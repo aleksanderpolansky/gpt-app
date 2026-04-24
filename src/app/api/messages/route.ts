@@ -11,24 +11,41 @@ export async function GET() {
     );
   }
 
-  const { data: appUser, error: userError } = await supabase
+  // 1. Пытаемся найти пользователя
+  let { data: appUser, error: userError } = await supabase
     .from("app_users")
     .select("id")
     .eq("auth0_sub", session.user.sub)
     .single();
 
-  if (userError) {
-    return Response.json(
-      { success: false, error: userError.message },
-      { status: 500 }
-    );
+  // 2. Если нет — создаём
+  if (!appUser) {
+    const { data: newUser, error: insertError } = await supabase
+      .from("app_users")
+      .insert({
+        auth0_sub: session.user.sub,
+        email: session.user.email,
+        name: session.user.name,
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      return Response.json(
+        { success: false, error: insertError.message },
+        { status: 500 }
+      );
+    }
+
+    appUser = newUser;
   }
 
+  // 3. Загружаем сообщения
   const { data: messages, error: messagesError } = await supabase
     .from("chat_messages")
     .select("id, role, content, created_at")
     .eq("user_id", appUser.id)
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .limit(20);
 
   if (messagesError) {
