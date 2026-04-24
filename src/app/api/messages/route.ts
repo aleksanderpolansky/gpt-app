@@ -11,14 +11,12 @@ export async function GET() {
     );
   }
 
-  // 1. Пытаемся найти пользователя
-  let { data: appUser, error: userError } = await supabase
+  let { data: appUser } = await supabase
     .from("app_users")
     .select("id")
     .eq("auth0_sub", session.user.sub)
     .single();
 
-  // 2. Если нет — создаём
   if (!appUser) {
     const { data: newUser, error: insertError } = await supabase
       .from("app_users")
@@ -26,6 +24,7 @@ export async function GET() {
         auth0_sub: session.user.sub,
         email: session.user.email,
         name: session.user.name,
+        picture: session.user.picture,
       })
       .select("id")
       .single();
@@ -40,12 +39,11 @@ export async function GET() {
     appUser = newUser;
   }
 
-  // 3. Загружаем сообщения
   const { data: messages, error: messagesError } = await supabase
     .from("chat_messages")
     .select("id, role, content, created_at")
     .eq("user_id", appUser.id)
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: true })
     .limit(20);
 
   if (messagesError) {

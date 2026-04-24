@@ -19,7 +19,6 @@ export default function Home() {
   const [message, setMessage] = useState("");
   const [submittedMessage, setSubmittedMessage] = useState("");
   const [serverResponse, setServerResponse] = useState("Пока сервер не вызывался.");
-  const [syncResponse, setSyncResponse] = useState("Пользователь ещё не синхронизирован.");
   const [user, setUser] = useState<UserProfile | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
@@ -42,21 +41,6 @@ export default function Home() {
     loadUser();
     loadMessages();
   }, []);
-
-  async function handleSyncUser() {
-    const response = await fetch("/api/sync-user", {
-      method: "POST",
-    });
-
-    const data = await response.json();
-
-    if (data.ok) {
-      setSyncResponse(`Пользователь записан в Supabase: ${data.user.email}`);
-      await loadMessages();
-    } else {
-      setSyncResponse(data.error || "Ошибка синхронизации пользователя.");
-    }
-  }
 
   async function handleSend() {
     setSubmittedMessage(message);
@@ -93,7 +77,7 @@ export default function Home() {
           </div>
         )}
 
-        <div className="flex gap-3 justify-center mb-6 flex-wrap">
+        <div className="flex gap-3 justify-center mb-8 flex-wrap">
           <a href="/auth/login" className="bg-blue-600 text-white px-5 py-3 rounded">
             Войти
           </a>
@@ -105,18 +89,6 @@ export default function Home() {
           <a href="/auth/profile" className="bg-green-600 text-white px-5 py-3 rounded">
             Профиль
           </a>
-        </div>
-
-        <button
-          onClick={handleSyncUser}
-          className="bg-purple-600 text-white px-6 py-3 rounded mb-4"
-        >
-          Синхронизировать пользователя
-        </button>
-
-        <div className="border rounded p-4 text-left bg-purple-50 mb-6">
-          <p className="font-semibold mb-2">Supabase:</p>
-          <p>{syncResponse}</p>
         </div>
 
         <input
