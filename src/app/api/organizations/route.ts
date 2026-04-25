@@ -1,6 +1,67 @@
-    import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
+
+async function getCurrentAppUser() {
+  const session = await auth0.getSession();
+
+  if (!session?.user) {
+    return {
+      appUser: null,
+      errorResponse: NextResponse.json(
+        { error: "Not authenticated" },
+        { status: 401 }
+      ),
+    };
+  }
+
+  const { data: appUser, error: appUserError } = await supabase
+    .from("app_users")
+    .select("*")
+    .eq("auth0_sub", session.user.sub)
+    .single();
+
+  if (appUserError) {
+    return {
+      appUser: null,
+      errorResponse: NextResponse.json(
+        { error: appUserError.message },
+        { status: 500 }
+      ),
+    };
+  }
+
+  return {
+    appUser,
+    errorResponse: null,
+  };
+}
+
+export async function GET() {
+  const { appUser, errorResponse } = await getCurrentAppUser();
+
+  if (errorResponse || !appUser) {
+    return errorResponse;
+  }
+
+  const { data: organizations, error: organizationsError } = await supabase
+    .from("organizations")
+    .select("*")
+    .eq("created_by_user_id", appUser.id)
+    .order("created_at", { ascending: false });
+
+  if (organizationsError) {
+    return NextResponse.json(
+      { error: organizationsError.message },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    organizations,
+  });
+}
 
 export async function POST(request: Request) {
   const session = await auth0.getSession();
