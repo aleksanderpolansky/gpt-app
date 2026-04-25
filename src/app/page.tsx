@@ -8,6 +8,18 @@ type UserProfile = {
   picture?: string;
 };
 
+type SyncedPerson = {
+  id: string;
+  full_name?: string;
+  short_name?: string;
+};
+
+type SyncedActor = {
+  id: string;
+  actor_type: string;
+  display_name: string;
+};
+
 type ChatMessage = {
   id: string;
   role: "user" | "assistant";
@@ -20,7 +32,10 @@ export default function Home() {
   const [submittedMessage, setSubmittedMessage] = useState("");
   const [serverResponse, setServerResponse] = useState("Пока сервер не вызывался.");
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [person, setPerson] = useState<SyncedPerson | null>(null);
+  const [actor, setActor] = useState<SyncedActor | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [syncStatus, setSyncStatus] = useState("Синхронизация ещё не выполнялась.");
 
   async function loadMessages() {
     const response = await fetch("/api/messages");
@@ -31,15 +46,38 @@ export default function Home() {
     }
   }
 
-  useEffect(() => {
-    async function loadUser() {
-      const response = await fetch("/api/me");
-      const data = await response.json();
-      setUser(data.user);
+  async function syncUser() {
+    const response = await fetch("/api/sync-user", {
+      method: "POST",
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setSyncStatus(data.error || "Ошибка синхронизации пользователя.");
+      return;
     }
 
-    loadUser();
-    loadMessages();
+    setPerson(data.person);
+    setActor(data.actor);
+    setSyncStatus("Пользователь, person и actor синхронизированы.");
+  }
+
+  useEffect(() => {
+    async function loadInitialData() {
+      const response = await fetch("/api/me");
+      const data = await response.json();
+
+      setUser(data.user);
+
+      if (data.user) {
+        await syncUser();
+      }
+
+      await loadMessages();
+    }
+
+    loadInitialData();
   }, []);
 
   async function handleSend() {
@@ -70,6 +108,24 @@ export default function Home() {
             <p className="font-semibold">Вы вошли как:</p>
             <p>{user.name}</p>
             <p>{user.email}</p>
+
+            <div className="mt-4 text-sm text-left border-t pt-3">
+              <p className="font-semibold">Статус синхронизации:</p>
+              <p>{syncStatus}</p>
+
+              {person && (
+                <p className="mt-2">
+                  <span className="font-semibold">Person ID:</span> {person.id}
+                </p>
+              )}
+
+              {actor && (
+                <p>
+                  <span className="font-semibold">Actor:</span> {actor.display_name}{" "}
+                  ({actor.actor_type})
+                </p>
+              )}
+            </div>
           </div>
         ) : (
           <div className="mb-6 border rounded p-4 bg-gray-50">
