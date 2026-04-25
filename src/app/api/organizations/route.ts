@@ -40,8 +40,15 @@ async function getCurrentAppUser() {
 export async function GET() {
   const { appUser, errorResponse } = await getCurrentAppUser();
 
-  if (errorResponse || !appUser) {
+  if (errorResponse) {
     return errorResponse;
+  }
+
+  if (!appUser) {
+    return NextResponse.json(
+      { error: "App user not found" },
+      { status: 500 }
+    );
   }
 
   const { data: organizations, error: organizationsError } = await supabase
@@ -146,16 +153,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: organizationActor, error: organizationActorError } = await supabase
-    .from("actors")
-    .insert({
-      actor_type: "organization",
-      organization_id: organization.id,
-      display_name: organization.organization_name,
-      status: "active",
-    })
-    .select()
-    .single();
+  const { data: organizationActor, error: organizationActorError } =
+    await supabase
+      .from("actors")
+      .insert({
+        actor_type: "organization",
+        organization_id: organization.id,
+        display_name: organization.organization_name,
+        status: "active",
+      })
+      .select()
+      .single();
 
   if (organizationActorError) {
     return NextResponse.json(

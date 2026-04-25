@@ -73,8 +73,15 @@ async function getCurrentPersonActor() {
 export async function GET() {
   const { personActor, errorResponse } = await getCurrentPersonActor();
 
-  if (errorResponse || !personActor) {
+  if (errorResponse) {
     return errorResponse;
+  }
+
+  if (!personActor) {
+    return NextResponse.json(
+      { error: "Person actor not found" },
+      { status: 500 }
+    );
   }
 
   const { data: locations, error: locationsError } = await supabase
@@ -99,8 +106,15 @@ export async function GET() {
 export async function POST(request: Request) {
   const { personActor, errorResponse } = await getCurrentPersonActor();
 
-  if (errorResponse || !personActor) {
+  if (errorResponse) {
     return errorResponse;
+  }
+
+  if (!personActor) {
+    return NextResponse.json(
+      { error: "Person actor not found" },
+      { status: 500 }
+    );
   }
 
   const body = await request.json();
