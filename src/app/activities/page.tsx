@@ -11,6 +11,14 @@ type ActivityParticipant = {
   space_id: string | null;
 };
 
+type ActivityLink = {
+  id: string;
+  linked_entity_type: string;
+  linked_entity_id: string;
+  link_type: string;
+  created_at: string;
+};
+
 type Activity = {
   id: string;
   activity_type: string;
@@ -25,6 +33,7 @@ type Activity = {
   ai_confidence: number | null;
   created_at: string;
   activity_participants: ActivityParticipant[];
+  activity_links: ActivityLink[];
 };
 
 export default function ActivitiesPage() {
@@ -53,8 +62,8 @@ export default function ActivitiesPage() {
       <h1>Activities</h1>
 
       <p>
-        This page shows the central Activity Core records with their
-        participants.
+        This page shows the central Activity Core records with participants and
+        links to related entities.
       </p>
 
       <p>
@@ -144,6 +153,20 @@ export default function ActivitiesPage() {
                 </ul>
               ) : (
                 <p>No participants.</p>
+              )}
+
+              <h3>Links</h3>
+
+              {activity.activity_links?.length > 0 ? (
+                <ul>
+                  {activity.activity_links.map((link) => (
+                    <li key={link.id}>
+                      {link.linked_entity_type} — {link.link_type}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No links.</p>
               )}
             </article>
           ))}
