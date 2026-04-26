@@ -128,7 +128,8 @@ export async function GET() {
     .select(
       `
       *,
-      activity_participants (*)
+      activity_participants (*),
+      activity_links (*)
     `
     )
     .eq("user_id", appUser.id)
@@ -174,6 +175,7 @@ export async function POST(request: Request) {
   const status = body.status ?? "completed";
   const source = body.source ?? "manual";
   const aiConfidence = body.aiConfidence ?? null;
+  const shouldCreateCalendarEvent = body.createCalendarEvent ?? true;
   const participants: ParticipantInput[] = body.participants ?? [];
 
   if (!activityType || !title) {
@@ -253,9 +255,67 @@ export async function POST(request: Request) {
     );
   }
 
+  let calendarEvent = null;
+  let activityLink = null;
+
+  if (shouldCreateCalendarEvent && startTime && endTime) {
+    const { data: createdCalendarEvent, error: calendarEventError } =
+      await supabase
+        .from("calendar_events")
+        .insert({
+          user_id: appUser.id,
+          actor_id: personActor.id,
+          space_id: primarySpaceId,
+          event_type: activityType,
+          title,
+          description,
+          start_time: startTime,
+          end_time: endTime,
+          duration_minutes: durationMinutes,
+          location_id: locationId,
+          status,
+          source: "activity",
+          related_activity_id: activity.id,
+        })
+        .select()
+        .single();
+
+    if (calendarEventError) {
+      return NextResponse.json(
+        { error: calendarEventError.message },
+        { status: 500 }
+      );
+    }
+
+    calendarEvent = createdCalendarEvent;
+
+    const { data: createdActivityLink, error: activityLinkError } =
+      await supabase
+        .from("activity_links")
+        .insert({
+          activity_id: activity.id,
+          linked_entity_type: "calendar_event",
+          linked_entity_id: calendarEvent.id,
+          link_type: "creates",
+        })
+        .select()
+        .single();
+
+    if (activityLinkError) {
+      return NextResponse.json(
+        { error: activityLinkError.message },
+        { status: 500 }
+      );
+    }
+
+    activityLink = createdActivityLink;
+  }
+
   return NextResponse.json({
     ok: true,
     activity,
     activityParticipants,
+    calendarEvent,
+    activityLink,
   });
 }
