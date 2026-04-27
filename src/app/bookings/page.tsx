@@ -43,23 +43,50 @@ type Booking = {
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [message, setMessage] = useState("Loading bookings...");
+  const [actionMessage, setActionMessage] = useState("");
+  const [updatingBookingId, setUpdatingBookingId] = useState<string | null>(null);
+
+  async function loadBookings() {
+    const response = await fetch("/api/bookings");
+    const data = await response.json();
+
+    if (!response.ok) {
+      setMessage(data.error ?? "Failed to load bookings");
+      return;
+    }
+
+    setBookings(data.bookings ?? []);
+    setMessage("");
+  }
 
   useEffect(() => {
-    async function loadBookings() {
-      const response = await fetch("/api/bookings");
+    loadBookings();
+  }, []);
+
+  async function confirmBooking(bookingId: string) {
+    setActionMessage("");
+    setUpdatingBookingId(bookingId);
+
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}/confirm`, {
+        method: "POST",
+      });
+
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data.error ?? "Failed to load bookings");
+        setActionMessage(data.error ?? "Failed to confirm booking");
         return;
       }
 
-      setBookings(data.bookings ?? []);
-      setMessage("");
+      setActionMessage("Booking confirmed successfully");
+      await loadBookings();
+    } catch {
+      setActionMessage("Failed to confirm booking");
+    } finally {
+      setUpdatingBookingId(null);
     }
-
-    loadBookings();
-  }, []);
+  }
 
   return (
     <main style={{ padding: "32px", maxWidth: "900px" }}>
@@ -72,6 +99,8 @@ export default function BookingsPage() {
       </p>
 
       {message && <p>{message}</p>}
+
+      {actionMessage && <p>{actionMessage}</p>}
 
       {!message && bookings.length === 0 && <p>No bookings yet.</p>}
 
@@ -147,6 +176,24 @@ export default function BookingsPage() {
                 <strong>Created at:</strong>{" "}
                 {new Date(booking.created_at).toLocaleString()}
               </p>
+
+              {booking.booking_status === "requested" && (
+                <button
+                  type="button"
+                  onClick={() => confirmBooking(booking.id)}
+                  disabled={updatingBookingId === booking.id}
+                  style={{
+                    marginTop: "12px",
+                    padding: "8px 12px",
+                    cursor:
+                      updatingBookingId === booking.id ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {updatingBookingId === booking.id
+                    ? "Confirming..."
+                    : "Confirm booking"}
+                </button>
+              )}
             </article>
           ))}
         </div>
