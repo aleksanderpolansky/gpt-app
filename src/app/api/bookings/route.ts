@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth0 } from "../../../../lib/auth0";
+import { checkBookingConflictByOffer } from "../../../../lib/booking-conflicts";
 import { supabase } from "../../../../lib/supabase";
 
 async function getCurrentUserContext() {
@@ -242,6 +243,26 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Offer provider actor not found" },
       { status: 500 }
+    );
+  }
+
+  const bookingConflictCheck = await checkBookingConflictByOffer({
+    offerId,
+    startTime,
+    endTime,
+  });
+
+  if (bookingConflictCheck.errorMessage) {
+    return NextResponse.json(
+      { error: bookingConflictCheck.errorMessage },
+      { status: 500 }
+    );
+  }
+
+  if (bookingConflictCheck.hasConflict) {
+    return NextResponse.json(
+      { error: "This time slot is already booked for this offer" },
+      { status: 409 }
     );
   }
 

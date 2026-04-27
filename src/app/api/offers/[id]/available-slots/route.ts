@@ -26,6 +26,13 @@ type CalendarEvent = {
   end_time: string;
 };
 
+type Booking = {
+  id: string;
+  start_time: string;
+  end_time: string;
+  booking_status: string;
+};
+
 type AvailableSlot = {
   offerId: string;
   availabilityRuleId: string;
@@ -166,11 +173,25 @@ function isSlotBlockedByCalendarEvents(
   });
 }
 
+function isSlotBlockedByBookings(
+  slotStart: Date,
+  slotEnd: Date,
+  bookings: Booking[]
+) {
+  return bookings.some((booking) => {
+    const bookingStart = new Date(booking.start_time);
+    const bookingEnd = new Date(booking.end_time);
+
+    return doIntervalsOverlap(slotStart, slotEnd, bookingStart, bookingEnd);
+  });
+}
+
 function buildSlotsForRule(
   offerId: string,
   rule: AvailabilityRule,
   dateString: string,
-  calendarEvents: CalendarEvent[]
+  calendarEvents: CalendarEvent[],
+  bookings: Booking[]
 ) {
   const slots: AvailableSlot[] = [];
 
@@ -188,13 +209,19 @@ function buildSlotsForRule(
       break;
     }
 
-    const blocked = isSlotBlockedByCalendarEvents(
+    const blockedByCalendar = isSlotBlockedByCalendarEvents(
       currentStart,
       currentEnd,
       calendarEvents
     );
 
-    if (!blocked) {
+    const blockedByBooking = isSlotBlockedByBookings(
+      currentStart,
+      currentEnd,
+      bookings
+    );
+
+    if (!blockedByCalendar && !blockedByBooking) {
       slots.push({
         offerId,
         availabilityRuleId: rule.id,
@@ -283,8 +310,8 @@ export async function GET(request: Request, context: RouteContext) {
     .from("calendar_events")
     .select("id,start_time,end_time")
     .eq("actor_id", personActor.id)
-    .gte("start_time", dayStart.toISOString())
-    .lte("start_time", dayEnd.toISOString())
+    .lt("start_time", dayEnd.toISOString())
+    .gt("end_time", dayStart.toISOString())
     .in("status", ["planned", "confirmed", "completed"]);
 
   if (calendarEventsError) {
@@ -294,12 +321,28 @@ export async function GET(request: Request, context: RouteContext) {
     );
   }
 
+  const { data: bookings, error: bookingsError } = await supabase
+    .from("bookings")
+    .select("id,start_time,end_time,booking_status")
+    .eq("offer_id", offerId)
+    .neq("booking_status", "cancelled")
+    .lt("start_time", dayEnd.toISOString())
+    .gt("end_time", dayStart.toISOString());
+
+  if (bookingsError) {
+    return NextResponse.json(
+      { error: bookingsError.message },
+      { status: 500 }
+    );
+  }
+
   const availableSlots = activeRulesForDate.flatMap((rule: AvailabilityRule) =>
     buildSlotsForRule(
       offerId,
       rule,
       dateString,
-      (calendarEvents ?? []) as CalendarEvent[]
+      (calendarEvents ?? []) as CalendarEvent[],
+      (bookings ?? []) as Booking[]
     )
   );
 
