@@ -113,6 +113,31 @@ export default function BookingsPage() {
     }
   }
 
+  async function completeBooking(bookingId: string) {
+    setActionMessage("");
+    setUpdatingBookingId(bookingId);
+
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}/complete`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setActionMessage(data.error ?? "Failed to complete booking");
+        return;
+      }
+
+      setActionMessage("Booking completed successfully");
+      await loadBookings();
+    } catch {
+      setActionMessage("Failed to complete booking");
+    } finally {
+      setUpdatingBookingId(null);
+    }
+  }
+
   return (
     <main style={{ padding: "32px", maxWidth: "900px" }}>
       <h1>Bookings</h1>
@@ -219,6 +244,25 @@ export default function BookingsPage() {
                     {updatingBookingId === booking.id
                       ? "Confirming..."
                       : "Confirm booking"}
+                  </button>
+                )}
+
+                {booking.booking_status === "confirmed" && (
+                  <button
+                    type="button"
+                    onClick={() => completeBooking(booking.id)}
+                    disabled={updatingBookingId === booking.id}
+                    style={{
+                      padding: "8px 12px",
+                      cursor:
+                        updatingBookingId === booking.id
+                          ? "not-allowed"
+                          : "pointer",
+                    }}
+                  >
+                    {updatingBookingId === booking.id
+                      ? "Completing..."
+                      : "Complete booking"}
                   </button>
                 )}
 
