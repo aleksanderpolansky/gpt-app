@@ -80,6 +80,33 @@ async function getCurrentUserContext() {
   };
 }
 
+async function verifyOrganizationAccess(
+  appUserId: string,
+  organizationId: string
+) {
+  const { data: organization, error: organizationError } = await supabase
+    .from("organizations")
+    .select("id, organization_name, organization_type, status, created_by_user_id")
+    .eq("id", organizationId)
+    .eq("created_by_user_id", appUserId)
+    .single();
+
+  if (organizationError || !organization) {
+    return {
+      organization: null,
+      errorResponse: NextResponse.json(
+        { error: "Organization not found or access denied" },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return {
+    organization,
+    errorResponse: null,
+  };
+}
+
 export async function GET() {
   const { personActor, errorResponse } = await getCurrentUserContext();
 
@@ -96,7 +123,17 @@ export async function GET() {
 
   const { data: valueObjects, error: valueObjectsError } = await supabase
     .from("value_objects")
-    .select("*")
+    .select(
+      `
+      *,
+      organizations (
+        id,
+        organization_name,
+        organization_type,
+        status
+      )
+    `
+    )
     .eq("owner_actor_id", personActor.id)
     .order("created_at", { ascending: false });
 
@@ -114,13 +151,13 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { personActor, errorResponse } = await getCurrentUserContext();
+  const { appUser, personActor, errorResponse } = await getCurrentUserContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
-  if (!personActor) {
+  if (!appUser || !personActor) {
     return NextResponse.json(
       { error: "User context not found" },
       { status: 500 }
@@ -129,6 +166,7 @@ export async function POST(request: Request) {
 
   const body = await request.json();
 
+  const organizationId = body.organizationId;
   const valueType = body.valueType;
   const title = body.title;
   const description = body.description ?? null;
@@ -142,10 +180,24 @@ export async function POST(request: Request) {
   const isMarketplaceSellable = body.isMarketplaceSellable ?? false;
   const isFreePossible = body.isFreePossible ?? false;
 
-  if (!valueType || !title) {
+  if (!organizationId || !valueType || !title) {
     return NextResponse.json(
-      { error: "valueType and title are required" },
+      { error: "organizationId, valueType and title are required" },
       { status: 400 }
+    );
+  }
+
+  const { organization, errorResponse: organizationAccessErrorResponse } =
+    await verifyOrganizationAccess(appUser.id, organizationId);
+
+  if (organizationAccessErrorResponse) {
+    return organizationAccessErrorResponse;
+  }
+
+  if (!organization) {
+    return NextResponse.json(
+      { error: "Organization context not found" },
+      { status: 500 }
     );
   }
 
@@ -153,6 +205,7 @@ export async function POST(request: Request) {
     .from("value_objects")
     .insert({
       owner_actor_id: personActor.id,
+      organization_id: organization.id,
       value_type: valueType,
       title,
       description,
@@ -164,7 +217,17 @@ export async function POST(request: Request) {
       is_free_possible: isFreePossible,
       status: "active",
     })
-    .select()
+    .select(
+      `
+      *,
+      organizations (
+        id,
+        organization_name,
+        organization_type,
+        status
+      )
+    `
+    )
     .single();
 
   if (valueObjectError) {
