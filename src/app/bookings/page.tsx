@@ -88,6 +88,31 @@ export default function BookingsPage() {
     }
   }
 
+  async function cancelBooking(bookingId: string) {
+    setActionMessage("");
+    setUpdatingBookingId(bookingId);
+
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}/cancel`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setActionMessage(data.error ?? "Failed to cancel booking");
+        return;
+      }
+
+      setActionMessage("Booking cancelled successfully");
+      await loadBookings();
+    } catch {
+      setActionMessage("Failed to cancel booking");
+    } finally {
+      setUpdatingBookingId(null);
+    }
+  }
+
   return (
     <main style={{ padding: "32px", maxWidth: "900px" }}>
       <h1>Bookings</h1>
@@ -177,23 +202,46 @@ export default function BookingsPage() {
                 {new Date(booking.created_at).toLocaleString()}
               </p>
 
-              {booking.booking_status === "requested" && (
-                <button
-                  type="button"
-                  onClick={() => confirmBooking(booking.id)}
-                  disabled={updatingBookingId === booking.id}
-                  style={{
-                    marginTop: "12px",
-                    padding: "8px 12px",
-                    cursor:
-                      updatingBookingId === booking.id ? "not-allowed" : "pointer",
-                  }}
-                >
-                  {updatingBookingId === booking.id
-                    ? "Confirming..."
-                    : "Confirm booking"}
-                </button>
-              )}
+              <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+                {booking.booking_status === "requested" && (
+                  <button
+                    type="button"
+                    onClick={() => confirmBooking(booking.id)}
+                    disabled={updatingBookingId === booking.id}
+                    style={{
+                      padding: "8px 12px",
+                      cursor:
+                        updatingBookingId === booking.id
+                          ? "not-allowed"
+                          : "pointer",
+                    }}
+                  >
+                    {updatingBookingId === booking.id
+                      ? "Confirming..."
+                      : "Confirm booking"}
+                  </button>
+                )}
+
+                {booking.booking_status !== "cancelled" &&
+                  booking.booking_status !== "completed" && (
+                    <button
+                      type="button"
+                      onClick={() => cancelBooking(booking.id)}
+                      disabled={updatingBookingId === booking.id}
+                      style={{
+                        padding: "8px 12px",
+                        cursor:
+                          updatingBookingId === booking.id
+                            ? "not-allowed"
+                            : "pointer",
+                      }}
+                    >
+                      {updatingBookingId === booking.id
+                        ? "Cancelling..."
+                        : "Cancel booking"}
+                    </button>
+                  )}
+              </div>
             </article>
           ))}
         </div>
