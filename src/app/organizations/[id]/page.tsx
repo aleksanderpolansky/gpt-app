@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
@@ -10,6 +10,8 @@ type Organization = {
   organization_type: string;
   description?: string | null;
   status: string;
+  country_code?: string | null;
+  default_currency?: string | null;
   created_at?: string | null;
 };
 
@@ -56,6 +58,12 @@ type Offer = {
   offer_items?: OfferItem[];
 };
 
+type PurchaseConfirmationCreateResponse = {
+  ok: boolean;
+  purchaseConfirmation?: unknown;
+  error?: string;
+};
+
 function formatMoney(value: number | string | null, currency: string | null) {
   if (value === null || value === undefined || value === "") {
     return "Not specified";
@@ -82,6 +90,14 @@ export default function OrganizationDetailsPage() {
   const [valueObjects, setValueObjects] = useState<ValueObject[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
 
+  const [purchaseAmount, setPurchaseAmount] = useState("");
+  const [purchaseCurrency, setPurchaseCurrency] = useState("");
+  const [userComment, setUserComment] = useState("");
+  const [receiptUrl, setReceiptUrl] = useState("");
+  const [isSubmittingPurchase, setIsSubmittingPurchase] = useState(false);
+  const [purchaseSubmitMessage, setPurchaseSubmitMessage] = useState("");
+  const [purchaseSubmitError, setPurchaseSubmitError] = useState("");
+
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -98,6 +114,9 @@ export default function OrganizationDetailsPage() {
   const organizationOffers = useMemo(() => {
     return offers.filter((offer) => offer.organization_id === organizationId);
   }, [offers, organizationId]);
+
+  const effectivePurchaseCurrency =
+    purchaseCurrency.trim() || organization?.default_currency || "PLN";
 
   async function loadData() {
     setIsLoading(true);
@@ -155,9 +174,68 @@ export default function OrganizationDetailsPage() {
     }
   }
 
+  async function handleSubmitPurchaseConfirmation(event: FormEvent) {
+    event.preventDefault();
+
+    setPurchaseSubmitMessage("");
+    setPurchaseSubmitError("");
+
+    const parsedPurchaseAmount = Number(purchaseAmount);
+
+    if (Number.isNaN(parsedPurchaseAmount) || parsedPurchaseAmount <= 0) {
+      setPurchaseSubmitError("Введите положительную сумму покупки.");
+      return;
+    }
+
+    setIsSubmittingPurchase(true);
+
+    try {
+      const response = await fetch("/api/purchase-confirmations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body: JSON.stringify({
+          organizationId,
+          purchaseAmount: parsedPurchaseAmount,
+          purchaseCurrency: effectivePurchaseCurrency,
+          userComment: userComment.trim() || null,
+          receiptUrl: receiptUrl.trim() || null,
+        }),
+      });
+
+      const json =
+        (await response.json()) as PurchaseConfirmationCreateResponse;
+
+      if (!response.ok || !json.ok) {
+        throw new Error(json.error ?? "Failed to submit purchase confirmation");
+      }
+
+      setPurchaseAmount("");
+      setUserComment("");
+      setReceiptUrl("");
+      setPurchaseSubmitMessage(
+        "Заявка на подтверждение покупки создана. Теперь продавец сможет подтвердить или отклонить её."
+      );
+    } catch (error) {
+      setPurchaseSubmitError(
+        error instanceof Error ? error.message : "Unknown submit error"
+      );
+    } finally {
+      setIsSubmittingPurchase(false);
+    }
+  }
+
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (organization?.default_currency && purchaseCurrency.trim() === "") {
+      setPurchaseCurrency(organization.default_currency);
+    }
+  }, [organization, purchaseCurrency]);
 
   return (
     <main
@@ -293,6 +371,16 @@ export default function OrganizationDetailsPage() {
               </p>
 
               <p style={{ margin: "0 0 6px" }}>
+                <strong>Country:</strong>{" "}
+                {organization.country_code || "Not specified"}
+              </p>
+
+              <p style={{ margin: "0 0 6px" }}>
+                <strong>Default currency:</strong>{" "}
+                {organization.default_currency || "Not specified"}
+              </p>
+
+              <p style={{ margin: "0 0 6px" }}>
                 <strong>Description:</strong>{" "}
                 {organization.description || "Not specified"}
               </p>
@@ -321,48 +409,177 @@ export default function OrganizationDetailsPage() {
               </h2>
 
               <p style={{ margin: "0 0 16px", color: "#374151" }}>
-                Здесь будет рабочий блок для регистрации покупки у этого
-                предприятия. Покупатель сможет отправить заявку, а продавец
-                сможет подтвердить или отклонить покупку. После подтверждения
-                система начислит points по правилам предприятия.
+                Здесь покупатель может зарегистрировать покупку у этого
+                предприятия. Продавец позже подтвердит или отклонит заявку.
+                После подтверждения система начислит points по правилам
+                предприятия.
               </p>
 
-              <div
+              <form
+                onSubmit={handleSubmitPurchaseConfirmation}
                 style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "12px",
-                  alignItems: "center",
+                  display: "grid",
+                  gap: "14px",
+                  padding: "16px",
+                  border: "1px solid #93c5fd",
+                  borderRadius: "12px",
+                  background: "#ffffff",
+                  marginBottom: "16px",
                 }}
               >
-                <Link
-                  href={purchaseConfirmationsHref}
-                  style={{
-                    display: "inline-block",
-                    padding: "10px 14px",
-                    borderRadius: "8px",
-                    background: "#2563eb",
-                    color: "#ffffff",
-                    textDecoration: "none",
-                    fontWeight: 600,
-                  }}
-                >
-                  View purchase confirmations
-                </Link>
+                <h3 style={{ margin: 0, fontSize: "20px" }}>
+                  Зарегистрировать покупку
+                </h3>
 
-                <span
+                <div
                   style={{
-                    display: "inline-block",
-                    padding: "10px 14px",
-                    borderRadius: "8px",
-                    border: "1px solid #93c5fd",
-                    background: "#ffffff",
-                    color: "#1d4ed8",
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                    gap: "12px",
                   }}
                 >
-                  Следующий шаг: форма “Зарегистрировать покупку”
-                </span>
-              </div>
+                  <label style={{ display: "grid", gap: "6px" }}>
+                    <span style={{ fontWeight: 600 }}>Сумма покупки</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={purchaseAmount}
+                      onChange={(event) => setPurchaseAmount(event.target.value)}
+                      placeholder="Например: 95"
+                      required
+                      style={{
+                        padding: "10px 12px",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "8px",
+                        fontSize: "15px",
+                      }}
+                    />
+                  </label>
+
+                  <label style={{ display: "grid", gap: "6px" }}>
+                    <span style={{ fontWeight: 600 }}>Валюта</span>
+                    <input
+                      type="text"
+                      value={purchaseCurrency}
+                      onChange={(event) =>
+                        setPurchaseCurrency(event.target.value.toUpperCase())
+                      }
+                      placeholder={organization.default_currency || "PLN"}
+                      style={{
+                        padding: "10px 12px",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "8px",
+                        fontSize: "15px",
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <label style={{ display: "grid", gap: "6px" }}>
+                  <span style={{ fontWeight: 600 }}>Комментарий покупателя</span>
+                  <textarea
+                    value={userComment}
+                    onChange={(event) => setUserComment(event.target.value)}
+                    placeholder="Например: покупка аксессуаров, чек приложен ссылкой."
+                    rows={3}
+                    style={{
+                      padding: "10px 12px",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "8px",
+                      fontSize: "15px",
+                      resize: "vertical",
+                    }}
+                  />
+                </label>
+
+                <label style={{ display: "grid", gap: "6px" }}>
+                  <span style={{ fontWeight: 600 }}>Ссылка на чек</span>
+                  <input
+                    type="url"
+                    value={receiptUrl}
+                    onChange={(event) => setReceiptUrl(event.target.value)}
+                    placeholder="https://..."
+                    style={{
+                      padding: "10px 12px",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "8px",
+                      fontSize: "15px",
+                    }}
+                  />
+                </label>
+
+                {purchaseSubmitError && (
+                  <div
+                    style={{
+                      border: "1px solid #f2b8b5",
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      background: "#fff5f5",
+                      color: "#a40000",
+                    }}
+                  >
+                    {purchaseSubmitError}
+                  </div>
+                )}
+
+                {purchaseSubmitMessage && (
+                  <div
+                    style={{
+                      border: "1px solid #bfe5c8",
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      background: "#edf8f0",
+                      color: "#176b2c",
+                    }}
+                  >
+                    {purchaseSubmitMessage}
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                    alignItems: "center",
+                  }}
+                >
+                  <button
+                    type="submit"
+                    disabled={isSubmittingPurchase}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid #2563eb",
+                      background: isSubmittingPurchase ? "#93c5fd" : "#2563eb",
+                      color: "#ffffff",
+                      fontWeight: 600,
+                      cursor: isSubmittingPurchase ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {isSubmittingPurchase
+                      ? "Отправка..."
+                      : "Зарегистрировать покупку"}
+                  </button>
+
+                  <Link
+                    href={purchaseConfirmationsHref}
+                    style={{
+                      display: "inline-block",
+                      padding: "10px 14px",
+                      borderRadius: "8px",
+                      background: "#ffffff",
+                      color: "#2563eb",
+                      border: "1px solid #93c5fd",
+                      textDecoration: "none",
+                      fontWeight: 600,
+                    }}
+                  >
+                    View purchase confirmations
+                  </Link>
+                </div>
+              </form>
             </section>
 
             <section
