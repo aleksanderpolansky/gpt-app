@@ -53,8 +53,7 @@ export default function OrganizationsPage() {
         background: "#ffffff",
         color: "#111111",
         padding: "40px 16px",
-        fontFamily:
-          "Arial, Helvetica, sans-serif",
+        fontFamily: "Arial, Helvetica, sans-serif",
       }}
     >
       <div
@@ -110,6 +109,28 @@ export default function OrganizationsPage() {
               }}
             >
               Создать организацию
+            </Link>
+
+            <Link
+              href="/value-objects"
+              style={{
+                color: "#2563eb",
+                textDecoration: "underline",
+                fontSize: "16px",
+              }}
+            >
+              Value objects
+            </Link>
+
+            <Link
+              href="/offers"
+              style={{
+                color: "#2563eb",
+                textDecoration: "underline",
+                fontSize: "16px",
+              }}
+            >
+              Offers
             </Link>
           </nav>
         </header>
@@ -206,6 +227,47 @@ export default function OrganizationsPage() {
                 >
                   ID: {organization.id}
                 </p>
+
+                <div
+                  style={{
+                    marginTop: "16px",
+                    display: "flex",
+                    gap: "16px",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                  }}
+                >
+                  <Link
+                    href={`/organizations/${organization.id}`}
+                    style={{
+                      color: "#2563eb",
+                      textDecoration: "underline",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Открыть организацию
+                  </Link>
+
+                  <Link
+                    href="/value-objects/new"
+                    style={{
+                      color: "#2563eb",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    Создать value object
+                  </Link>
+
+                  <Link
+                    href="/offers/new"
+                    style={{
+                      color: "#2563eb",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    Создать offer
+                  </Link>
+                </div>
               </article>
             ))}
           </section>

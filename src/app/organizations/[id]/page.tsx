@@ -1,0 +1,485 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+
+type Organization = {
+  id: string;
+  organization_name: string;
+  organization_type: string;
+  description?: string | null;
+  status: string;
+  created_at?: string | null;
+};
+
+type ValueObject = {
+  id: string;
+  organization_id?: string | null;
+  value_type: string;
+  title: string;
+  description: string | null;
+  unit_type: string | null;
+  default_price: number | null;
+  default_currency: string | null;
+  default_duration_minutes: number | null;
+  status: string;
+  created_at: string;
+};
+
+type OfferItem = {
+  id: string;
+  value_object_id: string;
+  quantity: number | string;
+  unit_price: number | string | null;
+  total_price: number | string | null;
+  currency: string | null;
+  is_required: boolean;
+  status: string;
+  value_objects?: {
+    id: string;
+    title: string;
+    value_type: string;
+  } | null;
+};
+
+type Offer = {
+  id: string;
+  organization_id?: string | null;
+  offer_type: string;
+  title: string;
+  description: string | null;
+  price: number | null;
+  currency: string | null;
+  status: string;
+  created_at: string;
+  offer_items?: OfferItem[];
+};
+
+function formatMoney(value: number | string | null, currency: string | null) {
+  if (value === null || value === undefined || value === "") {
+    return "Not specified";
+  }
+
+  return `${value} ${currency || ""}`.trim();
+}
+
+export default function OrganizationDetailsPage() {
+  const params = useParams();
+  const organizationId = String(params.id);
+
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [valueObjects, setValueObjects] = useState<ValueObject[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const organization = useMemo(() => {
+    return organizations.find((item) => item.id === organizationId) ?? null;
+  }, [organizations, organizationId]);
+
+  const organizationValueObjects = useMemo(() => {
+    return valueObjects.filter(
+      (valueObject) => valueObject.organization_id === organizationId
+    );
+  }, [valueObjects, organizationId]);
+
+  const organizationOffers = useMemo(() => {
+    return offers.filter((offer) => offer.organization_id === organizationId);
+  }, [offers, organizationId]);
+
+  async function loadData() {
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try {
+      const [organizationsResponse, valueObjectsResponse, offersResponse] =
+        await Promise.all([
+          fetch("/api/organizations", {
+            method: "GET",
+            cache: "no-store",
+          }),
+          fetch("/api/value-objects", {
+            method: "GET",
+            cache: "no-store",
+          }),
+          fetch("/api/offers", {
+            method: "GET",
+            cache: "no-store",
+          }),
+        ]);
+
+      const organizationsData = await organizationsResponse.json();
+      const valueObjectsData = await valueObjectsResponse.json();
+      const offersData = await offersResponse.json();
+
+      if (!organizationsResponse.ok || !organizationsData.ok) {
+        setErrorMessage(
+          organizationsData.error ?? "Failed to load organization"
+        );
+        return;
+      }
+
+      if (!valueObjectsResponse.ok || !valueObjectsData.ok) {
+        setErrorMessage(
+          valueObjectsData.error ?? "Failed to load value objects"
+        );
+        return;
+      }
+
+      if (!offersResponse.ok || !offersData.ok) {
+        setErrorMessage(offersData.error ?? "Failed to load offers");
+        return;
+      }
+
+      setOrganizations(organizationsData.organizations ?? []);
+      setValueObjects(valueObjectsData.valueObjects ?? []);
+      setOffers(offersData.offers ?? []);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unknown error occurred"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "#ffffff",
+        color: "#111111",
+        padding: "40px 16px",
+        fontFamily: "Arial, Helvetica, sans-serif",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "1000px",
+          margin: "0 auto",
+        }}
+      >
+        <header
+          style={{
+            marginBottom: "32px",
+            textAlign: "center",
+          }}
+        >
+          <h1
+            style={{
+              fontSize: "32px",
+              lineHeight: "1.2",
+              fontWeight: 700,
+              margin: "0 0 12px",
+            }}
+          >
+            Organization details
+          </h1>
+
+          <nav
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: "24px",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <Link href="/" style={{ color: "#2563eb" }}>
+              На главную
+            </Link>
+
+            <Link href="/organizations" style={{ color: "#2563eb" }}>
+              Мои организации
+            </Link>
+
+            <Link href="/value-objects/new" style={{ color: "#2563eb" }}>
+              Create value object
+            </Link>
+
+            <Link href="/offers/new" style={{ color: "#2563eb" }}>
+              Create offer
+            </Link>
+          </nav>
+        </header>
+
+        {isLoading && (
+          <div
+            style={{
+              border: "1px solid #dddddd",
+              borderRadius: "10px",
+              padding: "18px",
+              background: "#f9fafb",
+            }}
+          >
+            Loading organization details...
+          </div>
+        )}
+
+        {errorMessage && (
+          <div
+            style={{
+              border: "1px solid #f5c2c7",
+              borderRadius: "10px",
+              padding: "18px",
+              background: "#f8d7da",
+              color: "#842029",
+            }}
+          >
+            {errorMessage}
+          </div>
+        )}
+
+        {!isLoading && !errorMessage && !organization && (
+          <div
+            style={{
+              border: "1px solid #facc15",
+              borderRadius: "10px",
+              padding: "18px",
+              background: "#fefce8",
+            }}
+          >
+            Organization not found or access denied.
+          </div>
+        )}
+
+        {!isLoading && !errorMessage && organization && (
+          <div style={{ display: "grid", gap: "20px" }}>
+            <section
+              style={{
+                border: "1px solid #dddddd",
+                borderRadius: "12px",
+                padding: "20px",
+                background: "#f9fafb",
+                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: "26px",
+                  margin: "0 0 12px",
+                }}
+              >
+                {organization.organization_name}
+              </h2>
+
+              <p style={{ margin: "0 0 6px" }}>
+                <strong>Type:</strong> {organization.organization_type}
+              </p>
+
+              <p style={{ margin: "0 0 6px" }}>
+                <strong>Status:</strong> {organization.status}
+              </p>
+
+              <p style={{ margin: "0 0 6px" }}>
+                <strong>Description:</strong>{" "}
+                {organization.description || "Not specified"}
+              </p>
+
+              <p
+                style={{
+                  margin: "12px 0 0",
+                  color: "#666666",
+                  fontSize: "14px",
+                }}
+              >
+                ID: {organization.id}
+              </p>
+            </section>
+
+            <section
+              style={{
+                border: "1px solid #dddddd",
+                borderRadius: "12px",
+                padding: "20px",
+                background: "#ffffff",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  alignItems: "center",
+                  marginBottom: "16px",
+                }}
+              >
+                <div>
+                  <h2 style={{ margin: 0, fontSize: "24px" }}>
+                    Value objects
+                  </h2>
+                  <p style={{ margin: "6px 0 0", color: "#666666" }}>
+                    Products, services and certificates connected to this
+                    organization.
+                  </p>
+                </div>
+
+                <Link
+                  href="/value-objects/new"
+                  style={{
+                    color: "#2563eb",
+                    textDecoration: "underline",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Create value object
+                </Link>
+              </div>
+
+              {organizationValueObjects.length === 0 ? (
+                <p style={{ margin: 0, color: "#666666" }}>
+                  No value objects connected to this organization yet.
+                </p>
+              ) : (
+                <div style={{ display: "grid", gap: "12px" }}>
+                  {organizationValueObjects.map((valueObject) => (
+                    <article
+                      key={valueObject.id}
+                      style={{
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "10px",
+                        padding: "14px",
+                        background: "#f9fafb",
+                      }}
+                    >
+                      <h3 style={{ margin: "0 0 8px", fontSize: "20px" }}>
+                        {valueObject.title}
+                      </h3>
+
+                      <p style={{ margin: "0 0 6px" }}>
+                        <strong>Type:</strong> {valueObject.value_type}
+                      </p>
+
+                      <p style={{ margin: "0 0 6px" }}>
+                        <strong>Price:</strong>{" "}
+                        {formatMoney(
+                          valueObject.default_price,
+                          valueObject.default_currency
+                        )}
+                      </p>
+
+                      <p style={{ margin: 0 }}>
+                        <strong>Status:</strong> {valueObject.status}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section
+              style={{
+                border: "1px solid #dddddd",
+                borderRadius: "12px",
+                padding: "20px",
+                background: "#ffffff",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  alignItems: "center",
+                  marginBottom: "16px",
+                }}
+              >
+                <div>
+                  <h2 style={{ margin: 0, fontSize: "24px" }}>Offers</h2>
+                  <p style={{ margin: "6px 0 0", color: "#666666" }}>
+                    Commercial offers connected to this organization.
+                  </p>
+                </div>
+
+                <Link
+                  href="/offers/new"
+                  style={{
+                    color: "#2563eb",
+                    textDecoration: "underline",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Create offer
+                </Link>
+              </div>
+
+              {organizationOffers.length === 0 ? (
+                <p style={{ margin: 0, color: "#666666" }}>
+                  No offers connected to this organization yet.
+                </p>
+              ) : (
+                <div style={{ display: "grid", gap: "12px" }}>
+                  {organizationOffers.map((offer) => (
+                    <article
+                      key={offer.id}
+                      style={{
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "10px",
+                        padding: "14px",
+                        background: "#f9fafb",
+                      }}
+                    >
+                      <h3 style={{ margin: "0 0 8px", fontSize: "20px" }}>
+                        {offer.title}
+                      </h3>
+
+                      <p style={{ margin: "0 0 6px" }}>
+                        <strong>Type:</strong> {offer.offer_type}
+                      </p>
+
+                      <p style={{ margin: "0 0 6px" }}>
+                        <strong>Price:</strong>{" "}
+                        {formatMoney(offer.price, offer.currency)}
+                      </p>
+
+                      <p style={{ margin: "0 0 6px" }}>
+                        <strong>Status:</strong> {offer.status}
+                      </p>
+
+                      <div
+                        style={{
+                          marginTop: "10px",
+                          border: "1px solid #dddddd",
+                          borderRadius: "8px",
+                          padding: "10px",
+                          background: "#ffffff",
+                        }}
+                      >
+                        <strong>Items:</strong>
+
+                        {!offer.offer_items ||
+                        offer.offer_items.length === 0 ? (
+                          <p style={{ margin: "6px 0 0", color: "#666666" }}>
+                            No offer items.
+                          </p>
+                        ) : (
+                          <ul style={{ margin: "8px 0 0", paddingLeft: "20px" }}>
+                            {offer.offer_items.map((item) => (
+                              <li key={item.id}>
+                                {item.value_objects?.title ??
+                                  item.value_object_id}{" "}
+                                × {item.quantity} —{" "}
+                                {formatMoney(item.total_price, item.currency)}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
