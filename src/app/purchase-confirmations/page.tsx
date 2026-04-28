@@ -40,6 +40,12 @@ type PurchaseConfirmationsApiResponse = {
   error?: string;
 };
 
+type PurchaseConfirmationActionResponse = {
+  ok: boolean;
+  result?: unknown;
+  error?: string;
+};
+
 function formatDate(value: string | null | undefined) {
   if (!value) {
     return "—";
@@ -133,6 +139,12 @@ export default function PurchaseConfirmationsPage() {
   const [purchaseConfirmations, setPurchaseConfirmations] = useState<
     PurchaseConfirmation[]
   >([]);
+  const [sellerComments, setSellerComments] = useState<Record<string, string>>(
+    {}
+  );
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -146,13 +158,10 @@ export default function PurchaseConfirmationsPage() {
         cache: "no-store",
       });
 
-      const json =
-        (await response.json()) as PurchaseConfirmationsApiResponse;
+      const json = (await response.json()) as PurchaseConfirmationsApiResponse;
 
       if (!response.ok || !json.ok) {
-        throw new Error(
-          json.error ?? "Cannot load purchase confirmations"
-        );
+        throw new Error(json.error ?? "Cannot load purchase confirmations");
       }
 
       setPurchaseConfirmations(json.purchaseConfirmations ?? []);
@@ -163,6 +172,59 @@ export default function PurchaseConfirmationsPage() {
       setErrorMessage(message);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handlePurchaseConfirmationAction(
+    purchaseConfirmationId: string,
+    action: "confirm" | "reject"
+  ) {
+    setProcessingId(purchaseConfirmationId);
+    setActionMessage(null);
+    setActionError(null);
+
+    try {
+      const sellerComment = sellerComments[purchaseConfirmationId]?.trim();
+
+      const response = await fetch(
+        `/api/purchase-confirmations/${purchaseConfirmationId}/${action}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+          body: JSON.stringify({
+            sellerComment: sellerComment || null,
+          }),
+        }
+      );
+
+      const json =
+        (await response.json()) as PurchaseConfirmationActionResponse;
+
+      if (!response.ok || !json.ok) {
+        throw new Error(json.error ?? `Cannot ${action} purchase confirmation`);
+      }
+
+      setActionMessage(
+        action === "confirm"
+          ? "Покупка подтверждена. Если правило начисления найдено, points начислены."
+          : "Покупка отклонена."
+      );
+
+      setSellerComments((currentComments) => ({
+        ...currentComments,
+        [purchaseConfirmationId]: "",
+      }));
+
+      await loadPurchaseConfirmations();
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : "Unknown action error"
+      );
+    } finally {
+      setProcessingId(null);
     }
   }
 
@@ -179,11 +241,13 @@ export default function PurchaseConfirmationsPage() {
   ).length;
 
   const totalPointsAwarded = purchaseConfirmations.reduce((sum, item) => {
-    return sum + (typeof item.points_awarded === "number" ? item.points_awarded : 0);
+    return (
+      sum + (typeof item.points_awarded === "number" ? item.points_awarded : 0)
+    );
   }, 0);
 
   return (
-    <main style={{ padding: "32px", maxWidth: "1200px", margin: "0 auto" }}>
+    <main style={{ padding: "32px", maxWidth: "1300px", margin: "0 auto" }}>
       <div style={{ marginBottom: "28px" }}>
         <h1 style={{ fontSize: "32px", marginBottom: "8px" }}>
           Подтверждения покупок
@@ -236,7 +300,7 @@ export default function PurchaseConfirmationsPage() {
           <section
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
               gap: "16px",
               marginBottom: "28px",
             }}
@@ -310,6 +374,36 @@ export default function PurchaseConfirmationsPage() {
             </div>
           </section>
 
+          {actionError && (
+            <section
+              style={{
+                border: "1px solid #f2b8b5",
+                borderRadius: "12px",
+                padding: "14px 18px",
+                background: "#fff5f5",
+                color: "#a40000",
+                marginBottom: "16px",
+              }}
+            >
+              {actionError}
+            </section>
+          )}
+
+          {actionMessage && (
+            <section
+              style={{
+                border: "1px solid #bfe5c8",
+                borderRadius: "12px",
+                padding: "14px 18px",
+                background: "#edf8f0",
+                color: "#176b2c",
+                marginBottom: "16px",
+              }}
+            >
+              {actionMessage}
+            </section>
+          )}
+
           <section
             style={{
               border: "1px solid #ddd",
@@ -364,7 +458,7 @@ export default function PurchaseConfirmationsPage() {
                   style={{
                     width: "100%",
                     borderCollapse: "collapse",
-                    minWidth: "1100px",
+                    minWidth: "1250px",
                   }}
                 >
                   <thead>
@@ -376,8 +470,11 @@ export default function PurchaseConfirmationsPage() {
                       <th style={{ padding: "12px 16px" }}>Сумма</th>
                       <th style={{ padding: "12px 16px" }}>Points</th>
                       <th style={{ padding: "12px 16px" }}>Комментарий</th>
-                      <th style={{ padding: "12px 16px" }}>Комментарий продавца</th>
+                      <th style={{ padding: "12px 16px" }}>
+                        Комментарий продавца
+                      </th>
                       <th style={{ padding: "12px 16px" }}>Чек</th>
+                      <th style={{ padding: "12px 16px" }}>Действия</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -386,6 +483,9 @@ export default function PurchaseConfirmationsPage() {
                         item.organizations?.organization_name ?? "—";
 
                       const statusStyle = getStatusStyle(item.status);
+                      const canMakeDecision =
+                        item.status === "requested" || item.status === "rejected";
+                      const isProcessingThisItem = processingId === item.id;
 
                       return (
                         <tr
@@ -439,7 +539,29 @@ export default function PurchaseConfirmationsPage() {
                             {item.user_comment ?? "—"}
                           </td>
                           <td style={{ padding: "12px 16px" }}>
-                            {item.seller_comment ?? "—"}
+                            <div style={{ display: "grid", gap: "8px" }}>
+                              <div>{item.seller_comment ?? "—"}</div>
+
+                              {canMakeDecision && (
+                                <input
+                                  type="text"
+                                  value={sellerComments[item.id] ?? ""}
+                                  onChange={(event) =>
+                                    setSellerComments((currentComments) => ({
+                                      ...currentComments,
+                                      [item.id]: event.target.value,
+                                    }))
+                                  }
+                                  placeholder="Комментарий решения"
+                                  style={{
+                                    padding: "8px 10px",
+                                    border: "1px solid #cbd5e1",
+                                    borderRadius: "8px",
+                                    minWidth: "180px",
+                                  }}
+                                />
+                              )}
+                            </div>
                           </td>
                           <td style={{ padding: "12px 16px" }}>
                             {item.receipt_url ? (
@@ -452,6 +574,73 @@ export default function PurchaseConfirmationsPage() {
                               </a>
                             ) : (
                               "—"
+                            )}
+                          </td>
+                          <td style={{ padding: "12px 16px" }}>
+                            {canMakeDecision ? (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "8px",
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  disabled={isProcessingThisItem}
+                                  onClick={() =>
+                                    void handlePurchaseConfirmationAction(
+                                      item.id,
+                                      "confirm"
+                                    )
+                                  }
+                                  style={{
+                                    padding: "8px 10px",
+                                    borderRadius: "8px",
+                                    border: "1px solid #16a34a",
+                                    background: isProcessingThisItem
+                                      ? "#bbf7d0"
+                                      : "#16a34a",
+                                    color: "#ffffff",
+                                    cursor: isProcessingThisItem
+                                      ? "not-allowed"
+                                      : "pointer",
+                                    fontWeight: 600,
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  Confirm
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={isProcessingThisItem}
+                                  onClick={() =>
+                                    void handlePurchaseConfirmationAction(
+                                      item.id,
+                                      "reject"
+                                    )
+                                  }
+                                  style={{
+                                    padding: "8px 10px",
+                                    borderRadius: "8px",
+                                    border: "1px solid #dc2626",
+                                    background: isProcessingThisItem
+                                      ? "#fecaca"
+                                      : "#dc2626",
+                                    color: "#ffffff",
+                                    cursor: isProcessingThisItem
+                                      ? "not-allowed"
+                                      : "pointer",
+                                    fontWeight: 600,
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            ) : (
+                              <span style={{ color: "#666" }}>—</span>
                             )}
                           </td>
                         </tr>
