@@ -74,6 +74,9 @@ export default function OrganizationDetailsPage() {
   const createOfferHref = `/offers/new?organizationId=${encodeURIComponent(
     organizationId
   )}`;
+  const purchaseConfirmationsHref = `/purchase-confirmations?organizationId=${encodeURIComponent(
+    organizationId
+  )}`;
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [valueObjects, setValueObjects] = useState<ValueObject[]>([]);
@@ -214,6 +217,10 @@ export default function OrganizationDetailsPage() {
             <Link href={createOfferHref} style={{ color: "#2563eb" }}>
               Create offer
             </Link>
+
+            <Link href={purchaseConfirmationsHref} style={{ color: "#2563eb" }}>
+              Purchase confirmations
+            </Link>
           </nav>
         </header>
 
@@ -299,6 +306,63 @@ export default function OrganizationDetailsPage() {
               >
                 ID: {organization.id}
               </p>
+            </section>
+
+            <section
+              style={{
+                border: "1px solid #bfdbfe",
+                borderRadius: "12px",
+                padding: "20px",
+                background: "#eff6ff",
+              }}
+            >
+              <h2 style={{ margin: "0 0 10px", fontSize: "24px" }}>
+                Purchase confirmations & points
+              </h2>
+
+              <p style={{ margin: "0 0 16px", color: "#374151" }}>
+                Здесь будет рабочий блок для регистрации покупки у этого
+                предприятия. Покупатель сможет отправить заявку, а продавец
+                сможет подтвердить или отклонить покупку. После подтверждения
+                система начислит points по правилам предприятия.
+              </p>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "12px",
+                  alignItems: "center",
+                }}
+              >
+                <Link
+                  href={purchaseConfirmationsHref}
+                  style={{
+                    display: "inline-block",
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    background: "#2563eb",
+                    color: "#ffffff",
+                    textDecoration: "none",
+                    fontWeight: 600,
+                  }}
+                >
+                  View purchase confirmations
+                </Link>
+
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    border: "1px solid #93c5fd",
+                    background: "#ffffff",
+                    color: "#1d4ed8",
+                  }}
+                >
+                  Следующий шаг: форма “Зарегистрировать покупку”
+                </span>
+              </div>
             </section>
 
             <section
