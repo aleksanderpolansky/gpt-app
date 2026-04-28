@@ -13,6 +13,7 @@ type Organization = {
 export default function NewValueObjectPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [organizationId, setOrganizationId] = useState("");
+  const [organizationIdFromUrl, setOrganizationIdFromUrl] = useState("");
 
   const [valueType, setValueType] = useState("service");
   const [title, setTitle] = useState("");
@@ -32,6 +33,13 @@ export default function NewValueObjectPage() {
     setIsLoadingOrganizations(true);
     setMessage("");
 
+    const urlOrganizationId =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("organizationId") ?? ""
+        : "";
+
+    setOrganizationIdFromUrl(urlOrganizationId);
+
     try {
       const response = await fetch("/api/organizations", {
         method: "GET",
@@ -45,8 +53,17 @@ export default function NewValueObjectPage() {
         return;
       }
 
-      const loadedOrganizations = data.organizations ?? [];
+      const loadedOrganizations: Organization[] = data.organizations ?? [];
       setOrganizations(loadedOrganizations);
+
+      const organizationFromUrl = loadedOrganizations.find(
+        (organization) => organization.id === urlOrganizationId
+      );
+
+      if (organizationFromUrl) {
+        setOrganizationId(organizationFromUrl.id);
+        return;
+      }
 
       if (loadedOrganizations.length > 0) {
         setOrganizationId(loadedOrganizations[0].id);
@@ -116,6 +133,10 @@ export default function NewValueObjectPage() {
       setIsSubmitting(false);
     }
   }
+
+  const selectedOrganization = organizations.find(
+    (organization) => organization.id === organizationId
+  );
 
   const isSubmitDisabled =
     isSubmitting ||
@@ -202,6 +223,19 @@ export default function NewValueObjectPage() {
               Мои организации
             </Link>
 
+            {organizationId && (
+              <Link
+                href={`/organizations/${organizationId}`}
+                style={{
+                  color: "#2563eb",
+                  textDecoration: "underline",
+                  fontSize: "16px",
+                }}
+              >
+                Открыть организацию
+              </Link>
+            )}
+
             <Link
               href="/value-objects"
               style={{
@@ -241,6 +275,38 @@ export default function NewValueObjectPage() {
           >
             You need to create an organization first.{" "}
             <Link href="/organizations/new">Create organization</Link>
+          </div>
+        )}
+
+        {organizationIdFromUrl &&
+          !selectedOrganization &&
+          !isLoadingOrganizations && (
+            <div
+              style={{
+                border: "1px solid #facc15",
+                borderRadius: "10px",
+                padding: "16px",
+                background: "#fefce8",
+                marginBottom: "16px",
+              }}
+            >
+              Organization from URL was not found or access is denied. The first
+              available organization was selected instead.
+            </div>
+          )}
+
+        {selectedOrganization && (
+          <div
+            style={{
+              border: "1px solid #bfdbfe",
+              borderRadius: "10px",
+              padding: "14px",
+              background: "#eff6ff",
+              marginBottom: "16px",
+            }}
+          >
+            Selected organization:{" "}
+            <strong>{selectedOrganization.organization_name}</strong>
           </div>
         )}
 
@@ -435,7 +501,9 @@ export default function NewValueObjectPage() {
             <input
               type="checkbox"
               checked={isMarketplaceSellable}
-              onChange={(event) => setIsMarketplaceSellable(event.target.checked)}
+              onChange={(event) =>
+                setIsMarketplaceSellable(event.target.checked)
+              }
             />
             Marketplace sellable
           </label>

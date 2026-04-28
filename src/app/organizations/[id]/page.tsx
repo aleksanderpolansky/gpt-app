@@ -68,6 +68,13 @@ export default function OrganizationDetailsPage() {
   const params = useParams();
   const organizationId = String(params.id);
 
+  const createValueObjectHref = `/value-objects/new?organizationId=${encodeURIComponent(
+    organizationId
+  )}`;
+  const createOfferHref = `/offers/new?organizationId=${encodeURIComponent(
+    organizationId
+  )}`;
+
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [valueObjects, setValueObjects] = useState<ValueObject[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -200,11 +207,11 @@ export default function OrganizationDetailsPage() {
               Мои организации
             </Link>
 
-            <Link href="/value-objects/new" style={{ color: "#2563eb" }}>
+            <Link href={createValueObjectHref} style={{ color: "#2563eb" }}>
               Create value object
             </Link>
 
-            <Link href="/offers/new" style={{ color: "#2563eb" }}>
+            <Link href={createOfferHref} style={{ color: "#2563eb" }}>
               Create offer
             </Link>
           </nav>
@@ -322,7 +329,7 @@ export default function OrganizationDetailsPage() {
                 </div>
 
                 <Link
-                  href="/value-objects/new"
+                  href={createValueObjectHref}
                   style={{
                     color: "#2563eb",
                     textDecoration: "underline",
@@ -399,7 +406,7 @@ export default function OrganizationDetailsPage() {
                 </div>
 
                 <Link
-                  href="/offers/new"
+                  href={createOfferHref}
                   style={{
                     color: "#2563eb",
                     textDecoration: "underline",
@@ -460,7 +467,9 @@ export default function OrganizationDetailsPage() {
                             No offer items.
                           </p>
                         ) : (
-                          <ul style={{ margin: "8px 0 0", paddingLeft: "20px" }}>
+                          <ul
+                            style={{ margin: "8px 0 0", paddingLeft: "20px" }}
+                          >
                             {offer.offer_items.map((item) => (
                               <li key={item.id}>
                                 {item.value_objects?.title ??

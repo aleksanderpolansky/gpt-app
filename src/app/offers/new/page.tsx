@@ -46,6 +46,7 @@ export default function NewOfferPage() {
   const [valueObjects, setValueObjects] = useState<ValueObject[]>([]);
 
   const [organizationId, setOrganizationId] = useState("");
+  const [organizationIdFromUrl, setOrganizationIdFromUrl] = useState("");
   const [valueObjectId, setValueObjectId] = useState("");
 
   const [offerItems, setOfferItems] = useState<OfferItemForm[]>([
@@ -105,6 +106,14 @@ export default function NewOfferPage() {
   async function loadOrganizations() {
     setIsLoadingOrganizations(true);
 
+    const urlOrganizationId =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("organizationId") ??
+          ""
+        : "";
+
+    setOrganizationIdFromUrl(urlOrganizationId);
+
     try {
       const response = await fetch("/api/organizations", {
         method: "GET",
@@ -118,8 +127,17 @@ export default function NewOfferPage() {
         return;
       }
 
-      const loadedOrganizations = data.organizations ?? [];
+      const loadedOrganizations: Organization[] = data.organizations ?? [];
       setOrganizations(loadedOrganizations);
+
+      const organizationFromUrl = loadedOrganizations.find(
+        (organization) => organization.id === urlOrganizationId
+      );
+
+      if (organizationFromUrl) {
+        setOrganizationId(organizationFromUrl.id);
+        return;
+      }
 
       if (loadedOrganizations.length > 0) {
         setOrganizationId(loadedOrganizations[0].id);
@@ -421,6 +439,19 @@ export default function NewOfferPage() {
               Мои организации
             </Link>
 
+            {organizationId && (
+              <Link
+                href={`/organizations/${organizationId}`}
+                style={{
+                  color: "#2563eb",
+                  textDecoration: "underline",
+                  fontSize: "16px",
+                }}
+              >
+                Открыть организацию
+              </Link>
+            )}
+
             <Link
               href="/offers"
               style={{
@@ -473,6 +504,23 @@ export default function NewOfferPage() {
             <Link href="/organizations/new">Create organization</Link>
           </div>
         )}
+
+        {organizationIdFromUrl &&
+          !selectedOrganization &&
+          !isLoadingOrganizations && (
+            <div
+              style={{
+                border: "1px solid #facc15",
+                borderRadius: "10px",
+                padding: "16px",
+                background: "#fefce8",
+                marginBottom: "16px",
+              }}
+            >
+              Organization from URL was not found or access is denied. The first
+              available organization was selected instead.
+            </div>
+          )}
 
         <form
           onSubmit={handleSubmit}
@@ -546,9 +594,7 @@ export default function NewOfferPage() {
               gap: "16px",
             }}
           >
-            <h2 style={{ margin: 0, fontSize: "22px" }}>
-              2. Offer header
-            </h2>
+            <h2 style={{ margin: 0, fontSize: "22px" }}>2. Offer header</h2>
 
             <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
               Main value object
@@ -735,9 +781,7 @@ export default function NewOfferPage() {
               }}
             >
               <div>
-                <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  3. Offer items
-                </h2>
+                <h2 style={{ margin: 0, fontSize: "22px" }}>3. Offer items</h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
                   Add one or more value objects with quantity and unit price.
                 </p>
@@ -775,7 +819,13 @@ export default function NewOfferPage() {
                 }}
               >
                 No value objects connected to this organization yet.{" "}
-                <Link href="/value-objects/new">Create value object</Link>
+                <Link
+                  href={`/value-objects/new?organizationId=${encodeURIComponent(
+                    organizationId
+                  )}`}
+                >
+                  Create value object
+                </Link>
               </div>
             )}
 
@@ -970,7 +1020,8 @@ export default function NewOfferPage() {
                   </label>
 
                   <p style={{ margin: 0, fontWeight: 700 }}>
-                    Line total: {lineTotal.toFixed(2)} {item.currency || currency}
+                    Line total: {lineTotal.toFixed(2)}{" "}
+                    {item.currency || currency}
                   </p>
                 </div>
               );
