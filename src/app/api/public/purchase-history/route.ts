@@ -29,6 +29,14 @@ type ConfirmedPurchaseRow = {
   app_users?: PublicAppUser | PublicAppUser[] | null;
 };
 
+type PurchaseConfirmationEventRow = {
+  id: string;
+  purchase_confirmation_id: string;
+  event_type: string;
+  record_hash: string | null;
+  created_at: string;
+};
+
 function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   if (!value) {
     return null;
@@ -113,6 +121,27 @@ function createShortPublicHash(value: string | null | undefined) {
   return `${value.slice(0, 8)}...${value.slice(-4)}`;
 }
 
+function choosePublicEventHash(
+  purchaseConfirmationId: string,
+  events: PurchaseConfirmationEventRow[]
+) {
+  const matchingEvents = events
+    .filter((event) => event.purchase_confirmation_id === purchaseConfirmationId)
+    .filter(
+      (event) =>
+        event.event_type === "confirmed" ||
+        event.event_type === "corrected_to_confirmed"
+    )
+    .sort((firstEvent, secondEvent) => {
+      return (
+        new Date(secondEvent.created_at).getTime() -
+        new Date(firstEvent.created_at).getTime()
+      );
+    });
+
+  return matchingEvents[0]?.record_hash ?? null;
+}
+
 export async function GET() {
   const { data: confirmedPurchases, error: confirmedPurchasesError } =
     await supabase
@@ -154,16 +183,49 @@ export async function GET() {
   }
 
   const rows = (confirmedPurchases ?? []) as unknown as ConfirmedPurchaseRow[];
+  const purchaseConfirmationIds = rows.map((purchase) => purchase.id);
+
+  let purchaseConfirmationEvents: PurchaseConfirmationEventRow[] = [];
+
+  if (purchaseConfirmationIds.length > 0) {
+    const { data: events, error: eventsError } = await supabase
+      .from("purchase_confirmation_events")
+      .select(
+        `
+        id,
+        purchase_confirmation_id,
+        event_type,
+        record_hash,
+        created_at
+      `
+      )
+      .in("purchase_confirmation_id", purchaseConfirmationIds)
+      .in("event_type", ["confirmed", "corrected_to_confirmed"])
+      .order("created_at", { ascending: false });
+
+    if (eventsError) {
+      return NextResponse.json({ error: eventsError.message }, { status: 500 });
+    }
+
+    purchaseConfirmationEvents =
+      (events ?? []) as unknown as PurchaseConfirmationEventRow[];
+  }
 
   const publicPurchaseHistory = rows.map((purchase) => {
     const organization = getFirstRelatedItem(purchase.organizations);
     const appUser = getFirstRelatedItem(purchase.app_users);
 
     const buyerDisplayName = appUser?.name ?? appUser?.email ?? null;
+    const eventHash = choosePublicEventHash(
+      purchase.id,
+      purchaseConfirmationEvents
+    );
 
     return {
-      publicCode: purchase.buyer_public_code ?? purchase.id,
-      publicHash: createShortPublicHash(purchase.id),
+      publicCode: purchase.buyer_public_code ?? "—",
+      publicHash: createShortPublicHash(
+        eventHash ?? purchase.buyer_public_code ?? null
+      ),
       organizationName:
         organization?.organization_name ?? "Unknown organization",
       organizationId: purchase.organization_id,
