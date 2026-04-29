@@ -111,7 +111,7 @@ function maskPublicFullName(value: string | null | undefined) {
 
 function createShortPublicHash(value: string | null | undefined) {
   if (!value) {
-    return "—";
+    return "legacy-record";
   }
 
   if (value.length <= 12) {
@@ -223,9 +223,7 @@ export async function GET() {
 
     return {
       publicCode: purchase.buyer_public_code ?? "—",
-      publicHash: createShortPublicHash(
-        eventHash ?? purchase.buyer_public_code ?? null
-      ),
+      publicHash: createShortPublicHash(eventHash),
       organizationName:
         organization?.organization_name ?? "Unknown organization",
       organizationId: purchase.organization_id,
