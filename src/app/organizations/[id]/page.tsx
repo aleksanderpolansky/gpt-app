@@ -85,6 +85,7 @@ export default function OrganizationDetailsPage() {
   const purchaseConfirmationsHref = `/purchase-confirmations?organizationId=${encodeURIComponent(
     organizationId
   )}`;
+  const publicPurchaseHistoryHref = "/purchase-history";
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [valueObjects, setValueObjects] = useState<ValueObject[]>([]);
@@ -298,6 +299,10 @@ export default function OrganizationDetailsPage() {
 
             <Link href={purchaseConfirmationsHref} style={{ color: "#2563eb" }}>
               Purchase confirmations
+            </Link>
+
+            <Link href={publicPurchaseHistoryHref} style={{ color: "#2563eb" }}>
+              Public purchase history
             </Link>
           </nav>
         </header>
@@ -577,6 +582,22 @@ export default function OrganizationDetailsPage() {
                     }}
                   >
                     View purchase confirmations
+                  </Link>
+
+                  <Link
+                    href={publicPurchaseHistoryHref}
+                    style={{
+                      display: "inline-block",
+                      padding: "10px 14px",
+                      borderRadius: "8px",
+                      background: "#ffffff",
+                      color: "#2563eb",
+                      border: "1px solid #93c5fd",
+                      textDecoration: "none",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Public purchase history
                   </Link>
                 </div>
               </form>
