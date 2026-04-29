@@ -75,6 +75,29 @@ export async function GET() {
     );
   }
 
+  const { data: sellerOrganizations, error: sellerOrganizationsError } =
+    await supabase
+      .from("organizations")
+      .select("id")
+      .eq("created_by_user_id", appUser.id);
+
+  if (sellerOrganizationsError) {
+    return NextResponse.json(
+      { error: sellerOrganizationsError.message },
+      { status: 500 }
+    );
+  }
+
+  const sellerOrganizationIds =
+    sellerOrganizations?.map((organization) => organization.id) ?? [];
+
+  if (sellerOrganizationIds.length === 0) {
+    return NextResponse.json({
+      ok: true,
+      purchaseConfirmations: [],
+    });
+  }
+
   const { data: purchaseConfirmations, error: purchaseConfirmationsError } =
     await supabase
       .from("purchase_confirmations")
@@ -91,7 +114,7 @@ export async function GET() {
         )
       `
       )
-      .or(`buyer_user_id.eq.${appUser.id},confirmed_by_user_id.eq.${appUser.id}`)
+      .in("organization_id", sellerOrganizationIds)
       .order("created_at", { ascending: false });
 
   if (purchaseConfirmationsError) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Organization = {
   id: string;
@@ -139,6 +139,9 @@ export default function PurchaseConfirmationsPage() {
   const [purchaseConfirmations, setPurchaseConfirmations] = useState<
     PurchaseConfirmation[]
   >([]);
+  const [organizationIdFilter, setOrganizationIdFilter] = useState<
+    string | null
+  >(null);
   const [sellerComments, setSellerComments] = useState<Record<string, string>>(
     {}
   );
@@ -147,6 +150,31 @@ export default function PurchaseConfirmationsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const visiblePurchaseConfirmations = useMemo(() => {
+    if (!organizationIdFilter) {
+      return purchaseConfirmations;
+    }
+
+    return purchaseConfirmations.filter(
+      (item) => item.organization_id === organizationIdFilter
+    );
+  }, [purchaseConfirmations, organizationIdFilter]);
+
+  const activeOrganizationName = useMemo(() => {
+    if (!organizationIdFilter) {
+      return null;
+    }
+
+    const matchingPurchaseConfirmation = purchaseConfirmations.find(
+      (item) => item.organization_id === organizationIdFilter
+    );
+
+    return (
+      matchingPurchaseConfirmation?.organizations?.organization_name ??
+      organizationIdFilter
+    );
+  }, [purchaseConfirmations, organizationIdFilter]);
 
   async function loadPurchaseConfirmations() {
     setIsLoading(true);
@@ -228,23 +256,41 @@ export default function PurchaseConfirmationsPage() {
     }
   }
 
+  function clearOrganizationFilter() {
+    setOrganizationIdFilter(null);
+
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", "/purchase-confirmations");
+    }
+  }
+
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const organizationId = searchParams.get("organizationId");
+
+      setOrganizationIdFilter(organizationId);
+    }
+
     void loadPurchaseConfirmations();
   }, []);
 
-  const requestedCount = purchaseConfirmations.filter(
+  const requestedCount = visiblePurchaseConfirmations.filter(
     (item) => item.status === "requested"
   ).length;
 
-  const confirmedCount = purchaseConfirmations.filter(
+  const confirmedCount = visiblePurchaseConfirmations.filter(
     (item) => item.status === "confirmed"
   ).length;
 
-  const totalPointsAwarded = purchaseConfirmations.reduce((sum, item) => {
-    return (
-      sum + (typeof item.points_awarded === "number" ? item.points_awarded : 0)
-    );
-  }, 0);
+  const totalPointsAwarded = visiblePurchaseConfirmations.reduce(
+    (sum, item) => {
+      return (
+        sum + (typeof item.points_awarded === "number" ? item.points_awarded : 0)
+      );
+    },
+    0
+  );
 
   return (
     <main style={{ padding: "32px", maxWidth: "1300px", margin: "0 auto" }}>
@@ -257,6 +303,45 @@ export default function PurchaseConfirmationsPage() {
           продавцом система может начислить пользователю points.
         </p>
       </div>
+
+      {organizationIdFilter && (
+        <section
+          style={{
+            border: "1px solid #bfdbfe",
+            borderRadius: "12px",
+            padding: "14px 18px",
+            background: "#eff6ff",
+            color: "#1e3a8a",
+            marginBottom: "18px",
+            display: "flex",
+            justifyContent: "space-between",
+            gap: "12px",
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <strong>Фильтр по организации:</strong>{" "}
+            {activeOrganizationName ?? organizationIdFilter}
+          </div>
+
+          <button
+            type="button"
+            onClick={clearOrganizationFilter}
+            style={{
+              padding: "8px 12px",
+              borderRadius: "8px",
+              border: "1px solid #93c5fd",
+              background: "#ffffff",
+              color: "#1d4ed8",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            Показать все заявки
+          </button>
+        </section>
+      )}
 
       {isLoading ? (
         <section
@@ -318,7 +403,7 @@ export default function PurchaseConfirmationsPage() {
                 Всего заявок
               </div>
               <div style={{ fontSize: "32px", fontWeight: 700 }}>
-                {purchaseConfirmations.length}
+                {visiblePurchaseConfirmations.length}
               </div>
             </div>
 
@@ -448,7 +533,7 @@ export default function PurchaseConfirmationsPage() {
               </button>
             </div>
 
-            {purchaseConfirmations.length === 0 ? (
+            {visiblePurchaseConfirmations.length === 0 ? (
               <div style={{ padding: "24px", color: "#666" }}>
                 Заявок на подтверждение покупок пока нет.
               </div>
@@ -478,7 +563,7 @@ export default function PurchaseConfirmationsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {purchaseConfirmations.map((item) => {
+                    {visiblePurchaseConfirmations.map((item) => {
                       const organizationName =
                         item.organizations?.organization_name ?? "—";
 

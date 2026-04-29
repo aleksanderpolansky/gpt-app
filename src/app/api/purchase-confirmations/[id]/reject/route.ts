@@ -57,6 +57,66 @@ function parseOptionalText(value: unknown) {
   return trimmedValue;
 }
 
+async function checkSellerAccessToPurchaseConfirmation(
+  purchaseConfirmationId: string,
+  appUserId: string
+) {
+  const { data: purchaseConfirmation, error: purchaseConfirmationError } =
+    await supabase
+      .from("purchase_confirmations")
+      .select("id, organization_id")
+      .eq("id", purchaseConfirmationId)
+      .single();
+
+  if (purchaseConfirmationError || !purchaseConfirmation) {
+    return {
+      hasAccess: false,
+      errorResponse: NextResponse.json(
+        {
+          error:
+            purchaseConfirmationError?.message ??
+            "Purchase confirmation not found",
+        },
+        { status: 404 }
+      ),
+    };
+  }
+
+  const { data: organization, error: organizationError } = await supabase
+    .from("organizations")
+    .select("id, created_by_user_id")
+    .eq("id", purchaseConfirmation.organization_id)
+    .single();
+
+  if (organizationError || !organization) {
+    return {
+      hasAccess: false,
+      errorResponse: NextResponse.json(
+        { error: organizationError?.message ?? "Organization not found" },
+        { status: 404 }
+      ),
+    };
+  }
+
+  if (organization.created_by_user_id !== appUserId) {
+    return {
+      hasAccess: false,
+      errorResponse: NextResponse.json(
+        {
+          error:
+            "Access denied. Only the organization owner can reject this purchase.",
+        },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return {
+    hasAccess: true,
+    errorResponse: null,
+  };
+}
+
 export async function POST(request: Request, context: RouteContext) {
   const { appUser, errorResponse } = await getCurrentAppUser();
 
@@ -74,6 +134,15 @@ export async function POST(request: Request, context: RouteContext) {
   const params = await context.params;
   const purchaseConfirmationId = params.id;
 
+  const accessCheck = await checkSellerAccessToPurchaseConfirmation(
+    purchaseConfirmationId,
+    appUser.id
+  );
+
+  if (accessCheck.errorResponse) {
+    return accessCheck.errorResponse;
+  }
+
   const body = await request.json().catch(() => ({}));
   const sellerComment = parseOptionalText(body.sellerComment);
 
@@ -87,10 +156,7 @@ export async function POST(request: Request, context: RouteContext) {
   );
 
   if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   return NextResponse.json({
