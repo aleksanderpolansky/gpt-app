@@ -300,7 +300,7 @@ export default function OrganizationDetailsPage() {
             </Link>
 
             <Link href={purchaseConfirmationsHref} style={{ color: "#2563eb" }}>
-              Purchase confirmations
+              Seller purchase confirmations
             </Link>
 
             <Link href={publicPurchaseHistoryHref} style={{ color: "#2563eb" }}>
@@ -415,11 +415,25 @@ export default function OrganizationDetailsPage() {
                 Purchase confirmations & points
               </h2>
 
-              <p style={{ margin: "0 0 16px", color: "#374151" }}>
+              <p style={{ margin: "0 0 12px", color: "#374151" }}>
                 Здесь покупатель может зарегистрировать покупку у этого
                 предприятия. Продавец позже подтвердит или отклонит заявку.
                 После подтверждения система начислит points по правилам
                 предприятия.
+              </p>
+
+              <p
+                style={{
+                  margin: "0 0 16px",
+                  color: "#1e3a8a",
+                  fontSize: "14px",
+                  lineHeight: "1.5",
+                }}
+              >
+                Seller purchase confirmations — это закрытая панель продавца.
+                Она доступна только владельцу предприятия. Покупатели и другие
+                пользователи видят только публичную историю подтверждённых
+                покупок.
               </p>
 
               <form
@@ -583,7 +597,7 @@ export default function OrganizationDetailsPage() {
                       fontWeight: 600,
                     }}
                   >
-                    View purchase confirmations
+                    Seller purchase confirmations
                   </Link>
 
                   <Link
