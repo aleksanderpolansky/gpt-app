@@ -88,6 +88,7 @@ export default function OrganizationDetailsPage() {
   const publicPurchaseHistoryHref = `/purchase-history?organizationId=${encodeURIComponent(
     organizationId
   )}`;
+  const myPurchaseConfirmationsHref = "/my-purchase-confirmations";
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [valueObjects, setValueObjects] = useState<ValueObject[]>([]);
@@ -299,6 +300,10 @@ export default function OrganizationDetailsPage() {
               Create offer
             </Link>
 
+            <Link href={myPurchaseConfirmationsHref} style={{ color: "#2563eb" }}>
+              My purchase confirmations
+            </Link>
+
             <Link href={purchaseConfirmationsHref} style={{ color: "#2563eb" }}>
               Seller purchase confirmations
             </Link>
@@ -433,7 +438,8 @@ export default function OrganizationDetailsPage() {
                 Seller purchase confirmations — это закрытая панель продавца.
                 Она доступна только владельцу предприятия. Покупатели и другие
                 пользователи видят только публичную историю подтверждённых
-                покупок.
+                покупок. My purchase confirmations — это личная страница
+                покупателя со своими заявками.
               </p>
 
               <form
@@ -583,6 +589,22 @@ export default function OrganizationDetailsPage() {
                       ? "Отправка..."
                       : "Зарегистрировать покупку"}
                   </button>
+
+                  <Link
+                    href={myPurchaseConfirmationsHref}
+                    style={{
+                      display: "inline-block",
+                      padding: "10px 14px",
+                      borderRadius: "8px",
+                      background: "#ffffff",
+                      color: "#2563eb",
+                      border: "1px solid #93c5fd",
+                      textDecoration: "none",
+                      fontWeight: 600,
+                    }}
+                  >
+                    My purchase confirmations
+                  </Link>
 
                   <Link
                     href={purchaseConfirmationsHref}
