@@ -15,6 +15,7 @@ type PublicPurchaseHistoryItem = {
 
 type PublicPurchaseHistoryApiResponse = {
   ok: boolean;
+  organizationId?: string | null;
   publicPurchaseHistory?: PublicPurchaseHistoryItem[];
   error?: string;
 };
@@ -47,15 +48,32 @@ export default function PurchaseHistoryPage() {
   const [purchaseHistory, setPurchaseHistory] = useState<
     PublicPurchaseHistoryItem[]
   >([]);
+  const [organizationIdFilter, setOrganizationIdFilter] = useState<
+    string | null
+  >(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  async function loadPurchaseHistory() {
+  const activeOrganizationName =
+    purchaseHistory[0]?.organizationName ?? organizationIdFilter;
+
+  async function loadPurchaseHistory(nextOrganizationId?: string | null) {
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
-      const response = await fetch("/api/public/purchase-history", {
+      const organizationIdToUse =
+        nextOrganizationId === undefined
+          ? organizationIdFilter
+          : nextOrganizationId;
+
+      const apiUrl = organizationIdToUse
+        ? `/api/public/purchase-history?organizationId=${encodeURIComponent(
+            organizationIdToUse
+          )}`
+        : "/api/public/purchase-history";
+
+      const response = await fetch(apiUrl, {
         method: "GET",
         cache: "no-store",
       });
@@ -67,6 +85,7 @@ export default function PurchaseHistoryPage() {
       }
 
       setPurchaseHistory(json.publicPurchaseHistory ?? []);
+      setOrganizationIdFilter(json.organizationId ?? organizationIdToUse ?? null);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Unknown loading error"
@@ -76,8 +95,26 @@ export default function PurchaseHistoryPage() {
     }
   }
 
+  function clearOrganizationFilter() {
+    setOrganizationIdFilter(null);
+
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", "/purchase-history");
+    }
+
+    void loadPurchaseHistory(null);
+  }
+
   useEffect(() => {
-    void loadPurchaseHistory();
+    let initialOrganizationId: string | null = null;
+
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      initialOrganizationId = searchParams.get("organizationId");
+      setOrganizationIdFilter(initialOrganizationId);
+    }
+
+    void loadPurchaseHistory(initialOrganizationId);
   }, []);
 
   return (
@@ -121,6 +158,45 @@ export default function PurchaseHistoryPage() {
             чеки, внутренние ID и комментарии продавца не публикуются.
           </p>
         </header>
+
+        {organizationIdFilter && (
+          <section
+            style={{
+              border: "1px solid #bfdbfe",
+              borderRadius: "12px",
+              padding: "14px 18px",
+              background: "#eff6ff",
+              color: "#1e3a8a",
+              marginBottom: "18px",
+              display: "flex",
+              justifyContent: "space-between",
+              gap: "12px",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <strong>Фильтр по предприятию:</strong>{" "}
+              {activeOrganizationName ?? organizationIdFilter}
+            </div>
+
+            <button
+              type="button"
+              onClick={clearOrganizationFilter}
+              style={{
+                padding: "8px 12px",
+                borderRadius: "8px",
+                border: "1px solid #93c5fd",
+                background: "#ffffff",
+                color: "#1d4ed8",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              Показать все покупки
+            </button>
+          </section>
+        )}
 
         <section
           style={{
@@ -278,7 +354,7 @@ export default function PurchaseHistoryPage() {
                   <tbody>
                     {purchaseHistory.map((item) => (
                       <tr
-                        key={`${item.publicCode}-${item.publicHash}`}
+                        key={`${item.publicCode}-${item.publicHash}-${item.purchaseDate}`}
                         style={{ borderTop: "1px solid #eeeeee" }}
                       >
                         <td
@@ -298,8 +374,7 @@ export default function PurchaseHistoryPage() {
                           style={{
                             padding: "12px 16px",
                             whiteSpace: "nowrap",
-                            fontFamily:
-                              "Arial, Helvetica, sans-serif",
+                            fontFamily: "Arial, Helvetica, sans-serif",
                           }}
                         >
                           {item.buyerMaskedName}
