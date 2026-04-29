@@ -64,12 +64,64 @@ type PurchaseConfirmationCreateResponse = {
   error?: string;
 };
 
+type MinimumPurchaseThreshold = {
+  currency: string;
+  amount: number;
+};
+
+const MINIMUM_PURCHASE_THRESHOLDS: Record<string, MinimumPurchaseThreshold> = {
+  EUR: {
+    currency: "EUR",
+    amount: 10,
+  },
+  PLN: {
+    currency: "PLN",
+    amount: 45,
+  },
+  USD: {
+    currency: "USD",
+    amount: 11,
+  },
+  GBP: {
+    currency: "GBP",
+    amount: 9,
+  },
+  UAH: {
+    currency: "UAH",
+    amount: 450,
+  },
+  CZK: {
+    currency: "CZK",
+    amount: 250,
+  },
+};
+
 function formatMoney(value: number | string | null, currency: string | null) {
   if (value === null || value === undefined || value === "") {
     return "Not specified";
   }
 
   return `${value} ${currency || ""}`.trim();
+}
+
+function normalizeCurrency(value: string | null | undefined) {
+  if (!value) {
+    return "";
+  }
+
+  return value.trim().toUpperCase();
+}
+
+function getMinimumPurchaseThreshold(
+  currency: string | null | undefined
+): MinimumPurchaseThreshold | null {
+  const normalizedCurrency = normalizeCurrency(currency);
+
+  if (!normalizedCurrency) {
+    return null;
+  }
+
+  return MINIMUM_PURCHASE_THRESHOLDS[normalizedCurrency] ?? null;
 }
 
 export default function OrganizationDetailsPage() {
@@ -120,7 +172,13 @@ export default function OrganizationDetailsPage() {
   }, [offers, organizationId]);
 
   const effectivePurchaseCurrency =
-    purchaseCurrency.trim() || organization?.default_currency || "PLN";
+    normalizeCurrency(purchaseCurrency) ||
+    normalizeCurrency(organization?.default_currency) ||
+    "PLN";
+
+  const minimumPurchaseThreshold = getMinimumPurchaseThreshold(
+    effectivePurchaseCurrency
+  );
 
   async function loadData() {
     setIsLoading(true);
@@ -457,6 +515,42 @@ export default function OrganizationDetailsPage() {
                 <h3 style={{ margin: 0, fontSize: "20px" }}>
                   Зарегистрировать покупку
                 </h3>
+
+                {minimumPurchaseThreshold ? (
+                  <div
+                    style={{
+                      border: "1px solid #bfdbfe",
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      background: "#eff6ff",
+                      color: "#1e3a8a",
+                      fontSize: "14px",
+                      lineHeight: "1.5",
+                    }}
+                  >
+                    Минимальная сумма для начисления 10 points: больше{" "}
+                    <strong>
+                      {minimumPurchaseThreshold.amount}{" "}
+                      {minimumPurchaseThreshold.currency}
+                    </strong>
+                    .
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      border: "1px solid #facc15",
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      background: "#fefce8",
+                      color: "#713f12",
+                      fontSize: "14px",
+                      lineHeight: "1.5",
+                    }}
+                  >
+                    Минимальный порог начисления points пока не определён:
+                    проверьте страну и валюту предприятия.
+                  </div>
+                )}
 
                 <div
                   style={{
