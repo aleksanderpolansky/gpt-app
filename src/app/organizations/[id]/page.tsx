@@ -85,7 +85,9 @@ export default function OrganizationDetailsPage() {
   const purchaseConfirmationsHref = `/purchase-confirmations?organizationId=${encodeURIComponent(
     organizationId
   )}`;
-  const publicPurchaseHistoryHref = "/purchase-history";
+  const publicPurchaseHistoryHref = `/purchase-history?organizationId=${encodeURIComponent(
+    organizationId
+  )}`;
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [valueObjects, setValueObjects] = useState<ValueObject[]>([]);
