@@ -555,12 +555,31 @@ export default function OrganizationDetailsPage() {
                     style={{
                       border: "1px solid #bfe5c8",
                       borderRadius: "8px",
-                      padding: "10px 12px",
+                      padding: "12px",
                       background: "#edf8f0",
                       color: "#176b2c",
+                      display: "grid",
+                      gap: "10px",
                     }}
                   >
-                    {purchaseSubmitMessage}
+                    <div>{purchaseSubmitMessage}</div>
+
+                    <Link
+                      href={myPurchaseConfirmationsHref}
+                      style={{
+                        display: "inline-block",
+                        width: "fit-content",
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        background: "#ffffff",
+                        color: "#176b2c",
+                        border: "1px solid #bfe5c8",
+                        textDecoration: "none",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Посмотреть мои заявки
+                    </Link>
                   </div>
                 )}
 

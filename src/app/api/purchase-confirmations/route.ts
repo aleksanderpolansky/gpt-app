@@ -2,6 +2,39 @@ import { NextResponse } from "next/server";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 
+type OrganizationMinimumThreshold = {
+  currency: string;
+  amount: number;
+};
+
+const MINIMUM_PURCHASE_THRESHOLDS: Record<string, OrganizationMinimumThreshold> =
+  {
+    EUR: {
+      currency: "EUR",
+      amount: 10,
+    },
+    PLN: {
+      currency: "PLN",
+      amount: 45,
+    },
+    USD: {
+      currency: "USD",
+      amount: 11,
+    },
+    GBP: {
+      currency: "GBP",
+      amount: 9,
+    },
+    UAH: {
+      currency: "UAH",
+      amount: 450,
+    },
+    CZK: {
+      currency: "CZK",
+      amount: 250,
+    },
+  };
+
 async function getCurrentAppUser() {
   const session = await auth0.getSession();
 
@@ -59,6 +92,38 @@ function parseRequiredNumber(value: unknown) {
   }
 
   return parsedValue;
+}
+
+function normalizeCurrency(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const normalizedValue = value.trim().toUpperCase();
+
+  if (normalizedValue.length === 0) {
+    return null;
+  }
+
+  return normalizedValue;
+}
+
+function getMinimumPurchaseThreshold(currency: string | null) {
+  if (!currency) {
+    return null;
+  }
+
+  return MINIMUM_PURCHASE_THRESHOLDS[currency] ?? null;
+}
+
+function createMinimumPurchaseErrorMessage(
+  threshold: OrganizationMinimumThreshold | null
+) {
+  if (!threshold) {
+    return "Заявка не создана. Для этого предприятия пока не задан минимальный порог начисления points: в настройках предприятия не указана страна или валюта.";
+  }
+
+  return `Заявка не создана. Для начисления 10 points сумма покупки должна быть больше ${threshold.amount} ${threshold.currency}.`;
 }
 
 export async function GET() {
@@ -148,7 +213,9 @@ export async function POST(request: Request) {
 
   const organizationId = parseOptionalText(body.organizationId);
   const purchaseAmount = parseRequiredNumber(body.purchaseAmount);
-  const purchaseCurrency = parseOptionalText(body.purchaseCurrency);
+  const purchaseCurrencyFromRequest = normalizeCurrency(
+    parseOptionalText(body.purchaseCurrency)
+  );
   const userComment = parseOptionalText(body.userComment);
   const receiptUrl = parseOptionalText(body.receiptUrl);
 
@@ -159,12 +226,51 @@ export async function POST(request: Request) {
     );
   }
 
+  const { data: organization, error: organizationError } = await supabase
+    .from("organizations")
+    .select("id, country_code, default_currency")
+    .eq("id", organizationId)
+    .single();
+
+  if (organizationError || !organization) {
+    return NextResponse.json(
+      { error: organizationError?.message ?? "Organization not found" },
+      { status: 500 }
+    );
+  }
+
+  const effectivePurchaseCurrency =
+    purchaseCurrencyFromRequest ??
+    normalizeCurrency(organization.default_currency ?? null);
+
+  const minimumThreshold = getMinimumPurchaseThreshold(
+    effectivePurchaseCurrency
+  );
+
+  if (!minimumThreshold) {
+    return NextResponse.json(
+      {
+        error: createMinimumPurchaseErrorMessage(null),
+      },
+      { status: 400 }
+    );
+  }
+
+  if (purchaseAmount <= minimumThreshold.amount) {
+    return NextResponse.json(
+      {
+        error: createMinimumPurchaseErrorMessage(minimumThreshold),
+      },
+      { status: 400 }
+    );
+  }
+
   const { data: purchaseConfirmationResult, error: purchaseConfirmationError } =
     await supabase.rpc("submit_purchase_confirmation", {
       p_buyer_user_id: appUser.id,
       p_organization_id: organizationId,
       p_purchase_amount: purchaseAmount,
-      p_purchase_currency: purchaseCurrency,
+      p_purchase_currency: effectivePurchaseCurrency,
       p_user_comment: userComment,
       p_receipt_url: receiptUrl,
     });
