@@ -30,12 +30,16 @@ type ChatMessage = {
 export default function Home() {
   const [message, setMessage] = useState("");
   const [submittedMessage, setSubmittedMessage] = useState("");
-  const [serverResponse, setServerResponse] = useState("Пока сервер не вызывался.");
+  const [serverResponse, setServerResponse] = useState(
+    "Пока сервер не вызывался."
+  );
   const [user, setUser] = useState<UserProfile | null>(null);
   const [person, setPerson] = useState<SyncedPerson | null>(null);
   const [actor, setActor] = useState<SyncedActor | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [syncStatus, setSyncStatus] = useState("Синхронизация ещё не выполнялась.");
+  const [syncStatus, setSyncStatus] = useState(
+    "Синхронизация ещё не выполнялась."
+  );
 
   async function loadMessages() {
     const response = await fetch("/api/messages");
@@ -100,7 +104,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-white text-black px-4 py-10">
-      <div className="w-full max-w-xl text-center">
+      <div className="w-full max-w-3xl text-center">
         <h1 className="text-4xl font-bold mb-6">GPT App</h1>
 
         {user ? (
@@ -121,8 +125,8 @@ export default function Home() {
 
               {actor && (
                 <p>
-                  <span className="font-semibold">Actor:</span> {actor.display_name}{" "}
-                  ({actor.actor_type})
+                  <span className="font-semibold">Actor:</span>{" "}
+                  {actor.display_name} ({actor.actor_type})
                 </p>
               )}
             </div>
@@ -133,19 +137,98 @@ export default function Home() {
           </div>
         )}
 
-        <div className="flex gap-3 justify-center mb-8 flex-wrap">
-          <a href="/auth/login" className="bg-blue-600 text-white px-5 py-3 rounded">
+        <div className="flex gap-3 justify-center mb-6 flex-wrap">
+          <a
+            href="/auth/login"
+            className="bg-blue-600 text-white px-5 py-3 rounded"
+          >
             Войти
           </a>
 
-          <a href="/auth/logout" className="bg-gray-700 text-white px-5 py-3 rounded">
+          <a
+            href="/auth/logout"
+            className="bg-gray-700 text-white px-5 py-3 rounded"
+          >
             Выйти
           </a>
 
-          <a href="/auth/profile" className="bg-green-600 text-white px-5 py-3 rounded">
+          <a
+            href="/auth/profile"
+            className="bg-green-600 text-white px-5 py-3 rounded"
+          >
             Профиль
           </a>
         </div>
+
+        <section className="mb-8 border rounded p-4 bg-blue-50 text-left">
+          <h2 className="text-xl font-bold mb-3 text-center">
+            Основные разделы платформы
+          </h2>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <a
+              href="/organizations"
+              className="block border rounded bg-white p-4 hover:bg-gray-50"
+            >
+              <span className="font-semibold">Мои организации</span>
+              <span className="block text-sm text-gray-600 mt-1">
+                Создание и управление предприятиями.
+              </span>
+            </a>
+
+            <a
+              href="/my-purchase-confirmations"
+              className="block border rounded bg-white p-4 hover:bg-gray-50"
+            >
+              <span className="font-semibold">My purchase confirmations</span>
+              <span className="block text-sm text-gray-600 mt-1">
+                Личные заявки покупателя, статусы и начисленные points.
+              </span>
+            </a>
+
+            <a
+              href="/purchase-confirmations"
+              className="block border rounded bg-white p-4 hover:bg-gray-50"
+            >
+              <span className="font-semibold">
+                Seller purchase confirmations
+              </span>
+              <span className="block text-sm text-gray-600 mt-1">
+                Закрытая seller-панель подтверждения покупок.
+              </span>
+            </a>
+
+            <a
+              href="/purchase-history"
+              className="block border rounded bg-white p-4 hover:bg-gray-50"
+            >
+              <span className="font-semibold">Public purchase history</span>
+              <span className="block text-sm text-gray-600 mt-1">
+                Публичная безопасная история подтверждённых покупок.
+              </span>
+            </a>
+
+            <a
+              href="/points"
+              className="block border rounded bg-white p-4 hover:bg-gray-50"
+            >
+              <span className="font-semibold">Мои points</span>
+              <span className="block text-sm text-gray-600 mt-1">
+                Баланс пользователя и история операций points.
+              </span>
+            </a>
+
+            <a
+              href="/offers"
+              className="block border rounded bg-white p-4 hover:bg-gray-50"
+            >
+              <span className="font-semibold">Offers</span>
+              <span className="block text-sm text-gray-600 mt-1">
+                Коммерческие предложения, товары, услуги и сертификаты.
+              </span>
+            </a>
+          </div>
+        </section>
 
         <input
           type="text"
@@ -169,7 +252,9 @@ export default function Home() {
 
         <div className="border rounded p-4 text-left bg-gray-100 mb-4">
           <p className="font-semibold mb-2">Ответ GPT:</p>
-          <pre className="whitespace-pre-wrap break-words text-sm">{serverResponse}</pre>
+          <pre className="whitespace-pre-wrap break-words text-sm">
+            {serverResponse}
+          </pre>
         </div>
 
         <div className="border rounded p-4 text-left bg-yellow-50">
@@ -184,7 +269,9 @@ export default function Home() {
                   <p className="font-semibold">
                     {item.role === "user" ? "Пользователь" : "GPT"}
                   </p>
-                  <p className="whitespace-pre-wrap break-words">{item.content}</p>
+                  <p className="whitespace-pre-wrap break-words">
+                    {item.content}
+                  </p>
                 </div>
               ))}
             </div>
