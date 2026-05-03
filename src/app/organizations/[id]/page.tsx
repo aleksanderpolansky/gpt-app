@@ -1,8 +1,8 @@
-"use client";
+import { auth0 } from "../../../../lib/auth0";
+import { supabase } from "../../../../lib/supabase";
+import PurchaseConfirmationForm from "./PurchaseConfirmationForm";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+export const dynamic = "force-dynamic";
 
 type Organization = {
   id: string;
@@ -29,6 +29,12 @@ type ValueObject = {
   created_at: string;
 };
 
+type OfferItemValueObject = {
+  id: string;
+  title: string;
+  value_type: string;
+};
+
 type OfferItem = {
   id: string;
   value_object_id: string;
@@ -38,11 +44,7 @@ type OfferItem = {
   currency: string | null;
   is_required: boolean;
   status: string;
-  value_objects?: {
-    id: string;
-    title: string;
-    value_type: string;
-  } | null;
+  value_objects?: OfferItemValueObject | OfferItemValueObject[] | null;
 };
 
 type Offer = {
@@ -55,46 +57,40 @@ type Offer = {
   currency: string | null;
   status: string;
   created_at: string;
-  offer_items?: OfferItem[];
+  offer_items?: OfferItem[] | null;
 };
 
-type PurchaseConfirmationCreateResponse = {
-  ok: boolean;
-  purchaseConfirmation?: unknown;
-  error?: string;
+type AppUser = {
+  id: string;
+  auth0_sub: string;
+  email?: string | null;
+  name?: string | null;
 };
 
-type MinimumPurchaseThreshold = {
-  currency: string;
-  amount: number;
+type PageData = {
+  organization: Organization | null;
+  valueObjects: ValueObject[];
+  offers: Offer[];
+  errorMessage: string | null;
 };
 
-const MINIMUM_PURCHASE_THRESHOLDS: Record<string, MinimumPurchaseThreshold> = {
-  EUR: {
-    currency: "EUR",
-    amount: 10,
-  },
-  PLN: {
-    currency: "PLN",
-    amount: 45,
-  },
-  USD: {
-    currency: "USD",
-    amount: 11,
-  },
-  GBP: {
-    currency: "GBP",
-    amount: 9,
-  },
-  UAH: {
-    currency: "UAH",
-    amount: 450,
-  },
-  CZK: {
-    currency: "CZK",
-    amount: 250,
-  },
+type OrganizationDetailsPageProps = {
+  params: Promise<{
+    id: string;
+  }>;
 };
+
+function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value;
+}
 
 function formatMoney(value: number | string | null, currency: string | null) {
   if (value === null || value === undefined || value === "") {
@@ -104,29 +100,183 @@ function formatMoney(value: number | string | null, currency: string | null) {
   return `${value} ${currency || ""}`.trim();
 }
 
-function normalizeCurrency(value: string | null | undefined) {
-  if (!value) {
-    return "";
+async function getCurrentAppUser(): Promise<{
+  appUser: AppUser | null;
+  errorMessage: string | null;
+}> {
+  const session = await auth0.getSession();
+
+  if (!session?.user) {
+    return {
+      appUser: null,
+      errorMessage: "Not authenticated",
+    };
   }
 
-  return value.trim().toUpperCase();
-}
+  const { data: appUser, error: appUserError } = await supabase
+    .from("app_users")
+    .select("*")
+    .eq("auth0_sub", session.user.sub)
+    .single();
 
-function getMinimumPurchaseThreshold(
-  currency: string | null | undefined
-): MinimumPurchaseThreshold | null {
-  const normalizedCurrency = normalizeCurrency(currency);
-
-  if (!normalizedCurrency) {
-    return null;
+  if (appUserError || !appUser) {
+    return {
+      appUser: null,
+      errorMessage: appUserError?.message ?? "App user not found",
+    };
   }
 
-  return MINIMUM_PURCHASE_THRESHOLDS[normalizedCurrency] ?? null;
+  return {
+    appUser: appUser as AppUser,
+    errorMessage: null,
+  };
 }
 
-export default function OrganizationDetailsPage() {
-  const params = useParams();
-  const organizationId = String(params.id);
+async function getOrganizationPageData(
+  organizationId: string
+): Promise<PageData> {
+  const { appUser, errorMessage } = await getCurrentAppUser();
+
+  if (errorMessage) {
+    return {
+      organization: null,
+      valueObjects: [],
+      offers: [],
+      errorMessage,
+    };
+  }
+
+  if (!appUser) {
+    return {
+      organization: null,
+      valueObjects: [],
+      offers: [],
+      errorMessage: "User context not found",
+    };
+  }
+
+  const [organizationResult, valueObjectsResult, offersResult] =
+    await Promise.all([
+      supabase
+        .from("organizations")
+        .select(
+          `
+          id,
+          organization_name,
+          organization_type,
+          description,
+          status,
+          country_code,
+          default_currency,
+          created_at
+        `
+        )
+        .eq("id", organizationId)
+        .single(),
+
+      supabase
+        .from("value_objects")
+        .select(
+          `
+          id,
+          organization_id,
+          value_type,
+          title,
+          description,
+          unit_type,
+          default_price,
+          default_currency,
+          default_duration_minutes,
+          status,
+          created_at
+        `
+        )
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false }),
+
+      supabase
+        .from("offers")
+        .select(
+          `
+          id,
+          organization_id,
+          offer_type,
+          title,
+          description,
+          price,
+          currency,
+          status,
+          created_at,
+          offer_items (
+            id,
+            value_object_id,
+            quantity,
+            unit_price,
+            total_price,
+            currency,
+            is_required,
+            status,
+            value_objects (
+              id,
+              title,
+              value_type
+            )
+          )
+        `
+        )
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false }),
+    ]);
+
+  if (organizationResult.error) {
+    return {
+      organization: null,
+      valueObjects: [],
+      offers: [],
+      errorMessage: organizationResult.error.message,
+    };
+  }
+
+  if (!organizationResult.data) {
+    return {
+      organization: null,
+      valueObjects: [],
+      offers: [],
+      errorMessage: null,
+    };
+  }
+
+  if (valueObjectsResult.error) {
+    return {
+      organization: organizationResult.data as Organization,
+      valueObjects: [],
+      offers: [],
+      errorMessage: valueObjectsResult.error.message,
+    };
+  }
+
+  if (offersResult.error) {
+    return {
+      organization: organizationResult.data as Organization,
+      valueObjects: (valueObjectsResult.data as ValueObject[] | null) ?? [],
+      offers: [],
+      errorMessage: offersResult.error.message,
+    };
+  }
+
+  return {
+    organization: organizationResult.data as Organization,
+    valueObjects: (valueObjectsResult.data as ValueObject[] | null) ?? [],
+    offers: (offersResult.data as unknown as Offer[] | null) ?? [],
+    errorMessage: null,
+  };
+}
+
+export default async function OrganizationDetailsPage({
+  params,
+}: OrganizationDetailsPageProps) {
+  const resolvedParams = await params;
+  const organizationId = resolvedParams.id;
 
   const createValueObjectHref = `/value-objects/new?organizationId=${encodeURIComponent(
     organizationId
@@ -142,162 +292,8 @@ export default function OrganizationDetailsPage() {
   )}`;
   const myPurchaseConfirmationsHref = "/my-purchase-confirmations";
 
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [valueObjects, setValueObjects] = useState<ValueObject[]>([]);
-  const [offers, setOffers] = useState<Offer[]>([]);
-
-  const [purchaseAmount, setPurchaseAmount] = useState("");
-  const [purchaseCurrency, setPurchaseCurrency] = useState("");
-  const [userComment, setUserComment] = useState("");
-  const [receiptUrl, setReceiptUrl] = useState("");
-  const [isSubmittingPurchase, setIsSubmittingPurchase] = useState(false);
-  const [purchaseSubmitMessage, setPurchaseSubmitMessage] = useState("");
-  const [purchaseSubmitError, setPurchaseSubmitError] = useState("");
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
-
-  const organization = useMemo(() => {
-    return organizations.find((item) => item.id === organizationId) ?? null;
-  }, [organizations, organizationId]);
-
-  const organizationValueObjects = useMemo(() => {
-    return valueObjects.filter(
-      (valueObject) => valueObject.organization_id === organizationId
-    );
-  }, [valueObjects, organizationId]);
-
-  const organizationOffers = useMemo(() => {
-    return offers.filter((offer) => offer.organization_id === organizationId);
-  }, [offers, organizationId]);
-
-  const effectivePurchaseCurrency =
-    normalizeCurrency(purchaseCurrency) ||
-    normalizeCurrency(organization?.default_currency) ||
-    "PLN";
-
-  const minimumPurchaseThreshold = getMinimumPurchaseThreshold(
-    effectivePurchaseCurrency
-  );
-
-  async function loadData() {
-    setIsLoading(true);
-    setErrorMessage("");
-
-    try {
-      const [organizationsResponse, valueObjectsResponse, offersResponse] =
-        await Promise.all([
-          fetch("/api/organizations", {
-            method: "GET",
-            cache: "no-store",
-          }),
-          fetch("/api/value-objects", {
-            method: "GET",
-            cache: "no-store",
-          }),
-          fetch("/api/offers", {
-            method: "GET",
-            cache: "no-store",
-          }),
-        ]);
-
-      const organizationsData = await organizationsResponse.json();
-      const valueObjectsData = await valueObjectsResponse.json();
-      const offersData = await offersResponse.json();
-
-      if (!organizationsResponse.ok || !organizationsData.ok) {
-        setErrorMessage(
-          organizationsData.error ?? "Failed to load organization"
-        );
-        return;
-      }
-
-      if (!valueObjectsResponse.ok || !valueObjectsData.ok) {
-        setErrorMessage(
-          valueObjectsData.error ?? "Failed to load value objects"
-        );
-        return;
-      }
-
-      if (!offersResponse.ok || !offersData.ok) {
-        setErrorMessage(offersData.error ?? "Failed to load offers");
-        return;
-      }
-
-      setOrganizations(organizationsData.organizations ?? []);
-      setValueObjects(valueObjectsData.valueObjects ?? []);
-      setOffers(offersData.offers ?? []);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Unknown error occurred"
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function handleSubmitPurchaseConfirmation(event: FormEvent) {
-    event.preventDefault();
-
-    setPurchaseSubmitMessage("");
-    setPurchaseSubmitError("");
-
-    const parsedPurchaseAmount = Number(purchaseAmount);
-
-    if (Number.isNaN(parsedPurchaseAmount) || parsedPurchaseAmount <= 0) {
-      setPurchaseSubmitError("Введите положительную сумму покупки.");
-      return;
-    }
-
-    setIsSubmittingPurchase(true);
-
-    try {
-      const response = await fetch("/api/purchase-confirmations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-        body: JSON.stringify({
-          organizationId,
-          purchaseAmount: parsedPurchaseAmount,
-          purchaseCurrency: effectivePurchaseCurrency,
-          userComment: userComment.trim() || null,
-          receiptUrl: receiptUrl.trim() || null,
-        }),
-      });
-
-      const json =
-        (await response.json()) as PurchaseConfirmationCreateResponse;
-
-      if (!response.ok || !json.ok) {
-        throw new Error(json.error ?? "Failed to submit purchase confirmation");
-      }
-
-      setPurchaseAmount("");
-      setUserComment("");
-      setReceiptUrl("");
-      setPurchaseSubmitMessage(
-        "Заявка на подтверждение покупки создана. Теперь продавец сможет подтвердить или отклонить её."
-      );
-    } catch (error) {
-      setPurchaseSubmitError(
-        error instanceof Error ? error.message : "Unknown submit error"
-      );
-    } finally {
-      setIsSubmittingPurchase(false);
-    }
-  }
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    if (organization?.default_currency && purchaseCurrency.trim() === "") {
-      setPurchaseCurrency(organization.default_currency);
-    }
-  }, [organization, purchaseCurrency]);
+  const { organization, valueObjects, offers, errorMessage } =
+    await getOrganizationPageData(organizationId);
 
   return (
     <main
@@ -342,50 +338,37 @@ export default function OrganizationDetailsPage() {
               flexWrap: "wrap",
             }}
           >
-            <Link href="/" style={{ color: "#2563eb" }}>
+            <a href="/" style={{ color: "#2563eb" }}>
               На главную
-            </Link>
+            </a>
 
-            <Link href="/organizations" style={{ color: "#2563eb" }}>
+            <a href="/organizations" style={{ color: "#2563eb" }}>
               Мои организации
-            </Link>
+            </a>
 
-            <Link href={createValueObjectHref} style={{ color: "#2563eb" }}>
+            <a href={createValueObjectHref} style={{ color: "#2563eb" }}>
               Create value object
-            </Link>
+            </a>
 
-            <Link href={createOfferHref} style={{ color: "#2563eb" }}>
+            <a href={createOfferHref} style={{ color: "#2563eb" }}>
               Create offer
-            </Link>
+            </a>
 
-            <Link href={myPurchaseConfirmationsHref} style={{ color: "#2563eb" }}>
+            <a href={myPurchaseConfirmationsHref} style={{ color: "#2563eb" }}>
               My purchase confirmations
-            </Link>
+            </a>
 
-            <Link href={purchaseConfirmationsHref} style={{ color: "#2563eb" }}>
+            <a href={purchaseConfirmationsHref} style={{ color: "#2563eb" }}>
               Seller purchase confirmations
-            </Link>
+            </a>
 
-            <Link href={publicPurchaseHistoryHref} style={{ color: "#2563eb" }}>
+            <a href={publicPurchaseHistoryHref} style={{ color: "#2563eb" }}>
               Public purchase history
-            </Link>
+            </a>
           </nav>
         </header>
 
-        {isLoading && (
-          <div
-            style={{
-              border: "1px solid #dddddd",
-              borderRadius: "10px",
-              padding: "18px",
-              background: "#f9fafb",
-            }}
-          >
-            Loading organization details...
-          </div>
-        )}
-
-        {errorMessage && (
+        {errorMessage ? (
           <div
             style={{
               border: "1px solid #f5c2c7",
@@ -397,9 +380,9 @@ export default function OrganizationDetailsPage() {
           >
             {errorMessage}
           </div>
-        )}
+        ) : null}
 
-        {!isLoading && !errorMessage && !organization && (
+        {!errorMessage && !organization ? (
           <div
             style={{
               border: "1px solid #facc15",
@@ -410,9 +393,9 @@ export default function OrganizationDetailsPage() {
           >
             Organization not found or access denied.
           </div>
-        )}
+        ) : null}
 
-        {!isLoading && !errorMessage && organization && (
+        {!errorMessage && organization ? (
           <div style={{ display: "grid", gap: "20px" }}>
             <section
               style={{
@@ -466,293 +449,13 @@ export default function OrganizationDetailsPage() {
               </p>
             </section>
 
-            <section
-              style={{
-                border: "1px solid #bfdbfe",
-                borderRadius: "12px",
-                padding: "20px",
-                background: "#eff6ff",
-              }}
-            >
-              <h2 style={{ margin: "0 0 10px", fontSize: "24px" }}>
-                Purchase confirmations & points
-              </h2>
-
-              <p style={{ margin: "0 0 12px", color: "#374151" }}>
-                Здесь покупатель может зарегистрировать покупку у этого
-                предприятия. Продавец позже подтвердит или отклонит заявку.
-                После подтверждения система начислит points по правилам
-                предприятия.
-              </p>
-
-              <p
-                style={{
-                  margin: "0 0 16px",
-                  color: "#1e3a8a",
-                  fontSize: "14px",
-                  lineHeight: "1.5",
-                }}
-              >
-                Seller purchase confirmations — это закрытая панель продавца.
-                Она доступна только владельцу предприятия. Покупатели и другие
-                пользователи видят только публичную историю подтверждённых
-                покупок. My purchase confirmations — это личная страница
-                покупателя со своими заявками.
-              </p>
-
-              <form
-                onSubmit={handleSubmitPurchaseConfirmation}
-                style={{
-                  display: "grid",
-                  gap: "14px",
-                  padding: "16px",
-                  border: "1px solid #93c5fd",
-                  borderRadius: "12px",
-                  background: "#ffffff",
-                  marginBottom: "16px",
-                }}
-              >
-                <h3 style={{ margin: 0, fontSize: "20px" }}>
-                  Зарегистрировать покупку
-                </h3>
-
-                {minimumPurchaseThreshold ? (
-                  <div
-                    style={{
-                      border: "1px solid #bfdbfe",
-                      borderRadius: "8px",
-                      padding: "10px 12px",
-                      background: "#eff6ff",
-                      color: "#1e3a8a",
-                      fontSize: "14px",
-                      lineHeight: "1.5",
-                    }}
-                  >
-                    Минимальная сумма для начисления 10 points: больше{" "}
-                    <strong>
-                      {minimumPurchaseThreshold.amount}{" "}
-                      {minimumPurchaseThreshold.currency}
-                    </strong>
-                    .
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      border: "1px solid #facc15",
-                      borderRadius: "8px",
-                      padding: "10px 12px",
-                      background: "#fefce8",
-                      color: "#713f12",
-                      fontSize: "14px",
-                      lineHeight: "1.5",
-                    }}
-                  >
-                    Минимальный порог начисления points пока не определён:
-                    проверьте страну и валюту предприятия.
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                    gap: "12px",
-                  }}
-                >
-                  <label style={{ display: "grid", gap: "6px" }}>
-                    <span style={{ fontWeight: 600 }}>Сумма покупки</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={purchaseAmount}
-                      onChange={(event) => setPurchaseAmount(event.target.value)}
-                      placeholder="Например: 95"
-                      required
-                      style={{
-                        padding: "10px 12px",
-                        border: "1px solid #cbd5e1",
-                        borderRadius: "8px",
-                        fontSize: "15px",
-                      }}
-                    />
-                  </label>
-
-                  <label style={{ display: "grid", gap: "6px" }}>
-                    <span style={{ fontWeight: 600 }}>Валюта</span>
-                    <input
-                      type="text"
-                      value={purchaseCurrency}
-                      onChange={(event) =>
-                        setPurchaseCurrency(event.target.value.toUpperCase())
-                      }
-                      placeholder={organization.default_currency || "PLN"}
-                      style={{
-                        padding: "10px 12px",
-                        border: "1px solid #cbd5e1",
-                        borderRadius: "8px",
-                        fontSize: "15px",
-                      }}
-                    />
-                  </label>
-                </div>
-
-                <label style={{ display: "grid", gap: "6px" }}>
-                  <span style={{ fontWeight: 600 }}>Комментарий покупателя</span>
-                  <textarea
-                    value={userComment}
-                    onChange={(event) => setUserComment(event.target.value)}
-                    placeholder="Например: покупка аксессуаров, чек приложен ссылкой."
-                    rows={3}
-                    style={{
-                      padding: "10px 12px",
-                      border: "1px solid #cbd5e1",
-                      borderRadius: "8px",
-                      fontSize: "15px",
-                      resize: "vertical",
-                    }}
-                  />
-                </label>
-
-                <label style={{ display: "grid", gap: "6px" }}>
-                  <span style={{ fontWeight: 600 }}>Ссылка на чек</span>
-                  <input
-                    type="url"
-                    value={receiptUrl}
-                    onChange={(event) => setReceiptUrl(event.target.value)}
-                    placeholder="https://..."
-                    style={{
-                      padding: "10px 12px",
-                      border: "1px solid #cbd5e1",
-                      borderRadius: "8px",
-                      fontSize: "15px",
-                    }}
-                  />
-                </label>
-
-                {purchaseSubmitError && (
-                  <div
-                    style={{
-                      border: "1px solid #f2b8b5",
-                      borderRadius: "8px",
-                      padding: "10px 12px",
-                      background: "#fff5f5",
-                      color: "#a40000",
-                    }}
-                  >
-                    {purchaseSubmitError}
-                  </div>
-                )}
-
-                {purchaseSubmitMessage && (
-                  <div
-                    style={{
-                      border: "1px solid #bfe5c8",
-                      borderRadius: "8px",
-                      padding: "12px",
-                      background: "#edf8f0",
-                      color: "#176b2c",
-                      display: "grid",
-                      gap: "10px",
-                    }}
-                  >
-                    <div>{purchaseSubmitMessage}</div>
-
-                    <Link
-                      href={myPurchaseConfirmationsHref}
-                      style={{
-                        display: "inline-block",
-                        width: "fit-content",
-                        padding: "8px 12px",
-                        borderRadius: "8px",
-                        background: "#ffffff",
-                        color: "#176b2c",
-                        border: "1px solid #bfe5c8",
-                        textDecoration: "none",
-                        fontWeight: 700,
-                      }}
-                    >
-                      Посмотреть мои заявки
-                    </Link>
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "12px",
-                    alignItems: "center",
-                  }}
-                >
-                  <button
-                    type="submit"
-                    disabled={isSubmittingPurchase}
-                    style={{
-                      padding: "10px 14px",
-                      borderRadius: "8px",
-                      border: "1px solid #2563eb",
-                      background: isSubmittingPurchase ? "#93c5fd" : "#2563eb",
-                      color: "#ffffff",
-                      fontWeight: 600,
-                      cursor: isSubmittingPurchase ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    {isSubmittingPurchase
-                      ? "Отправка..."
-                      : "Зарегистрировать покупку"}
-                  </button>
-
-                  <Link
-                    href={myPurchaseConfirmationsHref}
-                    style={{
-                      display: "inline-block",
-                      padding: "10px 14px",
-                      borderRadius: "8px",
-                      background: "#ffffff",
-                      color: "#2563eb",
-                      border: "1px solid #93c5fd",
-                      textDecoration: "none",
-                      fontWeight: 600,
-                    }}
-                  >
-                    My purchase confirmations
-                  </Link>
-
-                  <Link
-                    href={purchaseConfirmationsHref}
-                    style={{
-                      display: "inline-block",
-                      padding: "10px 14px",
-                      borderRadius: "8px",
-                      background: "#ffffff",
-                      color: "#2563eb",
-                      border: "1px solid #93c5fd",
-                      textDecoration: "none",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Seller purchase confirmations
-                  </Link>
-
-                  <Link
-                    href={publicPurchaseHistoryHref}
-                    style={{
-                      display: "inline-block",
-                      padding: "10px 14px",
-                      borderRadius: "8px",
-                      background: "#ffffff",
-                      color: "#2563eb",
-                      border: "1px solid #93c5fd",
-                      textDecoration: "none",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Public purchase history
-                  </Link>
-                </div>
-              </form>
-            </section>
+            <PurchaseConfirmationForm
+              organizationId={organizationId}
+              organizationDefaultCurrency={organization.default_currency ?? null}
+              myPurchaseConfirmationsHref={myPurchaseConfirmationsHref}
+              purchaseConfirmationsHref={purchaseConfirmationsHref}
+              publicPurchaseHistoryHref={publicPurchaseHistoryHref}
+            />
 
             <section
               style={{
@@ -781,7 +484,7 @@ export default function OrganizationDetailsPage() {
                   </p>
                 </div>
 
-                <Link
+                <a
                   href={createValueObjectHref}
                   style={{
                     color: "#2563eb",
@@ -790,16 +493,16 @@ export default function OrganizationDetailsPage() {
                   }}
                 >
                   Create value object
-                </Link>
+                </a>
               </div>
 
-              {organizationValueObjects.length === 0 ? (
+              {valueObjects.length === 0 ? (
                 <p style={{ margin: 0, color: "#666666" }}>
                   No value objects connected to this organization yet.
                 </p>
               ) : (
                 <div style={{ display: "grid", gap: "12px" }}>
-                  {organizationValueObjects.map((valueObject) => (
+                  {valueObjects.map((valueObject) => (
                     <article
                       key={valueObject.id}
                       style={{
@@ -858,7 +561,7 @@ export default function OrganizationDetailsPage() {
                   </p>
                 </div>
 
-                <Link
+                <a
                   href={createOfferHref}
                   style={{
                     color: "#2563eb",
@@ -867,16 +570,16 @@ export default function OrganizationDetailsPage() {
                   }}
                 >
                   Create offer
-                </Link>
+                </a>
               </div>
 
-              {organizationOffers.length === 0 ? (
+              {offers.length === 0 ? (
                 <p style={{ margin: 0, color: "#666666" }}>
                   No offers connected to this organization yet.
                 </p>
               ) : (
                 <div style={{ display: "grid", gap: "12px" }}>
-                  {organizationOffers.map((offer) => (
+                  {offers.map((offer) => (
                     <article
                       key={offer.id}
                       style={{
@@ -923,14 +626,20 @@ export default function OrganizationDetailsPage() {
                           <ul
                             style={{ margin: "8px 0 0", paddingLeft: "20px" }}
                           >
-                            {offer.offer_items.map((item) => (
-                              <li key={item.id}>
-                                {item.value_objects?.title ??
-                                  item.value_object_id}{" "}
-                                × {item.quantity} —{" "}
-                                {formatMoney(item.total_price, item.currency)}
-                              </li>
-                            ))}
+                            {offer.offer_items.map((item) => {
+                              const relatedValueObject = getFirstRelatedItem(
+                                item.value_objects
+                              );
+
+                              return (
+                                <li key={item.id}>
+                                  {relatedValueObject?.title ??
+                                    item.value_object_id}{" "}
+                                  × {item.quantity} —{" "}
+                                  {formatMoney(item.total_price, item.currency)}
+                                </li>
+                              );
+                            })}
                           </ul>
                         )}
                       </div>
@@ -940,7 +649,7 @@ export default function OrganizationDetailsPage() {
               )}
             </section>
           </div>
-        )}
+        ) : null}
       </div>
     </main>
   );

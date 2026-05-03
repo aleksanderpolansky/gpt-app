@@ -1,6 +1,7 @@
-"use client";
+import { auth0 } from "../../../lib/auth0";
+import { supabase } from "../../../lib/supabase";
 
-import { useEffect, useState } from "react";
+export const dynamic = "force-dynamic";
 
 type Organization = {
   id: string;
@@ -31,11 +32,114 @@ type MyPurchaseConfirmation = {
   organizations?: Organization | Organization[] | null;
 };
 
-type MyPurchaseConfirmationsApiResponse = {
-  ok: boolean;
-  purchaseConfirmations?: MyPurchaseConfirmation[];
-  error?: string;
+type AppUser = {
+  id: string;
+  auth0_sub: string;
+  email?: string | null;
+  name?: string | null;
 };
+
+type PageData = {
+  purchaseConfirmations: MyPurchaseConfirmation[];
+  errorMessage: string | null;
+};
+
+async function getCurrentAppUser(): Promise<{
+  appUser: AppUser | null;
+  errorMessage: string | null;
+}> {
+  const session = await auth0.getSession();
+
+  if (!session?.user) {
+    return {
+      appUser: null,
+      errorMessage: "Not authenticated",
+    };
+  }
+
+  const { data: appUser, error: appUserError } = await supabase
+    .from("app_users")
+    .select("*")
+    .eq("auth0_sub", session.user.sub)
+    .single();
+
+  if (appUserError || !appUser) {
+    return {
+      appUser: null,
+      errorMessage: appUserError?.message ?? "App user not found",
+    };
+  }
+
+  return {
+    appUser: appUser as AppUser,
+    errorMessage: null,
+  };
+}
+
+async function getMyPurchaseConfirmations(): Promise<PageData> {
+  const { appUser, errorMessage } = await getCurrentAppUser();
+
+  if (errorMessage) {
+    return {
+      purchaseConfirmations: [],
+      errorMessage,
+    };
+  }
+
+  if (!appUser) {
+    return {
+      purchaseConfirmations: [],
+      errorMessage: "User context not found",
+    };
+  }
+
+  const { data: purchaseConfirmations, error: purchaseConfirmationsError } =
+    await supabase
+      .from("purchase_confirmations")
+      .select(
+        `
+        id,
+        organization_id,
+        buyer_user_id,
+        buyer_public_code,
+        purchase_amount,
+        purchase_currency,
+        user_comment,
+        points_awarded,
+        status,
+        requested_at,
+        confirmed_at,
+        rejected_at,
+        cancelled_at,
+        last_decision_at,
+        created_at,
+        updated_at,
+        organizations (
+          id,
+          organization_name,
+          organization_type,
+          country_code,
+          default_currency,
+          status
+        )
+      `
+      )
+      .eq("buyer_user_id", appUser.id)
+      .order("created_at", { ascending: false });
+
+  if (purchaseConfirmationsError) {
+    return {
+      purchaseConfirmations: [],
+      errorMessage: purchaseConfirmationsError.message,
+    };
+  }
+
+  return {
+    purchaseConfirmations:
+      (purchaseConfirmations as MyPurchaseConfirmation[] | null) ?? [],
+    errorMessage: null,
+  };
+}
 
 function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   if (!value) {
@@ -138,43 +242,24 @@ function getStatusStyle(status: string | null | undefined) {
   };
 }
 
-export default function MyPurchaseConfirmationsPage() {
-  const [purchaseConfirmations, setPurchaseConfirmations] = useState<
-    MyPurchaseConfirmation[]
-  >([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+function getLinkStyle() {
+  return {
+    display: "inline-block",
+    padding: "7px 10px",
+    borderRadius: "8px",
+    border: "1px solid #dddddd",
+    background: "#ffffff",
+    color: "#111111",
+    textDecoration: "none",
+    fontSize: "13px",
+    fontWeight: 600,
+    whiteSpace: "nowrap" as const,
+  };
+}
 
-  async function loadMyPurchaseConfirmations() {
-    setIsLoading(true);
-    setErrorMessage(null);
-
-    try {
-      const response = await fetch("/api/my/purchase-confirmations", {
-        method: "GET",
-        cache: "no-store",
-      });
-
-      const json =
-        (await response.json()) as MyPurchaseConfirmationsApiResponse;
-
-      if (!response.ok || !json.ok) {
-        throw new Error(json.error ?? "Cannot load my purchase confirmations");
-      }
-
-      setPurchaseConfirmations(json.purchaseConfirmations ?? []);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Unknown loading error"
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void loadMyPurchaseConfirmations();
-  }, []);
+export default async function MyPurchaseConfirmationsPage() {
+  const { purchaseConfirmations, errorMessage } =
+    await getMyPurchaseConfirmations();
 
   const requestedCount = purchaseConfirmations.filter(
     (item) => item.status === "requested"
@@ -330,18 +415,7 @@ export default function MyPurchaseConfirmationsPage() {
           </div>
         </section>
 
-        {isLoading ? (
-          <section
-            style={{
-              border: "1px solid #dddddd",
-              borderRadius: "12px",
-              padding: "24px",
-              background: "#f9fafb",
-            }}
-          >
-            Загрузка ваших заявок...
-          </section>
-        ) : errorMessage ? (
+        {errorMessage ? (
           <section
             style={{
               border: "1px solid #f2b8b5",
@@ -353,19 +427,6 @@ export default function MyPurchaseConfirmationsPage() {
           >
             <h2 style={{ marginTop: 0 }}>Ошибка загрузки</h2>
             <p>{errorMessage}</p>
-            <button
-              type="button"
-              onClick={() => void loadMyPurchaseConfirmations()}
-              style={{
-                padding: "10px 16px",
-                borderRadius: "8px",
-                border: "1px solid #a40000",
-                background: "#ffffff",
-                cursor: "pointer",
-              }}
-            >
-              Повторить
-            </button>
           </section>
         ) : (
           <section
@@ -398,20 +459,20 @@ export default function MyPurchaseConfirmationsPage() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => void loadMyPurchaseConfirmations()}
+              <a
+                href="/my-purchase-confirmations"
                 style={{
                   padding: "10px 16px",
                   borderRadius: "8px",
                   border: "1px solid #dddddd",
                   background: "#ffffff",
-                  cursor: "pointer",
+                  color: "#111111",
+                  textDecoration: "none",
                   whiteSpace: "nowrap",
                 }}
               >
                 Обновить
-              </button>
+              </a>
             </div>
 
             {purchaseConfirmations.length === 0 ? (
@@ -424,7 +485,7 @@ export default function MyPurchaseConfirmationsPage() {
                   style={{
                     width: "100%",
                     borderCollapse: "collapse",
-                    minWidth: "1200px",
+                    minWidth: "1300px",
                   }}
                 >
                   <thead>
@@ -432,6 +493,7 @@ export default function MyPurchaseConfirmationsPage() {
                       <th style={{ padding: "12px 16px" }}>Дата заявки</th>
                       <th style={{ padding: "12px 16px" }}>Статус</th>
                       <th style={{ padding: "12px 16px" }}>Предприятие</th>
+                      <th style={{ padding: "12px 16px" }}>Ссылки</th>
                       <th style={{ padding: "12px 16px" }}>Сумма</th>
                       <th style={{ padding: "12px 16px" }}>Points</th>
                       <th style={{ padding: "12px 16px" }}>Комментарий</th>
@@ -446,6 +508,11 @@ export default function MyPurchaseConfirmationsPage() {
                       const organization = getFirstRelatedItem(
                         item.organizations
                       );
+                      const organizationId =
+                        organization?.id ?? item.organization_id;
+                      const organizationName =
+                        organization?.organization_name ??
+                        "Unknown organization";
                       const statusStyle = getStatusStyle(item.status);
 
                       return (
@@ -478,8 +545,31 @@ export default function MyPurchaseConfirmationsPage() {
                           </td>
 
                           <td style={{ padding: "12px 16px", fontWeight: 600 }}>
-                            {organization?.organization_name ??
-                              "Unknown organization"}
+                            {organizationName}
+                          </td>
+
+                          <td style={{ padding: "12px 16px" }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: "8px",
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <a
+                                href={`/organizations/${organizationId}`}
+                                style={getLinkStyle()}
+                              >
+                                Предприятие
+                              </a>
+
+                              <a
+                                href={`/purchase-history?organizationId=${organizationId}`}
+                                style={getLinkStyle()}
+                              >
+                                Публичная история
+                              </a>
+                            </div>
                           </td>
 
                           <td
