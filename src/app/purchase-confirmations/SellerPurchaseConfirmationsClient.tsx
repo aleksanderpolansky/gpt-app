@@ -277,7 +277,7 @@ export default function SellerPurchaseConfirmationsClient({
 
       setActionMessage(
         action === "confirm"
-          ? "Покупка подтверждена. Если правило начисления найдено, points начислены."
+          ? "Покупка подтверждена. Если заявка была ошибочно отклонена, решение исправлено и записано в audit events."
           : "Покупка отклонена."
       );
 
@@ -526,7 +526,9 @@ export default function SellerPurchaseConfirmationsClient({
           <div>
             <h2 style={{ margin: 0, fontSize: "22px" }}>История заявок</h2>
             <p style={{ margin: "6px 0 0", color: "#666" }}>
-              Заявки пользователя и подтверждения продавца.
+              Заявки пользователя и подтверждения продавца. Для отклонённых
+              заявок доступно отдельное исправление: если заявка была отклонена
+              по ошибке, её можно подтвердить с записью в audit events.
             </p>
           </div>
 
@@ -557,7 +559,7 @@ export default function SellerPurchaseConfirmationsClient({
               style={{
                 width: "100%",
                 borderCollapse: "collapse",
-                minWidth: "1350px",
+                minWidth: "1450px",
               }}
             >
               <thead>
@@ -584,8 +586,11 @@ export default function SellerPurchaseConfirmationsClient({
                     organization?.organization_name ?? "—";
 
                   const statusStyle = getStatusStyle(item.status);
-                  const canMakeDecision =
-                    item.status === "requested" || item.status === "rejected";
+                  const canConfirmStandard = item.status === "requested";
+                  const canRejectStandard = item.status === "requested";
+                  const canCorrectRejected = item.status === "rejected";
+                  const canShowSellerCommentInput =
+                    canConfirmStandard || canRejectStandard || canCorrectRejected;
                   const isProcessingThisItem = processingId === item.id;
                   const auditHref = `/purchase-confirmations/${item.id}/events`;
 
@@ -641,7 +646,7 @@ export default function SellerPurchaseConfirmationsClient({
                         <div style={{ display: "grid", gap: "8px" }}>
                           <div>{item.seller_comment ?? "—"}</div>
 
-                          {canMakeDecision ? (
+                          {canShowSellerCommentInput ? (
                             <input
                               type="text"
                               value={sellerComments[item.id] ?? ""}
@@ -651,12 +656,16 @@ export default function SellerPurchaseConfirmationsClient({
                                   [item.id]: event.target.value,
                                 }))
                               }
-                              placeholder="Комментарий решения"
+                              placeholder={
+                                canCorrectRejected
+                                  ? "Комментарий исправления"
+                                  : "Комментарий решения"
+                              }
                               style={{
                                 padding: "8px 10px",
                                 border: "1px solid #cbd5e1",
                                 borderRadius: "8px",
-                                minWidth: "180px",
+                                minWidth: "210px",
                               }}
                             />
                           ) : null}
@@ -681,7 +690,7 @@ export default function SellerPurchaseConfirmationsClient({
                         </a>
                       </td>
                       <td style={{ padding: "12px 16px" }}>
-                        {canMakeDecision ? (
+                        {canConfirmStandard || canRejectStandard ? (
                           <div
                             style={{
                               display: "flex",
@@ -741,6 +750,56 @@ export default function SellerPurchaseConfirmationsClient({
                               }}
                             >
                               Reject
+                            </button>
+                          </div>
+                        ) : canCorrectRejected ? (
+                          <div
+                            style={{
+                              display: "grid",
+                              gap: "8px",
+                              minWidth: "220px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                border: "1px solid #f0d28a",
+                                borderRadius: "8px",
+                                background: "#fff8e6",
+                                color: "#7a4b00",
+                                padding: "8px 10px",
+                                fontSize: "13px",
+                                lineHeight: "1.4",
+                              }}
+                            >
+                              Заявка отклонена. Подтверждайте только если отказ
+                              был ошибочным.
+                            </div>
+
+                            <button
+                              type="button"
+                              disabled={isProcessingThisItem}
+                              onClick={() =>
+                                void handlePurchaseConfirmationAction(
+                                  item.id,
+                                  "confirm"
+                                )
+                              }
+                              style={{
+                                padding: "8px 10px",
+                                borderRadius: "8px",
+                                border: "1px solid #d97706",
+                                background: isProcessingThisItem
+                                  ? "#fed7aa"
+                                  : "#f59e0b",
+                                color: "#111827",
+                                cursor: isProcessingThisItem
+                                  ? "not-allowed"
+                                  : "pointer",
+                                fontWeight: 700,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              Ошибочно отклонена — подтвердить
                             </button>
                           </div>
                         ) : (
