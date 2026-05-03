@@ -1,6 +1,8 @@
-"use client";
+import { auth0 } from "../../../lib/auth0";
+import { supabase } from "../../../lib/supabase";
+import SellerPurchaseConfirmationsClient from "./SellerPurchaseConfirmationsClient";
 
-import { useEffect, useMemo, useState } from "react";
+export const dynamic = "force-dynamic";
 
 type Organization = {
   id: string;
@@ -31,713 +33,180 @@ type PurchaseConfirmation = {
   last_decision_at: string | null;
   created_at: string;
   updated_at: string | null;
-  organizations?: Organization | null;
+  organizations?: Organization | Organization[] | null;
 };
 
-type PurchaseConfirmationsApiResponse = {
-  ok: boolean;
-  purchaseConfirmations?: PurchaseConfirmation[];
-  error?: string;
+type AppUser = {
+  id: string;
+  auth0_sub: string;
+  email?: string | null;
+  name?: string | null;
 };
 
-type PurchaseConfirmationActionResponse = {
-  ok: boolean;
-  result?: unknown;
-  error?: string;
+type PageData = {
+  purchaseConfirmations: PurchaseConfirmation[];
+  errorMessage: string | null;
 };
 
-function formatDate(value: string | null | undefined) {
-  if (!value) {
-    return "—";
-  }
+type PurchaseConfirmationsPageProps = {
+  searchParams?: Promise<{
+    organizationId?: string | string[];
+  }>;
+};
 
-  return new Intl.DateTimeFormat("pl-PL", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
+async function getCurrentAppUser(): Promise<{
+  appUser: AppUser | null;
+  errorMessage: string | null;
+}> {
+  const session = await auth0.getSession();
 
-function formatMoney(
-  amount: number | null | undefined,
-  currency: string | null | undefined
-) {
-  if (typeof amount !== "number") {
-    return "—";
-  }
-
-  return `${new Intl.NumberFormat("pl-PL", {
-    maximumFractionDigits: 2,
-  }).format(amount)} ${currency ?? ""}`.trim();
-}
-
-function formatPoints(value: number | null | undefined) {
-  if (typeof value !== "number") {
-    return "0";
-  }
-
-  return new Intl.NumberFormat("pl-PL", {
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function getStatusLabel(status: string | null | undefined) {
-  if (status === "requested") {
-    return "Ожидает подтверждения";
-  }
-
-  if (status === "confirmed") {
-    return "Подтверждена";
-  }
-
-  if (status === "rejected") {
-    return "Отклонена";
-  }
-
-  if (status === "cancelled") {
-    return "Отменена";
-  }
-
-  return status ?? "—";
-}
-
-function getStatusStyle(status: string | null | undefined) {
-  if (status === "confirmed") {
+  if (!session?.user) {
     return {
-      background: "#edf8f0",
-      color: "#176b2c",
-      border: "1px solid #bfe5c8",
+      appUser: null,
+      errorMessage: "Not authenticated",
     };
   }
 
-  if (status === "rejected") {
-    return {
-      background: "#fff5f5",
-      color: "#a40000",
-      border: "1px solid #f2b8b5",
-    };
-  }
+  const { data: appUser, error: appUserError } = await supabase
+    .from("app_users")
+    .select("*")
+    .eq("auth0_sub", session.user.sub)
+    .single();
 
-  if (status === "cancelled") {
+  if (appUserError || !appUser) {
     return {
-      background: "#f5f5f5",
-      color: "#555",
-      border: "1px solid #ddd",
+      appUser: null,
+      errorMessage: appUserError?.message ?? "App user not found",
     };
   }
 
   return {
-    background: "#fff8e6",
-    color: "#7a4b00",
-    border: "1px solid #f0d28a",
+    appUser: appUser as AppUser,
+    errorMessage: null,
   };
 }
 
-export default function PurchaseConfirmationsPage() {
-  const [purchaseConfirmations, setPurchaseConfirmations] = useState<
-    PurchaseConfirmation[]
-  >([]);
-  const [organizationIdFilter, setOrganizationIdFilter] = useState<
-    string | null
-  >(null);
-  const [sellerComments, setSellerComments] = useState<Record<string, string>>(
-    {}
-  );
-  const [processingId, setProcessingId] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+async function getSellerPurchaseConfirmations(): Promise<PageData> {
+  const { appUser, errorMessage } = await getCurrentAppUser();
 
-  const visiblePurchaseConfirmations = useMemo(() => {
-    if (!organizationIdFilter) {
-      return purchaseConfirmations;
-    }
+  if (errorMessage) {
+    return {
+      purchaseConfirmations: [],
+      errorMessage,
+    };
+  }
 
-    return purchaseConfirmations.filter(
-      (item) => item.organization_id === organizationIdFilter
-    );
-  }, [purchaseConfirmations, organizationIdFilter]);
+  if (!appUser) {
+    return {
+      purchaseConfirmations: [],
+      errorMessage: "User context not found",
+    };
+  }
 
-  const activeOrganizationName = useMemo(() => {
-    if (!organizationIdFilter) {
-      return null;
-    }
+  const { data: sellerOrganizations, error: sellerOrganizationsError } =
+    await supabase
+      .from("organizations")
+      .select("id")
+      .eq("created_by_user_id", appUser.id);
 
-    const matchingPurchaseConfirmation = purchaseConfirmations.find(
-      (item) => item.organization_id === organizationIdFilter
-    );
+  if (sellerOrganizationsError) {
+    return {
+      purchaseConfirmations: [],
+      errorMessage: sellerOrganizationsError.message,
+    };
+  }
 
-    return (
-      matchingPurchaseConfirmation?.organizations?.organization_name ??
-      organizationIdFilter
-    );
-  }, [purchaseConfirmations, organizationIdFilter]);
+  const sellerOrganizationIds =
+    sellerOrganizations?.map((organization) => organization.id) ?? [];
 
-  async function loadPurchaseConfirmations() {
-    setIsLoading(true);
-    setErrorMessage(null);
+  if (sellerOrganizationIds.length === 0) {
+    return {
+      purchaseConfirmations: [],
+      errorMessage: null,
+    };
+  }
 
-    try {
-      const response = await fetch("/api/purchase-confirmations", {
-        method: "GET",
-        cache: "no-store",
-      });
+  const { data: purchaseConfirmations, error: purchaseConfirmationsError } =
+    await supabase
+      .from("purchase_confirmations")
+      .select(
+        `
+        id,
+        organization_id,
+        buyer_user_id,
+        buyer_public_code,
+        confirmed_by_user_id,
+        purchase_amount,
+        purchase_currency,
+        user_comment,
+        seller_comment,
+        receipt_url,
+        points_awarded,
+        status,
+        requested_at,
+        confirmed_at,
+        rejected_at,
+        cancelled_at,
+        last_decision_at,
+        created_at,
+        updated_at,
+        organizations (
+          id,
+          organization_name,
+          organization_type,
+          country_code,
+          default_currency,
+          status
+        )
+      `
+      )
+      .in("organization_id", sellerOrganizationIds)
+      .order("created_at", { ascending: false });
 
-      const json = (await response.json()) as PurchaseConfirmationsApiResponse;
+  if (purchaseConfirmationsError) {
+    return {
+      purchaseConfirmations: [],
+      errorMessage: purchaseConfirmationsError.message,
+    };
+  }
 
-      if (!response.ok || !json.ok) {
-        throw new Error(json.error ?? "Cannot load purchase confirmations");
+  return {
+    purchaseConfirmations:
+      (purchaseConfirmations as unknown as PurchaseConfirmation[] | null) ?? [],
+    errorMessage: null,
+  };
+}
+
+function getOrganizationIdFilter(
+  resolvedSearchParams:
+    | {
+        organizationId?: string | string[];
       }
+    | undefined
+) {
+  const rawValue = resolvedSearchParams?.organizationId;
 
-      setPurchaseConfirmations(json.purchaseConfirmations ?? []);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unknown loading error";
-
-      setErrorMessage(message);
-    } finally {
-      setIsLoading(false);
-    }
+  if (Array.isArray(rawValue)) {
+    return rawValue[0] ?? null;
   }
 
-  async function handlePurchaseConfirmationAction(
-    purchaseConfirmationId: string,
-    action: "confirm" | "reject"
-  ) {
-    setProcessingId(purchaseConfirmationId);
-    setActionMessage(null);
-    setActionError(null);
+  return rawValue ?? null;
+}
 
-    try {
-      const sellerComment = sellerComments[purchaseConfirmationId]?.trim();
+export default async function PurchaseConfirmationsPage({
+  searchParams,
+}: PurchaseConfirmationsPageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const organizationIdFilter = getOrganizationIdFilter(resolvedSearchParams);
 
-      const response = await fetch(
-        `/api/purchase-confirmations/${purchaseConfirmationId}/${action}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          cache: "no-store",
-          body: JSON.stringify({
-            sellerComment: sellerComment || null,
-          }),
-        }
-      );
-
-      const json =
-        (await response.json()) as PurchaseConfirmationActionResponse;
-
-      if (!response.ok || !json.ok) {
-        throw new Error(json.error ?? `Cannot ${action} purchase confirmation`);
-      }
-
-      setActionMessage(
-        action === "confirm"
-          ? "Покупка подтверждена. Если правило начисления найдено, points начислены."
-          : "Покупка отклонена."
-      );
-
-      setSellerComments((currentComments) => ({
-        ...currentComments,
-        [purchaseConfirmationId]: "",
-      }));
-
-      await loadPurchaseConfirmations();
-    } catch (error) {
-      setActionError(
-        error instanceof Error ? error.message : "Unknown action error"
-      );
-    } finally {
-      setProcessingId(null);
-    }
-  }
-
-  function clearOrganizationFilter() {
-    setOrganizationIdFilter(null);
-
-    if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", "/purchase-confirmations");
-    }
-  }
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const searchParams = new URLSearchParams(window.location.search);
-      const organizationId = searchParams.get("organizationId");
-
-      setOrganizationIdFilter(organizationId);
-    }
-
-    void loadPurchaseConfirmations();
-  }, []);
-
-  const requestedCount = visiblePurchaseConfirmations.filter(
-    (item) => item.status === "requested"
-  ).length;
-
-  const confirmedCount = visiblePurchaseConfirmations.filter(
-    (item) => item.status === "confirmed"
-  ).length;
-
-  const totalPointsAwarded = visiblePurchaseConfirmations.reduce(
-    (sum, item) => {
-      return (
-        sum + (typeof item.points_awarded === "number" ? item.points_awarded : 0)
-      );
-    },
-    0
-  );
+  const { purchaseConfirmations, errorMessage } =
+    await getSellerPurchaseConfirmations();
 
   return (
-    <main style={{ padding: "32px", maxWidth: "1300px", margin: "0 auto" }}>
-      <div style={{ marginBottom: "28px" }}>
-        <h1 style={{ fontSize: "32px", marginBottom: "8px" }}>
-          Подтверждения покупок
-        </h1>
-        <p style={{ color: "#666", fontSize: "16px", lineHeight: "1.5" }}>
-          Здесь отображаются заявки на подтверждение покупок. После подтверждения
-          продавцом система может начислить пользователю points.
-        </p>
-      </div>
-
-      {organizationIdFilter && (
-        <section
-          style={{
-            border: "1px solid #bfdbfe",
-            borderRadius: "12px",
-            padding: "14px 18px",
-            background: "#eff6ff",
-            color: "#1e3a8a",
-            marginBottom: "18px",
-            display: "flex",
-            justifyContent: "space-between",
-            gap: "12px",
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <strong>Фильтр по организации:</strong>{" "}
-            {activeOrganizationName ?? organizationIdFilter}
-          </div>
-
-          <button
-            type="button"
-            onClick={clearOrganizationFilter}
-            style={{
-              padding: "8px 12px",
-              borderRadius: "8px",
-              border: "1px solid #93c5fd",
-              background: "#ffffff",
-              color: "#1d4ed8",
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
-          >
-            Показать все заявки
-          </button>
-        </section>
-      )}
-
-      {isLoading ? (
-        <section
-          style={{
-            border: "1px solid #ddd",
-            borderRadius: "12px",
-            padding: "24px",
-            background: "#fff",
-          }}
-        >
-          Загрузка заявок...
-        </section>
-      ) : errorMessage ? (
-        <section
-          style={{
-            border: "1px solid #f2b8b5",
-            borderRadius: "12px",
-            padding: "24px",
-            background: "#fff5f5",
-            color: "#a40000",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Ошибка загрузки</h2>
-          <p>{errorMessage}</p>
-          <button
-            type="button"
-            onClick={() => void loadPurchaseConfirmations()}
-            style={{
-              padding: "10px 16px",
-              borderRadius: "8px",
-              border: "1px solid #a40000",
-              background: "#fff",
-              cursor: "pointer",
-            }}
-          >
-            Повторить
-          </button>
-        </section>
-      ) : (
-        <>
-          <section
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "16px",
-              marginBottom: "28px",
-            }}
-          >
-            <div
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: "16px",
-                padding: "24px",
-                background: "#fff",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div style={{ color: "#666", marginBottom: "8px" }}>
-                Всего заявок
-              </div>
-              <div style={{ fontSize: "32px", fontWeight: 700 }}>
-                {visiblePurchaseConfirmations.length}
-              </div>
-            </div>
-
-            <div
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: "16px",
-                padding: "24px",
-                background: "#fff",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div style={{ color: "#666", marginBottom: "8px" }}>
-                Ожидают решения
-              </div>
-              <div style={{ fontSize: "32px", fontWeight: 700 }}>
-                {requestedCount}
-              </div>
-            </div>
-
-            <div
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: "16px",
-                padding: "24px",
-                background: "#fff",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div style={{ color: "#666", marginBottom: "8px" }}>
-                Подтверждены
-              </div>
-              <div style={{ fontSize: "32px", fontWeight: 700 }}>
-                {confirmedCount}
-              </div>
-            </div>
-
-            <div
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: "16px",
-                padding: "24px",
-                background: "#fff",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div style={{ color: "#666", marginBottom: "8px" }}>
-                Начислено points
-              </div>
-              <div style={{ fontSize: "32px", fontWeight: 700 }}>
-                {formatPoints(totalPointsAwarded)}
-              </div>
-            </div>
-          </section>
-
-          {actionError && (
-            <section
-              style={{
-                border: "1px solid #f2b8b5",
-                borderRadius: "12px",
-                padding: "14px 18px",
-                background: "#fff5f5",
-                color: "#a40000",
-                marginBottom: "16px",
-              }}
-            >
-              {actionError}
-            </section>
-          )}
-
-          {actionMessage && (
-            <section
-              style={{
-                border: "1px solid #bfe5c8",
-                borderRadius: "12px",
-                padding: "14px 18px",
-                background: "#edf8f0",
-                color: "#176b2c",
-                marginBottom: "16px",
-              }}
-            >
-              {actionMessage}
-            </section>
-          )}
-
-          <section
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: "16px",
-              background: "#fff",
-              overflow: "hidden",
-              boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-            }}
-          >
-            <div
-              style={{
-                padding: "20px 24px",
-                borderBottom: "1px solid #eee",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: "12px",
-              }}
-            >
-              <div>
-                <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  История заявок
-                </h2>
-                <p style={{ margin: "6px 0 0", color: "#666" }}>
-                  Заявки пользователя и подтверждения продавца.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => void loadPurchaseConfirmations()}
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: "8px",
-                  border: "1px solid #ddd",
-                  background: "#fff",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Обновить
-              </button>
-            </div>
-
-            {visiblePurchaseConfirmations.length === 0 ? (
-              <div style={{ padding: "24px", color: "#666" }}>
-                Заявок на подтверждение покупок пока нет.
-              </div>
-            ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table
-                  style={{
-                    width: "100%",
-                    borderCollapse: "collapse",
-                    minWidth: "1250px",
-                  }}
-                >
-                  <thead>
-                    <tr style={{ background: "#f7f7f7", textAlign: "left" }}>
-                      <th style={{ padding: "12px 16px" }}>Дата</th>
-                      <th style={{ padding: "12px 16px" }}>Статус</th>
-                      <th style={{ padding: "12px 16px" }}>Предприятие</th>
-                      <th style={{ padding: "12px 16px" }}>Покупатель</th>
-                      <th style={{ padding: "12px 16px" }}>Сумма</th>
-                      <th style={{ padding: "12px 16px" }}>Points</th>
-                      <th style={{ padding: "12px 16px" }}>Комментарий</th>
-                      <th style={{ padding: "12px 16px" }}>
-                        Комментарий продавца
-                      </th>
-                      <th style={{ padding: "12px 16px" }}>Чек</th>
-                      <th style={{ padding: "12px 16px" }}>Действия</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visiblePurchaseConfirmations.map((item) => {
-                      const organizationName =
-                        item.organizations?.organization_name ?? "—";
-
-                      const statusStyle = getStatusStyle(item.status);
-                      const canMakeDecision =
-                        item.status === "requested" || item.status === "rejected";
-                      const isProcessingThisItem = processingId === item.id;
-
-                      return (
-                        <tr
-                          key={item.id}
-                          style={{ borderTop: "1px solid #eee" }}
-                        >
-                          <td style={{ padding: "12px 16px" }}>
-                            {formatDate(item.created_at)}
-                          </td>
-                          <td style={{ padding: "12px 16px" }}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                padding: "6px 10px",
-                                borderRadius: "999px",
-                                fontSize: "13px",
-                                whiteSpace: "nowrap",
-                                ...statusStyle,
-                              }}
-                            >
-                              {getStatusLabel(item.status)}
-                            </span>
-                          </td>
-                          <td style={{ padding: "12px 16px" }}>
-                            {organizationName}
-                          </td>
-                          <td style={{ padding: "12px 16px" }}>
-                            {item.buyer_public_code ?? "—"}
-                          </td>
-                          <td
-                            style={{
-                              padding: "12px 16px",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {formatMoney(
-                              item.purchase_amount,
-                              item.purchase_currency
-                            )}
-                          </td>
-                          <td
-                            style={{
-                              padding: "12px 16px",
-                              fontWeight: 700,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {formatPoints(item.points_awarded)} POINT
-                          </td>
-                          <td style={{ padding: "12px 16px" }}>
-                            {item.user_comment ?? "—"}
-                          </td>
-                          <td style={{ padding: "12px 16px" }}>
-                            <div style={{ display: "grid", gap: "8px" }}>
-                              <div>{item.seller_comment ?? "—"}</div>
-
-                              {canMakeDecision && (
-                                <input
-                                  type="text"
-                                  value={sellerComments[item.id] ?? ""}
-                                  onChange={(event) =>
-                                    setSellerComments((currentComments) => ({
-                                      ...currentComments,
-                                      [item.id]: event.target.value,
-                                    }))
-                                  }
-                                  placeholder="Комментарий решения"
-                                  style={{
-                                    padding: "8px 10px",
-                                    border: "1px solid #cbd5e1",
-                                    borderRadius: "8px",
-                                    minWidth: "180px",
-                                  }}
-                                />
-                              )}
-                            </div>
-                          </td>
-                          <td style={{ padding: "12px 16px" }}>
-                            {item.receipt_url ? (
-                              <a
-                                href={item.receipt_url}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                Открыть
-                              </a>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                          <td style={{ padding: "12px 16px" }}>
-                            {canMakeDecision ? (
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  gap: "8px",
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  disabled={isProcessingThisItem}
-                                  onClick={() =>
-                                    void handlePurchaseConfirmationAction(
-                                      item.id,
-                                      "confirm"
-                                    )
-                                  }
-                                  style={{
-                                    padding: "8px 10px",
-                                    borderRadius: "8px",
-                                    border: "1px solid #16a34a",
-                                    background: isProcessingThisItem
-                                      ? "#bbf7d0"
-                                      : "#16a34a",
-                                    color: "#ffffff",
-                                    cursor: isProcessingThisItem
-                                      ? "not-allowed"
-                                      : "pointer",
-                                    fontWeight: 600,
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  Confirm
-                                </button>
-
-                                <button
-                                  type="button"
-                                  disabled={isProcessingThisItem}
-                                  onClick={() =>
-                                    void handlePurchaseConfirmationAction(
-                                      item.id,
-                                      "reject"
-                                    )
-                                  }
-                                  style={{
-                                    padding: "8px 10px",
-                                    borderRadius: "8px",
-                                    border: "1px solid #dc2626",
-                                    background: isProcessingThisItem
-                                      ? "#fecaca"
-                                      : "#dc2626",
-                                    color: "#ffffff",
-                                    cursor: isProcessingThisItem
-                                      ? "not-allowed"
-                                      : "pointer",
-                                    fontWeight: 600,
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  Reject
-                                </button>
-                              </div>
-                            ) : (
-                              <span style={{ color: "#666" }}>—</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-        </>
-      )}
-    </main>
+    <SellerPurchaseConfirmationsClient
+      initialPurchaseConfirmations={purchaseConfirmations}
+      initialOrganizationIdFilter={organizationIdFilter}
+      initialErrorMessage={errorMessage}
+    />
   );
 }
