@@ -257,6 +257,21 @@ function getLinkStyle() {
   };
 }
 
+function getAuditLinkStyle() {
+  return {
+    display: "inline-block",
+    padding: "7px 10px",
+    borderRadius: "8px",
+    border: "1px solid #6366f1",
+    background: "#eef2ff",
+    color: "#3730a3",
+    textDecoration: "none",
+    fontSize: "13px",
+    fontWeight: 700,
+    whiteSpace: "nowrap" as const,
+  };
+}
+
 export default async function MyPurchaseConfirmationsPage() {
   const { purchaseConfirmations, errorMessage } =
     await getMyPurchaseConfirmations();
@@ -485,7 +500,7 @@ export default async function MyPurchaseConfirmationsPage() {
                   style={{
                     width: "100%",
                     borderCollapse: "collapse",
-                    minWidth: "1300px",
+                    minWidth: "1400px",
                   }}
                 >
                   <thead>
@@ -494,6 +509,7 @@ export default async function MyPurchaseConfirmationsPage() {
                       <th style={{ padding: "12px 16px" }}>Статус</th>
                       <th style={{ padding: "12px 16px" }}>Предприятие</th>
                       <th style={{ padding: "12px 16px" }}>Ссылки</th>
+                      <th style={{ padding: "12px 16px" }}>Audit</th>
                       <th style={{ padding: "12px 16px" }}>Сумма</th>
                       <th style={{ padding: "12px 16px" }}>Points</th>
                       <th style={{ padding: "12px 16px" }}>Комментарий</th>
@@ -514,6 +530,7 @@ export default async function MyPurchaseConfirmationsPage() {
                         organization?.organization_name ??
                         "Unknown organization";
                       const statusStyle = getStatusStyle(item.status);
+                      const auditHref = `/purchase-confirmations/${item.id}/events`;
 
                       return (
                         <tr
@@ -570,6 +587,12 @@ export default async function MyPurchaseConfirmationsPage() {
                                 Публичная история
                               </a>
                             </div>
+                          </td>
+
+                          <td style={{ padding: "12px 16px" }}>
+                            <a href={auditHref} style={getAuditLinkStyle()}>
+                              История
+                            </a>
                           </td>
 
                           <td
