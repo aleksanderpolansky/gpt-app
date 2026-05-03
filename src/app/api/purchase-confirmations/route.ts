@@ -228,7 +228,7 @@ export async function POST(request: Request) {
 
   const { data: organization, error: organizationError } = await supabase
     .from("organizations")
-    .select("id, country_code, default_currency")
+    .select("id, country_code, default_currency, created_by_user_id")
     .eq("id", organizationId)
     .single();
 
@@ -236,6 +236,16 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: organizationError?.message ?? "Organization not found" },
       { status: 500 }
+    );
+  }
+
+  if (organization.created_by_user_id === appUser.id) {
+    return NextResponse.json(
+      {
+        error:
+          "Заявка не создана. Владелец предприятия не может регистрировать покупку у своего же предприятия. Покупку должен зарегистрировать реальный покупатель со своего аккаунта.",
+      },
+      { status: 403 }
     );
   }
 
