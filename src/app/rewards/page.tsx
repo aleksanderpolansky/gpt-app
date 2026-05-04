@@ -396,6 +396,10 @@ export default async function RewardsCatalogPage({
             <a href="/my-purchase-confirmations" style={{ color: "#2563eb" }}>
               My purchase confirmations
             </a>
+
+            <a href="/my-certificates" style={{ color: "#2563eb" }}>
+              My certificates
+            </a>
           </nav>
         </header>
 
