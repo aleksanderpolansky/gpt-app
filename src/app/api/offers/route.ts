@@ -12,9 +12,10 @@ type OfferItemInput = {
 };
 
 type CertificatePricingCalculation = {
-  certificatePointsCoveredAmount: number | null;
+  certificatePaymentMode: "money_only" | "points_only" | "mixed";
+  certificatePointsCoveredAmount: number;
   certificatePointsPrice: number;
-  certificateMoneyPrice: number | null;
+  certificateMoneyPrice: number;
   referenceValuePerPoint: number;
   referenceExchangeRate: number | null;
 };
@@ -40,13 +41,13 @@ async function getCurrentUserContext() {
     .eq("auth0_sub", session.user.sub)
     .single();
 
-  if (appUserError) {
+  if (appUserError || !appUser) {
     return {
       appUser: null,
       person: null,
       personActor: null,
       errorResponse: NextResponse.json(
-        { error: appUserError.message },
+        { error: appUserError?.message ?? "App user not found" },
         { status: 500 }
       ),
     };
@@ -58,13 +59,13 @@ async function getCurrentUserContext() {
     .eq("user_id", appUser.id)
     .single();
 
-  if (personError) {
+  if (personError || !person) {
     return {
       appUser: null,
       person: null,
       personActor: null,
       errorResponse: NextResponse.json(
-        { error: personError.message },
+        { error: personError?.message ?? "Person not found" },
         { status: 500 }
       ),
     };
@@ -77,13 +78,13 @@ async function getCurrentUserContext() {
     .eq("actor_type", "person")
     .single();
 
-  if (personActorError) {
+  if (personActorError || !personActor) {
     return {
       appUser: null,
       person: null,
       personActor: null,
       errorResponse: NextResponse.json(
-        { error: personActorError.message },
+        { error: personActorError?.message ?? "Person actor not found" },
         { status: 500 }
       ),
     };
@@ -183,18 +184,6 @@ function parseOptionalDateTime(value: unknown) {
   return parsedValue;
 }
 
-function validateCertificatePaymentMode(value: string | null) {
-  if (!value) {
-    return "money_only";
-  }
-
-  if (["money_only", "points_only", "mixed"].includes(value)) {
-    return value;
-  }
-
-  return "money_only";
-}
-
 function validateDiscountType(value: string | null) {
   if (!value) {
     return null;
@@ -236,10 +225,8 @@ function roundPoints(value: number) {
 
 function calculateCertificatePricing(params: {
   certificateAvailable: boolean;
-  certificatePaymentMode: string;
   offerPrice: number | null;
   certificatePointsCoveredAmountInput: number | null;
-  certificateMoneyPriceInput: number | null;
   referenceValuePerPointInput: number | null;
   referenceExchangeRateInput: number | null;
 }): {
@@ -248,23 +235,64 @@ function calculateCertificatePricing(params: {
 } {
   const {
     certificateAvailable,
-    certificatePaymentMode,
     offerPrice,
     certificatePointsCoveredAmountInput,
-    certificateMoneyPriceInput,
     referenceValuePerPointInput,
     referenceExchangeRateInput,
   } = params;
 
   const referenceValuePerPoint = referenceValuePerPointInput ?? 1;
   const referenceExchangeRate = referenceExchangeRateInput;
+  const effectiveOfferPrice = typeof offerPrice === "number" ? offerPrice : null;
+  const coveredAmountInput = certificatePointsCoveredAmountInput ?? 0;
 
   if (!certificateAvailable) {
     return {
       calculation: {
-        certificatePointsCoveredAmount: null,
+        certificatePaymentMode: "money_only",
+        certificatePointsCoveredAmount: 0,
         certificatePointsPrice: 0,
-        certificateMoneyPrice: null,
+        certificateMoneyPrice:
+          effectiveOfferPrice !== null && effectiveOfferPrice > 0
+            ? roundMoney(effectiveOfferPrice)
+            : 0,
+        referenceValuePerPoint,
+        referenceExchangeRate,
+      },
+      errorMessage: null,
+    };
+  }
+
+  if (effectiveOfferPrice === null || effectiveOfferPrice <= 0) {
+    return {
+      calculation: null,
+      errorMessage:
+        "For certificate/reward offer, current offer price must be greater than 0.",
+    };
+  }
+
+  if (coveredAmountInput < 0) {
+    return {
+      calculation: null,
+      errorMessage: "Covered by points amount cannot be negative.",
+    };
+  }
+
+  if (coveredAmountInput > effectiveOfferPrice) {
+    return {
+      calculation: null,
+      errorMessage:
+        "Covered by points amount cannot be greater than the current offer price.",
+    };
+  }
+
+  if (coveredAmountInput === 0) {
+    return {
+      calculation: {
+        certificatePaymentMode: "money_only",
+        certificatePointsCoveredAmount: 0,
+        certificatePointsPrice: 0,
+        certificateMoneyPrice: roundMoney(effectiveOfferPrice),
         referenceValuePerPoint,
         referenceExchangeRate,
       },
@@ -279,118 +307,36 @@ function calculateCertificatePricing(params: {
     };
   }
 
-  if (certificatePaymentMode === "money_only") {
-    const moneyPrice =
-      certificateMoneyPriceInput ??
-      (typeof offerPrice === "number" ? offerPrice : null);
-
-    if (moneyPrice === null || moneyPrice <= 0) {
-      return {
-        calculation: null,
-        errorMessage:
-          "For money_only certificate mode, money price or offer price must be greater than 0.",
-      };
-    }
-
-    return {
-      calculation: {
-        certificatePointsCoveredAmount: 0,
-        certificatePointsPrice: 0,
-        certificateMoneyPrice: roundMoney(moneyPrice),
-        referenceValuePerPoint,
-        referenceExchangeRate,
-      },
-      errorMessage: null,
-    };
-  }
-
   if (!referenceExchangeRate || referenceExchangeRate <= 0) {
     return {
       calculation: null,
       errorMessage:
-        "For points_only or mixed certificate mode, referenceExchangeRate must be greater than 0. Example: if 1 EUR = 4.30 PLN, enter 4.30.",
+        "For points calculation, referenceExchangeRate must be greater than 0. Example: if 1 EUR = 4.30 PLN, enter 4.30.",
     };
   }
 
-  const effectiveOfferPrice = typeof offerPrice === "number" ? offerPrice : null;
-
-  if (effectiveOfferPrice === null || effectiveOfferPrice <= 0) {
-    return {
-      calculation: null,
-      errorMessage:
-        "For points_only or mixed certificate mode, offer price must be greater than 0.",
-    };
-  }
-
-  let coveredAmount = certificatePointsCoveredAmountInput;
-
-  if (certificatePaymentMode === "points_only" && coveredAmount === null) {
-    coveredAmount = effectiveOfferPrice;
-  }
-
-  if (certificatePaymentMode === "mixed" && coveredAmount === null) {
-    return {
-      calculation: null,
-      errorMessage:
-        "For mixed certificate mode, certificatePointsCoveredAmount is required.",
-    };
-  }
-
-  if (coveredAmount === null || coveredAmount <= 0) {
-    return {
-      calculation: null,
-      errorMessage:
-        "Covered by points amount must be greater than 0 for points_only or mixed mode.",
-    };
-  }
-
-  if (coveredAmount > effectiveOfferPrice) {
-    return {
-      calculation: null,
-      errorMessage:
-        "Covered by points amount cannot be greater than the current offer price.",
-    };
-  }
-
-  const calculatedPointsPrice = roundPoints(
-    coveredAmount / referenceExchangeRate / referenceValuePerPoint
+  const certificatePointsPrice = roundPoints(
+    coveredAmountInput / referenceExchangeRate / referenceValuePerPoint
   );
 
-  if (calculatedPointsPrice <= 0) {
+  if (certificatePointsPrice <= 0) {
     return {
       calculation: null,
       errorMessage: "Calculated points price must be greater than 0.",
     };
   }
 
-  if (certificatePaymentMode === "points_only") {
-    return {
-      calculation: {
-        certificatePointsCoveredAmount: roundMoney(coveredAmount),
-        certificatePointsPrice: calculatedPointsPrice,
-        certificateMoneyPrice: 0,
-        referenceValuePerPoint,
-        referenceExchangeRate,
-      },
-      errorMessage: null,
-    };
-  }
+  const certificateMoneyPrice = roundMoney(effectiveOfferPrice - coveredAmountInput);
 
-  const moneyPrice = roundMoney(effectiveOfferPrice - coveredAmount);
-
-  if (moneyPrice <= 0) {
-    return {
-      calculation: null,
-      errorMessage:
-        "For mixed mode, money part must be greater than 0. If points cover the full price, use points_only mode.",
-    };
-  }
+  const certificatePaymentMode =
+    certificateMoneyPrice === 0 ? "points_only" : "mixed";
 
   return {
     calculation: {
-      certificatePointsCoveredAmount: roundMoney(coveredAmount),
-      certificatePointsPrice: calculatedPointsPrice,
-      certificateMoneyPrice: moneyPrice,
+      certificatePaymentMode,
+      certificatePointsCoveredAmount: roundMoney(coveredAmountInput),
+      certificatePointsPrice,
+      certificateMoneyPrice,
       referenceValuePerPoint,
       referenceExchangeRate,
     },
@@ -609,9 +555,6 @@ export async function POST(request: Request) {
   );
   const discountLegalNote = parseOptionalText(body.discountLegalNote);
 
-  const certificatePaymentMode = validateCertificatePaymentMode(
-    parseOptionalText(body.certificatePaymentMode)
-  );
   const certificatePointsCoveredAmount = parseOptionalNumber(
     body.certificatePointsCoveredAmount
   );
@@ -673,12 +616,8 @@ export async function POST(request: Request) {
   const { calculation, errorMessage: certificatePricingErrorMessage } =
     calculateCertificatePricing({
       certificateAvailable,
-      certificatePaymentMode,
       offerPrice: price,
       certificatePointsCoveredAmountInput: certificatePointsCoveredAmount,
-      certificateMoneyPriceInput: parseOptionalNumber(
-        body.certificateMoneyPrice
-      ),
       referenceValuePerPointInput: referenceValuePerPoint,
       referenceExchangeRateInput: referenceExchangeRate,
     });
@@ -764,7 +703,7 @@ export async function POST(request: Request) {
       lowest_price_30_days_period_end: lowestPrice30DaysPeriodEnd,
       discount_legal_note: discountLegalNote,
 
-      certificate_payment_mode: certificatePaymentMode,
+      certificate_payment_mode: calculation.certificatePaymentMode,
       certificate_points_covered_amount:
         calculation.certificatePointsCoveredAmount,
       certificate_points_price: calculation.certificatePointsPrice,

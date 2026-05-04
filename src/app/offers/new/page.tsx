@@ -69,6 +69,34 @@ function round2(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+function getAutomaticPaymentMode(offerPrice: number | null, coveredAmount: number) {
+  if (!offerPrice || coveredAmount <= 0) {
+    return "money_only";
+  }
+
+  if (coveredAmount >= offerPrice) {
+    return "points_only";
+  }
+
+  return "mixed";
+}
+
+function getPaymentModeLabel(paymentMode: string) {
+  if (paymentMode === "money_only") {
+    return "Money only";
+  }
+
+  if (paymentMode === "points_only") {
+    return "Points only";
+  }
+
+  if (paymentMode === "mixed") {
+    return "Mixed: money + points";
+  }
+
+  return paymentMode;
+}
+
 export default function NewOfferPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [valueObjects, setValueObjects] = useState<ValueObject[]>([]);
@@ -105,8 +133,6 @@ export default function NewOfferPage() {
   const [discountLegalNote, setDiscountLegalNote] = useState("");
 
   const [certificateAvailable, setCertificateAvailable] = useState(true);
-  const [certificatePaymentMode, setCertificatePaymentMode] =
-    useState("points_only");
   const [certificatePointsCoveredAmount, setCertificatePointsCoveredAmount] =
     useState("");
   const [certificateCurrency, setCertificateCurrency] = useState("PLN");
@@ -186,28 +212,8 @@ export default function NewOfferPage() {
         coveredAmount: 0,
         calculatedPointsPrice: 0,
         moneyToPay: offerPrice ?? 0,
+        paymentMode: "money_only",
         warning: null,
-      };
-    }
-
-    if (certificatePaymentMode === "money_only") {
-      return {
-        canCalculate: true,
-        coveredAmount: 0,
-        calculatedPointsPrice: 0,
-        moneyToPay: round2(offerPrice),
-        warning: null,
-      };
-    }
-
-    if (!exchangeRate || !valuePerPoint) {
-      return {
-        canCalculate: false,
-        coveredAmount: 0,
-        calculatedPointsPrice: 0,
-        moneyToPay: offerPrice,
-        warning:
-          "Введите курс: например, если 1 EUR = 4.30 PLN, укажите 4.30.",
       };
     }
 
@@ -215,23 +221,8 @@ export default function NewOfferPage() {
       certificatePointsCoveredAmount
     );
 
-    const coveredAmount =
-      certificatePaymentMode === "points_only" &&
-      (certificatePointsCoveredAmount.trim().length === 0 ||
-        enteredCoveredAmount === null)
-        ? offerPrice
-        : enteredCoveredAmount ?? 0;
-
-    if (coveredAmount <= 0) {
-      return {
-        canCalculate: false,
-        coveredAmount,
-        calculatedPointsPrice: 0,
-        moneyToPay: offerPrice,
-        warning:
-          "Введите сумму, которую продавец готов покрыть points в валюте offer.",
-      };
-    }
+    const coveredAmount = enteredCoveredAmount ?? 0;
+    const paymentMode = getAutomaticPaymentMode(offerPrice, coveredAmount);
 
     if (coveredAmount > offerPrice) {
       return {
@@ -239,8 +230,32 @@ export default function NewOfferPage() {
         coveredAmount,
         calculatedPointsPrice: 0,
         moneyToPay: 0,
+        paymentMode,
         warning:
           "Сумма покрытия points не может быть больше текущей цены offer.",
+      };
+    }
+
+    if (paymentMode === "money_only") {
+      return {
+        canCalculate: true,
+        coveredAmount: 0,
+        calculatedPointsPrice: 0,
+        moneyToPay: round2(offerPrice),
+        paymentMode,
+        warning: null,
+      };
+    }
+
+    if (!exchangeRate || !valuePerPoint) {
+      return {
+        canCalculate: false,
+        coveredAmount,
+        calculatedPointsPrice: 0,
+        moneyToPay: offerPrice,
+        paymentMode,
+        warning:
+          "Введите курс: например, если 1 EUR = 4.30 PLN, укажите 4.30.",
       };
     }
 
@@ -249,31 +264,18 @@ export default function NewOfferPage() {
     );
 
     const moneyToPay =
-      certificatePaymentMode === "points_only"
-        ? 0
-        : round2(offerPrice - coveredAmount);
-
-    if (certificatePaymentMode === "mixed" && moneyToPay <= 0) {
-      return {
-        canCalculate: false,
-        coveredAmount,
-        calculatedPointsPrice,
-        moneyToPay,
-        warning:
-          "Для mixed-режима денежная часть должна быть больше 0. Если points покрывают всю цену, выберите points_only.",
-      };
-    }
+      paymentMode === "points_only" ? 0 : round2(offerPrice - coveredAmount);
 
     return {
       canCalculate: true,
       coveredAmount: round2(coveredAmount),
       calculatedPointsPrice,
       moneyToPay,
+      paymentMode,
       warning: null,
     };
   }, [
     certificateAvailable,
-    certificatePaymentMode,
     certificatePointsCoveredAmount,
     price,
     referenceExchangeRate,
@@ -371,13 +373,12 @@ export default function NewOfferPage() {
 
   useEffect(() => {
     if (
-      certificatePaymentMode === "points_only" &&
       price.trim().length > 0 &&
       certificatePointsCoveredAmount.trim().length === 0
     ) {
       setCertificatePointsCoveredAmount(price);
     }
-  }, [certificatePaymentMode, price, certificatePointsCoveredAmount]);
+  }, [price, certificatePointsCoveredAmount]);
 
   function findValueObject(valueObjectIdToFind: string) {
     return valueObjects.find(
@@ -470,10 +471,7 @@ export default function NewOfferPage() {
 
       setPrice(total);
       setRegularPrice(total);
-
-      if (certificatePaymentMode === "points_only") {
-        setCertificatePointsCoveredAmount(total);
-      }
+      setCertificatePointsCoveredAmount(total);
     }
   }
 
@@ -540,15 +538,7 @@ export default function NewOfferPage() {
           discountLegalNote,
 
           certificateAvailable,
-          certificatePaymentMode,
-          certificatePointsCoveredAmount:
-            certificatePaymentMode === "money_only"
-              ? "0"
-              : certificatePointsCoveredAmount,
-          certificateMoneyPrice:
-            certificatePaymentMode === "money_only"
-              ? price
-              : String(certificatePricingPreview.moneyToPay),
+          certificatePointsCoveredAmount,
           certificateCurrency,
           certificateTerms,
           certificateValidityDays,
@@ -610,7 +600,6 @@ export default function NewOfferPage() {
       setDiscountLegalNote("");
 
       setCertificateAvailable(true);
-      setCertificatePaymentMode("points_only");
       setCertificatePointsCoveredAmount("");
       setCertificateCurrency("PLN");
       setCertificateTerms("");
@@ -712,7 +701,10 @@ export default function NewOfferPage() {
               flexWrap: "wrap",
             }}
           >
-            <Link href="/" style={{ color: "#2563eb", textDecoration: "underline" }}>
+            <Link
+              href="/"
+              style={{ color: "#2563eb", textDecoration: "underline" }}
+            >
               На главную
             </Link>
 
@@ -1616,38 +1608,6 @@ export default function NewOfferPage() {
 
             {certificateAvailable ? (
               <>
-                <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-                  Certificate payment mode
-                  <select
-                    value={certificatePaymentMode}
-                    onChange={(event) => {
-                      const nextMode = event.target.value;
-                      setCertificatePaymentMode(nextMode);
-
-                      if (nextMode === "points_only" && price) {
-                        setCertificatePointsCoveredAmount(price);
-                      }
-
-                      if (nextMode === "money_only") {
-                        setCertificatePointsCoveredAmount("0");
-                      }
-                    }}
-                    style={{
-                      width: "100%",
-                      border: "1px solid #cccccc",
-                      borderRadius: "8px",
-                      padding: "12px",
-                      fontSize: "16px",
-                      boxSizing: "border-box",
-                      fontWeight: 400,
-                    }}
-                  >
-                    <option value="money_only">Money only</option>
-                    <option value="points_only">Points only</option>
-                    <option value="mixed">Mixed: money + points</option>
-                  </select>
-                </label>
-
                 <div
                   style={{
                     border: "1px solid #bfdbfe",
@@ -1664,15 +1624,33 @@ export default function NewOfferPage() {
 
                   <p style={{ margin: 0, color: "#374151", lineHeight: "1.5" }}>
                     Продавец указывает, какую сумму в валюте offer он готов
-                    покрыть points. Система рассчитывает, сколько POINT будет
-                    списано с покупателя. По умолчанию:{" "}
-                    <strong>
-                      1 {pointsCurrencyCode || "POINT"} ={" "}
-                      {referenceValuePerPoint || "1"}{" "}
-                      {referenceCurrency || "EUR"}
-                    </strong>
-                    .
+                    покрыть points. Система автоматически определяет режим
+                    оплаты и рассчитывает, сколько POINT будет списано с
+                    покупателя.
                   </p>
+
+                  <div
+                    style={{
+                      border: "1px solid #dddddd",
+                      borderRadius: "10px",
+                      padding: "12px",
+                      background: "#f9fafb",
+                      display: "grid",
+                      gap: "6px",
+                      lineHeight: "1.5",
+                    }}
+                  >
+                    <strong>Automatic payment mode</strong>
+                    <span>
+                      {getPaymentModeLabel(
+                        certificatePricingPreview.paymentMode
+                      )}
+                    </span>
+                    <span style={{ color: "#555555" }}>
+                      0 {currency} covered by points → money only. Partial
+                      coverage → mixed. Full coverage → points only.
+                    </span>
+                  </div>
 
                   <div
                     style={{
@@ -1690,15 +1668,10 @@ export default function NewOfferPage() {
                         step="0.01"
                         min="0"
                         value={certificatePointsCoveredAmount}
-                        disabled={certificatePaymentMode === "money_only"}
                         onChange={(event) =>
                           setCertificatePointsCoveredAmount(event.target.value)
                         }
-                        placeholder={
-                          certificatePaymentMode === "points_only"
-                            ? "Full offer price"
-                            : "For example: 40"
-                        }
+                        placeholder="For example: 50"
                         style={{
                           width: "100%",
                           border: "1px solid #cccccc",
@@ -1707,10 +1680,6 @@ export default function NewOfferPage() {
                           fontSize: "16px",
                           boxSizing: "border-box",
                           fontWeight: 400,
-                          background:
-                            certificatePaymentMode === "money_only"
-                              ? "#f3f4f6"
-                              : "#ffffff",
                         }}
                       />
                     </label>
@@ -1917,7 +1886,18 @@ export default function NewOfferPage() {
                     ) : (
                       <>
                         <span>
-                          Offer price: <strong>{price || "0"} {currency}</strong>
+                          Payment mode:{" "}
+                          <strong>
+                            {getPaymentModeLabel(
+                              certificatePricingPreview.paymentMode
+                            )}
+                          </strong>
+                        </span>
+                        <span>
+                          Offer price:{" "}
+                          <strong>
+                            {price || "0"} {currency}
+                          </strong>
                         </span>
                         <span>
                           Covered by points:{" "}
