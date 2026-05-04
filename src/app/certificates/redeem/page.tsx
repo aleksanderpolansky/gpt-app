@@ -388,7 +388,7 @@ export default async function RedeemCertificatePage({
               lineHeight: "1.5",
             }}
           >
-            Scan result page for seller confirmation.
+            Seller confirmation page after scanning the customer QR code.
           </p>
 
           <nav
@@ -496,8 +496,7 @@ export default async function RedeemCertificatePage({
                   lineHeight: "1.45",
                 }}
               >
-                This certificate belongs to another seller organization. Only
-                the owner of this organization can confirm usage.
+                Only the seller organization owner can confirm this certificate.
               </section>
             ) : null}
 
@@ -517,7 +516,7 @@ export default async function RedeemCertificatePage({
                 }}
               >
                 <div style={{ color: "#1e3a8a", marginBottom: "6px" }}>
-                  Reserved to charge
+                  Points to charge
                 </div>
                 <strong>
                   {formatMoney(
@@ -536,7 +535,7 @@ export default async function RedeemCertificatePage({
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "6px" }}>
-                  Money payment
+                  Customer pays money
                 </div>
                 <strong>
                   {formatMoney(certificate.money_price, certificate.currency)}
@@ -552,7 +551,7 @@ export default async function RedeemCertificatePage({
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "6px" }}>
-                  Covered value
+                  Value covered by points
                 </div>
                 <strong>
                   {formatMoney(
@@ -575,13 +574,6 @@ export default async function RedeemCertificatePage({
               }}
             >
               <p style={{ margin: 0 }}>
-                <strong>Certificate code:</strong>{" "}
-                <span style={{ fontFamily: "monospace" }}>
-                  {certificate.certificate_code}
-                </span>
-              </p>
-
-              <p style={{ margin: 0 }}>
                 <strong>Public code:</strong>{" "}
                 <span style={{ fontFamily: "monospace" }}>
                   {certificate.public_code ?? "—"}
@@ -600,25 +592,7 @@ export default async function RedeemCertificatePage({
               </p>
 
               <p style={{ margin: 0 }}>
-                <strong>Delivered:</strong> {formatDate(certificate.delivered_at)}
-              </p>
-
-              <p style={{ margin: 0 }}>
-                <strong>Redeemed:</strong> {formatDate(certificate.redeemed_at)}
-              </p>
-
-              <p style={{ margin: 0 }}>
-                <strong>Cancelled:</strong>{" "}
-                {formatDate(certificate.cancelled_at)}
-              </p>
-
-              <p style={{ margin: 0 }}>
                 <strong>Buyer message:</strong> {certificate.message ?? "—"}
-              </p>
-
-              <p style={{ margin: 0 }}>
-                <strong>Seller comment:</strong>{" "}
-                {certificate.seller_comment ?? "—"}
               </p>
             </section>
 
