@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase";
+import RequestCertificateButton from "./components/RequestCertificateButton";
 
 export const dynamic = "force-dynamic";
 
@@ -709,6 +710,7 @@ export default async function RewardsCatalogPage({
                       gap: "10px",
                       flexWrap: "wrap",
                       marginTop: "4px",
+                      alignItems: "flex-start",
                     }}
                   >
                     {offer.organizationId ? (
@@ -729,22 +731,13 @@ export default async function RewardsCatalogPage({
                       </a>
                     ) : null}
 
-                    <button
-                      type="button"
-                      disabled
-                      title="Certificate ordering will be added in the next step"
-                      style={{
-                        border: "1px solid #9ca3af",
-                        borderRadius: "8px",
-                        padding: "10px 12px",
-                        color: "#ffffff",
-                        background: "#9ca3af",
-                        fontWeight: 700,
-                        cursor: "not-allowed",
-                      }}
-                    >
-                      Request certificate
-                    </button>
+                    <RequestCertificateButton
+                      offerId={offer.id}
+                      pointsPrice={offer.certificatePointsPrice}
+                      pointsCurrencyCode={offer.pointsCurrencyCode}
+                      moneyPrice={offer.certificateMoneyPrice}
+                      currency={offer.certificateCurrency ?? offer.currency}
+                    />
                   </div>
                 </article>
               );
