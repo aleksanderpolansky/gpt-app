@@ -40,6 +40,8 @@ type RewardOfferRecord = {
   certificate_currency: string | null;
   certificate_terms: string | null;
   certificate_validity_days: number | null;
+  cancellation_window_minutes: number | null;
+  cooldown_after_cancellation_minutes: number | null;
   requires_seller_confirmation: boolean | null;
   is_transferable: boolean | null;
   is_cancellable: boolean | null;
@@ -84,6 +86,8 @@ type RewardOffer = {
   certificateCurrency: string | null;
   certificateTerms: string | null;
   certificateValidityDays: number | null;
+  cancellationWindowMinutes: number | null;
+  cooldownAfterCancellationMinutes: number | null;
   requiresSellerConfirmation: boolean | null;
   isTransferable: boolean | null;
   isCancellable: boolean | null;
@@ -132,6 +136,26 @@ function formatMoney(
   }
 
   return `${value} ${currency || ""}`.trim();
+}
+
+function formatMinutes(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return "Not specified";
+  }
+
+  if (value < 60) {
+    return `${value} minutes`;
+  }
+
+  if (value === 60) {
+    return "1 hour";
+  }
+
+  if (value % 60 === 0) {
+    return `${value / 60} hours`;
+  }
+
+  return `${value} minutes`;
 }
 
 function getPaymentModeLabel(paymentMode: string | null | undefined) {
@@ -199,6 +223,8 @@ async function getRewardOffers(): Promise<{
       certificate_currency,
       certificate_terms,
       certificate_validity_days,
+      cancellation_window_minutes,
+      cooldown_after_cancellation_minutes,
       requires_seller_confirmation,
       is_transferable,
       is_cancellable,
@@ -270,6 +296,9 @@ async function getRewardOffers(): Promise<{
         certificateCurrency: offer.certificate_currency,
         certificateTerms: offer.certificate_terms,
         certificateValidityDays: offer.certificate_validity_days,
+        cancellationWindowMinutes: offer.cancellation_window_minutes,
+        cooldownAfterCancellationMinutes:
+          offer.cooldown_after_cancellation_minutes,
         requiresSellerConfirmation: offer.requires_seller_confirmation,
         isTransferable: offer.is_transferable,
         isCancellable: offer.is_cancellable,
@@ -666,6 +695,21 @@ export default async function RewardsCatalogPage({
                     </p>
 
                     <p style={{ margin: 0 }}>
+                      <strong>Cancellation window:</strong>{" "}
+                      {formatMinutes(offer.cancellationWindowMinutes)}
+                    </p>
+
+                    <p style={{ margin: 0 }}>
+                      <strong>Cooldown after cancellation:</strong>{" "}
+                      {formatMinutes(offer.cooldownAfterCancellationMinutes)}
+                    </p>
+
+                    <p style={{ margin: 0 }}>
+                      <strong>After expiry:</strong> reserved{" "}
+                      {offer.pointsCurrencyCode ?? "POINT"} will be charged.
+                    </p>
+
+                    <p style={{ margin: 0 }}>
                       <strong>Booking:</strong>{" "}
                       {getBooleanLabel(offer.requiresBooking)} /{" "}
                       {offer.bookingMode ?? "not specified"}
@@ -689,6 +733,22 @@ export default async function RewardsCatalogPage({
                       {offer.referenceValuePerPoint ?? 1}{" "}
                       {offer.referenceCurrency ?? "EUR"}
                     </p>
+                  </section>
+
+                  <section
+                    style={{
+                      border: "1px solid #f0d28a",
+                      borderRadius: "10px",
+                      padding: "12px",
+                      background: "#fff8e6",
+                      color: "#7a4b00",
+                      lineHeight: "1.45",
+                    }}
+                  >
+                    <strong>Important:</strong> You can cancel this certificate
+                    only during the cancellation window. If you do not use it
+                    before the validity period ends, reserved points will be
+                    charged and will not return to your available balance.
                   </section>
 
                   {offer.certificateTerms ? (
