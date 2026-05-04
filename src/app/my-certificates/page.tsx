@@ -1,5 +1,7 @@
 import { auth0 } from "../../../lib/auth0";
 import { supabase } from "../../../lib/supabase";
+import CancelCertificateButton from "./components/CancelCertificateButton";
+import ShowCertificateQrButton from "./components/ShowCertificateQrButton";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +56,7 @@ type CertificateRecord = {
   certificate_code: string;
   public_code: string | null;
   redeem_code: string | null;
+  qr_token: string | null;
   points_price: number;
   money_price: number | null;
   currency: string | null;
@@ -176,7 +179,12 @@ function getStatusStyle(status: string | null | undefined) {
     };
   }
 
-  if (status === "requested" || status === "seller_confirmed" || status === "active") {
+  if (
+    status === "requested" ||
+    status === "seller_confirmed" ||
+    status === "active" ||
+    status === "delivered"
+  ) {
     return {
       background: "#eff6ff",
       color: "#1e3a8a",
@@ -282,6 +290,7 @@ async function getMyCertificates(): Promise<PageData> {
       certificate_code,
       public_code,
       redeem_code,
+      qr_token,
       points_price,
       money_price,
       currency,
@@ -344,12 +353,16 @@ async function getMyCertificates(): Promise<PageData> {
 export default async function MyCertificatesPage() {
   const { certificates, errorMessage } = await getMyCertificates();
 
-  const requestedCount = certificates.filter(
-    (certificate) => certificate.status === "requested"
+  const activeCount = certificates.filter(
+    (certificate) => certificate.status === "active"
   ).length;
 
   const redeemedCount = certificates.filter(
     (certificate) => certificate.status === "redeemed"
+  ).length;
+
+  const cancelledCount = certificates.filter(
+    (certificate) => certificate.status === "cancelled"
   ).length;
 
   const reservedPointsTotal = certificates.reduce((sum, certificate) => {
@@ -358,6 +371,10 @@ export default async function MyCertificatesPage() {
 
   const chargedPointsTotal = certificates.reduce((sum, certificate) => {
     return sum + (Number(certificate.points_charged) || 0);
+  }, 0);
+
+  const releasedPointsTotal = certificates.reduce((sum, certificate) => {
+    return sum + (Number(certificate.points_released) || 0);
   }, 0);
 
   return (
@@ -480,10 +497,10 @@ export default async function MyCertificatesPage() {
               }}
             >
               <div style={{ color: "#1e3a8a", marginBottom: "8px" }}>
-                Requested / active
+                Active
               </div>
               <div style={{ fontSize: "34px", fontWeight: 700 }}>
-                {requestedCount}
+                {activeCount}
               </div>
             </div>
 
@@ -501,6 +518,23 @@ export default async function MyCertificatesPage() {
               </div>
               <div style={{ fontSize: "34px", fontWeight: 700 }}>
                 {redeemedCount}
+              </div>
+            </div>
+
+            <div
+              style={{
+                border: "1px solid #f2b8b5",
+                borderRadius: "16px",
+                padding: "22px",
+                background: "#fff5f5",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+              }}
+            >
+              <div style={{ color: "#a40000", marginBottom: "8px" }}>
+                Cancelled
+              </div>
+              <div style={{ fontSize: "34px", fontWeight: 700 }}>
+                {cancelledCount}
               </div>
             </div>
 
@@ -535,6 +569,23 @@ export default async function MyCertificatesPage() {
               </div>
               <div style={{ fontSize: "34px", fontWeight: 700 }}>
                 {chargedPointsTotal.toFixed(2)}
+              </div>
+            </div>
+
+            <div
+              style={{
+                border: "1px solid #dddddd",
+                borderRadius: "16px",
+                padding: "22px",
+                background: "#ffffff",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+              }}
+            >
+              <div style={{ color: "#666666", marginBottom: "8px" }}>
+                Released POINT
+              </div>
+              <div style={{ fontSize: "34px", fontWeight: 700 }}>
+                {releasedPointsTotal.toFixed(2)}
               </div>
             </div>
           </section>
@@ -607,7 +658,13 @@ export default async function MyCertificatesPage() {
                       </p>
                     </div>
 
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        flexWrap: "wrap",
+                      }}
+                    >
                       <span
                         style={{
                           display: "inline-block",
@@ -643,7 +700,8 @@ export default async function MyCertificatesPage() {
                   <section
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(180px, 1fr))",
                       gap: "10px",
                     }}
                   >
@@ -694,10 +752,32 @@ export default async function MyCertificatesPage() {
                       }}
                     >
                       <div style={{ color: "#666666", marginBottom: "6px" }}>
+                        Released
+                      </div>
+                      <strong>
+                        {formatMoney(
+                          certificate.points_released,
+                          certificate.points_currency_code
+                        )}
+                      </strong>
+                    </div>
+
+                    <div
+                      style={{
+                        border: "1px solid #dddddd",
+                        borderRadius: "10px",
+                        padding: "12px",
+                        background: "#f9fafb",
+                      }}
+                    >
+                      <div style={{ color: "#666666", marginBottom: "6px" }}>
                         Money payment
                       </div>
                       <strong>
-                        {formatMoney(certificate.money_price, certificate.currency)}
+                        {formatMoney(
+                          certificate.money_price,
+                          certificate.currency
+                        )}
                       </strong>
                     </div>
 
@@ -759,8 +839,8 @@ export default async function MyCertificatesPage() {
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Seller confirmed:</strong>{" "}
-                      {formatDate(certificate.seller_confirmed_at)}
+                      <strong>Delivered:</strong>{" "}
+                      {formatDate(certificate.delivered_at)}
                     </p>
 
                     <p style={{ margin: 0 }}>
@@ -769,8 +849,18 @@ export default async function MyCertificatesPage() {
                     </p>
 
                     <p style={{ margin: 0 }}>
+                      <strong>Cancelled:</strong>{" "}
+                      {formatDate(certificate.cancelled_at)}
+                    </p>
+
+                    <p style={{ margin: 0 }}>
                       <strong>Seller comment:</strong>{" "}
                       {certificate.seller_comment ?? "—"}
+                    </p>
+
+                    <p style={{ margin: 0 }}>
+                      <strong>Buyer comment:</strong>{" "}
+                      {certificate.buyer_comment ?? "—"}
                     </p>
 
                     <p style={{ margin: 0 }}>
@@ -783,6 +873,7 @@ export default async function MyCertificatesPage() {
                       display: "flex",
                       gap: "10px",
                       flexWrap: "wrap",
+                      alignItems: "flex-start",
                     }}
                   >
                     {organization?.id ? (
@@ -803,22 +894,25 @@ export default async function MyCertificatesPage() {
                       </a>
                     ) : null}
 
-                    <button
-                      type="button"
-                      disabled
-                      title="QR display and redemption flow will be added in the next step"
-                      style={{
-                        border: "1px solid #9ca3af",
-                        borderRadius: "8px",
-                        padding: "10px 12px",
-                        color: "#ffffff",
-                        background: "#9ca3af",
-                        fontWeight: 700,
-                        cursor: "not-allowed",
-                      }}
-                    >
-                      Show QR / redeem
-                    </button>
+                    <ShowCertificateQrButton
+                      certificateCode={certificate.certificate_code}
+                      publicCode={certificate.public_code}
+                      redeemCode={certificate.redeem_code}
+                      qrToken={certificate.qr_token}
+                      status={certificate.status}
+                      pointsStatus={certificate.points_status}
+                    />
+
+                    <CancelCertificateButton
+                      certificateId={certificate.id}
+                      certificateCode={certificate.certificate_code}
+                      status={certificate.status}
+                      pointsStatus={certificate.points_status}
+                      pointsReserved={Number(certificate.points_reserved) || 0}
+                      pointsCurrencyCode={
+                        certificate.points_currency_code || "POINT"
+                      }
+                    />
                   </div>
                 </article>
               );
