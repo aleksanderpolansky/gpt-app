@@ -11,6 +11,14 @@ type OfferItemInput = {
   isRequired?: boolean;
 };
 
+type CertificatePricingCalculation = {
+  certificatePointsCoveredAmount: number | null;
+  certificatePointsPrice: number;
+  certificateMoneyPrice: number | null;
+  referenceValuePerPoint: number;
+  referenceExchangeRate: number | null;
+};
+
 async function getCurrentUserContext() {
   const session = await auth0.getSession();
 
@@ -89,6 +97,20 @@ async function getCurrentUserContext() {
   };
 }
 
+function parseOptionalText(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (trimmedValue.length === 0) {
+    return null;
+  }
+
+  return trimmedValue;
+}
+
 function parseOptionalNumber(value: unknown) {
   if (value === null || value === undefined || value === "") {
     return null;
@@ -103,6 +125,26 @@ function parseOptionalNumber(value: unknown) {
   return parsedValue;
 }
 
+function parseOptionalInteger(value: unknown) {
+  const parsedValue = parseOptionalNumber(value);
+
+  if (parsedValue === null) {
+    return null;
+  }
+
+  return Math.trunc(parsedValue);
+}
+
+function parseIntegerWithFallback(value: unknown, fallbackValue = 0) {
+  const parsedValue = parseOptionalNumber(value);
+
+  if (parsedValue === null) {
+    return fallbackValue;
+  }
+
+  return Math.trunc(parsedValue);
+}
+
 function parseRequiredPositiveNumber(value: unknown, fallbackValue = 1) {
   const parsedValue = parseOptionalNumber(value);
 
@@ -113,14 +155,247 @@ function parseRequiredPositiveNumber(value: unknown, fallbackValue = 1) {
   return parsedValue;
 }
 
-function parseOptionalInteger(value: unknown, fallbackValue = 0) {
-  const parsedValue = parseOptionalNumber(value);
-
-  if (parsedValue === null) {
-    return fallbackValue;
+function parseOptionalBoolean(value: unknown, fallbackValue = false) {
+  if (typeof value === "boolean") {
+    return value;
   }
 
-  return Math.trunc(parsedValue);
+  return fallbackValue;
+}
+
+function normalizeCurrency(value: unknown) {
+  const parsedValue = parseOptionalText(value);
+
+  if (!parsedValue) {
+    return null;
+  }
+
+  return parsedValue.toUpperCase();
+}
+
+function parseOptionalDateTime(value: unknown) {
+  const parsedValue = parseOptionalText(value);
+
+  if (!parsedValue) {
+    return null;
+  }
+
+  return parsedValue;
+}
+
+function validateCertificatePaymentMode(value: string | null) {
+  if (!value) {
+    return "money_only";
+  }
+
+  if (["money_only", "points_only", "mixed"].includes(value)) {
+    return value;
+  }
+
+  return "money_only";
+}
+
+function validateDiscountType(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  if (["percent", "fixed_amount", "manual_price"].includes(value)) {
+    return value;
+  }
+
+  return null;
+}
+
+function validatePointsRefundPolicy(value: string | null) {
+  if (!value) {
+    return "refund_until_seller_confirmation";
+  }
+
+  if (
+    [
+      "no_refund",
+      "refund_until_seller_confirmation",
+      "refund_until_delivery",
+      "manual_review",
+    ].includes(value)
+  ) {
+    return value;
+  }
+
+  return "refund_until_seller_confirmation";
+}
+
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function roundPoints(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function calculateCertificatePricing(params: {
+  certificateAvailable: boolean;
+  certificatePaymentMode: string;
+  offerPrice: number | null;
+  certificatePointsCoveredAmountInput: number | null;
+  certificateMoneyPriceInput: number | null;
+  referenceValuePerPointInput: number | null;
+  referenceExchangeRateInput: number | null;
+}): {
+  calculation: CertificatePricingCalculation | null;
+  errorMessage: string | null;
+} {
+  const {
+    certificateAvailable,
+    certificatePaymentMode,
+    offerPrice,
+    certificatePointsCoveredAmountInput,
+    certificateMoneyPriceInput,
+    referenceValuePerPointInput,
+    referenceExchangeRateInput,
+  } = params;
+
+  const referenceValuePerPoint = referenceValuePerPointInput ?? 1;
+  const referenceExchangeRate = referenceExchangeRateInput;
+
+  if (!certificateAvailable) {
+    return {
+      calculation: {
+        certificatePointsCoveredAmount: null,
+        certificatePointsPrice: 0,
+        certificateMoneyPrice: null,
+        referenceValuePerPoint,
+        referenceExchangeRate,
+      },
+      errorMessage: null,
+    };
+  }
+
+  if (referenceValuePerPoint <= 0) {
+    return {
+      calculation: null,
+      errorMessage: "referenceValuePerPoint must be greater than 0.",
+    };
+  }
+
+  if (certificatePaymentMode === "money_only") {
+    const moneyPrice =
+      certificateMoneyPriceInput ??
+      (typeof offerPrice === "number" ? offerPrice : null);
+
+    if (moneyPrice === null || moneyPrice <= 0) {
+      return {
+        calculation: null,
+        errorMessage:
+          "For money_only certificate mode, money price or offer price must be greater than 0.",
+      };
+    }
+
+    return {
+      calculation: {
+        certificatePointsCoveredAmount: 0,
+        certificatePointsPrice: 0,
+        certificateMoneyPrice: roundMoney(moneyPrice),
+        referenceValuePerPoint,
+        referenceExchangeRate,
+      },
+      errorMessage: null,
+    };
+  }
+
+  if (!referenceExchangeRate || referenceExchangeRate <= 0) {
+    return {
+      calculation: null,
+      errorMessage:
+        "For points_only or mixed certificate mode, referenceExchangeRate must be greater than 0. Example: if 1 EUR = 4.30 PLN, enter 4.30.",
+    };
+  }
+
+  const effectiveOfferPrice = typeof offerPrice === "number" ? offerPrice : null;
+
+  if (effectiveOfferPrice === null || effectiveOfferPrice <= 0) {
+    return {
+      calculation: null,
+      errorMessage:
+        "For points_only or mixed certificate mode, offer price must be greater than 0.",
+    };
+  }
+
+  let coveredAmount = certificatePointsCoveredAmountInput;
+
+  if (certificatePaymentMode === "points_only" && coveredAmount === null) {
+    coveredAmount = effectiveOfferPrice;
+  }
+
+  if (certificatePaymentMode === "mixed" && coveredAmount === null) {
+    return {
+      calculation: null,
+      errorMessage:
+        "For mixed certificate mode, certificatePointsCoveredAmount is required.",
+    };
+  }
+
+  if (coveredAmount === null || coveredAmount <= 0) {
+    return {
+      calculation: null,
+      errorMessage:
+        "Covered by points amount must be greater than 0 for points_only or mixed mode.",
+    };
+  }
+
+  if (coveredAmount > effectiveOfferPrice) {
+    return {
+      calculation: null,
+      errorMessage:
+        "Covered by points amount cannot be greater than the current offer price.",
+    };
+  }
+
+  const calculatedPointsPrice = roundPoints(
+    coveredAmount / referenceExchangeRate / referenceValuePerPoint
+  );
+
+  if (calculatedPointsPrice <= 0) {
+    return {
+      calculation: null,
+      errorMessage: "Calculated points price must be greater than 0.",
+    };
+  }
+
+  if (certificatePaymentMode === "points_only") {
+    return {
+      calculation: {
+        certificatePointsCoveredAmount: roundMoney(coveredAmount),
+        certificatePointsPrice: calculatedPointsPrice,
+        certificateMoneyPrice: 0,
+        referenceValuePerPoint,
+        referenceExchangeRate,
+      },
+      errorMessage: null,
+    };
+  }
+
+  const moneyPrice = roundMoney(effectiveOfferPrice - coveredAmount);
+
+  if (moneyPrice <= 0) {
+    return {
+      calculation: null,
+      errorMessage:
+        "For mixed mode, money part must be greater than 0. If points cover the full price, use points_only mode.",
+    };
+  }
+
+  return {
+    calculation: {
+      certificatePointsCoveredAmount: roundMoney(coveredAmount),
+      certificatePointsPrice: calculatedPointsPrice,
+      certificateMoneyPrice: moneyPrice,
+      referenceValuePerPoint,
+      referenceExchangeRate,
+    },
+    errorMessage: null,
+  };
 }
 
 async function verifyOrganizationAccess(
@@ -290,28 +565,87 @@ export async function POST(request: Request) {
 
   const body = await request.json();
 
-  const organizationId = body.organizationId;
-  const valueObjectId = body.valueObjectId ?? null;
-  const offerType = body.offerType;
-  const title = body.title;
-  const description = body.description ?? null;
+  const organizationId = parseOptionalText(body.organizationId);
+  const valueObjectId = parseOptionalText(body.valueObjectId);
+  const offerType = parseOptionalText(body.offerType);
+  const title = parseOptionalText(body.title);
+  const description = parseOptionalText(body.description);
   const price = parseOptionalNumber(body.price);
-  const currency = body.currency ?? null;
-  const isPaid = body.isPaid ?? true;
-  const isFree = body.isFree ?? false;
-  const certificateAvailable = body.certificateAvailable ?? false;
-  const requiresBooking = body.requiresBooking ?? false;
-  const bookingMode = body.bookingMode ?? "not_required";
-  const defaultDurationMinutes = parseOptionalNumber(
+  const currency = normalizeCurrency(body.currency);
+  const isPaid = parseOptionalBoolean(body.isPaid, true);
+  const isFree = parseOptionalBoolean(body.isFree, false);
+  const certificateAvailable = parseOptionalBoolean(
+    body.certificateAvailable,
+    false
+  );
+  const requiresBooking = parseOptionalBoolean(body.requiresBooking, false);
+  const bookingMode = parseOptionalText(body.bookingMode) ?? "not_required";
+  const defaultDurationMinutes = parseOptionalInteger(
     body.defaultDurationMinutes
   );
-  const minDurationMinutes = parseOptionalNumber(body.minDurationMinutes);
-  const maxDurationMinutes = parseOptionalNumber(body.maxDurationMinutes);
-  const quantityLimit = parseOptionalNumber(body.quantityLimit);
-  const validFrom = body.validFrom || null;
-  const validUntil = body.validUntil || null;
-  const targetReceiverType = body.targetReceiverType ?? null;
-  const spaceId = body.spaceId ?? null;
+  const minDurationMinutes = parseOptionalInteger(body.minDurationMinutes);
+  const maxDurationMinutes = parseOptionalInteger(body.maxDurationMinutes);
+  const quantityLimit = parseOptionalInteger(body.quantityLimit);
+  const validFrom = parseOptionalDateTime(body.validFrom);
+  const validUntil = parseOptionalDateTime(body.validUntil);
+  const targetReceiverType = parseOptionalText(body.targetReceiverType);
+  const spaceId = parseOptionalText(body.spaceId);
+
+  const regularPrice = parseOptionalNumber(body.regularPrice);
+  const isDiscountActive = parseOptionalBoolean(body.isDiscountActive, false);
+  const discountType = validateDiscountType(parseOptionalText(body.discountType));
+  const discountValue = parseOptionalNumber(body.discountValue);
+  const discountStartsAt = parseOptionalDateTime(body.discountStartsAt);
+  const discountEndsAt = parseOptionalDateTime(body.discountEndsAt);
+  const lowestPrice30Days = parseOptionalNumber(body.lowestPrice30Days);
+  const lowestPrice30DaysCurrency = normalizeCurrency(
+    body.lowestPrice30DaysCurrency
+  );
+  const lowestPrice30DaysPeriodStart = parseOptionalDateTime(
+    body.lowestPrice30DaysPeriodStart
+  );
+  const lowestPrice30DaysPeriodEnd = parseOptionalDateTime(
+    body.lowestPrice30DaysPeriodEnd
+  );
+  const discountLegalNote = parseOptionalText(body.discountLegalNote);
+
+  const certificatePaymentMode = validateCertificatePaymentMode(
+    parseOptionalText(body.certificatePaymentMode)
+  );
+  const certificatePointsCoveredAmount = parseOptionalNumber(
+    body.certificatePointsCoveredAmount
+  );
+  const certificateCurrency = normalizeCurrency(body.certificateCurrency);
+  const certificateTerms = parseOptionalText(body.certificateTerms);
+  const certificateValidityDays = parseOptionalInteger(
+    body.certificateValidityDays
+  );
+  const requiresSellerConfirmation = parseOptionalBoolean(
+    body.requiresSellerConfirmation,
+    true
+  );
+  const isTransferable = parseOptionalBoolean(body.isTransferable, true);
+  const isCancellable = parseOptionalBoolean(body.isCancellable, true);
+  const pointsRefundPolicy = validatePointsRefundPolicy(
+    parseOptionalText(body.pointsRefundPolicy)
+  );
+  const maxCertificatesTotal = parseOptionalInteger(body.maxCertificatesTotal);
+  const maxCertificatesPerUser = parseOptionalInteger(
+    body.maxCertificatesPerUser
+  );
+  const isPublicReward = parseOptionalBoolean(body.isPublicReward, true);
+
+  const pointsCurrencyCode = normalizeCurrency(body.pointsCurrencyCode) ?? "POINT";
+  const referenceCurrency = normalizeCurrency(body.referenceCurrency) ?? "EUR";
+  const referenceValuePerPoint = parseOptionalNumber(
+    body.referenceValuePerPoint
+  );
+  const referenceExchangeRate = parseOptionalNumber(body.referenceExchangeRate);
+  const referenceExchangeRateSource =
+    parseOptionalText(body.referenceExchangeRateSource) ?? "manual";
+  const referenceExchangeRateDate = parseOptionalText(
+    body.referenceExchangeRateDate
+  );
 
   const rawItems: unknown[] = Array.isArray(body.items) ? body.items : [];
   const items: OfferItemInput[] = rawItems.filter(
@@ -322,6 +656,36 @@ export async function POST(request: Request) {
   if (!organizationId || !offerType || !title) {
     return NextResponse.json(
       { error: "organizationId, offerType and title are required" },
+      { status: 400 }
+    );
+  }
+
+  if (isDiscountActive && !lowestPrice30Days) {
+    return NextResponse.json(
+      {
+        error:
+          "For active discount, lowestPrice30Days is required for Polish/EU price reduction compliance.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const { calculation, errorMessage: certificatePricingErrorMessage } =
+    calculateCertificatePricing({
+      certificateAvailable,
+      certificatePaymentMode,
+      offerPrice: price,
+      certificatePointsCoveredAmountInput: certificatePointsCoveredAmount,
+      certificateMoneyPriceInput: parseOptionalNumber(
+        body.certificateMoneyPrice
+      ),
+      referenceValuePerPointInput: referenceValuePerPoint,
+      referenceExchangeRateInput: referenceExchangeRate,
+    });
+
+  if (certificatePricingErrorMessage || !calculation) {
+    return NextResponse.json(
+      { error: certificatePricingErrorMessage ?? "Certificate pricing error" },
       { status: 400 }
     );
   }
@@ -387,6 +751,41 @@ export async function POST(request: Request) {
       valid_until: validUntil,
       target_receiver_type: targetReceiverType,
       status: "active",
+
+      regular_price: regularPrice,
+      is_discount_active: isDiscountActive,
+      discount_type: discountType,
+      discount_value: discountValue,
+      discount_starts_at: discountStartsAt,
+      discount_ends_at: discountEndsAt,
+      lowest_price_30_days: lowestPrice30Days,
+      lowest_price_30_days_currency: lowestPrice30DaysCurrency ?? currency,
+      lowest_price_30_days_period_start: lowestPrice30DaysPeriodStart,
+      lowest_price_30_days_period_end: lowestPrice30DaysPeriodEnd,
+      discount_legal_note: discountLegalNote,
+
+      certificate_payment_mode: certificatePaymentMode,
+      certificate_points_covered_amount:
+        calculation.certificatePointsCoveredAmount,
+      certificate_points_price: calculation.certificatePointsPrice,
+      certificate_money_price: calculation.certificateMoneyPrice,
+      certificate_currency: certificateCurrency ?? currency,
+      certificate_terms: certificateTerms,
+      certificate_validity_days: certificateValidityDays,
+      requires_seller_confirmation: requiresSellerConfirmation,
+      is_transferable: isTransferable,
+      is_cancellable: isCancellable,
+      points_refund_policy: pointsRefundPolicy,
+      max_certificates_total: maxCertificatesTotal,
+      max_certificates_per_user: maxCertificatesPerUser,
+      is_public_reward: isPublicReward,
+
+      points_currency_code: pointsCurrencyCode,
+      reference_currency: referenceCurrency,
+      reference_value_per_point: calculation.referenceValuePerPoint,
+      reference_exchange_rate: calculation.referenceExchangeRate,
+      reference_exchange_rate_source: referenceExchangeRateSource,
+      reference_exchange_rate_date: referenceExchangeRateDate,
     })
     .select(
       `
@@ -422,7 +821,7 @@ export async function POST(request: Request) {
         unit_price: unitPrice,
         total_price: totalPrice,
         currency: item.currency ?? currency,
-        sort_order: parseOptionalInteger(item.sortOrder, index),
+        sort_order: parseIntegerWithFallback(item.sortOrder, index),
         is_required: item.isRequired ?? true,
         status: "active",
       };

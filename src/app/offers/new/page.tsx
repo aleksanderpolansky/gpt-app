@@ -41,6 +41,34 @@ function createEmptyOfferItem(currency = "PLN"): OfferItemForm {
   };
 }
 
+function todayDateInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function parsePositiveNumber(value: string) {
+  const parsedValue = Number(value);
+
+  if (Number.isNaN(parsedValue) || parsedValue <= 0) {
+    return null;
+  }
+
+  return parsedValue;
+}
+
+function parseNonNegativeNumber(value: string) {
+  const parsedValue = Number(value);
+
+  if (Number.isNaN(parsedValue) || parsedValue < 0) {
+    return null;
+  }
+
+  return parsedValue;
+}
+
+function round2(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
 export default function NewOfferPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [valueObjects, setValueObjects] = useState<ValueObject[]>([]);
@@ -57,10 +85,54 @@ export default function NewOfferPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [regularPrice, setRegularPrice] = useState("");
   const [currency, setCurrency] = useState("PLN");
   const [isPaid, setIsPaid] = useState(true);
   const [isFree, setIsFree] = useState(false);
+
+  const [isDiscountActive, setIsDiscountActive] = useState(false);
+  const [discountType, setDiscountType] = useState("manual_price");
+  const [discountValue, setDiscountValue] = useState("");
+  const [discountStartsAt, setDiscountStartsAt] = useState("");
+  const [discountEndsAt, setDiscountEndsAt] = useState("");
+  const [lowestPrice30Days, setLowestPrice30Days] = useState("");
+  const [lowestPrice30DaysCurrency, setLowestPrice30DaysCurrency] =
+    useState("PLN");
+  const [lowestPrice30DaysPeriodStart, setLowestPrice30DaysPeriodStart] =
+    useState("");
+  const [lowestPrice30DaysPeriodEnd, setLowestPrice30DaysPeriodEnd] =
+    useState("");
+  const [discountLegalNote, setDiscountLegalNote] = useState("");
+
   const [certificateAvailable, setCertificateAvailable] = useState(true);
+  const [certificatePaymentMode, setCertificatePaymentMode] =
+    useState("points_only");
+  const [certificatePointsCoveredAmount, setCertificatePointsCoveredAmount] =
+    useState("");
+  const [certificateCurrency, setCertificateCurrency] = useState("PLN");
+  const [certificateTerms, setCertificateTerms] = useState("");
+  const [certificateValidityDays, setCertificateValidityDays] = useState("180");
+  const [requiresSellerConfirmation, setRequiresSellerConfirmation] =
+    useState(true);
+  const [isTransferable, setIsTransferable] = useState(true);
+  const [isCancellable, setIsCancellable] = useState(true);
+  const [pointsRefundPolicy, setPointsRefundPolicy] = useState(
+    "refund_until_seller_confirmation"
+  );
+  const [maxCertificatesTotal, setMaxCertificatesTotal] = useState("");
+  const [maxCertificatesPerUser, setMaxCertificatesPerUser] = useState("");
+  const [isPublicReward, setIsPublicReward] = useState(true);
+
+  const [pointsCurrencyCode, setPointsCurrencyCode] = useState("POINT");
+  const [referenceCurrency, setReferenceCurrency] = useState("EUR");
+  const [referenceValuePerPoint, setReferenceValuePerPoint] = useState("1");
+  const [referenceExchangeRate, setReferenceExchangeRate] = useState("4.30");
+  const [referenceExchangeRateSource, setReferenceExchangeRateSource] =
+    useState("manual");
+  const [referenceExchangeRateDate, setReferenceExchangeRateDate] = useState(
+    todayDateInputValue()
+  );
+
   const [requiresBooking, setRequiresBooking] = useState(false);
   const [bookingMode, setBookingMode] = useState("not_required");
   const [defaultDurationMinutes, setDefaultDurationMinutes] = useState("");
@@ -102,6 +174,111 @@ export default function NewOfferPage() {
       return sum + quantity * unitPrice;
     }, 0);
   }, [offerItems]);
+
+  const certificatePricingPreview = useMemo(() => {
+    const offerPrice = parsePositiveNumber(price);
+    const exchangeRate = parsePositiveNumber(referenceExchangeRate);
+    const valuePerPoint = parsePositiveNumber(referenceValuePerPoint);
+
+    if (!certificateAvailable || !offerPrice) {
+      return {
+        canCalculate: false,
+        coveredAmount: 0,
+        calculatedPointsPrice: 0,
+        moneyToPay: offerPrice ?? 0,
+        warning: null,
+      };
+    }
+
+    if (certificatePaymentMode === "money_only") {
+      return {
+        canCalculate: true,
+        coveredAmount: 0,
+        calculatedPointsPrice: 0,
+        moneyToPay: round2(offerPrice),
+        warning: null,
+      };
+    }
+
+    if (!exchangeRate || !valuePerPoint) {
+      return {
+        canCalculate: false,
+        coveredAmount: 0,
+        calculatedPointsPrice: 0,
+        moneyToPay: offerPrice,
+        warning:
+          "Введите курс: например, если 1 EUR = 4.30 PLN, укажите 4.30.",
+      };
+    }
+
+    const enteredCoveredAmount = parseNonNegativeNumber(
+      certificatePointsCoveredAmount
+    );
+
+    const coveredAmount =
+      certificatePaymentMode === "points_only" &&
+      (certificatePointsCoveredAmount.trim().length === 0 ||
+        enteredCoveredAmount === null)
+        ? offerPrice
+        : enteredCoveredAmount ?? 0;
+
+    if (coveredAmount <= 0) {
+      return {
+        canCalculate: false,
+        coveredAmount,
+        calculatedPointsPrice: 0,
+        moneyToPay: offerPrice,
+        warning:
+          "Введите сумму, которую продавец готов покрыть points в валюте offer.",
+      };
+    }
+
+    if (coveredAmount > offerPrice) {
+      return {
+        canCalculate: false,
+        coveredAmount,
+        calculatedPointsPrice: 0,
+        moneyToPay: 0,
+        warning:
+          "Сумма покрытия points не может быть больше текущей цены offer.",
+      };
+    }
+
+    const calculatedPointsPrice = round2(
+      coveredAmount / exchangeRate / valuePerPoint
+    );
+
+    const moneyToPay =
+      certificatePaymentMode === "points_only"
+        ? 0
+        : round2(offerPrice - coveredAmount);
+
+    if (certificatePaymentMode === "mixed" && moneyToPay <= 0) {
+      return {
+        canCalculate: false,
+        coveredAmount,
+        calculatedPointsPrice,
+        moneyToPay,
+        warning:
+          "Для mixed-режима денежная часть должна быть больше 0. Если points покрывают всю цену, выберите points_only.",
+      };
+    }
+
+    return {
+      canCalculate: true,
+      coveredAmount: round2(coveredAmount),
+      calculatedPointsPrice,
+      moneyToPay,
+      warning: null,
+    };
+  }, [
+    certificateAvailable,
+    certificatePaymentMode,
+    certificatePointsCoveredAmount,
+    price,
+    referenceExchangeRate,
+    referenceValuePerPoint,
+  ]);
 
   async function loadOrganizations() {
     setIsLoadingOrganizations(true);
@@ -187,6 +364,21 @@ export default function NewOfferPage() {
     setOfferItems([createEmptyOfferItem(currency)]);
   }, [organizationId]);
 
+  useEffect(() => {
+    setCertificateCurrency(currency);
+    setLowestPrice30DaysCurrency(currency);
+  }, [currency]);
+
+  useEffect(() => {
+    if (
+      certificatePaymentMode === "points_only" &&
+      price.trim().length > 0 &&
+      certificatePointsCoveredAmount.trim().length === 0
+    ) {
+      setCertificatePointsCoveredAmount(price);
+    }
+  }, [certificatePaymentMode, price, certificatePointsCoveredAmount]);
+
   function findValueObject(valueObjectIdToFind: string) {
     return valueObjects.find(
       (valueObject) => valueObject.id === valueObjectIdToFind
@@ -208,11 +400,17 @@ export default function NewOfferPage() {
     );
 
     if (selectedValueObject.default_price !== null) {
-      setPrice(String(selectedValueObject.default_price));
+      const defaultPrice = String(selectedValueObject.default_price);
+
+      setPrice(defaultPrice);
+      setRegularPrice(defaultPrice);
+      setCertificatePointsCoveredAmount(defaultPrice);
     }
 
     if (selectedValueObject.default_currency) {
       setCurrency(selectedValueObject.default_currency);
+      setCertificateCurrency(selectedValueObject.default_currency);
+      setLowestPrice30DaysCurrency(selectedValueObject.default_currency);
     }
 
     if (selectedValueObject.default_duration_minutes !== null) {
@@ -268,7 +466,30 @@ export default function NewOfferPage() {
 
   function useItemsTotalAsOfferPrice() {
     if (calculatedItemsTotal > 0) {
-      setPrice(String(calculatedItemsTotal));
+      const total = String(calculatedItemsTotal);
+
+      setPrice(total);
+      setRegularPrice(total);
+
+      if (certificatePaymentMode === "points_only") {
+        setCertificatePointsCoveredAmount(total);
+      }
+    }
+  }
+
+  function prepareDiscountDates() {
+    if (!isDiscountActive) {
+      return;
+    }
+
+    const today = todayDateInputValue();
+
+    if (!discountStartsAt) {
+      setDiscountStartsAt(today);
+    }
+
+    if (!lowestPrice30DaysPeriodEnd) {
+      setLowestPrice30DaysPeriodEnd(today);
     }
   }
 
@@ -302,10 +523,50 @@ export default function NewOfferPage() {
           title,
           description,
           price,
+          regularPrice,
           currency,
           isPaid,
           isFree,
+
+          isDiscountActive,
+          discountType,
+          discountValue,
+          discountStartsAt,
+          discountEndsAt,
+          lowestPrice30Days,
+          lowestPrice30DaysCurrency,
+          lowestPrice30DaysPeriodStart,
+          lowestPrice30DaysPeriodEnd,
+          discountLegalNote,
+
           certificateAvailable,
+          certificatePaymentMode,
+          certificatePointsCoveredAmount:
+            certificatePaymentMode === "money_only"
+              ? "0"
+              : certificatePointsCoveredAmount,
+          certificateMoneyPrice:
+            certificatePaymentMode === "money_only"
+              ? price
+              : String(certificatePricingPreview.moneyToPay),
+          certificateCurrency,
+          certificateTerms,
+          certificateValidityDays,
+          requiresSellerConfirmation,
+          isTransferable,
+          isCancellable,
+          pointsRefundPolicy,
+          maxCertificatesTotal,
+          maxCertificatesPerUser,
+          isPublicReward,
+
+          pointsCurrencyCode,
+          referenceCurrency,
+          referenceValuePerPoint,
+          referenceExchangeRate,
+          referenceExchangeRateSource,
+          referenceExchangeRateDate,
+
           requiresBooking,
           bookingMode,
           defaultDurationMinutes,
@@ -332,10 +593,43 @@ export default function NewOfferPage() {
       setTitle("");
       setDescription("");
       setPrice("");
+      setRegularPrice("");
       setCurrency("PLN");
       setIsPaid(true);
       setIsFree(false);
+
+      setIsDiscountActive(false);
+      setDiscountType("manual_price");
+      setDiscountValue("");
+      setDiscountStartsAt("");
+      setDiscountEndsAt("");
+      setLowestPrice30Days("");
+      setLowestPrice30DaysCurrency("PLN");
+      setLowestPrice30DaysPeriodStart("");
+      setLowestPrice30DaysPeriodEnd("");
+      setDiscountLegalNote("");
+
       setCertificateAvailable(true);
+      setCertificatePaymentMode("points_only");
+      setCertificatePointsCoveredAmount("");
+      setCertificateCurrency("PLN");
+      setCertificateTerms("");
+      setCertificateValidityDays("180");
+      setRequiresSellerConfirmation(true);
+      setIsTransferable(true);
+      setIsCancellable(true);
+      setPointsRefundPolicy("refund_until_seller_confirmation");
+      setMaxCertificatesTotal("");
+      setMaxCertificatesPerUser("");
+      setIsPublicReward(true);
+
+      setPointsCurrencyCode("POINT");
+      setReferenceCurrency("EUR");
+      setReferenceValuePerPoint("1");
+      setReferenceExchangeRate("4.30");
+      setReferenceExchangeRateSource("manual");
+      setReferenceExchangeRateDate(todayDateInputValue());
+
       setRequiresBooking(false);
       setBookingMode("not_required");
       setDefaultDurationMinutes("");
@@ -379,7 +673,7 @@ export default function NewOfferPage() {
       <div
         style={{
           width: "100%",
-          maxWidth: "900px",
+          maxWidth: "980px",
           margin: "0 auto",
         }}
       >
@@ -397,15 +691,16 @@ export default function NewOfferPage() {
 
           <p
             style={{
-              maxWidth: "760px",
+              maxWidth: "820px",
               margin: "0 auto 20px",
               color: "#555555",
               fontSize: "16px",
               lineHeight: "1.5",
             }}
           >
-            Create a commercial offer connected to one organization. It can
-            contain one or many value objects with quantities and prices.
+            Create a commercial offer connected to one organization. The seller
+            enters the money amount covered by points, and the system calculates
+            how many POINT will be charged.
           </p>
 
           <nav
@@ -417,66 +712,43 @@ export default function NewOfferPage() {
               flexWrap: "wrap",
             }}
           >
-            <Link
-              href="/"
-              style={{
-                color: "#2563eb",
-                textDecoration: "underline",
-                fontSize: "16px",
-              }}
-            >
+            <Link href="/" style={{ color: "#2563eb", textDecoration: "underline" }}>
               На главную
             </Link>
 
             <Link
               href="/organizations"
-              style={{
-                color: "#2563eb",
-                textDecoration: "underline",
-                fontSize: "16px",
-              }}
+              style={{ color: "#2563eb", textDecoration: "underline" }}
             >
               Мои организации
             </Link>
 
-            {organizationId && (
+            {organizationId ? (
               <Link
                 href={`/organizations/${organizationId}`}
-                style={{
-                  color: "#2563eb",
-                  textDecoration: "underline",
-                  fontSize: "16px",
-                }}
+                style={{ color: "#2563eb", textDecoration: "underline" }}
               >
                 Открыть организацию
               </Link>
-            )}
+            ) : null}
 
             <Link
               href="/offers"
-              style={{
-                color: "#2563eb",
-                textDecoration: "underline",
-                fontSize: "16px",
-              }}
+              style={{ color: "#2563eb", textDecoration: "underline" }}
             >
               Offers
             </Link>
 
             <Link
               href="/value-objects"
-              style={{
-                color: "#2563eb",
-                textDecoration: "underline",
-                fontSize: "16px",
-              }}
+              style={{ color: "#2563eb", textDecoration: "underline" }}
             >
               Value objects
             </Link>
           </nav>
         </header>
 
-        {isLoading && (
+        {isLoading ? (
           <div
             style={{
               border: "1px solid #dddddd",
@@ -488,9 +760,9 @@ export default function NewOfferPage() {
           >
             Loading organizations and value objects...
           </div>
-        )}
+        ) : null}
 
-        {!isLoading && organizations.length === 0 && (
+        {!isLoading && organizations.length === 0 ? (
           <div
             style={{
               border: "1px solid #facc15",
@@ -503,24 +775,24 @@ export default function NewOfferPage() {
             You need to create an organization first.{" "}
             <Link href="/organizations/new">Create organization</Link>
           </div>
-        )}
+        ) : null}
 
         {organizationIdFromUrl &&
-          !selectedOrganization &&
-          !isLoadingOrganizations && (
-            <div
-              style={{
-                border: "1px solid #facc15",
-                borderRadius: "10px",
-                padding: "16px",
-                background: "#fefce8",
-                marginBottom: "16px",
-              }}
-            >
-              Organization from URL was not found or access is denied. The first
-              available organization was selected instead.
-            </div>
-          )}
+        !selectedOrganization &&
+        !isLoadingOrganizations ? (
+          <div
+            style={{
+              border: "1px solid #facc15",
+              borderRadius: "10px",
+              padding: "16px",
+              background: "#fefce8",
+              marginBottom: "16px",
+            }}
+          >
+            Organization from URL was not found or access is denied. The first
+            available organization was selected instead.
+          </div>
+        ) : null}
 
         <form
           onSubmit={handleSubmit}
@@ -563,9 +835,9 @@ export default function NewOfferPage() {
                   fontWeight: 400,
                 }}
               >
-                {organizations.length === 0 && (
+                {organizations.length === 0 ? (
                   <option value="">No organizations available</option>
-                )}
+                ) : null}
 
                 {organizations.map((organization) => (
                   <option key={organization.id} value={organization.id}>
@@ -576,12 +848,12 @@ export default function NewOfferPage() {
               </select>
             </label>
 
-            {selectedOrganization && (
+            {selectedOrganization ? (
               <p style={{ margin: 0, color: "#555555" }}>
                 Selected organization:{" "}
                 <strong>{selectedOrganization.organization_name}</strong>
               </p>
-            )}
+            ) : null}
           </section>
 
           <section
@@ -701,18 +973,38 @@ export default function NewOfferPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 160px",
+                gridTemplateColumns: "1fr 1fr 160px",
                 gap: "12px",
               }}
             >
               <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-                Offer price
+                Regular price
+                <input
+                  type="number"
+                  step="0.01"
+                  value={regularPrice}
+                  onChange={(event) => setRegularPrice(event.target.value)}
+                  placeholder="299"
+                  style={{
+                    width: "100%",
+                    border: "1px solid #cccccc",
+                    borderRadius: "8px",
+                    padding: "12px",
+                    fontSize: "16px",
+                    boxSizing: "border-box",
+                    fontWeight: 400,
+                  }}
+                />
+              </label>
+
+              <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
+                Current price
                 <input
                   type="number"
                   step="0.01"
                   value={price}
                   onChange={(event) => setPrice(event.target.value)}
-                  placeholder="299"
+                  placeholder="249"
                   style={{
                     width: "100%",
                     border: "1px solid #cccccc",
@@ -772,6 +1064,275 @@ export default function NewOfferPage() {
               gap: "16px",
             }}
           >
+            <h2 style={{ margin: 0, fontSize: "22px" }}>
+              3. Discount and legal price info
+            </h2>
+
+            <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={isDiscountActive}
+                onChange={(event) => {
+                  setIsDiscountActive(event.target.checked);
+                  if (event.target.checked) {
+                    prepareDiscountDates();
+                  }
+                }}
+              />
+              Discount active
+            </label>
+
+            <p style={{ margin: 0, color: "#555555", lineHeight: "1.5" }}>
+              If you show a price reduction in Poland/EU, you should store the
+              lowest price from the 30 days before the discount. This field will
+              later be displayed near the reduced price.
+            </p>
+
+            {isDiscountActive ? (
+              <div style={{ display: "grid", gap: "14px" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "12px",
+                  }}
+                >
+                  <label
+                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                  >
+                    Discount type
+                    <select
+                      value={discountType}
+                      onChange={(event) => setDiscountType(event.target.value)}
+                      style={{
+                        width: "100%",
+                        border: "1px solid #cccccc",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        fontSize: "16px",
+                        boxSizing: "border-box",
+                        fontWeight: 400,
+                      }}
+                    >
+                      <option value="manual_price">Manual reduced price</option>
+                      <option value="percent">Percent</option>
+                      <option value="fixed_amount">Fixed amount</option>
+                    </select>
+                  </label>
+
+                  <label
+                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                  >
+                    Discount value
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={discountValue}
+                      onChange={(event) => setDiscountValue(event.target.value)}
+                      placeholder="20"
+                      style={{
+                        width: "100%",
+                        border: "1px solid #cccccc",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        fontSize: "16px",
+                        boxSizing: "border-box",
+                        fontWeight: 400,
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "12px",
+                  }}
+                >
+                  <label
+                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                  >
+                    Discount starts at
+                    <input
+                      type="date"
+                      value={discountStartsAt}
+                      onChange={(event) =>
+                        setDiscountStartsAt(event.target.value)
+                      }
+                      style={{
+                        width: "100%",
+                        border: "1px solid #cccccc",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        fontSize: "16px",
+                        boxSizing: "border-box",
+                        fontWeight: 400,
+                      }}
+                    />
+                  </label>
+
+                  <label
+                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                  >
+                    Discount ends at
+                    <input
+                      type="date"
+                      value={discountEndsAt}
+                      onChange={(event) => setDiscountEndsAt(event.target.value)}
+                      style={{
+                        width: "100%",
+                        border: "1px solid #cccccc",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        fontSize: "16px",
+                        boxSizing: "border-box",
+                        fontWeight: 400,
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 160px",
+                    gap: "12px",
+                  }}
+                >
+                  <label
+                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                  >
+                    Lowest price 30 days before discount
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={lowestPrice30Days}
+                      onChange={(event) =>
+                        setLowestPrice30Days(event.target.value)
+                      }
+                      placeholder="299"
+                      required={isDiscountActive}
+                      style={{
+                        width: "100%",
+                        border: "1px solid #cccccc",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        fontSize: "16px",
+                        boxSizing: "border-box",
+                        fontWeight: 400,
+                      }}
+                    />
+                  </label>
+
+                  <label
+                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                  >
+                    Currency
+                    <input
+                      value={lowestPrice30DaysCurrency}
+                      onChange={(event) =>
+                        setLowestPrice30DaysCurrency(event.target.value)
+                      }
+                      placeholder="PLN"
+                      style={{
+                        width: "100%",
+                        border: "1px solid #cccccc",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        fontSize: "16px",
+                        boxSizing: "border-box",
+                        fontWeight: 400,
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "12px",
+                  }}
+                >
+                  <label
+                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                  >
+                    30-day period start
+                    <input
+                      type="date"
+                      value={lowestPrice30DaysPeriodStart}
+                      onChange={(event) =>
+                        setLowestPrice30DaysPeriodStart(event.target.value)
+                      }
+                      style={{
+                        width: "100%",
+                        border: "1px solid #cccccc",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        fontSize: "16px",
+                        boxSizing: "border-box",
+                        fontWeight: 400,
+                      }}
+                    />
+                  </label>
+
+                  <label
+                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                  >
+                    30-day period end
+                    <input
+                      type="date"
+                      value={lowestPrice30DaysPeriodEnd}
+                      onChange={(event) =>
+                        setLowestPrice30DaysPeriodEnd(event.target.value)
+                      }
+                      style={{
+                        width: "100%",
+                        border: "1px solid #cccccc",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        fontSize: "16px",
+                        boxSizing: "border-box",
+                        fontWeight: 400,
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
+                  Discount legal note
+                  <textarea
+                    value={discountLegalNote}
+                    onChange={(event) => setDiscountLegalNote(event.target.value)}
+                    placeholder="Lowest price in 30 days before discount: 299 PLN."
+                    rows={3}
+                    style={{
+                      width: "100%",
+                      border: "1px solid #cccccc",
+                      borderRadius: "8px",
+                      padding: "12px",
+                      fontSize: "16px",
+                      boxSizing: "border-box",
+                      resize: "vertical",
+                      fontWeight: 400,
+                    }}
+                  />
+                </label>
+              </div>
+            ) : null}
+          </section>
+
+          <section
+            style={{
+              border: "1px solid #e5e7eb",
+              borderRadius: "10px",
+              padding: "16px",
+              background: "#ffffff",
+              display: "grid",
+              gap: "16px",
+            }}
+          >
             <div
               style={{
                 display: "flex",
@@ -781,7 +1342,7 @@ export default function NewOfferPage() {
               }}
             >
               <div>
-                <h2 style={{ margin: 0, fontSize: "22px" }}>3. Offer items</h2>
+                <h2 style={{ margin: 0, fontSize: "22px" }}>4. Offer items</h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
                   Add one or more value objects with quantity and unit price.
                 </p>
@@ -809,7 +1370,7 @@ export default function NewOfferPage() {
               </button>
             </div>
 
-            {organizationId && filteredValueObjects.length === 0 && (
+            {organizationId && filteredValueObjects.length === 0 ? (
               <div
                 style={{
                   border: "1px solid #facc15",
@@ -827,7 +1388,7 @@ export default function NewOfferPage() {
                   Create value object
                 </Link>
               </div>
-            )}
+            ) : null}
 
             {offerItems.map((item, index) => {
               const selectedValueObject = findValueObject(item.valueObjectId);
@@ -911,12 +1472,12 @@ export default function NewOfferPage() {
                     </select>
                   </label>
 
-                  {selectedValueObject && (
+                  {selectedValueObject ? (
                     <p style={{ margin: 0, color: "#666666" }}>
                       Selected: {selectedValueObject.title} /{" "}
                       {selectedValueObject.value_type}
                     </p>
-                  )}
+                  ) : null}
 
                   <div
                     style={{
@@ -1030,6 +1591,576 @@ export default function NewOfferPage() {
 
           <section
             style={{
+              border: "1px solid #bfdbfe",
+              borderRadius: "10px",
+              padding: "16px",
+              background: "#eff6ff",
+              display: "grid",
+              gap: "16px",
+            }}
+          >
+            <h2 style={{ margin: 0, fontSize: "22px" }}>
+              5. Certificate / reward rules
+            </h2>
+
+            <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={certificateAvailable}
+                onChange={(event) =>
+                  setCertificateAvailable(event.target.checked)
+                }
+              />
+              Certificate / reward available
+            </label>
+
+            {certificateAvailable ? (
+              <>
+                <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
+                  Certificate payment mode
+                  <select
+                    value={certificatePaymentMode}
+                    onChange={(event) => {
+                      const nextMode = event.target.value;
+                      setCertificatePaymentMode(nextMode);
+
+                      if (nextMode === "points_only" && price) {
+                        setCertificatePointsCoveredAmount(price);
+                      }
+
+                      if (nextMode === "money_only") {
+                        setCertificatePointsCoveredAmount("0");
+                      }
+                    }}
+                    style={{
+                      width: "100%",
+                      border: "1px solid #cccccc",
+                      borderRadius: "8px",
+                      padding: "12px",
+                      fontSize: "16px",
+                      boxSizing: "border-box",
+                      fontWeight: 400,
+                    }}
+                  >
+                    <option value="money_only">Money only</option>
+                    <option value="points_only">Points only</option>
+                    <option value="mixed">Mixed: money + points</option>
+                  </select>
+                </label>
+
+                <div
+                  style={{
+                    border: "1px solid #bfdbfe",
+                    borderRadius: "10px",
+                    padding: "14px",
+                    background: "#ffffff",
+                    display: "grid",
+                    gap: "12px",
+                  }}
+                >
+                  <h3 style={{ margin: 0, fontSize: "18px" }}>
+                    Points calculation
+                  </h3>
+
+                  <p style={{ margin: 0, color: "#374151", lineHeight: "1.5" }}>
+                    Продавец указывает, какую сумму в валюте offer он готов
+                    покрыть points. Система рассчитывает, сколько POINT будет
+                    списано с покупателя. По умолчанию:{" "}
+                    <strong>
+                      1 {pointsCurrencyCode || "POINT"} ={" "}
+                      {referenceValuePerPoint || "1"}{" "}
+                      {referenceCurrency || "EUR"}
+                    </strong>
+                    .
+                  </p>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "12px",
+                    }}
+                  >
+                    <label
+                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                    >
+                      Amount covered by points ({certificateCurrency || currency})
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={certificatePointsCoveredAmount}
+                        disabled={certificatePaymentMode === "money_only"}
+                        onChange={(event) =>
+                          setCertificatePointsCoveredAmount(event.target.value)
+                        }
+                        placeholder={
+                          certificatePaymentMode === "points_only"
+                            ? "Full offer price"
+                            : "For example: 40"
+                        }
+                        style={{
+                          width: "100%",
+                          border: "1px solid #cccccc",
+                          borderRadius: "8px",
+                          padding: "12px",
+                          fontSize: "16px",
+                          boxSizing: "border-box",
+                          fontWeight: 400,
+                          background:
+                            certificatePaymentMode === "money_only"
+                              ? "#f3f4f6"
+                              : "#ffffff",
+                        }}
+                      />
+                    </label>
+
+                    <label
+                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                    >
+                      Certificate currency
+                      <input
+                        value={certificateCurrency}
+                        onChange={(event) =>
+                          setCertificateCurrency(event.target.value)
+                        }
+                        placeholder="PLN"
+                        style={{
+                          width: "100%",
+                          border: "1px solid #cccccc",
+                          borderRadius: "8px",
+                          padding: "12px",
+                          fontSize: "16px",
+                          boxSizing: "border-box",
+                          fontWeight: 400,
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr 1fr",
+                      gap: "12px",
+                    }}
+                  >
+                    <label
+                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                    >
+                      Points currency
+                      <input
+                        value={pointsCurrencyCode}
+                        onChange={(event) =>
+                          setPointsCurrencyCode(event.target.value)
+                        }
+                        placeholder="POINT"
+                        style={{
+                          width: "100%",
+                          border: "1px solid #cccccc",
+                          borderRadius: "8px",
+                          padding: "12px",
+                          fontSize: "16px",
+                          boxSizing: "border-box",
+                          fontWeight: 400,
+                        }}
+                      />
+                    </label>
+
+                    <label
+                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                    >
+                      Reference currency
+                      <input
+                        value={referenceCurrency}
+                        onChange={(event) =>
+                          setReferenceCurrency(event.target.value)
+                        }
+                        placeholder="EUR"
+                        style={{
+                          width: "100%",
+                          border: "1px solid #cccccc",
+                          borderRadius: "8px",
+                          padding: "12px",
+                          fontSize: "16px",
+                          boxSizing: "border-box",
+                          fontWeight: 400,
+                        }}
+                      />
+                    </label>
+
+                    <label
+                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                    >
+                      Value per point
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={referenceValuePerPoint}
+                        onChange={(event) =>
+                          setReferenceValuePerPoint(event.target.value)
+                        }
+                        placeholder="1"
+                        style={{
+                          width: "100%",
+                          border: "1px solid #cccccc",
+                          borderRadius: "8px",
+                          padding: "12px",
+                          fontSize: "16px",
+                          boxSizing: "border-box",
+                          fontWeight: 400,
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr 1fr",
+                      gap: "12px",
+                    }}
+                  >
+                    <label
+                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                    >
+                      Exchange rate
+                      <input
+                        type="number"
+                        step="0.0001"
+                        min="0"
+                        value={referenceExchangeRate}
+                        onChange={(event) =>
+                          setReferenceExchangeRate(event.target.value)
+                        }
+                        placeholder="4.30"
+                        style={{
+                          width: "100%",
+                          border: "1px solid #cccccc",
+                          borderRadius: "8px",
+                          padding: "12px",
+                          fontSize: "16px",
+                          boxSizing: "border-box",
+                          fontWeight: 400,
+                        }}
+                      />
+                    </label>
+
+                    <label
+                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                    >
+                      Rate source
+                      <input
+                        value={referenceExchangeRateSource}
+                        onChange={(event) =>
+                          setReferenceExchangeRateSource(event.target.value)
+                        }
+                        placeholder="manual"
+                        style={{
+                          width: "100%",
+                          border: "1px solid #cccccc",
+                          borderRadius: "8px",
+                          padding: "12px",
+                          fontSize: "16px",
+                          boxSizing: "border-box",
+                          fontWeight: 400,
+                        }}
+                      />
+                    </label>
+
+                    <label
+                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                    >
+                      Rate date
+                      <input
+                        type="date"
+                        value={referenceExchangeRateDate}
+                        onChange={(event) =>
+                          setReferenceExchangeRateDate(event.target.value)
+                        }
+                        style={{
+                          width: "100%",
+                          border: "1px solid #cccccc",
+                          borderRadius: "8px",
+                          padding: "12px",
+                          fontSize: "16px",
+                          boxSizing: "border-box",
+                          fontWeight: 400,
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div
+                    style={{
+                      border: certificatePricingPreview.warning
+                        ? "1px solid #f0d28a"
+                        : "1px solid #bfe5c8",
+                      borderRadius: "10px",
+                      padding: "14px",
+                      background: certificatePricingPreview.warning
+                        ? "#fff8e6"
+                        : "#edf8f0",
+                      color: certificatePricingPreview.warning
+                        ? "#7a4b00"
+                        : "#176b2c",
+                      display: "grid",
+                      gap: "6px",
+                      lineHeight: "1.5",
+                    }}
+                  >
+                    <strong>Calculation preview</strong>
+
+                    {certificatePricingPreview.warning ? (
+                      <span>{certificatePricingPreview.warning}</span>
+                    ) : (
+                      <>
+                        <span>
+                          Offer price: <strong>{price || "0"} {currency}</strong>
+                        </span>
+                        <span>
+                          Covered by points:{" "}
+                          <strong>
+                            {certificatePricingPreview.coveredAmount.toFixed(2)}{" "}
+                            {certificateCurrency || currency}
+                          </strong>
+                        </span>
+                        <span>
+                          Reference:{" "}
+                          <strong>
+                            1 {pointsCurrencyCode || "POINT"} ={" "}
+                            {referenceValuePerPoint || "1"}{" "}
+                            {referenceCurrency || "EUR"}
+                          </strong>
+                        </span>
+                        <span>
+                          Exchange rate:{" "}
+                          <strong>
+                            1 {referenceCurrency || "EUR"} ={" "}
+                            {referenceExchangeRate || "0"}{" "}
+                            {certificateCurrency || currency}
+                          </strong>
+                        </span>
+                        <span>
+                          Buyer will be charged:{" "}
+                          <strong>
+                            {certificatePricingPreview.calculatedPointsPrice.toFixed(
+                              2
+                            )}{" "}
+                            {pointsCurrencyCode || "POINT"}
+                          </strong>
+                        </span>
+                        <span>
+                          Buyer money payment:{" "}
+                          <strong>
+                            {certificatePricingPreview.moneyToPay.toFixed(2)}{" "}
+                            {certificateCurrency || currency}
+                          </strong>
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
+                  Certificate terms
+                  <textarea
+                    value={certificateTerms}
+                    onChange={(event) => setCertificateTerms(event.target.value)}
+                    placeholder="Certificate can be used once within 180 days. Booking required."
+                    rows={4}
+                    style={{
+                      width: "100%",
+                      border: "1px solid #cccccc",
+                      borderRadius: "8px",
+                      padding: "12px",
+                      fontSize: "16px",
+                      boxSizing: "border-box",
+                      resize: "vertical",
+                      fontWeight: 400,
+                    }}
+                  />
+                </label>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr",
+                    gap: "12px",
+                  }}
+                >
+                  <label
+                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                  >
+                    Validity days
+                    <input
+                      type="number"
+                      value={certificateValidityDays}
+                      onChange={(event) =>
+                        setCertificateValidityDays(event.target.value)
+                      }
+                      placeholder="180"
+                      style={{
+                        width: "100%",
+                        border: "1px solid #cccccc",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        fontSize: "16px",
+                        boxSizing: "border-box",
+                        fontWeight: 400,
+                      }}
+                    />
+                  </label>
+
+                  <label
+                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                  >
+                    Max certificates total
+                    <input
+                      type="number"
+                      value={maxCertificatesTotal}
+                      onChange={(event) =>
+                        setMaxCertificatesTotal(event.target.value)
+                      }
+                      placeholder="Optional"
+                      style={{
+                        width: "100%",
+                        border: "1px solid #cccccc",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        fontSize: "16px",
+                        boxSizing: "border-box",
+                        fontWeight: 400,
+                      }}
+                    />
+                  </label>
+
+                  <label
+                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
+                  >
+                    Max per user
+                    <input
+                      type="number"
+                      value={maxCertificatesPerUser}
+                      onChange={(event) =>
+                        setMaxCertificatesPerUser(event.target.value)
+                      }
+                      placeholder="Optional"
+                      style={{
+                        width: "100%",
+                        border: "1px solid #cccccc",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        fontSize: "16px",
+                        boxSizing: "border-box",
+                        fontWeight: 400,
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
+                  Points refund policy
+                  <select
+                    value={pointsRefundPolicy}
+                    onChange={(event) => setPointsRefundPolicy(event.target.value)}
+                    style={{
+                      width: "100%",
+                      border: "1px solid #cccccc",
+                      borderRadius: "8px",
+                      padding: "12px",
+                      fontSize: "16px",
+                      boxSizing: "border-box",
+                      fontWeight: 400,
+                    }}
+                  >
+                    <option value="no_refund">No refund</option>
+                    <option value="refund_until_seller_confirmation">
+                      Refund until seller confirmation
+                    </option>
+                    <option value="refund_until_delivery">
+                      Refund until delivery
+                    </option>
+                    <option value="manual_review">Manual review</option>
+                  </select>
+                </label>
+
+                <div style={{ display: "grid", gap: "10px" }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={requiresSellerConfirmation}
+                      onChange={(event) =>
+                        setRequiresSellerConfirmation(event.target.checked)
+                      }
+                    />
+                    Requires seller confirmation
+                  </label>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isTransferable}
+                      onChange={(event) =>
+                        setIsTransferable(event.target.checked)
+                      }
+                    />
+                    Transferable to another receiver
+                  </label>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isCancellable}
+                      onChange={(event) =>
+                        setIsCancellable(event.target.checked)
+                      }
+                    />
+                    Cancellable
+                  </label>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isPublicReward}
+                      onChange={(event) =>
+                        setIsPublicReward(event.target.checked)
+                      }
+                    />
+                    Show in public reward / certificate catalog
+                  </label>
+                </div>
+              </>
+            ) : null}
+          </section>
+
+          <section
+            style={{
               border: "1px solid #e5e7eb",
               borderRadius: "10px",
               padding: "16px",
@@ -1039,7 +2170,7 @@ export default function NewOfferPage() {
             }}
           >
             <h2 style={{ margin: 0, fontSize: "22px" }}>
-              4. Booking and options
+              6. Booking and options
             </h2>
 
             <div style={{ display: "grid", gap: "10px" }}>
@@ -1063,19 +2194,6 @@ export default function NewOfferPage() {
                   onChange={(event) => setIsFree(event.target.checked)}
                 />
                 Free
-              </label>
-
-              <label
-                style={{ display: "flex", gap: "8px", alignItems: "center" }}
-              >
-                <input
-                  type="checkbox"
-                  checked={certificateAvailable}
-                  onChange={(event) =>
-                    setCertificateAvailable(event.target.checked)
-                  }
-                />
-                Certificate available
               </label>
 
               <label
@@ -1238,7 +2356,7 @@ export default function NewOfferPage() {
           </button>
         </form>
 
-        {message && (
+        {message ? (
           <div
             style={{
               marginTop: "16px",
@@ -1250,7 +2368,7 @@ export default function NewOfferPage() {
           >
             {message}
           </div>
-        )}
+        ) : null}
       </div>
     </main>
   );
