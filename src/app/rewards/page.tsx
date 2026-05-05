@@ -640,7 +640,7 @@ export default async function RewardsCatalogPage({
                       }}
                     >
                       <div style={{ color: "#1e3a8a", marginBottom: "6px" }}>
-                        Buyer pays
+                        POINT after usage confirmation
                       </div>
                       <strong>
                         {formatMoney(
@@ -706,7 +706,8 @@ export default async function RewardsCatalogPage({
 
                     <p style={{ margin: 0 }}>
                       <strong>After expiry:</strong> reserved{" "}
-                      {offer.pointsCurrencyCode ?? "POINT"} will be charged.
+                      {offer.pointsCurrencyCode ?? "POINT"} will be charged
+                      after certificate expiration.
                     </p>
 
                     <p style={{ margin: 0 }}>
@@ -716,7 +717,7 @@ export default async function RewardsCatalogPage({
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Seller confirmation:</strong>{" "}
+                      <strong>Usage confirmation:</strong>{" "}
                       {getBooleanLabel(offer.requiresSellerConfirmation)}
                     </p>
 
@@ -748,7 +749,8 @@ export default async function RewardsCatalogPage({
                     <strong>Important:</strong> You can cancel this certificate
                     only during the cancellation window. If you do not use it
                     before the validity period ends, reserved points will be
-                    charged and will not return to your available balance.
+                    charged after expiration and will not return to your
+                    available balance.
                   </section>
 
                   {offer.certificateTerms ? (
