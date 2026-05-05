@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import LocalDateTime from "../../components/LocalDateTime";
 
 type Wallet = {
   id?: string;
@@ -87,20 +88,6 @@ function calculateBalance(
   reserved: number | null | undefined
 ) {
   return toNumber(available) + toNumber(reserved);
-}
-
-function formatDate(value: string | null | undefined) {
-  if (!value) {
-    return "—";
-  }
-
-  return new Intl.DateTimeFormat("pl-PL", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
 }
 
 function formatPoints(value: number | null | undefined) {
@@ -515,11 +502,18 @@ export default function PointsPage() {
                 {getLatestTransactionText(latestTransaction)}
               </div>
               <div style={{ color: "#777", marginTop: "10px", fontSize: "14px" }}>
-                {latestTransaction
-                  ? `${getTransactionSign(latestTransaction.direction)}${formatPoints(
-                      latestTransaction.amount
-                    )} POINT · ${formatDate(latestTransaction.created_at)}`
-                  : "История операций пуста."}
+                {latestTransaction ? (
+                  <>
+                    {getTransactionSign(latestTransaction.direction)}
+                    {formatPoints(latestTransaction.amount)} POINT ·{" "}
+                    <LocalDateTime
+                      value={latestTransaction.created_at}
+                      showHelperText={false}
+                    />
+                  </>
+                ) : (
+                  "История операций пуста."
+                )}
               </div>
             </div>
           </section>
@@ -624,7 +618,10 @@ export default function PointsPage() {
                               verticalAlign: "top",
                             }}
                           >
-                            {formatDate(transaction.created_at)}
+                            <LocalDateTime
+                              value={transaction.created_at}
+                              showHelperText={false}
+                            />
                           </td>
 
                           <td

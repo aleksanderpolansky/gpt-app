@@ -1,5 +1,6 @@
 import { auth0 } from "../../../lib/auth0";
 import { supabase } from "../../../lib/supabase";
+import LocalDateTime from "../../components/LocalDateTime";
 import CancelCertificateButton from "./components/CancelCertificateButton";
 import ShowCertificateQrButton from "./components/ShowCertificateQrButton";
 
@@ -114,20 +115,6 @@ function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   }
 
   return value;
-}
-
-function formatDate(value: string | null | undefined) {
-  if (!value) {
-    return "—";
-  }
-
-  return new Intl.DateTimeFormat("pl-PL", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
 }
 
 function formatNumber(value: number | string | null | undefined) {
@@ -966,10 +953,15 @@ export default async function MyCertificatesPage() {
                             >
                               <strong>{item.title}</strong>
                               <span style={{ fontSize: "13px" }}>
-                                {formatDate(item.date)}
+                                <LocalDateTime
+                                  value={item.date}
+                                  showHelperText={false}
+                                />
                               </span>
                             </div>
-                            <div style={{ fontSize: "14px", lineHeight: "1.45" }}>
+                            <div
+                              style={{ fontSize: "14px", lineHeight: "1.45" }}
+                            >
                               {item.description}
                             </div>
                           </div>
@@ -1012,27 +1004,27 @@ export default async function MyCertificatesPage() {
 
                     <p style={{ margin: 0 }}>
                       <strong>Requested:</strong>{" "}
-                      {formatDate(certificate.requested_at)}
+                      <LocalDateTime value={certificate.requested_at} />
                     </p>
 
                     <p style={{ margin: 0 }}>
                       <strong>Delivered:</strong>{" "}
-                      {formatDate(certificate.delivered_at)}
+                      <LocalDateTime value={certificate.delivered_at} />
                     </p>
 
                     <p style={{ margin: 0 }}>
                       <strong>Redeemed:</strong>{" "}
-                      {formatDate(certificate.redeemed_at)}
+                      <LocalDateTime value={certificate.redeemed_at} />
                     </p>
 
                     <p style={{ margin: 0 }}>
                       <strong>Cancelled:</strong>{" "}
-                      {formatDate(certificate.cancelled_at)}
+                      <LocalDateTime value={certificate.cancelled_at} />
                     </p>
 
                     <p style={{ margin: 0 }}>
                       <strong>Expired:</strong>{" "}
-                      {formatDate(certificate.expired_at)}
+                      <LocalDateTime value={certificate.expired_at} />
                     </p>
 
                     <p style={{ margin: 0 }}>
