@@ -766,6 +766,14 @@ function getOrganizationInternalHref(organizationId: string) {
   return `/organizations/${organizationId}`;
 }
 
+function getOfferDetailHref(offerId: string) {
+  return `/offers/${offerId}`;
+}
+
+function getCertificateOrderHref(offerId: string) {
+  return `/certificates/new?offerId=${offerId}`;
+}
+
 export default async function DirectoryOrganizationPage({
   params,
 }: DirectoryOrganizationPageProps) {
@@ -1330,7 +1338,7 @@ export default async function DirectoryOrganizationPage({
                         }}
                       >
                         <Link
-                          href="/offers"
+                          href={getOfferDetailHref(offer.id)}
                           style={{
                             display: "inline-block",
                             padding: "9px 12px",
@@ -1342,28 +1350,12 @@ export default async function DirectoryOrganizationPage({
                             fontWeight: 600,
                           }}
                         >
-                          Смотреть предложения
-                        </Link>
-
-                        <Link
-                          href={organizationInternalHref}
-                          style={{
-                            display: "inline-block",
-                            padding: "9px 12px",
-                            borderRadius: "8px",
-                            border: "1px solid #16a34a",
-                            background: "#16a34a",
-                            color: "#ffffff",
-                            textDecoration: "none",
-                            fontWeight: 700,
-                          }}
-                        >
-                          Зарегистрировать покупку
+                          Подробное описание
                         </Link>
 
                         {offer.certificateAvailable ? (
                           <Link
-                            href="/rewards"
+                            href={getCertificateOrderHref(offer.id)}
                             style={{
                               display: "inline-block",
                               padding: "9px 12px",
@@ -1375,7 +1367,7 @@ export default async function DirectoryOrganizationPage({
                               fontWeight: 700,
                             }}
                           >
-                            Сертификаты
+                            Заказать сертификат
                           </Link>
                         ) : null}
                       </div>
