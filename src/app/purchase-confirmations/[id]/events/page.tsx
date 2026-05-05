@@ -1,5 +1,6 @@
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
+import LocalDateTime from "../../../../components/LocalDateTime";
 
 export const dynamic = "force-dynamic";
 
@@ -74,18 +75,12 @@ function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   return value;
 }
 
-function formatDate(value: string | null | undefined) {
+function getDateCell(value: string | null | undefined) {
   if (!value) {
     return "—";
   }
 
-  return new Intl.DateTimeFormat("pl-PL", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return <LocalDateTime value={value} />;
 }
 
 function formatMoney(
@@ -117,18 +112,30 @@ function getStatusLabel(status: string | null | undefined) {
   }
 
   if (status === "confirmed") {
-    return "Подтверждена";
+    return "Покупка подтверждена";
   }
 
   if (status === "rejected") {
-    return "Отклонена";
+    return "Покупка отклонена";
   }
 
   if (status === "cancelled") {
-    return "Отменена";
+    return "Заявка отменена";
   }
 
   return status ?? "—";
+}
+
+function getAccessRoleLabel(accessRole: "buyer" | "seller" | null) {
+  if (accessRole === "buyer") {
+    return "Покупатель";
+  }
+
+  if (accessRole === "seller") {
+    return "Продавец предприятия";
+  }
+
+  return "—";
 }
 
 function getEventTypeLabel(eventType: string | null | undefined) {
@@ -145,7 +152,7 @@ function getEventTypeLabel(eventType: string | null | undefined) {
   }
 
   if (eventType === "corrected_to_confirmed") {
-    return "Исправлено: отклонённая заявка подтверждена";
+    return "Исправление: отклонённая заявка подтверждена";
   }
 
   if (eventType === "cancelled") {
@@ -256,13 +263,11 @@ async function getPurchaseConfirmationEventsPageData(
     };
   }
 
-  const {
-    data: purchaseConfirmation,
-    error: purchaseConfirmationError,
-  } = await supabase
-    .from("purchase_confirmations")
-    .select(
-      `
+  const { data: purchaseConfirmation, error: purchaseConfirmationError } =
+    await supabase
+      .from("purchase_confirmations")
+      .select(
+        `
       id,
       organization_id,
       buyer_user_id,
@@ -277,9 +282,9 @@ async function getPurchaseConfirmationEventsPageData(
         organization_name
       )
     `
-    )
-    .eq("id", purchaseConfirmationId)
-    .single();
+      )
+      .eq("id", purchaseConfirmationId)
+      .single();
 
   if (purchaseConfirmationError || !purchaseConfirmation) {
     return {
@@ -401,19 +406,33 @@ export default async function PurchaseConfirmationEventsPage({
               margin: "0 0 10px",
             }}
           >
-            Audit events заявки
+            Журнал событий заявки
           </h1>
 
           <p
             style={{
-              margin: "0 0 16px",
+              margin: "0 0 8px",
               color: "#555555",
               fontSize: "16px",
               lineHeight: "1.5",
             }}
           >
-            Неизменяемая история событий заявки на подтверждение покупки:
-            создание, подтверждение, отказ, исправление решения и hash-chain.
+            Здесь показана неизменяемая история заявки на подтверждение покупки:
+            создание, подтверждение, отклонение, исправление решения и
+            техническая hash-связь между событиями.
+          </p>
+
+          <p
+            style={{
+              margin: "0 0 16px",
+              color: "#666666",
+              fontSize: "14px",
+              lineHeight: "1.5",
+            }}
+          >
+            POINTS — это бонусные единицы программы лояльности. Они не являются
+            деньгами, валютой или средством платежа. Время показывается по
+            настройкам вашего устройства.
           </p>
 
           <nav
@@ -441,7 +460,7 @@ export default async function PurchaseConfirmationEventsPage({
                 textDecoration: "underline",
               }}
             >
-              Seller-панель заявок
+              Страница продавца
             </a>
 
             {purchaseConfirmation ? (
@@ -468,7 +487,7 @@ export default async function PurchaseConfirmationEventsPage({
               color: "#a40000",
             }}
           >
-            <h2 style={{ marginTop: 0 }}>Ошибка загрузки audit events</h2>
+            <h2 style={{ marginTop: 0 }}>Ошибка загрузки журнала событий</h2>
             <p>{errorMessage}</p>
           </section>
         ) : null}
@@ -510,10 +529,10 @@ export default async function PurchaseConfirmationEventsPage({
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "8px" }}>
-                  Роль доступа
+                  Ваша роль
                 </div>
                 <div style={{ fontSize: "18px", fontWeight: 700 }}>
-                  {accessRole ?? "—"}
+                  {getAccessRoleLabel(accessRole)}
                 </div>
               </div>
 
@@ -574,14 +593,14 @@ export default async function PurchaseConfirmationEventsPage({
                   История событий
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Каждая строка показывает одно событие и его hash-связь с
-                  предыдущим событием.
+                  Каждая строка показывает одно событие заявки и его связь с
+                  предыдущей записью.
                 </p>
               </div>
 
               {events.length === 0 ? (
                 <div style={{ padding: "24px", color: "#666666" }}>
-                  Для этой заявки пока нет audit events.
+                  Для этой заявки пока нет записей в журнале событий.
                 </div>
               ) : (
                 <div style={{ overflowX: "auto" }}>
@@ -597,8 +616,8 @@ export default async function PurchaseConfirmationEventsPage({
                         <th style={{ padding: "12px 16px" }}>Дата</th>
                         <th style={{ padding: "12px 16px" }}>Событие</th>
                         <th style={{ padding: "12px 16px" }}>Статус</th>
-                        <th style={{ padding: "12px 16px" }}>Сумма</th>
-                        <th style={{ padding: "12px 16px" }}>Points</th>
+                        <th style={{ padding: "12px 16px" }}>Сумма покупки</th>
+                        <th style={{ padding: "12px 16px" }}>Бонус</th>
                         <th style={{ padding: "12px 16px" }}>Покупатель</th>
                         <th style={{ padding: "12px 16px" }}>
                           Комментарий покупателя
@@ -606,8 +625,10 @@ export default async function PurchaseConfirmationEventsPage({
                         <th style={{ padding: "12px 16px" }}>
                           Комментарий продавца
                         </th>
-                        <th style={{ padding: "12px 16px" }}>Previous hash</th>
-                        <th style={{ padding: "12px 16px" }}>Record hash</th>
+                        <th style={{ padding: "12px 16px" }}>
+                          Предыдущий hash
+                        </th>
+                        <th style={{ padding: "12px 16px" }}>Hash записи</th>
                       </tr>
                     </thead>
 
@@ -626,7 +647,7 @@ export default async function PurchaseConfirmationEventsPage({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {formatDate(event.created_at)}
+                              {getDateCell(event.created_at)}
                             </td>
 
                             <td style={{ padding: "12px 16px" }}>
@@ -650,8 +671,8 @@ export default async function PurchaseConfirmationEventsPage({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {event.status_before ?? "—"} →{" "}
-                              {event.status_after}
+                              {getStatusLabel(event.status_before)} →{" "}
+                              {getStatusLabel(event.status_after)}
                             </td>
 
                             <td
@@ -673,7 +694,7 @@ export default async function PurchaseConfirmationEventsPage({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {formatPoints(event.points_awarded)} POINT
+                              {formatPoints(event.points_awarded)} POINTS
                             </td>
 
                             <td
