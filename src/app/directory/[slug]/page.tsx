@@ -259,7 +259,9 @@ function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   return value;
 }
 
-function getPublicLocation(location: RelatedLocation | null): DirectoryLocation | null {
+function getPublicLocation(
+  location: RelatedLocation | null
+): DirectoryLocation | null {
   if (!location) {
     return null;
   }
@@ -319,7 +321,9 @@ function getPublicLocation(location: RelatedLocation | null): DirectoryLocation 
   };
 }
 
-function mapDirectoryOrganization(row: DirectoryOrganizationRow): DirectoryOrganization {
+function mapDirectoryOrganization(
+  row: DirectoryOrganizationRow
+): DirectoryOrganization {
   const primaryCategoryRelation =
     row.organization_categories?.find((item) => item.is_primary) ??
     row.organization_categories?.[0] ??
@@ -758,6 +762,10 @@ function getBookingLabel(offer: PublicDirectoryOffer) {
   return "Требуется бронирование";
 }
 
+function getOrganizationInternalHref(organizationId: string) {
+  return `/organizations/${organizationId}`;
+}
+
 export default async function DirectoryOrganizationPage({
   params,
 }: DirectoryOrganizationPageProps) {
@@ -776,6 +784,9 @@ export default async function DirectoryOrganizationPage({
 
   const offers = offersResult.offers;
   const offersErrorMessage = offersResult.errorMessage;
+  const organizationInternalHref = organization
+    ? getOrganizationInternalHref(organization.id)
+    : "/organizations";
 
   return (
     <main
@@ -871,7 +882,7 @@ export default async function DirectoryOrganizationPage({
 
               <p
                 style={{
-                  margin: 0,
+                  margin: "0 0 16px",
                   color: "#666666",
                   fontSize: "14px",
                   lineHeight: "1.5",
@@ -881,12 +892,73 @@ export default async function DirectoryOrganizationPage({
                 информация предприятия. Если адрес скрыт или указан
                 приблизительно, точный адрес не раскрывается.
               </p>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <Link
+                  href={organizationInternalHref}
+                  style={{
+                    display: "inline-block",
+                    padding: "11px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #16a34a",
+                    background: "#16a34a",
+                    color: "#ffffff",
+                    textDecoration: "none",
+                    fontWeight: 800,
+                  }}
+                >
+                  Зарегистрировать покупку
+                </Link>
+
+                <Link
+                  href={organizationInternalHref}
+                  style={{
+                    display: "inline-block",
+                    padding: "11px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #2563eb",
+                    background: "#2563eb",
+                    color: "#ffffff",
+                    textDecoration: "none",
+                    fontWeight: 700,
+                  }}
+                >
+                  Внутренняя страница предприятия
+                </Link>
+              </div>
             </>
           ) : null}
         </header>
 
         {organization ? (
           <>
+            <section
+              style={{
+                border: "1px solid #bbf7d0",
+                borderRadius: "16px",
+                background: "#f0fdf4",
+                padding: "18px 20px",
+                marginBottom: "24px",
+                color: "#166534",
+              }}
+            >
+              <h2 style={{ margin: "0 0 8px", fontSize: "20px" }}>
+                Регистрация покупки
+              </h2>
+              <p style={{ margin: 0, lineHeight: "1.5" }}>
+                Покупку можно зарегистрировать через уже проверенный внутренний
+                сценарий предприятия. После проверки продавцом заявка может
+                привести к начислению POINTS как бонусных единиц программы
+                лояльности.
+              </p>
+            </section>
+
             <section
               style={{
                 display: "grid",
@@ -1273,6 +1345,22 @@ export default async function DirectoryOrganizationPage({
                           Смотреть предложения
                         </Link>
 
+                        <Link
+                          href={organizationInternalHref}
+                          style={{
+                            display: "inline-block",
+                            padding: "9px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #16a34a",
+                            background: "#16a34a",
+                            color: "#ffffff",
+                            textDecoration: "none",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Зарегистрировать покупку
+                        </Link>
+
                         {offer.certificateAvailable ? (
                           <Link
                             href="/rewards"
@@ -1321,7 +1409,23 @@ export default async function DirectoryOrganizationPage({
               </Link>
 
               <Link
-                href={`/organizations/${organization.id}`}
+                href={organizationInternalHref}
+                style={{
+                  display: "inline-block",
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid #16a34a",
+                  background: "#16a34a",
+                  color: "#ffffff",
+                  textDecoration: "none",
+                  fontWeight: 800,
+                }}
+              >
+                Зарегистрировать покупку
+              </Link>
+
+              <Link
+                href={organizationInternalHref}
                 style={{
                   display: "inline-block",
                   padding: "10px 14px",
