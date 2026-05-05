@@ -9,7 +9,10 @@ async function getCurrentAppUser() {
     return {
       appUser: null,
       errorResponse: NextResponse.json(
-        { error: "Not authenticated" },
+        {
+          ok: false,
+          error: "Not authenticated",
+        },
         { status: 401 }
       ),
     };
@@ -17,7 +20,7 @@ async function getCurrentAppUser() {
 
   const { data: appUser, error: appUserError } = await supabase
     .from("app_users")
-    .select("*")
+    .select("id")
     .eq("auth0_sub", session.user.sub)
     .single();
 
@@ -25,7 +28,10 @@ async function getCurrentAppUser() {
     return {
       appUser: null,
       errorResponse: NextResponse.json(
-        { error: appUserError?.message ?? "App user not found" },
+        {
+          ok: false,
+          error: appUserError?.message ?? "App user not found",
+        },
         { status: 500 }
       ),
     };
@@ -46,7 +52,10 @@ export async function GET() {
 
   if (!appUser) {
     return NextResponse.json(
-      { error: "User context not found" },
+      {
+        ok: false,
+        error: "User context not found",
+      },
       { status: 500 }
     );
   }
@@ -55,7 +64,26 @@ export async function GET() {
     .from("points_transactions")
     .select(
       `
-      *,
+      id,
+      wallet_id,
+      user_id,
+      organization_id,
+      transaction_type,
+      direction,
+      amount,
+      balance_before,
+      balance_after,
+      source_type,
+      source_id,
+      certificate_id,
+      offer_id,
+      description,
+      status,
+      created_at,
+      points_currency_code,
+      reference_currency,
+      reference_value_per_point,
+      reference_value_total,
       organizations (
         id,
         organization_name,
@@ -67,17 +95,21 @@ export async function GET() {
     `
     )
     .eq("user_id", appUser.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(100);
 
   if (transactionsError) {
     return NextResponse.json(
-      { error: transactionsError.message },
+      {
+        ok: false,
+        error: transactionsError.message,
+      },
       { status: 500 }
     );
   }
 
   return NextResponse.json({
     ok: true,
-    transactions,
+    transactions: transactions ?? [],
   });
 }

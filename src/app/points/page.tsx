@@ -89,19 +89,131 @@ function getDirectionLabel(direction: string | null | undefined) {
     return "Списание";
   }
 
+  if (direction === "reserve") {
+    return "Резерв";
+  }
+
+  if (direction === "release") {
+    return "Возврат из резерва";
+  }
+
   return direction ?? "—";
 }
 
 function getTransactionSign(direction: string | null | undefined) {
-  if (direction === "credit") {
+  if (direction === "credit" || direction === "release") {
     return "+";
   }
 
-  if (direction === "debit") {
+  if (direction === "debit" || direction === "reserve") {
     return "-";
   }
 
   return "";
+}
+
+function getTransactionHumanTitle(transaction: PointsTransaction) {
+  const transactionType = transaction.transaction_type?.toLowerCase() ?? "";
+  const sourceType = transaction.source_type?.toLowerCase() ?? "";
+  const description = transaction.description?.toLowerCase() ?? "";
+  const direction = transaction.direction?.toLowerCase() ?? "";
+
+  const combined = `${transactionType} ${sourceType} ${description}`;
+
+  if (
+    combined.includes("purchase") &&
+    (direction === "credit" || combined.includes("award"))
+  ) {
+    return "Начислено за подтверждённую покупку";
+  }
+
+  if (
+    combined.includes("certificate") &&
+    (combined.includes("reserve") || direction === "reserve")
+  ) {
+    return "Зарезервировано под сертификат";
+  }
+
+  if (
+    combined.includes("certificate") &&
+    (combined.includes("cancel") ||
+      combined.includes("release") ||
+      direction === "release")
+  ) {
+    return "Возвращено после отмены сертификата";
+  }
+
+  if (
+    combined.includes("certificate") &&
+    (combined.includes("redeem") || combined.includes("usage"))
+  ) {
+    return "Списано при использовании сертификата";
+  }
+
+  if (
+    combined.includes("certificate") &&
+    (combined.includes("expire") || combined.includes("expiration"))
+  ) {
+    return "Списано после истечения срока сертификата";
+  }
+
+  if (direction === "credit") {
+    return "Начисление POINT";
+  }
+
+  if (direction === "debit") {
+    return "Списание POINT";
+  }
+
+  return "Операция POINT";
+}
+
+function getTransactionStatusLabel(status: string | null | undefined) {
+  if (!status) {
+    return "—";
+  }
+
+  if (status === "completed") {
+    return "Завершено";
+  }
+
+  if (status === "pending") {
+    return "В обработке";
+  }
+
+  if (status === "failed") {
+    return "Ошибка";
+  }
+
+  if (status === "cancelled") {
+    return "Отменено";
+  }
+
+  return status;
+}
+
+function getTransactionTone(direction: string | null | undefined) {
+  if (direction === "credit" || direction === "release") {
+    return {
+      background: "#f0fff4",
+      border: "#b7ebc6",
+      color: "#137333",
+    };
+  }
+
+  if (direction === "debit" || direction === "reserve") {
+    return {
+      background: "#fff8e6",
+      border: "#f7d58a",
+      color: "#8a5a00",
+    };
+  }
+
+  return {
+    background: "#f7f7f7",
+    border: "#ddd",
+    color: "#444",
+  };
 }
 
 export default function PointsPage() {
@@ -159,10 +271,11 @@ export default function PointsPage() {
   return (
     <main style={{ padding: "32px", maxWidth: "1100px", margin: "0 auto" }}>
       <div style={{ marginBottom: "28px" }}>
-        <h1 style={{ fontSize: "32px", marginBottom: "8px" }}>Мои points</h1>
+        <h1 style={{ fontSize: "32px", marginBottom: "8px" }}>Мои POINTS</h1>
         <p style={{ color: "#666", fontSize: "16px", lineHeight: "1.5" }}>
-          Здесь отображается общий баланс пользователя на платформе и история
-          операций начисления или списания points.
+          Здесь отображается общий баланс пользователя на платформе и понятная
+          история операций: начисление, резервирование, возврат и списание
+          POINTS.
         </p>
       </div>
 
@@ -175,7 +288,7 @@ export default function PointsPage() {
             background: "#fff",
           }}
         >
-          Загрузка points...
+          Загрузка POINTS...
         </section>
       ) : errorMessage ? (
         <section
@@ -223,10 +336,14 @@ export default function PointsPage() {
               }}
             >
               <div style={{ color: "#666", marginBottom: "8px" }}>
-                Текущий баланс
+                Текущий доступный баланс
               </div>
               <div style={{ fontSize: "40px", fontWeight: 700 }}>
                 {formatPoints(wallet?.balance)} POINT
+              </div>
+              <div style={{ color: "#777", marginTop: "10px", fontSize: "14px" }}>
+                POINTS — это бонусные единицы внутри платформы, не деньги и не
+                средство вывода средств.
               </div>
             </div>
 
@@ -286,10 +403,11 @@ export default function PointsPage() {
             >
               <div>
                 <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  История операций
+                  История операций POINTS
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666" }}>
-                  Последние начисления и списания points.
+                  Человеческое объяснение каждой операции плюс технические
+                  данные для audit.
                 </p>
               </div>
 
@@ -311,7 +429,7 @@ export default function PointsPage() {
 
             {transactions.length === 0 ? (
               <div style={{ padding: "24px", color: "#666" }}>
-                Операций points пока нет.
+                Операций POINTS пока нет.
               </div>
             ) : (
               <div style={{ overflowX: "auto" }}>
@@ -319,25 +437,26 @@ export default function PointsPage() {
                   style={{
                     width: "100%",
                     borderCollapse: "collapse",
-                    minWidth: "900px",
+                    minWidth: "980px",
                   }}
                 >
                   <thead>
                     <tr style={{ background: "#f7f7f7", textAlign: "left" }}>
                       <th style={{ padding: "12px 16px" }}>Дата</th>
-                      <th style={{ padding: "12px 16px" }}>Тип</th>
-                      <th style={{ padding: "12px 16px" }}>Операция</th>
+                      <th style={{ padding: "12px 16px" }}>Смысл операции</th>
+                      <th style={{ padding: "12px 16px" }}>Движение</th>
                       <th style={{ padding: "12px 16px" }}>POINT</th>
                       <th style={{ padding: "12px 16px" }}>Баланс</th>
                       <th style={{ padding: "12px 16px" }}>Предприятие</th>
-                      <th style={{ padding: "12px 16px" }}>Источник</th>
-                      <th style={{ padding: "12px 16px" }}>Описание</th>
+                      <th style={{ padding: "12px 16px" }}>Статус</th>
+                      <th style={{ padding: "12px 16px" }}>Audit source</th>
                     </tr>
                   </thead>
                   <tbody>
                     {transactions.map((transaction) => {
                       const organizationName =
                         transaction.organizations?.organization_name ?? "—";
+                      const tone = getTransactionTone(transaction.direction);
 
                       return (
                         <tr
@@ -347,12 +466,42 @@ export default function PointsPage() {
                           <td style={{ padding: "12px 16px" }}>
                             {formatDate(transaction.created_at)}
                           </td>
+
                           <td style={{ padding: "12px 16px" }}>
-                            {transaction.transaction_type ?? "—"}
+                            <div style={{ fontWeight: 700 }}>
+                              {getTransactionHumanTitle(transaction)}
+                            </div>
+                            <div
+                              style={{
+                                color: "#777",
+                                fontSize: "13px",
+                                marginTop: "4px",
+                              }}
+                            >
+                              {transaction.description ??
+                                transaction.transaction_type ??
+                                "—"}
+                            </div>
                           </td>
+
                           <td style={{ padding: "12px 16px" }}>
-                            {getDirectionLabel(transaction.direction)}
+                            <span
+                              style={{
+                                display: "inline-block",
+                                padding: "6px 10px",
+                                borderRadius: "999px",
+                                background: tone.background,
+                                border: `1px solid ${tone.border}`,
+                                color: tone.color,
+                                fontSize: "13px",
+                                fontWeight: 700,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {getDirectionLabel(transaction.direction)}
+                            </span>
                           </td>
+
                           <td
                             style={{
                               padding: "12px 16px",
@@ -363,6 +512,7 @@ export default function PointsPage() {
                             {getTransactionSign(transaction.direction)}
                             {formatPoints(transaction.amount)}
                           </td>
+
                           <td
                             style={{
                               padding: "12px 16px",
@@ -372,14 +522,30 @@ export default function PointsPage() {
                             {formatPoints(transaction.balance_before)} →{" "}
                             {formatPoints(transaction.balance_after)}
                           </td>
+
                           <td style={{ padding: "12px 16px" }}>
                             {organizationName}
                           </td>
+
                           <td style={{ padding: "12px 16px" }}>
-                            {transaction.source_type ?? "—"}
+                            {getTransactionStatusLabel(transaction.status)}
                           </td>
-                          <td style={{ padding: "12px 16px" }}>
-                            {transaction.description ?? "—"}
+
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              color: "#666",
+                              fontSize: "13px",
+                            }}
+                          >
+                            <div>
+                              <strong>type:</strong>{" "}
+                              {transaction.transaction_type ?? "—"}
+                            </div>
+                            <div>
+                              <strong>source:</strong>{" "}
+                              {transaction.source_type ?? "—"}
+                            </div>
                           </td>
                         </tr>
                       );
