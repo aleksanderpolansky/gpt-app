@@ -206,7 +206,7 @@ export default function NewOfferPage() {
     const exchangeRate = parsePositiveNumber(referenceExchangeRate);
     const valuePerPoint = parsePositiveNumber(referenceValuePerPoint);
 
-    if (!certificateAvailable || !offerPrice) {
+    if (!certificateAvailable) {
       return {
         canCalculate: false,
         coveredAmount: 0,
@@ -214,6 +214,17 @@ export default function NewOfferPage() {
         moneyToPay: offerPrice ?? 0,
         paymentMode: "money_only",
         warning: null,
+      };
+    }
+
+    if (!offerPrice) {
+      return {
+        canCalculate: false,
+        coveredAmount: 0,
+        calculatedPointsPrice: 0,
+        moneyToPay: 0,
+        paymentMode: "money_only",
+        warning: "Введите Current price, чтобы рассчитать POINTS.",
       };
     }
 
