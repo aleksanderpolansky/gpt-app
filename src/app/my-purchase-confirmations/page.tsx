@@ -1,5 +1,6 @@
 import { auth0 } from "../../../lib/auth0";
 import { supabase } from "../../../lib/supabase";
+import LocalDateTime from "../../components/LocalDateTime";
 
 export const dynamic = "force-dynamic";
 
@@ -153,20 +154,6 @@ function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   return value;
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) {
-    return "—";
-  }
-
-  return new Intl.DateTimeFormat("pl-PL", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
 function formatMoney(
   amount: number | null | undefined,
   currency: string | null | undefined
@@ -196,15 +183,15 @@ function getStatusLabel(status: string | null | undefined) {
   }
 
   if (status === "confirmed") {
-    return "Подтверждена";
+    return "Покупка подтверждена";
   }
 
   if (status === "rejected") {
-    return "Отклонена";
+    return "Покупка отклонена";
   }
 
   if (status === "cancelled") {
-    return "Отменена";
+    return "Заявка отменена";
   }
 
   return status ?? "—";
@@ -272,6 +259,14 @@ function getAuditLinkStyle() {
   };
 }
 
+function getDateCell(value: string | null | undefined) {
+  if (!value) {
+    return "—";
+  }
+
+  return <LocalDateTime value={value} />;
+}
+
 export default async function MyPurchaseConfirmationsPage() {
   const { purchaseConfirmations, errorMessage } =
     await getMyPurchaseConfirmations();
@@ -325,14 +320,28 @@ export default async function MyPurchaseConfirmationsPage() {
 
           <p
             style={{
-              margin: 0,
+              margin: "0 0 6px",
               color: "#555555",
               fontSize: "16px",
               lineHeight: "1.5",
             }}
           >
             Здесь отображаются только ваши собственные заявки как покупателя:
-            отправленные, подтверждённые, отклонённые и начисленные points.
+            отправленные, подтверждённые, отклонённые и заявки, по которым были
+            начислены POINTS.
+          </p>
+
+          <p
+            style={{
+              margin: 0,
+              color: "#666666",
+              fontSize: "14px",
+              lineHeight: "1.5",
+            }}
+          >
+            POINTS — это бонусные единицы программы лояльности. Они не являются
+            деньгами, валютой или средством платежа. Время показывается по
+            настройкам вашего устройства.
           </p>
         </header>
 
@@ -422,7 +431,7 @@ export default async function MyPurchaseConfirmationsPage() {
             }}
           >
             <div style={{ color: "#1e3a8a", marginBottom: "8px" }}>
-              Начислено points
+              Начислено POINTS
             </div>
             <div style={{ fontSize: "34px", fontWeight: 700 }}>
               {formatPoints(totalPointsAwarded)}
@@ -469,8 +478,8 @@ export default async function MyPurchaseConfirmationsPage() {
                   История моих заявок
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Это личный список покупателя. Он не является seller-панелью
-                  продавца.
+                  Это личный список покупателя. Управлять решением по заявке
+                  может только соответствующий продавец на своей странице.
                 </p>
               </div>
 
@@ -509,9 +518,9 @@ export default async function MyPurchaseConfirmationsPage() {
                       <th style={{ padding: "12px 16px" }}>Статус</th>
                       <th style={{ padding: "12px 16px" }}>Предприятие</th>
                       <th style={{ padding: "12px 16px" }}>Ссылки</th>
-                      <th style={{ padding: "12px 16px" }}>Audit</th>
-                      <th style={{ padding: "12px 16px" }}>Сумма</th>
-                      <th style={{ padding: "12px 16px" }}>Points</th>
+                      <th style={{ padding: "12px 16px" }}>Журнал</th>
+                      <th style={{ padding: "12px 16px" }}>Сумма покупки</th>
+                      <th style={{ padding: "12px 16px" }}>Бонус</th>
                       <th style={{ padding: "12px 16px" }}>Комментарий</th>
                       <th style={{ padding: "12px 16px" }}>Подтверждена</th>
                       <th style={{ padding: "12px 16px" }}>Отклонена</th>
@@ -527,8 +536,7 @@ export default async function MyPurchaseConfirmationsPage() {
                       const organizationId =
                         organization?.id ?? item.organization_id;
                       const organizationName =
-                        organization?.organization_name ??
-                        "Unknown organization";
+                        organization?.organization_name ?? "Предприятие";
                       const statusStyle = getStatusStyle(item.status);
                       const auditHref = `/purchase-confirmations/${item.id}/events`;
 
@@ -543,7 +551,7 @@ export default async function MyPurchaseConfirmationsPage() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {formatDate(item.created_at)}
+                            {getDateCell(item.created_at)}
                           </td>
 
                           <td style={{ padding: "12px 16px" }}>
@@ -614,7 +622,7 @@ export default async function MyPurchaseConfirmationsPage() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {formatPoints(item.points_awarded)} POINT
+                            {formatPoints(item.points_awarded)} POINTS
                           </td>
 
                           <td style={{ padding: "12px 16px" }}>
@@ -627,7 +635,7 @@ export default async function MyPurchaseConfirmationsPage() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {formatDate(item.confirmed_at)}
+                            {getDateCell(item.confirmed_at)}
                           </td>
 
                           <td
@@ -636,7 +644,7 @@ export default async function MyPurchaseConfirmationsPage() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {formatDate(item.rejected_at)}
+                            {getDateCell(item.rejected_at)}
                           </td>
 
                           <td
