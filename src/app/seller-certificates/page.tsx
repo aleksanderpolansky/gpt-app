@@ -1,5 +1,6 @@
 import { auth0 } from "../../../lib/auth0";
 import { supabase } from "../../../lib/supabase";
+import RedeemCertificateButton from "./components/RedeemCertificateButton";
 
 export const dynamic = "force-dynamic";
 
@@ -375,12 +376,8 @@ async function getSellerCertificates(): Promise<PageData> {
 export default async function SellerCertificatesPage() {
   const { certificates, errorMessage } = await getSellerCertificates();
 
-  const requestedCount = certificates.filter(
-    (certificate) => certificate.status === "requested"
-  ).length;
-
-  const sellerConfirmedCount = certificates.filter(
-    (certificate) => certificate.status === "seller_confirmed"
+  const activeCount = certificates.filter(
+    (certificate) => certificate.status === "active"
   ).length;
 
   const redeemedCount = certificates.filter(
@@ -520,27 +517,10 @@ export default async function SellerCertificatesPage() {
               }}
             >
               <div style={{ color: "#1e3a8a", marginBottom: "8px" }}>
-                Requested
+                Active
               </div>
               <div style={{ fontSize: "34px", fontWeight: 700 }}>
-                {requestedCount}
-              </div>
-            </div>
-
-            <div
-              style={{
-                border: "1px solid #bfdbfe",
-                borderRadius: "16px",
-                padding: "22px",
-                background: "#eff6ff",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div style={{ color: "#1e3a8a", marginBottom: "8px" }}>
-                Seller confirmed
-              </div>
-              <div style={{ fontSize: "34px", fontWeight: 700 }}>
-                {sellerConfirmedCount}
+                {activeCount}
               </div>
             </div>
 
@@ -705,7 +685,8 @@ export default async function SellerCertificatesPage() {
                   <section
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(180px, 1fr))",
                       gap: "10px",
                     }}
                   >
@@ -759,7 +740,10 @@ export default async function SellerCertificatesPage() {
                         Money payment
                       </div>
                       <strong>
-                        {formatMoney(certificate.money_price, certificate.currency)}
+                        {formatMoney(
+                          certificate.money_price,
+                          certificate.currency
+                        )}
                       </strong>
                     </div>
 
@@ -834,8 +818,8 @@ export default async function SellerCertificatesPage() {
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Seller confirmed:</strong>{" "}
-                      {formatDate(certificate.seller_confirmed_at)}
+                      <strong>Delivered:</strong>{" "}
+                      {formatDate(certificate.delivered_at)}
                     </p>
 
                     <p style={{ margin: 0 }}>
@@ -859,6 +843,7 @@ export default async function SellerCertificatesPage() {
                       display: "flex",
                       gap: "10px",
                       flexWrap: "wrap",
+                      alignItems: "flex-start",
                     }}
                   >
                     {organization?.id ? (
@@ -879,22 +864,16 @@ export default async function SellerCertificatesPage() {
                       </a>
                     ) : null}
 
-                    <button
-                      type="button"
-                      disabled
-                      title="Seller actions will be added in the next step"
-                      style={{
-                        border: "1px solid #9ca3af",
-                        borderRadius: "8px",
-                        padding: "10px 12px",
-                        color: "#ffffff",
-                        background: "#9ca3af",
-                        fontWeight: 700,
-                        cursor: "not-allowed",
-                      }}
-                    >
-                      Seller actions pending
-                    </button>
+                    <RedeemCertificateButton
+                      certificateId={certificate.id}
+                      certificateCode={certificate.certificate_code}
+                      status={certificate.status}
+                      pointsStatus={certificate.points_status}
+                      pointsReserved={Number(certificate.points_reserved) || 0}
+                      pointsCurrencyCode={
+                        certificate.points_currency_code || "POINT"
+                      }
+                    />
                   </div>
                 </article>
               );
