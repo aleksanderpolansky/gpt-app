@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { supabase } from "../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -112,17 +113,132 @@ type PublicDirectoryOffer = {
   updatedAt: string | null;
 };
 
-type DirectoryOrganizationApiResponse = {
-  ok: boolean;
-  organization?: DirectoryOrganization;
-  error?: string;
+type RelatedCategory = {
+  is_primary: boolean | null;
+  business_categories:
+    | {
+        id: string;
+        slug: string;
+        name: string;
+        description: string | null;
+      }
+    | {
+        id: string;
+        slug: string;
+        name: string;
+        description: string | null;
+      }[]
+    | null;
 };
 
-type DirectoryOrganizationOffersApiResponse = {
-  ok: boolean;
-  offers?: PublicDirectoryOffer[];
-  count?: number;
-  error?: string;
+type RelatedLocation = {
+  id: string;
+  location_type: string;
+  address_visibility: string;
+  label: string | null;
+  country_code: string | null;
+  region: string | null;
+  city: string | null;
+  district: string | null;
+  street_address: string | null;
+  postal_code: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  is_primary: boolean | null;
+  is_active: boolean | null;
+  geo_areas:
+    | {
+        id: string;
+        area_type: string;
+        name: string;
+        slug: string;
+        country_code: string | null;
+      }
+    | {
+        id: string;
+        area_type: string;
+        name: string;
+        slug: string;
+        country_code: string | null;
+      }[]
+    | null;
+};
+
+type RelatedStats = {
+  profile_views_count: number | null;
+  offer_clicks_count: number | null;
+  certificate_clicks_count: number | null;
+  purchase_registration_clicks_count: number | null;
+};
+
+type DirectoryOrganizationRow = {
+  id: string;
+  organization_name: string;
+  organization_type: string;
+  description: string | null;
+  short_description: string | null;
+  public_slug: string | null;
+  country_code: string | null;
+  default_currency: string | null;
+  directory_status: string;
+  verification_status: string;
+  public_email: string | null;
+  public_phone: string | null;
+  website_url: string | null;
+  booking_url: string | null;
+  logo_url: string | null;
+  cover_image_url: string | null;
+  social_links_json: Record<string, unknown> | null;
+  directory_published_at: string | null;
+  created_at: string;
+  updated_at: string | null;
+  organization_categories?: RelatedCategory[] | null;
+  organization_locations?: RelatedLocation[] | null;
+  organization_search_stats?: RelatedStats[] | null;
+};
+
+type PublicOfferRow = {
+  id: string;
+  organization_id: string | null;
+  offer_type: string;
+  title: string;
+  description: string | null;
+  price: number | null;
+  currency: string | null;
+  is_paid: boolean;
+  is_free: boolean;
+  certificate_available: boolean;
+  requires_booking: boolean;
+  booking_mode: string;
+  default_duration_minutes: number | null;
+  min_duration_minutes: number | null;
+  max_duration_minutes: number | null;
+  quantity_limit: number | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  status: string;
+  regular_price: number | null;
+  is_discount_active: boolean;
+  discount_type: string | null;
+  discount_value: number | null;
+  discount_starts_at: string | null;
+  discount_ends_at: string | null;
+  lowest_price_30_days: number | null;
+  lowest_price_30_days_currency: string | null;
+  discount_legal_note: string | null;
+  certificate_payment_mode: string;
+  certificate_points_price: number;
+  certificate_money_price: number | null;
+  certificate_currency: string | null;
+  certificate_terms: string | null;
+  certificate_validity_days: number | null;
+  requires_seller_confirmation: boolean;
+  is_transferable: boolean;
+  is_cancellable: boolean;
+  points_refund_policy: string;
+  max_certificates_total: number | null;
+  created_at: string;
+  updated_at: string | null;
 };
 
 type DirectoryOrganizationPageProps = {
@@ -131,122 +247,352 @@ type DirectoryOrganizationPageProps = {
   }>;
 };
 
-function getBaseUrl() {
-  if (process.env.NODE_ENV !== "production") {
-    return "http://localhost:3000";
+function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
+  if (!value) {
+    return null;
   }
 
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
   }
 
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
+  return value;
+}
+
+function getPublicLocation(location: RelatedLocation | null): DirectoryLocation | null {
+  if (!location) {
+    return null;
   }
 
-  return "http://localhost:3000";
+  const geoArea = getFirstRelatedItem(location.geo_areas);
+
+  if (location.address_visibility === "hidden") {
+    return {
+      id: location.id,
+      locationType: location.location_type,
+      addressVisibility: location.address_visibility,
+      label: location.label,
+      countryCode: location.country_code,
+      region: location.region,
+      city: location.city,
+      district: location.district,
+      streetAddress: null,
+      postalCode: null,
+      latitude: null,
+      longitude: null,
+      geoArea,
+    };
+  }
+
+  if (location.address_visibility === "approximate") {
+    return {
+      id: location.id,
+      locationType: location.location_type,
+      addressVisibility: location.address_visibility,
+      label: location.label,
+      countryCode: location.country_code,
+      region: location.region,
+      city: location.city,
+      district: location.district,
+      streetAddress: null,
+      postalCode: null,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      geoArea,
+    };
+  }
+
+  return {
+    id: location.id,
+    locationType: location.location_type,
+    addressVisibility: location.address_visibility,
+    label: location.label,
+    countryCode: location.country_code,
+    region: location.region,
+    city: location.city,
+    district: location.district,
+    streetAddress: location.street_address,
+    postalCode: location.postal_code,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    geoArea,
+  };
+}
+
+function mapDirectoryOrganization(row: DirectoryOrganizationRow): DirectoryOrganization {
+  const primaryCategoryRelation =
+    row.organization_categories?.find((item) => item.is_primary) ??
+    row.organization_categories?.[0] ??
+    null;
+
+  const primaryCategory = getFirstRelatedItem(
+    primaryCategoryRelation?.business_categories
+  );
+
+  const primaryLocation =
+    row.organization_locations?.find(
+      (item) => item.is_primary && item.is_active
+    ) ??
+    row.organization_locations?.find((item) => item.is_active) ??
+    row.organization_locations?.[0] ??
+    null;
+
+  const stats = row.organization_search_stats?.[0] ?? null;
+
+  return {
+    id: row.id,
+    name: row.organization_name,
+    type: row.organization_type,
+    description: row.description,
+    shortDescription: row.short_description,
+    publicSlug: row.public_slug,
+    countryCode: row.country_code,
+    defaultCurrency: row.default_currency,
+    directoryStatus: row.directory_status,
+    verificationStatus: row.verification_status,
+    publicEmail: row.public_email,
+    publicPhone: row.public_phone,
+    websiteUrl: row.website_url,
+    bookingUrl: row.booking_url,
+    logoUrl: row.logo_url,
+    coverImageUrl: row.cover_image_url,
+    socialLinks: row.social_links_json ?? {},
+    directoryPublishedAt: row.directory_published_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    primaryCategory,
+    primaryLocation: getPublicLocation(primaryLocation),
+    stats: {
+      profileViewsCount: stats?.profile_views_count ?? 0,
+      offerClicksCount: stats?.offer_clicks_count ?? 0,
+      certificateClicksCount: stats?.certificate_clicks_count ?? 0,
+      purchaseRegistrationClicksCount:
+        stats?.purchase_registration_clicks_count ?? 0,
+    },
+  };
+}
+
+function mapPublicOffer(row: PublicOfferRow): PublicDirectoryOffer {
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    offerType: row.offer_type,
+    title: row.title,
+    description: row.description,
+    price: row.price,
+    currency: row.currency,
+    isPaid: row.is_paid,
+    isFree: row.is_free,
+    certificateAvailable: row.certificate_available,
+    requiresBooking: row.requires_booking,
+    bookingMode: row.booking_mode,
+    defaultDurationMinutes: row.default_duration_minutes,
+    minDurationMinutes: row.min_duration_minutes,
+    maxDurationMinutes: row.max_duration_minutes,
+    quantityLimit: row.quantity_limit,
+    validFrom: row.valid_from,
+    validUntil: row.valid_until,
+    status: row.status,
+    regularPrice: row.regular_price,
+    isDiscountActive: row.is_discount_active,
+    discountType: row.discount_type,
+    discountValue: row.discount_value,
+    discountStartsAt: row.discount_starts_at,
+    discountEndsAt: row.discount_ends_at,
+    lowestPrice30Days: row.lowest_price_30_days,
+    lowestPrice30DaysCurrency: row.lowest_price_30_days_currency,
+    discountLegalNote: row.discount_legal_note,
+    certificate: {
+      available: row.certificate_available,
+      paymentMode: row.certificate_payment_mode,
+      pointsPrice: row.certificate_points_price,
+      moneyPrice: row.certificate_money_price,
+      currency: row.certificate_currency,
+      terms: row.certificate_terms,
+      validityDays: row.certificate_validity_days,
+      requiresSellerConfirmation: row.requires_seller_confirmation,
+      isTransferable: row.is_transferable,
+      isCancellable: row.is_cancellable,
+      pointsRefundPolicy: row.points_refund_policy,
+      maxCertificatesTotal: row.max_certificates_total,
+    },
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 async function getDirectoryOrganization(slug: string): Promise<{
   organization: DirectoryOrganization | null;
   errorMessage: string | null;
 }> {
-  try {
-    const response = await fetch(
-      `${getBaseUrl()}/api/directory/organizations/${encodeURIComponent(slug)}`,
-      {
-        method: "GET",
-        cache: "no-store",
-      }
-    );
+  const { data, error } = await supabase
+    .from("organizations")
+    .select(
+      `
+      id,
+      organization_name,
+      organization_type,
+      description,
+      short_description,
+      public_slug,
+      country_code,
+      default_currency,
+      directory_status,
+      verification_status,
+      public_email,
+      public_phone,
+      website_url,
+      booking_url,
+      logo_url,
+      cover_image_url,
+      social_links_json,
+      directory_published_at,
+      created_at,
+      updated_at,
+      organization_categories (
+        is_primary,
+        business_categories (
+          id,
+          slug,
+          name,
+          description
+        )
+      ),
+      organization_locations (
+        id,
+        location_type,
+        address_visibility,
+        label,
+        country_code,
+        region,
+        city,
+        district,
+        street_address,
+        postal_code,
+        latitude,
+        longitude,
+        is_primary,
+        is_active,
+        geo_areas (
+          id,
+          area_type,
+          name,
+          slug,
+          country_code
+        )
+      ),
+      organization_search_stats (
+        profile_views_count,
+        offer_clicks_count,
+        certificate_clicks_count,
+        purchase_registration_clicks_count
+      )
+    `
+    )
+    .eq("public_slug", slug)
+    .eq("status", "active")
+    .eq("directory_status", "published")
+    .eq("is_public_profile_enabled", true)
+    .eq("is_listed_in_directory", true)
+    .single();
 
-    const contentType = response.headers.get("content-type") ?? "";
-
-    if (!contentType.includes("application/json")) {
-      return {
-        organization: null,
-        errorMessage: "Directory organization API returned non-JSON response",
-      };
-    }
-
-    const json = (await response.json()) as DirectoryOrganizationApiResponse;
-
-    if (response.status === 404) {
+  if (error || !data) {
+    if (error?.code === "PGRST116") {
       return {
         organization: null,
         errorMessage: null,
       };
     }
 
-    if (!response.ok || !json.ok || !json.organization) {
-      return {
-        organization: null,
-        errorMessage: json.error ?? "Cannot load directory organization",
-      };
-    }
-
-    return {
-      organization: json.organization,
-      errorMessage: null,
-    };
-  } catch (error) {
     return {
       organization: null,
-      errorMessage:
-        error instanceof Error
-          ? error.message
-          : "Unknown directory organization error",
+      errorMessage: error?.message ?? "Cannot load directory organization",
     };
   }
+
+  return {
+    organization: mapDirectoryOrganization(
+      data as unknown as DirectoryOrganizationRow
+    ),
+    errorMessage: null,
+  };
 }
 
-async function getDirectoryOrganizationOffers(slug: string): Promise<{
+async function getDirectoryOrganizationOffers(
+  organizationId: string
+): Promise<{
   offers: PublicDirectoryOffer[];
   errorMessage: string | null;
 }> {
-  try {
-    const response = await fetch(
-      `${getBaseUrl()}/api/directory/organizations/${encodeURIComponent(
-        slug
-      )}/offers`,
-      {
-        method: "GET",
-        cache: "no-store",
-      }
-    );
+  const nowIso = new Date().toISOString();
 
-    const contentType = response.headers.get("content-type") ?? "";
+  const { data, error } = await supabase
+    .from("offers")
+    .select(
+      `
+      id,
+      organization_id,
+      offer_type,
+      title,
+      description,
+      price,
+      currency,
+      is_paid,
+      is_free,
+      certificate_available,
+      requires_booking,
+      booking_mode,
+      default_duration_minutes,
+      min_duration_minutes,
+      max_duration_minutes,
+      quantity_limit,
+      valid_from,
+      valid_until,
+      status,
+      regular_price,
+      is_discount_active,
+      discount_type,
+      discount_value,
+      discount_starts_at,
+      discount_ends_at,
+      lowest_price_30_days,
+      lowest_price_30_days_currency,
+      discount_legal_note,
+      certificate_payment_mode,
+      certificate_points_price,
+      certificate_money_price,
+      certificate_currency,
+      certificate_terms,
+      certificate_validity_days,
+      requires_seller_confirmation,
+      is_transferable,
+      is_cancellable,
+      points_refund_policy,
+      max_certificates_total,
+      created_at,
+      updated_at
+    `
+    )
+    .eq("organization_id", organizationId)
+    .eq("status", "active")
+    .or(`valid_from.is.null,valid_from.lte.${nowIso}`)
+    .or(`valid_until.is.null,valid_until.gte.${nowIso}`)
+    .order("created_at", { ascending: false })
+    .limit(50);
 
-    if (!contentType.includes("application/json")) {
-      return {
-        offers: [],
-        errorMessage: "Directory offers API returned non-JSON response",
-      };
-    }
-
-    const json =
-      (await response.json()) as DirectoryOrganizationOffersApiResponse;
-
-    if (!response.ok || !json.ok) {
-      return {
-        offers: [],
-        errorMessage: json.error ?? "Cannot load directory organization offers",
-      };
-    }
-
-    return {
-      offers: json.offers ?? [],
-      errorMessage: null,
-    };
-  } catch (error) {
+  if (error) {
     return {
       offers: [],
-      errorMessage:
-        error instanceof Error
-          ? error.message
-          : "Unknown directory organization offers error",
+      errorMessage: error.message,
     };
   }
+
+  return {
+    offers: ((data as unknown as PublicOfferRow[] | null) ?? []).map(
+      mapPublicOffer
+    ),
+    errorMessage: null,
+  };
 }
 
 function getLocationLabel(location: DirectoryLocation | null) {
@@ -418,14 +764,15 @@ export default async function DirectoryOrganizationPage({
   const resolvedParams = await params;
   const slug = resolvedParams.slug;
 
-  const [{ organization, errorMessage }, offersResult] = await Promise.all([
-    getDirectoryOrganization(slug),
-    getDirectoryOrganizationOffers(slug),
-  ]);
+  const { organization, errorMessage } = await getDirectoryOrganization(slug);
 
   if (!organization && !errorMessage) {
     notFound();
   }
+
+  const offersResult = organization
+    ? await getDirectoryOrganizationOffers(organization.id)
+    : { offers: [], errorMessage: null };
 
   const offers = offersResult.offers;
   const offersErrorMessage = offersResult.errorMessage;
