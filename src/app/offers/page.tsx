@@ -96,7 +96,10 @@ type Offer = {
   offer_items?: OfferItem[];
 };
 
-function formatMoney(value: number | string | null | undefined, currency: string | null | undefined) {
+function formatMoney(
+  value: number | string | null | undefined,
+  currency: string | null | undefined
+) {
   if (value === null || value === undefined || value === "") {
     return "Not specified";
   }
@@ -174,6 +177,26 @@ function getDiscountTypeLabel(discountType: string | null | undefined) {
   }
 
   return discountType || "Not specified";
+}
+
+function getRefundPolicyLabel(policy: string | null | undefined) {
+  if (policy === "no_refund") {
+    return "No refund";
+  }
+
+  if (policy === "refund_until_seller_confirmation") {
+    return "Refund until usage confirmation";
+  }
+
+  if (policy === "refund_until_delivery") {
+    return "Refund until delivery";
+  }
+
+  if (policy === "manual_review") {
+    return "Manual review";
+  }
+
+  return policy || "Not specified";
 }
 
 function getBooleanLabel(value: boolean | null | undefined) {
@@ -374,7 +397,9 @@ export default function OffersPage() {
             }}
           >
             {offers.map((offer) => {
-              const organizationHref = getOrganizationHref(offer.organization_id);
+              const organizationHref = getOrganizationHref(
+                offer.organization_id
+              );
               const paymentModeStyle = getPaymentModeStyle(
                 offer.certificate_payment_mode
               );
@@ -465,7 +490,8 @@ export default function OffersPage() {
                   <section
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(220px, 1fr))",
                       gap: "12px",
                       marginBottom: "16px",
                     }}
@@ -617,7 +643,9 @@ export default function OffersPage() {
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Buyer will be charged:</strong>{" "}
+                      <strong>
+                        Buyer will be charged after usage confirmation:
+                      </strong>{" "}
                       {formatMoney(
                         offer.certificate_points_price ?? 0,
                         offer.points_currency_code ?? "POINT"
@@ -640,16 +668,16 @@ export default function OffersPage() {
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Exchange rate:</strong> 1{" "}
+                      <strong>Reference calculation rate:</strong> 1{" "}
                       {offer.reference_currency ?? "EUR"} ={" "}
                       {formatNumber(offer.reference_exchange_rate)}{" "}
                       {offer.certificate_currency ?? offer.currency ?? ""}
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Rate source:</strong>{" "}
+                      <strong>Reference rate source:</strong>{" "}
                       {offer.reference_exchange_rate_source ?? "Not specified"}{" "}
-                      / <strong>Rate date:</strong>{" "}
+                      / <strong>Reference rate date:</strong>{" "}
                       {offer.reference_exchange_rate_date ?? "Not specified"}
                     </p>
 
@@ -664,7 +692,7 @@ export default function OffersPage() {
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Seller confirmation:</strong>{" "}
+                      <strong>Usage confirmation:</strong>{" "}
                       {getBooleanLabel(offer.requires_seller_confirmation)} /{" "}
                       <strong>Transferable:</strong>{" "}
                       {getBooleanLabel(offer.is_transferable)} /{" "}
@@ -674,7 +702,7 @@ export default function OffersPage() {
 
                     <p style={{ margin: 0 }}>
                       <strong>Refund policy:</strong>{" "}
-                      {offer.points_refund_policy ?? "Not specified"}
+                      {getRefundPolicyLabel(offer.points_refund_policy)}
                     </p>
 
                     <p style={{ margin: 0 }}>
