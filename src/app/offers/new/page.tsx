@@ -689,7 +689,7 @@ export default function NewOfferPage() {
           >
             Create a commercial offer connected to one organization. The seller
             enters the money amount covered by points, and the system calculates
-            how many POINT will be charged.
+            how many POINT will be charged after usage confirmation.
           </p>
 
           <nav
@@ -1626,7 +1626,7 @@ export default function NewOfferPage() {
                     Продавец указывает, какую сумму в валюте offer он готов
                     покрыть points. Система автоматически определяет режим
                     оплаты и рассчитывает, сколько POINT будет списано с
-                    покупателя.
+                    покупателя после подтверждения использования.
                   </p>
 
                   <div
@@ -1923,7 +1923,7 @@ export default function NewOfferPage() {
                           </strong>
                         </span>
                         <span>
-                          Buyer will be charged:{" "}
+                          Buyer will be charged after usage confirmation:{" "}
                           <strong>
                             {certificatePricingPreview.calculatedPointsPrice.toFixed(
                               2
@@ -2057,7 +2057,7 @@ export default function NewOfferPage() {
                   >
                     <option value="no_refund">No refund</option>
                     <option value="refund_until_seller_confirmation">
-                      Refund until seller confirmation
+                      Refund until usage confirmation
                     </option>
                     <option value="refund_until_delivery">
                       Refund until delivery
@@ -2081,7 +2081,7 @@ export default function NewOfferPage() {
                         setRequiresSellerConfirmation(event.target.checked)
                       }
                     />
-                    Requires seller confirmation
+                    Requires usage confirmation
                   </label>
 
                   <label
