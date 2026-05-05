@@ -541,24 +541,6 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                   flexWrap: "wrap",
                 }}
               >
-                {offer.certificateAvailable ? (
-                  <Link
-                    href={certificateOrderHref}
-                    style={{
-                      display: "inline-block",
-                      padding: "11px 16px",
-                      borderRadius: "8px",
-                      border: "1px solid #2563eb",
-                      background: "#2563eb",
-                      color: "#ffffff",
-                      textDecoration: "none",
-                      fontWeight: 800,
-                    }}
-                  >
-                    Заказать сертификат
-                  </Link>
-                ) : null}
-
                 <Link
                   href={directoryHref}
                   style={{
@@ -615,7 +597,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "8px" }}>
-                  Цена
+                  Цена offer
                 </div>
                 <div style={{ fontSize: "20px", fontWeight: 700 }}>
                   {offer.isFree
@@ -643,17 +625,18 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
 
               <div
                 style={{
-                  border: "1px solid #dddddd",
+                  border: "1px solid #bfdbfe",
                   borderRadius: "16px",
                   padding: "20px",
-                  background: "#ffffff",
+                  background: "#eff6ff",
+                  color: "#1e3a8a",
                   boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
                 }}
               >
-                <div style={{ color: "#666666", marginBottom: "8px" }}>
-                  Сертификат
+                <div style={{ marginBottom: "8px" }}>
+                  Сертификат по offer
                 </div>
-                <div style={{ fontSize: "20px", fontWeight: 700 }}>
+                <div style={{ fontSize: "20px", fontWeight: 800 }}>
                   {offer.certificateAvailable ? "Доступен" : "Недоступен"}
                 </div>
               </div>
@@ -670,13 +653,14 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
               }}
             >
               <h2 style={{ margin: "0 0 8px", fontSize: "20px" }}>
-                POINTS и сертификаты
+                Offer, сертификат и регистрация покупки
               </h2>
               <p style={{ margin: 0, lineHeight: "1.5" }}>
-                POINTS — это бонусные единицы программы лояльности, а не деньги,
-                валюта или средство платежа. Сертификат относится к конкретному
-                предложению, а регистрация покупки относится к предприятию в
-                целом.
+                Эта страница описывает конкретный offer. Сертификат создаётся по
+                этому offer. Регистрация покупки относится не к конкретному
+                offer, а к предприятию в целом: покупатель может купить любой
+                товар или услугу у предприятия, а продавец подтверждает факт
+                покупки.
               </p>
             </section>
 
@@ -697,10 +681,10 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                 }}
               >
                 <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  Подробное описание
+                  Подробное описание offer
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Публичная информация о предложении.
+                  Публичная информация о выбранном предложении.
                 </p>
               </div>
 
@@ -726,7 +710,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                 </div>
 
                 <div>
-                  <strong>Цена:</strong>{" "}
+                  <strong>Цена offer:</strong>{" "}
                   {offer.isFree
                     ? "Бесплатно"
                     : formatMoney(offer.price, offer.currency)}
@@ -818,10 +802,11 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                 }}
               >
                 <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  Сертификат по этому предложению
+                  Сертификат по этому offer
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Сертификат создаётся на основании конкретного offer.
+                  Здесь показаны условия сертификата. Оформление сертификата
+                  выполняется на отдельной странице заказа.
                 </p>
               </div>
 
@@ -901,7 +886,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                           fontWeight: 800,
                         }}
                       >
-                        Заказать сертификат
+                        Перейти к заказу сертификата
                       </Link>
                     </div>
                   </>
@@ -946,7 +931,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                     fontWeight: 800,
                   }}
                 >
-                  Заказать сертификат
+                  Перейти к заказу сертификата
                 </Link>
               ) : null}
 
