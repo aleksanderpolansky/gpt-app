@@ -97,6 +97,13 @@ type PageData = {
   errorMessage: string | null;
 };
 
+type CertificateTimelineItem = {
+  title: string;
+  description: string;
+  date: string | null;
+  tone: "done" | "active" | "warning" | "neutral";
+};
+
 function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   if (!value) {
     return null;
@@ -123,6 +130,22 @@ function formatDate(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
+function formatNumber(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === "") {
+    return "0";
+  }
+
+  const numericValue = Number(value);
+
+  if (Number.isNaN(numericValue)) {
+    return String(value);
+  }
+
+  return new Intl.NumberFormat("pl-PL", {
+    maximumFractionDigits: 2,
+  }).format(numericValue);
+}
+
 function formatMoney(
   value: number | string | null | undefined,
   currency: string | null | undefined
@@ -131,7 +154,7 @@ function formatMoney(
     return "—";
   }
 
-  return `${value} ${currency || ""}`.trim();
+  return `${formatNumber(value)} ${currency || ""}`.trim();
 }
 
 function getStatusLabel(status: string | null | undefined) {
@@ -225,6 +248,163 @@ function getPointsStatusLabel(status: string | null | undefined) {
   }
 
   return status ?? "—";
+}
+
+function getTimelineToneStyle(tone: CertificateTimelineItem["tone"]) {
+  if (tone === "done") {
+    return {
+      background: "#edf8f0",
+      border: "1px solid #bfe5c8",
+      color: "#176b2c",
+    };
+  }
+
+  if (tone === "active") {
+    return {
+      background: "#eff6ff",
+      border: "1px solid #bfdbfe",
+      color: "#1e3a8a",
+    };
+  }
+
+  if (tone === "warning") {
+    return {
+      background: "#fff8e6",
+      border: "1px solid #f0d28a",
+      color: "#7a4b00",
+    };
+  }
+
+  return {
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    color: "#444444",
+  };
+}
+
+function buildCertificateTimeline(
+  certificate: CertificateRecord
+): CertificateTimelineItem[] {
+  const pointsCurrency = certificate.points_currency_code || "POINT";
+  const reservedAmount = Number(certificate.points_price) || 0;
+  const chargedAmount = Number(certificate.points_charged) || reservedAmount;
+  const releasedAmount = Number(certificate.points_released) || reservedAmount;
+
+  const items: CertificateTimelineItem[] = [
+    {
+      title: "Сертификат заказан",
+      description: `Создан сертификат ${certificate.certificate_code}.`,
+      date: certificate.requested_at || certificate.created_at,
+      tone: "done",
+    },
+    {
+      title: "POINTS зарезервированы",
+      description: `${formatMoney(
+        reservedAmount,
+        pointsCurrency
+      )} зарезервировано под этот сертификат.`,
+      date: certificate.requested_at || certificate.created_at,
+      tone: "done",
+    },
+  ];
+
+  if (certificate.status === "active") {
+    items.push({
+      title: "Сертификат активен",
+      description:
+        "Сертификат можно показать продавцу через QR-код или redeem code.",
+      date: certificate.delivered_at || certificate.requested_at,
+      tone: "active",
+    });
+
+    return items;
+  }
+
+  if (certificate.status === "redeemed") {
+    items.push({
+      title: "Сертификат использован",
+      description: "Продавец подтвердил использование сертификата.",
+      date: certificate.redeemed_at,
+      tone: "done",
+    });
+
+    items.push({
+      title: "POINTS окончательно списаны",
+      description: `${formatMoney(
+        chargedAmount,
+        pointsCurrency
+      )} списано за использование сертификата.`,
+      date: certificate.redeemed_at,
+      tone: "done",
+    });
+
+    return items;
+  }
+
+  if (certificate.status === "cancelled") {
+    items.push({
+      title: "Сертификат отменён",
+      description: "Покупатель отменил сертификат в разрешённое окно.",
+      date: certificate.cancelled_at,
+      tone: "warning",
+    });
+
+    items.push({
+      title: "POINTS возвращены на счёт",
+      description: `${formatMoney(
+        releasedAmount,
+        pointsCurrency
+      )} возвращено из резерва после отмены.`,
+      date: certificate.cancelled_at,
+      tone: "done",
+    });
+
+    return items;
+  }
+
+  if (certificate.status === "expired") {
+    items.push({
+      title: "Срок сертификата истёк",
+      description: "Сертификат не был использован до окончания срока действия.",
+      date: certificate.expired_at,
+      tone: "warning",
+    });
+
+    items.push({
+      title: "POINTS окончательно списаны",
+      description: `${formatMoney(
+        chargedAmount,
+        pointsCurrency
+      )} списано после истечения срока сертификата.`,
+      date: certificate.expired_at,
+      tone: "done",
+    });
+
+    return items;
+  }
+
+  if (certificate.status === "rejected") {
+    items.push({
+      title: "Сертификат отклонён",
+      description:
+        "Сертификат был отклонён. Проверьте комментарий продавца или статус offer.",
+      date: certificate.rejected_at,
+      tone: "warning",
+    });
+
+    return items;
+  }
+
+  items.push({
+    title: `Текущий статус: ${getStatusLabel(certificate.status)}`,
+    description: `POINTS status: ${getPointsStatusLabel(
+      certificate.points_status
+    )}.`,
+    date: certificate.updated_at,
+    tone: "neutral",
+  });
+
+  return items;
 }
 
 async function getCurrentAppUser(): Promise<{
@@ -365,18 +545,6 @@ export default async function MyCertificatesPage() {
     (certificate) => certificate.status === "cancelled"
   ).length;
 
-  const reservedPointsTotal = certificates.reduce((sum, certificate) => {
-    return sum + (Number(certificate.points_reserved) || 0);
-  }, 0);
-
-  const chargedPointsTotal = certificates.reduce((sum, certificate) => {
-    return sum + (Number(certificate.points_charged) || 0);
-  }, 0);
-
-  const releasedPointsTotal = certificates.reduce((sum, certificate) => {
-    return sum + (Number(certificate.points_released) || 0);
-  }, 0);
-
   return (
     <main
       style={{
@@ -416,7 +584,7 @@ export default async function MyCertificatesPage() {
             }}
           >
             Your ordered certificates and rewards. Points are reserved after
-            ordering and charged only after certificate usage.
+            ordering and charged only after certificate usage or expiration.
           </p>
 
           <nav
@@ -537,57 +705,6 @@ export default async function MyCertificatesPage() {
                 {cancelledCount}
               </div>
             </div>
-
-            <div
-              style={{
-                border: "1px solid #f0d28a",
-                borderRadius: "16px",
-                padding: "22px",
-                background: "#fff8e6",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div style={{ color: "#7a4b00", marginBottom: "8px" }}>
-                Reserved POINT
-              </div>
-              <div style={{ fontSize: "34px", fontWeight: 700 }}>
-                {reservedPointsTotal.toFixed(2)}
-              </div>
-            </div>
-
-            <div
-              style={{
-                border: "1px solid #dddddd",
-                borderRadius: "16px",
-                padding: "22px",
-                background: "#ffffff",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div style={{ color: "#666666", marginBottom: "8px" }}>
-                Charged POINT
-              </div>
-              <div style={{ fontSize: "34px", fontWeight: 700 }}>
-                {chargedPointsTotal.toFixed(2)}
-              </div>
-            </div>
-
-            <div
-              style={{
-                border: "1px solid #dddddd",
-                borderRadius: "16px",
-                padding: "22px",
-                background: "#ffffff",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div style={{ color: "#666666", marginBottom: "8px" }}>
-                Released POINT
-              </div>
-              <div style={{ fontSize: "34px", fontWeight: 700 }}>
-                {releasedPointsTotal.toFixed(2)}
-              </div>
-            </div>
           </section>
         ) : null}
 
@@ -618,6 +735,7 @@ export default async function MyCertificatesPage() {
               );
               const offer = getFirstRelatedItem(certificate.offers);
               const statusStyle = getStatusStyle(certificate.status);
+              const timeline = buildCertificateTimeline(certificate);
 
               return (
                 <article
@@ -804,6 +922,65 @@ export default async function MyCertificatesPage() {
                   <section
                     style={{
                       border: "1px solid #e5e7eb",
+                      borderRadius: "12px",
+                      padding: "14px",
+                      background: "#ffffff",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        margin: "0 0 12px",
+                        fontSize: "18px",
+                        lineHeight: "1.3",
+                      }}
+                    >
+                      История сертификата
+                    </h3>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gap: "10px",
+                      }}
+                    >
+                      {timeline.map((item, index) => {
+                        const toneStyle = getTimelineToneStyle(item.tone);
+
+                        return (
+                          <div
+                            key={`${certificate.id}-${item.title}-${index}`}
+                            style={{
+                              borderRadius: "10px",
+                              padding: "12px",
+                              ...toneStyle,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                gap: "12px",
+                                flexWrap: "wrap",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              <strong>{item.title}</strong>
+                              <span style={{ fontSize: "13px" }}>
+                                {formatDate(item.date)}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: "14px", lineHeight: "1.45" }}>
+                              {item.description}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  <section
+                    style={{
+                      border: "1px solid #e5e7eb",
                       borderRadius: "10px",
                       padding: "14px",
                       background: "#f9fafb",
@@ -851,6 +1028,11 @@ export default async function MyCertificatesPage() {
                     <p style={{ margin: 0 }}>
                       <strong>Cancelled:</strong>{" "}
                       {formatDate(certificate.cancelled_at)}
+                    </p>
+
+                    <p style={{ margin: 0 }}>
+                      <strong>Expired:</strong>{" "}
+                      {formatDate(certificate.expired_at)}
                     </p>
 
                     <p style={{ margin: 0 }}>
