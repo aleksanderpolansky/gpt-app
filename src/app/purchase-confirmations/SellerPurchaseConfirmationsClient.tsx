@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Organization = {
   id: string;
@@ -64,18 +64,43 @@ function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   return value;
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) {
-    return "—";
-  }
+function LocalDateTimeText({
+  value,
+}: {
+  value: string | null | undefined;
+}) {
+  const [formattedValue, setFormattedValue] = useState("—");
 
-  return new Intl.DateTimeFormat("pl-PL", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+  useEffect(() => {
+    if (!value) {
+      setFormattedValue("—");
+      return;
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      setFormattedValue("—");
+      return;
+    }
+
+    const browserLanguage =
+      typeof navigator !== "undefined" && navigator.language
+        ? navigator.language
+        : "pl-PL";
+
+    setFormattedValue(
+      new Intl.DateTimeFormat(browserLanguage, {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(date)
+    );
+  }, [value]);
+
+  return <span>{formattedValue}</span>;
 }
 
 function formatMoney(
@@ -103,19 +128,19 @@ function formatPoints(value: number | null | undefined) {
 
 function getStatusLabel(status: string | null | undefined) {
   if (status === "requested") {
-    return "Ожидает подтверждения";
+    return "Ожидает решения";
   }
 
   if (status === "confirmed") {
-    return "Подтверждена";
+    return "Покупка подтверждена";
   }
 
   if (status === "rejected") {
-    return "Отклонена";
+    return "Покупка отклонена";
   }
 
   if (status === "cancelled") {
-    return "Отменена";
+    return "Заявка отменена";
   }
 
   return status ?? "—";
@@ -277,8 +302,8 @@ export default function SellerPurchaseConfirmationsClient({
 
       setActionMessage(
         action === "confirm"
-          ? "Покупка подтверждена. Если заявка была ошибочно отклонена, решение исправлено и записано в audit events."
-          : "Покупка отклонена."
+          ? "Покупка подтверждена. Если эта заявка ранее была отклонена по ошибке, исправление сохранено в журнале событий."
+          : "Покупка отклонена. Решение сохранено в журнале событий."
       );
 
       setSellerComments((currentComments) => ({
@@ -325,11 +350,16 @@ export default function SellerPurchaseConfirmationsClient({
     <main style={{ padding: "32px", maxWidth: "1300px", margin: "0 auto" }}>
       <div style={{ marginBottom: "28px" }}>
         <h1 style={{ fontSize: "32px", marginBottom: "8px" }}>
-          Подтверждения покупок
+          Подтверждение покупок
         </h1>
         <p style={{ color: "#666", fontSize: "16px", lineHeight: "1.5" }}>
-          Здесь отображаются заявки на подтверждение покупок. После подтверждения
-          продавцом система может начислить пользователю points.
+          Здесь продавец проверяет заявки покупателей и подтверждает только
+          реальные покупки. После подтверждения система может начислить
+          пользователю POINTS как бонусные единицы программы лояльности.
+        </p>
+        <p style={{ color: "#777", fontSize: "14px", lineHeight: "1.5" }}>
+          POINTS не являются деньгами, валютой или средством платежа. Время на
+          этой странице показывается по настройкам устройства пользователя.
         </p>
       </div>
 
@@ -350,7 +380,7 @@ export default function SellerPurchaseConfirmationsClient({
           }}
         >
           <div>
-            <strong>Фильтр по организации:</strong>{" "}
+            <strong>Фильтр по предприятию:</strong>{" "}
             {activeOrganizationName ?? organizationIdFilter}
           </div>
 
@@ -466,7 +496,7 @@ export default function SellerPurchaseConfirmationsClient({
           }}
         >
           <div style={{ color: "#666", marginBottom: "8px" }}>
-            Начислено points
+            Начислено POINTS
           </div>
           <div style={{ fontSize: "32px", fontWeight: 700 }}>
             {formatPoints(totalPointsAwarded)}
@@ -524,11 +554,12 @@ export default function SellerPurchaseConfirmationsClient({
           }}
         >
           <div>
-            <h2 style={{ margin: 0, fontSize: "22px" }}>История заявок</h2>
-            <p style={{ margin: "6px 0 0", color: "#666" }}>
-              Заявки пользователя и подтверждения продавца. Для отклонённых
-              заявок доступно отдельное исправление: если заявка была отклонена
-              по ошибке, её можно подтвердить с записью в audit events.
+            <h2 style={{ margin: 0, fontSize: "22px" }}>Журнал заявок</h2>
+            <p style={{ margin: "6px 0 0", color: "#666", lineHeight: "1.5" }}>
+              Покупатель подаёт заявку, а продавец подтверждает или отклоняет
+              её после проверки. Если отказ был сделан по ошибке, отклонённую
+              заявку можно позже подтвердить — такое исправление сохраняется в
+              журнале событий.
             </p>
           </div>
 
@@ -564,18 +595,20 @@ export default function SellerPurchaseConfirmationsClient({
             >
               <thead>
                 <tr style={{ background: "#f7f7f7", textAlign: "left" }}>
-                  <th style={{ padding: "12px 16px" }}>Дата</th>
+                  <th style={{ padding: "12px 16px" }}>Дата заявки</th>
                   <th style={{ padding: "12px 16px" }}>Статус</th>
                   <th style={{ padding: "12px 16px" }}>Предприятие</th>
                   <th style={{ padding: "12px 16px" }}>Покупатель</th>
-                  <th style={{ padding: "12px 16px" }}>Сумма</th>
-                  <th style={{ padding: "12px 16px" }}>Points</th>
-                  <th style={{ padding: "12px 16px" }}>Комментарий</th>
+                  <th style={{ padding: "12px 16px" }}>Сумма покупки</th>
+                  <th style={{ padding: "12px 16px" }}>Бонус</th>
+                  <th style={{ padding: "12px 16px" }}>
+                    Комментарий покупателя
+                  </th>
                   <th style={{ padding: "12px 16px" }}>
                     Комментарий продавца
                   </th>
                   <th style={{ padding: "12px 16px" }}>Чек</th>
-                  <th style={{ padding: "12px 16px" }}>Audit</th>
+                  <th style={{ padding: "12px 16px" }}>Журнал</th>
                   <th style={{ padding: "12px 16px" }}>Действия</th>
                 </tr>
               </thead>
@@ -596,8 +629,13 @@ export default function SellerPurchaseConfirmationsClient({
 
                   return (
                     <tr key={item.id} style={{ borderTop: "1px solid #eee" }}>
-                      <td style={{ padding: "12px 16px" }}>
-                        {formatDate(item.created_at)}
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <LocalDateTimeText value={item.created_at} />
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <span
@@ -637,7 +675,7 @@ export default function SellerPurchaseConfirmationsClient({
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {formatPoints(item.points_awarded)} POINT
+                        {formatPoints(item.points_awarded)} POINTS
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         {item.user_comment ?? "—"}
@@ -658,8 +696,8 @@ export default function SellerPurchaseConfirmationsClient({
                               }
                               placeholder={
                                 canCorrectRejected
-                                  ? "Комментарий исправления"
-                                  : "Комментарий решения"
+                                  ? "Причина исправления решения"
+                                  : "Комментарий к решению"
                               }
                               style={{
                                 padding: "8px 10px",
@@ -722,7 +760,7 @@ export default function SellerPurchaseConfirmationsClient({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              Confirm
+                              Подтвердить покупку
                             </button>
 
                             <button
@@ -749,7 +787,7 @@ export default function SellerPurchaseConfirmationsClient({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              Reject
+                              Отклонить заявку
                             </button>
                           </div>
                         ) : canCorrectRejected ? (
@@ -771,8 +809,8 @@ export default function SellerPurchaseConfirmationsClient({
                                 lineHeight: "1.4",
                               }}
                             >
-                              Заявка отклонена. Подтверждайте только если отказ
-                              был ошибочным.
+                              Заявка отклонена. Подтверждайте её только если
+                              отказ был ошибочным.
                             </div>
 
                             <button
@@ -799,7 +837,7 @@ export default function SellerPurchaseConfirmationsClient({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              Ошибочно отклонена — подтвердить
+                              Исправить отказ и подтвердить
                             </button>
                           </div>
                         ) : (
