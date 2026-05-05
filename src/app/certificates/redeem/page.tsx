@@ -1,5 +1,6 @@
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
+import LocalDateTime from "../../../components/LocalDateTime";
 import RedeemCertificateButton from "../../seller-certificates/components/RedeemCertificateButton";
 
 export const dynamic = "force-dynamic";
@@ -114,20 +115,6 @@ function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   return value;
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) {
-    return "—";
-  }
-
-  return new Intl.DateTimeFormat("pl-PL", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
 function formatMoney(
   value: number | string | null | undefined,
   currency: string | null | undefined
@@ -158,6 +145,26 @@ function getStatusLabel(status: string | null | undefined) {
 
   if (status === "expired") {
     return "Expired";
+  }
+
+  return status ?? "—";
+}
+
+function getPointsStatusLabel(status: string | null | undefined) {
+  if (status === "reserved") {
+    return "Reserved";
+  }
+
+  if (status === "charged") {
+    return "Charged";
+  }
+
+  if (status === "released") {
+    return "Released";
+  }
+
+  if (status === "none") {
+    return "None";
   }
 
   return status ?? "—";
@@ -377,7 +384,7 @@ export default async function RedeemCertificatePage({
               margin: "0 0 12px",
             }}
           >
-            Redeem certificate
+            Confirm certificate usage
           </h1>
 
           <p
@@ -388,7 +395,7 @@ export default async function RedeemCertificatePage({
               lineHeight: "1.5",
             }}
           >
-            Seller confirmation page after scanning the customer QR code.
+            Usage confirmation page after scanning the customer QR code.
           </p>
 
           <nav
@@ -481,7 +488,7 @@ export default async function RedeemCertificatePage({
                 }}
               >
                 {getStatusLabel(certificate.status)} / points:{" "}
-                {certificate.points_status}
+                {getPointsStatusLabel(certificate.points_status)}
               </span>
             </div>
 
@@ -496,7 +503,8 @@ export default async function RedeemCertificatePage({
                   lineHeight: "1.45",
                 }}
               >
-                Only the seller organization owner can confirm this certificate.
+                Only the organization owner can confirm usage of this
+                certificate.
               </section>
             ) : null}
 
@@ -516,7 +524,7 @@ export default async function RedeemCertificatePage({
                 }}
               >
                 <div style={{ color: "#1e3a8a", marginBottom: "6px" }}>
-                  Points to charge
+                  POINT after usage confirmation
                 </div>
                 <strong>
                   {formatMoney(
@@ -535,7 +543,7 @@ export default async function RedeemCertificatePage({
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "6px" }}>
-                  Customer pays money
+                  Customer money payment
                 </div>
                 <strong>
                   {formatMoney(certificate.money_price, certificate.currency)}
@@ -588,7 +596,8 @@ export default async function RedeemCertificatePage({
               </p>
 
               <p style={{ margin: 0 }}>
-                <strong>Requested:</strong> {formatDate(certificate.requested_at)}
+                <strong>Requested:</strong>{" "}
+                <LocalDateTime value={certificate.requested_at} />
               </p>
 
               <p style={{ margin: 0 }}>
@@ -617,7 +626,7 @@ export default async function RedeemCertificatePage({
                   color: "#555555",
                 }}
               >
-                Redeem action is not available for this certificate status.
+                Usage confirmation is not available for this certificate status.
               </section>
             ) : null}
           </article>
