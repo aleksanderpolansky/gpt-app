@@ -6,6 +6,10 @@ type Wallet = {
   id?: string;
   user_id: string;
   balance: number;
+  available_balance?: number | null;
+  reserved_balance?: number | null;
+  spent_balance?: number | null;
+  released_balance?: number | null;
   status: string;
   created_at?: string;
   updated_at?: string;
@@ -28,8 +32,22 @@ type PointsTransaction = {
   transaction_type: string | null;
   direction: string | null;
   amount: number;
+
   balance_before: number | null;
   balance_after: number | null;
+
+  available_balance_before: number | null;
+  available_balance_after: number | null;
+
+  reserved_balance_before: number | null;
+  reserved_balance_after: number | null;
+
+  spent_balance_before: number | null;
+  spent_balance_after: number | null;
+
+  released_balance_before: number | null;
+  released_balance_after: number | null;
+
   source_type: string | null;
   source_id: string | null;
   certificate_id: string | null;
@@ -55,6 +73,21 @@ type TransactionsApiResponse = {
   transactions?: PointsTransaction[];
   error?: string;
 };
+
+function toNumber(value: number | null | undefined) {
+  if (typeof value !== "number") {
+    return 0;
+  }
+
+  return value;
+}
+
+function calculateBalance(
+  available: number | null | undefined,
+  reserved: number | null | undefined
+) {
+  return toNumber(available) + toNumber(reserved);
+}
 
 function formatDate(value: string | null | undefined) {
   if (!value) {
@@ -97,6 +130,10 @@ function getDirectionLabel(direction: string | null | undefined) {
     return "Возврат из резерва";
   }
 
+  if (direction === "charge") {
+    return "Окончательное списание";
+  }
+
   return direction ?? "—";
 }
 
@@ -105,7 +142,11 @@ function getTransactionSign(direction: string | null | undefined) {
     return "+";
   }
 
-  if (direction === "debit" || direction === "reserve") {
+  if (
+    direction === "debit" ||
+    direction === "reserve" ||
+    direction === "charge"
+  ) {
     return "-";
   }
 
@@ -140,32 +181,40 @@ function getTransactionHumanTitle(transaction: PointsTransaction) {
       combined.includes("release") ||
       direction === "release")
   ) {
-    return "Возвращено после отмены сертификата";
+    return "Возвращено на счёт после отмены";
   }
 
   if (
     combined.includes("certificate") &&
-    (combined.includes("redeem") || combined.includes("usage"))
+    (combined.includes("redeem") || combined.includes("redemption"))
   ) {
-    return "Списано при использовании сертификата";
+    return "Списано за использование сертификата";
   }
 
   if (
     combined.includes("certificate") &&
     (combined.includes("expire") || combined.includes("expiration"))
   ) {
-    return "Списано после истечения срока сертификата";
+    return "Окончательно списано после истечения срока сертификата";
   }
 
   if (direction === "credit") {
     return "Начисление POINT";
   }
 
-  if (direction === "debit") {
+  if (direction === "debit" || direction === "charge") {
     return "Списание POINT";
   }
 
   return "Операция POINT";
+}
+
+function getLatestTransactionText(transaction: PointsTransaction | undefined) {
+  if (!transaction) {
+    return "Операций пока нет";
+  }
+
+  return getTransactionHumanTitle(transaction);
 }
 
 function getTransactionStatusLabel(status: string | null | undefined) {
@@ -175,6 +224,10 @@ function getTransactionStatusLabel(status: string | null | undefined) {
 
   if (status === "completed") {
     return "Завершено";
+  }
+
+  if (status === "confirmed") {
+    return "Подтверждено";
   }
 
   if (status === "pending") {
@@ -201,7 +254,11 @@ function getTransactionTone(direction: string | null | undefined) {
     };
   }
 
-  if (direction === "debit" || direction === "reserve") {
+  if (
+    direction === "debit" ||
+    direction === "reserve" ||
+    direction === "charge"
+  ) {
     return {
       background: "#fff8e6",
       border: "#f7d58a",
@@ -216,11 +273,49 @@ function getTransactionTone(direction: string | null | undefined) {
   };
 }
 
+function BalanceLine({
+  label,
+  before,
+  after,
+  isPrimary = false,
+}: {
+  label: string;
+  before: number | null | undefined;
+  after: number | null | undefined;
+  isPrimary?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "150px 1fr",
+        gap: "8px",
+        fontSize: isPrimary ? "14px" : "13px",
+        lineHeight: "1.35",
+      }}
+    >
+      <span style={{ color: isPrimary ? "#111" : "#666", fontWeight: 600 }}>
+        {label}
+      </span>
+      <strong style={{ whiteSpace: "nowrap" }}>
+        {formatPoints(before)} → {formatPoints(after)}
+      </strong>
+    </div>
+  );
+}
+
 export default function PointsPage() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<PointsTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const currentBalance = calculateBalance(
+    wallet?.available_balance,
+    wallet?.reserved_balance
+  );
+
+  const latestTransaction = transactions[0];
 
   async function loadPointsData() {
     setIsLoading(true);
@@ -269,13 +364,12 @@ export default function PointsPage() {
   }, []);
 
   return (
-    <main style={{ padding: "32px", maxWidth: "1100px", margin: "0 auto" }}>
+    <main style={{ padding: "32px", maxWidth: "1240px", margin: "0 auto" }}>
       <div style={{ marginBottom: "28px" }}>
         <h1 style={{ fontSize: "32px", marginBottom: "8px" }}>Мои POINTS</h1>
         <p style={{ color: "#666", fontSize: "16px", lineHeight: "1.5" }}>
-          Здесь отображается общий баланс пользователя на платформе и понятная
-          история операций: начисление, резервирование, возврат и списание
-          POINTS.
+          Здесь отображается баланс POINTS, доступные POINTS, резерв под
+          сертификаты и audit-история всех операций.
         </p>
       </div>
 
@@ -321,13 +415,32 @@ export default function PointsPage() {
           <section
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
               gap: "16px",
               marginBottom: "28px",
             }}
           >
             <div
               style={{
+                border: "2px solid #111",
+                borderRadius: "16px",
+                padding: "24px",
+                background: "#fff",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+              }}
+            >
+              <div style={{ color: "#444", marginBottom: "8px" }}>Баланс</div>
+              <div style={{ fontSize: "34px", fontWeight: 800 }}>
+                {formatPoints(currentBalance)} POINT
+              </div>
+              <div style={{ color: "#666", marginTop: "10px", fontSize: "14px" }}>
+                Баланс = доступно сейчас + зарезервировано под активные
+                сертификаты.
+              </div>
+            </div>
+
+            <div
+              style={{
                 border: "1px solid #ddd",
                 borderRadius: "16px",
                 padding: "24px",
@@ -336,14 +449,31 @@ export default function PointsPage() {
               }}
             >
               <div style={{ color: "#666", marginBottom: "8px" }}>
-                Текущий доступный баланс
+                Доступно сейчас
               </div>
-              <div style={{ fontSize: "40px", fontWeight: 700 }}>
-                {formatPoints(wallet?.balance)} POINT
+              <div style={{ fontSize: "28px", fontWeight: 700 }}>
+                {formatPoints(wallet?.available_balance)} POINT
               </div>
               <div style={{ color: "#777", marginTop: "10px", fontSize: "14px" }}>
-                POINTS — это бонусные единицы внутри платформы, не деньги и не
-                средство вывода средств.
+                Можно использовать для новых сертификатов.
+              </div>
+            </div>
+
+            <div
+              style={{
+                border: "1px solid #ddd",
+                borderRadius: "16px",
+                padding: "24px",
+                background: "#fff",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+              }}
+            >
+              <div style={{ color: "#666", marginBottom: "8px" }}>В резерве</div>
+              <div style={{ fontSize: "28px", fontWeight: 700 }}>
+                {formatPoints(wallet?.reserved_balance)} POINT
+              </div>
+              <div style={{ color: "#777", marginTop: "10px", fontSize: "14px" }}>
+                Зарезервировано под активные сертификаты.
               </div>
             </div>
 
@@ -357,10 +487,15 @@ export default function PointsPage() {
               }}
             >
               <div style={{ color: "#666", marginBottom: "8px" }}>
-                Статус wallet
+                Начислено / потрачено за всё время
               </div>
-              <div style={{ fontSize: "24px", fontWeight: 600 }}>
-                {wallet?.status ?? "not_created"}
+              <div style={{ fontSize: "20px", fontWeight: 700 }}>
+                {formatPoints(wallet?.balance)} /{" "}
+                {formatPoints(wallet?.spent_balance)} POINT
+              </div>
+              <div style={{ color: "#777", marginTop: "10px", fontSize: "14px" }}>
+                Архивная статистика: сколько начислено всего и сколько
+                окончательно использовано или списано.
               </div>
             </div>
 
@@ -374,10 +509,17 @@ export default function PointsPage() {
               }}
             >
               <div style={{ color: "#666", marginBottom: "8px" }}>
-                Количество операций
+                Последняя транзакция
               </div>
-              <div style={{ fontSize: "24px", fontWeight: 600 }}>
-                {transactions.length}
+              <div style={{ fontSize: "18px", fontWeight: 700 }}>
+                {getLatestTransactionText(latestTransaction)}
+              </div>
+              <div style={{ color: "#777", marginTop: "10px", fontSize: "14px" }}>
+                {latestTransaction
+                  ? `${getTransactionSign(latestTransaction.direction)}${formatPoints(
+                      latestTransaction.amount
+                    )} POINT · ${formatDate(latestTransaction.created_at)}`
+                  : "История операций пуста."}
               </div>
             </div>
           </section>
@@ -406,8 +548,9 @@ export default function PointsPage() {
                   История операций POINTS
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666" }}>
-                  Человеческое объяснение каждой операции плюс технические
-                  данные для audit.
+                  Главный показатель — баланс: доступно сейчас + резерв.
+                  Остальные поля показывают, как именно POINTS перемещались
+                  между карманами.
                 </p>
               </div>
 
@@ -437,7 +580,7 @@ export default function PointsPage() {
                   style={{
                     width: "100%",
                     borderCollapse: "collapse",
-                    minWidth: "980px",
+                    minWidth: "1180px",
                   }}
                 >
                   <thead>
@@ -446,7 +589,9 @@ export default function PointsPage() {
                       <th style={{ padding: "12px 16px" }}>Смысл операции</th>
                       <th style={{ padding: "12px 16px" }}>Движение</th>
                       <th style={{ padding: "12px 16px" }}>POINT</th>
-                      <th style={{ padding: "12px 16px" }}>Баланс</th>
+                      <th style={{ padding: "12px 16px" }}>
+                        Баланс и карманы
+                      </th>
                       <th style={{ padding: "12px 16px" }}>Предприятие</th>
                       <th style={{ padding: "12px 16px" }}>Статус</th>
                       <th style={{ padding: "12px 16px" }}>Audit source</th>
@@ -458,16 +603,36 @@ export default function PointsPage() {
                         transaction.organizations?.organization_name ?? "—";
                       const tone = getTransactionTone(transaction.direction);
 
+                      const balanceBefore = calculateBalance(
+                        transaction.available_balance_before,
+                        transaction.reserved_balance_before
+                      );
+
+                      const balanceAfter = calculateBalance(
+                        transaction.available_balance_after,
+                        transaction.reserved_balance_after
+                      );
+
                       return (
                         <tr
                           key={transaction.id}
                           style={{ borderTop: "1px solid #eee" }}
                         >
-                          <td style={{ padding: "12px 16px" }}>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              verticalAlign: "top",
+                            }}
+                          >
                             {formatDate(transaction.created_at)}
                           </td>
 
-                          <td style={{ padding: "12px 16px" }}>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              verticalAlign: "top",
+                            }}
+                          >
                             <div style={{ fontWeight: 700 }}>
                               {getTransactionHumanTitle(transaction)}
                             </div>
@@ -484,7 +649,12 @@ export default function PointsPage() {
                             </div>
                           </td>
 
-                          <td style={{ padding: "12px 16px" }}>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              verticalAlign: "top",
+                            }}
+                          >
                             <span
                               style={{
                                 display: "inline-block",
@@ -507,6 +677,7 @@ export default function PointsPage() {
                               padding: "12px 16px",
                               fontWeight: 700,
                               whiteSpace: "nowrap",
+                              verticalAlign: "top",
                             }}
                           >
                             {getTransactionSign(transaction.direction)}
@@ -517,17 +688,64 @@ export default function PointsPage() {
                             style={{
                               padding: "12px 16px",
                               whiteSpace: "nowrap",
+                              verticalAlign: "top",
                             }}
                           >
-                            {formatPoints(transaction.balance_before)} →{" "}
-                            {formatPoints(transaction.balance_after)}
+                            <div
+                              style={{
+                                display: "grid",
+                                gap: "4px",
+                              }}
+                            >
+                              <BalanceLine
+                                label="Баланс"
+                                before={balanceBefore}
+                                after={balanceAfter}
+                                isPrimary
+                              />
+                              <BalanceLine
+                                label="Доступно"
+                                before={transaction.available_balance_before}
+                                after={transaction.available_balance_after}
+                              />
+                              <BalanceLine
+                                label="Резерв"
+                                before={transaction.reserved_balance_before}
+                                after={transaction.reserved_balance_after}
+                              />
+                              <BalanceLine
+                                label="Потрачено"
+                                before={transaction.spent_balance_before}
+                                after={transaction.spent_balance_after}
+                              />
+                              <BalanceLine
+                                label="Возвращено"
+                                before={transaction.released_balance_before}
+                                after={transaction.released_balance_after}
+                              />
+                              <BalanceLine
+                                label="Начислено всего"
+                                before={transaction.balance_before}
+                                after={transaction.balance_after}
+                              />
+                            </div>
                           </td>
 
-                          <td style={{ padding: "12px 16px" }}>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              verticalAlign: "top",
+                            }}
+                          >
                             {organizationName}
                           </td>
 
-                          <td style={{ padding: "12px 16px" }}>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              verticalAlign: "top",
+                            }}
+                          >
                             {getTransactionStatusLabel(transaction.status)}
                           </td>
 
@@ -536,6 +754,7 @@ export default function PointsPage() {
                               padding: "12px 16px",
                               color: "#666",
                               fontSize: "13px",
+                              verticalAlign: "top",
                             }}
                           >
                             <div>
