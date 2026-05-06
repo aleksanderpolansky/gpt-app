@@ -2,6 +2,28 @@ import { NextResponse } from "next/server";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 
+type GeoAreaRow = {
+  id: string;
+  parent_id: string | null;
+  area_type: string;
+  country_code: string | null;
+  name: string;
+  slug: string;
+  latitude: number | null;
+  longitude: number | null;
+  status: string;
+  is_active: boolean;
+};
+
+type ParsedOrganizationLocationInput = {
+  countryCode: string | null;
+  countryGeoAreaId: string | null;
+  cityGeoAreaId: string | null;
+  city: string | null;
+  districtGeoAreaId: string | null;
+  district: string | null;
+};
+
 async function getCurrentAppUser() {
   const session = await auth0.getSession();
 
@@ -34,6 +56,308 @@ async function getCurrentAppUser() {
   return {
     appUser,
     errorResponse: null,
+  };
+}
+
+function parseOptionalText(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (trimmedValue.length === 0) {
+    return null;
+  }
+
+  return trimmedValue;
+}
+
+function normalizeCountryCode(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const normalizedValue = value.trim().toUpperCase();
+
+  if (!/^[A-Z]{2}$/.test(normalizedValue)) {
+    return null;
+  }
+
+  return normalizedValue;
+}
+
+function normalizeUuid(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  if (!uuidPattern.test(value)) {
+    return null;
+  }
+
+  return value;
+}
+
+function parseOrganizationLocationInput(
+  body: Record<string, unknown>
+): ParsedOrganizationLocationInput {
+  return {
+    countryCode: normalizeCountryCode(parseOptionalText(body.countryCode)),
+    countryGeoAreaId: normalizeUuid(parseOptionalText(body.countryGeoAreaId)),
+    cityGeoAreaId: normalizeUuid(parseOptionalText(body.cityGeoAreaId)),
+    city: parseOptionalText(body.city),
+    districtGeoAreaId: normalizeUuid(parseOptionalText(body.districtGeoAreaId)),
+    district: parseOptionalText(body.district),
+  };
+}
+
+function hasAnyLocationInput(input: ParsedOrganizationLocationInput) {
+  return Boolean(
+    input.countryCode ||
+      input.countryGeoAreaId ||
+      input.cityGeoAreaId ||
+      input.city ||
+      input.districtGeoAreaId ||
+      input.district
+  );
+}
+
+async function getGeoAreaById(id: string) {
+  const { data: geoArea, error: geoAreaError } = await supabase
+    .from("geo_areas")
+    .select(
+      "id, parent_id, area_type, country_code, name, slug, latitude, longitude, status, is_active"
+    )
+    .eq("id", id)
+    .single();
+
+  if (geoAreaError || !geoArea) {
+    return {
+      geoArea: null,
+      errorMessage: geoAreaError?.message ?? "Geo area not found",
+    };
+  }
+
+  return {
+    geoArea: geoArea as GeoAreaRow,
+    errorMessage: null,
+  };
+}
+
+async function validateOrganizationLocationInput(
+  input: ParsedOrganizationLocationInput
+) {
+  if (!hasAnyLocationInput(input)) {
+    return {
+      ok: true,
+      countryGeoArea: null as GeoAreaRow | null,
+      cityGeoArea: null as GeoAreaRow | null,
+      districtGeoArea: null as GeoAreaRow | null,
+      errorMessage: null as string | null,
+    };
+  }
+
+  if (!input.countryCode) {
+    return {
+      ok: false,
+      countryGeoArea: null,
+      cityGeoArea: null,
+      districtGeoArea: null,
+      errorMessage:
+        "countryCode is required when organization location is provided",
+    };
+  }
+
+  let countryGeoArea: GeoAreaRow | null = null;
+  let cityGeoArea: GeoAreaRow | null = null;
+  let districtGeoArea: GeoAreaRow | null = null;
+
+  if (input.countryGeoAreaId) {
+    const { geoArea, errorMessage } = await getGeoAreaById(
+      input.countryGeoAreaId
+    );
+
+    if (errorMessage || !geoArea) {
+      return {
+        ok: false,
+        countryGeoArea: null,
+        cityGeoArea: null,
+        districtGeoArea: null,
+        errorMessage,
+      };
+    }
+
+    if (geoArea.area_type !== "country") {
+      return {
+        ok: false,
+        countryGeoArea: null,
+        cityGeoArea: null,
+        districtGeoArea: null,
+        errorMessage: "countryGeoAreaId must point to a country geo area",
+      };
+    }
+
+    if (geoArea.status !== "approved" || geoArea.is_active === false) {
+      return {
+        ok: false,
+        countryGeoArea: null,
+        cityGeoArea: null,
+        districtGeoArea: null,
+        errorMessage: "Selected country is not approved or not active",
+      };
+    }
+
+    if (geoArea.country_code && geoArea.country_code !== input.countryCode) {
+      return {
+        ok: false,
+        countryGeoArea: null,
+        cityGeoArea: null,
+        districtGeoArea: null,
+        errorMessage: "Selected country does not match countryCode",
+      };
+    }
+
+    countryGeoArea = geoArea;
+  }
+
+  if (input.cityGeoAreaId) {
+    const { geoArea, errorMessage } = await getGeoAreaById(input.cityGeoAreaId);
+
+    if (errorMessage || !geoArea) {
+      return {
+        ok: false,
+        countryGeoArea,
+        cityGeoArea: null,
+        districtGeoArea: null,
+        errorMessage,
+      };
+    }
+
+    if (geoArea.area_type !== "city") {
+      return {
+        ok: false,
+        countryGeoArea,
+        cityGeoArea: null,
+        districtGeoArea: null,
+        errorMessage: "cityGeoAreaId must point to a city geo area",
+      };
+    }
+
+    if (geoArea.status !== "approved" || geoArea.is_active === false) {
+      return {
+        ok: false,
+        countryGeoArea,
+        cityGeoArea: null,
+        districtGeoArea: null,
+        errorMessage: "Selected city is not approved or not active",
+      };
+    }
+
+    if (geoArea.country_code !== input.countryCode) {
+      return {
+        ok: false,
+        countryGeoArea,
+        cityGeoArea: null,
+        districtGeoArea: null,
+        errorMessage: "Selected city does not match countryCode",
+      };
+    }
+
+    if (
+      countryGeoArea &&
+      geoArea.parent_id &&
+      geoArea.parent_id !== countryGeoArea.id
+    ) {
+      return {
+        ok: false,
+        countryGeoArea,
+        cityGeoArea: null,
+        districtGeoArea: null,
+        errorMessage: "Selected city does not belong to selected country",
+      };
+    }
+
+    cityGeoArea = geoArea;
+  }
+
+  if (input.districtGeoAreaId) {
+    const { geoArea, errorMessage } = await getGeoAreaById(
+      input.districtGeoAreaId
+    );
+
+    if (errorMessage || !geoArea) {
+      return {
+        ok: false,
+        countryGeoArea,
+        cityGeoArea,
+        districtGeoArea: null,
+        errorMessage,
+      };
+    }
+
+    if (geoArea.area_type !== "district") {
+      return {
+        ok: false,
+        countryGeoArea,
+        cityGeoArea,
+        districtGeoArea: null,
+        errorMessage: "districtGeoAreaId must point to a district geo area",
+      };
+    }
+
+    if (geoArea.status !== "approved" || geoArea.is_active === false) {
+      return {
+        ok: false,
+        countryGeoArea,
+        cityGeoArea,
+        districtGeoArea: null,
+        errorMessage: "Selected district is not approved or not active",
+      };
+    }
+
+    if (geoArea.country_code !== input.countryCode) {
+      return {
+        ok: false,
+        countryGeoArea,
+        cityGeoArea,
+        districtGeoArea: null,
+        errorMessage: "Selected district does not match countryCode",
+      };
+    }
+
+    if (!cityGeoArea) {
+      return {
+        ok: false,
+        countryGeoArea,
+        cityGeoArea,
+        districtGeoArea: null,
+        errorMessage: "cityGeoAreaId is required when districtGeoAreaId is provided",
+      };
+    }
+
+    if (geoArea.parent_id !== cityGeoArea.id) {
+      return {
+        ok: false,
+        countryGeoArea,
+        cityGeoArea,
+        districtGeoArea: null,
+        errorMessage: "Selected district does not belong to selected city",
+      };
+    }
+
+    districtGeoArea = geoArea;
+  }
+
+  return {
+    ok: true,
+    countryGeoArea,
+    cityGeoArea,
+    districtGeoArea,
+    errorMessage: null,
   };
 }
 
@@ -74,21 +398,35 @@ export async function POST(request: Request) {
   const session = await auth0.getSession();
 
   if (!session?.user) {
-    return NextResponse.json(
-      { error: "Not authenticated" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   const body = await request.json();
 
-  const organizationName = body.organizationName;
-  const organizationType = body.organizationType;
-  const description = body.description ?? null;
+  const organizationName = parseOptionalText(body.organizationName);
+  const organizationType = parseOptionalText(body.organizationType);
+  const description = parseOptionalText(body.description);
 
   if (!organizationName || !organizationType) {
     return NextResponse.json(
       { error: "organizationName and organizationType are required" },
+      { status: 400 }
+    );
+  }
+
+  const locationInput = parseOrganizationLocationInput(body);
+
+  const locationValidation = await validateOrganizationLocationInput(
+    locationInput
+  );
+
+  if (!locationValidation.ok) {
+    return NextResponse.json(
+      {
+        error:
+          locationValidation.errorMessage ??
+          "Selected organization location is invalid",
+      },
       { status: 400 }
     );
   }
@@ -100,10 +438,7 @@ export async function POST(request: Request) {
     .single();
 
   if (appUserError) {
-    return NextResponse.json(
-      { error: appUserError.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: appUserError.message }, { status: 500 });
   }
 
   const { data: person, error: personError } = await supabase
@@ -113,10 +448,7 @@ export async function POST(request: Request) {
     .single();
 
   if (personError) {
-    return NextResponse.json(
-      { error: personError.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: personError.message }, { status: 500 });
   }
 
   const { data: personActor, error: personActorError } = await supabase
@@ -141,6 +473,7 @@ export async function POST(request: Request) {
       organization_type: organizationType,
       owner_person_id: person.id,
       description,
+      country_code: locationInput.countryCode,
       status: "active",
     })
     .select()
@@ -151,6 +484,48 @@ export async function POST(request: Request) {
       { error: organizationError.message },
       { status: 500 }
     );
+  }
+
+  let organizationLocation = null;
+
+  if (hasAnyLocationInput(locationInput)) {
+    const cityName =
+      locationValidation.cityGeoArea?.name ?? locationInput.city ?? null;
+    const districtName =
+      locationValidation.districtGeoArea?.name ?? locationInput.district ?? null;
+
+    const latitude = locationValidation.cityGeoArea?.latitude ?? null;
+    const longitude = locationValidation.cityGeoArea?.longitude ?? null;
+
+    const { data: insertedLocation, error: locationError } = await supabase
+      .from("organization_locations")
+      .insert({
+        organization_id: organization.id,
+        country_code: locationInput.countryCode,
+        city: cityName,
+        district: districtName,
+        address_visibility: "approximate",
+        latitude,
+        longitude,
+        is_primary: true,
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (locationError) {
+      return NextResponse.json(
+        {
+          error: locationError.message,
+          organization,
+          warning:
+            "Organization was created, but organization location was not saved.",
+        },
+        { status: 500 }
+      );
+    }
+
+    organizationLocation = insertedLocation;
   }
 
   const { data: organizationActor, error: organizationActorError } =
@@ -257,6 +632,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     organization,
+    organizationLocation,
     organizationActor,
     businessSpace,
     roles: {
