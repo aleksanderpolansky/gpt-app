@@ -92,6 +92,18 @@ export default function NewOrganizationPage() {
     null
   );
 
+  const [isSuggestDistrictOpen, setIsSuggestDistrictOpen] = useState(false);
+  const [suggestedDistrictName, setSuggestedDistrictName] = useState("");
+  const [suggestedDistrictNotes, setSuggestedDistrictNotes] = useState("");
+  const [isSubmittingDistrictSuggestion, setIsSubmittingDistrictSuggestion] =
+    useState(false);
+  const [districtSuggestionMessage, setDistrictSuggestionMessage] = useState<
+    string | null
+  >(null);
+  const [districtSuggestionError, setDistrictSuggestionError] = useState<
+    string | null
+  >(null);
+
   const [result, setResult] = useState<CreateOrganizationResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [debugMessage, setDebugMessage] = useState("Кнопка ещё не нажималась.");
@@ -170,11 +182,18 @@ export default function NewOrganizationPage() {
       setDistricts([]);
       setCityGeoAreaId("");
       setDistrictGeoAreaId("");
+
       setCitySuggestionMessage(null);
       setCitySuggestionError(null);
       setIsSuggestCityOpen(false);
       setSuggestedCityName("");
       setSuggestedCityNotes("");
+
+      setDistrictSuggestionMessage(null);
+      setDistrictSuggestionError(null);
+      setIsSuggestDistrictOpen(false);
+      setSuggestedDistrictName("");
+      setSuggestedDistrictNotes("");
 
       if (!selectedCountryCode) {
         setIsLoadingCities(false);
@@ -226,6 +245,12 @@ export default function NewOrganizationPage() {
     async function loadDistricts() {
       setDistricts([]);
       setDistrictGeoAreaId("");
+
+      setDistrictSuggestionMessage(null);
+      setDistrictSuggestionError(null);
+      setIsSuggestDistrictOpen(false);
+      setSuggestedDistrictName("");
+      setSuggestedDistrictNotes("");
 
       if (!cityGeoAreaId) {
         setIsLoadingDistricts(false);
@@ -329,6 +354,78 @@ export default function NewOrganizationPage() {
     }
   }
 
+  async function handleSuggestDistrict() {
+    setDistrictSuggestionMessage(null);
+    setDistrictSuggestionError(null);
+
+    if (!selectedCountryCode) {
+      setDistrictSuggestionError("Сначала выберите страну.");
+      return;
+    }
+
+    if (!cityGeoAreaId || !selectedCity) {
+      setDistrictSuggestionError("Сначала выберите город.");
+      return;
+    }
+
+    if (suggestedDistrictName.trim().length < 2) {
+      setDistrictSuggestionError(
+        "Название района должно содержать минимум 2 символа."
+      );
+      return;
+    }
+
+    setIsSubmittingDistrictSuggestion(true);
+
+    try {
+      const response = await fetch("/api/geo/suggestions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          areaType: "district",
+          countryCode: selectedCountryCode,
+          name: suggestedDistrictName,
+          parentId: cityGeoAreaId,
+          notes: suggestedDistrictNotes || null,
+        }),
+      });
+
+      const data = (await response.json()) as GeoSuggestionResponse;
+
+      if (!response.ok || !data.ok) {
+        setDistrictSuggestionError(
+          data.error ?? "Не удалось предложить район."
+        );
+        return;
+      }
+
+      setDistrictSuggestionMessage(
+        data.alreadyExists
+          ? data.message ??
+              "Такой район уже есть в справочнике или уже был предложен ранее."
+          : `Район “${
+              data.geoArea?.name ?? suggestedDistrictName
+            }” предложен на проверку для города ${
+              selectedCity.name
+            }. После утверждения он появится только в списке районов этого города.`
+      );
+
+      setSuggestedDistrictName("");
+      setSuggestedDistrictNotes("");
+      setIsSuggestDistrictOpen(false);
+    } catch (error) {
+      setDistrictSuggestionError(
+        error instanceof Error
+          ? error.message
+          : "Unknown district suggestion error"
+      );
+    } finally {
+      setIsSubmittingDistrictSuggestion(false);
+    }
+  }
+
   async function handleCreateOrganization(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -373,11 +470,18 @@ export default function NewOrganizationPage() {
       setDistrictGeoAreaId("");
       setCities([]);
       setDistricts([]);
+
       setCitySuggestionMessage(null);
       setCitySuggestionError(null);
       setIsSuggestCityOpen(false);
       setSuggestedCityName("");
       setSuggestedCityNotes("");
+
+      setDistrictSuggestionMessage(null);
+      setDistrictSuggestionError(null);
+      setIsSuggestDistrictOpen(false);
+      setSuggestedDistrictName("");
+      setSuggestedDistrictNotes("");
     } catch (error) {
       setDebugMessage("Ошибка JavaScript при отправке формы.");
       setResult({
@@ -557,8 +661,7 @@ export default function NewOrganizationPage() {
                 }}
               >
                 Страны, города и районы берутся из справочника geo_areas.
-                Публичный каталог по-прежнему показывает только места, где уже
-                есть опубликованные предприятия.
+                Районы загружаются отдельно для каждого выбранного города.
               </p>
             </div>
 
@@ -905,6 +1008,190 @@ export default function NewOrganizationPage() {
                 ))}
               </select>
 
+              {cityGeoAreaId ? (
+                <div style={{ marginTop: "10px", display: "grid", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSuggestDistrictOpen(
+                        (currentValue) => !currentValue
+                      );
+                      setDistrictSuggestionMessage(null);
+                      setDistrictSuggestionError(null);
+                    }}
+                    style={{
+                      border: "1px solid #2563eb",
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      background: "#eff6ff",
+                      color: "#1e3a8a",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {isSuggestDistrictOpen
+                      ? "Скрыть форму предложения района"
+                      : "Не нашли район? Предложить новый район"}
+                  </button>
+
+                  {districtSuggestionMessage ? (
+                    <div
+                      style={{
+                        border: "1px solid #bbf7d0",
+                        borderRadius: "8px",
+                        padding: "10px",
+                        background: "#f0fdf4",
+                        color: "#166534",
+                        fontSize: "14px",
+                        lineHeight: "1.4",
+                      }}
+                    >
+                      {districtSuggestionMessage}
+                    </div>
+                  ) : null}
+
+                  {districtSuggestionError ? (
+                    <div
+                      style={{
+                        border: "1px solid #fecaca",
+                        borderRadius: "8px",
+                        padding: "10px",
+                        background: "#fff1f2",
+                        color: "#991b1b",
+                        fontSize: "14px",
+                        lineHeight: "1.4",
+                      }}
+                    >
+                      {districtSuggestionError}
+                    </div>
+                  ) : null}
+
+                  {isSuggestDistrictOpen ? (
+                    <div
+                      style={{
+                        border: "1px solid #bfdbfe",
+                        borderRadius: "10px",
+                        padding: "12px",
+                        background: "#f8fbff",
+                        display: "grid",
+                        gap: "10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          color: "#1e3a8a",
+                          fontSize: "14px",
+                          lineHeight: "1.4",
+                        }}
+                      >
+                        Район будет сохранён как предложение на проверку только
+                        для выбранного города:{" "}
+                        <strong>{selectedCity?.name ?? "город не выбран"}</strong>.
+                      </div>
+
+                      <div>
+                        <label
+                          style={{
+                            display: "block",
+                            fontWeight: 700,
+                            marginBottom: "6px",
+                          }}
+                        >
+                          Название района
+                        </label>
+
+                        <input
+                          type="text"
+                          value={suggestedDistrictName}
+                          onChange={(event) =>
+                            setSuggestedDistrictName(event.target.value)
+                          }
+                          placeholder="Например: Centrum, Mitte, Ruzafa"
+                          style={{
+                            width: "100%",
+                            border: "1px solid #cccccc",
+                            borderRadius: "8px",
+                            padding: "10px",
+                            fontSize: "15px",
+                            boxSizing: "border-box",
+                            background: "#ffffff",
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          style={{
+                            display: "block",
+                            fontWeight: 700,
+                            marginBottom: "6px",
+                          }}
+                        >
+                          Комментарий для проверки
+                        </label>
+
+                        <textarea
+                          value={suggestedDistrictNotes}
+                          onChange={(event) =>
+                            setSuggestedDistrictNotes(event.target.value)
+                          }
+                          placeholder="Можно указать, почему нужно добавить этот район."
+                          style={{
+                            width: "100%",
+                            minHeight: "72px",
+                            border: "1px solid #cccccc",
+                            borderRadius: "8px",
+                            padding: "10px",
+                            fontSize: "15px",
+                            boxSizing: "border-box",
+                            resize: "vertical",
+                            background: "#ffffff",
+                          }}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={
+                          isSubmittingDistrictSuggestion ||
+                          !selectedCountryCode ||
+                          !cityGeoAreaId ||
+                          suggestedDistrictName.trim().length < 2
+                        }
+                        onClick={() => {
+                          handleSuggestDistrict();
+                        }}
+                        style={{
+                          border: "none",
+                          borderRadius: "8px",
+                          padding: "11px 14px",
+                          background:
+                            isSubmittingDistrictSuggestion ||
+                            !selectedCountryCode ||
+                            !cityGeoAreaId ||
+                            suggestedDistrictName.trim().length < 2
+                              ? "#9ca3af"
+                              : "#2563eb",
+                          color: "#ffffff",
+                          fontWeight: 800,
+                          cursor:
+                            isSubmittingDistrictSuggestion ||
+                            !selectedCountryCode ||
+                            !cityGeoAreaId ||
+                            suggestedDistrictName.trim().length < 2
+                              ? "not-allowed"
+                              : "pointer",
+                        }}
+                      >
+                        {isSubmittingDistrictSuggestion
+                          ? "Отправляю..."
+                          : "Отправить район на проверку"}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               {cityGeoAreaId && !isLoadingDistricts && districts.length === 0 ? (
                 <p
                   style={{
@@ -914,8 +1201,8 @@ export default function NewOrganizationPage() {
                     lineHeight: "1.4",
                   }}
                 >
-                  Для выбранного города пока нет утверждённых районов. Позже
-                  здесь появится кнопка “предложить новый район”.
+                  Для выбранного города пока нет утверждённых районов. Можно
+                  предложить новый район на проверку.
                 </p>
               ) : null}
             </div>
