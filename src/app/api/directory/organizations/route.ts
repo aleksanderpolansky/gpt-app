@@ -9,6 +9,8 @@ type DirectoryActionFilter =
   | "hasCertificates"
   | "canRegisterPurchase";
 
+type DirectorySortMode = "newest" | "distance";
+
 type RelatedCategory = {
   is_primary: boolean | null;
   business_categories:
@@ -114,6 +116,11 @@ type MinimumPurchaseThreshold = {
   amount: number;
 };
 
+type RowWithDistance = {
+  row: DirectoryOrganizationRow;
+  distanceKm: number | null;
+};
+
 const MINIMUM_PURCHASE_THRESHOLDS: Record<string, MinimumPurchaseThreshold> = {
   EUR: {
     currency: "EUR",
@@ -175,6 +182,38 @@ function normalizeActionFilter(value: string | null): DirectoryActionFilter {
   }
 
   return "all";
+}
+
+function normalizeSortMode(value: string | null): DirectorySortMode {
+  const normalizedValue = normalizeSearchValue(value);
+
+  if (normalizedValue === "distance") {
+    return "distance";
+  }
+
+  return "newest";
+}
+
+function parseCoordinate(
+  value: string | null,
+  minimum: number,
+  maximum: number
+) {
+  if (!value) {
+    return null;
+  }
+
+  const parsedValue = Number(value);
+
+  if (!Number.isFinite(parsedValue)) {
+    return null;
+  }
+
+  if (parsedValue < minimum || parsedValue > maximum) {
+    return null;
+  }
+
+  return parsedValue;
 }
 
 function normalizeCurrency(value: string | null | undefined) {
@@ -345,9 +384,21 @@ async function getActionStatsByOrganizationId(
   return statsByOrganizationId;
 }
 
+function getPrimaryLocation(row: DirectoryOrganizationRow) {
+  return (
+    row.organization_locations?.find(
+      (item) => item.is_primary && item.is_active
+    ) ??
+    row.organization_locations?.find((item) => item.is_active) ??
+    row.organization_locations?.[0] ??
+    null
+  );
+}
+
 function mapDirectoryOrganization(
   row: DirectoryOrganizationRow,
-  actionStats: OrganizationActionStats
+  actionStats: OrganizationActionStats,
+  distanceKm: number | null
 ) {
   const primaryCategoryRelation =
     row.organization_categories?.find((item) => item.is_primary) ??
@@ -358,13 +409,7 @@ function mapDirectoryOrganization(
     primaryCategoryRelation?.business_categories
   );
 
-  const primaryLocation =
-    row.organization_locations?.find(
-      (item) => item.is_primary && item.is_active
-    ) ??
-    row.organization_locations?.find((item) => item.is_active) ??
-    row.organization_locations?.[0] ??
-    null;
+  const primaryLocation = getPrimaryLocation(row);
 
   const stats = row.organization_search_stats?.[0] ?? null;
   const canRegisterPurchase = canRegisterPurchaseForOrganization(row);
@@ -392,6 +437,7 @@ function mapDirectoryOrganization(
     updatedAt: row.updated_at,
     primaryCategory,
     primaryLocation: getPublicLocation(primaryLocation),
+    distanceKm,
     stats: {
       profileViewsCount: stats?.profile_views_count ?? 0,
       offerClicksCount: stats?.offer_clicks_count ?? 0,
@@ -481,6 +527,137 @@ function rowMatchesActionFilter(
   return true;
 }
 
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
+}
+
+function calculateDistanceKm(
+  fromLat: number,
+  fromLng: number,
+  toLat: number,
+  toLng: number
+) {
+  const earthRadiusKm = 6371;
+
+  const latitudeDelta = toRadians(toLat - fromLat);
+  const longitudeDelta = toRadians(toLng - fromLng);
+
+  const fromLatRad = toRadians(fromLat);
+  const toLatRad = toRadians(toLat);
+
+  const a =
+    Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2) +
+    Math.cos(fromLatRad) *
+      Math.cos(toLatRad) *
+      Math.sin(longitudeDelta / 2) *
+      Math.sin(longitudeDelta / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return earthRadiusKm * c;
+}
+
+function roundDistanceKm(distanceKm: number | null) {
+  if (distanceKm === null) {
+    return null;
+  }
+
+  return Math.round(distanceKm * 100) / 100;
+}
+
+function getNearestDistanceKm(
+  row: DirectoryOrganizationRow,
+  userLat: number,
+  userLng: number
+) {
+  const activePublicLocations =
+    row.organization_locations?.filter((location) => {
+      if (!location.is_active) {
+        return false;
+      }
+
+      if (location.address_visibility === "hidden") {
+        return false;
+      }
+
+      if (typeof location.latitude !== "number") {
+        return false;
+      }
+
+      if (typeof location.longitude !== "number") {
+        return false;
+      }
+
+      return true;
+    }) ?? [];
+
+  if (activePublicLocations.length === 0) {
+    return null;
+  }
+
+  const distances = activePublicLocations.map((location) =>
+    calculateDistanceKm(
+      userLat,
+      userLng,
+      location.latitude as number,
+      location.longitude as number
+    )
+  );
+
+  return Math.min(...distances);
+}
+
+function getTimestamp(value: string | null | undefined) {
+  if (!value) {
+    return 0;
+  }
+
+  const parsedTime = Date.parse(value);
+
+  if (Number.isNaN(parsedTime)) {
+    return 0;
+  }
+
+  return parsedTime;
+}
+
+function compareByNewest(
+  firstRow: DirectoryOrganizationRow,
+  secondRow: DirectoryOrganizationRow
+) {
+  const firstTime = getTimestamp(
+    firstRow.directory_published_at ?? firstRow.created_at
+  );
+  const secondTime = getTimestamp(
+    secondRow.directory_published_at ?? secondRow.created_at
+  );
+
+  return secondTime - firstTime;
+}
+
+function compareByDistance(firstItem: RowWithDistance, secondItem: RowWithDistance) {
+  const firstDistance = firstItem.distanceKm;
+  const secondDistance = secondItem.distanceKm;
+
+  if (firstDistance === null && secondDistance === null) {
+    return compareByNewest(firstItem.row, secondItem.row);
+  }
+
+  if (firstDistance === null) {
+    return 1;
+  }
+
+  if (secondDistance === null) {
+    return -1;
+  }
+
+  if (firstDistance !== secondDistance) {
+    return firstDistance - secondDistance;
+  }
+
+  return compareByNewest(firstItem.row, secondItem.row);
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
 
@@ -490,11 +667,17 @@ export async function GET(request: NextRequest) {
   const district = normalizeSearchValue(searchParams.get("district"));
   const countryCode = normalizeSearchValue(searchParams.get("countryCode"));
   const action = normalizeActionFilter(searchParams.get("action"));
+  const sort = normalizeSortMode(searchParams.get("sort"));
+  const userLat = parseCoordinate(searchParams.get("userLat"), -90, 90);
+  const userLng = parseCoordinate(searchParams.get("userLng"), -180, 180);
   const limitParam = Number(searchParams.get("limit") ?? "50");
 
   const limit = Number.isFinite(limitParam)
     ? Math.min(Math.max(Math.trunc(limitParam), 1), 100)
     : 50;
+
+  const canSortByDistance =
+    sort === "distance" && userLat !== null && userLng !== null;
 
   let query = supabase
     .from("organizations")
@@ -567,7 +750,7 @@ export async function GET(request: NextRequest) {
     .eq("is_public_profile_enabled", true)
     .eq("is_listed_in_directory", true)
     .order("directory_published_at", { ascending: false })
-    .limit(limit);
+    .limit(500);
 
   if (q) {
     query = query.or(
@@ -604,22 +787,44 @@ export async function GET(request: NextRequest) {
     locationAndCategoryFilteredRows.map((row) => row.id)
   );
 
-  const filteredRows = locationAndCategoryFilteredRows.filter((row) => {
+  const actionFilteredRows = locationAndCategoryFilteredRows.filter((row) => {
     const actionStats =
       actionStatsByOrganizationId.get(row.id) ?? getEmptyActionStats();
 
     return rowMatchesActionFilter(row, action, actionStats);
   });
 
+  const rowsWithDistance: RowWithDistance[] = actionFilteredRows.map((row) => {
+    const distanceKm =
+      canSortByDistance && userLat !== null && userLng !== null
+        ? roundDistanceKm(getNearestDistanceKm(row, userLat, userLng))
+        : null;
+
+    return {
+      row,
+      distanceKm,
+    };
+  });
+
+  const sortedRowsWithDistance = [...rowsWithDistance].sort(
+    canSortByDistance
+      ? compareByDistance
+      : (firstItem, secondItem) => compareByNewest(firstItem.row, secondItem.row)
+  );
+
+  const limitedRowsWithDistance = sortedRowsWithDistance.slice(0, limit);
+
   return NextResponse.json({
     ok: true,
-    organizations: filteredRows.map((row) =>
+    organizations: limitedRowsWithDistance.map((item) =>
       mapDirectoryOrganization(
-        row,
-        actionStatsByOrganizationId.get(row.id) ?? getEmptyActionStats()
+        item.row,
+        actionStatsByOrganizationId.get(item.row.id) ?? getEmptyActionStats(),
+        item.distanceKm
       )
     ),
-    count: filteredRows.length,
+    count: limitedRowsWithDistance.length,
+    totalCount: sortedRowsWithDistance.length,
     filters: {
       q,
       category: categorySlug,
@@ -627,6 +832,10 @@ export async function GET(request: NextRequest) {
       district,
       countryCode,
       action,
+      sort,
+      userLat,
+      userLng,
+      distanceSortingAvailable: canSortByDistance,
       limit,
     },
   });
