@@ -23,6 +23,23 @@ type GeoAreasResponse = {
   error?: string;
 };
 
+type GeoSuggestionResponse = {
+  ok?: boolean;
+  alreadyExists?: boolean;
+  message?: string;
+  error?: string;
+  geoArea?: {
+    id: string;
+    parent_id: string | null;
+    area_type: string;
+    country_code: string | null;
+    name: string;
+    slug: string;
+    status: string;
+    source: string;
+  };
+};
+
 type CreateOrganizationResponse = {
   ok?: boolean;
   error?: string;
@@ -53,7 +70,6 @@ export default function NewOrganizationPage() {
   const [cities, setCities] = useState<GeoArea[]>([]);
   const [districts, setDistricts] = useState<GeoArea[]>([]);
 
-  const [countryCode, setCountryCode] = useState("");
   const [countryGeoAreaId, setCountryGeoAreaId] = useState("");
   const [cityGeoAreaId, setCityGeoAreaId] = useState("");
   const [districtGeoAreaId, setDistrictGeoAreaId] = useState("");
@@ -64,11 +80,27 @@ export default function NewOrganizationPage() {
 
   const [geoErrorMessage, setGeoErrorMessage] = useState<string | null>(null);
 
+  const [isSuggestCityOpen, setIsSuggestCityOpen] = useState(false);
+  const [suggestedCityName, setSuggestedCityName] = useState("");
+  const [suggestedCityNotes, setSuggestedCityNotes] = useState("");
+  const [isSubmittingCitySuggestion, setIsSubmittingCitySuggestion] =
+    useState(false);
+  const [citySuggestionMessage, setCitySuggestionMessage] = useState<
+    string | null
+  >(null);
+  const [citySuggestionError, setCitySuggestionError] = useState<string | null>(
+    null
+  );
+
   const [result, setResult] = useState<CreateOrganizationResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [debugMessage, setDebugMessage] = useState("Кнопка ещё не нажималась.");
 
-  const selectedCountry = countries.find((country) => country.id === countryGeoAreaId);
+  const selectedCountry = countries.find(
+    (country) => country.id === countryGeoAreaId
+  );
+  const selectedCountryCode = selectedCountry?.countryCode ?? "";
+
   const selectedCity = cities.find((city) => city.id === cityGeoAreaId);
   const selectedDistrict = districts.find(
     (district) => district.id === districtGeoAreaId
@@ -112,7 +144,9 @@ export default function NewOrganizationPage() {
         }
 
         setGeoErrorMessage(
-          error instanceof Error ? error.message : "Unknown countries loading error"
+          error instanceof Error
+            ? error.message
+            : "Unknown countries loading error"
         );
       } finally {
         if (isMounted) {
@@ -136,8 +170,14 @@ export default function NewOrganizationPage() {
       setDistricts([]);
       setCityGeoAreaId("");
       setDistrictGeoAreaId("");
+      setCitySuggestionMessage(null);
+      setCitySuggestionError(null);
+      setIsSuggestCityOpen(false);
+      setSuggestedCityName("");
+      setSuggestedCityNotes("");
 
-      if (!countryCode) {
+      if (!selectedCountryCode) {
+        setIsLoadingCities(false);
         return;
       }
 
@@ -147,7 +187,7 @@ export default function NewOrganizationPage() {
       try {
         const loadedCities = await loadGeoAreas(
           `/api/geo/areas?areaType=city&countryCode=${encodeURIComponent(
-            countryCode
+            selectedCountryCode
           )}&status=approved`
         );
 
@@ -162,7 +202,9 @@ export default function NewOrganizationPage() {
         }
 
         setGeoErrorMessage(
-          error instanceof Error ? error.message : "Unknown cities loading error"
+          error instanceof Error
+            ? error.message
+            : "Unknown cities loading error"
         );
       } finally {
         if (isMounted) {
@@ -176,7 +218,7 @@ export default function NewOrganizationPage() {
     return () => {
       isMounted = false;
     };
-  }, [countryCode]);
+  }, [selectedCountryCode]);
 
   useEffect(() => {
     let isMounted = true;
@@ -186,6 +228,7 @@ export default function NewOrganizationPage() {
       setDistrictGeoAreaId("");
 
       if (!cityGeoAreaId) {
+        setIsLoadingDistricts(false);
         return;
       }
 
@@ -210,7 +253,9 @@ export default function NewOrganizationPage() {
         }
 
         setGeoErrorMessage(
-          error instanceof Error ? error.message : "Unknown districts loading error"
+          error instanceof Error
+            ? error.message
+            : "Unknown districts loading error"
         );
       } finally {
         if (isMounted) {
@@ -225,6 +270,64 @@ export default function NewOrganizationPage() {
       isMounted = false;
     };
   }, [cityGeoAreaId]);
+
+  async function handleSuggestCity() {
+    setCitySuggestionMessage(null);
+    setCitySuggestionError(null);
+
+    if (!selectedCountryCode) {
+      setCitySuggestionError("Сначала выберите страну.");
+      return;
+    }
+
+    if (suggestedCityName.trim().length < 2) {
+      setCitySuggestionError("Название города должно содержать минимум 2 символа.");
+      return;
+    }
+
+    setIsSubmittingCitySuggestion(true);
+
+    try {
+      const response = await fetch("/api/geo/suggestions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          areaType: "city",
+          countryCode: selectedCountryCode,
+          name: suggestedCityName,
+          parentId: countryGeoAreaId || null,
+          notes: suggestedCityNotes || null,
+        }),
+      });
+
+      const data = (await response.json()) as GeoSuggestionResponse;
+
+      if (!response.ok || !data.ok) {
+        setCitySuggestionError(data.error ?? "Не удалось предложить город.");
+        return;
+      }
+
+      setCitySuggestionMessage(
+        data.alreadyExists
+          ? data.message ??
+              "Такой город уже есть в справочнике или уже был предложен ранее."
+          : `Город “${
+              data.geoArea?.name ?? suggestedCityName
+            }” предложен на проверку. После утверждения он появится в списке городов.`
+      );
+      setSuggestedCityName("");
+      setSuggestedCityNotes("");
+      setIsSuggestCityOpen(false);
+    } catch (error) {
+      setCitySuggestionError(
+        error instanceof Error ? error.message : "Unknown city suggestion error"
+      );
+    } finally {
+      setIsSubmittingCitySuggestion(false);
+    }
+  }
 
   async function handleCreateOrganization(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -243,7 +346,7 @@ export default function NewOrganizationPage() {
           organizationName,
           organizationType,
           description,
-          countryCode: countryCode || null,
+          countryCode: selectedCountryCode || null,
           countryGeoAreaId: countryGeoAreaId || null,
           cityGeoAreaId: cityGeoAreaId || null,
           city: selectedCity?.name ?? null,
@@ -260,19 +363,21 @@ export default function NewOrganizationPage() {
         return;
       }
 
-      setDebugMessage(
-        "Организация успешно создана. На следующем шаге подключим сохранение локации в backend."
-      );
+      setDebugMessage("Организация успешно создана.");
 
       setOrganizationName("");
       setDescription("");
       setOrganizationType("private_business");
-      setCountryCode("");
       setCountryGeoAreaId("");
       setCityGeoAreaId("");
       setDistrictGeoAreaId("");
       setCities([]);
       setDistricts([]);
+      setCitySuggestionMessage(null);
+      setCitySuggestionError(null);
+      setIsSuggestCityOpen(false);
+      setSuggestedCityName("");
+      setSuggestedCityNotes("");
     } catch (error) {
       setDebugMessage("Ошибка JavaScript при отправке формы.");
       setResult({
@@ -487,13 +592,7 @@ export default function NewOrganizationPage() {
               <select
                 value={countryGeoAreaId}
                 onChange={(event) => {
-                  const selectedId = event.target.value;
-                  const nextCountry = countries.find(
-                    (country) => country.id === selectedId
-                  );
-
-                  setCountryGeoAreaId(selectedId);
-                  setCountryCode(nextCountry?.countryCode ?? "");
+                  setCountryGeoAreaId(event.target.value);
                 }}
                 disabled={isLoadingCountries}
                 style={{
@@ -535,7 +634,7 @@ export default function NewOrganizationPage() {
                 onChange={(event) => {
                   setCityGeoAreaId(event.target.value);
                 }}
-                disabled={!countryCode || isLoadingCities}
+                disabled={!selectedCountryCode || isLoadingCities}
                 style={{
                   width: "100%",
                   border: "1px solid #cccccc",
@@ -544,13 +643,15 @@ export default function NewOrganizationPage() {
                   fontSize: "16px",
                   boxSizing: "border-box",
                   background:
-                    !countryCode || isLoadingCities ? "#f3f4f6" : "#ffffff",
-                  color: !countryCode ? "#9ca3af" : "#111111",
-                  cursor: !countryCode ? "not-allowed" : "default",
+                    !selectedCountryCode || isLoadingCities
+                      ? "#f3f4f6"
+                      : "#ffffff",
+                  color: !selectedCountryCode ? "#9ca3af" : "#111111",
+                  cursor: !selectedCountryCode ? "not-allowed" : "default",
                 }}
               >
                 <option value="">
-                  {!countryCode
+                  {!selectedCountryCode
                     ? "Сначала выберите страну"
                     : isLoadingCities
                       ? "Загружаю города..."
@@ -564,7 +665,187 @@ export default function NewOrganizationPage() {
                 ))}
               </select>
 
-              {countryCode && !isLoadingCities && cities.length === 0 ? (
+              {selectedCountryCode ? (
+                <div style={{ marginTop: "10px", display: "grid", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSuggestCityOpen((currentValue) => !currentValue);
+                      setCitySuggestionMessage(null);
+                      setCitySuggestionError(null);
+                    }}
+                    style={{
+                      border: "1px solid #2563eb",
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      background: "#eff6ff",
+                      color: "#1e3a8a",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {isSuggestCityOpen
+                      ? "Скрыть форму предложения города"
+                      : "Не нашли город? Предложить новый город"}
+                  </button>
+
+                  {citySuggestionMessage ? (
+                    <div
+                      style={{
+                        border: "1px solid #bbf7d0",
+                        borderRadius: "8px",
+                        padding: "10px",
+                        background: "#f0fdf4",
+                        color: "#166534",
+                        fontSize: "14px",
+                        lineHeight: "1.4",
+                      }}
+                    >
+                      {citySuggestionMessage}
+                    </div>
+                  ) : null}
+
+                  {citySuggestionError ? (
+                    <div
+                      style={{
+                        border: "1px solid #fecaca",
+                        borderRadius: "8px",
+                        padding: "10px",
+                        background: "#fff1f2",
+                        color: "#991b1b",
+                        fontSize: "14px",
+                        lineHeight: "1.4",
+                      }}
+                    >
+                      {citySuggestionError}
+                    </div>
+                  ) : null}
+
+                  {isSuggestCityOpen ? (
+                    <div
+                      style={{
+                        border: "1px solid #bfdbfe",
+                        borderRadius: "10px",
+                        padding: "12px",
+                        background: "#f8fbff",
+                        display: "grid",
+                        gap: "10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          color: "#1e3a8a",
+                          fontSize: "14px",
+                          lineHeight: "1.4",
+                        }}
+                      >
+                        Город будет сохранён как предложение на проверку.
+                        После утверждения он появится в списке городов для
+                        выбранной страны:{" "}
+                        <strong>{selectedCountryCode}</strong>.
+                      </div>
+
+                      <div>
+                        <label
+                          style={{
+                            display: "block",
+                            fontWeight: 700,
+                            marginBottom: "6px",
+                          }}
+                        >
+                          Название города
+                        </label>
+
+                        <input
+                          type="text"
+                          value={suggestedCityName}
+                          onChange={(event) =>
+                            setSuggestedCityName(event.target.value)
+                          }
+                          placeholder="Например: Valencia, Berlin, Wrocław"
+                          style={{
+                            width: "100%",
+                            border: "1px solid #cccccc",
+                            borderRadius: "8px",
+                            padding: "10px",
+                            fontSize: "15px",
+                            boxSizing: "border-box",
+                            background: "#ffffff",
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          style={{
+                            display: "block",
+                            fontWeight: 700,
+                            marginBottom: "6px",
+                          }}
+                        >
+                          Комментарий для проверки
+                        </label>
+
+                        <textarea
+                          value={suggestedCityNotes}
+                          onChange={(event) =>
+                            setSuggestedCityNotes(event.target.value)
+                          }
+                          placeholder="Можно указать, почему нужно добавить этот город."
+                          style={{
+                            width: "100%",
+                            minHeight: "72px",
+                            border: "1px solid #cccccc",
+                            borderRadius: "8px",
+                            padding: "10px",
+                            fontSize: "15px",
+                            boxSizing: "border-box",
+                            resize: "vertical",
+                            background: "#ffffff",
+                          }}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={
+                          isSubmittingCitySuggestion ||
+                          !selectedCountryCode ||
+                          suggestedCityName.trim().length < 2
+                        }
+                        onClick={() => {
+                          handleSuggestCity();
+                        }}
+                        style={{
+                          border: "none",
+                          borderRadius: "8px",
+                          padding: "11px 14px",
+                          background:
+                            isSubmittingCitySuggestion ||
+                            !selectedCountryCode ||
+                            suggestedCityName.trim().length < 2
+                              ? "#9ca3af"
+                              : "#2563eb",
+                          color: "#ffffff",
+                          fontWeight: 800,
+                          cursor:
+                            isSubmittingCitySuggestion ||
+                            !selectedCountryCode ||
+                            suggestedCityName.trim().length < 2
+                              ? "not-allowed"
+                              : "pointer",
+                        }}
+                      >
+                        {isSubmittingCitySuggestion
+                          ? "Отправляю..."
+                          : "Отправить город на проверку"}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {selectedCountryCode && !isLoadingCities && cities.length === 0 ? (
                 <p
                   style={{
                     margin: "8px 0 0",
@@ -573,8 +854,8 @@ export default function NewOrganizationPage() {
                     lineHeight: "1.4",
                   }}
                 >
-                  Для выбранной страны пока нет утверждённых городов. Позже здесь
-                  появится кнопка “предложить новый город”.
+                  Для выбранной страны пока нет утверждённых городов. Можно
+                  предложить новый город на проверку.
                 </p>
               ) : null}
             </div>
@@ -748,18 +1029,6 @@ export default function NewOrganizationPage() {
 
                 <p style={{ margin: 0 }}>
                   <strong>Space:</strong> {result.businessSpace?.title}
-                </p>
-
-                <p
-                  style={{
-                    margin: 0,
-                    color: "#92400e",
-                    fontSize: "14px",
-                    lineHeight: "1.4",
-                  }}
-                >
-                  Внимание: на этом шаге форма уже выбирает geo_areas, но
-                  backend сохранения локации будет подключён следующим шагом.
                 </p>
 
                 <div style={{ paddingTop: "8px" }}>
