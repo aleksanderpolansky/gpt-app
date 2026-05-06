@@ -4,6 +4,20 @@ import PurchaseConfirmationForm from "./PurchaseConfirmationForm";
 
 export const dynamic = "force-dynamic";
 
+type OrganizationLocation = {
+  id: string;
+  organization_id: string;
+  country_code: string | null;
+  city: string | null;
+  district: string | null;
+  address_visibility: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  is_primary: boolean | null;
+  is_active: boolean | null;
+  created_at: string;
+};
+
 type Organization = {
   id: string;
   organization_name: string;
@@ -116,6 +130,7 @@ type AppUser = {
 
 type PageData = {
   organization: Organization | null;
+  primaryLocation: OrganizationLocation | null;
   valueObjects: ValueObject[];
   offers: Offer[];
   errorMessage: string | null;
@@ -226,6 +241,58 @@ function getDiscountTypeLabel(discountType: string | null | undefined) {
   return discountType || "Not specified";
 }
 
+function getLocationLabel(location: OrganizationLocation | null) {
+  if (!location) {
+    return "Not specified";
+  }
+
+  if (location.address_visibility === "hidden") {
+    return "Address hidden";
+  }
+
+  const parts = [location.country_code, location.city, location.district].filter(
+    Boolean
+  );
+
+  if (parts.length === 0) {
+    return "Not specified";
+  }
+
+  return parts.join(" → ");
+}
+
+function getLocationVisibilityLabel(location: OrganizationLocation | null) {
+  if (!location) {
+    return "Not specified";
+  }
+
+  if (location.address_visibility === "approximate") {
+    return "Approximate public location";
+  }
+
+  if (location.address_visibility === "public") {
+    return "Public exact location";
+  }
+
+  if (location.address_visibility === "hidden") {
+    return "Hidden location";
+  }
+
+  return location.address_visibility || "Not specified";
+}
+
+function getCoordinatesLabel(location: OrganizationLocation | null) {
+  if (!location) {
+    return "Not specified";
+  }
+
+  if (location.latitude === null || location.longitude === null) {
+    return "Not specified";
+  }
+
+  return `${location.latitude}, ${location.longitude}`;
+}
+
 async function getCurrentAppUser(): Promise<{
   appUser: AppUser | null;
   errorMessage: string | null;
@@ -266,6 +333,7 @@ async function getOrganizationPageData(
   if (errorMessage) {
     return {
       organization: null,
+      primaryLocation: null,
       valueObjects: [],
       offers: [],
       errorMessage,
@@ -275,129 +343,158 @@ async function getOrganizationPageData(
   if (!appUser) {
     return {
       organization: null,
+      primaryLocation: null,
       valueObjects: [],
       offers: [],
       errorMessage: "User context not found",
     };
   }
 
-  const [organizationResult, valueObjectsResult, offersResult] =
-    await Promise.all([
-      supabase
-        .from("organizations")
-        .select(
-          `
-          id,
-          organization_name,
-          organization_type,
-          description,
-          status,
-          country_code,
-          default_currency,
-          created_at
+  const [
+    organizationResult,
+    locationResult,
+    valueObjectsResult,
+    offersResult,
+  ] = await Promise.all([
+    supabase
+      .from("organizations")
+      .select(
         `
-        )
-        .eq("id", organizationId)
-        .single(),
+        id,
+        organization_name,
+        organization_type,
+        description,
+        status,
+        country_code,
+        default_currency,
+        created_at
+      `
+      )
+      .eq("id", organizationId)
+      .single(),
 
-      supabase
-        .from("value_objects")
-        .select(
-          `
-          id,
-          organization_id,
-          value_type,
-          title,
-          description,
-          unit_type,
-          default_price,
-          default_currency,
-          default_duration_minutes,
-          status,
-          created_at
+    supabase
+      .from("organization_locations")
+      .select(
         `
-        )
-        .eq("organization_id", organizationId)
-        .order("created_at", { ascending: false }),
+        id,
+        organization_id,
+        country_code,
+        city,
+        district,
+        address_visibility,
+        latitude,
+        longitude,
+        is_primary,
+        is_active,
+        created_at
+      `
+      )
+      .eq("organization_id", organizationId)
+      .eq("is_active", true)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(1),
 
-      supabase
-        .from("offers")
-        .select(
-          `
+    supabase
+      .from("value_objects")
+      .select(
+        `
+        id,
+        organization_id,
+        value_type,
+        title,
+        description,
+        unit_type,
+        default_price,
+        default_currency,
+        default_duration_minutes,
+        status,
+        created_at
+      `
+      )
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false }),
+
+    supabase
+      .from("offers")
+      .select(
+        `
+        id,
+        organization_id,
+        offer_type,
+        title,
+        description,
+        price,
+        regular_price,
+        currency,
+        is_paid,
+        is_free,
+        is_discount_active,
+        discount_type,
+        discount_value,
+        discount_starts_at,
+        discount_ends_at,
+        lowest_price_30_days,
+        lowest_price_30_days_currency,
+        lowest_price_30_days_period_start,
+        lowest_price_30_days_period_end,
+        discount_legal_note,
+        certificate_available,
+        certificate_payment_mode,
+        certificate_points_covered_amount,
+        certificate_points_price,
+        certificate_money_price,
+        certificate_currency,
+        certificate_terms,
+        certificate_validity_days,
+        requires_seller_confirmation,
+        is_transferable,
+        is_cancellable,
+        points_refund_policy,
+        max_certificates_total,
+        max_certificates_per_user,
+        is_public_reward,
+        points_currency_code,
+        reference_currency,
+        reference_value_per_point,
+        reference_exchange_rate,
+        reference_exchange_rate_source,
+        reference_exchange_rate_date,
+        requires_booking,
+        booking_mode,
+        default_duration_minutes,
+        min_duration_minutes,
+        max_duration_minutes,
+        quantity_limit,
+        target_receiver_type,
+        status,
+        created_at,
+        offer_items (
           id,
-          organization_id,
-          offer_type,
-          title,
-          description,
-          price,
-          regular_price,
+          value_object_id,
+          quantity,
+          unit_price,
+          total_price,
           currency,
-          is_paid,
-          is_free,
-          is_discount_active,
-          discount_type,
-          discount_value,
-          discount_starts_at,
-          discount_ends_at,
-          lowest_price_30_days,
-          lowest_price_30_days_currency,
-          lowest_price_30_days_period_start,
-          lowest_price_30_days_period_end,
-          discount_legal_note,
-          certificate_available,
-          certificate_payment_mode,
-          certificate_points_covered_amount,
-          certificate_points_price,
-          certificate_money_price,
-          certificate_currency,
-          certificate_terms,
-          certificate_validity_days,
-          requires_seller_confirmation,
-          is_transferable,
-          is_cancellable,
-          points_refund_policy,
-          max_certificates_total,
-          max_certificates_per_user,
-          is_public_reward,
-          points_currency_code,
-          reference_currency,
-          reference_value_per_point,
-          reference_exchange_rate,
-          reference_exchange_rate_source,
-          reference_exchange_rate_date,
-          requires_booking,
-          booking_mode,
-          default_duration_minutes,
-          min_duration_minutes,
-          max_duration_minutes,
-          quantity_limit,
-          target_receiver_type,
+          is_required,
           status,
-          created_at,
-          offer_items (
+          value_objects (
             id,
-            value_object_id,
-            quantity,
-            unit_price,
-            total_price,
-            currency,
-            is_required,
-            status,
-            value_objects (
-              id,
-              title,
-              value_type
-            )
+            title,
+            value_type
           )
-        `
         )
-        .eq("organization_id", organizationId)
-        .order("created_at", { ascending: false }),
-    ]);
+      `
+      )
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false }),
+  ]);
 
   if (organizationResult.error) {
     return {
       organization: null,
+      primaryLocation: null,
       valueObjects: [],
       offers: [],
       errorMessage: organizationResult.error.message,
@@ -407,15 +504,29 @@ async function getOrganizationPageData(
   if (!organizationResult.data) {
     return {
       organization: null,
+      primaryLocation: null,
       valueObjects: [],
       offers: [],
       errorMessage: null,
     };
   }
 
+  if (locationResult.error) {
+    return {
+      organization: organizationResult.data as Organization,
+      primaryLocation: null,
+      valueObjects: [],
+      offers: [],
+      errorMessage: locationResult.error.message,
+    };
+  }
+
   if (valueObjectsResult.error) {
     return {
       organization: organizationResult.data as Organization,
+      primaryLocation:
+        ((locationResult.data ?? [])[0] as OrganizationLocation | undefined) ??
+        null,
       valueObjects: [],
       offers: [],
       errorMessage: valueObjectsResult.error.message,
@@ -425,6 +536,9 @@ async function getOrganizationPageData(
   if (offersResult.error) {
     return {
       organization: organizationResult.data as Organization,
+      primaryLocation:
+        ((locationResult.data ?? [])[0] as OrganizationLocation | undefined) ??
+        null,
       valueObjects: (valueObjectsResult.data as ValueObject[] | null) ?? [],
       offers: [],
       errorMessage: offersResult.error.message,
@@ -433,6 +547,9 @@ async function getOrganizationPageData(
 
   return {
     organization: organizationResult.data as Organization,
+    primaryLocation:
+      ((locationResult.data ?? [])[0] as OrganizationLocation | undefined) ??
+      null,
     valueObjects: (valueObjectsResult.data as ValueObject[] | null) ?? [],
     offers: (offersResult.data as unknown as Offer[] | null) ?? [],
     errorMessage: null,
@@ -459,7 +576,7 @@ export default async function OrganizationDetailsPage({
   )}`;
   const myPurchaseConfirmationsHref = "/my-purchase-confirmations";
 
-  const { organization, valueObjects, offers, errorMessage } =
+  const { organization, primaryLocation, valueObjects, offers, errorMessage } =
     await getOrganizationPageData(organizationId);
 
   return (
@@ -588,6 +705,20 @@ export default async function OrganizationDetailsPage({
 
               <p style={{ margin: "0 0 6px" }}>
                 <strong>Status:</strong> {organization.status}
+              </p>
+
+              <p style={{ margin: "0 0 6px" }}>
+                <strong>Location:</strong> {getLocationLabel(primaryLocation)}
+              </p>
+
+              <p style={{ margin: "0 0 6px" }}>
+                <strong>Address visibility:</strong>{" "}
+                {getLocationVisibilityLabel(primaryLocation)}
+              </p>
+
+              <p style={{ margin: "0 0 6px" }}>
+                <strong>Coordinates:</strong>{" "}
+                {getCoordinatesLabel(primaryLocation)}
               </p>
 
               <p style={{ margin: "0 0 6px" }}>
@@ -848,7 +979,12 @@ export default async function OrganizationDetailsPage({
                               background: "#ffffff",
                             }}
                           >
-                            <div style={{ color: "#666666", marginBottom: "6px" }}>
+                            <div
+                              style={{
+                                color: "#666666",
+                                marginBottom: "6px",
+                              }}
+                            >
                               Current price
                             </div>
                             <div style={{ fontSize: "20px", fontWeight: 700 }}>
@@ -864,7 +1000,12 @@ export default async function OrganizationDetailsPage({
                               background: "#ffffff",
                             }}
                           >
-                            <div style={{ color: "#666666", marginBottom: "6px" }}>
+                            <div
+                              style={{
+                                color: "#666666",
+                                marginBottom: "6px",
+                              }}
+                            >
                               Regular price
                             </div>
                             <div style={{ fontSize: "20px", fontWeight: 700 }}>
@@ -880,7 +1021,12 @@ export default async function OrganizationDetailsPage({
                               background: "#eff6ff",
                             }}
                           >
-                            <div style={{ color: "#1e3a8a", marginBottom: "6px" }}>
+                            <div
+                              style={{
+                                color: "#1e3a8a",
+                                marginBottom: "6px",
+                              }}
+                            >
                               Buyer pays POINT
                             </div>
                             <div style={{ fontSize: "20px", fontWeight: 700 }}>
@@ -899,7 +1045,12 @@ export default async function OrganizationDetailsPage({
                               background: "#ffffff",
                             }}
                           >
-                            <div style={{ color: "#666666", marginBottom: "6px" }}>
+                            <div
+                              style={{
+                                color: "#666666",
+                                marginBottom: "6px",
+                              }}
+                            >
                               Buyer pays money
                             </div>
                             <div style={{ fontSize: "20px", fontWeight: 700 }}>
