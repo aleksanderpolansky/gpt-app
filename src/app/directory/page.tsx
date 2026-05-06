@@ -2,12 +2,19 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+type DirectoryActionFilter =
+  | "all"
+  | "hasOffers"
+  | "hasCertificates"
+  | "canRegisterPurchase";
+
 type DirectoryPageProps = {
   searchParams?: Promise<{
     q?: string | string[];
     category?: string | string[];
     city?: string | string[];
     countryCode?: string | string[];
+    action?: string | string[];
   }>;
 };
 
@@ -42,6 +49,14 @@ type DirectoryLocation = {
     | null;
 };
 
+type DirectoryActionStats = {
+  activeOffersCount: number;
+  activeCertificatesCount: number;
+  hasActiveOffers: boolean;
+  hasActiveCertificates: boolean;
+  canRegisterPurchase: boolean;
+};
+
 type DirectoryOrganization = {
   id: string;
   name: string;
@@ -70,6 +85,7 @@ type DirectoryOrganization = {
     certificateClicksCount: number;
     purchaseRegistrationClicksCount: number;
   };
+  actionStats?: DirectoryActionStats;
 };
 
 type DirectoryApiResponse = {
@@ -81,6 +97,7 @@ type DirectoryApiResponse = {
     category: string | null;
     city: string | null;
     countryCode: string | null;
+    action: DirectoryActionFilter;
     limit: number;
   };
   error?: string;
@@ -91,6 +108,7 @@ type DirectoryFilters = {
   category: string;
   city: string;
   countryCode: string;
+  action: DirectoryActionFilter;
 };
 
 const DIRECTORY_CATEGORIES = [
@@ -152,6 +170,28 @@ const DIRECTORY_CITIES = [
   },
 ];
 
+const DIRECTORY_ACTION_FILTERS: {
+  value: DirectoryActionFilter;
+  label: string;
+}[] = [
+  {
+    value: "all",
+    label: "Все предприятия",
+  },
+  {
+    value: "hasOffers",
+    label: "Есть предложения",
+  },
+  {
+    value: "hasCertificates",
+    label: "Есть сертификаты",
+  },
+  {
+    value: "canRegisterPurchase",
+    label: "Можно зарегистрировать покупку / POINTS",
+  },
+];
+
 function getBaseUrl() {
   const publicAppUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
 
@@ -178,6 +218,22 @@ function normalizeFilterValue(value: string | string[] | undefined) {
   return getFirstSearchParam(value).trim();
 }
 
+function normalizeActionFilter(
+  value: string | string[] | undefined
+): DirectoryActionFilter {
+  const normalizedValue = normalizeFilterValue(value);
+
+  if (
+    normalizedValue === "hasOffers" ||
+    normalizedValue === "hasCertificates" ||
+    normalizedValue === "canRegisterPurchase"
+  ) {
+    return normalizedValue;
+  }
+
+  return "all";
+}
+
 function buildDirectoryApiUrl(baseUrl: string, filters: DirectoryFilters) {
   const searchParams = new URLSearchParams();
 
@@ -195,6 +251,10 @@ function buildDirectoryApiUrl(baseUrl: string, filters: DirectoryFilters) {
 
   if (filters.countryCode) {
     searchParams.set("countryCode", filters.countryCode);
+  }
+
+  if (filters.action !== "all") {
+    searchParams.set("action", filters.action);
   }
 
   searchParams.set("limit", "100");
@@ -315,9 +375,32 @@ function getDirectoryOrganizationHref(organization: DirectoryOrganization) {
   return "/directory";
 }
 
+function getActionStats(organization: DirectoryOrganization) {
+  return (
+    organization.actionStats ?? {
+      activeOffersCount: 0,
+      activeCertificatesCount: 0,
+      hasActiveOffers: false,
+      hasActiveCertificates: false,
+      canRegisterPurchase: false,
+    }
+  );
+}
+
 function hasActiveFilters(filters: DirectoryFilters) {
   return Boolean(
-    filters.q || filters.category || filters.city || filters.countryCode
+    filters.q ||
+      filters.category ||
+      filters.city ||
+      filters.countryCode ||
+      filters.action !== "all"
+  );
+}
+
+function getActionFilterLabel(action: DirectoryActionFilter) {
+  return (
+    DIRECTORY_ACTION_FILTERS.find((filter) => filter.value === action)?.label ??
+    "Все предприятия"
   );
 }
 
@@ -331,6 +414,7 @@ export default async function DirectoryPage({
     category: normalizeFilterValue(resolvedSearchParams?.category),
     city: normalizeFilterValue(resolvedSearchParams?.city),
     countryCode: normalizeFilterValue(resolvedSearchParams?.countryCode),
+    action: normalizeActionFilter(resolvedSearchParams?.action),
   };
 
   const { organizations, errorMessage } =
@@ -513,6 +597,28 @@ export default async function DirectoryPage({
               </select>
             </label>
 
+            <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
+              Действие пользователя
+              <select
+                name="action"
+                defaultValue={filters.action}
+                style={{
+                  border: "1px solid #cccccc",
+                  borderRadius: "8px",
+                  padding: "11px 12px",
+                  fontSize: "15px",
+                  fontWeight: 400,
+                  background: "#ffffff",
+                }}
+              >
+                {DIRECTORY_ACTION_FILTERS.map((filter) => (
+                  <option key={filter.value} value={filter.value}>
+                    {filter.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <div
               style={{
                 display: "flex",
@@ -594,7 +700,14 @@ export default async function DirectoryPage({
 
                 {filters.countryCode ? (
                   <span>
-                    Страна: <strong>{filters.countryCode}</strong>
+                    Страна: <strong>{filters.countryCode}</strong>{" "}
+                  </span>
+                ) : null}
+
+                {filters.action !== "all" ? (
+                  <span>
+                    Действие:{" "}
+                    <strong>{getActionFilterLabel(filters.action)}</strong>
                   </span>
                 ) : null}
               </div>
@@ -660,6 +773,23 @@ export default async function DirectoryPage({
               {selectedCategory?.name ?? "Все"}
             </div>
           </div>
+
+          <div
+            style={{
+              border: "1px solid #bbf7d0",
+              borderRadius: "16px",
+              padding: "22px",
+              background: "#f0fdf4",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+            }}
+          >
+            <div style={{ color: "#166534", marginBottom: "8px" }}>
+              Действие
+            </div>
+            <div style={{ fontSize: "22px", fontWeight: 800 }}>
+              {getActionFilterLabel(filters.action)}
+            </div>
+          </div>
         </section>
 
         {errorMessage ? (
@@ -698,8 +828,8 @@ export default async function DirectoryPage({
             </h2>
             <p style={{ margin: "6px 0 0", color: "#666666" }}>
               На этом этапе показывается только безопасная публичная информация:
-              название, категория, город, тип локации и ссылка на публичную
-              карточку.
+              название, категория, город, тип локации, публичные действия и
+              ссылка на карточку.
             </p>
           </div>
 
@@ -719,6 +849,7 @@ export default async function DirectoryPage({
               {organizations.map((organization) => {
                 const organizationHref =
                   getDirectoryOrganizationHref(organization);
+                const actionStats = getActionStats(organization);
 
                 return (
                   <article
@@ -790,6 +921,85 @@ export default async function DirectoryPage({
                       </div>
                     </div>
 
+                    <section
+                      style={{
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "12px",
+                        padding: "12px",
+                        background: "#f9fafb",
+                        display: "grid",
+                        gap: "8px",
+                        fontSize: "14px",
+                      }}
+                    >
+                      <div style={{ fontWeight: 800 }}>
+                        Доступные действия
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: "inline-block",
+                            border: "1px solid #bfdbfe",
+                            borderRadius: "999px",
+                            padding: "6px 10px",
+                            background: "#eff6ff",
+                            color: "#1e3a8a",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Offers: {actionStats.activeOffersCount}
+                        </span>
+
+                        <span
+                          style={{
+                            display: "inline-block",
+                            border: "1px solid #bfdbfe",
+                            borderRadius: "999px",
+                            padding: "6px 10px",
+                            background: actionStats.hasActiveCertificates
+                              ? "#eff6ff"
+                              : "#ffffff",
+                            color: actionStats.hasActiveCertificates
+                              ? "#1e3a8a"
+                              : "#666666",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Certificates: {actionStats.activeCertificatesCount}
+                        </span>
+
+                        <span
+                          style={{
+                            display: "inline-block",
+                            border: actionStats.canRegisterPurchase
+                              ? "1px solid #bbf7d0"
+                              : "1px solid #dddddd",
+                            borderRadius: "999px",
+                            padding: "6px 10px",
+                            background: actionStats.canRegisterPurchase
+                              ? "#f0fdf4"
+                              : "#ffffff",
+                            color: actionStats.canRegisterPurchase
+                              ? "#166534"
+                              : "#666666",
+                            fontWeight: 700,
+                          }}
+                        >
+                          POINTS:{" "}
+                          {actionStats.canRegisterPurchase
+                            ? "можно"
+                            : "недоступно"}
+                        </span>
+                      </div>
+                    </section>
+
                     <div
                       style={{
                         display: "flex",
@@ -814,7 +1024,8 @@ export default async function DirectoryPage({
                         Открыть карточку
                       </Link>
 
-                      {organization.publicSlug ? (
+                      {organization.publicSlug &&
+                      actionStats.canRegisterPurchase ? (
                         <Link
                           href={`${organizationHref}#register-purchase`}
                           style={{
