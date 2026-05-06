@@ -409,6 +409,58 @@ function mapDirectoryOrganization(
   };
 }
 
+function rowMatchesLocationFilters(
+  row: DirectoryOrganizationRow,
+  city: string | null,
+  district: string | null
+) {
+  if (!city && !district) {
+    return true;
+  }
+
+  const hasMatchingLocation =
+    row.organization_locations?.some((location) => {
+      if (!location.is_active) {
+        return false;
+      }
+
+      if (city && location.city?.toLowerCase() !== city.toLowerCase()) {
+        return false;
+      }
+
+      if (
+        district &&
+        location.district?.toLowerCase() !== district.toLowerCase()
+      ) {
+        return false;
+      }
+
+      return true;
+    }) ?? false;
+
+  return hasMatchingLocation;
+}
+
+function rowMatchesCategoryFilter(
+  row: DirectoryOrganizationRow,
+  categorySlug: string | null
+) {
+  if (!categorySlug) {
+    return true;
+  }
+
+  const hasMatchingCategory =
+    row.organization_categories?.some((categoryRelation) => {
+      const category = getFirstRelatedItem(
+        categoryRelation.business_categories
+      );
+
+      return category?.slug === categorySlug;
+    }) ?? false;
+
+  return hasMatchingCategory;
+}
+
 function rowMatchesActionFilter(
   row: DirectoryOrganizationRow,
   actionFilter: DirectoryActionFilter,
@@ -435,6 +487,7 @@ export async function GET(request: NextRequest) {
   const q = normalizeSearchValue(searchParams.get("q"));
   const categorySlug = normalizeSearchValue(searchParams.get("category"));
   const city = normalizeSearchValue(searchParams.get("city"));
+  const district = normalizeSearchValue(searchParams.get("district"));
   const countryCode = normalizeSearchValue(searchParams.get("countryCode"));
   const action = normalizeActionFilter(searchParams.get("action"));
   const limitParam = Number(searchParams.get("limit") ?? "50");
@@ -541,36 +594,10 @@ export async function GET(request: NextRequest) {
   const rows = (data as unknown as DirectoryOrganizationRow[] | null) ?? [];
 
   const locationAndCategoryFilteredRows = rows.filter((row) => {
-    if (categorySlug) {
-      const hasMatchingCategory =
-        row.organization_categories?.some((categoryRelation) => {
-          const category = getFirstRelatedItem(
-            categoryRelation.business_categories
-          );
-
-          return category?.slug === categorySlug;
-        }) ?? false;
-
-      if (!hasMatchingCategory) {
-        return false;
-      }
-    }
-
-    if (city) {
-      const hasMatchingCity =
-        row.organization_locations?.some((location) => {
-          return (
-            location.is_active &&
-            location.city?.toLowerCase() === city.toLowerCase()
-          );
-        }) ?? false;
-
-      if (!hasMatchingCity) {
-        return false;
-      }
-    }
-
-    return true;
+    return (
+      rowMatchesCategoryFilter(row, categorySlug) &&
+      rowMatchesLocationFilters(row, city, district)
+    );
   });
 
   const actionStatsByOrganizationId = await getActionStatsByOrganizationId(
@@ -597,6 +624,7 @@ export async function GET(request: NextRequest) {
       q,
       category: categorySlug,
       city,
+      district,
       countryCode,
       action,
       limit,
