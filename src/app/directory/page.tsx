@@ -8,6 +8,8 @@ type DirectoryActionFilter =
   | "hasCertificates"
   | "canRegisterPurchase";
 
+type DirectorySortMode = "newest" | "distance";
+
 type DirectoryPageProps = {
   searchParams?: Promise<{
     q?: string | string[];
@@ -16,6 +18,9 @@ type DirectoryPageProps = {
     district?: string | string[];
     countryCode?: string | string[];
     action?: string | string[];
+    sort?: string | string[];
+    userLat?: string | string[];
+    userLng?: string | string[];
   }>;
 };
 
@@ -80,6 +85,7 @@ type DirectoryOrganization = {
   updatedAt: string | null;
   primaryCategory: DirectoryCategory | null;
   primaryLocation: DirectoryLocation | null;
+  distanceKm?: number | null;
   stats: {
     profileViewsCount: number;
     offerClicksCount: number;
@@ -100,6 +106,9 @@ type DirectoryApiResponse = {
     district: string | null;
     countryCode: string | null;
     action: DirectoryActionFilter;
+    sort: DirectorySortMode;
+    userLat: number | null;
+    userLng: number | null;
     limit: number;
   };
   error?: string;
@@ -112,6 +121,9 @@ type DirectoryFilters = {
   district: string;
   countryCode: string;
   action: DirectoryActionFilter;
+  sort: DirectorySortMode;
+  userLat: string;
+  userLng: string;
 };
 
 type DirectoryDistrictOption = {
@@ -211,6 +223,20 @@ const DIRECTORY_ACTION_FILTERS: {
   },
 ];
 
+const DIRECTORY_SORT_OPTIONS: {
+  value: DirectorySortMode;
+  label: string;
+}[] = [
+  {
+    value: "newest",
+    label: "По новизне",
+  },
+  {
+    value: "distance",
+    label: "По расстоянию",
+  },
+];
+
 function getBaseUrl() {
   const publicAppUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
 
@@ -253,6 +279,18 @@ function normalizeActionFilter(
   return "all";
 }
 
+function normalizeSortMode(
+  value: string | string[] | undefined
+): DirectorySortMode {
+  const normalizedValue = normalizeFilterValue(value);
+
+  if (normalizedValue === "distance") {
+    return "distance";
+  }
+
+  return "newest";
+}
+
 function buildDirectoryApiUrl(baseUrl: string, filters: DirectoryFilters) {
   const searchParams = new URLSearchParams();
 
@@ -278,6 +316,18 @@ function buildDirectoryApiUrl(baseUrl: string, filters: DirectoryFilters) {
 
   if (filters.action !== "all") {
     searchParams.set("action", filters.action);
+  }
+
+  if (filters.sort !== "newest") {
+    searchParams.set("sort", filters.sort);
+  }
+
+  if (filters.userLat) {
+    searchParams.set("userLat", filters.userLat);
+  }
+
+  if (filters.userLng) {
+    searchParams.set("userLng", filters.userLng);
   }
 
   searchParams.set("limit", "100");
@@ -417,7 +467,10 @@ function hasActiveFilters(filters: DirectoryFilters) {
       filters.city ||
       filters.district ||
       filters.countryCode ||
-      filters.action !== "all"
+      filters.action !== "all" ||
+      filters.sort !== "newest" ||
+      filters.userLat ||
+      filters.userLng
   );
 }
 
@@ -425,6 +478,13 @@ function getActionFilterLabel(action: DirectoryActionFilter) {
   return (
     DIRECTORY_ACTION_FILTERS.find((filter) => filter.value === action)?.label ??
     "Все предприятия"
+  );
+}
+
+function getSortModeLabel(sort: DirectorySortMode) {
+  return (
+    DIRECTORY_SORT_OPTIONS.find((sortOption) => sortOption.value === sort)
+      ?.label ?? "По новизне"
   );
 }
 
@@ -459,6 +519,26 @@ function getDistrictLabel(
   );
 }
 
+function hasDistanceCoordinates(filters: DirectoryFilters) {
+  return Boolean(filters.userLat && filters.userLng);
+}
+
+function formatDistanceKm(distanceKm: number | null | undefined) {
+  if (typeof distanceKm !== "number" || Number.isNaN(distanceKm)) {
+    return null;
+  }
+
+  if (distanceKm < 1) {
+    return `${distanceKm.toFixed(2)} км`;
+  }
+
+  if (distanceKm < 10) {
+    return `${distanceKm.toFixed(1)} км`;
+  }
+
+  return `${Math.round(distanceKm)} км`;
+}
+
 export default async function DirectoryPage({
   searchParams,
 }: DirectoryPageProps) {
@@ -471,6 +551,9 @@ export default async function DirectoryPage({
     district: normalizeFilterValue(resolvedSearchParams?.district),
     countryCode: normalizeFilterValue(resolvedSearchParams?.countryCode),
     action: normalizeActionFilter(resolvedSearchParams?.action),
+    sort: normalizeSortMode(resolvedSearchParams?.sort),
+    userLat: normalizeFilterValue(resolvedSearchParams?.userLat),
+    userLng: normalizeFilterValue(resolvedSearchParams?.userLng),
   };
 
   const districtOptions = getDistrictOptions(filters);
@@ -492,6 +575,9 @@ export default async function DirectoryPage({
     filters.district,
     districtOptions
   );
+
+  const shouldShowDistanceCoordinateWarning =
+    filters.sort === "distance" && !hasDistanceCoordinates(filters);
 
   return (
     <main
@@ -719,6 +805,64 @@ export default async function DirectoryPage({
               </select>
             </label>
 
+            <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
+              Сортировка
+              <select
+                name="sort"
+                defaultValue={filters.sort}
+                style={{
+                  border: "1px solid #cccccc",
+                  borderRadius: "8px",
+                  padding: "11px 12px",
+                  fontSize: "15px",
+                  fontWeight: 400,
+                  background: "#ffffff",
+                }}
+              >
+                {DIRECTORY_SORT_OPTIONS.map((sortOption) => (
+                  <option key={sortOption.value} value={sortOption.value}>
+                    {sortOption.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
+              Моя широта
+              <input
+                name="userLat"
+                defaultValue={filters.userLat}
+                placeholder="Например: 53.4300"
+                inputMode="decimal"
+                style={{
+                  border: "1px solid #cccccc",
+                  borderRadius: "8px",
+                  padding: "11px 12px",
+                  fontSize: "15px",
+                  fontWeight: 400,
+                  background: "#ffffff",
+                }}
+              />
+            </label>
+
+            <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
+              Моя долгота
+              <input
+                name="userLng"
+                defaultValue={filters.userLng}
+                placeholder="Например: 14.5500"
+                inputMode="decimal"
+                style={{
+                  border: "1px solid #cccccc",
+                  borderRadius: "8px",
+                  padding: "11px 12px",
+                  fontSize: "15px",
+                  fontWeight: 400,
+                  background: "#ffffff",
+                }}
+              />
+            </label>
+
             <div
               style={{
                 display: "flex",
@@ -759,6 +903,24 @@ export default async function DirectoryPage({
               </Link>
             </div>
           </form>
+
+          {shouldShowDistanceCoordinateWarning ? (
+            <div
+              style={{
+                marginTop: "16px",
+                border: "1px solid #fde68a",
+                borderRadius: "10px",
+                padding: "12px",
+                background: "#fffbeb",
+                color: "#92400e",
+                lineHeight: "1.5",
+              }}
+            >
+              Для сортировки по расстоянию укажите обе координаты пользователя:
+              широту и долготу. Для теста можно использовать{" "}
+              <strong>53.4300</strong> и <strong>14.5500</strong>.
+            </div>
+          ) : null}
 
           {hasActiveFilters(filters) ? (
             <div
@@ -813,7 +975,25 @@ export default async function DirectoryPage({
                 {filters.action !== "all" ? (
                   <span>
                     Действие:{" "}
-                    <strong>{getActionFilterLabel(filters.action)}</strong>
+                    <strong>{getActionFilterLabel(filters.action)}</strong>{" "}
+                  </span>
+                ) : null}
+
+                {filters.sort !== "newest" ? (
+                  <span>
+                    Сортировка: <strong>{getSortModeLabel(filters.sort)}</strong>{" "}
+                  </span>
+                ) : null}
+
+                {filters.userLat ? (
+                  <span>
+                    Широта: <strong>{filters.userLat}</strong>{" "}
+                  </span>
+                ) : null}
+
+                {filters.userLng ? (
+                  <span>
+                    Долгота: <strong>{filters.userLng}</strong>{" "}
                   </span>
                 ) : null}
               </div>
@@ -913,6 +1093,35 @@ export default async function DirectoryPage({
               {getActionFilterLabel(filters.action)}
             </div>
           </div>
+
+          <div
+            style={{
+              border: "1px solid #fed7aa",
+              borderRadius: "16px",
+              padding: "22px",
+              background: "#fff7ed",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+            }}
+          >
+            <div style={{ color: "#9a3412", marginBottom: "8px" }}>
+              Сортировка
+            </div>
+            <div style={{ fontSize: "22px", fontWeight: 800 }}>
+              {getSortModeLabel(filters.sort)}
+            </div>
+            {filters.sort === "distance" && hasDistanceCoordinates(filters) ? (
+              <div
+                style={{
+                  marginTop: "8px",
+                  color: "#9a3412",
+                  fontSize: "14px",
+                  lineHeight: "1.4",
+                }}
+              >
+                От точки {filters.userLat}, {filters.userLng}
+              </div>
+            ) : null}
+          </div>
         </section>
 
         {errorMessage ? (
@@ -973,6 +1182,9 @@ export default async function DirectoryPage({
                 const organizationHref =
                   getDirectoryOrganizationHref(organization);
                 const actionStats = getActionStats(organization);
+                const formattedDistance = formatDistanceKm(
+                  organization.distanceKm
+                );
 
                 return (
                   <article
@@ -1042,6 +1254,14 @@ export default async function DirectoryPage({
                         <strong>Район:</strong>{" "}
                         {organization.primaryLocation?.district ?? "Не указан"}
                       </div>
+
+                      {formattedDistance ? (
+                        <div>
+                          <strong>Расстояние:</strong> примерно{" "}
+                          {formattedDistance}
+                        </div>
+                      ) : null}
+
                       <div>
                         <strong>Проверка:</strong>{" "}
                         {getVerificationLabel(organization.verificationStatus)}
