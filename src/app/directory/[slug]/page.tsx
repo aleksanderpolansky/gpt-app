@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../../lib/supabase";
+import DirectoryPurchaseConfirmationForm from "./DirectoryPurchaseConfirmationForm";
 
 export const dynamic = "force-dynamic";
 
@@ -298,8 +299,8 @@ function getPublicLocation(
       district: location.district,
       streetAddress: null,
       postalCode: null,
-      latitude: location.latitude,
-      longitude: location.longitude,
+      latitude: null,
+      longitude: null,
       geoArea,
     };
   }
@@ -741,7 +742,9 @@ function getCertificatePaymentLabel(offer: PublicDirectoryOffer) {
   }
 
   if (offer.certificate.paymentMode === "mixed") {
-    return `${formatPoints(offer.certificate.pointsPrice)} POINTS + ${formatMoney(
+    return `${formatPoints(
+      offer.certificate.pointsPrice
+    )} POINTS + ${formatMoney(
       offer.certificate.moneyPrice,
       offer.certificate.currency ?? offer.currency
     )}`;
@@ -760,10 +763,6 @@ function getBookingLabel(offer: PublicDirectoryOffer) {
   }
 
   return "Требуется бронирование";
-}
-
-function getOrganizationInternalHref(organizationId: string) {
-  return `/organizations/${organizationId}`;
 }
 
 function getOfferDetailHref(offerId: string) {
@@ -792,9 +791,6 @@ export default async function DirectoryOrganizationPage({
 
   const offers = offersResult.offers;
   const offersErrorMessage = offersResult.errorMessage;
-  const organizationInternalHref = organization
-    ? getOrganizationInternalHref(organization.id)
-    : "/organizations";
 
   return (
     <main
@@ -898,7 +894,7 @@ export default async function DirectoryOrganizationPage({
               >
                 На этой публичной карточке показывается только безопасная
                 информация предприятия. Если адрес скрыт или указан
-                приблизительно, точный адрес не раскрывается.
+                приблизительно, точный адрес и точные координаты не раскрываются.
               </p>
 
               <div
@@ -908,8 +904,8 @@ export default async function DirectoryOrganizationPage({
                   flexWrap: "wrap",
                 }}
               >
-                <Link
-                  href={organizationInternalHref}
+                <a
+                  href="#register-purchase"
                   style={{
                     display: "inline-block",
                     padding: "11px 16px",
@@ -922,10 +918,10 @@ export default async function DirectoryOrganizationPage({
                   }}
                 >
                   Зарегистрировать покупку
-                </Link>
+                </a>
 
-                <Link
-                  href={organizationInternalHref}
+                <a
+                  href="#public-offers"
                   style={{
                     display: "inline-block",
                     padding: "11px 16px",
@@ -937,8 +933,8 @@ export default async function DirectoryOrganizationPage({
                     fontWeight: 700,
                   }}
                 >
-                  Внутренняя страница предприятия
-                </Link>
+                  Посмотреть предложения
+                </a>
               </div>
             </>
           ) : null}
@@ -946,27 +942,6 @@ export default async function DirectoryOrganizationPage({
 
         {organization ? (
           <>
-            <section
-              style={{
-                border: "1px solid #bbf7d0",
-                borderRadius: "16px",
-                background: "#f0fdf4",
-                padding: "18px 20px",
-                marginBottom: "24px",
-                color: "#166534",
-              }}
-            >
-              <h2 style={{ margin: "0 0 8px", fontSize: "20px" }}>
-                Регистрация покупки
-              </h2>
-              <p style={{ margin: 0, lineHeight: "1.5" }}>
-                Покупку можно зарегистрировать через уже проверенный внутренний
-                сценарий предприятия. После проверки продавцом заявка может
-                привести к начислению POINTS как бонусных единиц программы
-                лояльности.
-              </p>
-            </section>
-
             <section
               style={{
                 display: "grid",
@@ -1085,6 +1060,20 @@ export default async function DirectoryOrganizationPage({
                   {organization.primaryLocation?.city ?? "Не указан"}
                 </div>
 
+                {organization.primaryLocation?.district ? (
+                  <div>
+                    <strong>Район:</strong>{" "}
+                    {organization.primaryLocation.district}
+                  </div>
+                ) : null}
+
+                {organization.primaryLocation?.streetAddress ? (
+                  <div>
+                    <strong>Адрес:</strong>{" "}
+                    {organization.primaryLocation.streetAddress}
+                  </div>
+                ) : null}
+
                 {organization.publicEmail ? (
                   <div>
                     <strong>Email:</strong> {organization.publicEmail}
@@ -1125,6 +1114,11 @@ export default async function DirectoryOrganizationPage({
               </div>
             </section>
 
+            <DirectoryPurchaseConfirmationForm
+              organizationId={organization.id}
+              organizationDefaultCurrency={organization.defaultCurrency}
+            />
+
             <section
               style={{
                 border: "1px solid #bfdbfe",
@@ -1146,6 +1140,7 @@ export default async function DirectoryOrganizationPage({
             </section>
 
             <section
+              id="public-offers"
               style={{
                 border: "1px solid #dddddd",
                 borderRadius: "16px",
@@ -1400,8 +1395,8 @@ export default async function DirectoryOrganizationPage({
                 Назад в каталог
               </Link>
 
-              <Link
-                href={organizationInternalHref}
+              <a
+                href="#register-purchase"
                 style={{
                   display: "inline-block",
                   padding: "10px 14px",
@@ -1414,10 +1409,10 @@ export default async function DirectoryOrganizationPage({
                 }}
               >
                 Зарегистрировать покупку
-              </Link>
+              </a>
 
-              <Link
-                href={organizationInternalHref}
+              <a
+                href="#public-offers"
                 style={{
                   display: "inline-block",
                   padding: "10px 14px",
@@ -1429,8 +1424,8 @@ export default async function DirectoryOrganizationPage({
                   fontWeight: 700,
                 }}
               >
-                Внутренняя страница предприятия
-              </Link>
+                Посмотреть предложения
+              </a>
             </section>
           </>
         ) : null}
