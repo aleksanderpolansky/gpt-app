@@ -1,4 +1,5 @@
 import Link from "next/link";
+import DirectoryUseLocationButton from "./components/DirectoryUseLocationButton";
 
 export const dynamic = "force-dynamic";
 
@@ -873,6 +874,19 @@ export default async function DirectoryPage({
             </div>
           </form>
 
+          <div style={{ marginTop: "16px" }}>
+            <DirectoryUseLocationButton
+              currentSearchParams={{
+                q: filters.q,
+                category: filters.category,
+                city: filters.city,
+                district: filters.district,
+                countryCode: filters.countryCode,
+                action: filters.action,
+              }}
+            />
+          </div>
+
           <div
             style={{
               marginTop: "16px",
@@ -886,9 +900,9 @@ export default async function DirectoryPage({
             }}
           >
             <strong>Расстояние:</strong> сейчас можно вручную указать координаты
-            точки, от которой нужно сортировать предприятия. Позже здесь будет
-            отдельная кнопка “использовать моё местоположение” с явным
-            согласием пользователя.
+            точки, от которой нужно сортировать предприятия, или нажать кнопку
+            “Использовать моё местоположение”. Координаты запрашиваются только
+            после явного действия пользователя.
           </div>
 
           {shouldShowDistanceCoordinateWarning ? (
