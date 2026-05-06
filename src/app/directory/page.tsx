@@ -1,4 +1,5 @@
 import Link from "next/link";
+import DirectoryLocationFilterFields from "./components/DirectoryLocationFilterFields";
 import DirectoryUseLocationButton from "./components/DirectoryUseLocationButton";
 
 export const dynamic = "force-dynamic";
@@ -115,6 +116,44 @@ type DirectoryApiResponse = {
   error?: string;
 };
 
+type DirectoryFilterCity = {
+  city: string;
+  countryCode: string;
+  label: string;
+};
+
+type DirectoryFilterDistrict = {
+  city: string;
+  district: string;
+  countryCode: string;
+  label: string;
+};
+
+type DirectoryFilterCountry = {
+  countryCode: string;
+  label: string;
+};
+
+type DirectoryFiltersApiResponse = {
+  ok: boolean;
+  categories?: DirectoryCategory[];
+  cities?: DirectoryFilterCity[];
+  districts?: DirectoryFilterDistrict[];
+  counts?: {
+    organizations: number;
+    categories: number;
+    cities: number;
+    districts: number;
+  };
+  error?: string;
+};
+
+type DirectoryFilterOptions = {
+  categories: DirectoryCategory[];
+  cities: DirectoryFilterCity[];
+  districts: DirectoryFilterDistrict[];
+};
+
 type DirectoryFilters = {
   q: string;
   category: string;
@@ -126,45 +165,6 @@ type DirectoryFilters = {
   userLat: string;
   userLng: string;
 };
-
-type DirectoryDistrictOption = {
-  city: string;
-  district: string;
-  countryCode: string;
-  label: string;
-};
-
-const DIRECTORY_CATEGORIES = [
-  { slug: "auto", name: "Авто" },
-  { slug: "beauty", name: "Красота" },
-  { slug: "health-and-wellness", name: "Здоровье и wellness" },
-  { slug: "food-and-drinks", name: "Еда и напитки" },
-  { slug: "sport-and-fitness", name: "Спорт и фитнес" },
-  { slug: "education", name: "Образование" },
-  { slug: "retail", name: "Розница" },
-  { slug: "home-services", name: "Домашние услуги" },
-  { slug: "professional-services", name: "Профессиональные услуги" },
-  { slug: "b2b-services", name: "B2B-услуги" },
-  { slug: "events-and-entertainment", name: "События и развлечения" },
-  { slug: "other", name: "Другое" },
-];
-
-const DIRECTORY_CITIES = [
-  {
-    city: "Szczecin",
-    countryCode: "PL",
-    label: "Szczecin, PL",
-  },
-];
-
-const DIRECTORY_DISTRICTS: DirectoryDistrictOption[] = [
-  {
-    city: "Szczecin",
-    district: "Centrum",
-    countryCode: "PL",
-    label: "Centrum",
-  },
-];
 
 const DIRECTORY_ACTION_FILTERS: {
   value: DirectoryActionFilter;
@@ -328,6 +328,54 @@ async function getDirectoryOrganizations(
   }
 }
 
+async function getDirectoryFilterOptions(): Promise<{
+  filterOptions: DirectoryFilterOptions;
+  errorMessage: string | null;
+}> {
+  const baseUrl = getBaseUrl();
+
+  try {
+    const response = await fetch(`${baseUrl}/api/directory/filters`, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    const json = (await response.json()) as DirectoryFiltersApiResponse;
+
+    if (!response.ok || !json.ok) {
+      return {
+        filterOptions: {
+          categories: [],
+          cities: [],
+          districts: [],
+        },
+        errorMessage: json.error ?? "Cannot load directory filter options",
+      };
+    }
+
+    return {
+      filterOptions: {
+        categories: json.categories ?? [],
+        cities: json.cities ?? [],
+        districts: json.districts ?? [],
+      },
+      errorMessage: null,
+    };
+  } catch (error) {
+    return {
+      filterOptions: {
+        categories: [],
+        cities: [],
+        districts: [],
+      },
+      errorMessage:
+        error instanceof Error
+          ? error.message
+          : "Unknown directory filters error",
+    };
+  }
+}
+
 function getLocationLabel(location: DirectoryLocation | null) {
   if (!location) {
     return "Локация не указана";
@@ -458,9 +506,54 @@ function getSortModeLabel(sort: DirectorySortMode) {
   );
 }
 
-function getDistrictOptions(filters: DirectoryFilters) {
-  return DIRECTORY_DISTRICTS.filter((districtOption) => {
-    if (filters.city && districtOption.city !== filters.city) {
+function getCountryOptions(
+  cities: DirectoryFilterCity[],
+  districts: DirectoryFilterDistrict[]
+): DirectoryFilterCountry[] {
+  const countryMap = new Map<string, DirectoryFilterCountry>();
+
+  for (const city of cities) {
+    if (!city.countryCode) {
+      continue;
+    }
+
+    countryMap.set(city.countryCode, {
+      countryCode: city.countryCode,
+      label: city.countryCode === "PL" ? "Poland / PL" : city.countryCode,
+    });
+  }
+
+  for (const district of districts) {
+    if (!district.countryCode) {
+      continue;
+    }
+
+    countryMap.set(district.countryCode, {
+      countryCode: district.countryCode,
+      label:
+        district.countryCode === "PL"
+          ? "Poland / PL"
+          : district.countryCode,
+    });
+  }
+
+  return Array.from(countryMap.values()).sort((left, right) =>
+    left.label.localeCompare(right.label, "en", {
+      sensitivity: "base",
+    })
+  );
+}
+
+function getDistrictOptions(
+  filters: DirectoryFilters,
+  districts: DirectoryFilterDistrict[]
+) {
+  if (!filters.city) {
+    return [];
+  }
+
+  return districts.filter((districtOption) => {
+    if (districtOption.city !== filters.city) {
       return false;
     }
 
@@ -477,7 +570,7 @@ function getDistrictOptions(filters: DirectoryFilters) {
 
 function getDistrictLabel(
   district: string,
-  districtOptions: DirectoryDistrictOption[]
+  districtOptions: DirectoryFilterDistrict[]
 ) {
   if (!district) {
     return "Все районы";
@@ -486,6 +579,39 @@ function getDistrictLabel(
   return (
     districtOptions.find((districtOption) => districtOption.district === district)
       ?.label ?? district
+  );
+}
+
+function getCategoryLabel(categorySlug: string, categories: DirectoryCategory[]) {
+  if (!categorySlug) {
+    return "Все";
+  }
+
+  return (
+    categories.find((category) => category.slug === categorySlug)?.name ??
+    categorySlug
+  );
+}
+
+function getCityLabel(city: string, cities: DirectoryFilterCity[]) {
+  if (!city) {
+    return "Все города";
+  }
+
+  return cities.find((cityOption) => cityOption.city === city)?.label ?? city;
+}
+
+function getCountryLabel(
+  countryCode: string,
+  countries: DirectoryFilterCountry[]
+) {
+  if (!countryCode) {
+    return "Все страны";
+  }
+
+  return (
+    countries.find((countryOption) => countryOption.countryCode === countryCode)
+      ?.label ?? countryCode
   );
 }
 
@@ -526,21 +652,31 @@ export default async function DirectoryPage({
     userLng: normalizeFilterValue(resolvedSearchParams?.userLng),
   };
 
-  const districtOptions = getDistrictOptions(filters);
+  const [
+    { organizations, errorMessage: organizationsErrorMessage },
+    { filterOptions, errorMessage: filterOptionsErrorMessage },
+  ] = await Promise.all([
+    getDirectoryOrganizations(filters),
+    getDirectoryFilterOptions(),
+  ]);
 
-  const { organizations, errorMessage } =
-    await getDirectoryOrganizations(filters);
-
-  const selectedCategory = DIRECTORY_CATEGORIES.find(
-    (category) => category.slug === filters.category
+  const categoryOptions = filterOptions.categories;
+  const cityOptions = filterOptions.cities;
+  const countryOptions = getCountryOptions(
+    filterOptions.cities,
+    filterOptions.districts
   );
+  const districtOptions = getDistrictOptions(filters, filterOptions.districts);
 
-  const selectedCity = DIRECTORY_CITIES.find(
-    (cityOption) =>
-      cityOption.city === filters.city &&
-      (!filters.countryCode || cityOption.countryCode === filters.countryCode)
+  const selectedCategoryLabel = getCategoryLabel(
+    filters.category,
+    categoryOptions
   );
-
+  const selectedCityLabel = getCityLabel(filters.city, cityOptions);
+  const selectedCountryLabel = getCountryLabel(
+    filters.countryCode,
+    countryOptions
+  );
   const selectedDistrictLabel = getDistrictLabel(
     filters.district,
     districtOptions
@@ -624,6 +760,24 @@ export default async function DirectoryPage({
             Поиск и фильтры
           </h2>
 
+          {filterOptionsErrorMessage ? (
+            <div
+              style={{
+                border: "1px solid #fde68a",
+                borderRadius: "10px",
+                padding: "12px",
+                background: "#fffbeb",
+                color: "#92400e",
+                marginBottom: "14px",
+                lineHeight: "1.5",
+              }}
+            >
+              Не удалось загрузить динамические списки фильтров:{" "}
+              {filterOptionsErrorMessage}. Поиск по URL-параметрам всё ещё
+              доступен.
+            </div>
+          ) : null}
+
           <form
             method="GET"
             action="/directory"
@@ -666,92 +820,32 @@ export default async function DirectoryPage({
                 }}
               >
                 <option value="">Все категории</option>
-                {DIRECTORY_CATEGORIES.map((category) => (
-                  <option key={category.slug} value={category.slug}>
+
+                {filters.category &&
+                !categoryOptions.some(
+                  (category) => category.slug === filters.category
+                ) ? (
+                  <option value={filters.category}>
+                    {filters.category} / временный URL-фильтр
+                  </option>
+                ) : null}
+
+                {categoryOptions.map((category) => (
+                  <option key={category.id} value={category.slug}>
                     {category.name}
                   </option>
                 ))}
               </select>
             </label>
 
-            <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
-              Город
-              <select
-                name="city"
-                defaultValue={filters.city}
-                style={{
-                  border: "1px solid #cccccc",
-                  borderRadius: "8px",
-                  padding: "11px 12px",
-                  fontSize: "15px",
-                  fontWeight: 400,
-                  background: "#ffffff",
-                }}
-              >
-                <option value="">Все города</option>
-                {DIRECTORY_CITIES.map((cityOption) => (
-                  <option key={cityOption.label} value={cityOption.city}>
-                    {cityOption.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
-              Район
-              <select
-                name="district"
-                defaultValue={filters.district}
-                style={{
-                  border: "1px solid #cccccc",
-                  borderRadius: "8px",
-                  padding: "11px 12px",
-                  fontSize: "15px",
-                  fontWeight: 400,
-                  background: "#ffffff",
-                }}
-              >
-                <option value="">Все районы</option>
-
-                {filters.district &&
-                !districtOptions.some(
-                  (districtOption) =>
-                    districtOption.district === filters.district
-                ) ? (
-                  <option value={filters.district}>
-                    {filters.district} / временный URL-фильтр
-                  </option>
-                ) : null}
-
-                {districtOptions.map((districtOption) => (
-                  <option
-                    key={`${districtOption.city}-${districtOption.district}`}
-                    value={districtOption.district}
-                  >
-                    {districtOption.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
-              Страна
-              <select
-                name="countryCode"
-                defaultValue={filters.countryCode}
-                style={{
-                  border: "1px solid #cccccc",
-                  borderRadius: "8px",
-                  padding: "11px 12px",
-                  fontSize: "15px",
-                  fontWeight: 400,
-                  background: "#ffffff",
-                }}
-              >
-                <option value="">Все страны</option>
-                <option value="PL">Poland / PL</option>
-              </select>
-            </label>
+            <DirectoryLocationFilterFields
+              cities={cityOptions}
+              districts={filterOptions.districts}
+              countries={countryOptions}
+              selectedCity={filters.city}
+              selectedDistrict={filters.district}
+              selectedCountryCode={filters.countryCode}
+            />
 
             <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
               Действие пользователя
@@ -945,19 +1039,15 @@ export default async function DirectoryPage({
                   </span>
                 ) : null}
 
-                {selectedCategory ? (
+                {filters.category ? (
                   <span>
-                    Категория: <strong>{selectedCategory.name}</strong>{" "}
+                    Категория: <strong>{selectedCategoryLabel}</strong>{" "}
                   </span>
                 ) : null}
 
-                {selectedCity ? (
+                {filters.city ? (
                   <span>
-                    Город: <strong>{selectedCity.label}</strong>{" "}
-                  </span>
-                ) : filters.city ? (
-                  <span>
-                    Город: <strong>{filters.city}</strong>{" "}
+                    Город: <strong>{selectedCityLabel}</strong>{" "}
                   </span>
                 ) : null}
 
@@ -969,7 +1059,7 @@ export default async function DirectoryPage({
 
                 {filters.countryCode ? (
                   <span>
-                    Страна: <strong>{filters.countryCode}</strong>{" "}
+                    Страна: <strong>{selectedCountryLabel}</strong>{" "}
                   </span>
                 ) : null}
 
@@ -1038,7 +1128,7 @@ export default async function DirectoryPage({
               Текущий город
             </div>
             <div style={{ fontSize: "24px", fontWeight: 700 }}>
-              {filters.city || "Все города"}
+              {selectedCityLabel}
             </div>
           </div>
 
@@ -1072,7 +1162,7 @@ export default async function DirectoryPage({
               Категория
             </div>
             <div style={{ fontSize: "24px", fontWeight: 700 }}>
-              {selectedCategory?.name ?? "Все"}
+              {selectedCategoryLabel}
             </div>
           </div>
 
@@ -1123,7 +1213,7 @@ export default async function DirectoryPage({
           </div>
         </section>
 
-        {errorMessage ? (
+        {organizationsErrorMessage ? (
           <section
             style={{
               border: "1px solid #f2b8b5",
@@ -1135,7 +1225,7 @@ export default async function DirectoryPage({
             }}
           >
             <h2 style={{ marginTop: 0 }}>Ошибка загрузки каталога</h2>
-            <p>{errorMessage}</p>
+            <p>{organizationsErrorMessage}</p>
           </section>
         ) : null}
 
