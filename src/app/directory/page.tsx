@@ -134,54 +134,18 @@ type DirectoryDistrictOption = {
 };
 
 const DIRECTORY_CATEGORIES = [
-  {
-    slug: "auto",
-    name: "Авто",
-  },
-  {
-    slug: "beauty",
-    name: "Красота",
-  },
-  {
-    slug: "health-and-wellness",
-    name: "Здоровье и wellness",
-  },
-  {
-    slug: "food-and-drinks",
-    name: "Еда и напитки",
-  },
-  {
-    slug: "sport-and-fitness",
-    name: "Спорт и фитнес",
-  },
-  {
-    slug: "education",
-    name: "Образование",
-  },
-  {
-    slug: "retail",
-    name: "Розница",
-  },
-  {
-    slug: "home-services",
-    name: "Домашние услуги",
-  },
-  {
-    slug: "professional-services",
-    name: "Профессиональные услуги",
-  },
-  {
-    slug: "b2b-services",
-    name: "B2B-услуги",
-  },
-  {
-    slug: "events-and-entertainment",
-    name: "События и развлечения",
-  },
-  {
-    slug: "other",
-    name: "Другое",
-  },
+  { slug: "auto", name: "Авто" },
+  { slug: "beauty", name: "Красота" },
+  { slug: "health-and-wellness", name: "Здоровье и wellness" },
+  { slug: "food-and-drinks", name: "Еда и напитки" },
+  { slug: "sport-and-fitness", name: "Спорт и фитнес" },
+  { slug: "education", name: "Образование" },
+  { slug: "retail", name: "Розница" },
+  { slug: "home-services", name: "Домашние услуги" },
+  { slug: "professional-services", name: "Профессиональные услуги" },
+  { slug: "b2b-services", name: "B2B-услуги" },
+  { slug: "events-and-entertainment", name: "События и развлечения" },
+  { slug: "other", name: "Другое" },
 ];
 
 const DIRECTORY_CITIES = [
@@ -205,18 +169,9 @@ const DIRECTORY_ACTION_FILTERS: {
   value: DirectoryActionFilter;
   label: string;
 }[] = [
-  {
-    value: "all",
-    label: "Все предприятия",
-  },
-  {
-    value: "hasOffers",
-    label: "Есть предложения",
-  },
-  {
-    value: "hasCertificates",
-    label: "Есть сертификаты",
-  },
+  { value: "all", label: "Все предприятия" },
+  { value: "hasOffers", label: "Есть предложения" },
+  { value: "hasCertificates", label: "Есть сертификаты" },
   {
     value: "canRegisterPurchase",
     label: "Можно зарегистрировать покупку / POINTS",
@@ -227,14 +182,8 @@ const DIRECTORY_SORT_OPTIONS: {
   value: DirectorySortMode;
   label: string;
 }[] = [
-  {
-    value: "newest",
-    label: "По новизне",
-  },
-  {
-    value: "distance",
-    label: "По расстоянию",
-  },
+  { value: "newest", label: "По новизне" },
+  { value: "distance", label: "По расстоянию" },
 ];
 
 function getBaseUrl() {
@@ -402,6 +351,26 @@ function getLocationLabel(location: DirectoryLocation | null) {
   }
 
   return parts.join(", ");
+}
+
+function getDistanceExplanation(location: DirectoryLocation | null) {
+  if (!location) {
+    return "Расстояние рассчитано приблизительно.";
+  }
+
+  if (location.addressVisibility === "approximate") {
+    return "Расстояние рассчитано до приблизительной публичной локации, а не до точного адреса.";
+  }
+
+  if (location.addressVisibility === "public") {
+    return "Расстояние рассчитано до публичной локации предприятия.";
+  }
+
+  return "Расстояние для скрытого адреса не показывается.";
+}
+
+function canShowDistance(location: DirectoryLocation | null) {
+  return Boolean(location && location.addressVisibility !== "hidden");
 }
 
 function getVerificationLabel(status: string | null | undefined) {
@@ -828,11 +797,11 @@ export default async function DirectoryPage({
             </label>
 
             <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
-              Моя широта
+              Широта для расчёта расстояния
               <input
                 name="userLat"
                 defaultValue={filters.userLat}
-                placeholder="Например: 53.4300"
+                placeholder="53.4300"
                 inputMode="decimal"
                 style={{
                   border: "1px solid #cccccc",
@@ -846,11 +815,11 @@ export default async function DirectoryPage({
             </label>
 
             <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
-              Моя долгота
+              Долгота для расчёта расстояния
               <input
                 name="userLng"
                 defaultValue={filters.userLng}
-                placeholder="Например: 14.5500"
+                placeholder="14.5500"
                 inputMode="decimal"
                 style={{
                   border: "1px solid #cccccc",
@@ -904,6 +873,24 @@ export default async function DirectoryPage({
             </div>
           </form>
 
+          <div
+            style={{
+              marginTop: "16px",
+              border: "1px solid #e5e7eb",
+              borderRadius: "10px",
+              padding: "12px",
+              background: "#ffffff",
+              color: "#555555",
+              fontSize: "14px",
+              lineHeight: "1.5",
+            }}
+          >
+            <strong>Расстояние:</strong> сейчас можно вручную указать координаты
+            точки, от которой нужно сортировать предприятия. Позже здесь будет
+            отдельная кнопка “использовать моё местоположение” с явным
+            согласием пользователя.
+          </div>
+
           {shouldShowDistanceCoordinateWarning ? (
             <div
               style={{
@@ -916,9 +903,9 @@ export default async function DirectoryPage({
                 lineHeight: "1.5",
               }}
             >
-              Для сортировки по расстоянию укажите обе координаты пользователя:
-              широту и долготу. Для теста можно использовать{" "}
-              <strong>53.4300</strong> и <strong>14.5500</strong>.
+              Для сортировки по расстоянию нужно указать обе координаты: широту
+              и долготу. Без координат каталог не может понять, от какой точки
+              считать расстояние.
             </div>
           ) : null}
 
@@ -981,19 +968,17 @@ export default async function DirectoryPage({
 
                 {filters.sort !== "newest" ? (
                   <span>
-                    Сортировка: <strong>{getSortModeLabel(filters.sort)}</strong>{" "}
+                    Сортировка:{" "}
+                    <strong>{getSortModeLabel(filters.sort)}</strong>{" "}
                   </span>
                 ) : null}
 
-                {filters.userLat ? (
+                {hasDistanceCoordinates(filters) ? (
                   <span>
-                    Широта: <strong>{filters.userLat}</strong>{" "}
-                  </span>
-                ) : null}
-
-                {filters.userLng ? (
-                  <span>
-                    Долгота: <strong>{filters.userLng}</strong>{" "}
+                    Точка расчёта расстояния:{" "}
+                    <strong>
+                      {filters.userLat}, {filters.userLng}
+                    </strong>{" "}
                   </span>
                 ) : null}
               </div>
@@ -1118,7 +1103,7 @@ export default async function DirectoryPage({
                   lineHeight: "1.4",
                 }}
               >
-                От точки {filters.userLat}, {filters.userLng}
+                От указанной точки: {filters.userLat}, {filters.userLng}
               </div>
             ) : null}
           </div>
@@ -1185,6 +1170,9 @@ export default async function DirectoryPage({
                 const formattedDistance = formatDistanceKm(
                   organization.distanceKm
                 );
+                const shouldShowDistance =
+                  formattedDistance &&
+                  canShowDistance(organization.primaryLocation);
 
                 return (
                   <article
@@ -1255,10 +1243,22 @@ export default async function DirectoryPage({
                         {organization.primaryLocation?.district ?? "Не указан"}
                       </div>
 
-                      {formattedDistance ? (
+                      {shouldShowDistance ? (
                         <div>
                           <strong>Расстояние:</strong> примерно{" "}
                           {formattedDistance}
+                          <div
+                            style={{
+                              marginTop: "4px",
+                              color: "#777777",
+                              fontSize: "13px",
+                              lineHeight: "1.4",
+                            }}
+                          >
+                            {getDistanceExplanation(
+                              organization.primaryLocation
+                            )}
+                          </div>
                         </div>
                       ) : null}
 
