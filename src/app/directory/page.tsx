@@ -180,7 +180,14 @@ const DIRECTORY_CITIES = [
   },
 ];
 
-const DIRECTORY_DISTRICTS: DirectoryDistrictOption[] = [];
+const DIRECTORY_DISTRICTS: DirectoryDistrictOption[] = [
+  {
+    city: "Szczecin",
+    district: "Centrum",
+    countryCode: "PL",
+    label: "Centrum",
+  },
+];
 
 const DIRECTORY_ACTION_FILTERS: {
   value: DirectoryActionFilter;
