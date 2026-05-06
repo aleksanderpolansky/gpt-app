@@ -1,7 +1,27 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+
+type GeoArea = {
+  id: string;
+  parentId: string | null;
+  areaType: string;
+  countryCode: string | null;
+  name: string;
+  slug: string;
+  latitude: number | null;
+  longitude: number | null;
+  sortOrder: number;
+  status: string;
+};
+
+type GeoAreasResponse = {
+  ok?: boolean;
+  areas?: GeoArea[];
+  count?: number;
+  error?: string;
+};
 
 type CreateOrganizationResponse = {
   ok?: boolean;
@@ -28,9 +48,183 @@ export default function NewOrganizationPage() {
   const [organizationName, setOrganizationName] = useState("");
   const [organizationType, setOrganizationType] = useState("private_business");
   const [description, setDescription] = useState("");
+
+  const [countries, setCountries] = useState<GeoArea[]>([]);
+  const [cities, setCities] = useState<GeoArea[]>([]);
+  const [districts, setDistricts] = useState<GeoArea[]>([]);
+
+  const [countryCode, setCountryCode] = useState("");
+  const [countryGeoAreaId, setCountryGeoAreaId] = useState("");
+  const [cityGeoAreaId, setCityGeoAreaId] = useState("");
+  const [districtGeoAreaId, setDistrictGeoAreaId] = useState("");
+
+  const [isLoadingCountries, setIsLoadingCountries] = useState(false);
+  const [isLoadingCities, setIsLoadingCities] = useState(false);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
+
+  const [geoErrorMessage, setGeoErrorMessage] = useState<string | null>(null);
+
   const [result, setResult] = useState<CreateOrganizationResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [debugMessage, setDebugMessage] = useState("Кнопка ещё не нажималась.");
+
+  const selectedCountry = countries.find((country) => country.id === countryGeoAreaId);
+  const selectedCity = cities.find((city) => city.id === cityGeoAreaId);
+  const selectedDistrict = districts.find(
+    (district) => district.id === districtGeoAreaId
+  );
+
+  async function loadGeoAreas(url: string) {
+    const response = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    const data = (await response.json()) as GeoAreasResponse;
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error ?? "Cannot load geo areas");
+    }
+
+    return data.areas ?? [];
+  }
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadCountries() {
+      setIsLoadingCountries(true);
+      setGeoErrorMessage(null);
+
+      try {
+        const loadedCountries = await loadGeoAreas(
+          "/api/geo/areas?areaType=country&status=approved"
+        );
+
+        if (!isMounted) {
+          return;
+        }
+
+        setCountries(loadedCountries);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setGeoErrorMessage(
+          error instanceof Error ? error.message : "Unknown countries loading error"
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoadingCountries(false);
+        }
+      }
+    }
+
+    loadCountries();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadCities() {
+      setCities([]);
+      setDistricts([]);
+      setCityGeoAreaId("");
+      setDistrictGeoAreaId("");
+
+      if (!countryCode) {
+        return;
+      }
+
+      setIsLoadingCities(true);
+      setGeoErrorMessage(null);
+
+      try {
+        const loadedCities = await loadGeoAreas(
+          `/api/geo/areas?areaType=city&countryCode=${encodeURIComponent(
+            countryCode
+          )}&status=approved`
+        );
+
+        if (!isMounted) {
+          return;
+        }
+
+        setCities(loadedCities);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setGeoErrorMessage(
+          error instanceof Error ? error.message : "Unknown cities loading error"
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoadingCities(false);
+        }
+      }
+    }
+
+    loadCities();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [countryCode]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadDistricts() {
+      setDistricts([]);
+      setDistrictGeoAreaId("");
+
+      if (!cityGeoAreaId) {
+        return;
+      }
+
+      setIsLoadingDistricts(true);
+      setGeoErrorMessage(null);
+
+      try {
+        const loadedDistricts = await loadGeoAreas(
+          `/api/geo/areas?areaType=district&parentId=${encodeURIComponent(
+            cityGeoAreaId
+          )}&status=approved`
+        );
+
+        if (!isMounted) {
+          return;
+        }
+
+        setDistricts(loadedDistricts);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setGeoErrorMessage(
+          error instanceof Error ? error.message : "Unknown districts loading error"
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoadingDistricts(false);
+        }
+      }
+    }
+
+    loadDistricts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [cityGeoAreaId]);
 
   async function handleCreateOrganization(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,6 +243,12 @@ export default function NewOrganizationPage() {
           organizationName,
           organizationType,
           description,
+          countryCode: countryCode || null,
+          countryGeoAreaId: countryGeoAreaId || null,
+          cityGeoAreaId: cityGeoAreaId || null,
+          city: selectedCity?.name ?? null,
+          districtGeoAreaId: districtGeoAreaId || null,
+          district: selectedDistrict?.name ?? null,
         }),
       });
 
@@ -60,11 +260,19 @@ export default function NewOrganizationPage() {
         return;
       }
 
-      setDebugMessage("Организация успешно создана.");
+      setDebugMessage(
+        "Организация успешно создана. На следующем шаге подключим сохранение локации в backend."
+      );
 
       setOrganizationName("");
       setDescription("");
       setOrganizationType("private_business");
+      setCountryCode("");
+      setCountryGeoAreaId("");
+      setCityGeoAreaId("");
+      setDistrictGeoAreaId("");
+      setCities([]);
+      setDistricts([]);
     } catch (error) {
       setDebugMessage("Ошибка JavaScript при отправке формы.");
       setResult({
@@ -215,6 +423,223 @@ export default function NewOrganizationPage() {
             </select>
           </div>
 
+          <section
+            style={{
+              border: "1px solid #e5e7eb",
+              borderRadius: "10px",
+              padding: "14px",
+              background: "#ffffff",
+              display: "grid",
+              gap: "14px",
+            }}
+          >
+            <div>
+              <h2
+                style={{
+                  fontSize: "18px",
+                  margin: "0 0 6px",
+                }}
+              >
+                Локация организации
+              </h2>
+
+              <p
+                style={{
+                  margin: 0,
+                  color: "#666666",
+                  fontSize: "14px",
+                  lineHeight: "1.5",
+                }}
+              >
+                Страны, города и районы берутся из справочника geo_areas.
+                Публичный каталог по-прежнему показывает только места, где уже
+                есть опубликованные предприятия.
+              </p>
+            </div>
+
+            {geoErrorMessage ? (
+              <div
+                style={{
+                  border: "1px solid #fecaca",
+                  borderRadius: "8px",
+                  padding: "10px",
+                  background: "#fff1f2",
+                  color: "#991b1b",
+                  fontSize: "14px",
+                  lineHeight: "1.4",
+                }}
+              >
+                {geoErrorMessage}
+              </div>
+            ) : null}
+
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontWeight: 700,
+                  marginBottom: "8px",
+                }}
+              >
+                Страна
+              </label>
+
+              <select
+                value={countryGeoAreaId}
+                onChange={(event) => {
+                  const selectedId = event.target.value;
+                  const nextCountry = countries.find(
+                    (country) => country.id === selectedId
+                  );
+
+                  setCountryGeoAreaId(selectedId);
+                  setCountryCode(nextCountry?.countryCode ?? "");
+                }}
+                disabled={isLoadingCountries}
+                style={{
+                  width: "100%",
+                  border: "1px solid #cccccc",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  fontSize: "16px",
+                  boxSizing: "border-box",
+                  background: isLoadingCountries ? "#f3f4f6" : "#ffffff",
+                }}
+              >
+                <option value="">
+                  {isLoadingCountries ? "Загружаю страны..." : "Выберите страну"}
+                </option>
+
+                {countries.map((country) => (
+                  <option key={country.id} value={country.id}>
+                    {country.name}
+                    {country.countryCode ? ` / ${country.countryCode}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontWeight: 700,
+                  marginBottom: "8px",
+                }}
+              >
+                Город
+              </label>
+
+              <select
+                value={cityGeoAreaId}
+                onChange={(event) => {
+                  setCityGeoAreaId(event.target.value);
+                }}
+                disabled={!countryCode || isLoadingCities}
+                style={{
+                  width: "100%",
+                  border: "1px solid #cccccc",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  fontSize: "16px",
+                  boxSizing: "border-box",
+                  background:
+                    !countryCode || isLoadingCities ? "#f3f4f6" : "#ffffff",
+                  color: !countryCode ? "#9ca3af" : "#111111",
+                  cursor: !countryCode ? "not-allowed" : "default",
+                }}
+              >
+                <option value="">
+                  {!countryCode
+                    ? "Сначала выберите страну"
+                    : isLoadingCities
+                      ? "Загружаю города..."
+                      : "Выберите город"}
+                </option>
+
+                {cities.map((city) => (
+                  <option key={city.id} value={city.id}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+
+              {countryCode && !isLoadingCities && cities.length === 0 ? (
+                <p
+                  style={{
+                    margin: "8px 0 0",
+                    color: "#92400e",
+                    fontSize: "14px",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  Для выбранной страны пока нет утверждённых городов. Позже здесь
+                  появится кнопка “предложить новый город”.
+                </p>
+              ) : null}
+            </div>
+
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontWeight: 700,
+                  marginBottom: "8px",
+                }}
+              >
+                Район
+              </label>
+
+              <select
+                value={districtGeoAreaId}
+                onChange={(event) => {
+                  setDistrictGeoAreaId(event.target.value);
+                }}
+                disabled={!cityGeoAreaId || isLoadingDistricts}
+                style={{
+                  width: "100%",
+                  border: "1px solid #cccccc",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  fontSize: "16px",
+                  boxSizing: "border-box",
+                  background:
+                    !cityGeoAreaId || isLoadingDistricts ? "#f3f4f6" : "#ffffff",
+                  color: !cityGeoAreaId ? "#9ca3af" : "#111111",
+                  cursor: !cityGeoAreaId ? "not-allowed" : "default",
+                }}
+              >
+                <option value="">
+                  {!cityGeoAreaId
+                    ? "Сначала выберите город"
+                    : isLoadingDistricts
+                      ? "Загружаю районы..."
+                      : "Район не выбран"}
+                </option>
+
+                {districts.map((district) => (
+                  <option key={district.id} value={district.id}>
+                    {district.name}
+                  </option>
+                ))}
+              </select>
+
+              {cityGeoAreaId && !isLoadingDistricts && districts.length === 0 ? (
+                <p
+                  style={{
+                    margin: "8px 0 0",
+                    color: "#92400e",
+                    fontSize: "14px",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  Для выбранного города пока нет утверждённых районов. Позже
+                  здесь появится кнопка “предложить новый район”.
+                </p>
+              ) : null}
+            </div>
+          </section>
+
           <div>
             <label
               style={{
@@ -279,6 +704,19 @@ export default function NewOrganizationPage() {
         >
           <p style={{ fontWeight: 700, margin: "0 0 6px" }}>Debug:</p>
           <p style={{ margin: 0 }}>{debugMessage}</p>
+          <p
+            style={{
+              margin: "8px 0 0",
+              color: "#1e3a8a",
+              fontSize: "14px",
+              lineHeight: "1.4",
+            }}
+          >
+            Выбрано: страна{" "}
+            <strong>{selectedCountry?.name ?? "не выбрана"}</strong>, город{" "}
+            <strong>{selectedCity?.name ?? "не выбран"}</strong>, район{" "}
+            <strong>{selectedDistrict?.name ?? "не выбран"}</strong>.
+          </p>
         </div>
 
         {result && (
@@ -310,6 +748,18 @@ export default function NewOrganizationPage() {
 
                 <p style={{ margin: 0 }}>
                   <strong>Space:</strong> {result.businessSpace?.title}
+                </p>
+
+                <p
+                  style={{
+                    margin: 0,
+                    color: "#92400e",
+                    fontSize: "14px",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  Внимание: на этом шаге форма уже выбирает geo_areas, но
+                  backend сохранения локации будет подключён следующим шагом.
                 </p>
 
                 <div style={{ paddingTop: "8px" }}>
