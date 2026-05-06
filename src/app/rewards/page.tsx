@@ -3,23 +3,22 @@ import RequestCertificateButton from "./components/RequestCertificateButton";
 
 export const dynamic = "force-dynamic";
 
+type RelatedOrganizationObject = {
+  id: string;
+  organization_name: string | null;
+  organization_type: string | null;
+  country_code: string | null;
+  default_currency: string | null;
+  status: string | null;
+  public_slug: string | null;
+  directory_status: string | null;
+  is_public_profile_enabled: boolean | null;
+  is_listed_in_directory: boolean | null;
+};
+
 type RelatedOrganization =
-  | {
-      id: string;
-      organization_name: string | null;
-      organization_type: string | null;
-      country_code: string | null;
-      default_currency: string | null;
-      status: string | null;
-    }
-  | {
-      id: string;
-      organization_name: string | null;
-      organization_type: string | null;
-      country_code: string | null;
-      default_currency: string | null;
-      status: string | null;
-    }[]
+  | RelatedOrganizationObject
+  | RelatedOrganizationObject[]
   | null;
 
 type RewardOfferRecord = {
@@ -70,6 +69,10 @@ type RewardOffer = {
   organizationName: string | null;
   organizationType: string | null;
   organizationCountryCode: string | null;
+  organizationPublicSlug: string | null;
+  organizationDirectoryStatus: string | null;
+  organizationIsPublicProfileEnabled: boolean | null;
+  organizationIsListedInDirectory: boolean | null;
 
   offerType: string | null;
   title: string | null;
@@ -198,6 +201,19 @@ function getBooleanLabel(value: boolean | null | undefined) {
   return value ? "Yes" : "No";
 }
 
+function getDirectoryHref(offer: RewardOffer) {
+  if (
+    offer.organizationPublicSlug &&
+    offer.organizationDirectoryStatus === "published" &&
+    offer.organizationIsPublicProfileEnabled &&
+    offer.organizationIsListedInDirectory
+  ) {
+    return `/directory/${offer.organizationPublicSlug}`;
+  }
+
+  return "/directory";
+}
+
 async function getRewardOffers(): Promise<{
   rewardOffers: RewardOffer[];
   errorMessage: string | null;
@@ -250,7 +266,11 @@ async function getRewardOffers(): Promise<{
         organization_type,
         country_code,
         default_currency,
-        status
+        status,
+        public_slug,
+        directory_status,
+        is_public_profile_enabled,
+        is_listed_in_directory
       )
     `
     )
@@ -279,6 +299,12 @@ async function getRewardOffers(): Promise<{
         organizationName: organization?.organization_name ?? null,
         organizationType: organization?.organization_type ?? null,
         organizationCountryCode: organization?.country_code ?? null,
+        organizationPublicSlug: organization?.public_slug ?? null,
+        organizationDirectoryStatus: organization?.directory_status ?? null,
+        organizationIsPublicProfileEnabled:
+          organization?.is_public_profile_enabled ?? null,
+        organizationIsListedInDirectory:
+          organization?.is_listed_in_directory ?? null,
 
         offerType: offer.offer_type,
         title: offer.title,
@@ -414,8 +440,8 @@ export default async function RewardsCatalogPage({
               На главную
             </a>
 
-            <a href="/organizations" style={{ color: "#2563eb" }}>
-              Мои организации
+            <a href="/directory" style={{ color: "#2563eb" }}>
+              Каталог предприятий
             </a>
 
             <a href="/offers" style={{ color: "#2563eb" }}>
@@ -537,6 +563,8 @@ export default async function RewardsCatalogPage({
               const paymentModeStyle = getPaymentModeStyle(
                 offer.certificatePaymentMode
               );
+
+              const directoryHref = getDirectoryHref(offer);
 
               return (
                 <article
@@ -779,23 +807,21 @@ export default async function RewardsCatalogPage({
                       alignItems: "flex-start",
                     }}
                   >
-                    {offer.organizationId ? (
-                      <a
-                        href={`/organizations/${offer.organizationId}`}
-                        style={{
-                          display: "inline-block",
-                          border: "1px solid #2563eb",
-                          borderRadius: "8px",
-                          padding: "10px 12px",
-                          color: "#2563eb",
-                          background: "#ffffff",
-                          textDecoration: "none",
-                          fontWeight: 700,
-                        }}
-                      >
-                        Open organization
-                      </a>
-                    ) : null}
+                    <a
+                      href={directoryHref}
+                      style={{
+                        display: "inline-block",
+                        border: "1px solid #2563eb",
+                        borderRadius: "8px",
+                        padding: "10px 12px",
+                        color: "#2563eb",
+                        background: "#ffffff",
+                        textDecoration: "none",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Открыть карточку предприятия
+                    </a>
 
                     <RequestCertificateButton
                       offerId={offer.id}
