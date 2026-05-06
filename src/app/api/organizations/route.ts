@@ -24,6 +24,20 @@ type ParsedOrganizationLocationInput = {
   district: string | null;
 };
 
+type OrganizationLocationRow = {
+  id: string;
+  organization_id: string;
+  country_code: string | null;
+  city: string | null;
+  district: string | null;
+  address_visibility: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  is_primary: boolean | null;
+  is_active: boolean | null;
+  created_at: string;
+};
+
 async function getCurrentAppUser() {
   const session = await auth0.getSession();
 
@@ -361,6 +375,28 @@ async function validateOrganizationLocationInput(
   };
 }
 
+function getPrimaryLocationForOrganization(
+  organizationId: string,
+  locations: OrganizationLocationRow[]
+) {
+  const organizationLocations = locations.filter(
+    (location) => location.organization_id === organizationId
+  );
+
+  const primaryLocation = organizationLocations.find(
+    (location) => location.is_primary === true && location.is_active !== false
+  );
+
+  if (primaryLocation) {
+    return primaryLocation;
+  }
+
+  return (
+    organizationLocations.find((location) => location.is_active !== false) ??
+    null
+  );
+}
+
 export async function GET() {
   const { appUser, errorResponse } = await getCurrentAppUser();
 
@@ -388,9 +424,47 @@ export async function GET() {
     );
   }
 
+  const organizationIds =
+    organizations?.map((organization) => organization.id) ?? [];
+
+  if (organizationIds.length === 0) {
+    return NextResponse.json({
+      ok: true,
+      organizations: [],
+    });
+  }
+
+  const { data: locations, error: locationsError } = await supabase
+    .from("organization_locations")
+    .select(
+      "id, organization_id, country_code, city, district, address_visibility, latitude, longitude, is_primary, is_active, created_at"
+    )
+    .in("organization_id", organizationIds)
+    .eq("is_active", true)
+    .order("is_primary", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (locationsError) {
+    return NextResponse.json(
+      { error: locationsError.message },
+      { status: 500 }
+    );
+  }
+
+  const locationRows = (locations ?? []) as OrganizationLocationRow[];
+
+  const organizationsWithLocations =
+    organizations?.map((organization) => ({
+      ...organization,
+      primaryLocation: getPrimaryLocationForOrganization(
+        organization.id,
+        locationRows
+      ),
+    })) ?? [];
+
   return NextResponse.json({
     ok: true,
-    organizations,
+    organizations: organizationsWithLocations,
   });
 }
 
