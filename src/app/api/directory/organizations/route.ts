@@ -3,6 +3,12 @@ import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
+type DirectoryActionFilter =
+  | "all"
+  | "hasOffers"
+  | "hasCertificates"
+  | "canRegisterPurchase";
+
 type RelatedCategory = {
   is_primary: boolean | null;
   business_categories:
@@ -89,6 +95,52 @@ type DirectoryOrganizationRow = {
   organization_search_stats?: RelatedStats[] | null;
 };
 
+type OfferActionRow = {
+  id: string;
+  organization_id: string | null;
+  certificate_available: boolean;
+  status: string;
+  valid_from: string | null;
+  valid_until: string | null;
+};
+
+type OrganizationActionStats = {
+  activeOffersCount: number;
+  activeCertificatesCount: number;
+};
+
+type MinimumPurchaseThreshold = {
+  currency: string;
+  amount: number;
+};
+
+const MINIMUM_PURCHASE_THRESHOLDS: Record<string, MinimumPurchaseThreshold> = {
+  EUR: {
+    currency: "EUR",
+    amount: 10,
+  },
+  PLN: {
+    currency: "PLN",
+    amount: 45,
+  },
+  USD: {
+    currency: "USD",
+    amount: 11,
+  },
+  GBP: {
+    currency: "GBP",
+    amount: 9,
+  },
+  UAH: {
+    currency: "UAH",
+    amount: 450,
+  },
+  CZK: {
+    currency: "CZK",
+    amount: 250,
+  },
+};
+
 function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   if (!value) {
     return null;
@@ -109,6 +161,44 @@ function normalizeSearchValue(value: string | null) {
   }
 
   return trimmedValue;
+}
+
+function normalizeActionFilter(value: string | null): DirectoryActionFilter {
+  const normalizedValue = normalizeSearchValue(value);
+
+  if (
+    normalizedValue === "hasOffers" ||
+    normalizedValue === "hasCertificates" ||
+    normalizedValue === "canRegisterPurchase"
+  ) {
+    return normalizedValue;
+  }
+
+  return "all";
+}
+
+function normalizeCurrency(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const normalizedValue = value.trim().toUpperCase();
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  return normalizedValue;
+}
+
+function canRegisterPurchaseForOrganization(row: DirectoryOrganizationRow) {
+  const currency = normalizeCurrency(row.default_currency);
+
+  if (!currency) {
+    return false;
+  }
+
+  return Boolean(MINIMUM_PURCHASE_THRESHOLDS[currency]);
 }
 
 function getPublicLocation(location: RelatedLocation | null) {
@@ -169,7 +259,96 @@ function getPublicLocation(location: RelatedLocation | null) {
   };
 }
 
-function mapDirectoryOrganization(row: DirectoryOrganizationRow) {
+function getEmptyActionStats(): OrganizationActionStats {
+  return {
+    activeOffersCount: 0,
+    activeCertificatesCount: 0,
+  };
+}
+
+function isOfferCurrentlyActive(offer: OfferActionRow, nowIso: string) {
+  if (offer.status !== "active") {
+    return false;
+  }
+
+  if (offer.valid_from && offer.valid_from > nowIso) {
+    return false;
+  }
+
+  if (offer.valid_until && offer.valid_until < nowIso) {
+    return false;
+  }
+
+  return true;
+}
+
+async function getActionStatsByOrganizationId(
+  organizationIds: string[]
+): Promise<Map<string, OrganizationActionStats>> {
+  const statsByOrganizationId = new Map<string, OrganizationActionStats>();
+
+  for (const organizationId of organizationIds) {
+    statsByOrganizationId.set(organizationId, getEmptyActionStats());
+  }
+
+  if (organizationIds.length === 0) {
+    return statsByOrganizationId;
+  }
+
+  const nowIso = new Date().toISOString();
+
+  const { data: offers, error } = await supabase
+    .from("offers")
+    .select(
+      `
+      id,
+      organization_id,
+      certificate_available,
+      status,
+      valid_from,
+      valid_until
+    `
+    )
+    .in("organization_id", organizationIds)
+    .eq("status", "active")
+    .or(`valid_from.is.null,valid_from.lte.${nowIso}`)
+    .or(`valid_until.is.null,valid_until.gte.${nowIso}`);
+
+  if (error) {
+    return statsByOrganizationId;
+  }
+
+  const offerRows = (offers as unknown as OfferActionRow[] | null) ?? [];
+
+  for (const offer of offerRows) {
+    if (!offer.organization_id) {
+      continue;
+    }
+
+    if (!isOfferCurrentlyActive(offer, nowIso)) {
+      continue;
+    }
+
+    const currentStats =
+      statsByOrganizationId.get(offer.organization_id) ??
+      getEmptyActionStats();
+
+    currentStats.activeOffersCount += 1;
+
+    if (offer.certificate_available) {
+      currentStats.activeCertificatesCount += 1;
+    }
+
+    statsByOrganizationId.set(offer.organization_id, currentStats);
+  }
+
+  return statsByOrganizationId;
+}
+
+function mapDirectoryOrganization(
+  row: DirectoryOrganizationRow,
+  actionStats: OrganizationActionStats
+) {
   const primaryCategoryRelation =
     row.organization_categories?.find((item) => item.is_primary) ??
     row.organization_categories?.[0] ??
@@ -188,6 +367,7 @@ function mapDirectoryOrganization(row: DirectoryOrganizationRow) {
     null;
 
   const stats = row.organization_search_stats?.[0] ?? null;
+  const canRegisterPurchase = canRegisterPurchaseForOrganization(row);
 
   return {
     id: row.id,
@@ -219,7 +399,34 @@ function mapDirectoryOrganization(row: DirectoryOrganizationRow) {
       purchaseRegistrationClicksCount:
         stats?.purchase_registration_clicks_count ?? 0,
     },
+    actionStats: {
+      activeOffersCount: actionStats.activeOffersCount,
+      activeCertificatesCount: actionStats.activeCertificatesCount,
+      hasActiveOffers: actionStats.activeOffersCount > 0,
+      hasActiveCertificates: actionStats.activeCertificatesCount > 0,
+      canRegisterPurchase,
+    },
   };
+}
+
+function rowMatchesActionFilter(
+  row: DirectoryOrganizationRow,
+  actionFilter: DirectoryActionFilter,
+  actionStats: OrganizationActionStats
+) {
+  if (actionFilter === "hasOffers") {
+    return actionStats.activeOffersCount > 0;
+  }
+
+  if (actionFilter === "hasCertificates") {
+    return actionStats.activeCertificatesCount > 0;
+  }
+
+  if (actionFilter === "canRegisterPurchase") {
+    return canRegisterPurchaseForOrganization(row);
+  }
+
+  return true;
 }
 
 export async function GET(request: NextRequest) {
@@ -229,6 +436,7 @@ export async function GET(request: NextRequest) {
   const categorySlug = normalizeSearchValue(searchParams.get("category"));
   const city = normalizeSearchValue(searchParams.get("city"));
   const countryCode = normalizeSearchValue(searchParams.get("countryCode"));
+  const action = normalizeActionFilter(searchParams.get("action"));
   const limitParam = Number(searchParams.get("limit") ?? "50");
 
   const limit = Number.isFinite(limitParam)
@@ -332,7 +540,7 @@ export async function GET(request: NextRequest) {
 
   const rows = (data as unknown as DirectoryOrganizationRow[] | null) ?? [];
 
-  const filteredRows = rows.filter((row) => {
+  const locationAndCategoryFilteredRows = rows.filter((row) => {
     if (categorySlug) {
       const hasMatchingCategory =
         row.organization_categories?.some((categoryRelation) => {
@@ -365,15 +573,32 @@ export async function GET(request: NextRequest) {
     return true;
   });
 
+  const actionStatsByOrganizationId = await getActionStatsByOrganizationId(
+    locationAndCategoryFilteredRows.map((row) => row.id)
+  );
+
+  const filteredRows = locationAndCategoryFilteredRows.filter((row) => {
+    const actionStats =
+      actionStatsByOrganizationId.get(row.id) ?? getEmptyActionStats();
+
+    return rowMatchesActionFilter(row, action, actionStats);
+  });
+
   return NextResponse.json({
     ok: true,
-    organizations: filteredRows.map(mapDirectoryOrganization),
+    organizations: filteredRows.map((row) =>
+      mapDirectoryOrganization(
+        row,
+        actionStatsByOrganizationId.get(row.id) ?? getEmptyActionStats()
+      )
+    ),
     count: filteredRows.length,
     filters: {
       q,
       category: categorySlug,
       city,
       countryCode,
+      action,
       limit,
     },
   });
