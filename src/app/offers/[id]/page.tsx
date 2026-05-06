@@ -400,12 +400,14 @@ function getDirectoryHref(organization: OrganizationRow | null) {
   return "/directory";
 }
 
-function getOrganizationInternalHref(organization: OrganizationRow | null) {
-  if (!organization?.id) {
-    return "/organizations";
+function getRegisterPurchaseHref(organization: OrganizationRow | null) {
+  const directoryHref = getDirectoryHref(organization);
+
+  if (directoryHref === "/directory") {
+    return directoryHref;
   }
 
-  return `/organizations/${organization.id}`;
+  return `${directoryHref}#register-purchase`;
 }
 
 function getCertificateOrderHref(offerId: string) {
@@ -439,7 +441,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
   }
 
   const directoryHref = getDirectoryHref(organization);
-  const organizationInternalHref = getOrganizationInternalHref(organization);
+  const registerPurchaseHref = getRegisterPurchaseHref(organization);
   const certificateOrderHref = offer
     ? getCertificateOrderHref(offer.id)
     : "/certificates/new";
@@ -558,7 +560,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                 </Link>
 
                 <Link
-                  href={organizationInternalHref}
+                  href={registerPurchaseHref}
                   style={{
                     display: "inline-block",
                     padding: "11px 16px",
@@ -776,7 +778,8 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                 </div>
 
                 <div>
-                  <strong>Действует до:</strong> {formatDate(offer.validUntil)}
+                  <strong>Действует до:</strong>{" "}
+                  {formatDate(offer.validUntil)}
                 </div>
               </div>
             </section>
@@ -936,7 +939,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
               ) : null}
 
               <Link
-                href={organizationInternalHref}
+                href={registerPurchaseHref}
                 style={{
                   display: "inline-block",
                   padding: "10px 14px",
