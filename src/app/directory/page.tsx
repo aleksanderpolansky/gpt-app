@@ -70,15 +70,25 @@ type DirectoryApiResponse = {
   error?: string;
 };
 
+function getBaseUrl() {
+  const publicAppUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+
+  if (publicAppUrl) {
+    return publicAppUrl;
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  return "http://localhost:3000";
+}
+
 async function getDirectoryOrganizations(): Promise<{
   organizations: DirectoryOrganization[];
   errorMessage: string | null;
 }> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
-    process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000";
+  const baseUrl = getBaseUrl();
 
   try {
     const response = await fetch(`${baseUrl}/api/directory/organizations`, {
@@ -113,6 +123,10 @@ function getLocationLabel(location: DirectoryLocation | null) {
     return "Локация не указана";
   }
 
+  if (location.addressVisibility === "hidden") {
+    return "Адрес скрыт";
+  }
+
   const parts = [
     location.city,
     location.district,
@@ -121,10 +135,6 @@ function getLocationLabel(location: DirectoryLocation | null) {
 
   if (parts.length === 0) {
     return "Локация не указана";
-  }
-
-  if (location.addressVisibility === "hidden") {
-    return "Адрес скрыт";
   }
 
   if (location.addressVisibility === "approximate") {
@@ -170,6 +180,14 @@ function getOrganizationTypeLabel(type: string | null | undefined) {
   return type ?? "Предприятие";
 }
 
+function getDirectoryOrganizationHref(organization: DirectoryOrganization) {
+  if (organization.publicSlug) {
+    return `/directory/${organization.publicSlug}`;
+  }
+
+  return "/directory";
+}
+
 export default async function DirectoryPage() {
   const { organizations, errorMessage } = await getDirectoryOrganizations();
 
@@ -210,7 +228,7 @@ export default async function DirectoryPage() {
               lineHeight: "1.5",
             }}
           >
-            Здесь будут отображаться опубликованные предприятия, связанные с
+            Здесь отображаются опубликованные предприятия, связанные с
             предложениями, сертификатами и POINTS.
           </p>
 
@@ -224,7 +242,8 @@ export default async function DirectoryPage() {
           >
             В каталоге показываются только предприятия, которые включили
             публичный профиль и были опубликованы в directory layer. Если адрес
-            скрыт или указан приблизительно, точный адрес не раскрывается.
+            скрыт или указан приблизительно, точный адрес и точные координаты не
+            раскрываются.
           </p>
         </header>
 
@@ -278,10 +297,10 @@ export default async function DirectoryPage() {
             }}
           >
             <div style={{ color: "#7a4b00", marginBottom: "8px" }}>
-              Статус MVP
+              Статус
             </div>
             <div style={{ fontSize: "24px", fontWeight: 700 }}>
-              Directory test
+              Public directory
             </div>
           </div>
         </section>
@@ -322,7 +341,8 @@ export default async function DirectoryPage() {
             </h2>
             <p style={{ margin: "6px 0 0", color: "#666666" }}>
               На этом этапе показывается только безопасная публичная информация:
-              название, категория, город, тип локации и ссылки на карточку.
+              название, категория, город, тип локации и ссылка на публичную
+              карточку.
             </p>
           </div>
 
@@ -340,9 +360,8 @@ export default async function DirectoryPage() {
               }}
             >
               {organizations.map((organization) => {
-                const organizationHref = organization.publicSlug
-                  ? `/directory/${organization.publicSlug}`
-                  : `/organizations/${organization.id}`;
+                const organizationHref =
+                  getDirectoryOrganizationHref(organization);
 
                 return (
                   <article
@@ -365,7 +384,8 @@ export default async function DirectoryPage() {
                           marginBottom: "6px",
                         }}
                       >
-                        {organization.primaryCategory?.name ?? "Категория не указана"}
+                        {organization.primaryCategory?.name ??
+                          "Категория не указана"}
                       </div>
 
                       <h3
@@ -437,21 +457,23 @@ export default async function DirectoryPage() {
                         Открыть карточку
                       </Link>
 
-                      <Link
-                        href={`/organizations/${organization.id}`}
-                        style={{
-                          display: "inline-block",
-                          padding: "9px 12px",
-                          borderRadius: "8px",
-                          border: "1px solid #dddddd",
-                          background: "#ffffff",
-                          color: "#111111",
-                          textDecoration: "none",
-                          fontWeight: 600,
-                        }}
-                      >
-                        Внутренняя страница
-                      </Link>
+                      {organization.publicSlug ? (
+                        <Link
+                          href={`${organizationHref}#register-purchase`}
+                          style={{
+                            display: "inline-block",
+                            padding: "9px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #16a34a",
+                            background: "#16a34a",
+                            color: "#ffffff",
+                            textDecoration: "none",
+                            fontWeight: 800,
+                          }}
+                        >
+                          Зарегистрировать покупку
+                        </Link>
+                      ) : null}
                     </div>
                   </article>
                 );
