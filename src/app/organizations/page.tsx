@@ -310,7 +310,7 @@ export default function OrganizationsPage() {
               }}
             >
               <Link
-                href="/api/auth/login"
+                href="/auth/login"
                 style={{
                   display: "inline-block",
                   border: "1px solid #2563eb",
