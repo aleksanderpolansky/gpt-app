@@ -15,6 +15,13 @@ type OrganizationLocation = {
   is_primary: boolean | null;
   is_active: boolean | null;
   created_at: string;
+  cityGeoStatus?: string | null;
+  cityGeoSource?: string | null;
+  cityGeoIsOwnSuggestion?: boolean;
+  districtGeoStatus?: string | null;
+  districtGeoSource?: string | null;
+  districtGeoIsOwnSuggestion?: boolean;
+  geoStatusLabel?: string | null;
 };
 
 type Organization = {
@@ -64,6 +71,20 @@ function getLocationPrivacyLabel(
 
   if (location.address_visibility === "hidden") {
     return "Скрытая локация";
+  }
+
+  return null;
+}
+
+function getLocationStatusLabel(
+  location: OrganizationLocation | null | undefined
+) {
+  if (!location) {
+    return null;
+  }
+
+  if (location.geoStatusLabel) {
+    return location.geoStatusLabel;
   }
 
   return null;
@@ -246,6 +267,9 @@ export default function OrganizationsPage() {
               const locationPrivacyLabel = getLocationPrivacyLabel(
                 organization.primaryLocation
               );
+              const locationStatusLabel = getLocationStatusLabel(
+                organization.primaryLocation
+              );
 
               return (
                 <article
@@ -290,6 +314,19 @@ export default function OrganizationsPage() {
                       }}
                     >
                       {locationPrivacyLabel}
+                    </p>
+                  ) : null}
+
+                  {locationStatusLabel ? (
+                    <p
+                      style={{
+                        margin: "0 0 6px",
+                        color: "#92400e",
+                        fontSize: "14px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Статус локации: {locationStatusLabel}
                     </p>
                   ) : null}
 

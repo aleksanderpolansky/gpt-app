@@ -40,6 +40,16 @@ type OrganizationLocationRow = {
   created_at: string;
 };
 
+type OrganizationLocationWithGeoStatus = OrganizationLocationRow & {
+  cityGeoStatus: string | null;
+  cityGeoSource: string | null;
+  cityGeoIsOwnSuggestion: boolean;
+  districtGeoStatus: string | null;
+  districtGeoSource: string | null;
+  districtGeoIsOwnSuggestion: boolean;
+  geoStatusLabel: string | null;
+};
+
 type AppUserRow = {
   id: string;
   auth0_sub: string;
@@ -469,6 +479,142 @@ function getPrimaryLocationForOrganization(
   );
 }
 
+function normalizeNameForMatching(value: string | null | undefined) {
+  if (!value) {
+    return "";
+  }
+
+  return value.trim().toLowerCase();
+}
+
+function isOwnSuggestedGeoArea(geoArea: GeoAreaRow | null, appUserId: string) {
+  return Boolean(
+    geoArea &&
+      geoArea.source === "user_suggestion" &&
+      geoArea.created_by_user_id === appUserId &&
+      (geoArea.status === "suggested" || geoArea.status === "needs_review")
+  );
+}
+
+async function findGeoAreaByLocationName(input: {
+  areaType: "city" | "district";
+  countryCode: string | null;
+  name: string | null;
+  parentId?: string | null;
+}) {
+  if (!input.countryCode || !input.name) {
+    return null;
+  }
+
+  let query = supabase
+    .from("geo_areas")
+    .select(
+      `
+      id,
+      parent_id,
+      area_type,
+      country_code,
+      name,
+      slug,
+      latitude,
+      longitude,
+      status,
+      source,
+      created_by_user_id,
+      is_active
+    `
+    )
+    .eq("area_type", input.areaType)
+    .eq("country_code", input.countryCode)
+    .eq("name", input.name)
+    .eq("is_active", true)
+    .limit(1);
+
+  if (input.parentId) {
+    query = query.eq("parent_id", input.parentId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return null;
+  }
+
+  return ((data ?? [])[0] as GeoAreaRow | undefined) ?? null;
+}
+
+function createGeoStatusLabel(input: {
+  cityGeoArea: GeoAreaRow | null;
+  districtGeoArea: GeoAreaRow | null;
+  appUserId: string;
+}) {
+  const parts: string[] = [];
+
+  if (isOwnSuggestedGeoArea(input.cityGeoArea, input.appUserId)) {
+    parts.push("город ожидает проверки");
+  } else if (
+    input.cityGeoArea &&
+    input.cityGeoArea.status &&
+    input.cityGeoArea.status !== "approved"
+  ) {
+    parts.push(`город: ${input.cityGeoArea.status}`);
+  }
+
+  if (isOwnSuggestedGeoArea(input.districtGeoArea, input.appUserId)) {
+    parts.push("район ожидает проверки");
+  } else if (
+    input.districtGeoArea &&
+    input.districtGeoArea.status &&
+    input.districtGeoArea.status !== "approved"
+  ) {
+    parts.push(`район: ${input.districtGeoArea.status}`);
+  }
+
+  if (parts.length === 0) {
+    return null;
+  }
+
+  return parts.join(", ");
+}
+
+async function enrichLocationWithGeoStatus(input: {
+  location: OrganizationLocationRow;
+  appUserId: string;
+}): Promise<OrganizationLocationWithGeoStatus> {
+  const cityGeoArea = await findGeoAreaByLocationName({
+    areaType: "city",
+    countryCode: input.location.country_code,
+    name: input.location.city,
+  });
+
+  const districtGeoArea = await findGeoAreaByLocationName({
+    areaType: "district",
+    countryCode: input.location.country_code,
+    name: input.location.district,
+    parentId: cityGeoArea?.id ?? null,
+  });
+
+  const geoStatusLabel = createGeoStatusLabel({
+    cityGeoArea,
+    districtGeoArea,
+    appUserId: input.appUserId,
+  });
+
+  return {
+    ...input.location,
+    cityGeoStatus: cityGeoArea?.status ?? null,
+    cityGeoSource: cityGeoArea?.source ?? null,
+    cityGeoIsOwnSuggestion: isOwnSuggestedGeoArea(cityGeoArea, input.appUserId),
+    districtGeoStatus: districtGeoArea?.status ?? null,
+    districtGeoSource: districtGeoArea?.source ?? null,
+    districtGeoIsOwnSuggestion: isOwnSuggestedGeoArea(
+      districtGeoArea,
+      input.appUserId
+    ),
+    geoStatusLabel,
+  };
+}
+
 export async function GET() {
   const { appUser, errorResponse } = await getCurrentAppUser();
 
@@ -525,12 +671,21 @@ export async function GET() {
 
   const locationRows = (locations ?? []) as OrganizationLocationRow[];
 
+  const enrichedLocationRows = await Promise.all(
+    locationRows.map((location) =>
+      enrichLocationWithGeoStatus({
+        location,
+        appUserId: appUser.id,
+      })
+    )
+  );
+
   const organizationsWithLocations =
     organizations?.map((organization) => ({
       ...organization,
       primaryLocation: getPrimaryLocationForOrganization(
         organization.id,
-        locationRows
+        enrichedLocationRows
       ),
     })) ?? [];
 
