@@ -93,6 +93,7 @@ function mapSuggestionToGeoArea(
 
 function mergeGeoAreas(currentAreas: GeoArea[], nextArea: GeoArea) {
   const withoutDuplicate = currentAreas.filter((area) => area.id !== nextArea.id);
+
   return [...withoutDuplicate, nextArea].sort((firstArea, secondArea) => {
     if (firstArea.sortOrder !== secondArea.sortOrder) {
       return firstArea.sortOrder - secondArea.sortOrder;
@@ -114,6 +115,10 @@ function getAreaOptionLabel(area: GeoArea) {
   return area.name;
 }
 
+function normalizeCountryCodeInput(value: string) {
+  return value.trim().toUpperCase();
+}
+
 export default function NewOrganizationPage() {
   const [organizationName, setOrganizationName] = useState("");
   const [organizationType, setOrganizationType] = useState("private_business");
@@ -132,6 +137,19 @@ export default function NewOrganizationPage() {
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
 
   const [geoErrorMessage, setGeoErrorMessage] = useState<string | null>(null);
+
+  const [isSuggestCountryOpen, setIsSuggestCountryOpen] = useState(false);
+  const [suggestedCountryName, setSuggestedCountryName] = useState("");
+  const [suggestedCountryCode, setSuggestedCountryCode] = useState("");
+  const [suggestedCountryNotes, setSuggestedCountryNotes] = useState("");
+  const [isSubmittingCountrySuggestion, setIsSubmittingCountrySuggestion] =
+    useState(false);
+  const [countrySuggestionMessage, setCountrySuggestionMessage] = useState<
+    string | null
+  >(null);
+  const [countrySuggestionError, setCountrySuggestionError] = useState<
+    string | null
+  >(null);
 
   const [isSuggestCityOpen, setIsSuggestCityOpen] = useState(false);
   const [suggestedCityName, setSuggestedCityName] = useState("");
@@ -195,7 +213,7 @@ export default function NewOrganizationPage() {
 
       try {
         const loadedCountries = await loadGeoAreas(
-          "/api/geo/areas?areaType=country&status=approved"
+          "/api/geo/areas?areaType=country&includeOwnSuggestions=true"
         );
 
         if (!isMounted) {
@@ -349,6 +367,83 @@ export default function NewOrganizationPage() {
     };
   }, [cityGeoAreaId]);
 
+  async function handleSuggestCountry() {
+    setCountrySuggestionMessage(null);
+    setCountrySuggestionError(null);
+
+    const normalizedCountryCode = normalizeCountryCodeInput(suggestedCountryCode);
+
+    if (suggestedCountryName.trim().length < 2) {
+      setCountrySuggestionError(
+        "Название страны должно содержать минимум 2 символа."
+      );
+      return;
+    }
+
+    if (!/^[A-Z]{2}$/.test(normalizedCountryCode)) {
+      setCountrySuggestionError(
+        "Код страны должен состоять из 2 латинских букв, например ES, DE, PL."
+      );
+      return;
+    }
+
+    setIsSubmittingCountrySuggestion(true);
+
+    try {
+      const response = await fetch("/api/geo/suggestions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          areaType: "country",
+          countryCode: normalizedCountryCode,
+          name: suggestedCountryName,
+          parentId: null,
+          notes: suggestedCountryNotes || null,
+        }),
+      });
+
+      const data = (await response.json()) as GeoSuggestionResponse;
+
+      if (!response.ok || !data.ok) {
+        setCountrySuggestionError(data.error ?? "Не удалось добавить страну.");
+        return;
+      }
+
+      const nextCountry = mapSuggestionToGeoArea(data.geoArea);
+
+      if (nextCountry) {
+        setCountries((currentCountries) =>
+          mergeGeoAreas(currentCountries, nextCountry)
+        );
+        setCountryGeoAreaId(nextCountry.id);
+      }
+
+      setCountrySuggestionMessage(
+        data.alreadyExists
+          ? data.message ??
+              "Такая страна уже есть в справочнике или уже была предложена ранее."
+          : `Страна “${
+              data.geoArea?.name ?? suggestedCountryName
+            }” добавлена и уже доступна вам для выбора. Теперь город нужно добавлять внутри этой страны.`
+      );
+
+      setSuggestedCountryName("");
+      setSuggestedCountryCode("");
+      setSuggestedCountryNotes("");
+      setIsSuggestCountryOpen(false);
+    } catch (error) {
+      setCountrySuggestionError(
+        error instanceof Error
+          ? error.message
+          : "Unknown country suggestion error"
+      );
+    } finally {
+      setIsSubmittingCountrySuggestion(false);
+    }
+  }
+
   async function handleSuggestCity() {
     setCitySuggestionMessage(null);
     setCitySuggestionError(null);
@@ -400,7 +495,9 @@ export default function NewOrganizationPage() {
               "Такой город уже есть в справочнике или уже был предложен ранее."
           : `Город “${
               data.geoArea?.name ?? suggestedCityName
-            }” добавлен и уже доступен вам для выбора. Позже он будет проверен администратором.`
+            }” добавлен в страну ${
+              selectedCountry?.name ?? selectedCountryCode
+            } и уже доступен вам для выбора. Позже он будет проверен администратором.`
       );
 
       setSuggestedCityName("");
@@ -538,6 +635,13 @@ export default function NewOrganizationPage() {
       setDistrictGeoAreaId("");
       setCities([]);
       setDistricts([]);
+
+      setCountrySuggestionMessage(null);
+      setCountrySuggestionError(null);
+      setIsSuggestCountryOpen(false);
+      setSuggestedCountryName("");
+      setSuggestedCountryCode("");
+      setSuggestedCountryNotes("");
 
       setCitySuggestionMessage(null);
       setCitySuggestionError(null);
@@ -728,10 +832,9 @@ export default function NewOrganizationPage() {
                   lineHeight: "1.5",
                 }}
               >
-                Страны, города и районы берутся из справочника geo_areas.
-                Районы загружаются отдельно для каждого выбранного города.
-                Добавленные вами города и районы становятся доступными вам сразу,
-                но будут проверены администратором позже.
+                Сначала выберите страну. Город добавляется только внутри
+                выбранной страны, а район — только внутри выбранного города.
+                Если страны нет, добавьте её сначала, например Spain / ES.
               </p>
             </div>
 
@@ -784,11 +887,227 @@ export default function NewOrganizationPage() {
 
                 {countries.map((country) => (
                   <option key={country.id} value={country.id}>
-                    {country.name}
+                    {getAreaOptionLabel(country)}
                     {country.countryCode ? ` / ${country.countryCode}` : ""}
                   </option>
                 ))}
               </select>
+
+              <div style={{ marginTop: "10px", display: "grid", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSuggestCountryOpen((currentValue) => !currentValue);
+                    setCountrySuggestionMessage(null);
+                    setCountrySuggestionError(null);
+                  }}
+                  style={{
+                    border: "1px solid #2563eb",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    background: "#eff6ff",
+                    color: "#1e3a8a",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {isSuggestCountryOpen
+                    ? "Скрыть форму добавления страны"
+                    : "Не нашли страну? Добавить новую страну"}
+                </button>
+
+                {countrySuggestionMessage ? (
+                  <div
+                    style={{
+                      border: "1px solid #bbf7d0",
+                      borderRadius: "8px",
+                      padding: "10px",
+                      background: "#f0fdf4",
+                      color: "#166534",
+                      fontSize: "14px",
+                      lineHeight: "1.4",
+                    }}
+                  >
+                    {countrySuggestionMessage}
+                  </div>
+                ) : null}
+
+                {countrySuggestionError ? (
+                  <div
+                    style={{
+                      border: "1px solid #fecaca",
+                      borderRadius: "8px",
+                      padding: "10px",
+                      background: "#fff1f2",
+                      color: "#991b1b",
+                      fontSize: "14px",
+                      lineHeight: "1.4",
+                    }}
+                  >
+                    {countrySuggestionError}
+                  </div>
+                ) : null}
+
+                {isSuggestCountryOpen ? (
+                  <div
+                    style={{
+                      border: "1px solid #bfdbfe",
+                      borderRadius: "10px",
+                      padding: "12px",
+                      background: "#f8fbff",
+                      display: "grid",
+                      gap: "10px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: "#1e3a8a",
+                        fontSize: "14px",
+                        lineHeight: "1.4",
+                      }}
+                    >
+                      Страна будет сразу доступна вам для выбора. Для остальных
+                      пользователей она станет публичной после проверки.
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          fontWeight: 700,
+                          marginBottom: "6px",
+                        }}
+                      >
+                        Название страны
+                      </label>
+
+                      <input
+                        type="text"
+                        value={suggestedCountryName}
+                        onChange={(event) =>
+                          setSuggestedCountryName(event.target.value)
+                        }
+                        placeholder="Например: Spain, Germany, Ukraine"
+                        style={{
+                          width: "100%",
+                          border: "1px solid #cccccc",
+                          borderRadius: "8px",
+                          padding: "10px",
+                          fontSize: "15px",
+                          boxSizing: "border-box",
+                          background: "#ffffff",
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          fontWeight: 700,
+                          marginBottom: "6px",
+                        }}
+                      >
+                        Код страны ISO 3166-1 alpha-2
+                      </label>
+
+                      <input
+                        type="text"
+                        value={suggestedCountryCode}
+                        onChange={(event) =>
+                          setSuggestedCountryCode(
+                            normalizeCountryCodeInput(event.target.value)
+                          )
+                        }
+                        placeholder="Например: ES, DE, UA"
+                        maxLength={2}
+                        style={{
+                          width: "100%",
+                          border: "1px solid #cccccc",
+                          borderRadius: "8px",
+                          padding: "10px",
+                          fontSize: "15px",
+                          boxSizing: "border-box",
+                          background: "#ffffff",
+                          textTransform: "uppercase",
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          fontWeight: 700,
+                          marginBottom: "6px",
+                        }}
+                      >
+                        Комментарий для проверки
+                      </label>
+
+                      <textarea
+                        value={suggestedCountryNotes}
+                        onChange={(event) =>
+                          setSuggestedCountryNotes(event.target.value)
+                        }
+                        placeholder="Можно указать, почему нужно добавить эту страну."
+                        style={{
+                          width: "100%",
+                          minHeight: "72px",
+                          border: "1px solid #cccccc",
+                          borderRadius: "8px",
+                          padding: "10px",
+                          fontSize: "15px",
+                          boxSizing: "border-box",
+                          resize: "vertical",
+                          background: "#ffffff",
+                        }}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={
+                        isSubmittingCountrySuggestion ||
+                        suggestedCountryName.trim().length < 2 ||
+                        !/^[A-Z]{2}$/.test(
+                          normalizeCountryCodeInput(suggestedCountryCode)
+                        )
+                      }
+                      onClick={() => {
+                        handleSuggestCountry();
+                      }}
+                      style={{
+                        border: "none",
+                        borderRadius: "8px",
+                        padding: "11px 14px",
+                        background:
+                          isSubmittingCountrySuggestion ||
+                          suggestedCountryName.trim().length < 2 ||
+                          !/^[A-Z]{2}$/.test(
+                            normalizeCountryCodeInput(suggestedCountryCode)
+                          )
+                            ? "#9ca3af"
+                            : "#2563eb",
+                        color: "#ffffff",
+                        fontWeight: 800,
+                        cursor:
+                          isSubmittingCountrySuggestion ||
+                          suggestedCountryName.trim().length < 2 ||
+                          !/^[A-Z]{2}$/.test(
+                            normalizeCountryCodeInput(suggestedCountryCode)
+                          )
+                            ? "not-allowed"
+                            : "pointer",
+                      }}
+                    >
+                      {isSubmittingCountrySuggestion
+                        ? "Добавляю..."
+                        : "Добавить страну"}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             <div>
@@ -912,10 +1231,12 @@ export default function NewOrganizationPage() {
                           lineHeight: "1.4",
                         }}
                       >
-                        Город будет сразу добавлен в ваш список выбора для
-                        страны: <strong>{selectedCountryCode}</strong>. Для
-                        остальных пользователей он станет публичным после
-                        проверки.
+                        Город будет добавлен именно в страну:{" "}
+                        <strong>
+                          {selectedCountry?.name ?? selectedCountryCode}
+                        </strong>
+                        . Если это другой город, сначала выберите правильную
+                        страну.
                       </div>
 
                       <div>
@@ -1154,11 +1475,8 @@ export default function NewOrganizationPage() {
                           lineHeight: "1.4",
                         }}
                       >
-                        Район будет сразу добавлен в ваш список выбора только
-                        для города:{" "}
+                        Район будет добавлен только в город:{" "}
                         <strong>{selectedCity?.name ?? "город не выбран"}</strong>.
-                        Для остальных пользователей он станет публичным после
-                        проверки.
                       </div>
 
                       <div>

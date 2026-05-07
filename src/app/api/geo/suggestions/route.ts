@@ -4,7 +4,12 @@ import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-type GeoAreaType = "region" | "city" | "district" | "neighborhood";
+type GeoAreaType =
+  | "country"
+  | "region"
+  | "city"
+  | "district"
+  | "neighborhood";
 
 type GeoAreaStatus = "approved" | "suggested" | "needs_review" | "rejected";
 
@@ -18,7 +23,7 @@ type GeoAreaSource =
 type GeoAreaRow = {
   id: string;
   parent_id: string | null;
-  area_type: GeoAreaType | "country" | "custom_zone";
+  area_type: GeoAreaType | "custom_zone";
   country_code: string | null;
   name: string;
   slug: string;
@@ -47,6 +52,7 @@ type GeoSuggestionResponseItem = GeoAreaRow & {
 };
 
 const ALLOWED_SUGGESTION_AREA_TYPES: GeoAreaType[] = [
+  "country",
   "region",
   "city",
   "district",
@@ -192,6 +198,7 @@ function normalizeAreaType(value: string | null): GeoAreaType | null {
   }
 
   if (
+    value === "country" ||
     value === "region" ||
     value === "city" ||
     value === "district" ||
@@ -241,8 +248,11 @@ function validateSuggestionInput(input: {
   name: string | null;
   parentId: string | null;
 }) {
-  if (!input.areaType || !ALLOWED_SUGGESTION_AREA_TYPES.includes(input.areaType)) {
-    return "areaType must be one of: region, city, district, neighborhood";
+  if (
+    !input.areaType ||
+    !ALLOWED_SUGGESTION_AREA_TYPES.includes(input.areaType)
+  ) {
+    return "areaType must be one of: country, region, city, district, neighborhood";
   }
 
   if (!input.countryCode) {
@@ -259,6 +269,10 @@ function validateSuggestionInput(input: {
 
   if (input.name.length > 120) {
     return "name must be shorter than 120 characters";
+  }
+
+  if (input.areaType === "country" && input.parentId) {
+    return "parentId is not allowed for country suggestions";
   }
 
   if (
@@ -324,6 +338,14 @@ function validateParentRelation(input: {
       }
     | null;
 }) {
+  if (input.areaType === "country") {
+    if (input.parentGeoArea) {
+      return "Country must not have a parent geo area";
+    }
+
+    return null;
+  }
+
   if (!input.parentGeoArea) {
     if (input.areaType === "region" || input.areaType === "city") {
       return null;
