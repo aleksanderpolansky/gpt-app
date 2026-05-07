@@ -36,6 +36,16 @@ type GeoAreaRow = {
   updated_at: string;
 };
 
+type GeoSuggestionResponseItem = GeoAreaRow & {
+  parentArea: {
+    id: string;
+    area_type: string;
+    country_code: string | null;
+    name: string;
+    slug: string;
+  } | null;
+};
+
 const ALLOWED_SUGGESTION_AREA_TYPES: GeoAreaType[] = [
   "region",
   "city",
@@ -426,6 +436,72 @@ async function findExistingGeoArea(input: {
   };
 }
 
+async function getParentAreasForSuggestions(suggestions: GeoAreaRow[]) {
+  const parentIds = Array.from(
+    new Set(
+      suggestions
+        .map((suggestion) => suggestion.parent_id)
+        .filter((parentId): parentId is string => Boolean(parentId))
+    )
+  );
+
+  if (parentIds.length === 0) {
+    return new Map<
+      string,
+      {
+        id: string;
+        area_type: string;
+        country_code: string | null;
+        name: string;
+        slug: string;
+      }
+    >();
+  }
+
+  const { data: parentAreas, error: parentAreasError } = await supabase
+    .from("geo_areas")
+    .select("id, area_type, country_code, name, slug")
+    .in("id", parentIds);
+
+  if (parentAreasError) {
+    throw new Error(parentAreasError.message);
+  }
+
+  return new Map(
+    (parentAreas ?? []).map((parentArea) => [
+      parentArea.id,
+      {
+        id: parentArea.id,
+        area_type: parentArea.area_type,
+        country_code: parentArea.country_code,
+        name: parentArea.name,
+        slug: parentArea.slug,
+      },
+    ])
+  );
+}
+
+function mapSuggestionWithParent(
+  suggestion: GeoAreaRow,
+  parentAreaMap: Map<
+    string,
+    {
+      id: string;
+      area_type: string;
+      country_code: string | null;
+      name: string;
+      slug: string;
+    }
+  >
+): GeoSuggestionResponseItem {
+  return {
+    ...suggestion,
+    parentArea: suggestion.parent_id
+      ? parentAreaMap.get(suggestion.parent_id) ?? null
+      : null,
+  };
+}
+
 export async function GET() {
   const { appUser, errorResponse } = await getCurrentAppUser();
 
@@ -476,10 +552,28 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json({
-    ok: true,
-    suggestions: suggestions ?? [],
-  });
+  const suggestionRows = (suggestions ?? []) as GeoAreaRow[];
+
+  try {
+    const parentAreaMap = await getParentAreasForSuggestions(suggestionRows);
+
+    return NextResponse.json({
+      ok: true,
+      suggestions: suggestionRows.map((suggestion) =>
+        mapSuggestionWithParent(suggestion, parentAreaMap)
+      ),
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Cannot load suggestion parent areas",
+      },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: Request) {
