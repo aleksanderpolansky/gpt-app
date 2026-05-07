@@ -513,10 +513,19 @@ function getPrimaryLocationForOrganization(
   );
 }
 
-function isSuggestedOrNeedsReviewGeoArea(geoArea: GeoAreaRow | null) {
+function normalizeNameForMatching(value: string | null | undefined) {
+  if (!value) {
+    return "";
+  }
+
+  return value.trim().toLowerCase();
+}
+
+function isOwnSuggestedGeoArea(geoArea: GeoAreaRow | null, appUserId: string) {
   return Boolean(
     geoArea &&
       geoArea.source === "user_suggestion" &&
+      geoArea.created_by_user_id === appUserId &&
       (geoArea.status === "suggested" || geoArea.status === "needs_review")
   );
 }
@@ -568,13 +577,14 @@ async function findGeoAreaByLocationName(input: {
   return ((data ?? [])[0] as GeoAreaRow | undefined) ?? null;
 }
 
-function createPublicGeoStatusLabel(input: {
+function createGeoStatusLabel(input: {
   cityGeoArea: GeoAreaRow | null;
   districtGeoArea: GeoAreaRow | null;
+  appUserId: string;
 }) {
   const parts: string[] = [];
 
-  if (isSuggestedOrNeedsReviewGeoArea(input.cityGeoArea)) {
+  if (isOwnSuggestedGeoArea(input.cityGeoArea, input.appUserId)) {
     parts.push("город ожидает проверки");
   } else if (
     input.cityGeoArea &&
@@ -584,7 +594,7 @@ function createPublicGeoStatusLabel(input: {
     parts.push(`город: ${input.cityGeoArea.status}`);
   }
 
-  if (isSuggestedOrNeedsReviewGeoArea(input.districtGeoArea)) {
+  if (isOwnSuggestedGeoArea(input.districtGeoArea, input.appUserId)) {
     parts.push("район ожидает проверки");
   } else if (
     input.districtGeoArea &&
@@ -603,6 +613,7 @@ function createPublicGeoStatusLabel(input: {
 
 async function enrichLocationWithGeoStatus(input: {
   location: OrganizationLocationRow;
+  appUserId: string;
 }): Promise<OrganizationLocationWithGeoStatus> {
   const cityGeoArea = await findGeoAreaByLocationName({
     areaType: "city",
@@ -617,39 +628,45 @@ async function enrichLocationWithGeoStatus(input: {
     parentId: cityGeoArea?.id ?? null,
   });
 
-  const geoStatusLabel = createPublicGeoStatusLabel({
+  const geoStatusLabel = createGeoStatusLabel({
     cityGeoArea,
     districtGeoArea,
+    appUserId: input.appUserId,
   });
 
   return {
     ...input.location,
     cityGeoStatus: cityGeoArea?.status ?? null,
     cityGeoSource: cityGeoArea?.source ?? null,
-    cityGeoIsOwnSuggestion: false,
+    cityGeoIsOwnSuggestion: isOwnSuggestedGeoArea(cityGeoArea, input.appUserId),
     districtGeoStatus: districtGeoArea?.status ?? null,
     districtGeoSource: districtGeoArea?.source ?? null,
-    districtGeoIsOwnSuggestion: false,
+    districtGeoIsOwnSuggestion: isOwnSuggestedGeoArea(
+      districtGeoArea,
+      input.appUserId
+    ),
     geoStatusLabel,
   };
 }
 
 export async function GET() {
+  const { appUser, errorResponse } = await getCurrentAppUser();
+
+  if (errorResponse) {
+    return errorResponse;
+  }
+
+  if (!appUser) {
+    return NextResponse.json(
+      { error: "App user not found" },
+      { status: 500 }
+    );
+  }
+
   const { data: organizations, error: organizationsError } = await supabase
     .from("organizations")
-    .select(
-      `
-      id,
-      organization_name,
-      organization_type,
-      description,
-      status,
-      country_code,
-      default_currency,
-      created_at
-    `
-    )
-    .eq("status", "active")
+    .select("*")
+    .eq("created_by_user_id", appUser.id)
     .order("created_at", { ascending: false });
 
   if (organizationsError) {
@@ -692,25 +709,19 @@ export async function GET() {
     locationRows.map((location) =>
       enrichLocationWithGeoStatus({
         location,
+        appUserId: appUser.id,
       })
     )
   );
 
   const organizationsWithLocations =
-    organizations?.map((organization) => {
-      const effectiveDefaultCurrency =
-        organization.default_currency ??
-        getDefaultCurrencyByCountryCode(organization.country_code);
-
-      return {
-        ...organization,
-        default_currency: effectiveDefaultCurrency,
-        primaryLocation: getPrimaryLocationForOrganization(
-          organization.id,
-          enrichedLocationRows
-        ),
-      };
-    }) ?? [];
+    organizations?.map((organization) => ({
+      ...organization,
+      primaryLocation: getPrimaryLocationForOrganization(
+        organization.id,
+        enrichedLocationRows
+      ),
+    })) ?? [];
 
   return NextResponse.json({
     ok: true,
