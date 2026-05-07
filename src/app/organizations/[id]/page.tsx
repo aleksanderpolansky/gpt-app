@@ -48,6 +48,7 @@ type Organization = {
   status: string;
   country_code?: string | null;
   default_currency?: string | null;
+  created_by_user_id?: string | null;
   created_at?: string | null;
 };
 
@@ -155,6 +156,7 @@ type PageData = {
   primaryLocation: OrganizationLocation | null;
   valueObjects: ValueObject[];
   offers: Offer[];
+  appUser: AppUser | null;
   errorMessage: string | null;
 };
 
@@ -174,6 +176,65 @@ function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   }
 
   return value;
+}
+
+function normalizeCountryCode(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const normalizedValue = value.trim().toUpperCase();
+
+  if (!/^[A-Z]{2}$/.test(normalizedValue)) {
+    return null;
+  }
+
+  return normalizedValue;
+}
+
+function getDefaultCurrencyByCountryCode(countryCode: string | null | undefined) {
+  const normalizedCountryCode = normalizeCountryCode(countryCode);
+
+  if (normalizedCountryCode === "PL") {
+    return "PLN";
+  }
+
+  if (normalizedCountryCode === "ES") {
+    return "EUR";
+  }
+
+  if (normalizedCountryCode === "DE") {
+    return "EUR";
+  }
+
+  if (normalizedCountryCode === "UA") {
+    return "UAH";
+  }
+
+  if (normalizedCountryCode === "US") {
+    return "USD";
+  }
+
+  if (normalizedCountryCode === "GB") {
+    return "GBP";
+  }
+
+  if (normalizedCountryCode === "CZ") {
+    return "CZK";
+  }
+
+  return "PLN";
+}
+
+function getEffectiveOrganizationCurrency(organization: Organization | null) {
+  if (!organization) {
+    return "PLN";
+  }
+
+  return (
+    organization.default_currency ??
+    getDefaultCurrencyByCountryCode(organization.country_code)
+  );
 }
 
 function formatMoney(
@@ -308,6 +369,10 @@ function getCoordinatesLabel(location: OrganizationLocation | null) {
     return "Not specified";
   }
 
+  if (location.address_visibility !== "public") {
+    return "Not shown for approximate or hidden location";
+  }
+
   if (location.latitude === null || location.longitude === null) {
     return "Not specified";
   }
@@ -327,11 +392,10 @@ function getLocationGeoStatusLabel(location: OrganizationLocation | null) {
   return null;
 }
 
-function isOwnSuggestedGeoArea(geoArea: GeoAreaRow | null, appUserId: string) {
+function isSuggestedOrNeedsReviewGeoArea(geoArea: GeoAreaRow | null) {
   return Boolean(
     geoArea &&
       geoArea.source === "user_suggestion" &&
-      geoArea.created_by_user_id === appUserId &&
       (geoArea.status === "suggested" || geoArea.status === "needs_review")
   );
 }
@@ -383,14 +447,13 @@ async function findGeoAreaByLocationName(input: {
   return ((data ?? [])[0] as GeoAreaRow | undefined) ?? null;
 }
 
-function createGeoStatusLabel(input: {
+function createPublicGeoStatusLabel(input: {
   cityGeoArea: GeoAreaRow | null;
   districtGeoArea: GeoAreaRow | null;
-  appUserId: string;
 }) {
   const parts: string[] = [];
 
-  if (isOwnSuggestedGeoArea(input.cityGeoArea, input.appUserId)) {
+  if (isSuggestedOrNeedsReviewGeoArea(input.cityGeoArea)) {
     parts.push("город ожидает проверки");
   } else if (
     input.cityGeoArea &&
@@ -400,7 +463,7 @@ function createGeoStatusLabel(input: {
     parts.push(`город: ${input.cityGeoArea.status}`);
   }
 
-  if (isOwnSuggestedGeoArea(input.districtGeoArea, input.appUserId)) {
+  if (isSuggestedOrNeedsReviewGeoArea(input.districtGeoArea)) {
     parts.push("район ожидает проверки");
   } else if (
     input.districtGeoArea &&
@@ -417,59 +480,48 @@ function createGeoStatusLabel(input: {
   return parts.join(", ");
 }
 
-async function enrichLocationWithGeoStatus(input: {
-  location: OrganizationLocation | null;
-  appUserId: string;
-}): Promise<OrganizationLocation | null> {
-  if (!input.location) {
+async function enrichLocationWithGeoStatus(
+  location: OrganizationLocation | null
+): Promise<OrganizationLocation | null> {
+  if (!location) {
     return null;
   }
 
   const cityGeoArea = await findGeoAreaByLocationName({
     areaType: "city",
-    countryCode: input.location.country_code,
-    name: input.location.city,
+    countryCode: location.country_code,
+    name: location.city,
   });
 
   const districtGeoArea = await findGeoAreaByLocationName({
     areaType: "district",
-    countryCode: input.location.country_code,
-    name: input.location.district,
+    countryCode: location.country_code,
+    name: location.district,
     parentId: cityGeoArea?.id ?? null,
   });
 
-  const geoStatusLabel = createGeoStatusLabel({
+  const geoStatusLabel = createPublicGeoStatusLabel({
     cityGeoArea,
     districtGeoArea,
-    appUserId: input.appUserId,
   });
 
   return {
-    ...input.location,
+    ...location,
     cityGeoStatus: cityGeoArea?.status ?? null,
     cityGeoSource: cityGeoArea?.source ?? null,
-    cityGeoIsOwnSuggestion: isOwnSuggestedGeoArea(cityGeoArea, input.appUserId),
+    cityGeoIsOwnSuggestion: false,
     districtGeoStatus: districtGeoArea?.status ?? null,
     districtGeoSource: districtGeoArea?.source ?? null,
-    districtGeoIsOwnSuggestion: isOwnSuggestedGeoArea(
-      districtGeoArea,
-      input.appUserId
-    ),
+    districtGeoIsOwnSuggestion: false,
     geoStatusLabel,
   };
 }
 
-async function getCurrentAppUser(): Promise<{
-  appUser: AppUser | null;
-  errorMessage: string | null;
-}> {
+async function getOptionalAppUser(): Promise<AppUser | null> {
   const session = await auth0.getSession();
 
   if (!session?.user) {
-    return {
-      appUser: null,
-      errorMessage: "Not authenticated",
-    };
+    return null;
   }
 
   const { data: appUser, error: appUserError } = await supabase
@@ -479,42 +531,16 @@ async function getCurrentAppUser(): Promise<{
     .single();
 
   if (appUserError || !appUser) {
-    return {
-      appUser: null,
-      errorMessage: appUserError?.message ?? "App user not found",
-    };
+    return null;
   }
 
-  return {
-    appUser: appUser as AppUser,
-    errorMessage: null,
-  };
+  return appUser as AppUser;
 }
 
 async function getOrganizationPageData(
   organizationId: string
 ): Promise<PageData> {
-  const { appUser, errorMessage } = await getCurrentAppUser();
-
-  if (errorMessage) {
-    return {
-      organization: null,
-      primaryLocation: null,
-      valueObjects: [],
-      offers: [],
-      errorMessage,
-    };
-  }
-
-  if (!appUser) {
-    return {
-      organization: null,
-      primaryLocation: null,
-      valueObjects: [],
-      offers: [],
-      errorMessage: "User context not found",
-    };
-  }
+  const appUser = await getOptionalAppUser();
 
   const [
     organizationResult,
@@ -533,11 +559,13 @@ async function getOrganizationPageData(
         status,
         country_code,
         default_currency,
+        created_by_user_id,
         created_at
       `
       )
       .eq("id", organizationId)
-      .single(),
+      .eq("status", "active")
+      .maybeSingle(),
 
     supabase
       .from("organization_locations")
@@ -580,6 +608,7 @@ async function getOrganizationPageData(
       `
       )
       .eq("organization_id", organizationId)
+      .eq("status", "active")
       .order("created_at", { ascending: false }),
 
     supabase
@@ -654,6 +683,7 @@ async function getOrganizationPageData(
       `
       )
       .eq("organization_id", organizationId)
+      .eq("status", "active")
       .order("created_at", { ascending: false }),
   ]);
 
@@ -663,6 +693,7 @@ async function getOrganizationPageData(
       primaryLocation: null,
       valueObjects: [],
       offers: [],
+      appUser,
       errorMessage: organizationResult.error.message,
     };
   }
@@ -673,16 +704,25 @@ async function getOrganizationPageData(
       primaryLocation: null,
       valueObjects: [],
       offers: [],
+      appUser,
       errorMessage: null,
     };
   }
 
+  const organization = organizationResult.data as Organization;
+
+  const effectiveOrganization: Organization = {
+    ...organization,
+    default_currency: getEffectiveOrganizationCurrency(organization),
+  };
+
   if (locationResult.error) {
     return {
-      organization: organizationResult.data as Organization,
+      organization: effectiveOrganization,
       primaryLocation: null,
       valueObjects: [],
       offers: [],
+      appUser,
       errorMessage: locationResult.error.message,
     };
   }
@@ -691,36 +731,37 @@ async function getOrganizationPageData(
     ((locationResult.data ?? [])[0] as OrganizationLocation | undefined) ??
     null;
 
-  const enrichedPrimaryLocation = await enrichLocationWithGeoStatus({
-    location: rawPrimaryLocation,
-    appUserId: appUser.id,
-  });
+  const enrichedPrimaryLocation =
+    await enrichLocationWithGeoStatus(rawPrimaryLocation);
 
   if (valueObjectsResult.error) {
     return {
-      organization: organizationResult.data as Organization,
+      organization: effectiveOrganization,
       primaryLocation: enrichedPrimaryLocation,
       valueObjects: [],
       offers: [],
+      appUser,
       errorMessage: valueObjectsResult.error.message,
     };
   }
 
   if (offersResult.error) {
     return {
-      organization: organizationResult.data as Organization,
+      organization: effectiveOrganization,
       primaryLocation: enrichedPrimaryLocation,
       valueObjects: (valueObjectsResult.data as ValueObject[] | null) ?? [],
       offers: [],
+      appUser,
       errorMessage: offersResult.error.message,
     };
   }
 
   return {
-    organization: organizationResult.data as Organization,
+    organization: effectiveOrganization,
     primaryLocation: enrichedPrimaryLocation,
     valueObjects: (valueObjectsResult.data as ValueObject[] | null) ?? [],
     offers: (offersResult.data as unknown as Offer[] | null) ?? [],
+    appUser,
     errorMessage: null,
   };
 }
@@ -745,9 +786,20 @@ export default async function OrganizationDetailsPage({
   )}`;
   const myPurchaseConfirmationsHref = "/my-purchase-confirmations";
 
-  const { organization, primaryLocation, valueObjects, offers, errorMessage } =
-    await getOrganizationPageData(organizationId);
+  const {
+    organization,
+    primaryLocation,
+    valueObjects,
+    offers,
+    appUser,
+    errorMessage,
+  } = await getOrganizationPageData(organizationId);
 
+  const isAuthenticated = Boolean(appUser);
+  const isOwner = Boolean(
+    appUser && organization?.created_by_user_id === appUser.id
+  );
+  const organizationCurrency = getEffectiveOrganizationCurrency(organization);
   const locationGeoStatusLabel = getLocationGeoStatusLabel(primaryLocation);
 
   return (
@@ -781,7 +833,7 @@ export default async function OrganizationDetailsPage({
               margin: "0 0 12px",
             }}
           >
-            Organization details
+            Карточка организации
           </h1>
 
           <nav
@@ -798,28 +850,38 @@ export default async function OrganizationDetailsPage({
             </a>
 
             <a href="/organizations" style={{ color: "#2563eb" }}>
-              Мои организации
-            </a>
-
-            <a href={createValueObjectHref} style={{ color: "#2563eb" }}>
-              Create value object
-            </a>
-
-            <a href={createOfferHref} style={{ color: "#2563eb" }}>
-              Create offer
-            </a>
-
-            <a href={myPurchaseConfirmationsHref} style={{ color: "#2563eb" }}>
-              My purchase confirmations
-            </a>
-
-            <a href={purchaseConfirmationsHref} style={{ color: "#2563eb" }}>
-              Seller purchase confirmations
+              Каталог организаций
             </a>
 
             <a href={publicPurchaseHistoryHref} style={{ color: "#2563eb" }}>
               Public purchase history
             </a>
+
+            {isAuthenticated ? (
+              <a href={myPurchaseConfirmationsHref} style={{ color: "#2563eb" }}>
+                My purchase confirmations
+              </a>
+            ) : (
+              <a href="/api/auth/login" style={{ color: "#2563eb" }}>
+                Войти
+              </a>
+            )}
+
+            {isOwner ? (
+              <>
+                <a href={createValueObjectHref} style={{ color: "#2563eb" }}>
+                  Create value object
+                </a>
+
+                <a href={createOfferHref} style={{ color: "#2563eb" }}>
+                  Create offer
+                </a>
+
+                <a href={purchaseConfirmationsHref} style={{ color: "#2563eb" }}>
+                  Seller purchase confirmations
+                </a>
+              </>
+            ) : null}
           </nav>
         </header>
 
@@ -846,7 +908,7 @@ export default async function OrganizationDetailsPage({
               background: "#fefce8",
             }}
           >
-            Organization not found or access denied.
+            Organization not found or not public.
           </div>
         ) : null}
 
@@ -911,8 +973,7 @@ export default async function OrganizationDetailsPage({
               </p>
 
               <p style={{ margin: "0 0 6px" }}>
-                <strong>Default currency:</strong>{" "}
-                {organization.default_currency || "Not specified"}
+                <strong>Default currency:</strong> {organizationCurrency}
               </p>
 
               <p style={{ margin: "0 0 6px" }}>
@@ -931,13 +992,45 @@ export default async function OrganizationDetailsPage({
               </p>
             </section>
 
-            <PurchaseConfirmationForm
-              organizationId={organizationId}
-              organizationDefaultCurrency={organization.default_currency ?? null}
-              myPurchaseConfirmationsHref={myPurchaseConfirmationsHref}
-              purchaseConfirmationsHref={purchaseConfirmationsHref}
-              publicPurchaseHistoryHref={publicPurchaseHistoryHref}
-            />
+            {isAuthenticated ? (
+              <PurchaseConfirmationForm
+                organizationId={organizationId}
+                organizationDefaultCurrency={organizationCurrency}
+                myPurchaseConfirmationsHref={myPurchaseConfirmationsHref}
+                purchaseConfirmationsHref={purchaseConfirmationsHref}
+                publicPurchaseHistoryHref={publicPurchaseHistoryHref}
+              />
+            ) : (
+              <section
+                style={{
+                  border: "1px solid #bfdbfe",
+                  borderRadius: "12px",
+                  padding: "20px",
+                  background: "#eff6ff",
+                }}
+              >
+                <h2 style={{ margin: "0 0 10px", fontSize: "22px" }}>
+                  Purchase confirmations & points
+                </h2>
+
+                <p style={{ margin: "0 0 14px", color: "#1e3a8a" }}>
+                  Каталог и карточка организации доступны публично. Чтобы
+                  зарегистрировать покупку, видеть свои заявки и получать points,
+                  нужно войти в аккаунт.
+                </p>
+
+                <a
+                  href="/api/auth/login"
+                  style={{
+                    color: "#2563eb",
+                    textDecoration: "underline",
+                    fontWeight: 700,
+                  }}
+                >
+                  Войти и зарегистрировать покупку
+                </a>
+              </section>
+            )}
 
             <section
               style={{
@@ -966,21 +1059,23 @@ export default async function OrganizationDetailsPage({
                   </p>
                 </div>
 
-                <a
-                  href={createValueObjectHref}
-                  style={{
-                    color: "#2563eb",
-                    textDecoration: "underline",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Create value object
-                </a>
+                {isOwner ? (
+                  <a
+                    href={createValueObjectHref}
+                    style={{
+                      color: "#2563eb",
+                      textDecoration: "underline",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Create value object
+                  </a>
+                ) : null}
               </div>
 
               {valueObjects.length === 0 ? (
                 <p style={{ margin: 0, color: "#666666" }}>
-                  No value objects connected to this organization yet.
+                  No public value objects connected to this organization yet.
                 </p>
               ) : (
                 <div style={{ display: "grid", gap: "12px" }}>
@@ -1044,21 +1139,23 @@ export default async function OrganizationDetailsPage({
                   </p>
                 </div>
 
-                <a
-                  href={createOfferHref}
-                  style={{
-                    color: "#2563eb",
-                    textDecoration: "underline",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Create offer
-                </a>
+                {isOwner ? (
+                  <a
+                    href={createOfferHref}
+                    style={{
+                      color: "#2563eb",
+                      textDecoration: "underline",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Create offer
+                  </a>
+                ) : null}
               </div>
 
               {offers.length === 0 ? (
                 <p style={{ margin: 0, color: "#666666" }}>
-                  No offers connected to this organization yet.
+                  No public offers connected to this organization yet.
                 </p>
               ) : (
                 <div style={{ display: "grid", gap: "16px" }}>

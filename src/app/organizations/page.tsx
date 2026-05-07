@@ -30,6 +30,8 @@ type Organization = {
   organization_type: string;
   description?: string | null;
   status: string;
+  country_code?: string | null;
+  default_currency?: string | null;
   created_at: string;
   primaryLocation?: OrganizationLocation | null;
 };
@@ -108,7 +110,7 @@ export default function OrganizationsPage() {
       const data = await response.json();
 
       if (!response.ok || !data.ok) {
-        setError(data.error || "Ошибка загрузки организаций.");
+        setError(data.error || "Ошибка загрузки каталога организаций.");
         return;
       }
 
@@ -152,11 +154,22 @@ export default function OrganizationsPage() {
               fontSize: "32px",
               lineHeight: "1.2",
               fontWeight: 700,
-              margin: "0 0 20px",
+              margin: "0 0 12px",
             }}
           >
-            Мои организации
+            Каталог организаций
           </h1>
+
+          <p
+            style={{
+              margin: "0 0 20px",
+              color: "#555555",
+              fontSize: "16px",
+            }}
+          >
+            Публичный список предприятий, услуг, товаров, сертификатов и
+            партнёров платформы.
+          </p>
 
           <nav
             style={{
@@ -186,29 +199,29 @@ export default function OrganizationsPage() {
                 fontSize: "16px",
               }}
             >
-              Создать организацию
+              Добавить организацию
             </Link>
 
             <Link
-              href="/value-objects"
+              href="/purchase-history"
               style={{
                 color: "#2563eb",
                 textDecoration: "underline",
                 fontSize: "16px",
               }}
             >
-              Value objects
+              Public purchase history
             </Link>
 
             <Link
-              href="/offers"
+              href="/api/auth/login"
               style={{
                 color: "#2563eb",
                 textDecoration: "underline",
                 fontSize: "16px",
               }}
             >
-              Offers
+              Войти
             </Link>
           </nav>
         </header>
@@ -222,7 +235,7 @@ export default function OrganizationsPage() {
               background: "#f9fafb",
             }}
           >
-            Загружаю организации...
+            Загружаю каталог организаций...
           </div>
         )}
 
@@ -249,7 +262,7 @@ export default function OrganizationsPage() {
               background: "#fefce8",
             }}
           >
-            У тебя пока нет организаций.
+            В каталоге пока нет активных организаций.
           </div>
         )}
 
@@ -330,6 +343,11 @@ export default function OrganizationsPage() {
                     </p>
                   ) : null}
 
+                  <p style={{ margin: "0 0 6px" }}>
+                    <strong>Валюта:</strong>{" "}
+                    {organization.default_currency || "Не указана"}
+                  </p>
+
                   {organization.description && (
                     <p style={{ margin: "10px 0 0" }}>
                       <strong>Описание:</strong> {organization.description}
@@ -367,23 +385,15 @@ export default function OrganizationsPage() {
                     </Link>
 
                     <Link
-                      href="/value-objects/new"
+                      href={`/purchase-history?organizationId=${encodeURIComponent(
+                        organization.id
+                      )}`}
                       style={{
                         color: "#2563eb",
                         textDecoration: "underline",
                       }}
                     >
-                      Создать value object
-                    </Link>
-
-                    <Link
-                      href="/offers/new"
-                      style={{
-                        color: "#2563eb",
-                        textDecoration: "underline",
-                      }}
-                    >
-                      Создать offer
+                      История покупок
                     </Link>
                   </div>
                 </article>

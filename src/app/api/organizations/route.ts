@@ -513,19 +513,10 @@ function getPrimaryLocationForOrganization(
   );
 }
 
-function normalizeNameForMatching(value: string | null | undefined) {
-  if (!value) {
-    return "";
-  }
-
-  return value.trim().toLowerCase();
-}
-
-function isOwnSuggestedGeoArea(geoArea: GeoAreaRow | null, appUserId: string) {
+function isSuggestedOrNeedsReviewGeoArea(geoArea: GeoAreaRow | null) {
   return Boolean(
     geoArea &&
       geoArea.source === "user_suggestion" &&
-      geoArea.created_by_user_id === appUserId &&
       (geoArea.status === "suggested" || geoArea.status === "needs_review")
   );
 }
@@ -577,14 +568,13 @@ async function findGeoAreaByLocationName(input: {
   return ((data ?? [])[0] as GeoAreaRow | undefined) ?? null;
 }
 
-function createGeoStatusLabel(input: {
+function createPublicGeoStatusLabel(input: {
   cityGeoArea: GeoAreaRow | null;
   districtGeoArea: GeoAreaRow | null;
-  appUserId: string;
 }) {
   const parts: string[] = [];
 
-  if (isOwnSuggestedGeoArea(input.cityGeoArea, input.appUserId)) {
+  if (isSuggestedOrNeedsReviewGeoArea(input.cityGeoArea)) {
     parts.push("город ожидает проверки");
   } else if (
     input.cityGeoArea &&
@@ -594,7 +584,7 @@ function createGeoStatusLabel(input: {
     parts.push(`город: ${input.cityGeoArea.status}`);
   }
 
-  if (isOwnSuggestedGeoArea(input.districtGeoArea, input.appUserId)) {
+  if (isSuggestedOrNeedsReviewGeoArea(input.districtGeoArea)) {
     parts.push("район ожидает проверки");
   } else if (
     input.districtGeoArea &&
@@ -613,7 +603,6 @@ function createGeoStatusLabel(input: {
 
 async function enrichLocationWithGeoStatus(input: {
   location: OrganizationLocationRow;
-  appUserId: string;
 }): Promise<OrganizationLocationWithGeoStatus> {
   const cityGeoArea = await findGeoAreaByLocationName({
     areaType: "city",
@@ -628,45 +617,39 @@ async function enrichLocationWithGeoStatus(input: {
     parentId: cityGeoArea?.id ?? null,
   });
 
-  const geoStatusLabel = createGeoStatusLabel({
+  const geoStatusLabel = createPublicGeoStatusLabel({
     cityGeoArea,
     districtGeoArea,
-    appUserId: input.appUserId,
   });
 
   return {
     ...input.location,
     cityGeoStatus: cityGeoArea?.status ?? null,
     cityGeoSource: cityGeoArea?.source ?? null,
-    cityGeoIsOwnSuggestion: isOwnSuggestedGeoArea(cityGeoArea, input.appUserId),
+    cityGeoIsOwnSuggestion: false,
     districtGeoStatus: districtGeoArea?.status ?? null,
     districtGeoSource: districtGeoArea?.source ?? null,
-    districtGeoIsOwnSuggestion: isOwnSuggestedGeoArea(
-      districtGeoArea,
-      input.appUserId
-    ),
+    districtGeoIsOwnSuggestion: false,
     geoStatusLabel,
   };
 }
 
 export async function GET() {
-  const { appUser, errorResponse } = await getCurrentAppUser();
-
-  if (errorResponse) {
-    return errorResponse;
-  }
-
-  if (!appUser) {
-    return NextResponse.json(
-      { error: "App user not found" },
-      { status: 500 }
-    );
-  }
-
   const { data: organizations, error: organizationsError } = await supabase
     .from("organizations")
-    .select("*")
-    .eq("created_by_user_id", appUser.id)
+    .select(
+      `
+      id,
+      organization_name,
+      organization_type,
+      description,
+      status,
+      country_code,
+      default_currency,
+      created_at
+    `
+    )
+    .eq("status", "active")
     .order("created_at", { ascending: false });
 
   if (organizationsError) {
@@ -709,19 +692,25 @@ export async function GET() {
     locationRows.map((location) =>
       enrichLocationWithGeoStatus({
         location,
-        appUserId: appUser.id,
       })
     )
   );
 
   const organizationsWithLocations =
-    organizations?.map((organization) => ({
-      ...organization,
-      primaryLocation: getPrimaryLocationForOrganization(
-        organization.id,
-        enrichedLocationRows
-      ),
-    })) ?? [];
+    organizations?.map((organization) => {
+      const effectiveDefaultCurrency =
+        organization.default_currency ??
+        getDefaultCurrencyByCountryCode(organization.country_code);
+
+      return {
+        ...organization,
+        default_currency: effectiveDefaultCurrency,
+        primaryLocation: getPrimaryLocationForOrganization(
+          organization.id,
+          enrichedLocationRows
+        ),
+      };
+    }) ?? [];
 
   return NextResponse.json({
     ok: true,
