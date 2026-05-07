@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
@@ -150,6 +151,10 @@ function getDefaultCurrencyByCountryCode(countryCode: string | null) {
   }
 
   return "PLN";
+}
+
+function createPublicSlugFromOrganizationId(organizationId: string) {
+  return `organization-${organizationId.slice(0, 8)}`;
 }
 
 function normalizeUuid(value: string | null) {
@@ -778,6 +783,12 @@ export async function POST(request: Request) {
     locationInput.countryCode
   );
 
+  const organizationId = randomUUID();
+  const organizationPublicSlug = createPublicSlugFromOrganizationId(
+    organizationId
+  );
+  const directoryPublishedAt = new Date().toISOString();
+
   const { data: person, error: personError } = await supabase
     .from("persons")
     .select("*")
@@ -805,6 +816,7 @@ export async function POST(request: Request) {
   const { data: organization, error: organizationError } = await supabase
     .from("organizations")
     .insert({
+      id: organizationId,
       created_by_user_id: appUser.id,
       organization_name: organizationName,
       organization_type: organizationType,
@@ -813,6 +825,12 @@ export async function POST(request: Request) {
       country_code: locationInput.countryCode,
       default_currency: defaultCurrency,
       status: "active",
+      directory_status: "published",
+      is_public_profile_enabled: true,
+      is_listed_in_directory: true,
+      public_slug: organizationPublicSlug,
+      directory_published_at: directoryPublishedAt,
+      updated_at: directoryPublishedAt,
     })
     .select()
     .single();
@@ -977,6 +995,13 @@ export async function POST(request: Request) {
       owner: ownerRole,
       manager: managerRole,
       seller: sellerRole,
+    },
+    directory: {
+      status: organization.directory_status,
+      isPublicProfileEnabled: organization.is_public_profile_enabled,
+      isListedInDirectory: organization.is_listed_in_directory,
+      publicSlug: organization.public_slug,
+      publishedAt: organization.directory_published_at,
     },
   });
 }
