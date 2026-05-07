@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import DirectoryLocationFilterFields from "./components/DirectoryLocationFilterFields";
 import DirectoryUseLocationButton from "./components/DirectoryUseLocationButton";
 
@@ -187,7 +188,19 @@ const DIRECTORY_SORT_OPTIONS: {
   { value: "distance", label: "По расстоянию" },
 ];
 
-function getBaseUrl() {
+async function getBaseUrl() {
+  const headersList = await headers();
+
+  const forwardedHost = headersList.get("x-forwarded-host");
+  const host = forwardedHost ?? headersList.get("host");
+
+  const forwardedProto = headersList.get("x-forwarded-proto");
+  const protocol = forwardedProto ?? "https";
+
+  if (host) {
+    return `${protocol}://${host}`;
+  }
+
   const publicAppUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
 
   if (publicAppUrl) {
@@ -291,13 +304,34 @@ function buildDirectoryApiUrl(baseUrl: string, filters: DirectoryFilters) {
   return `${baseUrl}/api/directory/organizations?${queryString}`;
 }
 
+async function readJsonResponse<T>(
+  response: Response,
+  endpointLabel: string
+): Promise<T> {
+  const contentType = response.headers.get("content-type") ?? "";
+  const responseText = await response.text();
+
+  if (!contentType.includes("application/json")) {
+    throw new Error(
+      `${endpointLabel} returned non-JSON response: status ${
+        response.status
+      }, content-type ${contentType || "not specified"}, body: ${responseText.slice(
+        0,
+        160
+      )}`
+    );
+  }
+
+  return JSON.parse(responseText) as T;
+}
+
 async function getDirectoryOrganizations(
   filters: DirectoryFilters
 ): Promise<{
   organizations: DirectoryOrganization[];
   errorMessage: string | null;
 }> {
-  const baseUrl = getBaseUrl();
+  const baseUrl = await getBaseUrl();
   const apiUrl = buildDirectoryApiUrl(baseUrl, filters);
 
   try {
@@ -306,7 +340,10 @@ async function getDirectoryOrganizations(
       cache: "no-store",
     });
 
-    const json = (await response.json()) as DirectoryApiResponse;
+    const json = await readJsonResponse<DirectoryApiResponse>(
+      response,
+      "/api/directory/organizations"
+    );
 
     if (!response.ok || !json.ok) {
       return {
@@ -332,7 +369,7 @@ async function getDirectoryFilterOptions(): Promise<{
   filterOptions: DirectoryFilterOptions;
   errorMessage: string | null;
 }> {
-  const baseUrl = getBaseUrl();
+  const baseUrl = await getBaseUrl();
 
   try {
     const response = await fetch(`${baseUrl}/api/directory/filters`, {
@@ -340,7 +377,10 @@ async function getDirectoryFilterOptions(): Promise<{
       cache: "no-store",
     });
 
-    const json = (await response.json()) as DirectoryFiltersApiResponse;
+    const json = await readJsonResponse<DirectoryFiltersApiResponse>(
+      response,
+      "/api/directory/filters"
+    );
 
     if (!response.ok || !json.ok) {
       return {
