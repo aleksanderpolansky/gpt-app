@@ -4,6 +4,21 @@ import PurchaseConfirmationForm from "./PurchaseConfirmationForm";
 
 export const dynamic = "force-dynamic";
 
+type GeoAreaRow = {
+  id: string;
+  parent_id: string | null;
+  area_type: string;
+  country_code: string | null;
+  name: string;
+  slug: string;
+  latitude: number | null;
+  longitude: number | null;
+  status: string;
+  source: string | null;
+  created_by_user_id: string | null;
+  is_active: boolean;
+};
+
 type OrganizationLocation = {
   id: string;
   organization_id: string;
@@ -16,6 +31,13 @@ type OrganizationLocation = {
   is_primary: boolean | null;
   is_active: boolean | null;
   created_at: string;
+  cityGeoStatus?: string | null;
+  cityGeoSource?: string | null;
+  cityGeoIsOwnSuggestion?: boolean;
+  districtGeoStatus?: string | null;
+  districtGeoSource?: string | null;
+  districtGeoIsOwnSuggestion?: boolean;
+  geoStatusLabel?: string | null;
 };
 
 type Organization = {
@@ -293,6 +315,150 @@ function getCoordinatesLabel(location: OrganizationLocation | null) {
   return `${location.latitude}, ${location.longitude}`;
 }
 
+function getLocationGeoStatusLabel(location: OrganizationLocation | null) {
+  if (!location) {
+    return null;
+  }
+
+  if (location.geoStatusLabel) {
+    return location.geoStatusLabel;
+  }
+
+  return null;
+}
+
+function isOwnSuggestedGeoArea(geoArea: GeoAreaRow | null, appUserId: string) {
+  return Boolean(
+    geoArea &&
+      geoArea.source === "user_suggestion" &&
+      geoArea.created_by_user_id === appUserId &&
+      (geoArea.status === "suggested" || geoArea.status === "needs_review")
+  );
+}
+
+async function findGeoAreaByLocationName(input: {
+  areaType: "city" | "district";
+  countryCode: string | null;
+  name: string | null;
+  parentId?: string | null;
+}) {
+  if (!input.countryCode || !input.name) {
+    return null;
+  }
+
+  let query = supabase
+    .from("geo_areas")
+    .select(
+      `
+      id,
+      parent_id,
+      area_type,
+      country_code,
+      name,
+      slug,
+      latitude,
+      longitude,
+      status,
+      source,
+      created_by_user_id,
+      is_active
+    `
+    )
+    .eq("area_type", input.areaType)
+    .eq("country_code", input.countryCode)
+    .eq("name", input.name)
+    .eq("is_active", true)
+    .limit(1);
+
+  if (input.parentId) {
+    query = query.eq("parent_id", input.parentId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return null;
+  }
+
+  return ((data ?? [])[0] as GeoAreaRow | undefined) ?? null;
+}
+
+function createGeoStatusLabel(input: {
+  cityGeoArea: GeoAreaRow | null;
+  districtGeoArea: GeoAreaRow | null;
+  appUserId: string;
+}) {
+  const parts: string[] = [];
+
+  if (isOwnSuggestedGeoArea(input.cityGeoArea, input.appUserId)) {
+    parts.push("город ожидает проверки");
+  } else if (
+    input.cityGeoArea &&
+    input.cityGeoArea.status &&
+    input.cityGeoArea.status !== "approved"
+  ) {
+    parts.push(`город: ${input.cityGeoArea.status}`);
+  }
+
+  if (isOwnSuggestedGeoArea(input.districtGeoArea, input.appUserId)) {
+    parts.push("район ожидает проверки");
+  } else if (
+    input.districtGeoArea &&
+    input.districtGeoArea.status &&
+    input.districtGeoArea.status !== "approved"
+  ) {
+    parts.push(`район: ${input.districtGeoArea.status}`);
+  }
+
+  if (parts.length === 0) {
+    return null;
+  }
+
+  return parts.join(", ");
+}
+
+async function enrichLocationWithGeoStatus(input: {
+  location: OrganizationLocation | null;
+  appUserId: string;
+}): Promise<OrganizationLocation | null> {
+  if (!input.location) {
+    return null;
+  }
+
+  const cityGeoArea = await findGeoAreaByLocationName({
+    areaType: "city",
+    countryCode: input.location.country_code,
+    name: input.location.city,
+  });
+
+  const districtGeoArea = await findGeoAreaByLocationName({
+    areaType: "district",
+    countryCode: input.location.country_code,
+    name: input.location.district,
+    parentId: cityGeoArea?.id ?? null,
+  });
+
+  const geoStatusLabel = createGeoStatusLabel({
+    cityGeoArea,
+    districtGeoArea,
+    appUserId: input.appUserId,
+  });
+
+  return {
+    ...input.location,
+    cityGeoStatus: cityGeoArea?.status ?? null,
+    cityGeoSource: cityGeoArea?.source ?? null,
+    cityGeoIsOwnSuggestion: isOwnSuggestedGeoArea(cityGeoArea, input.appUserId),
+    districtGeoStatus: districtGeoArea?.status ?? null,
+    districtGeoSource: districtGeoArea?.source ?? null,
+    districtGeoIsOwnSuggestion: isOwnSuggestedGeoArea(
+      districtGeoArea,
+      input.appUserId
+    ),
+    geoStatusLabel,
+  };
+}
+
 async function getCurrentAppUser(): Promise<{
   appUser: AppUser | null;
   errorMessage: string | null;
@@ -521,12 +687,19 @@ async function getOrganizationPageData(
     };
   }
 
+  const rawPrimaryLocation =
+    ((locationResult.data ?? [])[0] as OrganizationLocation | undefined) ??
+    null;
+
+  const enrichedPrimaryLocation = await enrichLocationWithGeoStatus({
+    location: rawPrimaryLocation,
+    appUserId: appUser.id,
+  });
+
   if (valueObjectsResult.error) {
     return {
       organization: organizationResult.data as Organization,
-      primaryLocation:
-        ((locationResult.data ?? [])[0] as OrganizationLocation | undefined) ??
-        null,
+      primaryLocation: enrichedPrimaryLocation,
       valueObjects: [],
       offers: [],
       errorMessage: valueObjectsResult.error.message,
@@ -536,9 +709,7 @@ async function getOrganizationPageData(
   if (offersResult.error) {
     return {
       organization: organizationResult.data as Organization,
-      primaryLocation:
-        ((locationResult.data ?? [])[0] as OrganizationLocation | undefined) ??
-        null,
+      primaryLocation: enrichedPrimaryLocation,
       valueObjects: (valueObjectsResult.data as ValueObject[] | null) ?? [],
       offers: [],
       errorMessage: offersResult.error.message,
@@ -547,9 +718,7 @@ async function getOrganizationPageData(
 
   return {
     organization: organizationResult.data as Organization,
-    primaryLocation:
-      ((locationResult.data ?? [])[0] as OrganizationLocation | undefined) ??
-      null,
+    primaryLocation: enrichedPrimaryLocation,
     valueObjects: (valueObjectsResult.data as ValueObject[] | null) ?? [],
     offers: (offersResult.data as unknown as Offer[] | null) ?? [],
     errorMessage: null,
@@ -578,6 +747,8 @@ export default async function OrganizationDetailsPage({
 
   const { organization, primaryLocation, valueObjects, offers, errorMessage } =
     await getOrganizationPageData(organizationId);
+
+  const locationGeoStatusLabel = getLocationGeoStatusLabel(primaryLocation);
 
   return (
     <main
@@ -710,6 +881,19 @@ export default async function OrganizationDetailsPage({
               <p style={{ margin: "0 0 6px" }}>
                 <strong>Location:</strong> {getLocationLabel(primaryLocation)}
               </p>
+
+              {locationGeoStatusLabel ? (
+                <p
+                  style={{
+                    margin: "0 0 6px",
+                    color: "#92400e",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                  }}
+                >
+                  <strong>Location status:</strong> {locationGeoStatusLabel}
+                </p>
+              ) : null}
 
               <p style={{ margin: "0 0 6px" }}>
                 <strong>Address visibility:</strong>{" "}
