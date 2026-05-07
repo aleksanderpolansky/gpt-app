@@ -14,6 +14,8 @@ type GeoArea = {
   longitude: number | null;
   sortOrder: number;
   status: string;
+  source?: string;
+  isOwnSuggestion?: boolean;
 };
 
 type GeoAreasResponse = {
@@ -35,6 +37,9 @@ type GeoSuggestionResponse = {
     country_code: string | null;
     name: string;
     slug: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    sort_order?: number;
     status: string;
     source: string;
   };
@@ -60,6 +65,54 @@ type CreateOrganizationResponse = {
     space_type: string;
   };
 };
+
+function mapSuggestionToGeoArea(
+  geoArea: GeoSuggestionResponse["geoArea"]
+): GeoArea | null {
+  if (!geoArea) {
+    return null;
+  }
+
+  return {
+    id: geoArea.id,
+    parentId: geoArea.parent_id,
+    areaType: geoArea.area_type,
+    countryCode: geoArea.country_code,
+    name: geoArea.name,
+    slug: geoArea.slug,
+    latitude: geoArea.latitude ?? null,
+    longitude: geoArea.longitude ?? null,
+    sortOrder: geoArea.sort_order ?? 1000,
+    status: geoArea.status,
+    source: geoArea.source,
+    isOwnSuggestion:
+      geoArea.source === "user_suggestion" &&
+      (geoArea.status === "suggested" || geoArea.status === "needs_review"),
+  };
+}
+
+function mergeGeoAreas(currentAreas: GeoArea[], nextArea: GeoArea) {
+  const withoutDuplicate = currentAreas.filter((area) => area.id !== nextArea.id);
+  return [...withoutDuplicate, nextArea].sort((firstArea, secondArea) => {
+    if (firstArea.sortOrder !== secondArea.sortOrder) {
+      return firstArea.sortOrder - secondArea.sortOrder;
+    }
+
+    return firstArea.name.localeCompare(secondArea.name);
+  });
+}
+
+function getAreaOptionLabel(area: GeoArea) {
+  if (area.isOwnSuggestion) {
+    return `${area.name} — добавлено вами, ожидает проверки`;
+  }
+
+  if (area.status !== "approved") {
+    return `${area.name} — ${area.status}`;
+  }
+
+  return area.name;
+}
 
 export default function NewOrganizationPage() {
   const [organizationName, setOrganizationName] = useState("");
@@ -207,7 +260,7 @@ export default function NewOrganizationPage() {
         const loadedCities = await loadGeoAreas(
           `/api/geo/areas?areaType=city&countryCode=${encodeURIComponent(
             selectedCountryCode
-          )}&status=approved`
+          )}&includeOwnSuggestions=true`
         );
 
         if (!isMounted) {
@@ -264,7 +317,7 @@ export default function NewOrganizationPage() {
         const loadedDistricts = await loadGeoAreas(
           `/api/geo/areas?areaType=district&parentId=${encodeURIComponent(
             cityGeoAreaId
-          )}&status=approved`
+          )}&includeOwnSuggestions=true`
         );
 
         if (!isMounted) {
@@ -330,8 +383,15 @@ export default function NewOrganizationPage() {
       const data = (await response.json()) as GeoSuggestionResponse;
 
       if (!response.ok || !data.ok) {
-        setCitySuggestionError(data.error ?? "Не удалось предложить город.");
+        setCitySuggestionError(data.error ?? "Не удалось добавить город.");
         return;
+      }
+
+      const nextCity = mapSuggestionToGeoArea(data.geoArea);
+
+      if (nextCity) {
+        setCities((currentCities) => mergeGeoAreas(currentCities, nextCity));
+        setCityGeoAreaId(nextCity.id);
       }
 
       setCitySuggestionMessage(
@@ -340,8 +400,9 @@ export default function NewOrganizationPage() {
               "Такой город уже есть в справочнике или уже был предложен ранее."
           : `Город “${
               data.geoArea?.name ?? suggestedCityName
-            }” предложен на проверку. После утверждения он появится в списке городов.`
+            }” добавлен и уже доступен вам для выбора. Позже он будет проверен администратором.`
       );
+
       setSuggestedCityName("");
       setSuggestedCityNotes("");
       setIsSuggestCityOpen(false);
@@ -395,10 +456,17 @@ export default function NewOrganizationPage() {
       const data = (await response.json()) as GeoSuggestionResponse;
 
       if (!response.ok || !data.ok) {
-        setDistrictSuggestionError(
-          data.error ?? "Не удалось предложить район."
-        );
+        setDistrictSuggestionError(data.error ?? "Не удалось добавить район.");
         return;
+      }
+
+      const nextDistrict = mapSuggestionToGeoArea(data.geoArea);
+
+      if (nextDistrict) {
+        setDistricts((currentDistricts) =>
+          mergeGeoAreas(currentDistricts, nextDistrict)
+        );
+        setDistrictGeoAreaId(nextDistrict.id);
       }
 
       setDistrictSuggestionMessage(
@@ -407,9 +475,9 @@ export default function NewOrganizationPage() {
               "Такой район уже есть в справочнике или уже был предложен ранее."
           : `Район “${
               data.geoArea?.name ?? suggestedDistrictName
-            }” предложен на проверку для города ${
+            }” добавлен к городу ${
               selectedCity.name
-            }. После утверждения он появится только в списке районов этого города.`
+            } и уже доступен вам для выбора. Позже он будет проверен администратором.`
       );
 
       setSuggestedDistrictName("");
@@ -662,6 +730,8 @@ export default function NewOrganizationPage() {
               >
                 Страны, города и районы берутся из справочника geo_areas.
                 Районы загружаются отдельно для каждого выбранного города.
+                Добавленные вами города и районы становятся доступными вам сразу,
+                но будут проверены администратором позже.
               </p>
             </div>
 
@@ -763,7 +833,7 @@ export default function NewOrganizationPage() {
 
                 {cities.map((city) => (
                   <option key={city.id} value={city.id}>
-                    {city.name}
+                    {getAreaOptionLabel(city)}
                   </option>
                 ))}
               </select>
@@ -788,8 +858,8 @@ export default function NewOrganizationPage() {
                     }}
                   >
                     {isSuggestCityOpen
-                      ? "Скрыть форму предложения города"
-                      : "Не нашли город? Предложить новый город"}
+                      ? "Скрыть форму добавления города"
+                      : "Не нашли город? Добавить новый город"}
                   </button>
 
                   {citySuggestionMessage ? (
@@ -842,10 +912,10 @@ export default function NewOrganizationPage() {
                           lineHeight: "1.4",
                         }}
                       >
-                        Город будет сохранён как предложение на проверку.
-                        После утверждения он появится в списке городов для
-                        выбранной страны:{" "}
-                        <strong>{selectedCountryCode}</strong>.
+                        Город будет сразу добавлен в ваш список выбора для
+                        страны: <strong>{selectedCountryCode}</strong>. Для
+                        остальных пользователей он станет публичным после
+                        проверки.
                       </div>
 
                       <div>
@@ -940,8 +1010,8 @@ export default function NewOrganizationPage() {
                         }}
                       >
                         {isSubmittingCitySuggestion
-                          ? "Отправляю..."
-                          : "Отправить город на проверку"}
+                          ? "Добавляю..."
+                          : "Добавить город"}
                       </button>
                     </div>
                   ) : null}
@@ -957,8 +1027,8 @@ export default function NewOrganizationPage() {
                     lineHeight: "1.4",
                   }}
                 >
-                  Для выбранной страны пока нет утверждённых городов. Можно
-                  предложить новый город на проверку.
+                  Для выбранной страны пока нет доступных городов. Можно
+                  добавить новый город.
                 </p>
               ) : null}
             </div>
@@ -1003,7 +1073,7 @@ export default function NewOrganizationPage() {
 
                 {districts.map((district) => (
                   <option key={district.id} value={district.id}>
-                    {district.name}
+                    {getAreaOptionLabel(district)}
                   </option>
                 ))}
               </select>
@@ -1030,8 +1100,8 @@ export default function NewOrganizationPage() {
                     }}
                   >
                     {isSuggestDistrictOpen
-                      ? "Скрыть форму предложения района"
-                      : "Не нашли район? Предложить новый район"}
+                      ? "Скрыть форму добавления района"
+                      : "Не нашли район? Добавить новый район"}
                   </button>
 
                   {districtSuggestionMessage ? (
@@ -1084,9 +1154,11 @@ export default function NewOrganizationPage() {
                           lineHeight: "1.4",
                         }}
                       >
-                        Район будет сохранён как предложение на проверку только
-                        для выбранного города:{" "}
+                        Район будет сразу добавлен в ваш список выбора только
+                        для города:{" "}
                         <strong>{selectedCity?.name ?? "город не выбран"}</strong>.
+                        Для остальных пользователей он станет публичным после
+                        проверки.
                       </div>
 
                       <div>
@@ -1184,8 +1256,8 @@ export default function NewOrganizationPage() {
                         }}
                       >
                         {isSubmittingDistrictSuggestion
-                          ? "Отправляю..."
-                          : "Отправить район на проверку"}
+                          ? "Добавляю..."
+                          : "Добавить район"}
                       </button>
                     </div>
                   ) : null}
@@ -1201,8 +1273,8 @@ export default function NewOrganizationPage() {
                     lineHeight: "1.4",
                   }}
                 >
-                  Для выбранного города пока нет утверждённых районов. Можно
-                  предложить новый район на проверку.
+                  Для выбранного города пока нет доступных районов. Можно
+                  добавить новый район.
                 </p>
               ) : null}
             </div>

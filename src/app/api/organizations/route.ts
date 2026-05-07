@@ -12,6 +12,8 @@ type GeoAreaRow = {
   latitude: number | null;
   longitude: number | null;
   status: string;
+  source: string | null;
+  created_by_user_id: string | null;
   is_active: boolean;
 };
 
@@ -38,6 +40,11 @@ type OrganizationLocationRow = {
   created_at: string;
 };
 
+type AppUserRow = {
+  id: string;
+  auth0_sub: string;
+};
+
 async function getCurrentAppUser() {
   const session = await auth0.getSession();
 
@@ -57,18 +64,18 @@ async function getCurrentAppUser() {
     .eq("auth0_sub", session.user.sub)
     .single();
 
-  if (appUserError) {
+  if (appUserError || !appUser) {
     return {
       appUser: null,
       errorResponse: NextResponse.json(
-        { error: appUserError.message },
+        { error: appUserError?.message ?? "App user not found" },
         { status: 500 }
       ),
     };
   }
 
   return {
-    appUser,
+    appUser: appUser as AppUserRow,
     errorResponse: null,
   };
 }
@@ -144,7 +151,20 @@ async function getGeoAreaById(id: string) {
   const { data: geoArea, error: geoAreaError } = await supabase
     .from("geo_areas")
     .select(
-      "id, parent_id, area_type, country_code, name, slug, latitude, longitude, status, is_active"
+      `
+      id,
+      parent_id,
+      area_type,
+      country_code,
+      name,
+      slug,
+      latitude,
+      longitude,
+      status,
+      source,
+      created_by_user_id,
+      is_active
+    `
     )
     .eq("id", id)
     .single();
@@ -162,8 +182,51 @@ async function getGeoAreaById(id: string) {
   };
 }
 
+function canUseGeoAreaForOrganization(input: {
+  geoArea: GeoAreaRow;
+  appUserId: string;
+}) {
+  if (input.geoArea.is_active === false) {
+    return false;
+  }
+
+  if (input.geoArea.status === "approved") {
+    return true;
+  }
+
+  if (
+    (input.geoArea.status === "suggested" ||
+      input.geoArea.status === "needs_review") &&
+    input.geoArea.source === "user_suggestion" &&
+    input.geoArea.created_by_user_id === input.appUserId
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function getGeoAreaAccessErrorMessage(input: {
+  geoAreaTypeLabel: string;
+  geoArea: GeoAreaRow;
+}) {
+  if (input.geoArea.is_active === false) {
+    return `Selected ${input.geoAreaTypeLabel} is not active`;
+  }
+
+  if (
+    input.geoArea.status === "suggested" ||
+    input.geoArea.status === "needs_review"
+  ) {
+    return `Selected ${input.geoAreaTypeLabel} is not approved and was not created by current user`;
+  }
+
+  return `Selected ${input.geoAreaTypeLabel} is not approved or not active`;
+}
+
 async function validateOrganizationLocationInput(
-  input: ParsedOrganizationLocationInput
+  input: ParsedOrganizationLocationInput,
+  appUserId: string
 ) {
   if (!hasAnyLocationInput(input)) {
     return {
@@ -215,13 +278,16 @@ async function validateOrganizationLocationInput(
       };
     }
 
-    if (geoArea.status !== "approved" || geoArea.is_active === false) {
+    if (!canUseGeoAreaForOrganization({ geoArea, appUserId })) {
       return {
         ok: false,
         countryGeoArea: null,
         cityGeoArea: null,
         districtGeoArea: null,
-        errorMessage: "Selected country is not approved or not active",
+        errorMessage: getGeoAreaAccessErrorMessage({
+          geoAreaTypeLabel: "country",
+          geoArea,
+        }),
       };
     }
 
@@ -261,13 +327,16 @@ async function validateOrganizationLocationInput(
       };
     }
 
-    if (geoArea.status !== "approved" || geoArea.is_active === false) {
+    if (!canUseGeoAreaForOrganization({ geoArea, appUserId })) {
       return {
         ok: false,
         countryGeoArea,
         cityGeoArea: null,
         districtGeoArea: null,
-        errorMessage: "Selected city is not approved or not active",
+        errorMessage: getGeoAreaAccessErrorMessage({
+          geoAreaTypeLabel: "city",
+          geoArea,
+        }),
       };
     }
 
@@ -323,13 +392,16 @@ async function validateOrganizationLocationInput(
       };
     }
 
-    if (geoArea.status !== "approved" || geoArea.is_active === false) {
+    if (!canUseGeoAreaForOrganization({ geoArea, appUserId })) {
       return {
         ok: false,
         countryGeoArea,
         cityGeoArea,
         districtGeoArea: null,
-        errorMessage: "Selected district is not approved or not active",
+        errorMessage: getGeoAreaAccessErrorMessage({
+          geoAreaTypeLabel: "district",
+          geoArea,
+        }),
       };
     }
 
@@ -469,10 +541,17 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await auth0.getSession();
+  const { appUser, errorResponse } = await getCurrentAppUser();
 
-  if (!session?.user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (errorResponse) {
+    return errorResponse;
+  }
+
+  if (!appUser) {
+    return NextResponse.json(
+      { error: "App user not found" },
+      { status: 500 }
+    );
   }
 
   const body = await request.json();
@@ -491,7 +570,8 @@ export async function POST(request: Request) {
   const locationInput = parseOrganizationLocationInput(body);
 
   const locationValidation = await validateOrganizationLocationInput(
-    locationInput
+    locationInput,
+    appUser.id
   );
 
   if (!locationValidation.ok) {
@@ -503,16 +583,6 @@ export async function POST(request: Request) {
       },
       { status: 400 }
     );
-  }
-
-  const { data: appUser, error: appUserError } = await supabase
-    .from("app_users")
-    .select("*")
-    .eq("auth0_sub", session.user.sub)
-    .single();
-
-  if (appUserError) {
-    return NextResponse.json({ error: appUserError.message }, { status: 500 });
   }
 
   const { data: person, error: personError } = await supabase
