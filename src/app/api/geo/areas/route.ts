@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,7 @@ type GeoAreaRow = {
   is_active: boolean;
   status: GeoAreaStatus;
   source: string;
+  created_by_user_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -41,6 +43,13 @@ type GeoAreaResponseItem = {
   longitude: number | null;
   sortOrder: number;
   status: GeoAreaStatus;
+  source: string;
+  isOwnSuggestion: boolean;
+};
+
+type AppUser = {
+  id: string;
+  auth0_sub: string;
 };
 
 const ALLOWED_AREA_TYPES: GeoAreaType[] = [
@@ -135,7 +144,13 @@ function normalizeUuid(value: string | null) {
 }
 
 function parseLimit(value: string | null) {
-  const parsedValue = Number(value);
+  const normalizedValue = parseOptionalText(value);
+
+  if (!normalizedValue) {
+    return 100;
+  }
+
+  const parsedValue = Number(normalizedValue);
 
   if (!Number.isInteger(parsedValue)) {
     return 100;
@@ -152,7 +167,36 @@ function parseLimit(value: string | null) {
   return parsedValue;
 }
 
-function mapGeoArea(row: GeoAreaRow): GeoAreaResponseItem {
+async function getOptionalCurrentAppUser(): Promise<AppUser | null> {
+  const session = await auth0.getSession();
+
+  if (!session?.user?.sub) {
+    return null;
+  }
+
+  const { data: appUser, error: appUserError } = await supabase
+    .from("app_users")
+    .select("id, auth0_sub")
+    .eq("auth0_sub", session.user.sub)
+    .maybeSingle();
+
+  if (appUserError || !appUser) {
+    return null;
+  }
+
+  return appUser as AppUser;
+}
+
+function mapGeoArea(
+  row: GeoAreaRow,
+  appUser: AppUser | null
+): GeoAreaResponseItem {
+  const isOwnSuggestion = Boolean(
+    appUser &&
+      row.created_by_user_id === appUser.id &&
+      (row.status === "suggested" || row.status === "needs_review")
+  );
+
   return {
     id: row.id,
     parentId: row.parent_id,
@@ -164,7 +208,209 @@ function mapGeoArea(row: GeoAreaRow): GeoAreaResponseItem {
     longitude: row.longitude,
     sortOrder: row.sort_order,
     status: row.status,
+    source: row.source,
+    isOwnSuggestion,
   };
+}
+
+function sortGeoAreas(areas: GeoAreaResponseItem[]) {
+  return areas.sort((firstArea, secondArea) => {
+    if (firstArea.sortOrder !== secondArea.sortOrder) {
+      return firstArea.sortOrder - secondArea.sortOrder;
+    }
+
+    return firstArea.name.localeCompare(secondArea.name);
+  });
+}
+
+function deduplicateGeoAreas(areas: GeoAreaResponseItem[]) {
+  const map = new Map<string, GeoAreaResponseItem>();
+
+  for (const area of areas) {
+    if (!map.has(area.id)) {
+      map.set(area.id, area);
+    }
+  }
+
+  return Array.from(map.values());
+}
+
+async function loadApprovedAreas(input: {
+  areaType: GeoAreaType | null;
+  countryCode: string | null;
+  parentId: string | null;
+  includeInactive: boolean;
+  limit: number;
+}) {
+  let query = supabase
+    .from("geo_areas")
+    .select(
+      `
+      id,
+      parent_id,
+      area_type,
+      country_code,
+      name,
+      slug,
+      latitude,
+      longitude,
+      sort_order,
+      is_active,
+      status,
+      source,
+      created_by_user_id,
+      created_at,
+      updated_at
+    `
+    )
+    .eq("status", "approved")
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true })
+    .limit(input.limit);
+
+  if (!input.includeInactive) {
+    query = query.eq("is_active", true);
+  }
+
+  if (input.areaType) {
+    query = query.eq("area_type", input.areaType);
+  }
+
+  if (input.countryCode) {
+    query = query.eq("country_code", input.countryCode);
+  }
+
+  if (input.parentId) {
+    query = query.eq("parent_id", input.parentId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as GeoAreaRow[];
+}
+
+async function loadAreasByStatus(input: {
+  areaType: GeoAreaType | null;
+  countryCode: string | null;
+  parentId: string | null;
+  status: GeoAreaStatus;
+  includeInactive: boolean;
+  limit: number;
+}) {
+  let query = supabase
+    .from("geo_areas")
+    .select(
+      `
+      id,
+      parent_id,
+      area_type,
+      country_code,
+      name,
+      slug,
+      latitude,
+      longitude,
+      sort_order,
+      is_active,
+      status,
+      source,
+      created_by_user_id,
+      created_at,
+      updated_at
+    `
+    )
+    .eq("status", input.status)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true })
+    .limit(input.limit);
+
+  if (!input.includeInactive) {
+    query = query.eq("is_active", true);
+  }
+
+  if (input.areaType) {
+    query = query.eq("area_type", input.areaType);
+  }
+
+  if (input.countryCode) {
+    query = query.eq("country_code", input.countryCode);
+  }
+
+  if (input.parentId) {
+    query = query.eq("parent_id", input.parentId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as GeoAreaRow[];
+}
+
+async function loadOwnSuggestedAreas(input: {
+  areaType: GeoAreaType | null;
+  countryCode: string | null;
+  parentId: string | null;
+  appUser: AppUser;
+  includeInactive: boolean;
+  limit: number;
+}) {
+  let query = supabase
+    .from("geo_areas")
+    .select(
+      `
+      id,
+      parent_id,
+      area_type,
+      country_code,
+      name,
+      slug,
+      latitude,
+      longitude,
+      sort_order,
+      is_active,
+      status,
+      source,
+      created_by_user_id,
+      created_at,
+      updated_at
+    `
+    )
+    .eq("created_by_user_id", input.appUser.id)
+    .eq("source", "user_suggestion")
+    .in("status", ["suggested", "needs_review"])
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true })
+    .limit(input.limit);
+
+  if (!input.includeInactive) {
+    query = query.eq("is_active", true);
+  }
+
+  if (input.areaType) {
+    query = query.eq("area_type", input.areaType);
+  }
+
+  if (input.countryCode) {
+    query = query.eq("country_code", input.countryCode);
+  }
+
+  if (input.parentId) {
+    query = query.eq("parent_id", input.parentId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as GeoAreaRow[];
 }
 
 export async function GET(request: Request) {
@@ -176,13 +422,17 @@ export async function GET(request: Request) {
     const parentIdParam = url.searchParams.get("parentId");
     const statusParam = url.searchParams.get("status");
     const includeInactiveParam = url.searchParams.get("includeInactive");
+    const includeOwnSuggestionsParam = url.searchParams.get(
+      "includeOwnSuggestions"
+    );
     const limitParam = url.searchParams.get("limit");
 
     const areaType = normalizeAreaType(areaTypeParam);
     const countryCode = normalizeCountryCode(countryCodeParam);
     const parentId = normalizeUuid(parentIdParam);
-    const status = normalizeStatus(statusParam) ?? "approved";
+    const status = normalizeStatus(statusParam);
     const includeInactive = includeInactiveParam === "true";
+    const includeOwnSuggestions = includeOwnSuggestionsParam === "true";
     const limit = parseLimit(limitParam);
 
     if (areaTypeParam && !areaType) {
@@ -200,7 +450,8 @@ export async function GET(request: Request) {
       return NextResponse.json(
         {
           ok: false,
-          error: "Invalid countryCode. Use 2-letter country code, for example PL, ES, DE",
+          error:
+            "Invalid countryCode. Use 2-letter country code, for example PL, ES, DE",
         },
         { status: 400 }
       );
@@ -216,7 +467,7 @@ export async function GET(request: Request) {
       );
     }
 
-    if (statusParam && !normalizeStatus(statusParam)) {
+    if (statusParam && !status) {
       return NextResponse.json(
         {
           ok: false,
@@ -227,60 +478,47 @@ export async function GET(request: Request) {
       );
     }
 
-    let query = supabase
-      .from("geo_areas")
-      .select(
-        `
-        id,
-        parent_id,
-        area_type,
-        country_code,
-        name,
-        slug,
-        latitude,
-        longitude,
-        sort_order,
-        is_active,
+    const appUser = includeOwnSuggestions
+      ? await getOptionalCurrentAppUser()
+      : null;
+
+    let rows: GeoAreaRow[] = [];
+
+    if (status) {
+      rows = await loadAreasByStatus({
+        areaType,
+        countryCode,
+        parentId,
         status,
-        source,
-        created_at,
-        updated_at
-      `
-      )
-      .eq("status", status)
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true })
-      .limit(limit);
-
-    if (!includeInactive) {
-      query = query.eq("is_active", true);
+        includeInactive,
+        limit,
+      });
+    } else {
+      rows = await loadApprovedAreas({
+        areaType,
+        countryCode,
+        parentId,
+        includeInactive,
+        limit,
+      });
     }
 
-    if (areaType) {
-      query = query.eq("area_type", areaType);
+    if (includeOwnSuggestions && appUser && (!status || status === "approved")) {
+      const ownSuggestedRows = await loadOwnSuggestedAreas({
+        areaType,
+        countryCode,
+        parentId,
+        appUser,
+        includeInactive,
+        limit,
+      });
+
+      rows = [...rows, ...ownSuggestedRows];
     }
 
-    if (countryCode) {
-      query = query.eq("country_code", countryCode);
-    }
-
-    if (parentId) {
-      query = query.eq("parent_id", parentId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: error.message,
-        },
-        { status: 500 }
-      );
-    }
-
-    const areas = ((data ?? []) as GeoAreaRow[]).map(mapGeoArea);
+    const areas = sortGeoAreas(
+      deduplicateGeoAreas(rows.map((row) => mapGeoArea(row, appUser)))
+    ).slice(0, limit);
 
     return NextResponse.json({
       ok: true,
@@ -290,8 +528,9 @@ export async function GET(request: Request) {
         areaType,
         countryCode,
         parentId,
-        status,
+        status: status ?? "approved_plus_own_suggestions_if_requested",
         includeInactive,
+        includeOwnSuggestions,
         limit,
       },
     });
