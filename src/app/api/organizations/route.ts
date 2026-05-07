@@ -118,6 +118,40 @@ function normalizeCountryCode(value: string | null) {
   return normalizedValue;
 }
 
+function getDefaultCurrencyByCountryCode(countryCode: string | null) {
+  const normalizedCountryCode = normalizeCountryCode(countryCode);
+
+  if (normalizedCountryCode === "PL") {
+    return "PLN";
+  }
+
+  if (normalizedCountryCode === "ES") {
+    return "EUR";
+  }
+
+  if (normalizedCountryCode === "DE") {
+    return "EUR";
+  }
+
+  if (normalizedCountryCode === "UA") {
+    return "UAH";
+  }
+
+  if (normalizedCountryCode === "US") {
+    return "USD";
+  }
+
+  if (normalizedCountryCode === "GB") {
+    return "GBP";
+  }
+
+  if (normalizedCountryCode === "CZ") {
+    return "CZK";
+  }
+
+  return "PLN";
+}
+
 function normalizeUuid(value: string | null) {
   if (!value) {
     return null;
@@ -740,6 +774,10 @@ export async function POST(request: Request) {
     );
   }
 
+  const defaultCurrency = getDefaultCurrencyByCountryCode(
+    locationInput.countryCode
+  );
+
   const { data: person, error: personError } = await supabase
     .from("persons")
     .select("*")
@@ -773,6 +811,7 @@ export async function POST(request: Request) {
       owner_person_id: person.id,
       description,
       country_code: locationInput.countryCode,
+      default_currency: defaultCurrency,
       status: "active",
     })
     .select()
