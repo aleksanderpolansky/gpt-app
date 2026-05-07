@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import DirectoryLocationFilterFields from "./components/DirectoryLocationFilterFields";
 import DirectoryUseLocationButton from "./components/DirectoryUseLocationButton";
+import DirectorySuggestionRequestForm from "./components/DirectorySuggestionRequestForm";
 
 export const dynamic = "force-dynamic";
 
@@ -1129,6 +1130,8 @@ export default async function DirectoryPage({
             </div>
           ) : null}
         </section>
+
+        <DirectorySuggestionRequestForm />
 
         <section
           style={{
