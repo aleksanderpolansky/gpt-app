@@ -90,6 +90,10 @@ function getLocationStatusLabel(
   return null;
 }
 
+function isAuthError(error: string) {
+  return error.trim().toLowerCase() === "not authenticated";
+}
+
 export default function OrganizationsPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -124,6 +128,8 @@ export default function OrganizationsPage() {
     loadOrganizations();
   }, []);
 
+  const authError = isAuthError(error);
+
   return (
     <main
       style={{
@@ -152,11 +158,24 @@ export default function OrganizationsPage() {
               fontSize: "32px",
               lineHeight: "1.2",
               fontWeight: 700,
-              margin: "0 0 20px",
+              margin: "0 0 12px",
             }}
           >
             Мои организации
           </h1>
+
+          <p
+            style={{
+              margin: "0 0 20px",
+              color: "#555555",
+              fontSize: "16px",
+              lineHeight: "1.5",
+            }}
+          >
+            Это личный кабинет владельца предприятия. Здесь можно управлять
+            своими организациями, товарами, услугами, сертификатами и
+            предложениями.
+          </p>
 
           <nav
             style={{
@@ -176,6 +195,17 @@ export default function OrganizationsPage() {
               }}
             >
               На главную
+            </Link>
+
+            <Link
+              href="/directory"
+              style={{
+                color: "#2563eb",
+                textDecoration: "underline",
+                fontSize: "16px",
+              }}
+            >
+              Публичный каталог
             </Link>
 
             <Link
@@ -226,7 +256,95 @@ export default function OrganizationsPage() {
           </div>
         )}
 
-        {error && (
+        {!isLoading && authError ? (
+          <section
+            style={{
+              border: "1px solid #bfdbfe",
+              borderRadius: "14px",
+              padding: "24px",
+              background: "#eff6ff",
+              color: "#1e3a8a",
+              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+            }}
+          >
+            <h2
+              style={{
+                margin: "0 0 12px",
+                fontSize: "24px",
+                lineHeight: "1.25",
+              }}
+            >
+              Нужно войти в аккаунт
+            </h2>
+
+            <p
+              style={{
+                margin: "0 0 10px",
+                fontSize: "16px",
+                lineHeight: "1.5",
+              }}
+            >
+              Страница <strong>“Мои организации”</strong> — это приватный
+              кабинет владельца. Чтобы увидеть свои предприятия и управлять ими,
+              войди в аккаунт.
+            </p>
+
+            <p
+              style={{
+                margin: "0 0 18px",
+                fontSize: "15px",
+                lineHeight: "1.5",
+                color: "#1f2937",
+              }}
+            >
+              Публичный каталог предприятий доступен без авторизации отдельно на
+              странице <strong>/directory</strong>.
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
+              <Link
+                href="/api/auth/login"
+                style={{
+                  display: "inline-block",
+                  border: "1px solid #2563eb",
+                  borderRadius: "8px",
+                  padding: "11px 16px",
+                  background: "#2563eb",
+                  color: "#ffffff",
+                  textDecoration: "none",
+                  fontWeight: 800,
+                }}
+              >
+                Войти
+              </Link>
+
+              <Link
+                href="/directory"
+                style={{
+                  display: "inline-block",
+                  border: "1px solid #bfdbfe",
+                  borderRadius: "8px",
+                  padding: "10px 16px",
+                  background: "#ffffff",
+                  color: "#2563eb",
+                  textDecoration: "none",
+                  fontWeight: 700,
+                }}
+              >
+                Перейти в публичный каталог
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
+        {!isLoading && error && !authError ? (
           <div
             style={{
               border: "1px solid #f5c2c7",
@@ -238,7 +356,7 @@ export default function OrganizationsPage() {
           >
             {error}
           </div>
-        )}
+        ) : null}
 
         {!isLoading && !error && organizations.length === 0 && (
           <div
@@ -367,7 +485,9 @@ export default function OrganizationsPage() {
                     </Link>
 
                     <Link
-                      href="/value-objects/new"
+                      href={`/value-objects/new?organizationId=${encodeURIComponent(
+                        organization.id
+                      )}`}
                       style={{
                         color: "#2563eb",
                         textDecoration: "underline",
@@ -377,7 +497,9 @@ export default function OrganizationsPage() {
                     </Link>
 
                     <Link
-                      href="/offers/new"
+                      href={`/offers/new?organizationId=${encodeURIComponent(
+                        organization.id
+                      )}`}
                       style={{
                         color: "#2563eb",
                         textDecoration: "underline",
