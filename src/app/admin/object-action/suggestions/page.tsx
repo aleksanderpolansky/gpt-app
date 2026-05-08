@@ -61,7 +61,7 @@ type SuggestionRequestRow = {
   ai_suggested_action_type_id: string | null;
   ai_suggested_contextual_category_id: string | null;
   matched_existing_category_id: string | null;
-  ai_analysis_json: Record<string, unknown>;
+  ai_analysis_json: Record<string, unknown> | null;
   ai_error_message: string | null;
   status: string;
   admin_decision: string | null;
@@ -79,6 +79,17 @@ type PageData = {
   errorMessage: string | null;
   statusFilter: SuggestionStatusFilter;
   limit: number;
+};
+
+type AiAnalysisDetails = {
+  model: string | null;
+  promptVersion: string | null;
+  analyzedAt: string | null;
+  rationale: string | null;
+  riskNotes: string | null;
+  safetyNote: string | null;
+  categorySlug: string | null;
+  existingCategoriesConsidered: number | null;
 };
 
 const DEFAULT_STATUS_FILTER: SuggestionStatusFilter = "needs_review";
@@ -153,6 +164,16 @@ function formatDateTime(value: string | null | undefined) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function formatNumber(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  return new Intl.NumberFormat("pl-PL", {
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 function getStatusStyle(status: string | null | undefined) {
@@ -237,6 +258,87 @@ function getAiStatusStyle(status: string | null | undefined) {
 
 function getStatusFilterHref(status: SuggestionStatusFilter) {
   return `/admin/object-action/suggestions?status=${status}`;
+}
+
+function getRecord(value: unknown) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function getJsonString(record: Record<string, unknown> | null, key: string) {
+  if (!record) {
+    return null;
+  }
+
+  const value = record[key];
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+
+  return trimmedValue || null;
+}
+
+function getJsonNumber(record: Record<string, unknown> | null, key: string) {
+  if (!record) {
+    return null;
+  }
+
+  const value = record[key];
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsedValue = Number(value);
+
+    if (Number.isFinite(parsedValue)) {
+      return parsedValue;
+    }
+  }
+
+  return null;
+}
+
+function getAiAnalysisDetails(
+  suggestion: SuggestionRequestRow
+): AiAnalysisDetails {
+  const analysisRecord = getRecord(suggestion.ai_analysis_json);
+
+  return {
+    model: getJsonString(analysisRecord, "model") ?? suggestion.ai_model,
+    promptVersion:
+      getJsonString(analysisRecord, "promptVersion") ??
+      suggestion.ai_prompt_version,
+    analyzedAt: getJsonString(analysisRecord, "analyzedAt"),
+    rationale: getJsonString(analysisRecord, "rationale"),
+    riskNotes: getJsonString(analysisRecord, "riskNotes"),
+    safetyNote: getJsonString(analysisRecord, "safetyNote"),
+    categorySlug: getJsonString(analysisRecord, "categorySlug"),
+    existingCategoriesConsidered: getJsonNumber(
+      analysisRecord,
+      "existingCategoriesConsidered"
+    ),
+  };
+}
+
+function hasAiAnalysisDetails(details: AiAnalysisDetails) {
+  return Boolean(
+    details.model ||
+      details.promptVersion ||
+      details.analyzedAt ||
+      details.rationale ||
+      details.riskNotes ||
+      details.safetyNote ||
+      details.categorySlug ||
+      details.existingCategoriesConsidered !== null
+  );
 }
 
 async function getCurrentAppUser(): Promise<{
@@ -518,9 +620,9 @@ export default async function AdminObjectActionSuggestionsPage({
               lineHeight: "1.5",
             }}
           >
-            Reject and archive actions only change request status. Approve and
-            merge actions will be added later and must not publish anything
-            automatically without explicit moderation.
+            AI analysis is advisory only. It can suggest object, action and
+            category mapping, but it never creates, approves, publishes or
+            merges Object-Action Rubricator data automatically.
           </p>
         </header>
 
@@ -694,8 +796,8 @@ export default async function AdminObjectActionSuggestionsPage({
                   Suggestion requests
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Reject and archive are available here. Approve / merge actions
-                  will be added in later steps.
+                  Reject, archive and AI analysis are available here. Approve /
+                  merge actions will be added in later steps.
                 </p>
               </div>
 
@@ -715,6 +817,11 @@ export default async function AdminObjectActionSuggestionsPage({
                     const statusStyle = getStatusStyle(suggestion.status);
                     const aiStatusStyle = getAiStatusStyle(
                       suggestion.ai_status
+                    );
+                    const aiAnalysisDetails =
+                      getAiAnalysisDetails(suggestion);
+                    const shouldShowAiAnalysisDetails = hasAiAnalysisDetails(
+                      aiAnalysisDetails
                     );
 
                     return (
@@ -941,7 +1048,7 @@ export default async function AdminObjectActionSuggestionsPage({
 
                           <div>
                             <strong>AI confidence:</strong>{" "}
-                            {suggestion.ai_confidence ?? "—"}
+                            {formatNumber(suggestion.ai_confidence)}
                           </div>
 
                           <div>
@@ -950,6 +1057,117 @@ export default async function AdminObjectActionSuggestionsPage({
                               {suggestion.matched_existing_category_id ?? "—"}
                             </span>
                           </div>
+                        </section>
+
+                        <section
+                          style={{
+                            border:
+                              suggestion.ai_error_message ||
+                              aiAnalysisDetails.riskNotes
+                                ? "1px solid #f0d28a"
+                                : "1px solid #bfdbfe",
+                            borderRadius: "10px",
+                            padding: "12px",
+                            background:
+                              suggestion.ai_error_message ||
+                              aiAnalysisDetails.riskNotes
+                                ? "#fff8e6"
+                                : "#eff6ff",
+                            display: "grid",
+                            gap: "10px",
+                            lineHeight: "1.45",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontWeight: 800,
+                              color:
+                                suggestion.ai_error_message ||
+                                aiAnalysisDetails.riskNotes
+                                  ? "#7a4b00"
+                                  : "#1e3a8a",
+                            }}
+                          >
+                            AI analysis details
+                          </div>
+
+                          <div
+                            style={{
+                              border: "1px solid #bfdbfe",
+                              borderRadius: "8px",
+                              padding: "10px",
+                              background: "#ffffff",
+                              color: "#1e3a8a",
+                              fontSize: "13px",
+                            }}
+                          >
+                            <strong>Safety note:</strong>{" "}
+                            {aiAnalysisDetails.safetyNote ??
+                              "AI analysis is advisory only. It does not create, approve, publish or merge Object-Action Rubricator data."}
+                          </div>
+
+                          {shouldShowAiAnalysisDetails ||
+                          suggestion.ai_error_message ? (
+                            <div
+                              style={{
+                                display: "grid",
+                                gap: "8px",
+                              }}
+                            >
+                              <div>
+                                <strong>Rationale:</strong>{" "}
+                                {aiAnalysisDetails.rationale ?? "—"}
+                              </div>
+
+                              <div>
+                                <strong>Risk notes:</strong>{" "}
+                                {aiAnalysisDetails.riskNotes ?? "—"}
+                              </div>
+
+                              <div>
+                                <strong>AI error:</strong>{" "}
+                                {suggestion.ai_error_message ?? "—"}
+                              </div>
+
+                              <div>
+                                <strong>Category slug:</strong>{" "}
+                                {aiAnalysisDetails.categorySlug ?? "—"}
+                              </div>
+
+                              <div>
+                                <strong>Model:</strong>{" "}
+                                {aiAnalysisDetails.model ?? "—"}
+                              </div>
+
+                              <div>
+                                <strong>Prompt version:</strong>{" "}
+                                {aiAnalysisDetails.promptVersion ?? "—"}
+                              </div>
+
+                              <div>
+                                <strong>Analyzed at:</strong>{" "}
+                                {formatDateTime(aiAnalysisDetails.analyzedAt)}
+                              </div>
+
+                              <div>
+                                <strong>
+                                  Existing categories considered:
+                                </strong>{" "}
+                                {formatNumber(
+                                  aiAnalysisDetails.existingCategoriesConsidered
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                color: "#555555",
+                                fontSize: "13px",
+                              }}
+                            >
+                              AI analysis has not been run for this request yet.
+                            </div>
+                          )}
                         </section>
 
                         <SuggestionModerationButtons
