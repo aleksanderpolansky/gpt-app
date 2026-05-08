@@ -796,8 +796,11 @@ export default async function AdminObjectActionSuggestionsPage({
                   Suggestion requests
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Reject, archive and AI analysis are available here. Approve /
-                  merge actions will be added in later steps.
+                  AI Analyze, Approve match, Reject and Archive are available
+                  here. Approve match only confirms an AI-matched existing
+                  category and does not create a new public category. Full new
+                  category approval and advanced merge flows will be added in
+                  later steps.
                 </p>
               </div>
 
