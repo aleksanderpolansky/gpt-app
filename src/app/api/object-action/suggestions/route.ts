@@ -24,6 +24,9 @@ type SuggestionModerationRequestBody = {
   id?: unknown;
   action?: unknown;
   adminComment?: unknown;
+  newCategoryName?: unknown;
+  newCategorySlug?: unknown;
+  newCategoryDescription?: unknown;
 };
 
 type ContextRow = {
@@ -106,13 +109,15 @@ type SuggestionStatusChangingAction = "reject" | "archive";
 type SuggestionModerationAction =
   | SuggestionStatusChangingAction
   | "analyze"
-  | "approve_existing_match";
+  | "approve_existing_match"
+  | "approve_new_category";
 
 type SuggestionAuditEventType =
   | "ai_analyzed"
   | "rejected"
   | "archived"
-  | "approve_existing_match";
+  | "approve_existing_match"
+  | "approve_new_category";
 
 type CreateSuggestionAuditEventInput = {
   suggestionRequestId: string;
@@ -133,12 +138,32 @@ type CreateSuggestionAuditEventInput = {
   internalNote?: string | null;
 };
 
+type SuggestedNewCategoryData = {
+  name: string;
+  slug: string;
+  description: string | null;
+  source: "admin_explicit" | "ai_suggested";
+};
+
 const DEFAULT_LOCALE = "ru";
 const DEFAULT_CONTEXT_CODE = "business_directory";
 const DEFAULT_ENTITY_TYPE = "general";
 const DEFAULT_REQUEST_SOURCE = "api";
 const DEFAULT_SUGGESTION_STATUS_FILTER: SuggestionStatusFilter = "needs_review";
 const MAX_ADMIN_COMMENT_LENGTH = 2000;
+
+const UNSAFE_GENERIC_CATEGORY_SLUGS = new Set([
+  "other",
+  "general",
+  "review",
+  "unknown",
+  "misc",
+  "miscellaneous",
+  "uncategorized",
+  "category",
+  "service",
+  "services",
+]);
 
 const SUGGESTION_REQUEST_SELECT = `
   id,
@@ -215,6 +240,7 @@ const ALLOWED_MODERATION_ACTIONS = new Set<SuggestionModerationAction>([
   "archive",
   "analyze",
   "approve_existing_match",
+  "approve_new_category",
 ]);
 
 const AI_ANALYSIS_ALLOWED_STATUSES = new Set([
@@ -227,6 +253,17 @@ const APPROVE_EXISTING_MATCH_ALLOWED_STATUSES = new Set([
   "draft",
   "suggested",
   "needs_review",
+]);
+
+const APPROVE_NEW_CATEGORY_ALLOWED_STATUSES = new Set([
+  "draft",
+  "suggested",
+  "needs_review",
+]);
+
+const APPROVE_NEW_CATEGORY_ALLOWED_AI_STATUSES = new Set([
+  "new_category_suggested",
+  "low_confidence",
 ]);
 
 const MUTATION_ADMIN_ROLES = new Set(["owner", "admin", "moderator"]);
@@ -387,6 +424,26 @@ function normalizeAdminComment(value: unknown) {
   return normalizedValue;
 }
 
+function normalizeCategorySlug(value: unknown) {
+  const normalizedValue = normalizeStringValue(value);
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  const slug = normalizedValue
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 100)
+    .replace(/-+$/g, "");
+
+  return slug || null;
+}
+
 function getStatusForModerationAction(
   action: SuggestionStatusChangingAction
 ): "rejected" | "archived" {
@@ -424,6 +481,38 @@ function isSuggestionEligibleForApproveExistingMatch(
   return APPROVE_EXISTING_MATCH_ALLOWED_STATUSES.has(suggestion.status);
 }
 
+function isSuggestionEligibleForApproveNewCategory(
+  suggestion: ExistingSuggestionRow
+) {
+  return APPROVE_NEW_CATEGORY_ALLOWED_STATUSES.has(suggestion.status);
+}
+
+function isAiStatusEligibleForApproveNewCategory(
+  suggestion: ExistingSuggestionRow
+) {
+  if (!suggestion.ai_status) {
+    return false;
+  }
+
+  return APPROVE_NEW_CATEGORY_ALLOWED_AI_STATUSES.has(suggestion.ai_status);
+}
+
+function getRecord(value: unknown) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function getJsonString(record: Record<string, unknown> | null, key: string) {
+  if (!record) {
+    return null;
+  }
+
+  return normalizeOptionalStringValue(record[key]);
+}
+
 function createSuggestionSnapshot(suggestion: SuggestionRequestRow) {
   return {
     id: suggestion.id,
@@ -451,6 +540,59 @@ function createSuggestionSnapshot(suggestion: SuggestionRequestRow) {
     matchedExistingCategoryId: suggestion.matched_existing_category_id,
     aiErrorMessage: suggestion.ai_error_message,
     updatedAt: suggestion.updated_at,
+  };
+}
+
+function getSuggestedNewCategoryData(
+  suggestion: ExistingSuggestionRow,
+  body: SuggestionModerationRequestBody
+): SuggestedNewCategoryData | null {
+  const explicitName = normalizeOptionalStringValue(body.newCategoryName);
+  const explicitSlug = normalizeCategorySlug(
+    body.newCategorySlug ?? body.newCategoryName
+  );
+  const explicitDescription = normalizeOptionalStringValue(
+    body.newCategoryDescription
+  );
+
+  if (explicitName || explicitSlug || explicitDescription) {
+    if (!explicitName || !explicitSlug) {
+      return null;
+    }
+
+    return {
+      name: explicitName,
+      slug: explicitSlug,
+      description: explicitDescription,
+      source: "admin_explicit",
+    };
+  }
+
+  const analysisRecord = getRecord(suggestion.ai_analysis_json);
+
+  const categoryName =
+    normalizeOptionalStringValue(suggestion.ai_suggested_category_text) ??
+    getJsonString(analysisRecord, "categoryText") ??
+    normalizeOptionalStringValue(suggestion.proposed_category_text);
+
+  if (!categoryName) {
+    return null;
+  }
+
+  const rawCategorySlug =
+    getJsonString(analysisRecord, "categorySlug") ?? categoryName;
+
+  const categorySlug = normalizeCategorySlug(rawCategorySlug);
+
+  if (!categorySlug) {
+    return null;
+  }
+
+  return {
+    name: categoryName,
+    slug: categorySlug,
+    description: null,
+    source: "ai_suggested",
   };
 }
 
@@ -627,6 +769,42 @@ async function getContextualCategoryForSuggestion(
     .eq("context_id", context.id)
     .eq("is_active", true)
     .in("status", ["approved", "published"])
+    .limit(1);
+
+  if (error) {
+    return {
+      category: null,
+      errorMessage: error.message,
+    };
+  }
+
+  const categoryRows = (data as unknown as ContextualCategoryRow[] | null) ?? [];
+
+  return {
+    category: categoryRows[0] ?? null,
+    errorMessage: null,
+  };
+}
+
+async function getContextualCategoryBySlug(
+  contextId: string,
+  slug: string
+): Promise<{
+  category: ContextualCategoryRow | null;
+  errorMessage: string | null;
+}> {
+  const { data, error } = await supabase
+    .from("contextual_categories")
+    .select(
+      `
+      id,
+      slug,
+      name,
+      description
+    `
+    )
+    .eq("context_id", contextId)
+    .ilike("slug", slug)
     .limit(1);
 
   if (error) {
@@ -1084,6 +1262,232 @@ async function approveExistingMatchSuggestionRequest(
   });
 }
 
+async function approveNewCategorySuggestionRequest(
+  suggestion: ExistingSuggestionRow,
+  appUser: AppUserRow,
+  platformAdmin: PlatformAdminRow,
+  adminComment: string | null,
+  body: SuggestionModerationRequestBody
+) {
+  if (!isSuggestionEligibleForApproveNewCategory(suggestion)) {
+    return createValidationErrorResponse(
+      `approve_new_category can only run for draft, suggested or needs_review suggestions. Current status: ${suggestion.status}.`
+    );
+  }
+
+  if (!isAiStatusEligibleForApproveNewCategory(suggestion)) {
+    return createValidationErrorResponse(
+      `approve_new_category requires ai_status=new_category_suggested or low_confidence. Current ai_status: ${
+        suggestion.ai_status ?? "null"
+      }.`
+    );
+  }
+
+  if (suggestion.ai_status === "low_confidence" && !adminComment) {
+    return createValidationErrorResponse(
+      "approve_new_category for low_confidence AI analysis requires an explicit adminComment."
+    );
+  }
+
+  const explicitNewCategoryName = normalizeOptionalStringValue(
+    body.newCategoryName
+  );
+  const explicitNewCategorySlug = normalizeCategorySlug(body.newCategorySlug);
+
+  if (
+    suggestion.ai_status === "low_confidence" &&
+    (!explicitNewCategoryName || !explicitNewCategorySlug)
+  ) {
+    return createValidationErrorResponse(
+      "approve_new_category for low_confidence AI analysis requires explicit newCategoryName and newCategorySlug."
+    );
+  }
+
+  const suggestedCategory = getSuggestedNewCategoryData(suggestion, body);
+
+  if (!suggestedCategory) {
+    return createValidationErrorResponse(
+      "approve_new_category requires a non-empty category name and URL-safe category slug."
+    );
+  }
+
+  if (UNSAFE_GENERIC_CATEGORY_SLUGS.has(suggestedCategory.slug)) {
+    return createValidationErrorResponse(
+      `approve_new_category rejected unsafe generic slug "${suggestedCategory.slug}". Provide explicit newCategoryName and newCategorySlug with a specific category name.`
+    );
+  }
+
+  const { context, errorMessage: contextErrorMessage } =
+    await getResolvedContext(suggestion.context_code);
+
+  if (contextErrorMessage) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: contextErrorMessage,
+      },
+      { status: 500 }
+    );
+  }
+
+  if (!context) {
+    return createValidationErrorResponse("contextCode was not found.");
+  }
+
+  const {
+    category: existingCategoryWithSameSlug,
+    errorMessage: existingCategoryErrorMessage,
+  } = await getContextualCategoryBySlug(context.id, suggestedCategory.slug);
+
+  if (existingCategoryErrorMessage) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: existingCategoryErrorMessage,
+      },
+      { status: 500 }
+    );
+  }
+
+  if (existingCategoryWithSameSlug) {
+    return createValidationErrorResponse(
+      `A contextual category with slug "${suggestedCategory.slug}" already exists in this context. Use approve_existing_match or choose another slug later.`
+    );
+  }
+
+  const nowIso = new Date().toISOString();
+  const finalAdminComment =
+    adminComment ??
+    `Approved new category: ${suggestedCategory.name} (${suggestedCategory.slug}).`;
+
+  const { data: createdCategoryData, error: createCategoryError } =
+    await supabase
+      .from("contextual_categories")
+      .insert({
+        context_id: context.id,
+        parent_id: null,
+        slug: suggestedCategory.slug,
+        name: suggestedCategory.name,
+        description: suggestedCategory.description,
+        status: "approved",
+        source_type: "owner_confirmed",
+        sort_order: 100,
+        is_active: true,
+      })
+      .select(
+        `
+        id,
+        slug,
+        name,
+        description
+      `
+      )
+      .single();
+
+  if (createCategoryError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: createCategoryError.message,
+      },
+      { status: 500 }
+    );
+  }
+
+  const createdCategory =
+    createdCategoryData as unknown as ContextualCategoryRow;
+
+  const { data, error } = await supabase
+    .from("object_action_suggestion_requests")
+    .update({
+      status: "approved",
+      admin_decision: "approve",
+      admin_comment: finalAdminComment,
+      reviewed_by_user_id: appUser.id,
+      reviewed_at: nowIso,
+      ai_suggested_contextual_category_id: createdCategory.id,
+      matched_existing_category_id: null,
+      ai_suggested_category_text: createdCategory.name,
+    })
+    .eq("id", suggestion.id)
+    .select(SUGGESTION_REQUEST_SELECT)
+    .single();
+
+  if (error) {
+    await supabase
+      .from("contextual_categories")
+      .update({
+        status: "archived",
+        is_active: false,
+      })
+      .eq("id", createdCategory.id);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error.message,
+        compensation:
+          "New contextual category was archived because suggestion request update failed.",
+      },
+      { status: 500 }
+    );
+  }
+
+  const updatedSuggestion = data as unknown as SuggestionRequestRow;
+
+  const auditErrorMessage = await createObjectActionSuggestionAuditEvent({
+    suggestionRequestId: suggestion.id,
+    appUser,
+    platformAdmin,
+    eventType: "approve_new_category",
+    statusBefore: suggestion.status,
+    statusAfter: updatedSuggestion.status,
+    aiStatusBefore: suggestion.ai_status,
+    aiStatusAfter: updatedSuggestion.ai_status,
+    adminDecision: "approve",
+    matchedExistingCategoryId: null,
+    createdContextualCategoryId: createdCategory.id,
+    previousValues: createSuggestionSnapshot(suggestion),
+    newValues: createSuggestionSnapshot(updatedSuggestion),
+    metadataJson: {
+      action: "approve_new_category",
+      reviewedAt: nowIso,
+      createdContextualCategoryId: createdCategory.id,
+      createdContextualCategoryName: createdCategory.name,
+      createdContextualCategorySlug: createdCategory.slug,
+      newCategorySource: suggestedCategory.source,
+      contextId: context.id,
+      publicDataMutation: true,
+      safetyNote:
+        "A new contextual category was created only after explicit platform admin approval.",
+    },
+    internalNote: finalAdminComment,
+  });
+
+  if (auditErrorMessage) {
+    return createAuditErrorResponse(auditErrorMessage, updatedSuggestion);
+  }
+
+  return NextResponse.json({
+    ok: true,
+    suggestionRequest: updatedSuggestion,
+    moderation: {
+      action: "approve_new_category",
+      previousStatus: suggestion.status,
+      nextStatus: "approved",
+      reviewedByUserId: appUser.id,
+      reviewedAt: nowIso,
+      createdContextualCategoryId: createdCategory.id,
+      createdContextualCategoryName: createdCategory.name,
+      createdContextualCategorySlug: createdCategory.slug,
+      newCategorySource: suggestedCategory.source,
+      publicDataMutation: true,
+      note:
+        "New contextual category was created after explicit platform admin approval.",
+    },
+  });
+}
+
 export async function GET(request: NextRequest) {
   const {
     appUser,
@@ -1184,7 +1588,7 @@ export async function PATCH(request: NextRequest) {
 
   if (!action) {
     return createValidationErrorResponse(
-      "action must be reject, archive, analyze or approve_existing_match."
+      "action must be reject, archive, analyze, approve_existing_match or approve_new_category."
     );
   }
 
@@ -1231,6 +1635,16 @@ export async function PATCH(request: NextRequest) {
       appUser,
       platformAdmin,
       adminComment
+    );
+  }
+
+  if (action === "approve_new_category") {
+    return approveNewCategorySuggestionRequest(
+      suggestion,
+      appUser,
+      platformAdmin,
+      adminComment,
+      body
     );
   }
 
