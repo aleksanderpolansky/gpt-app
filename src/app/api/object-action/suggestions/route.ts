@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -22,10 +23,35 @@ type ContextRow = {
   is_active: boolean;
 };
 
+type AppUserRow = {
+  id: string;
+  auth0_sub: string;
+  email: string | null;
+  name: string | null;
+};
+
+type PlatformAdminRow = {
+  id: string;
+  app_user_id: string;
+  role: string;
+  status: string;
+};
+
+type SuggestionStatusFilter =
+  | "all"
+  | "draft"
+  | "suggested"
+  | "needs_review"
+  | "approved"
+  | "merged"
+  | "rejected"
+  | "archived";
+
 const DEFAULT_LOCALE = "ru";
 const DEFAULT_CONTEXT_CODE = "business_directory";
 const DEFAULT_ENTITY_TYPE = "general";
 const DEFAULT_REQUEST_SOURCE = "api";
+const DEFAULT_SUGGESTION_STATUS_FILTER: SuggestionStatusFilter = "needs_review";
 
 const ALLOWED_ENTITY_TYPES = new Set([
   "organization",
@@ -48,6 +74,17 @@ const ALLOWED_REQUEST_SOURCES = new Set([
   "api",
   "import",
   "other",
+]);
+
+const ALLOWED_SUGGESTION_STATUS_FILTERS = new Set<SuggestionStatusFilter>([
+  "all",
+  "draft",
+  "suggested",
+  "needs_review",
+  "approved",
+  "merged",
+  "rejected",
+  "archived",
 ]);
 
 function normalizeStringValue(value: unknown) {
@@ -114,6 +151,34 @@ function normalizeRequestSource(value: unknown) {
   return normalizedValue;
 }
 
+function normalizeSuggestionStatusFilter(
+  value: string | null
+): SuggestionStatusFilter {
+  const normalizedValue = normalizeStringValue(value);
+
+  if (!normalizedValue) {
+    return DEFAULT_SUGGESTION_STATUS_FILTER;
+  }
+
+  const lowerValue = normalizedValue.toLowerCase() as SuggestionStatusFilter;
+
+  if (!ALLOWED_SUGGESTION_STATUS_FILTERS.has(lowerValue)) {
+    return DEFAULT_SUGGESTION_STATUS_FILTER;
+  }
+
+  return lowerValue;
+}
+
+function normalizeLimit(value: string | null) {
+  const parsedValue = Number(value ?? "50");
+
+  if (!Number.isFinite(parsedValue)) {
+    return 50;
+  }
+
+  return Math.min(Math.max(Math.trunc(parsedValue), 1), 100);
+}
+
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value
@@ -165,6 +230,123 @@ async function getResolvedContext(contextCode: string) {
   };
 }
 
+async function getCurrentAppUser(): Promise<{
+  appUser: AppUserRow | null;
+  errorMessage: string | null;
+  status: number;
+}> {
+  const session = await auth0.getSession();
+
+  if (!session?.user?.sub) {
+    return {
+      appUser: null,
+      errorMessage: "Not authenticated.",
+      status: 401,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("app_users")
+    .select(
+      `
+      id,
+      auth0_sub,
+      email,
+      name
+    `
+    )
+    .eq("auth0_sub", session.user.sub)
+    .limit(1);
+
+  if (error) {
+    return {
+      appUser: null,
+      errorMessage: error.message,
+      status: 500,
+    };
+  }
+
+  const appUserRows = (data as unknown as AppUserRow[] | null) ?? [];
+
+  if (!appUserRows[0]) {
+    return {
+      appUser: null,
+      errorMessage: "App user not found.",
+      status: 403,
+    };
+  }
+
+  return {
+    appUser: appUserRows[0],
+    errorMessage: null,
+    status: 200,
+  };
+}
+
+async function requirePlatformAdmin(): Promise<{
+  appUser: AppUserRow | null;
+  platformAdmin: PlatformAdminRow | null;
+  errorMessage: string | null;
+  status: number;
+}> {
+  const {
+    appUser,
+    errorMessage: appUserErrorMessage,
+    status: appUserStatus,
+  } = await getCurrentAppUser();
+
+  if (appUserErrorMessage || !appUser) {
+    return {
+      appUser: null,
+      platformAdmin: null,
+      errorMessage: appUserErrorMessage ?? "App user not found.",
+      status: appUserStatus,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("platform_admins")
+    .select(
+      `
+      id,
+      app_user_id,
+      role,
+      status
+    `
+    )
+    .eq("app_user_id", appUser.id)
+    .eq("status", "active")
+    .limit(1);
+
+  if (error) {
+    return {
+      appUser,
+      platformAdmin: null,
+      errorMessage: error.message,
+      status: 500,
+    };
+  }
+
+  const platformAdminRows =
+    (data as unknown as PlatformAdminRow[] | null) ?? [];
+
+  if (!platformAdminRows[0]) {
+    return {
+      appUser,
+      platformAdmin: null,
+      errorMessage: "Platform admin access required.",
+      status: 403,
+    };
+  }
+
+  return {
+    appUser,
+    platformAdmin: platformAdminRows[0],
+    errorMessage: null,
+    status: 200,
+  };
+}
+
 function createValidationErrorResponse(message: string) {
   return NextResponse.json(
     {
@@ -173,6 +355,112 @@ function createValidationErrorResponse(message: string) {
     },
     { status: 400 }
   );
+}
+
+function createAuthErrorResponse(message: string, status: number) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: message,
+    },
+    { status }
+  );
+}
+
+export async function GET(request: NextRequest) {
+  const {
+    appUser,
+    platformAdmin,
+    errorMessage: adminErrorMessage,
+    status: adminStatus,
+  } = await requirePlatformAdmin();
+
+  if (adminErrorMessage || !appUser || !platformAdmin) {
+    return createAuthErrorResponse(
+      adminErrorMessage ?? "Platform admin access required.",
+      adminStatus
+    );
+  }
+
+  const searchParams = request.nextUrl.searchParams;
+  const statusFilter = normalizeSuggestionStatusFilter(
+    searchParams.get("status")
+  );
+  const limit = normalizeLimit(searchParams.get("limit"));
+
+  let query = supabase
+    .from("object_action_suggestion_requests")
+    .select(
+      `
+      id,
+      user_text,
+      locale,
+      context_code,
+      resolved_context_id,
+      entity_type,
+      entity_id,
+      request_source,
+      source_type,
+      created_by_user_id,
+      proposed_object_text,
+      proposed_action_text,
+      proposed_category_text,
+      ai_status,
+      ai_confidence,
+      ai_model,
+      ai_prompt_version,
+      ai_suggested_object_text,
+      ai_suggested_action_text,
+      ai_suggested_category_text,
+      ai_suggested_object_type_id,
+      ai_suggested_action_type_id,
+      ai_suggested_contextual_category_id,
+      matched_existing_category_id,
+      ai_analysis_json,
+      ai_error_message,
+      status,
+      admin_decision,
+      admin_comment,
+      reviewed_by_user_id,
+      reviewed_at,
+      created_at,
+      updated_at
+    `
+    )
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (statusFilter !== "all") {
+    query = query.eq("status", statusFilter);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error.message,
+      },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    suggestionRequests: data ?? [],
+    count: data?.length ?? 0,
+    filters: {
+      status: statusFilter,
+      limit,
+    },
+    admin: {
+      appUserId: appUser.id,
+      email: appUser.email,
+      name: appUser.name,
+      role: platformAdmin.role,
+    },
+  });
 }
 
 export async function POST(request: NextRequest) {
