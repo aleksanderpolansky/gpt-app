@@ -47,16 +47,43 @@ type PlatformAdminRow = {
   status: string;
 };
 
-type ExistingSuggestionRow = {
+type SuggestionRequestRow = {
   id: string;
   user_text: string;
   locale: string;
   context_code: string;
-  status: string;
+  resolved_context_id: string | null;
+  entity_type: string;
+  entity_id: string | null;
+  request_source: string;
+  source_type: string;
+  created_by_user_id: string | null;
+  proposed_object_text: string | null;
+  proposed_action_text: string | null;
+  proposed_category_text: string | null;
   ai_status: string | null;
-  matched_existing_category_id: string | null;
+  ai_confidence: number | null;
+  ai_model: string | null;
+  ai_prompt_version: string | null;
+  ai_suggested_object_text: string | null;
+  ai_suggested_action_text: string | null;
+  ai_suggested_category_text: string | null;
+  ai_suggested_object_type_id: string | null;
+  ai_suggested_action_type_id: string | null;
   ai_suggested_contextual_category_id: string | null;
+  matched_existing_category_id: string | null;
+  ai_analysis_json: Record<string, unknown> | null;
+  ai_error_message: string | null;
+  status: string;
+  admin_decision: string | null;
+  admin_comment: string | null;
+  reviewed_by_user_id: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
+
+type ExistingSuggestionRow = SuggestionRequestRow;
 
 type ContextualCategoryRow = {
   id: string;
@@ -81,12 +108,73 @@ type SuggestionModerationAction =
   | "analyze"
   | "approve_existing_match";
 
+type SuggestionAuditEventType =
+  | "ai_analyzed"
+  | "rejected"
+  | "archived"
+  | "approve_existing_match";
+
+type CreateSuggestionAuditEventInput = {
+  suggestionRequestId: string;
+  appUser: AppUserRow;
+  platformAdmin: PlatformAdminRow;
+  eventType: SuggestionAuditEventType;
+  statusBefore: string | null;
+  statusAfter: string;
+  aiStatusBefore: string | null;
+  aiStatusAfter: string | null;
+  adminDecision: string | null;
+  matchedExistingCategoryId?: string | null;
+  createdContextualCategoryId?: string | null;
+  previousValues?: Record<string, unknown> | null;
+  newValues?: Record<string, unknown> | null;
+  metadataJson?: Record<string, unknown>;
+  publicNote?: string | null;
+  internalNote?: string | null;
+};
+
 const DEFAULT_LOCALE = "ru";
 const DEFAULT_CONTEXT_CODE = "business_directory";
 const DEFAULT_ENTITY_TYPE = "general";
 const DEFAULT_REQUEST_SOURCE = "api";
 const DEFAULT_SUGGESTION_STATUS_FILTER: SuggestionStatusFilter = "needs_review";
 const MAX_ADMIN_COMMENT_LENGTH = 2000;
+
+const SUGGESTION_REQUEST_SELECT = `
+  id,
+  user_text,
+  locale,
+  context_code,
+  resolved_context_id,
+  entity_type,
+  entity_id,
+  request_source,
+  source_type,
+  created_by_user_id,
+  proposed_object_text,
+  proposed_action_text,
+  proposed_category_text,
+  ai_status,
+  ai_confidence,
+  ai_model,
+  ai_prompt_version,
+  ai_suggested_object_text,
+  ai_suggested_action_text,
+  ai_suggested_category_text,
+  ai_suggested_object_type_id,
+  ai_suggested_action_type_id,
+  ai_suggested_contextual_category_id,
+  matched_existing_category_id,
+  ai_analysis_json,
+  ai_error_message,
+  status,
+  admin_decision,
+  admin_comment,
+  reviewed_by_user_id,
+  reviewed_at,
+  created_at,
+  updated_at
+`;
 
 const ALLOWED_ENTITY_TYPES = new Set([
   "organization",
@@ -309,6 +397,16 @@ function getStatusForModerationAction(
   return "rejected";
 }
 
+function getAuditEventTypeForModerationAction(
+  action: SuggestionStatusChangingAction
+): "rejected" | "archived" {
+  if (action === "archive") {
+    return "archived";
+  }
+
+  return "rejected";
+}
+
 function getMatchedExistingCategoryId(suggestion: ExistingSuggestionRow) {
   return (
     suggestion.matched_existing_category_id ??
@@ -324,6 +422,80 @@ function isSuggestionEligibleForApproveExistingMatch(
   suggestion: ExistingSuggestionRow
 ) {
   return APPROVE_EXISTING_MATCH_ALLOWED_STATUSES.has(suggestion.status);
+}
+
+function createSuggestionSnapshot(suggestion: SuggestionRequestRow) {
+  return {
+    id: suggestion.id,
+    userText: suggestion.user_text,
+    locale: suggestion.locale,
+    contextCode: suggestion.context_code,
+    entityType: suggestion.entity_type,
+    entityId: suggestion.entity_id,
+    requestSource: suggestion.request_source,
+    sourceType: suggestion.source_type,
+    status: suggestion.status,
+    adminDecision: suggestion.admin_decision,
+    adminComment: suggestion.admin_comment,
+    reviewedByUserId: suggestion.reviewed_by_user_id,
+    reviewedAt: suggestion.reviewed_at,
+    aiStatus: suggestion.ai_status,
+    aiConfidence: suggestion.ai_confidence,
+    aiModel: suggestion.ai_model,
+    aiPromptVersion: suggestion.ai_prompt_version,
+    aiSuggestedObjectText: suggestion.ai_suggested_object_text,
+    aiSuggestedActionText: suggestion.ai_suggested_action_text,
+    aiSuggestedCategoryText: suggestion.ai_suggested_category_text,
+    aiSuggestedContextualCategoryId:
+      suggestion.ai_suggested_contextual_category_id,
+    matchedExistingCategoryId: suggestion.matched_existing_category_id,
+    aiErrorMessage: suggestion.ai_error_message,
+    updatedAt: suggestion.updated_at,
+  };
+}
+
+async function createObjectActionSuggestionAuditEvent(
+  input: CreateSuggestionAuditEventInput
+) {
+  const { error } = await supabase.from("object_action_suggestion_events").insert({
+    suggestion_request_id: input.suggestionRequestId,
+    actor_user_id: input.appUser.id,
+    actor_role: input.platformAdmin.role,
+    event_type: input.eventType,
+    event_source: "admin_ui",
+    status_before: input.statusBefore,
+    status_after: input.statusAfter,
+    ai_status_before: input.aiStatusBefore,
+    ai_status_after: input.aiStatusAfter,
+    admin_decision: input.adminDecision,
+    matched_existing_category_id: input.matchedExistingCategoryId ?? null,
+    created_contextual_category_id: input.createdContextualCategoryId ?? null,
+    previous_values: input.previousValues ?? null,
+    new_values: input.newValues ?? null,
+    metadata_json: input.metadataJson ?? {},
+    public_note: input.publicNote ?? null,
+    internal_note: input.internalNote ?? null,
+  });
+
+  if (error) {
+    return error.message;
+  }
+
+  return null;
+}
+
+function createAuditErrorResponse(
+  auditErrorMessage: string,
+  suggestionRequest: SuggestionRequestRow
+) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: `Suggestion request was updated, but audit event creation failed: ${auditErrorMessage}`,
+      suggestionRequest,
+    },
+    { status: 500 }
+  );
 }
 
 async function getResolvedContext(contextCode: string) {
@@ -595,18 +767,7 @@ async function getExistingSuggestionRequest(suggestionId: string): Promise<{
 }> {
   const { data, error } = await supabase
     .from("object_action_suggestion_requests")
-    .select(
-      `
-      id,
-      user_text,
-      locale,
-      context_code,
-      status,
-      ai_status,
-      matched_existing_category_id,
-      ai_suggested_contextual_category_id
-    `
-    )
+    .select(SUGGESTION_REQUEST_SELECT)
     .eq("id", suggestionId)
     .limit(1);
 
@@ -645,7 +806,11 @@ function createAuthErrorResponse(message: string, status: number) {
   );
 }
 
-async function analyzeSuggestionRequest(suggestion: ExistingSuggestionRow) {
+async function analyzeSuggestionRequest(
+  suggestion: ExistingSuggestionRow,
+  appUser: AppUserRow,
+  platformAdmin: PlatformAdminRow
+) {
   if (!isSuggestionEligibleForAiAnalysis(suggestion)) {
     return createValidationErrorResponse(
       `AI analysis can only run for draft, suggested or needs_review suggestions. Current status: ${suggestion.status}.`
@@ -713,43 +878,7 @@ async function analyzeSuggestionRequest(suggestion: ExistingSuggestionRow) {
       ai_error_message: analysis.errorMessage,
     })
     .eq("id", suggestion.id)
-    .select(
-      `
-      id,
-      user_text,
-      locale,
-      context_code,
-      resolved_context_id,
-      entity_type,
-      entity_id,
-      request_source,
-      source_type,
-      created_by_user_id,
-      proposed_object_text,
-      proposed_action_text,
-      proposed_category_text,
-      ai_status,
-      ai_confidence,
-      ai_model,
-      ai_prompt_version,
-      ai_suggested_object_text,
-      ai_suggested_action_text,
-      ai_suggested_category_text,
-      ai_suggested_object_type_id,
-      ai_suggested_action_type_id,
-      ai_suggested_contextual_category_id,
-      matched_existing_category_id,
-      ai_analysis_json,
-      ai_error_message,
-      status,
-      admin_decision,
-      admin_comment,
-      reviewed_by_user_id,
-      reviewed_at,
-      created_at,
-      updated_at
-    `
-    )
+    .select(SUGGESTION_REQUEST_SELECT)
     .single();
 
   if (error) {
@@ -762,9 +891,47 @@ async function analyzeSuggestionRequest(suggestion: ExistingSuggestionRow) {
     );
   }
 
+  const updatedSuggestion = data as unknown as SuggestionRequestRow;
+
+  const auditErrorMessage = await createObjectActionSuggestionAuditEvent({
+    suggestionRequestId: suggestion.id,
+    appUser,
+    platformAdmin,
+    eventType: "ai_analyzed",
+    statusBefore: suggestion.status,
+    statusAfter: updatedSuggestion.status,
+    aiStatusBefore: suggestion.ai_status,
+    aiStatusAfter: updatedSuggestion.ai_status,
+    adminDecision: null,
+    matchedExistingCategoryId: updatedSuggestion.matched_existing_category_id,
+    previousValues: createSuggestionSnapshot(suggestion),
+    newValues: createSuggestionSnapshot(updatedSuggestion),
+    metadataJson: {
+      action: "analyze",
+      analyzedAt,
+      aiStatus: analysis.aiStatus,
+      confidence: analysis.confidence,
+      model: analysis.aiModel,
+      promptVersion: analysis.aiPromptVersion,
+      existingCategoriesConsidered: categories.length,
+      matchedExistingCategoryId: analysis.matchedExistingCategoryId,
+      errorMessage: analysis.errorMessage,
+      publicDataMutation: false,
+      safetyNote:
+        "AI analysis is advisory only. It does not create, approve, publish or merge Object-Action Rubricator data.",
+    },
+    internalNote: analysis.errorMessage
+      ? `AI analysis failed: ${analysis.errorMessage}`
+      : `AI analysis completed with status ${analysis.aiStatus}.`,
+  });
+
+  if (auditErrorMessage) {
+    return createAuditErrorResponse(auditErrorMessage, updatedSuggestion);
+  }
+
   return NextResponse.json({
     ok: true,
-    suggestionRequest: data,
+    suggestionRequest: updatedSuggestion,
     aiAnalysis: {
       aiStatus: analysis.aiStatus,
       confidence: analysis.confidence,
@@ -787,6 +954,7 @@ async function analyzeSuggestionRequest(suggestion: ExistingSuggestionRow) {
 async function approveExistingMatchSuggestionRequest(
   suggestion: ExistingSuggestionRow,
   appUser: AppUserRow,
+  platformAdmin: PlatformAdminRow,
   adminComment: string | null
 ) {
   if (!isSuggestionEligibleForApproveExistingMatch(suggestion)) {
@@ -852,43 +1020,7 @@ async function approveExistingMatchSuggestionRequest(
       ai_suggested_contextual_category_id: category.id,
     })
     .eq("id", suggestion.id)
-    .select(
-      `
-      id,
-      user_text,
-      locale,
-      context_code,
-      resolved_context_id,
-      entity_type,
-      entity_id,
-      request_source,
-      source_type,
-      created_by_user_id,
-      proposed_object_text,
-      proposed_action_text,
-      proposed_category_text,
-      ai_status,
-      ai_confidence,
-      ai_model,
-      ai_prompt_version,
-      ai_suggested_object_text,
-      ai_suggested_action_text,
-      ai_suggested_category_text,
-      ai_suggested_object_type_id,
-      ai_suggested_action_type_id,
-      ai_suggested_contextual_category_id,
-      matched_existing_category_id,
-      ai_analysis_json,
-      ai_error_message,
-      status,
-      admin_decision,
-      admin_comment,
-      reviewed_by_user_id,
-      reviewed_at,
-      created_at,
-      updated_at
-    `
-    )
+    .select(SUGGESTION_REQUEST_SELECT)
     .single();
 
   if (error) {
@@ -901,9 +1033,41 @@ async function approveExistingMatchSuggestionRequest(
     );
   }
 
+  const updatedSuggestion = data as unknown as SuggestionRequestRow;
+
+  const auditErrorMessage = await createObjectActionSuggestionAuditEvent({
+    suggestionRequestId: suggestion.id,
+    appUser,
+    platformAdmin,
+    eventType: "approve_existing_match",
+    statusBefore: suggestion.status,
+    statusAfter: updatedSuggestion.status,
+    aiStatusBefore: suggestion.ai_status,
+    aiStatusAfter: updatedSuggestion.ai_status,
+    adminDecision: "approve_existing_match",
+    matchedExistingCategoryId: category.id,
+    previousValues: createSuggestionSnapshot(suggestion),
+    newValues: createSuggestionSnapshot(updatedSuggestion),
+    metadataJson: {
+      action: "approve_existing_match",
+      reviewedAt: nowIso,
+      matchedExistingCategoryId: category.id,
+      matchedExistingCategoryName: category.name,
+      matchedExistingCategorySlug: category.slug,
+      publicDataMutation: false,
+      safetyNote:
+        "Suggestion request was merged with an existing category. No new public category was created.",
+    },
+    internalNote: finalAdminComment,
+  });
+
+  if (auditErrorMessage) {
+    return createAuditErrorResponse(auditErrorMessage, updatedSuggestion);
+  }
+
   return NextResponse.json({
     ok: true,
-    suggestionRequest: data,
+    suggestionRequest: updatedSuggestion,
     moderation: {
       action: "approve_existing_match",
       previousStatus: suggestion.status,
@@ -943,43 +1107,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("object_action_suggestion_requests")
-    .select(
-      `
-      id,
-      user_text,
-      locale,
-      context_code,
-      resolved_context_id,
-      entity_type,
-      entity_id,
-      request_source,
-      source_type,
-      created_by_user_id,
-      proposed_object_text,
-      proposed_action_text,
-      proposed_category_text,
-      ai_status,
-      ai_confidence,
-      ai_model,
-      ai_prompt_version,
-      ai_suggested_object_text,
-      ai_suggested_action_text,
-      ai_suggested_category_text,
-      ai_suggested_object_type_id,
-      ai_suggested_action_type_id,
-      ai_suggested_contextual_category_id,
-      matched_existing_category_id,
-      ai_analysis_json,
-      ai_error_message,
-      status,
-      admin_decision,
-      admin_comment,
-      reviewed_by_user_id,
-      reviewed_at,
-      created_at,
-      updated_at
-    `
-    )
+    .select(SUGGESTION_REQUEST_SELECT)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -1086,7 +1214,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (action === "analyze") {
-    return analyzeSuggestionRequest(suggestion);
+    return analyzeSuggestionRequest(suggestion, appUser, platformAdmin);
   }
 
   const adminComment = normalizeAdminComment(body.adminComment);
@@ -1101,6 +1229,7 @@ export async function PATCH(request: NextRequest) {
     return approveExistingMatchSuggestionRequest(
       suggestion,
       appUser,
+      platformAdmin,
       adminComment
     );
   }
@@ -1124,25 +1253,7 @@ export async function PATCH(request: NextRequest) {
       reviewed_at: nowIso,
     })
     .eq("id", suggestion.id)
-    .select(
-      `
-      id,
-      user_text,
-      locale,
-      context_code,
-      entity_type,
-      entity_id,
-      request_source,
-      ai_status,
-      status,
-      admin_decision,
-      admin_comment,
-      reviewed_by_user_id,
-      reviewed_at,
-      created_at,
-      updated_at
-    `
-    )
+    .select(SUGGESTION_REQUEST_SELECT)
     .single();
 
   if (error) {
@@ -1155,9 +1266,39 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
+  const updatedSuggestion = data as unknown as SuggestionRequestRow;
+  const auditEventType = getAuditEventTypeForModerationAction(action);
+
+  const auditErrorMessage = await createObjectActionSuggestionAuditEvent({
+    suggestionRequestId: suggestion.id,
+    appUser,
+    platformAdmin,
+    eventType: auditEventType,
+    statusBefore: suggestion.status,
+    statusAfter: updatedSuggestion.status,
+    aiStatusBefore: suggestion.ai_status,
+    aiStatusAfter: updatedSuggestion.ai_status,
+    adminDecision: action,
+    matchedExistingCategoryId: updatedSuggestion.matched_existing_category_id,
+    previousValues: createSuggestionSnapshot(suggestion),
+    newValues: createSuggestionSnapshot(updatedSuggestion),
+    metadataJson: {
+      action,
+      reviewedAt: nowIso,
+      publicDataMutation: false,
+      safetyNote:
+        "Reject and archive actions only change the suggestion request status. They do not create or publish Object-Action Rubricator data.",
+    },
+    internalNote: adminComment ?? `${action} action by platform admin.`,
+  });
+
+  if (auditErrorMessage) {
+    return createAuditErrorResponse(auditErrorMessage, updatedSuggestion);
+  }
+
   return NextResponse.json({
     ok: true,
-    suggestionRequest: data,
+    suggestionRequest: updatedSuggestion,
     moderation: {
       action,
       previousStatus: suggestion.status,
