@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-type ModerationAction = "reject" | "archive";
+type StatusChangingAction = "reject" | "archive";
+type ModerationAction = StatusChangingAction | "analyze";
 type ModerationSubmitStatus = "idle" | "submitting" | "success" | "error";
 
 type SuggestionModerationButtonsProps = {
@@ -22,6 +23,14 @@ type ModerationApiResponse = {
     entity_id: string | null;
     request_source: string;
     ai_status: string;
+    ai_confidence?: number | null;
+    ai_model?: string | null;
+    ai_prompt_version?: string | null;
+    ai_suggested_object_text?: string | null;
+    ai_suggested_action_text?: string | null;
+    ai_suggested_category_text?: string | null;
+    matched_existing_category_id?: string | null;
+    ai_error_message?: string | null;
     status: string;
     admin_decision: string | null;
     admin_comment: string | null;
@@ -31,26 +40,52 @@ type ModerationApiResponse = {
     updated_at: string;
   };
   moderation?: {
-    action: ModerationAction;
+    action: StatusChangingAction;
     previousStatus: string;
     nextStatus: string;
     reviewedByUserId: string;
     reviewedAt: string;
+  };
+  aiAnalysis?: {
+    aiStatus: string;
+    confidence: number | null;
+    objectText: string | null;
+    actionText: string | null;
+    categoryText: string | null;
+    categorySlug: string | null;
+    matchedExistingCategoryId: string | null;
+    rationale: string;
+    riskNotes: string;
+    errorMessage: string | null;
+    model: string | null;
+    promptVersion: string;
+    existingCategoriesConsidered: number;
+    analyzedAt: string;
   };
   error?: string;
 };
 
 const FINAL_PUBLIC_STATUSES = new Set(["approved", "merged"]);
 
+const AI_ANALYSIS_ALLOWED_STATUSES = new Set([
+  "draft",
+  "suggested",
+  "needs_review",
+]);
+
 function getActionLabel(action: ModerationAction) {
   if (action === "archive") {
     return "Archive";
   }
 
+  if (action === "analyze") {
+    return "AI Analyze";
+  }
+
   return "Reject";
 }
 
-function getActionPastLabel(action: ModerationAction) {
+function getActionPastLabel(action: StatusChangingAction) {
   if (action === "archive") {
     return "archived";
   }
@@ -82,12 +117,52 @@ function canArchiveStatus(status: string) {
   return true;
 }
 
-function getDefaultComment(action: ModerationAction) {
+function canAnalyzeStatus(status: string) {
+  return AI_ANALYSIS_ALLOWED_STATUSES.has(status);
+}
+
+function getDefaultComment(action: StatusChangingAction) {
   if (action === "archive") {
     return "Archived by platform admin.";
   }
 
   return "Rejected by platform admin.";
+}
+
+function getAiAnalysisMessage(json: ModerationApiResponse) {
+  const aiAnalysis = json.aiAnalysis;
+  const suggestionRequest = json.suggestionRequest;
+
+  if (!aiAnalysis && suggestionRequest) {
+    return `AI analysis finished. AI status: ${suggestionRequest.ai_status}.`;
+  }
+
+  if (!aiAnalysis) {
+    return "AI analysis finished.";
+  }
+
+  const confidence =
+    typeof aiAnalysis.confidence === "number"
+      ? `, confidence: ${aiAnalysis.confidence}`
+      : "";
+
+  const objectText = aiAnalysis.objectText
+    ? `, object: ${aiAnalysis.objectText}`
+    : "";
+
+  const actionText = aiAnalysis.actionText
+    ? `, action: ${aiAnalysis.actionText}`
+    : "";
+
+  const categoryText = aiAnalysis.categoryText
+    ? `, category: ${aiAnalysis.categoryText}`
+    : "";
+
+  const errorText = aiAnalysis.errorMessage
+    ? ` Error: ${aiAnalysis.errorMessage}`
+    : "";
+
+  return `AI analysis finished. AI status: ${aiAnalysis.aiStatus}${confidence}${objectText}${actionText}${categoryText}.${errorText}`;
 }
 
 export default function SuggestionModerationButtons({
@@ -107,8 +182,80 @@ export default function SuggestionModerationButtons({
 
   const canReject = canRejectStatus(currentStatus);
   const canArchive = canArchiveStatus(currentStatus);
+  const canAnalyze = canAnalyzeStatus(currentStatus);
 
-  async function submitModerationAction(action: ModerationAction) {
+  async function submitAiAnalyzeAction() {
+    if (isSubmitting) {
+      return;
+    }
+
+    if (!canAnalyze) {
+      setSubmitStatus("error");
+      setMessage(
+        `AI analysis can only run for draft, suggested or needs_review suggestions. Current status: "${currentStatus}".`
+      );
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Run AI analysis for this suggestion request? This will only write advisory AI fields and will not publish or merge any category."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setSubmitStatus("submitting");
+    setActiveAction("analyze");
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/object-action/suggestions", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({
+          id: suggestionId,
+          action: "analyze",
+        }),
+      });
+
+      const json = (await response.json()) as ModerationApiResponse;
+
+      if (!response.ok || !json.ok || !json.suggestionRequest) {
+        setSubmitStatus("error");
+        setMessage(
+          json.error ??
+            "Failed to run AI analysis for suggestion request. Please try again."
+        );
+        return;
+      }
+
+      if (json.suggestionRequest.ai_status === "failed") {
+        setSubmitStatus("error");
+        setMessage(getAiAnalysisMessage(json));
+        router.refresh();
+        return;
+      }
+
+      setSubmitStatus("success");
+      setMessage(getAiAnalysisMessage(json));
+
+      router.refresh();
+    } catch (error) {
+      setSubmitStatus("error");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to run AI analysis for suggestion request. Please try again."
+      );
+    } finally {
+      setActiveAction(null);
+    }
+  }
+
+  async function submitModerationAction(action: StatusChangingAction) {
     if (isSubmitting) {
       return;
     }
@@ -231,6 +378,28 @@ export default function SuggestionModerationButtons({
       >
         <button
           type="button"
+          disabled={isSubmitting || !canAnalyze}
+          onClick={submitAiAnalyzeAction}
+          style={{
+            border:
+              isSubmitting || !canAnalyze
+                ? "1px solid #dddddd"
+                : "1px solid #2563eb",
+            borderRadius: "8px",
+            padding: "9px 12px",
+            background: isSubmitting || !canAnalyze ? "#f5f5f5" : "#2563eb",
+            color: isSubmitting || !canAnalyze ? "#777777" : "#ffffff",
+            fontWeight: 800,
+            cursor: isSubmitting || !canAnalyze ? "not-allowed" : "pointer",
+          }}
+        >
+          {isSubmitting && activeAction === "analyze"
+            ? "Analyzing..."
+            : "AI Analyze"}
+        </button>
+
+        <button
+          type="button"
           disabled={isSubmitting || !canReject}
           onClick={() => submitModerationAction("reject")}
           style={{
@@ -297,6 +466,23 @@ export default function SuggestionModerationButtons({
           }}
         >
           {message}
+        </div>
+      ) : null}
+
+      {!canAnalyze ? (
+        <div
+          style={{
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            padding: "10px",
+            background: "#f9fafb",
+            color: "#555555",
+            fontSize: "13px",
+            lineHeight: "1.45",
+          }}
+        >
+          AI analysis is available only for draft, suggested or needs_review
+          suggestion requests.
         </div>
       ) : null}
 
