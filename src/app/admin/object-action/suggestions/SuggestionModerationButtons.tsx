@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-type StatusChangingAction = "reject" | "archive";
+type StatusChangingAction = "reject" | "archive" | "approve_existing_match";
 type ModerationAction = StatusChangingAction | "analyze";
 type ModerationSubmitStatus = "idle" | "submitting" | "success" | "error";
 
@@ -45,6 +45,11 @@ type ModerationApiResponse = {
     nextStatus: string;
     reviewedByUserId: string;
     reviewedAt: string;
+    matchedExistingCategoryId?: string;
+    matchedExistingCategoryName?: string;
+    matchedExistingCategorySlug?: string;
+    publicDataMutation?: boolean;
+    note?: string;
   };
   aiAnalysis?: {
     aiStatus: string;
@@ -73,6 +78,12 @@ const AI_ANALYSIS_ALLOWED_STATUSES = new Set([
   "needs_review",
 ]);
 
+const APPROVE_EXISTING_MATCH_ALLOWED_STATUSES = new Set([
+  "draft",
+  "suggested",
+  "needs_review",
+]);
+
 function getActionLabel(action: ModerationAction) {
   if (action === "archive") {
     return "Archive";
@@ -82,12 +93,20 @@ function getActionLabel(action: ModerationAction) {
     return "AI Analyze";
   }
 
+  if (action === "approve_existing_match") {
+    return "Approve match";
+  }
+
   return "Reject";
 }
 
 function getActionPastLabel(action: StatusChangingAction) {
   if (action === "archive") {
     return "archived";
+  }
+
+  if (action === "approve_existing_match") {
+    return "merged with existing category";
   }
 
   return "rejected";
@@ -121,12 +140,34 @@ function canAnalyzeStatus(status: string) {
   return AI_ANALYSIS_ALLOWED_STATUSES.has(status);
 }
 
+function canApproveExistingMatchStatus(status: string) {
+  return APPROVE_EXISTING_MATCH_ALLOWED_STATUSES.has(status);
+}
+
 function getDefaultComment(action: StatusChangingAction) {
   if (action === "archive") {
     return "Archived by platform admin.";
   }
 
+  if (action === "approve_existing_match") {
+    return "Approved existing category match by platform admin.";
+  }
+
   return "Rejected by platform admin.";
+}
+
+function getConfirmMessage(action: StatusChangingAction) {
+  if (action === "approve_existing_match") {
+    return [
+      "Approve this AI matched existing category?",
+      "",
+      "This will mark the suggestion as merged with an existing category.",
+      "It will NOT create a new public category.",
+      "It will NOT publish anything automatically.",
+    ].join("\n");
+  }
+
+  return `Are you sure you want to ${action} this suggestion request?`;
 }
 
 function getAiAnalysisMessage(json: ModerationApiResponse) {
@@ -165,6 +206,30 @@ function getAiAnalysisMessage(json: ModerationApiResponse) {
   return `AI analysis finished. AI status: ${aiAnalysis.aiStatus}${confidence}${objectText}${actionText}${categoryText}.${errorText}`;
 }
 
+function getModerationSuccessMessage(
+  action: StatusChangingAction,
+  json: ModerationApiResponse
+) {
+  const nextStatus = json.suggestionRequest?.status ?? json.moderation?.nextStatus;
+
+  if (action === "approve_existing_match") {
+    const categoryName = json.moderation?.matchedExistingCategoryName;
+    const categorySlug = json.moderation?.matchedExistingCategorySlug;
+    const categoryText =
+      categoryName && categorySlug
+        ? ` Category: ${categoryName} (${categorySlug}).`
+        : "";
+
+    return `Suggestion request ${getActionPastLabel(
+      action
+    )}. New status: ${nextStatus ?? "merged"}.${categoryText} No new public category was created.`;
+  }
+
+  return `Suggestion request ${getActionPastLabel(
+    action
+  )}. New status: ${nextStatus ?? "—"}.`;
+}
+
 export default function SuggestionModerationButtons({
   suggestionId,
   currentStatus,
@@ -183,6 +248,7 @@ export default function SuggestionModerationButtons({
   const canReject = canRejectStatus(currentStatus);
   const canArchive = canArchiveStatus(currentStatus);
   const canAnalyze = canAnalyzeStatus(currentStatus);
+  const canApproveExistingMatch = canApproveExistingMatchStatus(currentStatus);
 
   async function submitAiAnalyzeAction() {
     if (isSubmitting) {
@@ -272,6 +338,14 @@ export default function SuggestionModerationButtons({
       return;
     }
 
+    if (action === "approve_existing_match" && !canApproveExistingMatch) {
+      setSubmitStatus("error");
+      setMessage(
+        `Cannot approve existing match for suggestion with status "${currentStatus}".`
+      );
+      return;
+    }
+
     const defaultComment = getDefaultComment(action);
 
     const adminComment = window.prompt(
@@ -291,9 +365,7 @@ export default function SuggestionModerationButtons({
       return;
     }
 
-    const confirmed = window.confirm(
-      `Are you sure you want to ${action} this suggestion request?`
-    );
+    const confirmed = window.confirm(getConfirmMessage(action));
 
     if (!confirmed) {
       return;
@@ -322,17 +394,15 @@ export default function SuggestionModerationButtons({
         setSubmitStatus("error");
         setMessage(
           json.error ??
-            `Failed to ${action} suggestion request. Please try again.`
+            `Failed to ${getActionLabel(
+              action
+            ).toLowerCase()} suggestion request. Please try again.`
         );
         return;
       }
 
       setSubmitStatus("success");
-      setMessage(
-        `Suggestion request ${getActionPastLabel(
-          action
-        )}. New status: ${json.suggestionRequest.status}.`
-      );
+      setMessage(getModerationSuccessMessage(action, json));
 
       router.refresh();
     } catch (error) {
@@ -340,7 +410,9 @@ export default function SuggestionModerationButtons({
       setMessage(
         error instanceof Error
           ? error.message
-          : `Failed to ${action} suggestion request. Please try again.`
+          : `Failed to ${getActionLabel(
+              action
+            ).toLowerCase()} suggestion request. Please try again.`
       );
     } finally {
       setActiveAction(null);
@@ -396,6 +468,33 @@ export default function SuggestionModerationButtons({
           {isSubmitting && activeAction === "analyze"
             ? "Analyzing..."
             : "AI Analyze"}
+        </button>
+
+        <button
+          type="button"
+          disabled={isSubmitting || !canApproveExistingMatch}
+          onClick={() => submitModerationAction("approve_existing_match")}
+          style={{
+            border:
+              isSubmitting || !canApproveExistingMatch
+                ? "1px solid #dddddd"
+                : "1px solid #16a34a",
+            borderRadius: "8px",
+            padding: "9px 12px",
+            background:
+              isSubmitting || !canApproveExistingMatch ? "#f5f5f5" : "#16a34a",
+            color:
+              isSubmitting || !canApproveExistingMatch ? "#777777" : "#ffffff",
+            fontWeight: 800,
+            cursor:
+              isSubmitting || !canApproveExistingMatch
+                ? "not-allowed"
+                : "pointer",
+          }}
+        >
+          {isSubmitting && activeAction === "approve_existing_match"
+            ? "Approving..."
+            : "Approve match"}
         </button>
 
         <button
@@ -483,6 +582,24 @@ export default function SuggestionModerationButtons({
         >
           AI analysis is available only for draft, suggested or needs_review
           suggestion requests.
+        </div>
+      ) : null}
+
+      {!canApproveExistingMatch ? (
+        <div
+          style={{
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            padding: "10px",
+            background: "#f9fafb",
+            color: "#555555",
+            fontSize: "13px",
+            lineHeight: "1.45",
+          }}
+        >
+          Approve match is available only for draft, suggested or needs_review
+          suggestion requests. Backend also requires ai_status=matched_existing
+          and a valid matched existing category.
         </div>
       ) : null}
 
