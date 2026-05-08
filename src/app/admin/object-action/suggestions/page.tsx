@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
+import SuggestionModerationButtons from "./SuggestionModerationButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -504,9 +505,9 @@ export default async function AdminObjectActionSuggestionsPage({
               lineHeight: "1.5",
             }}
           >
-            Read-only moderation queue for user-submitted missing business
-            directions. These requests are not public categories and do not
-            change the Object-Action Rubricator until explicit moderation.
+            Moderation queue for user-submitted missing business directions.
+            These requests are not public categories and do not change the
+            Object-Action Rubricator until explicit moderation.
           </p>
 
           <p
@@ -517,8 +518,9 @@ export default async function AdminObjectActionSuggestionsPage({
               lineHeight: "1.5",
             }}
           >
-            AI may later suggest object/action/category, but this page must not
-            publish anything automatically.
+            Reject and archive actions only change request status. Approve and
+            merge actions will be added later and must not publish anything
+            automatically without explicit moderation.
           </p>
         </header>
 
@@ -692,8 +694,8 @@ export default async function AdminObjectActionSuggestionsPage({
                   Suggestion requests
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  This page is read-only. Approve / merge / reject actions will
-                  be added in later steps.
+                  Reject and archive are available here. Approve / merge actions
+                  will be added in later steps.
                 </p>
               </div>
 
@@ -869,7 +871,9 @@ export default async function AdminObjectActionSuggestionsPage({
                             >
                               Created
                             </div>
-                            <strong>{formatDateTime(suggestion.created_at)}</strong>
+                            <strong>
+                              {formatDateTime(suggestion.created_at)}
+                            </strong>
                           </div>
 
                           <div
@@ -888,7 +892,9 @@ export default async function AdminObjectActionSuggestionsPage({
                             >
                               Updated
                             </div>
-                            <strong>{formatDateTime(suggestion.updated_at)}</strong>
+                            <strong>
+                              {formatDateTime(suggestion.updated_at)}
+                            </strong>
                           </div>
                         </section>
 
@@ -945,6 +951,11 @@ export default async function AdminObjectActionSuggestionsPage({
                             </span>
                           </div>
                         </section>
+
+                        <SuggestionModerationButtons
+                          suggestionId={suggestion.id}
+                          currentStatus={suggestion.status}
+                        />
 
                         <section
                           style={{
