@@ -16,6 +16,12 @@ type SuggestionRequestBody = {
   proposedCategoryText?: unknown;
 };
 
+type SuggestionModerationRequestBody = {
+  id?: unknown;
+  action?: unknown;
+  adminComment?: unknown;
+};
+
 type ContextRow = {
   id: string;
   code: string;
@@ -37,6 +43,11 @@ type PlatformAdminRow = {
   status: string;
 };
 
+type ExistingSuggestionRow = {
+  id: string;
+  status: string;
+};
+
 type SuggestionStatusFilter =
   | "all"
   | "draft"
@@ -47,11 +58,14 @@ type SuggestionStatusFilter =
   | "rejected"
   | "archived";
 
+type SuggestionModerationAction = "reject" | "archive";
+
 const DEFAULT_LOCALE = "ru";
 const DEFAULT_CONTEXT_CODE = "business_directory";
 const DEFAULT_ENTITY_TYPE = "general";
 const DEFAULT_REQUEST_SOURCE = "api";
 const DEFAULT_SUGGESTION_STATUS_FILTER: SuggestionStatusFilter = "needs_review";
+const MAX_ADMIN_COMMENT_LENGTH = 2000;
 
 const ALLOWED_ENTITY_TYPES = new Set([
   "organization",
@@ -86,6 +100,13 @@ const ALLOWED_SUGGESTION_STATUS_FILTERS = new Set<SuggestionStatusFilter>([
   "rejected",
   "archived",
 ]);
+
+const ALLOWED_MODERATION_ACTIONS = new Set<SuggestionModerationAction>([
+  "reject",
+  "archive",
+]);
+
+const MUTATION_ADMIN_ROLES = new Set(["owner", "admin", "moderator"]);
 
 function normalizeStringValue(value: unknown) {
   if (typeof value !== "string") {
@@ -169,6 +190,22 @@ function normalizeSuggestionStatusFilter(
   return lowerValue;
 }
 
+function normalizeModerationAction(value: unknown) {
+  const normalizedValue = normalizeStringValue(value);
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  const lowerValue = normalizedValue.toLowerCase() as SuggestionModerationAction;
+
+  if (!ALLOWED_MODERATION_ACTIONS.has(lowerValue)) {
+    return null;
+  }
+
+  return lowerValue;
+}
+
 function normalizeLimit(value: string | null) {
   const parsedValue = Number(value ?? "50");
 
@@ -197,6 +234,44 @@ function normalizeEntityId(value: unknown) {
   }
 
   return normalizedValue;
+}
+
+function normalizeSuggestionId(value: unknown) {
+  const normalizedValue = normalizeStringValue(value);
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  if (!isUuid(normalizedValue)) {
+    return null;
+  }
+
+  return normalizedValue;
+}
+
+function normalizeAdminComment(value: unknown) {
+  const normalizedValue = normalizeOptionalStringValue(value);
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  if (normalizedValue.length > MAX_ADMIN_COMMENT_LENGTH) {
+    return null;
+  }
+
+  return normalizedValue;
+}
+
+function getStatusForModerationAction(
+  action: SuggestionModerationAction
+): "rejected" | "archived" {
+  if (action === "archive") {
+    return "archived";
+  }
+
+  return "rejected";
 }
 
 async function getResolvedContext(contextCode: string) {
@@ -347,6 +422,36 @@ async function requirePlatformAdmin(): Promise<{
   };
 }
 
+async function getExistingSuggestionRequest(suggestionId: string): Promise<{
+  suggestion: ExistingSuggestionRow | null;
+  errorMessage: string | null;
+}> {
+  const { data, error } = await supabase
+    .from("object_action_suggestion_requests")
+    .select(
+      `
+      id,
+      status
+    `
+    )
+    .eq("id", suggestionId)
+    .limit(1);
+
+  if (error) {
+    return {
+      suggestion: null,
+      errorMessage: error.message,
+    };
+  }
+
+  const rows = (data as unknown as ExistingSuggestionRow[] | null) ?? [];
+
+  return {
+    suggestion: rows[0] ?? null,
+    errorMessage: null,
+  };
+}
+
 function createValidationErrorResponse(message: string) {
   return NextResponse.json(
     {
@@ -459,6 +564,146 @@ export async function GET(request: NextRequest) {
       email: appUser.email,
       name: appUser.name,
       role: platformAdmin.role,
+    },
+  });
+}
+
+export async function PATCH(request: NextRequest) {
+  const {
+    appUser,
+    platformAdmin,
+    errorMessage: adminErrorMessage,
+    status: adminStatus,
+  } = await requirePlatformAdmin();
+
+  if (adminErrorMessage || !appUser || !platformAdmin) {
+    return createAuthErrorResponse(
+      adminErrorMessage ?? "Platform admin access required.",
+      adminStatus
+    );
+  }
+
+  if (!MUTATION_ADMIN_ROLES.has(platformAdmin.role)) {
+    return createAuthErrorResponse(
+      "Platform admin role cannot mutate suggestion requests.",
+      403
+    );
+  }
+
+  let body: SuggestionModerationRequestBody;
+
+  try {
+    body = (await request.json()) as SuggestionModerationRequestBody;
+  } catch {
+    return createValidationErrorResponse("Invalid JSON body.");
+  }
+
+  const suggestionId = normalizeSuggestionId(body.id);
+
+  if (!suggestionId) {
+    return createValidationErrorResponse("id must be a valid UUID.");
+  }
+
+  const action = normalizeModerationAction(body.action);
+
+  if (!action) {
+    return createValidationErrorResponse(
+      "action must be either reject or archive."
+    );
+  }
+
+  const adminComment = normalizeAdminComment(body.adminComment);
+
+  if (body.adminComment && adminComment === null) {
+    return createValidationErrorResponse(
+      `adminComment must be ${MAX_ADMIN_COMMENT_LENGTH} characters or shorter.`
+    );
+  }
+
+  const {
+    suggestion,
+    errorMessage: existingSuggestionErrorMessage,
+  } = await getExistingSuggestionRequest(suggestionId);
+
+  if (existingSuggestionErrorMessage) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: existingSuggestionErrorMessage,
+      },
+      { status: 500 }
+    );
+  }
+
+  if (!suggestion) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Suggestion request not found.",
+      },
+      { status: 404 }
+    );
+  }
+
+  if (suggestion.status === "approved" || suggestion.status === "merged") {
+    return createValidationErrorResponse(
+      "Approved or merged suggestion requests cannot be rejected or archived by this endpoint."
+    );
+  }
+
+  const nextStatus = getStatusForModerationAction(action);
+  const nowIso = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("object_action_suggestion_requests")
+    .update({
+      status: nextStatus,
+      admin_decision: action,
+      admin_comment: adminComment,
+      reviewed_by_user_id: appUser.id,
+      reviewed_at: nowIso,
+    })
+    .eq("id", suggestion.id)
+    .select(
+      `
+      id,
+      user_text,
+      locale,
+      context_code,
+      entity_type,
+      entity_id,
+      request_source,
+      ai_status,
+      status,
+      admin_decision,
+      admin_comment,
+      reviewed_by_user_id,
+      reviewed_at,
+      created_at,
+      updated_at
+    `
+    )
+    .single();
+
+  if (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error.message,
+      },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    suggestionRequest: data,
+    moderation: {
+      action,
+      previousStatus: suggestion.status,
+      nextStatus,
+      reviewedByUserId: appUser.id,
+      reviewedAt: nowIso,
     },
   });
 }
