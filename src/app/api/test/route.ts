@@ -1,10 +1,13 @@
-import OpenAI from "openai";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
+import { OPENAI_DEFAULT_MODEL } from "../../../../lib/ai/openaiConfig";
+import { runAiJson } from "../../../../lib/ai/openaiClient";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+export const dynamic = "force-dynamic";
+
+type ChatAiResponse = {
+  reply: string;
+};
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +21,15 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const userMessage = body.message;
+    const userMessage =
+      typeof body.message === "string" ? body.message.trim() : "";
+
+    if (!userMessage) {
+      return Response.json(
+        { success: false, error: "Message is required" },
+        { status: 400 }
+      );
+    }
 
     const { data: appUser, error: userError } = await supabase
       .from("app_users")
@@ -50,12 +61,19 @@ export async function POST(request: Request) {
       content: userMessage,
     });
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: userMessage }],
+    const aiResult = await runAiJson<ChatAiResponse>({
+      system:
+        "You are a simple AI assistant inside a web platform that is currently in development. Return only valid compact JSON in this exact shape: {\"reply\":\"string\"}. Keep the reply short and practical.",
+      user: {
+        message: userMessage,
+      },
+      maxOutputTokens: 200,
     });
 
-    const reply = completion.choices[0]?.message?.content ?? "Пустой ответ";
+    const reply =
+      typeof aiResult.reply === "string" && aiResult.reply.trim()
+        ? aiResult.reply.trim()
+        : "Пустой ответ";
 
     await supabase.from("chat_messages").insert({
       user_id: appUser.id,
@@ -65,6 +83,7 @@ export async function POST(request: Request) {
 
     return Response.json({
       success: true,
+      model: OPENAI_DEFAULT_MODEL,
       reply,
     });
   } catch (error) {
@@ -73,6 +92,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         success: false,
+        model: OPENAI_DEFAULT_MODEL,
         reply: "Ошибка на сервере",
         error: error instanceof Error ? error.message : "Unknown error",
       },

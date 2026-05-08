@@ -1,4 +1,8 @@
 import OpenAI from "openai";
+import {
+  OPENAI_DEFAULT_MODEL,
+  OPENAI_MAX_OUTPUT_TOKENS,
+} from "../ai/openaiConfig";
 
 export type ObjectActionSuggestionAiStatus =
   | "matched_existing"
@@ -49,7 +53,7 @@ type RawAiAnalysisResult = {
 };
 
 const AI_PROMPT_VERSION = "object-action-suggestion-analysis-v1";
-const DEFAULT_MODEL = "gpt-4o-mini";
+const DEFAULT_MODEL = OPENAI_DEFAULT_MODEL;
 const MAX_EXISTING_CATEGORIES_IN_PROMPT = 80;
 
 const AI_STATUS_VALUES = new Set<ObjectActionSuggestionAiStatus>([
@@ -141,7 +145,7 @@ function getOpenAiClient() {
 }
 
 function getModelName() {
-  return process.env.OPENAI_OBJECT_ACTION_MODEL || DEFAULT_MODEL;
+  return DEFAULT_MODEL;
 }
 
 function normalizeString(value: unknown) {
@@ -215,7 +219,7 @@ function createFailedAnalysisResult(
     rationale: "AI analysis failed. Manual admin review is required.",
     riskNotes: "Do not publish or merge this request based on failed AI output.",
     rawAnalysisJson,
-    aiModel: process.env.OPENAI_OBJECT_ACTION_MODEL || DEFAULT_MODEL,
+    aiModel: getModelName(),
     aiPromptVersion: AI_PROMPT_VERSION,
     errorMessage,
   };
@@ -425,6 +429,7 @@ export async function analyzeObjectActionSuggestion(
           }),
         },
       ],
+      max_output_tokens: OPENAI_MAX_OUTPUT_TOKENS,
       text: {
         format: {
           type: "json_schema",
