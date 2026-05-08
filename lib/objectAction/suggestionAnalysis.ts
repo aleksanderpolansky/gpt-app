@@ -52,9 +52,22 @@ type RawAiAnalysisResult = {
   riskNotes?: unknown;
 };
 
+type ResponseDiagnostic = {
+  status: unknown;
+  incompleteDetails: unknown;
+  error: unknown;
+  outputTypes: string[];
+  contentTypes: string[];
+  outputPreview: unknown;
+  usage: unknown;
+  configuredMaxOutputTokens: number;
+  effectiveMaxOutputTokens: number;
+};
+
 const AI_PROMPT_VERSION = "object-action-suggestion-analysis-v1";
 const DEFAULT_MODEL = OPENAI_DEFAULT_MODEL;
 const MAX_EXISTING_CATEGORIES_IN_PROMPT = 80;
+const MIN_SUGGESTION_ANALYSIS_MAX_OUTPUT_TOKENS = 800;
 
 const AI_STATUS_VALUES = new Set<ObjectActionSuggestionAiStatus>([
   "matched_existing",
@@ -146,6 +159,17 @@ function getOpenAiClient() {
 
 function getModelName() {
   return DEFAULT_MODEL;
+}
+
+function getSuggestionAnalysisMaxOutputTokens() {
+  if (!Number.isFinite(OPENAI_MAX_OUTPUT_TOKENS)) {
+    return MIN_SUGGESTION_ANALYSIS_MAX_OUTPUT_TOKENS;
+  }
+
+  return Math.max(
+    Math.trunc(OPENAI_MAX_OUTPUT_TOKENS),
+    MIN_SUGGESTION_ANALYSIS_MAX_OUTPUT_TOKENS
+  );
 }
 
 function normalizeString(value: unknown) {
@@ -270,7 +294,8 @@ function buildSystemInstruction() {
     "You must not approve, publish, create, mutate, or promise any public category.",
     "You must prefer matching an existing category when it is clearly suitable.",
     "If the user's text is vague, ambiguous, too broad, unsafe, or could match several categories, return low_confidence.",
-    "Return only the structured JSON requested by the schema.",
+    "Return only one compact JSON object matching the requested schema.",
+    "Keep all string fields short and practical for an admin moderation panel.",
   ].join("\n");
 }
 
@@ -302,6 +327,22 @@ function buildUserPrompt(input: ObjectActionSuggestionAnalysisInput) {
   );
 }
 
+function getContentItemText(contentItem: unknown) {
+  const directText = (contentItem as { text?: unknown }).text;
+
+  if (typeof directText === "string" && directText.trim()) {
+    return directText;
+  }
+
+  const outputText = (contentItem as { output_text?: unknown }).output_text;
+
+  if (typeof outputText === "string" && outputText.trim()) {
+    return outputText;
+  }
+
+  return null;
+}
+
 function parseOutputText(response: unknown) {
   const directOutputText = (response as { output_text?: unknown }).output_text;
 
@@ -325,9 +366,9 @@ function parseOutputText(response: unknown) {
     }
 
     for (const contentItem of content) {
-      const text = (contentItem as { text?: unknown }).text;
+      const text = getContentItemText(contentItem);
 
-      if (typeof text === "string") {
+      if (text) {
         textParts.push(text);
       }
     }
@@ -350,6 +391,72 @@ function parseRawAnalysisJson(outputText: string) {
   }
 
   return parsedJson as Record<string, unknown>;
+}
+
+function getOutputTypes(response: unknown) {
+  const output = (response as { output?: unknown }).output;
+
+  if (!Array.isArray(output)) {
+    return [];
+  }
+
+  return output
+    .map((outputItem) => {
+      const type = (outputItem as { type?: unknown }).type;
+
+      return typeof type === "string" ? type : "unknown";
+    })
+    .slice(0, 20);
+}
+
+function getContentTypes(response: unknown) {
+  const output = (response as { output?: unknown }).output;
+
+  if (!Array.isArray(output)) {
+    return [];
+  }
+
+  const contentTypes: string[] = [];
+
+  for (const outputItem of output) {
+    const content = (outputItem as { content?: unknown }).content;
+
+    if (!Array.isArray(content)) {
+      continue;
+    }
+
+    for (const contentItem of content) {
+      const type = (contentItem as { type?: unknown }).type;
+
+      contentTypes.push(typeof type === "string" ? type : "unknown");
+    }
+  }
+
+  return contentTypes.slice(0, 30);
+}
+
+function createResponseDiagnostic(response: unknown): ResponseDiagnostic {
+  const responseLike = response as {
+    status?: unknown;
+    incomplete_details?: unknown;
+    error?: unknown;
+    output?: unknown;
+    usage?: unknown;
+  };
+
+  return {
+    status: responseLike.status ?? null,
+    incompleteDetails: responseLike.incomplete_details ?? null,
+    error: responseLike.error ?? null,
+    outputTypes: getOutputTypes(response),
+    contentTypes: getContentTypes(response),
+    outputPreview: Array.isArray(responseLike.output)
+      ? responseLike.output.slice(0, 3)
+      : null,
+    usage: responseLike.usage ?? null,
+    configuredMaxOutputTokens: OPENAI_MAX_OUTPUT_TOKENS,
+    effectiveMaxOutputTokens: getSuggestionAnalysisMaxOutputTokens(),
+  };
 }
 
 function normalizeRawAnalysisResult(
@@ -416,6 +523,9 @@ export async function analyzeObjectActionSuggestion(
   try {
     const response = await openai.responses.create({
       model: aiModel,
+      reasoning: {
+        effort: "minimal",
+      },
       input: [
         {
           role: "system",
@@ -429,7 +539,7 @@ export async function analyzeObjectActionSuggestion(
           }),
         },
       ],
-      max_output_tokens: OPENAI_MAX_OUTPUT_TOKENS,
+      max_output_tokens: getSuggestionAnalysisMaxOutputTokens(),
       text: {
         format: {
           type: "json_schema",
@@ -443,7 +553,16 @@ export async function analyzeObjectActionSuggestion(
     const outputText = parseOutputText(response);
 
     if (!outputText) {
-      return createFailedAnalysisResult("AI response did not contain text.");
+      const diagnostic = createResponseDiagnostic(response);
+
+      return createFailedAnalysisResult(
+        `AI response did not contain text. status=${String(
+          diagnostic.status ?? "unknown"
+        )}`,
+        {
+          responseDiagnostic: diagnostic as unknown as Record<string, unknown>,
+        }
+      );
     }
 
     const rawAnalysisJson = parseRawAnalysisJson(outputText);

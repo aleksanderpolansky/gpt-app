@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth0 } from "../../../../../lib/auth0";
+import {
+  analyzeObjectActionSuggestion,
+  type ObjectActionExistingCategoryInput,
+} from "../../../../../lib/objectAction/suggestionAnalysis";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +49,17 @@ type PlatformAdminRow = {
 
 type ExistingSuggestionRow = {
   id: string;
+  user_text: string;
+  locale: string;
+  context_code: string;
   status: string;
+};
+
+type ContextualCategoryRow = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
 };
 
 type SuggestionStatusFilter =
@@ -58,7 +72,8 @@ type SuggestionStatusFilter =
   | "rejected"
   | "archived";
 
-type SuggestionModerationAction = "reject" | "archive";
+type SuggestionStatusChangingAction = "reject" | "archive";
+type SuggestionModerationAction = SuggestionStatusChangingAction | "analyze";
 
 const DEFAULT_LOCALE = "ru";
 const DEFAULT_CONTEXT_CODE = "business_directory";
@@ -104,6 +119,13 @@ const ALLOWED_SUGGESTION_STATUS_FILTERS = new Set<SuggestionStatusFilter>([
 const ALLOWED_MODERATION_ACTIONS = new Set<SuggestionModerationAction>([
   "reject",
   "archive",
+  "analyze",
+]);
+
+const AI_ANALYSIS_ALLOWED_STATUSES = new Set([
+  "draft",
+  "suggested",
+  "needs_review",
 ]);
 
 const MUTATION_ADMIN_ROLES = new Set(["owner", "admin", "moderator"]);
@@ -265,13 +287,17 @@ function normalizeAdminComment(value: unknown) {
 }
 
 function getStatusForModerationAction(
-  action: SuggestionModerationAction
+  action: SuggestionStatusChangingAction
 ): "rejected" | "archived" {
   if (action === "archive") {
     return "archived";
   }
 
   return "rejected";
+}
+
+function isSuggestionEligibleForAiAnalysis(suggestion: ExistingSuggestionRow) {
+  return AI_ANALYSIS_ALLOWED_STATUSES.has(suggestion.status);
 }
 
 async function getResolvedContext(contextCode: string) {
@@ -301,6 +327,66 @@ async function getResolvedContext(contextCode: string) {
 
   return {
     context: contextRows[0] ?? null,
+    errorMessage: null,
+  };
+}
+
+async function getExistingCategoriesForSuggestionAnalysis(
+  contextCode: string
+): Promise<{
+  categories: ObjectActionExistingCategoryInput[];
+  errorMessage: string | null;
+}> {
+  const { context, errorMessage: contextErrorMessage } =
+    await getResolvedContext(contextCode);
+
+  if (contextErrorMessage) {
+    return {
+      categories: [],
+      errorMessage: contextErrorMessage,
+    };
+  }
+
+  if (!context) {
+    return {
+      categories: [],
+      errorMessage: "contextCode was not found.",
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("contextual_categories")
+    .select(
+      `
+      id,
+      slug,
+      name,
+      description
+    `
+    )
+    .eq("context_id", context.id)
+    .eq("is_active", true)
+    .in("status", ["approved", "published"])
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true })
+    .limit(100);
+
+  if (error) {
+    return {
+      categories: [],
+      errorMessage: error.message,
+    };
+  }
+
+  const categoryRows = (data as unknown as ContextualCategoryRow[] | null) ?? [];
+
+  return {
+    categories: categoryRows.map((category) => ({
+      id: category.id,
+      slug: category.slug,
+      name: category.name,
+      description: category.description,
+    })),
     errorMessage: null,
   };
 }
@@ -431,6 +517,9 @@ async function getExistingSuggestionRequest(suggestionId: string): Promise<{
     .select(
       `
       id,
+      user_text,
+      locale,
+      context_code,
       status
     `
     )
@@ -470,6 +559,145 @@ function createAuthErrorResponse(message: string, status: number) {
     },
     { status }
   );
+}
+
+async function analyzeSuggestionRequest(suggestion: ExistingSuggestionRow) {
+  if (!isSuggestionEligibleForAiAnalysis(suggestion)) {
+    return createValidationErrorResponse(
+      `AI analysis can only run for draft, suggested or needs_review suggestions. Current status: ${suggestion.status}.`
+    );
+  }
+
+  const {
+    categories,
+    errorMessage: categoriesErrorMessage,
+  } = await getExistingCategoriesForSuggestionAnalysis(suggestion.context_code);
+
+  if (categoriesErrorMessage) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: categoriesErrorMessage,
+      },
+      { status: 500 }
+    );
+  }
+
+  const analysis = await analyzeObjectActionSuggestion({
+    userText: suggestion.user_text,
+    locale: suggestion.locale,
+    contextCode: suggestion.context_code,
+    existingCategories: categories,
+  });
+
+  const analyzedAt = new Date().toISOString();
+
+  const analysisJson = {
+    promptVersion: analysis.aiPromptVersion,
+    model: analysis.aiModel,
+    analyzedAt,
+    contextCode: suggestion.context_code,
+    locale: suggestion.locale,
+    existingCategoriesConsidered: categories.length,
+    aiStatus: analysis.aiStatus,
+    objectText: analysis.objectText,
+    actionText: analysis.actionText,
+    categoryText: analysis.categoryText,
+    categorySlug: analysis.categorySlug,
+    confidence: analysis.confidence,
+    matchedExistingCategoryId: analysis.matchedExistingCategoryId,
+    rationale: analysis.rationale,
+    riskNotes: analysis.riskNotes,
+    rawAnalysisJson: analysis.rawAnalysisJson,
+    safetyNote:
+      "AI analysis is advisory only. It does not create, approve, publish or merge Object-Action Rubricator data.",
+  };
+
+  const { data, error } = await supabase
+    .from("object_action_suggestion_requests")
+    .update({
+      ai_status: analysis.aiStatus,
+      ai_confidence: analysis.confidence,
+      ai_model: analysis.aiModel,
+      ai_prompt_version: analysis.aiPromptVersion,
+      ai_suggested_object_text: analysis.objectText,
+      ai_suggested_action_text: analysis.actionText,
+      ai_suggested_category_text: analysis.categoryText,
+      ai_suggested_contextual_category_id: analysis.matchedExistingCategoryId,
+      matched_existing_category_id: analysis.matchedExistingCategoryId,
+      ai_analysis_json: analysisJson,
+      ai_error_message: analysis.errorMessage,
+    })
+    .eq("id", suggestion.id)
+    .select(
+      `
+      id,
+      user_text,
+      locale,
+      context_code,
+      resolved_context_id,
+      entity_type,
+      entity_id,
+      request_source,
+      source_type,
+      created_by_user_id,
+      proposed_object_text,
+      proposed_action_text,
+      proposed_category_text,
+      ai_status,
+      ai_confidence,
+      ai_model,
+      ai_prompt_version,
+      ai_suggested_object_text,
+      ai_suggested_action_text,
+      ai_suggested_category_text,
+      ai_suggested_object_type_id,
+      ai_suggested_action_type_id,
+      ai_suggested_contextual_category_id,
+      matched_existing_category_id,
+      ai_analysis_json,
+      ai_error_message,
+      status,
+      admin_decision,
+      admin_comment,
+      reviewed_by_user_id,
+      reviewed_at,
+      created_at,
+      updated_at
+    `
+    )
+    .single();
+
+  if (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error.message,
+      },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    suggestionRequest: data,
+    aiAnalysis: {
+      aiStatus: analysis.aiStatus,
+      confidence: analysis.confidence,
+      objectText: analysis.objectText,
+      actionText: analysis.actionText,
+      categoryText: analysis.categoryText,
+      categorySlug: analysis.categorySlug,
+      matchedExistingCategoryId: analysis.matchedExistingCategoryId,
+      rationale: analysis.rationale,
+      riskNotes: analysis.riskNotes,
+      errorMessage: analysis.errorMessage,
+      model: analysis.aiModel,
+      promptVersion: analysis.aiPromptVersion,
+      existingCategoriesConsidered: categories.length,
+      analyzedAt,
+    },
+  });
 }
 
 export async function GET(request: NextRequest) {
@@ -608,15 +836,7 @@ export async function PATCH(request: NextRequest) {
 
   if (!action) {
     return createValidationErrorResponse(
-      "action must be either reject or archive."
-    );
-  }
-
-  const adminComment = normalizeAdminComment(body.adminComment);
-
-  if (body.adminComment && adminComment === null) {
-    return createValidationErrorResponse(
-      `adminComment must be ${MAX_ADMIN_COMMENT_LENGTH} characters or shorter.`
+      "action must be reject, archive or analyze."
     );
   }
 
@@ -642,6 +862,18 @@ export async function PATCH(request: NextRequest) {
         error: "Suggestion request not found.",
       },
       { status: 404 }
+    );
+  }
+
+  if (action === "analyze") {
+    return analyzeSuggestionRequest(suggestion);
+  }
+
+  const adminComment = normalizeAdminComment(body.adminComment);
+
+  if (body.adminComment && adminComment === null) {
+    return createValidationErrorResponse(
+      `adminComment must be ${MAX_ADMIN_COMMENT_LENGTH} characters or shorter.`
     );
   }
 
