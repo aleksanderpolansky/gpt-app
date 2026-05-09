@@ -105,6 +105,12 @@ type GetEntityClassificationsInput = {
   status?: ObjectActionStatus[];
 };
 
+type ContextualCategoryVisibilityRow = {
+  id: Uuid;
+  status: ObjectActionStatus;
+  is_active: boolean;
+};
+
 const DEFAULT_PUBLIC_STATUSES: ObjectActionStatus[] = [
   "approved",
   "published",
@@ -548,7 +554,49 @@ export async function getEntityClassifications(
 
     const rows = (data ?? []) as EntityClassificationRow[];
 
-    return ok(rows.map(mapEntityClassificationRowToOption));
+    const contextualCategoryIds = Array.from(
+      new Set(
+        rows
+          .map((row) => row.contextual_category_id)
+          .filter((value): value is Uuid => Boolean(value))
+      )
+    );
+
+    if (contextualCategoryIds.length === 0) {
+      return ok(rows.map(mapEntityClassificationRowToOption));
+    }
+
+    const { data: categoryData, error: categoryError } = await supabase
+      .from("contextual_categories")
+      .select("id, status, is_active")
+      .in("id", contextualCategoryIds)
+      .in("status", statuses)
+      .eq("is_active", true);
+
+    if (categoryError) {
+      logObjectActionError(
+        "getEntityClassifications contextual categories",
+        categoryError
+      );
+      return fail([], categoryError);
+    }
+
+    const visibleCategoryRows =
+      (categoryData ?? []) as ContextualCategoryVisibilityRow[];
+
+    const visibleCategoryIds = new Set(
+      visibleCategoryRows.map((category) => category.id)
+    );
+
+    const visibleRows = rows.filter((row) => {
+      if (!row.contextual_category_id) {
+        return true;
+      }
+
+      return visibleCategoryIds.has(row.contextual_category_id);
+    });
+
+    return ok(visibleRows.map(mapEntityClassificationRowToOption));
   } catch (error) {
     logObjectActionError("getEntityClassifications unexpected", error);
     return fail([], error);
