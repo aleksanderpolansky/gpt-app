@@ -20,6 +20,10 @@ type ModerationSubmitStatus = "idle" | "submitting" | "success" | "error";
 type SuggestionModerationButtonsProps = {
   suggestionId: string;
   currentStatus: string;
+  aiStatus: string | null;
+  aiConfidence: number | null;
+  aiSuggestedCategoryText: string | null;
+  matchedExistingCategoryId: string | null;
 };
 
 type NewCategoryFormState = {
@@ -111,6 +115,11 @@ const APPROVE_NEW_CATEGORY_ALLOWED_STATUSES = new Set([
   "needs_review",
 ]);
 
+const APPROVE_NEW_CATEGORY_ALLOWED_AI_STATUSES = new Set([
+  "new_category_suggested",
+  "low_confidence",
+]);
+
 const DEFAULT_NEW_CATEGORY_FORM: NewCategoryFormState = {
   name: "",
   slug: "",
@@ -190,12 +199,28 @@ function canAnalyzeStatus(status: string) {
   return AI_ANALYSIS_ALLOWED_STATUSES.has(status);
 }
 
-function canApproveExistingMatchStatus(status: string) {
-  return APPROVE_EXISTING_MATCH_ALLOWED_STATUSES.has(status);
+function canApproveExistingMatchStatus(
+  status: string,
+  aiStatus: string | null,
+  matchedExistingCategoryId: string | null
+) {
+  return (
+    APPROVE_EXISTING_MATCH_ALLOWED_STATUSES.has(status) &&
+    aiStatus === "matched_existing" &&
+    Boolean(matchedExistingCategoryId)
+  );
 }
 
-function canApproveNewCategoryStatus(status: string) {
-  return APPROVE_NEW_CATEGORY_ALLOWED_STATUSES.has(status);
+function canApproveNewCategoryStatus(status: string, aiStatus: string | null) {
+  if (!APPROVE_NEW_CATEGORY_ALLOWED_STATUSES.has(status)) {
+    return false;
+  }
+
+  if (!aiStatus) {
+    return false;
+  }
+
+  return APPROVE_NEW_CATEGORY_ALLOWED_AI_STATUSES.has(aiStatus);
 }
 
 function getDefaultComment(action: StatusChangingAction) {
@@ -306,6 +331,10 @@ function getApproveNewCategorySuccessMessage(json: ModerationApiResponse) {
 export default function SuggestionModerationButtons({
   suggestionId,
   currentStatus,
+  aiStatus,
+  aiConfidence,
+  aiSuggestedCategoryText,
+  matchedExistingCategoryId,
 }: SuggestionModerationButtonsProps) {
   const router = useRouter();
 
@@ -323,8 +352,15 @@ export default function SuggestionModerationButtons({
   const canReject = canRejectStatus(currentStatus);
   const canArchive = canArchiveStatus(currentStatus);
   const canAnalyze = canAnalyzeStatus(currentStatus);
-  const canApproveExistingMatch = canApproveExistingMatchStatus(currentStatus);
-  const canApproveNewCategory = canApproveNewCategoryStatus(currentStatus);
+  const canApproveExistingMatch = canApproveExistingMatchStatus(
+    currentStatus,
+    aiStatus,
+    matchedExistingCategoryId
+  );
+  const canApproveNewCategory = canApproveNewCategoryStatus(
+    currentStatus,
+    aiStatus
+  );
 
   function updateNewCategoryField(
     field: keyof NewCategoryFormState,
@@ -438,7 +474,7 @@ export default function SuggestionModerationButtons({
     if (!canApproveNewCategory) {
       setSubmitStatus("error");
       setMessage(
-        `Cannot approve new category for suggestion with status "${currentStatus}".`
+        `Cannot approve new category for suggestion with status "${currentStatus}" and AI status "${aiStatus ?? "null"}".`
       );
       return;
     }
@@ -556,7 +592,7 @@ export default function SuggestionModerationButtons({
     if (action === "approve_existing_match" && !canApproveExistingMatch) {
       setSubmitStatus("error");
       setMessage(
-        `Cannot approve existing match for suggestion with status "${currentStatus}".`
+        `Cannot approve existing match for suggestion with status "${currentStatus}", AI status "${aiStatus ?? "null"}" and matched category "${matchedExistingCategoryId ?? "null"}".`
       );
       return;
     }
@@ -794,8 +830,17 @@ export default function SuggestionModerationButtons({
           }}
         >
           Creates a new contextual category only after explicit platform admin
-          review. For low-confidence AI suggestions, name, slug and admin
-          comment are required.
+          review. Available only when AI status is{" "}
+          <strong>new_category_suggested</strong> or{" "}
+          <strong>low_confidence</strong>. Current AI status:{" "}
+          <strong>{aiStatus ?? "—"}</strong>. Current AI category:{" "}
+          <strong>{aiSuggestedCategoryText ?? "—"}</strong>. Confidence:{" "}
+          <strong>
+            {aiConfidence === null || aiConfidence === undefined
+              ? "—"
+              : aiConfidence}
+          </strong>
+          .
         </div>
 
         <div
@@ -1006,9 +1051,11 @@ export default function SuggestionModerationButtons({
             lineHeight: "1.45",
           }}
         >
-          Approve match is available only for draft, suggested or needs_review
-          suggestion requests. Backend also requires ai_status=matched_existing
-          and a valid matched existing category.
+          Approve match is available only when status is draft, suggested or
+          needs_review, AI status is matched_existing, and a matched existing
+          category id exists. Current AI status:{" "}
+          <strong>{aiStatus ?? "—"}</strong>. Current matched category:{" "}
+          <strong>{matchedExistingCategoryId ?? "—"}</strong>.
         </div>
       ) : null}
 
@@ -1024,9 +1071,10 @@ export default function SuggestionModerationButtons({
             lineHeight: "1.45",
           }}
         >
-          Approve new category is available only for draft, suggested or
-          needs_review suggestion requests. Backend also requires a valid AI
-          analysis status and explicit admin category data.
+          Approve new category is available only when status is draft, suggested
+          or needs_review and AI status is new_category_suggested or
+          low_confidence. Current AI status:{" "}
+          <strong>{aiStatus ?? "—"}</strong>.
         </div>
       ) : null}
 

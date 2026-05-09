@@ -796,11 +796,11 @@ export default async function AdminObjectActionSuggestionsPage({
                   Suggestion requests
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  AI Analyze, Approve match, Reject and Archive are available
-                  here. Approve match only confirms an AI-matched existing
-                  category and does not create a new public category. Full new
-                  category approval and advanced merge flows will be added in
-                  later steps.
+                  AI Analyze, Approve match, Approve new category, Reject and
+                  Archive are available here. Approve match only confirms an
+                  AI-matched existing category and does not create a new public
+                  category. Approve new category requires explicit admin name,
+                  slug and comment.
                 </p>
               </div>
 
@@ -826,6 +826,9 @@ export default async function AdminObjectActionSuggestionsPage({
                     const shouldShowAiAnalysisDetails = hasAiAnalysisDetails(
                       aiAnalysisDetails
                     );
+                    const resolvedMatchedExistingCategoryId =
+                      suggestion.matched_existing_category_id ??
+                      suggestion.ai_suggested_contextual_category_id;
 
                     return (
                       <article
@@ -1057,7 +1060,7 @@ export default async function AdminObjectActionSuggestionsPage({
                           <div>
                             <strong>Matched existing category:</strong>{" "}
                             <span style={{ fontFamily: "monospace" }}>
-                              {suggestion.matched_existing_category_id ?? "—"}
+                              {resolvedMatchedExistingCategoryId ?? "—"}
                             </span>
                           </div>
                         </section>
@@ -1176,6 +1179,14 @@ export default async function AdminObjectActionSuggestionsPage({
                         <SuggestionModerationButtons
                           suggestionId={suggestion.id}
                           currentStatus={suggestion.status}
+                          aiStatus={suggestion.ai_status}
+                          aiConfidence={suggestion.ai_confidence}
+                          aiSuggestedCategoryText={
+                            suggestion.ai_suggested_category_text
+                          }
+                          matchedExistingCategoryId={
+                            resolvedMatchedExistingCategoryId
+                          }
                         />
 
                         <section
