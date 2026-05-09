@@ -118,6 +118,19 @@ type AiAnalysisDetails = {
   existingCategoriesConsidered: number | null;
 };
 
+type HashChainStatusKey =
+  | "chain_start"
+  | "linked"
+  | "hash_missing"
+  | "previous_hash_missing"
+  | "previous_record_hash_missing"
+  | "broken";
+
+type HashChainStatus = {
+  key: HashChainStatusKey;
+  label: string;
+};
+
 const DEFAULT_STATUS_FILTER: SuggestionStatusFilter = "needs_review";
 
 const STATUS_FILTERS: {
@@ -351,6 +364,105 @@ function getAuditEventStyle(eventType: string | null | undefined) {
     background: "#fff8e6",
     color: "#7a4b00",
     border: "1px solid #f0d28a",
+  };
+}
+
+function getHashChainStatusStyle(status: HashChainStatusKey) {
+  if (status === "linked") {
+    return {
+      background: "#edf8f0",
+      color: "#176b2c",
+      border: "1px solid #bfe5c8",
+    };
+  }
+
+  if (status === "chain_start") {
+    return {
+      background: "#eff6ff",
+      color: "#1e3a8a",
+      border: "1px solid #bfdbfe",
+    };
+  }
+
+  if (
+    status === "hash_missing" ||
+    status === "previous_hash_missing" ||
+    status === "previous_record_hash_missing" ||
+    status === "broken"
+  ) {
+    return {
+      background: "#fff5f5",
+      color: "#a40000",
+      border: "1px solid #f2b8b5",
+    };
+  }
+
+  return {
+    background: "#f5f5f5",
+    color: "#555555",
+    border: "1px solid #dddddd",
+  };
+}
+
+function getAuditHashChainStatus(
+  auditEvents: SuggestionAuditEventRow[],
+  auditEventIndex: number
+): HashChainStatus {
+  const auditEvent = auditEvents[auditEventIndex];
+  const previousChronologicalEvent = auditEvents[auditEventIndex + 1] ?? null;
+
+  if (!auditEvent) {
+    return {
+      key: "hash_missing",
+      label: "event missing",
+    };
+  }
+
+  if (!auditEvent.record_hash) {
+    return {
+      key: "hash_missing",
+      label: "record hash missing",
+    };
+  }
+
+  if (!previousChronologicalEvent) {
+    if (!auditEvent.previous_hash) {
+      return {
+        key: "chain_start",
+        label: "chain start",
+      };
+    }
+
+    return {
+      key: "broken",
+      label: "unexpected previous hash",
+    };
+  }
+
+  if (!previousChronologicalEvent.record_hash) {
+    return {
+      key: "previous_record_hash_missing",
+      label: "previous record hash missing",
+    };
+  }
+
+  if (!auditEvent.previous_hash) {
+    return {
+      key: "previous_hash_missing",
+      label: "previous hash missing",
+    };
+  }
+
+  if (auditEvent.previous_hash === previousChronologicalEvent.record_hash) {
+    return {
+      key: "linked",
+      label: "linked to previous event",
+    };
+  }
+
+  return {
+    key: "broken",
+    label: "broken hash link",
   };
 }
 
@@ -1031,7 +1143,7 @@ export default async function AdminObjectActionSuggestionsPage({
                   AI-matched existing category and does not create a new public
                   category. Approve new category requires explicit admin name,
                   slug and comment. Each moderation action is shown in the
-                  audit timeline.
+                  audit timeline with hash-chain fields.
                 </p>
               </div>
 
@@ -1481,7 +1593,7 @@ export default async function AdminObjectActionSuggestionsPage({
                                 gap: "10px",
                               }}
                             >
-                              {auditEvents.map((auditEvent) => {
+                              {auditEvents.map((auditEvent, auditEventIndex) => {
                                 const auditEventStyle = getAuditEventStyle(
                                   auditEvent.event_type
                                 );
@@ -1489,6 +1601,15 @@ export default async function AdminObjectActionSuggestionsPage({
                                   auditEvent.metadata_json,
                                   "publicDataMutation"
                                 );
+                                const hashChainStatus =
+                                  getAuditHashChainStatus(
+                                    auditEvents,
+                                    auditEventIndex
+                                  );
+                                const hashChainStatusStyle =
+                                  getHashChainStatusStyle(
+                                    hashChainStatus.key
+                                  );
 
                                 return (
                                   <article
@@ -1538,7 +1659,7 @@ export default async function AdminObjectActionSuggestionsPage({
                                       style={{
                                         display: "grid",
                                         gridTemplateColumns:
-                                          "repeat(auto-fit, minmax(220px, 1fr))",
+                                          "repeat(auto-fit, minmax(260px, 1fr))",
                                         gap: "8px",
                                         fontSize: "13px",
                                         lineHeight: "1.45",
@@ -1606,9 +1727,40 @@ export default async function AdminObjectActionSuggestionsPage({
                                       </div>
 
                                       <div>
+                                        <strong>Hash chain:</strong>{" "}
+                                        <span
+                                          style={{
+                                            display: "inline-block",
+                                            borderRadius: "999px",
+                                            padding: "4px 8px",
+                                            fontSize: "12px",
+                                            fontWeight: 800,
+                                            ...hashChainStatusStyle,
+                                          }}
+                                        >
+                                          {hashChainStatus.label}
+                                        </span>
+                                      </div>
+
+                                      <div>
+                                        <strong>Previous hash:</strong>{" "}
+                                        <span
+                                          style={{
+                                            fontFamily: "monospace",
+                                            wordBreak: "break-all",
+                                          }}
+                                        >
+                                          {auditEvent.previous_hash ?? "—"}
+                                        </span>
+                                      </div>
+
+                                      <div>
                                         <strong>Record hash:</strong>{" "}
                                         <span
-                                          style={{ fontFamily: "monospace" }}
+                                          style={{
+                                            fontFamily: "monospace",
+                                            wordBreak: "break-all",
+                                          }}
                                         >
                                           {auditEvent.record_hash ?? "—"}
                                         </span>
