@@ -113,17 +113,27 @@ type SuggestionModerationAction =
   | "approve_new_category";
 
 type SuggestionAuditEventType =
+  | "created"
   | "ai_analyzed"
   | "rejected"
   | "archived"
   | "approve_existing_match"
   | "approve_new_category";
 
+type SuggestionAuditEventSource =
+  | "admin_ui"
+  | "api"
+  | "system"
+  | "ai"
+  | "import";
+
 type CreateSuggestionAuditEventInput = {
   suggestionRequestId: string;
-  appUser: AppUserRow;
-  platformAdmin: PlatformAdminRow;
+  appUser?: AppUserRow | null;
+  platformAdmin?: PlatformAdminRow | null;
+  actorRole?: string | null;
   eventType: SuggestionAuditEventType;
+  eventSource?: SuggestionAuditEventSource;
   statusBefore: string | null;
   statusAfter: string;
   aiStatusBefore: string | null;
@@ -599,25 +609,27 @@ function getSuggestedNewCategoryData(
 async function createObjectActionSuggestionAuditEvent(
   input: CreateSuggestionAuditEventInput
 ) {
-  const { error } = await supabase.from("object_action_suggestion_events").insert({
-    suggestion_request_id: input.suggestionRequestId,
-    actor_user_id: input.appUser.id,
-    actor_role: input.platformAdmin.role,
-    event_type: input.eventType,
-    event_source: "admin_ui",
-    status_before: input.statusBefore,
-    status_after: input.statusAfter,
-    ai_status_before: input.aiStatusBefore,
-    ai_status_after: input.aiStatusAfter,
-    admin_decision: input.adminDecision,
-    matched_existing_category_id: input.matchedExistingCategoryId ?? null,
-    created_contextual_category_id: input.createdContextualCategoryId ?? null,
-    previous_values: input.previousValues ?? null,
-    new_values: input.newValues ?? null,
-    metadata_json: input.metadataJson ?? {},
-    public_note: input.publicNote ?? null,
-    internal_note: input.internalNote ?? null,
-  });
+  const { error } = await supabase
+    .from("object_action_suggestion_events")
+    .insert({
+      suggestion_request_id: input.suggestionRequestId,
+      actor_user_id: input.appUser?.id ?? null,
+      actor_role: input.actorRole ?? input.platformAdmin?.role ?? null,
+      event_type: input.eventType,
+      event_source: input.eventSource ?? "admin_ui",
+      status_before: input.statusBefore,
+      status_after: input.statusAfter,
+      ai_status_before: input.aiStatusBefore,
+      ai_status_after: input.aiStatusAfter,
+      admin_decision: input.adminDecision,
+      matched_existing_category_id: input.matchedExistingCategoryId ?? null,
+      created_contextual_category_id: input.createdContextualCategoryId ?? null,
+      previous_values: input.previousValues ?? null,
+      new_values: input.newValues ?? null,
+      metadata_json: input.metadataJson ?? {},
+      public_note: input.publicNote ?? null,
+      internal_note: input.internalNote ?? null,
+    });
 
   if (error) {
     return error.message;
@@ -633,7 +645,7 @@ function createAuditErrorResponse(
   return NextResponse.json(
     {
       ok: false,
-      error: `Suggestion request was updated, but audit event creation failed: ${auditErrorMessage}`,
+      error: `Suggestion request mutation succeeded, but audit event creation failed: ${auditErrorMessage}`,
       suggestionRequest,
     },
     { status: 500 }
@@ -818,6 +830,54 @@ async function getContextualCategoryBySlug(
 
   return {
     category: categoryRows[0] ?? null,
+    errorMessage: null,
+  };
+}
+
+async function getOptionalCurrentAppUser(): Promise<{
+  appUser: AppUserRow | null;
+  errorMessage: string | null;
+}> {
+  const session = await auth0.getSession();
+
+  if (!session?.user?.sub) {
+    return {
+      appUser: null,
+      errorMessage: null,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("app_users")
+    .select(
+      `
+      id,
+      auth0_sub,
+      email,
+      name
+    `
+    )
+    .eq("auth0_sub", session.user.sub)
+    .limit(1);
+
+  if (error) {
+    return {
+      appUser: null,
+      errorMessage: error.message,
+    };
+  }
+
+  const appUserRows = (data as unknown as AppUserRow[] | null) ?? [];
+
+  if (!appUserRows[0]) {
+    return {
+      appUser: null,
+      errorMessage: "Authenticated Auth0 user is not linked to app_users.",
+    };
+  }
+
+  return {
+    appUser: appUserRows[0],
     errorMessage: null,
   };
 }
@@ -1775,6 +1835,9 @@ export async function POST(request: NextRequest) {
     return createValidationErrorResponse("Unsupported requestSource.");
   }
 
+  const { appUser, errorMessage: optionalUserErrorMessage } =
+    await getOptionalCurrentAppUser();
+
   const { context, errorMessage: contextErrorMessage } =
     await getResolvedContext(contextCode);
 
@@ -1813,6 +1876,7 @@ export async function POST(request: NextRequest) {
       entity_id: entityId,
       request_source: requestSource,
       source_type: "user_submitted",
+      created_by_user_id: appUser?.id ?? null,
       proposed_object_text: proposedObjectText,
       proposed_action_text: proposedActionText,
       proposed_category_text: proposedCategoryText,
@@ -1820,21 +1884,7 @@ export async function POST(request: NextRequest) {
       ai_analysis_json: {},
       status: "needs_review",
     })
-    .select(
-      `
-      id,
-      user_text,
-      locale,
-      context_code,
-      resolved_context_id,
-      entity_type,
-      entity_id,
-      request_source,
-      ai_status,
-      status,
-      created_at
-    `
-    )
+    .select(SUGGESTION_REQUEST_SELECT)
     .single();
 
   if (error) {
@@ -1847,10 +1897,50 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const createdSuggestion = data as unknown as SuggestionRequestRow;
+
+  const auditErrorMessage = await createObjectActionSuggestionAuditEvent({
+    suggestionRequestId: createdSuggestion.id,
+    appUser,
+    actorRole: appUser ? "submitter" : "anonymous",
+    eventType: "created",
+    eventSource: "api",
+    statusBefore: null,
+    statusAfter: createdSuggestion.status,
+    aiStatusBefore: null,
+    aiStatusAfter: createdSuggestion.ai_status,
+    adminDecision: null,
+    matchedExistingCategoryId: null,
+    createdContextualCategoryId: null,
+    previousValues: null,
+    newValues: createSuggestionSnapshot(createdSuggestion),
+    metadataJson: {
+      action: "created",
+      createdAt: createdSuggestion.created_at,
+      contextId: context.id,
+      contextCode: context.code,
+      requestSource,
+      sourceType: "user_submitted",
+      entityType,
+      entityId,
+      locale,
+      actorResolution: appUser ? "app_user" : "anonymous",
+      optionalUserErrorMessage,
+      publicDataMutation: false,
+      safetyNote:
+        "Suggestion request was created as a moderation request only. It does not create, approve, publish or merge Object-Action Rubricator data.",
+    },
+    internalNote: "Suggestion request created.",
+  });
+
+  if (auditErrorMessage) {
+    return createAuditErrorResponse(auditErrorMessage, createdSuggestion);
+  }
+
   return NextResponse.json(
     {
       ok: true,
-      suggestionRequest: data,
+      suggestionRequest: createdSuggestion,
     },
     { status: 201 }
   );
