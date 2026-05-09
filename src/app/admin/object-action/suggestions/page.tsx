@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 import SuggestionModerationButtons from "./SuggestionModerationButtons";
@@ -190,7 +190,7 @@ function normalizeLimit(value: string | string[] | undefined) {
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) {
-    return "—";
+    return "â€”";
   }
 
   const date = new Date(value);
@@ -207,7 +207,7 @@ function formatDateTime(value: string | null | undefined) {
 
 function formatNumber(value: number | null | undefined) {
   if (value === null || value === undefined) {
-    return "—";
+    return "â€”";
   }
 
   return new Intl.NumberFormat("pl-PL", {
@@ -224,12 +224,12 @@ function formatBoolean(value: boolean | null | undefined) {
     return "false";
   }
 
-  return "—";
+  return "â€”";
 }
 
 function formatJson(value: unknown) {
   if (value === null || value === undefined) {
-    return "—";
+    return "â€”";
   }
 
   try {
@@ -920,7 +920,7 @@ export default async function AdminObjectActionSuggestionsPage({
                 display: "inline-block",
               }}
             >
-              ← Назад в каталог
+              ← ÐÐ°Ð·Ð°Ð´ Ð² ÐºÐ°Ñ‚Ð°Ð»Ð¾Ð³
             </Link>
 
             <Link
@@ -933,6 +933,18 @@ export default async function AdminObjectActionSuggestionsPage({
               }}
             >
               Object-Action categories →
+            </Link>
+
+            <Link
+              href="/admin/object-action/classifications"
+              style={{
+                color: "#2563eb",
+                textDecoration: "underline",
+                display: "inline-block",
+                fontWeight: 700,
+              }}
+            >
+              Classifications →
             </Link>
           </nav>
 
@@ -1226,7 +1238,7 @@ export default async function AdminObjectActionSuggestionsPage({
                                 marginBottom: "6px",
                               }}
                             >
-                              {suggestion.context_code} ·{" "}
+                              {suggestion.context_code} Â·{" "}
                               {suggestion.request_source}
                             </div>
 
@@ -1390,32 +1402,32 @@ export default async function AdminObjectActionSuggestionsPage({
                         >
                           <div>
                             <strong>Proposed object:</strong>{" "}
-                            {suggestion.proposed_object_text ?? "—"}
+                            {suggestion.proposed_object_text ?? "â€”"}
                           </div>
 
                           <div>
                             <strong>Proposed action:</strong>{" "}
-                            {suggestion.proposed_action_text ?? "—"}
+                            {suggestion.proposed_action_text ?? "â€”"}
                           </div>
 
                           <div>
                             <strong>Proposed category:</strong>{" "}
-                            {suggestion.proposed_category_text ?? "—"}
+                            {suggestion.proposed_category_text ?? "â€”"}
                           </div>
 
                           <div>
                             <strong>AI object:</strong>{" "}
-                            {suggestion.ai_suggested_object_text ?? "—"}
+                            {suggestion.ai_suggested_object_text ?? "â€”"}
                           </div>
 
                           <div>
                             <strong>AI action:</strong>{" "}
-                            {suggestion.ai_suggested_action_text ?? "—"}
+                            {suggestion.ai_suggested_action_text ?? "â€”"}
                           </div>
 
                           <div>
                             <strong>AI category:</strong>{" "}
-                            {suggestion.ai_suggested_category_text ?? "—"}
+                            {suggestion.ai_suggested_category_text ?? "â€”"}
                           </div>
 
                           <div>
@@ -1426,7 +1438,7 @@ export default async function AdminObjectActionSuggestionsPage({
                           <div>
                             <strong>Matched existing category:</strong>{" "}
                             <span style={{ fontFamily: "monospace" }}>
-                              {resolvedMatchedExistingCategoryId ?? "—"}
+                              {resolvedMatchedExistingCategoryId ?? "â€”"}
                             </span>
                           </div>
                         </section>
@@ -1488,32 +1500,32 @@ export default async function AdminObjectActionSuggestionsPage({
                             >
                               <div>
                                 <strong>Rationale:</strong>{" "}
-                                {aiAnalysisDetails.rationale ?? "—"}
+                                {aiAnalysisDetails.rationale ?? "â€”"}
                               </div>
 
                               <div>
                                 <strong>Risk notes:</strong>{" "}
-                                {aiAnalysisDetails.riskNotes ?? "—"}
+                                {aiAnalysisDetails.riskNotes ?? "â€”"}
                               </div>
 
                               <div>
                                 <strong>AI error:</strong>{" "}
-                                {suggestion.ai_error_message ?? "—"}
+                                {suggestion.ai_error_message ?? "â€”"}
                               </div>
 
                               <div>
                                 <strong>Category slug:</strong>{" "}
-                                {aiAnalysisDetails.categorySlug ?? "—"}
+                                {aiAnalysisDetails.categorySlug ?? "â€”"}
                               </div>
 
                               <div>
                                 <strong>Model:</strong>{" "}
-                                {aiAnalysisDetails.model ?? "—"}
+                                {aiAnalysisDetails.model ?? "â€”"}
                               </div>
 
                               <div>
                                 <strong>Prompt version:</strong>{" "}
-                                {aiAnalysisDetails.promptVersion ?? "—"}
+                                {aiAnalysisDetails.promptVersion ?? "â€”"}
                               </div>
 
                               <div>
@@ -1691,13 +1703,13 @@ export default async function AdminObjectActionSuggestionsPage({
                                         <span
                                           style={{ fontFamily: "monospace" }}
                                         >
-                                          {auditEvent.actor_user_id ?? "—"}
+                                          {auditEvent.actor_user_id ?? "â€”"}
                                         </span>
                                       </div>
 
                                       <div>
                                         <strong>Actor role:</strong>{" "}
-                                        {auditEvent.actor_role ?? "—"}
+                                        {auditEvent.actor_role ?? "â€”"}
                                       </div>
 
                                       <div>
@@ -1712,19 +1724,19 @@ export default async function AdminObjectActionSuggestionsPage({
 
                                       <div>
                                         <strong>Status:</strong>{" "}
-                                        {auditEvent.status_before ?? "—"} →{" "}
+                                        {auditEvent.status_before ?? "â€”"} →{" "}
                                         {auditEvent.status_after}
                                       </div>
 
                                       <div>
                                         <strong>AI status:</strong>{" "}
-                                        {auditEvent.ai_status_before ?? "—"} →{" "}
-                                        {auditEvent.ai_status_after ?? "—"}
+                                        {auditEvent.ai_status_before ?? "â€”"} →{" "}
+                                        {auditEvent.ai_status_after ?? "â€”"}
                                       </div>
 
                                       <div>
                                         <strong>Admin decision:</strong>{" "}
-                                        {auditEvent.admin_decision ?? "—"}
+                                        {auditEvent.admin_decision ?? "â€”"}
                                       </div>
 
                                       <div>
@@ -1733,7 +1745,7 @@ export default async function AdminObjectActionSuggestionsPage({
                                           style={{ fontFamily: "monospace" }}
                                         >
                                           {auditEvent.matched_existing_category_id ??
-                                            "—"}
+                                            "â€”"}
                                         </span>
                                       </div>
 
@@ -1743,7 +1755,7 @@ export default async function AdminObjectActionSuggestionsPage({
                                           style={{ fontFamily: "monospace" }}
                                         >
                                           {auditEvent.created_contextual_category_id ??
-                                            "—"}
+                                            "â€”"}
                                         </span>
                                       </div>
 
@@ -1771,7 +1783,7 @@ export default async function AdminObjectActionSuggestionsPage({
                                             wordBreak: "break-all",
                                           }}
                                         >
-                                          {auditEvent.previous_hash ?? "—"}
+                                          {auditEvent.previous_hash ?? "â€”"}
                                         </span>
                                       </div>
 
@@ -1783,7 +1795,7 @@ export default async function AdminObjectActionSuggestionsPage({
                                             wordBreak: "break-all",
                                           }}
                                         >
-                                          {auditEvent.record_hash ?? "—"}
+                                          {auditEvent.record_hash ?? "â€”"}
                                         </span>
                                       </div>
                                     </section>
@@ -1877,18 +1889,18 @@ export default async function AdminObjectActionSuggestionsPage({
                           <div>
                             <strong>Created by user:</strong>{" "}
                             <span style={{ fontFamily: "monospace" }}>
-                              {suggestion.created_by_user_id ?? "—"}
+                              {suggestion.created_by_user_id ?? "â€”"}
                             </span>
                           </div>
 
                           <div>
                             <strong>Admin decision:</strong>{" "}
-                            {suggestion.admin_decision ?? "—"}
+                            {suggestion.admin_decision ?? "â€”"}
                           </div>
 
                           <div>
                             <strong>Admin comment:</strong>{" "}
-                            {suggestion.admin_comment ?? "—"}
+                            {suggestion.admin_comment ?? "â€”"}
                           </div>
 
                           <div>
