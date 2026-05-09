@@ -470,12 +470,6 @@ function getStatusFilterHref(status: SuggestionStatusFilter) {
   return `/admin/object-action/suggestions?status=${status}`;
 }
 
-function getAuditVerifyHref(suggestionId: string) {
-  return `/api/object-action/suggestions/audit-verify?suggestionId=${encodeURIComponent(
-    suggestionId
-  )}`;
-}
-
 function getRecord(value: unknown) {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return null;
@@ -909,17 +903,38 @@ export default async function AdminObjectActionSuggestionsPage({
         }}
       >
         <header style={{ marginBottom: "28px" }}>
-          <Link
-            href="/directory"
+          <nav
             style={{
-              color: "#2563eb",
-              textDecoration: "underline",
-              display: "inline-block",
+              display: "flex",
+              gap: "12px",
+              flexWrap: "wrap",
+              alignItems: "center",
               marginBottom: "16px",
             }}
           >
-            ← Назад в каталог
-          </Link>
+            <Link
+              href="/directory"
+              style={{
+                color: "#2563eb",
+                textDecoration: "underline",
+                display: "inline-block",
+              }}
+            >
+              ← Назад в каталог
+            </Link>
+
+            <Link
+              href="/admin/object-action/categories"
+              style={{
+                color: "#2563eb",
+                textDecoration: "underline",
+                display: "inline-block",
+                fontWeight: 700,
+              }}
+            >
+              Object-Action categories →
+            </Link>
+          </nav>
 
           <h1
             style={{
@@ -1571,40 +1586,11 @@ export default async function AdminObjectActionSuggestionsPage({
 
                             <div
                               style={{
-                                display: "flex",
-                                gap: "10px",
-                                flexWrap: "wrap",
-                                alignItems: "center",
+                                color: "#666666",
+                                fontSize: "13px",
                               }}
                             >
-                              <div
-                                style={{
-                                  color: "#666666",
-                                  fontSize: "13px",
-                                }}
-                              >
-                                Events: {auditEvents.length}
-                              </div>
-
-                              <Link
-                                href={getAuditVerifyHref(suggestion.id)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  display: "inline-block",
-                                  border: "1px solid #2563eb",
-                                  borderRadius: "999px",
-                                  padding: "6px 10px",
-                                  background: "#eff6ff",
-                                  color: "#1e3a8a",
-                                  fontSize: "13px",
-                                  fontWeight: 800,
-                                  textDecoration: "none",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                Verify hash chain ↗
-                              </Link>
+                              Events: {auditEvents.length}
                             </div>
                           </div>
 
