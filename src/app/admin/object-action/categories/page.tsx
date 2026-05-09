@@ -15,10 +15,13 @@ type CategoryStatusFilter =
 
 type ActiveFilter = "all" | "active" | "inactive";
 
+type OriginFilter = "all" | "suggestion" | "not_linked";
+
 type AdminCategoriesPageProps = {
   searchParams?: Promise<{
     status?: string | string[];
     active?: string | string[];
+    origin?: string | string[];
     context?: string | string[];
     limit?: string | string[];
   }>;
@@ -86,12 +89,14 @@ type PageData = {
   originErrorMessage: string | null;
   statusFilter: CategoryStatusFilter;
   activeFilter: ActiveFilter;
+  originFilter: OriginFilter;
   contextFilter: string;
   limit: number;
 };
 
 const DEFAULT_STATUS_FILTER: CategoryStatusFilter = "all";
 const DEFAULT_ACTIVE_FILTER: ActiveFilter = "active";
+const DEFAULT_ORIGIN_FILTER: OriginFilter = "all";
 const DEFAULT_LIMIT = 100;
 
 const MUTATION_ADMIN_ROLES = new Set(["owner", "admin", "moderator"]);
@@ -117,12 +122,25 @@ const ACTIVE_FILTERS: {
   { value: "inactive", label: "Inactive only" },
 ];
 
+const ORIGIN_FILTERS: {
+  value: OriginFilter;
+  label: string;
+}[] = [
+  { value: "all", label: "All" },
+  { value: "suggestion", label: "Created from suggestions" },
+  { value: "not_linked", label: "Not linked" },
+];
+
 const ALLOWED_STATUS_FILTERS = new Set<CategoryStatusFilter>(
   STATUS_FILTERS.map((item) => item.value)
 );
 
 const ALLOWED_ACTIVE_FILTERS = new Set<ActiveFilter>(
   ACTIVE_FILTERS.map((item) => item.value)
+);
+
+const ALLOWED_ORIGIN_FILTERS = new Set<OriginFilter>(
+  ORIGIN_FILTERS.map((item) => item.value)
 );
 
 function getFirstSearchParam(value: string | string[] | undefined) {
@@ -164,6 +182,24 @@ function normalizeActiveFilter(
 
   if (!ALLOWED_ACTIVE_FILTERS.has(typedValue)) {
     return DEFAULT_ACTIVE_FILTER;
+  }
+
+  return typedValue;
+}
+
+function normalizeOriginFilter(
+  value: string | string[] | undefined
+): OriginFilter {
+  const normalizedValue = getFirstSearchParam(value).trim().toLowerCase();
+
+  if (!normalizedValue) {
+    return DEFAULT_ORIGIN_FILTER;
+  }
+
+  const typedValue = normalizedValue as OriginFilter;
+
+  if (!ALLOWED_ORIGIN_FILTERS.has(typedValue)) {
+    return DEFAULT_ORIGIN_FILTER;
   }
 
   return typedValue;
@@ -302,6 +338,7 @@ function getOriginStyle(hasOriginEvent: boolean) {
 function getFilterHref(params: {
   status?: CategoryStatusFilter;
   active?: ActiveFilter;
+  origin?: OriginFilter;
   context?: string;
   limit?: number;
 }) {
@@ -309,6 +346,7 @@ function getFilterHref(params: {
 
   searchParams.set("status", params.status ?? DEFAULT_STATUS_FILTER);
   searchParams.set("active", params.active ?? DEFAULT_ACTIVE_FILTER);
+  searchParams.set("origin", params.origin ?? DEFAULT_ORIGIN_FILTER);
 
   if (params.context) {
     searchParams.set("context", params.context);
@@ -319,6 +357,31 @@ function getFilterHref(params: {
   }
 
   return `/admin/object-action/categories?${searchParams.toString()}`;
+}
+
+function filterCategoriesByOrigin(
+  categories: ContextualCategoryRow[],
+  originEventsByCategoryId: Record<string, CategoryOriginEventRow[]>,
+  originFilter: OriginFilter
+) {
+  if (originFilter === "all") {
+    return categories;
+  }
+
+  return categories.filter((category) => {
+    const hasOriginEvent =
+      (originEventsByCategoryId[category.id] ?? []).length > 0;
+
+    if (originFilter === "suggestion") {
+      return hasOriginEvent;
+    }
+
+    if (originFilter === "not_linked") {
+      return !hasOriginEvent;
+    }
+
+    return true;
+  });
 }
 
 async function getCurrentAppUser(): Promise<{
@@ -589,6 +652,7 @@ async function getCategoryOriginEvents(
 async function getPageData(
   statusFilter: CategoryStatusFilter,
   activeFilter: ActiveFilter,
+  originFilter: OriginFilter,
   contextFilter: string,
   limit: number
 ): Promise<PageData> {
@@ -607,6 +671,7 @@ async function getPageData(
       originErrorMessage: null,
       statusFilter,
       activeFilter,
+      originFilter,
       contextFilter,
       limit,
     };
@@ -628,6 +693,7 @@ async function getPageData(
       originErrorMessage: null,
       statusFilter,
       activeFilter,
+      originFilter,
       contextFilter,
       limit,
     };
@@ -653,25 +719,32 @@ async function getPageData(
       originErrorMessage: null,
       statusFilter,
       activeFilter,
+      originFilter,
       contextFilter,
       limit,
     };
   }
 
-  const { contextsById, errorMessage: contextsErrorMessage } =
-    await getContextsById(categories.map((category) => category.context_id));
-
   const {
     originEventsByCategoryId,
     errorMessage: originEventsErrorMessage,
-  } = await getCategoryOriginEvents(
-    categories.map((category) => category.id)
+  } = await getCategoryOriginEvents(categories.map((category) => category.id));
+
+  const filteredCategories = filterCategoriesByOrigin(
+    categories,
+    originEventsByCategoryId,
+    originFilter
   );
+
+  const { contextsById, errorMessage: contextsErrorMessage } =
+    await getContextsById(
+      filteredCategories.map((category) => category.context_id)
+    );
 
   return {
     appUser,
     platformAdmin,
-    categories,
+    categories: filteredCategories,
     contextsById,
     originEventsByCategoryId,
     errorMessage: null,
@@ -679,6 +752,7 @@ async function getPageData(
     originErrorMessage: originEventsErrorMessage,
     statusFilter,
     activeFilter,
+    originFilter,
     contextFilter,
     limit,
   };
@@ -691,6 +765,7 @@ export default async function AdminObjectActionCategoriesPage({
 
   const statusFilter = normalizeStatusFilter(resolvedSearchParams?.status);
   const activeFilter = normalizeActiveFilter(resolvedSearchParams?.active);
+  const originFilter = normalizeOriginFilter(resolvedSearchParams?.origin);
   const contextFilter = normalizeContextFilter(resolvedSearchParams?.context);
   const limit = normalizeLimit(resolvedSearchParams?.limit);
 
@@ -703,7 +778,13 @@ export default async function AdminObjectActionCategoriesPage({
     errorMessage,
     contextErrorMessage,
     originErrorMessage,
-  } = await getPageData(statusFilter, activeFilter, contextFilter, limit);
+  } = await getPageData(
+    statusFilter,
+    activeFilter,
+    originFilter,
+    contextFilter,
+    limit
+  );
 
   const activeCount = categories.filter((category) => category.is_active).length;
   const publicCount = categories.filter(
@@ -969,6 +1050,7 @@ export default async function AdminObjectActionCategoriesPage({
                         href={getFilterHref({
                           status: filter.value,
                           active: activeFilter,
+                          origin: originFilter,
                           context: contextFilter,
                           limit,
                         })}
@@ -1013,6 +1095,52 @@ export default async function AdminObjectActionCategoriesPage({
                         href={getFilterHref({
                           status: statusFilter,
                           active: filter.value,
+                          origin: originFilter,
+                          context: contextFilter,
+                          limit,
+                        })}
+                        style={{
+                          display: "inline-block",
+                          border: isActive
+                            ? "1px solid #2563eb"
+                            : "1px solid #dddddd",
+                          borderRadius: "999px",
+                          padding: "8px 12px",
+                          background: isActive ? "#2563eb" : "#ffffff",
+                          color: isActive ? "#ffffff" : "#111111",
+                          textDecoration: "none",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {filter.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <h2 style={{ margin: "0 0 12px", fontSize: "20px" }}>
+                  Origin filters
+                </h2>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "8px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {ORIGIN_FILTERS.map((filter) => {
+                    const isActive = filter.value === originFilter;
+
+                    return (
+                      <Link
+                        key={filter.value}
+                        href={getFilterHref({
+                          status: statusFilter,
+                          active: activeFilter,
+                          origin: filter.value,
                           context: contextFilter,
                           limit,
                         })}
@@ -1059,6 +1187,7 @@ export default async function AdminObjectActionCategoriesPage({
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
                   Current status filter: <strong>{statusFilter}</strong>.
                   Current active filter: <strong>{activeFilter}</strong>.
+                  Current origin filter: <strong>{originFilter}</strong>.
                   Active in current view: <strong>{activeCount}</strong>. Limit:{" "}
                   <strong>{limit}</strong>.
                 </p>
