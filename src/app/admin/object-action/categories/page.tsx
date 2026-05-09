@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
+import CategoryAdminButtons from "./CategoryAdminButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -66,47 +67,12 @@ type CategoryOriginEventRow = {
   actor_role: string | null;
   event_type: string;
   event_source: string;
-  status_before: string | null;
-  status_after: string;
-  ai_status_before: string | null;
-  ai_status_after: string | null;
   admin_decision: string | null;
-  matched_existing_category_id: string | null;
   created_contextual_category_id: string | null;
   metadata_json: Record<string, unknown> | null;
   internal_note: string | null;
-  previous_hash: string | null;
   record_hash: string | null;
   created_at: string;
-};
-
-type OriginSuggestionRow = {
-  id: string;
-  user_text: string;
-  locale: string;
-  context_code: string;
-  entity_type: string;
-  entity_id: string | null;
-  request_source: string;
-  source_type: string;
-  created_by_user_id: string | null;
-  ai_status: string | null;
-  ai_confidence: number | null;
-  ai_suggested_object_text: string | null;
-  ai_suggested_action_text: string | null;
-  ai_suggested_category_text: string | null;
-  status: string;
-  admin_decision: string | null;
-  admin_comment: string | null;
-  reviewed_by_user_id: string | null;
-  reviewed_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-type CategoryOriginData = {
-  event: CategoryOriginEventRow;
-  suggestion: OriginSuggestionRow | null;
 };
 
 type PageData = {
@@ -114,7 +80,7 @@ type PageData = {
   platformAdmin: PlatformAdminRow | null;
   categories: ContextualCategoryRow[];
   contextsById: Record<string, ContextRow>;
-  originsByCategoryId: Record<string, CategoryOriginData>;
+  originEventsByCategoryId: Record<string, CategoryOriginEventRow[]>;
   errorMessage: string | null;
   contextErrorMessage: string | null;
   originErrorMessage: string | null;
@@ -127,6 +93,8 @@ type PageData = {
 const DEFAULT_STATUS_FILTER: CategoryStatusFilter = "all";
 const DEFAULT_ACTIVE_FILTER: ActiveFilter = "active";
 const DEFAULT_LIMIT = 100;
+
+const MUTATION_ADMIN_ROLES = new Set(["owner", "admin", "moderator"]);
 
 const STATUS_FILTERS: {
   value: CategoryStatusFilter;
@@ -239,7 +207,7 @@ function formatNumber(value: number | null | undefined) {
   }
 
   return new Intl.NumberFormat("pl-PL", {
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   }).format(value);
 }
 
@@ -315,8 +283,8 @@ function getActiveStyle(isActive: boolean) {
   };
 }
 
-function getOriginStyle(origin: CategoryOriginData | null) {
-  if (origin) {
+function getOriginStyle(hasOriginEvent: boolean) {
+  if (hasOriginEvent) {
     return {
       background: "#eff6ff",
       color: "#1e3a8a",
@@ -351,38 +319,6 @@ function getFilterHref(params: {
   }
 
   return `/admin/object-action/categories?${searchParams.toString()}`;
-}
-
-function getOriginSuggestionHref(suggestion: OriginSuggestionRow | null) {
-  if (!suggestion) {
-    return "/admin/object-action/suggestions?status=all";
-  }
-
-  return `/admin/object-action/suggestions?status=${suggestion.status}`;
-}
-
-function getAuditVerifyHref(suggestion: OriginSuggestionRow | null) {
-  if (!suggestion) {
-    return null;
-  }
-
-  return `/api/object-action/suggestions/audit-verify?suggestionId=${suggestion.id}`;
-}
-
-function getJsonString(record: Record<string, unknown> | null, key: string) {
-  if (!record) {
-    return null;
-  }
-
-  const value = record[key];
-
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmedValue = value.trim();
-
-  return trimmedValue || null;
 }
 
 async function getCurrentAppUser(): Promise<{
@@ -583,82 +519,17 @@ async function getContextsById(contextIds: string[]): Promise<{
   };
 }
 
-async function getOriginSuggestionsById(
-  suggestionIds: string[]
-): Promise<{
-  suggestionsById: Record<string, OriginSuggestionRow>;
-  errorMessage: string | null;
-}> {
-  const uniqueSuggestionIds = Array.from(new Set(suggestionIds));
-
-  if (uniqueSuggestionIds.length === 0) {
-    return {
-      suggestionsById: {},
-      errorMessage: null,
-    };
-  }
-
-  const { data, error } = await supabase
-    .from("object_action_suggestion_requests")
-    .select(
-      `
-      id,
-      user_text,
-      locale,
-      context_code,
-      entity_type,
-      entity_id,
-      request_source,
-      source_type,
-      created_by_user_id,
-      ai_status,
-      ai_confidence,
-      ai_suggested_object_text,
-      ai_suggested_action_text,
-      ai_suggested_category_text,
-      status,
-      admin_decision,
-      admin_comment,
-      reviewed_by_user_id,
-      reviewed_at,
-      created_at,
-      updated_at
-    `
-    )
-    .in("id", uniqueSuggestionIds);
-
-  if (error) {
-    return {
-      suggestionsById: {},
-      errorMessage: error.message,
-    };
-  }
-
-  const suggestionRows = (data as unknown as OriginSuggestionRow[] | null) ?? [];
-
-  const suggestionsById: Record<string, OriginSuggestionRow> = {};
-
-  for (const suggestion of suggestionRows) {
-    suggestionsById[suggestion.id] = suggestion;
-  }
-
-  return {
-    suggestionsById,
-    errorMessage: null,
-  };
-}
-
-async function getCategoryOriginsByCategoryId(
+async function getCategoryOriginEvents(
   categoryIds: string[]
 ): Promise<{
-  originsByCategoryId: Record<string, CategoryOriginData>;
+  originEventsByCategoryId: Record<string, CategoryOriginEventRow[]>;
   errorMessage: string | null;
 }> {
   const uniqueCategoryIds = Array.from(new Set(categoryIds));
 
   if (uniqueCategoryIds.length === 0) {
     return {
-      originsByCategoryId: {},
+      originEventsByCategoryId: {},
       errorMessage: null,
     };
   }
@@ -673,66 +544,44 @@ async function getCategoryOriginsByCategoryId(
       actor_role,
       event_type,
       event_source,
-      status_before,
-      status_after,
-      ai_status_before,
-      ai_status_after,
       admin_decision,
-      matched_existing_category_id,
       created_contextual_category_id,
       metadata_json,
       internal_note,
-      previous_hash,
       record_hash,
       created_at
     `
     )
-    .eq("event_type", "approve_new_category")
     .in("created_contextual_category_id", uniqueCategoryIds)
     .order("created_at", { ascending: false });
 
   if (error) {
     return {
-      originsByCategoryId: {},
+      originEventsByCategoryId: {},
       errorMessage: error.message,
     };
   }
 
-  const eventRows = (data as unknown as CategoryOriginEventRow[] | null) ?? [];
+  const originRows = (data as unknown as CategoryOriginEventRow[] | null) ?? [];
+  const originEventsByCategoryId: Record<string, CategoryOriginEventRow[]> = {};
 
-  const {
-    suggestionsById,
-    errorMessage: suggestionsErrorMessage,
-  } = await getOriginSuggestionsById(
-    eventRows.map((event) => event.suggestion_request_id)
-  );
-
-  if (suggestionsErrorMessage) {
-    return {
-      originsByCategoryId: {},
-      errorMessage: suggestionsErrorMessage,
-    };
-  }
-
-  const originsByCategoryId: Record<string, CategoryOriginData> = {};
-
-  for (const event of eventRows) {
-    if (!event.created_contextual_category_id) {
+  for (const originEvent of originRows) {
+    if (!originEvent.created_contextual_category_id) {
       continue;
     }
 
-    if (originsByCategoryId[event.created_contextual_category_id]) {
-      continue;
-    }
+    const existingEvents =
+      originEventsByCategoryId[originEvent.created_contextual_category_id] ??
+      [];
 
-    originsByCategoryId[event.created_contextual_category_id] = {
-      event,
-      suggestion: suggestionsById[event.suggestion_request_id] ?? null,
-    };
+    originEventsByCategoryId[originEvent.created_contextual_category_id] = [
+      ...existingEvents,
+      originEvent,
+    ];
   }
 
   return {
-    originsByCategoryId,
+    originEventsByCategoryId,
     errorMessage: null,
   };
 }
@@ -752,7 +601,7 @@ async function getPageData(
       platformAdmin: null,
       categories: [],
       contextsById: {},
-      originsByCategoryId: {},
+      originEventsByCategoryId: {},
       errorMessage: appUserErrorMessage ?? "Not authenticated",
       contextErrorMessage: null,
       originErrorMessage: null,
@@ -772,7 +621,7 @@ async function getPageData(
       platformAdmin: null,
       categories: [],
       contextsById: {},
-      originsByCategoryId: {},
+      originEventsByCategoryId: {},
       errorMessage:
         platformAdminErrorMessage ?? "Platform admin access required",
       contextErrorMessage: null,
@@ -798,7 +647,7 @@ async function getPageData(
       platformAdmin,
       categories: [],
       contextsById: {},
-      originsByCategoryId: {},
+      originEventsByCategoryId: {},
       errorMessage: categoriesErrorMessage,
       contextErrorMessage: null,
       originErrorMessage: null,
@@ -813,9 +662,9 @@ async function getPageData(
     await getContextsById(categories.map((category) => category.context_id));
 
   const {
-    originsByCategoryId,
-    errorMessage: originErrorMessage,
-  } = await getCategoryOriginsByCategoryId(
+    originEventsByCategoryId,
+    errorMessage: originEventsErrorMessage,
+  } = await getCategoryOriginEvents(
     categories.map((category) => category.id)
   );
 
@@ -824,10 +673,10 @@ async function getPageData(
     platformAdmin,
     categories,
     contextsById,
-    originsByCategoryId,
+    originEventsByCategoryId,
     errorMessage: null,
     contextErrorMessage: contextsErrorMessage,
-    originErrorMessage,
+    originErrorMessage: originEventsErrorMessage,
     statusFilter,
     activeFilter,
     contextFilter,
@@ -850,7 +699,7 @@ export default async function AdminObjectActionCategoriesPage({
     platformAdmin,
     categories,
     contextsById,
-    originsByCategoryId,
+    originEventsByCategoryId,
     errorMessage,
     contextErrorMessage,
     originErrorMessage,
@@ -862,8 +711,10 @@ export default async function AdminObjectActionCategoriesPage({
       category.status === "approved" || category.status === "published"
   ).length;
   const createdFromSuggestionsCount = categories.filter(
-    (category) => originsByCategoryId[category.id]
+    (category) => (originEventsByCategoryId[category.id] ?? []).length > 0
   ).length;
+  const canMutateCategories =
+    platformAdmin && MUTATION_ADMIN_ROLES.has(platformAdmin.role);
 
   return (
     <main
@@ -932,8 +783,8 @@ export default async function AdminObjectActionCategoriesPage({
             }}
           >
             Admin overview of contextual categories used by the Object-Action
-            Rubricator. This page is read-only and helps verify what actually
-            exists after suggestion moderation.
+            Rubricator. This page helps verify what actually exists after
+            suggestion moderation.
           </p>
 
           <p
@@ -946,9 +797,8 @@ export default async function AdminObjectActionCategoriesPage({
           >
             Approved and published categories can be used by the business
             directory. Archived or inactive categories should not be offered to
-            users in public category pickers. If a category was created through
-            suggestion moderation, its source suggestion and audit event are
-            shown below.
+            users in public category pickers. Admin actions never delete a
+            category record.
           </p>
         </header>
 
@@ -1209,7 +1059,8 @@ export default async function AdminObjectActionCategoriesPage({
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
                   Current status filter: <strong>{statusFilter}</strong>.
                   Current active filter: <strong>{activeFilter}</strong>.
-                  Limit: <strong>{limit}</strong>.
+                  Active in current view: <strong>{activeCount}</strong>. Limit:{" "}
+                  <strong>{limit}</strong>.
                 </p>
               </div>
 
@@ -1229,17 +1080,11 @@ export default async function AdminObjectActionCategoriesPage({
                     const context = contextsById[category.context_id] ?? null;
                     const statusStyle = getStatusStyle(category.status);
                     const activeStyle = getActiveStyle(category.is_active);
-                    const origin = originsByCategoryId[category.id] ?? null;
-                    const originStyle = getOriginStyle(origin);
-                    const originSuggestion = origin?.suggestion ?? null;
-                    const verifyHref = getAuditVerifyHref(originSuggestion);
-                    const newCategorySource = getJsonString(
-                      origin?.event.metadata_json ?? null,
-                      "newCategorySource"
-                    );
-                    const originAction = getJsonString(
-                      origin?.event.metadata_json ?? null,
-                      "action"
+                    const originEvents =
+                      originEventsByCategoryId[category.id] ?? [];
+                    const latestOriginEvent = originEvents[0] ?? null;
+                    const originStyle = getOriginStyle(
+                      originEvents.length > 0
                     );
 
                     return (
@@ -1344,7 +1189,9 @@ export default async function AdminObjectActionCategoriesPage({
                               }}
                             >
                               origin:{" "}
-                              {origin ? "suggestion request" : "not linked"}
+                              {originEvents.length > 0
+                                ? "suggestion"
+                                : "not linked"}
                             </span>
                           </div>
                         </div>
@@ -1394,161 +1241,48 @@ export default async function AdminObjectActionCategoriesPage({
                           </div>
                         </section>
 
-                        {origin ? (
-                          <section
-                            style={{
-                              border: "1px solid #bfdbfe",
-                              borderRadius: "10px",
-                              padding: "12px",
-                              background: "#eff6ff",
-                              display: "grid",
-                              gap: "10px",
-                              lineHeight: "1.45",
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                gap: "12px",
-                                flexWrap: "wrap",
-                                alignItems: "center",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  fontWeight: 800,
-                                  color: "#1e3a8a",
-                                }}
-                              >
-                                Origin: created from suggestion moderation
-                              </div>
+                        <section
+                          style={{
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "10px",
+                            padding: "12px",
+                            background: "#ffffff",
+                            display: "grid",
+                            gap: "8px",
+                            lineHeight: "1.45",
+                            fontSize: "13px",
+                          }}
+                        >
+                          <div style={{ fontWeight: 800 }}>
+                            Category origin from suggestion moderation
+                          </div>
 
-                              <div
-                                style={{
-                                  display: "flex",
-                                  gap: "8px",
-                                  flexWrap: "wrap",
-                                }}
-                              >
-                                <Link
-                                  href={getOriginSuggestionHref(
-                                    originSuggestion
-                                  )}
-                                  style={{
-                                    display: "inline-block",
-                                    border: "1px solid #2563eb",
-                                    borderRadius: "999px",
-                                    padding: "6px 10px",
-                                    background: "#ffffff",
-                                    color: "#2563eb",
-                                    textDecoration: "none",
-                                    fontWeight: 800,
-                                    fontSize: "13px",
-                                  }}
-                                >
-                                  Open moderation queue →
-                                </Link>
-
-                                {verifyHref ? (
-                                  <Link
-                                    href={verifyHref}
-                                    target="_blank"
-                                    style={{
-                                      display: "inline-block",
-                                      border: "1px solid #2563eb",
-                                      borderRadius: "999px",
-                                      padding: "6px 10px",
-                                      background: "#ffffff",
-                                      color: "#2563eb",
-                                      textDecoration: "none",
-                                      fontWeight: 800,
-                                      fontSize: "13px",
-                                    }}
-                                  >
-                                    Verify hash chain ↗
-                                  </Link>
-                                ) : null}
-                              </div>
-                            </div>
-
-                            <section
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns:
-                                  "repeat(auto-fit, minmax(240px, 1fr))",
-                                gap: "8px",
-                                fontSize: "13px",
-                              }}
-                            >
+                          {latestOriginEvent ? (
+                            <>
                               <div>
-                                <strong>Suggestion ID:</strong>{" "}
-                                <span
-                                  style={{
-                                    fontFamily: "monospace",
-                                    wordBreak: "break-all",
-                                  }}
-                                >
-                                  {origin.event.suggestion_request_id}
+                                <strong>Origin event:</strong>{" "}
+                                {latestOriginEvent.event_type} ·{" "}
+                                {formatDateTime(latestOriginEvent.created_at)}
+                              </div>
+
+                              <div>
+                                <strong>Suggestion request:</strong>{" "}
+                                <span style={{ fontFamily: "monospace" }}>
+                                  {latestOriginEvent.suggestion_request_id}
                                 </span>
-                              </div>
-
-                              <div>
-                                <strong>Event:</strong> {origin.event.event_type}
-                              </div>
-
-                              <div>
-                                <strong>Event source:</strong>{" "}
-                                {origin.event.event_source}
                               </div>
 
                               <div>
                                 <strong>Actor:</strong>{" "}
-                                <span
-                                  style={{
-                                    fontFamily: "monospace",
-                                    wordBreak: "break-all",
-                                  }}
-                                >
-                                  {origin.event.actor_user_id ?? "—"}
-                                </span>
-                              </div>
-
-                              <div>
-                                <strong>Actor role:</strong>{" "}
-                                {origin.event.actor_role ?? "—"}
+                                <span style={{ fontFamily: "monospace" }}>
+                                  {latestOriginEvent.actor_user_id ?? "—"}
+                                </span>{" "}
+                                · role: {latestOriginEvent.actor_role ?? "—"}
                               </div>
 
                               <div>
                                 <strong>Admin decision:</strong>{" "}
-                                {origin.event.admin_decision ?? "—"}
-                              </div>
-
-                              <div>
-                                <strong>New category source:</strong>{" "}
-                                {newCategorySource ?? "—"}
-                              </div>
-
-                              <div>
-                                <strong>Origin action:</strong>{" "}
-                                {originAction ?? "—"}
-                              </div>
-
-                              <div>
-                                <strong>Origin event created:</strong>{" "}
-                                {formatDateTime(origin.event.created_at)}
-                              </div>
-
-                              <div>
-                                <strong>Previous hash:</strong>{" "}
-                                <span
-                                  style={{
-                                    fontFamily: "monospace",
-                                    wordBreak: "break-all",
-                                  }}
-                                >
-                                  {origin.event.previous_hash ?? "—"}
-                                </span>
+                                {latestOriginEvent.admin_decision ?? "—"}
                               </div>
 
                               <div>
@@ -1559,121 +1293,61 @@ export default async function AdminObjectActionCategoriesPage({
                                     wordBreak: "break-all",
                                   }}
                                 >
-                                  {origin.event.record_hash ?? "—"}
+                                  {latestOriginEvent.record_hash ?? "—"}
                                 </span>
                               </div>
-                            </section>
 
-                            {originSuggestion ? (
-                              <section
-                                style={{
-                                  border: "1px solid #bfdbfe",
-                                  borderRadius: "8px",
-                                  padding: "10px",
-                                  background: "#ffffff",
-                                  display: "grid",
-                                  gap: "8px",
-                                }}
-                              >
+                              {latestOriginEvent.internal_note ? (
                                 <div>
-                                  <strong>User text:</strong>{" "}
-                                  {originSuggestion.user_text}
+                                  <strong>Internal note:</strong>{" "}
+                                  {latestOriginEvent.internal_note}
                                 </div>
+                              ) : null}
 
-                                <div>
-                                  <strong>Suggestion status:</strong>{" "}
-                                  {originSuggestion.status} ·{" "}
-                                  <strong>AI status:</strong>{" "}
-                                  {originSuggestion.ai_status ?? "—"} ·{" "}
-                                  <strong>AI confidence:</strong>{" "}
-                                  {formatNumber(
-                                    originSuggestion.ai_confidence
-                                  )}
-                                </div>
+                              <details>
+                                <summary
+                                  style={{
+                                    cursor: "pointer",
+                                    color: "#2563eb",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  origin metadata_json
+                                </summary>
+                                <pre
+                                  style={{
+                                    marginTop: "8px",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "8px",
+                                    padding: "10px",
+                                    background: "#f9fafb",
+                                    overflowX: "auto",
+                                    fontSize: "12px",
+                                    lineHeight: "1.45",
+                                  }}
+                                >
+                                  {formatJson(latestOriginEvent.metadata_json)}
+                                </pre>
+                              </details>
+                            </>
+                          ) : (
+                            <div style={{ color: "#666666" }}>
+                              No approve_new_category audit origin found for
+                              this category. This usually means the category was
+                              seeded manually, imported, created before the
+                              audit-origin flow, or created outside suggestion
+                              moderation.
+                            </div>
+                          )}
+                        </section>
 
-                                <div>
-                                  <strong>AI object:</strong>{" "}
-                                  {originSuggestion.ai_suggested_object_text ??
-                                    "—"}{" "}
-                                  · <strong>AI action:</strong>{" "}
-                                  {originSuggestion.ai_suggested_action_text ??
-                                    "—"}{" "}
-                                  · <strong>AI category:</strong>{" "}
-                                  {originSuggestion.ai_suggested_category_text ??
-                                    "—"}
-                                </div>
-
-                                <div>
-                                  <strong>Admin comment:</strong>{" "}
-                                  {originSuggestion.admin_comment ?? "—"}
-                                </div>
-
-                                <div>
-                                  <strong>Reviewed at:</strong>{" "}
-                                  {formatDateTime(
-                                    originSuggestion.reviewed_at
-                                  )}
-                                </div>
-                              </section>
-                            ) : (
-                              <section
-                                style={{
-                                  border: "1px solid #f0d28a",
-                                  borderRadius: "8px",
-                                  padding: "10px",
-                                  background: "#fff8e6",
-                                  color: "#7a4b00",
-                                }}
-                              >
-                                Origin audit event exists, but linked suggestion
-                                request was not found.
-                              </section>
-                            )}
-
-                            {origin.event.internal_note ? (
-                              <div
-                                style={{
-                                  border: "1px solid #bfdbfe",
-                                  borderRadius: "8px",
-                                  padding: "10px",
-                                  background: "#ffffff",
-                                  color: "#1e3a8a",
-                                  fontSize: "13px",
-                                }}
-                              >
-                                <strong>Internal note:</strong>{" "}
-                                {origin.event.internal_note}
-                              </div>
-                            ) : null}
-
-                            <details>
-                              <summary
-                                style={{
-                                  cursor: "pointer",
-                                  color: "#2563eb",
-                                  fontWeight: 800,
-                                  fontSize: "13px",
-                                }}
-                              >
-                                metadata_json
-                              </summary>
-
-                              <pre
-                                style={{
-                                  marginTop: "8px",
-                                  border: "1px solid #bfdbfe",
-                                  borderRadius: "8px",
-                                  padding: "10px",
-                                  background: "#ffffff",
-                                  overflowX: "auto",
-                                  fontSize: "12px",
-                                  lineHeight: "1.45",
-                                }}
-                              >
-                                {formatJson(origin.event.metadata_json)}
-                              </pre>
-                            </details>
-                          </section>
+                        {canMutateCategories ? (
+                          <CategoryAdminButtons
+                            categoryId={category.id}
+                            categoryName={category.name}
+                            categoryStatus={category.status}
+                            isActive={category.is_active}
+                          />
                         ) : (
                           <section
                             style={{
@@ -1681,14 +1355,13 @@ export default async function AdminObjectActionCategoriesPage({
                               borderRadius: "10px",
                               padding: "12px",
                               background: "#f9fafb",
-                              color: "#555555",
+                              color: "#666666",
                               fontSize: "13px",
+                              lineHeight: "1.45",
                             }}
                           >
-                            No approve_new_category audit origin found for this
-                            category. This usually means the category was seeded
-                            manually, imported, created before the audit-origin
-                            flow, or created outside suggestion moderation.
+                            Category mutation buttons are hidden because the
+                            current admin role cannot mutate categories.
                           </section>
                         )}
 
