@@ -461,6 +461,14 @@ function getFilterHref(params: {
   return `/admin/object-action/categories?${searchParams.toString()}`;
 }
 
+function getCategoryAuditVerifyHref(categoryId: string) {
+  const searchParams = new URLSearchParams();
+
+  searchParams.set("categoryId", categoryId);
+
+  return `/api/object-action/categories/audit-verify?${searchParams.toString()}`;
+}
+
 function filterCategoriesByOrigin(
   categories: ContextualCategoryRow[],
   originEventsByCategoryId: Record<string, CategoryOriginEventRow[]>,
@@ -1690,8 +1698,30 @@ export default async function AdminObjectActionCategoriesPage({
                             fontSize: "13px",
                           }}
                         >
-                          <div style={{ fontWeight: 800 }}>
-                            Category mutation audit history
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              gap: "10px",
+                              flexWrap: "wrap",
+                              alignItems: "center",
+                            }}
+                          >
+                            <div style={{ fontWeight: 800 }}>
+                              Category mutation audit history
+                            </div>
+
+                            <Link
+                              href={getCategoryAuditVerifyHref(category.id)}
+                              target="_blank"
+                              style={{
+                                color: "#2563eb",
+                                textDecoration: "underline",
+                                fontWeight: 800,
+                              }}
+                            >
+                              Verify mutation audit chain ↗
+                            </Link>
                           </div>
 
                           <div style={{ color: "#666666" }}>
