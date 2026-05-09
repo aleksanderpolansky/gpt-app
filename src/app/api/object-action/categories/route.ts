@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
@@ -5,6 +6,8 @@ import { supabase } from "../../../../../lib/supabase";
 export const dynamic = "force-dynamic";
 
 type CategoryAdminAction = "archive" | "deactivate" | "activate";
+
+type CategoryEventType = "archived" | "deactivated" | "activated";
 
 type CategoryMutationRequestBody = {
   id?: unknown;
@@ -41,6 +44,34 @@ type ContextualCategoryRow = {
   updated_at: string;
 };
 
+type ContextualCategoryEventRow = {
+  id: string;
+  contextual_category_id: string;
+  actor_user_id: string | null;
+  actor_role: string | null;
+  event_type: string;
+  event_source: string;
+  status_before: string | null;
+  status_after: string | null;
+  is_active_before: boolean | null;
+  is_active_after: boolean | null;
+  admin_comment: string | null;
+  previous_values: Record<string, unknown>;
+  new_values: Record<string, unknown>;
+  metadata_json: Record<string, unknown>;
+  public_note: string | null;
+  internal_note: string | null;
+  previous_hash: string | null;
+  record_hash: string | null;
+  created_at: string;
+};
+
+type LatestCategoryEventHashRow = {
+  id: string;
+  record_hash: string | null;
+  created_at: string;
+};
+
 const MUTATION_ADMIN_ROLES = new Set(["owner", "admin", "moderator"]);
 const MAX_ADMIN_COMMENT_LENGTH = 2000;
 
@@ -57,6 +88,28 @@ const CATEGORY_SELECT = `
   is_active,
   created_at,
   updated_at
+`;
+
+const CATEGORY_EVENT_SELECT = `
+  id,
+  contextual_category_id,
+  actor_user_id,
+  actor_role,
+  event_type,
+  event_source,
+  status_before,
+  status_after,
+  is_active_before,
+  is_active_after,
+  admin_comment,
+  previous_values,
+  new_values,
+  metadata_json,
+  public_note,
+  internal_note,
+  previous_hash,
+  record_hash,
+  created_at
 `;
 
 function normalizeStringValue(value: unknown) {
@@ -145,6 +198,48 @@ function createAuthErrorResponse(message: string, status: number) {
     },
     { status }
   );
+}
+
+function sortJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => sortJsonValue(item));
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const sortedRecord: Record<string, unknown> = {};
+
+    for (const key of Object.keys(record).sort()) {
+      sortedRecord[key] = sortJsonValue(record[key]);
+    }
+
+    return sortedRecord;
+  }
+
+  return value;
+}
+
+function stableJsonStringify(value: unknown) {
+  return JSON.stringify(sortJsonValue(value));
+}
+
+function createSha256Hash(value: unknown) {
+  return crypto
+    .createHash("sha256")
+    .update(stableJsonStringify(value))
+    .digest("hex");
+}
+
+function getCategoryEventType(action: CategoryAdminAction): CategoryEventType {
+  if (action === "archive") {
+    return "archived";
+  }
+
+  if (action === "deactivate") {
+    return "deactivated";
+  }
+
+  return "activated";
 }
 
 async function getCurrentAppUser(): Promise<{
@@ -289,6 +384,40 @@ async function getExistingCategory(categoryId: string): Promise<{
   };
 }
 
+async function getLatestCategoryEventHash(
+  categoryId: string
+): Promise<{
+  latestEvent: LatestCategoryEventHashRow | null;
+  errorMessage: string | null;
+}> {
+  const { data, error } = await supabase
+    .from("contextual_category_events")
+    .select(
+      `
+      id,
+      record_hash,
+      created_at
+    `
+    )
+    .eq("contextual_category_id", categoryId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    return {
+      latestEvent: null,
+      errorMessage: error.message,
+    };
+  }
+
+  const rows = (data as unknown as LatestCategoryEventHashRow[] | null) ?? [];
+
+  return {
+    latestEvent: rows[0] ?? null,
+    errorMessage: null,
+  };
+}
+
 function getMutationPatch(action: CategoryAdminAction) {
   if (action === "archive") {
     return {
@@ -330,6 +459,158 @@ function getActionNote(params: {
   };
 
   return baseNote;
+}
+
+function buildCategoryEventPayload(params: {
+  action: CategoryAdminAction;
+  previousCategory: ContextualCategoryRow;
+  updatedCategory: ContextualCategoryRow;
+  appUser: AppUserRow;
+  platformAdmin: PlatformAdminRow;
+  adminComment: string | null;
+  previousHash: string | null;
+  latestEvent: LatestCategoryEventHashRow | null;
+}) {
+  const eventType = getCategoryEventType(params.action);
+
+  const previousValues = {
+    status: params.previousCategory.status,
+    is_active: params.previousCategory.is_active,
+    updated_at: params.previousCategory.updated_at,
+  };
+
+  const newValues = {
+    status: params.updatedCategory.status,
+    is_active: params.updatedCategory.is_active,
+    updated_at: params.updatedCategory.updated_at,
+  };
+
+  const metadataJson = {
+    action: params.action,
+    categoryId: params.previousCategory.id,
+    categoryName: params.previousCategory.name,
+    categorySlug: params.previousCategory.slug,
+    sourceType: params.previousCategory.source_type,
+    contextId: params.previousCategory.context_id,
+    parentId: params.previousCategory.parent_id,
+    sortOrder: params.previousCategory.sort_order,
+    publicDataMutation: true,
+    previousEventId: params.latestEvent?.id ?? null,
+    previousEventCreatedAt: params.latestEvent?.created_at ?? null,
+    previousEventRecordHashWasMissing:
+      Boolean(params.latestEvent) && !params.latestEvent?.record_hash,
+    safetyNote:
+      "Contextual category admin mutation. Category record is preserved; visibility/status changed only through admin action.",
+  };
+
+  const publicNote =
+    params.action === "archive"
+      ? "Contextual category was archived by platform admin."
+      : params.action === "deactivate"
+        ? "Contextual category was deactivated by platform admin."
+        : "Contextual category was activated by platform admin.";
+
+  const internalNote =
+    params.adminComment ??
+    `Contextual category ${params.action} action performed by platform admin.`;
+
+  const stablePayloadForHash = {
+    contextual_category_id: params.updatedCategory.id,
+    actor_user_id: params.appUser.id,
+    actor_role: params.platformAdmin.role,
+    event_type: eventType,
+    event_source: "admin_ui",
+    status_before: params.previousCategory.status,
+    status_after: params.updatedCategory.status,
+    is_active_before: params.previousCategory.is_active,
+    is_active_after: params.updatedCategory.is_active,
+    admin_comment: params.adminComment,
+    previous_values: previousValues,
+    new_values: newValues,
+    metadata_json: metadataJson,
+    public_note: publicNote,
+    internal_note: internalNote,
+    previous_hash: params.previousHash,
+  };
+
+  const recordHash = createSha256Hash(stablePayloadForHash);
+
+  return {
+    eventType,
+    previousValues,
+    newValues,
+    metadataJson,
+    publicNote,
+    internalNote,
+    previousHash: params.previousHash,
+    recordHash,
+  };
+}
+
+async function createCategoryMutationEvent(params: {
+  action: CategoryAdminAction;
+  previousCategory: ContextualCategoryRow;
+  updatedCategory: ContextualCategoryRow;
+  appUser: AppUserRow;
+  platformAdmin: PlatformAdminRow;
+  adminComment: string | null;
+}): Promise<{
+  event: ContextualCategoryEventRow | null;
+  errorMessage: string | null;
+}> {
+  const { latestEvent, errorMessage: latestEventErrorMessage } =
+    await getLatestCategoryEventHash(params.updatedCategory.id);
+
+  if (latestEventErrorMessage) {
+    return {
+      event: null,
+      errorMessage: latestEventErrorMessage,
+    };
+  }
+
+  const previousHash = latestEvent?.record_hash ?? null;
+
+  const eventPayload = buildCategoryEventPayload({
+    ...params,
+    previousHash,
+    latestEvent,
+  });
+
+  const { data, error } = await supabase
+    .from("contextual_category_events")
+    .insert({
+      contextual_category_id: params.updatedCategory.id,
+      actor_user_id: params.appUser.id,
+      actor_role: params.platformAdmin.role,
+      event_type: eventPayload.eventType,
+      event_source: "admin_ui",
+      status_before: params.previousCategory.status,
+      status_after: params.updatedCategory.status,
+      is_active_before: params.previousCategory.is_active,
+      is_active_after: params.updatedCategory.is_active,
+      admin_comment: params.adminComment,
+      previous_values: eventPayload.previousValues,
+      new_values: eventPayload.newValues,
+      metadata_json: eventPayload.metadataJson,
+      public_note: eventPayload.publicNote,
+      internal_note: eventPayload.internalNote,
+      previous_hash: eventPayload.previousHash,
+      record_hash: eventPayload.recordHash,
+    })
+    .select(CATEGORY_EVENT_SELECT)
+    .single();
+
+  if (error) {
+    return {
+      event: null,
+      errorMessage: error.message,
+    };
+  }
+
+  return {
+    event: data as unknown as ContextualCategoryEventRow,
+    errorMessage: null,
+  };
 }
 
 export async function PATCH(request: NextRequest) {
@@ -458,9 +739,36 @@ export async function PATCH(request: NextRequest) {
 
   const updatedCategory = data as unknown as ContextualCategoryRow;
 
+  const { event, errorMessage: auditEventErrorMessage } =
+    await createCategoryMutationEvent({
+      action,
+      previousCategory: category,
+      updatedCategory,
+      appUser,
+      platformAdmin,
+      adminComment,
+    });
+
+  if (auditEventErrorMessage || !event) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          auditEventErrorMessage ??
+          "Contextual category was updated, but audit event was not created.",
+        categoryMutationSucceeded: true,
+        category: updatedCategory,
+        warning:
+          "The category mutation already happened. Investigate contextual_category_events before retrying the same action.",
+      },
+      { status: 500 }
+    );
+  }
+
   return NextResponse.json({
     ok: true,
     category: updatedCategory,
+    auditEvent: event,
     moderation: {
       action,
       previousCategory: category,
@@ -475,9 +783,13 @@ export async function PATCH(request: NextRequest) {
         ...adminMetadata,
         nextStatus: updatedCategory.status,
         nextIsActive: updatedCategory.is_active,
+        auditEventId: event.id,
+        auditEventType: event.event_type,
+        previousHash: event.previous_hash,
+        recordHash: event.record_hash,
       },
       note:
-        "Contextual category was updated by platform admin. No category record was deleted.",
+        "Contextual category was updated by platform admin and category audit event was recorded. No category record was deleted.",
     },
   });
 }
