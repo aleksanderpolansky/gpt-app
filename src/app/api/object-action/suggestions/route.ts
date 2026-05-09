@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { auth0 } from "../../../../../lib/auth0";
 import {
@@ -93,6 +94,12 @@ type ContextualCategoryRow = {
   slug: string;
   name: string;
   description: string | null;
+};
+
+type SuggestionAuditEventHashRow = {
+  id: string;
+  record_hash: string | null;
+  created_at: string;
 };
 
 type SuggestionStatusFilter =
@@ -454,6 +461,33 @@ function normalizeCategorySlug(value: unknown) {
   return slug || null;
 }
 
+function stableJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => stableJsonValue(item));
+  }
+
+  if (typeof value === "object" && value !== null) {
+    const record = value as Record<string, unknown>;
+    const sortedRecord: Record<string, unknown> = {};
+
+    for (const key of Object.keys(record).sort()) {
+      sortedRecord[key] = stableJsonValue(record[key]);
+    }
+
+    return sortedRecord;
+  }
+
+  return value;
+}
+
+function stableStringify(value: unknown) {
+  return JSON.stringify(stableJsonValue(value));
+}
+
+function sha256Hex(value: unknown) {
+  return createHash("sha256").update(stableStringify(value)).digest("hex");
+}
+
 function getStatusForModerationAction(
   action: SuggestionStatusChangingAction
 ): "rejected" | "archived" {
@@ -606,29 +640,83 @@ function getSuggestedNewCategoryData(
   };
 }
 
+async function getLatestSuggestionAuditEventHash(
+  suggestionRequestId: string
+): Promise<{
+  previousHash: string | null;
+  errorMessage: string | null;
+}> {
+  const { data, error } = await supabase
+    .from("object_action_suggestion_events")
+    .select(
+      `
+      id,
+      record_hash,
+      created_at
+    `
+    )
+    .eq("suggestion_request_id", suggestionRequestId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    return {
+      previousHash: null,
+      errorMessage: error.message,
+    };
+  }
+
+  const rows = (data as unknown as SuggestionAuditEventHashRow[] | null) ?? [];
+
+  return {
+    previousHash: rows[0]?.record_hash ?? null,
+    errorMessage: null,
+  };
+}
+
 async function createObjectActionSuggestionAuditEvent(
   input: CreateSuggestionAuditEventInput
 ) {
+  const {
+    previousHash,
+    errorMessage: previousHashErrorMessage,
+  } = await getLatestSuggestionAuditEventHash(input.suggestionRequestId);
+
+  if (previousHashErrorMessage) {
+    return previousHashErrorMessage;
+  }
+
+  const eventCreatedAt = new Date().toISOString();
+
+  const eventPayload = {
+    suggestion_request_id: input.suggestionRequestId,
+    actor_user_id: input.appUser?.id ?? null,
+    actor_role: input.actorRole ?? input.platformAdmin?.role ?? null,
+    event_type: input.eventType,
+    event_source: input.eventSource ?? "admin_ui",
+    status_before: input.statusBefore,
+    status_after: input.statusAfter,
+    ai_status_before: input.aiStatusBefore,
+    ai_status_after: input.aiStatusAfter,
+    admin_decision: input.adminDecision,
+    matched_existing_category_id: input.matchedExistingCategoryId ?? null,
+    created_contextual_category_id: input.createdContextualCategoryId ?? null,
+    previous_values: input.previousValues ?? null,
+    new_values: input.newValues ?? null,
+    metadata_json: input.metadataJson ?? {},
+    public_note: input.publicNote ?? null,
+    internal_note: input.internalNote ?? null,
+    previous_hash: previousHash,
+    created_at: eventCreatedAt,
+  };
+
+  const recordHash = sha256Hex(eventPayload);
+
   const { error } = await supabase
     .from("object_action_suggestion_events")
     .insert({
-      suggestion_request_id: input.suggestionRequestId,
-      actor_user_id: input.appUser?.id ?? null,
-      actor_role: input.actorRole ?? input.platformAdmin?.role ?? null,
-      event_type: input.eventType,
-      event_source: input.eventSource ?? "admin_ui",
-      status_before: input.statusBefore,
-      status_after: input.statusAfter,
-      ai_status_before: input.aiStatusBefore,
-      ai_status_after: input.aiStatusAfter,
-      admin_decision: input.adminDecision,
-      matched_existing_category_id: input.matchedExistingCategoryId ?? null,
-      created_contextual_category_id: input.createdContextualCategoryId ?? null,
-      previous_values: input.previousValues ?? null,
-      new_values: input.newValues ?? null,
-      metadata_json: input.metadataJson ?? {},
-      public_note: input.publicNote ?? null,
-      internal_note: input.internalNote ?? null,
+      ...eventPayload,
+      record_hash: recordHash,
     });
 
   if (error) {
