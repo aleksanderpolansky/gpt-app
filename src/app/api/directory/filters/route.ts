@@ -68,6 +68,11 @@ type DirectoryFilterDistrict = {
   label: string;
 };
 
+const PUBLIC_RUBRICATOR_CATEGORY_STATUSES = new Set([
+  "approved",
+  "published",
+]);
+
 function normalizeTextValue(value: string | null | undefined) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -114,6 +119,12 @@ function getJoinedCategory(
   }
 
   return value;
+}
+
+function isPublicRubricatorCategory(row: RubricatorCategoryRow) {
+  return PUBLIC_RUBRICATOR_CATEGORY_STATUSES.has(
+    normalizeTextValue(row.status).toLowerCase()
+  );
 }
 
 function getLegacyCategoryMap(rows: OrganizationCategoryRow[]) {
@@ -168,6 +179,10 @@ function mapCategoriesFromRubricator(input: {
   const mappedCategoryBySlug = new Map<string, DirectoryFilterCategoryWithSort>();
 
   for (const rubricatorCategory of input.rubricatorRows) {
+    if (!isPublicRubricatorCategory(rubricatorCategory)) {
+      continue;
+    }
+
     const slug = normalizeTextValue(rubricatorCategory.category_slug);
 
     if (!slug) {
