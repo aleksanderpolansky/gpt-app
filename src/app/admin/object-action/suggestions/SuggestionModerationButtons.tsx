@@ -3,13 +3,30 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-type StatusChangingAction = "reject" | "archive" | "approve_existing_match";
-type ModerationAction = StatusChangingAction | "analyze";
+type StatusChangingAction =
+  | "reject"
+  | "archive"
+  | "approve_existing_match";
+
+type NewCategoryAction = "approve_new_category";
+
+type ModerationAction =
+  | StatusChangingAction
+  | NewCategoryAction
+  | "analyze";
+
 type ModerationSubmitStatus = "idle" | "submitting" | "success" | "error";
 
 type SuggestionModerationButtonsProps = {
   suggestionId: string;
   currentStatus: string;
+};
+
+type NewCategoryFormState = {
+  name: string;
+  slug: string;
+  description: string;
+  adminComment: string;
 };
 
 type ModerationApiResponse = {
@@ -40,7 +57,7 @@ type ModerationApiResponse = {
     updated_at: string;
   };
   moderation?: {
-    action: StatusChangingAction;
+    action: StatusChangingAction | NewCategoryAction;
     previousStatus: string;
     nextStatus: string;
     reviewedByUserId: string;
@@ -48,6 +65,10 @@ type ModerationApiResponse = {
     matchedExistingCategoryId?: string;
     matchedExistingCategoryName?: string;
     matchedExistingCategorySlug?: string;
+    createdContextualCategoryId?: string;
+    createdContextualCategoryName?: string;
+    createdContextualCategorySlug?: string;
+    newCategorySource?: "admin_explicit" | "ai_suggested";
     publicDataMutation?: boolean;
     note?: string;
   };
@@ -84,6 +105,31 @@ const APPROVE_EXISTING_MATCH_ALLOWED_STATUSES = new Set([
   "needs_review",
 ]);
 
+const APPROVE_NEW_CATEGORY_ALLOWED_STATUSES = new Set([
+  "draft",
+  "suggested",
+  "needs_review",
+]);
+
+const DEFAULT_NEW_CATEGORY_FORM: NewCategoryFormState = {
+  name: "",
+  slug: "",
+  description: "",
+  adminComment: "",
+};
+
+function createSlugFromText(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 100)
+    .replace(/-+$/g, "");
+}
+
 function getActionLabel(action: ModerationAction) {
   if (action === "archive") {
     return "Archive";
@@ -95,6 +141,10 @@ function getActionLabel(action: ModerationAction) {
 
   if (action === "approve_existing_match") {
     return "Approve match";
+  }
+
+  if (action === "approve_new_category") {
+    return "Approve new category";
   }
 
   return "Reject";
@@ -142,6 +192,10 @@ function canAnalyzeStatus(status: string) {
 
 function canApproveExistingMatchStatus(status: string) {
   return APPROVE_EXISTING_MATCH_ALLOWED_STATUSES.has(status);
+}
+
+function canApproveNewCategoryStatus(status: string) {
+  return APPROVE_NEW_CATEGORY_ALLOWED_STATUSES.has(status);
 }
 
 function getDefaultComment(action: StatusChangingAction) {
@@ -222,12 +276,31 @@ function getModerationSuccessMessage(
 
     return `Suggestion request ${getActionPastLabel(
       action
-    )}. New status: ${nextStatus ?? "merged"}.${categoryText} No new public category was created.`;
+    )}. New status: ${
+      nextStatus ?? "merged"
+    }.${categoryText} No new public category was created.`;
   }
 
   return `Suggestion request ${getActionPastLabel(
     action
   )}. New status: ${nextStatus ?? "—"}.`;
+}
+
+function getApproveNewCategorySuccessMessage(json: ModerationApiResponse) {
+  const categoryName = json.moderation?.createdContextualCategoryName;
+  const categorySlug = json.moderation?.createdContextualCategorySlug;
+  const categoryText =
+    categoryName && categorySlug
+      ? ` Category: ${categoryName} (${categorySlug}).`
+      : "";
+
+  const sourceText = json.moderation?.newCategorySource
+    ? ` Source: ${json.moderation.newCategorySource}.`
+    : "";
+
+  return `New category approved. New status: ${
+    json.suggestionRequest?.status ?? json.moderation?.nextStatus ?? "approved"
+  }.${categoryText}${sourceText}`;
 }
 
 export default function SuggestionModerationButtons({
@@ -242,6 +315,8 @@ export default function SuggestionModerationButtons({
     null
   );
   const [message, setMessage] = useState<string | null>(null);
+  const [newCategoryForm, setNewCategoryForm] =
+    useState<NewCategoryFormState>(DEFAULT_NEW_CATEGORY_FORM);
 
   const isSubmitting = submitStatus === "submitting";
 
@@ -249,6 +324,40 @@ export default function SuggestionModerationButtons({
   const canArchive = canArchiveStatus(currentStatus);
   const canAnalyze = canAnalyzeStatus(currentStatus);
   const canApproveExistingMatch = canApproveExistingMatchStatus(currentStatus);
+  const canApproveNewCategory = canApproveNewCategoryStatus(currentStatus);
+
+  function updateNewCategoryField(
+    field: keyof NewCategoryFormState,
+    value: string
+  ) {
+    setNewCategoryForm((currentForm) => {
+      if (field === "name") {
+        const shouldAutoFillSlug =
+          !currentForm.slug ||
+          currentForm.slug === createSlugFromText(currentForm.name);
+
+        return {
+          ...currentForm,
+          name: value,
+          slug: shouldAutoFillSlug
+            ? createSlugFromText(value)
+            : currentForm.slug,
+        };
+      }
+
+      if (field === "slug") {
+        return {
+          ...currentForm,
+          slug: createSlugFromText(value),
+        };
+      }
+
+      return {
+        ...currentForm,
+        [field]: value,
+      };
+    });
+  }
 
   async function submitAiAnalyzeAction() {
     if (isSubmitting) {
@@ -315,6 +424,112 @@ export default function SuggestionModerationButtons({
         error instanceof Error
           ? error.message
           : "Failed to run AI analysis for suggestion request. Please try again."
+      );
+    } finally {
+      setActiveAction(null);
+    }
+  }
+
+  async function submitApproveNewCategoryAction() {
+    if (isSubmitting) {
+      return;
+    }
+
+    if (!canApproveNewCategory) {
+      setSubmitStatus("error");
+      setMessage(
+        `Cannot approve new category for suggestion with status "${currentStatus}".`
+      );
+      return;
+    }
+
+    const trimmedName = newCategoryForm.name.trim();
+    const trimmedSlug = createSlugFromText(newCategoryForm.slug);
+    const trimmedDescription = newCategoryForm.description.trim();
+    const trimmedAdminComment = newCategoryForm.adminComment.trim();
+
+    if (!trimmedName) {
+      setSubmitStatus("error");
+      setMessage("New category name is required.");
+      return;
+    }
+
+    if (!trimmedSlug) {
+      setSubmitStatus("error");
+      setMessage("New category slug is required.");
+      return;
+    }
+
+    if (!trimmedAdminComment) {
+      setSubmitStatus("error");
+      setMessage("Admin comment is required for approving a new category.");
+      return;
+    }
+
+    if (trimmedAdminComment.length > 2000) {
+      setSubmitStatus("error");
+      setMessage("Admin comment must be 2000 characters or shorter.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      [
+        "Approve and create a NEW contextual category?",
+        "",
+        `Name: ${trimmedName}`,
+        `Slug: ${trimmedSlug}`,
+        "",
+        "This WILL create a new category in the Object-Action Rubricator.",
+        "This is a public data mutation and will be recorded in the audit log.",
+      ].join("\n")
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setSubmitStatus("submitting");
+    setActiveAction("approve_new_category");
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/object-action/suggestions", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({
+          id: suggestionId,
+          action: "approve_new_category",
+          newCategoryName: trimmedName,
+          newCategorySlug: trimmedSlug,
+          newCategoryDescription: trimmedDescription || null,
+          adminComment: trimmedAdminComment,
+        }),
+      });
+
+      const json = (await response.json()) as ModerationApiResponse;
+
+      if (!response.ok || !json.ok || !json.suggestionRequest) {
+        setSubmitStatus("error");
+        setMessage(
+          json.error ??
+            "Failed to approve new category. Please review the category data and try again."
+        );
+        return;
+      }
+
+      setSubmitStatus("success");
+      setMessage(getApproveNewCategorySuccessMessage(json));
+      setNewCategoryForm(DEFAULT_NEW_CATEGORY_FORM);
+
+      router.refresh();
+    } catch (error) {
+      setSubmitStatus("error");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to approve new category. Please try again."
       );
     } finally {
       setActiveAction(null);
@@ -549,6 +764,200 @@ export default function SuggestionModerationButtons({
         </span>
       </div>
 
+      <section
+        style={{
+          border: canApproveNewCategory
+            ? "1px solid #bbf7d0"
+            : "1px solid #e5e7eb",
+          borderRadius: "10px",
+          padding: "12px",
+          background: canApproveNewCategory ? "#f0fdf4" : "#f9fafb",
+          display: "grid",
+          gap: "10px",
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 800,
+            color: canApproveNewCategory ? "#166534" : "#555555",
+            fontSize: "14px",
+          }}
+        >
+          Approve new category
+        </div>
+
+        <div
+          style={{
+            color: "#555555",
+            fontSize: "13px",
+            lineHeight: "1.45",
+          }}
+        >
+          Creates a new contextual category only after explicit platform admin
+          review. For low-confidence AI suggestions, name, slug and admin
+          comment are required.
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "10px",
+          }}
+        >
+          <label
+            style={{
+              display: "grid",
+              gap: "6px",
+              fontSize: "13px",
+              fontWeight: 700,
+              color: "#111111",
+            }}
+          >
+            New category name
+            <input
+              type="text"
+              value={newCategoryForm.name}
+              disabled={isSubmitting || !canApproveNewCategory}
+              onChange={(event) =>
+                updateNewCategoryField("name", event.target.value)
+              }
+              placeholder="Example: Laser engraving"
+              style={{
+                border: "1px solid #d1d5db",
+                borderRadius: "8px",
+                padding: "9px 10px",
+                fontSize: "14px",
+                background:
+                  isSubmitting || !canApproveNewCategory ? "#f5f5f5" : "#fff",
+                color: "#111111",
+              }}
+            />
+          </label>
+
+          <label
+            style={{
+              display: "grid",
+              gap: "6px",
+              fontSize: "13px",
+              fontWeight: 700,
+              color: "#111111",
+            }}
+          >
+            New category slug
+            <input
+              type="text"
+              value={newCategoryForm.slug}
+              disabled={isSubmitting || !canApproveNewCategory}
+              onChange={(event) =>
+                updateNewCategoryField("slug", event.target.value)
+              }
+              placeholder="example: laser-engraving"
+              style={{
+                border: "1px solid #d1d5db",
+                borderRadius: "8px",
+                padding: "9px 10px",
+                fontSize: "14px",
+                background:
+                  isSubmitting || !canApproveNewCategory ? "#f5f5f5" : "#fff",
+                color: "#111111",
+                fontFamily: "monospace",
+              }}
+            />
+          </label>
+        </div>
+
+        <label
+          style={{
+            display: "grid",
+            gap: "6px",
+            fontSize: "13px",
+            fontWeight: 700,
+            color: "#111111",
+          }}
+        >
+          New category description
+          <textarea
+            value={newCategoryForm.description}
+            disabled={isSubmitting || !canApproveNewCategory}
+            onChange={(event) =>
+              updateNewCategoryField("description", event.target.value)
+            }
+            placeholder="Optional short description for the new category."
+            rows={3}
+            style={{
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+              padding: "9px 10px",
+              fontSize: "14px",
+              background:
+                isSubmitting || !canApproveNewCategory ? "#f5f5f5" : "#fff",
+              color: "#111111",
+              resize: "vertical",
+            }}
+          />
+        </label>
+
+        <label
+          style={{
+            display: "grid",
+            gap: "6px",
+            fontSize: "13px",
+            fontWeight: 700,
+            color: "#111111",
+          }}
+        >
+          Admin comment
+          <textarea
+            value={newCategoryForm.adminComment}
+            disabled={isSubmitting || !canApproveNewCategory}
+            onChange={(event) =>
+              updateNewCategoryField("adminComment", event.target.value)
+            }
+            placeholder="Required. Explain why this new category is approved."
+            rows={3}
+            style={{
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+              padding: "9px 10px",
+              fontSize: "14px",
+              background:
+                isSubmitting || !canApproveNewCategory ? "#f5f5f5" : "#fff",
+              color: "#111111",
+              resize: "vertical",
+            }}
+          />
+        </label>
+
+        <button
+          type="button"
+          disabled={isSubmitting || !canApproveNewCategory}
+          onClick={submitApproveNewCategoryAction}
+          style={{
+            border:
+              isSubmitting || !canApproveNewCategory
+                ? "1px solid #dddddd"
+                : "1px solid #15803d",
+            borderRadius: "8px",
+            padding: "10px 12px",
+            background:
+              isSubmitting || !canApproveNewCategory ? "#f5f5f5" : "#15803d",
+            color:
+              isSubmitting || !canApproveNewCategory ? "#777777" : "#ffffff",
+            fontWeight: 900,
+            cursor:
+              isSubmitting || !canApproveNewCategory
+                ? "not-allowed"
+                : "pointer",
+            justifySelf: "start",
+          }}
+        >
+          {isSubmitting && activeAction === "approve_new_category"
+            ? "Approving new category..."
+            : "Approve new category"}
+        </button>
+      </section>
+
       {message ? (
         <div
           style={{
@@ -600,6 +1009,24 @@ export default function SuggestionModerationButtons({
           Approve match is available only for draft, suggested or needs_review
           suggestion requests. Backend also requires ai_status=matched_existing
           and a valid matched existing category.
+        </div>
+      ) : null}
+
+      {!canApproveNewCategory ? (
+        <div
+          style={{
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            padding: "10px",
+            background: "#f9fafb",
+            color: "#555555",
+            fontSize: "13px",
+            lineHeight: "1.45",
+          }}
+        >
+          Approve new category is available only for draft, suggested or
+          needs_review suggestion requests. Backend also requires a valid AI
+          analysis status and explicit admin category data.
         </div>
       ) : null}
 
