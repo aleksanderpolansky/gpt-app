@@ -72,11 +72,37 @@ type SuggestionRequestRow = {
   updated_at: string;
 };
 
+type SuggestionAuditEventRow = {
+  id: string;
+  suggestion_request_id: string;
+  actor_user_id: string | null;
+  actor_role: string | null;
+  event_type: string;
+  event_source: string;
+  status_before: string | null;
+  status_after: string;
+  ai_status_before: string | null;
+  ai_status_after: string | null;
+  admin_decision: string | null;
+  matched_existing_category_id: string | null;
+  created_contextual_category_id: string | null;
+  previous_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
+  metadata_json: Record<string, unknown> | null;
+  public_note: string | null;
+  internal_note: string | null;
+  previous_hash: string | null;
+  record_hash: string | null;
+  created_at: string;
+};
+
 type PageData = {
   appUser: AppUserRow | null;
   platformAdmin: PlatformAdminRow | null;
   suggestions: SuggestionRequestRow[];
+  auditEventsBySuggestionId: Record<string, SuggestionAuditEventRow[]>;
   errorMessage: string | null;
+  auditErrorMessage: string | null;
   statusFilter: SuggestionStatusFilter;
   limit: number;
 };
@@ -176,6 +202,30 @@ function formatNumber(value: number | null | undefined) {
   }).format(value);
 }
 
+function formatBoolean(value: boolean | null | undefined) {
+  if (value === true) {
+    return "true";
+  }
+
+  if (value === false) {
+    return "false";
+  }
+
+  return "—";
+}
+
+function formatJson(value: unknown) {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
 function getStatusStyle(status: string | null | undefined) {
   if (status === "needs_review" || status === "suggested") {
     return {
@@ -256,6 +306,54 @@ function getAiStatusStyle(status: string | null | undefined) {
   };
 }
 
+function getAuditEventStyle(eventType: string | null | undefined) {
+  if (eventType === "approve_new_category") {
+    return {
+      background: "#f0fdf4",
+      color: "#166534",
+      border: "1px solid #bbf7d0",
+    };
+  }
+
+  if (eventType === "approve_existing_match") {
+    return {
+      background: "#edf8f0",
+      color: "#176b2c",
+      border: "1px solid #bfe5c8",
+    };
+  }
+
+  if (eventType === "ai_analyzed") {
+    return {
+      background: "#eff6ff",
+      color: "#1e3a8a",
+      border: "1px solid #bfdbfe",
+    };
+  }
+
+  if (eventType === "rejected") {
+    return {
+      background: "#fff5f5",
+      color: "#a40000",
+      border: "1px solid #f2b8b5",
+    };
+  }
+
+  if (eventType === "archived") {
+    return {
+      background: "#f5f5f5",
+      color: "#555555",
+      border: "1px solid #dddddd",
+    };
+  }
+
+  return {
+    background: "#fff8e6",
+    color: "#7a4b00",
+    border: "1px solid #f0d28a",
+  };
+}
+
 function getStatusFilterHref(status: SuggestionStatusFilter) {
   return `/admin/object-action/suggestions?status=${status}`;
 }
@@ -301,6 +399,20 @@ function getJsonNumber(record: Record<string, unknown> | null, key: string) {
     if (Number.isFinite(parsedValue)) {
       return parsedValue;
     }
+  }
+
+  return null;
+}
+
+function getJsonBoolean(record: Record<string, unknown> | null, key: string) {
+  if (!record) {
+    return null;
+  }
+
+  const value = record[key];
+
+  if (typeof value === "boolean") {
+    return value;
   }
 
   return null;
@@ -498,6 +610,77 @@ async function getSuggestionRequests(
   };
 }
 
+async function getSuggestionAuditEvents(
+  suggestionIds: string[]
+): Promise<{
+  auditEventsBySuggestionId: Record<string, SuggestionAuditEventRow[]>;
+  errorMessage: string | null;
+}> {
+  if (suggestionIds.length === 0) {
+    return {
+      auditEventsBySuggestionId: {},
+      errorMessage: null,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("object_action_suggestion_events")
+    .select(
+      `
+      id,
+      suggestion_request_id,
+      actor_user_id,
+      actor_role,
+      event_type,
+      event_source,
+      status_before,
+      status_after,
+      ai_status_before,
+      ai_status_after,
+      admin_decision,
+      matched_existing_category_id,
+      created_contextual_category_id,
+      previous_values,
+      new_values,
+      metadata_json,
+      public_note,
+      internal_note,
+      previous_hash,
+      record_hash,
+      created_at
+    `
+    )
+    .in("suggestion_request_id", suggestionIds)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return {
+      auditEventsBySuggestionId: {},
+      errorMessage: error.message,
+    };
+  }
+
+  const auditRows = (data as unknown as SuggestionAuditEventRow[] | null) ?? [];
+
+  const auditEventsBySuggestionId: Record<string, SuggestionAuditEventRow[]> =
+    {};
+
+  for (const auditEvent of auditRows) {
+    const existingEvents =
+      auditEventsBySuggestionId[auditEvent.suggestion_request_id] ?? [];
+
+    auditEventsBySuggestionId[auditEvent.suggestion_request_id] = [
+      ...existingEvents,
+      auditEvent,
+    ];
+  }
+
+  return {
+    auditEventsBySuggestionId,
+    errorMessage: null,
+  };
+}
+
 async function getPageData(
   statusFilter: SuggestionStatusFilter,
   limit: number
@@ -510,7 +693,9 @@ async function getPageData(
       appUser: null,
       platformAdmin: null,
       suggestions: [],
+      auditEventsBySuggestionId: {},
       errorMessage: appUserErrorMessage ?? "Not authenticated",
+      auditErrorMessage: null,
       statusFilter,
       limit,
     };
@@ -524,8 +709,10 @@ async function getPageData(
       appUser,
       platformAdmin: null,
       suggestions: [],
+      auditEventsBySuggestionId: {},
       errorMessage:
         platformAdminErrorMessage ?? "Platform admin access required",
+      auditErrorMessage: null,
       statusFilter,
       limit,
     };
@@ -534,11 +721,33 @@ async function getPageData(
   const { suggestions, errorMessage: suggestionsErrorMessage } =
     await getSuggestionRequests(statusFilter, limit);
 
+  if (suggestionsErrorMessage) {
+    return {
+      appUser,
+      platformAdmin,
+      suggestions: [],
+      auditEventsBySuggestionId: {},
+      errorMessage: suggestionsErrorMessage,
+      auditErrorMessage: null,
+      statusFilter,
+      limit,
+    };
+  }
+
+  const {
+    auditEventsBySuggestionId,
+    errorMessage: auditEventsErrorMessage,
+  } = await getSuggestionAuditEvents(
+    suggestions.map((suggestion) => suggestion.id)
+  );
+
   return {
     appUser,
     platformAdmin,
     suggestions,
-    errorMessage: suggestionsErrorMessage,
+    auditEventsBySuggestionId,
+    errorMessage: null,
+    auditErrorMessage: auditEventsErrorMessage,
     statusFilter,
     limit,
   };
@@ -551,8 +760,14 @@ export default async function AdminObjectActionSuggestionsPage({
   const statusFilter = normalizeStatusFilter(resolvedSearchParams?.status);
   const limit = normalizeLimit(resolvedSearchParams?.limit);
 
-  const { appUser, platformAdmin, suggestions, errorMessage } =
-    await getPageData(statusFilter, limit);
+  const {
+    appUser,
+    platformAdmin,
+    suggestions,
+    auditEventsBySuggestionId,
+    errorMessage,
+    auditErrorMessage,
+  } = await getPageData(statusFilter, limit);
 
   const needsReviewCount = suggestions.filter(
     (suggestion) => suggestion.status === "needs_review"
@@ -644,6 +859,21 @@ export default async function AdminObjectActionSuggestionsPage({
 
         {!errorMessage && appUser && platformAdmin ? (
           <>
+            {auditErrorMessage ? (
+              <section
+                style={{
+                  border: "1px solid #f0d28a",
+                  borderRadius: "12px",
+                  padding: "16px",
+                  background: "#fff8e6",
+                  color: "#7a4b00",
+                  marginBottom: "24px",
+                }}
+              >
+                <strong>Audit loading warning:</strong> {auditErrorMessage}
+              </section>
+            ) : null}
+
             <section
               style={{
                 display: "grid",
@@ -800,7 +1030,8 @@ export default async function AdminObjectActionSuggestionsPage({
                   Archive are available here. Approve match only confirms an
                   AI-matched existing category and does not create a new public
                   category. Approve new category requires explicit admin name,
-                  slug and comment.
+                  slug and comment. Each moderation action is shown in the
+                  audit timeline.
                 </p>
               </div>
 
@@ -829,6 +1060,8 @@ export default async function AdminObjectActionSuggestionsPage({
                     const resolvedMatchedExistingCategoryId =
                       suggestion.matched_existing_category_id ??
                       suggestion.ai_suggested_contextual_category_id;
+                    const auditEvents =
+                      auditEventsBySuggestionId[suggestion.id] ?? [];
 
                     return (
                       <article
@@ -1188,6 +1421,266 @@ export default async function AdminObjectActionSuggestionsPage({
                             resolvedMatchedExistingCategoryId
                           }
                         />
+
+                        <section
+                          style={{
+                            border: "1px solid #d1d5db",
+                            borderRadius: "10px",
+                            padding: "12px",
+                            background: "#f9fafb",
+                            display: "grid",
+                            gap: "10px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              gap: "12px",
+                              flexWrap: "wrap",
+                              alignItems: "center",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontWeight: 800,
+                                color: "#111111",
+                                fontSize: "14px",
+                              }}
+                            >
+                              Moderation timeline / Audit history
+                            </div>
+
+                            <div
+                              style={{
+                                color: "#666666",
+                                fontSize: "13px",
+                              }}
+                            >
+                              Events: {auditEvents.length}
+                            </div>
+                          </div>
+
+                          {auditEvents.length === 0 ? (
+                            <div
+                              style={{
+                                border: "1px solid #e5e7eb",
+                                borderRadius: "8px",
+                                padding: "10px",
+                                background: "#ffffff",
+                                color: "#666666",
+                                fontSize: "13px",
+                              }}
+                            >
+                              No audit events yet.
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                display: "grid",
+                                gap: "10px",
+                              }}
+                            >
+                              {auditEvents.map((auditEvent) => {
+                                const auditEventStyle = getAuditEventStyle(
+                                  auditEvent.event_type
+                                );
+                                const publicDataMutation = getJsonBoolean(
+                                  auditEvent.metadata_json,
+                                  "publicDataMutation"
+                                );
+
+                                return (
+                                  <article
+                                    key={auditEvent.id}
+                                    style={{
+                                      border: "1px solid #e5e7eb",
+                                      borderRadius: "10px",
+                                      padding: "12px",
+                                      background: "#ffffff",
+                                      display: "grid",
+                                      gap: "10px",
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        gap: "10px",
+                                        flexWrap: "wrap",
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          display: "inline-block",
+                                          borderRadius: "999px",
+                                          padding: "6px 10px",
+                                          fontSize: "13px",
+                                          fontWeight: 800,
+                                          whiteSpace: "nowrap",
+                                          ...auditEventStyle,
+                                        }}
+                                      >
+                                        {auditEvent.event_type}
+                                      </span>
+
+                                      <span
+                                        style={{
+                                          color: "#555555",
+                                          fontSize: "13px",
+                                        }}
+                                      >
+                                        {formatDateTime(auditEvent.created_at)}
+                                      </span>
+                                    </div>
+
+                                    <section
+                                      style={{
+                                        display: "grid",
+                                        gridTemplateColumns:
+                                          "repeat(auto-fit, minmax(220px, 1fr))",
+                                        gap: "8px",
+                                        fontSize: "13px",
+                                        lineHeight: "1.45",
+                                      }}
+                                    >
+                                      <div>
+                                        <strong>Actor:</strong>{" "}
+                                        <span
+                                          style={{ fontFamily: "monospace" }}
+                                        >
+                                          {auditEvent.actor_user_id ?? "—"}
+                                        </span>
+                                      </div>
+
+                                      <div>
+                                        <strong>Actor role:</strong>{" "}
+                                        {auditEvent.actor_role ?? "—"}
+                                      </div>
+
+                                      <div>
+                                        <strong>Source:</strong>{" "}
+                                        {auditEvent.event_source}
+                                      </div>
+
+                                      <div>
+                                        <strong>Public mutation:</strong>{" "}
+                                        {formatBoolean(publicDataMutation)}
+                                      </div>
+
+                                      <div>
+                                        <strong>Status:</strong>{" "}
+                                        {auditEvent.status_before ?? "—"} →{" "}
+                                        {auditEvent.status_after}
+                                      </div>
+
+                                      <div>
+                                        <strong>AI status:</strong>{" "}
+                                        {auditEvent.ai_status_before ?? "—"} →{" "}
+                                        {auditEvent.ai_status_after ?? "—"}
+                                      </div>
+
+                                      <div>
+                                        <strong>Admin decision:</strong>{" "}
+                                        {auditEvent.admin_decision ?? "—"}
+                                      </div>
+
+                                      <div>
+                                        <strong>Matched category:</strong>{" "}
+                                        <span
+                                          style={{ fontFamily: "monospace" }}
+                                        >
+                                          {auditEvent.matched_existing_category_id ??
+                                            "—"}
+                                        </span>
+                                      </div>
+
+                                      <div>
+                                        <strong>Created category:</strong>{" "}
+                                        <span
+                                          style={{ fontFamily: "monospace" }}
+                                        >
+                                          {auditEvent.created_contextual_category_id ??
+                                            "—"}
+                                        </span>
+                                      </div>
+
+                                      <div>
+                                        <strong>Record hash:</strong>{" "}
+                                        <span
+                                          style={{ fontFamily: "monospace" }}
+                                        >
+                                          {auditEvent.record_hash ?? "—"}
+                                        </span>
+                                      </div>
+                                    </section>
+
+                                    {auditEvent.internal_note ? (
+                                      <div
+                                        style={{
+                                          border: "1px solid #e5e7eb",
+                                          borderRadius: "8px",
+                                          padding: "10px",
+                                          background: "#f9fafb",
+                                          color: "#333333",
+                                          fontSize: "13px",
+                                          lineHeight: "1.45",
+                                        }}
+                                      >
+                                        <strong>Internal note:</strong>{" "}
+                                        {auditEvent.internal_note}
+                                      </div>
+                                    ) : null}
+
+                                    {auditEvent.public_note ? (
+                                      <div
+                                        style={{
+                                          border: "1px solid #bfdbfe",
+                                          borderRadius: "8px",
+                                          padding: "10px",
+                                          background: "#eff6ff",
+                                          color: "#1e3a8a",
+                                          fontSize: "13px",
+                                          lineHeight: "1.45",
+                                        }}
+                                      >
+                                        <strong>Public note:</strong>{" "}
+                                        {auditEvent.public_note}
+                                      </div>
+                                    ) : null}
+
+                                    <details>
+                                      <summary
+                                        style={{
+                                          cursor: "pointer",
+                                          color: "#2563eb",
+                                          fontWeight: 700,
+                                          fontSize: "13px",
+                                        }}
+                                      >
+                                        metadata_json
+                                      </summary>
+                                      <pre
+                                        style={{
+                                          marginTop: "8px",
+                                          border: "1px solid #e5e7eb",
+                                          borderRadius: "8px",
+                                          padding: "10px",
+                                          background: "#f9fafb",
+                                          overflowX: "auto",
+                                          fontSize: "12px",
+                                          lineHeight: "1.45",
+                                        }}
+                                      >
+                                        {formatJson(auditEvent.metadata_json)}
+                                      </pre>
+                                    </details>
+                                  </article>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </section>
 
                         <section
                           style={{
