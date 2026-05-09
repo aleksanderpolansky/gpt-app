@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 import CategoryAdminButtons from "./CategoryAdminButtons";
@@ -246,7 +246,7 @@ function normalizeLimit(value: string | string[] | undefined) {
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) {
-    return "—";
+    return "â€”";
   }
 
   const date = new Date(value);
@@ -263,7 +263,7 @@ function formatDateTime(value: string | null | undefined) {
 
 function formatNumber(value: number | null | undefined) {
   if (value === null || value === undefined) {
-    return "—";
+    return "â€”";
   }
 
   return new Intl.NumberFormat("pl-PL", {
@@ -280,12 +280,12 @@ function formatBoolean(value: boolean | null | undefined) {
     return "false";
   }
 
-  return "—";
+  return "â€”";
 }
 
 function formatJson(value: unknown) {
   if (value === null || value === undefined) {
-    return "—";
+    return "â€”";
   }
 
   try {
@@ -1028,7 +1028,7 @@ export default async function AdminObjectActionCategoriesPage({
                 textDecoration: "underline",
               }}
             >
-              ← Назад в каталог
+              â† ÐÐ°Ð·Ð°Ð´ Ð² ÐºÐ°Ñ‚Ð°Ð»Ð¾Ð³
             </Link>
 
             <Link
@@ -1038,7 +1038,7 @@ export default async function AdminObjectActionCategoriesPage({
                 textDecoration: "underline",
               }}
             >
-              Suggestion moderation →
+              Suggestion moderation â†’
             </Link>
           </div>
 
@@ -1462,7 +1462,7 @@ export default async function AdminObjectActionCategoriesPage({
                                 marginBottom: "6px",
                               }}
                             >
-                              {context?.code ?? "unknown_context"} ·{" "}
+                              {context?.code ?? "unknown_context"} Â·{" "}
                               {category.source_type ?? "unknown_source"}
                             </div>
 
@@ -1554,13 +1554,13 @@ export default async function AdminObjectActionCategoriesPage({
                         >
                           <div>
                             <strong>Description:</strong>{" "}
-                            {category.description ?? "—"}
+                            {category.description ?? "â€”"}
                           </div>
 
                           <div>
                             <strong>Context:</strong>{" "}
                             <span style={{ fontFamily: "monospace" }}>
-                              {context?.code ?? "—"}
+                              {context?.code ?? "â€”"}
                             </span>{" "}
                             <span style={{ color: "#666666" }}>
                               ({category.context_id})
@@ -1569,14 +1569,14 @@ export default async function AdminObjectActionCategoriesPage({
 
                           <div>
                             <strong>Context status:</strong>{" "}
-                            {context?.status ?? "—"} · active:{" "}
+                            {context?.status ?? "â€”"} Â· active:{" "}
                             {formatBoolean(context?.is_active)}
                           </div>
 
                           <div>
                             <strong>Parent category:</strong>{" "}
                             <span style={{ fontFamily: "monospace" }}>
-                              {category.parent_id ?? "—"}
+                              {category.parent_id ?? "â€”"}
                             </span>
                           </div>
 
@@ -1606,7 +1606,7 @@ export default async function AdminObjectActionCategoriesPage({
                             <>
                               <div>
                                 <strong>Origin event:</strong>{" "}
-                                {latestOriginEvent.event_type} ·{" "}
+                                {latestOriginEvent.event_type} Â·{" "}
                                 {formatDateTime(latestOriginEvent.created_at)}
                               </div>
 
@@ -1620,14 +1620,14 @@ export default async function AdminObjectActionCategoriesPage({
                               <div>
                                 <strong>Actor:</strong>{" "}
                                 <span style={{ fontFamily: "monospace" }}>
-                                  {latestOriginEvent.actor_user_id ?? "—"}
+                                  {latestOriginEvent.actor_user_id ?? "â€”"}
                                 </span>{" "}
-                                · role: {latestOriginEvent.actor_role ?? "—"}
+                                Â· role: {latestOriginEvent.actor_role ?? "â€”"}
                               </div>
 
                               <div>
                                 <strong>Admin decision:</strong>{" "}
-                                {latestOriginEvent.admin_decision ?? "—"}
+                                {latestOriginEvent.admin_decision ?? "â€”"}
                               </div>
 
                               <div>
@@ -1638,7 +1638,7 @@ export default async function AdminObjectActionCategoriesPage({
                                     wordBreak: "break-all",
                                   }}
                                 >
-                                  {latestOriginEvent.record_hash ?? "—"}
+                                  {latestOriginEvent.record_hash ?? "â€”"}
                                 </span>
                               </div>
 
@@ -1711,17 +1711,28 @@ export default async function AdminObjectActionCategoriesPage({
                               Category mutation audit history
                             </div>
 
-                            <Link
-                              href={getCategoryAuditVerifyHref(category.id)}
-                              target="_blank"
-                              style={{
-                                color: "#2563eb",
-                                textDecoration: "underline",
-                                fontWeight: 800,
-                              }}
-                            >
-                              Verify mutation audit chain ↗
-                            </Link>
+                            {mutationEvents.length > 0 ? (
+                              <Link
+                                href={getCategoryAuditVerifyHref(category.id)}
+                                target="_blank"
+                                style={{
+                                  color: "#2563eb",
+                                  textDecoration: "underline",
+                                  fontWeight: 800,
+                                }}
+                              >
+                                Verify mutation audit chain ↗
+                              </Link>
+                            ) : (
+                              <span
+                                style={{
+                                  color: "#666666",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                No mutation chain to verify
+                              </span>
+                            )}
                           </div>
 
                           <div style={{ color: "#666666" }}>
@@ -1823,8 +1834,8 @@ export default async function AdminObjectActionCategoriesPage({
                                     >
                                       <div>
                                         <strong>Status:</strong>{" "}
-                                        {mutationEvent.status_before ?? "—"} →{" "}
-                                        {mutationEvent.status_after ?? "—"}
+                                        {mutationEvent.status_before ?? "â€”"} â†’{" "}
+                                        {mutationEvent.status_after ?? "â€”"}
                                       </div>
 
                                       <div>
@@ -1832,7 +1843,7 @@ export default async function AdminObjectActionCategoriesPage({
                                         {formatBoolean(
                                           mutationEvent.is_active_before
                                         )}{" "}
-                                        →{" "}
+                                        â†’{" "}
                                         {formatBoolean(
                                           mutationEvent.is_active_after
                                         )}
@@ -1846,10 +1857,10 @@ export default async function AdminObjectActionCategoriesPage({
                                             wordBreak: "break-all",
                                           }}
                                         >
-                                          {mutationEvent.actor_user_id ?? "—"}
+                                          {mutationEvent.actor_user_id ?? "â€”"}
                                         </span>{" "}
-                                        · role:{" "}
-                                        {mutationEvent.actor_role ?? "—"}
+                                        Â· role:{" "}
+                                        {mutationEvent.actor_role ?? "â€”"}
                                       </div>
 
                                       <div>
@@ -1860,7 +1871,7 @@ export default async function AdminObjectActionCategoriesPage({
 
                                     <div>
                                       <strong>Admin comment:</strong>{" "}
-                                      {mutationEvent.admin_comment ?? "—"}
+                                      {mutationEvent.admin_comment ?? "â€”"}
                                     </div>
 
                                     {mutationEvent.public_note ? (
@@ -1885,7 +1896,7 @@ export default async function AdminObjectActionCategoriesPage({
                                           wordBreak: "break-all",
                                         }}
                                       >
-                                        {mutationEvent.previous_hash ?? "—"}
+                                        {mutationEvent.previous_hash ?? "â€”"}
                                       </span>
                                     </div>
 
@@ -1897,7 +1908,7 @@ export default async function AdminObjectActionCategoriesPage({
                                           wordBreak: "break-all",
                                         }}
                                       >
-                                        {mutationEvent.record_hash ?? "—"}
+                                        {mutationEvent.record_hash ?? "â€”"}
                                       </span>
                                     </div>
 
