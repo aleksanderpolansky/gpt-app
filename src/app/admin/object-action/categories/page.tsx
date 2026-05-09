@@ -78,15 +78,39 @@ type CategoryOriginEventRow = {
   created_at: string;
 };
 
+type CategoryMutationEventRow = {
+  id: string;
+  contextual_category_id: string;
+  actor_user_id: string | null;
+  actor_role: string | null;
+  event_type: string;
+  event_source: string;
+  status_before: string | null;
+  status_after: string | null;
+  is_active_before: boolean | null;
+  is_active_after: boolean | null;
+  admin_comment: string | null;
+  previous_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
+  metadata_json: Record<string, unknown> | null;
+  public_note: string | null;
+  internal_note: string | null;
+  previous_hash: string | null;
+  record_hash: string | null;
+  created_at: string;
+};
+
 type PageData = {
   appUser: AppUserRow | null;
   platformAdmin: PlatformAdminRow | null;
   categories: ContextualCategoryRow[];
   contextsById: Record<string, ContextRow>;
   originEventsByCategoryId: Record<string, CategoryOriginEventRow[]>;
+  mutationEventsByCategoryId: Record<string, CategoryMutationEventRow[]>;
   errorMessage: string | null;
   contextErrorMessage: string | null;
   originErrorMessage: string | null;
+  mutationEventErrorMessage: string | null;
   statusFilter: CategoryStatusFilter;
   activeFilter: ActiveFilter;
   originFilter: OriginFilter;
@@ -332,6 +356,84 @@ function getOriginStyle(hasOriginEvent: boolean) {
     background: "#f5f5f5",
     color: "#555555",
     border: "1px solid #dddddd",
+  };
+}
+
+function getMutationEventStyle(eventType: string | null | undefined) {
+  if (eventType === "activated") {
+    return {
+      background: "#edf8f0",
+      color: "#176b2c",
+      border: "1px solid #bfe5c8",
+    };
+  }
+
+  if (eventType === "deactivated") {
+    return {
+      background: "#fff8e6",
+      color: "#7a4b00",
+      border: "1px solid #f0d28a",
+    };
+  }
+
+  if (eventType === "archived") {
+    return {
+      background: "#f5f5f5",
+      color: "#555555",
+      border: "1px solid #dddddd",
+    };
+  }
+
+  return {
+    background: "#eff6ff",
+    color: "#1e3a8a",
+    border: "1px solid #bfdbfe",
+  };
+}
+
+function getHashChainStatus(
+  event: CategoryMutationEventRow,
+  eventIndex: number,
+  events: CategoryMutationEventRow[]
+) {
+  if (!event.previous_hash) {
+    return "chain start";
+  }
+
+  const previousEvent = events[eventIndex + 1] ?? null;
+
+  if (!previousEvent) {
+    return "previous event not loaded";
+  }
+
+  if (previousEvent.record_hash === event.previous_hash) {
+    return "linked to previous event";
+  }
+
+  return "broken previous hash";
+}
+
+function getHashChainStatusStyle(status: string) {
+  if (status === "chain start" || status === "linked to previous event") {
+    return {
+      background: "#edf8f0",
+      color: "#176b2c",
+      border: "1px solid #bfe5c8",
+    };
+  }
+
+  if (status === "previous event not loaded") {
+    return {
+      background: "#fff8e6",
+      color: "#7a4b00",
+      border: "1px solid #f0d28a",
+    };
+  }
+
+  return {
+    background: "#fff5f5",
+    color: "#a40000",
+    border: "1px solid #f2b8b5",
   };
 }
 
@@ -649,6 +751,77 @@ async function getCategoryOriginEvents(
   };
 }
 
+async function getCategoryMutationEvents(
+  categoryIds: string[]
+): Promise<{
+  mutationEventsByCategoryId: Record<string, CategoryMutationEventRow[]>;
+  errorMessage: string | null;
+}> {
+  const uniqueCategoryIds = Array.from(new Set(categoryIds));
+
+  if (uniqueCategoryIds.length === 0) {
+    return {
+      mutationEventsByCategoryId: {},
+      errorMessage: null,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("contextual_category_events")
+    .select(
+      `
+      id,
+      contextual_category_id,
+      actor_user_id,
+      actor_role,
+      event_type,
+      event_source,
+      status_before,
+      status_after,
+      is_active_before,
+      is_active_after,
+      admin_comment,
+      previous_values,
+      new_values,
+      metadata_json,
+      public_note,
+      internal_note,
+      previous_hash,
+      record_hash,
+      created_at
+    `
+    )
+    .in("contextual_category_id", uniqueCategoryIds)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return {
+      mutationEventsByCategoryId: {},
+      errorMessage: error.message,
+    };
+  }
+
+  const mutationRows =
+    (data as unknown as CategoryMutationEventRow[] | null) ?? [];
+  const mutationEventsByCategoryId: Record<string, CategoryMutationEventRow[]> =
+    {};
+
+  for (const mutationEvent of mutationRows) {
+    const existingEvents =
+      mutationEventsByCategoryId[mutationEvent.contextual_category_id] ?? [];
+
+    mutationEventsByCategoryId[mutationEvent.contextual_category_id] = [
+      ...existingEvents,
+      mutationEvent,
+    ];
+  }
+
+  return {
+    mutationEventsByCategoryId,
+    errorMessage: null,
+  };
+}
+
 async function getPageData(
   statusFilter: CategoryStatusFilter,
   activeFilter: ActiveFilter,
@@ -666,9 +839,11 @@ async function getPageData(
       categories: [],
       contextsById: {},
       originEventsByCategoryId: {},
+      mutationEventsByCategoryId: {},
       errorMessage: appUserErrorMessage ?? "Not authenticated",
       contextErrorMessage: null,
       originErrorMessage: null,
+      mutationEventErrorMessage: null,
       statusFilter,
       activeFilter,
       originFilter,
@@ -687,10 +862,12 @@ async function getPageData(
       categories: [],
       contextsById: {},
       originEventsByCategoryId: {},
+      mutationEventsByCategoryId: {},
       errorMessage:
         platformAdminErrorMessage ?? "Platform admin access required",
       contextErrorMessage: null,
       originErrorMessage: null,
+      mutationEventErrorMessage: null,
       statusFilter,
       activeFilter,
       originFilter,
@@ -714,9 +891,11 @@ async function getPageData(
       categories: [],
       contextsById: {},
       originEventsByCategoryId: {},
+      mutationEventsByCategoryId: {},
       errorMessage: categoriesErrorMessage,
       contextErrorMessage: null,
       originErrorMessage: null,
+      mutationEventErrorMessage: null,
       statusFilter,
       activeFilter,
       originFilter,
@@ -741,15 +920,24 @@ async function getPageData(
       filteredCategories.map((category) => category.context_id)
     );
 
+  const {
+    mutationEventsByCategoryId,
+    errorMessage: mutationEventsErrorMessage,
+  } = await getCategoryMutationEvents(
+    filteredCategories.map((category) => category.id)
+  );
+
   return {
     appUser,
     platformAdmin,
     categories: filteredCategories,
     contextsById,
     originEventsByCategoryId,
+    mutationEventsByCategoryId,
     errorMessage: null,
     contextErrorMessage: contextsErrorMessage,
     originErrorMessage: originEventsErrorMessage,
+    mutationEventErrorMessage: mutationEventsErrorMessage,
     statusFilter,
     activeFilter,
     originFilter,
@@ -775,9 +963,11 @@ export default async function AdminObjectActionCategoriesPage({
     categories,
     contextsById,
     originEventsByCategoryId,
+    mutationEventsByCategoryId,
     errorMessage,
     contextErrorMessage,
     originErrorMessage,
+    mutationEventErrorMessage,
   } = await getPageData(
     statusFilter,
     activeFilter,
@@ -929,6 +1119,22 @@ export default async function AdminObjectActionCategoriesPage({
                 }}
               >
                 <strong>Origin loading warning:</strong> {originErrorMessage}
+              </section>
+            ) : null}
+
+            {mutationEventErrorMessage ? (
+              <section
+                style={{
+                  border: "1px solid #f0d28a",
+                  borderRadius: "12px",
+                  padding: "16px",
+                  background: "#fff8e6",
+                  color: "#7a4b00",
+                  marginBottom: "24px",
+                }}
+              >
+                <strong>Category mutation audit warning:</strong>{" "}
+                {mutationEventErrorMessage}
               </section>
             ) : null}
 
@@ -1215,6 +1421,8 @@ export default async function AdminObjectActionCategoriesPage({
                     const originStyle = getOriginStyle(
                       originEvents.length > 0
                     );
+                    const mutationEvents =
+                      mutationEventsByCategoryId[category.id] ?? [];
 
                     return (
                       <article
@@ -1466,6 +1674,305 @@ export default async function AdminObjectActionCategoriesPage({
                               seeded manually, imported, created before the
                               audit-origin flow, or created outside suggestion
                               moderation.
+                            </div>
+                          )}
+                        </section>
+
+                        <section
+                          style={{
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "10px",
+                            padding: "12px",
+                            background: "#ffffff",
+                            display: "grid",
+                            gap: "10px",
+                            lineHeight: "1.45",
+                            fontSize: "13px",
+                          }}
+                        >
+                          <div style={{ fontWeight: 800 }}>
+                            Category mutation audit history
+                          </div>
+
+                          <div style={{ color: "#666666" }}>
+                            Admin mutation events recorded after category
+                            actions such as activate, deactivate and archive.
+                          </div>
+
+                          {mutationEvents.length === 0 ? (
+                            <div style={{ color: "#666666" }}>
+                              No contextual category mutation events recorded
+                              for this category yet.
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                display: "grid",
+                                gap: "10px",
+                              }}
+                            >
+                              {mutationEvents.map((mutationEvent, index) => {
+                                const eventStyle = getMutationEventStyle(
+                                  mutationEvent.event_type
+                                );
+                                const hashChainStatus = getHashChainStatus(
+                                  mutationEvent,
+                                  index,
+                                  mutationEvents
+                                );
+                                const hashChainStatusStyle =
+                                  getHashChainStatusStyle(hashChainStatus);
+
+                                return (
+                                  <article
+                                    key={mutationEvent.id}
+                                    style={{
+                                      border: "1px solid #e5e7eb",
+                                      borderRadius: "10px",
+                                      padding: "12px",
+                                      background: "#f9fafb",
+                                      display: "grid",
+                                      gap: "8px",
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        gap: "10px",
+                                        flexWrap: "wrap",
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          gap: "8px",
+                                          flexWrap: "wrap",
+                                          alignItems: "center",
+                                        }}
+                                      >
+                                        <span
+                                          style={{
+                                            display: "inline-block",
+                                            borderRadius: "999px",
+                                            padding: "6px 10px",
+                                            fontWeight: 800,
+                                            ...eventStyle,
+                                          }}
+                                        >
+                                          {mutationEvent.event_type}
+                                        </span>
+
+                                        <span
+                                          style={{
+                                            display: "inline-block",
+                                            borderRadius: "999px",
+                                            padding: "6px 10px",
+                                            fontWeight: 800,
+                                            ...hashChainStatusStyle,
+                                          }}
+                                        >
+                                          Hash chain: {hashChainStatus}
+                                        </span>
+                                      </div>
+
+                                      <strong>
+                                        {formatDateTime(
+                                          mutationEvent.created_at
+                                        )}
+                                      </strong>
+                                    </div>
+
+                                    <div
+                                      style={{
+                                        display: "grid",
+                                        gridTemplateColumns:
+                                          "repeat(auto-fit, minmax(240px, 1fr))",
+                                        gap: "8px",
+                                      }}
+                                    >
+                                      <div>
+                                        <strong>Status:</strong>{" "}
+                                        {mutationEvent.status_before ?? "—"} →{" "}
+                                        {mutationEvent.status_after ?? "—"}
+                                      </div>
+
+                                      <div>
+                                        <strong>Active:</strong>{" "}
+                                        {formatBoolean(
+                                          mutationEvent.is_active_before
+                                        )}{" "}
+                                        →{" "}
+                                        {formatBoolean(
+                                          mutationEvent.is_active_after
+                                        )}
+                                      </div>
+
+                                      <div>
+                                        <strong>Actor:</strong>{" "}
+                                        <span
+                                          style={{
+                                            fontFamily: "monospace",
+                                            wordBreak: "break-all",
+                                          }}
+                                        >
+                                          {mutationEvent.actor_user_id ?? "—"}
+                                        </span>{" "}
+                                        · role:{" "}
+                                        {mutationEvent.actor_role ?? "—"}
+                                      </div>
+
+                                      <div>
+                                        <strong>Source:</strong>{" "}
+                                        {mutationEvent.event_source}
+                                      </div>
+                                    </div>
+
+                                    <div>
+                                      <strong>Admin comment:</strong>{" "}
+                                      {mutationEvent.admin_comment ?? "—"}
+                                    </div>
+
+                                    {mutationEvent.public_note ? (
+                                      <div>
+                                        <strong>Public note:</strong>{" "}
+                                        {mutationEvent.public_note}
+                                      </div>
+                                    ) : null}
+
+                                    {mutationEvent.internal_note ? (
+                                      <div>
+                                        <strong>Internal note:</strong>{" "}
+                                        {mutationEvent.internal_note}
+                                      </div>
+                                    ) : null}
+
+                                    <div>
+                                      <strong>Previous hash:</strong>{" "}
+                                      <span
+                                        style={{
+                                          fontFamily: "monospace",
+                                          wordBreak: "break-all",
+                                        }}
+                                      >
+                                        {mutationEvent.previous_hash ?? "—"}
+                                      </span>
+                                    </div>
+
+                                    <div>
+                                      <strong>Record hash:</strong>{" "}
+                                      <span
+                                        style={{
+                                          fontFamily: "monospace",
+                                          wordBreak: "break-all",
+                                        }}
+                                      >
+                                        {mutationEvent.record_hash ?? "—"}
+                                      </span>
+                                    </div>
+
+                                    <details>
+                                      <summary
+                                        style={{
+                                          cursor: "pointer",
+                                          color: "#2563eb",
+                                          fontWeight: 700,
+                                        }}
+                                      >
+                                        mutation values and metadata
+                                      </summary>
+
+                                      <div
+                                        style={{
+                                          display: "grid",
+                                          gridTemplateColumns:
+                                            "repeat(auto-fit, minmax(260px, 1fr))",
+                                          gap: "10px",
+                                          marginTop: "8px",
+                                        }}
+                                      >
+                                        <div>
+                                          <div
+                                            style={{
+                                              fontWeight: 800,
+                                              marginBottom: "6px",
+                                            }}
+                                          >
+                                            previous_values
+                                          </div>
+                                          <pre
+                                            style={{
+                                              border: "1px solid #e5e7eb",
+                                              borderRadius: "8px",
+                                              padding: "10px",
+                                              background: "#ffffff",
+                                              overflowX: "auto",
+                                              fontSize: "12px",
+                                              lineHeight: "1.45",
+                                            }}
+                                          >
+                                            {formatJson(
+                                              mutationEvent.previous_values
+                                            )}
+                                          </pre>
+                                        </div>
+
+                                        <div>
+                                          <div
+                                            style={{
+                                              fontWeight: 800,
+                                              marginBottom: "6px",
+                                            }}
+                                          >
+                                            new_values
+                                          </div>
+                                          <pre
+                                            style={{
+                                              border: "1px solid #e5e7eb",
+                                              borderRadius: "8px",
+                                              padding: "10px",
+                                              background: "#ffffff",
+                                              overflowX: "auto",
+                                              fontSize: "12px",
+                                              lineHeight: "1.45",
+                                            }}
+                                          >
+                                            {formatJson(
+                                              mutationEvent.new_values
+                                            )}
+                                          </pre>
+                                        </div>
+
+                                        <div>
+                                          <div
+                                            style={{
+                                              fontWeight: 800,
+                                              marginBottom: "6px",
+                                            }}
+                                          >
+                                            metadata_json
+                                          </div>
+                                          <pre
+                                            style={{
+                                              border: "1px solid #e5e7eb",
+                                              borderRadius: "8px",
+                                              padding: "10px",
+                                              background: "#ffffff",
+                                              overflowX: "auto",
+                                              fontSize: "12px",
+                                              lineHeight: "1.45",
+                                            }}
+                                          >
+                                            {formatJson(
+                                              mutationEvent.metadata_json
+                                            )}
+                                          </pre>
+                                        </div>
+                                      </div>
+                                    </details>
+                                  </article>
+                                );
+                              })}
                             </div>
                           )}
                         </section>
