@@ -140,6 +140,7 @@ type DirectoryContextualCategoryRow = {
   default_name: string;
   slug: string;
   status: string;
+  is_active: boolean;
   sort_order: number | null;
 };
 
@@ -588,12 +589,14 @@ async function getDirectoryClassificationsByOrganizationId(
       default_name,
       slug,
       status,
+      is_active,
       sort_order
     `
     )
     .in("id", contextualCategoryIds)
     .eq("context_id", businessDirectoryContextId)
-    .in("status", PUBLIC_OBJECT_ACTION_STATUSES);
+    .in("status", PUBLIC_OBJECT_ACTION_STATUSES)
+    .eq("is_active", true);
 
   if (categoryError) {
     return classificationsByOrganizationId;
