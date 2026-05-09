@@ -470,6 +470,12 @@ function getStatusFilterHref(status: SuggestionStatusFilter) {
   return `/admin/object-action/suggestions?status=${status}`;
 }
 
+function getAuditVerifyHref(suggestionId: string) {
+  return `/api/object-action/suggestions/audit-verify?suggestionId=${encodeURIComponent(
+    suggestionId
+  )}`;
+}
+
 function getRecord(value: unknown) {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return null;
@@ -1565,11 +1571,40 @@ export default async function AdminObjectActionSuggestionsPage({
 
                             <div
                               style={{
-                                color: "#666666",
-                                fontSize: "13px",
+                                display: "flex",
+                                gap: "10px",
+                                flexWrap: "wrap",
+                                alignItems: "center",
                               }}
                             >
-                              Events: {auditEvents.length}
+                              <div
+                                style={{
+                                  color: "#666666",
+                                  fontSize: "13px",
+                                }}
+                              >
+                                Events: {auditEvents.length}
+                              </div>
+
+                              <Link
+                                href={getAuditVerifyHref(suggestion.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: "inline-block",
+                                  border: "1px solid #2563eb",
+                                  borderRadius: "999px",
+                                  padding: "6px 10px",
+                                  background: "#eff6ff",
+                                  color: "#1e3a8a",
+                                  fontSize: "13px",
+                                  fontWeight: 800,
+                                  textDecoration: "none",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                Verify hash chain ↗
+                              </Link>
                             </div>
                           </div>
 
