@@ -238,7 +238,17 @@ export default async function AdminObjectActionHubPage() {
               marginBottom: "16px",
             }}
           >
-            <Link
+                        <Link
+              href="/admin"
+              style={{
+                color: "#2563eb",
+                textDecoration: "underline",
+                fontWeight: 700,
+              }}
+            >
+              Admin hub
+            </Link>
+<Link
               href="/directory"
               style={{
                 color: "#2563eb",
