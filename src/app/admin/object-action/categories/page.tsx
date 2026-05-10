@@ -1021,6 +1021,16 @@ export default async function AdminObjectActionCategoriesPage({
               marginBottom: "16px",
             }}
           >
+                        <Link
+              href="/admin/object-action"
+              style={{
+                color: "#2563eb",
+                textDecoration: "underline",
+                fontWeight: 700,
+              }}
+            >
+              Object-Action hub
+            </Link>
             <Link
               href="/directory"
               style={{
@@ -1028,7 +1038,7 @@ export default async function AdminObjectActionCategoriesPage({
                 textDecoration: "underline",
               }}
             >
-              ← ÐÐ°Ð·Ð°Ð´ Ð² ÐºÐ°Ñ‚Ð°Ð»Ð¾Ð³
+              Public directory {"\u2192"}
             </Link>
 
             <Link

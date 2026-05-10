@@ -841,7 +841,17 @@ export default async function AdminObjectActionClassificationsPage({
               marginBottom: "16px",
             }}
           >
-            <Link
+                        <Link
+              href="/admin/object-action"
+              style={{
+                color: "#2563eb",
+                textDecoration: "underline",
+                fontWeight: 700,
+              }}
+            >
+              Object-Action hub
+            </Link>
+<Link
               href="/admin/object-action/categories"
               style={{
                 color: "#2563eb",
@@ -861,14 +871,14 @@ export default async function AdminObjectActionClassificationsPage({
               Suggestion moderation {"\u2192"}
             </Link>
 
-            <Link
+                        <Link
               href="/directory"
               style={{
                 color: "#2563eb",
                 textDecoration: "underline",
               }}
             >
-              Public directory →
+              Public directory {"\u2192"}
             </Link>
           </div>
 
