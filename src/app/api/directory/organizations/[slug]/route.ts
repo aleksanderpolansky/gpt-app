@@ -1,7 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
+
+const BUSINESS_DIRECTORY_CONTEXT_CODE = "business_directory";
+const ORGANIZATION_ENTITY_TYPE = "organization";
+const PUBLIC_OBJECT_ACTION_STATUSES = ["approved", "published"];
 
 type RelatedCategory = {
   is_primary: boolean | null;
@@ -89,6 +93,38 @@ type DirectoryOrganizationRow = {
   organization_search_stats?: RelatedStats[] | null;
 };
 
+type ContextRow = {
+  id: string;
+};
+
+type EntityClassificationRow = {
+  id: string;
+  entity_id: string;
+  role: string | null;
+  status: string;
+  contextual_category_id: string | null;
+  created_at: string;
+};
+
+type DirectoryContextualCategoryRow = {
+  id: string;
+  code: string;
+  default_name: string;
+  slug: string;
+  status: string;
+  is_active: boolean;
+  sort_order: number | null;
+};
+
+type DirectoryObjectActionClassification = {
+  id: string;
+  entityId: string;
+  role: string | null;
+  status: string;
+  createdAt: string;
+  category: DirectoryContextualCategoryRow;
+};
+
 type RouteProps = {
   params: Promise<{
     slug: string;
@@ -165,15 +201,207 @@ function getPublicLocation(location: RelatedLocation | null) {
   };
 }
 
-function mapDirectoryOrganization(row: DirectoryOrganizationRow) {
+function getObjectActionRolePriority(role: string | null) {
+  if (role === "primary") {
+    return 0;
+  }
+
+  if (role === "secondary") {
+    return 1;
+  }
+
+  return 2;
+}
+
+function compareObjectActionClassifications(
+  left: DirectoryObjectActionClassification,
+  right: DirectoryObjectActionClassification
+) {
+  const leftRolePriority = getObjectActionRolePriority(left.role);
+  const rightRolePriority = getObjectActionRolePriority(right.role);
+
+  if (leftRolePriority !== rightRolePriority) {
+    return leftRolePriority - rightRolePriority;
+  }
+
+  const leftSortOrder = left.category.sort_order ?? 999;
+  const rightSortOrder = right.category.sort_order ?? 999;
+
+  if (leftSortOrder !== rightSortOrder) {
+    return leftSortOrder - rightSortOrder;
+  }
+
+  return left.category.default_name.localeCompare(right.category.default_name, "en", {
+    sensitivity: "base",
+  });
+}
+
+function getLegacyPrimaryCategory(row: DirectoryOrganizationRow) {
   const primaryCategoryRelation =
     row.organization_categories?.find((item) => item.is_primary) ??
     row.organization_categories?.[0] ??
     null;
 
-  const primaryCategory = getFirstRelatedItem(
-    primaryCategoryRelation?.business_categories
+  return getFirstRelatedItem(primaryCategoryRelation?.business_categories);
+}
+
+function mapObjectActionCategoryToDirectoryCategory(
+  classification: DirectoryObjectActionClassification
+) {
+  return {
+    id: classification.category.id,
+    slug: classification.category.slug,
+    name: classification.category.default_name,
+    description: null,
+    code: classification.category.code,
+    source: "object_action",
+    classificationId: classification.id,
+    classificationRole: classification.role,
+  };
+}
+
+function getPrimaryCategory(
+  row: DirectoryOrganizationRow,
+  classifications: DirectoryObjectActionClassification[]
+) {
+  const primaryObjectActionClassification =
+    classifications.find((item) => item.role === "primary") ??
+    classifications[0] ??
+    null;
+
+  if (primaryObjectActionClassification) {
+    return mapObjectActionCategoryToDirectoryCategory(
+      primaryObjectActionClassification
+    );
+  }
+
+  return getLegacyPrimaryCategory(row);
+}
+
+async function getBusinessDirectoryContextId() {
+  const { data, error } = await supabase
+    .from("contexts")
+    .select("id")
+    .eq("code", BUSINESS_DIRECTORY_CONTEXT_CODE)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return (data as ContextRow).id;
+}
+
+async function getDirectoryClassificationsByOrganizationId(
+  organizationId: string
+): Promise<DirectoryObjectActionClassification[]> {
+  const businessDirectoryContextId = await getBusinessDirectoryContextId();
+
+  if (!businessDirectoryContextId) {
+    return [];
+  }
+
+  const { data: classificationData, error: classificationError } =
+    await supabase
+      .from("entity_classifications")
+      .select(
+        `
+        id,
+        entity_id,
+        role,
+        status,
+        contextual_category_id,
+        created_at
+      `
+      )
+      .eq("entity_type", ORGANIZATION_ENTITY_TYPE)
+      .eq("context_id", businessDirectoryContextId)
+      .eq("entity_id", organizationId)
+      .in("status", PUBLIC_OBJECT_ACTION_STATUSES)
+      .not("contextual_category_id", "is", null)
+      .order("created_at", { ascending: true });
+
+  if (classificationError) {
+    return [];
+  }
+
+  const classificationRows =
+    (classificationData as unknown as EntityClassificationRow[] | null) ?? [];
+
+  const contextualCategoryIds = Array.from(
+    new Set(
+      classificationRows
+        .map((row) => row.contextual_category_id)
+        .filter((value): value is string => Boolean(value))
+    )
   );
+
+  if (contextualCategoryIds.length === 0) {
+    return [];
+  }
+
+  const { data: categoryData, error: categoryError } = await supabase
+    .from("contextual_categories")
+    .select(
+      `
+      id,
+      code,
+      default_name,
+      slug,
+      status,
+      is_active,
+      sort_order
+    `
+    )
+    .in("id", contextualCategoryIds)
+    .eq("context_id", businessDirectoryContextId)
+    .in("status", PUBLIC_OBJECT_ACTION_STATUSES)
+    .eq("is_active", true);
+
+  if (categoryError) {
+    return [];
+  }
+
+  const categoryRows =
+    (categoryData as unknown as DirectoryContextualCategoryRow[] | null) ?? [];
+
+  const categoryById = new Map<string, DirectoryContextualCategoryRow>();
+
+  for (const category of categoryRows) {
+    categoryById.set(category.id, category);
+  }
+
+  const classifications: DirectoryObjectActionClassification[] = [];
+
+  for (const classification of classificationRows) {
+    if (!classification.contextual_category_id) {
+      continue;
+    }
+
+    const category = categoryById.get(classification.contextual_category_id);
+
+    if (!category) {
+      continue;
+    }
+
+    classifications.push({
+      id: classification.id,
+      entityId: classification.entity_id,
+      role: classification.role,
+      status: classification.status,
+      createdAt: classification.created_at,
+      category,
+    });
+  }
+
+  return classifications.sort(compareObjectActionClassifications);
+}
+
+function mapDirectoryOrganization(
+  row: DirectoryOrganizationRow,
+  classifications: DirectoryObjectActionClassification[]
+) {
+  const primaryCategory = getPrimaryCategory(row, classifications);
 
   const primaryLocation =
     row.organization_locations?.find(
@@ -315,10 +543,13 @@ export async function GET(_request: NextRequest, { params }: RouteProps) {
     );
   }
 
+  const organizationRow = data as unknown as DirectoryOrganizationRow;
+  const classifications = await getDirectoryClassificationsByOrganizationId(
+    organizationRow.id
+  );
+
   return NextResponse.json({
     ok: true,
-    organization: mapDirectoryOrganization(
-      data as unknown as DirectoryOrganizationRow
-    ),
+    organization: mapDirectoryOrganization(organizationRow, classifications),
   });
 }
