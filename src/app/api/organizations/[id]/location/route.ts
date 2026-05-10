@@ -454,7 +454,7 @@ async function updatePrimaryLocation(input: {
 }> {
   const locationPatch = {
     organization_id: input.organizationId,
-    location_type: "primary",
+    location_type: "physical",
     label: buildLocationLabel(input.locationInput),
     country_code: input.locationInput.countryCode,
     city: input.locationInput.city,

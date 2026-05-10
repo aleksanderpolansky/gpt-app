@@ -1,6 +1,7 @@
-import { auth0 } from "../../../../lib/auth0";
+﻿import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import PurchaseConfirmationForm from "./PurchaseConfirmationForm";
+import OrganizationLocationEditForm from "./OrganizationLocationEditForm";
 
 export const dynamic = "force-dynamic";
 
@@ -919,6 +920,22 @@ export default async function OrganizationDetailsPage({
                 <strong>Description:</strong>{" "}
                 {organization.description || "Not specified"}
               </p>
+
+              <div style={{ marginTop: "18px" }}>
+                <OrganizationLocationEditForm
+                  organizationId={organization.id}
+                  initialCountryCode={
+                    primaryLocation?.country_code ?? organization.country_code ?? null
+                  }
+                  initialCity={primaryLocation?.city ?? null}
+                  initialDistrict={primaryLocation?.district ?? null}
+                  initialAddressVisibility={
+                    primaryLocation?.address_visibility ?? "approximate"
+                  }
+                  initialLatitude={primaryLocation?.latitude ?? null}
+                  initialLongitude={primaryLocation?.longitude ?? null}
+                />
+              </div>
 
               <p
                 style={{
