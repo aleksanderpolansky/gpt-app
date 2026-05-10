@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -548,7 +548,7 @@ async function getDirectoryClassificationsByOrganizationId(
         `
         id,
         entity_id,
-        role,
+        role:classification_role,
         status,
         contextual_category_id,
         created_at
@@ -585,8 +585,9 @@ async function getDirectoryClassificationsByOrganizationId(
     .select(
       `
       id,
-      code,
-      default_name,
+      code:slug,
+      default_name:name,
+      default_description:description,
       slug,
       status,
       is_active,
