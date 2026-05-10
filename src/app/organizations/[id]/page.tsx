@@ -43,6 +43,7 @@ type OrganizationLocation = {
 
 type Organization = {
   id: string;
+  created_by_user_id?: string | null;
   organization_name: string;
   organization_type: string;
   description?: string | null;
@@ -157,6 +158,7 @@ type PageData = {
   valueObjects: ValueObject[];
   offers: Offer[];
   errorMessage: string | null;
+  canEditOrganizationLocation?: boolean;
 };
 
 type OrganizationDetailsPageProps = {
@@ -528,6 +530,7 @@ async function getOrganizationPageData(
       .select(
         `
         id,
+        created_by_user_id,
         organization_name,
         organization_type,
         description,
@@ -717,12 +720,15 @@ async function getOrganizationPageData(
     };
   }
 
+  const organization = organizationResult.data as Organization;
+
   return {
-    organization: organizationResult.data as Organization,
+    organization,
     primaryLocation: enrichedPrimaryLocation,
     valueObjects: (valueObjectsResult.data as ValueObject[] | null) ?? [],
     offers: (offersResult.data as unknown as Offer[] | null) ?? [],
     errorMessage: null,
+    canEditOrganizationLocation: organization.created_by_user_id === appUser.id,
   };
 }
 
@@ -746,8 +752,14 @@ export default async function OrganizationDetailsPage({
   )}`;
   const myPurchaseConfirmationsHref = "/my-purchase-confirmations";
 
-  const { organization, primaryLocation, valueObjects, offers, errorMessage } =
-    await getOrganizationPageData(organizationId);
+  const {
+    organization,
+    primaryLocation,
+    valueObjects,
+    offers,
+    errorMessage,
+    canEditOrganizationLocation = false,
+  } = await getOrganizationPageData(organizationId);
 
   const locationGeoStatusLabel = getLocationGeoStatusLabel(primaryLocation);
 
@@ -921,21 +933,23 @@ export default async function OrganizationDetailsPage({
                 {organization.description || "Not specified"}
               </p>
 
-              <div style={{ marginTop: "18px" }}>
-                <OrganizationLocationEditForm
-                  organizationId={organization.id}
-                  initialCountryCode={
-                    primaryLocation?.country_code ?? organization.country_code ?? null
-                  }
-                  initialCity={primaryLocation?.city ?? null}
-                  initialDistrict={primaryLocation?.district ?? null}
-                  initialAddressVisibility={
-                    primaryLocation?.address_visibility ?? "approximate"
-                  }
-                  initialLatitude={primaryLocation?.latitude ?? null}
-                  initialLongitude={primaryLocation?.longitude ?? null}
-                />
-              </div>
+              {canEditOrganizationLocation ? (
+                <div style={{ marginTop: "18px" }}>
+                  <OrganizationLocationEditForm
+                    organizationId={organization.id}
+                    initialCountryCode={
+                      primaryLocation?.country_code ?? organization.country_code ?? null
+                    }
+                    initialCity={primaryLocation?.city ?? null}
+                    initialDistrict={primaryLocation?.district ?? null}
+                    initialAddressVisibility={
+                      primaryLocation?.address_visibility ?? "approximate"
+                    }
+                    initialLatitude={primaryLocation?.latitude ?? null}
+                    initialLongitude={primaryLocation?.longitude ?? null}
+                  />
+                </div>
+              ) : null}
 
               <p
                 style={{
