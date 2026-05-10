@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +25,10 @@ type OrganizationLocationRow = {
   country_code: string | null;
   city: string | null;
   district: string | null;
+};
+
+type DirectoryEntityClassificationRow = {
+  contextual_category_id: string | null;
 };
 
 type RubricatorCategoryRow = {
@@ -72,6 +76,8 @@ const PUBLIC_RUBRICATOR_CATEGORY_STATUSES = new Set([
   "approved",
   "published",
 ]);
+
+const PUBLIC_OBJECT_ACTION_STATUSES = ["approved", "published"];
 
 function normalizeTextValue(value: string | null | undefined) {
   return typeof value === "string" ? value.trim() : "";
@@ -166,16 +172,20 @@ function mapLegacyCategories(
     .sort(compareCategories);
 }
 
+function getObjectActionCategoryIdSet(rows: DirectoryEntityClassificationRow[]) {
+  return new Set(
+    rows
+      .map((row) => row.contextual_category_id)
+      .filter((value): value is string => Boolean(value))
+  );
+}
+
 function mapCategoriesFromRubricator(input: {
   legacyRows: OrganizationCategoryRow[];
   rubricatorRows: RubricatorCategoryRow[];
+  objectActionCategoryIds: Set<string>;
 }): DirectoryFilterCategory[] {
   const legacyCategoryBySlug = getLegacyCategoryMap(input.legacyRows);
-
-  if (legacyCategoryBySlug.size === 0) {
-    return [];
-  }
-
   const mappedCategoryBySlug = new Map<string, DirectoryFilterCategoryWithSort>();
 
   for (const rubricatorCategory of input.rubricatorRows) {
@@ -190,8 +200,12 @@ function mapCategoriesFromRubricator(input: {
     }
 
     const legacyCategory = legacyCategoryBySlug.get(slug);
+    const isUsedByObjectAction = input.objectActionCategoryIds.has(
+      rubricatorCategory.category_id
+    );
+    const isUsedByLegacy = Boolean(legacyCategory);
 
-    if (!legacyCategory) {
+    if (!isUsedByObjectAction && !isUsedByLegacy) {
       continue;
     }
 
@@ -201,15 +215,17 @@ function mapCategoriesFromRubricator(input: {
       name:
         normalizeTextValue(rubricatorCategory.display_name) ||
         normalizeTextValue(rubricatorCategory.default_name) ||
-        legacyCategory.name,
+        legacyCategory?.name ||
+        slug,
       description:
         rubricatorCategory.display_description ??
         rubricatorCategory.default_description ??
-        legacyCategory.description,
+        legacyCategory?.description ??
+        null,
       sortOrder:
         typeof rubricatorCategory.sort_order === "number"
           ? rubricatorCategory.sort_order
-          : legacyCategory.sort_order ?? 999,
+          : legacyCategory?.sort_order ?? 999,
     });
   }
 
@@ -231,7 +247,6 @@ function mapCategoriesFromRubricator(input: {
     .sort(compareCategoriesWithSort)
     .map(({ sortOrder: _sortOrder, ...category }) => category);
 }
-
 function mapCities(rows: OrganizationLocationRow[]): DirectoryFilterCity[] {
   const cityMap = new Map<string, DirectoryFilterCity>();
 
@@ -327,8 +342,12 @@ export async function GET() {
       });
     }
 
-    const [categoriesResult, locationsResult, rubricatorCategoriesResult] =
-      await Promise.all([
+    const [
+      categoriesResult,
+      locationsResult,
+      rubricatorCategoriesResult,
+      classificationsResult,
+    ] = await Promise.all([
         supabase
           .from("organization_categories")
           .select(
@@ -355,6 +374,14 @@ export async function GET() {
           p_context_code: "business_directory",
           p_language_code: "ru",
         }),
+
+        supabase
+          .from("entity_classifications")
+          .select("contextual_category_id")
+          .eq("entity_type", "organization")
+          .in("entity_id", organizationIds)
+          .in("status", PUBLIC_OBJECT_ACTION_STATUSES)
+          .not("contextual_category_id", "is", null),
       ]);
 
     if (categoriesResult.error) {
@@ -379,6 +406,12 @@ export async function GET() {
 
     const categoryRows =
       (categoriesResult.data ?? []) as OrganizationCategoryRow[];
+    const classificationRows = classificationsResult.error
+      ? []
+      : ((classificationsResult.data ?? []) as DirectoryEntityClassificationRow[]);
+
+    const objectActionCategoryIds =
+      getObjectActionCategoryIdSet(classificationRows);
 
     const categories = rubricatorCategoriesResult.error
       ? mapLegacyCategories(categoryRows)
@@ -386,6 +419,7 @@ export async function GET() {
           legacyRows: categoryRows,
           rubricatorRows:
             (rubricatorCategoriesResult.data ?? []) as RubricatorCategoryRow[],
+          objectActionCategoryIds,
         });
 
     const cities = mapCities(
