@@ -2,6 +2,7 @@
 import { supabase } from "../../../../lib/supabase";
 import PurchaseConfirmationForm from "./PurchaseConfirmationForm";
 import OrganizationLocationEditForm from "./OrganizationLocationEditForm";
+import DirectorySuggestionRequestForm from "../../directory/components/DirectorySuggestionRequestForm";
 
 export const dynamic = "force-dynamic";
 
@@ -947,6 +948,26 @@ export default async function OrganizationDetailsPage({
                     }
                     initialLatitude={primaryLocation?.latitude ?? null}
                     initialLongitude={primaryLocation?.longitude ?? null}
+                  />
+                </div>
+              ) : null}
+
+              {canEditOrganizationLocation ? (
+                <div style={{ marginTop: "18px" }}>
+                  <DirectorySuggestionRequestForm
+                    title="Suggest organization category change"
+                    description="Describe what this organization really does and suggest a better public directory category. The request will be reviewed by an admin before changing the public directory."
+                    textareaLabel="Organization activity description"
+                    textareaPlaceholder="Example: This company provides AI automation consulting, workflow optimization and business process improvement for small companies."
+                    submitButtonLabel="Send category change request"
+                    successTitle="Category change request sent."
+                    entityType="organization"
+                    entityId={organization.id}
+                    requestSource="api"
+                    locale="en"
+                    contextCode="business_directory"
+                    initialText={organization.description ?? ""}
+                    showProposedCategoryField={true}
                   />
                 </div>
               ) : null}

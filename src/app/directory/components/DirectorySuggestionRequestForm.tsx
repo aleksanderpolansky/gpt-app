@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useState } from "react";
 
@@ -21,22 +21,116 @@ type SuggestionApiResponse = {
   error?: string;
 };
 
+type DirectorySuggestionRequestFormProps = {
+  title?: string;
+  description?: string;
+  textareaLabel?: string;
+  textareaPlaceholder?: string;
+  submitButtonLabel?: string;
+  successTitle?: string;
+  entityType?: "general" | "organization";
+  entityId?: string | null;
+  requestSource?: string;
+  locale?: string;
+  contextCode?: string;
+  initialText?: string;
+  initialProposedCategoryText?: string;
+  proposedCategoryLabel?: string;
+  proposedCategoryPlaceholder?: string;
+  showProposedCategoryField?: boolean;
+};
+
 const MIN_TEXT_LENGTH = 5;
 const MAX_TEXT_LENGTH = 4000;
+const MAX_PROPOSED_CATEGORY_LENGTH = 200;
 
-export default function DirectorySuggestionRequestForm() {
-  const [userText, setUserText] = useState("");
+const DEFAULT_GENERAL_TITLE = "Missing business category?";
+const DEFAULT_ORGANIZATION_TITLE = "Suggest category change";
+
+const DEFAULT_GENERAL_DESCRIPTION =
+  "Describe in normal words what kind of business, service or activity is missing in the directory. The request will be saved for moderation. Nothing is published automatically.";
+
+const DEFAULT_ORGANIZATION_DESCRIPTION =
+  "Describe what this organization really does and, if needed, suggest a better category. The request will be saved for admin review. The public category changes only after approval.";
+
+const DEFAULT_TEXTAREA_LABEL = "Business activity description";
+
+const DEFAULT_GENERAL_PLACEHOLDER =
+  "Example: electric scooters / massage and injury recovery studio / coffee machine maintenance for offices.";
+
+const DEFAULT_ORGANIZATION_PLACEHOLDER =
+  "Example: This company provides massage, wellness and recovery services for clients.";
+
+const DEFAULT_PROPOSED_CATEGORY_LABEL = "Suggested category name";
+const DEFAULT_PROPOSED_CATEGORY_PLACEHOLDER =
+  "Example: Health and wellness / AI automation consulting";
+
+function normalizeTextValue(value: string | null | undefined) {
+  return value?.trim() ?? "";
+}
+
+export default function DirectorySuggestionRequestForm({
+  title,
+  description,
+  textareaLabel = DEFAULT_TEXTAREA_LABEL,
+  textareaPlaceholder,
+  submitButtonLabel = "Send for review",
+  successTitle = "Request sent.",
+  entityType = "general",
+  entityId = null,
+  requestSource = "directory_category_picker",
+  locale = "ru",
+  contextCode = "business_directory",
+  initialText = "",
+  initialProposedCategoryText = "",
+  proposedCategoryLabel = DEFAULT_PROPOSED_CATEGORY_LABEL,
+  proposedCategoryPlaceholder = DEFAULT_PROPOSED_CATEGORY_PLACEHOLDER,
+  showProposedCategoryField,
+}: DirectorySuggestionRequestFormProps) {
+  const normalizedEntityType = entityType;
+  const normalizedEntityId = normalizeTextValue(entityId);
+  const shouldShowProposedCategoryField =
+    showProposedCategoryField ?? normalizedEntityType === "organization";
+
+  const [userText, setUserText] = useState(initialText);
+  const [proposedCategoryText, setProposedCategoryText] = useState(
+    initialProposedCategoryText
+  );
   const [submitStatus, setSubmitStatus] =
     useState<SuggestionSubmitStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createdRequestId, setCreatedRequestId] = useState<string | null>(null);
 
   const trimmedUserText = userText.trim();
+  const trimmedProposedCategoryText = proposedCategoryText.trim();
   const isSubmitting = submitStatus === "submitting";
+
+  const isProposedCategoryTooLong =
+    trimmedProposedCategoryText.length > MAX_PROPOSED_CATEGORY_LENGTH;
+
   const isSubmitDisabled =
     isSubmitting ||
     trimmedUserText.length < MIN_TEXT_LENGTH ||
-    trimmedUserText.length > MAX_TEXT_LENGTH;
+    trimmedUserText.length > MAX_TEXT_LENGTH ||
+    isProposedCategoryTooLong;
+
+  const effectiveTitle =
+    title ??
+    (normalizedEntityType === "organization"
+      ? DEFAULT_ORGANIZATION_TITLE
+      : DEFAULT_GENERAL_TITLE);
+
+  const effectiveDescription =
+    description ??
+    (normalizedEntityType === "organization"
+      ? DEFAULT_ORGANIZATION_DESCRIPTION
+      : DEFAULT_GENERAL_DESCRIPTION);
+
+  const effectiveTextareaPlaceholder =
+    textareaPlaceholder ??
+    (normalizedEntityType === "organization"
+      ? DEFAULT_ORGANIZATION_PLACEHOLDER
+      : DEFAULT_GENERAL_PLACEHOLDER);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,19 +143,37 @@ export default function DirectorySuggestionRequestForm() {
     setErrorMessage(null);
     setCreatedRequestId(null);
 
+    const requestBody: {
+      userText: string;
+      locale: string;
+      contextCode: string;
+      entityType: string;
+      entityId?: string;
+      requestSource: string;
+      proposedCategoryText?: string;
+    } = {
+      userText: trimmedUserText,
+      locale,
+      contextCode,
+      entityType: normalizedEntityType,
+      requestSource,
+    };
+
+    if (normalizedEntityId) {
+      requestBody.entityId = normalizedEntityId;
+    }
+
+    if (trimmedProposedCategoryText) {
+      requestBody.proposedCategoryText = trimmedProposedCategoryText;
+    }
+
     try {
       const response = await fetch("/api/object-action/suggestions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json; charset=utf-8",
         },
-        body: JSON.stringify({
-          userText: trimmedUserText,
-          locale: "ru",
-          contextCode: "business_directory",
-          entityType: "general",
-          requestSource: "directory_category_picker",
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const json = (await response.json()) as SuggestionApiResponse;
@@ -69,7 +181,7 @@ export default function DirectorySuggestionRequestForm() {
       if (!response.ok || !json.ok || !json.suggestionRequest) {
         setSubmitStatus("error");
         setErrorMessage(
-          json.error ?? "Не удалось отправить заявку. Попробуйте ещё раз."
+          json.error ?? "Could not send the request. Please try again."
         );
         return;
       }
@@ -77,12 +189,13 @@ export default function DirectorySuggestionRequestForm() {
       setSubmitStatus("success");
       setCreatedRequestId(json.suggestionRequest.id);
       setUserText("");
+      setProposedCategoryText("");
     } catch (error) {
       setSubmitStatus("error");
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Не удалось отправить заявку. Попробуйте ещё раз."
+          : "Could not send the request. Please try again."
       );
     }
   }
@@ -105,7 +218,7 @@ export default function DirectorySuggestionRequestForm() {
           color: "#1e3a8a",
         }}
       >
-        Не нашли подходящее направление?
+        {effectiveTitle}
       </h2>
 
       <p
@@ -116,10 +229,32 @@ export default function DirectorySuggestionRequestForm() {
           lineHeight: "1.5",
         }}
       >
-        Опишите обычными словами, чем занимается предприятие. Система сохранит
-        заявку на рассмотрение. Новая категория не появится в публичном каталоге
-        автоматически — сначала её должен проверить администратор.
+        {effectiveDescription}
       </p>
+
+      {normalizedEntityType === "organization" && normalizedEntityId ? (
+        <p
+          style={{
+            margin: "0 0 14px",
+            color: "#1e40af",
+            fontSize: "13px",
+            lineHeight: "1.5",
+          }}
+        >
+          Organization request mode. Entity ID:{" "}
+          <code
+            style={{
+              background: "#dbeafe",
+              borderRadius: "6px",
+              padding: "2px 5px",
+              color: "#1e3a8a",
+              fontWeight: 700,
+            }}
+          >
+            {normalizedEntityId}
+          </code>
+        </p>
+      ) : null}
 
       <form
         onSubmit={handleSubmit}
@@ -136,11 +271,11 @@ export default function DirectorySuggestionRequestForm() {
             color: "#1e3a8a",
           }}
         >
-          Описание направления деятельности
+          {textareaLabel}
           <textarea
             value={userText}
             onChange={(event) => setUserText(event.target.value)}
-            placeholder="Например: Я ремонтирую электросамокаты. / У меня салон массажа и восстановления после травм. / Мы обслуживаем кофемашины для офисов."
+            placeholder={effectiveTextareaPlaceholder}
             rows={4}
             maxLength={MAX_TEXT_LENGTH}
             disabled={isSubmitting}
@@ -158,6 +293,38 @@ export default function DirectorySuggestionRequestForm() {
           />
         </label>
 
+        {shouldShowProposedCategoryField ? (
+          <label
+            style={{
+              display: "grid",
+              gap: "7px",
+              fontWeight: 700,
+              color: "#1e3a8a",
+            }}
+          >
+            {proposedCategoryLabel}
+            <input
+              type="text"
+              value={proposedCategoryText}
+              onChange={(event) =>
+                setProposedCategoryText(event.target.value)
+              }
+              placeholder={proposedCategoryPlaceholder}
+              maxLength={MAX_PROPOSED_CATEGORY_LENGTH}
+              disabled={isSubmitting}
+              style={{
+                border: "1px solid #93c5fd",
+                borderRadius: "10px",
+                padding: "12px",
+                fontSize: "15px",
+                fontWeight: 400,
+                background: "#ffffff",
+                color: "#111111",
+              }}
+            />
+          </label>
+        ) : null}
+
         <div
           style={{
             display: "flex",
@@ -170,13 +337,23 @@ export default function DirectorySuggestionRequestForm() {
           <div
             style={{
               color:
-                trimmedUserText.length > MAX_TEXT_LENGTH ? "#a40000" : "#1e40af",
+                trimmedUserText.length > MAX_TEXT_LENGTH ||
+                isProposedCategoryTooLong
+                  ? "#a40000"
+                  : "#1e40af",
               fontSize: "13px",
               lineHeight: "1.4",
             }}
           >
-            {trimmedUserText.length}/{MAX_TEXT_LENGTH} символов. Минимум:{" "}
-            {MIN_TEXT_LENGTH}.
+            Description: {trimmedUserText.length}/{MAX_TEXT_LENGTH} characters.
+            Minimum: {MIN_TEXT_LENGTH}.
+            {shouldShowProposedCategoryField ? (
+              <>
+                {" "}
+                Suggested category: {trimmedProposedCategoryText.length}/
+                {MAX_PROPOSED_CATEGORY_LENGTH}.
+              </>
+            ) : null}
           </div>
 
           <button
@@ -194,7 +371,7 @@ export default function DirectorySuggestionRequestForm() {
               cursor: isSubmitDisabled ? "not-allowed" : "pointer",
             }}
           >
-            {isSubmitting ? "Отправляем..." : "Отправить на рассмотрение"}
+            {isSubmitting ? "Sending..." : submitButtonLabel}
           </button>
         </div>
       </form>
@@ -211,8 +388,9 @@ export default function DirectorySuggestionRequestForm() {
             lineHeight: "1.5",
           }}
         >
-          <strong>Заявка отправлена.</strong> Она сохранена со статусом{" "}
-          <strong>needs_review</strong> и не будет опубликована без модерации.
+          <strong>{successTitle}</strong> It was saved with status{" "}
+          <strong>needs_review</strong> and will not be published without
+          moderation.
           {createdRequestId ? (
             <div
               style={{
@@ -221,7 +399,7 @@ export default function DirectorySuggestionRequestForm() {
                 color: "#166534",
               }}
             >
-              ID заявки: {createdRequestId}
+              Request ID: {createdRequestId}
             </div>
           ) : null}
         </div>
@@ -239,8 +417,8 @@ export default function DirectorySuggestionRequestForm() {
             lineHeight: "1.5",
           }}
         >
-          <strong>Ошибка отправки.</strong>{" "}
-          {errorMessage ?? "Попробуйте ещё раз."}
+          <strong>Submission error.</strong>{" "}
+          {errorMessage ?? "Please try again."}
         </div>
       ) : null}
     </section>
