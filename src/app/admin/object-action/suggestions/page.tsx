@@ -1217,6 +1217,59 @@ export default async function AdminObjectActionSuggestionsPage({
                     const auditEvents =
                       auditEventsBySuggestionId[suggestion.id] ?? [];
 
+                    const applicationResultAuditEvent =
+                      auditEvents.find(
+                        (auditEvent) =>
+                          auditEvent.event_type === "approve_new_category" ||
+                          auditEvent.event_type === "approve_existing_match"
+                      ) ?? null;
+
+                    const applicationResultMetadata =
+                      applicationResultAuditEvent?.metadata_json ?? null;
+
+                    const applicationResultPublicDataMutation = getJsonBoolean(
+                      applicationResultMetadata,
+                      "publicDataMutation"
+                    );
+
+                    const applicationResultClassificationApplied =
+                      getJsonBoolean(
+                        applicationResultMetadata,
+                        "classificationApplied"
+                      );
+
+                    const applicationResultEntityClassificationId =
+                      getJsonString(
+                        applicationResultMetadata,
+                        "entityClassificationId"
+                      );
+
+                    const applicationResultCreatedCategoryId = getJsonString(
+                      applicationResultMetadata,
+                      "createdContextualCategoryId"
+                    );
+
+                    const applicationResultCreatedCategoryName = getJsonString(
+                      applicationResultMetadata,
+                      "createdContextualCategoryName"
+                    );
+
+                    const applicationResultCreatedCategorySlug = getJsonString(
+                      applicationResultMetadata,
+                      "createdContextualCategorySlug"
+                    );
+
+                    const applicationResultSupersededPrimaryIdsRaw =
+                      applicationResultMetadata?.supersededPrimaryClassificationIds;
+
+                    const applicationResultSupersededPrimaryIds = Array.isArray(
+                      applicationResultSupersededPrimaryIdsRaw
+                    )
+                      ? applicationResultSupersededPrimaryIdsRaw.filter(
+                          (item): item is string => typeof item === "string"
+                        )
+                      : [];
+
                     return (
                       <article
                         key={suggestion.id}
@@ -1563,6 +1616,99 @@ export default async function AdminObjectActionSuggestionsPage({
                           )}
                         </section>
 
+                        {applicationResultAuditEvent ? (
+                          <section
+                            style={{
+                              border: "1px solid #bbf7d0",
+                              borderRadius: "10px",
+                              padding: "12px",
+                              background: "#f0fdf4",
+                              display: "grid",
+                              gap: "10px",
+                            }}
+                          >
+                            <h3
+                              style={{
+                                margin: 0,
+                                color: "#166534",
+                                fontSize: "16px",
+                              }}
+                            >
+                              Application result
+                            </h3>
+
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns:
+                                  "repeat(auto-fit, minmax(260px, 1fr))",
+                                gap: "8px",
+                                color: "#14532d",
+                                fontSize: "13px",
+                                lineHeight: "1.5",
+                              }}
+                            >
+                              <div>
+                                <strong>Event:</strong>{" "}
+                                {applicationResultAuditEvent.event_type}
+                              </div>
+
+                              <div>
+                                <strong>Applied at:</strong>{" "}
+                                {formatDateTime(
+                                  applicationResultAuditEvent.created_at
+                                )}
+                              </div>
+
+                              <div>
+                                <strong>Public data mutation:</strong>{" "}
+                                {applicationResultPublicDataMutation === null
+                                  ? "unknown"
+                                  : applicationResultPublicDataMutation
+                                    ? "yes"
+                                    : "no"}
+                              </div>
+
+                              <div>
+                                <strong>Classification applied:</strong>{" "}
+                                {applicationResultClassificationApplied === null
+                                  ? "unknown"
+                                  : applicationResultClassificationApplied
+                                    ? "yes"
+                                    : "no"}
+                              </div>
+
+                              <div>
+                                <strong>Entity classification ID:</strong>{" "}
+                                {applicationResultEntityClassificationId ?? "—"}
+                              </div>
+
+                              <div>
+                                <strong>Created category:</strong>{" "}
+                                {applicationResultCreatedCategoryName ?? "—"}{" "}
+                                {applicationResultCreatedCategorySlug ? (
+                                  <span>
+                                    / {applicationResultCreatedCategorySlug}
+                                  </span>
+                                ) : null}
+                              </div>
+
+                              <div>
+                                <strong>Created category ID:</strong>{" "}
+                                {applicationResultCreatedCategoryId ?? "—"}
+                              </div>
+
+                              <div>
+                                <strong>Superseded primary classifications:</strong>{" "}
+                                {applicationResultSupersededPrimaryIds.length > 0
+                                  ? applicationResultSupersededPrimaryIds.join(
+                                      ", "
+                                    )
+                                  : "none"}
+                              </div>
+                            </div>
+                          </section>
+                        ) : null}
                         <SuggestionModerationButtons
                           suggestionId={suggestion.id}
                           currentStatus={suggestion.status}
