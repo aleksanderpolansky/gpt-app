@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -308,7 +308,7 @@ function getModerationSuccessMessage(
 
   return `Suggestion request ${getActionPastLabel(
     action
-  )}. New status: ${nextStatus ?? "—"}.`;
+  )}. New status: ${nextStatus ?? "â€”"}.`;
 }
 
 function getApproveNewCategorySuccessMessage(json: ModerationApiResponse) {
@@ -670,6 +670,52 @@ export default function SuggestionModerationButtons({
     }
   }
 
+  if (FINAL_PUBLIC_STATUSES.has(currentStatus)) {
+    return (
+      <section
+        style={{
+          border: "1px solid #fde68a",
+          borderRadius: "10px",
+          padding: "12px",
+          background: "#fffbeb",
+          display: "grid",
+          gap: "10px",
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 800,
+            color: "#92400e",
+            fontSize: "14px",
+          }}
+        >
+          Moderation closed
+        </div>
+
+        <div
+          style={{
+            color: "#92400e",
+            fontSize: "13px",
+            lineHeight: "1.5",
+          }}
+        >
+          This suggestion request already has a final public status. Approve,
+          reject and archive controls are hidden to avoid accidental repeated
+          moderation actions.
+        </div>
+
+        <div
+          style={{
+            color: "#92400e",
+            fontSize: "13px",
+            lineHeight: "1.5",
+          }}
+        >
+          Current status: <strong>{currentStatus}</strong>
+        </div>
+      </section>
+    );
+  }
   return (
     <section
       style={{
@@ -833,11 +879,11 @@ export default function SuggestionModerationButtons({
           review. Available only when AI status is{" "}
           <strong>new_category_suggested</strong> or{" "}
           <strong>low_confidence</strong>. Current AI status:{" "}
-          <strong>{aiStatus ?? "—"}</strong>. Current AI category:{" "}
-          <strong>{aiSuggestedCategoryText ?? "—"}</strong>. Confidence:{" "}
+          <strong>{aiStatus ?? "â€”"}</strong>. Current AI category:{" "}
+          <strong>{aiSuggestedCategoryText ?? "â€”"}</strong>. Confidence:{" "}
           <strong>
             {aiConfidence === null || aiConfidence === undefined
-              ? "—"
+              ? "â€”"
               : aiConfidence}
           </strong>
           .
@@ -1054,8 +1100,8 @@ export default function SuggestionModerationButtons({
           Approve match is available only when status is draft, suggested or
           needs_review, AI status is matched_existing, and a matched existing
           category id exists. Current AI status:{" "}
-          <strong>{aiStatus ?? "—"}</strong>. Current matched category:{" "}
-          <strong>{matchedExistingCategoryId ?? "—"}</strong>.
+          <strong>{aiStatus ?? "â€”"}</strong>. Current matched category:{" "}
+          <strong>{matchedExistingCategoryId ?? "â€”"}</strong>.
         </div>
       ) : null}
 
@@ -1074,7 +1120,7 @@ export default function SuggestionModerationButtons({
           Approve new category is available only when status is draft, suggested
           or needs_review and AI status is new_category_suggested or
           low_confidence. Current AI status:{" "}
-          <strong>{aiStatus ?? "—"}</strong>.
+          <strong>{aiStatus ?? "â€”"}</strong>.
         </div>
       ) : null}
 
