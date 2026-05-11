@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+﻿import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { auth0 } from "../../../../../lib/auth0";
 import {
@@ -96,6 +96,40 @@ type ContextualCategoryRow = {
   description: string | null;
 };
 
+type ExistingEntityClassificationRow = {
+  id: string;
+  object_type_id: string;
+  action_type_id: string | null;
+  contextual_category_id: string | null;
+  classification_role: string;
+  is_primary: boolean;
+  status: string;
+  source_type: string;
+  created_at: string;
+};
+
+type EntityClassificationIdRow = {
+  id: string;
+};
+
+type ApplyApprovedSuggestionCategoryInput = {
+  suggestion: SuggestionRequestRow;
+  appUser: AppUserRow;
+  contextualCategoryId: string;
+  action: "approve_existing_match" | "approve_new_category";
+  nowIso: string;
+};
+
+type ApplyApprovedSuggestionCategoryResult = {
+  applied: boolean;
+  classificationId: string | null;
+  action: "approve_existing_match" | "approve_new_category";
+  reason: string | null;
+  contextualCategoryId: string | null;
+  objectTypeId: string | null;
+  actionTypeId: string | null;
+  supersededPrimaryClassificationIds: string[];
+};
 type SuggestionAuditEventHashRow = {
   id: string;
   record_hash: string | null;
@@ -165,6 +199,8 @@ type SuggestedNewCategoryData = {
 const DEFAULT_LOCALE = "ru";
 const DEFAULT_CONTEXT_CODE = "business_directory";
 const DEFAULT_ENTITY_TYPE = "general";
+const ORGANIZATION_ENTITY_TYPE = "organization";
+const PUBLIC_ENTITY_CLASSIFICATION_STATUSES = ["approved", "published"];
 const DEFAULT_REQUEST_SOURCE = "api";
 const DEFAULT_SUGGESTION_STATUS_FILTER: SuggestionStatusFilter = "needs_review";
 const MAX_ADMIN_COMMENT_LENGTH = 2000;
@@ -1277,6 +1313,285 @@ async function analyzeSuggestionRequest(
   });
 }
 
+const UUID_FOR_ENTITY_CLASSIFICATION_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function getUuidForEntityClassification(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const normalizedValue = value.trim();
+
+  if (!UUID_FOR_ENTITY_CLASSIFICATION_PATTERN.test(normalizedValue)) {
+    return null;
+  }
+
+  return normalizedValue;
+}
+
+function getClassificationConfidence(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return 1;
+  }
+
+  return Math.min(1, Math.max(0, value));
+}
+
+async function getExistingEntityClassificationTemplate(input: {
+  entityId: string;
+  contextId: string;
+}): Promise<{
+  row: ExistingEntityClassificationRow | null;
+  errorMessage: string | null;
+}> {
+  const { data, error } = await supabase
+    .from("entity_classifications")
+    .select(
+      `
+      id,
+      object_type_id,
+      action_type_id,
+      contextual_category_id,
+      classification_role,
+      is_primary,
+      status,
+      source_type,
+      created_at
+    `
+    )
+    .eq("entity_type", ORGANIZATION_ENTITY_TYPE)
+    .eq("entity_id", input.entityId)
+    .eq("context_id", input.contextId)
+    .in("status", PUBLIC_ENTITY_CLASSIFICATION_STATUSES)
+    .order("is_primary", { ascending: false })
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  if (error) {
+    return {
+      row: null,
+      errorMessage: error.message,
+    };
+  }
+
+  const rows = (data as unknown as ExistingEntityClassificationRow[] | null) ?? [];
+
+  return {
+    row: rows[0] ?? null,
+    errorMessage: null,
+  };
+}
+
+async function applyApprovedSuggestionCategoryToEntity(
+  input: ApplyApprovedSuggestionCategoryInput
+): Promise<ApplyApprovedSuggestionCategoryResult> {
+  const emptyResult: ApplyApprovedSuggestionCategoryResult = {
+    applied: false,
+    classificationId: null,
+    action: input.action,
+    reason: null,
+    contextualCategoryId: input.contextualCategoryId,
+    objectTypeId: null,
+    actionTypeId: null,
+    supersededPrimaryClassificationIds: [],
+  };
+
+  if (input.suggestion.entity_type.trim().toLowerCase() !== ORGANIZATION_ENTITY_TYPE) {
+    return {
+      ...emptyResult,
+      reason: "suggestion_entity_type_is_not_organization",
+    };
+  }
+
+  const entityId = getUuidForEntityClassification(input.suggestion.entity_id);
+
+  if (!entityId) {
+    return {
+      ...emptyResult,
+      reason: "missing_or_invalid_organization_entity_id",
+    };
+  }
+
+  const contextualCategoryId = getUuidForEntityClassification(
+    input.contextualCategoryId
+  );
+
+  if (!contextualCategoryId) {
+    return {
+      ...emptyResult,
+      reason: "missing_or_invalid_contextual_category_id",
+    };
+  }
+
+  const { context, errorMessage: contextErrorMessage } = await getResolvedContext(
+    input.suggestion.context_code
+  );
+
+  if (contextErrorMessage) {
+    return {
+      ...emptyResult,
+      reason: `context_resolution_error: ${contextErrorMessage}`,
+    };
+  }
+
+  if (!context) {
+    return {
+      ...emptyResult,
+      reason: "context_not_found",
+    };
+  }
+
+  const {
+    row: existingTemplate,
+    errorMessage: existingTemplateErrorMessage,
+  } = await getExistingEntityClassificationTemplate({
+    entityId,
+    contextId: context.id,
+  });
+
+  if (existingTemplateErrorMessage) {
+    return {
+      ...emptyResult,
+      reason: `existing_classification_lookup_error: ${existingTemplateErrorMessage}`,
+    };
+  }
+
+  const objectTypeId =
+    getUuidForEntityClassification(input.suggestion.ai_suggested_object_type_id) ??
+    existingTemplate?.object_type_id ??
+    null;
+
+  const actionTypeId =
+    getUuidForEntityClassification(input.suggestion.ai_suggested_action_type_id) ??
+    existingTemplate?.action_type_id ??
+    null;
+
+  if (!objectTypeId) {
+    return {
+      ...emptyResult,
+      reason: "missing_object_type_id_and_no_existing_classification_template",
+    };
+  }
+
+  let existingTargetQuery = supabase
+    .from("entity_classifications")
+    .select("id")
+    .eq("entity_type", ORGANIZATION_ENTITY_TYPE)
+    .eq("entity_id", entityId)
+    .eq("object_type_id", objectTypeId)
+    .eq("context_id", context.id)
+    .eq("contextual_category_id", contextualCategoryId)
+    .eq("classification_role", "primary")
+    .limit(1);
+
+  if (actionTypeId) {
+    existingTargetQuery = existingTargetQuery.eq("action_type_id", actionTypeId);
+  } else {
+    existingTargetQuery = existingTargetQuery.is("action_type_id", null);
+  }
+
+  const { data: existingTargetData, error: existingTargetError } =
+    await existingTargetQuery;
+
+  if (existingTargetError) {
+    return {
+      ...emptyResult,
+      objectTypeId,
+      actionTypeId,
+      reason: `existing_target_classification_lookup_error: ${existingTargetError.message}`,
+    };
+  }
+
+  const existingTargetRows =
+    (existingTargetData as unknown as EntityClassificationIdRow[] | null) ?? [];
+  const existingTarget = existingTargetRows[0] ?? null;
+
+  const classificationValues = {
+    classification_role: "primary",
+    is_primary: true,
+    confidence: getClassificationConfidence(input.suggestion.ai_confidence),
+    status: "approved",
+    source_type: "owner_confirmed",
+    classified_by_user_id: input.appUser.id,
+    evidence_json: {
+      suggestionRequestId: input.suggestion.id,
+      moderationAction: input.action,
+      contextCode: input.suggestion.context_code,
+      userText: input.suggestion.user_text,
+      aiStatus: input.suggestion.ai_status,
+      aiConfidence: input.suggestion.ai_confidence,
+      matchedExistingCategoryId: input.suggestion.matched_existing_category_id,
+      appliedAt: input.nowIso,
+      appliedByUserId: input.appUser.id,
+    },
+    notes: `Applied from Object-Action suggestion request ${input.suggestion.id} by ${input.action}.`,
+  };
+
+  const { data: classificationData, error: classificationError } = existingTarget
+    ? await supabase
+        .from("entity_classifications")
+        .update(classificationValues)
+        .eq("id", existingTarget.id)
+        .select("id")
+        .single()
+    : await supabase
+        .from("entity_classifications")
+        .insert({
+          entity_type: ORGANIZATION_ENTITY_TYPE,
+          entity_id: entityId,
+          object_type_id: objectTypeId,
+          action_type_id: actionTypeId,
+          context_id: context.id,
+          contextual_category_id: contextualCategoryId,
+          ...classificationValues,
+        })
+        .select("id")
+        .single();
+
+  if (classificationError) {
+    return {
+      ...emptyResult,
+      objectTypeId,
+      actionTypeId,
+      reason: `classification_apply_error: ${classificationError.message}`,
+    };
+  }
+
+  const classificationRow =
+    classificationData as unknown as EntityClassificationIdRow | null;
+
+  const { data: supersededData, error: supersedeError } = await supabase
+    .from("entity_classifications")
+    .update({
+      status: "archived",
+      is_primary: false,
+      notes: `Superseded by Object-Action suggestion request ${input.suggestion.id}.`,
+    })
+    .eq("entity_type", ORGANIZATION_ENTITY_TYPE)
+    .eq("entity_id", entityId)
+    .eq("context_id", context.id)
+    .eq("classification_role", "primary")
+    .neq("contextual_category_id", contextualCategoryId)
+    .in("status", PUBLIC_ENTITY_CLASSIFICATION_STATUSES)
+    .select("id");
+
+  const supersededRows =
+    (supersededData as unknown as EntityClassificationIdRow[] | null) ?? [];
+
+  return {
+    applied: true,
+    classificationId: classificationRow?.id ?? existingTarget?.id ?? null,
+    action: input.action,
+    reason: supersedeError
+      ? `classification_applied_but_supersede_old_primary_failed: ${supersedeError.message}`
+      : null,
+    contextualCategoryId,
+    objectTypeId,
+    actionTypeId,
+    supersededPrimaryClassificationIds: supersededRows.map((row) => row.id),
+  };
+}
 async function approveExistingMatchSuggestionRequest(
   suggestion: ExistingSuggestionRow,
   appUser: AppUserRow,
@@ -1361,6 +1676,14 @@ async function approveExistingMatchSuggestionRequest(
 
   const updatedSuggestion = data as unknown as SuggestionRequestRow;
 
+  const classificationApplication = await applyApprovedSuggestionCategoryToEntity({
+    suggestion: updatedSuggestion,
+    appUser,
+    contextualCategoryId: category.id,
+    action: "approve_existing_match",
+    nowIso,
+  });
+
   const auditErrorMessage = await createObjectActionSuggestionAuditEvent({
     suggestionRequestId: suggestion.id,
     appUser,
@@ -1380,9 +1703,14 @@ async function approveExistingMatchSuggestionRequest(
       matchedExistingCategoryId: category.id,
       matchedExistingCategoryName: category.name,
       matchedExistingCategorySlug: category.slug,
-      publicDataMutation: false,
+      publicDataMutation: classificationApplication.applied,
+      classificationApplication,
+      classificationApplied: classificationApplication.applied,
+      entityClassificationId: classificationApplication.classificationId,
+      supersededPrimaryClassificationIds:
+        classificationApplication.supersededPrimaryClassificationIds,
       safetyNote:
-        "Suggestion request was merged with an existing category. No new public category was created.",
+        "Suggestion request was merged with an existing category. If the request targets an organization, its Object-Action directory classification is applied separately.",
     },
     internalNote: finalAdminComment,
   });
@@ -1403,9 +1731,14 @@ async function approveExistingMatchSuggestionRequest(
       matchedExistingCategoryId: category.id,
       matchedExistingCategoryName: category.name,
       matchedExistingCategorySlug: category.slug,
-      publicDataMutation: false,
+      publicDataMutation: classificationApplication.applied,
+      classificationApplication,
+      classificationApplied: classificationApplication.applied,
+      entityClassificationId: classificationApplication.classificationId,
+      supersededPrimaryClassificationIds:
+        classificationApplication.supersededPrimaryClassificationIds,
       note:
-        "Suggestion request was merged with an existing category. No new public category was created.",
+        "Suggestion request was merged with an existing category. If the request targets an organization, its Object-Action directory classification is applied separately.",
     },
   });
 }
@@ -1583,6 +1916,14 @@ async function approveNewCategorySuggestionRequest(
 
   const updatedSuggestion = data as unknown as SuggestionRequestRow;
 
+  const classificationApplication = await applyApprovedSuggestionCategoryToEntity({
+    suggestion: updatedSuggestion,
+    appUser,
+    contextualCategoryId: createdCategory.id,
+    action: "approve_new_category",
+    nowIso,
+  });
+
   const auditErrorMessage = await createObjectActionSuggestionAuditEvent({
     suggestionRequestId: suggestion.id,
     appUser,
@@ -1606,8 +1947,13 @@ async function approveNewCategorySuggestionRequest(
       newCategorySource: suggestedCategory.source,
       contextId: context.id,
       publicDataMutation: true,
+      classificationApplication,
+      classificationApplied: classificationApplication.applied,
+      entityClassificationId: classificationApplication.classificationId,
+      supersededPrimaryClassificationIds:
+        classificationApplication.supersededPrimaryClassificationIds,
       safetyNote:
-        "A new contextual category was created only after explicit platform admin approval.",
+        "A new contextual category was created only after explicit platform admin approval. If the request targets an organization, its Object-Action directory classification is applied separately.",
     },
     internalNote: finalAdminComment,
   });
@@ -1630,8 +1976,13 @@ async function approveNewCategorySuggestionRequest(
       createdContextualCategorySlug: createdCategory.slug,
       newCategorySource: suggestedCategory.source,
       publicDataMutation: true,
+      classificationApplication,
+      classificationApplied: classificationApplication.applied,
+      entityClassificationId: classificationApplication.classificationId,
+      supersededPrimaryClassificationIds:
+        classificationApplication.supersededPrimaryClassificationIds,
       note:
-        "New contextual category was created after explicit platform admin approval.",
+        "New contextual category was created after explicit platform admin approval. If the request targets an organization, its Object-Action directory classification is applied separately.",
     },
   });
 }
