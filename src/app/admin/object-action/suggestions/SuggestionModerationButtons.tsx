@@ -1123,23 +1123,6 @@ export default function SuggestionModerationButtons({
           <strong>{aiStatus ?? "â€”"}</strong>.
         </div>
       ) : null}
-
-      {FINAL_PUBLIC_STATUSES.has(currentStatus) ? (
-        <div
-          style={{
-            border: "1px solid #fde68a",
-            borderRadius: "8px",
-            padding: "10px",
-            background: "#fffbeb",
-            color: "#92400e",
-            fontSize: "13px",
-            lineHeight: "1.45",
-          }}
-        >
-          Approved or merged suggestion requests cannot be rejected or archived
-          from this endpoint.
-        </div>
-      ) : null}
     </section>
   );
 }
