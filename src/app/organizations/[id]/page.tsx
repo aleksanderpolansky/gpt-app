@@ -154,6 +154,18 @@ type AppUser = {
 };
 
 
+
+type OrganizationCurrentCategory = {
+  classificationId: string;
+  contextualCategoryId: string;
+  categoryName: string;
+  categorySlug: string;
+  classificationRole: string;
+  classificationStatus: string;
+  sourceType: string | null;
+  isPrimary: boolean | null;
+  updatedAt: string | null;
+};
 type OrganizationCategorySuggestionRequest = {
   id: string;
   user_text: string;
@@ -176,6 +188,7 @@ type PageData = {
   valueObjects: ValueObject[];
   offers: Offer[];
   categorySuggestionRequests?: OrganizationCategorySuggestionRequest[];
+  currentCategory?: OrganizationCurrentCategory | null;
   errorMessage: string | null;
   canEditOrganizationLocation?: boolean;
 };
@@ -775,6 +788,88 @@ async function getOrganizationPageData(
       : ((categorySuggestionRequestsData as
           | OrganizationCategorySuggestionRequest[]
           | null) ?? []);
+
+  type CurrentClassificationRow = {
+    id: string;
+    contextual_category_id: string | null;
+    classification_role: string;
+    status: string;
+    source_type: string | null;
+    is_primary: boolean | null;
+    updated_at: string | null;
+  };
+
+  type CurrentCategoryRow = {
+    id: string;
+    slug: string;
+    name: string;
+  };
+
+  const {
+    data: currentClassificationData,
+    error: currentClassificationError,
+  } = await supabase
+    .from("entity_classifications")
+    .select(
+      `
+      id,
+      contextual_category_id,
+      classification_role,
+      status,
+      source_type,
+      is_primary,
+      updated_at
+    `
+    )
+    .eq("entity_type", "organization")
+    .eq("entity_id", organizationId)
+    .eq("classification_role", "primary")
+    .eq("status", "approved")
+    .eq("is_primary", true)
+    .order("updated_at", { ascending: false })
+    .limit(1);
+
+  const currentClassificationRows =
+    (currentClassificationData as CurrentClassificationRow[] | null) ?? [];
+
+  const currentClassification =
+    currentClassificationError || currentClassificationRows.length === 0
+      ? null
+      : currentClassificationRows[0];
+
+  let currentCategory: OrganizationCurrentCategory | null = null;
+
+  if (currentClassification?.contextual_category_id) {
+    const { data: currentCategoryData } = await supabase
+      .from("contextual_categories")
+      .select(
+        `
+        id,
+        slug,
+        name
+      `
+      )
+      .eq("id", currentClassification.contextual_category_id)
+      .maybeSingle();
+
+    const currentCategoryRow =
+      currentCategoryData as CurrentCategoryRow | null;
+
+    if (currentCategoryRow) {
+      currentCategory = {
+        classificationId: currentClassification.id,
+        contextualCategoryId: currentCategoryRow.id,
+        categoryName: currentCategoryRow.name,
+        categorySlug: currentCategoryRow.slug,
+        classificationRole: currentClassification.classification_role,
+        classificationStatus: currentClassification.status,
+        sourceType: currentClassification.source_type,
+        isPrimary: currentClassification.is_primary,
+        updatedAt: currentClassification.updated_at,
+      };
+    }
+  }
+
   const organization = organizationResult.data as Organization;
 
   return {
@@ -783,6 +878,7 @@ async function getOrganizationPageData(
     valueObjects: (valueObjectsResult.data as ValueObject[] | null) ?? [],
     offers: (offersResult.data as unknown as Offer[] | null) ?? [],
     categorySuggestionRequests: categorySuggestionRequests,
+    currentCategory: currentCategory,
     errorMessage: null,
     canEditOrganizationLocation: organization.created_by_user_id === appUser.id,
   };
@@ -814,6 +910,7 @@ export default async function OrganizationDetailsPage({
     valueObjects,
     offers,
     categorySuggestionRequests = [],
+    currentCategory = null,
     errorMessage,
     canEditOrganizationLocation = false,
   } = await getOrganizationPageData(organizationId);
@@ -997,6 +1094,81 @@ export default async function OrganizationDetailsPage({
                 <strong>Description:</strong>{" "}
                 {organization.description || "Not specified"}
               </p>
+              {canEditOrganizationLocation ? (
+                <section
+                  style={{
+                    marginTop: "18px",
+                    border: "1px solid #bbf7d0",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    background: "#f0fdf4",
+                  }}
+                >
+                  <h3
+                    style={{
+                      margin: "0 0 8px",
+                      fontSize: "18px",
+                      color: "#166534",
+                    }}
+                  >
+                    Current public category
+                  </h3>
+
+                  {currentCategory ? (
+                    <div
+                      style={{
+                        display: "grid",
+                        gap: "6px",
+                        color: "#14532d",
+                        fontSize: "13px",
+                        lineHeight: "1.5",
+                      }}
+                    >
+                      <p style={{ margin: 0 }}>
+                        <strong>Category:</strong>{" "}
+                        {currentCategory.categoryName}
+                      </p>
+
+                      <p style={{ margin: 0 }}>
+                        <strong>Slug:</strong> {currentCategory.categorySlug}
+                      </p>
+
+                      <p style={{ margin: 0 }}>
+                        <strong>Status:</strong>{" "}
+                        {currentCategory.classificationStatus}
+                      </p>
+
+                      <p style={{ margin: 0 }}>
+                        <strong>Role:</strong>{" "}
+                        {currentCategory.classificationRole}
+                      </p>
+
+                      <p style={{ margin: 0 }}>
+                        <strong>Source:</strong>{" "}
+                        {currentCategory.sourceType ?? "not specified"}
+                      </p>
+
+                      <p style={{ margin: 0 }}>
+                        <strong>Classification ID:</strong>{" "}
+                        {currentCategory.classificationId}
+                      </p>
+                    </div>
+                  ) : (
+                    <p
+                      style={{
+                        margin: 0,
+                        color: "#166534",
+                        fontSize: "13px",
+                        lineHeight: "1.5",
+                      }}
+                    >
+                      No approved primary Object-Action category is currently
+                      assigned to this organization.
+                    </p>
+                  )}
+                </section>
+              ) : null}
+
 
               {canEditOrganizationLocation ? (
                 <div style={{ marginTop: "18px" }}>
