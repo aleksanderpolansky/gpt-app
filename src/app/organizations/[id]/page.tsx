@@ -820,6 +820,14 @@ export default async function OrganizationDetailsPage({
 
   const locationGeoStatusLabel = getLocationGeoStatusLabel(primaryLocation);
 
+  const activeCategorySuggestionRequests = categorySuggestionRequests.filter(
+    (request) =>
+      request.status === "draft" ||
+      request.status === "suggested" ||
+      request.status === "needs_review"
+  );
+
+
   return (
     <main
       style={{
@@ -1010,6 +1018,29 @@ export default async function OrganizationDetailsPage({
 
               {canEditOrganizationLocation ? (
                 <div style={{ marginTop: "18px" }}>
+                  {activeCategorySuggestionRequests.length > 0 ? (
+                    <div
+                      style={{
+                        marginBottom: "12px",
+                        border: "1px solid #fbbf24",
+                        borderRadius: "10px",
+                        padding: "12px",
+                        background: "#fffbeb",
+                        color: "#92400e",
+                        fontSize: "13px",
+                        lineHeight: "1.5",
+                      }}
+                    >
+                      <strong>
+                        There is already an active category change request for
+                        this organization.
+                      </strong>{" "}
+                      Active requests:{" "}
+                      <strong>{activeCategorySuggestionRequests.length}</strong>.
+                      You can still send another request, but it may duplicate
+                      an existing pending review.
+                    </div>
+                  ) : null}
                   <DirectorySuggestionRequestForm
                     title="Suggest organization category change"
                     description="Describe what this organization really does and suggest a better public directory category. The request will be reviewed by an admin before changing the public directory."
