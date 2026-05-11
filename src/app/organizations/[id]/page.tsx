@@ -153,11 +153,29 @@ type AppUser = {
   name?: string | null;
 };
 
+
+type OrganizationCategorySuggestionRequest = {
+  id: string;
+  user_text: string;
+  proposed_category_text: string | null;
+  status: string;
+  admin_decision: string | null;
+  ai_status: string | null;
+  ai_confidence: number | null;
+  request_source: string;
+  ai_suggested_category_text: string | null;
+  ai_suggested_contextual_category_id: string | null;
+  matched_existing_category_id: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
 type PageData = {
   organization: Organization | null;
   primaryLocation: OrganizationLocation | null;
   valueObjects: ValueObject[];
-  offers: Offer[];
+  offers: Offer[];
+  categorySuggestionRequests?: OrganizationCategorySuggestionRequest[];
   errorMessage: string | null;
   canEditOrganizationLocation?: boolean;
 };
@@ -721,6 +739,42 @@ async function getOrganizationPageData(
     };
   }
 
+  const {
+    data: categorySuggestionRequestsData,
+    error: categorySuggestionRequestsError,
+  } = await supabase
+    .from("object_action_suggestion_requests")
+    .select(
+      `
+      id,
+      user_text,
+      proposed_category_text,
+      status,
+      admin_decision,
+      ai_status,
+      ai_confidence,
+      request_source,
+      ai_suggested_category_text,
+      ai_suggested_contextual_category_id,
+      matched_existing_category_id,
+      reviewed_at,
+      created_at,
+      updated_at
+    `
+    )
+    .eq("entity_type", "organization")
+    .eq("entity_id", organizationId)
+    .eq("context_code", "business_directory")
+    .in("request_source", ["organization_category_change", "api"])
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const categorySuggestionRequests =
+    categorySuggestionRequestsError
+      ? []
+      : ((categorySuggestionRequestsData as
+          | OrganizationCategorySuggestionRequest[]
+          | null) ?? []);
   const organization = organizationResult.data as Organization;
 
   return {
@@ -728,6 +782,7 @@ async function getOrganizationPageData(
     primaryLocation: enrichedPrimaryLocation,
     valueObjects: (valueObjectsResult.data as ValueObject[] | null) ?? [],
     offers: (offersResult.data as unknown as Offer[] | null) ?? [],
+    categorySuggestionRequests: categorySuggestionRequests,
     errorMessage: null,
     canEditOrganizationLocation: organization.created_by_user_id === appUser.id,
   };
@@ -758,6 +813,7 @@ export default async function OrganizationDetailsPage({
     primaryLocation,
     valueObjects,
     offers,
+    categorySuggestionRequests = [],
     errorMessage,
     canEditOrganizationLocation = false,
   } = await getOrganizationPageData(organizationId);
@@ -970,6 +1026,148 @@ export default async function OrganizationDetailsPage({
                     showProposedCategoryField={true}
                   />
                 </div>
+              ) : null}
+
+              {canEditOrganizationLocation ? (
+                <section
+                  style={{
+                    marginTop: "18px",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    background: "#f8fbff",
+                  }}
+                >
+                  <h3
+                    style={{
+                      margin: "0 0 8px",
+                      fontSize: "18px",
+                      color: "#1e3a8a",
+                    }}
+                  >
+                    Recent category change requests
+                  </h3>
+
+                  <p
+                    style={{
+                      margin: "0 0 12px",
+                      color: "#1e40af",
+                      fontSize: "13px",
+                      lineHeight: "1.5",
+                    }}
+                  >
+                    Last requests submitted for this organization. Public
+                    category changes only after admin approval.
+                  </p>
+
+                  {categorySuggestionRequests.length === 0 ? (
+                    <p
+                      style={{
+                        margin: 0,
+                        color: "#666666",
+                        fontSize: "14px",
+                      }}
+                    >
+                      No category change requests yet.
+                    </p>
+                  ) : (
+                    <div style={{ display: "grid", gap: "10px" }}>
+                      {categorySuggestionRequests.map((request) => (
+                        <article
+                          key={request.id}
+                          style={{
+                            border: "1px solid #dbeafe",
+                            borderRadius: "10px",
+                            padding: "12px",
+                            background: "#ffffff",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              flexWrap: "wrap",
+                              alignItems: "center",
+                              marginBottom: "8px",
+                            }}
+                          >
+                            <strong style={{ color: "#111827" }}>
+                              {request.proposed_category_text ??
+                                request.ai_suggested_category_text ??
+                                "Category not specified"}
+                            </strong>
+
+                            <span
+                              style={{
+                                border: "1px solid #bfdbfe",
+                                borderRadius: "999px",
+                                padding: "2px 8px",
+                                background: "#eff6ff",
+                                color: "#1e40af",
+                                fontSize: "12px",
+                                fontWeight: 700,
+                              }}
+                            >
+                              {request.status}
+                            </span>
+
+                            <span
+                              style={{
+                                border: "1px solid #e5e7eb",
+                                borderRadius: "999px",
+                                padding: "2px 8px",
+                                background: "#f9fafb",
+                                color: "#374151",
+                                fontSize: "12px",
+                                fontWeight: 700,
+                              }}
+                            >
+                              AI: {request.ai_status ?? "not_requested"}
+                            </span>
+                          </div>
+
+                          <p
+                            style={{
+                              margin: "0 0 8px",
+                              color: "#374151",
+                              fontSize: "13px",
+                              lineHeight: "1.5",
+                            }}
+                          >
+                            {request.user_text}
+                          </p>
+
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns:
+                                "repeat(auto-fit, minmax(180px, 1fr))",
+                              gap: "6px",
+                              color: "#6b7280",
+                              fontSize: "12px",
+                              lineHeight: "1.4",
+                            }}
+                          >
+                            <span>ID: {request.id}</span>
+                            <span>Source: {request.request_source}</span>
+                            <span>Created: {request.created_at}</span>
+                            <span>Updated: {request.updated_at}</span>
+
+                            {request.admin_decision ? (
+                              <span>
+                                Admin decision: {request.admin_decision}
+                              </span>
+                            ) : null}
+
+                            {request.reviewed_at ? (
+                              <span>Reviewed: {request.reviewed_at}</span>
+                            ) : null}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </section>
               ) : null}
 
               <p
