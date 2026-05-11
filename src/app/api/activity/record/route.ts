@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
   ACTIVITY_RECORDING_ENABLED,
 } from "../../../../../lib/activity/activityRecordingConfig";
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
+import { processActivityImpacts } from "../../../../../lib/activity/activityImpactProcessor";
 
 export const dynamic = "force-dynamic";
 
@@ -682,14 +683,14 @@ export async function GET() {
     primaryInputExample: {
       templateSlug: "german-marketing-handwriting-practice",
       durationMinutes: 25,
-      comment: "коммерческое письмо",
+      comment: "ÐºÐ¾Ð¼Ð¼ÐµÑ€Ñ‡ÐµÑÐºÐ¾Ðµ Ð¿Ð¸ÑÑŒÐ¼Ð¾",
     },
     supportedFallbacks: {
       templateId: "uuid",
-      shortcut: "DE письмо",
+      shortcut: "DE Ð¿Ð¸ÑÑŒÐ¼Ð¾",
       legacyShortcut: "11-341",
       naturalInput:
-        "учил немецкий 25 минут, писал коммерческое письмо от руки",
+        "ÑƒÑ‡Ð¸Ð» Ð½ÐµÐ¼ÐµÑ†ÐºÐ¸Ð¹ 25 Ð¼Ð¸Ð½ÑƒÑ‚, Ð¿Ð¸ÑÐ°Ð» ÐºÐ¾Ð¼Ð¼ÐµÑ€Ñ‡ÐµÑÐºÐ¾Ðµ Ð¿Ð¸ÑÑŒÐ¼Ð¾ Ð¾Ñ‚ Ñ€ÑƒÐºÐ¸",
     },
     note:
       "Legacy numeric codes are supported only as optional shortcuts, not as the primary UX model.",
@@ -809,7 +810,7 @@ export async function POST(request: Request) {
         primaryInputExample: {
           templateSlug: "german-marketing-handwriting-practice",
           durationMinutes: 25,
-          comment: "коммерческое письмо",
+          comment: "ÐºÐ¾Ð¼Ð¼ÐµÑ€Ñ‡ÐµÑÐºÐ¾Ðµ Ð¿Ð¸ÑÑŒÐ¼Ð¾",
         },
       },
       { status: 400 }
@@ -946,29 +947,67 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({
-    ok: true,
-    status: "recorded",
-    event: createdEvent,
-    eventLinks,
-    parser: {
-      mode: "template_first_v2",
-      resolvedBy,
-      templateId: template.id,
-      templateSlug: template.slug,
-      shortcutUsed: shortcut
-        ? {
-            shortcutType: shortcut.shortcut_type,
-            shortcutValue: shortcut.shortcut_value,
-            isDeprecatedAlias: shortcut.is_deprecated_alias,
-            showInDefaultUi: shortcut.show_in_default_ui,
-          }
-        : null,
-      durationMinutes: timing.durationMinutes,
-      aiUsed: false,
-      impactsCreated: false,
-      note:
-        "Rule-based impacts will be added in the next processor step. This step creates activity_event and event_links only.",
-    },
-  });
+  try {
+    const impactResult = await processActivityImpacts({
+      eventId: createdEvent.id,
+      userId: appUser.id,
+      activityTemplateId: createdEvent.activity_template_id,
+      activityTypeId: createdEvent.activity_type_id,
+      durationMinutes: createdEvent.duration_minutes,
+      startedAt: createdEvent.started_at,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      status: "recorded",
+      event: createdEvent,
+      eventLinks,
+      impactEvents: impactResult.impactEvents,
+      dailyAggregates: impactResult.dailyAggregates,
+      currentSnapshots: impactResult.currentSnapshots,
+      impactProcessor: {
+        ok: impactResult.ok,
+        skipped: impactResult.skipped,
+        reason: impactResult.reason,
+        counts: impactResult.counts,
+      },
+      parser: {
+        mode: "template_first_v2",
+        resolvedBy,
+        templateId: template.id,
+        templateSlug: template.slug,
+        shortcutUsed: shortcut
+          ? {
+              shortcutType: shortcut.shortcut_type,
+              shortcutValue: shortcut.shortcut_value,
+              isDeprecatedAlias: shortcut.is_deprecated_alias,
+              showInDefaultUi: shortcut.show_in_default_ui,
+            }
+          : null,
+        durationMinutes: timing.durationMinutes,
+        aiUsed: false,
+        impactsCreated: impactResult.counts.impactEvents > 0,
+        note:
+          "Rule-based impacts, daily aggregates and current snapshots were processed without AI.",
+      },
+    });
+  } catch (error) {
+    await supabase
+      .from("activity_events")
+      .update({ processing_status: "failed" })
+      .eq("id", createdEvent.id);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to process rule-based activity impacts",
+        event: createdEvent,
+        eventLinks,
+      },
+      { status: 500 }
+    );
+  }
 }
