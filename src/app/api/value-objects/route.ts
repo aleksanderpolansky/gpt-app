@@ -1,11 +1,134 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 
-async function getCurrentUserContext() {
+export const dynamic = "force-dynamic";
+
+type AppUserRow = {
+  id: string;
+  auth0_sub?: string | null;
+};
+
+type PersonRow = {
+  id: string;
+  user_id?: string | null;
+};
+
+type ActorRow = {
+  id: string;
+  person_id?: string | null;
+  actor_type?: string | null;
+};
+
+type OrganizationRow = {
+  id: string;
+  organization_name: string | null;
+  organization_type: string | null;
+  status: string | null;
+  created_by_user_id: string | null;
+};
+
+type CurrentUserContext =
+  | {
+      appUser: AppUserRow;
+      person: PersonRow;
+      personActor: ActorRow;
+      errorResponse: null;
+    }
+  | {
+      appUser: null;
+      person: null;
+      personActor: null;
+      errorResponse: NextResponse;
+    };
+
+type OrganizationAccessResult =
+  | {
+      organization: OrganizationRow;
+      errorResponse: null;
+    }
+  | {
+      organization: null;
+      errorResponse: NextResponse;
+    };
+
+type ValueObjectRequestBody = {
+  organizationId?: unknown;
+  valueType?: unknown;
+  title?: unknown;
+  description?: unknown;
+  unitType?: unknown;
+  defaultPrice?: unknown;
+  defaultCurrency?: unknown;
+  defaultDurationMinutes?: unknown;
+  isMarketplaceSellable?: unknown;
+  isFreePossible?: unknown;
+};
+
+function normalizeRequiredString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function normalizeOptionalString(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function normalizeOptionalNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+
+    if (!trimmed) {
+      return null;
+    }
+
+    const parsed = Number(trimmed);
+
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function normalizeBoolean(value: unknown): boolean {
+  return value === true;
+}
+
+async function getCurrentUserContext(): Promise<CurrentUserContext> {
   const session = await auth0.getSession();
 
-  if (!session?.user) {
+  if (!session?.user?.sub) {
     return {
       appUser: null,
       person: null,
@@ -19,17 +142,17 @@ async function getCurrentUserContext() {
 
   const { data: appUser, error: appUserError } = await supabase
     .from("app_users")
-    .select("*")
+    .select("id, auth0_sub")
     .eq("auth0_sub", session.user.sub)
     .single();
 
-  if (appUserError) {
+  if (appUserError || !appUser) {
     return {
       appUser: null,
       person: null,
       personActor: null,
       errorResponse: NextResponse.json(
-        { error: appUserError.message },
+        { error: appUserError?.message ?? "App user not found" },
         { status: 500 }
       ),
     };
@@ -37,17 +160,17 @@ async function getCurrentUserContext() {
 
   const { data: person, error: personError } = await supabase
     .from("persons")
-    .select("*")
+    .select("id, user_id")
     .eq("user_id", appUser.id)
     .single();
 
-  if (personError) {
+  if (personError || !person) {
     return {
       appUser: null,
       person: null,
       personActor: null,
       errorResponse: NextResponse.json(
-        { error: personError.message },
+        { error: personError?.message ?? "Person not found" },
         { status: 500 }
       ),
     };
@@ -55,18 +178,18 @@ async function getCurrentUserContext() {
 
   const { data: personActor, error: personActorError } = await supabase
     .from("actors")
-    .select("*")
+    .select("id, person_id, actor_type")
     .eq("person_id", person.id)
     .eq("actor_type", "person")
     .single();
 
-  if (personActorError) {
+  if (personActorError || !personActor) {
     return {
       appUser: null,
       person: null,
       personActor: null,
       errorResponse: NextResponse.json(
-        { error: personActorError.message },
+        { error: personActorError?.message ?? "Person actor not found" },
         { status: 500 }
       ),
     };
@@ -83,7 +206,7 @@ async function getCurrentUserContext() {
 async function verifyOrganizationAccess(
   appUserId: string,
   organizationId: string
-) {
+): Promise<OrganizationAccessResult> {
   const { data: organization, error: organizationError } = await supabase
     .from("organizations")
     .select("id, organization_name, organization_type, status, created_by_user_id")
@@ -112,13 +235,6 @@ export async function GET() {
 
   if (errorResponse) {
     return errorResponse;
-  }
-
-  if (!personActor) {
-    return NextResponse.json(
-      { error: "User context not found" },
-      { status: 500 }
-    );
   }
 
   const { data: valueObjects, error: valueObjectsError } = await supabase
@@ -157,28 +273,29 @@ export async function POST(request: Request) {
     return errorResponse;
   }
 
-  if (!appUser || !personActor) {
+  let body: ValueObjectRequestBody;
+
+  try {
+    body = (await request.json()) as ValueObjectRequestBody;
+  } catch {
     return NextResponse.json(
-      { error: "User context not found" },
-      { status: 500 }
+      { error: "Invalid JSON body" },
+      { status: 400 }
     );
   }
 
-  const body = await request.json();
-
-  const organizationId = body.organizationId;
-  const valueType = body.valueType;
-  const title = body.title;
-  const description = body.description ?? null;
-  const unitType = body.unitType ?? null;
-  const defaultPrice = body.defaultPrice === "" ? null : body.defaultPrice ?? null;
-  const defaultCurrency = body.defaultCurrency ?? null;
-  const defaultDurationMinutes =
-    body.defaultDurationMinutes === ""
-      ? null
-      : body.defaultDurationMinutes ?? null;
-  const isMarketplaceSellable = body.isMarketplaceSellable ?? false;
-  const isFreePossible = body.isFreePossible ?? false;
+  const organizationId = normalizeRequiredString(body.organizationId);
+  const valueType = normalizeRequiredString(body.valueType);
+  const title = normalizeRequiredString(body.title);
+  const description = normalizeOptionalString(body.description);
+  const unitType = normalizeOptionalString(body.unitType);
+  const defaultPrice = normalizeOptionalNumber(body.defaultPrice);
+  const defaultCurrency = normalizeOptionalString(body.defaultCurrency);
+  const defaultDurationMinutes = normalizeOptionalNumber(
+    body.defaultDurationMinutes
+  );
+  const isMarketplaceSellable = normalizeBoolean(body.isMarketplaceSellable);
+  const isFreePossible = normalizeBoolean(body.isFreePossible);
 
   if (!organizationId || !valueType || !title) {
     return NextResponse.json(
@@ -192,13 +309,6 @@ export async function POST(request: Request) {
 
   if (organizationAccessErrorResponse) {
     return organizationAccessErrorResponse;
-  }
-
-  if (!organization) {
-    return NextResponse.json(
-      { error: "Organization context not found" },
-      { status: 500 }
-    );
   }
 
   const { data: valueObject, error: valueObjectError } = await supabase
