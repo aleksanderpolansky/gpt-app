@@ -270,6 +270,7 @@ const ALLOWED_REQUEST_SOURCES = new Set([
   "directory_category_picker",
   "organization_profile",
   "organization_onboarding",
+  "organization_category_change",
   "offer_form",
   "admin_panel",
   "api",

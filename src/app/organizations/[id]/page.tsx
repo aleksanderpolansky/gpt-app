@@ -963,7 +963,7 @@ export default async function OrganizationDetailsPage({
                     successTitle="Category change request sent."
                     entityType="organization"
                     entityId={organization.id}
-                    requestSource="api"
+                    requestSource="organization_category_change"
                     locale="en"
                     contextCode="business_directory"
                     initialText={organization.description ?? ""}
