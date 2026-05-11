@@ -4,8 +4,8 @@ import {
   ACTIVITY_RECORDING_ENABLED,
 } from "../../../../../lib/activity/activityRecordingConfig";
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
-import { supabase } from "../../../../../lib/supabase";
 import { processActivityImpacts } from "../../../../../lib/activity/activityImpactProcessor";
+import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -304,9 +304,7 @@ function resolveTiming(params: {
       };
     }
 
-    const endedDate = new Date(
-      startedDate.getTime() + durationMinutes * 60000
-    );
+    const endedDate = new Date(startedDate.getTime() + durationMinutes * 60000);
 
     return {
       startedAt: startedDate.toISOString(),
@@ -334,9 +332,7 @@ function resolveTiming(params: {
       };
     }
 
-    const startedDate = new Date(
-      endedDate.getTime() - durationMinutes * 60000
-    );
+    const startedDate = new Date(endedDate.getTime() - durationMinutes * 60000);
 
     return {
       startedAt: startedDate.toISOString(),
@@ -376,7 +372,10 @@ function hasTemplateAccess(template: ActivityTemplateRow, appUserId: string) {
     return template.owner_user_id === appUserId;
   }
 
-  if (template.visibility === "public_template" || template.visibility === "public") {
+  if (
+    template.visibility === "public_template" ||
+    template.visibility === "public"
+  ) {
     return true;
   }
 
@@ -453,7 +452,9 @@ async function getShortcut(shortcutValue: string, appUserId: string) {
 
   const shortcuts = (data ?? []) as ActivityShortcutRow[];
 
-  const userShortcut = shortcuts.find((shortcut) => shortcut.user_id === appUserId);
+  const userShortcut = shortcuts.find(
+    (shortcut) => shortcut.user_id === appUserId
+  );
 
   return userShortcut ?? shortcuts[0] ?? null;
 }
@@ -683,14 +684,14 @@ export async function GET() {
     primaryInputExample: {
       templateSlug: "german-marketing-handwriting-practice",
       durationMinutes: 25,
-      comment: "ÐºÐ¾Ð¼Ð¼ÐµÑ€Ñ‡ÐµÑÐºÐ¾Ðµ Ð¿Ð¸ÑÑŒÐ¼Ð¾",
+      comment: "commercial letter handwriting practice",
     },
     supportedFallbacks: {
       templateId: "uuid",
-      shortcut: "DE Ð¿Ð¸ÑÑŒÐ¼Ð¾",
+      shortcut: "DE writing",
       legacyShortcut: "11-341",
       naturalInput:
-        "ÑƒÑ‡Ð¸Ð» Ð½ÐµÐ¼ÐµÑ†ÐºÐ¸Ð¹ 25 Ð¼Ð¸Ð½ÑƒÑ‚, Ð¿Ð¸ÑÐ°Ð» ÐºÐ¾Ð¼Ð¼ÐµÑ€Ñ‡ÐµÑÐºÐ¾Ðµ Ð¿Ð¸ÑÑŒÐ¼Ð¾ Ð¾Ñ‚ Ñ€ÑƒÐºÐ¸",
+        "I studied German for 25 minutes and wrote a commercial letter by hand.",
     },
     note:
       "Legacy numeric codes are supported only as optional shortcuts, not as the primary UX model.",
@@ -810,7 +811,7 @@ export async function POST(request: Request) {
         primaryInputExample: {
           templateSlug: "german-marketing-handwriting-practice",
           durationMinutes: 25,
-          comment: "ÐºÐ¾Ð¼Ð¼ÐµÑ€Ñ‡ÐµÑÐºÐ¾Ðµ Ð¿Ð¸ÑÑŒÐ¼Ð¾",
+          comment: "commercial letter handwriting practice",
         },
       },
       { status: 400 }
