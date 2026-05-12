@@ -48,6 +48,16 @@ function parseOptionalString(
   return trimmed ? trimmed : null;
 }
 
+function parseBooleanFlag(searchParams: URLSearchParams, key: string): boolean {
+  const value = searchParams.get(key);
+
+  if (!value) {
+    return false;
+  }
+
+  return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
+}
+
 function parseDateRange(searchParams: URLSearchParams): DateRange | null {
   const date = searchParams.get("date");
 
@@ -166,11 +176,9 @@ function normalizeImpactEvent(row: Row) {
     id: asString(row.id),
     eventId: asString(row.event_id),
     targetType:
-      asString(row.impact_target_type) ??
-      asString(row.target_type),
+      asString(row.impact_target_type) ?? asString(row.target_type),
     targetKey:
-      asString(row.impact_target_key) ??
-      asString(row.target_key),
+      asString(row.impact_target_key) ?? asString(row.target_key),
     metric:
       asString(row.impact_metric) ??
       asString(row.metric) ??
@@ -180,15 +188,13 @@ function normalizeImpactEvent(row: Row) {
       asNumber(row.value_numeric) ??
       asNumber(row.value_numeric_delta),
     valueText:
-      asString(row.impact_value_text) ??
-      asString(row.value_text),
+      asString(row.impact_value_text) ?? asString(row.value_text),
     unit:
       asString(row.impact_unit) ??
       asString(row.unit) ??
       asString(row.metric_unit),
     direction:
-      asString(row.impact_direction) ??
-      asString(row.direction),
+      asString(row.impact_direction) ?? asString(row.direction),
     intensity: asString(row.intensity),
     source: asString(row.source),
     confidence: asNumber(row.confidence),
@@ -276,6 +282,7 @@ export async function GET(request: Request) {
   const sourceType = parseOptionalString(url.searchParams, "sourceType");
   const templateId = parseOptionalString(url.searchParams, "templateId");
   const dateRange = parseDateRange(url.searchParams);
+  const includeDetails = parseBooleanFlag(url.searchParams, "includeDetails");
 
   let eventsQuery = supabase
     .from("activity_events")
@@ -317,34 +324,30 @@ export async function GET(request: Request) {
   const eventRows = (eventRowsRaw ?? []) as Row[];
   const eventIds = uniqueStrings(eventRows.map((event) => asString(event.id)));
 
+  const filters = {
+    status,
+    sourceType,
+    templateId,
+    date: url.searchParams.get("date"),
+    includeDetails,
+  };
+
   if (eventIds.length === 0) {
     return NextResponse.json({
       ok: true,
       limit,
-      filters: {
-        status,
-        sourceType,
-        templateId,
-        date: url.searchParams.get("date"),
-      },
+      filters,
       count: 0,
       events: [],
     });
   }
 
-  const activityTemplateIds = uniqueStrings(
-    eventRows.map((event) => asString(event.activity_template_id))
-  );
-  const legacyTemplateIds = uniqueStrings(
-    eventRows.map((event) => asString(event.template_id))
-  );
-  const activityTypeIds = uniqueStrings(
-    eventRows.map((event) => asString(event.activity_type_id))
-  );
+  const eventLinkSelect = includeDetails ? "*" : "id,event_id";
+  const impactEventSelect = includeDetails ? "*" : "id,event_id";
 
   const { data: eventLinkRowsRaw, error: eventLinksError } = await supabase
     .from("event_links")
-    .select("*")
+    .select(eventLinkSelect)
     .in("event_id", eventIds);
 
   if (eventLinksError) {
@@ -359,7 +362,7 @@ export async function GET(request: Request) {
 
   const { data: impactEventRowsRaw, error: impactEventsError } = await supabase
     .from("impact_events")
-    .select("*")
+    .select(impactEventSelect)
     .in("event_id", eventIds);
 
   if (impactEventsError) {
@@ -371,6 +374,67 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
+
+  const eventLinkRows = (eventLinkRowsRaw ?? []) as Row[];
+  const impactEventRows = (impactEventRowsRaw ?? []) as Row[];
+
+  const linksByEventId = groupByEventId(eventLinkRows);
+  const impactsByEventId = groupByEventId(impactEventRows);
+
+  if (!includeDetails) {
+    const events = eventRows.map((event) => {
+      const eventId = asString(event.id);
+      const source = asString(event.source) ?? asString(event.source_type);
+
+      return {
+        id: eventId,
+        title: asString(event.title),
+        status: asString(event.status),
+        source,
+        sourceType: source,
+        privacyScope: asString(event.privacy_scope),
+        processingStatus: asString(event.processing_status),
+        startedAt: asString(event.started_at),
+        endedAt: asString(event.ended_at),
+        durationMinutes:
+          asNumber(event.duration_minutes) ?? asNumber(event.durationMinutes),
+        comment:
+          asString(event.description) ??
+          asString(event.comment) ??
+          asString(event.input_text),
+        activityTypeId: asString(event.activity_type_id),
+        activityTemplateId: asString(event.activity_template_id),
+        legacyTemplateId: asString(event.template_id),
+        createdAt: asString(event.created_at),
+        updatedAt: asString(event.updated_at),
+        eventLinksCount: eventId
+          ? linksByEventId.get(eventId)?.length ?? 0
+          : 0,
+        impactEventsCount: eventId
+          ? impactsByEventId.get(eventId)?.length ?? 0
+          : 0,
+      };
+    });
+
+    return NextResponse.json({
+      ok: true,
+      mode: "summary",
+      limit,
+      filters,
+      count: events.length,
+      events,
+    });
+  }
+
+  const activityTemplateIds = uniqueStrings(
+    eventRows.map((event) => asString(event.activity_template_id))
+  );
+  const legacyTemplateIds = uniqueStrings(
+    eventRows.map((event) => asString(event.template_id))
+  );
+  const activityTypeIds = uniqueStrings(
+    eventRows.map((event) => asString(event.activity_type_id))
+  );
 
   const activityTemplateRows: Row[] = [];
 
@@ -435,8 +499,6 @@ export async function GET(request: Request) {
     activityTypeRows.push(...((data ?? []) as Row[]));
   }
 
-  const linksByEventId = groupByEventId((eventLinkRowsRaw ?? []) as Row[]);
-  const impactsByEventId = groupByEventId((impactEventRowsRaw ?? []) as Row[]);
   const activityTemplatesById = indexById(activityTemplateRows);
   const legacyTemplatesById = indexById(legacyTemplateRows);
   const activityTypesById = indexById(activityTypeRows);
@@ -473,6 +535,9 @@ export async function GET(request: Request) {
         asString(event.description) ??
         asString(event.comment) ??
         asString(event.input_text),
+      activityTypeId,
+      activityTemplateId,
+      legacyTemplateId,
       createdAt: asString(event.created_at),
       updatedAt: asString(event.updated_at),
       activityTemplate: normalizeActivityTemplate(
@@ -498,13 +563,9 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: true,
+    mode: "details",
     limit,
-    filters: {
-      status,
-      sourceType,
-      templateId,
-      date: url.searchParams.get("date"),
-    },
+    filters,
     count: events.length,
     events,
   });
