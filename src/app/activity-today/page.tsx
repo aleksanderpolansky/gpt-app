@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+const DEFAULT_TIMEZONE = "Europe/Warsaw";
+
 type DaySummaryEvent = {
   id: string;
   title: string | null;
@@ -53,13 +55,17 @@ type DaySummaryResponse = {
   ok: boolean;
   error?: string;
   date?: string;
+  timezone?: string;
   timezoneMode?: string;
   dayRange?: {
     from: string;
     to: string;
+    timezone?: string;
+    localDate?: string;
   };
   filters?: {
     limit: number;
+    timezone?: string;
   };
   summary?: {
     events: {
@@ -90,8 +96,23 @@ type DaySummaryResponse = {
   note?: string;
 };
 
-function getTodayUtcDate() {
-  return new Date().toISOString().slice(0, 10);
+function getTodayDateForTimezone(timezone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  if (!year || !month || !day) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  return `${year}-${month}-${day}`;
 }
 
 function formatDateTime(value: string | null | undefined) {
@@ -105,10 +126,15 @@ function formatDateTime(value: string | null | undefined) {
     return value;
   }
 
-  return date.toLocaleString();
+  return date.toLocaleString(undefined, {
+    timeZone: DEFAULT_TIMEZONE,
+  });
 }
 
-function formatMetricValue(value: number | null | undefined, unit: string | null | undefined) {
+function formatMetricValue(
+  value: number | null | undefined,
+  unit: string | null | undefined
+) {
   if (value === null || value === undefined) {
     return "—";
   }
@@ -157,7 +183,7 @@ function StatCard({
 }
 
 export default function ActivityTodayPage() {
-  const [date, setDate] = useState(getTodayUtcDate());
+  const [date, setDate] = useState(getTodayDateForTimezone(DEFAULT_TIMEZONE));
   const [summary, setSummary] = useState<DaySummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -197,7 +223,9 @@ export default function ActivityTodayPage() {
 
     try {
       const response = await fetch(
-        `/api/activity/day-summary?date=${encodeURIComponent(targetDate)}&limit=20`,
+        `/api/activity/day-summary?date=${encodeURIComponent(
+          targetDate
+        )}&timezone=${encodeURIComponent(DEFAULT_TIMEZONE)}&limit=20`,
         {
           method: "GET",
           headers: {
@@ -232,6 +260,8 @@ export default function ActivityTodayPage() {
   const eventSummary = summary?.summary?.events;
   const aggregateSummary = summary?.summary?.dailyAggregates;
   const snapshotSummary = summary?.summary?.currentSnapshots;
+  const activeTimezone = summary?.timezone ?? DEFAULT_TIMEZONE;
+  const timezoneMode = summary?.timezoneMode ?? "local";
 
   return (
     <main className="min-h-screen bg-zinc-950 px-5 py-6 text-zinc-100 md:px-8">
@@ -250,9 +280,14 @@ export default function ActivityTodayPage() {
                 events, aggregates, current snapshots and raw response data.
               </p>
               <p className="mt-2 text-xs text-zinc-600">
-                Current date mode: UTC. Local user timezone support can be added
-                later for production daily reports.
+                Current date mode: {activeTimezone} local day. API timezone
+                mode: {timezoneMode}.
               </p>
+              {summary?.dayRange ? (
+                <p className="mt-2 text-xs text-zinc-700">
+                  UTC range: {summary.dayRange.from} → {summary.dayRange.to}
+                </p>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap gap-2 text-sm">
@@ -264,7 +299,9 @@ export default function ActivityTodayPage() {
               </Link>
               <Link
                 className="rounded-full border border-zinc-700 px-4 py-2 text-zinc-200 hover:border-emerald-500 hover:text-emerald-300"
-                href={`/api/activity/day-summary?date=${date}`}
+                href={`/api/activity/day-summary?date=${encodeURIComponent(
+                  date
+                )}&timezone=${encodeURIComponent(DEFAULT_TIMEZONE)}`}
                 target="_blank"
               >
                 Day Summary API
@@ -287,7 +324,7 @@ export default function ActivityTodayPage() {
                 className="mb-2 block text-xs uppercase tracking-[0.22em] text-zinc-500"
                 htmlFor="summary-date"
               >
-                Summary date
+                Summary date ({DEFAULT_TIMEZONE})
               </label>
               <input
                 className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
@@ -311,13 +348,13 @@ export default function ActivityTodayPage() {
               className="rounded-2xl border border-zinc-700 px-5 py-3 text-sm font-semibold text-zinc-200 hover:border-emerald-500 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={loading}
               onClick={() => {
-                const today = getTodayUtcDate();
+                const today = getTodayDateForTimezone(DEFAULT_TIMEZONE);
                 setDate(today);
                 void loadSummary(today);
               }}
               type="button"
             >
-              Today UTC
+              Today Warsaw
             </button>
           </div>
 
@@ -332,7 +369,7 @@ export default function ActivityTodayPage() {
           <StatCard
             label="Total events"
             value={eventSummary?.totalEvents ?? "—"}
-            hint="Events anchored to selected UTC day"
+            hint={`Events anchored to selected ${DEFAULT_TIMEZONE} day`}
           />
           <StatCard
             label="Completed"
@@ -451,7 +488,7 @@ export default function ActivityTodayPage() {
           <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
             <h2 className="text-lg font-semibold text-white">Latest events</h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Most recent events for the selected UTC day.
+              Most recent events for the selected {DEFAULT_TIMEZONE} day.
             </p>
 
             <div className="mt-4 grid gap-3">
