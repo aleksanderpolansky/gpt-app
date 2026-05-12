@@ -187,6 +187,7 @@ export default function ActivityTodayPage() {
   const [summary, setSummary] = useState<DaySummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showRawSummary, setShowRawSummary] = useState(false);
 
   const dailyAggregates = summary?.dailyAggregates ?? [];
   const currentSnapshots = summary?.currentSnapshots ?? [];
@@ -277,7 +278,8 @@ export default function ActivityTodayPage() {
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
                 Dev dashboard based on the day-summary API. It shows daily
-                events, aggregates, current snapshots and raw response data.
+                events, aggregates and current snapshots. Raw response data is
+                available in the debug section below.
               </p>
               <p className="mt-2 text-xs text-zinc-600">
                 Current date mode: {activeTimezone} local day. API timezone
@@ -612,14 +614,33 @@ export default function ActivityTodayPage() {
         </section>
 
         <section className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
-          <h2 className="text-lg font-semibold text-white">
-            Raw day-summary response
-          </h2>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-white">
+                Debug: raw day-summary response
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                Hidden by default to keep the panel lightweight. Open only when
+                debugging API shape, timezone ranges or aggregate rows.
+              </p>
+            </div>
+
+            <button
+              className="rounded-full border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:border-emerald-500 hover:text-emerald-300"
+              onClick={() => setShowRawSummary((current) => !current)}
+              type="button"
+            >
+              {showRawSummary ? "Hide debug JSON" : "Show debug JSON"}
+            </button>
+          </div>
+
           <div className="mt-4">
-            {summary ? (
+            {showRawSummary && summary ? (
               <JsonBlock value={summary} />
-            ) : (
+            ) : showRawSummary ? (
               <EmptyState text="No raw response loaded yet." />
+            ) : (
+              <EmptyState text="Raw JSON is hidden. Use the debug button to inspect the full day-summary response." />
             )}
           </div>
         </section>
