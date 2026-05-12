@@ -1,5 +1,7 @@
 ﻿import { supabase } from "../supabase";
 
+const DEFAULT_AGGREGATE_TIMEZONE = "Europe/Warsaw";
+
 type ImpactRuleRow = {
   id: string;
   template_id: string | null;
@@ -47,6 +49,7 @@ export type ProcessActivityImpactsInput = {
   activityTypeId?: string | null;
   durationMinutes?: number | null;
   startedAt?: string | null;
+  timezone?: string | null;
 };
 
 export type ProcessActivityImpactsResult = {
@@ -97,6 +100,44 @@ function asNumber(value: unknown): number | null {
   }
 
   return null;
+}
+
+function isValidTimeZone(timezone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resolveImpactTimezone(timezone?: string | null) {
+  const trimmedTimezone = timezone?.trim();
+
+  if (trimmedTimezone && isValidTimeZone(trimmedTimezone)) {
+    return trimmedTimezone;
+  }
+
+  return DEFAULT_AGGREGATE_TIMEZONE;
+}
+
+function getDatePartsInTimezone(date: Date, timezone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  if (!year || !month || !day) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  return `${year}-${month}-${day}`;
 }
 
 function uniqueImpactRules(rules: ImpactRuleRow[]) {
@@ -206,8 +247,9 @@ function buildImpactEventRows(params: {
   eventId: string;
   impactRules: ImpactRuleRow[];
   durationMinutes: number | null;
+  aggregateTimezone: string;
 }) {
-  const { eventId, impactRules, durationMinutes } = params;
+  const { eventId, impactRules, durationMinutes, aggregateTimezone } = params;
 
   return impactRules.map((rule): ImpactEventInsertRow => {
     const { impactValueNumeric, impactValueText } = calculateImpactValue({
@@ -231,6 +273,7 @@ function buildImpactEventRows(params: {
       metadata_json: {
         processor: "activityImpactProcessor.v1",
         processor_update_mode: "atomic_rpc",
+        aggregate_timezone: aggregateTimezone,
         rule_code: rule.rule_code,
         rule_title: rule.title,
         impact_value_mode: rule.impact_value_mode,
@@ -242,12 +285,21 @@ function buildImpactEventRows(params: {
   });
 }
 
-function resolveAggregateDate(startedAt?: string | null) {
+function resolveAggregateDate(params: {
+  startedAt?: string | null;
+  timezone: string;
+}) {
+  const { startedAt, timezone } = params;
+
   if (startedAt) {
-    return startedAt.slice(0, 10);
+    const startedAtDate = new Date(startedAt);
+
+    if (!Number.isNaN(startedAtDate.getTime())) {
+      return getDatePartsInTimezone(startedAtDate, timezone);
+    }
   }
 
-  return new Date().toISOString().slice(0, 10);
+  return getDatePartsInTimezone(new Date(), timezone);
 }
 
 function resolveAggregateDelta(params: {
@@ -280,6 +332,7 @@ async function updateDailyAggregate(params: {
   userId: string;
   eventId: string;
   aggregateDate: string;
+  aggregateTimezone: string;
   aggregateType: string;
   aggregateKey: string;
   metricKey: string;
@@ -290,6 +343,7 @@ async function updateDailyAggregate(params: {
     userId,
     eventId,
     aggregateDate,
+    aggregateTimezone,
     aggregateType,
     aggregateKey,
     metricKey,
@@ -310,6 +364,7 @@ async function updateDailyAggregate(params: {
     p_metadata_json: {
       processor: "activityImpactProcessor.v1",
       processor_update_mode: "atomic_rpc",
+      aggregate_timezone: aggregateTimezone,
     },
   });
 
@@ -367,10 +422,18 @@ async function updateDerivedMetrics(params: {
   userId: string;
   eventId: string;
   aggregateDate: string;
+  aggregateTimezone: string;
   impactRules: ImpactRuleRow[];
   impactRows: ImpactEventInsertRow[];
 }) {
-  const { userId, eventId, aggregateDate, impactRules, impactRows } = params;
+  const {
+    userId,
+    eventId,
+    aggregateDate,
+    aggregateTimezone,
+    impactRules,
+    impactRows,
+  } = params;
 
   const dailyAggregates: unknown[] = [];
   const currentSnapshots: unknown[] = [];
@@ -401,6 +464,7 @@ async function updateDerivedMetrics(params: {
         userId,
         eventId,
         aggregateDate,
+        aggregateTimezone,
         aggregateType: dailyAggregateType,
         aggregateKey: dailyAggregateKey,
         metricKey: dailyMetricKey,
@@ -441,8 +505,10 @@ export async function processActivityImpacts(
     activityTypeId = null,
     durationMinutes = null,
     startedAt = null,
+    timezone = null,
   } = input;
 
+  const aggregateTimezone = resolveImpactTimezone(timezone);
   const existingImpactEventsCount = await getExistingImpactEventsCount(eventId);
 
   if (existingImpactEventsCount > 0) {
@@ -488,6 +554,7 @@ export async function processActivityImpacts(
     eventId,
     impactRules,
     durationMinutes,
+    aggregateTimezone,
   });
 
   const { data: impactEvents, error: impactEventsError } =
@@ -499,12 +566,16 @@ export async function processActivityImpacts(
     throw new Error(impactEventsError.message);
   }
 
-  const aggregateDate = resolveAggregateDate(startedAt);
+  const aggregateDate = resolveAggregateDate({
+    startedAt,
+    timezone: aggregateTimezone,
+  });
 
   const { dailyAggregates, currentSnapshots } = await updateDerivedMetrics({
     userId,
     eventId,
     aggregateDate,
+    aggregateTimezone,
     impactRules,
     impactRows,
   });
