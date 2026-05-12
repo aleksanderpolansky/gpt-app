@@ -106,6 +106,28 @@ function valuesDiffer(left: unknown, right: unknown) {
   return String(left ?? "") !== String(right ?? "");
 }
 
+function dateValuesDiffer(left: string | null, right: string | null) {
+  if (!left && !right) {
+    return false;
+  }
+
+  if (!left || !right) {
+    return true;
+  }
+
+  const leftDate = new Date(left);
+  const rightDate = new Date(right);
+
+  if (
+    Number.isNaN(leftDate.getTime()) ||
+    Number.isNaN(rightDate.getTime())
+  ) {
+    return valuesDiffer(left, right);
+  }
+
+  return leftDate.getTime() !== rightDate.getTime();
+}
+
 function normalizeIsoDate(value: string | null) {
   if (!value) {
     return null;
@@ -226,8 +248,8 @@ function resolveCorrectionTiming(params: {
         endedAt: recalculatedEndedAt,
         durationMinutes: patchedDuration,
         timingChanged:
-          valuesDiffer(startedAt, event.started_at) ||
-          valuesDiffer(recalculatedEndedAt, event.ended_at),
+          dateValuesDiffer(startedAt, event.started_at) ||
+          dateValuesDiffer(recalculatedEndedAt, event.ended_at),
         durationChanged: valuesDiffer(patchedDuration, event.duration_minutes),
       };
     }
@@ -244,8 +266,8 @@ function resolveCorrectionTiming(params: {
         endedAt,
         durationMinutes: patchedDuration,
         timingChanged:
-          valuesDiffer(recalculatedStartedAt, event.started_at) ||
-          valuesDiffer(endedAt, event.ended_at),
+          dateValuesDiffer(recalculatedStartedAt, event.started_at) ||
+          dateValuesDiffer(endedAt, event.ended_at),
         durationChanged: valuesDiffer(patchedDuration, event.duration_minutes),
       };
     }
@@ -272,8 +294,8 @@ function resolveCorrectionTiming(params: {
       endedAt,
       durationMinutes: calculatedDurationMinutes,
       timingChanged:
-        valuesDiffer(startedAt, event.started_at) ||
-        valuesDiffer(endedAt, event.ended_at),
+        dateValuesDiffer(startedAt, event.started_at) ||
+        dateValuesDiffer(endedAt, event.ended_at),
       durationChanged: valuesDiffer(
         calculatedDurationMinutes,
         event.duration_minutes
@@ -287,8 +309,8 @@ function resolveCorrectionTiming(params: {
     endedAt,
     durationMinutes: patchedDuration,
     timingChanged:
-      valuesDiffer(startedAt, event.started_at) ||
-      valuesDiffer(endedAt, event.ended_at),
+      dateValuesDiffer(startedAt, event.started_at) ||
+      dateValuesDiffer(endedAt, event.ended_at),
     durationChanged: valuesDiffer(patchedDuration, event.duration_minutes),
   };
 }
@@ -544,14 +566,14 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   if (
     timing.timingChanged &&
-    valuesDiffer(timing.startedAt, previousEvent.started_at)
+    dateValuesDiffer(timing.startedAt, previousEvent.started_at)
   ) {
     changedFields.push("started_at");
   }
 
   if (
     timing.timingChanged &&
-    valuesDiffer(timing.endedAt, previousEvent.ended_at)
+    dateValuesDiffer(timing.endedAt, previousEvent.ended_at)
   ) {
     changedFields.push("ended_at");
   }
