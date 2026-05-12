@@ -75,6 +75,14 @@ function parseDateRange(searchParams: URLSearchParams): DateRange | null {
   };
 }
 
+function toRows(value: unknown): Row[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value as Row[];
+}
+
 function asString(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
@@ -175,10 +183,8 @@ function normalizeImpactEvent(row: Row) {
   return {
     id: asString(row.id),
     eventId: asString(row.event_id),
-    targetType:
-      asString(row.impact_target_type) ?? asString(row.target_type),
-    targetKey:
-      asString(row.impact_target_key) ?? asString(row.target_key),
+    targetType: asString(row.impact_target_type) ?? asString(row.target_type),
+    targetKey: asString(row.impact_target_key) ?? asString(row.target_key),
     metric:
       asString(row.impact_metric) ??
       asString(row.metric) ??
@@ -187,14 +193,12 @@ function normalizeImpactEvent(row: Row) {
       asNumber(row.impact_value_numeric) ??
       asNumber(row.value_numeric) ??
       asNumber(row.value_numeric_delta),
-    valueText:
-      asString(row.impact_value_text) ?? asString(row.value_text),
+    valueText: asString(row.impact_value_text) ?? asString(row.value_text),
     unit:
       asString(row.impact_unit) ??
       asString(row.unit) ??
       asString(row.metric_unit),
-    direction:
-      asString(row.impact_direction) ?? asString(row.direction),
+    direction: asString(row.impact_direction) ?? asString(row.direction),
     intensity: asString(row.intensity),
     source: asString(row.source),
     confidence: asNumber(row.confidence),
@@ -284,6 +288,8 @@ export async function GET(request: Request) {
   const dateRange = parseDateRange(url.searchParams);
   const includeDetails = parseBooleanFlag(url.searchParams, "includeDetails");
 
+  const mode = includeDetails ? "details" : "summary";
+
   let eventsQuery = supabase
     .from("activity_events")
     .select("*")
@@ -321,7 +327,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const eventRows = (eventRowsRaw ?? []) as Row[];
+  const eventRows = toRows(eventRowsRaw);
   const eventIds = uniqueStrings(eventRows.map((event) => asString(event.id)));
 
   const filters = {
@@ -335,6 +341,7 @@ export async function GET(request: Request) {
   if (eventIds.length === 0) {
     return NextResponse.json({
       ok: true,
+      mode,
       limit,
       filters,
       count: 0,
@@ -375,8 +382,8 @@ export async function GET(request: Request) {
     );
   }
 
-  const eventLinkRows = (eventLinkRowsRaw ?? []) as Row[];
-  const impactEventRows = (impactEventRowsRaw ?? []) as Row[];
+  const eventLinkRows = toRows(eventLinkRowsRaw);
+  const impactEventRows = toRows(impactEventRowsRaw);
 
   const linksByEventId = groupByEventId(eventLinkRows);
   const impactsByEventId = groupByEventId(impactEventRows);
@@ -454,7 +461,7 @@ export async function GET(request: Request) {
       );
     }
 
-    activityTemplateRows.push(...((data ?? []) as Row[]));
+    activityTemplateRows.push(...toRows(data));
   }
 
   const legacyTemplateRows: Row[] = [];
@@ -475,7 +482,7 @@ export async function GET(request: Request) {
       );
     }
 
-    legacyTemplateRows.push(...((data ?? []) as Row[]));
+    legacyTemplateRows.push(...toRows(data));
   }
 
   const activityTypeRows: Row[] = [];
@@ -496,7 +503,7 @@ export async function GET(request: Request) {
       );
     }
 
-    activityTypeRows.push(...((data ?? []) as Row[]));
+    activityTypeRows.push(...toRows(data));
   }
 
   const activityTemplatesById = indexById(activityTemplateRows);
