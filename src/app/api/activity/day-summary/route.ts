@@ -10,6 +10,8 @@ import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
+const DEFAULT_TIMEZONE = "Europe/Warsaw";
+
 type ActivityEventRow = {
   id: string;
   user_id: string;
@@ -78,6 +80,13 @@ type NumericTotalMap = Record<
   }
 >;
 
+type DayRange = {
+  from: string;
+  to: string;
+  timezone: string;
+  localDate: string;
+};
+
 function asString(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
@@ -121,24 +130,134 @@ function parseLimit(searchParams: URLSearchParams): number {
   return Math.min(parsedLimit, ACTIVITY_RECORDING_MAX_LIMIT);
 }
 
-function resolveDate(searchParams: URLSearchParams): string {
+function isValidDateString(value: string | null): value is string {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+function isValidTimeZone(timezone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resolveTimezone(searchParams: URLSearchParams): string {
+  const rawTimezone = searchParams.get("timezone");
+  const timezone = rawTimezone?.trim() || DEFAULT_TIMEZONE;
+
+  if (!isValidTimeZone(timezone)) {
+    return DEFAULT_TIMEZONE;
+  }
+
+  return timezone;
+}
+
+function getDatePartsInTimezone(date: Date, timezone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  if (!year || !month || !day) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  return `${year}-${month}-${day}`;
+}
+
+function resolveDate(searchParams: URLSearchParams, timezone: string): string {
   const rawDate = searchParams.get("date");
 
-  if (rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+  if (isValidDateString(rawDate)) {
     return rawDate;
   }
 
-  return new Date().toISOString().slice(0, 10);
+  return getDatePartsInTimezone(new Date(), timezone);
 }
 
-function buildUtcDayRange(date: string) {
-  const from = `${date}T00:00:00.000Z`;
-  const toDate = new Date(from);
-  toDate.setUTCDate(toDate.getUTCDate() + 1);
+function getTimezoneOffsetMs(date: Date, timezone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(date);
+
+  const values: Record<string, string> = {};
+
+  for (const part of parts) {
+    if (part.type !== "literal") {
+      values[part.type] = part.value;
+    }
+  }
+
+  const asUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second)
+  );
+
+  return asUtc - date.getTime();
+}
+
+function localDateTimeToUtcIso(
+  date: string,
+  timezone: string,
+  hour: number,
+  minute: number,
+  second: number,
+  millisecond: number
+): string {
+  const [year, month, day] = date.split("-").map((part) => Number(part));
+  const utcGuess = Date.UTC(
+    year,
+    month - 1,
+    day,
+    hour,
+    minute,
+    second,
+    millisecond
+  );
+
+  const firstOffset = getTimezoneOffsetMs(new Date(utcGuess), timezone);
+  const firstUtc = utcGuess - firstOffset;
+  const secondOffset = getTimezoneOffsetMs(new Date(firstUtc), timezone);
+  const finalUtc = utcGuess - secondOffset;
+
+  return new Date(finalUtc).toISOString();
+}
+
+function addDaysToDateString(date: string, days: number): string {
+  const [year, month, day] = date.split("-").map((part) => Number(part));
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  utcDate.setUTCDate(utcDate.getUTCDate() + days);
+
+  return utcDate.toISOString().slice(0, 10);
+}
+
+function buildLocalDayRange(date: string, timezone: string): DayRange {
+  const nextDate = addDaysToDateString(date, 1);
 
   return {
-    from,
-    to: toDate.toISOString(),
+    from: localDateTimeToUtcIso(date, timezone, 0, 0, 0, 0),
+    to: localDateTimeToUtcIso(nextDate, timezone, 0, 0, 0, 0),
+    timezone,
+    localDate: date,
   };
 }
 
@@ -303,9 +422,10 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const date = resolveDate(url.searchParams);
+  const timezone = resolveTimezone(url.searchParams);
+  const date = resolveDate(url.searchParams, timezone);
   const limit = parseLimit(url.searchParams);
-  const dayRange = buildUtcDayRange(date);
+  const dayRange = buildLocalDayRange(date, timezone);
 
   const { data: rawEvents, error: eventsError } = await supabase
     .from("activity_events")
@@ -390,10 +510,12 @@ export async function GET(request: Request) {
   return NextResponse.json({
     ok: true,
     date,
-    timezoneMode: "UTC",
+    timezone,
+    timezoneMode: "local",
     dayRange,
     filters: {
       limit,
+      timezone,
     },
     summary: {
       events: summarizeEvents(dayEvents),
@@ -410,6 +532,6 @@ export async function GET(request: Request) {
     dailyAggregates: dailyAggregates.map(normalizeDailyAggregate),
     currentSnapshots: currentSnapshots.map(normalizeCurrentSnapshot),
     note:
-      "This day summary currently uses UTC dates. Local timezone support can be added later for user-facing daily reports.",
+      "This day summary uses the requested local timezone for event day boundaries. daily_aggregates are still matched by aggregate_date and should be aligned with the same timezone in the impact processor in a later step.",
   });
 }
