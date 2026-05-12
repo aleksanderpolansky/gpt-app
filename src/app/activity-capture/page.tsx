@@ -507,6 +507,12 @@ export default function ActivityCapturePage() {
 
             <div className="flex flex-wrap gap-2 text-sm">
               <Link
+                className="rounded-full border border-emerald-600 bg-emerald-950/30 px-4 py-2 text-emerald-200 hover:border-emerald-400 hover:text-emerald-100"
+                href="/activity-today"
+              >
+                Today Panel
+              </Link>
+              <Link
                 className="rounded-full border border-zinc-700 px-4 py-2 text-zinc-200 hover:border-emerald-500 hover:text-emerald-300"
                 href="/api/activity/templates"
                 target="_blank"
@@ -968,3 +974,4 @@ export default function ActivityCapturePage() {
     </main>
   );
 }
+
