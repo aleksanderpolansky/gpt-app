@@ -42,6 +42,24 @@ type ImpactEventInsertRow = {
   metadata_json: Record<string, unknown>;
 };
 
+type ImpactEventRow = {
+  id: string;
+  event_id: string;
+  rule_id: string | null;
+  impact_target_type: string;
+  impact_target_key: string;
+  impact_metric: string;
+  impact_value_numeric: number | string | null;
+  impact_value_text: string | null;
+  impact_unit: string | null;
+  impact_direction: string;
+  intensity: string | null;
+  source: string;
+  confidence: number | string | null;
+  metadata_json: Record<string, unknown> | null;
+  created_at: string;
+};
+
 export type ProcessActivityImpactsInput = {
   eventId: string;
   userId: string;
@@ -65,6 +83,39 @@ export type ProcessActivityImpactsResult = {
     dailyAggregates: number;
     currentSnapshots: number;
   };
+};
+
+export type RecalculateActivityImpactsInput = {
+  eventId: string;
+  userId: string;
+  activityTemplateId?: string | null;
+  activityTypeId?: string | null;
+  durationMinutes?: number | null;
+  startedAt?: string | null;
+  previousStartedAt?: string | null;
+  timezone?: string | null;
+  reason?: string | null;
+};
+
+export type RecalculateActivityImpactsResult = {
+  ok: boolean;
+  skipped: boolean;
+  reason: string | null;
+  previousImpactEvents: unknown[];
+  rollbackDailyAggregates: unknown[];
+  recalculatedImpactEvents: unknown[];
+  recalculatedDailyAggregates: unknown[];
+  recalculatedCurrentSnapshots: unknown[];
+  counts: {
+    previousImpactEvents: number;
+    rollbackDailyAggregates: number;
+    deletedImpactEvents: number;
+    recalculatedImpactRules: number;
+    recalculatedImpactEvents: number;
+    recalculatedDailyAggregates: number;
+    recalculatedCurrentSnapshots: number;
+  };
+  recalculatedProcessor: ProcessActivityImpactsResult;
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -140,6 +191,22 @@ function getDatePartsInTimezone(date: Date, timezone: string) {
   return `${year}-${month}-${day}`;
 }
 
+function resolveLegacyUtcAggregateDate(startedAt?: string | null) {
+  if (startedAt && /^\d{4}-\d{2}-\d{2}/.test(startedAt)) {
+    return startedAt.slice(0, 10);
+  }
+
+  if (startedAt) {
+    const startedAtDate = new Date(startedAt);
+
+    if (!Number.isNaN(startedAtDate.getTime())) {
+      return startedAtDate.toISOString().slice(0, 10);
+    }
+  }
+
+  return new Date().toISOString().slice(0, 10);
+}
+
 function uniqueImpactRules(rules: ImpactRuleRow[]) {
   const rulesById = new Map<string, ImpactRuleRow>();
 
@@ -159,6 +226,33 @@ async function getExistingImpactEventsCount(eventId: string) {
       count: "exact",
       head: true,
     })
+    .eq("event_id", eventId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
+async function getExistingImpactEvents(eventId: string) {
+  const { data, error } = await supabase
+    .from("impact_events")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as ImpactEventRow[];
+}
+
+async function deleteImpactEvents(eventId: string) {
+  const { count, error } = await supabase
+    .from("impact_events")
+    .delete({ count: "exact" })
     .eq("event_id", eventId);
 
   if (error) {
@@ -302,6 +396,33 @@ function resolveAggregateDate(params: {
   return getDatePartsInTimezone(new Date(), timezone);
 }
 
+function resolveRollbackAggregateDate(params: {
+  impactRow: ImpactEventRow;
+  previousStartedAt?: string | null;
+  fallbackTimezone: string;
+}) {
+  const { impactRow, previousStartedAt, fallbackTimezone } = params;
+  const impactMetadata = asRecord(impactRow.metadata_json);
+  const storedAggregateTimezone = asString(impactMetadata.aggregate_timezone);
+
+  if (storedAggregateTimezone && isValidTimeZone(storedAggregateTimezone)) {
+    return {
+      aggregateDate: resolveAggregateDate({
+        startedAt: previousStartedAt,
+        timezone: storedAggregateTimezone,
+      }),
+      aggregateTimezone: storedAggregateTimezone,
+      dateMode: "stored_timezone",
+    };
+  }
+
+  return {
+    aggregateDate: resolveLegacyUtcAggregateDate(previousStartedAt),
+    aggregateTimezone: fallbackTimezone,
+    dateMode: "legacy_utc",
+  };
+}
+
 function resolveAggregateDelta(params: {
   dailyMetricKey: string;
   impactValueNumeric: number | null;
@@ -338,6 +459,8 @@ async function updateDailyAggregate(params: {
   metricKey: string;
   metricUnit: string | null;
   delta: number;
+  updateReason?: string | null;
+  rollbackDateMode?: string | null;
 }) {
   const {
     userId,
@@ -349,7 +472,23 @@ async function updateDailyAggregate(params: {
     metricKey,
     metricUnit,
     delta,
+    updateReason = null,
+    rollbackDateMode = null,
   } = params;
+
+  const metadata: Record<string, unknown> = {
+    processor: "activityImpactProcessor.v1",
+    processor_update_mode: "atomic_rpc",
+    aggregate_timezone: aggregateTimezone,
+  };
+
+  if (updateReason) {
+    metadata.update_reason = updateReason;
+  }
+
+  if (rollbackDateMode) {
+    metadata.rollback_date_mode = rollbackDateMode;
+  }
 
   const { data, error } = await supabase.rpc("increment_daily_aggregate", {
     p_user_id: userId,
@@ -361,11 +500,7 @@ async function updateDailyAggregate(params: {
     p_metric_unit: metricUnit,
     p_delta: delta,
     p_source: "rule",
-    p_metadata_json: {
-      processor: "activityImpactProcessor.v1",
-      processor_update_mode: "atomic_rpc",
-      aggregate_timezone: aggregateTimezone,
-    },
+    p_metadata_json: metadata,
   });
 
   if (error) {
@@ -495,6 +630,75 @@ async function updateDerivedMetrics(params: {
   };
 }
 
+async function rollbackDailyAggregatesForImpactRows(params: {
+  userId: string;
+  eventId: string;
+  previousStartedAt?: string | null;
+  fallbackTimezone: string;
+  impactRows: ImpactEventRow[];
+  reason?: string | null;
+}) {
+  const {
+    userId,
+    eventId,
+    previousStartedAt = null,
+    fallbackTimezone,
+    impactRows,
+    reason = null,
+  } = params;
+
+  const rollbackDailyAggregates: unknown[] = [];
+
+  for (const impactRow of impactRows) {
+    const impactMetadata = asRecord(impactRow.metadata_json);
+    const ruleMetadata = asRecord(impactMetadata.rule_metadata);
+
+    const dailyAggregateType = asString(ruleMetadata.daily_aggregate_type);
+    const dailyAggregateKey = asString(ruleMetadata.daily_aggregate_key);
+    const dailyMetricKey = asString(ruleMetadata.daily_metric_key);
+
+    if (!dailyAggregateType || !dailyAggregateKey || !dailyMetricKey) {
+      continue;
+    }
+
+    const rollbackInfo = resolveRollbackAggregateDate({
+      impactRow,
+      previousStartedAt,
+      fallbackTimezone,
+    });
+
+    const rollbackDelta =
+      -1 *
+      resolveAggregateDelta({
+        dailyMetricKey,
+        impactValueNumeric: asNumber(impactRow.impact_value_numeric),
+      });
+
+    const metricUnit = resolveAggregateMetricUnit({
+      dailyMetricKey,
+      impactUnit: impactRow.impact_unit,
+    });
+
+    const rollbackDailyAggregate = await updateDailyAggregate({
+      userId,
+      eventId,
+      aggregateDate: rollbackInfo.aggregateDate,
+      aggregateTimezone: rollbackInfo.aggregateTimezone,
+      aggregateType: dailyAggregateType,
+      aggregateKey: dailyAggregateKey,
+      metricKey: dailyMetricKey,
+      metricUnit,
+      delta: rollbackDelta,
+      updateReason: reason ?? "impact_recalculation_rollback",
+      rollbackDateMode: rollbackInfo.dateMode,
+    });
+
+    rollbackDailyAggregates.push(rollbackDailyAggregate);
+  }
+
+  return rollbackDailyAggregates;
+}
+
 export async function processActivityImpacts(
   input: ProcessActivityImpactsInput
 ): Promise<ProcessActivityImpactsResult> {
@@ -593,5 +797,67 @@ export async function processActivityImpacts(
       dailyAggregates: dailyAggregates.length,
       currentSnapshots: currentSnapshots.length,
     },
+  };
+}
+
+export async function recalculateActivityImpacts(
+  input: RecalculateActivityImpactsInput
+): Promise<RecalculateActivityImpactsResult> {
+  const {
+    eventId,
+    userId,
+    activityTemplateId = null,
+    activityTypeId = null,
+    durationMinutes = null,
+    startedAt = null,
+    previousStartedAt = null,
+    timezone = null,
+    reason = null,
+  } = input;
+
+  const aggregateTimezone = resolveImpactTimezone(timezone);
+  const previousImpactEvents = await getExistingImpactEvents(eventId);
+
+  const rollbackDailyAggregates = await rollbackDailyAggregatesForImpactRows({
+    userId,
+    eventId,
+    previousStartedAt,
+    fallbackTimezone: aggregateTimezone,
+    impactRows: previousImpactEvents,
+    reason: reason ?? "activity_event_correction",
+  });
+
+  const deletedImpactEvents = await deleteImpactEvents(eventId);
+
+  const recalculatedProcessor = await processActivityImpacts({
+    eventId,
+    userId,
+    activityTemplateId,
+    activityTypeId,
+    durationMinutes,
+    startedAt,
+    timezone: aggregateTimezone,
+  });
+
+  return {
+    ok: true,
+    skipped: false,
+    reason: null,
+    previousImpactEvents,
+    rollbackDailyAggregates,
+    recalculatedImpactEvents: recalculatedProcessor.impactEvents,
+    recalculatedDailyAggregates: recalculatedProcessor.dailyAggregates,
+    recalculatedCurrentSnapshots: recalculatedProcessor.currentSnapshots,
+    counts: {
+      previousImpactEvents: previousImpactEvents.length,
+      rollbackDailyAggregates: rollbackDailyAggregates.length,
+      deletedImpactEvents,
+      recalculatedImpactRules: recalculatedProcessor.counts.impactRules,
+      recalculatedImpactEvents: recalculatedProcessor.counts.impactEvents,
+      recalculatedDailyAggregates: recalculatedProcessor.counts.dailyAggregates,
+      recalculatedCurrentSnapshots:
+        recalculatedProcessor.counts.currentSnapshots,
+    },
+    recalculatedProcessor,
   };
 }
