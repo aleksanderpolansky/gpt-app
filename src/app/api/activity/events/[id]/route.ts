@@ -213,6 +213,44 @@ function resolveCorrectionTiming(params: {
     };
   }
 
+  if (hasDurationPatch && patchedDuration !== null) {
+    if (startedAt && !hasEndedAtPatch) {
+      const startedDate = new Date(startedAt);
+      const recalculatedEndedAt = new Date(
+        startedDate.getTime() + patchedDuration * 60000
+      ).toISOString();
+
+      return {
+        ok: true,
+        startedAt,
+        endedAt: recalculatedEndedAt,
+        durationMinutes: patchedDuration,
+        timingChanged:
+          valuesDiffer(startedAt, event.started_at) ||
+          valuesDiffer(recalculatedEndedAt, event.ended_at),
+        durationChanged: valuesDiffer(patchedDuration, event.duration_minutes),
+      };
+    }
+
+    if (endedAt && !hasStartedAtPatch) {
+      const endedDate = new Date(endedAt);
+      const recalculatedStartedAt = new Date(
+        endedDate.getTime() - patchedDuration * 60000
+      ).toISOString();
+
+      return {
+        ok: true,
+        startedAt: recalculatedStartedAt,
+        endedAt,
+        durationMinutes: patchedDuration,
+        timingChanged:
+          valuesDiffer(recalculatedStartedAt, event.started_at) ||
+          valuesDiffer(endedAt, event.ended_at),
+        durationChanged: valuesDiffer(patchedDuration, event.duration_minutes),
+      };
+    }
+  }
+
   if (startedAt && endedAt) {
     const startedDate = new Date(startedAt);
     const endedDate = new Date(endedAt);
@@ -240,42 +278,6 @@ function resolveCorrectionTiming(params: {
         calculatedDurationMinutes,
         event.duration_minutes
       ),
-    };
-  }
-
-  if (startedAt && patchedDuration !== null && hasDurationPatch) {
-    const startedDate = new Date(startedAt);
-    const calculatedEndedAt = new Date(
-      startedDate.getTime() + patchedDuration * 60000
-    ).toISOString();
-
-    return {
-      ok: true,
-      startedAt,
-      endedAt: calculatedEndedAt,
-      durationMinutes: patchedDuration,
-      timingChanged:
-        valuesDiffer(startedAt, event.started_at) ||
-        valuesDiffer(calculatedEndedAt, event.ended_at),
-      durationChanged: valuesDiffer(patchedDuration, event.duration_minutes),
-    };
-  }
-
-  if (endedAt && patchedDuration !== null && hasDurationPatch) {
-    const endedDate = new Date(endedAt);
-    const calculatedStartedAt = new Date(
-      endedDate.getTime() - patchedDuration * 60000
-    ).toISOString();
-
-    return {
-      ok: true,
-      startedAt: calculatedStartedAt,
-      endedAt,
-      durationMinutes: patchedDuration,
-      timingChanged:
-        valuesDiffer(calculatedStartedAt, event.started_at) ||
-        valuesDiffer(endedAt, event.ended_at),
-      durationChanged: valuesDiffer(patchedDuration, event.duration_minutes),
     };
   }
 
@@ -540,11 +542,17 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const changedFields: string[] = [];
 
-  if (timing.timingChanged && valuesDiffer(timing.startedAt, previousEvent.started_at)) {
+  if (
+    timing.timingChanged &&
+    valuesDiffer(timing.startedAt, previousEvent.started_at)
+  ) {
     changedFields.push("started_at");
   }
 
-  if (timing.timingChanged && valuesDiffer(timing.endedAt, previousEvent.ended_at)) {
+  if (
+    timing.timingChanged &&
+    valuesDiffer(timing.endedAt, previousEvent.ended_at)
+  ) {
     changedFields.push("ended_at");
   }
 
@@ -552,7 +560,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     changedFields.push("duration_minutes");
   }
 
-  if (hasCommentPatch && valuesDiffer(patchedComment, previousEvent.description)) {
+  if (
+    hasCommentPatch &&
+    valuesDiffer(patchedComment, previousEvent.description)
+  ) {
     changedFields.push("description");
   }
 
@@ -644,7 +655,8 @@ export async function PATCH(request: Request, context: RouteContext) {
   let recalculationResult: unknown = {
     ok: true,
     skipped: true,
-    reason: "Only comment/description changed. Impact recalculation was not required.",
+    reason:
+      "Only comment/description changed. Impact recalculation was not required.",
   };
 
   if (shouldRecalculate) {
