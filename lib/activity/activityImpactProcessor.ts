@@ -1,4 +1,4 @@
-import { supabase } from "../supabase";
+﻿import { supabase } from "../supabase";
 
 type ImpactRuleRow = {
   id: string;
@@ -230,6 +230,7 @@ function buildImpactEventRows(params: {
       confidence: 1,
       metadata_json: {
         processor: "activityImpactProcessor.v1",
+        processor_update_mode: "atomic_rpc",
         rule_code: rule.rule_code,
         rule_title: rule.title,
         impact_value_mode: rule.impact_value_mode,
@@ -296,67 +297,27 @@ async function updateDailyAggregate(params: {
     delta,
   } = params;
 
-  const { data: existingAggregate, error: existingAggregateError } =
-    await supabase
-      .from("daily_aggregates")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("aggregate_date", aggregateDate)
-      .eq("aggregate_type", aggregateType)
-      .eq("aggregate_key", aggregateKey)
-      .eq("metric_key", metricKey)
-      .maybeSingle();
+  const { data, error } = await supabase.rpc("increment_daily_aggregate", {
+    p_user_id: userId,
+    p_event_id: eventId,
+    p_aggregate_date: aggregateDate,
+    p_aggregate_type: aggregateType,
+    p_aggregate_key: aggregateKey,
+    p_metric_key: metricKey,
+    p_metric_unit: metricUnit,
+    p_delta: delta,
+    p_source: "rule",
+    p_metadata_json: {
+      processor: "activityImpactProcessor.v1",
+      processor_update_mode: "atomic_rpc",
+    },
+  });
 
-  if (existingAggregateError) {
-    throw new Error(existingAggregateError.message);
+  if (error) {
+    throw new Error(error.message);
   }
 
-  if (existingAggregate) {
-    const currentValue = asNumber(existingAggregate.metric_value_numeric) ?? 0;
-
-    const { data: updatedAggregate, error: updateError } = await supabase
-      .from("daily_aggregates")
-      .update({
-        metric_value_numeric: currentValue + delta,
-        metric_unit: metricUnit,
-        last_event_id: eventId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", existingAggregate.id)
-      .select()
-      .single();
-
-    if (updateError) {
-      throw new Error(updateError.message);
-    }
-
-    return updatedAggregate;
-  }
-
-  const { data: createdAggregate, error: insertError } = await supabase
-    .from("daily_aggregates")
-    .insert({
-      user_id: userId,
-      aggregate_date: aggregateDate,
-      aggregate_type: aggregateType,
-      aggregate_key: aggregateKey,
-      metric_key: metricKey,
-      metric_value_numeric: delta,
-      metric_unit: metricUnit,
-      source: "rule",
-      last_event_id: eventId,
-      metadata_json: {
-        processor: "activityImpactProcessor.v1",
-      },
-    })
-    .select()
-    .single();
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
-
-  return createdAggregate;
+  return data;
 }
 
 async function updateCurrentSnapshot(params: {
@@ -380,73 +341,26 @@ async function updateCurrentSnapshot(params: {
     metricUnit,
   } = params;
 
-  const { data: existingSnapshot, error: existingSnapshotError } =
-    await supabase
-      .from("current_snapshots")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("snapshot_entity_type", snapshotEntityType)
-      .eq("snapshot_entity_key", snapshotEntityKey)
-      .eq("metric_key", metricKey)
-      .maybeSingle();
+  const { data, error } = await supabase.rpc("upsert_current_snapshot", {
+    p_user_id: userId,
+    p_event_id: eventId,
+    p_snapshot_entity_type: snapshotEntityType,
+    p_snapshot_entity_key: snapshotEntityKey,
+    p_metric_key: metricKey,
+    p_metric_value_numeric: metricValueNumeric,
+    p_metric_value_text: metricValueText,
+    p_metric_unit: metricUnit,
+    p_metadata_json: {
+      processor: "activityImpactProcessor.v1",
+      processor_update_mode: "atomic_rpc",
+    },
+  });
 
-  if (existingSnapshotError) {
-    throw new Error(existingSnapshotError.message);
+  if (error) {
+    throw new Error(error.message);
   }
 
-  if (existingSnapshot) {
-    const currentNumericValue =
-      asNumber(existingSnapshot.metric_value_numeric) ?? 0;
-
-    const nextNumericValue =
-      metricValueNumeric === null
-        ? existingSnapshot.metric_value_numeric
-        : currentNumericValue + metricValueNumeric;
-
-    const { data: updatedSnapshot, error: updateError } = await supabase
-      .from("current_snapshots")
-      .update({
-        metric_value_numeric: nextNumericValue,
-        metric_value_text:
-          metricValueText ?? existingSnapshot.metric_value_text,
-        metric_unit: metricUnit ?? existingSnapshot.metric_unit,
-        last_event_id: eventId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", existingSnapshot.id)
-      .select()
-      .single();
-
-    if (updateError) {
-      throw new Error(updateError.message);
-    }
-
-    return updatedSnapshot;
-  }
-
-  const { data: createdSnapshot, error: insertError } = await supabase
-    .from("current_snapshots")
-    .insert({
-      user_id: userId,
-      snapshot_entity_type: snapshotEntityType,
-      snapshot_entity_key: snapshotEntityKey,
-      metric_key: metricKey,
-      metric_value_numeric: metricValueNumeric,
-      metric_value_text: metricValueText,
-      metric_unit: metricUnit,
-      last_event_id: eventId,
-      metadata_json: {
-        processor: "activityImpactProcessor.v1",
-      },
-    })
-    .select()
-    .single();
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
-
-  return createdSnapshot;
+  return data;
 }
 
 async function updateDerivedMetrics(params: {
