@@ -4,12 +4,22 @@ import {
   ACTIVITY_RECORDING_ENABLED,
 } from "../../../../../../lib/activity/activityRecordingConfig";
 import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
-import { recalculateActivityImpacts } from "../../../../../../lib/activity/activityImpactProcessor";
+import {
+  recalculateActivityImpacts,
+  rollbackActivityImpacts,
+} from "../../../../../../lib/activity/activityImpactProcessor";
 import { supabase } from "../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
 const DEFAULT_CORRECTION_TIMEZONE = "Europe/Warsaw";
+
+const ROLLBACK_ONLY_STATUSES = new Set([
+  "cancelled",
+  "missed",
+  "archived",
+  "corrected",
+]);
 
 type RouteContext = {
   params: Promise<{
@@ -128,6 +138,10 @@ function dateValuesDiffer(left: string | null, right: string | null) {
   return leftDate.getTime() !== rightDate.getTime();
 }
 
+function hasOwnProperty(object: object, key: string) {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
 function normalizeIsoDate(value: string | null) {
   if (!value) {
     return null;
@@ -180,17 +194,12 @@ function resolveCorrectionTiming(params: {
   const { event, body } = params;
 
   const hasStartedAtPatch =
-    Object.prototype.hasOwnProperty.call(body, "startedAt") ||
-    Object.prototype.hasOwnProperty.call(body, "startTime");
+    hasOwnProperty(body, "startedAt") || hasOwnProperty(body, "startTime");
 
   const hasEndedAtPatch =
-    Object.prototype.hasOwnProperty.call(body, "endedAt") ||
-    Object.prototype.hasOwnProperty.call(body, "endTime");
+    hasOwnProperty(body, "endedAt") || hasOwnProperty(body, "endTime");
 
-  const hasDurationPatch = Object.prototype.hasOwnProperty.call(
-    body,
-    "durationMinutes"
-  );
+  const hasDurationPatch = hasOwnProperty(body, "durationMinutes");
 
   const rawStartedAt = hasStartedAtPatch
     ? asString(body.startedAt) ?? asString(body.startTime)
@@ -389,6 +398,10 @@ async function getCurrentSnapshotsForAudit(params: {
 }
 
 function resolveCorrectionType(changedFields: string[]) {
+  if (changedFields.includes("status")) {
+    return "status_rollback";
+  }
+
   if (
     changedFields.includes("started_at") ||
     changedFields.includes("ended_at")
@@ -407,6 +420,31 @@ function resolveCorrectionType(changedFields: string[]) {
   return "manual_patch";
 }
 
+async function collectPreviousAuditState(params: {
+  event: ActivityEventRow;
+  userId: string;
+}) {
+  const { event, userId } = params;
+  const previousAggregateDate = resolveAggregateDateForAudit(event.started_at);
+
+  const previousImpactEvents = await getImpactEventsForAudit(event.id);
+  const previousDailyAggregates = await getDailyAggregatesForAudit({
+    userId,
+    aggregateDate: previousAggregateDate,
+  });
+  const previousCurrentSnapshots = await getCurrentSnapshotsForAudit({
+    userId,
+    eventId: event.id,
+  });
+
+  return {
+    previousAggregateDate,
+    previousImpactEvents,
+    previousDailyAggregates,
+    previousCurrentSnapshots,
+  };
+}
+
 export async function GET() {
   return NextResponse.json({
     ok: true,
@@ -419,10 +457,11 @@ export async function GET() {
       comment: "string",
       startedAt: "ISO date string",
       endedAt: "ISO date string",
+      status: Array.from(ROLLBACK_ONLY_STATUSES),
       reason: "string",
     },
     currentLimit:
-      "B11.3a supports completed event timing/duration/comment corrections. Status rollback/cancel corrections are planned as a separate step.",
+      "B11.3a supports completed event timing/duration/comment corrections. B11.3b supports rollback-only status corrections for completed events.",
   });
 }
 
@@ -480,17 +519,22 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  const unsupportedStatus = asString(body.status);
+  const requestedStatus = asString(body.status);
+  const isRollbackOnlyStatus =
+    requestedStatus !== null && ROLLBACK_ONLY_STATUSES.has(requestedStatus);
 
-  if (unsupportedStatus && unsupportedStatus !== "completed") {
+  if (
+    requestedStatus &&
+    requestedStatus !== "completed" &&
+    !isRollbackOnlyStatus
+  ) {
     return NextResponse.json(
       {
         ok: false,
-        error:
-          "Status corrections to non-completed states are not enabled in B11.3a. They require rollback-only correction mode.",
-        requestedStatus: unsupportedStatus,
-        supportedNow: ["completed"],
-        plannedNext: "B11.3b or B11.4 status correction rollback-only flow",
+        error: "Unsupported status correction.",
+        requestedStatus,
+        supportedRollbackOnlyStatuses: Array.from(ROLLBACK_ONLY_STATUSES),
+        supportedNormalStatus: "completed",
       },
       { status: 400 }
     );
@@ -526,12 +570,212 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
+  const reason = asString(body.reason);
+  const hasCommentPatch = hasOwnProperty(body, "comment");
+  const patchedComment = hasCommentPatch
+    ? asString(body.comment)
+    : previousEvent.description;
+
+  if (isRollbackOnlyStatus && requestedStatus) {
+    if (previousEvent.status !== "completed") {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Rollback-only status correction is currently supported only from completed events.",
+          currentStatus: previousEvent.status,
+          requestedStatus,
+        },
+        { status: 409 }
+      );
+    }
+
+    const forbiddenMixedFields = [
+      hasOwnProperty(body, "durationMinutes") ? "durationMinutes" : null,
+      hasOwnProperty(body, "startedAt") ? "startedAt" : null,
+      hasOwnProperty(body, "startTime") ? "startTime" : null,
+      hasOwnProperty(body, "endedAt") ? "endedAt" : null,
+      hasOwnProperty(body, "endTime") ? "endTime" : null,
+    ].filter(Boolean);
+
+    if (forbiddenMixedFields.length > 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "B11.3b status rollback should not be mixed with timing or duration corrections. Do timing/duration correction first, then status rollback.",
+          forbiddenMixedFields,
+        },
+        { status: 400 }
+      );
+    }
+
+    const changedFields = ["status"];
+
+    if (
+      hasCommentPatch &&
+      valuesDiffer(patchedComment, previousEvent.description)
+    ) {
+      changedFields.push("description");
+    }
+
+    let auditState: {
+      previousAggregateDate: string;
+      previousImpactEvents: unknown[];
+      previousDailyAggregates: unknown[];
+      previousCurrentSnapshots: unknown[];
+    };
+
+    try {
+      auditState = await collectPreviousAuditState({
+        event: previousEvent,
+        userId: appUser.id,
+      });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to collect previous correction audit state.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const nowIso = new Date().toISOString();
+    const existingMetadata = asRecord(previousEvent.metadata_json);
+
+    const { data: updatedEventData, error: updateError } = await supabase
+      .from("activity_events")
+      .update({
+        status: requestedStatus,
+        description: patchedComment,
+        processing_status: "processed",
+        metadata_json: {
+          ...existingMetadata,
+          corrected: true,
+          impact_rollback: true,
+          impact_rollback_at: nowIso,
+          last_correction_at: nowIso,
+          last_correction_reason: reason,
+          last_correction_changed_fields: changedFields,
+          previous_status: previousEvent.status,
+          correction_flow: "B11.3b",
+        },
+        updated_at: nowIso,
+      })
+      .eq("id", previousEvent.id)
+      .eq("user_id", appUser.id)
+      .select()
+      .single();
+
+    if (updateError || !updatedEventData) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: updateError?.message ?? "Failed to update activity event.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const updatedEvent = updatedEventData as ActivityEventRow;
+
+    let rollbackResult: unknown;
+
+    try {
+      rollbackResult = await rollbackActivityImpacts({
+        eventId: updatedEvent.id,
+        userId: appUser.id,
+        previousStartedAt: previousEvent.started_at,
+        timezone: DEFAULT_CORRECTION_TIMEZONE,
+        reason: reason ?? "activity_event_status_rollback",
+        cleanupCurrentSnapshots: true,
+      });
+    } catch (error) {
+      await supabase
+        .from("activity_events")
+        .update({
+          processing_status: "failed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", updatedEvent.id)
+        .eq("user_id", appUser.id);
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to rollback activity impacts.",
+          previousEvent,
+          updatedEvent,
+        },
+        { status: 500 }
+      );
+    }
+
+    const { data: correctionRow, error: correctionError } = await supabase
+      .from("activity_corrections")
+      .insert({
+        user_id: appUser.id,
+        event_id: updatedEvent.id,
+        correction_type: resolveCorrectionType(changedFields),
+        correction_status: "applied",
+        changed_fields: changedFields,
+        previous_event_json: previousEvent,
+        new_event_json: updatedEvent,
+        previous_impact_events_json: auditState.previousImpactEvents,
+        previous_daily_aggregates_json: auditState.previousDailyAggregates,
+        previous_current_snapshots_json: auditState.previousCurrentSnapshots,
+        recalculation_result_json: rollbackResult,
+        reason,
+        source: "api_patch",
+      })
+      .select()
+      .single();
+
+    if (correctionError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: correctionError.message,
+          warning:
+            "Activity event status was updated and impacts were rolled back, but correction audit row was not created.",
+          previousEvent,
+          updatedEvent,
+          rollbackResult,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      status: "status_corrected",
+      event: updatedEvent,
+      correction: correctionRow,
+      changedFields,
+      rollback: rollbackResult,
+      audit: {
+        previousImpactEventsCount: auditState.previousImpactEvents.length,
+        previousDailyAggregatesCount: auditState.previousDailyAggregates.length,
+        previousCurrentSnapshotsCount:
+          auditState.previousCurrentSnapshots.length,
+        previousAggregateDate: auditState.previousAggregateDate,
+      },
+    });
+  }
+
   if (previousEvent.status !== "completed") {
     return NextResponse.json(
       {
         ok: false,
         error:
-          "B11.3a correction route only supports completed events. Started/paused/status corrections will be handled separately.",
+          "B11.3a correction route only supports completed events. Rollback-only status corrections are supported only from completed events.",
         currentStatus: previousEvent.status,
       },
       { status: 409 }
@@ -552,15 +796,6 @@ export async function PATCH(request: Request, context: RouteContext) {
       { status: 400 }
     );
   }
-
-  const hasCommentPatch = Object.prototype.hasOwnProperty.call(
-    body,
-    "comment"
-  );
-
-  const patchedComment = hasCommentPatch
-    ? asString(body.comment)
-    : previousEvent.description;
 
   const changedFields: string[] = [];
 
@@ -599,24 +834,17 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  const reason = asString(body.reason);
-  const previousAggregateDate = resolveAggregateDateForAudit(
-    previousEvent.started_at
-  );
-
-  let previousImpactEvents: unknown[] = [];
-  let previousDailyAggregates: unknown[] = [];
-  let previousCurrentSnapshots: unknown[] = [];
+  let auditState: {
+    previousAggregateDate: string;
+    previousImpactEvents: unknown[];
+    previousDailyAggregates: unknown[];
+    previousCurrentSnapshots: unknown[];
+  };
 
   try {
-    previousImpactEvents = await getImpactEventsForAudit(previousEvent.id);
-    previousDailyAggregates = await getDailyAggregatesForAudit({
+    auditState = await collectPreviousAuditState({
+      event: previousEvent,
       userId: appUser.id,
-      aggregateDate: previousAggregateDate,
-    });
-    previousCurrentSnapshots = await getCurrentSnapshotsForAudit({
-      userId: appUser.id,
-      eventId: previousEvent.id,
     });
   } catch (error) {
     return NextResponse.json(
@@ -729,9 +957,9 @@ export async function PATCH(request: Request, context: RouteContext) {
       changed_fields: changedFields,
       previous_event_json: previousEvent,
       new_event_json: updatedEvent,
-      previous_impact_events_json: previousImpactEvents,
-      previous_daily_aggregates_json: previousDailyAggregates,
-      previous_current_snapshots_json: previousCurrentSnapshots,
+      previous_impact_events_json: auditState.previousImpactEvents,
+      previous_daily_aggregates_json: auditState.previousDailyAggregates,
+      previous_current_snapshots_json: auditState.previousCurrentSnapshots,
       recalculation_result_json: recalculationResult,
       reason,
       source: "api_patch",
@@ -762,10 +990,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     changedFields,
     recalculation: recalculationResult,
     audit: {
-      previousImpactEventsCount: previousImpactEvents.length,
-      previousDailyAggregatesCount: previousDailyAggregates.length,
-      previousCurrentSnapshotsCount: previousCurrentSnapshots.length,
-      previousAggregateDate,
+      previousImpactEventsCount: auditState.previousImpactEvents.length,
+      previousDailyAggregatesCount: auditState.previousDailyAggregates.length,
+      previousCurrentSnapshotsCount:
+        auditState.previousCurrentSnapshots.length,
+      previousAggregateDate: auditState.previousAggregateDate,
     },
   });
 }
