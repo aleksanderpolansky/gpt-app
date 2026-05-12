@@ -118,6 +118,29 @@ export type RecalculateActivityImpactsResult = {
   recalculatedProcessor: ProcessActivityImpactsResult;
 };
 
+export type RollbackActivityImpactsInput = {
+  eventId: string;
+  userId: string;
+  previousStartedAt?: string | null;
+  timezone?: string | null;
+  reason?: string | null;
+  cleanupCurrentSnapshots?: boolean;
+};
+
+export type RollbackActivityImpactsResult = {
+  ok: boolean;
+  skipped: boolean;
+  reason: string | null;
+  previousImpactEvents: unknown[];
+  rollbackDailyAggregates: unknown[];
+  counts: {
+    previousImpactEvents: number;
+    rollbackDailyAggregates: number;
+    deletedImpactEvents: number;
+    deletedCurrentSnapshots: number;
+  };
+};
+
 function asRecord(value: unknown): Record<string, unknown> {
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {
     return value as Record<string, unknown>;
@@ -254,6 +277,25 @@ async function deleteImpactEvents(eventId: string) {
     .from("impact_events")
     .delete({ count: "exact" })
     .eq("event_id", eventId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
+async function deleteCurrentSnapshotsForEvent(params: {
+  userId: string;
+  eventId: string;
+}) {
+  const { userId, eventId } = params;
+
+  const { count, error } = await supabase
+    .from("current_snapshots")
+    .delete({ count: "exact" })
+    .eq("user_id", userId)
+    .eq("last_event_id", eventId);
 
   if (error) {
     throw new Error(error.message);
@@ -859,5 +901,61 @@ export async function recalculateActivityImpacts(
         recalculatedProcessor.counts.currentSnapshots,
     },
     recalculatedProcessor,
+  };
+}
+
+export async function rollbackActivityImpacts(
+  input: RollbackActivityImpactsInput
+): Promise<RollbackActivityImpactsResult> {
+  const {
+    eventId,
+    userId,
+    previousStartedAt = null,
+    timezone = null,
+    reason = null,
+    cleanupCurrentSnapshots = true,
+  } = input;
+
+  const aggregateTimezone = resolveImpactTimezone(timezone);
+  const previousImpactEvents = await getExistingImpactEvents(eventId);
+
+  const rollbackDailyAggregates = await rollbackDailyAggregatesForImpactRows({
+    userId,
+    eventId,
+    previousStartedAt,
+    fallbackTimezone: aggregateTimezone,
+    impactRows: previousImpactEvents,
+    reason: reason ?? "activity_event_status_rollback",
+  });
+
+  const deletedImpactEvents = await deleteImpactEvents(eventId);
+
+  const deletedCurrentSnapshots = cleanupCurrentSnapshots
+    ? await deleteCurrentSnapshotsForEvent({
+        userId,
+        eventId,
+      })
+    : 0;
+
+  const skipped =
+    previousImpactEvents.length === 0 &&
+    rollbackDailyAggregates.length === 0 &&
+    deletedImpactEvents === 0 &&
+    deletedCurrentSnapshots === 0;
+
+  return {
+    ok: true,
+    skipped,
+    reason: skipped
+      ? "No impact events, daily aggregates or current snapshots needed rollback."
+      : null,
+    previousImpactEvents,
+    rollbackDailyAggregates,
+    counts: {
+      previousImpactEvents: previousImpactEvents.length,
+      rollbackDailyAggregates: rollbackDailyAggregates.length,
+      deletedImpactEvents,
+      deletedCurrentSnapshots,
+    },
   };
 }
