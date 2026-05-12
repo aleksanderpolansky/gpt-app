@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -121,6 +121,43 @@ type RowWithDistance = {
   distanceKm: number | null;
 };
 
+type ContextRow = {
+  id: string;
+};
+
+type EntityClassificationRow = {
+  id: string;
+  entity_id: string;
+  role: string | null;
+  status: string;
+  contextual_category_id: string | null;
+  created_at: string;
+};
+
+type DirectoryContextualCategoryRow = {
+  id: string;
+  code: string;
+  default_name: string;
+  slug: string;
+  status: string;
+  is_active: boolean;
+  sort_order: number | null;
+};
+
+type DirectoryObjectActionClassification = {
+  id: string;
+  entityId: string;
+  role: string | null;
+  status: string;
+  createdAt: string;
+  category: DirectoryContextualCategoryRow;
+};
+
+const BUSINESS_DIRECTORY_CONTEXT_CODE = "business_directory";
+const ORGANIZATION_ENTITY_TYPE = "organization";
+
+const PUBLIC_OBJECT_ACTION_STATUSES = ["approved", "published"];
+
 const MINIMUM_PURCHASE_THRESHOLDS: Record<string, MinimumPurchaseThreshold> = {
   EUR: {
     currency: "EUR",
@@ -146,6 +183,62 @@ const MINIMUM_PURCHASE_THRESHOLDS: Record<string, MinimumPurchaseThreshold> = {
     currency: "CZK",
     amount: 250,
   },
+};
+
+const DIRECTORY_CATEGORY_SLUG_ALIASES: Record<string, string[]> = {
+  auto: [
+    "auto",
+    "car",
+    "cars",
+    "car-repair",
+    "auto-repair",
+    "auto-service",
+    "autoservice",
+    "avtoservis",
+    "warsztat-samochodowy",
+  ],
+  beauty: ["beauty", "beauty-salon", "beauty-services"],
+  "health-and-wellness": [
+    "health-and-wellness",
+    "health",
+    "wellness",
+    "massage",
+    "massage-service",
+    "massage-services",
+    "massazhnye-uslugi",
+    "masaz",
+    "masaz-uslugi",
+  ],
+  "food-and-drinks": [
+    "food-and-drinks",
+    "food",
+    "drinks",
+    "restaurant",
+    "cafe",
+    "bar",
+  ],
+  "sport-and-fitness": [
+    "sport-and-fitness",
+    "sport",
+    "fitness",
+    "gym",
+    "training",
+  ],
+  education: ["education", "learning", "school", "course", "courses"],
+  retail: ["retail", "shop", "store"],
+  "home-services": ["home-services", "home-service", "house-services"],
+  "professional-services": [
+    "professional-services",
+    "professional-service",
+    "consulting",
+  ],
+  "b2b-services": ["b2b-services", "b2b-service", "business-services"],
+  "events-and-entertainment": [
+    "events-and-entertainment",
+    "events",
+    "entertainment",
+  ],
+  other: ["other"],
 };
 
 function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
@@ -228,6 +321,32 @@ function normalizeCurrency(value: string | null | undefined) {
   }
 
   return normalizedValue;
+}
+
+function normalizeCategoryComparableValue(value: string | null | undefined) {
+  const normalizedValue = value?.trim().toLowerCase();
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  return normalizedValue.replaceAll("_", "-");
+}
+
+function getDirectoryCategoryFilterCandidates(categorySlug: string | null) {
+  const normalizedSlug = normalizeCategoryComparableValue(categorySlug);
+
+  if (!normalizedSlug) {
+    return new Set<string>();
+  }
+
+  const aliasValues = DIRECTORY_CATEGORY_SLUG_ALIASES[normalizedSlug] ?? [];
+
+  return new Set(
+    [normalizedSlug, ...aliasValues]
+      .map((value) => normalizeCategoryComparableValue(value))
+      .filter((value): value is string => Boolean(value))
+  );
 }
 
 function canRegisterPurchaseForOrganization(row: DirectoryOrganizationRow) {
@@ -384,6 +503,178 @@ async function getActionStatsByOrganizationId(
   return statsByOrganizationId;
 }
 
+async function getBusinessDirectoryContextId() {
+  const { data, error } = await supabase
+    .from("contexts")
+    .select("id")
+    .eq("code", BUSINESS_DIRECTORY_CONTEXT_CODE)
+    .limit(1);
+
+  if (error) {
+    return null;
+  }
+
+  const contextRows = (data as unknown as ContextRow[] | null) ?? [];
+
+  return contextRows[0]?.id ?? null;
+}
+
+async function getDirectoryClassificationsByOrganizationId(
+  organizationIds: string[]
+): Promise<Map<string, DirectoryObjectActionClassification[]>> {
+  const classificationsByOrganizationId = new Map<
+    string,
+    DirectoryObjectActionClassification[]
+  >();
+
+  for (const organizationId of organizationIds) {
+    classificationsByOrganizationId.set(organizationId, []);
+  }
+
+  if (organizationIds.length === 0) {
+    return classificationsByOrganizationId;
+  }
+
+  const businessDirectoryContextId = await getBusinessDirectoryContextId();
+
+  if (!businessDirectoryContextId) {
+    return classificationsByOrganizationId;
+  }
+
+  const { data: classificationData, error: classificationError } =
+    await supabase
+      .from("entity_classifications")
+      .select(
+        `
+        id,
+        entity_id,
+        role:classification_role,
+        status,
+        contextual_category_id,
+        created_at
+      `
+      )
+      .eq("entity_type", ORGANIZATION_ENTITY_TYPE)
+      .eq("context_id", businessDirectoryContextId)
+      .in("entity_id", organizationIds)
+      .in("status", PUBLIC_OBJECT_ACTION_STATUSES)
+      .not("contextual_category_id", "is", null)
+      .order("created_at", { ascending: true });
+
+  if (classificationError) {
+    return classificationsByOrganizationId;
+  }
+
+  const classificationRows =
+    (classificationData as unknown as EntityClassificationRow[] | null) ?? [];
+
+  const contextualCategoryIds = Array.from(
+    new Set(
+      classificationRows
+        .map((row) => row.contextual_category_id)
+        .filter((value): value is string => Boolean(value))
+    )
+  );
+
+  if (contextualCategoryIds.length === 0) {
+    return classificationsByOrganizationId;
+  }
+
+  const { data: categoryData, error: categoryError } = await supabase
+    .from("contextual_categories")
+    .select(
+      `
+      id,
+      code:slug,
+      default_name:name,
+      default_description:description,
+      slug,
+      status,
+      is_active,
+      sort_order
+    `
+    )
+    .in("id", contextualCategoryIds)
+    .eq("context_id", businessDirectoryContextId)
+    .in("status", PUBLIC_OBJECT_ACTION_STATUSES)
+    .eq("is_active", true);
+
+  if (categoryError) {
+    return classificationsByOrganizationId;
+  }
+
+  const categoryRows =
+    (categoryData as unknown as DirectoryContextualCategoryRow[] | null) ?? [];
+
+  const categoryById = new Map<string, DirectoryContextualCategoryRow>();
+
+  for (const category of categoryRows) {
+    categoryById.set(category.id, category);
+  }
+
+  for (const classification of classificationRows) {
+    if (!classification.contextual_category_id) {
+      continue;
+    }
+
+    const category = categoryById.get(classification.contextual_category_id);
+
+    if (!category) {
+      continue;
+    }
+
+    const currentClassifications =
+      classificationsByOrganizationId.get(classification.entity_id) ?? [];
+
+    currentClassifications.push({
+      id: classification.id,
+      entityId: classification.entity_id,
+      role: classification.role,
+      status: classification.status,
+      createdAt: classification.created_at,
+      category,
+    });
+
+    classificationsByOrganizationId.set(
+      classification.entity_id,
+      currentClassifications
+    );
+  }
+
+  for (const [
+    organizationId,
+    classifications,
+  ] of classificationsByOrganizationId.entries()) {
+    classificationsByOrganizationId.set(
+      organizationId,
+      [...classifications].sort(compareObjectActionClassifications)
+    );
+  }
+
+  return classificationsByOrganizationId;
+}
+
+function compareObjectActionClassifications(
+  firstItem: DirectoryObjectActionClassification,
+  secondItem: DirectoryObjectActionClassification
+) {
+  const firstRolePriority = firstItem.role === "primary" ? 0 : 1;
+  const secondRolePriority = secondItem.role === "primary" ? 0 : 1;
+
+  if (firstRolePriority !== secondRolePriority) {
+    return firstRolePriority - secondRolePriority;
+  }
+
+  const firstSortOrder = firstItem.category.sort_order ?? 0;
+  const secondSortOrder = secondItem.category.sort_order ?? 0;
+
+  if (firstSortOrder !== secondSortOrder) {
+    return firstSortOrder - secondSortOrder;
+  }
+
+  return getTimestamp(firstItem.createdAt) - getTimestamp(secondItem.createdAt);
+}
+
 function getPrimaryLocation(row: DirectoryOrganizationRow) {
   return (
     row.organization_locations?.find(
@@ -395,20 +686,55 @@ function getPrimaryLocation(row: DirectoryOrganizationRow) {
   );
 }
 
-function mapDirectoryOrganization(
-  row: DirectoryOrganizationRow,
-  actionStats: OrganizationActionStats,
-  distanceKm: number | null
-) {
+function getLegacyPrimaryCategory(row: DirectoryOrganizationRow) {
   const primaryCategoryRelation =
     row.organization_categories?.find((item) => item.is_primary) ??
     row.organization_categories?.[0] ??
     null;
 
-  const primaryCategory = getFirstRelatedItem(
-    primaryCategoryRelation?.business_categories
-  );
+  return getFirstRelatedItem(primaryCategoryRelation?.business_categories);
+}
 
+function mapObjectActionCategoryToDirectoryCategory(
+  classification: DirectoryObjectActionClassification
+) {
+  return {
+    id: classification.category.id,
+    slug: classification.category.slug,
+    name: classification.category.default_name,
+    description: null,
+    code: classification.category.code,
+    source: "object_action",
+    classificationId: classification.id,
+    classificationRole: classification.role,
+  };
+}
+
+function getPrimaryCategory(
+  row: DirectoryOrganizationRow,
+  classifications: DirectoryObjectActionClassification[]
+) {
+  const primaryObjectActionClassification =
+    classifications.find((item) => item.role === "primary") ??
+    classifications[0] ??
+    null;
+
+  if (primaryObjectActionClassification) {
+    return mapObjectActionCategoryToDirectoryCategory(
+      primaryObjectActionClassification
+    );
+  }
+
+  return getLegacyPrimaryCategory(row);
+}
+
+function mapDirectoryOrganization(
+  row: DirectoryOrganizationRow,
+  actionStats: OrganizationActionStats,
+  distanceKm: number | null,
+  classifications: DirectoryObjectActionClassification[]
+) {
+  const primaryCategory = getPrimaryCategory(row, classifications);
   const primaryLocation = getPrimaryLocation(row);
 
   const stats = row.organization_search_stats?.[0] ?? null;
@@ -487,24 +813,66 @@ function rowMatchesLocationFilters(
   return hasMatchingLocation;
 }
 
-function rowMatchesCategoryFilter(
-  row: DirectoryOrganizationRow,
-  categorySlug: string | null
+function objectActionCategoryMatchesFilter(
+  classification: DirectoryObjectActionClassification,
+  categoryCandidates: Set<string>
 ) {
-  if (!categorySlug) {
-    return true;
-  }
+  const comparableValues = [
+    classification.category.slug,
+    classification.category.code,
+    classification.category.default_name,
+  ]
+    .map((value) => normalizeCategoryComparableValue(value))
+    .filter((value): value is string => Boolean(value));
 
+  return comparableValues.some((value) => categoryCandidates.has(value));
+}
+
+function legacyCategoryMatchesFilter(
+  row: DirectoryOrganizationRow,
+  categoryCandidates: Set<string>
+) {
   const hasMatchingCategory =
     row.organization_categories?.some((categoryRelation) => {
       const category = getFirstRelatedItem(
         categoryRelation.business_categories
       );
 
-      return category?.slug === categorySlug;
+      const comparableValues = [category?.slug, category?.name]
+        .map((value) => normalizeCategoryComparableValue(value))
+        .filter((value): value is string => Boolean(value));
+
+      return comparableValues.some((value) => categoryCandidates.has(value));
     }) ?? false;
 
   return hasMatchingCategory;
+}
+
+function rowMatchesCategoryFilter(
+  row: DirectoryOrganizationRow,
+  categorySlug: string | null,
+  classifications: DirectoryObjectActionClassification[]
+) {
+  if (!categorySlug) {
+    return true;
+  }
+
+  const categoryCandidates = getDirectoryCategoryFilterCandidates(categorySlug);
+
+  if (categoryCandidates.size === 0) {
+    return true;
+  }
+
+  const hasMatchingObjectActionCategory = classifications.some(
+    (classification) =>
+      objectActionCategoryMatchesFilter(classification, categoryCandidates)
+  );
+
+  if (hasMatchingObjectActionCategory) {
+    return true;
+  }
+
+  return legacyCategoryMatchesFilter(row, categoryCandidates);
 }
 
 function rowMatchesActionFilter(
@@ -776,9 +1144,14 @@ export async function GET(request: NextRequest) {
 
   const rows = (data as unknown as DirectoryOrganizationRow[] | null) ?? [];
 
+  const classificationsByOrganizationId =
+    await getDirectoryClassificationsByOrganizationId(rows.map((row) => row.id));
+
   const locationAndCategoryFilteredRows = rows.filter((row) => {
+    const classifications = classificationsByOrganizationId.get(row.id) ?? [];
+
     return (
-      rowMatchesCategoryFilter(row, categorySlug) &&
+      rowMatchesCategoryFilter(row, categorySlug, classifications) &&
       rowMatchesLocationFilters(row, city, district)
     );
   });
@@ -820,7 +1193,8 @@ export async function GET(request: NextRequest) {
       mapDirectoryOrganization(
         item.row,
         actionStatsByOrganizationId.get(item.row.id) ?? getEmptyActionStats(),
-        item.distanceKm
+        item.distanceKm,
+        classificationsByOrganizationId.get(item.row.id) ?? []
       )
     ),
     count: limitedRowsWithDistance.length,

@@ -1,6 +1,8 @@
-import { auth0 } from "../../../../lib/auth0";
+﻿import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import PurchaseConfirmationForm from "./PurchaseConfirmationForm";
+import OrganizationLocationEditForm from "./OrganizationLocationEditForm";
+import DirectorySuggestionRequestForm from "../../directory/components/DirectorySuggestionRequestForm";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +44,7 @@ type OrganizationLocation = {
 
 type Organization = {
   id: string;
+  created_by_user_id?: string | null;
   organization_name: string;
   organization_type: string;
   description?: string | null;
@@ -150,12 +153,44 @@ type AppUser = {
   name?: string | null;
 };
 
+
+
+type OrganizationCurrentCategory = {
+  classificationId: string;
+  contextualCategoryId: string;
+  categoryName: string;
+  categorySlug: string;
+  classificationRole: string;
+  classificationStatus: string;
+  sourceType: string | null;
+  isPrimary: boolean | null;
+  updatedAt: string | null;
+};
+type OrganizationCategorySuggestionRequest = {
+  id: string;
+  user_text: string;
+  proposed_category_text: string | null;
+  status: string;
+  admin_decision: string | null;
+  ai_status: string | null;
+  ai_confidence: number | null;
+  request_source: string;
+  ai_suggested_category_text: string | null;
+  ai_suggested_contextual_category_id: string | null;
+  matched_existing_category_id: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
 type PageData = {
   organization: Organization | null;
   primaryLocation: OrganizationLocation | null;
   valueObjects: ValueObject[];
-  offers: Offer[];
+  offers: Offer[];
+  categorySuggestionRequests?: OrganizationCategorySuggestionRequest[];
+  currentCategory?: OrganizationCurrentCategory | null;
   errorMessage: string | null;
+  canEditOrganizationLocation?: boolean;
 };
 
 type OrganizationDetailsPageProps = {
@@ -527,6 +562,7 @@ async function getOrganizationPageData(
       .select(
         `
         id,
+        created_by_user_id,
         organization_name,
         organization_type,
         description,
@@ -716,12 +752,135 @@ async function getOrganizationPageData(
     };
   }
 
+  const {
+    data: categorySuggestionRequestsData,
+    error: categorySuggestionRequestsError,
+  } = await supabase
+    .from("object_action_suggestion_requests")
+    .select(
+      `
+      id,
+      user_text,
+      proposed_category_text,
+      status,
+      admin_decision,
+      ai_status,
+      ai_confidence,
+      request_source,
+      ai_suggested_category_text,
+      ai_suggested_contextual_category_id,
+      matched_existing_category_id,
+      reviewed_at,
+      created_at,
+      updated_at
+    `
+    )
+    .eq("entity_type", "organization")
+    .eq("entity_id", organizationId)
+    .eq("context_code", "business_directory")
+    .in("request_source", ["organization_category_change", "api"])
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const categorySuggestionRequests =
+    categorySuggestionRequestsError
+      ? []
+      : ((categorySuggestionRequestsData as
+          | OrganizationCategorySuggestionRequest[]
+          | null) ?? []);
+
+  type CurrentClassificationRow = {
+    id: string;
+    contextual_category_id: string | null;
+    classification_role: string;
+    status: string;
+    source_type: string | null;
+    is_primary: boolean | null;
+    updated_at: string | null;
+  };
+
+  type CurrentCategoryRow = {
+    id: string;
+    slug: string;
+    name: string;
+  };
+
+  const {
+    data: currentClassificationData,
+    error: currentClassificationError,
+  } = await supabase
+    .from("entity_classifications")
+    .select(
+      `
+      id,
+      contextual_category_id,
+      classification_role,
+      status,
+      source_type,
+      is_primary,
+      updated_at
+    `
+    )
+    .eq("entity_type", "organization")
+    .eq("entity_id", organizationId)
+    .eq("classification_role", "primary")
+    .eq("status", "approved")
+    .eq("is_primary", true)
+    .order("updated_at", { ascending: false })
+    .limit(1);
+
+  const currentClassificationRows =
+    (currentClassificationData as CurrentClassificationRow[] | null) ?? [];
+
+  const currentClassification =
+    currentClassificationError || currentClassificationRows.length === 0
+      ? null
+      : currentClassificationRows[0];
+
+  let currentCategory: OrganizationCurrentCategory | null = null;
+
+  if (currentClassification?.contextual_category_id) {
+    const { data: currentCategoryData } = await supabase
+      .from("contextual_categories")
+      .select(
+        `
+        id,
+        slug,
+        name
+      `
+      )
+      .eq("id", currentClassification.contextual_category_id)
+      .maybeSingle();
+
+    const currentCategoryRow =
+      currentCategoryData as CurrentCategoryRow | null;
+
+    if (currentCategoryRow) {
+      currentCategory = {
+        classificationId: currentClassification.id,
+        contextualCategoryId: currentCategoryRow.id,
+        categoryName: currentCategoryRow.name,
+        categorySlug: currentCategoryRow.slug,
+        classificationRole: currentClassification.classification_role,
+        classificationStatus: currentClassification.status,
+        sourceType: currentClassification.source_type,
+        isPrimary: currentClassification.is_primary,
+        updatedAt: currentClassification.updated_at,
+      };
+    }
+  }
+
+  const organization = organizationResult.data as Organization;
+
   return {
-    organization: organizationResult.data as Organization,
+    organization,
     primaryLocation: enrichedPrimaryLocation,
     valueObjects: (valueObjectsResult.data as ValueObject[] | null) ?? [],
     offers: (offersResult.data as unknown as Offer[] | null) ?? [],
+    categorySuggestionRequests: categorySuggestionRequests,
+    currentCategory: currentCategory,
     errorMessage: null,
+    canEditOrganizationLocation: organization.created_by_user_id === appUser.id,
   };
 }
 
@@ -745,10 +904,26 @@ export default async function OrganizationDetailsPage({
   )}`;
   const myPurchaseConfirmationsHref = "/my-purchase-confirmations";
 
-  const { organization, primaryLocation, valueObjects, offers, errorMessage } =
-    await getOrganizationPageData(organizationId);
+  const {
+    organization,
+    primaryLocation,
+    valueObjects,
+    offers,
+    categorySuggestionRequests = [],
+    currentCategory = null,
+    errorMessage,
+    canEditOrganizationLocation = false,
+  } = await getOrganizationPageData(organizationId);
 
   const locationGeoStatusLabel = getLocationGeoStatusLabel(primaryLocation);
+
+  const activeCategorySuggestionRequests = categorySuggestionRequests.filter(
+    (request) =>
+      request.status === "draft" ||
+      request.status === "suggested" ||
+      request.status === "needs_review"
+  );
+
 
   return (
     <main
@@ -919,6 +1094,284 @@ export default async function OrganizationDetailsPage({
                 <strong>Description:</strong>{" "}
                 {organization.description || "Not specified"}
               </p>
+              {canEditOrganizationLocation ? (
+                <section
+                  style={{
+                    marginTop: "18px",
+                    border: "1px solid #bbf7d0",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    background: "#f0fdf4",
+                  }}
+                >
+                  <h3
+                    style={{
+                      margin: "0 0 8px",
+                      fontSize: "18px",
+                      color: "#166534",
+                    }}
+                  >
+                    Current public category
+                  </h3>
+
+                  {currentCategory ? (
+                    <div
+                      style={{
+                        display: "grid",
+                        gap: "6px",
+                        color: "#14532d",
+                        fontSize: "13px",
+                        lineHeight: "1.5",
+                      }}
+                    >
+                      <p style={{ margin: 0 }}>
+                        <strong>Category:</strong>{" "}
+                        {currentCategory.categoryName}
+                      </p>
+
+                      <p style={{ margin: 0 }}>
+                        <strong>Slug:</strong> {currentCategory.categorySlug}
+                      </p>
+
+                      <p style={{ margin: 0 }}>
+                        <strong>Status:</strong>{" "}
+                        {currentCategory.classificationStatus}
+                      </p>
+
+                      <p style={{ margin: 0 }}>
+                        <strong>Role:</strong>{" "}
+                        {currentCategory.classificationRole}
+                      </p>
+
+                      <p style={{ margin: 0 }}>
+                        <strong>Source:</strong>{" "}
+                        {currentCategory.sourceType ?? "not specified"}
+                      </p>
+
+                      <p style={{ margin: 0 }}>
+                        <strong>Classification ID:</strong>{" "}
+                        {currentCategory.classificationId}
+                      </p>
+                    </div>
+                  ) : (
+                    <p
+                      style={{
+                        margin: 0,
+                        color: "#166534",
+                        fontSize: "13px",
+                        lineHeight: "1.5",
+                      }}
+                    >
+                      No approved primary Object-Action category is currently
+                      assigned to this organization.
+                    </p>
+                  )}
+                </section>
+              ) : null}
+
+
+              {canEditOrganizationLocation ? (
+                <div style={{ marginTop: "18px" }}>
+                  <OrganizationLocationEditForm
+                    organizationId={organization.id}
+                    initialCountryCode={
+                      primaryLocation?.country_code ?? organization.country_code ?? null
+                    }
+                    initialCity={primaryLocation?.city ?? null}
+                    initialDistrict={primaryLocation?.district ?? null}
+                    initialAddressVisibility={
+                      primaryLocation?.address_visibility ?? "approximate"
+                    }
+                    initialLatitude={primaryLocation?.latitude ?? null}
+                    initialLongitude={primaryLocation?.longitude ?? null}
+                  />
+                </div>
+              ) : null}
+
+              {canEditOrganizationLocation ? (
+                <div style={{ marginTop: "18px" }}>
+                  {activeCategorySuggestionRequests.length > 0 ? (
+                    <div
+                      style={{
+                        marginBottom: "12px",
+                        border: "1px solid #fbbf24",
+                        borderRadius: "10px",
+                        padding: "12px",
+                        background: "#fffbeb",
+                        color: "#92400e",
+                        fontSize: "13px",
+                        lineHeight: "1.5",
+                      }}
+                    >
+                      <strong>
+                        There is already an active category change request for
+                        this organization.
+                      </strong>{" "}
+                      Active requests:{" "}
+                      <strong>{activeCategorySuggestionRequests.length}</strong>.
+                      You can still send another request, but it may duplicate
+                      an existing pending review.
+                    </div>
+                  ) : null}
+                  <DirectorySuggestionRequestForm
+                    title="Suggest organization category change"
+                    description="Describe what this organization really does and suggest a better public directory category. The request will be reviewed by an admin before changing the public directory."
+                    textareaLabel="Organization activity description"
+                    textareaPlaceholder="Example: This company provides AI automation consulting, workflow optimization and business process improvement for small companies."
+                    submitButtonLabel="Send category change request"
+                    successTitle="Category change request sent."
+                    entityType="organization"
+                    entityId={organization.id}
+                    requestSource="organization_category_change"
+                    locale="en"
+                    contextCode="business_directory"
+                    initialText={organization.description ?? ""}
+                    showProposedCategoryField={true}
+                  />
+                </div>
+              ) : null}
+
+              {canEditOrganizationLocation ? (
+                <section
+                  style={{
+                    marginTop: "18px",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    background: "#f8fbff",
+                  }}
+                >
+                  <h3
+                    style={{
+                      margin: "0 0 8px",
+                      fontSize: "18px",
+                      color: "#1e3a8a",
+                    }}
+                  >
+                    Recent category change requests
+                  </h3>
+
+                  <p
+                    style={{
+                      margin: "0 0 12px",
+                      color: "#1e40af",
+                      fontSize: "13px",
+                      lineHeight: "1.5",
+                    }}
+                  >
+                    Last requests submitted for this organization. Public
+                    category changes only after admin approval.
+                  </p>
+
+                  {categorySuggestionRequests.length === 0 ? (
+                    <p
+                      style={{
+                        margin: 0,
+                        color: "#666666",
+                        fontSize: "14px",
+                      }}
+                    >
+                      No category change requests yet.
+                    </p>
+                  ) : (
+                    <div style={{ display: "grid", gap: "10px" }}>
+                      {categorySuggestionRequests.map((request) => (
+                        <article
+                          key={request.id}
+                          style={{
+                            border: "1px solid #dbeafe",
+                            borderRadius: "10px",
+                            padding: "12px",
+                            background: "#ffffff",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              flexWrap: "wrap",
+                              alignItems: "center",
+                              marginBottom: "8px",
+                            }}
+                          >
+                            <strong style={{ color: "#111827" }}>
+                              {request.proposed_category_text ??
+                                request.ai_suggested_category_text ??
+                                "Category not specified"}
+                            </strong>
+
+                            <span
+                              style={{
+                                border: "1px solid #bfdbfe",
+                                borderRadius: "999px",
+                                padding: "2px 8px",
+                                background: "#eff6ff",
+                                color: "#1e40af",
+                                fontSize: "12px",
+                                fontWeight: 700,
+                              }}
+                            >
+                              {request.status}
+                            </span>
+
+                            <span
+                              style={{
+                                border: "1px solid #e5e7eb",
+                                borderRadius: "999px",
+                                padding: "2px 8px",
+                                background: "#f9fafb",
+                                color: "#374151",
+                                fontSize: "12px",
+                                fontWeight: 700,
+                              }}
+                            >
+                              AI: {request.ai_status ?? "not_requested"}
+                            </span>
+                          </div>
+
+                          <p
+                            style={{
+                              margin: "0 0 8px",
+                              color: "#374151",
+                              fontSize: "13px",
+                              lineHeight: "1.5",
+                            }}
+                          >
+                            {request.user_text}
+                          </p>
+
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns:
+                                "repeat(auto-fit, minmax(180px, 1fr))",
+                              gap: "6px",
+                              color: "#6b7280",
+                              fontSize: "12px",
+                              lineHeight: "1.4",
+                            }}
+                          >
+                            <span>ID: {request.id}</span>
+                            <span>Source: {request.request_source}</span>
+                            <span>Created: {request.created_at}</span>
+                            <span>Updated: {request.updated_at}</span>
+
+                            {request.admin_decision ? (
+                              <span>
+                                Admin decision: {request.admin_decision}
+                              </span>
+                            ) : null}
+
+                            {request.reviewed_at ? (
+                              <span>Reviewed: {request.reviewed_at}</span>
+                            ) : null}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ) : null}
 
               <p
                 style={{
