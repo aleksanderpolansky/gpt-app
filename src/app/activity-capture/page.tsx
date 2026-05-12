@@ -82,7 +82,7 @@ type TemplatesResponse = {
   templates?: ActivityTemplate[];
 };
 
-type ActivityRecordResponse = {
+type ActivityActionResponse = {
   ok: boolean;
   status?: string;
   error?: string;
@@ -101,27 +101,32 @@ type ActivityRecordResponse = {
       currentSnapshots?: number;
     };
   };
+  lifecycle?: Record<string, unknown>;
   parser?: Record<string, unknown>;
+};
+
+type ActivityEventSummary = {
+  id: string | null;
+  title: string | null;
+  status: string | null;
+  source: string | null;
+  sourceType: string | null;
+  privacyScope: string | null;
+  processingStatus: string | null;
+  durationMinutes: number | null;
+  comment: string | null;
+  createdAt: string | null;
+  startedAt?: string | null;
+  endedAt?: string | null;
+  eventLinksCount: number;
+  impactEventsCount: number;
 };
 
 type EventsResponse = {
   ok: boolean;
   count?: number;
   error?: string;
-  events?: Array<{
-    id: string | null;
-    title: string | null;
-    status: string | null;
-    source: string | null;
-    sourceType: string | null;
-    privacyScope: string | null;
-    processingStatus: string | null;
-    durationMinutes: number | null;
-    comment: string | null;
-    createdAt: string | null;
-    eventLinksCount: number;
-    impactEventsCount: number;
-  }>;
+  events?: ActivityEventSummary[];
 };
 
 function getTemplateLabel(template: ActivityTemplate) {
@@ -158,6 +163,20 @@ function safeNumber(value: string) {
   return parsed;
 }
 
+function formatEventTime(value: string | null | undefined) {
+  if (!value) {
+    return "no time";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString();
+}
+
 function JsonBlock({ value }: { value: unknown }) {
   return (
     <pre className="max-h-[520px] overflow-auto rounded-2xl border border-zinc-800 bg-black p-4 text-xs leading-relaxed text-zinc-200">
@@ -186,9 +205,13 @@ export default function ActivityCapturePage() {
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
   const [recordLoading, setRecordLoading] = useState(false);
+  const [startLoading, setStartLoading] = useState(false);
+  const [completeLoadingId, setCompleteLoadingId] = useState<string | null>(
+    null
+  );
   const [recordError, setRecordError] = useState<string | null>(null);
   const [recordResult, setRecordResult] =
-    useState<ActivityRecordResponse | null>(null);
+    useState<ActivityActionResponse | null>(null);
   const [recentEvents, setRecentEvents] = useState<EventsResponse | null>(null);
   const [recentEventsLoading, setRecentEventsLoading] = useState(false);
 
@@ -236,6 +259,15 @@ export default function ActivityCapturePage() {
     });
   }, [groupFilter, query, templates]);
 
+  const openSessions = useMemo(() => {
+    return (recentEvents?.events ?? []).filter((event) => {
+      return event.status === "started" || event.processingStatus === "pending";
+    });
+  }, [recentEvents]);
+
+  const isAnyActionLoading =
+    recordLoading || startLoading || completeLoadingId !== null;
+
   async function loadTemplates() {
     setTemplatesLoading(true);
     setTemplatesError(null);
@@ -279,7 +311,7 @@ export default function ActivityCapturePage() {
     setRecentEventsLoading(true);
 
     try {
-      const response = await fetch("/api/activity/events?limit=5", {
+      const response = await fetch("/api/activity/events?limit=20", {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -348,7 +380,7 @@ export default function ActivityCapturePage() {
         }),
       });
 
-      const body = (await response.json()) as ActivityRecordResponse;
+      const body = (await response.json()) as ActivityActionResponse;
 
       if (!response.ok || !body.ok) {
         throw new Error(body.error ?? "Failed to record activity");
@@ -365,6 +397,95 @@ export default function ActivityCapturePage() {
     }
   }
 
+  async function startActivity() {
+    if (!selectedTemplate) {
+      setRecordError("Select an activity template first.");
+      return;
+    }
+
+    setStartLoading(true);
+    setRecordError(null);
+    setRecordResult(null);
+
+    try {
+      const response = await fetch("/api/activity/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          templateSlug: selectedTemplate.slug,
+          comment: comment.trim() || "Started from Activity Capture UI",
+          sourceType: "manual_form",
+        }),
+      });
+
+      const body = (await response.json()) as ActivityActionResponse;
+
+      if (!response.ok || !body.ok) {
+        throw new Error(body.error ?? "Failed to start activity");
+      }
+
+      setRecordResult(body);
+      await loadRecentEvents();
+    } catch (error) {
+      setRecordError(
+        error instanceof Error ? error.message : "Unknown start error"
+      );
+    } finally {
+      setStartLoading(false);
+    }
+  }
+
+  async function completeActivity(eventId: string | null) {
+    if (!eventId) {
+      setRecordError("Cannot complete activity without event id.");
+      return;
+    }
+
+    const durationMinutes = safeNumber(durationInput);
+
+    if (durationMinutes === null) {
+      setRecordError("Duration must be a valid non-negative number.");
+      return;
+    }
+
+    setCompleteLoadingId(eventId);
+    setRecordError(null);
+    setRecordResult(null);
+
+    try {
+      const response = await fetch("/api/activity/complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          eventId,
+          durationMinutes,
+          comment: comment.trim() || "Completed from Activity Capture UI",
+        }),
+      });
+
+      const body = (await response.json()) as ActivityActionResponse;
+
+      if (!response.ok || !body.ok) {
+        throw new Error(body.error ?? "Failed to complete activity");
+      }
+
+      setRecordResult(body);
+      await loadRecentEvents();
+    } catch (error) {
+      setRecordError(
+        error instanceof Error ? error.message : "Unknown completion error"
+      );
+    } finally {
+      setCompleteLoadingId(null);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-zinc-950 px-5 py-6 text-zinc-100 md:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
@@ -378,9 +499,9 @@ export default function ActivityCapturePage() {
                 Activity Capture Dev UI
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
-                Template-first activity recording. The user selects a clear
-                activity template, duration and comment. Numeric codes remain
-                only optional legacy shortcuts, not the main UX.
+                Template-first recording with two modes: direct completed
+                activity and lifecycle start/complete. Numeric codes remain
+                optional legacy shortcuts, not the main UX.
               </p>
             </div>
 
@@ -394,10 +515,24 @@ export default function ActivityCapturePage() {
               </Link>
               <Link
                 className="rounded-full border border-zinc-700 px-4 py-2 text-zinc-200 hover:border-emerald-500 hover:text-emerald-300"
-                href="/api/activity/events?limit=5"
+                href="/api/activity/events?limit=10"
                 target="_blank"
               >
                 Events API
+              </Link>
+              <Link
+                className="rounded-full border border-zinc-700 px-4 py-2 text-zinc-200 hover:border-emerald-500 hover:text-emerald-300"
+                href="/api/activity/start"
+                target="_blank"
+              >
+                Start API
+              </Link>
+              <Link
+                className="rounded-full border border-zinc-700 px-4 py-2 text-zinc-200 hover:border-emerald-500 hover:text-emerald-300"
+                href="/api/activity/complete"
+                target="_blank"
+              >
+                Complete API
               </Link>
             </div>
           </div>
@@ -556,7 +691,7 @@ export default function ActivityCapturePage() {
           <div className="flex flex-col gap-6">
             <section className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
               <h2 className="text-lg font-semibold text-white">
-                2. Record selected activity
+                2. Record or start selected activity
               </h2>
 
               {selectedTemplate ? (
@@ -623,24 +758,108 @@ export default function ActivityCapturePage() {
                     </div>
                   ) : null}
 
-                  <button
-                    className="mt-4 w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={recordLoading}
-                    onClick={() => void recordActivity()}
-                    type="button"
-                  >
-                    {recordLoading ? "Recording..." : "Record activity"}
-                  </button>
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <button
+                      className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={isAnyActionLoading}
+                      onClick={() => void recordActivity()}
+                      type="button"
+                    >
+                      {recordLoading ? "Recording..." : "Record completed"}
+                    </button>
+
+                    <button
+                      className="rounded-2xl border border-blue-500 bg-blue-950/30 px-4 py-3 text-sm font-semibold text-blue-100 hover:bg-blue-900/40 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={isAnyActionLoading}
+                      onClick={() => void startActivity()}
+                      type="button"
+                    >
+                      {startLoading ? "Starting..." : "Start activity"}
+                    </button>
+                  </div>
+
+                  <p className="mt-3 text-xs leading-5 text-zinc-500">
+                    Record completed immediately creates impacts. Start activity
+                    creates only a started event with links; impacts are created
+                    after completion.
+                  </p>
                 </div>
               ) : (
-                <EmptyState text="Select a template to record an activity." />
+                <EmptyState text="Select a template to record or start an activity." />
               )}
             </section>
 
             <section className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
               <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">
+                    3. Open sessions
+                  </h2>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Started/pending activities waiting for completion.
+                  </p>
+                </div>
+                <button
+                  className="rounded-full border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:border-emerald-500 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={recentEventsLoading}
+                  onClick={() => void loadRecentEvents()}
+                  type="button"
+                >
+                  {recentEventsLoading ? "Loading..." : "Reload"}
+                </button>
+              </div>
+
+              <div className="mt-4 grid gap-3">
+                {openSessions.map((event) => (
+                  <div
+                    className="rounded-2xl border border-blue-900/70 bg-blue-950/20 p-4"
+                    key={event.id ?? event.createdAt ?? "open-session"}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-white">
+                        {event.title ?? "Untitled activity"}
+                      </p>
+                      <span className="rounded-full bg-blue-900 px-2.5 py-1 text-xs text-blue-100">
+                        {event.status} / {event.processingStatus}
+                      </span>
+                    </div>
+
+                    <p className="mt-2 text-xs text-zinc-500">
+                      started: {formatEventTime(event.startedAt ?? event.createdAt)}
+                    </p>
+
+                    <p className="mt-2 text-xs text-zinc-400">
+                      links: {event.eventLinksCount} · impacts:{" "}
+                      {event.impactEventsCount}
+                    </p>
+
+                    <p className="mt-2 text-xs text-zinc-500">
+                      comment: {event.comment ?? "no comment"}
+                    </p>
+
+                    <button
+                      className="mt-4 w-full rounded-2xl bg-blue-500 px-4 py-3 text-sm font-semibold text-black hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={isAnyActionLoading}
+                      onClick={() => void completeActivity(event.id)}
+                      type="button"
+                    >
+                      {completeLoadingId === event.id
+                        ? "Completing..."
+                        : `Complete with ${durationInput || "0"} min`}
+                    </button>
+                  </div>
+                ))}
+
+                {openSessions.length === 0 ? (
+                  <EmptyState text="No open sessions found." />
+                ) : null}
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
+              <div className="flex items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold text-white">
-                  3. Recent events
+                  4. Recent events
                 </h2>
                 <button
                   className="rounded-full border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:border-emerald-500 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
@@ -656,7 +875,7 @@ export default function ActivityCapturePage() {
                 {recentEvents?.events?.map((event) => (
                   <div
                     className="rounded-2xl border border-zinc-800 bg-black/50 p-4"
-                    key={event.id ?? Math.random().toString()}
+                    key={event.id ?? event.createdAt ?? "recent-event"}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-medium text-white">
@@ -673,6 +892,9 @@ export default function ActivityCapturePage() {
                     <p className="mt-2 text-xs text-zinc-400">
                       links: {event.eventLinksCount} · impacts:{" "}
                       {event.impactEventsCount}
+                    </p>
+                    <p className="mt-2 text-xs text-zinc-500">
+                      {event.comment ?? "no comment"}
                     </p>
                   </div>
                 ))}
@@ -693,7 +915,7 @@ export default function ActivityCapturePage() {
 
         <section className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
           <h2 className="text-lg font-semibold text-white">
-            4. Last recording response
+            5. Last action response
           </h2>
 
           <div className="mt-4">
@@ -701,7 +923,7 @@ export default function ActivityCapturePage() {
               <div className="grid gap-4 xl:grid-cols-[0.75fr_1.25fr]">
                 <div className="rounded-2xl border border-zinc-800 bg-black/50 p-4">
                   <p className="text-sm font-semibold text-emerald-300">
-                    Recorded successfully
+                    Action completed successfully
                   </p>
                   <dl className="mt-4 grid gap-3 text-sm">
                     <div className="flex justify-between gap-4">
@@ -738,7 +960,7 @@ export default function ActivityCapturePage() {
                 <JsonBlock value={recordResult} />
               </div>
             ) : (
-              <EmptyState text="No activity has been recorded from this UI yet." />
+              <EmptyState text="No activity action has been executed from this UI yet." />
             )}
           </div>
         </section>
