@@ -96,6 +96,34 @@ type DaySummaryResponse = {
   note?: string;
 };
 
+type CorrectionDraft = {
+  durationMinutes: string;
+  comment: string;
+  reason: string;
+};
+
+type CorrectionState = {
+  loading: boolean;
+  error: string | null;
+  result: unknown | null;
+};
+
+type CorrectionMode = "duration_comment" | "cancelled";
+
+type CorrectionPatchResponse = {
+  ok: boolean;
+  status?: string;
+  error?: string;
+  warning?: string;
+  changedFields?: string[];
+  event?: Record<string, unknown>;
+  correction?: Record<string, unknown>;
+  recalculation?: unknown;
+  rollback?: unknown;
+  audit?: Record<string, unknown>;
+  recovery?: unknown;
+};
+
 function getTodayDateForTimezone(timezone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
@@ -146,6 +174,24 @@ function humanizeKey(value: string) {
   return value.replaceAll("_", " ");
 }
 
+function getDefaultCorrectionDraft(event: DaySummaryEvent): CorrectionDraft {
+  return {
+    durationMinutes: String(event.durationMinutes ?? 0),
+    comment: event.comment ?? "",
+    reason: "Manual correction from Activity Today UI",
+  };
+}
+
+function parseDurationInput(value: string) {
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
 function JsonBlock({ value }: { value: unknown }) {
   return (
     <pre className="max-h-[620px] overflow-auto rounded-2xl border border-zinc-800 bg-black p-4 text-xs leading-relaxed text-zinc-200">
@@ -182,12 +228,179 @@ function StatCard({
   );
 }
 
+function EventCorrectionControls({
+  event,
+  draft,
+  state,
+  onDraftChange,
+  onSubmit,
+}: {
+  event: DaySummaryEvent;
+  draft: CorrectionDraft;
+  state: CorrectionState | undefined;
+  onDraftChange: (patch: Partial<CorrectionDraft>) => void;
+  onSubmit: (mode: CorrectionMode) => void;
+}) {
+  const isCompleted = event.status === "completed";
+  const isLoading = state?.loading ?? false;
+  const result = state?.result as CorrectionPatchResponse | null | undefined;
+
+  return (
+    <div className="mt-4 rounded-2xl border border-zinc-900 bg-zinc-950/70 p-4">
+      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+            Correction
+          </p>
+          <p className="mt-1 text-xs leading-5 text-zinc-500">
+            B12.1 UI uses PATCH /api/activity/events/[id]. Duration/comment
+            corrections recalculate impacts. Cancelled status uses rollback-only
+            correction.
+          </p>
+        </div>
+
+        <span
+          className={[
+            "rounded-full px-2.5 py-1 text-xs",
+            isCompleted
+              ? "bg-emerald-950 text-emerald-200"
+              : "bg-zinc-900 text-zinc-500",
+          ].join(" ")}
+        >
+          {isCompleted ? "editable" : "read-only"}
+        </span>
+      </div>
+
+      {!isCompleted ? (
+        <div className="mt-4 rounded-xl border border-zinc-800 bg-black/40 p-3 text-xs text-zinc-500">
+          Corrections are available only for completed events. Current status:{" "}
+          <span className="text-zinc-300">{event.status}</span>.
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-3">
+          <div className="grid gap-3 md:grid-cols-[0.35fr_0.65fr]">
+            <div>
+              <label
+                className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-600"
+                htmlFor={`duration-${event.id}`}
+              >
+                Duration
+              </label>
+              <input
+                className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500"
+                disabled={isLoading}
+                id={`duration-${event.id}`}
+                min={0}
+                onChange={(inputEvent) =>
+                  onDraftChange({ durationMinutes: inputEvent.target.value })
+                }
+                type="number"
+                value={draft.durationMinutes}
+              />
+            </div>
+
+            <div>
+              <label
+                className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-600"
+                htmlFor={`reason-${event.id}`}
+              >
+                Reason
+              </label>
+              <input
+                className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500"
+                disabled={isLoading}
+                id={`reason-${event.id}`}
+                onChange={(inputEvent) =>
+                  onDraftChange({ reason: inputEvent.target.value })
+                }
+                value={draft.reason}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-600"
+              htmlFor={`comment-${event.id}`}
+            >
+              Comment
+            </label>
+            <textarea
+              className="min-h-20 w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-emerald-500"
+              disabled={isLoading}
+              id={`comment-${event.id}`}
+              onChange={(inputEvent) =>
+                onDraftChange({ comment: inputEvent.target.value })
+              }
+              value={draft.comment}
+            />
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-2">
+            <button
+              className="rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isLoading}
+              onClick={() => onSubmit("duration_comment")}
+              type="button"
+            >
+              {isLoading ? "Saving..." : "Save duration/comment"}
+            </button>
+
+            <button
+              className="rounded-xl border border-red-700 bg-red-950/40 px-3 py-2 text-xs font-semibold text-red-100 hover:bg-red-900/40 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isLoading}
+              onClick={() => onSubmit("cancelled")}
+              type="button"
+            >
+              {isLoading ? "Rolling back..." : "Mark cancelled + rollback"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {state?.error ? (
+        <div className="mt-4 rounded-xl border border-red-900/70 bg-red-950/40 p-3 text-xs leading-5 text-red-200">
+          {state.error}
+        </div>
+      ) : null}
+
+      {result?.ok ? (
+        <div className="mt-4 rounded-xl border border-emerald-900/70 bg-emerald-950/30 p-3 text-xs leading-5 text-emerald-200">
+          <p className="font-semibold">Correction applied.</p>
+          <p className="mt-1">
+            Status: {result.status ?? "ok"} · changed fields:{" "}
+            {result.changedFields?.join(", ") ?? "—"}
+          </p>
+          {result.warning ? <p className="mt-1">{result.warning}</p> : null}
+        </div>
+      ) : null}
+
+      {state?.result ? (
+        <details className="mt-4">
+          <summary className="cursor-pointer text-xs text-zinc-500 hover:text-zinc-300">
+            Correction response JSON
+          </summary>
+          <div className="mt-3">
+            <JsonBlock value={state.result} />
+          </div>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
 export default function ActivityTodayPage() {
   const [date, setDate] = useState(getTodayDateForTimezone(DEFAULT_TIMEZONE));
   const [summary, setSummary] = useState<DaySummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRawSummary, setShowRawSummary] = useState(false);
+  const [correctionDrafts, setCorrectionDrafts] = useState<
+    Record<string, CorrectionDraft>
+  >({});
+  const [correctionStates, setCorrectionStates] = useState<
+    Record<string, CorrectionState>
+  >({});
 
   const dailyAggregates = summary?.dailyAggregates ?? [];
   const currentSnapshots = summary?.currentSnapshots ?? [];
@@ -250,6 +463,117 @@ export default function ActivityTodayPage() {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  function getCorrectionDraft(event: DaySummaryEvent) {
+    return correctionDrafts[event.id] ?? getDefaultCorrectionDraft(event);
+  }
+
+  function updateCorrectionDraft(
+    event: DaySummaryEvent,
+    patch: Partial<CorrectionDraft>
+  ) {
+    setCorrectionDrafts((current) => ({
+      ...current,
+      [event.id]: {
+        ...getDefaultCorrectionDraft(event),
+        ...(current[event.id] ?? {}),
+        ...patch,
+      },
+    }));
+  }
+
+  function setCorrectionState(eventId: string, state: CorrectionState) {
+    setCorrectionStates((current) => ({
+      ...current,
+      [eventId]: state,
+    }));
+  }
+
+  async function submitCorrection(event: DaySummaryEvent, mode: CorrectionMode) {
+    const draft = getCorrectionDraft(event);
+
+    if (event.status !== "completed") {
+      setCorrectionState(event.id, {
+        loading: false,
+        error: "Only completed events can be corrected in B12.1 UI.",
+        result: null,
+      });
+      return;
+    }
+
+    const reason =
+      draft.reason.trim() ||
+      (mode === "cancelled"
+        ? "Cancelled from Activity Today UI"
+        : "Duration/comment correction from Activity Today UI");
+
+    const body: Record<string, unknown> = {
+      comment: draft.comment,
+      reason,
+    };
+
+    if (mode === "duration_comment") {
+      const durationMinutes = parseDurationInput(draft.durationMinutes);
+
+      if (durationMinutes === null) {
+        setCorrectionState(event.id, {
+          loading: false,
+          error: "Duration must be a valid non-negative number.",
+          result: null,
+        });
+        return;
+      }
+
+      body.durationMinutes = durationMinutes;
+    }
+
+    if (mode === "cancelled") {
+      body.status = "cancelled";
+    }
+
+    setCorrectionState(event.id, {
+      loading: true,
+      error: null,
+      result: null,
+    });
+
+    try {
+      const response = await fetch(
+        `/api/activity/events/${encodeURIComponent(event.id)}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      const result = (await response.json()) as CorrectionPatchResponse;
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error ?? "Failed to apply correction");
+      }
+
+      setCorrectionState(event.id, {
+        loading: false,
+        error: null,
+        result,
+      });
+
+      await loadSummary(date);
+    } catch (requestError) {
+      setCorrectionState(event.id, {
+        loading: false,
+        error:
+          requestError instanceof Error
+            ? requestError.message
+            : "Unknown correction error",
+        result: null,
+      });
     }
   }
 
@@ -516,6 +840,16 @@ export default function ActivityTodayPage() {
                   <p className="mt-2 text-xs text-zinc-400">
                     {event.comment ?? "no comment"}
                   </p>
+
+                  <EventCorrectionControls
+                    draft={getCorrectionDraft(event)}
+                    event={event}
+                    onDraftChange={(patch) =>
+                      updateCorrectionDraft(event, patch)
+                    }
+                    onSubmit={(mode) => void submitCorrection(event, mode)}
+                    state={correctionStates[event.id]}
+                  />
                 </div>
               ))}
 
