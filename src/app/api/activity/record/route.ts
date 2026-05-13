@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
   ACTIVITY_RECORDING_ENABLED,
@@ -936,7 +936,8 @@ export async function POST(request: Request) {
     await supabase
       .from("activity_events")
       .update({ processing_status: "failed" })
-      .eq("id", createdEvent.id);
+      .eq("id", createdEvent.id)
+      .eq("user_id", appUser.id);
 
     return NextResponse.json(
       {
@@ -996,7 +997,8 @@ export async function POST(request: Request) {
     await supabase
       .from("activity_events")
       .update({ processing_status: "failed" })
-      .eq("id", createdEvent.id);
+      .eq("id", createdEvent.id)
+      .eq("user_id", appUser.id);
 
     return NextResponse.json(
       {
