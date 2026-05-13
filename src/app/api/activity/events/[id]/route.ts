@@ -13,12 +13,22 @@ import { supabase } from "../../../../../../lib/supabase";
 export const dynamic = "force-dynamic";
 
 const DEFAULT_CORRECTION_TIMEZONE = "Europe/Warsaw";
+const TIMELINE_SEARCH_PADDING_BEFORE_HOURS = 2;
+const TIMELINE_SEARCH_PADDING_AFTER_HOURS = 12;
 
 const ROLLBACK_ONLY_STATUSES = new Set([
   "cancelled",
   "missed",
   "archived",
   "corrected",
+]);
+
+const TIMELINE_EXCLUDED_STATUSES = new Set([
+  "cancelled",
+  "missed",
+  "archived",
+  "corrected",
+  "status_corrected",
 ]);
 
 type RouteContext = {
@@ -81,6 +91,54 @@ type AuditFailureRecoveryResult = {
   ok: boolean;
   error: string | null;
   event: ActivityEventRow | null;
+};
+
+type TimelineConflictSeverity = "info" | "warning" | "blocking";
+
+type TimelineConflictCandidate = {
+  eventId: string;
+  title: string | null;
+  status: string;
+  processingStatus: string | null;
+  source: string | null;
+  currentStartedAt: string | null;
+  currentEndedAt: string | null;
+  currentDurationMinutes: number | null;
+  suggestedStartedAt: string | null;
+  suggestedEndedAt: string | null;
+  suggestedDurationMinutes: number | null;
+  conflictTypes: string[];
+  severity: TimelineConflictSeverity;
+  isSuggestedChange: boolean;
+  explanation: string;
+};
+
+type TimelineConflictDetectionResult = {
+  ok: boolean;
+  skipped?: boolean;
+  reason?: string;
+  error?: string;
+  correctedEventId: string;
+  previousInterval: {
+    startedAt: string | null;
+    endedAt: string | null;
+    durationMinutes: number | null;
+  };
+  newInterval: {
+    startedAt: string | null;
+    endedAt: string | null;
+    durationMinutes: number | null;
+  };
+  searchRange?: {
+    from: string;
+    to: string;
+  };
+  summary: {
+    candidatesCount: number;
+    suggestedChangesCount: number;
+    blockingCandidatesCount: number;
+  };
+  candidates: TimelineConflictCandidate[];
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -191,6 +249,413 @@ function resolveAggregateDateForAudit(startedAt: string | null) {
   }
 
   return getDatePartsInTimezone(new Date(), DEFAULT_CORRECTION_TIMEZONE);
+}
+
+function isSameInstant(left: string | null, right: string | null) {
+  if (!left || !right) {
+    return false;
+  }
+
+  const leftDate = new Date(left);
+  const rightDate = new Date(right);
+
+  if (
+    Number.isNaN(leftDate.getTime()) ||
+    Number.isNaN(rightDate.getTime())
+  ) {
+    return false;
+  }
+
+  return leftDate.getTime() === rightDate.getTime();
+}
+
+function getTimeValue(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.getTime();
+}
+
+function addHours(value: string, hours: number) {
+  const date = new Date(value);
+  return new Date(date.getTime() + hours * 60 * 60 * 1000).toISOString();
+}
+
+function calculateDurationMinutes(startedAt: string | null, endedAt: string | null) {
+  const startedValue = getTimeValue(startedAt);
+  const endedValue = getTimeValue(endedAt);
+
+  if (startedValue === null || endedValue === null) {
+    return null;
+  }
+
+  return Math.round((endedValue - startedValue) / 60000);
+}
+
+function getDurationFromEvent(event: ActivityEventRow) {
+  const explicitDuration = asNumber(event.duration_minutes);
+
+  if (explicitDuration !== null) {
+    return explicitDuration;
+  }
+
+  return calculateDurationMinutes(event.started_at, event.ended_at);
+}
+
+function resolveTimelineSearchRange(params: {
+  previousEvent: ActivityEventRow;
+  updatedEvent: ActivityEventRow;
+}) {
+  const { previousEvent, updatedEvent } = params;
+
+  const values = [
+    normalizeIsoDate(previousEvent.started_at),
+    normalizeIsoDate(previousEvent.ended_at),
+    normalizeIsoDate(updatedEvent.started_at),
+    normalizeIsoDate(updatedEvent.ended_at),
+  ].filter((value): value is string => Boolean(value));
+
+  if (values.length === 0) {
+    return null;
+  }
+
+  const timestamps = values
+    .map((value) => new Date(value).getTime())
+    .filter((value) => Number.isFinite(value));
+
+  if (timestamps.length === 0) {
+    return null;
+  }
+
+  const minIso = new Date(Math.min(...timestamps)).toISOString();
+  const maxIso = new Date(Math.max(...timestamps)).toISOString();
+
+  return {
+    from: addHours(minIso, -TIMELINE_SEARCH_PADDING_BEFORE_HOURS),
+    to: addHours(maxIso, TIMELINE_SEARCH_PADDING_AFTER_HOURS),
+  };
+}
+
+function shouldConsiderTimelineCandidate(event: ActivityEventRow) {
+  if (TIMELINE_EXCLUDED_STATUSES.has(event.status)) {
+    return false;
+  }
+
+  if (event.processing_status === "failed") {
+    return false;
+  }
+
+  if (!event.started_at) {
+    return false;
+  }
+
+  return true;
+}
+
+function buildTimelineCandidate(params: {
+  candidate: ActivityEventRow;
+  previousEvent: ActivityEventRow;
+  updatedEvent: ActivityEventRow;
+}): TimelineConflictCandidate | null {
+  const { candidate, previousEvent, updatedEvent } = params;
+
+  if (!shouldConsiderTimelineCandidate(candidate)) {
+    return null;
+  }
+
+  const previousEndedAt = normalizeIsoDate(previousEvent.ended_at);
+  const updatedStartedAt = normalizeIsoDate(updatedEvent.started_at);
+  const updatedEndedAt = normalizeIsoDate(updatedEvent.ended_at);
+  const candidateStartedAt = normalizeIsoDate(candidate.started_at);
+  const candidateEndedAt = normalizeIsoDate(candidate.ended_at);
+
+  const previousEndedValue = getTimeValue(previousEndedAt);
+  const updatedStartedValue = getTimeValue(updatedStartedAt);
+  const updatedEndedValue = getTimeValue(updatedEndedAt);
+  const candidateStartedValue = getTimeValue(candidateStartedAt);
+  const candidateEndedValue = getTimeValue(candidateEndedAt);
+
+  if (
+    !updatedStartedAt ||
+    !updatedEndedAt ||
+    updatedStartedValue === null ||
+    updatedEndedValue === null ||
+    !candidateStartedAt ||
+    candidateStartedValue === null
+  ) {
+    return null;
+  }
+
+  const conflictTypes: string[] = [];
+  let suggestedStartedAt = candidateStartedAt;
+  let suggestedEndedAt = candidateEndedAt;
+
+  if (previousEndedAt && isSameInstant(candidateStartedAt, previousEndedAt)) {
+    conflictTypes.push("started_at_old_corrected_event_end");
+    suggestedStartedAt = updatedEndedAt;
+  }
+
+  if (
+    previousEndedValue !== null &&
+    updatedEndedValue > previousEndedValue &&
+    candidateStartedValue >= previousEndedValue &&
+    candidateStartedValue < updatedEndedValue
+  ) {
+    conflictTypes.push("starts_inside_extended_corrected_interval");
+    suggestedStartedAt = updatedEndedAt;
+  }
+
+  if (
+    previousEndedValue !== null &&
+    updatedEndedValue < previousEndedValue &&
+    isSameInstant(candidateStartedAt, previousEndedAt)
+  ) {
+    conflictTypes.push("starts_at_old_end_after_shorter_correction");
+    suggestedStartedAt = updatedEndedAt;
+  }
+
+  if (
+    candidateEndedValue !== null &&
+    candidateStartedValue < updatedEndedValue &&
+    candidateEndedValue > updatedStartedValue
+  ) {
+    conflictTypes.push("overlaps_corrected_event_interval");
+  }
+
+  if (
+    previousEndedValue !== null &&
+    updatedEndedValue > previousEndedValue &&
+    candidateEndedValue !== null &&
+    candidateStartedValue < updatedEndedValue &&
+    candidateEndedValue > previousEndedValue
+  ) {
+    conflictTypes.push("overlaps_extended_part_of_corrected_event");
+  }
+
+  const uniqueConflictTypes = Array.from(new Set(conflictTypes));
+
+  if (uniqueConflictTypes.length === 0) {
+    return null;
+  }
+
+  const suggestedDurationMinutes = calculateDurationMinutes(
+    suggestedStartedAt,
+    suggestedEndedAt
+  );
+
+  const isSuggestedChange =
+    dateValuesDiffer(suggestedStartedAt, candidateStartedAt) ||
+    dateValuesDiffer(suggestedEndedAt, candidateEndedAt);
+
+  let severity: TimelineConflictSeverity = isSuggestedChange
+    ? "warning"
+    : "info";
+
+  if (
+    isSuggestedChange &&
+    suggestedDurationMinutes !== null &&
+    suggestedDurationMinutes <= 0
+  ) {
+    severity = "blocking";
+  }
+
+  const explanation =
+    severity === "blocking"
+      ? "Suggested adjustment would make duration zero or negative. User must resolve manually."
+      : isSuggestedChange
+        ? "This activity starts inside the corrected interval. UI may suggest moving its start while keeping its end as anchor."
+        : "This activity overlaps the corrected interval, but no automatic suggestion is safe. User should decide whether it is parallel or needs editing.";
+
+  return {
+    eventId: candidate.id,
+    title: candidate.title,
+    status: candidate.status,
+    processingStatus: candidate.processing_status,
+    source: candidate.source,
+    currentStartedAt: candidateStartedAt,
+    currentEndedAt: candidateEndedAt,
+    currentDurationMinutes: getDurationFromEvent(candidate),
+    suggestedStartedAt,
+    suggestedEndedAt,
+    suggestedDurationMinutes,
+    conflictTypes: uniqueConflictTypes,
+    severity,
+    isSuggestedChange,
+    explanation,
+  };
+}
+
+async function getNearbyTimelineEvents(params: {
+  userId: string;
+  eventId: string;
+  searchRange: {
+    from: string;
+    to: string;
+  };
+}) {
+  const { userId, eventId, searchRange } = params;
+
+  const { data, error } = await supabase
+    .from("activity_events")
+    .select("*")
+    .eq("user_id", userId)
+    .neq("id", eventId)
+    .not("started_at", "is", null)
+    .gte("started_at", searchRange.from)
+    .lte("started_at", searchRange.to)
+    .order("started_at", { ascending: true })
+    .limit(100);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data as unknown as ActivityEventRow[] | null) ?? [];
+}
+
+async function detectTimelineConflicts(params: {
+  previousEvent: ActivityEventRow;
+  updatedEvent: ActivityEventRow;
+  userId: string;
+}): Promise<TimelineConflictDetectionResult> {
+  const { previousEvent, updatedEvent, userId } = params;
+
+  const previousDuration = getDurationFromEvent(previousEvent);
+  const updatedDuration = getDurationFromEvent(updatedEvent);
+
+  const baseResult = {
+    correctedEventId: updatedEvent.id,
+    previousInterval: {
+      startedAt: normalizeIsoDate(previousEvent.started_at),
+      endedAt: normalizeIsoDate(previousEvent.ended_at),
+      durationMinutes: previousDuration,
+    },
+    newInterval: {
+      startedAt: normalizeIsoDate(updatedEvent.started_at),
+      endedAt: normalizeIsoDate(updatedEvent.ended_at),
+      durationMinutes: updatedDuration,
+    },
+  };
+
+  if (!dateValuesDiffer(previousEvent.ended_at, updatedEvent.ended_at)) {
+    return {
+      ok: true,
+      skipped: true,
+      reason:
+        "Corrected event ended_at did not change. Timeline conflict detection was not required.",
+      ...baseResult,
+      summary: {
+        candidatesCount: 0,
+        suggestedChangesCount: 0,
+        blockingCandidatesCount: 0,
+      },
+      candidates: [],
+    };
+  }
+
+  const searchRange = resolveTimelineSearchRange({
+    previousEvent,
+    updatedEvent,
+  });
+
+  if (!searchRange) {
+    return {
+      ok: true,
+      skipped: true,
+      reason:
+        "Could not resolve a reliable search range for timeline conflict detection.",
+      ...baseResult,
+      summary: {
+        candidatesCount: 0,
+        suggestedChangesCount: 0,
+        blockingCandidatesCount: 0,
+      },
+      candidates: [],
+    };
+  }
+
+  const nearbyEvents = await getNearbyTimelineEvents({
+    userId,
+    eventId: updatedEvent.id,
+    searchRange,
+  });
+
+  const candidates = nearbyEvents
+    .map((candidate) =>
+      buildTimelineCandidate({
+        candidate,
+        previousEvent,
+        updatedEvent,
+      })
+    )
+    .filter(
+      (candidate): candidate is TimelineConflictCandidate =>
+        candidate !== null
+    );
+
+  return {
+    ok: true,
+    ...baseResult,
+    searchRange,
+    summary: {
+      candidatesCount: candidates.length,
+      suggestedChangesCount: candidates.filter(
+        (candidate) => candidate.isSuggestedChange
+      ).length,
+      blockingCandidatesCount: candidates.filter(
+        (candidate) => candidate.severity === "blocking"
+      ).length,
+    },
+    candidates,
+  };
+}
+
+async function safeDetectTimelineConflicts(params: {
+  previousEvent: ActivityEventRow;
+  updatedEvent: ActivityEventRow;
+  userId: string;
+}): Promise<TimelineConflictDetectionResult> {
+  const { previousEvent, updatedEvent, userId } = params;
+
+  try {
+    return await detectTimelineConflicts({
+      previousEvent,
+      updatedEvent,
+      userId,
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to detect timeline conflicts.",
+      correctedEventId: updatedEvent.id,
+      previousInterval: {
+        startedAt: normalizeIsoDate(previousEvent.started_at),
+        endedAt: normalizeIsoDate(previousEvent.ended_at),
+        durationMinutes: getDurationFromEvent(previousEvent),
+      },
+      newInterval: {
+        startedAt: normalizeIsoDate(updatedEvent.started_at),
+        endedAt: normalizeIsoDate(updatedEvent.ended_at),
+        durationMinutes: getDurationFromEvent(updatedEvent),
+      },
+      summary: {
+        candidatesCount: 0,
+        suggestedChangesCount: 0,
+        blockingCandidatesCount: 0,
+      },
+      candidates: [],
+    };
+  }
 }
 
 function resolveCorrectionTiming(params: {
@@ -519,8 +984,13 @@ export async function GET() {
       status: Array.from(ROLLBACK_ONLY_STATUSES),
       reason: "string",
     },
+    timelineConflictDetection: {
+      status: "B12.6.1",
+      behavior:
+        "After timing/duration correction, the route returns timeline.candidates but does not modify neighboring events automatically.",
+    },
     currentLimit:
-      "B11.3a supports completed event timing/duration/comment corrections. B11.3b supports rollback-only status corrections for completed events. B11.4.1 adds metadata recovery when correction audit insert fails after partial success.",
+      "B11.3a supports completed event timing/duration/comment corrections. B11.3b supports rollback-only status corrections for completed events. B11.4.1 adds metadata recovery when correction audit insert fails after partial success. B12.6.1 adds read-only timeline conflict detection after corrections.",
   });
 }
 
@@ -828,6 +1298,29 @@ export async function PATCH(request: Request, context: RouteContext) {
       correction: correctionRow,
       changedFields,
       rollback: rollbackResult,
+      timeline: {
+        ok: true,
+        skipped: true,
+        reason:
+          "Timeline conflict detection is skipped for rollback-only status corrections.",
+        correctedEventId: updatedEvent.id,
+        previousInterval: {
+          startedAt: normalizeIsoDate(previousEvent.started_at),
+          endedAt: normalizeIsoDate(previousEvent.ended_at),
+          durationMinutes: getDurationFromEvent(previousEvent),
+        },
+        newInterval: {
+          startedAt: normalizeIsoDate(updatedEvent.started_at),
+          endedAt: normalizeIsoDate(updatedEvent.ended_at),
+          durationMinutes: getDurationFromEvent(updatedEvent),
+        },
+        summary: {
+          candidatesCount: 0,
+          suggestedChangesCount: 0,
+          blockingCandidatesCount: 0,
+        },
+        candidates: [],
+      },
       audit: {
         previousImpactEventsCount: auditState.previousImpactEvents.length,
         previousDailyAggregatesCount: auditState.previousDailyAggregates.length,
@@ -1015,6 +1508,36 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
   }
 
+  const timeline = shouldRecalculate
+    ? await safeDetectTimelineConflicts({
+        previousEvent,
+        updatedEvent,
+        userId: appUser.id,
+      })
+    : {
+        ok: true,
+        skipped: true,
+        reason:
+          "Timeline conflict detection was skipped because correction did not change timing or duration.",
+        correctedEventId: updatedEvent.id,
+        previousInterval: {
+          startedAt: normalizeIsoDate(previousEvent.started_at),
+          endedAt: normalizeIsoDate(previousEvent.ended_at),
+          durationMinutes: getDurationFromEvent(previousEvent),
+        },
+        newInterval: {
+          startedAt: normalizeIsoDate(updatedEvent.started_at),
+          endedAt: normalizeIsoDate(updatedEvent.ended_at),
+          durationMinutes: getDurationFromEvent(updatedEvent),
+        },
+        summary: {
+          candidatesCount: 0,
+          suggestedChangesCount: 0,
+          blockingCandidatesCount: 0,
+        },
+        candidates: [],
+      };
+
   const { data: correctionRow, error: correctionError } = await supabase
     .from("activity_corrections")
     .insert({
@@ -1053,6 +1576,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         previousEvent,
         updatedEvent,
         recalculationResult,
+        timeline,
         recovery,
       },
       { status: 500 }
@@ -1066,6 +1590,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     correction: correctionRow,
     changedFields,
     recalculation: recalculationResult,
+    timeline,
     audit: {
       previousImpactEventsCount: auditState.previousImpactEvents.length,
       previousDailyAggregatesCount: auditState.previousDailyAggregates.length,
