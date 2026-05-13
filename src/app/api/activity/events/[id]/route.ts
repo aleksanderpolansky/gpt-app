@@ -77,6 +77,12 @@ type ResolvedCorrectionTiming =
       error: string;
     };
 
+type AuditFailureRecoveryResult = {
+  ok: boolean;
+  error: string | null;
+  event: ActivityEventRow | null;
+};
+
 function asRecord(value: unknown): Record<string, unknown> {
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {
     return value as Record<string, unknown>;
@@ -445,6 +451,59 @@ async function collectPreviousAuditState(params: {
   };
 }
 
+async function markCorrectionAuditFailure(params: {
+  event: ActivityEventRow;
+  userId: string;
+  correctionFlow: string;
+  correctionStage: string;
+  correctionError: string;
+}): Promise<AuditFailureRecoveryResult> {
+  const {
+    event,
+    userId,
+    correctionFlow,
+    correctionStage,
+    correctionError,
+  } = params;
+
+  const nowIso = new Date().toISOString();
+  const existingMetadata = asRecord(event.metadata_json);
+
+  const { data, error } = await supabase
+    .from("activity_events")
+    .update({
+      metadata_json: {
+        ...existingMetadata,
+        correction_audit_failed: true,
+        correction_audit_failed_at: nowIso,
+        correction_audit_error: correctionError,
+        correction_audit_stage: correctionStage,
+        correction_audit_manual_review_required: true,
+        correction_audit_recovery_flow: "B11.4.1",
+        correction_flow: correctionFlow,
+      },
+      updated_at: nowIso,
+    })
+    .eq("id", event.id)
+    .eq("user_id", userId)
+    .select()
+    .single();
+
+  if (error) {
+    return {
+      ok: false,
+      error: error.message,
+      event: null,
+    };
+  }
+
+  return {
+    ok: true,
+    error: null,
+    event: data as ActivityEventRow,
+  };
+}
+
 export async function GET() {
   return NextResponse.json({
     ok: true,
@@ -461,7 +520,7 @@ export async function GET() {
       reason: "string",
     },
     currentLimit:
-      "B11.3a supports completed event timing/duration/comment corrections. B11.3b supports rollback-only status corrections for completed events.",
+      "B11.3a supports completed event timing/duration/comment corrections. B11.3b supports rollback-only status corrections for completed events. B11.4.1 adds metadata recovery when correction audit insert fails after partial success.",
   });
 }
 
@@ -739,15 +798,24 @@ export async function PATCH(request: Request, context: RouteContext) {
       .single();
 
     if (correctionError) {
+      const recovery = await markCorrectionAuditFailure({
+        event: updatedEvent,
+        userId: appUser.id,
+        correctionFlow: "B11.3b",
+        correctionStage: "status_rollback_audit_insert",
+        correctionError: correctionError.message,
+      });
+
       return NextResponse.json(
         {
           ok: false,
           error: correctionError.message,
           warning:
-            "Activity event status was updated and impacts were rolled back, but correction audit row was not created.",
+            "Activity event status was updated and impacts were rolled back, but correction audit row was not created. Recovery metadata was written to the activity event when possible.",
           previousEvent,
           updatedEvent,
           rollbackResult,
+          recovery,
         },
         { status: 500 }
       );
@@ -968,15 +1036,24 @@ export async function PATCH(request: Request, context: RouteContext) {
     .single();
 
   if (correctionError) {
+    const recovery = await markCorrectionAuditFailure({
+      event: updatedEvent,
+      userId: appUser.id,
+      correctionFlow: "B11.3a",
+      correctionStage: "correction_audit_insert",
+      correctionError: correctionError.message,
+    });
+
     return NextResponse.json(
       {
         ok: false,
         error: correctionError.message,
         warning:
-          "Activity event was updated, but correction audit row was not created.",
+          "Activity event was updated, but correction audit row was not created. Recovery metadata was written to the activity event when possible.",
         previousEvent,
         updatedEvent,
         recalculationResult,
+        recovery,
       },
       { status: 500 }
     );
