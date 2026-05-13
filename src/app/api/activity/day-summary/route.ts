@@ -12,6 +12,21 @@ export const dynamic = "force-dynamic";
 
 const DEFAULT_TIMEZONE = "Europe/Warsaw";
 
+const EFFECTIVE_DURATION_STATUSES = new Set([
+  "completed",
+  "started",
+  "paused",
+  "planned",
+  "confirmed",
+]);
+
+const EXCLUDED_DURATION_STATUSES = new Set([
+  "cancelled",
+  "missed",
+  "archived",
+  "corrected",
+]);
+
 type ActivityEventRow = {
   id: string;
   user_id: string;
@@ -296,6 +311,22 @@ function countBy<T>(items: T[], getKey: (item: T) => string | null): CountMap {
   return result;
 }
 
+function isEffectiveDurationEvent(event: ActivityEventRow) {
+  if (event.processing_status === "failed") {
+    return false;
+  }
+
+  return EFFECTIVE_DURATION_STATUSES.has(event.status);
+}
+
+function isExcludedDurationEvent(event: ActivityEventRow) {
+  if (event.processing_status === "failed") {
+    return true;
+  }
+
+  return EXCLUDED_DURATION_STATUSES.has(event.status);
+}
+
 function normalizeEvent(event: ActivityEventRow) {
   return {
     id: event.id,
@@ -313,6 +344,8 @@ function normalizeEvent(event: ActivityEventRow) {
     legacyTemplateId: event.template_id,
     createdAt: event.created_at,
     updatedAt: event.updated_at,
+    isEffectiveForDuration: isEffectiveDurationEvent(event),
+    isExcludedFromEffectiveDuration: isExcludedDurationEvent(event),
   };
 }
 
@@ -370,11 +403,13 @@ function summarizeDailyAggregates(rows: DailyAggregateRow[]) {
   );
 }
 
-function summarizeEvents(events: ActivityEventRow[]) {
-  const totalDurationMinutes = events.reduce((sum, event) => {
+function sumDuration(events: ActivityEventRow[]) {
+  return events.reduce((sum, event) => {
     return sum + (asNumber(event.duration_minutes) ?? 0);
   }, 0);
+}
 
+function summarizeEvents(events: ActivityEventRow[]) {
   const completedEvents = events.filter((event) => event.status === "completed");
   const openEvents = events.filter(
     (event) =>
@@ -383,11 +418,48 @@ function summarizeEvents(events: ActivityEventRow[]) {
       event.processing_status === "pending"
   );
 
+  const cancelledEvents = events.filter((event) => event.status === "cancelled");
+  const missedEvents = events.filter((event) => event.status === "missed");
+  const archivedEvents = events.filter((event) => event.status === "archived");
+  const correctedEvents = events.filter((event) => event.status === "corrected");
+
+  const effectiveDurationEvents = events.filter(isEffectiveDurationEvent);
+  const excludedDurationEvents = events.filter(isExcludedDurationEvent);
+
+  const rawDurationMinutes = sumDuration(events);
+  const effectiveDurationMinutes = sumDuration(effectiveDurationEvents);
+  const excludedDurationMinutes = sumDuration(excludedDurationEvents);
+
   return {
     totalEvents: events.length,
     completedEvents: completedEvents.length,
     openEvents: openEvents.length,
-    totalDurationMinutes,
+    cancelledEvents: cancelledEvents.length,
+    missedEvents: missedEvents.length,
+    archivedEvents: archivedEvents.length,
+    correctedEvents: correctedEvents.length,
+    effectiveEvents: effectiveDurationEvents.length,
+    excludedEvents: excludedDurationEvents.length,
+
+    // Backward-compatible field used by the current UI.
+    // From B12.2 it means effective/productive duration, not raw duration.
+    totalDurationMinutes: effectiveDurationMinutes,
+
+    effectiveDurationMinutes,
+    rawDurationMinutes,
+    excludedDurationMinutes,
+    cancelledDurationMinutes: sumDuration(cancelledEvents),
+    missedDurationMinutes: sumDuration(missedEvents),
+    archivedDurationMinutes: sumDuration(archivedEvents),
+    correctedDurationMinutes: sumDuration(correctedEvents),
+
+    durationPolicy: {
+      totalDurationMinutesMeans: "effectiveDurationMinutes",
+      effectiveStatuses: Array.from(EFFECTIVE_DURATION_STATUSES),
+      excludedStatuses: Array.from(EXCLUDED_DURATION_STATUSES),
+      failedProcessingStatusExcluded: true,
+    },
+
     byStatus: countBy(events, (event) => event.status),
     byProcessingStatus: countBy(events, (event) => event.processing_status),
     bySource: countBy(events, (event) => event.source),
@@ -532,6 +604,6 @@ export async function GET(request: Request) {
     dailyAggregates: dailyAggregates.map(normalizeDailyAggregate),
     currentSnapshots: currentSnapshots.map(normalizeCurrentSnapshot),
     note:
-      "This day summary uses the requested local timezone for event day boundaries. daily_aggregates are still matched by aggregate_date and should be aligned with the same timezone in the impact processor in a later step.",
+      "B12.2: day-summary uses local timezone day boundaries and effective duration totals. cancelled/missed/archived/corrected events remain visible in event history but are excluded from productive totalDurationMinutes.",
   });
 }
