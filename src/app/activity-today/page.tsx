@@ -129,6 +129,9 @@ type CorrectionDraft = {
   durationMinutes: string;
   comment: string;
   reason: string;
+  startedAtLocal: string;
+  endedAtLocal: string;
+  advancedDurationMinutes: string;
 };
 
 type CorrectionState = {
@@ -137,7 +140,7 @@ type CorrectionState = {
   result: unknown | null;
 };
 
-type CorrectionMode = "duration_comment" | "cancelled";
+type CorrectionMode = "duration_comment" | "advanced_timing" | "cancelled";
 
 type TimelineConflictSeverity = "info" | "warning" | "blocking";
 
@@ -262,6 +265,15 @@ type TimelineAdjustmentStatus = {
   validationMessage: string | null;
 };
 
+type AdvancedTimingCorrectionStatus = {
+  startedAtIso: string | null;
+  endedAtIso: string | null;
+  durationMinutes: number | null;
+  isChanged: boolean;
+  isValid: boolean;
+  validationMessage: string | null;
+};
+
 function getTodayDateForTimezone(timezone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
@@ -348,6 +360,27 @@ function parseDateTimeInputValue(value: string) {
   return date.toISOString();
 }
 
+function addMinutesToDateTimeInputValue(
+  startedAtLocal: string,
+  durationMinutes: number
+) {
+  const startedAtIso = parseDateTimeInputValue(startedAtLocal);
+
+  if (!startedAtIso) {
+    return "";
+  }
+
+  const startedDate = new Date(startedAtIso);
+
+  if (Number.isNaN(startedDate.getTime())) {
+    return "";
+  }
+
+  return formatDateTimeInputValue(
+    new Date(startedDate.getTime() + durationMinutes * 60000).toISOString()
+  );
+}
+
 function getInstantValue(value: string | null | undefined) {
   if (!value) {
     return null;
@@ -426,6 +459,9 @@ function getDefaultCorrectionDraft(event: DaySummaryEvent): CorrectionDraft {
     durationMinutes: String(event.durationMinutes ?? 0),
     comment: event.comment ?? "",
     reason: "Manual correction from Activity Today UI",
+    startedAtLocal: formatDateTimeInputValue(event.startedAt),
+    endedAtLocal: formatDateTimeInputValue(event.endedAt),
+    advancedDurationMinutes: String(event.durationMinutes ?? 0),
   };
 }
 
@@ -563,6 +599,73 @@ function getTimelineAdjustmentStatus(
       isValid: false,
       validationMessage:
         "This row is not completed. The current PATCH correction route supports timeline adjustment only for completed events.",
+    };
+  }
+
+  return {
+    startedAtIso,
+    endedAtIso,
+    durationMinutes,
+    isChanged,
+    isValid: true,
+    validationMessage: null,
+  };
+}
+
+function getAdvancedTimingCorrectionStatus(
+  event: DaySummaryEvent,
+  draft: CorrectionDraft
+): AdvancedTimingCorrectionStatus {
+  const startedAtIso = parseDateTimeInputValue(draft.startedAtLocal);
+  const endedAtIso = parseDateTimeInputValue(draft.endedAtLocal);
+  const durationMinutes = calculateDurationMinutes(startedAtIso, endedAtIso);
+
+  const isChanged =
+    dateValuesDiffer(startedAtIso, event.startedAt) ||
+    dateValuesDiffer(endedAtIso, event.endedAt);
+
+  if (!startedAtIso || !endedAtIso) {
+    return {
+      startedAtIso,
+      endedAtIso,
+      durationMinutes,
+      isChanged,
+      isValid: false,
+      validationMessage: "Started at and ended at must be valid date/time values.",
+    };
+  }
+
+  if (durationMinutes === null) {
+    return {
+      startedAtIso,
+      endedAtIso,
+      durationMinutes,
+      isChanged,
+      isValid: false,
+      validationMessage: "Could not calculate duration from started at and ended at.",
+    };
+  }
+
+  if (durationMinutes <= 0) {
+    return {
+      startedAtIso,
+      endedAtIso,
+      durationMinutes,
+      isChanged,
+      isValid: false,
+      validationMessage: "Duration must be greater than 0 minutes.",
+    };
+  }
+
+  if (event.status !== "completed") {
+    return {
+      startedAtIso,
+      endedAtIso,
+      durationMinutes,
+      isChanged,
+      isValid: false,
+      validationMessage:
+        "Advanced timing correction is currently available only for completed events.",
     };
   }
 
@@ -1348,6 +1451,61 @@ function EventCorrectionControls({
   const isCompleted = event.status === "completed";
   const isLoading = state?.loading ?? false;
   const result = state?.result as CorrectionPatchResponse | null | undefined;
+  const advancedTimingStatus = getAdvancedTimingCorrectionStatus(event, draft);
+
+  function handleAdvancedStartedAtChange(value: string) {
+    const endedAtIso = parseDateTimeInputValue(draft.endedAtLocal);
+    const startedAtIso = parseDateTimeInputValue(value);
+    const nextDurationMinutes = calculateDurationMinutes(
+      startedAtIso,
+      endedAtIso
+    );
+
+    onDraftChange({
+      startedAtLocal: value,
+      advancedDurationMinutes:
+        nextDurationMinutes !== null && nextDurationMinutes >= 0
+          ? String(nextDurationMinutes)
+          : draft.advancedDurationMinutes,
+    });
+  }
+
+  function handleAdvancedEndedAtChange(value: string) {
+    const startedAtIso = parseDateTimeInputValue(draft.startedAtLocal);
+    const endedAtIso = parseDateTimeInputValue(value);
+    const nextDurationMinutes = calculateDurationMinutes(
+      startedAtIso,
+      endedAtIso
+    );
+
+    onDraftChange({
+      endedAtLocal: value,
+      advancedDurationMinutes:
+        nextDurationMinutes !== null && nextDurationMinutes >= 0
+          ? String(nextDurationMinutes)
+          : draft.advancedDurationMinutes,
+    });
+  }
+
+  function handleAdvancedDurationChange(value: string) {
+    const durationMinutes = parseDurationInput(value);
+    const patch: Partial<CorrectionDraft> = {
+      advancedDurationMinutes: value,
+    };
+
+    if (durationMinutes !== null) {
+      const recalculatedEndedAtLocal = addMinutesToDateTimeInputValue(
+        draft.startedAtLocal,
+        durationMinutes
+      );
+
+      if (recalculatedEndedAtLocal) {
+        patch.endedAtLocal = recalculatedEndedAtLocal;
+      }
+    }
+
+    onDraftChange(patch);
+  }
 
   return (
     <div className="mt-4 rounded-2xl border border-zinc-900 bg-zinc-950/70 p-4">
@@ -1458,6 +1616,129 @@ function EventCorrectionControls({
               {isLoading ? "Rolling back..." : "Mark cancelled + rollback"}
             </button>
           </div>
+
+          <details className="rounded-2xl border border-zinc-800 bg-black/30 p-4">
+            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 hover:text-emerald-300">
+              Advanced timing correction
+            </summary>
+
+            <div className="mt-4 grid gap-3">
+              <p className="text-xs leading-5 text-zinc-500">
+                Edit started at / ended at directly. Duration is recalculated
+                from start and end. If you change duration here, ended at is
+                recalculated from started at.
+              </p>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label
+                    className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-600"
+                    htmlFor={`advanced-start-${event.id}`}
+                  >
+                    Started at
+                  </label>
+                  <input
+                    className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isLoading}
+                    id={`advanced-start-${event.id}`}
+                    onChange={(inputEvent) =>
+                      handleAdvancedStartedAtChange(inputEvent.target.value)
+                    }
+                    step={1}
+                    type="datetime-local"
+                    value={draft.startedAtLocal}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-600"
+                    htmlFor={`advanced-end-${event.id}`}
+                  >
+                    Ended at
+                  </label>
+                  <input
+                    className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isLoading}
+                    id={`advanced-end-${event.id}`}
+                    onChange={(inputEvent) =>
+                      handleAdvancedEndedAtChange(inputEvent.target.value)
+                    }
+                    step={1}
+                    type="datetime-local"
+                    value={draft.endedAtLocal}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-[0.35fr_0.65fr]">
+                <div>
+                  <label
+                    className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-600"
+                    htmlFor={`advanced-duration-${event.id}`}
+                  >
+                    Duration
+                  </label>
+                  <input
+                    className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isLoading}
+                    id={`advanced-duration-${event.id}`}
+                    min={0}
+                    onChange={(inputEvent) =>
+                      handleAdvancedDurationChange(inputEvent.target.value)
+                    }
+                    type="number"
+                    value={draft.advancedDurationMinutes}
+                  />
+                </div>
+
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-xs leading-5 text-zinc-400">
+                  <p>
+                    Current event interval: {formatDateTime(event.startedAt)} →{" "}
+                    {formatDateTime(event.endedAt)}
+                  </p>
+                  <p className="mt-1">
+                    New interval: {formatDateTime(advancedTimingStatus.startedAtIso)}{" "}
+                    → {formatDateTime(advancedTimingStatus.endedAtIso)}
+                  </p>
+                  <p className="mt-1">
+                    New calculated duration:{" "}
+                    {formatMinutes(advancedTimingStatus.durationMinutes)}
+                  </p>
+                  <p className="mt-1">
+                    Changed: {advancedTimingStatus.isChanged ? "yes" : "no"}
+                  </p>
+                </div>
+              </div>
+
+              {advancedTimingStatus.validationMessage ? (
+                <div className="rounded-xl border border-red-900/70 bg-red-950/30 p-3 text-xs leading-5 text-red-100">
+                  {advancedTimingStatus.validationMessage}
+                </div>
+              ) : null}
+
+              {!advancedTimingStatus.isChanged &&
+              advancedTimingStatus.isValid ? (
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-xs leading-5 text-zinc-500">
+                  Advanced timing values match the current event interval.
+                  Change started at, ended at, or duration before applying.
+                </div>
+              ) : null}
+
+              <button
+                className="rounded-xl border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={
+                  isLoading ||
+                  !advancedTimingStatus.isValid ||
+                  !advancedTimingStatus.isChanged
+                }
+                onClick={() => onSubmit("advanced_timing")}
+                type="button"
+              >
+                {isLoading ? "Saving advanced timing..." : "Save advanced timing"}
+              </button>
+            </div>
+          </details>
         </div>
       )}
 
@@ -1782,7 +2063,9 @@ export default function ActivityTodayPage() {
       draft.reason.trim() ||
       (mode === "cancelled"
         ? "Cancelled from Activity Today UI"
-        : "Duration/comment correction from Activity Today UI");
+        : mode === "advanced_timing"
+          ? "Advanced timing correction from Activity Today UI"
+          : "Duration/comment correction from Activity Today UI");
 
     const body: Record<string, unknown> = {
       comment: draft.comment,
@@ -1802,6 +2085,45 @@ export default function ActivityTodayPage() {
       }
 
       body.durationMinutes = durationMinutes;
+    }
+
+    if (mode === "advanced_timing") {
+      const startedAt = parseDateTimeInputValue(draft.startedAtLocal);
+      const endedAt = parseDateTimeInputValue(draft.endedAtLocal);
+      const durationMinutes = calculateDurationMinutes(startedAt, endedAt);
+
+      if (!startedAt || !endedAt) {
+        setCorrectionState(event.id, {
+          loading: false,
+          error: "Started at and ended at must be valid date/time values.",
+          result: null,
+        });
+        return;
+      }
+
+      if (durationMinutes === null || durationMinutes <= 0) {
+        setCorrectionState(event.id, {
+          loading: false,
+          error: "Advanced timing duration must be greater than 0 minutes.",
+          result: null,
+        });
+        return;
+      }
+
+      if (
+        !dateValuesDiffer(startedAt, event.startedAt) &&
+        !dateValuesDiffer(endedAt, event.endedAt)
+      ) {
+        setCorrectionState(event.id, {
+          loading: false,
+          error: "Advanced timing fields are unchanged.",
+          result: null,
+        });
+        return;
+      }
+
+      body.startedAt = startedAt;
+      body.endedAt = endedAt;
     }
 
     if (mode === "cancelled") {
