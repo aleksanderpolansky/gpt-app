@@ -21,6 +21,8 @@ type DaySummaryEvent = {
   legacyTemplateId: string | null;
   createdAt: string;
   updatedAt: string;
+  isEffectiveForDuration?: boolean;
+  isExcludedFromEffectiveDuration?: boolean;
 };
 
 type DaySummaryAggregate = {
@@ -72,7 +74,26 @@ type DaySummaryResponse = {
       totalEvents: number;
       completedEvents: number;
       openEvents: number;
+      cancelledEvents?: number;
+      missedEvents?: number;
+      archivedEvents?: number;
+      correctedEvents?: number;
+      effectiveEvents?: number;
+      excludedEvents?: number;
       totalDurationMinutes: number;
+      effectiveDurationMinutes?: number;
+      rawDurationMinutes?: number;
+      excludedDurationMinutes?: number;
+      cancelledDurationMinutes?: number;
+      missedDurationMinutes?: number;
+      archivedDurationMinutes?: number;
+      correctedDurationMinutes?: number;
+      durationPolicy?: {
+        totalDurationMinutesMeans?: string;
+        effectiveStatuses?: string[];
+        excludedStatuses?: string[];
+        failedProcessingStatusExcluded?: boolean;
+      };
       byStatus: Record<string, number>;
       byProcessingStatus: Record<string, number>;
       bySource: Record<string, number>;
@@ -170,6 +191,14 @@ function formatMetricValue(
   return unit ? `${value} ${unit}` : String(value);
 }
 
+function formatMinutes(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  return `${value} min`;
+}
+
 function humanizeKey(value: string) {
   return value.replaceAll("_", " ");
 }
@@ -228,6 +257,71 @@ function StatCard({
   );
 }
 
+function TechnicalCounters({
+  summary,
+}: {
+  summary: DaySummaryResponse | null;
+}) {
+  const eventSummary = summary?.summary?.events;
+
+  if (!eventSummary) {
+    return <EmptyState text="Load a day summary first." />;
+  }
+
+  return (
+    <details className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
+      <summary className="cursor-pointer text-sm font-semibold text-zinc-300 hover:text-emerald-300">
+        Technical counters for debugging
+      </summary>
+
+      <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-xl border border-zinc-900 bg-zinc-950 p-3">
+          <p className="text-xs uppercase tracking-[0.18em] text-zinc-600">
+            Raw activity records
+          </p>
+          <p className="mt-2 text-xl font-semibold text-white">
+            {eventSummary.totalEvents}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-zinc-900 bg-zinc-950 p-3">
+          <p className="text-xs uppercase tracking-[0.18em] text-zinc-600">
+            Excluded records
+          </p>
+          <p className="mt-2 text-xl font-semibold text-white">
+            {eventSummary.excludedEvents ?? 0}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-zinc-900 bg-zinc-950 p-3">
+          <p className="text-xs uppercase tracking-[0.18em] text-zinc-600">
+            Raw duration
+          </p>
+          <p className="mt-2 text-xl font-semibold text-white">
+            {formatMinutes(eventSummary.rawDurationMinutes)}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-zinc-900 bg-zinc-950 p-3">
+          <p className="text-xs uppercase tracking-[0.18em] text-zinc-600">
+            Excluded duration
+          </p>
+          <p className="mt-2 text-xl font-semibold text-white">
+            {formatMinutes(eventSummary.excludedDurationMinutes)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 text-xs text-zinc-500 md:grid-cols-2">
+        <p>Cancelled: {eventSummary.cancelledEvents ?? 0}</p>
+        <p>Missed: {eventSummary.missedEvents ?? 0}</p>
+        <p>Archived: {eventSummary.archivedEvents ?? 0}</p>
+        <p>Corrected records: {eventSummary.correctedEvents ?? 0}</p>
+      </div>
+    </details>
+  );
+}
+
 function EventCorrectionControls({
   event,
   draft,
@@ -253,9 +347,8 @@ function EventCorrectionControls({
             Correction
           </p>
           <p className="mt-1 text-xs leading-5 text-zinc-500">
-            B12.1 UI uses PATCH /api/activity/events/[id]. Duration/comment
-            corrections recalculate impacts. Cancelled status uses rollback-only
-            correction.
+            Duration/comment corrections recalculate impacts. Cancelled status
+            uses rollback-only correction.
           </p>
         </div>
 
@@ -588,6 +681,12 @@ export default function ActivityTodayPage() {
   const activeTimezone = summary?.timezone ?? DEFAULT_TIMEZONE;
   const timezoneMode = summary?.timezoneMode ?? "local";
 
+  const effectiveDurationMinutes =
+    eventSummary?.effectiveDurationMinutes ?? eventSummary?.totalDurationMinutes;
+
+  const rawDurationMinutes = eventSummary?.rawDurationMinutes;
+  const excludedDurationMinutes = eventSummary?.excludedDurationMinutes;
+
   return (
     <main className="min-h-screen bg-zinc-950 px-5 py-6 text-zinc-100 md:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
@@ -601,9 +700,9 @@ export default function ActivityTodayPage() {
                 Today Activity Panel
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
-                Dev dashboard based on the day-summary API. It shows daily
-                events, aggregates and current snapshots. Raw response data is
-                available in the debug section below.
+                Dev dashboard based on the day-summary API. The main cards show
+                useful completed work, productive time, open activities and
+                tracked progress metrics. Technical records stay in debug.
               </p>
               <p className="mt-2 text-xs text-zinc-600">
                 Current date mode: {activeTimezone} local day. API timezone
@@ -693,26 +792,31 @@ export default function ActivityTodayPage() {
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            label="Total events"
-            value={eventSummary?.totalEvents ?? "—"}
-            hint={`Events anchored to selected ${DEFAULT_TIMEZONE} day`}
-          />
-          <StatCard
-            label="Completed"
+            label="Completed activities"
             value={eventSummary?.completedEvents ?? "—"}
-            hint={`Open: ${eventSummary?.openEvents ?? "—"}`}
+            hint="Useful completed activities counted for this day"
           />
           <StatCard
-            label="Total duration"
+            label="Effective duration"
             value={
-              eventSummary
-                ? `${eventSummary.totalDurationMinutes} min`
+              effectiveDurationMinutes !== undefined
+                ? `${effectiveDurationMinutes} min`
                 : "—"
             }
-            hint="Sum of duration_minutes"
+            hint={
+              rawDurationMinutes !== undefined &&
+              excludedDurationMinutes !== undefined
+                ? `Raw: ${rawDurationMinutes} min · excluded: ${excludedDurationMinutes} min`
+                : "Productive time after corrections and rollbacks"
+            }
           />
           <StatCard
-            label="Daily aggregate rows"
+            label="Open activities"
+            value={eventSummary?.openEvents ?? "—"}
+            hint="Started or pending activities"
+          />
+          <StatCard
+            label="Progress metrics"
             value={aggregateSummary?.totalRows ?? "—"}
             hint={`Snapshots: ${snapshotSummary?.totalRows ?? "—"}`}
           />
@@ -812,9 +916,11 @@ export default function ActivityTodayPage() {
 
         <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
           <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
-            <h2 className="text-lg font-semibold text-white">Latest events</h2>
+            <h2 className="text-lg font-semibold text-white">Latest records</h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Most recent events for the selected {DEFAULT_TIMEZONE} day.
+              Recent activity records for the selected {DEFAULT_TIMEZONE} day.
+              Cancelled records stay visible here, but they are excluded from
+              effective duration.
             </p>
 
             <div className="mt-4 grid gap-3">
@@ -837,6 +943,12 @@ export default function ActivityTodayPage() {
                     {formatDateTime(event.startedAt)}
                   </p>
 
+                  {event.isExcludedFromEffectiveDuration ? (
+                    <p className="mt-2 text-xs text-amber-300">
+                      Excluded from effective duration.
+                    </p>
+                  ) : null}
+
                   <p className="mt-2 text-xs text-zinc-400">
                     {event.comment ?? "no comment"}
                   </p>
@@ -854,7 +966,7 @@ export default function ActivityTodayPage() {
               ))}
 
               {latestEvents.length === 0 ? (
-                <EmptyState text="No events for this date." />
+                <EmptyState text="No activity records for this date." />
               ) : null}
             </div>
           </div>
@@ -862,7 +974,7 @@ export default function ActivityTodayPage() {
           <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
             <h2 className="text-lg font-semibold text-white">Open sessions</h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Started or pending events detected by day-summary.
+              Started or pending activities detected by day-summary.
             </p>
 
             <div className="mt-4 grid gap-3">
@@ -951,11 +1063,12 @@ export default function ActivityTodayPage() {
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-white">
-                Debug: raw day-summary response
+                Debug and technical details
               </h2>
               <p className="mt-1 text-sm text-zinc-500">
-                Hidden by default to keep the panel lightweight. Open only when
-                debugging API shape, timezone ranges or aggregate rows.
+                User-facing cards above hide raw technical counters. Open this
+                section when debugging records, rollbacks, timezone ranges or
+                aggregate rows.
               </p>
             </div>
 
@@ -964,11 +1077,13 @@ export default function ActivityTodayPage() {
               onClick={() => setShowRawSummary((current) => !current)}
               type="button"
             >
-              {showRawSummary ? "Hide debug JSON" : "Show debug JSON"}
+              {showRawSummary ? "Hide raw JSON" : "Show raw JSON"}
             </button>
           </div>
 
-          <div className="mt-4">
+          <div className="mt-4 grid gap-4">
+            <TechnicalCounters summary={summary} />
+
             {showRawSummary && summary ? (
               <JsonBlock value={summary} />
             ) : showRawSummary ? (
