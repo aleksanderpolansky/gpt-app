@@ -153,6 +153,43 @@ type CorrectionPatchResponse = {
   recovery?: unknown;
 };
 
+type CorrectionHistoryItem = {
+  id: string;
+  eventId: string;
+  correctionType: string;
+  correctionStatus: string;
+  changedFields: string[];
+  reason: string | null;
+  source: string | null;
+  createdAt: string;
+  previousEvent: unknown;
+  newEvent: unknown;
+  previousImpactEvents: unknown;
+  previousDailyAggregates: unknown;
+  previousCurrentSnapshots: unknown;
+  recalculationResult: unknown;
+};
+
+type CorrectionHistoryResponse = {
+  ok: boolean;
+  error?: string;
+  endpoint?: string;
+  eventId?: string;
+  filters?: {
+    limit: number;
+  };
+  summary?: {
+    totalCorrectionsReturned: number;
+  };
+  corrections?: CorrectionHistoryItem[];
+};
+
+type CorrectionHistoryState = {
+  loading: boolean;
+  error: string | null;
+  response: CorrectionHistoryResponse | null;
+};
+
 function getTodayDateForTimezone(timezone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
@@ -362,6 +399,111 @@ function TechnicalCounters({
   );
 }
 
+function CorrectionHistoryPanel({
+  eventId,
+  state,
+  onLoad,
+}: {
+  eventId: string;
+  state: CorrectionHistoryState | undefined;
+  onLoad: () => void;
+}) {
+  const corrections = state?.response?.corrections ?? [];
+  const hasLoaded = Boolean(state?.response || state?.error);
+
+  return (
+    <details className="mt-4 rounded-2xl border border-zinc-800 bg-black/30 p-4">
+      <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 hover:text-emerald-300">
+        Correction history
+      </summary>
+
+      <div className="mt-4 grid gap-3">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <p className="text-xs leading-5 text-zinc-500">
+            Read-only audit history from activity_corrections. It is loaded on
+            demand and stays outside the main activity interpretation.
+          </p>
+
+          <button
+            className="rounded-xl border border-zinc-700 px-3 py-2 text-xs font-semibold text-zinc-200 hover:border-emerald-500 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={state?.loading ?? false}
+            onClick={onLoad}
+            type="button"
+          >
+            {state?.loading ? "Loading..." : hasLoaded ? "Refresh history" : "Load history"}
+          </button>
+        </div>
+
+        {state?.error ? (
+          <div className="rounded-xl border border-red-900/70 bg-red-950/40 p-3 text-xs leading-5 text-red-200">
+            {state.error}
+          </div>
+        ) : null}
+
+        {!hasLoaded && !state?.loading ? (
+          <EmptyState text="Correction history is not loaded yet." />
+        ) : null}
+
+        {state?.response?.ok && corrections.length === 0 ? (
+          <EmptyState text="No correction history for this event." />
+        ) : null}
+
+        {corrections.map((correction) => (
+          <div
+            className="rounded-xl border border-zinc-800 bg-zinc-950 p-3"
+            key={correction.id}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  {humanizeKey(correction.correctionType)}
+                </p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {formatDateTime(correction.createdAt)} ·{" "}
+                  {correction.source ?? "unknown source"}
+                </p>
+              </div>
+
+              <span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300">
+                {correction.correctionStatus}
+              </span>
+            </div>
+
+            <p className="mt-3 text-xs text-zinc-400">
+              Changed fields:{" "}
+              {correction.changedFields.length > 0
+                ? correction.changedFields.join(", ")
+                : "—"}
+            </p>
+
+            <p className="mt-2 text-xs text-zinc-500">
+              Reason: {correction.reason ?? "—"}
+            </p>
+
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs text-zinc-500 hover:text-zinc-300">
+                Correction audit JSON
+              </summary>
+              <div className="mt-3">
+                <JsonBlock value={correction} />
+              </div>
+            </details>
+          </div>
+        ))}
+
+        {state?.response?.ok ? (
+          <p className="text-xs text-zinc-600">
+            Returned corrections:{" "}
+            {state.response.summary?.totalCorrectionsReturned ??
+              corrections.length}{" "}
+            · event: {eventId}
+          </p>
+        ) : null}
+      </div>
+    </details>
+  );
+}
+
 function EventCorrectionControls({
   event,
   draft,
@@ -526,14 +668,18 @@ function CountedActivityCard({
   event,
   draft,
   state,
+  historyState,
   onDraftChange,
   onSubmit,
+  onLoadHistory,
 }: {
   event: DaySummaryEvent;
   draft: CorrectionDraft;
   state: CorrectionState | undefined;
+  historyState: CorrectionHistoryState | undefined;
   onDraftChange: (patch: Partial<CorrectionDraft>) => void;
   onSubmit: (mode: CorrectionMode) => void;
+  onLoadHistory: () => void;
 }) {
   return (
     <div className="rounded-2xl border border-emerald-900/50 bg-emerald-950/10 p-4">
@@ -561,6 +707,12 @@ function CountedActivityCard({
         onDraftChange={onDraftChange}
         onSubmit={onSubmit}
         state={state}
+      />
+
+      <CorrectionHistoryPanel
+        eventId={event.id}
+        onLoad={onLoadHistory}
+        state={historyState}
       />
     </div>
   );
@@ -610,6 +762,9 @@ export default function ActivityTodayPage() {
   >({});
   const [correctionStates, setCorrectionStates] = useState<
     Record<string, CorrectionState>
+  >({});
+  const [correctionHistoryStates, setCorrectionHistoryStates] = useState<
+    Record<string, CorrectionHistoryState>
   >({});
 
   const dailyAggregates = summary?.dailyAggregates ?? [];
@@ -720,6 +875,59 @@ export default function ActivityTodayPage() {
     }));
   }
 
+  function setCorrectionHistoryState(
+    eventId: string,
+    state: CorrectionHistoryState
+  ) {
+    setCorrectionHistoryStates((current) => ({
+      ...current,
+      [eventId]: state,
+    }));
+  }
+
+  async function loadCorrectionHistory(eventId: string) {
+    setCorrectionHistoryState(eventId, {
+      loading: true,
+      error: null,
+      response: correctionHistoryStates[eventId]?.response ?? null,
+    });
+
+    try {
+      const response = await fetch(
+        `/api/activity/events/${encodeURIComponent(
+          eventId
+        )}/corrections?limit=20`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      );
+
+      const body = (await response.json()) as CorrectionHistoryResponse;
+
+      if (!response.ok || !body.ok) {
+        throw new Error(body.error ?? "Failed to load correction history");
+      }
+
+      setCorrectionHistoryState(eventId, {
+        loading: false,
+        error: null,
+        response: body,
+      });
+    } catch (requestError) {
+      setCorrectionHistoryState(eventId, {
+        loading: false,
+        error:
+          requestError instanceof Error
+            ? requestError.message
+            : "Unknown correction history error",
+        response: null,
+      });
+    }
+  }
+
   async function submitCorrection(event: DaySummaryEvent, mode: CorrectionMode) {
     const draft = getCorrectionDraft(event);
 
@@ -794,6 +1002,7 @@ export default function ActivityTodayPage() {
       });
 
       await loadSummary(date);
+      await loadCorrectionHistory(event.id);
     } catch (requestError) {
       setCorrectionState(event.id, {
         loading: false,
@@ -1066,10 +1275,12 @@ export default function ActivityTodayPage() {
                 <CountedActivityCard
                   draft={getCorrectionDraft(event)}
                   event={event}
+                  historyState={correctionHistoryStates[event.id]}
                   key={event.id}
                   onDraftChange={(patch) =>
                     updateCorrectionDraft(event, patch)
                   }
+                  onLoadHistory={() => void loadCorrectionHistory(event.id)}
                   onSubmit={(mode) => void submitCorrection(event, mode)}
                   state={correctionStates[event.id]}
                 />
