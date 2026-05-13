@@ -5,6 +5,14 @@ import { useEffect, useMemo, useState } from "react";
 
 const DEFAULT_TIMEZONE = "Europe/Warsaw";
 
+const EXCLUDED_ACTIVITY_STATUSES = new Set([
+  "cancelled",
+  "missed",
+  "archived",
+  "corrected",
+  "status_corrected",
+]);
+
 type DaySummaryEvent = {
   id: string;
   title: string | null;
@@ -219,6 +227,38 @@ function parseDurationInput(value: string) {
   }
 
   return parsed;
+}
+
+function isExcludedActivityRecord(event: DaySummaryEvent) {
+  return (
+    event.isExcludedFromEffectiveDuration === true ||
+    EXCLUDED_ACTIVITY_STATUSES.has(event.status) ||
+    event.processingStatus === "failed"
+  );
+}
+
+function isCountedActivityRecord(event: DaySummaryEvent) {
+  if (isExcludedActivityRecord(event)) {
+    return false;
+  }
+
+  return event.isEffectiveForDuration === true || event.status === "completed";
+}
+
+function getExcludedRecordReason(event: DaySummaryEvent) {
+  if (event.isExcludedFromEffectiveDuration) {
+    return "Excluded from effective duration by day-summary policy.";
+  }
+
+  if (event.processingStatus === "failed") {
+    return "Processing failed, so this record is kept for audit and excluded from effective progress.";
+  }
+
+  if (EXCLUDED_ACTIVITY_STATUSES.has(event.status)) {
+    return `Status "${event.status}" is treated as audit/history, not as effective activity.`;
+  }
+
+  return "This record is kept for audit and does not affect effective duration.";
 }
 
 function JsonBlock({ value }: { value: unknown }) {
@@ -482,6 +522,83 @@ function EventCorrectionControls({
   );
 }
 
+function CountedActivityCard({
+  event,
+  draft,
+  state,
+  onDraftChange,
+  onSubmit,
+}: {
+  event: DaySummaryEvent;
+  draft: CorrectionDraft;
+  state: CorrectionState | undefined;
+  onDraftChange: (patch: Partial<CorrectionDraft>) => void;
+  onSubmit: (mode: CorrectionMode) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-emerald-900/50 bg-emerald-950/10 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium text-white">
+          {event.title ?? "Untitled activity"}
+        </p>
+        <span className="rounded-full bg-emerald-950 px-2.5 py-1 text-xs text-emerald-200">
+          counted · {event.status} / {event.processingStatus}
+        </span>
+      </div>
+
+      <p className="mt-2 text-xs text-zinc-500">
+        {event.durationMinutes ?? 0} min · {event.source} · started{" "}
+        {formatDateTime(event.startedAt)}
+      </p>
+
+      <p className="mt-2 text-xs text-zinc-400">
+        {event.comment ?? "no comment"}
+      </p>
+
+      <EventCorrectionControls
+        draft={draft}
+        event={event}
+        onDraftChange={onDraftChange}
+        onSubmit={onSubmit}
+        state={state}
+      />
+    </div>
+  );
+}
+
+function ExcludedActivityCard({ event }: { event: DaySummaryEvent }) {
+  return (
+    <div className="rounded-2xl border border-amber-900/50 bg-amber-950/10 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium text-white">
+          {event.title ?? "Untitled activity"}
+        </p>
+        <span className="rounded-full bg-amber-950 px-2.5 py-1 text-xs text-amber-200">
+          excluded · {event.status} / {event.processingStatus}
+        </span>
+      </div>
+
+      <p className="mt-2 text-xs text-zinc-500">
+        {event.durationMinutes ?? 0} min · {event.source} · started{" "}
+        {formatDateTime(event.startedAt)}
+      </p>
+
+      <p className="mt-2 text-xs text-amber-300">
+        {getExcludedRecordReason(event)}
+      </p>
+
+      <p className="mt-2 text-xs text-zinc-400">
+        {event.comment ?? "no comment"}
+      </p>
+
+      <div className="mt-4 rounded-xl border border-zinc-800 bg-black/30 p-3 text-xs leading-5 text-zinc-500">
+        Read-only audit record. Correction controls are hidden because this
+        record is not counted as effective activity.
+      </div>
+    </div>
+  );
+}
+
 export default function ActivityTodayPage() {
   const [date, setDate] = useState(getTodayDateForTimezone(DEFAULT_TIMEZONE));
   const [summary, setSummary] = useState<DaySummaryResponse | null>(null);
@@ -499,6 +616,25 @@ export default function ActivityTodayPage() {
   const currentSnapshots = summary?.currentSnapshots ?? [];
   const latestEvents = summary?.latestEvents ?? [];
   const openEvents = summary?.openEvents ?? [];
+
+  const countedEvents = useMemo(
+    () => latestEvents.filter((event) => isCountedActivityRecord(event)),
+    [latestEvents]
+  );
+
+  const excludedEvents = useMemo(
+    () => latestEvents.filter((event) => isExcludedActivityRecord(event)),
+    [latestEvents]
+  );
+
+  const otherLatestRecords = useMemo(
+    () =>
+      latestEvents.filter(
+        (event) =>
+          !isCountedActivityRecord(event) && !isExcludedActivityRecord(event)
+      ),
+    [latestEvents]
+  );
 
   const aggregatesByType = useMemo(() => {
     const result = new Map<string, DaySummaryAggregate[]>();
@@ -590,7 +726,7 @@ export default function ActivityTodayPage() {
     if (event.status !== "completed") {
       setCorrectionState(event.id, {
         loading: false,
-        error: "Only completed events can be corrected in B12.1 UI.",
+        error: "Only completed events can be corrected from this panel.",
         result: null,
       });
       return;
@@ -916,59 +1052,95 @@ export default function ActivityTodayPage() {
 
         <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
           <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
-            <h2 className="text-lg font-semibold text-white">Latest records</h2>
+            <h2 className="text-lg font-semibold text-white">
+              Counted activities
+            </h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Recent activity records for the selected {DEFAULT_TIMEZONE} day.
-              Cancelled records stay visible here, but they are excluded from
-              effective duration.
+              Completed and effective records counted in the selected{" "}
+              {DEFAULT_TIMEZONE} day. Correction controls are available only
+              here.
             </p>
 
             <div className="mt-4 grid gap-3">
-              {latestEvents.map((event) => (
-                <div
-                  className="rounded-2xl border border-zinc-800 bg-black/50 p-4"
+              {countedEvents.map((event) => (
+                <CountedActivityCard
+                  draft={getCorrectionDraft(event)}
+                  event={event}
                   key={event.id}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-white">
-                      {event.title ?? "Untitled activity"}
-                    </p>
-                    <span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300">
-                      {event.status} / {event.processingStatus}
-                    </span>
-                  </div>
-
-                  <p className="mt-2 text-xs text-zinc-500">
-                    {event.durationMinutes ?? 0} min · {event.source} · started{" "}
-                    {formatDateTime(event.startedAt)}
-                  </p>
-
-                  {event.isExcludedFromEffectiveDuration ? (
-                    <p className="mt-2 text-xs text-amber-300">
-                      Excluded from effective duration.
-                    </p>
-                  ) : null}
-
-                  <p className="mt-2 text-xs text-zinc-400">
-                    {event.comment ?? "no comment"}
-                  </p>
-
-                  <EventCorrectionControls
-                    draft={getCorrectionDraft(event)}
-                    event={event}
-                    onDraftChange={(patch) =>
-                      updateCorrectionDraft(event, patch)
-                    }
-                    onSubmit={(mode) => void submitCorrection(event, mode)}
-                    state={correctionStates[event.id]}
-                  />
-                </div>
+                  onDraftChange={(patch) =>
+                    updateCorrectionDraft(event, patch)
+                  }
+                  onSubmit={(mode) => void submitCorrection(event, mode)}
+                  state={correctionStates[event.id]}
+                />
               ))}
 
-              {latestEvents.length === 0 ? (
-                <EmptyState text="No activity records for this date." />
+              {summary && countedEvents.length === 0 ? (
+                <EmptyState text="No counted activities for this date." />
               ) : null}
+
+              {!summary ? <EmptyState text="Load a day summary first." /> : null}
             </div>
+
+            {excludedEvents.length > 0 ? (
+              <details className="mt-5 rounded-2xl border border-amber-900/50 bg-black/30 p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-amber-200 hover:text-amber-100">
+                  Excluded records ({excludedEvents.length})
+                </summary>
+
+                <p className="mt-3 text-xs leading-5 text-zinc-500">
+                  Excluded records are kept for audit/history but do not affect
+                  effective duration or the main completed-work interpretation.
+                </p>
+
+                <div className="mt-4 grid gap-3">
+                  {excludedEvents.map((event) => (
+                    <ExcludedActivityCard event={event} key={event.id} />
+                  ))}
+                </div>
+              </details>
+            ) : null}
+
+            {otherLatestRecords.length > 0 ? (
+              <details className="mt-5 rounded-2xl border border-zinc-800 bg-black/30 p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-zinc-300 hover:text-zinc-100">
+                  Other technical records ({otherLatestRecords.length})
+                </summary>
+
+                <p className="mt-3 text-xs leading-5 text-zinc-500">
+                  These records are neither counted as effective completed
+                  activities nor explicitly excluded by the current day-summary
+                  policy.
+                </p>
+
+                <div className="mt-4 grid gap-3">
+                  {otherLatestRecords.map((event) => (
+                    <div
+                      className="rounded-2xl border border-zinc-800 bg-black/50 p-4"
+                      key={event.id}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-medium text-white">
+                          {event.title ?? "Untitled activity"}
+                        </p>
+                        <span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300">
+                          {event.status} / {event.processingStatus}
+                        </span>
+                      </div>
+
+                      <p className="mt-2 text-xs text-zinc-500">
+                        {event.durationMinutes ?? 0} min · {event.source} ·
+                        started {formatDateTime(event.startedAt)}
+                      </p>
+
+                      <p className="mt-2 text-xs text-zinc-400">
+                        {event.comment ?? "no comment"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            ) : null}
           </div>
 
           <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
