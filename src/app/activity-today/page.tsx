@@ -239,6 +239,28 @@ type CorrectionHistoryState = {
   response: CorrectionHistoryResponse | null;
 };
 
+type TimelineAdjustmentDraft = {
+  startedAtLocal: string;
+  endedAtLocal: string;
+  reason: string;
+};
+
+type TimelineAdjustmentApplyState = {
+  loading: boolean;
+  error: string | null;
+  appliedCount: number;
+  results: Record<string, CorrectionPatchResponse> | null;
+};
+
+type TimelineAdjustmentStatus = {
+  startedAtIso: string | null;
+  endedAtIso: string | null;
+  durationMinutes: number | null;
+  isChanged: boolean;
+  isValid: boolean;
+  validationMessage: string | null;
+};
+
 function getTodayDateForTimezone(timezone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
@@ -272,6 +294,107 @@ function formatDateTime(value: string | null | undefined) {
   return date.toLocaleString(undefined, {
     timeZone: DEFAULT_TIMEZONE,
   });
+}
+
+function formatDateTimeInputValue(value: string | null | undefined) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: DEFAULT_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  const hour = parts.find((part) => part.type === "hour")?.value;
+  const minute = parts.find((part) => part.type === "minute")?.value;
+  const second = parts.find((part) => part.type === "second")?.value;
+
+  if (!year || !month || !day || !hour || !minute || !second) {
+    return "";
+  }
+
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+}
+
+function parseDateTimeInputValue(value: string) {
+  if (!value.trim()) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
+}
+
+function getInstantValue(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.getTime();
+}
+
+function dateValuesDiffer(
+  left: string | null | undefined,
+  right: string | null | undefined
+) {
+  if (!left && !right) {
+    return false;
+  }
+
+  if (!left || !right) {
+    return true;
+  }
+
+  const leftValue = getInstantValue(left);
+  const rightValue = getInstantValue(right);
+
+  if (leftValue === null || rightValue === null) {
+    return String(left ?? "") !== String(right ?? "");
+  }
+
+  return leftValue !== rightValue;
+}
+
+function calculateDurationMinutes(
+  startedAtIso: string | null,
+  endedAtIso: string | null
+) {
+  const startedValue = getInstantValue(startedAtIso);
+  const endedValue = getInstantValue(endedAtIso);
+
+  if (startedValue === null || endedValue === null) {
+    return null;
+  }
+
+  return Math.round((endedValue - startedValue) / 60000);
 }
 
 function formatMetricValue(
@@ -369,6 +492,87 @@ function getTimelineBadgeClasses(severity: TimelineConflictSeverity) {
   }
 
   return "bg-zinc-800 text-zinc-300";
+}
+
+function getDefaultTimelineAdjustmentDraft(
+  candidate: TimelineConflictCandidate
+): TimelineAdjustmentDraft {
+  return {
+    startedAtLocal: formatDateTimeInputValue(
+      candidate.suggestedStartedAt ?? candidate.currentStartedAt
+    ),
+    endedAtLocal: formatDateTimeInputValue(
+      candidate.suggestedEndedAt ?? candidate.currentEndedAt
+    ),
+    reason: "Timeline adjustment after corrected activity duration change",
+  };
+}
+
+function getTimelineAdjustmentStatus(
+  candidate: TimelineConflictCandidate,
+  draft: TimelineAdjustmentDraft
+): TimelineAdjustmentStatus {
+  const startedAtIso = parseDateTimeInputValue(draft.startedAtLocal);
+  const endedAtIso = parseDateTimeInputValue(draft.endedAtLocal);
+  const durationMinutes = calculateDurationMinutes(startedAtIso, endedAtIso);
+
+  const isChanged =
+    dateValuesDiffer(startedAtIso, candidate.currentStartedAt) ||
+    dateValuesDiffer(endedAtIso, candidate.currentEndedAt);
+
+  if (!startedAtIso || !endedAtIso) {
+    return {
+      startedAtIso,
+      endedAtIso,
+      durationMinutes,
+      isChanged,
+      isValid: false,
+      validationMessage: "Start and end must be valid date/time values.",
+    };
+  }
+
+  if (durationMinutes === null) {
+    return {
+      startedAtIso,
+      endedAtIso,
+      durationMinutes,
+      isChanged,
+      isValid: false,
+      validationMessage: "Could not calculate duration.",
+    };
+  }
+
+  if (durationMinutes <= 0) {
+    return {
+      startedAtIso,
+      endedAtIso,
+      durationMinutes,
+      isChanged,
+      isValid: false,
+      validationMessage: "Duration must be greater than 0 minutes.",
+    };
+  }
+
+  if (candidate.status !== "completed") {
+    return {
+      startedAtIso,
+      endedAtIso,
+      durationMinutes,
+      isChanged,
+      isValid: false,
+      validationMessage:
+        "This row is not completed. The current PATCH correction route supports timeline adjustment only for completed events.",
+    };
+  }
+
+  return {
+    startedAtIso,
+    endedAtIso,
+    durationMinutes,
+    isChanged,
+    isValid: true,
+    validationMessage: null,
+  };
 }
 
 function JsonBlock({ value }: { value: unknown }) {
@@ -474,9 +678,68 @@ function TechnicalCounters({
 
 function TimelineCheckPanel({
   timeline,
+  onApplied,
 }: {
   timeline: TimelineConflictDetectionResult | undefined;
+  onApplied?: () => Promise<void> | void;
 }) {
+  const [drafts, setDrafts] = useState<Record<string, TimelineAdjustmentDraft>>(
+    {}
+  );
+  const [applyState, setApplyState] = useState<TimelineAdjustmentApplyState>({
+    loading: false,
+    error: null,
+    appliedCount: 0,
+    results: null,
+  });
+
+  const timelineSignature = useMemo(() => {
+    if (!timeline) {
+      return "no-timeline";
+    }
+
+    return JSON.stringify({
+      correctedEventId: timeline.correctedEventId,
+      newInterval: timeline.newInterval,
+      candidates: timeline.candidates.map((candidate) => ({
+        eventId: candidate.eventId,
+        currentStartedAt: candidate.currentStartedAt,
+        currentEndedAt: candidate.currentEndedAt,
+        suggestedStartedAt: candidate.suggestedStartedAt,
+        suggestedEndedAt: candidate.suggestedEndedAt,
+      })),
+    });
+  }, [timeline]);
+
+  useEffect(() => {
+    if (!timeline?.candidates) {
+      setDrafts({});
+      setApplyState({
+        loading: false,
+        error: null,
+        appliedCount: 0,
+        results: null,
+      });
+      return;
+    }
+
+    const nextDrafts: Record<string, TimelineAdjustmentDraft> = {};
+
+    for (const candidate of timeline.candidates) {
+      nextDrafts[candidate.eventId] = getDefaultTimelineAdjustmentDraft(
+        candidate
+      );
+    }
+
+    setDrafts(nextDrafts);
+    setApplyState({
+      loading: false,
+      error: null,
+      appliedCount: 0,
+      results: null,
+    });
+  }, [timelineSignature, timeline]);
+
   if (!timeline) {
     return null;
   }
@@ -492,6 +755,114 @@ function TimelineCheckPanel({
 
   const candidates = timeline.candidates ?? [];
   const hasCandidates = candidates.length > 0;
+
+  const candidateStatuses = candidates.map((candidate) => {
+    const draft =
+      drafts[candidate.eventId] ?? getDefaultTimelineAdjustmentDraft(candidate);
+
+    return {
+      candidate,
+      draft,
+      status: getTimelineAdjustmentStatus(candidate, draft),
+    };
+  });
+
+  const changedRows = candidateStatuses.filter(
+    (item) => item.status.isChanged
+  );
+  const validChangedRows = changedRows.filter((item) => item.status.isValid);
+  const invalidChangedRows = changedRows.filter((item) => !item.status.isValid);
+
+  async function applyTimelineAdjustments() {
+    if (validChangedRows.length === 0) {
+      setApplyState({
+        loading: false,
+        error: "No valid changed timeline rows to apply.",
+        appliedCount: 0,
+        results: null,
+      });
+      return;
+    }
+
+    if (invalidChangedRows.length > 0) {
+      setApplyState({
+        loading: false,
+        error: "Fix invalid changed rows before applying timeline adjustments.",
+        appliedCount: 0,
+        results: null,
+      });
+      return;
+    }
+
+    setApplyState({
+      loading: true,
+      error: null,
+      appliedCount: 0,
+      results: null,
+    });
+
+    const results: Record<string, CorrectionPatchResponse> = {};
+
+    try {
+      for (const item of validChangedRows) {
+        if (!item.status.startedAtIso || !item.status.endedAtIso) {
+          throw new Error(
+            `Invalid timeline adjustment for ${item.candidate.eventId}.`
+          );
+        }
+
+        const response = await fetch(
+          `/api/activity/events/${encodeURIComponent(
+            item.candidate.eventId
+          )}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              startedAt: item.status.startedAtIso,
+              endedAt: item.status.endedAtIso,
+              reason:
+                item.draft.reason.trim() ||
+                "Timeline adjustment after corrected activity duration change",
+            }),
+          }
+        );
+
+        const result = (await response.json()) as CorrectionPatchResponse;
+
+        if (!response.ok || !result.ok) {
+          throw new Error(
+            result.error ??
+              `Failed to apply timeline adjustment for ${item.candidate.eventId}.`
+          );
+        }
+
+        results[item.candidate.eventId] = result;
+      }
+
+      setApplyState({
+        loading: false,
+        error: null,
+        appliedCount: validChangedRows.length,
+        results,
+      });
+
+      await onApplied?.();
+    } catch (requestError) {
+      setApplyState({
+        loading: false,
+        error:
+          requestError instanceof Error
+            ? requestError.message
+            : "Unknown timeline adjustment error.",
+        appliedCount: Object.keys(results).length,
+        results: Object.keys(results).length > 0 ? results : null,
+      });
+    }
+  }
 
   return (
     <details
@@ -564,77 +935,247 @@ function TimelineCheckPanel({
           </div>
         ) : null}
 
-        {candidates.map((candidate) => (
-          <div
-            className={[
-              "rounded-xl border p-3 text-xs leading-5",
-              getTimelineSeverityClasses(candidate.severity),
-            ].join(" ")}
-            key={candidate.eventId}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  {candidate.title ?? "Untitled activity"}
-                </p>
-                <p className="mt-1 text-zinc-500">
-                  {candidate.source ?? "unknown source"} · {candidate.status} /{" "}
-                  {candidate.processingStatus ?? "unknown"}
-                </p>
-              </div>
-
-              <span
-                className={[
-                  "rounded-full px-2.5 py-1 text-xs",
-                  getTimelineBadgeClasses(candidate.severity),
-                ].join(" ")}
-              >
-                {candidate.severity}
-              </span>
-            </div>
-
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
-              <div className="rounded-lg border border-zinc-800 bg-black/30 p-2">
-                <p className="uppercase tracking-[0.16em] text-zinc-600">
-                  Current
-                </p>
-                <p className="mt-1 text-zinc-200">
-                  {formatDateTime(candidate.currentStartedAt)} →{" "}
-                  {formatDateTime(candidate.currentEndedAt)}
-                </p>
-                <p className="mt-1 text-zinc-500">
-                  {formatMinutes(candidate.currentDurationMinutes)}
-                </p>
-              </div>
-
-              <div className="rounded-lg border border-zinc-800 bg-black/30 p-2">
-                <p className="uppercase tracking-[0.16em] text-zinc-600">
-                  Suggested
-                </p>
-                <p className="mt-1 text-zinc-200">
-                  {formatDateTime(candidate.suggestedStartedAt)} →{" "}
-                  {formatDateTime(candidate.suggestedEndedAt)}
-                </p>
-                <p className="mt-1 text-zinc-500">
-                  {formatMinutes(candidate.suggestedDurationMinutes)}
-                </p>
-              </div>
-            </div>
-
-            <p className="mt-3 text-zinc-400">{candidate.explanation}</p>
-
-            <p className="mt-2 text-zinc-500">
-              Conflict types:{" "}
-              {candidate.conflictTypes.length > 0
-                ? candidate.conflictTypes.join(", ")
-                : "—"}
-            </p>
-
-            <p className="mt-2 text-zinc-500">
-              Suggested change: {candidate.isSuggestedChange ? "yes" : "no"}
-            </p>
+        {hasCandidates ? (
+          <div className="rounded-xl border border-zinc-800 bg-black/30 p-3 text-xs leading-5 text-zinc-400">
+            Edit start/end directly. Rows whose new start/end differ from the
+            current values will be applied. Unchanged rows will be ignored.
           </div>
-        ))}
+        ) : null}
+
+        {candidateStatuses.map(({ candidate, draft, status }) => {
+          const rowStatusLabel = !status.isChanged
+            ? "unchanged"
+            : status.isValid
+              ? "will be updated"
+              : "invalid";
+
+          const rowStatusClasses = !status.isChanged
+            ? "bg-zinc-800 text-zinc-300"
+            : status.isValid
+              ? "bg-emerald-950 text-emerald-200"
+              : "bg-red-950 text-red-200";
+
+          return (
+            <div
+              className={[
+                "rounded-xl border p-3 text-xs leading-5",
+                getTimelineSeverityClasses(candidate.severity),
+              ].join(" ")}
+              key={candidate.eventId}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    {candidate.title ?? "Untitled activity"}
+                  </p>
+                  <p className="mt-1 text-zinc-500">
+                    {candidate.source ?? "unknown source"} · {candidate.status} /{" "}
+                    {candidate.processingStatus ?? "unknown"}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <span
+                    className={[
+                      "rounded-full px-2.5 py-1 text-xs",
+                      getTimelineBadgeClasses(candidate.severity),
+                    ].join(" ")}
+                  >
+                    {candidate.severity}
+                  </span>
+                  <span
+                    className={[
+                      "rounded-full px-2.5 py-1 text-xs",
+                      rowStatusClasses,
+                    ].join(" ")}
+                  >
+                    {rowStatusLabel}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-2 md:grid-cols-2">
+                <div className="rounded-lg border border-zinc-800 bg-black/30 p-2">
+                  <p className="uppercase tracking-[0.16em] text-zinc-600">
+                    Current
+                  </p>
+                  <p className="mt-1 text-zinc-200">
+                    {formatDateTime(candidate.currentStartedAt)} →{" "}
+                    {formatDateTime(candidate.currentEndedAt)}
+                  </p>
+                  <p className="mt-1 text-zinc-500">
+                    {formatMinutes(candidate.currentDurationMinutes)}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-zinc-800 bg-black/30 p-2">
+                  <p className="uppercase tracking-[0.16em] text-zinc-600">
+                    Suggested baseline
+                  </p>
+                  <p className="mt-1 text-zinc-200">
+                    {formatDateTime(candidate.suggestedStartedAt)} →{" "}
+                    {formatDateTime(candidate.suggestedEndedAt)}
+                  </p>
+                  <p className="mt-1 text-zinc-500">
+                    {formatMinutes(candidate.suggestedDurationMinutes)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div>
+                  <label
+                    className="mb-2 block text-xs uppercase tracking-[0.16em] text-zinc-600"
+                    htmlFor={`timeline-start-${candidate.eventId}`}
+                  >
+                    New start
+                  </label>
+                  <input
+                    className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500"
+                    disabled={applyState.loading}
+                    id={`timeline-start-${candidate.eventId}`}
+                    onChange={(event) =>
+                      setDrafts((current) => ({
+                        ...current,
+                        [candidate.eventId]: {
+                          ...draft,
+                          startedAtLocal: event.target.value,
+                        },
+                      }))
+                    }
+                    step={1}
+                    type="datetime-local"
+                    value={draft.startedAtLocal}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    className="mb-2 block text-xs uppercase tracking-[0.16em] text-zinc-600"
+                    htmlFor={`timeline-end-${candidate.eventId}`}
+                  >
+                    New end
+                  </label>
+                  <input
+                    className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500"
+                    disabled={applyState.loading}
+                    id={`timeline-end-${candidate.eventId}`}
+                    onChange={(event) =>
+                      setDrafts((current) => ({
+                        ...current,
+                        [candidate.eventId]: {
+                          ...draft,
+                          endedAtLocal: event.target.value,
+                        },
+                      }))
+                    }
+                    step={1}
+                    type="datetime-local"
+                    value={draft.endedAtLocal}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label
+                  className="mb-2 block text-xs uppercase tracking-[0.16em] text-zinc-600"
+                  htmlFor={`timeline-reason-${candidate.eventId}`}
+                >
+                  Reason
+                </label>
+                <input
+                  className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500"
+                  disabled={applyState.loading}
+                  id={`timeline-reason-${candidate.eventId}`}
+                  onChange={(event) =>
+                    setDrafts((current) => ({
+                      ...current,
+                      [candidate.eventId]: {
+                        ...draft,
+                        reason: event.target.value,
+                      },
+                    }))
+                  }
+                  value={draft.reason}
+                />
+              </div>
+
+              <div className="mt-3 rounded-lg border border-zinc-800 bg-black/30 p-2">
+                <p className="text-zinc-400">
+                  New duration: {formatMinutes(status.durationMinutes)}
+                </p>
+                <p className="mt-1 text-zinc-500">
+                  Conflict types:{" "}
+                  {candidate.conflictTypes.length > 0
+                    ? candidate.conflictTypes.join(", ")
+                    : "—"}
+                </p>
+                <p className="mt-1 text-zinc-500">
+                  Suggested change from detector:{" "}
+                  {candidate.isSuggestedChange ? "yes" : "no"}
+                </p>
+                {status.validationMessage ? (
+                  <p className="mt-2 text-red-200">
+                    {status.validationMessage}
+                  </p>
+                ) : null}
+              </div>
+
+              <p className="mt-3 text-zinc-400">{candidate.explanation}</p>
+            </div>
+          );
+        })}
+
+        {hasCandidates ? (
+          <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="text-xs leading-5 text-zinc-500">
+                <p>Changed rows: {changedRows.length}</p>
+                <p>Valid rows to apply: {validChangedRows.length}</p>
+                <p>Invalid changed rows: {invalidChangedRows.length}</p>
+              </div>
+
+              <button
+                className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-semibold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={
+                  applyState.loading ||
+                  validChangedRows.length === 0 ||
+                  invalidChangedRows.length > 0
+                }
+                onClick={() => void applyTimelineAdjustments()}
+                type="button"
+              >
+                {applyState.loading
+                  ? "Applying..."
+                  : "Apply changed timeline rows"}
+              </button>
+            </div>
+
+            {applyState.error ? (
+              <div className="mt-3 rounded-lg border border-red-900/70 bg-red-950/30 p-3 text-xs leading-5 text-red-100">
+                {applyState.error}
+              </div>
+            ) : null}
+
+            {applyState.appliedCount > 0 ? (
+              <div className="mt-3 rounded-lg border border-emerald-900/70 bg-emerald-950/30 p-3 text-xs leading-5 text-emerald-200">
+                Applied timeline adjustments: {applyState.appliedCount}. The
+                day summary has been reloaded.
+              </div>
+            ) : null}
+
+            {applyState.results ? (
+              <details className="mt-3">
+                <summary className="cursor-pointer text-xs text-zinc-500 hover:text-zinc-300">
+                  Timeline adjustment results JSON
+                </summary>
+                <div className="mt-3">
+                  <JsonBlock value={applyState.results} />
+                </div>
+              </details>
+            ) : null}
+          </div>
+        ) : null}
 
         <details>
           <summary className="cursor-pointer text-xs text-zinc-500 hover:text-zinc-300">
@@ -764,12 +1305,14 @@ function EventCorrectionControls({
   state,
   onDraftChange,
   onSubmit,
+  onTimelineAdjustmentsApplied,
 }: {
   event: DaySummaryEvent;
   draft: CorrectionDraft;
   state: CorrectionState | undefined;
   onDraftChange: (patch: Partial<CorrectionDraft>) => void;
   onSubmit: (mode: CorrectionMode) => void;
+  onTimelineAdjustmentsApplied?: () => Promise<void> | void;
 }) {
   const isCompleted = event.status === "completed";
   const isLoading = state?.loading ?? false;
@@ -904,7 +1447,12 @@ function EventCorrectionControls({
         </div>
       ) : null}
 
-      {result?.ok ? <TimelineCheckPanel timeline={result.timeline} /> : null}
+      {result?.ok ? (
+        <TimelineCheckPanel
+          onApplied={onTimelineAdjustmentsApplied}
+          timeline={result.timeline}
+        />
+      ) : null}
 
       {state?.result ? (
         <details className="mt-4">
@@ -928,6 +1476,7 @@ function CountedActivityCard({
   onDraftChange,
   onSubmit,
   onLoadHistory,
+  onTimelineAdjustmentsApplied,
 }: {
   event: DaySummaryEvent;
   draft: CorrectionDraft;
@@ -936,6 +1485,7 @@ function CountedActivityCard({
   onDraftChange: (patch: Partial<CorrectionDraft>) => void;
   onSubmit: (mode: CorrectionMode) => void;
   onLoadHistory: () => void;
+  onTimelineAdjustmentsApplied: () => Promise<void> | void;
 }) {
   return (
     <div className="rounded-2xl border border-emerald-900/50 bg-emerald-950/10 p-4">
@@ -962,6 +1512,7 @@ function CountedActivityCard({
         event={event}
         onDraftChange={onDraftChange}
         onSubmit={onSubmit}
+        onTimelineAdjustmentsApplied={onTimelineAdjustmentsApplied}
         state={state}
       />
 
@@ -1538,6 +2089,7 @@ export default function ActivityTodayPage() {
                   }
                   onLoadHistory={() => void loadCorrectionHistory(event.id)}
                   onSubmit={(mode) => void submitCorrection(event, mode)}
+                  onTimelineAdjustmentsApplied={() => loadSummary(date)}
                   state={correctionStates[event.id]}
                 />
               ))}
