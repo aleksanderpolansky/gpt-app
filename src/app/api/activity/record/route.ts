@@ -1,10 +1,20 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
   ACTIVITY_RECORDING_ENABLED,
 } from "../../../../../lib/activity/activityRecordingConfig";
+import {
+  getDurationMs,
+  safeCreateActivityProcessingLog,
+} from "../../../../../lib/activity/activityProcessingLogs";
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { processActivityImpacts } from "../../../../../lib/activity/activityImpactProcessor";
+import {
+  createRawActivitySignal,
+  markRawActivitySignalFailed,
+  markRawActivitySignalProcessed,
+} from "../../../../../lib/activity/rawActivitySignals";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -872,6 +882,88 @@ export async function POST(request: Request) {
     comment,
   });
 
+  const processingRunId = randomUUID();
+  const processingStartedAt = new Date();
+
+  const rawSignalResult = await createRawActivitySignal({
+    userId: appUser.id,
+    sourceType: "manual_form",
+    rawPayload: {
+      endpoint: "/api/activity/record",
+      body,
+      resolvedBy,
+      source,
+      status,
+    },
+    normalizedPreview: {
+      templateId: template.id,
+      templateSlug: template.slug,
+      title,
+      source,
+      status,
+      startedAt: timing.startedAt,
+      endedAt: timing.endedAt,
+      durationMinutes: timing.durationMinutes,
+    },
+    occurredAt: timing.startedAt,
+    trustLevel: "medium",
+    privacyScope:
+      template.default_privacy_scope === "shared_with_org" ||
+      template.default_privacy_scope === "public_masked" ||
+      template.default_privacy_scope === "public"
+        ? template.default_privacy_scope
+        : "private",
+    processingStatus: "processing",
+    metadata: {
+      parser: "template_first_v2",
+      processingRunId,
+      mode: "template_first_completed",
+      templateScope: template.template_scope,
+      templateGroup: template.template_group,
+      shortcutId: shortcut?.id ?? null,
+      shortcutType: shortcut?.shortcut_type ?? null,
+      shortcutValue: shortcut?.shortcut_value ?? null,
+    },
+  });
+
+  const rawSignal = rawSignalResult.signal;
+
+  await safeCreateActivityProcessingLog({
+    userId: appUser.id,
+    rawSignalId: rawSignal?.id ?? null,
+    processingRunId,
+    processorName: "activity_record_route",
+    processingStage: "ingest",
+    processingStatus: rawSignalResult.ok ? "completed" : "warning",
+    severity: rawSignalResult.ok ? "info" : "warning",
+    message: rawSignalResult.ok
+      ? "Raw activity signal captured."
+      : "Raw activity signal creation failed; continuing without raw signal.",
+    input: {
+      templateId: template.id,
+      templateSlug: template.slug,
+      source,
+      status,
+    },
+    output: rawSignal
+      ? {
+          rawSignalId: rawSignal.id,
+        }
+      : {},
+    error: rawSignalResult.ok
+      ? {}
+      : {
+          message: rawSignalResult.error,
+        },
+    metadata: {
+      endpoint: "/api/activity/record",
+      mode: "template_first_completed",
+    },
+    startedAt: processingStartedAt.toISOString(),
+    finishedAt: new Date().toISOString(),
+    durationMs: getDurationMs(processingStartedAt),
+  });
+
   const { data: createdEvent, error: eventError } = await supabase
     .from("activity_events")
     .insert({
@@ -912,6 +1004,40 @@ export async function POST(request: Request) {
     .single();
 
   if (eventError || !createdEvent) {
+    if (rawSignal) {
+      await markRawActivitySignalFailed({
+        signalId: rawSignal.id,
+        userId: appUser.id,
+        error: eventError?.message ?? "Failed to create activity event",
+      });
+    }
+
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: rawSignal?.id ?? null,
+      processingRunId,
+      processorName: "activity_record_route",
+      processingStage: "create_event",
+      processingStatus: "failed",
+      severity: "error",
+      message: "Failed to create activity event from template-first raw signal.",
+      input: {
+        templateId: template.id,
+        templateSlug: template.slug,
+        title,
+      },
+      error: {
+        message: eventError?.message ?? "Failed to create activity event",
+      },
+      metadata: {
+        endpoint: "/api/activity/record",
+        mode: "template_first_completed",
+      },
+      startedAt: processingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(processingStartedAt),
+    });
+
     return NextResponse.json(
       {
         ok: false,
@@ -920,6 +1046,35 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+
+  await safeCreateActivityProcessingLog({
+    userId: appUser.id,
+    rawSignalId: rawSignal?.id ?? null,
+    activityEventId: createdEvent.id,
+    processingRunId,
+    processorName: "activity_record_route",
+    processingStage: "create_event",
+    processingStatus: "completed",
+    severity: "info",
+    message: "Activity event created from template-first record flow.",
+    input: {
+      templateId: template.id,
+      templateSlug: template.slug,
+      title,
+    },
+    output: {
+      activityEventId: createdEvent.id,
+      status: createdEvent.status,
+      processingStatus: createdEvent.processing_status,
+    },
+    metadata: {
+      endpoint: "/api/activity/record",
+      mode: "template_first_completed",
+    },
+    startedAt: processingStartedAt.toISOString(),
+    finishedAt: new Date().toISOString(),
+    durationMs: getDurationMs(processingStartedAt),
+  });
 
   const eventLinkRows = buildEventLinkRows({
     eventId: createdEvent.id,
@@ -933,6 +1088,39 @@ export async function POST(request: Request) {
       : { data: [], error: null };
 
   if (eventLinksError) {
+    if (rawSignal) {
+      await markRawActivitySignalFailed({
+        signalId: rawSignal.id,
+        userId: appUser.id,
+        error: eventLinksError.message,
+      });
+    }
+
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: rawSignal?.id ?? null,
+      activityEventId: createdEvent.id,
+      processingRunId,
+      processorName: "activity_record_route",
+      processingStage: "link_event",
+      processingStatus: "failed",
+      severity: "error",
+      message: "Failed to create activity event links.",
+      input: {
+        eventLinkRowsCount: eventLinkRows.length,
+      },
+      error: {
+        message: eventLinksError.message,
+      },
+      metadata: {
+        endpoint: "/api/activity/record",
+        mode: "template_first_completed",
+      },
+      startedAt: processingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(processingStartedAt),
+    });
+
     await supabase
       .from("activity_events")
       .update({ processing_status: "failed" })
@@ -949,6 +1137,31 @@ export async function POST(request: Request) {
     );
   }
 
+  await safeCreateActivityProcessingLog({
+    userId: appUser.id,
+    rawSignalId: rawSignal?.id ?? null,
+    activityEventId: createdEvent.id,
+    processingRunId,
+    processorName: "activity_record_route",
+    processingStage: "link_event",
+    processingStatus: "completed",
+    severity: "info",
+    message: "Activity event links created.",
+    input: {
+      eventLinkRowsCount: eventLinkRows.length,
+    },
+    output: {
+      eventLinksCount: Array.isArray(eventLinks) ? eventLinks.length : 0,
+    },
+    metadata: {
+      endpoint: "/api/activity/record",
+      mode: "template_first_completed",
+    },
+    startedAt: processingStartedAt.toISOString(),
+    finishedAt: new Date().toISOString(),
+    durationMs: getDurationMs(processingStartedAt),
+  });
+
   try {
     const impactResult = await processActivityImpacts({
       eventId: createdEvent.id,
@@ -957,6 +1170,78 @@ export async function POST(request: Request) {
       activityTypeId: createdEvent.activity_type_id,
       durationMinutes: createdEvent.duration_minutes,
       startedAt: createdEvent.started_at,
+    });
+
+    const processedSignalResult = rawSignal
+      ? await markRawActivitySignalProcessed({
+          signalId: rawSignal.id,
+          userId: appUser.id,
+          outputEventId: createdEvent.id,
+          normalizedPreview: {
+            activityEventId: createdEvent.id,
+            eventLinksCount: Array.isArray(eventLinks) ? eventLinks.length : 0,
+            impactProcessor: {
+              ok: impactResult.ok,
+              skipped: impactResult.skipped,
+              reason: impactResult.reason,
+              counts: impactResult.counts,
+            },
+          },
+        })
+      : null;
+
+    if (processedSignalResult && !processedSignalResult.ok) {
+      await safeCreateActivityProcessingLog({
+        userId: appUser.id,
+        rawSignalId: rawSignal?.id ?? null,
+        activityEventId: createdEvent.id,
+        processingRunId,
+        processorName: "activity_record_route",
+        processingStage: "finalize",
+        processingStatus: "warning",
+        severity: "warning",
+        message: "Activity was recorded, but raw signal could not be marked as processed.",
+        error: {
+          message: processedSignalResult.error,
+        },
+        metadata: {
+          endpoint: "/api/activity/record",
+          mode: "template_first_completed",
+        },
+        startedAt: processingStartedAt.toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: getDurationMs(processingStartedAt),
+      });
+    }
+
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: rawSignal?.id ?? null,
+      activityEventId: createdEvent.id,
+      processingRunId,
+      processorName: "activity_record_route",
+      processingStage: "process_impacts",
+      processingStatus: impactResult.ok ? "completed" : "skipped",
+      severity: impactResult.ok ? "info" : "notice",
+      message: "Rule-based activity impacts processed.",
+      input: {
+        activityTemplateId: createdEvent.activity_template_id,
+        activityTypeId: createdEvent.activity_type_id,
+        durationMinutes: createdEvent.duration_minutes,
+      },
+      output: {
+        ok: impactResult.ok,
+        skipped: impactResult.skipped,
+        reason: impactResult.reason,
+        counts: impactResult.counts,
+      },
+      metadata: {
+        endpoint: "/api/activity/record",
+        mode: "template_first_completed",
+      },
+      startedAt: processingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(processingStartedAt),
     });
 
     return NextResponse.json({
@@ -973,6 +1258,15 @@ export async function POST(request: Request) {
         reason: impactResult.reason,
         counts: impactResult.counts,
       },
+      rawSignal: rawSignal
+        ? {
+            id: rawSignal.id,
+            processingStatus:
+              processedSignalResult?.signal?.processing_status ??
+              rawSignal.processing_status,
+          }
+        : null,
+      processingRunId,
       parser: {
         mode: "template_first_v2",
         resolvedBy,
@@ -994,6 +1288,42 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    if (rawSignal) {
+      await markRawActivitySignalFailed({
+        signalId: rawSignal.id,
+        userId: appUser.id,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to process rule-based activity impacts",
+      });
+    }
+
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: rawSignal?.id ?? null,
+      activityEventId: createdEvent.id,
+      processingRunId,
+      processorName: "activity_record_route",
+      processingStage: "process_impacts",
+      processingStatus: "failed",
+      severity: "error",
+      message: "Failed to process rule-based activity impacts.",
+      input: {
+        activityTemplateId: createdEvent.activity_template_id,
+        activityTypeId: createdEvent.activity_type_id,
+        durationMinutes: createdEvent.duration_minutes,
+      },
+      error,
+      metadata: {
+        endpoint: "/api/activity/record",
+        mode: "template_first_completed",
+      },
+      startedAt: processingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(processingStartedAt),
+    });
+
     await supabase
       .from("activity_events")
       .update({ processing_status: "failed" })
