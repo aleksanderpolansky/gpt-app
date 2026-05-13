@@ -139,6 +139,54 @@ type CorrectionState = {
 
 type CorrectionMode = "duration_comment" | "cancelled";
 
+type TimelineConflictSeverity = "info" | "warning" | "blocking";
+
+type TimelineConflictCandidate = {
+  eventId: string;
+  title: string | null;
+  status: string;
+  processingStatus: string | null;
+  source: string | null;
+  currentStartedAt: string | null;
+  currentEndedAt: string | null;
+  currentDurationMinutes: number | null;
+  suggestedStartedAt: string | null;
+  suggestedEndedAt: string | null;
+  suggestedDurationMinutes: number | null;
+  conflictTypes: string[];
+  severity: TimelineConflictSeverity;
+  isSuggestedChange: boolean;
+  explanation: string;
+};
+
+type TimelineConflictDetectionResult = {
+  ok: boolean;
+  skipped?: boolean;
+  reason?: string;
+  error?: string;
+  correctedEventId: string;
+  previousInterval: {
+    startedAt: string | null;
+    endedAt: string | null;
+    durationMinutes: number | null;
+  };
+  newInterval: {
+    startedAt: string | null;
+    endedAt: string | null;
+    durationMinutes: number | null;
+  };
+  searchRange?: {
+    from: string;
+    to: string;
+  };
+  summary: {
+    candidatesCount: number;
+    suggestedChangesCount: number;
+    blockingCandidatesCount: number;
+  };
+  candidates: TimelineConflictCandidate[];
+};
+
 type CorrectionPatchResponse = {
   ok: boolean;
   status?: string;
@@ -149,6 +197,7 @@ type CorrectionPatchResponse = {
   correction?: Record<string, unknown>;
   recalculation?: unknown;
   rollback?: unknown;
+  timeline?: TimelineConflictDetectionResult;
   audit?: Record<string, unknown>;
   recovery?: unknown;
 };
@@ -298,6 +347,30 @@ function getExcludedRecordReason(event: DaySummaryEvent) {
   return "This record is kept for audit and does not affect effective duration.";
 }
 
+function getTimelineSeverityClasses(severity: TimelineConflictSeverity) {
+  if (severity === "blocking") {
+    return "border-red-900/70 bg-red-950/30 text-red-100";
+  }
+
+  if (severity === "warning") {
+    return "border-amber-900/70 bg-amber-950/20 text-amber-100";
+  }
+
+  return "border-zinc-800 bg-zinc-950 text-zinc-200";
+}
+
+function getTimelineBadgeClasses(severity: TimelineConflictSeverity) {
+  if (severity === "blocking") {
+    return "bg-red-950 text-red-200";
+  }
+
+  if (severity === "warning") {
+    return "bg-amber-950 text-amber-200";
+  }
+
+  return "bg-zinc-800 text-zinc-300";
+}
+
 function JsonBlock({ value }: { value: unknown }) {
   return (
     <pre className="max-h-[620px] overflow-auto rounded-2xl border border-zinc-800 bg-black p-4 text-xs leading-relaxed text-zinc-200">
@@ -399,6 +472,183 @@ function TechnicalCounters({
   );
 }
 
+function TimelineCheckPanel({
+  timeline,
+}: {
+  timeline: TimelineConflictDetectionResult | undefined;
+}) {
+  if (!timeline) {
+    return null;
+  }
+
+  if (!timeline.ok) {
+    return (
+      <div className="mt-4 rounded-2xl border border-red-900/70 bg-red-950/30 p-4 text-xs leading-5 text-red-100">
+        <p className="font-semibold">Timeline check failed.</p>
+        <p className="mt-1">{timeline.error ?? "Unknown timeline error."}</p>
+      </div>
+    );
+  }
+
+  const candidates = timeline.candidates ?? [];
+  const hasCandidates = candidates.length > 0;
+
+  return (
+    <details
+      className={[
+        "mt-4 rounded-2xl border p-4",
+        hasCandidates
+          ? "border-amber-900/60 bg-amber-950/10"
+          : "border-emerald-900/60 bg-emerald-950/10",
+      ].join(" ")}
+      open={hasCandidates}
+    >
+      <summary
+        className={[
+          "cursor-pointer text-xs font-semibold uppercase tracking-[0.18em]",
+          hasCandidates ? "text-amber-200" : "text-emerald-300",
+        ].join(" ")}
+      >
+        Timeline check
+      </summary>
+
+      <div className="mt-4 grid gap-3">
+        <div className="grid gap-3 text-xs md:grid-cols-3">
+          <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
+            <p className="uppercase tracking-[0.16em] text-zinc-600">
+              Candidates
+            </p>
+            <p className="mt-2 text-lg font-semibold text-white">
+              {timeline.summary.candidatesCount}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
+            <p className="uppercase tracking-[0.16em] text-zinc-600">
+              Suggested changes
+            </p>
+            <p className="mt-2 text-lg font-semibold text-white">
+              {timeline.summary.suggestedChangesCount}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
+            <p className="uppercase tracking-[0.16em] text-zinc-600">
+              Blocking
+            </p>
+            <p className="mt-2 text-lg font-semibold text-white">
+              {timeline.summary.blockingCandidatesCount}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-zinc-800 bg-black/30 p-3 text-xs leading-5 text-zinc-400">
+          <p>
+            Corrected interval: {formatDateTime(timeline.previousInterval.endedAt)}{" "}
+            → {formatDateTime(timeline.newInterval.endedAt)}
+          </p>
+          <p className="mt-1">
+            Duration: {formatMinutes(timeline.previousInterval.durationMinutes)}{" "}
+            → {formatMinutes(timeline.newInterval.durationMinutes)}
+          </p>
+          {timeline.skipped ? (
+            <p className="mt-2 text-zinc-500">
+              Timeline detection skipped: {timeline.reason ?? "no reason"}
+            </p>
+          ) : null}
+        </div>
+
+        {!hasCandidates && !timeline.skipped ? (
+          <div className="rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-3 text-xs leading-5 text-emerald-200">
+            No affected activities detected.
+          </div>
+        ) : null}
+
+        {candidates.map((candidate) => (
+          <div
+            className={[
+              "rounded-xl border p-3 text-xs leading-5",
+              getTimelineSeverityClasses(candidate.severity),
+            ].join(" ")}
+            key={candidate.eventId}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  {candidate.title ?? "Untitled activity"}
+                </p>
+                <p className="mt-1 text-zinc-500">
+                  {candidate.source ?? "unknown source"} · {candidate.status} /{" "}
+                  {candidate.processingStatus ?? "unknown"}
+                </p>
+              </div>
+
+              <span
+                className={[
+                  "rounded-full px-2.5 py-1 text-xs",
+                  getTimelineBadgeClasses(candidate.severity),
+                ].join(" ")}
+              >
+                {candidate.severity}
+              </span>
+            </div>
+
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              <div className="rounded-lg border border-zinc-800 bg-black/30 p-2">
+                <p className="uppercase tracking-[0.16em] text-zinc-600">
+                  Current
+                </p>
+                <p className="mt-1 text-zinc-200">
+                  {formatDateTime(candidate.currentStartedAt)} →{" "}
+                  {formatDateTime(candidate.currentEndedAt)}
+                </p>
+                <p className="mt-1 text-zinc-500">
+                  {formatMinutes(candidate.currentDurationMinutes)}
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 bg-black/30 p-2">
+                <p className="uppercase tracking-[0.16em] text-zinc-600">
+                  Suggested
+                </p>
+                <p className="mt-1 text-zinc-200">
+                  {formatDateTime(candidate.suggestedStartedAt)} →{" "}
+                  {formatDateTime(candidate.suggestedEndedAt)}
+                </p>
+                <p className="mt-1 text-zinc-500">
+                  {formatMinutes(candidate.suggestedDurationMinutes)}
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-3 text-zinc-400">{candidate.explanation}</p>
+
+            <p className="mt-2 text-zinc-500">
+              Conflict types:{" "}
+              {candidate.conflictTypes.length > 0
+                ? candidate.conflictTypes.join(", ")
+                : "—"}
+            </p>
+
+            <p className="mt-2 text-zinc-500">
+              Suggested change: {candidate.isSuggestedChange ? "yes" : "no"}
+            </p>
+          </div>
+        ))}
+
+        <details>
+          <summary className="cursor-pointer text-xs text-zinc-500 hover:text-zinc-300">
+            Timeline JSON
+          </summary>
+          <div className="mt-3">
+            <JsonBlock value={timeline} />
+          </div>
+        </details>
+      </div>
+    </details>
+  );
+}
+
 function CorrectionHistoryPanel({
   eventId,
   state,
@@ -430,7 +680,11 @@ function CorrectionHistoryPanel({
             onClick={onLoad}
             type="button"
           >
-            {state?.loading ? "Loading..." : hasLoaded ? "Refresh history" : "Load history"}
+            {state?.loading
+              ? "Loading..."
+              : hasLoaded
+                ? "Refresh history"
+                : "Load history"}
           </button>
         </div>
 
@@ -649,6 +903,8 @@ function EventCorrectionControls({
           {result.warning ? <p className="mt-1">{result.warning}</p> : null}
         </div>
       ) : null}
+
+      {result?.ok ? <TimelineCheckPanel timeline={result.timeline} /> : null}
 
       {state?.result ? (
         <details className="mt-4">
