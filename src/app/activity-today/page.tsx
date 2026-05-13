@@ -249,6 +249,7 @@ type TimelineAdjustmentApplyState = {
   loading: boolean;
   error: string | null;
   appliedCount: number;
+  appliedEventIds: string[];
   results: Record<string, CorrectionPatchResponse> | null;
 };
 
@@ -690,6 +691,7 @@ function TimelineCheckPanel({
     loading: false,
     error: null,
     appliedCount: 0,
+    appliedEventIds: [],
     results: null,
   });
 
@@ -718,6 +720,7 @@ function TimelineCheckPanel({
         loading: false,
         error: null,
         appliedCount: 0,
+        appliedEventIds: [],
         results: null,
       });
       return;
@@ -736,6 +739,7 @@ function TimelineCheckPanel({
       loading: false,
       error: null,
       appliedCount: 0,
+      appliedEventIds: [],
       results: null,
     });
   }, [timelineSignature, timeline]);
@@ -755,6 +759,7 @@ function TimelineCheckPanel({
 
   const candidates = timeline.candidates ?? [];
   const hasCandidates = candidates.length > 0;
+  const appliedEventIds = new Set(applyState.appliedEventIds);
 
   const candidateStatuses = candidates.map((candidate) => {
     const draft =
@@ -763,43 +768,41 @@ function TimelineCheckPanel({
     return {
       candidate,
       draft,
+      isApplied: appliedEventIds.has(candidate.eventId),
       status: getTimelineAdjustmentStatus(candidate, draft),
     };
   });
 
   const changedRows = candidateStatuses.filter(
-    (item) => item.status.isChanged
+    (item) => !item.isApplied && item.status.isChanged
   );
   const validChangedRows = changedRows.filter((item) => item.status.isValid);
   const invalidChangedRows = changedRows.filter((item) => !item.status.isValid);
 
   async function applyTimelineAdjustments() {
     if (validChangedRows.length === 0) {
-      setApplyState({
+      setApplyState((current) => ({
+        ...current,
         loading: false,
         error: "No valid changed timeline rows to apply.",
-        appliedCount: 0,
-        results: null,
-      });
+      }));
       return;
     }
 
     if (invalidChangedRows.length > 0) {
-      setApplyState({
+      setApplyState((current) => ({
+        ...current,
         loading: false,
         error: "Fix invalid changed rows before applying timeline adjustments.",
-        appliedCount: 0,
-        results: null,
-      });
+      }));
       return;
     }
 
-    setApplyState({
+    setApplyState((current) => ({
+      ...current,
       loading: true,
       error: null,
-      appliedCount: 0,
-      results: null,
-    });
+    }));
 
     const results: Record<string, CorrectionPatchResponse> = {};
 
@@ -843,24 +846,34 @@ function TimelineCheckPanel({
         results[item.candidate.eventId] = result;
       }
 
-      setApplyState({
+      const newlyAppliedEventIds = validChangedRows.map(
+        (item) => item.candidate.eventId
+      );
+
+      setApplyState((current) => ({
         loading: false,
         error: null,
-        appliedCount: validChangedRows.length,
-        results,
-      });
+        appliedCount: current.appliedCount + newlyAppliedEventIds.length,
+        appliedEventIds: Array.from(
+          new Set([...current.appliedEventIds, ...newlyAppliedEventIds])
+        ),
+        results: {
+          ...(current.results ?? {}),
+          ...results,
+        },
+      }));
 
       await onApplied?.();
     } catch (requestError) {
-      setApplyState({
+      setApplyState((current) => ({
+        ...current,
         loading: false,
         error:
           requestError instanceof Error
             ? requestError.message
             : "Unknown timeline adjustment error.",
-        appliedCount: Object.keys(results).length,
-        results: Object.keys(results).length > 0 ? results : null,
-      });
+        results: Object.keys(results).length > 0 ? results : current.results,
+      }));
     }
   }
 
@@ -938,28 +951,35 @@ function TimelineCheckPanel({
         {hasCandidates ? (
           <div className="rounded-xl border border-zinc-800 bg-black/30 p-3 text-xs leading-5 text-zinc-400">
             Edit start/end directly. Rows whose new start/end differ from the
-            current values will be applied. Unchanged rows will be ignored.
+            current values will be applied. Already applied rows are locked to
+            prevent duplicate corrections.
           </div>
         ) : null}
 
-        {candidateStatuses.map(({ candidate, draft, status }) => {
-          const rowStatusLabel = !status.isChanged
-            ? "unchanged"
-            : status.isValid
-              ? "will be updated"
-              : "invalid";
+        {candidateStatuses.map(({ candidate, draft, isApplied, status }) => {
+          const rowStatusLabel = isApplied
+            ? "applied"
+            : !status.isChanged
+              ? "unchanged"
+              : status.isValid
+                ? "will be updated"
+                : "invalid";
 
-          const rowStatusClasses = !status.isChanged
-            ? "bg-zinc-800 text-zinc-300"
-            : status.isValid
-              ? "bg-emerald-950 text-emerald-200"
-              : "bg-red-950 text-red-200";
+          const rowStatusClasses = isApplied
+            ? "bg-emerald-950 text-emerald-200"
+            : !status.isChanged
+              ? "bg-zinc-800 text-zinc-300"
+              : status.isValid
+                ? "bg-emerald-950 text-emerald-200"
+                : "bg-red-950 text-red-200";
 
           return (
             <div
               className={[
                 "rounded-xl border p-3 text-xs leading-5",
-                getTimelineSeverityClasses(candidate.severity),
+                isApplied
+                  ? "border-emerald-900/70 bg-emerald-950/10 text-emerald-100"
+                  : getTimelineSeverityClasses(candidate.severity),
               ].join(" ")}
               key={candidate.eventId}
             >
@@ -997,7 +1017,7 @@ function TimelineCheckPanel({
               <div className="mt-3 grid gap-2 md:grid-cols-2">
                 <div className="rounded-lg border border-zinc-800 bg-black/30 p-2">
                   <p className="uppercase tracking-[0.16em] text-zinc-600">
-                    Current
+                    Current before apply
                   </p>
                   <p className="mt-1 text-zinc-200">
                     {formatDateTime(candidate.currentStartedAt)} →{" "}
@@ -1031,8 +1051,8 @@ function TimelineCheckPanel({
                     New start
                   </label>
                   <input
-                    className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500"
-                    disabled={applyState.loading}
+                    className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={applyState.loading || isApplied}
                     id={`timeline-start-${candidate.eventId}`}
                     onChange={(event) =>
                       setDrafts((current) => ({
@@ -1057,8 +1077,8 @@ function TimelineCheckPanel({
                     New end
                   </label>
                   <input
-                    className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500"
-                    disabled={applyState.loading}
+                    className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={applyState.loading || isApplied}
                     id={`timeline-end-${candidate.eventId}`}
                     onChange={(event) =>
                       setDrafts((current) => ({
@@ -1084,8 +1104,8 @@ function TimelineCheckPanel({
                   Reason
                 </label>
                 <input
-                  className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500"
-                  disabled={applyState.loading}
+                  className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={applyState.loading || isApplied}
                   id={`timeline-reason-${candidate.eventId}`}
                   onChange={(event) =>
                     setDrafts((current) => ({
@@ -1114,7 +1134,14 @@ function TimelineCheckPanel({
                   Suggested change from detector:{" "}
                   {candidate.isSuggestedChange ? "yes" : "no"}
                 </p>
-                {status.validationMessage ? (
+                {isApplied ? (
+                  <p className="mt-2 text-emerald-200">
+                    This timeline row has already been applied. Inputs are
+                    locked to prevent a duplicate correction from the same
+                    preview.
+                  </p>
+                ) : null}
+                {status.validationMessage && !isApplied ? (
                   <p className="mt-2 text-red-200">
                     {status.validationMessage}
                   </p>
@@ -1130,9 +1157,10 @@ function TimelineCheckPanel({
           <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="text-xs leading-5 text-zinc-500">
-                <p>Changed rows: {changedRows.length}</p>
+                <p>Changed rows not yet applied: {changedRows.length}</p>
                 <p>Valid rows to apply: {validChangedRows.length}</p>
                 <p>Invalid changed rows: {invalidChangedRows.length}</p>
+                <p>Applied rows: {applyState.appliedEventIds.length}</p>
               </div>
 
               <button
@@ -1147,7 +1175,10 @@ function TimelineCheckPanel({
               >
                 {applyState.loading
                   ? "Applying..."
-                  : "Apply changed timeline rows"}
+                  : applyState.appliedEventIds.length > 0 &&
+                      validChangedRows.length === 0
+                    ? "Applied"
+                    : "Apply changed timeline rows"}
               </button>
             </div>
 
@@ -1160,7 +1191,7 @@ function TimelineCheckPanel({
             {applyState.appliedCount > 0 ? (
               <div className="mt-3 rounded-lg border border-emerald-900/70 bg-emerald-950/30 p-3 text-xs leading-5 text-emerald-200">
                 Applied timeline adjustments: {applyState.appliedCount}. The
-                day summary has been reloaded.
+                applied rows are locked and the day summary has been reloaded.
               </div>
             ) : null}
 
