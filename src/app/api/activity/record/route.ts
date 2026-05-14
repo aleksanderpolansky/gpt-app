@@ -1,9 +1,10 @@
-import { randomUUID } from "crypto";
+﻿import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
   ACTIVITY_RECORDING_ENABLED,
 } from "../../../../../lib/activity/activityRecordingConfig";
+import { normalizeActivityStatus } from "../../../../../lib/activity/activityLifecycle";
 import {
   getDurationMs,
   safeCreateActivityProcessingLog,
@@ -143,19 +144,6 @@ const ALLOWED_SOURCE_TYPES = new Set([
   "legacy_code",
 ]);
 
-const ALLOWED_STATUSES = new Set([
-  "draft",
-  "planned",
-  "confirmed",
-  "completed",
-  "cancelled",
-  "missed",
-  "corrected",
-  "started",
-  "paused",
-  "imported_pending",
-  "archived",
-]);
 
 function asString(value: unknown): string | null {
   if (typeof value !== "string") {
@@ -194,14 +182,11 @@ function normalizeSourceType(value: unknown, fallback: string) {
   return fallback;
 }
 
-function normalizeStatus(value: unknown, fallback: string) {
-  const status = asString(value) ?? fallback;
-
-  if (ALLOWED_STATUSES.has(status)) {
-    return status;
-  }
-
-  return fallback;
+function normalizeRecordStatus(value: unknown, fallback: string) {
+  return normalizeActivityStatus(
+    value,
+    normalizeActivityStatus(fallback, "completed")
+  );
 }
 
 function inferLegacyShortcutFromInput(input: string | null) {
@@ -869,7 +854,7 @@ export async function POST(request: Request) {
       : template.default_source_type
   );
 
-  const status = normalizeStatus(body.status, template.default_status);
+  const status = normalizeRecordStatus(body.status, template.default_status);
 
   const title = asString(body.title) ?? template.title;
 
@@ -1344,3 +1329,4 @@ export async function POST(request: Request) {
     );
   }
 }
+
