@@ -1,13 +1,23 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
   ACTIVITY_RECORDING_ENABLED,
 } from "../../../../../../lib/activity/activityRecordingConfig";
+import {
+  getDurationMs,
+  safeCreateActivityProcessingLog,
+} from "../../../../../../lib/activity/activityProcessingLogs";
 import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
 import {
   recalculateActivityImpacts,
   rollbackActivityImpacts,
 } from "../../../../../../lib/activity/activityImpactProcessor";
+import {
+  createRawActivitySignal,
+  markRawActivitySignalFailed,
+  markRawActivitySignalProcessed,
+} from "../../../../../../lib/activity/rawActivitySignals";
 import { supabase } from "../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -1176,6 +1186,92 @@ export async function PATCH(request: Request, context: RouteContext) {
     const nowIso = new Date().toISOString();
     const existingMetadata = asRecord(previousEvent.metadata_json);
 
+    const rollbackProcessingRunId = randomUUID();
+    const rollbackProcessingStartedAt = new Date();
+
+    const rollbackRawSignalResult = await createRawActivitySignal({
+      userId: appUser.id,
+      sourceType: "manual_form",
+      idempotencyKey: `${previousEvent.id}:status_rollback:${requestedStatus}:${nowIso}`,
+      rawPayload: {
+        endpoint: "/api/activity/events/[id]",
+        method: "PATCH",
+        mode: "status_rollback",
+        body,
+        eventId: previousEvent.id,
+        previousStatus: previousEvent.status,
+        requestedStatus,
+        changedFields,
+        reason,
+      },
+      normalizedPreview: {
+        activityEventId: previousEvent.id,
+        title: previousEvent.title,
+        correctionMode: "status_rollback",
+        previousStatus: previousEvent.status,
+        requestedStatus,
+        changedFields,
+        reason,
+      },
+      occurredAt: nowIso,
+      trustLevel: "medium",
+      privacyScope:
+        previousEvent.privacy_scope === "shared_with_org" ||
+        previousEvent.privacy_scope === "public_masked" ||
+        previousEvent.privacy_scope === "public"
+          ? previousEvent.privacy_scope
+          : "private",
+      processingStatus: "processing",
+      metadata: {
+        parser: "template_first_v2",
+        processingRunId: rollbackProcessingRunId,
+        mode: "status_rollback",
+        correctionFlow: "B11.3b",
+        previousStatus: previousEvent.status,
+        requestedStatus,
+      },
+    });
+
+    const rollbackRawSignal = rollbackRawSignalResult.signal;
+
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: rollbackRawSignal?.id ?? null,
+      activityEventId: previousEvent.id,
+      processingRunId: rollbackProcessingRunId,
+      processorName: "activity_event_patch_route",
+      processingStage: "ingest",
+      processingStatus: rollbackRawSignalResult.ok ? "completed" : "warning",
+      severity: rollbackRawSignalResult.ok ? "info" : "warning",
+      message: rollbackRawSignalResult.ok
+        ? "Raw activity status rollback correction signal captured."
+        : "Raw activity status rollback correction signal creation failed; continuing without raw signal.",
+      input: {
+        eventId: previousEvent.id,
+        previousStatus: previousEvent.status,
+        requestedStatus,
+        changedFields,
+      },
+      output: rollbackRawSignal
+        ? {
+            rawSignalId: rollbackRawSignal.id,
+          }
+        : {},
+      error: rollbackRawSignalResult.ok
+        ? {}
+        : {
+            message: rollbackRawSignalResult.error,
+          },
+      metadata: {
+        endpoint: "/api/activity/events/[id]",
+        mode: "status_rollback",
+        correctionFlow: "B11.3b",
+      },
+      startedAt: rollbackProcessingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(rollbackProcessingStartedAt),
+    });
+
     const { data: updatedEventData, error: updateError } = await supabase
       .from("activity_events")
       .update({
@@ -1201,6 +1297,43 @@ export async function PATCH(request: Request, context: RouteContext) {
       .single();
 
     if (updateError || !updatedEventData) {
+      if (rollbackRawSignal) {
+        await markRawActivitySignalFailed({
+          signalId: rollbackRawSignal.id,
+          userId: appUser.id,
+          error: updateError?.message ?? "Failed to update activity event.",
+        });
+      }
+
+      await safeCreateActivityProcessingLog({
+        userId: appUser.id,
+        rawSignalId: rollbackRawSignal?.id ?? null,
+        activityEventId: previousEvent.id,
+        processingRunId: rollbackProcessingRunId,
+        processorName: "activity_event_patch_route",
+        processingStage: "correction",
+        processingStatus: "failed",
+        severity: "error",
+        message: "Failed to apply activity status rollback correction.",
+        input: {
+          eventId: previousEvent.id,
+          previousStatus: previousEvent.status,
+          requestedStatus,
+          changedFields,
+        },
+        error: {
+          message: updateError?.message ?? "Failed to update activity event.",
+        },
+        metadata: {
+          endpoint: "/api/activity/events/[id]",
+          mode: "status_rollback",
+          correctionFlow: "B11.3b",
+        },
+        startedAt: rollbackProcessingStartedAt.toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: getDurationMs(rollbackProcessingStartedAt),
+      });
+
       return NextResponse.json(
         {
           ok: false,
@@ -1211,6 +1344,37 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const updatedEvent = updatedEventData as ActivityEventRow;
+
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: rollbackRawSignal?.id ?? null,
+      activityEventId: updatedEvent.id,
+      processingRunId: rollbackProcessingRunId,
+      processorName: "activity_event_patch_route",
+      processingStage: "correction",
+      processingStatus: "completed",
+      severity: "info",
+      message: "Activity event status rollback correction applied.",
+      input: {
+        eventId: previousEvent.id,
+        previousStatus: previousEvent.status,
+        requestedStatus,
+        changedFields,
+      },
+      output: {
+        activityEventId: updatedEvent.id,
+        status: updatedEvent.status,
+        processingStatus: updatedEvent.processing_status,
+      },
+      metadata: {
+        endpoint: "/api/activity/events/[id]",
+        mode: "status_rollback",
+        correctionFlow: "B11.3b",
+      },
+      startedAt: rollbackProcessingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(rollbackProcessingStartedAt),
+    });
 
     let rollbackResult: unknown;
 
@@ -1224,6 +1388,49 @@ export async function PATCH(request: Request, context: RouteContext) {
         cleanupCurrentSnapshots: true,
       });
     } catch (error) {
+      if (rollbackRawSignal) {
+        await markRawActivitySignalFailed({
+          signalId: rollbackRawSignal.id,
+          userId: appUser.id,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to rollback activity impacts.",
+        });
+      }
+
+      await safeCreateActivityProcessingLog({
+        userId: appUser.id,
+        rawSignalId: rollbackRawSignal?.id ?? null,
+        activityEventId: updatedEvent.id,
+        processingRunId: rollbackProcessingRunId,
+        processorName: "activity_event_patch_route",
+        processingStage: "rollback",
+        processingStatus: "failed",
+        severity: "error",
+        message: "Failed to rollback activity impacts after status rollback correction.",
+        input: {
+          eventId: updatedEvent.id,
+          previousStartedAt: previousEvent.started_at,
+          requestedStatus,
+          changedFields,
+        },
+        error: {
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to rollback activity impacts.",
+        },
+        metadata: {
+          endpoint: "/api/activity/events/[id]",
+          mode: "status_rollback",
+          correctionFlow: "B11.3b",
+        },
+        startedAt: rollbackProcessingStartedAt.toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: getDurationMs(rollbackProcessingStartedAt),
+      });
+
       await supabase
         .from("activity_events")
         .update({
@@ -1247,6 +1454,33 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: rollbackRawSignal?.id ?? null,
+      activityEventId: updatedEvent.id,
+      processingRunId: rollbackProcessingRunId,
+      processorName: "activity_event_patch_route",
+      processingStage: "rollback",
+      processingStatus: "completed",
+      severity: "info",
+      message: "Activity impacts rolled back after status rollback correction.",
+      input: {
+        eventId: updatedEvent.id,
+        previousStartedAt: previousEvent.started_at,
+        requestedStatus,
+        changedFields,
+      },
+      output: rollbackResult as Record<string, unknown>,
+      metadata: {
+        endpoint: "/api/activity/events/[id]",
+        mode: "status_rollback",
+        correctionFlow: "B11.3b",
+      },
+      startedAt: rollbackProcessingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(rollbackProcessingStartedAt),
+    });
+
     const { data: correctionRow, error: correctionError } = await supabase
       .from("activity_corrections")
       .insert({
@@ -1268,6 +1502,43 @@ export async function PATCH(request: Request, context: RouteContext) {
       .single();
 
     if (correctionError) {
+      if (rollbackRawSignal) {
+        await markRawActivitySignalFailed({
+          signalId: rollbackRawSignal.id,
+          userId: appUser.id,
+          error: correctionError.message,
+        });
+      }
+
+      await safeCreateActivityProcessingLog({
+        userId: appUser.id,
+        rawSignalId: rollbackRawSignal?.id ?? null,
+        activityEventId: updatedEvent.id,
+        processingRunId: rollbackProcessingRunId,
+        processorName: "activity_event_patch_route",
+        processingStage: "correction",
+        processingStatus: "failed",
+        severity: "error",
+        message: "Failed to create status rollback correction audit row.",
+        input: {
+          eventId: updatedEvent.id,
+          changedFields,
+          requestedStatus,
+        },
+        error: {
+          message: correctionError.message,
+        },
+        metadata: {
+          endpoint: "/api/activity/events/[id]",
+          mode: "status_rollback",
+          correctionFlow: "B11.3b",
+          correctionStage: "status_rollback_audit_insert",
+        },
+        startedAt: rollbackProcessingStartedAt.toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: getDurationMs(rollbackProcessingStartedAt),
+      });
+
       const recovery = await markCorrectionAuditFailure({
         event: updatedEvent,
         userId: appUser.id,
@@ -1291,6 +1562,82 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: rollbackRawSignal?.id ?? null,
+      activityEventId: updatedEvent.id,
+      activityCorrectionId: correctionRow.id,
+      processingRunId: rollbackProcessingRunId,
+      processorName: "activity_event_patch_route",
+      processingStage: "correction",
+      processingStatus: "completed",
+      severity: "info",
+      message: "Status rollback correction audit row created.",
+      input: {
+        eventId: updatedEvent.id,
+        changedFields,
+        requestedStatus,
+      },
+      output: {
+        correctionId: correctionRow.id,
+        correctionStatus: correctionRow.correction_status,
+        correctionType: correctionRow.correction_type,
+      },
+      metadata: {
+        endpoint: "/api/activity/events/[id]",
+        mode: "status_rollback",
+        correctionFlow: "B11.3b",
+        correctionStage: "status_rollback_audit_insert",
+      },
+      startedAt: rollbackProcessingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(rollbackProcessingStartedAt),
+    });
+
+    const rollbackProcessedSignalResult = rollbackRawSignal
+      ? await markRawActivitySignalProcessed({
+          signalId: rollbackRawSignal.id,
+          userId: appUser.id,
+          outputEventId: updatedEvent.id,
+          normalizedPreview: {
+            activityEventId: updatedEvent.id,
+            correctionId: correctionRow.id,
+            correctionMode: "status_rollback",
+            previousStatus: previousEvent.status,
+            requestedStatus,
+            finalStatus: updatedEvent.status,
+            changedFields,
+            rollbackApplied: true,
+          },
+        })
+      : null;
+
+    if (rollbackProcessedSignalResult && !rollbackProcessedSignalResult.ok) {
+      await safeCreateActivityProcessingLog({
+        userId: appUser.id,
+        rawSignalId: rollbackRawSignal?.id ?? null,
+        activityEventId: updatedEvent.id,
+        activityCorrectionId: correctionRow.id,
+        processingRunId: rollbackProcessingRunId,
+        processorName: "activity_event_patch_route",
+        processingStage: "finalize",
+        processingStatus: "warning",
+        severity: "warning",
+        message: "Status rollback correction was applied, but raw signal could not be marked as processed.",
+        error: {
+          message: rollbackProcessedSignalResult.error,
+        },
+        metadata: {
+          endpoint: "/api/activity/events/[id]",
+          mode: "status_rollback",
+          correctionFlow: "B11.3b",
+        },
+        startedAt: rollbackProcessingStartedAt.toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: getDurationMs(rollbackProcessingStartedAt),
+      });
+    }
+
     return NextResponse.json({
       ok: true,
       status: "status_corrected",
@@ -1298,6 +1645,15 @@ export async function PATCH(request: Request, context: RouteContext) {
       correction: correctionRow,
       changedFields,
       rollback: rollbackResult,
+      rawSignal: rollbackRawSignal
+        ? {
+            id: rollbackRawSignal.id,
+            processingStatus:
+              rollbackProcessedSignalResult?.signal?.processing_status ??
+              rollbackRawSignal.processing_status,
+          }
+        : null,
+      processingRunId: rollbackProcessingRunId,
       timeline: {
         ok: true,
         skipped: true,
@@ -1423,6 +1779,95 @@ export async function PATCH(request: Request, context: RouteContext) {
   const nowIso = new Date().toISOString();
   const existingMetadata = asRecord(previousEvent.metadata_json);
 
+  const correctionProcessingRunId = randomUUID();
+  const correctionProcessingStartedAt = new Date();
+
+  const correctionRawSignalResult = await createRawActivitySignal({
+    userId: appUser.id,
+    sourceType: "manual_form",
+    idempotencyKey: `${previousEvent.id}:normal_correction:${changedFields.join(",")}:${nowIso}`,
+    rawPayload: {
+      endpoint: "/api/activity/events/[id]",
+      method: "PATCH",
+      mode: "normal_correction",
+      body,
+      eventId: previousEvent.id,
+      previousStatus: previousEvent.status,
+      changedFields,
+      reason,
+      timing,
+    },
+    normalizedPreview: {
+      activityEventId: previousEvent.id,
+      title: previousEvent.title,
+      correctionMode: "normal_correction",
+      correctionFlow: "B11.3a",
+      changedFields,
+      reason,
+      previousStartedAt: normalizeIsoDate(previousEvent.started_at),
+      previousEndedAt: normalizeIsoDate(previousEvent.ended_at),
+      previousDurationMinutes: getDurationFromEvent(previousEvent),
+      nextStartedAt: timing.startedAt,
+      nextEndedAt: timing.endedAt,
+      nextDurationMinutes: timing.durationMinutes,
+    },
+    occurredAt: nowIso,
+    trustLevel: "medium",
+    privacyScope:
+      previousEvent.privacy_scope === "shared_with_org" ||
+      previousEvent.privacy_scope === "public_masked" ||
+      previousEvent.privacy_scope === "public"
+        ? previousEvent.privacy_scope
+        : "private",
+    processingStatus: "processing",
+    metadata: {
+      parser: "template_first_v2",
+      processingRunId: correctionProcessingRunId,
+      mode: "normal_correction",
+      correctionFlow: "B11.3a",
+      changedFields,
+    },
+  });
+
+  const correctionRawSignal = correctionRawSignalResult.signal;
+
+  await safeCreateActivityProcessingLog({
+    userId: appUser.id,
+    rawSignalId: correctionRawSignal?.id ?? null,
+    activityEventId: previousEvent.id,
+    processingRunId: correctionProcessingRunId,
+    processorName: "activity_event_patch_route",
+    processingStage: "ingest",
+    processingStatus: correctionRawSignalResult.ok ? "completed" : "warning",
+    severity: correctionRawSignalResult.ok ? "info" : "warning",
+    message: correctionRawSignalResult.ok
+      ? "Raw activity normal correction signal captured."
+      : "Raw activity normal correction signal creation failed; continuing without raw signal.",
+    input: {
+      eventId: previousEvent.id,
+      changedFields,
+      reason,
+    },
+    output: correctionRawSignal
+      ? {
+          rawSignalId: correctionRawSignal.id,
+        }
+      : {},
+    error: correctionRawSignalResult.ok
+      ? {}
+      : {
+          message: correctionRawSignalResult.error,
+        },
+    metadata: {
+      endpoint: "/api/activity/events/[id]",
+      mode: "normal_correction",
+      correctionFlow: "B11.3a",
+    },
+    startedAt: correctionProcessingStartedAt.toISOString(),
+    finishedAt: new Date().toISOString(),
+    durationMs: getDurationMs(correctionProcessingStartedAt),
+  });
+
   const { data: updatedEventData, error: updateError } = await supabase
     .from("activity_events")
     .update({
@@ -1448,6 +1893,42 @@ export async function PATCH(request: Request, context: RouteContext) {
     .single();
 
   if (updateError || !updatedEventData) {
+    if (correctionRawSignal) {
+      await markRawActivitySignalFailed({
+        signalId: correctionRawSignal.id,
+        userId: appUser.id,
+        error: updateError?.message ?? "Failed to update activity event.",
+      });
+    }
+
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: correctionRawSignal?.id ?? null,
+      activityEventId: previousEvent.id,
+      processingRunId: correctionProcessingRunId,
+      processorName: "activity_event_patch_route",
+      processingStage: "correction",
+      processingStatus: "failed",
+      severity: "error",
+      message: "Failed to apply activity normal correction.",
+      input: {
+        eventId: previousEvent.id,
+        changedFields,
+        reason,
+      },
+      error: {
+        message: updateError?.message ?? "Failed to update activity event.",
+      },
+      metadata: {
+        endpoint: "/api/activity/events/[id]",
+        mode: "normal_correction",
+        correctionFlow: "B11.3a",
+      },
+      startedAt: correctionProcessingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(correctionProcessingStartedAt),
+    });
+
     return NextResponse.json(
       {
         ok: false,
@@ -1458,6 +1939,39 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const updatedEvent = updatedEventData as ActivityEventRow;
+
+  await safeCreateActivityProcessingLog({
+    userId: appUser.id,
+    rawSignalId: correctionRawSignal?.id ?? null,
+    activityEventId: updatedEvent.id,
+    processingRunId: correctionProcessingRunId,
+    processorName: "activity_event_patch_route",
+    processingStage: "correction",
+    processingStatus: "completed",
+    severity: "info",
+    message: "Activity normal correction applied.",
+    input: {
+      eventId: previousEvent.id,
+      changedFields,
+      reason,
+    },
+    output: {
+      activityEventId: updatedEvent.id,
+      status: updatedEvent.status,
+      processingStatus: updatedEvent.processing_status,
+      startedAt: updatedEvent.started_at,
+      endedAt: updatedEvent.ended_at,
+      durationMinutes: updatedEvent.duration_minutes,
+    },
+    metadata: {
+      endpoint: "/api/activity/events/[id]",
+      mode: "normal_correction",
+      correctionFlow: "B11.3a",
+    },
+    startedAt: correctionProcessingStartedAt.toISOString(),
+    finishedAt: new Date().toISOString(),
+    durationMs: getDurationMs(correctionProcessingStartedAt),
+  });
   const shouldRecalculate =
     changedFields.includes("started_at") ||
     changedFields.includes("ended_at") ||
@@ -1484,6 +1998,53 @@ export async function PATCH(request: Request, context: RouteContext) {
         reason: reason ?? "activity_event_correction",
       });
     } catch (error) {
+      if (correctionRawSignal) {
+        await markRawActivitySignalFailed({
+          signalId: correctionRawSignal.id,
+          userId: appUser.id,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to recalculate activity impacts.",
+        });
+      }
+
+      await safeCreateActivityProcessingLog({
+        userId: appUser.id,
+        rawSignalId: correctionRawSignal?.id ?? null,
+        activityEventId: updatedEvent.id,
+        processingRunId: correctionProcessingRunId,
+        processorName: "activity_event_patch_route",
+        processingStage: "process_impacts",
+        processingStatus: "failed",
+        severity: "error",
+        message: "Failed to recalculate activity impacts after normal correction.",
+        input: {
+          eventId: updatedEvent.id,
+          changedFields,
+          reason,
+          activityTemplateId: updatedEvent.activity_template_id,
+          activityTypeId: updatedEvent.activity_type_id,
+          durationMinutes: asNumber(updatedEvent.duration_minutes),
+          startedAt: updatedEvent.started_at,
+          previousStartedAt: previousEvent.started_at,
+        },
+        error: {
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to recalculate activity impacts.",
+        },
+        metadata: {
+          endpoint: "/api/activity/events/[id]",
+          mode: "normal_correction",
+          correctionFlow: "B11.3a",
+        },
+        startedAt: correctionProcessingStartedAt.toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: getDurationMs(correctionProcessingStartedAt),
+      });
+
       await supabase
         .from("activity_events")
         .update({
@@ -1507,6 +2068,40 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
   }
+
+  await safeCreateActivityProcessingLog({
+    userId: appUser.id,
+    rawSignalId: correctionRawSignal?.id ?? null,
+    activityEventId: updatedEvent.id,
+    processingRunId: correctionProcessingRunId,
+    processorName: "activity_event_patch_route",
+    processingStage: "process_impacts",
+    processingStatus: shouldRecalculate ? "completed" : "skipped",
+    severity: shouldRecalculate ? "info" : "notice",
+    message: shouldRecalculate
+      ? "Activity normal correction impact recalculation processed."
+      : "Activity normal correction did not require impact recalculation.",
+    input: {
+      eventId: updatedEvent.id,
+      changedFields,
+      reason,
+      shouldRecalculate,
+      activityTemplateId: updatedEvent.activity_template_id,
+      activityTypeId: updatedEvent.activity_type_id,
+      durationMinutes: asNumber(updatedEvent.duration_minutes),
+      startedAt: updatedEvent.started_at,
+      previousStartedAt: previousEvent.started_at,
+    },
+    output: asRecord(recalculationResult),
+    metadata: {
+      endpoint: "/api/activity/events/[id]",
+      mode: "normal_correction",
+      correctionFlow: "B11.3a",
+    },
+    startedAt: correctionProcessingStartedAt.toISOString(),
+    finishedAt: new Date().toISOString(),
+    durationMs: getDurationMs(correctionProcessingStartedAt),
+  });
 
   const timeline = shouldRecalculate
     ? await safeDetectTimelineConflicts({
@@ -1559,6 +2154,43 @@ export async function PATCH(request: Request, context: RouteContext) {
     .single();
 
   if (correctionError) {
+    if (correctionRawSignal) {
+      await markRawActivitySignalFailed({
+        signalId: correctionRawSignal.id,
+        userId: appUser.id,
+        error: correctionError.message,
+      });
+    }
+
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: correctionRawSignal?.id ?? null,
+      activityEventId: updatedEvent.id,
+      processingRunId: correctionProcessingRunId,
+      processorName: "activity_event_patch_route",
+      processingStage: "correction",
+      processingStatus: "failed",
+      severity: "error",
+      message: "Failed to create normal correction audit row.",
+      input: {
+        eventId: updatedEvent.id,
+        changedFields,
+        reason,
+      },
+      error: {
+        message: correctionError.message,
+      },
+      metadata: {
+        endpoint: "/api/activity/events/[id]",
+        mode: "normal_correction",
+        correctionFlow: "B11.3a",
+        correctionStage: "correction_audit_insert",
+      },
+      startedAt: correctionProcessingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(correctionProcessingStartedAt),
+    });
+
     const recovery = await markCorrectionAuditFailure({
       event: updatedEvent,
       userId: appUser.id,
@@ -1583,6 +2215,84 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
+  await safeCreateActivityProcessingLog({
+    userId: appUser.id,
+    rawSignalId: correctionRawSignal?.id ?? null,
+    activityEventId: updatedEvent.id,
+    activityCorrectionId: correctionRow.id,
+    processingRunId: correctionProcessingRunId,
+    processorName: "activity_event_patch_route",
+    processingStage: "correction",
+    processingStatus: "completed",
+    severity: "info",
+    message: "Normal correction audit row created.",
+    input: {
+      eventId: updatedEvent.id,
+      changedFields,
+      reason,
+    },
+    output: {
+      correctionId: correctionRow.id,
+      correctionStatus: correctionRow.correction_status,
+      correctionType: correctionRow.correction_type,
+    },
+    metadata: {
+      endpoint: "/api/activity/events/[id]",
+      mode: "normal_correction",
+      correctionFlow: "B11.3a",
+      correctionStage: "correction_audit_insert",
+    },
+    startedAt: correctionProcessingStartedAt.toISOString(),
+    finishedAt: new Date().toISOString(),
+    durationMs: getDurationMs(correctionProcessingStartedAt),
+  });
+
+  const correctionProcessedSignalResult = correctionRawSignal
+    ? await markRawActivitySignalProcessed({
+        signalId: correctionRawSignal.id,
+        userId: appUser.id,
+        outputEventId: updatedEvent.id,
+        normalizedPreview: {
+          activityEventId: updatedEvent.id,
+          correctionId: correctionRow.id,
+          correctionMode: "normal_correction",
+          changedFields,
+          reason,
+          startedAt: updatedEvent.started_at,
+          endedAt: updatedEvent.ended_at,
+          durationMinutes: asNumber(updatedEvent.duration_minutes),
+          recalculation: asRecord(recalculationResult),
+          timelineSummary: timeline.summary,
+        },
+      })
+    : null;
+
+  if (correctionProcessedSignalResult && !correctionProcessedSignalResult.ok) {
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: correctionRawSignal?.id ?? null,
+      activityEventId: updatedEvent.id,
+      activityCorrectionId: correctionRow.id,
+      processingRunId: correctionProcessingRunId,
+      processorName: "activity_event_patch_route",
+      processingStage: "finalize",
+      processingStatus: "warning",
+      severity: "warning",
+      message: "Normal correction was applied, but raw signal could not be marked as processed.",
+      error: {
+        message: correctionProcessedSignalResult.error,
+      },
+      metadata: {
+        endpoint: "/api/activity/events/[id]",
+        mode: "normal_correction",
+        correctionFlow: "B11.3a",
+      },
+      startedAt: correctionProcessingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(correctionProcessingStartedAt),
+    });
+  }
+
   return NextResponse.json({
     ok: true,
     status: "corrected",
@@ -1591,6 +2301,15 @@ export async function PATCH(request: Request, context: RouteContext) {
     changedFields,
     recalculation: recalculationResult,
     timeline,
+    rawSignal: correctionRawSignal
+      ? {
+          id: correctionRawSignal.id,
+          processingStatus:
+            correctionProcessedSignalResult?.signal?.processing_status ??
+            correctionRawSignal.processing_status,
+        }
+      : null,
+    processingRunId: correctionProcessingRunId,
     audit: {
       previousImpactEventsCount: auditState.previousImpactEvents.length,
       previousDailyAggregatesCount: auditState.previousDailyAggregates.length,
