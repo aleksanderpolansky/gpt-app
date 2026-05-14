@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+﻿import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
@@ -14,6 +14,11 @@ import {
   rollbackActivityImpacts,
 } from "../../../../../../lib/activity/activityImpactProcessor";
 import {
+  ACTIVITY_ROLLBACK_ONLY_STATUSES,
+  isRollbackOnlyActivityStatus,
+  shouldExcludeActivityStatusFromTimeline,
+} from "../../../../../../lib/activity/activityLifecycle";
+import {
   createRawActivitySignal,
   markRawActivitySignalFailed,
   markRawActivitySignalProcessed,
@@ -26,20 +31,7 @@ const DEFAULT_CORRECTION_TIMEZONE = "Europe/Warsaw";
 const TIMELINE_SEARCH_PADDING_BEFORE_HOURS = 2;
 const TIMELINE_SEARCH_PADDING_AFTER_HOURS = 12;
 
-const ROLLBACK_ONLY_STATUSES = new Set([
-  "cancelled",
-  "missed",
-  "archived",
-  "corrected",
-]);
 
-const TIMELINE_EXCLUDED_STATUSES = new Set([
-  "cancelled",
-  "missed",
-  "archived",
-  "corrected",
-  "status_corrected",
-]);
 
 type RouteContext = {
   params: Promise<{
@@ -354,7 +346,7 @@ function resolveTimelineSearchRange(params: {
 }
 
 function shouldConsiderTimelineCandidate(event: ActivityEventRow) {
-  if (TIMELINE_EXCLUDED_STATUSES.has(event.status)) {
+  if (shouldExcludeActivityStatusFromTimeline(event.status)) {
     return false;
   }
 
@@ -991,7 +983,7 @@ export async function GET() {
       comment: "string",
       startedAt: "ISO date string",
       endedAt: "ISO date string",
-      status: Array.from(ROLLBACK_ONLY_STATUSES),
+      status: Array.from(ACTIVITY_ROLLBACK_ONLY_STATUSES),
       reason: "string",
     },
     timelineConflictDetection: {
@@ -1060,7 +1052,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const requestedStatus = asString(body.status);
   const isRollbackOnlyStatus =
-    requestedStatus !== null && ROLLBACK_ONLY_STATUSES.has(requestedStatus);
+    requestedStatus !== null && isRollbackOnlyActivityStatus(requestedStatus);
 
   if (
     requestedStatus &&
@@ -1072,7 +1064,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         ok: false,
         error: "Unsupported status correction.",
         requestedStatus,
-        supportedRollbackOnlyStatuses: Array.from(ROLLBACK_ONLY_STATUSES),
+        supportedRollbackOnlyStatuses: Array.from(ACTIVITY_ROLLBACK_ONLY_STATUSES),
         supportedNormalStatus: "completed",
       },
       { status: 400 }
@@ -2319,3 +2311,5 @@ export async function PATCH(request: Request, context: RouteContext) {
     },
   });
 }
+
+
