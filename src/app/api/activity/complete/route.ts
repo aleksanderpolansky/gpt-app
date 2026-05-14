@@ -1,9 +1,14 @@
-import { randomUUID } from "crypto";
+﻿import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
   ACTIVITY_RECORDING_ENABLED,
 } from "../../../../../lib/activity/activityRecordingConfig";
+import {
+  ACTIVITY_COMPLETABLE_STATUSES,
+  ACTIVITY_STATUS_COMPLETED,
+  isCompletableActivityStatus,
+} from "../../../../../lib/activity/activityLifecycle";
 import {
   getDurationMs,
   safeCreateActivityProcessingLog,
@@ -64,7 +69,6 @@ type CompletionTiming =
       error: string;
     };
 
-const COMPLETABLE_STATUSES = new Set(["started", "paused"]);
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {
@@ -311,8 +315,9 @@ export async function POST(request: Request) {
   }
 
   const event = eventData as ActivityEventRow;
+  const completedStatus = ACTIVITY_STATUS_COMPLETED;
 
-  if (event.status === "completed") {
+  if (event.status === completedStatus) {
     try {
       const existingImpactEventsCount = await getExistingImpactEventsCount(
         event.id
@@ -361,12 +366,12 @@ export async function POST(request: Request) {
     }
   }
 
-  if (!COMPLETABLE_STATUSES.has(event.status)) {
+  if (!isCompletableActivityStatus(event.status)) {
     return NextResponse.json(
       {
         ok: false,
         error: `Activity event status '${event.status}' cannot be completed by this endpoint.`,
-        allowedStatuses: Array.from(COMPLETABLE_STATUSES),
+        allowedStatuses: Array.from(ACTIVITY_COMPLETABLE_STATUSES),
       },
       { status: 409 }
     );
@@ -410,7 +415,7 @@ export async function POST(request: Request) {
       activityEventId: event.id,
       title: event.title,
       previousStatus: event.status,
-      nextStatus: "completed",
+      nextStatus: completedStatus,
       startedAt: timing.startedAt,
       endedAt: timing.endedAt,
       durationMinutes: timing.durationMinutes,
@@ -428,7 +433,7 @@ export async function POST(request: Request) {
       parser: "template_first_v2",
       processingRunId,
       mode: "template_first_complete",
-      lifecycle: "completed",
+      lifecycle: completedStatus,
       previousStatus: event.status,
       activityTemplateId: event.activity_template_id,
       activityTypeId: event.activity_type_id,
@@ -479,12 +484,12 @@ export async function POST(request: Request) {
     .update({
       ended_at: timing.endedAt,
       duration_minutes: timing.durationMinutes,
-      status: "completed",
+      status: completedStatus,
       processing_status: "processed",
       description: comment ?? event.description,
       metadata_json: {
         ...existingMetadata,
-        lifecycle: "completed",
+        lifecycle: completedStatus,
         lifecycle_completed_at: nowIso,
         previous_status: event.status,
         completion_comment: comment,
@@ -669,7 +674,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      status: "completed",
+      status: completedStatus,
       event: updatedEvent,
       impactEvents: impactResult.impactEvents,
       dailyAggregates: impactResult.dailyAggregates,
@@ -763,3 +768,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
+

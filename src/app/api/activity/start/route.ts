@@ -1,9 +1,10 @@
-import { randomUUID } from "crypto";
+﻿import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
   ACTIVITY_RECORDING_ENABLED,
 } from "../../../../../lib/activity/activityRecordingConfig";
+import { ACTIVITY_STATUS_STARTED } from "../../../../../lib/activity/activityLifecycle";
 import {
   getDurationMs,
   safeCreateActivityProcessingLog,
@@ -561,6 +562,8 @@ export async function POST(request: Request) {
       : template.default_source_type
   );
 
+  const lifecycleStatus = ACTIVITY_STATUS_STARTED;
+
   const processingRunId = randomUUID();
   const processingStartedAt = new Date();
 
@@ -572,14 +575,14 @@ export async function POST(request: Request) {
       body,
       resolvedBy,
       source,
-      status: "started",
+      status: lifecycleStatus,
     },
     normalizedPreview: {
       templateId: template.id,
       templateSlug: template.slug,
       title,
       source,
-      status: "started",
+      status: lifecycleStatus,
       startedAt,
       endedAt: null,
       durationMinutes: null,
@@ -597,7 +600,7 @@ export async function POST(request: Request) {
       parser: "template_first_v2",
       processingRunId,
       mode: "template_first_start",
-      lifecycle: "started",
+      lifecycle: lifecycleStatus,
       templateScope: template.template_scope,
       templateGroup: template.template_group,
       shortcutId: shortcut?.id ?? null,
@@ -623,7 +626,7 @@ export async function POST(request: Request) {
       templateId: template.id,
       templateSlug: template.slug,
       source,
-      status: "started",
+      status: lifecycleStatus,
     },
     output: rawSignal
       ? {
@@ -669,12 +672,12 @@ export async function POST(request: Request) {
       ended_at: null,
       duration_minutes: null,
       source,
-      status: "started",
+      status: lifecycleStatus,
       privacy_scope: template.default_privacy_scope,
       processing_status: "pending",
       metadata_json: {
         parser: "template_first_v2",
-        lifecycle: "started",
+        lifecycle: lifecycleStatus,
         resolved_by: resolvedBy,
         ai_used: false,
         template_slug: template.slug,
@@ -859,7 +862,7 @@ export async function POST(request: Request) {
         normalizedPreview: {
           activityEventId: createdEvent.id,
           status: createdEvent.status,
-          lifecycle: "started",
+          lifecycle: lifecycleStatus,
           eventLinksCount: Array.isArray(eventLinks) ? eventLinks.length : 0,
           impactsCreated: false,
         },
@@ -892,7 +895,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    status: "started",
+    status: lifecycleStatus,
     event: createdEvent,
     eventLinks,
     impactEvents: [],
@@ -930,3 +933,5 @@ export async function POST(request: Request) {
     },
   });
 }
+
+

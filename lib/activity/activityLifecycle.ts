@@ -14,6 +14,18 @@
 
 export type ActivityStatus = (typeof ACTIVITY_STATUS_VALUES)[number];
 
+export const ACTIVITY_STATUS_DRAFT: ActivityStatus = "draft";
+export const ACTIVITY_STATUS_PLANNED: ActivityStatus = "planned";
+export const ACTIVITY_STATUS_CONFIRMED: ActivityStatus = "confirmed";
+export const ACTIVITY_STATUS_STARTED: ActivityStatus = "started";
+export const ACTIVITY_STATUS_PAUSED: ActivityStatus = "paused";
+export const ACTIVITY_STATUS_COMPLETED: ActivityStatus = "completed";
+export const ACTIVITY_STATUS_CANCELLED: ActivityStatus = "cancelled";
+export const ACTIVITY_STATUS_MISSED: ActivityStatus = "missed";
+export const ACTIVITY_STATUS_CORRECTED: ActivityStatus = "corrected";
+export const ACTIVITY_STATUS_IMPORTED_PENDING: ActivityStatus = "imported_pending";
+export const ACTIVITY_STATUS_ARCHIVED: ActivityStatus = "archived";
+
 export const ACTIVITY_DRAFT_STATUSES = ["draft"] as const;
 
 export const ACTIVITY_PLANNING_STATUSES = [
@@ -22,6 +34,11 @@ export const ACTIVITY_PLANNING_STATUSES = [
 ] as const;
 
 export const ACTIVITY_ACTIVE_STATUSES = [
+  "started",
+  "paused",
+] as const;
+
+export const ACTIVITY_COMPLETABLE_STATUSES = [
   "started",
   "paused",
 ] as const;
@@ -101,6 +118,10 @@ const ACTIVITY_TERMINAL_STATUS_SET = new Set<string>(
 
 const ACTIVITY_TIMELINE_EXCLUDED_STATUS_SET = new Set<string>(
   ACTIVITY_TIMELINE_EXCLUDED_STATUSES
+);
+
+const ACTIVITY_COMPLETABLE_STATUS_SET = new Set<string>(
+  ACTIVITY_COMPLETABLE_STATUSES
 );
 
 export const ACTIVITY_STATUS_TRANSITIONS: Record<
@@ -269,6 +290,16 @@ export function shouldExcludeActivityStatusFromTimeline(value: unknown) {
   return ACTIVITY_TIMELINE_EXCLUDED_STATUS_SET.has(status);
 }
 
+export function isCompletableActivityStatus(value: unknown) {
+  const status = asTrimmedString(value);
+
+  if (!status) {
+    return false;
+  }
+
+  return ACTIVITY_COMPLETABLE_STATUS_SET.has(status);
+}
+
 export function getAllowedNextActivityStatuses(
   fromStatus: ActivityStatus
 ): readonly ActivityStatus[] {
@@ -408,3 +439,4 @@ export function assertActivityProcessingStatus(
 
   return value;
 }
+
