@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
   ACTIVITY_RECORDING_ENABLED,
@@ -13,6 +13,8 @@ type RouteContext = {
     id: string;
   }>;
 };
+
+type CorrectionResponseMode = "full" | "summary";
 
 type ActivityCorrectionRow = {
   id: string;
@@ -51,6 +53,68 @@ function parseLimit(value: string | null) {
   return Math.min(Math.max(parsed, 1), 100);
 }
 
+function parseMode(value: string | null): CorrectionResponseMode {
+  if (!value) {
+    return "full";
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === "summary") {
+    return "summary";
+  }
+
+  return "full";
+}
+
+function hasJsonPayload(value: unknown) {
+  if (value === null || value === undefined) {
+    return false;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  if (typeof value === "object") {
+    return Object.keys(value as Record<string, unknown>).length > 0;
+  }
+
+  return true;
+}
+
+function countJsonItems(value: unknown) {
+  if (value === null || value === undefined) {
+    return 0;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length;
+  }
+
+  if (typeof value === "object") {
+    return Object.keys(value as Record<string, unknown>).length > 0 ? 1 : 0;
+  }
+
+  return 1;
+}
+
+function getJsonObjectKeys(value: unknown) {
+  if (value === null || value === undefined) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return [];
+  }
+
+  if (typeof value !== "object") {
+    return [];
+  }
+
+  return Object.keys(value as Record<string, unknown>).sort();
+}
+
 function normalizeCorrection(row: ActivityCorrectionRow) {
   return {
     id: row.id,
@@ -67,6 +131,28 @@ function normalizeCorrection(row: ActivityCorrectionRow) {
     previousDailyAggregates: row.previous_daily_aggregates_json,
     previousCurrentSnapshots: row.previous_current_snapshots_json,
     recalculationResult: row.recalculation_result_json,
+  };
+}
+
+function normalizeCorrectionSummary(row: ActivityCorrectionRow) {
+  return {
+    id: row.id,
+    eventId: row.event_id,
+    correctionType: row.correction_type,
+    correctionStatus: row.correction_status,
+    changedFields: row.changed_fields ?? [],
+    reason: row.reason,
+    source: row.source,
+    createdAt: row.created_at,
+    hasPreviousEvent: hasJsonPayload(row.previous_event_json),
+    hasNewEvent: hasJsonPayload(row.new_event_json),
+    previousImpactEventsCount: countJsonItems(row.previous_impact_events_json),
+    previousDailyAggregatesCount: countJsonItems(row.previous_daily_aggregates_json),
+    previousCurrentSnapshotsCount: countJsonItems(
+      row.previous_current_snapshots_json
+    ),
+    hasRecalculationResult: hasJsonPayload(row.recalculation_result_json),
+    recalculationResultKeys: getJsonObjectKeys(row.recalculation_result_json),
   };
 }
 
@@ -172,6 +258,7 @@ export async function GET(request: Request, context: RouteContext) {
 
   const url = new URL(request.url);
   const limit = parseLimit(url.searchParams.get("limit"));
+  const mode = parseMode(url.searchParams.get("mode"));
 
   try {
     const event = await getActivityEventForAccessCheck({
@@ -194,6 +281,22 @@ export async function GET(request: Request, context: RouteContext) {
       userId: appUser.id,
       limit,
     });
+
+    if (mode === "summary") {
+      return NextResponse.json({
+        ok: true,
+        endpoint: "/api/activity/events/[id]/corrections",
+        eventId,
+        mode,
+        filters: {
+          limit,
+        },
+        summary: {
+          totalCorrectionsReturned: corrections.length,
+        },
+        corrections: corrections.map(normalizeCorrectionSummary),
+      });
+    }
 
     return NextResponse.json({
       ok: true,
