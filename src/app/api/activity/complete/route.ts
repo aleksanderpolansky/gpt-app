@@ -7,6 +7,7 @@ import {
 import {
   ACTIVITY_COMPLETABLE_STATUSES,
   ACTIVITY_STATUS_COMPLETED,
+  canTransitionActivityStatus,
   isCompletableActivityStatus,
 } from "../../../../../lib/activity/activityLifecycle";
 import {
@@ -768,5 +769,6 @@ export async function POST(request: Request) {
     );
   }
 }
+
 
 
