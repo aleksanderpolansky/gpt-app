@@ -9,6 +9,7 @@ import { supabase } from "../../../../../lib/supabase";
 export const dynamic = "force-dynamic";
 
 type GenericRow = Record<string, unknown>;
+type TraceMode = "full" | "summary";
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
@@ -21,6 +22,34 @@ function asString(value: unknown): string | null {
   const trimmed = value.trim();
 
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function asNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function asBoolean(value: unknown): boolean | null {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  return null;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function unique(values: Array<string | null | undefined>) {
@@ -58,12 +87,116 @@ function parseLimit(value: string | null) {
   return Math.min(parsed, MAX_LIMIT);
 }
 
+function parseMode(value: string | null): TraceMode {
+  const mode = asString(value)?.toLowerCase();
+
+  if (mode === "summary") {
+    return "summary";
+  }
+
+  return "full";
+}
+
 function getId(row: GenericRow) {
   return asString(row.id);
 }
 
 function getStringField(row: GenericRow, field: string) {
   return asString(row[field]);
+}
+
+function getNumberField(row: GenericRow, field: string) {
+  return asNumber(row[field]);
+}
+
+function getBooleanField(row: GenericRow, field: string) {
+  return asBoolean(row[field]);
+}
+
+function getFirstStringField(row: GenericRow, fields: string[]) {
+  for (const field of fields) {
+    const value = getStringField(row, field);
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function getFirstNumberField(row: GenericRow, fields: string[]) {
+  for (const field of fields) {
+    const value = getNumberField(row, field);
+
+    if (value !== null) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function getDateSortValue(row: GenericRow) {
+  const dateValue = getFirstStringField(row, [
+    "created_at",
+    "received_at",
+    "started_at",
+    "occurred_at",
+    "updated_at",
+  ]);
+
+  if (!dateValue) {
+    return 0;
+  }
+
+  const parsed = Date.parse(dateValue);
+
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getJsonKeys(value: unknown) {
+  if (isPlainObject(value)) {
+    return Object.keys(value).sort();
+  }
+
+  if (Array.isArray(value)) {
+    return [`array:${value.length}`];
+  }
+
+  if (value === null || value === undefined) {
+    return [];
+  }
+
+  return [typeof value];
+}
+
+function getFieldKeys(row: GenericRow, field: string) {
+  return getJsonKeys(row[field]);
+}
+
+function getChangedFieldNames(value: unknown) {
+  if (Array.isArray(value)) {
+    const stringValues = value
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter((item) => item.length > 0);
+
+    if (stringValues.length > 0) {
+      return unique(stringValues);
+    }
+
+    const objectKeys = value.flatMap((item) =>
+      isPlainObject(item) ? Object.keys(item) : []
+    );
+
+    return unique(objectKeys);
+  }
+
+  if (isPlainObject(value)) {
+    return Object.keys(value).sort();
+  }
+
+  return [];
 }
 
 function mergeRows(existing: GenericRow[], incoming: GenericRow[]) {
@@ -394,11 +527,13 @@ async function fetchTrace(params: {
     })
   );
 
+  const ownedEventIds = unique(activityEvents.map((row) => getId(row)));
+
   impactEvents = mergeRows(
     impactEvents,
     await fetchByEventIds({
       table: "impact_events",
-      eventIds: Array.from(eventIds),
+      eventIds: ownedEventIds,
       limit,
       orderBy: "created_at",
       ascending: true,
@@ -409,7 +544,7 @@ async function fetchTrace(params: {
     eventLinks,
     await fetchByEventIds({
       table: "event_links",
-      eventIds: Array.from(eventIds),
+      eventIds: ownedEventIds,
       limit,
       orderBy: "created_at",
       ascending: true,
@@ -423,6 +558,476 @@ async function fetchTrace(params: {
     activityCorrections,
     impactEvents,
     eventLinks,
+  };
+}
+
+function compactActivityEvent(row: GenericRow) {
+  return {
+    id: getId(row),
+    title: getStringField(row, "title"),
+    status: getStringField(row, "status"),
+    source: getStringField(row, "source"),
+    privacyScope: getStringField(row, "privacy_scope"),
+    processingStatus: getStringField(row, "processing_status"),
+    startedAt: getStringField(row, "started_at"),
+    endedAt: getStringField(row, "ended_at"),
+    occurredAt: getStringField(row, "occurred_at"),
+    durationMinutes: getNumberField(row, "duration_minutes"),
+    activityTypeId: getStringField(row, "activity_type_id"),
+    activityTemplateId: getStringField(row, "activity_template_id"),
+    legacyTemplateId: getStringField(row, "legacy_template_id"),
+    createdAt: getStringField(row, "created_at"),
+    updatedAt: getStringField(row, "updated_at"),
+  };
+}
+
+function compactRawSignal(row: GenericRow) {
+  return {
+    id: getId(row),
+    source: getStringField(row, "source"),
+    sourceType: getStringField(row, "source_type"),
+    signalType: getStringField(row, "signal_type"),
+    endpoint: getStringField(row, "endpoint"),
+    processingStatus: getStringField(row, "processing_status"),
+    outputEventId: getStringField(row, "output_event_id"),
+    processingRunId: getStringField(row, "processing_run_id"),
+    createdAt: getStringField(row, "created_at"),
+    updatedAt: getStringField(row, "updated_at"),
+    rawPayloadKeys: getFieldKeys(row, "raw_payload"),
+    normalizedPreviewKeys: getFieldKeys(row, "normalized_preview_json"),
+    hasRawPayload: row.raw_payload !== undefined && row.raw_payload !== null,
+    hasNormalizedPreview:
+      row.normalized_preview_json !== undefined &&
+      row.normalized_preview_json !== null,
+  };
+}
+
+function compactProcessingLog(row: GenericRow) {
+  return {
+    id: getId(row),
+    processingRunId: getStringField(row, "processing_run_id"),
+    rawSignalId: getStringField(row, "raw_signal_id"),
+    activityEventId: getStringField(row, "activity_event_id"),
+    activityCorrectionId: getStringField(row, "activity_correction_id"),
+    stage: getStringField(row, "stage"),
+    status: getStringField(row, "status"),
+    level: getStringField(row, "level"),
+    message: getStringField(row, "message"),
+    errorMessage:
+      getStringField(row, "error_message") ?? getStringField(row, "error"),
+    durationMs: getFirstNumberField(row, ["duration_ms", "elapsed_ms"]),
+    createdAt: getStringField(row, "created_at"),
+    metadataKeys: getFieldKeys(row, "metadata_json"),
+    detailsKeys: getFieldKeys(row, "details_json"),
+    normalizedPreviewKeys: getFieldKeys(row, "normalized_preview_json"),
+    recalculationResultKeys: getFieldKeys(row, "recalculation_result_json"),
+  };
+}
+
+function compactCorrection(row: GenericRow) {
+  return {
+    id: getId(row),
+    eventId: getStringField(row, "event_id"),
+    correctionType: getStringField(row, "correction_type"),
+    status: getStringField(row, "status"),
+    changedFieldNames: getChangedFieldNames(row.changed_fields),
+    createdAt: getStringField(row, "created_at"),
+    updatedAt: getStringField(row, "updated_at"),
+    hasBeforeSnapshot:
+      row.before_snapshot_json !== undefined && row.before_snapshot_json !== null,
+    hasAfterSnapshot:
+      row.after_snapshot_json !== undefined && row.after_snapshot_json !== null,
+    hasRecalculationResult:
+      row.recalculation_result_json !== undefined &&
+      row.recalculation_result_json !== null,
+    beforeSnapshotKeys: getFieldKeys(row, "before_snapshot_json"),
+    afterSnapshotKeys: getFieldKeys(row, "after_snapshot_json"),
+    recalculationResultKeys: getFieldKeys(row, "recalculation_result_json"),
+  };
+}
+
+function buildImpactSummary(rows: GenericRow[]) {
+  const groups = new Map<
+    string,
+    {
+      targetType: string | null;
+      targetKey: string | null;
+      metric: string | null;
+      direction: string | null;
+      unit: string | null;
+      count: number;
+      numericSum: number | null;
+      eventIds: string[];
+      sampleImpactIds: string[];
+      latestCreatedAt: string | null;
+    }
+  >();
+
+  for (const row of rows) {
+    const targetType = getStringField(row, "target_type");
+    const targetKey = getStringField(row, "target_key");
+    const metric = getStringField(row, "metric");
+    const direction = getStringField(row, "direction");
+    const unit = getStringField(row, "unit");
+    const key = JSON.stringify([targetType, targetKey, metric, direction, unit]);
+    const numericValue = getNumberField(row, "value_numeric");
+    const eventId = getStringField(row, "event_id");
+    const impactId = getId(row);
+    const createdAt = getStringField(row, "created_at");
+
+    const existing =
+      groups.get(key) ??
+      {
+        targetType,
+        targetKey,
+        metric,
+        direction,
+        unit,
+        count: 0,
+        numericSum: null,
+        eventIds: [],
+        sampleImpactIds: [],
+        latestCreatedAt: null,
+      };
+
+    existing.count += 1;
+
+    if (numericValue !== null) {
+      existing.numericSum = (existing.numericSum ?? 0) + numericValue;
+    }
+
+    if (eventId && !existing.eventIds.includes(eventId)) {
+      existing.eventIds.push(eventId);
+    }
+
+    if (impactId && existing.sampleImpactIds.length < 10) {
+      existing.sampleImpactIds.push(impactId);
+    }
+
+    if (
+      createdAt &&
+      (!existing.latestCreatedAt ||
+        Date.parse(createdAt) > Date.parse(existing.latestCreatedAt))
+    ) {
+      existing.latestCreatedAt = createdAt;
+    }
+
+    groups.set(key, existing);
+  }
+
+  return Array.from(groups.values()).sort((left, right) => {
+    const leftTime = left.latestCreatedAt ? Date.parse(left.latestCreatedAt) : 0;
+    const rightTime = right.latestCreatedAt ? Date.parse(right.latestCreatedAt) : 0;
+
+    return rightTime - leftTime;
+  });
+}
+
+function buildEventLinksSummary(rows: GenericRow[]) {
+  const groups = new Map<
+    string,
+    {
+      eventId: string | null;
+      linkType: string | null;
+      targetType: string | null;
+      targetId: string | null;
+      count: number;
+      sampleLinkIds: string[];
+      latestCreatedAt: string | null;
+    }
+  >();
+
+  for (const row of rows) {
+    const eventId = getStringField(row, "event_id");
+    const linkType = getStringField(row, "link_type");
+    const targetType =
+      getStringField(row, "target_type") ??
+      getStringField(row, "linked_entity_type") ??
+      getStringField(row, "entity_type");
+    const targetId =
+      getStringField(row, "target_id") ??
+      getStringField(row, "linked_entity_id") ??
+      getStringField(row, "entity_id");
+    const key = JSON.stringify([eventId, linkType, targetType, targetId]);
+    const linkId = getId(row);
+    const createdAt = getStringField(row, "created_at");
+
+    const existing =
+      groups.get(key) ??
+      {
+        eventId,
+        linkType,
+        targetType,
+        targetId,
+        count: 0,
+        sampleLinkIds: [],
+        latestCreatedAt: null,
+      };
+
+    existing.count += 1;
+
+    if (linkId && existing.sampleLinkIds.length < 10) {
+      existing.sampleLinkIds.push(linkId);
+    }
+
+    if (
+      createdAt &&
+      (!existing.latestCreatedAt ||
+        Date.parse(createdAt) > Date.parse(existing.latestCreatedAt))
+    ) {
+      existing.latestCreatedAt = createdAt;
+    }
+
+    groups.set(key, existing);
+  }
+
+  return Array.from(groups.values()).sort((left, right) => {
+    const leftTime = left.latestCreatedAt ? Date.parse(left.latestCreatedAt) : 0;
+    const rightTime = right.latestCreatedAt ? Date.parse(right.latestCreatedAt) : 0;
+
+    return rightTime - leftTime;
+  });
+}
+
+function isProblemStatus(value: string | null) {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = value.toLowerCase();
+
+  return (
+    normalized.includes("fail") ||
+    normalized.includes("error") ||
+    normalized.includes("warn") ||
+    normalized.includes("invalid")
+  );
+}
+
+function inferSeverity(value: string | null): "error" | "warning" {
+  if (!value) {
+    return "warning";
+  }
+
+  const normalized = value.toLowerCase();
+
+  if (
+    normalized.includes("fail") ||
+    normalized.includes("error") ||
+    normalized.includes("invalid")
+  ) {
+    return "error";
+  }
+
+  return "warning";
+}
+
+function buildErrorsAndWarnings(trace: {
+  activityEvents: GenericRow[];
+  rawActivitySignals: GenericRow[];
+  activityProcessingLogs: GenericRow[];
+  activityCorrections: GenericRow[];
+}) {
+  const problems: Array<{
+    sourceTable: string;
+    sourceId: string | null;
+    severity: "error" | "warning";
+    status: string | null;
+    stage: string | null;
+    message: string | null;
+    createdAt: string | null;
+  }> = [];
+
+  for (const row of trace.activityEvents) {
+    const status =
+      getStringField(row, "processing_status") ?? getStringField(row, "status");
+
+    if (isProblemStatus(status)) {
+      problems.push({
+        sourceTable: "activity_events",
+        sourceId: getId(row),
+        severity: inferSeverity(status),
+        status,
+        stage: null,
+        message:
+          getStringField(row, "processing_error") ??
+          getStringField(row, "error_message") ??
+          getStringField(row, "comment"),
+        createdAt: getStringField(row, "created_at"),
+      });
+    }
+  }
+
+  for (const row of trace.rawActivitySignals) {
+    const status = getStringField(row, "processing_status");
+
+    if (isProblemStatus(status)) {
+      problems.push({
+        sourceTable: "raw_activity_signals",
+        sourceId: getId(row),
+        severity: inferSeverity(status),
+        status,
+        stage: null,
+        message:
+          getStringField(row, "processing_error") ??
+          getStringField(row, "error_message"),
+        createdAt: getStringField(row, "created_at"),
+      });
+    }
+  }
+
+  for (const row of trace.activityProcessingLogs) {
+    const status =
+      getStringField(row, "status") ?? getStringField(row, "level");
+
+    if (
+      isProblemStatus(status) ||
+      getStringField(row, "error_message") ||
+      getStringField(row, "error")
+    ) {
+      problems.push({
+        sourceTable: "activity_processing_logs",
+        sourceId: getId(row),
+        severity: inferSeverity(status),
+        status,
+        stage: getStringField(row, "stage"),
+        message:
+          getStringField(row, "error_message") ??
+          getStringField(row, "error") ??
+          getStringField(row, "message"),
+        createdAt: getStringField(row, "created_at"),
+      });
+    }
+  }
+
+  for (const row of trace.activityCorrections) {
+    const status = getStringField(row, "status");
+
+    if (isProblemStatus(status)) {
+      problems.push({
+        sourceTable: "activity_corrections",
+        sourceId: getId(row),
+        severity: inferSeverity(status),
+        status,
+        stage: getStringField(row, "correction_type"),
+        message:
+          getStringField(row, "error_message") ??
+          getStringField(row, "processing_error"),
+        createdAt: getStringField(row, "created_at"),
+      });
+    }
+  }
+
+  return problems.sort((left, right) => {
+    const leftTime = left.createdAt ? Date.parse(left.createdAt) : 0;
+    const rightTime = right.createdAt ? Date.parse(right.createdAt) : 0;
+
+    return leftTime - rightTime;
+  });
+}
+
+function buildTraceHealth(params: {
+  trace: {
+    activityEvents: GenericRow[];
+    rawActivitySignals: GenericRow[];
+    activityProcessingLogs: GenericRow[];
+    activityCorrections: GenericRow[];
+    impactEvents: GenericRow[];
+    eventLinks: GenericRow[];
+  };
+  errorsAndWarnings: Array<{ severity: "error" | "warning" }>;
+}) {
+  const { trace, errorsAndWarnings } = params;
+  const hasErrors = errorsAndWarnings.some((item) => item.severity === "error");
+  const hasWarnings = errorsAndWarnings.some(
+    (item) => item.severity === "warning"
+  );
+  const hasRootTrace =
+    trace.activityEvents.length > 0 ||
+    trace.rawActivitySignals.length > 0 ||
+    trace.activityCorrections.length > 0 ||
+    trace.activityProcessingLogs.length > 0;
+
+  return {
+    status: hasErrors ? "error" : hasWarnings ? "warning" : "ok",
+    hasErrors,
+    hasWarnings,
+    hasRootTrace,
+    counts: {
+      activityEvents: trace.activityEvents.length,
+      rawSignals: trace.rawActivitySignals.length,
+      processingLogs: trace.activityProcessingLogs.length,
+      corrections: trace.activityCorrections.length,
+      impactEvents: trace.impactEvents.length,
+      eventLinks: trace.eventLinks.length,
+      errorsAndWarnings: errorsAndWarnings.length,
+    },
+    checks: {
+      activityEventFound: trace.activityEvents.length > 0,
+      rawSignalFound: trace.rawActivitySignals.length > 0,
+      processingTimelineFound: trace.activityProcessingLogs.length > 0,
+      correctionFound: trace.activityCorrections.length > 0,
+      impactsFound: trace.impactEvents.length > 0,
+      eventLinksFound: trace.eventLinks.length > 0,
+      compactTraceDoesNotExposeRawPayload: true,
+      compactTraceDoesNotExposeAuditSnapshots: true,
+      compactTraceDoesNotExposeRecalculationJson: true,
+    },
+  };
+}
+
+function buildCompactTrace(trace: {
+  activityEvents: GenericRow[];
+  rawActivitySignals: GenericRow[];
+  activityProcessingLogs: GenericRow[];
+  activityCorrections: GenericRow[];
+  impactEvents: GenericRow[];
+  eventLinks: GenericRow[];
+}) {
+  const errorsAndWarnings = buildErrorsAndWarnings(trace);
+
+  return {
+    activityEvents: trace.activityEvents
+      .slice()
+      .sort((left, right) => getDateSortValue(right) - getDateSortValue(left))
+      .map(compactActivityEvent),
+    rawSignals: trace.rawActivitySignals
+      .slice()
+      .sort((left, right) => getDateSortValue(right) - getDateSortValue(left))
+      .map(compactRawSignal),
+    processingTimeline: trace.activityProcessingLogs
+      .slice()
+      .sort((left, right) => getDateSortValue(left) - getDateSortValue(right))
+      .map(compactProcessingLog),
+    corrections: trace.activityCorrections
+      .slice()
+      .sort((left, right) => getDateSortValue(right) - getDateSortValue(left))
+      .map(compactCorrection),
+    impactSummary: buildImpactSummary(trace.impactEvents),
+    eventLinksSummary: buildEventLinksSummary(trace.eventLinks),
+    errorsAndWarnings,
+    health: buildTraceHealth({
+      trace,
+      errorsAndWarnings,
+    }),
+  };
+}
+
+function buildTraceCounts(trace: {
+  activityEvents: GenericRow[];
+  rawActivitySignals: GenericRow[];
+  activityProcessingLogs: GenericRow[];
+  activityCorrections: GenericRow[];
+  impactEvents: GenericRow[];
+  eventLinks: GenericRow[];
+}) {
+  return {
+    activityEvents: trace.activityEvents.length,
+    rawActivitySignals: trace.rawActivitySignals.length,
+    activityProcessingLogs: trace.activityProcessingLogs.length,
+    activityCorrections: trace.activityCorrections.length,
+    impactEvents: trace.impactEvents.length,
+    eventLinks: trace.eventLinks.length,
   };
 }
 
@@ -456,6 +1061,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const searchParams = url.searchParams;
   const limit = parseLimit(searchParams.get("limit"));
+  const mode = parseMode(searchParams.get("mode"));
 
   const eventIds = new Set(
     unique([
@@ -485,6 +1091,13 @@ export async function GET(request: Request) {
     ])
   );
 
+  const requestedFilters = {
+    eventIds: Array.from(eventIds),
+    rawSignalIds: Array.from(rawSignalIds),
+    correctionIds: Array.from(correctionIds),
+    processingRunIds: Array.from(processingRunIds),
+  };
+
   const hasAnyFilter =
     eventIds.size > 0 ||
     rawSignalIds.size > 0 ||
@@ -502,6 +1115,7 @@ export async function GET(request: Request) {
           "/api/activity/debug-trace?rawSignalId=<raw_signal_id>",
           "/api/activity/debug-trace?processingRunId=<processing_run_id>",
           "/api/activity/debug-trace?correctionId=<activity_correction_id>",
+          "/api/activity/debug-trace?rawSignalId=<raw_signal_id>&mode=summary",
         ],
       },
       { status: 400 }
@@ -518,25 +1132,24 @@ export async function GET(request: Request) {
       limit,
     });
 
+    const summary = buildTraceCounts(trace);
+
     return NextResponse.json({
       ok: true,
       endpoint: "/api/activity/debug-trace",
+      mode,
       filters: {
-        eventIds: Array.from(eventIds),
-        rawSignalIds: Array.from(rawSignalIds),
-        correctionIds: Array.from(correctionIds),
-        processingRunIds: Array.from(processingRunIds),
+        requested: requestedFilters,
+        expanded: {
+          eventIds: Array.from(eventIds),
+          rawSignalIds: Array.from(rawSignalIds),
+          correctionIds: Array.from(correctionIds),
+          processingRunIds: Array.from(processingRunIds),
+        },
         limit,
       },
-      summary: {
-        activityEvents: trace.activityEvents.length,
-        rawActivitySignals: trace.rawActivitySignals.length,
-        activityProcessingLogs: trace.activityProcessingLogs.length,
-        activityCorrections: trace.activityCorrections.length,
-        impactEvents: trace.impactEvents.length,
-        eventLinks: trace.eventLinks.length,
-      },
-      trace,
+      summary,
+      trace: mode === "summary" ? buildCompactTrace(trace) : trace,
     });
   } catch (error) {
     return NextResponse.json(
