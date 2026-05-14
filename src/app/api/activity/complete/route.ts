@@ -1,10 +1,20 @@
-﻿import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
+import { NextResponse } from "next/server";
 import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
   ACTIVITY_RECORDING_ENABLED,
 } from "../../../../../lib/activity/activityRecordingConfig";
+import {
+  getDurationMs,
+  safeCreateActivityProcessingLog,
+} from "../../../../../lib/activity/activityProcessingLogs";
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { processActivityImpacts } from "../../../../../lib/activity/activityImpactProcessor";
+import {
+  createRawActivitySignal,
+  markRawActivitySignalFailed,
+  markRawActivitySignalProcessed,
+} from "../../../../../lib/activity/rawActivitySignals";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -381,6 +391,89 @@ export async function POST(request: Request) {
   const existingMetadata = asRecord(event.metadata_json);
   const nowIso = new Date().toISOString();
 
+  const processingRunId = randomUUID();
+  const processingStartedAt = new Date();
+
+  const rawSignalResult = await createRawActivitySignal({
+    userId: appUser.id,
+    sourceType: "manual_form",
+    sourceEventId: event.id,
+    idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+    rawPayload: {
+      endpoint: "/api/activity/complete",
+      body,
+      eventId: event.id,
+      previousStatus: event.status,
+      timing,
+    },
+    normalizedPreview: {
+      activityEventId: event.id,
+      title: event.title,
+      previousStatus: event.status,
+      nextStatus: "completed",
+      startedAt: timing.startedAt,
+      endedAt: timing.endedAt,
+      durationMinutes: timing.durationMinutes,
+    },
+    occurredAt: timing.endedAt,
+    trustLevel: "medium",
+    privacyScope:
+      event.privacy_scope === "shared_with_org" ||
+      event.privacy_scope === "public_masked" ||
+      event.privacy_scope === "public"
+        ? event.privacy_scope
+        : "private",
+    processingStatus: "processing",
+    metadata: {
+      parser: "template_first_v2",
+      processingRunId,
+      mode: "template_first_complete",
+      lifecycle: "completed",
+      previousStatus: event.status,
+      activityTemplateId: event.activity_template_id,
+      activityTypeId: event.activity_type_id,
+    },
+  });
+
+  const rawSignal = rawSignalResult.signal;
+
+  await safeCreateActivityProcessingLog({
+    userId: appUser.id,
+    rawSignalId: rawSignal?.id ?? null,
+    activityEventId: event.id,
+    processingRunId,
+    processorName: "activity_complete_route",
+    processingStage: "ingest",
+    processingStatus: rawSignalResult.ok ? "completed" : "warning",
+    severity: rawSignalResult.ok ? "info" : "warning",
+    message: rawSignalResult.ok
+      ? "Raw activity complete signal captured."
+      : "Raw activity complete signal creation failed; continuing without raw signal.",
+    input: {
+      eventId: event.id,
+      previousStatus: event.status,
+      endedAt: timing.endedAt,
+      durationMinutes: timing.durationMinutes,
+    },
+    output: rawSignal
+      ? {
+          rawSignalId: rawSignal.id,
+        }
+      : {},
+    error: rawSignalResult.ok
+      ? {}
+      : {
+          message: rawSignalResult.error,
+        },
+    metadata: {
+      endpoint: "/api/activity/complete",
+      mode: "template_first_complete",
+    },
+    startedAt: processingStartedAt.toISOString(),
+    finishedAt: new Date().toISOString(),
+    durationMs: getDurationMs(processingStartedAt),
+  });
+
   const { data: updatedEventData, error: updateError } = await supabase
     .from("activity_events")
     .update({
@@ -410,6 +503,42 @@ export async function POST(request: Request) {
     .single();
 
   if (updateError || !updatedEventData) {
+    if (rawSignal) {
+      await markRawActivitySignalFailed({
+        signalId: rawSignal.id,
+        userId: appUser.id,
+        error: updateError?.message ?? "Failed to complete activity event.",
+      });
+    }
+
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: rawSignal?.id ?? null,
+      activityEventId: event.id,
+      processingRunId,
+      processorName: "activity_complete_route",
+      processingStage: "complete_event",
+      processingStatus: "failed",
+      severity: "error",
+      message: "Failed to update activity event to completed status.",
+      input: {
+        eventId: event.id,
+        previousStatus: event.status,
+        endedAt: timing.endedAt,
+        durationMinutes: timing.durationMinutes,
+      },
+      error: {
+        message: updateError?.message ?? "Failed to complete activity event.",
+      },
+      metadata: {
+        endpoint: "/api/activity/complete",
+        mode: "template_first_complete",
+      },
+      startedAt: processingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(processingStartedAt),
+    });
+
     return NextResponse.json(
       {
         ok: false,
@@ -421,6 +550,36 @@ export async function POST(request: Request) {
 
   const updatedEvent = updatedEventData as ActivityEventRow;
 
+  await safeCreateActivityProcessingLog({
+    userId: appUser.id,
+    rawSignalId: rawSignal?.id ?? null,
+    activityEventId: updatedEvent.id,
+    processingRunId,
+    processorName: "activity_complete_route",
+    processingStage: "complete_event",
+    processingStatus: "completed",
+    severity: "info",
+    message: "Activity event completed from lifecycle complete flow.",
+    input: {
+      eventId: event.id,
+      previousStatus: event.status,
+      endedAt: timing.endedAt,
+      durationMinutes: timing.durationMinutes,
+    },
+    output: {
+      activityEventId: updatedEvent.id,
+      status: updatedEvent.status,
+      processingStatus: updatedEvent.processing_status,
+    },
+    metadata: {
+      endpoint: "/api/activity/complete",
+      mode: "template_first_complete",
+    },
+    startedAt: processingStartedAt.toISOString(),
+    finishedAt: new Date().toISOString(),
+    durationMs: getDurationMs(processingStartedAt),
+  });
+
   try {
     const impactResult = await processActivityImpacts({
       eventId: updatedEvent.id,
@@ -429,6 +588,83 @@ export async function POST(request: Request) {
       activityTypeId: updatedEvent.activity_type_id,
       durationMinutes: updatedEvent.duration_minutes,
       startedAt: updatedEvent.started_at,
+    });
+
+    const processedSignalResult = rawSignal
+      ? await markRawActivitySignalProcessed({
+          signalId: rawSignal.id,
+          userId: appUser.id,
+          outputEventId: updatedEvent.id,
+          normalizedPreview: {
+            activityEventId: updatedEvent.id,
+            previousStatus: event.status,
+            nextStatus: updatedEvent.status,
+            startedAt: timing.startedAt,
+            endedAt: timing.endedAt,
+            durationMinutes: timing.durationMinutes,
+            impactProcessor: {
+              ok: impactResult.ok,
+              skipped: impactResult.skipped,
+              reason: impactResult.reason,
+              counts: impactResult.counts,
+            },
+          },
+        })
+      : null;
+
+    if (processedSignalResult && !processedSignalResult.ok) {
+      await safeCreateActivityProcessingLog({
+        userId: appUser.id,
+        rawSignalId: rawSignal?.id ?? null,
+        activityEventId: updatedEvent.id,
+        processingRunId,
+        processorName: "activity_complete_route",
+        processingStage: "finalize",
+        processingStatus: "warning",
+        severity: "warning",
+        message: "Completed activity was processed, but raw signal could not be marked as processed.",
+        error: {
+          message: processedSignalResult.error,
+        },
+        metadata: {
+          endpoint: "/api/activity/complete",
+          mode: "template_first_complete",
+        },
+        startedAt: processingStartedAt.toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: getDurationMs(processingStartedAt),
+      });
+    }
+
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: rawSignal?.id ?? null,
+      activityEventId: updatedEvent.id,
+      processingRunId,
+      processorName: "activity_complete_route",
+      processingStage: "process_impacts",
+      processingStatus: impactResult.ok ? "completed" : "skipped",
+      severity: impactResult.ok ? "info" : "notice",
+      message: "Rule-based activity impacts processed after completion.",
+      input: {
+        activityTemplateId: updatedEvent.activity_template_id,
+        activityTypeId: updatedEvent.activity_type_id,
+        durationMinutes: updatedEvent.duration_minutes,
+        startedAt: updatedEvent.started_at,
+      },
+      output: {
+        ok: impactResult.ok,
+        skipped: impactResult.skipped,
+        reason: impactResult.reason,
+        counts: impactResult.counts,
+      },
+      metadata: {
+        endpoint: "/api/activity/complete",
+        mode: "template_first_complete",
+      },
+      startedAt: processingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(processingStartedAt),
     });
 
     return NextResponse.json({
@@ -444,6 +680,15 @@ export async function POST(request: Request) {
         reason: impactResult.reason,
         counts: impactResult.counts,
       },
+      rawSignal: rawSignal
+        ? {
+            id: rawSignal.id,
+            processingStatus:
+              processedSignalResult?.signal?.processing_status ??
+              rawSignal.processing_status,
+          }
+        : null,
+      processingRunId,
       lifecycle: {
         startedAt: timing.startedAt,
         endedAt: timing.endedAt,
@@ -454,6 +699,48 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    if (rawSignal) {
+      await markRawActivitySignalFailed({
+        signalId: rawSignal.id,
+        userId: appUser.id,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to process rule-based activity impacts after completion.",
+      });
+    }
+
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: rawSignal?.id ?? null,
+      activityEventId: updatedEvent.id,
+      processingRunId,
+      processorName: "activity_complete_route",
+      processingStage: "process_impacts",
+      processingStatus: "failed",
+      severity: "error",
+      message: "Failed to process rule-based activity impacts after completion.",
+      input: {
+        activityTemplateId: updatedEvent.activity_template_id,
+        activityTypeId: updatedEvent.activity_type_id,
+        durationMinutes: updatedEvent.duration_minutes,
+        startedAt: updatedEvent.started_at,
+      },
+      error: {
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to process rule-based activity impacts after completion.",
+      },
+      metadata: {
+        endpoint: "/api/activity/complete",
+        mode: "template_first_complete",
+      },
+      startedAt: processingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(processingStartedAt),
+    });
+
     await supabase
       .from("activity_events")
       .update({

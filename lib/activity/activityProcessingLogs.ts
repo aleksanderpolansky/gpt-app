@@ -1,4 +1,4 @@
-﻿import { supabase } from "../supabase";
+import { supabase } from "../supabase";
 import type { JsonObject, JsonValue } from "./rawActivitySignals";
 
 export type ActivityProcessingStage =
@@ -8,6 +8,7 @@ export type ActivityProcessingStage =
   | "validate"
   | "deduplicate"
   | "create_event"
+  | "complete_event"
   | "link_event"
   | "process_impacts"
   | "aggregate"
