@@ -270,3 +270,157 @@ This smoke test used `allowControlledTextFallback: true`. `classificationSummary
 Next planned step:
 
 P4.7.6-R — create or use a real approved Object-Action classification for the same activity event and verify the mapper path without controlled text fallback.
+
+---
+
+## P4.7.6-R Real entity_classifications mapper path verification
+
+Date: 2026-05-15
+
+### Scope
+
+This section verifies the production-oriented Object-Action Rubricator path without controlled text fallback.
+
+Tested pipeline:
+
+Activity Event
+-> real entity_classification
+-> Object-Action Rubricator
+-> Rubricator Mapper
+-> Value Object Mapping
+-> Value Object Bridge
+-> Idempotency Guard
+
+### P4.7.6-R-B approved entity_classification
+
+Created one approved classification for the existing completed activity event.
+
+Classification:
+
+- classificationId: `4ddc3212-9997-4b54-8190-516e23cb3ff0`
+- entity_type: `activity_event`
+- entity_id: `3931a981-430e-494d-8b00-fc8f1069f175`
+- object_type_id: `e6f44f33-5484-496e-8fe6-31f8de8cebcd`
+- object_type_code: `German_language`
+- action_type_id: `f2e19a37-241b-45eb-b07d-f5e1fef0e7fd`
+- action_type_code: `practice`
+- context_id: `8312bdf9-dcba-4c42-867d-9d5c9ddd0b48`
+- context_code: `learning`
+- contextual_category_id: `36365384-f6b6-47dd-bc18-2127b01541d4`
+- contextual_category_slug: `business-german`
+- status: `approved`
+- confidence: `0.9`
+- source_type: `manual`
+
+### P4.7.6-R-C dry-run without controlled text fallback
+
+Endpoint:
+
+`POST /api/activity/debug-rubricator-value-object-bridge`
+
+Body:
+
+```json
+{
+  "eventId": "3931a981-430e-494d-8b00-fc8f1069f175",
+  "dryRun": true,
+  "createMissingControlledValueObject": false,
+  "allowControlledTextFallback": false
+}
+```
+
+Result:
+
+- HTTP status: `200`
+- ok: `true`
+- dryRun: `true`
+- bridgeExecuted: `false`
+- mappingResult.skipped: `false`
+- mappingResult.mappings.length: `1`
+- classificationSummary.length: `1`
+- errors: `[]`
+
+Conclusion:
+
+The mapper used the real approved `entity_classifications` row. Controlled text fallback was disabled.
+
+### P4.7.6-R-D SQL no-write check after dry-run
+
+After dry-run, SQL counts remained unchanged:
+
+- entity_classifications_for_event: `1`
+- controlled_value_object: `1`
+- value_object_instances_by_event: `1`
+- activity_event_value_object_instance_links_by_event: `1`
+- value_object_state_deltas_by_event: `1`
+- value_object_daily_aggregates_by_event: `1`
+- value_object_state_snapshots_by_event: `1`
+
+Conclusion:
+
+Dry-run through the real classification path did not create duplicate rows.
+
+### P4.7.6-R-E real run without controlled text fallback
+
+Endpoint:
+
+`POST /api/activity/debug-rubricator-value-object-bridge`
+
+Body:
+
+```json
+{
+  "eventId": "3931a981-430e-494d-8b00-fc8f1069f175",
+  "dryRun": false,
+  "createMissingControlledValueObject": false,
+  "allowControlledTextFallback": false
+}
+```
+
+Result:
+
+- HTTP status: `200`
+- ok: `true`
+- dryRun: `false`
+- bridgeExecuted: `true`
+- classificationSummary.length: `1`
+- mappingResult.mappings.length: `1`
+- bridgeResult.created[0].skipped: `true`
+- bridgeResult.created[0].skipReason: `already_processed_event_value_object_metric`
+- returned existing valueObjectInstanceId: `e395f581-385e-4f68-bffa-33be51ef4b0e`
+- returned existing stateDeltaId: `0f1583be-1343-4d68-bbe5-37cc465cec0a`
+
+Conclusion:
+
+The real classification path successfully produced the same Value Object mapping, and the Value Object Bridge idempotency guard prevented duplicate VOI/link/delta creation.
+
+### P4.7.6-R-F SQL count check after real classification-path run
+
+After real run without fallback, SQL counts remained:
+
+- entity_classifications_for_event: `1`
+- controlled_value_object: `1`
+- value_object_instances_by_event: `1`
+- activity_event_value_object_instance_links_by_event: `1`
+- value_object_state_deltas_by_event: `1`
+- value_object_daily_aggregates_by_event: `1`
+- value_object_state_snapshots_by_event: `1`
+
+Conclusion:
+
+No duplicate records were created. Production-oriented classification path is verified for the controlled German business writing rule.
+
+### Current status
+
+P4.7.6-R is completed.
+
+Verified:
+
+- controlled text fallback path
+- real `entity_classifications` path
+- dry-run no-write safety
+- idempotency guard for repeated real bridge execution
+
+Next planned step:
+
+P4.7.7-R — integrate the real rubricator mapper path into the normal activity processing lifecycle instead of using the debug endpoint.
