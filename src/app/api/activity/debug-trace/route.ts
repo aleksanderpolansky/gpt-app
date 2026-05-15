@@ -52,6 +52,28 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return isPlainObject(value) ? value : {};
+}
+
+function getRecordField(row: GenericRow, field: string) {
+  return asRecord(row[field]);
+}
+
+function getRecordString(
+  record: Record<string, unknown>,
+  field: string
+): string | null {
+  return asString(record[field]);
+}
+
+function getRecordBoolean(
+  record: Record<string, unknown>,
+  field: string
+): boolean | null {
+  return asBoolean(record[field]);
+}
+
 function unique(values: Array<string | null | undefined>) {
   return Array.from(
     new Set(
@@ -242,6 +264,12 @@ function addIdsFromRows(params: {
       getStringField(row, "correction_id");
     const processingRunId = getStringField(row, "processing_run_id");
 
+    const metadata = getRecordField(row, "metadata_json");
+    const metadataRawSignalId = getRecordString(metadata, "rawSignalId");
+    const metadataOutputEventId =
+      getRecordString(metadata, "activityEventId") ??
+      getRecordString(metadata, "outputEventId");
+
     if (id && row.processing_status !== undefined && row.raw_payload !== undefined) {
       rawSignalIds.add(id);
     }
@@ -260,6 +288,14 @@ function addIdsFromRows(params: {
 
     if (rawSignalId) {
       rawSignalIds.add(rawSignalId);
+    }
+
+    if (metadataRawSignalId) {
+      rawSignalIds.add(metadataRawSignalId);
+    }
+
+    if (metadataOutputEventId) {
+      eventIds.add(metadataOutputEventId);
     }
 
     if (correctionId) {
@@ -561,6 +597,113 @@ async function fetchTrace(params: {
   };
 }
 
+function extractLifecycleMetadata(row: GenericRow) {
+  const metadata = getRecordField(row, "metadata_json");
+
+  return {
+    metadataKeys: getJsonKeys(metadata),
+    promotion: {
+      promotionFlow: getRecordString(metadata, "promotionFlow"),
+      promotedAt: getRecordString(metadata, "promotedAt"),
+      rawSignalId: getRecordString(metadata, "rawSignalId"),
+      rawSignalSourceType: getRecordString(metadata, "rawSignalSourceType"),
+      rawSignalSourceEventId: getRecordString(
+        metadata,
+        "rawSignalSourceEventId"
+      ),
+      rawSignalIdempotencyKey: getRecordString(
+        metadata,
+        "rawSignalIdempotencyKey"
+      ),
+      rawSignalProcessingStatusBeforePromotion: getRecordString(
+        metadata,
+        "rawSignalProcessingStatusBeforePromotion"
+      ),
+      activityEventSource: getRecordString(metadata, "activityEventSource"),
+      defaultActivityStatus: getRecordString(metadata, "defaultActivityStatus"),
+      promotedActivityStatus: getRecordString(
+        metadata,
+        "promotedActivityStatus"
+      ),
+      requiresHumanReview: getRecordBoolean(metadata, "requiresHumanReview"),
+      noImpactsCreated: getRecordBoolean(metadata, "noImpactsCreated"),
+      noDailyAggregatesCreated: getRecordBoolean(
+        metadata,
+        "noDailyAggregatesCreated"
+      ),
+      noCurrentSnapshotsCreated: getRecordBoolean(
+        metadata,
+        "noCurrentSnapshotsCreated"
+      ),
+      reviewNote: getRecordString(metadata, "reviewNote"),
+    },
+    confirmation: {
+      confirmationFlow: getRecordString(metadata, "confirmationFlow"),
+      importedPendingConfirmed: getRecordBoolean(
+        metadata,
+        "importedPendingConfirmed"
+      ),
+      importedPendingConfirmedAt: getRecordString(
+        metadata,
+        "importedPendingConfirmedAt"
+      ),
+      importedPendingPreviousStatus: getRecordString(
+        metadata,
+        "importedPendingPreviousStatus"
+      ),
+      reviewNote: getRecordString(metadata, "reviewNote"),
+    },
+  };
+}
+
+function extractRawSignalPromotionPreview(row: GenericRow) {
+  const normalizedPreview = getRecordField(row, "normalized_preview_json");
+  const promotion = asRecord(normalizedPreview.promotion);
+  const originalIntake = asRecord(normalizedPreview.originalIntake);
+
+  return {
+    normalizedPreviewKeys: getJsonKeys(normalizedPreview),
+    promotion: {
+      endpoint: getRecordString(promotion, "endpoint"),
+      promotionFlow: getRecordString(promotion, "promotionFlow"),
+      promotedAt: getRecordString(promotion, "promotedAt"),
+      activityEventId: getRecordString(promotion, "activityEventId"),
+      activityStatus: getRecordString(promotion, "activityStatus"),
+      activityProcessingStatus: getRecordString(
+        promotion,
+        "activityProcessingStatus"
+      ),
+      activityEventSource: getRecordString(promotion, "activityEventSource"),
+      noImpactsCreated: getRecordBoolean(promotion, "noImpactsCreated"),
+    },
+    originalIntake: {
+      sourceType: getRecordString(originalIntake, "sourceType"),
+      activityEventSource: getRecordString(
+        originalIntake,
+        "activityEventSource"
+      ),
+      sourceEventId: getRecordString(originalIntake, "sourceEventId"),
+      idempotencyKey: getRecordString(originalIntake, "idempotencyKey"),
+      defaultActivityStatus: getRecordString(
+        originalIntake,
+        "defaultActivityStatus"
+      ),
+      defaultRawProcessingStatus: getRecordString(
+        originalIntake,
+        "defaultRawProcessingStatus"
+      ),
+      requiresHumanReview: getRecordBoolean(
+        originalIntake,
+        "requiresHumanReview"
+      ),
+      shouldCreateImportedPendingEvent: getRecordBoolean(
+        originalIntake,
+        "shouldCreateImportedPendingEvent"
+      ),
+    },
+  };
+}
+
 function compactActivityEvent(row: GenericRow) {
   return {
     id: getId(row),
@@ -578,6 +721,7 @@ function compactActivityEvent(row: GenericRow) {
     legacyTemplateId: getStringField(row, "legacy_template_id"),
     createdAt: getStringField(row, "created_at"),
     updatedAt: getStringField(row, "updated_at"),
+    lifecycleMetadata: extractLifecycleMetadata(row),
   };
 }
 
@@ -586,19 +730,29 @@ function compactRawSignal(row: GenericRow) {
     id: getId(row),
     source: getStringField(row, "source"),
     sourceType: getStringField(row, "source_type"),
+    sourceEventId: getStringField(row, "source_event_id"),
+    idempotencyKey: getStringField(row, "idempotency_key"),
     signalType: getStringField(row, "signal_type"),
     endpoint: getStringField(row, "endpoint"),
+    trustLevel: getStringField(row, "trust_level"),
+    privacyScope: getStringField(row, "privacy_scope"),
     processingStatus: getStringField(row, "processing_status"),
+    processingError: getStringField(row, "processing_error"),
     outputEventId: getStringField(row, "output_event_id"),
     processingRunId: getStringField(row, "processing_run_id"),
+    occurredAt: getStringField(row, "occurred_at"),
+    measuredAt: getStringField(row, "measured_at"),
+    receivedAt: getStringField(row, "received_at"),
     createdAt: getStringField(row, "created_at"),
     updatedAt: getStringField(row, "updated_at"),
     rawPayloadKeys: getFieldKeys(row, "raw_payload"),
     normalizedPreviewKeys: getFieldKeys(row, "normalized_preview_json"),
+    metadataKeys: getFieldKeys(row, "metadata_json"),
     hasRawPayload: row.raw_payload !== undefined && row.raw_payload !== null,
     hasNormalizedPreview:
       row.normalized_preview_json !== undefined &&
       row.normalized_preview_json !== null,
+    promotionPreview: extractRawSignalPromotionPreview(row),
   };
 }
 
@@ -789,6 +943,115 @@ function buildEventLinksSummary(rows: GenericRow[]) {
   });
 }
 
+function buildRawImportedLinkage(trace: {
+  activityEvents: GenericRow[];
+  rawActivitySignals: GenericRow[];
+}) {
+  const rawSignalsByOutputEventId = new Map<string, GenericRow[]>();
+  const rawSignalsById = new Map<string, GenericRow>();
+
+  for (const rawSignal of trace.rawActivitySignals) {
+    const rawSignalId = getId(rawSignal);
+    const outputEventId = getStringField(rawSignal, "output_event_id");
+
+    if (rawSignalId) {
+      rawSignalsById.set(rawSignalId, rawSignal);
+    }
+
+    if (outputEventId) {
+      const existing = rawSignalsByOutputEventId.get(outputEventId) ?? [];
+      existing.push(rawSignal);
+      rawSignalsByOutputEventId.set(outputEventId, existing);
+    }
+  }
+
+  return trace.activityEvents
+    .slice()
+    .sort((left, right) => getDateSortValue(right) - getDateSortValue(left))
+    .map((event) => {
+      const eventId = getId(event);
+      const eventMetadata = getRecordField(event, "metadata_json");
+      const metadataRawSignalId = getRecordString(eventMetadata, "rawSignalId");
+
+      const linkedRawSignals = unique([
+        ...(eventId
+          ? (rawSignalsByOutputEventId.get(eventId) ?? []).map((row) =>
+              getId(row)
+            )
+          : []),
+        metadataRawSignalId,
+      ])
+        .map((rawSignalId) => rawSignalsById.get(rawSignalId))
+        .filter((row): row is GenericRow => Boolean(row));
+
+      const primaryRawSignal = linkedRawSignals[0] ?? null;
+      const eventLifecycleMetadata = extractLifecycleMetadata(event);
+      const rawSignalPromotionPreview = primaryRawSignal
+        ? extractRawSignalPromotionPreview(primaryRawSignal)
+        : null;
+
+      return {
+        eventId,
+        eventTitle: getStringField(event, "title"),
+        eventStatus: getStringField(event, "status"),
+        eventProcessingStatus: getStringField(event, "processing_status"),
+        eventSource: getStringField(event, "source"),
+        isImportedPending: getStringField(event, "status") === "imported_pending",
+        isCompleted: getStringField(event, "status") === "completed",
+        isArchived: getStringField(event, "status") === "archived",
+        linkedRawSignalsCount: linkedRawSignals.length,
+        rawSignal: primaryRawSignal
+          ? {
+              id: getId(primaryRawSignal),
+              sourceType: getStringField(primaryRawSignal, "source_type"),
+              sourceEventId: getStringField(
+                primaryRawSignal,
+                "source_event_id"
+              ),
+              idempotencyKey: getStringField(
+                primaryRawSignal,
+                "idempotency_key"
+              ),
+              processingStatus: getStringField(
+                primaryRawSignal,
+                "processing_status"
+              ),
+              outputEventId: getStringField(primaryRawSignal, "output_event_id"),
+              occurredAt: getStringField(primaryRawSignal, "occurred_at"),
+              measuredAt: getStringField(primaryRawSignal, "measured_at"),
+              receivedAt: getStringField(primaryRawSignal, "received_at"),
+            }
+          : null,
+        linkedRawSignalIds: linkedRawSignals
+          .map((row) => getId(row))
+          .filter((id): id is string => Boolean(id)),
+        promotion: {
+          eventMetadata: eventLifecycleMetadata.promotion,
+          rawSignalPromotionPreview: rawSignalPromotionPreview?.promotion ?? null,
+          originalIntake: rawSignalPromotionPreview?.originalIntake ?? null,
+        },
+        confirmation: eventLifecycleMetadata.confirmation,
+        linkageChecks: {
+          hasLinkedRawSignal: linkedRawSignals.length > 0,
+          rawSignalOutputPointsToEvent:
+            Boolean(primaryRawSignal) &&
+            Boolean(eventId) &&
+            getStringField(primaryRawSignal as GenericRow, "output_event_id") ===
+              eventId,
+          eventMetadataPointsToRawSignal:
+            Boolean(metadataRawSignalId) &&
+            linkedRawSignals.some((row) => getId(row) === metadataRawSignalId),
+          hasPromotionMetadata:
+            Boolean(eventLifecycleMetadata.promotion.promotionFlow) ||
+            Boolean(rawSignalPromotionPreview?.promotion?.promotionFlow),
+          hasConfirmationMetadata: Boolean(
+            eventLifecycleMetadata.confirmation.confirmationFlow
+          ),
+        },
+      };
+    });
+}
+
 function isProblemStatus(value: string | null) {
   if (!value) {
     return false;
@@ -948,6 +1211,11 @@ function buildTraceHealth(params: {
     trace.activityCorrections.length > 0 ||
     trace.activityProcessingLogs.length > 0;
 
+  const rawImportedLinkage = buildRawImportedLinkage({
+    activityEvents: trace.activityEvents,
+    rawActivitySignals: trace.rawActivitySignals,
+  });
+
   return {
     status: hasErrors ? "error" : hasWarnings ? "warning" : "ok",
     hasErrors,
@@ -961,10 +1229,14 @@ function buildTraceHealth(params: {
       impactEvents: trace.impactEvents.length,
       eventLinks: trace.eventLinks.length,
       errorsAndWarnings: errorsAndWarnings.length,
+      rawImportedLinkages: rawImportedLinkage.length,
     },
     checks: {
       activityEventFound: trace.activityEvents.length > 0,
       rawSignalFound: trace.rawActivitySignals.length > 0,
+      rawImportedLinkageFound: rawImportedLinkage.some(
+        (link) => link.linkageChecks.hasLinkedRawSignal
+      ),
       processingTimelineFound: trace.activityProcessingLogs.length > 0,
       correctionFound: trace.activityCorrections.length > 0,
       impactsFound: trace.impactEvents.length > 0,
@@ -995,6 +1267,10 @@ function buildCompactTrace(trace: {
       .slice()
       .sort((left, right) => getDateSortValue(right) - getDateSortValue(left))
       .map(compactRawSignal),
+    rawImportedLinkage: buildRawImportedLinkage({
+      activityEvents: trace.activityEvents,
+      rawActivitySignals: trace.rawActivitySignals,
+    }),
     processingTimeline: trace.activityProcessingLogs
       .slice()
       .sort((left, right) => getDateSortValue(left) - getDateSortValue(right))
@@ -1115,6 +1391,7 @@ export async function GET(request: Request) {
           "/api/activity/debug-trace?rawSignalId=<raw_signal_id>",
           "/api/activity/debug-trace?processingRunId=<processing_run_id>",
           "/api/activity/debug-trace?correctionId=<activity_correction_id>",
+          "/api/activity/debug-trace?eventId=<activity_event_id>&mode=summary",
           "/api/activity/debug-trace?rawSignalId=<raw_signal_id>&mode=summary",
         ],
       },
@@ -1150,6 +1427,10 @@ export async function GET(request: Request) {
       },
       summary,
       trace: mode === "summary" ? buildCompactTrace(trace) : trace,
+      note:
+        mode === "summary"
+          ? "Summary mode includes rawImportedLinkage, sourceEventId, idempotencyKey and lifecycle metadata keys without exposing rawPayload, audit snapshots or recalculation JSON."
+          : "Full mode returns owner-only raw rows for private debugging. Do not expose full mode in public UI.",
     });
   } catch (error) {
     return NextResponse.json(
