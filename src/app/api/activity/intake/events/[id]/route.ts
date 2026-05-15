@@ -533,6 +533,52 @@ function buildPatchUpdate(params: {
   };
 }
 
+function resolveImportedPendingCorrectionType(changedFields: string[]) {
+  if (
+    changedFields.includes("started_at") ||
+    changedFields.includes("ended_at")
+  ) {
+    return "timing_correction";
+  }
+
+  if (changedFields.includes("duration_minutes")) {
+    return "duration_correction";
+  }
+
+  if (changedFields.includes("description")) {
+    return "comment_correction";
+  }
+
+  return "manual_patch";
+}
+
+function getImportedPendingPatchReviewReason(body: PatchImportedEventBody) {
+  const reviewNoteInput =
+    body.reviewNote !== undefined ? body.reviewNote : body.review_note;
+
+  return asString(reviewNoteInput) ?? "imported_pending_review_edit";
+}
+
+function buildImportedPendingPatchRecalculationResult(params: {
+  eventId: string;
+  changedFields: string[];
+}) {
+  const { eventId, changedFields } = params;
+
+  return {
+    ok: true,
+    skipped: true,
+    reason:
+      "Imported_pending activity event was edited before confirmation. No impacts exist yet, so impact recalculation was not required.",
+    flow: "P4.6.2",
+    eventId,
+    changedFields,
+    createsImpacts: false,
+    createsDailyAggregates: false,
+    createsCurrentSnapshots: false,
+  };
+}
+
 function p447AsRecord(value: unknown): Record<string, unknown> {
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {
     return value as Record<string, unknown>;
@@ -1297,12 +1343,71 @@ export async function PATCH(
       eventId,
     });
 
+    const correctionRecalculationResult =
+      buildImportedPendingPatchRecalculationResult({
+        eventId,
+        changedFields: finalChangedFields,
+      });
+
+    const { data: correctionData, error: correctionError } = await supabase
+      .from("activity_corrections")
+      .insert({
+        user_id: appUser.id,
+        event_id: eventId,
+        correction_type: resolveImportedPendingCorrectionType(finalChangedFields),
+        correction_status: "applied",
+        changed_fields: finalChangedFields,
+        previous_event_json: event,
+        new_event_json: updatedEvent,
+        previous_impact_events_json: [],
+        previous_daily_aggregates_json: [],
+        previous_current_snapshots_json: [],
+        recalculation_result_json: correctionRecalculationResult,
+        reason: getImportedPendingPatchReviewReason(body),
+        source: "api_patch",
+      })
+      .select()
+      .single();
+
+    if (correctionError || !correctionData) {
+      return NextResponse.json(
+        {
+          ok: false,
+          status: "updated_imported_pending_audit_failed",
+          endpoint: ENDPOINT,
+          eventId,
+          error:
+            correctionError?.message ??
+            "Imported_pending event was updated, but correction audit row was not created.",
+          warning:
+            "The activity event was already updated. Create or repair the missing activity_corrections audit row before relying on this event for lifecycle debugging.",
+          changedFields: finalChangedFields,
+          event: summarizeActivityEvent(updatedEvent),
+          rawSignal: summarizeRawSignal(rawSignal),
+          impactEvents: [],
+          dailyAggregates: [],
+          currentSnapshots: [],
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       ok: true,
       status: "updated_imported_pending",
       endpoint: ENDPOINT,
       eventId,
       changedFields: finalChangedFields,
+      correction: correctionData,
+      audit: {
+        correctionCreated: true,
+        correctionType: correctionData.correction_type,
+        correctionStatus: correctionData.correction_status,
+        previousImpactEventsCount: 0,
+        previousDailyAggregatesCount: 0,
+        previousCurrentSnapshotsCount: 0,
+        recalculationSkipped: true,
+      },
       event: summarizeActivityEvent(updatedEvent),
       rawSignal: summarizeRawSignal(rawSignal),
       reviewReadiness: buildReviewReadiness({
@@ -1330,6 +1435,7 @@ export async function PATCH(
     );
   }
 }
+
 
 
 
