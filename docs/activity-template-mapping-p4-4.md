@@ -273,3 +273,130 @@ Recommended next tasks:
 ## 13. Completion status
 
 P4.4.6 is done when this document is committed and pushed.
+
+---
+
+## P4.5 Imported pending template/type correction before confirm/reject
+
+Date: 2026-05-15  
+Scope: imported_pending events created from raw_activity_signals.
+
+### P4.5.1 — Template/type/legacy PATCH smoke test
+
+Status: DONE / SMOKE TESTED / COMMITTED
+
+Verified:
+- imported_pending event can preserve already attached:
+  - activity_template_id
+  - activity_type_id
+  - template_id / legacyTemplateId
+- PATCH with the same activityTemplateId returns no_changes when no reviewNote is provided.
+- PATCH with the same activityTemplateId + activityTypeId + legacyTemplateId returns no_changes.
+- invalid activityTypeId is rejected with HTTP 400.
+- event remains imported_pending and reviewable after no-change PATCH.
+- no impacts, daily aggregates or current snapshots are created during PATCH.
+
+Important note:
+- PATCH with reviewNote is expected to change description/comment, therefore it is not a pure no_changes case.
+
+### P4.5.2 — Confirm after manual template correction
+
+Status: DONE / SMOKE TESTED
+
+Verified flow:
+- raw api_webhook signal without high-confidence template match
+- promote to imported_pending without template/type/legacy
+- PATCH imported_pending with activityTemplateId
+- mapper attaches:
+  - activity_template_id
+  - activity_type_id
+  - template_id / legacyTemplateId
+- confirm converts imported_pending to completed
+- template/type/legacy values are preserved after confirm
+- impact processor uses matched rules after confirm
+- impact events are created only after confirm
+- debug trace shows impactsFound = true
+
+Known observation:
+- a repeated confirm returns already_confirmed and skips duplicate impact processing when impact events already exist.
+- in that already_confirmed response, dailyAggregates/currentSnapshots may be 0 because duplicate processing is skipped; this is expected.
+
+### P4.5.3 — Reject after manual template correction
+
+Status: DONE / SMOKE TESTED
+
+Verified flow:
+- raw api_webhook signal without high-confidence template match
+- promote to imported_pending without template/type/legacy
+- PATCH imported_pending with activityTemplateId
+- mapper attaches:
+  - activity_template_id
+  - activity_type_id
+  - template_id / legacyTemplateId
+- reject archives imported_pending event
+- event status becomes archived
+- processingStatus becomes skipped
+- event is removed from default imported_pending review queue
+- no impacts, daily aggregates or current snapshots are created
+- debug trace shows impactsFound = false
+
+### P4.5.4 — Reject response legacyTemplateId fix
+
+Status: DONE / SMOKE TESTED / COMMITTED
+
+Problem:
+- reject response already had activityTemplateId and activityTypeId,
+  but legacyTemplateId could be null because the real DB column is template_id,
+  not legacy_template_id.
+
+Fix:
+- src/app/api/activity/intake/events/[id]/reject/route.ts
+- summarizeActivityEvent now reads legacyTemplateId from:
+  - legacy_template_id
+  - legacyTemplateId
+  - template_id
+  - templateId
+
+Verified:
+- POST /api/activity/intake/events/[id]/reject on already archived event returns:
+  - status = already_rejected
+  - event.status = archived
+  - event.legacyTemplateId = expected template_id
+- no impacts, daily aggregates or current snapshots are created.
+
+### Current conclusion after P4.5.4
+
+The imported_pending review lifecycle now supports:
+
+1. Raw external/imported signal intake.
+2. Promotion to imported_pending.
+3. Automatic or explicit template mapping during promote.
+4. Manual template/type correction before confirm/reject.
+5. Confirm after correction:
+   - completed event
+   - template/type preserved
+   - impacts only after confirm
+6. Reject after correction:
+   - archived event
+   - skipped processing
+   - no impacts
+7. Debug trace can show linkage, lifecycle metadata and impact summaries.
+
+### What not to do yet
+
+Do not start full UX/design work yet.
+Do not build mobile quick capture yet.
+Do not use AI for every imported event by default.
+Do not auto-complete external/imported signals.
+Do not move to Value Object State Layer before review/correction of mapped imported events is stable.
+
+### Next suggested step
+
+P4.5.5 is complete when this documentation update is committed.
+
+After that, the next technical block should be selected from:
+- P4.6: cleanup/stabilization of imported_pending review queue,
+- P4.6: correction/audit rows for imported_pending template corrections,
+- P4.6: stricter debug trace for template correction lifecycle,
+- or move to the next planned Activity Recording Layer block if no additional review-lifecycle gaps remain.
+
