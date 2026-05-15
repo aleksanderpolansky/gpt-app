@@ -136,6 +136,8 @@ function summarizeActivityEvent(row: ActivityEventRow) {
     legacyTemplateId: getFirstNullableString(row, [
       "legacy_template_id",
       "legacyTemplateId",
+      "template_id",
+      "templateId",
     ]),
     createdAt: getFirstNullableString(row, ["created_at", "createdAt"]),
     updatedAt: getFirstNullableString(row, ["updated_at", "updatedAt"]),
@@ -369,3 +371,4 @@ export async function POST(
     );
   }
 }
+
