@@ -12,8 +12,11 @@ import {
 import {
   createRawActivitySignal,
   type RawActivitySignalPrivacyScope,
+  type RawActivitySignalRow,
+  type RawActivitySignalSourceType,
   type RawActivitySignalTrustLevel,
 } from "../../../../../lib/activity/rawActivitySignals";
+import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +34,13 @@ type ActivityIntakeBody = {
   normalizedPreview?: unknown;
   metadata?: unknown;
 };
+
+type ExistingRawSignalMatch = {
+  signal: RawActivitySignalRow;
+  matchedBy: "idempotency_key" | "source_event_id";
+};
+
+const ENDPOINT = "/api/activity/intake";
 
 const ALLOWED_TRUST_LEVELS = new Set([
   "untrusted",
@@ -108,6 +118,22 @@ function normalizeOptionalIsoDate(value: unknown) {
   return date.toISOString();
 }
 
+function summarizeRawSignal(rawSignal: RawActivitySignalRow) {
+  return {
+    id: rawSignal.id,
+    sourceType: rawSignal.source_type,
+    sourceEventId: rawSignal.source_event_id,
+    idempotencyKey: rawSignal.idempotency_key,
+    trustLevel: rawSignal.trust_level,
+    privacyScope: rawSignal.privacy_scope,
+    processingStatus: rawSignal.processing_status,
+    occurredAt: rawSignal.occurred_at,
+    measuredAt: rawSignal.measured_at,
+    outputEventId: rawSignal.output_event_id,
+    createdAt: rawSignal.created_at,
+  };
+}
+
 function buildNormalizedPreview(params: {
   body: ActivityIntakeBody;
   decision: ReturnType<typeof decideActivityIntake>;
@@ -145,10 +171,63 @@ function buildNormalizedPreview(params: {
   };
 }
 
+async function findExistingRawSignal(params: {
+  userId: string;
+  sourceType: RawActivitySignalSourceType;
+  sourceEventId: string | null;
+  idempotencyKey: string | null;
+}): Promise<ExistingRawSignalMatch | null> {
+  const { userId, sourceType, sourceEventId, idempotencyKey } = params;
+
+  if (idempotencyKey) {
+    const { data, error } = await supabase
+      .from("raw_activity_signals")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("source_type", sourceType)
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (data) {
+      return {
+        signal: data as RawActivitySignalRow,
+        matchedBy: "idempotency_key",
+      };
+    }
+  }
+
+  if (sourceEventId) {
+    const { data, error } = await supabase
+      .from("raw_activity_signals")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("source_type", sourceType)
+      .eq("source_event_id", sourceEventId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (data) {
+      return {
+        signal: data as RawActivitySignalRow,
+        matchedBy: "source_event_id",
+      };
+    }
+  }
+
+  return null;
+}
+
 export async function GET() {
   return NextResponse.json({
     ok: true,
-    endpoint: "/api/activity/intake",
+    endpoint: ENDPOINT,
     method: "POST",
     enabled: ACTIVITY_RECORDING_ENABLED,
     status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
@@ -167,6 +246,11 @@ export async function GET() {
         adapter: "example",
       },
     },
+    duplicateHandling: {
+      status: "P4.2.7",
+      behavior:
+        "Repeated external signals with the same sourceEventId or idempotencyKey return a controlled duplicate response instead of a server error.",
+    },
     supportedSourceTypes: [
       "manual_chat",
       "manual_form",
@@ -183,7 +267,7 @@ export async function GET() {
       "unknown",
     ],
     note:
-      "P4.2.5 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+      "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
   });
 }
 
@@ -256,7 +340,7 @@ export async function POST(request: Request) {
   const privacyScope = normalizePrivacyScope(body.privacyScope, "private");
 
   const rawPayload = {
-    endpoint: "/api/activity/intake",
+    endpoint: ENDPOINT,
     sourceType: rawSourceType,
     sourceEventId,
     idempotencyKey,
@@ -289,8 +373,8 @@ export async function POST(request: Request) {
     processingStatus: decision.defaultRawProcessingStatus,
     metadata: {
       ...(asRecord(body.metadata)),
-      endpoint: "/api/activity/intake",
-      intakeVersion: "P4.2.5",
+      endpoint: ENDPOINT,
+      intakeVersion: "P4.2.7",
       activityEventSource: decision.activityEventSource,
       defaultActivityStatus: decision.defaultActivityStatus,
       requiresHumanReview: decision.requiresHumanReview,
@@ -299,11 +383,56 @@ export async function POST(request: Request) {
   });
 
   if (!rawSignalResult.ok || !rawSignalResult.signal) {
+    try {
+      const existingRawSignal = await findExistingRawSignal({
+        userId: appUser.id,
+        sourceType: rawSourceType,
+        sourceEventId,
+        idempotencyKey,
+      });
+
+      if (existingRawSignal) {
+        return NextResponse.json({
+          ok: true,
+          status: "duplicate",
+          endpoint: ENDPOINT,
+          decision,
+          duplicate: {
+            detected: true,
+            matchedBy: existingRawSignal.matchedBy,
+            originalRawSignalId: existingRawSignal.signal.id,
+            originalProcessingStatus:
+              existingRawSignal.signal.processing_status,
+            insertError: rawSignalResult.error,
+          },
+          rawSignal: summarizeRawSignal(existingRawSignal.signal),
+          activityEvent: null,
+          note:
+            "Duplicate raw activity signal was not inserted. Existing raw signal is returned. No completed activity event was created.",
+        });
+      }
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to inspect duplicate raw activity signal",
+          originalInsertError: rawSignalResult.error,
+          decision,
+          activityEvent: null,
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       {
         ok: false,
         error: rawSignalResult.error ?? "Failed to create raw activity signal",
         decision,
+        activityEvent: null,
       },
       { status: 500 }
     );
@@ -314,23 +443,11 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     status: "raw_signal_received",
-    endpoint: "/api/activity/intake",
+    endpoint: ENDPOINT,
     decision,
-    rawSignal: {
-      id: rawSignal.id,
-      sourceType: rawSignal.source_type,
-      sourceEventId: rawSignal.source_event_id,
-      idempotencyKey: rawSignal.idempotency_key,
-      trustLevel: rawSignal.trust_level,
-      privacyScope: rawSignal.privacy_scope,
-      processingStatus: rawSignal.processing_status,
-      occurredAt: rawSignal.occurred_at,
-      measuredAt: rawSignal.measured_at,
-      outputEventId: rawSignal.output_event_id,
-      createdAt: rawSignal.created_at,
-    },
+    rawSignal: summarizeRawSignal(rawSignal),
     activityEvent: null,
     note:
-      "P4.2.5 stores the raw signal only. Imported/external signals are not completed activities until a later review or adapter flow creates or confirms an activity event.",
+      "P4.2.7 stores the raw signal only. Imported/external signals are not completed activities until a later review or adapter flow creates or confirms an activity event.",
   });
 }
