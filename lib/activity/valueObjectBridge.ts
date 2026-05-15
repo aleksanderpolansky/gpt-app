@@ -284,6 +284,56 @@ async function readValueObjectOwnerContext(
   };
 }
 
+
+async function readExistingStateDeltaForMapping(
+  supabase: SupabaseClient,
+  eventId: string,
+  valueObjectId: string,
+  metricKey: string
+): Promise<{
+  stateDeltaId: string | null;
+  valueObjectInstanceId: string | null;
+  errorMessage: string | null;
+}> {
+  const { data, error } = await supabase
+    .from("value_object_state_deltas")
+    .select("id, value_object_instance_id")
+    .eq("event_id", eventId)
+    .eq("value_object_id", valueObjectId)
+    .eq("metric_key", metricKey)
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  if (error) {
+    return {
+      stateDeltaId: null,
+      valueObjectInstanceId: null,
+      errorMessage: error.message,
+    };
+  }
+
+  const rows =
+    (data as Array<{
+      id: string;
+      value_object_instance_id: string | null;
+    }> | null) ?? [];
+
+  const firstRow = rows[0] ?? null;
+
+  if (!firstRow) {
+    return {
+      stateDeltaId: null,
+      valueObjectInstanceId: null,
+      errorMessage: null,
+    };
+  }
+
+  return {
+    stateDeltaId: firstRow.id,
+    valueObjectInstanceId: firstRow.value_object_instance_id,
+    errorMessage: null,
+  };
+}
 async function readExistingNumericValue(
   supabase: SupabaseClient,
   tableName: "value_object_daily_aggregates" | "value_object_state_snapshots",
@@ -405,6 +455,29 @@ export async function processValueObjectBridgeForActivityEvent(
       continue;
     }
 
+    const existingStateDelta = await readExistingStateDeltaForMapping(
+      supabase,
+      event.id,
+      mapping.valueObjectId,
+      mapping.metricKey
+    );
+
+    if (existingStateDelta.errorMessage) {
+      createdItem.skipped = true;
+      createdItem.skipReason = existingStateDelta.errorMessage;
+      result.created.push(createdItem);
+      continue;
+    }
+
+    if (existingStateDelta.stateDeltaId) {
+      createdItem.valueObjectInstanceId =
+        existingStateDelta.valueObjectInstanceId;
+      createdItem.stateDeltaId = existingStateDelta.stateDeltaId;
+      createdItem.skipped = true;
+      createdItem.skipReason = "already_processed_event_value_object_metric";
+      result.created.push(createdItem);
+      continue;
+    }
     const ownerContext = await readValueObjectOwnerContext(
       supabase,
       mapping.valueObjectId
@@ -632,3 +705,4 @@ export async function processValueObjectBridgeForActivityEvent(
 
   return result;
 }
+
