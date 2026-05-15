@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
   }
 
   const allowNonCompletedEvent = getBoolean(body.allowNonCompletedEvent);
-  const createMissingControlledValueObject = getBoolean(
+  const requestedCreateMissingControlledValueObject = getBoolean(
     body.createMissingControlledValueObject
   );
   const allowControlledTextFallback = getBoolean(
@@ -206,12 +206,17 @@ export async function POST(request: NextRequest) {
   );
   const dryRun = getBoolean(body.dryRun);
 
+  const effectiveCreateMissingControlledValueObject = dryRun
+    ? false
+    : requestedCreateMissingControlledValueObject;
+
   const mappingResult =
     await resolveValueObjectMappingsFromRubricatorForActivityEvent({
       supabase,
       eventId,
       allowNonCompletedEvent,
-      createMissingControlledValueObject,
+      createMissingControlledValueObject:
+        effectiveCreateMissingControlledValueObject,
       allowControlledTextFallback,
     });
 
@@ -221,6 +226,9 @@ export async function POST(request: NextRequest) {
         ok: false,
         endpoint: "/api/activity/debug-rubricator-value-object-bridge",
         userId: appUser.id,
+        dryRun,
+        requestedCreateMissingControlledValueObject,
+        effectiveCreateMissingControlledValueObject,
         stage: "rubricator_mapping",
         mappingResult,
       },
@@ -234,6 +242,8 @@ export async function POST(request: NextRequest) {
       endpoint: "/api/activity/debug-rubricator-value-object-bridge",
       userId: appUser.id,
       dryRun,
+      requestedCreateMissingControlledValueObject,
+      effectiveCreateMissingControlledValueObject,
       stage: "rubricator_mapping",
       bridgeExecuted: false,
       mappingResult,
@@ -247,6 +257,8 @@ export async function POST(request: NextRequest) {
       endpoint: "/api/activity/debug-rubricator-value-object-bridge",
       userId: appUser.id,
       dryRun,
+      requestedCreateMissingControlledValueObject,
+      effectiveCreateMissingControlledValueObject,
       stage: "dry_run",
       bridgeExecuted: false,
       mappingResult,
@@ -268,6 +280,8 @@ export async function POST(request: NextRequest) {
     endpoint: "/api/activity/debug-rubricator-value-object-bridge",
     userId: appUser.id,
     dryRun,
+    requestedCreateMissingControlledValueObject,
+    effectiveCreateMissingControlledValueObject,
     stage: "bridge_executed",
     bridgeExecuted: true,
     mappingResult,
