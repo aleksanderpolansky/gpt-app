@@ -4,6 +4,10 @@ import {
   ACTIVITY_RECORDING_ENABLED,
 } from "../../../../../../../../lib/activity/activityRecordingConfig";
 import { getActivityUserContext } from "../../../../../../../../lib/activity/activityUserContext";
+import {
+  mapImportedActivityToTemplate,
+  type ImportedActivityTemplateMappingResult,
+} from "../../../../../../../../lib/activity/importedActivityTemplateMapping";
 import { decideActivityIntake } from "../../../../../../../../lib/activity/activitySourceIntake";
 import {
   markRawActivitySignalProcessed,
@@ -29,6 +33,14 @@ type PromoteRawSignalBody = {
   endTime?: unknown;
   durationMinutes?: unknown;
   reviewNote?: unknown;
+  activityTemplateId?: unknown;
+  activity_template_id?: unknown;
+  activityTypeId?: unknown;
+  activity_type_id?: unknown;
+  templateId?: unknown;
+  template_id?: unknown;
+  legacyTemplateId?: unknown;
+  legacy_template_id?: unknown;
 };
 
 type ActivityEventRow = {
@@ -130,7 +142,10 @@ function normalizeOptionalIsoDate(value: unknown) {
   return date.toISOString();
 }
 
-function calculateDurationMinutes(startedAt: string | null, endedAt: string | null) {
+function calculateDurationMinutes(
+  startedAt: string | null,
+  endedAt: string | null
+) {
   if (!startedAt || !endedAt) {
     return null;
   }
@@ -184,6 +199,47 @@ function summarizeActivityEvent(event: ActivityEventRow) {
     templateId: event.template_id,
     createdAt: event.created_at,
     updatedAt: event.updated_at,
+  };
+}
+
+function summarizeTemplateMapping(
+  templateMapping: ImportedActivityTemplateMappingResult
+) {
+  return {
+    ok: templateMapping.ok,
+    matched: templateMapping.matched,
+    matchType: templateMapping.matchType,
+    confidence: templateMapping.confidence,
+    reason: templateMapping.reason,
+    activityTemplateId: templateMapping.activityTemplateId,
+    activityTypeId: templateMapping.activityTypeId,
+    legacyTemplateId: templateMapping.legacyTemplateId,
+    selectedTemplate: templateMapping.selectedTemplate
+      ? {
+          templateId: templateMapping.selectedTemplate.templateId,
+          activityTypeId: templateMapping.selectedTemplate.activityTypeId,
+          legacyTemplateId: templateMapping.selectedTemplate.legacyTemplateId,
+          slug: templateMapping.selectedTemplate.slug,
+          title: templateMapping.selectedTemplate.title,
+          shortTitle: templateMapping.selectedTemplate.shortTitle,
+          templateGroup: templateMapping.selectedTemplate.templateGroup,
+          templateScope: templateMapping.selectedTemplate.templateScope,
+          score: templateMapping.selectedTemplate.score,
+          reasons: templateMapping.selectedTemplate.reasons,
+        }
+      : null,
+    candidates: templateMapping.candidates.map((candidate) => ({
+      templateId: candidate.templateId,
+      activityTypeId: candidate.activityTypeId,
+      legacyTemplateId: candidate.legacyTemplateId,
+      slug: candidate.slug,
+      title: candidate.title,
+      shortTitle: candidate.shortTitle,
+      templateGroup: candidate.templateGroup,
+      templateScope: candidate.templateScope,
+      score: candidate.score,
+      reasons: candidate.reasons,
+    })),
   };
 }
 
@@ -310,14 +366,21 @@ function resolvePromotedDescription(params: {
 function buildInputText(params: {
   rawSignal: RawActivitySignalRow;
   title: string;
+  templateMapping: ImportedActivityTemplateMappingResult;
 }) {
-  const { rawSignal, title } = params;
+  const { rawSignal, title, templateMapping } = params;
 
   return [
     title,
     `rawSignal:${rawSignal.id}`,
     rawSignal.source_type,
     rawSignal.source_event_id ? `sourceEvent:${rawSignal.source_event_id}` : null,
+    templateMapping.activityTemplateId
+      ? `activityTemplate:${templateMapping.activityTemplateId}`
+      : null,
+    templateMapping.activityTypeId
+      ? `activityType:${templateMapping.activityTypeId}`
+      : null,
   ]
     .filter(Boolean)
     .join(" | ");
@@ -365,7 +428,7 @@ export async function GET() {
     enabled: ACTIVITY_RECORDING_ENABLED,
     status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
     message: ACTIVITY_RECORDING_ENABLED
-      ? "Promote one raw activity signal into an imported_pending activity_event without creating impacts."
+      ? "Promote one raw activity signal into an imported_pending activity_event without creating impacts. P4.4.x template mapping may attach activity_template_id/activity_type_id before review."
       : ACTIVITY_RECORDING_DISABLED_MESSAGE,
     behavior: {
       createsActivityEvent: true,
@@ -374,6 +437,7 @@ export async function GET() {
       createsImpacts: false,
       createsDailyAggregates: false,
       createsCurrentSnapshots: false,
+      canAttachTemplateMapping: true,
       duplicatePromotion:
         "If the raw signal already has output_event_id, the existing event is returned.",
     },
@@ -382,6 +446,8 @@ export async function GET() {
       comment: "Needs review before completion",
       durationMinutes: 10,
       reviewNote: "Promoted from raw API signal",
+      activityTemplateId: "optional-explicit-template-id",
+      activityTypeId: "optional-explicit-activity-type-id",
     },
   });
 }
@@ -548,6 +614,33 @@ export async function POST(request: Request, context: RouteContext) {
     payload,
   });
 
+  let templateMapping: ImportedActivityTemplateMappingResult;
+
+  try {
+    templateMapping = await mapImportedActivityToTemplate({
+      userId: appUser.id,
+      rawSignal,
+      title,
+      payload,
+      body: asRecord(body),
+      normalizedPreview,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        endpoint: ENDPOINT,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to map imported activity to template.",
+        rawSignal: summarizeRawSignal(rawSignal),
+        activityEvent: null,
+      },
+      { status: 500 }
+    );
+  }
+
   const nowIso = new Date().toISOString();
 
   const { data: createdEventData, error: createEventError } = await supabase
@@ -557,13 +650,14 @@ export async function POST(request: Request, context: RouteContext) {
       performed_by_actor_id: personActor?.id ?? null,
       acting_as_actor_id: personActor?.id ?? null,
       acting_for_actor_id: personActor?.id ?? null,
-      activity_type_id: null,
-      activity_template_id: null,
-      template_id: null,
+      activity_type_id: templateMapping.activityTypeId,
+      activity_template_id: templateMapping.activityTemplateId,
+      template_id: templateMapping.legacyTemplateId,
       event_code: null,
       input_text: buildInputText({
         rawSignal,
         title,
+        templateMapping,
       }),
       title,
       description,
@@ -577,6 +671,7 @@ export async function POST(request: Request, context: RouteContext) {
       metadata_json: {
         parser: "raw_intake_promote_v1",
         promotionFlow: "P4.2.10",
+        templateMappingFlow: "P4.4.2",
         promotedAt: nowIso,
         rawSignalId: rawSignal.id,
         rawSignalSourceType: rawSignal.source_type,
@@ -592,6 +687,7 @@ export async function POST(request: Request, context: RouteContext) {
         noDailyAggregatesCreated: true,
         noCurrentSnapshotsCreated: true,
         reviewNote,
+        importedTemplateMapping: templateMapping.metadata,
       },
       updated_at: nowIso,
     })
@@ -607,6 +703,7 @@ export async function POST(request: Request, context: RouteContext) {
           createEventError?.message ??
           "Failed to create imported_pending activity event.",
         rawSignal: summarizeRawSignal(rawSignal),
+        templateMapping: summarizeTemplateMapping(templateMapping),
         activityEvent: null,
       },
       { status: 500 }
@@ -623,11 +720,16 @@ export async function POST(request: Request, context: RouteContext) {
       promotion: {
         endpoint: ENDPOINT,
         promotionFlow: "P4.2.10",
+        templateMappingFlow: "P4.4.2",
         promotedAt: nowIso,
         activityEventId: createdEvent.id,
         activityStatus: createdEvent.status,
         activityProcessingStatus: createdEvent.processing_status,
         activityEventSource: createdEvent.source,
+        activityTemplateId: createdEvent.activity_template_id,
+        activityTypeId: createdEvent.activity_type_id,
+        legacyTemplateId: createdEvent.template_id,
+        templateMapping: summarizeTemplateMapping(templateMapping),
         noImpactsCreated: true,
       },
       originalIntake: normalizedPreview.intake ?? null,
@@ -644,6 +746,7 @@ export async function POST(request: Request, context: RouteContext) {
           "Activity event was created, but raw signal could not be marked as processed.",
         rawSignalUpdateError: processedSignalResult.error,
         rawSignal: summarizeRawSignal(rawSignal),
+        templateMapping: summarizeTemplateMapping(templateMapping),
         activityEvent: summarizeActivityEvent(createdEvent),
         impactEvents: [],
         dailyAggregates: [],
@@ -658,11 +761,12 @@ export async function POST(request: Request, context: RouteContext) {
     status: "promoted_to_imported_pending",
     endpoint: ENDPOINT,
     rawSignal: summarizeRawSignal(processedSignalResult.signal),
+    templateMapping: summarizeTemplateMapping(templateMapping),
     activityEvent: summarizeActivityEvent(createdEvent),
     impactEvents: [],
     dailyAggregates: [],
     currentSnapshots: [],
     note:
-      "Raw activity signal was promoted into imported_pending activity_event. No completed activity, impacts, daily aggregates or current snapshots were created.",
+      "Raw activity signal was promoted into imported_pending activity_event. Template mapping may attach activity_template_id/activity_type_id, but no completed activity, impacts, daily aggregates or current snapshots were created.",
   });
 }
