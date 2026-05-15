@@ -820,13 +820,13 @@ function buildImpactSummary(rows: GenericRow[]) {
   >();
 
   for (const row of rows) {
-    const targetType = getStringField(row, "target_type");
-    const targetKey = getStringField(row, "target_key");
-    const metric = getStringField(row, "metric");
-    const direction = getStringField(row, "direction");
-    const unit = getStringField(row, "unit");
+    const targetType = getFirstStringField(row, ["impact_target_type", "target_type"]);
+    const targetKey = getFirstStringField(row, ["impact_target_key", "target_key"]);
+    const metric = getFirstStringField(row, ["impact_metric", "metric"]);
+    const direction = getFirstStringField(row, ["impact_direction", "direction"]);
+    const unit = getFirstStringField(row, ["impact_unit", "unit"]);
     const key = JSON.stringify([targetType, targetKey, metric, direction, unit]);
-    const numericValue = getNumberField(row, "value_numeric");
+    const numericValue = getFirstNumberField(row, ["impact_value_numeric", "value_numeric"]);
     const eventId = getStringField(row, "event_id");
     const impactId = getId(row);
     const createdAt = getStringField(row, "created_at");
@@ -1447,4 +1447,5 @@ export async function GET(request: Request) {
     );
   }
 }
+
 
