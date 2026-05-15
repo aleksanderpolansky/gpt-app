@@ -278,6 +278,7 @@ function summarizeActivityEvent(row: ActivityEventQueueRow) {
       "legacy_template_id",
       "legacyTemplateId",
     ]),
+    templateMapping: summarizeImportedTemplateMapping(row),
     createdAt: getFirstNullableString(row, ["created_at", "createdAt"]),
     updatedAt: getFirstNullableString(row, ["updated_at", "updatedAt"]),
   };
@@ -293,6 +294,85 @@ function normalizeFullActivityEvent(row: ActivityEventQueueRow) {
   };
 }
 
+function p447AsRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  return {};
+}
+
+function p447StringFromRecord(
+  record: Record<string, unknown>,
+  key: string
+): string | null {
+  const value = record[key];
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function p447NumberFromRecord(
+  record: Record<string, unknown>,
+  key: string
+): number | null {
+  const value = record[key];
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function p447BooleanFromRecord(
+  record: Record<string, unknown>,
+  key: string
+): boolean | null {
+  const value = record[key];
+
+  return typeof value === "boolean" ? value : null;
+}
+
+function summarizeImportedTemplateMapping(row: GenericRow) {
+  const metadata = p447AsRecord(row.metadata_json ?? row.metadataJson);
+  const mapping = p447AsRecord(metadata.importedTemplateMapping);
+
+  if (Object.keys(mapping).length === 0) {
+    return null;
+  }
+
+  return {
+    mapper: p447StringFromRecord(mapping, "mapper"),
+    matched: p447BooleanFromRecord(mapping, "matched"),
+    matchType: p447StringFromRecord(mapping, "matchType"),
+    confidence: p447NumberFromRecord(mapping, "confidence"),
+    reason: p447StringFromRecord(mapping, "reason"),
+    selectedTemplateId: p447StringFromRecord(mapping, "selectedTemplateId"),
+    selectedTemplateTitle: p447StringFromRecord(mapping, "selectedTemplateTitle"),
+    selectedTemplateSlug: p447StringFromRecord(mapping, "selectedTemplateSlug"),
+    selectedActivityTypeId: p447StringFromRecord(mapping, "selectedActivityTypeId"),
+    selectedLegacyTemplateId: p447StringFromRecord(mapping, "selectedLegacyTemplateId"),
+    explicitActivityTemplateId: p447StringFromRecord(mapping, "explicitActivityTemplateId"),
+    explicitLegacyTemplateId: p447StringFromRecord(mapping, "explicitLegacyTemplateId"),
+    explicitActivityTypeId: p447StringFromRecord(mapping, "explicitActivityTypeId"),
+    candidatesCount: p447NumberFromRecord(mapping, "candidatesCount"),
+    searchTextPreview: p447StringFromRecord(mapping, "searchTextPreview"),
+  };
+}
 export async function GET(request: Request) {
   if (!ACTIVITY_RECORDING_ENABLED) {
     return NextResponse.json(
@@ -436,4 +516,5 @@ export async function GET(request: Request) {
     );
   }
 }
+
 
