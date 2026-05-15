@@ -4,6 +4,7 @@ import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
   ACTIVITY_RECORDING_ENABLED,
 } from "../../../../../lib/activity/activityRecordingConfig";
+import { normalizeActivityEventSourceType } from "../../../../../lib/activity/activitySourceIntake";
 import { normalizeActivityStatus } from "../../../../../lib/activity/activityLifecycle";
 import {
   getDurationMs,
@@ -123,26 +124,6 @@ type ResolvedTiming = {
   durationMinutes: number | null;
 };
 
-const ALLOWED_SOURCE_TYPES = new Set([
-  "manual",
-  "chat_ai",
-  "calendar",
-  "booking",
-  "rule",
-  "import",
-  "system",
-  "manual_form",
-  "manual_chat",
-  "voice_input",
-  "app_action",
-  "system_event",
-  "api_webhook",
-  "nfc_sensor",
-  "wearable_import",
-  "calendar_import",
-  "ai_suggested",
-  "legacy_code",
-]);
 
 
 function asString(value: unknown): string | null {
@@ -173,13 +154,10 @@ function asNumber(value: unknown): number | null {
 }
 
 function normalizeSourceType(value: unknown, fallback: string) {
-  const sourceType = asString(value) ?? fallback;
-
-  if (ALLOWED_SOURCE_TYPES.has(sourceType)) {
-    return sourceType;
-  }
-
-  return fallback;
+  return normalizeActivityEventSourceType(
+    value,
+    normalizeActivityEventSourceType(fallback, "manual_form")
+  );
 }
 
 function normalizeRecordStatus(value: unknown, fallback: string) {
@@ -1329,4 +1307,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
 
