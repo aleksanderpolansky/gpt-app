@@ -6,6 +6,9 @@ import {
 import { getActivityUserContext } from "../../../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../../../lib/supabase";
 
+type GenericRow = Record<string, unknown>;
+
+
 export const dynamic = "force-dynamic";
 
 type ResponseMode = "summary" | "full";
