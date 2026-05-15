@@ -784,8 +784,20 @@ function compactCorrection(row: GenericRow) {
   return {
     id: getId(row),
     eventId: getStringField(row, "event_id"),
-    correctionType: getStringField(row, "correction_type"),
-    status: getStringField(row, "status"),
+    correctionType: getFirstStringField(row, [
+      "correction_type",
+      "correctionType",
+    ]),
+    correctionStatus: getFirstStringField(row, [
+      "correction_status",
+      "correctionStatus",
+      "status",
+    ]),
+    status: getFirstStringField(row, [
+      "correction_status",
+      "correctionStatus",
+      "status",
+    ]),
     changedFieldNames: getChangedFieldNames(row.changed_fields),
     createdAt: getStringField(row, "created_at"),
     updatedAt: getStringField(row, "updated_at"),
@@ -1447,5 +1459,6 @@ export async function GET(request: Request) {
     );
   }
 }
+
 
 
