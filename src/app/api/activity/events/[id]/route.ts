@@ -15,6 +15,7 @@ import {
 } from "../../../../../../lib/activity/activityImpactProcessor";
 import {
   ACTIVITY_ROLLBACK_ONLY_STATUSES,
+  canTransitionActivityStatus,
   isRollbackOnlyActivityStatus,
   shouldExcludeActivityStatusFromTimeline,
 } from "../../../../../../lib/activity/activityLifecycle";
@@ -2311,5 +2312,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     },
   });
 }
+
 
 
