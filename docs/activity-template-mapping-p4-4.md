@@ -400,3 +400,118 @@ After that, the next technical block should be selected from:
 - P4.6: stricter debug trace for template correction lifecycle,
 - or move to the next planned Activity Recording Layer block if no additional review-lifecycle gaps remain.
 
+
+---
+
+## P4.6.2-P4.6.3 Imported pending edit audit stabilization
+
+### P4.6.2 — Audit rows for imported_pending PATCH edits
+
+Status: completed, smoke-tested, committed.
+
+Commit:
+
+```text
+905e350 Add audit rows for imported pending event edits
+```
+
+Implemented behavior:
+
+- PATCH `/api/activity/intake/events/[id]` now creates an `activity_corrections` audit row when an `imported_pending` event is edited before confirm/reject.
+- The event remains `imported_pending`.
+- The event remains reviewable:
+  - `canConfirm: true`
+  - `canReject: true`
+  - `canEditBeforeConfirm: true`
+- No impact events are created during imported_pending edit.
+- No daily aggregates are created during imported_pending edit.
+- No current snapshots are created during imported_pending edit.
+- Recalculation is explicitly skipped because the event is still not confirmed/completed.
+
+Confirmed by smoke test:
+
+```text
+patch 200: true
+patch updated: true
+patch changed fields present: true
+correction object returned: true
+audit correctionCreated true: true
+audit recalculation skipped: true
+correction status applied: true
+correction changed fields include duration: true
+no impacts on patch: true
+detail still imported_pending: true
+detail still reviewable: true
+debug correction found: true
+debug health correctionFound: true
+debug impacts not found: true
+```
+
+Test IDs:
+
+```text
+rawSignalId: d2db8f2c-b09a-420c-b967-ebd21f484e57
+eventId: 507a2319-01c7-4710-8ddd-392236d3297a
+correctionId: a2463d69-427a-443f-93d6-f1d21386046c
+```
+
+### P4.6.3 — Debug trace correction status visibility
+
+Status: completed, smoke-tested, committed.
+
+Commit:
+
+```text
+c649ae9 Expose correction status in activity debug trace
+```
+
+Implemented behavior:
+
+- `GET /api/activity/debug-trace?eventId=...&mode=summary` now exposes correction status in compact correction summary.
+- The returned correction object includes `correctionStatus`.
+- The returned correction object also includes legacy-compatible `status`.
+- This fixes the previous situation where `status` was `null` even though the underlying audit row was applied.
+
+Confirmed by smoke test:
+
+```text
+debug trace 200: true
+debug trace ok: true
+correction found: true
+correctionStatus applied: true
+legacy status also applied: true
+changed fields preserved: true
+compact trace still safe: true
+```
+
+Important safety rule:
+
+```text
+Summary debug trace must remain compact and safe.
+It must not expose:
+- raw payload
+- audit snapshots
+- recalculation JSON
+```
+
+### Current state after P4.6.3
+
+The imported activity lifecycle currently supports:
+
+```text
+external/API/NFC/wearable/calendar/app signal
+-> raw_activity_signal
+-> duplicate OR ignored OR promoted
+-> activity_event(status: imported_pending)
+-> optional edit before review
+-> activity_corrections audit row for imported_pending edits
+-> reject OR confirm
+-> reject: archived/skipped, no impacts
+-> confirm: completed/processed, impacts created only after confirm
+```
+
+### Recommended next technical choice
+
+Proceed to P4.6.5 only if a concrete gap is found. Otherwise move to the next planned Activity Recording Layer block.
+
+P4.6.4 is complete when this documentation update is committed.
