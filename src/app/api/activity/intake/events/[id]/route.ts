@@ -612,6 +612,392 @@ function summarizeImportedTemplateMapping(row: GenericRow) {
     searchTextPreview: p447StringFromRecord(mapping, "searchTextPreview"),
   };
 }
+type P451ActivityTemplateRow = {
+  id: string;
+  slug: string | null;
+  title: string | null;
+  short_title: string | null;
+  template_group: string | null;
+  template_scope: string | null;
+  owner_user_id: string | null;
+  status: string | null;
+  is_active: boolean | null;
+  default_activity_type_id: string | null;
+  legacy_activity_code_template_id: string | null;
+};
+
+type P451ActivityTypeRow = {
+  id: string;
+  code: string | null;
+  title: string | null;
+  status: string | null;
+};
+
+type P451TemplateCorrectionPatchResult =
+  | {
+      ok: true;
+      update: GenericRow;
+      changedFields: string[];
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
+function p451HasOwnProperty(object: object, key: string) {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function p451BodyHasAnyKey(
+  body: PatchImportedEventBody,
+  keys: string[]
+): boolean {
+  const record = body as Record<string, unknown>;
+
+  return keys.some((key) => p451HasOwnProperty(record, key));
+}
+
+function p451BodyString(
+  body: PatchImportedEventBody,
+  keys: string[]
+): string | null {
+  const record = body as Record<string, unknown>;
+
+  for (const key of keys) {
+    if (!p451HasOwnProperty(record, key)) {
+      continue;
+    }
+
+    const value = asString(record[key]);
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function p451CurrentString(row: GenericRow, keys: string[]): string | null {
+  return getFirstNullableString(row, keys);
+}
+
+function p451Unique(values: string[]) {
+  return Array.from(new Set(values));
+}
+
+function p451CanUseTemplate(template: P451ActivityTemplateRow, userId: string) {
+  return template.template_scope === "system" || template.owner_user_id === userId;
+}
+
+async function p451LoadTemplateById(params: {
+  templateId: string;
+  userId: string;
+}): Promise<P451ActivityTemplateRow | null> {
+  const { templateId, userId } = params;
+
+  const { data, error } = await supabase
+    .from("activity_templates")
+    .select("*")
+    .eq("id", templateId)
+    .eq("status", "active")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const template = (data as P451ActivityTemplateRow | null) ?? null;
+
+  if (!template) {
+    return null;
+  }
+
+  return p451CanUseTemplate(template, userId) ? template : null;
+}
+
+async function p451LoadTemplateByLegacyId(params: {
+  legacyTemplateId: string;
+  userId: string;
+}): Promise<P451ActivityTemplateRow | null> {
+  const { legacyTemplateId, userId } = params;
+
+  const { data, error } = await supabase
+    .from("activity_templates")
+    .select("*")
+    .eq("legacy_activity_code_template_id", legacyTemplateId)
+    .eq("status", "active")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const template = (data as P451ActivityTemplateRow | null) ?? null;
+
+  if (!template) {
+    return null;
+  }
+
+  return p451CanUseTemplate(template, userId) ? template : null;
+}
+
+async function p451LoadActivityTypeById(
+  activityTypeId: string
+): Promise<P451ActivityTypeRow | null> {
+  const { data, error } = await supabase
+    .from("activity_types")
+    .select("id, code, title, status")
+    .eq("id", activityTypeId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const activityType = (data as P451ActivityTypeRow | null) ?? null;
+
+  if (!activityType) {
+    return null;
+  }
+
+  if (activityType.status && activityType.status !== "active") {
+    return null;
+  }
+
+  return activityType;
+}
+
+async function buildTemplateCorrectionPatch(params: {
+  userId: string;
+  event: ActivityEventDetailRow;
+  body: PatchImportedEventBody;
+}): Promise<P451TemplateCorrectionPatchResult> {
+  const { userId, event, body } = params;
+
+  const hasTemplatePatch = p451BodyHasAnyKey(body, [
+    "activityTemplateId",
+    "activity_template_id",
+  ]);
+
+  const hasActivityTypePatch = p451BodyHasAnyKey(body, [
+    "activityTypeId",
+    "activity_type_id",
+  ]);
+
+  const hasLegacyTemplatePatch = p451BodyHasAnyKey(body, [
+    "templateId",
+    "template_id",
+    "legacyTemplateId",
+    "legacy_template_id",
+  ]);
+
+  if (!hasTemplatePatch && !hasActivityTypePatch && !hasLegacyTemplatePatch) {
+    return {
+      ok: true,
+      update: {},
+      changedFields: [],
+    };
+  }
+
+  const explicitActivityTemplateId = p451BodyString(body, [
+    "activityTemplateId",
+    "activity_template_id",
+  ]);
+
+  const explicitActivityTypeId = p451BodyString(body, [
+    "activityTypeId",
+    "activity_type_id",
+  ]);
+
+  const explicitLegacyTemplateId = p451BodyString(body, [
+    "templateId",
+    "template_id",
+    "legacyTemplateId",
+    "legacy_template_id",
+  ]);
+
+  if (hasTemplatePatch && !explicitActivityTemplateId) {
+    return {
+      ok: false,
+      error: "activityTemplateId/activity_template_id must be a non-empty string.",
+    };
+  }
+
+  if (hasActivityTypePatch && !explicitActivityTypeId) {
+    return {
+      ok: false,
+      error: "activityTypeId/activity_type_id must be a non-empty string.",
+    };
+  }
+
+  if (hasLegacyTemplatePatch && !explicitLegacyTemplateId) {
+    return {
+      ok: false,
+      error:
+        "templateId/template_id/legacyTemplateId/legacy_template_id must be a non-empty string.",
+    };
+  }
+
+  let selectedTemplate: P451ActivityTemplateRow | null = null;
+
+  if (explicitActivityTemplateId) {
+    selectedTemplate = await p451LoadTemplateById({
+      templateId: explicitActivityTemplateId,
+      userId,
+    });
+
+    if (!selectedTemplate) {
+      return {
+        ok: false,
+        error:
+          "activityTemplateId does not match an active system/user activity template.",
+      };
+    }
+  }
+
+  if (explicitLegacyTemplateId) {
+    const legacyTemplate = await p451LoadTemplateByLegacyId({
+      legacyTemplateId: explicitLegacyTemplateId,
+      userId,
+    });
+
+    if (!legacyTemplate) {
+      return {
+        ok: false,
+        error:
+          "templateId/legacyTemplateId does not match an active system/user activity template.",
+      };
+    }
+
+    if (selectedTemplate && selectedTemplate.id !== legacyTemplate.id) {
+      return {
+        ok: false,
+        error:
+          "activityTemplateId and templateId/legacyTemplateId point to different templates.",
+      };
+    }
+
+    selectedTemplate = legacyTemplate;
+  }
+
+  let selectedActivityTypeId =
+    explicitActivityTypeId ?? selectedTemplate?.default_activity_type_id ?? null;
+
+  if (selectedActivityTypeId) {
+    const activityType = await p451LoadActivityTypeById(selectedActivityTypeId);
+
+    if (!activityType) {
+      return {
+        ok: false,
+        error: "activityTypeId does not match an active activity type.",
+      };
+    }
+  }
+
+  const nextActivityTemplateId = selectedTemplate?.id ?? null;
+  const nextLegacyTemplateId =
+    selectedTemplate?.legacy_activity_code_template_id ??
+    explicitLegacyTemplateId ??
+    null;
+
+  const currentActivityTemplateId = p451CurrentString(event, [
+    "activity_template_id",
+    "activityTemplateId",
+  ]);
+
+  const currentActivityTypeId = p451CurrentString(event, [
+    "activity_type_id",
+    "activityTypeId",
+  ]);
+
+  const currentLegacyTemplateId = p451CurrentString(event, [
+    "template_id",
+    "legacy_template_id",
+    "legacyTemplateId",
+  ]);
+
+  const update: GenericRow = {};
+  const changedFields: string[] = [];
+
+  if (hasTemplatePatch || hasLegacyTemplatePatch) {
+    if (currentActivityTemplateId !== nextActivityTemplateId) {
+      update.activity_template_id = nextActivityTemplateId;
+      changedFields.push("activity_template_id");
+    }
+
+    if (currentLegacyTemplateId !== nextLegacyTemplateId) {
+      update.template_id = nextLegacyTemplateId;
+      changedFields.push("template_id");
+    }
+  }
+
+  if (
+    hasActivityTypePatch ||
+    hasTemplatePatch ||
+    hasLegacyTemplatePatch
+  ) {
+    if (currentActivityTypeId !== selectedActivityTypeId) {
+      update.activity_type_id = selectedActivityTypeId;
+      changedFields.push("activity_type_id");
+    }
+  }
+
+  if (changedFields.length === 0) {
+    return {
+      ok: true,
+      update: {},
+      changedFields: [],
+    };
+  }
+
+  const nowIso = new Date().toISOString();
+  const existingMetadata = p447AsRecord(event.metadata_json ?? event.metadataJson);
+  const previousImportedMapping = p447AsRecord(
+    existingMetadata.importedTemplateMapping
+  );
+
+  update.metadata_json = {
+    ...existingMetadata,
+    templateCorrectionFlow: "P4.5.1",
+    templateCorrectedAt: nowIso,
+    templateCorrectionChangedFields: p451Unique(changedFields),
+    templateCorrectionBefore: {
+      activityTemplateId: currentActivityTemplateId,
+      activityTypeId: currentActivityTypeId,
+      legacyTemplateId: currentLegacyTemplateId,
+    },
+    templateCorrectionAfter: {
+      activityTemplateId: nextActivityTemplateId,
+      activityTypeId: selectedActivityTypeId,
+      legacyTemplateId: nextLegacyTemplateId,
+    },
+    importedTemplateMapping: {
+      ...previousImportedMapping,
+      mapper: previousImportedMapping.mapper ?? "imported_activity_template_mapping_v1",
+      matched: Boolean(nextActivityTemplateId || selectedActivityTypeId),
+      matchType: "manual_review_correction",
+      confidence: 100,
+      selectedTemplateId: nextActivityTemplateId,
+      selectedActivityTypeId,
+      selectedLegacyTemplateId: nextLegacyTemplateId,
+      explicitActivityTemplateId,
+      explicitActivityTypeId,
+      explicitLegacyTemplateId,
+      correctedBeforeConfirm: true,
+      correctedAt: nowIso,
+      correctionFlow: "P4.5.1",
+    },
+  };
+
+  return {
+    ok: true,
+    update,
+    changedFields: p451Unique(changedFields),
+  };
+}
 export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> }
@@ -838,7 +1224,35 @@ export async function PATCH(
       );
     }
 
-    if (patch.changedFields.length === 0) {
+    const templatePatch = await buildTemplateCorrectionPatch({
+      userId: appUser.id,
+      event,
+      body,
+    });
+
+    if (!templatePatch.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          endpoint: ENDPOINT,
+          eventId,
+          error: templatePatch.error,
+          event: summarizeActivityEvent(event),
+        },
+        { status: 400 }
+      );
+    }
+
+    const finalUpdate = {
+      ...patch.update,
+      ...templatePatch.update,
+    };
+
+    const finalChangedFields = Array.from(
+      new Set([...patch.changedFields, ...templatePatch.changedFields])
+    );
+
+    if (finalChangedFields.length === 0) {
       const rawSignal = await loadLinkedRawSignal({
         userId: appUser.id,
         eventId,
@@ -866,7 +1280,7 @@ export async function PATCH(
 
     const { data: updatedEventData, error: updateError } = await supabase
       .from("activity_events")
-      .update(patch.update)
+      .update(finalUpdate)
       .eq("id", eventId)
       .eq("user_id", appUser.id)
       .eq("status", "imported_pending")
@@ -888,7 +1302,7 @@ export async function PATCH(
       status: "updated_imported_pending",
       endpoint: ENDPOINT,
       eventId,
-      changedFields: patch.changedFields,
+      changedFields: finalChangedFields,
       event: summarizeActivityEvent(updatedEvent),
       rawSignal: summarizeRawSignal(rawSignal),
       reviewReadiness: buildReviewReadiness({
@@ -916,5 +1330,6 @@ export async function PATCH(
     );
   }
 }
+
 
 
