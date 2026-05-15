@@ -718,7 +718,9 @@ function compactActivityEvent(row: GenericRow) {
     durationMinutes: getNumberField(row, "duration_minutes"),
     activityTypeId: getStringField(row, "activity_type_id"),
     activityTemplateId: getStringField(row, "activity_template_id"),
-    legacyTemplateId: getStringField(row, "legacy_template_id"),
+    legacyTemplateId:
+      getStringField(row, "template_id") ??
+      getStringField(row, "legacy_template_id"),
     createdAt: getStringField(row, "created_at"),
     updatedAt: getStringField(row, "updated_at"),
     lifecycleMetadata: extractLifecycleMetadata(row),
@@ -1445,3 +1447,4 @@ export async function GET(request: Request) {
     );
   }
 }
+

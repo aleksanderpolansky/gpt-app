@@ -274,6 +274,7 @@ function summarizeActivityEvent(row: ActivityEventQueueRow) {
       "activityTemplateId",
     ]),
     legacyTemplateId: getFirstNullableString(row, [
+      "template_id",
       "legacy_template_id",
       "legacyTemplateId",
     ]),
@@ -435,3 +436,4 @@ export async function GET(request: Request) {
     );
   }
 }
+
