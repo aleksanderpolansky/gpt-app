@@ -6,6 +6,7 @@ import {
 import { getActivityUserContext } from "../../../../../../../../lib/activity/activityUserContext";
 import { processActivityImpacts } from "../../../../../../../../lib/activity/activityImpactProcessor";
 import { processActivityValueObjectBridge } from "../../../../../../../../lib/activity/activityValueObjectLifecycle";
+import { ensureActivityEventRubricatorClassificationForKnownTemplate } from "../../../../../../../../lib/activity/activityRubricatorClassificationLifecycle";
 import { supabase } from "../../../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -569,6 +570,16 @@ export async function POST(request: Request, context: RouteContext) {
       .eq("id", updatedEvent.id)
       .eq("user_id", appUser.id);
 
+    const rubricatorClassificationResult =
+      await ensureActivityEventRubricatorClassificationForKnownTemplate({
+        supabase,
+        eventId: updatedEvent.id,
+        userId: appUser.id,
+        activityTemplateId: updatedEvent.activity_template_id,
+        processorName:
+          "activity_confirm_route_known_template_rubricator_classification",
+      });
+
     const valueObjectBridgeResult = await processActivityValueObjectBridge({
       supabase,
       eventId: updatedEvent.id,
@@ -604,6 +615,18 @@ export async function POST(request: Request, context: RouteContext) {
           confirmedMetadataAfterImpacts.dailyAggregatesCreatedAfterConfirm,
         currentSnapshotsCreatedAfterConfirm:
           confirmedMetadataAfterImpacts.currentSnapshotsCreatedAfterConfirm,
+      },
+      rubricatorClassification: {
+        ok: rubricatorClassificationResult.ok,
+        skipped: rubricatorClassificationResult.skipped,
+        skipReason: rubricatorClassificationResult.skipReason,
+        ruleKey: rubricatorClassificationResult.ruleKey,
+        classificationId: rubricatorClassificationResult.classificationId,
+        classificationStatus:
+          rubricatorClassificationResult.classificationStatus,
+        created: rubricatorClassificationResult.created,
+        alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+        errors: rubricatorClassificationResult.errors,
       },
       valueObjectBridge: {
         ok: valueObjectBridgeResult.ok,
@@ -663,5 +686,6 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 }
+
 
 
