@@ -5,6 +5,7 @@ import {
 } from "../../../../../../../../lib/activity/activityRecordingConfig";
 import { getActivityUserContext } from "../../../../../../../../lib/activity/activityUserContext";
 import { processActivityImpacts } from "../../../../../../../../lib/activity/activityImpactProcessor";
+import { processActivityValueObjectBridge } from "../../../../../../../../lib/activity/activityValueObjectLifecycle";
 import { supabase } from "../../../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -542,6 +543,38 @@ export async function POST(request: Request, context: RouteContext) {
       startedAt: updatedEvent.started_at,
     });
 
+
+
+    const confirmedMetadataAfterImpacts = {
+      ...asRecord(updatedEvent.metadata_json),
+      noImpactsCreated: impactResult.counts.impactEvents === 0,
+      noDailyAggregatesCreated: impactResult.counts.dailyAggregates === 0,
+      noCurrentSnapshotsCreated: impactResult.counts.currentSnapshots === 0,
+      impactsCreatedAfterConfirm: impactResult.counts.impactEvents > 0,
+      dailyAggregatesCreatedAfterConfirm:
+        impactResult.counts.dailyAggregates > 0,
+      currentSnapshotsCreatedAfterConfirm:
+        impactResult.counts.currentSnapshots > 0,
+      confirmImpactProcessingFlow: "P4.7.7-R-E3-D3",
+      confirmImpactProcessingAt: new Date().toISOString(),
+      confirmImpactCounts: impactResult.counts,
+    };
+
+    const { error: confirmMetadataUpdateError } = await supabase
+      .from("activity_events")
+      .update({
+        metadata_json: confirmedMetadataAfterImpacts,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", updatedEvent.id)
+      .eq("user_id", appUser.id);
+
+    const valueObjectBridgeResult = await processActivityValueObjectBridge({
+      supabase,
+      eventId: updatedEvent.id,
+      processorName: "activity_confirm_route_p4_7_7",
+    });
+
     return NextResponse.json({
       ok: true,
       status: "confirmed_completed",
@@ -555,6 +588,53 @@ export async function POST(request: Request, context: RouteContext) {
         skipped: impactResult.skipped,
         reason: impactResult.reason,
         counts: impactResult.counts,
+      },
+      confirmMetadataUpdate: {
+        ok: !confirmMetadataUpdateError,
+        error: confirmMetadataUpdateError?.message ?? null,
+        noImpactsCreated:
+          confirmedMetadataAfterImpacts.noImpactsCreated,
+        noDailyAggregatesCreated:
+          confirmedMetadataAfterImpacts.noDailyAggregatesCreated,
+        noCurrentSnapshotsCreated:
+          confirmedMetadataAfterImpacts.noCurrentSnapshotsCreated,
+        impactsCreatedAfterConfirm:
+          confirmedMetadataAfterImpacts.impactsCreatedAfterConfirm,
+        dailyAggregatesCreatedAfterConfirm:
+          confirmedMetadataAfterImpacts.dailyAggregatesCreatedAfterConfirm,
+        currentSnapshotsCreatedAfterConfirm:
+          confirmedMetadataAfterImpacts.currentSnapshotsCreatedAfterConfirm,
+      },
+      valueObjectBridge: {
+        ok: valueObjectBridgeResult.ok,
+        skipped: valueObjectBridgeResult.skipped,
+        skipReason: valueObjectBridgeResult.skipReason,
+        errors: valueObjectBridgeResult.errors,
+        mapping: valueObjectBridgeResult.mappingResult
+          ? {
+              ok: valueObjectBridgeResult.mappingResult.ok,
+              skipped: valueObjectBridgeResult.mappingResult.skipped,
+              skipReason: valueObjectBridgeResult.mappingResult.skipReason,
+              classificationSummaryCount:
+                valueObjectBridgeResult.mappingResult.classificationSummary
+                  .length,
+              mappingsCount:
+                valueObjectBridgeResult.mappingResult.mappings.length,
+            }
+          : null,
+        bridge: valueObjectBridgeResult.bridgeResult
+          ? {
+              ok: valueObjectBridgeResult.bridgeResult.ok,
+              skipped: valueObjectBridgeResult.bridgeResult.skipped,
+              skipReason: valueObjectBridgeResult.bridgeResult.skipReason,
+              mappingsRequested:
+                valueObjectBridgeResult.bridgeResult.mappingsRequested,
+              createdCount:
+                valueObjectBridgeResult.bridgeResult.created.length,
+              created: valueObjectBridgeResult.bridgeResult.created,
+              errors: valueObjectBridgeResult.bridgeResult.errors,
+            }
+          : null,
       },
       note:
         "Imported pending activity_event was confirmed into completed status. Rule-based impacts were processed when matching rules were available.",
@@ -583,3 +663,5 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 }
+
+
