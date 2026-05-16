@@ -1,18 +1,9 @@
 ﻿import type { SupabaseClient } from "@supabase/supabase-js";
+import { KNOWN_TEMPLATE_RUBRICATOR_CLASSIFICATION_RULES } from "./knownTemplateRubricatorRules";
+import type { KnownTemplateRubricatorClassificationRule } from "./knownTemplateRubricatorRules";
 
 type GenericRow = Record<string, unknown>;
 
-type KnownTemplateRubricatorClassificationRule = {
-  ruleKey: string;
-  templateSlug: string;
-  objectTypeCode: string;
-  actionTypeCode: string;
-  contextCode: string;
-  contextualCategorySlug: string;
-  classificationRole: "primary";
-  isPrimary: boolean;
-  confidence: number;
-};
 
 const ACTIVITY_EVENT_ENTITY_TYPE = "activity_event";
 
@@ -21,19 +12,6 @@ const HELPER_NAME =
 
 const HELPER_VERSION = "p4_7_8_r_f1";
 
-const KNOWN_TEMPLATE_RULES: KnownTemplateRubricatorClassificationRule[] = [
-  {
-    ruleKey: "german_marketing_handwriting_practice_to_business_german",
-    templateSlug: "german-marketing-handwriting-practice",
-    objectTypeCode: "German_language",
-    actionTypeCode: "practice",
-    contextCode: "learning",
-    contextualCategorySlug: "business-german",
-    classificationRole: "primary",
-    isPrimary: true,
-    confidence: 1,
-  },
-];
 
 export type EnsureActivityEventRubricatorClassificationForKnownTemplateInput = {
   supabase: SupabaseClient;
@@ -154,7 +132,7 @@ function findRuleForTemplateSlug(
   }
 
   return (
-    KNOWN_TEMPLATE_RULES.find(
+    KNOWN_TEMPLATE_RUBRICATOR_CLASSIFICATION_RULES.find(
       (rule) => normalizeKey(rule.templateSlug) === normalizedTemplateSlug
     ) ?? null
   );
@@ -632,4 +610,5 @@ export async function ensureActivityEventRubricatorClassificationForKnownTemplat
     return result;
   }
 }
+
 
