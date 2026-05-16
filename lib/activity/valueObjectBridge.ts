@@ -627,6 +627,7 @@ export async function processValueObjectBridgeForActivityEvent(
           source: mappingSource,
           last_event_id: event.id,
           last_state_delta_id: stateDeltaId,
+          updated_at: new Date().toISOString(),
           metadata_json: {
             processorName,
             lastSignedDelta: signedDelta,
@@ -679,6 +680,7 @@ export async function processValueObjectBridgeForActivityEvent(
           metric_unit: mapping.metricUnit ?? null,
           last_event_id: event.id,
           last_state_delta_id: stateDeltaId,
+          updated_at: new Date().toISOString(),
           source: mappingSource,
           metadata_json: {
             processorName,
@@ -705,4 +707,5 @@ export async function processValueObjectBridgeForActivityEvent(
 
   return result;
 }
+
 
