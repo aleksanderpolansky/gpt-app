@@ -66,8 +66,111 @@ export type RubricatorValueObjectMappingResult = {
   errors: string[];
 };
 
-const CONTROLLED_VALUE_OBJECT_TITLE = "Business German writing practice";
-const CONTROLLED_VALUE_OBJECT_TYPE = "skill";
+type ControlledRubricatorValueObjectRule = {
+  ruleKey: string;
+  valueObjectTitle: string;
+  valueObjectType: string;
+  valueObjectDescription: string;
+  valueObjectUnitType: string;
+  defaultDurationMinutes: number | null;
+  objectTypeCode: string;
+  actionTypeCode: string;
+  contextCode: string;
+  contextualCategorySlug: string;
+  relationType: ValueObjectBridgeMapping["relationType"];
+  metricKey: string;
+  metricUnit: string;
+  deltaDirection: ValueObjectBridgeMapping["deltaDirection"];
+  aggregateType: string;
+  fallbackNeedleGroups: string[][];
+};
+
+const CONTROLLED_RUBRICATOR_VALUE_OBJECT_RULES: readonly ControlledRubricatorValueObjectRule[] = [
+  {
+    ruleKey: "german_business_writing_practice_duration",
+    valueObjectTitle: "Business German writing practice",
+    valueObjectType: "skill",
+    valueObjectDescription:
+      "Controlled P4.7-R value object for German business/marketing writing practice.",
+    valueObjectUnitType: "minutes",
+    defaultDurationMinutes: 25,
+    objectTypeCode: "German_language",
+    actionTypeCode: "practice",
+    contextCode: "learning",
+    contextualCategorySlug: "business-german",
+    relationType: "executes",
+    metricKey: "duration_minutes",
+    metricUnit: "minutes",
+    deltaDirection: "increase",
+    aggregateType: "value_object",
+    fallbackNeedleGroups: [
+      ["german", "deutsch", "немец", "niemieck", "alemán"],
+      [
+        "practice",
+        "practise",
+        "learn",
+        "learning",
+        "write",
+        "writing",
+        "handwriting",
+        "schrift",
+        "schreiben",
+        "üben",
+        "marketing",
+        "b2b",
+        "business",
+      ],
+      [
+        "learning",
+        "education",
+        "career",
+        "work",
+        "business",
+        "marketing",
+        "communication",
+        "language",
+        "skill",
+        "język",
+        "idioma",
+      ],
+    ],
+  },
+  {
+    ruleKey: "knee_training_health_practice_duration",
+    valueObjectTitle: "Knee training practice",
+    valueObjectType: "health_activity",
+    valueObjectDescription:
+      "Controlled P4.7.8-R-L5 value object for knee-focused exercise/training activity tracking. No medical diagnosis or treatment claim.",
+    valueObjectUnitType: "minutes",
+    defaultDurationMinutes: 10,
+    objectTypeCode: "knee",
+    actionTypeCode: "train",
+    contextCode: "health",
+    contextualCategorySlug: "knee-exercises",
+    relationType: "executes",
+    metricKey: "duration_minutes",
+    metricUnit: "minutes",
+    deltaDirection: "increase",
+    aggregateType: "value_object",
+    fallbackNeedleGroups: [
+      ["knee", "колено", "kolano", "rodilla", "knie"],
+      [
+        "train",
+        "training",
+        "exercise",
+        "mobility",
+        "practice",
+        "ćwiczenie",
+        "ćwiczenia",
+        "entrenamiento",
+        "ejercicio",
+        "übung",
+        "training",
+      ],
+      ["health", "body", "rehab", "recovery", "load", "здоров", "salud", "gesundheit"],
+    ],
+  },
+];
 
 function getString(row: GenericRow | null | undefined, key: string): string | null {
   if (!row) {
@@ -146,6 +249,10 @@ function normalizeText(value: string | null | undefined): string {
   return (value ?? "").toLowerCase();
 }
 
+function normalizeKey(value: string | null | undefined): string {
+  return normalizeText(value).trim();
+}
+
 function joinSearchText(parts: Array<string | null | undefined>): string {
   return parts
     .map((item) => normalizeText(item))
@@ -154,7 +261,7 @@ function joinSearchText(parts: Array<string | null | undefined>): string {
 }
 
 function includesAny(text: string, needles: string[]): boolean {
-  return needles.some((needle) => text.includes(needle));
+  return needles.some((needle) => text.includes(needle.toLowerCase()));
 }
 
 function isApprovedActivityEventClassification(row: GenericRow): boolean {
@@ -312,79 +419,115 @@ async function summarizeClassification(
   };
 }
 
-function isControlledGermanWritingPractice(
+function classificationMatchesRule(
+  classification: RubricatorClassificationSummary,
+  rule: ControlledRubricatorValueObjectRule
+): boolean {
+  return (
+    normalizeKey(classification.objectTypeCode) === normalizeKey(rule.objectTypeCode) &&
+    normalizeKey(classification.actionTypeCode) === normalizeKey(rule.actionTypeCode) &&
+    normalizeKey(classification.contextCode) === normalizeKey(rule.contextCode) &&
+    normalizeKey(classification.contextualCategorySlug) ===
+      normalizeKey(rule.contextualCategorySlug)
+  );
+}
+
+function classificationSearchText(
+  classification: RubricatorClassificationSummary | null
+): string {
+  if (!classification) {
+    return "";
+  }
+
+  return joinSearchText([
+    classification.objectTypeCode,
+    classification.objectTypeName,
+    classification.actionTypeCode,
+    classification.actionTypeName,
+    classification.contextCode,
+    classification.contextName,
+    classification.contextualCategorySlug,
+    classification.contextualCategoryName,
+  ]);
+}
+
+function eventSearchText(event: ActivityEventForRubricatorMapping): string {
+  return joinSearchText([
+    event.title,
+    event.description,
+    event.input_text,
+    event.event_code,
+  ]);
+}
+
+function eventOrClassificationMatchesFallbackRule(
   event: ActivityEventForRubricatorMapping,
   classification: RubricatorClassificationSummary | null,
+  rule: ControlledRubricatorValueObjectRule,
   allowTextFallback: boolean
 ): boolean {
-  const classificationText = classification
-    ? joinSearchText([
-        classification.objectTypeCode,
-        classification.objectTypeName,
-        classification.actionTypeCode,
-        classification.actionTypeName,
-        classification.contextCode,
-        classification.contextName,
-        classification.contextualCategorySlug,
-        classification.contextualCategoryName,
-      ])
-    : "";
-
-  const eventText = allowTextFallback
-    ? joinSearchText([
-        event.title,
-        event.description,
-        event.input_text,
-        event.event_code,
-      ])
-    : "";
-
-  const haystack = joinSearchText([classificationText, eventText]);
-
-  const hasGerman = includesAny(haystack, [
-    "german",
-    "deutsch",
-    "немец",
-    "niemieck",
-    "alemán",
+  const haystack = joinSearchText([
+    classificationSearchText(classification),
+    allowTextFallback ? eventSearchText(event) : "",
   ]);
 
-  const hasPracticeOrWriting = includesAny(haystack, [
-    "practice",
-    "practise",
-    "learn",
-    "learning",
-    "write",
-    "writing",
-    "handwriting",
-    "schrift",
-    "schreiben",
-    "üben",
-    "marketing",
-    "b2b",
-    "business",
-  ]);
+  if (!haystack) {
+    return false;
+  }
 
-  const hasLearningCareerContext = includesAny(haystack, [
-    "learning",
-    "education",
-    "career",
-    "work",
-    "business",
-    "marketing",
-    "communication",
-    "language",
-    "skill",
-    "język",
-    "idioma",
-  ]);
+  return rule.fallbackNeedleGroups.every((needleGroup) =>
+    includesAny(haystack, needleGroup)
+  );
+}
 
-  return hasGerman && hasPracticeOrWriting && hasLearningCareerContext;
+function findControlledRubricatorValueObjectRule(input: {
+  event: ActivityEventForRubricatorMapping;
+  summaries: RubricatorClassificationSummary[];
+  allowTextFallback: boolean;
+}): {
+  rule: ControlledRubricatorValueObjectRule;
+  classification: RubricatorClassificationSummary | null;
+} | null {
+  for (const summary of input.summaries) {
+    const exactRule = CONTROLLED_RUBRICATOR_VALUE_OBJECT_RULES.find((rule) =>
+      classificationMatchesRule(summary, rule)
+    );
+
+    if (exactRule) {
+      return {
+        rule: exactRule,
+        classification: summary,
+      };
+    }
+  }
+
+  if (!input.allowTextFallback) {
+    return null;
+  }
+
+  const fallbackRule = CONTROLLED_RUBRICATOR_VALUE_OBJECT_RULES.find((rule) =>
+    eventOrClassificationMatchesFallbackRule(
+      input.event,
+      null,
+      rule,
+      input.allowTextFallback
+    )
+  );
+
+  if (!fallbackRule) {
+    return null;
+  }
+
+  return {
+    rule: fallbackRule,
+    classification: null,
+  };
 }
 
 async function findControlledValueObject(
   supabase: SupabaseClient,
-  event: ActivityEventForRubricatorMapping
+  event: ActivityEventForRubricatorMapping,
+  rule: ControlledRubricatorValueObjectRule
 ): Promise<{
   valueObjectId: string | null;
   errorMessage: string | null;
@@ -395,8 +538,8 @@ async function findControlledValueObject(
   let query = supabase
     .from("value_objects")
     .select("id")
-    .eq("title", CONTROLLED_VALUE_OBJECT_TITLE)
-    .eq("value_type", CONTROLLED_VALUE_OBJECT_TYPE)
+    .eq("title", rule.valueObjectTitle)
+    .eq("value_type", rule.valueObjectType)
     .eq("status", "active")
     .is("organization_id", null)
     .limit(1);
@@ -424,7 +567,8 @@ async function findControlledValueObject(
 
 async function createControlledValueObject(
   supabase: SupabaseClient,
-  event: ActivityEventForRubricatorMapping
+  event: ActivityEventForRubricatorMapping,
+  rule: ControlledRubricatorValueObjectRule
 ): Promise<{
   valueObjectId: string | null;
   errorMessage: string | null;
@@ -437,14 +581,14 @@ async function createControlledValueObject(
     .insert({
       owner_actor_id: ownerActorId,
       organization_id: null,
-      value_type: CONTROLLED_VALUE_OBJECT_TYPE,
-      title: CONTROLLED_VALUE_OBJECT_TITLE,
-      description:
-        "Controlled P4.7-R value object for German business/marketing writing practice.",
-      unit_type: "minutes",
+      value_type: rule.valueObjectType,
+      title: rule.valueObjectTitle,
+      description: rule.valueObjectDescription,
+      unit_type: rule.valueObjectUnitType,
       default_price: null,
       default_currency: null,
-      default_duration_minutes: event.duration_minutes,
+      default_duration_minutes:
+        rule.defaultDurationMinutes ?? event.duration_minutes,
       is_marketplace_sellable: false,
       is_free_possible: false,
       status: "active",
@@ -468,13 +612,14 @@ async function createControlledValueObject(
 async function findOrCreateControlledValueObject(
   supabase: SupabaseClient,
   event: ActivityEventForRubricatorMapping,
+  rule: ControlledRubricatorValueObjectRule,
   createMissing: boolean
 ): Promise<{
   valueObjectId: string | null;
   created: boolean;
   errorMessage: string | null;
 }> {
-  const existing = await findControlledValueObject(supabase, event);
+  const existing = await findControlledValueObject(supabase, event, rule);
 
   if (existing.errorMessage) {
     return {
@@ -500,7 +645,7 @@ async function findOrCreateControlledValueObject(
     };
   }
 
-  const created = await createControlledValueObject(supabase, event);
+  const created = await createControlledValueObject(supabase, event, rule);
 
   return {
     valueObjectId: created.valueObjectId,
@@ -513,7 +658,8 @@ function buildControlledMapping(
   event: ActivityEventForRubricatorMapping,
   valueObjectId: string,
   classification: RubricatorClassificationSummary | null,
-  valueObjectCreated: boolean
+  valueObjectCreated: boolean,
+  rule: ControlledRubricatorValueObjectRule
 ): ValueObjectBridgeMapping | null {
   if (event.duration_minutes === null) {
     return null;
@@ -523,27 +669,27 @@ function buildControlledMapping(
 
   return {
     valueObjectId,
-    relationType: "executes",
+    relationType: rule.relationType,
     weight: 1,
     confidence,
     source: "rule",
     instanceStatus: "completed",
-    instanceTitle: event.title ?? CONTROLLED_VALUE_OBJECT_TITLE,
+    instanceTitle: event.title ?? rule.valueObjectTitle,
     instanceNote: event.description ?? event.input_text,
     resultStatus: "completed",
     qualityScore: null,
-    metricKey: "duration_minutes",
-    metricUnit: "minutes",
+    metricKey: rule.metricKey,
+    metricUnit: rule.metricUnit,
     deltaValueNumeric: event.duration_minutes,
     deltaValueText: null,
-    deltaDirection: "increase",
+    deltaDirection: rule.deltaDirection,
     aggregateDate: null,
-    aggregateType: "value_object",
+    aggregateType: rule.aggregateType,
     aggregateKey: valueObjectId,
     metadata: {
       mapper: "rubricatorValueObjectMapper",
-      mapperVersion: "p4_7_3_r",
-      controlledRule: "german_business_writing_practice_duration",
+      mapperVersion: "p4_7_8_r_l5",
+      controlledRule: rule.ruleKey,
       valueObjectCreated,
       classification,
     },
@@ -617,17 +763,13 @@ export async function resolveValueObjectMappingsFromRubricatorForActivityEvent(
     return result;
   }
 
-  const matchedClassification =
-    summaries.find((summary) =>
-      isControlledGermanWritingPractice(event, summary, false)
-    ) ?? null;
+  const ruleMatch = findControlledRubricatorValueObjectRule({
+    event,
+    summaries,
+    allowTextFallback: allowControlledTextFallback,
+  });
 
-  const shouldUseTextFallback =
-    !matchedClassification &&
-    allowControlledTextFallback &&
-    isControlledGermanWritingPractice(event, null, true);
-
-  if (!matchedClassification && !shouldUseTextFallback) {
+  if (!ruleMatch) {
     result.ok = true;
     result.skipped = true;
     result.skipReason = "no_controlled_rubricator_value_object_mapping";
@@ -637,6 +779,7 @@ export async function resolveValueObjectMappingsFromRubricatorForActivityEvent(
   const valueObjectResult = await findOrCreateControlledValueObject(
     supabase,
     event,
+    ruleMatch.rule,
     createMissingControlledValueObject
   );
 
@@ -657,8 +800,9 @@ export async function resolveValueObjectMappingsFromRubricatorForActivityEvent(
   const mapping = buildControlledMapping(
     event,
     valueObjectResult.valueObjectId,
-    matchedClassification,
-    valueObjectResult.created
+    ruleMatch.classification,
+    valueObjectResult.created,
+    ruleMatch.rule
   );
 
   if (!mapping) {
@@ -673,4 +817,3 @@ export async function resolveValueObjectMappingsFromRubricatorForActivityEvent(
 
   return result;
 }
-

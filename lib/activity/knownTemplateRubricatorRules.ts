@@ -22,5 +22,15 @@ export const KNOWN_TEMPLATE_RUBRICATOR_CLASSIFICATION_RULES: readonly KnownTempl
     isPrimary: true,
     confidence: 1,
   },
+  {
+    ruleKey: "knee_training_health_practice_to_knee_exercises",
+    templateSlug: "knee-training-health-practice",
+    objectTypeCode: "knee",
+    actionTypeCode: "train",
+    contextCode: "health",
+    contextualCategorySlug: "knee-exercises",
+    classificationRole: "primary",
+    isPrimary: true,
+    confidence: 1,
+  },
 ];
-
