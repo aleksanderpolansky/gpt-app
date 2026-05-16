@@ -14,6 +14,7 @@ import { getActivityUserContext } from "../../../../../lib/activity/activityUser
 import { processActivityImpacts } from "../../../../../lib/activity/activityImpactProcessor";
 import { processActivityValueObjectBridge } from "../../../../../lib/activity/activityValueObjectLifecycle";
 import { ensureActivityEventRubricatorClassificationForKnownTemplate } from "../../../../../lib/activity/activityRubricatorClassificationLifecycle";
+import { buildRubricatorResolverLogMetadata } from "../../../../../lib/activity/rubricatorResolverLogMetadata";
 import {
   createRawActivitySignal,
   markRawActivitySignalFailed,
@@ -1257,6 +1258,7 @@ export async function POST(request: Request) {
         endpoint: "/api/activity/record",
         mode: "template_first_record",
         p4Step: "P4.7.8-R-F2",
+        ruleResolver: buildRubricatorResolverLogMetadata(rubricatorClassificationResult),
       },
       startedAt: processingStartedAt.toISOString(),
       finishedAt: new Date().toISOString(),

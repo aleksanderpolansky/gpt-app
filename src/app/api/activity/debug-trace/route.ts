@@ -758,6 +758,69 @@ function compactRawSignal(row: GenericRow) {
   };
 }
 
+function getRecordArrayField(row: GenericRow, key: string): unknown[] {
+  const value = row[key];
+
+  return Array.isArray(value) ? value : [];
+}
+
+function compactProcessingLogRuleResolver(row: GenericRow) {
+  const metadata = getRecordField(row, "metadata_json");
+  const ruleResolver = getRecordField(metadata, "ruleResolver");
+
+  const source = getRecordString(ruleResolver, "source");
+  const selectedSource = getRecordString(ruleResolver, "selectedSource");
+  const mode = getRecordString(ruleResolver, "mode");
+  const requestedTemplateSlug = getRecordString(
+    ruleResolver,
+    "requestedTemplateSlug"
+  );
+  const hardcodedRuleFound = getRecordBoolean(
+    ruleResolver,
+    "hardcodedRuleFound"
+  );
+  const dbMetadataReadOk = getRecordBoolean(ruleResolver, "dbMetadataReadOk");
+  const dbMetadataFound = getRecordBoolean(ruleResolver, "dbMetadataFound");
+  const dbMetadataMatchesHardcoded = getRecordBoolean(
+    ruleResolver,
+    "dbMetadataMatchesHardcoded"
+  );
+  const mismatches = getRecordArrayField(ruleResolver, "mismatches");
+  const warnings = getRecordArrayField(ruleResolver, "warnings");
+  const errors = getRecordArrayField(ruleResolver, "errors");
+
+  const hasResolverMetadata =
+    Boolean(source) ||
+    Boolean(selectedSource) ||
+    Boolean(mode) ||
+    Boolean(requestedTemplateSlug) ||
+    hardcodedRuleFound !== null ||
+    dbMetadataReadOk !== null ||
+    dbMetadataFound !== null ||
+    dbMetadataMatchesHardcoded !== null ||
+    mismatches.length > 0 ||
+    warnings.length > 0 ||
+    errors.length > 0;
+
+  if (!hasResolverMetadata) {
+    return null;
+  }
+
+  return {
+    source,
+    selectedSource,
+    mode,
+    requestedTemplateSlug,
+    hardcodedRuleFound,
+    dbMetadataReadOk,
+    dbMetadataFound,
+    dbMetadataMatchesHardcoded,
+    mismatches,
+    warnings,
+    errors,
+  };
+}
+
 function compactProcessingLog(row: GenericRow) {
   return {
     id: getId(row),
@@ -774,6 +837,7 @@ function compactProcessingLog(row: GenericRow) {
     durationMs: getFirstNumberField(row, ["duration_ms", "elapsed_ms"]),
     createdAt: getStringField(row, "created_at"),
     metadataKeys: getFieldKeys(row, "metadata_json"),
+    ruleResolver: compactProcessingLogRuleResolver(row),
     detailsKeys: getFieldKeys(row, "details_json"),
     normalizedPreviewKeys: getFieldKeys(row, "normalized_preview_json"),
     recalculationResultKeys: getFieldKeys(row, "recalculation_result_json"),

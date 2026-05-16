@@ -11,6 +11,7 @@ import { getActivityUserContext } from "../../../../../../../../lib/activity/act
 import { processActivityImpacts } from "../../../../../../../../lib/activity/activityImpactProcessor";
 import { processActivityValueObjectBridge } from "../../../../../../../../lib/activity/activityValueObjectLifecycle";
 import { ensureActivityEventRubricatorClassificationForKnownTemplate } from "../../../../../../../../lib/activity/activityRubricatorClassificationLifecycle";
+import { buildRubricatorResolverLogMetadata } from "../../../../../../../../lib/activity/rubricatorResolverLogMetadata";
 import { supabase } from "../../../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -629,6 +630,7 @@ export async function POST(request: Request, context: RouteContext) {
           endpoint: ENDPOINT,
           mode: "imported_pending_confirm",
           p4Step: "P4.7.8-R-H1",
+          ruleResolver: buildRubricatorResolverLogMetadata(rubricatorClassificationResult),
         },
         startedAt: processingStartedAt.toISOString(),
         finishedAt: new Date().toISOString(),
