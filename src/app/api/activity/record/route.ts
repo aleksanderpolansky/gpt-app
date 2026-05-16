@@ -1220,7 +1220,8 @@ export async function POST(request: Request) {
         processorName: "activity_record_route_known_template_rubricator_classification",
       });
 
-    await safeCreateActivityProcessingLog({
+    const rubricatorClassificationLogResult =
+      await safeCreateActivityProcessingLog({
       userId: appUser.id,
       rawSignalId: rawSignal?.id ?? null,
       activityEventId: createdEvent.id,
@@ -1268,7 +1269,8 @@ export async function POST(request: Request) {
       processorName: "activity_record_route_p4_7_7",
     });
 
-    await safeCreateActivityProcessingLog({
+    const valueObjectBridgeLogResult =
+      await safeCreateActivityProcessingLog({
       userId: appUser.id,
       rawSignalId: rawSignal?.id ?? null,
       activityEventId: createdEvent.id,
@@ -1360,6 +1362,20 @@ export async function POST(request: Request) {
               errors: valueObjectBridgeResult.bridgeResult.errors,
             }
           : null,
+      },
+      processingLogs: {
+        rawSignalId: rawSignal?.id ?? null,
+        processingRunId,
+        rubricatorClassification: {
+          ok: rubricatorClassificationLogResult.ok,
+          error: rubricatorClassificationLogResult.error,
+          logId: rubricatorClassificationLogResult.log?.id ?? null,
+        },
+        valueObjectBridge: {
+          ok: valueObjectBridgeLogResult.ok,
+          error: valueObjectBridgeLogResult.error,
+          logId: valueObjectBridgeLogResult.log?.id ?? null,
+        },
       },
       rawSignal: rawSignal
         ? {
