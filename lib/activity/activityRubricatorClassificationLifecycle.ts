@@ -1,6 +1,7 @@
 ﻿import type { SupabaseClient } from "@supabase/supabase-js";
 import { KNOWN_TEMPLATE_RUBRICATOR_CLASSIFICATION_RULES } from "./knownTemplateRubricatorRules";
 import type { KnownTemplateRubricatorClassificationRule } from "./knownTemplateRubricatorRules";
+import { resolveKnownTemplateRubricatorClassificationRule } from "./knownTemplateRegistryRuleResolver";
 
 type GenericRow = Record<string, unknown>;
 
@@ -344,12 +345,34 @@ export async function ensureActivityEventRubricatorClassificationForKnownTemplat
       return result;
     }
 
-    const rule = findRuleForTemplateSlug(templateSlug);
+    if (!templateSlug) {
+      result.ok = true;
+      result.skipped = true;
+      result.skipReason = "template_slug_missing_after_resolution";
+      result.errors.push("Template slug was not resolved.");
+      return result;
+    }
+
+    const ruleResolution = await resolveKnownTemplateRubricatorClassificationRule({
+      supabase: input.supabase,
+      templateSlug,
+      mode: "prefer_db_metadata",
+    });
+
+    const rule = ruleResolution.ok ? ruleResolution.rule : null;
 
     if (!rule) {
       result.ok = true;
       result.skipped = true;
       result.skipReason = "no_known_template_rubricator_classification_rule";
+      result.metadata = {
+        ...result.metadata,
+        ruleResolver: {
+          source: ruleResolution.source,
+          diagnostics: ruleResolution.diagnostics,
+          errors: ruleResolution.errors,
+        },
+      };
       return result;
     }
 
@@ -357,6 +380,11 @@ export async function ensureActivityEventRubricatorClassificationForKnownTemplat
     result.metadata = {
       ...result.metadata,
       rule,
+      ruleResolver: {
+        source: ruleResolution.source,
+        diagnostics: ruleResolution.diagnostics,
+        errors: ruleResolution.errors,
+      },
     };
 
     const [objectTypeResult, actionTypeResult, contextResult] =
@@ -610,5 +638,7 @@ export async function ensureActivityEventRubricatorClassificationForKnownTemplat
     return result;
   }
 }
+
+
 
 
