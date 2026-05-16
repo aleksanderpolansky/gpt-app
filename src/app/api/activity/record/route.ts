@@ -13,6 +13,7 @@ import {
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { processActivityImpacts } from "../../../../../lib/activity/activityImpactProcessor";
 import { processActivityValueObjectBridge } from "../../../../../lib/activity/activityValueObjectLifecycle";
+import { ensureActivityEventRubricatorClassificationForKnownTemplate } from "../../../../../lib/activity/activityRubricatorClassificationLifecycle";
 import {
   createRawActivitySignal,
   markRawActivitySignalFailed,
@@ -1209,6 +1210,58 @@ export async function POST(request: Request) {
     });
 
 
+    const rubricatorClassificationResult =
+      await ensureActivityEventRubricatorClassificationForKnownTemplate({
+        supabase,
+        eventId: createdEvent.id,
+        userId: appUser.id,
+        activityTemplateId: createdEvent.activity_template_id,
+        templateSlug: template.slug,
+        processorName: "activity_record_route_known_template_rubricator_classification",
+      });
+
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: rawSignal?.id ?? null,
+      activityEventId: createdEvent.id,
+      processingRunId,
+      processorName: "activity_record_route_rubricator_classification",
+      processingStage: "finalize",
+      processingStatus: rubricatorClassificationResult.ok
+        ? rubricatorClassificationResult.skipped
+          ? "skipped"
+          : "completed"
+        : "warning",
+      severity: rubricatorClassificationResult.ok ? "info" : "warning",
+      message:
+        "Known-template rubricator classification ensured before Value Object bridge.",
+      input: {
+        eventId: createdEvent.id,
+        activityTemplateId: createdEvent.activity_template_id,
+        templateSlug: template.slug,
+      },
+      output: {
+        ok: rubricatorClassificationResult.ok,
+        skipped: rubricatorClassificationResult.skipped,
+        skipReason: rubricatorClassificationResult.skipReason,
+        ruleKey: rubricatorClassificationResult.ruleKey,
+        classificationId: rubricatorClassificationResult.classificationId,
+        classificationStatus:
+          rubricatorClassificationResult.classificationStatus,
+        created: rubricatorClassificationResult.created,
+        alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+        errors: rubricatorClassificationResult.errors,
+      },
+      metadata: {
+        endpoint: "/api/activity/record",
+        mode: "template_first_record",
+        p4Step: "P4.7.8-R-F2",
+      },
+      startedAt: processingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(processingStartedAt),
+    });
+
     const valueObjectBridgeResult = await processActivityValueObjectBridge({
       supabase,
       eventId: createdEvent.id,
@@ -1264,6 +1317,18 @@ export async function POST(request: Request) {
         skipped: impactResult.skipped,
         reason: impactResult.reason,
         counts: impactResult.counts,
+      },
+      rubricatorClassification: {
+        ok: rubricatorClassificationResult.ok,
+        skipped: rubricatorClassificationResult.skipped,
+        skipReason: rubricatorClassificationResult.skipReason,
+        ruleKey: rubricatorClassificationResult.ruleKey,
+        classificationId: rubricatorClassificationResult.classificationId,
+        classificationStatus:
+          rubricatorClassificationResult.classificationStatus,
+        created: rubricatorClassificationResult.created,
+        alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+        errors: rubricatorClassificationResult.errors,
       },
       valueObjectBridge: {
         ok: valueObjectBridgeResult.ok,
@@ -1382,6 +1447,7 @@ export async function POST(request: Request) {
     );
   }
 }
+
 
 
 
