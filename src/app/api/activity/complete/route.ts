@@ -16,6 +16,7 @@ import {
 } from "../../../../../lib/activity/activityProcessingLogs";
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { processActivityImpacts } from "../../../../../lib/activity/activityImpactProcessor";
+import { processActivityValueObjectBridge } from "../../../../../lib/activity/activityValueObjectLifecycle";
 import {
   createRawActivitySignal,
   markRawActivitySignalFailed,
@@ -673,6 +674,49 @@ export async function POST(request: Request) {
       durationMs: getDurationMs(processingStartedAt),
     });
 
+
+    const valueObjectBridgeResult = await processActivityValueObjectBridge({
+      supabase,
+      eventId: updatedEvent.id,
+      processorName: "activity_complete_route_p4_7_7",
+    });
+
+    await safeCreateActivityProcessingLog({
+      userId: appUser.id,
+      rawSignalId: rawSignal?.id ?? null,
+      activityEventId: updatedEvent.id,
+      processingRunId,
+      processorName: "activity_complete_route_value_object_bridge",
+      processingStage: "finalize",
+      processingStatus: valueObjectBridgeResult.ok
+        ? valueObjectBridgeResult.skipped
+          ? "skipped"
+          : "completed"
+        : "warning",
+      severity: valueObjectBridgeResult.ok ? "info" : "warning",
+      message: "Value Object bridge processed after activity completion.",
+      input: {
+        eventId: updatedEvent.id,
+      },
+      output: {
+        ok: valueObjectBridgeResult.ok,
+        skipped: valueObjectBridgeResult.skipped,
+        skipReason: valueObjectBridgeResult.skipReason,
+        mappingSkipped: valueObjectBridgeResult.mappingResult?.skipped ?? null,
+        mappingsCount: valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+        bridgeCreatedCount: valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+        errors: valueObjectBridgeResult.errors,
+      },
+      metadata: {
+        endpoint: "/api/activity/complete",
+        mode: "template_first_complete",
+        p4Step: "P4.7.7-R-E2",
+      },
+      startedAt: processingStartedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: getDurationMs(processingStartedAt),
+    });
+
     return NextResponse.json({
       ok: true,
       status: completedStatus,
@@ -685,6 +729,37 @@ export async function POST(request: Request) {
         skipped: impactResult.skipped,
         reason: impactResult.reason,
         counts: impactResult.counts,
+      },
+      valueObjectBridge: {
+        ok: valueObjectBridgeResult.ok,
+        skipped: valueObjectBridgeResult.skipped,
+        skipReason: valueObjectBridgeResult.skipReason,
+        errors: valueObjectBridgeResult.errors,
+        mapping: valueObjectBridgeResult.mappingResult
+          ? {
+              ok: valueObjectBridgeResult.mappingResult.ok,
+              skipped: valueObjectBridgeResult.mappingResult.skipped,
+              skipReason: valueObjectBridgeResult.mappingResult.skipReason,
+              classificationSummaryCount:
+                valueObjectBridgeResult.mappingResult.classificationSummary
+                  .length,
+              mappingsCount:
+                valueObjectBridgeResult.mappingResult.mappings.length,
+            }
+          : null,
+        bridge: valueObjectBridgeResult.bridgeResult
+          ? {
+              ok: valueObjectBridgeResult.bridgeResult.ok,
+              skipped: valueObjectBridgeResult.bridgeResult.skipped,
+              skipReason: valueObjectBridgeResult.bridgeResult.skipReason,
+              mappingsRequested:
+                valueObjectBridgeResult.bridgeResult.mappingsRequested,
+              createdCount:
+                valueObjectBridgeResult.bridgeResult.created.length,
+              created: valueObjectBridgeResult.bridgeResult.created,
+              errors: valueObjectBridgeResult.bridgeResult.errors,
+            }
+          : null,
       },
       rawSignal: rawSignal
         ? {
@@ -769,6 +844,7 @@ export async function POST(request: Request) {
     );
   }
 }
+
 
 
 
