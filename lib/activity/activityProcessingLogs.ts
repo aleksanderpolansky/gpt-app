@@ -1,4 +1,4 @@
-import { supabase } from "../supabase";
+﻿import { supabase } from "../supabase";
 import type { JsonObject, JsonValue } from "./rawActivitySignals";
 
 export type ActivityProcessingStage =
@@ -213,10 +213,16 @@ export function getDurationMs(
 
 export async function safeCreateActivityProcessingLog(
   input: CreateActivityProcessingLogInput
-): Promise<void> {
+): Promise<CreateActivityProcessingLogResult> {
   try {
-    await createActivityProcessingLog(input);
-  } catch {
+    return await createActivityProcessingLog(input);
+  } catch (error) {
     // Logging must never break the main activity recording flow.
+    return {
+      ok: false,
+      log: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
+

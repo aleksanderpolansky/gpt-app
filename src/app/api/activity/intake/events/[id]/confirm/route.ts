@@ -3,6 +3,10 @@ import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
   ACTIVITY_RECORDING_ENABLED,
 } from "../../../../../../../../lib/activity/activityRecordingConfig";
+import {
+  getDurationMs,
+  safeCreateActivityProcessingLog,
+} from "../../../../../../../../lib/activity/activityProcessingLogs";
 import { getActivityUserContext } from "../../../../../../../../lib/activity/activityUserContext";
 import { processActivityImpacts } from "../../../../../../../../lib/activity/activityImpactProcessor";
 import { processActivityValueObjectBridge } from "../../../../../../../../lib/activity/activityValueObjectLifecycle";
@@ -570,21 +574,109 @@ export async function POST(request: Request, context: RouteContext) {
       .eq("id", updatedEvent.id)
       .eq("user_id", appUser.id);
 
-    const rubricatorClassificationResult =
-      await ensureActivityEventRubricatorClassificationForKnownTemplate({
-        supabase,
-        eventId: updatedEvent.id,
-        userId: appUser.id,
-        activityTemplateId: updatedEvent.activity_template_id,
-        processorName:
-          "activity_confirm_route_known_template_rubricator_classification",
+      const processingStartedAt = new Date();
+      const processingRunId = crypto.randomUUID();
+      const rawSignalIdForProcessingLog =
+        typeof (confirmedMetadataAfterImpacts as Record<string, unknown>).rawSignalId ===
+        "string"
+          ? ((confirmedMetadataAfterImpacts as Record<string, unknown>)
+              .rawSignalId as string)
+          : null;
+
+      const rubricatorClassificationResult =
+        await ensureActivityEventRubricatorClassificationForKnownTemplate({
+          supabase,
+          eventId: updatedEvent.id,
+          userId: appUser.id,
+          activityTemplateId: updatedEvent.activity_template_id,
+          processorName:
+            "activity_confirm_route_known_template_rubricator_classification",
+        });
+
+      const rubricatorClassificationLogResult =
+        await safeCreateActivityProcessingLog({
+          userId: appUser.id,
+          rawSignalId: rawSignalIdForProcessingLog,
+          activityEventId: updatedEvent.id,
+        processingRunId,
+        processorName: "activity_confirm_route_rubricator_classification",
+        processingStage: "finalize",
+        processingStatus: rubricatorClassificationResult.ok
+          ? rubricatorClassificationResult.skipped
+            ? "skipped"
+            : "completed"
+          : "warning",
+        severity: rubricatorClassificationResult.ok ? "info" : "warning",
+        message:
+          "Known-template rubricator classification ensured before Value Object bridge.",
+        input: {
+          eventId: updatedEvent.id,
+          activityTemplateId: updatedEvent.activity_template_id,
+        },
+        output: {
+          ok: rubricatorClassificationResult.ok,
+          skipped: rubricatorClassificationResult.skipped,
+          skipReason: rubricatorClassificationResult.skipReason,
+          ruleKey: rubricatorClassificationResult.ruleKey,
+          classificationId: rubricatorClassificationResult.classificationId,
+          classificationStatus:
+            rubricatorClassificationResult.classificationStatus,
+          created: rubricatorClassificationResult.created,
+          alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+          errors: rubricatorClassificationResult.errors,
+        },
+        metadata: {
+          endpoint: ENDPOINT,
+          mode: "imported_pending_confirm",
+          p4Step: "P4.7.8-R-H1",
+        },
+        startedAt: processingStartedAt.toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: getDurationMs(processingStartedAt),
       });
 
-    const valueObjectBridgeResult = await processActivityValueObjectBridge({
-      supabase,
-      eventId: updatedEvent.id,
-      processorName: "activity_confirm_route_p4_7_7",
-    });
+      const valueObjectBridgeResult = await processActivityValueObjectBridge({
+        supabase,
+        eventId: updatedEvent.id,
+        processorName: "activity_confirm_route_p4_7_7",
+      });
+
+      const valueObjectBridgeLogResult =
+        await safeCreateActivityProcessingLog({
+          userId: appUser.id,
+          rawSignalId: rawSignalIdForProcessingLog,
+          activityEventId: updatedEvent.id,
+        processingRunId,
+        processorName: "activity_confirm_route_value_object_bridge",
+        processingStage: "finalize",
+        processingStatus: valueObjectBridgeResult.ok
+          ? valueObjectBridgeResult.skipped
+            ? "skipped"
+            : "completed"
+          : "warning",
+        severity: valueObjectBridgeResult.ok ? "info" : "warning",
+        message: "Value Object bridge processed after imported pending confirmation.",
+        input: {
+          eventId: updatedEvent.id,
+        },
+        output: {
+          ok: valueObjectBridgeResult.ok,
+          skipped: valueObjectBridgeResult.skipped,
+          skipReason: valueObjectBridgeResult.skipReason,
+          mappingSkipped: valueObjectBridgeResult.mappingResult?.skipped ?? null,
+          mappingsCount: valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+          bridgeCreatedCount: valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+          errors: valueObjectBridgeResult.errors,
+        },
+        metadata: {
+          endpoint: ENDPOINT,
+          mode: "imported_pending_confirm",
+          p4Step: "P4.7.7-R-E3",
+        },
+        startedAt: processingStartedAt.toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: getDurationMs(processingStartedAt),
+      });
 
     return NextResponse.json({
       ok: true,
@@ -659,6 +751,19 @@ export async function POST(request: Request, context: RouteContext) {
             }
           : null,
       },
+      processingLogs: {
+        rawSignalId: rawSignalIdForProcessingLog,
+        rubricatorClassification: {
+          ok: rubricatorClassificationLogResult.ok,
+          error: rubricatorClassificationLogResult.error,
+          logId: rubricatorClassificationLogResult.log?.id ?? null,
+        },
+        valueObjectBridge: {
+          ok: valueObjectBridgeLogResult.ok,
+          error: valueObjectBridgeLogResult.error,
+          logId: valueObjectBridgeLogResult.log?.id ?? null,
+        },
+      },
       note:
         "Imported pending activity_event was confirmed into completed status. Rule-based impacts were processed when matching rules were available.",
     });
@@ -686,6 +791,11 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 }
+
+
+
+
+
 
 
 
