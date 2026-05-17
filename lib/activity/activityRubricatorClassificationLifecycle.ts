@@ -356,7 +356,7 @@ export async function ensureActivityEventRubricatorClassificationForKnownTemplat
     const ruleResolution = await resolveKnownTemplateRubricatorClassificationRule({
       supabase: input.supabase,
       templateSlug,
-      mode: "prefer_db_metadata",
+      mode: "prefer_registry_table",
     });
 
     const rule = ruleResolution.ok ? ruleResolution.rule : null;
@@ -638,6 +638,7 @@ export async function ensureActivityEventRubricatorClassificationForKnownTemplat
     return result;
   }
 }
+
 
 
 

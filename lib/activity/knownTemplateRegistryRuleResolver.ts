@@ -1,21 +1,26 @@
 ﻿import type { SupabaseClient } from "@supabase/supabase-js";
-
 import {
   KNOWN_TEMPLATE_RUBRICATOR_CLASSIFICATION_RULES,
   type KnownTemplateRubricatorClassificationRule,
 } from "./knownTemplateRubricatorRules";
-
 import {
   readKnownTemplateRegistryMetadataBySlug,
   summarizeKnownTemplateRegistryMetadata,
   type KnownTemplateRegistryMetadata,
 } from "./knownTemplateRegistryMetadata";
+import {
+  readKnownTemplateRegistryTableRowBySlug,
+  type KnownTemplateRegistryTableClient,
+  type KnownTemplateRegistryTableSnapshot,
+} from "./knownTemplateRegistryTable";
 
 export type KnownTemplateRuleResolverSource =
+  | "registry_table"
   | "db_metadata"
   | "hardcoded_fallback";
 
 export type KnownTemplateRuleResolverMode =
+  | "prefer_registry_table"
   | "prefer_db_metadata"
   | "hardcoded_only";
 
@@ -23,11 +28,20 @@ export type KnownTemplateRuleResolverDiagnostics = {
   requestedTemplateSlug: string;
   mode: KnownTemplateRuleResolverMode;
   hardcodedRuleFound: boolean;
+
+  registryTableReadOk: boolean | null;
+  registryTableFound: boolean | null;
+  registryTableMatchesHardcoded: boolean | null;
+  registryTableSummary: Record<string, unknown> | null;
+  registryTableErrors: string[];
+  registryTableWarnings: string[];
+
   dbMetadataReadOk: boolean | null;
   dbMetadataFound: boolean | null;
   dbMetadataMatchesHardcoded: boolean | null;
-  selectedSource: KnownTemplateRuleResolverSource | null;
   dbMetadataSummary: Record<string, unknown> | null;
+
+  selectedSource: KnownTemplateRuleResolverSource | null;
   mismatches: string[];
   warnings: string[];
 };
@@ -62,11 +76,20 @@ function createBaseDiagnostics(
     requestedTemplateSlug: templateSlug,
     mode,
     hardcodedRuleFound: false,
+
+    registryTableReadOk: null,
+    registryTableFound: null,
+    registryTableMatchesHardcoded: null,
+    registryTableSummary: null,
+    registryTableErrors: [],
+    registryTableWarnings: [],
+
     dbMetadataReadOk: null,
     dbMetadataFound: null,
     dbMetadataMatchesHardcoded: null,
-    selectedSource: null,
     dbMetadataSummary: null,
+
+    selectedSource: null,
     mismatches: [],
     warnings: [],
   };
@@ -86,11 +109,14 @@ function pushMismatch(
   mismatches: string[],
   field: string,
   hardcodedValue: unknown,
-  dbValue: unknown
+  candidateValue: unknown,
+  candidateLabel: string
 ): void {
-  if (hardcodedValue !== dbValue) {
+  if (hardcodedValue !== candidateValue) {
     mismatches.push(
-      `${field}: hardcoded="${String(hardcodedValue)}" db="${String(dbValue)}"`
+      `${field}: hardcoded="${String(hardcodedValue)}" ${candidateLabel}="${String(
+        candidateValue
+      )}"`
     );
   }
 }
@@ -105,56 +131,137 @@ export function compareKnownTemplateDbMetadataWithHardcodedRule(
     mismatches,
     "templateSlug",
     hardcodedRule.templateSlug,
-    metadata.templateSlug
+    metadata.templateSlug,
+    "db"
   );
 
   pushMismatch(
     mismatches,
     "ruleKey",
     hardcodedRule.ruleKey,
-    metadata.knownTemplateRegistry.ruleKey
+    metadata.knownTemplateRegistry.ruleKey,
+    "db"
   );
 
   pushMismatch(
     mismatches,
     "objectTypeCode",
     hardcodedRule.objectTypeCode,
-    metadata.rubricatorCandidate.objectTypeCode
+    metadata.rubricatorCandidate.objectTypeCode,
+    "db"
   );
 
   pushMismatch(
     mismatches,
     "actionTypeCode",
     hardcodedRule.actionTypeCode,
-    metadata.rubricatorCandidate.actionTypeCode
+    metadata.rubricatorCandidate.actionTypeCode,
+    "db"
   );
 
   pushMismatch(
     mismatches,
     "contextCode",
     hardcodedRule.contextCode,
-    metadata.rubricatorCandidate.contextCode
+    metadata.rubricatorCandidate.contextCode,
+    "db"
   );
 
   pushMismatch(
     mismatches,
     "contextualCategorySlug",
     hardcodedRule.contextualCategorySlug,
-    metadata.rubricatorCandidate.contextualCategorySlug
+    metadata.rubricatorCandidate.contextualCategorySlug,
+    "db"
   );
 
   pushMismatch(
     mismatches,
     "classificationRole",
     hardcodedRule.classificationRole,
-    metadata.knownTemplateRegistry.classificationRole
+    metadata.knownTemplateRegistry.classificationRole,
+    "db"
   );
 
   pushMismatch(
     mismatches,
     "confidence",
     hardcodedRule.confidence,
-    metadata.knownTemplateRegistry.confidence
+    metadata.knownTemplateRegistry.confidence,
+    "db"
+  );
+
+  return mismatches;
+}
+
+export function compareKnownTemplateRegistryTableWithHardcodedRule(
+  snapshot: KnownTemplateRegistryTableSnapshot,
+  hardcodedRule: KnownTemplateRubricatorClassificationRule
+): string[] {
+  const mismatches: string[] = [];
+
+  pushMismatch(
+    mismatches,
+    "templateSlug",
+    hardcodedRule.templateSlug,
+    snapshot.templateSlug,
+    "registryTable"
+  );
+
+  pushMismatch(
+    mismatches,
+    "ruleKey",
+    hardcodedRule.ruleKey,
+    snapshot.ruleKey,
+    "registryTable"
+  );
+
+  pushMismatch(
+    mismatches,
+    "objectTypeCode",
+    hardcodedRule.objectTypeCode,
+    snapshot.objectTypeCode,
+    "registryTable"
+  );
+
+  pushMismatch(
+    mismatches,
+    "actionTypeCode",
+    hardcodedRule.actionTypeCode,
+    snapshot.actionTypeCode,
+    "registryTable"
+  );
+
+  pushMismatch(
+    mismatches,
+    "contextCode",
+    hardcodedRule.contextCode,
+    snapshot.contextCode,
+    "registryTable"
+  );
+
+  pushMismatch(
+    mismatches,
+    "contextualCategorySlug",
+    hardcodedRule.contextualCategorySlug,
+    snapshot.contextualCategorySlug,
+    "registryTable"
+  );
+
+  pushMismatch(
+    mismatches,
+    "classificationRole",
+    hardcodedRule.classificationRole,
+    snapshot.classificationRole,
+    "registryTable"
+  );
+
+  pushMismatch(
+    mismatches,
+    "confidence",
+    hardcodedRule.confidence,
+    snapshot.confidence,
+    "registryTable"
   );
 
   return mismatches;
@@ -177,10 +284,173 @@ export function buildKnownTemplateRuleFromDbMetadataWithHardcodedDefaults(
   };
 }
 
+export function buildKnownTemplateRuleFromRegistryTableWithHardcodedDefaults(
+  snapshot: KnownTemplateRegistryTableSnapshot,
+  hardcodedRule: KnownTemplateRubricatorClassificationRule
+): KnownTemplateRubricatorClassificationRule {
+  return {
+    ...hardcodedRule,
+    ruleKey: snapshot.ruleKey,
+    templateSlug: snapshot.templateSlug,
+    objectTypeCode: snapshot.objectTypeCode,
+    actionTypeCode: snapshot.actionTypeCode,
+    contextCode: snapshot.contextCode,
+    contextualCategorySlug: snapshot.contextualCategorySlug,
+    classificationRole: hardcodedRule.classificationRole,
+    confidence: snapshot.confidence,
+  };
+}
+
+function summarizeKnownTemplateRegistryTableSnapshot(
+  snapshot: KnownTemplateRegistryTableSnapshot
+): Record<string, unknown> {
+  return {
+    tableRowId: snapshot.tableRowId,
+    activityTemplateId: snapshot.activityTemplateId,
+    templateSlug: snapshot.templateSlug,
+    enabled: snapshot.enabled,
+    ruleKey: snapshot.ruleKey,
+    sourceType: snapshot.sourceType,
+    classificationRole: snapshot.classificationRole,
+    confidence: snapshot.confidence,
+    registryVersion: snapshot.registryVersion,
+    priority: snapshot.priority,
+    rubricatorCandidate: {
+      objectTypeCode: snapshot.objectTypeCode,
+      actionTypeCode: snapshot.actionTypeCode,
+      contextCode: snapshot.contextCode,
+      contextualCategorySlug: snapshot.contextualCategorySlug,
+    },
+    valueObjectMapping: {
+      valueObjectTitle: snapshot.valueObjectTitle,
+      valueObjectType: snapshot.valueObjectType,
+      relationType: snapshot.relationType,
+      metricKey: snapshot.metricKey,
+      metricUnit: snapshot.metricUnit,
+      deltaDirection: snapshot.deltaDirection,
+      aggregateType: snapshot.aggregateType,
+    },
+  };
+}
+
+async function tryResolveFromRegistryTable(input: {
+  supabase: SupabaseClient;
+  templateSlug: string;
+  hardcodedRule: KnownTemplateRubricatorClassificationRule;
+  diagnostics: KnownTemplateRuleResolverDiagnostics;
+}): Promise<KnownTemplateRubricatorClassificationRule | null> {
+  const tableReadResult = await readKnownTemplateRegistryTableRowBySlug(
+    input.supabase as unknown as KnownTemplateRegistryTableClient,
+    input.templateSlug
+  );
+
+  input.diagnostics.registryTableReadOk = tableReadResult.ok;
+  input.diagnostics.registryTableFound = tableReadResult.ok
+    ? true
+    : tableReadResult.reason !== "not_found"
+      ? false
+      : false;
+
+  input.diagnostics.registryTableErrors.push(
+    ...tableReadResult.diagnostics.errors
+  );
+
+  input.diagnostics.registryTableWarnings.push(
+    ...tableReadResult.diagnostics.warnings
+  );
+
+  if (!tableReadResult.ok) {
+    input.diagnostics.warnings.push(
+      `Registry table source was not usable (${tableReadResult.reason}); DB metadata fallback will be attempted.`
+    );
+    return null;
+  }
+
+  input.diagnostics.registryTableSummary =
+    summarizeKnownTemplateRegistryTableSnapshot(tableReadResult.snapshot);
+
+  const mismatches = compareKnownTemplateRegistryTableWithHardcodedRule(
+    tableReadResult.snapshot,
+    input.hardcodedRule
+  );
+
+  input.diagnostics.registryTableMatchesHardcoded = mismatches.length === 0;
+
+  if (mismatches.length > 0) {
+    input.diagnostics.mismatches = mismatches;
+    input.diagnostics.warnings.push(
+      "Registry table rule does not match hardcoded baseline; DB metadata fallback will be attempted."
+    );
+    return null;
+  }
+
+  input.diagnostics.selectedSource = "registry_table";
+
+  return buildKnownTemplateRuleFromRegistryTableWithHardcodedDefaults(
+    tableReadResult.snapshot,
+    input.hardcodedRule
+  );
+}
+
+async function tryResolveFromDbMetadata(input: {
+  supabase: SupabaseClient;
+  templateSlug: string;
+  hardcodedRule: KnownTemplateRubricatorClassificationRule;
+  diagnostics: KnownTemplateRuleResolverDiagnostics;
+}): Promise<KnownTemplateRubricatorClassificationRule | null> {
+  const dbReadResult = await readKnownTemplateRegistryMetadataBySlug(
+    input.supabase,
+    input.templateSlug
+  );
+
+  input.diagnostics.dbMetadataReadOk = dbReadResult.ok;
+  input.diagnostics.dbMetadataFound = dbReadResult.found;
+
+  if (!dbReadResult.ok) {
+    input.diagnostics.warnings.push(
+      "DB metadata read failed; hardcoded fallback will be selected if needed."
+    );
+    return null;
+  }
+
+  if (!dbReadResult.found || !dbReadResult.metadata) {
+    input.diagnostics.warnings.push(
+      "DB metadata was not found; hardcoded fallback will be selected if needed."
+    );
+    return null;
+  }
+
+  input.diagnostics.dbMetadataSummary = summarizeKnownTemplateRegistryMetadata(
+    dbReadResult.metadata
+  );
+
+  const mismatches = compareKnownTemplateDbMetadataWithHardcodedRule(
+    dbReadResult.metadata,
+    input.hardcodedRule
+  );
+
+  input.diagnostics.dbMetadataMatchesHardcoded = mismatches.length === 0;
+
+  if (mismatches.length > 0) {
+    input.diagnostics.mismatches = mismatches;
+    input.diagnostics.warnings.push(
+      "DB metadata does not match hardcoded rule; hardcoded fallback will be selected if needed."
+    );
+    return null;
+  }
+
+  input.diagnostics.selectedSource = "db_metadata";
+
+  return buildKnownTemplateRuleFromDbMetadataWithHardcodedDefaults(
+    dbReadResult.metadata,
+    input.hardcodedRule
+  );
+}
+
 export async function resolveKnownTemplateRubricatorClassificationRule(
   input: ResolveKnownTemplateRubricatorClassificationRuleInput
 ): Promise<ResolveKnownTemplateRubricatorClassificationRuleResult> {
-  const mode = input.mode ?? "prefer_db_metadata";
+  const mode = input.mode ?? "prefer_registry_table";
   const diagnostics = createBaseDiagnostics(input.templateSlug, mode);
   const errors: string[] = [];
 
@@ -215,29 +485,8 @@ export async function resolveKnownTemplateRubricatorClassificationRule(
 
   if (mode === "hardcoded_only") {
     diagnostics.selectedSource = "hardcoded_fallback";
-    diagnostics.warnings.push("Resolver mode is hardcoded_only; DB metadata was not read.");
-
-    return {
-      ok: true,
-      rule: hardcodedRule,
-      source: "hardcoded_fallback",
-      diagnostics,
-      errors: [],
-    };
-  }
-
-  const dbReadResult = await readKnownTemplateRegistryMetadataBySlug(
-    input.supabase,
-    input.templateSlug
-  );
-
-  diagnostics.dbMetadataReadOk = dbReadResult.ok;
-  diagnostics.dbMetadataFound = dbReadResult.found;
-
-  if (!dbReadResult.ok) {
-    diagnostics.selectedSource = "hardcoded_fallback";
     diagnostics.warnings.push(
-      "DB metadata read failed; hardcoded fallback selected."
+      "Resolver mode is hardcoded_only; registry table and DB metadata were not read."
     );
 
     return {
@@ -249,59 +498,53 @@ export async function resolveKnownTemplateRubricatorClassificationRule(
     };
   }
 
-  if (!dbReadResult.found || !dbReadResult.metadata) {
-    diagnostics.selectedSource = "hardcoded_fallback";
-    diagnostics.warnings.push(
-      "DB metadata was not found; hardcoded fallback selected."
-    );
+  if (mode === "prefer_registry_table") {
+    const registryTableRule = await tryResolveFromRegistryTable({
+      supabase: input.supabase,
+      templateSlug: input.templateSlug,
+      hardcodedRule,
+      diagnostics,
+    });
 
+    if (registryTableRule) {
+      return {
+        ok: true,
+        rule: registryTableRule,
+        source: "registry_table",
+        diagnostics,
+        errors: [],
+      };
+    }
+  } else {
+    diagnostics.warnings.push(
+      "Resolver mode is prefer_db_metadata; registry table was not read."
+    );
+  }
+
+  const dbBackedRule = await tryResolveFromDbMetadata({
+    supabase: input.supabase,
+    templateSlug: input.templateSlug,
+    hardcodedRule,
+    diagnostics,
+  });
+
+  if (dbBackedRule) {
     return {
       ok: true,
-      rule: hardcodedRule,
-      source: "hardcoded_fallback",
+      rule: dbBackedRule,
+      source: "db_metadata",
       diagnostics,
       errors: [],
     };
   }
 
-  diagnostics.dbMetadataSummary = summarizeKnownTemplateRegistryMetadata(
-    dbReadResult.metadata
-  );
-
-  const mismatches = compareKnownTemplateDbMetadataWithHardcodedRule(
-    dbReadResult.metadata,
-    hardcodedRule
-  );
-
-  diagnostics.mismatches = mismatches;
-  diagnostics.dbMetadataMatchesHardcoded = mismatches.length === 0;
-
-  if (mismatches.length > 0) {
-    diagnostics.selectedSource = "hardcoded_fallback";
-    diagnostics.warnings.push(
-      "DB metadata does not match hardcoded rule; hardcoded fallback selected."
-    );
-
-    return {
-      ok: true,
-      rule: hardcodedRule,
-      source: "hardcoded_fallback",
-      diagnostics,
-      errors: [],
-    };
-  }
-
-  const dbBackedRule = buildKnownTemplateRuleFromDbMetadataWithHardcodedDefaults(
-    dbReadResult.metadata,
-    hardcodedRule
-  );
-
-  diagnostics.selectedSource = "db_metadata";
+  diagnostics.selectedSource = "hardcoded_fallback";
+  diagnostics.warnings.push("Hardcoded fallback selected.");
 
   return {
     ok: true,
-    rule: dbBackedRule,
-    source: "db_metadata",
+    rule: hardcodedRule,
+    source: "hardcoded_fallback",
     diagnostics,
     errors: [],
   };
