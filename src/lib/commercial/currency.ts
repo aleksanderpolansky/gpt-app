@@ -20,6 +20,10 @@ export type OrganizationCurrencySource = {
   default_currency?: string | null;
 };
 
+export type CurrencyFallbackOptions = {
+  fallbackCurrency?: SupportedCurrencyCode | null;
+};
+
 export type CertificatePointsCalculationInput = {
   amountCoveredByPointsInOrganizationCurrency: number;
   exchangeRateToOrganizationCurrency: number;
@@ -69,19 +73,16 @@ export function normalizeCurrencyCode(value: unknown): string | null {
 }
 
 export function getDefaultCurrencyByCountryCode(
-  countryCode: unknown
+  countryCode: unknown,
+  options: CurrencyFallbackOptions = {}
 ): SupportedCurrencyCode | null {
   const normalizedCountryCode = normalizeCountryCode(countryCode);
 
-  if (!normalizedCountryCode) {
-    return null;
-  }
-
-  if (isSupportedCountryCode(normalizedCountryCode)) {
+  if (normalizedCountryCode && isSupportedCountryCode(normalizedCountryCode)) {
     return COUNTRY_TO_DEFAULT_CURRENCY[normalizedCountryCode];
   }
 
-  return null;
+  return options.fallbackCurrency ?? null;
 }
 
 export function getOrganizationCurrency(
@@ -143,11 +144,15 @@ export function calculatePointsToSpendForCertificate(
   const exchangeRate = input.exchangeRateToOrganizationCurrency;
 
   if (!Number.isFinite(amount) || amount < 0) {
-    throw new Error("amountCoveredByPointsInOrganizationCurrency must be a non-negative finite number.");
+    throw new Error(
+      "amountCoveredByPointsInOrganizationCurrency must be a non-negative finite number."
+    );
   }
 
   if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) {
-    throw new Error("exchangeRateToOrganizationCurrency must be a positive finite number.");
+    throw new Error(
+      "exchangeRateToOrganizationCurrency must be a positive finite number."
+    );
   }
 
   const rawPointsToSpend = amount / exchangeRate;
