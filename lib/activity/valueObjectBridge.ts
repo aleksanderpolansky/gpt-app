@@ -11,6 +11,17 @@ type BridgeSource =
 
 type V42ProjectionSource = "rule" | "ai" | "manual" | "system_seed" | "migration";
 
+type ValueObjectCategoryRole =
+  | "primary"
+  | "semantic_component"
+  | "context"
+  | "object"
+  | "action"
+  | "goal"
+  | "protocol"
+  | "general_meaning"
+  | "system_suggested";
+
 type ValueObjectStateDeltaDirection =
   | "increase"
   | "decrease"
@@ -37,6 +48,34 @@ type ActivityEventForValueObjectBridge = {
   performed_by_actor_id?: string | null;
   acting_as_actor_id?: string | null;
   acting_for_actor_id?: string | null;
+};
+
+type ContextualCategoryForLink = {
+  id: string;
+  slug: string | null;
+  name: string | null;
+  status: string | null;
+  is_active: boolean | null;
+};
+
+type ExtractedCategoryLinkMetadata = {
+  contextualCategoryId: string | null;
+  contextualCategorySlug: string | null;
+  contextualCategoryName: string | null;
+  classificationRole: string | null;
+  classificationId: string | null;
+  contextId: string | null;
+  contextCode: string | null;
+  contextName: string | null;
+  objectTypeId: string | null;
+  objectTypeCode: string | null;
+  objectTypeName: string | null;
+  actionTypeId: string | null;
+  actionTypeCode: string | null;
+  actionTypeName: string | null;
+  controlledRule: string | null;
+  mapper: string | null;
+  mapperVersion: string | null;
 };
 
 export type ValueObjectBridgeMapping = {
@@ -104,6 +143,15 @@ export type ValueObjectBridgeCreatedItem = {
   usageAggregateId: string | null;
   v42ProjectionError: string | null;
 
+  /**
+   * P4.9.2 additive category bridge fields.
+   *
+   * These connect a derived Value Object to reliable category/rubricator metadata.
+   * They do not replace VOI links, state deltas, aggregates, snapshots, or relation_type.
+   */
+  valueObjectCategoryLinkId: string | null;
+  valueObjectCategoryLinkError: string | null;
+
   skipped: boolean;
   skipReason: string | null;
 };
@@ -167,7 +215,7 @@ function normalizeV42ProjectionSource(source: BridgeSource): V42ProjectionSource
   }
 
   /*
-   * The v4.2 projection tables currently allow:
+   * The v4.2 projection/category tables currently allow:
    * rule | ai | manual | system_seed | migration
    *
    * Bridge-specific sources such as api/correction/commercial are kept in metadata,
@@ -216,6 +264,28 @@ function normalizeRelationType(
   return "executes";
 }
 
+function normalizeCategoryRole(
+  value: string | null | undefined
+): ValueObjectCategoryRole {
+  const allowed: ValueObjectCategoryRole[] = [
+    "primary",
+    "semantic_component",
+    "context",
+    "object",
+    "action",
+    "goal",
+    "protocol",
+    "general_meaning",
+    "system_suggested",
+  ];
+
+  if (allowed.includes(value as ValueObjectCategoryRole)) {
+    return value as ValueObjectCategoryRole;
+  }
+
+  return value === "primary" ? "primary" : "semantic_component";
+}
+
 function getDateFromEvent(event: ActivityEventForValueObjectBridge): string {
   const sourceDate = event.started_at ?? event.ended_at ?? new Date().toISOString();
   return sourceDate.slice(0, 10);
@@ -254,6 +324,33 @@ function asNumber(value: unknown, fallback = 0): number {
   return fallback;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function asString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function isUuid(value: string | null | undefined): value is string {
+  if (!value) {
+    return false;
+  }
+
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value
+  );
+}
+
 function getSignedNumericDelta(
   value: number | null | undefined,
   direction: ValueObjectStateDeltaDirection
@@ -271,6 +368,32 @@ function getSignedNumericDelta(
   }
 
   return value;
+}
+
+function extractCategoryLinkMetadata(
+  metadata: Record<string, unknown>
+): ExtractedCategoryLinkMetadata {
+  const classification = asRecord(metadata.classification) ?? {};
+
+  return {
+    contextualCategoryId: asString(classification.contextualCategoryId),
+    contextualCategorySlug: asString(classification.contextualCategorySlug),
+    contextualCategoryName: asString(classification.contextualCategoryName),
+    classificationRole: asString(classification.classificationRole),
+    classificationId: asString(classification.classificationId),
+    contextId: asString(classification.contextId),
+    contextCode: asString(classification.contextCode),
+    contextName: asString(classification.contextName),
+    objectTypeId: asString(classification.objectTypeId),
+    objectTypeCode: asString(classification.objectTypeCode),
+    objectTypeName: asString(classification.objectTypeName),
+    actionTypeId: asString(classification.actionTypeId),
+    actionTypeCode: asString(classification.actionTypeCode),
+    actionTypeName: asString(classification.actionTypeName),
+    controlledRule: asString(metadata.controlledRule),
+    mapper: asString(metadata.mapper),
+    mapperVersion: asString(metadata.mapperVersion),
+  };
 }
 
 async function readActivityEvent(
@@ -351,6 +474,39 @@ async function readValueObjectOwnerContext(
   return {
     ownerActorId: row.owner_actor_id,
     organizationId: row.organization_id,
+    errorMessage: null,
+  };
+}
+
+async function readContextualCategoryForLink(
+  supabase: SupabaseClient,
+  contextualCategoryId: string
+): Promise<{
+  category: ContextualCategoryForLink | null;
+  errorMessage: string | null;
+}> {
+  const { data, error } = await supabase
+    .from("contextual_categories")
+    .select("id, slug, name, status, is_active")
+    .eq("id", contextualCategoryId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      category: null,
+      errorMessage: error.message,
+    };
+  }
+
+  if (!data) {
+    return {
+      category: null,
+      errorMessage: null,
+    };
+  }
+
+  return {
+    category: data as ContextualCategoryForLink,
     errorMessage: null,
   };
 }
@@ -690,6 +846,140 @@ async function upsertV42ValueObjectProjection(params: {
   };
 }
 
+async function upsertV42ValueObjectCategoryLink(params: {
+  supabase: SupabaseClient;
+  event: ActivityEventForValueObjectBridge;
+  valueObjectId: string;
+  valueObjectInstanceId: string;
+  oldVoiLinkId: string | null;
+  activityEventValueObjectLinkId: string | null;
+  bridgeSource: BridgeSource;
+  confidence: number;
+  processorName: string;
+  mappingMetadata: Record<string, unknown>;
+}): Promise<{
+  valueObjectCategoryLinkId: string | null;
+  errorMessage: string | null;
+}> {
+  const {
+    supabase,
+    event,
+    valueObjectId,
+    valueObjectInstanceId,
+    oldVoiLinkId,
+    activityEventValueObjectLinkId,
+    bridgeSource,
+    confidence,
+    processorName,
+    mappingMetadata,
+  } = params;
+
+  const categoryMetadata = extractCategoryLinkMetadata(mappingMetadata);
+
+  if (!isUuid(categoryMetadata.contextualCategoryId)) {
+    return {
+      valueObjectCategoryLinkId: null,
+      errorMessage: null,
+    };
+  }
+
+  const categoryLookup = await readContextualCategoryForLink(
+    supabase,
+    categoryMetadata.contextualCategoryId
+  );
+
+  if (categoryLookup.errorMessage) {
+    return {
+      valueObjectCategoryLinkId: null,
+      errorMessage: categoryLookup.errorMessage,
+    };
+  }
+
+  if (!categoryLookup.category) {
+    return {
+      valueObjectCategoryLinkId: null,
+      errorMessage: null,
+    };
+  }
+
+  const projectionSource = normalizeV42ProjectionSource(bridgeSource);
+  const categoryRole = normalizeCategoryRole(
+    categoryMetadata.classificationRole === "primary"
+      ? "primary"
+      : "semantic_component"
+  );
+
+  const { data, error } = await supabase
+    .from("value_object_category_links")
+    .upsert(
+      {
+        value_object_id: valueObjectId,
+        category_table: "contextual_categories",
+        category_id: categoryMetadata.contextualCategoryId,
+        category_role: categoryRole,
+        source: projectionSource,
+        confidence,
+        metadata_json: {
+          processorName,
+          bridgeSource,
+          valueObjectInstanceId,
+          oldActivityEventValueObjectInstanceLinkId: oldVoiLinkId,
+          activityEventValueObjectLinkId,
+          mapper: categoryMetadata.mapper,
+          mapperVersion: categoryMetadata.mapperVersion,
+          controlledRule: categoryMetadata.controlledRule,
+          classification: {
+            classificationId: categoryMetadata.classificationId,
+            classificationRole: categoryMetadata.classificationRole,
+            contextId: categoryMetadata.contextId,
+            contextCode: categoryMetadata.contextCode,
+            contextName: categoryMetadata.contextName,
+            objectTypeId: categoryMetadata.objectTypeId,
+            objectTypeCode: categoryMetadata.objectTypeCode,
+            objectTypeName: categoryMetadata.objectTypeName,
+            actionTypeId: categoryMetadata.actionTypeId,
+            actionTypeCode: categoryMetadata.actionTypeCode,
+            actionTypeName: categoryMetadata.actionTypeName,
+            contextualCategoryId: categoryMetadata.contextualCategoryId,
+            contextualCategorySlug: categoryMetadata.contextualCategorySlug,
+            contextualCategoryName: categoryMetadata.contextualCategoryName,
+          },
+          resolvedContextualCategory: {
+            id: categoryLookup.category.id,
+            slug: categoryLookup.category.slug,
+            name: categoryLookup.category.name,
+            status: categoryLookup.category.status,
+            isActive: categoryLookup.category.is_active,
+          },
+          p492: {
+            projection: "value_object_category_links",
+            mode: "runtime_category_link_from_bridge_mapping_metadata",
+            sourceEventId: event.id,
+            sourceProjectionId: activityEventValueObjectLinkId,
+          },
+        },
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "value_object_id,category_table,category_id,category_role",
+      }
+    )
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    return {
+      valueObjectCategoryLinkId: null,
+      errorMessage: error?.message ?? "failed_to_upsert_value_object_category_link",
+    };
+  }
+
+  return {
+    valueObjectCategoryLinkId: (data as { id: string }).id,
+    errorMessage: null,
+  };
+}
+
 export async function processValueObjectBridgeForActivityEvent(
   input: ProcessValueObjectBridgeInput
 ): Promise<ProcessValueObjectBridgeResult> {
@@ -765,6 +1055,8 @@ export async function processValueObjectBridgeForActivityEvent(
       activityEventValueObjectLinkId: null,
       usageAggregateId: null,
       v42ProjectionError: null,
+      valueObjectCategoryLinkId: null,
+      valueObjectCategoryLinkError: null,
       skipped: false,
       skipReason: null,
     };
@@ -910,6 +1202,40 @@ export async function processValueObjectBridgeForActivityEvent(
           valueObjectId: mapping.valueObjectId,
           valueObjectInstanceId,
           errorMessage: v42Projection.errorMessage,
+        });
+      }
+
+      const categoryLink = await upsertV42ValueObjectCategoryLink({
+        supabase,
+        event,
+        valueObjectId: mapping.valueObjectId,
+        valueObjectInstanceId,
+        oldVoiLinkId: createdItem.linkId,
+        activityEventValueObjectLinkId:
+          v42Projection.activityEventValueObjectLinkId,
+        bridgeSource: mappingSource,
+        confidence,
+        processorName,
+        mappingMetadata: mapping.metadata ?? {},
+      });
+
+      createdItem.valueObjectCategoryLinkId =
+        categoryLink.valueObjectCategoryLinkId;
+      createdItem.valueObjectCategoryLinkError = categoryLink.errorMessage;
+
+      if (categoryLink.errorMessage) {
+        /*
+         * P4.9.2 compatibility rule:
+         * Category-link creation is additive and must not roll back the existing VOI
+         * pipeline or the already verified P4.9.1 projection layer.
+         */
+        console.warn("P4.9.2 value_object_category_links upsert failed", {
+          eventId: event.id,
+          valueObjectId: mapping.valueObjectId,
+          valueObjectInstanceId,
+          activityEventValueObjectLinkId:
+            v42Projection.activityEventValueObjectLinkId,
+          errorMessage: categoryLink.errorMessage,
         });
       }
     }
