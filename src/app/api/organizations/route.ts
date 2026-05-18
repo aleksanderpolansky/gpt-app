@@ -1,5 +1,6 @@
-import { randomUUID } from "crypto";
+﻿import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
+import { getDefaultCurrencyByCountryCode, normalizeCountryCode } from "@/lib/commercial/currency";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 
@@ -105,53 +106,7 @@ function parseOptionalText(value: unknown) {
   return trimmedValue;
 }
 
-function normalizeCountryCode(value: string | null) {
-  if (!value) {
-    return null;
-  }
 
-  const normalizedValue = value.trim().toUpperCase();
-
-  if (!/^[A-Z]{2}$/.test(normalizedValue)) {
-    return null;
-  }
-
-  return normalizedValue;
-}
-
-function getDefaultCurrencyByCountryCode(countryCode: string | null) {
-  const normalizedCountryCode = normalizeCountryCode(countryCode);
-
-  if (normalizedCountryCode === "PL") {
-    return "PLN";
-  }
-
-  if (normalizedCountryCode === "ES") {
-    return "EUR";
-  }
-
-  if (normalizedCountryCode === "DE") {
-    return "EUR";
-  }
-
-  if (normalizedCountryCode === "UA") {
-    return "UAH";
-  }
-
-  if (normalizedCountryCode === "US") {
-    return "USD";
-  }
-
-  if (normalizedCountryCode === "GB") {
-    return "GBP";
-  }
-
-  if (normalizedCountryCode === "CZ") {
-    return "CZK";
-  }
-
-  return "PLN";
-}
 
 function createPublicSlugFromOrganizationId(organizationId: string) {
   return `organization-${organizationId.slice(0, 8)}`;
@@ -590,23 +545,23 @@ function createGeoStatusLabel(input: {
   const parts: string[] = [];
 
   if (isOwnSuggestedGeoArea(input.cityGeoArea, input.appUserId)) {
-    parts.push("город ожидает проверки");
+    parts.push("Ð³Ð¾Ñ€Ð¾Ð´ Ð¾Ð¶Ð¸Ð´Ð°ÐµÑ‚ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸");
   } else if (
     input.cityGeoArea &&
     input.cityGeoArea.status &&
     input.cityGeoArea.status !== "approved"
   ) {
-    parts.push(`город: ${input.cityGeoArea.status}`);
+    parts.push(`Ð³Ð¾Ñ€Ð¾Ð´: ${input.cityGeoArea.status}`);
   }
 
   if (isOwnSuggestedGeoArea(input.districtGeoArea, input.appUserId)) {
-    parts.push("район ожидает проверки");
+    parts.push("Ñ€Ð°Ð¹Ð¾Ð½ Ð¾Ð¶Ð¸Ð´Ð°ÐµÑ‚ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸");
   } else if (
     input.districtGeoArea &&
     input.districtGeoArea.status &&
     input.districtGeoArea.status !== "approved"
   ) {
-    parts.push(`район: ${input.districtGeoArea.status}`);
+    parts.push(`Ñ€Ð°Ð¹Ð¾Ð½: ${input.districtGeoArea.status}`);
   }
 
   if (parts.length === 0) {
@@ -779,9 +734,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const defaultCurrency = getDefaultCurrencyByCountryCode(
-    locationInput.countryCode
-  );
+  const defaultCurrency = getDefaultCurrencyByCountryCode(locationInput.countryCode, { fallbackCurrency: "PLN" });
 
   const organizationId = randomUUID();
   const organizationPublicSlug = createPublicSlugFromOrganizationId(

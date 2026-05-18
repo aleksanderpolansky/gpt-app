@@ -1,4 +1,5 @@
 ﻿import { NextResponse } from "next/server";
+import { getDefaultCurrencyByCountryCode, normalizeCountryCode } from "@/lib/commercial/currency";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
 
@@ -126,53 +127,7 @@ function normalizeUuid(value: string | null) {
   return value;
 }
 
-function normalizeCountryCode(value: string | null) {
-  if (!value) {
-    return null;
-  }
 
-  const normalizedValue = value.trim().toUpperCase();
-
-  if (!/^[A-Z]{2}$/.test(normalizedValue)) {
-    return null;
-  }
-
-  return normalizedValue;
-}
-
-function getDefaultCurrencyByCountryCode(countryCode: string | null) {
-  const normalizedCountryCode = normalizeCountryCode(countryCode);
-
-  if (normalizedCountryCode === "PL") {
-    return "PLN";
-  }
-
-  if (normalizedCountryCode === "ES") {
-    return "EUR";
-  }
-
-  if (normalizedCountryCode === "DE") {
-    return "EUR";
-  }
-
-  if (normalizedCountryCode === "UA") {
-    return "UAH";
-  }
-
-  if (normalizedCountryCode === "US") {
-    return "USD";
-  }
-
-  if (normalizedCountryCode === "GB") {
-    return "GBP";
-  }
-
-  if (normalizedCountryCode === "CZ") {
-    return "CZK";
-  }
-
-  return "PLN";
-}
 
 function normalizeAddressVisibility(value: unknown) {
   const textValue = parseOptionalText(value);
@@ -670,9 +625,7 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     primaryLocationId: updatedLocation.id,
   });
 
-  const defaultCurrency = getDefaultCurrencyByCountryCode(
-    locationInput.countryCode
-  );
+  const defaultCurrency = getDefaultCurrencyByCountryCode(locationInput.countryCode, { fallbackCurrency: "PLN" });
 
   const nowIso = new Date().toISOString();
 
