@@ -9,6 +9,8 @@ type BridgeSource =
   | "correction"
   | "commercial";
 
+type V42ProjectionSource = "rule" | "ai" | "manual" | "system_seed" | "migration";
+
 type ValueObjectStateDeltaDirection =
   | "increase"
   | "decrease"
@@ -89,6 +91,19 @@ export type ValueObjectBridgeCreatedItem = {
   stateDeltaId: string | null;
   aggregateId: string | null;
   snapshotId: string | null;
+
+  /**
+   * P4.9.1 additive v4.2 projection fields.
+   *
+   * These do not replace the old VOI pipeline:
+   * - linkId still refers to activity_event_value_object_instance_links;
+   * - activityEventValueObjectLinkId refers to the new direct v4.2 projection table;
+   * - usageAggregateId refers to the new object-cloud/read-optimization aggregate.
+   */
+  activityEventValueObjectLinkId: string | null;
+  usageAggregateId: string | null;
+  v42ProjectionError: string | null;
+
   skipped: boolean;
   skipReason: string | null;
 };
@@ -138,6 +153,29 @@ function normalizeSource(value: string | null | undefined): BridgeSource {
   return "rule";
 }
 
+function normalizeV42ProjectionSource(source: BridgeSource): V42ProjectionSource {
+  if (source === "manual") {
+    return "manual";
+  }
+
+  if (source === "ai_draft") {
+    return "ai";
+  }
+
+  if (source === "system") {
+    return "system_seed";
+  }
+
+  /*
+   * The v4.2 projection tables currently allow:
+   * rule | ai | manual | system_seed | migration
+   *
+   * Bridge-specific sources such as api/correction/commercial are kept in metadata,
+   * while the table-level source remains rule-compatible.
+   */
+  return "rule";
+}
+
 function normalizeDeltaDirection(
   value: string | null | undefined
 ): ValueObjectStateDeltaDirection {
@@ -181,6 +219,39 @@ function normalizeRelationType(
 function getDateFromEvent(event: ActivityEventForValueObjectBridge): string {
   const sourceDate = event.started_at ?? event.ended_at ?? new Date().toISOString();
   return sourceDate.slice(0, 10);
+}
+
+function getEventFirstUsedAt(event: ActivityEventForValueObjectBridge): string {
+  return event.started_at ?? event.ended_at ?? new Date().toISOString();
+}
+
+function getEventLastUsedAt(event: ActivityEventForValueObjectBridge): string {
+  return event.ended_at ?? event.started_at ?? new Date().toISOString();
+}
+
+function normalizeExposureMinutes(durationMinutes: number | null | undefined): number {
+  if (typeof durationMinutes !== "number" || Number.isNaN(durationMinutes)) {
+    return 0;
+  }
+
+  if (durationMinutes < 0) {
+    return 0;
+  }
+
+  return durationMinutes;
+}
+
+function asNumber(value: unknown, fallback = 0): number {
+  if (typeof value === "number" && !Number.isNaN(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? fallback : parsed;
+  }
+
+  return fallback;
 }
 
 function getSignedNumericDelta(
@@ -284,7 +355,6 @@ async function readValueObjectOwnerContext(
   };
 }
 
-
 async function readExistingStateDeltaForMapping(
   supabase: SupabaseClient,
   eventId: string,
@@ -334,6 +404,7 @@ async function readExistingStateDeltaForMapping(
     errorMessage: null,
   };
 }
+
 async function readExistingNumericValue(
   supabase: SupabaseClient,
   tableName: "value_object_daily_aggregates" | "value_object_state_snapshots",
@@ -365,6 +436,258 @@ async function readExistingNumericValue(
   }
 
   return null;
+}
+
+async function readExistingV42ProjectionLink(
+  supabase: SupabaseClient,
+  eventId: string,
+  valueObjectId: string,
+  source: V42ProjectionSource
+): Promise<{
+  id: string | null;
+  errorMessage: string | null;
+}> {
+  const { data, error } = await supabase
+    .from("activity_event_value_object_links")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("value_object_id", valueObjectId)
+    .eq("source", source)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      id: null,
+      errorMessage: error.message,
+    };
+  }
+
+  return {
+    id: (data as { id: string } | null)?.id ?? null,
+    errorMessage: null,
+  };
+}
+
+async function readExistingV42UsageAggregate(
+  supabase: SupabaseClient,
+  userId: string,
+  valueObjectId: string
+): Promise<{
+  id: string | null;
+  usageCount: number;
+  exposureMinutes: number;
+  firstUsedAt: string | null;
+  errorMessage: string | null;
+}> {
+  const { data, error } = await supabase
+    .from("value_object_usage_aggregates")
+    .select("id, usage_count, exposure_minutes, first_used_at")
+    .eq("user_id", userId)
+    .eq("value_object_id", valueObjectId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      id: null,
+      usageCount: 0,
+      exposureMinutes: 0,
+      firstUsedAt: null,
+      errorMessage: error.message,
+    };
+  }
+
+  if (!data) {
+    return {
+      id: null,
+      usageCount: 0,
+      exposureMinutes: 0,
+      firstUsedAt: null,
+      errorMessage: null,
+    };
+  }
+
+  const row = data as {
+    id: string;
+    usage_count: unknown;
+    exposure_minutes: unknown;
+    first_used_at: string | null;
+  };
+
+  return {
+    id: row.id,
+    usageCount: Math.max(0, Math.trunc(asNumber(row.usage_count, 0))),
+    exposureMinutes: Math.max(0, asNumber(row.exposure_minutes, 0)),
+    firstUsedAt: row.first_used_at,
+    errorMessage: null,
+  };
+}
+
+async function upsertV42ValueObjectProjection(params: {
+  supabase: SupabaseClient;
+  event: ActivityEventForValueObjectBridge;
+  valueObjectId: string;
+  valueObjectInstanceId: string;
+  oldVoiLinkId: string | null;
+  bridgeSource: BridgeSource;
+  confidence: number;
+  processorName: string;
+  mappingMetadata: Record<string, unknown>;
+}): Promise<{
+  activityEventValueObjectLinkId: string | null;
+  usageAggregateId: string | null;
+  errorMessage: string | null;
+}> {
+  const {
+    supabase,
+    event,
+    valueObjectId,
+    valueObjectInstanceId,
+    oldVoiLinkId,
+    bridgeSource,
+    confidence,
+    processorName,
+    mappingMetadata,
+  } = params;
+
+  const projectionSource = normalizeV42ProjectionSource(bridgeSource);
+  const exposureMinutes = normalizeExposureMinutes(event.duration_minutes);
+  const nowIso = new Date().toISOString();
+
+  const existingProjection = await readExistingV42ProjectionLink(
+    supabase,
+    event.id,
+    valueObjectId,
+    projectionSource
+  );
+
+  if (existingProjection.errorMessage) {
+    return {
+      activityEventValueObjectLinkId: null,
+      usageAggregateId: null,
+      errorMessage: existingProjection.errorMessage,
+    };
+  }
+
+  const { data: projectionData, error: projectionError } = await supabase
+    .from("activity_event_value_object_links")
+    .upsert(
+      {
+        user_id: event.user_id,
+        event_id: event.id,
+        value_object_id: valueObjectId,
+        exposure_minutes: exposureMinutes,
+        source: projectionSource,
+        confidence,
+        metadata_json: {
+          processorName,
+          bridgeSource,
+          valueObjectInstanceId,
+          oldActivityEventValueObjectInstanceLinkId: oldVoiLinkId,
+          mappingMetadata,
+          p491: {
+            projection: "activity_event_value_object_links",
+            mode: "additive_v4_2_runtime_projection",
+          },
+        },
+        updated_at: nowIso,
+      },
+      {
+        onConflict: "event_id,value_object_id,source",
+      }
+    )
+    .select("id")
+    .single();
+
+  if (projectionError || !projectionData) {
+    return {
+      activityEventValueObjectLinkId: null,
+      usageAggregateId: null,
+      errorMessage:
+        projectionError?.message ?? "failed_to_upsert_activity_event_value_object_link",
+    };
+  }
+
+  const activityEventValueObjectLinkId = (projectionData as { id: string }).id;
+
+  /*
+   * Avoid usage overcounting:
+   * - if the direct event -> VO projection already existed, do not increment usage again;
+   * - still keep the projection row updated above for metadata/confidence freshness.
+   */
+  if (existingProjection.id) {
+    return {
+      activityEventValueObjectLinkId,
+      usageAggregateId: null,
+      errorMessage: null,
+    };
+  }
+
+  const existingUsage = await readExistingV42UsageAggregate(
+    supabase,
+    event.user_id,
+    valueObjectId
+  );
+
+  if (existingUsage.errorMessage) {
+    return {
+      activityEventValueObjectLinkId,
+      usageAggregateId: null,
+      errorMessage: existingUsage.errorMessage,
+    };
+  }
+
+  const firstUsedAt = existingUsage.firstUsedAt ?? getEventFirstUsedAt(event);
+  const lastUsedAt = getEventLastUsedAt(event);
+  const nextUsageCount = existingUsage.usageCount + 1;
+  const nextExposureMinutes = existingUsage.exposureMinutes + exposureMinutes;
+
+  const { data: usageData, error: usageError } = await supabase
+    .from("value_object_usage_aggregates")
+    .upsert(
+      {
+        user_id: event.user_id,
+        value_object_id: valueObjectId,
+        usage_count: nextUsageCount,
+        exposure_minutes: nextExposureMinutes,
+        first_used_at: firstUsedAt,
+        last_used_at: lastUsedAt,
+        last_event_id: event.id,
+        source: projectionSource,
+        metadata_json: {
+          processorName,
+          bridgeSource,
+          lastActivityEventValueObjectLinkId: activityEventValueObjectLinkId,
+          lastValueObjectInstanceId: valueObjectInstanceId,
+          lastOldActivityEventValueObjectInstanceLinkId: oldVoiLinkId,
+          lastExposureMinutes: exposureMinutes,
+          p491: {
+            projection: "value_object_usage_aggregates",
+            mode: "additive_v4_2_runtime_projection",
+          },
+        },
+        updated_at: nowIso,
+      },
+      {
+        onConflict: "user_id,value_object_id",
+      }
+    )
+    .select("id")
+    .single();
+
+  if (usageError || !usageData) {
+    return {
+      activityEventValueObjectLinkId,
+      usageAggregateId: null,
+      errorMessage:
+        usageError?.message ?? "failed_to_upsert_value_object_usage_aggregate",
+    };
+  }
+
+  return {
+    activityEventValueObjectLinkId,
+    usageAggregateId: (usageData as { id: string }).id,
+    errorMessage: null,
+  };
 }
 
 export async function processValueObjectBridgeForActivityEvent(
@@ -439,6 +762,9 @@ export async function processValueObjectBridgeForActivityEvent(
       stateDeltaId: null,
       aggregateId: null,
       snapshotId: null,
+      activityEventValueObjectLinkId: null,
+      usageAggregateId: null,
+      v42ProjectionError: null,
       skipped: false,
       skipReason: null,
     };
@@ -478,6 +804,7 @@ export async function processValueObjectBridgeForActivityEvent(
       result.created.push(createdItem);
       continue;
     }
+
     const ownerContext = await readValueObjectOwnerContext(
       supabase,
       mapping.valueObjectId
@@ -553,6 +880,38 @@ export async function processValueObjectBridgeForActivityEvent(
       result.errors.push(linkError.message);
     } else if (linkData) {
       createdItem.linkId = (linkData as { id: string }).id;
+
+      const v42Projection = await upsertV42ValueObjectProjection({
+        supabase,
+        event,
+        valueObjectId: mapping.valueObjectId,
+        valueObjectInstanceId,
+        oldVoiLinkId: createdItem.linkId,
+        bridgeSource: mappingSource,
+        confidence,
+        processorName,
+        mappingMetadata: mapping.metadata ?? {},
+      });
+
+      createdItem.activityEventValueObjectLinkId =
+        v42Projection.activityEventValueObjectLinkId;
+      createdItem.usageAggregateId = v42Projection.usageAggregateId;
+      createdItem.v42ProjectionError = v42Projection.errorMessage;
+
+      if (v42Projection.errorMessage) {
+        /*
+         * P4.9.1 compatibility rule:
+         * The new v4.2 projection must not roll back the existing VOI pipeline.
+         * Keep the old bridge flow running and expose the projection problem
+         * in the created item + console warning for post-check diagnostics.
+         */
+        console.warn("P4.9.1 v4.2 projection failed", {
+          eventId: event.id,
+          valueObjectId: mapping.valueObjectId,
+          valueObjectInstanceId,
+          errorMessage: v42Projection.errorMessage,
+        });
+      }
     }
 
     const { data: deltaData, error: deltaError } = await supabase
@@ -707,5 +1066,3 @@ export async function processValueObjectBridgeForActivityEvent(
 
   return result;
 }
-
-
