@@ -1,0 +1,1148 @@
+{
+  "ok": true,
+  "checkId": "P4.10.0-C8-N1",
+  "checkedAt": "2026-05-19T17:40:13.195Z",
+  "persistPath": "lib\\activity\\categoryDerivation\\persistDerivations.ts",
+  "totalCases": 7,
+  "passedCases": 7,
+  "failedCases": 0,
+  "liveDbWrites": false,
+  "cases": [
+    {
+      "id": "persist_success_with_resolved_and_unresolved_candidates",
+      "passed": true,
+      "result": {
+        "ok": true,
+        "derivationRunId": "mock-run-1",
+        "derivationRowsCreated": 2,
+        "candidateCount": 2,
+        "resolvedCandidateCount": 1,
+        "unresolvedCandidateCount": 1,
+        "warnings": [],
+        "errors": [],
+        "runInsert": {
+          "activity_event_id": "event-001",
+          "actor_id": "actor-001",
+          "organization_id": null,
+          "input_text": "walked to work for 15 minutes",
+          "input_language": "en",
+          "processor_version": "category_derivation_v1",
+          "rule_version": "rules_v1",
+          "model_name": null,
+          "prompt_version": null,
+          "status": "completed",
+          "confidence": 0.92,
+          "needs_user_confirmation": false,
+          "input_json": {
+            "activityEventId": "event-001",
+            "inputText": "walked to work for 15 minutes",
+            "title": "Walked to work",
+            "description": "Mock persistence test",
+            "durationMinutes": 15,
+            "inputLanguage": "en",
+            "actorId": "actor-001",
+            "organizationId": null,
+            "metadata": {
+              "test": true
+            }
+          },
+          "output_json": {
+            "ok": true,
+            "skipped": false,
+            "skipReason": null,
+            "processorVersion": "category_derivation_v1",
+            "ruleVersion": "rules_v1",
+            "confidence": 0.92,
+            "warnings": [],
+            "errors": [],
+            "candidateCount": 2,
+            "resolvedCandidateCount": 1,
+            "unresolvedCandidateCount": 1,
+            "candidates": [
+              {
+                "slug": "walking",
+                "title": "Walking",
+                "semanticLayer": "action",
+                "categoryType": "activity_action",
+                "source": "rule",
+                "confidence": 0.95,
+                "isRequired": true,
+                "isConfirmed": true,
+                "needsUserReview": false,
+                "metadata": {
+                  "ruleId": "walking_to_work_duration"
+                },
+                "categoryId": "category-walking",
+                "resolutionStatus": "resolved_existing"
+              },
+              {
+                "slug": "work",
+                "title": "Work",
+                "semanticLayer": "context",
+                "categoryType": "life_domain",
+                "source": "rule",
+                "confidence": 0.9,
+                "isRequired": true,
+                "isConfirmed": true,
+                "needsUserReview": false,
+                "metadata": {
+                  "ruleId": "walking_to_work_duration"
+                },
+                "categoryId": null,
+                "resolutionStatus": "unresolved"
+              }
+            ],
+            "metadata": {
+              "extractor": "ruleExtractor"
+            }
+          },
+          "error_json": null
+        },
+        "derivationInserts": [
+          {
+            "activity_event_id": "event-001",
+            "derivation_run_id": "mock-run-1",
+            "category_id": "category-walking",
+            "candidate_slug": "walking",
+            "candidate_title": "Walking",
+            "semantic_layer": "action",
+            "category_type": "activity_action",
+            "source": "rule",
+            "confidence": 0.95,
+            "is_required": true,
+            "is_confirmed": true,
+            "needs_user_review": false,
+            "is_rejected": false,
+            "metadata_json": {
+              "ruleId": "walking_to_work_duration",
+              "resolutionStatus": "resolved_existing",
+              "categoryId": "category-walking"
+            }
+          },
+          {
+            "activity_event_id": "event-001",
+            "derivation_run_id": "mock-run-1",
+            "category_id": null,
+            "candidate_slug": "work",
+            "candidate_title": "Work",
+            "semantic_layer": "context",
+            "category_type": "life_domain",
+            "source": "rule",
+            "confidence": 0.9,
+            "is_required": true,
+            "is_confirmed": true,
+            "needs_user_review": false,
+            "is_rejected": false,
+            "metadata_json": {
+              "ruleId": "walking_to_work_duration",
+              "resolutionStatus": "unresolved",
+              "categoryId": null
+            }
+          }
+        ]
+      },
+      "runPayload": {
+        "activity_event_id": "event-001",
+        "actor_id": "actor-001",
+        "organization_id": null,
+        "input_text": "walked to work for 15 minutes",
+        "input_language": "en",
+        "processor_version": "category_derivation_v1",
+        "rule_version": "rules_v1",
+        "model_name": null,
+        "prompt_version": null,
+        "status": "completed",
+        "confidence": 0.92,
+        "needs_user_confirmation": false,
+        "input_json": {
+          "activityEventId": "event-001",
+          "inputText": "walked to work for 15 minutes",
+          "title": "Walked to work",
+          "description": "Mock persistence test",
+          "durationMinutes": 15,
+          "inputLanguage": "en",
+          "actorId": "actor-001",
+          "organizationId": null,
+          "metadata": {
+            "test": true
+          }
+        },
+        "output_json": {
+          "ok": true,
+          "skipped": false,
+          "skipReason": null,
+          "processorVersion": "category_derivation_v1",
+          "ruleVersion": "rules_v1",
+          "confidence": 0.92,
+          "warnings": [],
+          "errors": [],
+          "candidateCount": 2,
+          "resolvedCandidateCount": 1,
+          "unresolvedCandidateCount": 1,
+          "candidates": [
+            {
+              "slug": "walking",
+              "title": "Walking",
+              "semanticLayer": "action",
+              "categoryType": "activity_action",
+              "source": "rule",
+              "confidence": 0.95,
+              "isRequired": true,
+              "isConfirmed": true,
+              "needsUserReview": false,
+              "metadata": {
+                "ruleId": "walking_to_work_duration"
+              },
+              "categoryId": "category-walking",
+              "resolutionStatus": "resolved_existing"
+            },
+            {
+              "slug": "work",
+              "title": "Work",
+              "semanticLayer": "context",
+              "categoryType": "life_domain",
+              "source": "rule",
+              "confidence": 0.9,
+              "isRequired": true,
+              "isConfirmed": true,
+              "needsUserReview": false,
+              "metadata": {
+                "ruleId": "walking_to_work_duration"
+              },
+              "categoryId": null,
+              "resolutionStatus": "unresolved"
+            }
+          ],
+          "metadata": {
+            "extractor": "ruleExtractor"
+          }
+        },
+        "error_json": null
+      },
+      "derivationPayloads": [
+        {
+          "activity_event_id": "event-001",
+          "derivation_run_id": "mock-run-1",
+          "category_id": "category-walking",
+          "candidate_slug": "walking",
+          "candidate_title": "Walking",
+          "semantic_layer": "action",
+          "category_type": "activity_action",
+          "source": "rule",
+          "confidence": 0.95,
+          "is_required": true,
+          "is_confirmed": true,
+          "needs_user_review": false,
+          "is_rejected": false,
+          "metadata_json": {
+            "ruleId": "walking_to_work_duration",
+            "resolutionStatus": "resolved_existing",
+            "categoryId": "category-walking"
+          }
+        },
+        {
+          "activity_event_id": "event-001",
+          "derivation_run_id": "mock-run-1",
+          "category_id": null,
+          "candidate_slug": "work",
+          "candidate_title": "Work",
+          "semantic_layer": "context",
+          "category_type": "life_domain",
+          "source": "rule",
+          "confidence": 0.9,
+          "is_required": true,
+          "is_confirmed": true,
+          "needs_user_review": false,
+          "is_rejected": false,
+          "metadata_json": {
+            "ruleId": "walking_to_work_duration",
+            "resolutionStatus": "unresolved",
+            "categoryId": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "warning_status_becomes_completed_with_warnings",
+      "passed": true,
+      "resultStatus": "completed_with_warnings",
+      "result": {
+        "ok": true,
+        "derivationRunId": "mock-run-1",
+        "derivationRowsCreated": 2,
+        "candidateCount": 2,
+        "resolvedCandidateCount": 1,
+        "unresolvedCandidateCount": 1,
+        "warnings": [],
+        "errors": [],
+        "runInsert": {
+          "activity_event_id": "event-warning",
+          "actor_id": "actor-001",
+          "organization_id": null,
+          "input_text": "walked to work for 15 minutes",
+          "input_language": "en",
+          "processor_version": "category_derivation_v1",
+          "rule_version": "rules_v1",
+          "model_name": null,
+          "prompt_version": null,
+          "status": "completed_with_warnings",
+          "confidence": 0.92,
+          "needs_user_confirmation": false,
+          "input_json": {
+            "activityEventId": "event-warning",
+            "inputText": "walked to work for 15 minutes",
+            "title": "Walked to work",
+            "description": "Mock persistence test",
+            "durationMinutes": 15,
+            "inputLanguage": "en",
+            "actorId": "actor-001",
+            "organizationId": null,
+            "metadata": {
+              "test": true
+            }
+          },
+          "output_json": {
+            "ok": true,
+            "skipped": false,
+            "skipReason": null,
+            "processorVersion": "category_derivation_v1",
+            "ruleVersion": "rules_v1",
+            "confidence": 0.92,
+            "warnings": [
+              "mock warning"
+            ],
+            "errors": [],
+            "candidateCount": 2,
+            "resolvedCandidateCount": 1,
+            "unresolvedCandidateCount": 1,
+            "candidates": [
+              {
+                "slug": "walking",
+                "title": "Walking",
+                "semanticLayer": "action",
+                "categoryType": "activity_action",
+                "source": "rule",
+                "confidence": 0.95,
+                "isRequired": true,
+                "isConfirmed": true,
+                "needsUserReview": false,
+                "metadata": {
+                  "ruleId": "walking_to_work_duration"
+                },
+                "categoryId": "category-walking",
+                "resolutionStatus": "resolved_existing"
+              },
+              {
+                "slug": "work",
+                "title": "Work",
+                "semanticLayer": "context",
+                "categoryType": "life_domain",
+                "source": "rule",
+                "confidence": 0.9,
+                "isRequired": true,
+                "isConfirmed": true,
+                "needsUserReview": false,
+                "metadata": {
+                  "ruleId": "walking_to_work_duration"
+                },
+                "categoryId": null,
+                "resolutionStatus": "unresolved"
+              }
+            ],
+            "metadata": {
+              "extractor": "ruleExtractor"
+            }
+          },
+          "error_json": null
+        },
+        "derivationInserts": [
+          {
+            "activity_event_id": "event-warning",
+            "derivation_run_id": "mock-run-1",
+            "category_id": "category-walking",
+            "candidate_slug": "walking",
+            "candidate_title": "Walking",
+            "semantic_layer": "action",
+            "category_type": "activity_action",
+            "source": "rule",
+            "confidence": 0.95,
+            "is_required": true,
+            "is_confirmed": true,
+            "needs_user_review": false,
+            "is_rejected": false,
+            "metadata_json": {
+              "ruleId": "walking_to_work_duration",
+              "resolutionStatus": "resolved_existing",
+              "categoryId": "category-walking"
+            }
+          },
+          {
+            "activity_event_id": "event-warning",
+            "derivation_run_id": "mock-run-1",
+            "category_id": null,
+            "candidate_slug": "work",
+            "candidate_title": "Work",
+            "semantic_layer": "context",
+            "category_type": "life_domain",
+            "source": "rule",
+            "confidence": 0.9,
+            "is_required": true,
+            "is_confirmed": true,
+            "needs_user_review": false,
+            "is_rejected": false,
+            "metadata_json": {
+              "ruleId": "walking_to_work_duration",
+              "resolutionStatus": "unresolved",
+              "categoryId": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "error_status_becomes_failed_and_error_json_exists",
+      "passed": true,
+      "resultStatus": "failed",
+      "errorJson": {
+        "errors": [
+          "mock extractor failure"
+        ],
+        "warnings": []
+      },
+      "result": {
+        "ok": true,
+        "derivationRunId": "mock-run-1",
+        "derivationRowsCreated": 2,
+        "candidateCount": 2,
+        "resolvedCandidateCount": 1,
+        "unresolvedCandidateCount": 1,
+        "warnings": [],
+        "errors": [],
+        "runInsert": {
+          "activity_event_id": "event-failed",
+          "actor_id": "actor-001",
+          "organization_id": null,
+          "input_text": "walked to work for 15 minutes",
+          "input_language": "en",
+          "processor_version": "category_derivation_v1",
+          "rule_version": "rules_v1",
+          "model_name": null,
+          "prompt_version": null,
+          "status": "failed",
+          "confidence": 0.92,
+          "needs_user_confirmation": false,
+          "input_json": {
+            "activityEventId": "event-failed",
+            "inputText": "walked to work for 15 minutes",
+            "title": "Walked to work",
+            "description": "Mock persistence test",
+            "durationMinutes": 15,
+            "inputLanguage": "en",
+            "actorId": "actor-001",
+            "organizationId": null,
+            "metadata": {
+              "test": true
+            }
+          },
+          "output_json": {
+            "ok": false,
+            "skipped": false,
+            "skipReason": null,
+            "processorVersion": "category_derivation_v1",
+            "ruleVersion": "rules_v1",
+            "confidence": 0.92,
+            "warnings": [],
+            "errors": [
+              "mock extractor failure"
+            ],
+            "candidateCount": 2,
+            "resolvedCandidateCount": 1,
+            "unresolvedCandidateCount": 1,
+            "candidates": [
+              {
+                "slug": "walking",
+                "title": "Walking",
+                "semanticLayer": "action",
+                "categoryType": "activity_action",
+                "source": "rule",
+                "confidence": 0.95,
+                "isRequired": true,
+                "isConfirmed": true,
+                "needsUserReview": false,
+                "metadata": {
+                  "ruleId": "walking_to_work_duration"
+                },
+                "categoryId": "category-walking",
+                "resolutionStatus": "resolved_existing"
+              },
+              {
+                "slug": "work",
+                "title": "Work",
+                "semanticLayer": "context",
+                "categoryType": "life_domain",
+                "source": "rule",
+                "confidence": 0.9,
+                "isRequired": true,
+                "isConfirmed": true,
+                "needsUserReview": false,
+                "metadata": {
+                  "ruleId": "walking_to_work_duration"
+                },
+                "categoryId": null,
+                "resolutionStatus": "unresolved"
+              }
+            ],
+            "metadata": {
+              "extractor": "ruleExtractor"
+            }
+          },
+          "error_json": {
+            "errors": [
+              "mock extractor failure"
+            ],
+            "warnings": []
+          }
+        },
+        "derivationInserts": [
+          {
+            "activity_event_id": "event-failed",
+            "derivation_run_id": "mock-run-1",
+            "category_id": "category-walking",
+            "candidate_slug": "walking",
+            "candidate_title": "Walking",
+            "semantic_layer": "action",
+            "category_type": "activity_action",
+            "source": "rule",
+            "confidence": 0.95,
+            "is_required": true,
+            "is_confirmed": true,
+            "needs_user_review": false,
+            "is_rejected": false,
+            "metadata_json": {
+              "ruleId": "walking_to_work_duration",
+              "resolutionStatus": "resolved_existing",
+              "categoryId": "category-walking"
+            }
+          },
+          {
+            "activity_event_id": "event-failed",
+            "derivation_run_id": "mock-run-1",
+            "category_id": null,
+            "candidate_slug": "work",
+            "candidate_title": "Work",
+            "semantic_layer": "context",
+            "category_type": "life_domain",
+            "source": "rule",
+            "confidence": 0.9,
+            "is_required": true,
+            "is_confirmed": true,
+            "needs_user_review": false,
+            "is_rejected": false,
+            "metadata_json": {
+              "ruleId": "walking_to_work_duration",
+              "resolutionStatus": "unresolved",
+              "categoryId": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "missing_activity_event_id_returns_error_without_inserts",
+      "passed": true,
+      "result": {
+        "ok": false,
+        "derivationRunId": null,
+        "derivationRowsCreated": 0,
+        "candidateCount": 2,
+        "resolvedCandidateCount": 0,
+        "unresolvedCandidateCount": 2,
+        "warnings": [],
+        "errors": [
+          "activityEventId is required."
+        ]
+      },
+      "inserts": []
+    },
+    {
+      "id": "run_insert_failure_returns_error",
+      "passed": true,
+      "result": {
+        "ok": false,
+        "derivationRunId": null,
+        "derivationRowsCreated": 0,
+        "candidateCount": 2,
+        "resolvedCandidateCount": 1,
+        "unresolvedCandidateCount": 1,
+        "warnings": [],
+        "errors": [
+          "Failed to insert category_derivation_runs: mock run insert failure"
+        ],
+        "runInsert": {
+          "activity_event_id": "event-run-failure",
+          "actor_id": "actor-001",
+          "organization_id": null,
+          "input_text": "walked to work for 15 minutes",
+          "input_language": "en",
+          "processor_version": "category_derivation_v1",
+          "rule_version": "rules_v1",
+          "model_name": null,
+          "prompt_version": null,
+          "status": "completed",
+          "confidence": 0.92,
+          "needs_user_confirmation": false,
+          "input_json": {
+            "activityEventId": "event-run-failure",
+            "inputText": "walked to work for 15 minutes",
+            "title": "Walked to work",
+            "description": "Mock persistence test",
+            "durationMinutes": 15,
+            "inputLanguage": "en",
+            "actorId": "actor-001",
+            "organizationId": null,
+            "metadata": {
+              "test": true
+            }
+          },
+          "output_json": {
+            "ok": true,
+            "skipped": false,
+            "skipReason": null,
+            "processorVersion": "category_derivation_v1",
+            "ruleVersion": "rules_v1",
+            "confidence": 0.92,
+            "warnings": [],
+            "errors": [],
+            "candidateCount": 2,
+            "resolvedCandidateCount": 1,
+            "unresolvedCandidateCount": 1,
+            "candidates": [
+              {
+                "slug": "walking",
+                "title": "Walking",
+                "semanticLayer": "action",
+                "categoryType": "activity_action",
+                "source": "rule",
+                "confidence": 0.95,
+                "isRequired": true,
+                "isConfirmed": true,
+                "needsUserReview": false,
+                "metadata": {
+                  "ruleId": "walking_to_work_duration"
+                },
+                "categoryId": "category-walking",
+                "resolutionStatus": "resolved_existing"
+              },
+              {
+                "slug": "work",
+                "title": "Work",
+                "semanticLayer": "context",
+                "categoryType": "life_domain",
+                "source": "rule",
+                "confidence": 0.9,
+                "isRequired": true,
+                "isConfirmed": true,
+                "needsUserReview": false,
+                "metadata": {
+                  "ruleId": "walking_to_work_duration"
+                },
+                "categoryId": null,
+                "resolutionStatus": "unresolved"
+              }
+            ],
+            "metadata": {
+              "extractor": "ruleExtractor"
+            }
+          },
+          "error_json": null
+        }
+      },
+      "inserts": [
+        {
+          "table": "category_derivation_runs",
+          "payload": {
+            "activity_event_id": "event-run-failure",
+            "actor_id": "actor-001",
+            "organization_id": null,
+            "input_text": "walked to work for 15 minutes",
+            "input_language": "en",
+            "processor_version": "category_derivation_v1",
+            "rule_version": "rules_v1",
+            "model_name": null,
+            "prompt_version": null,
+            "status": "completed",
+            "confidence": 0.92,
+            "needs_user_confirmation": false,
+            "input_json": {
+              "activityEventId": "event-run-failure",
+              "inputText": "walked to work for 15 minutes",
+              "title": "Walked to work",
+              "description": "Mock persistence test",
+              "durationMinutes": 15,
+              "inputLanguage": "en",
+              "actorId": "actor-001",
+              "organizationId": null,
+              "metadata": {
+                "test": true
+              }
+            },
+            "output_json": {
+              "ok": true,
+              "skipped": false,
+              "skipReason": null,
+              "processorVersion": "category_derivation_v1",
+              "ruleVersion": "rules_v1",
+              "confidence": 0.92,
+              "warnings": [],
+              "errors": [],
+              "candidateCount": 2,
+              "resolvedCandidateCount": 1,
+              "unresolvedCandidateCount": 1,
+              "candidates": [
+                {
+                  "slug": "walking",
+                  "title": "Walking",
+                  "semanticLayer": "action",
+                  "categoryType": "activity_action",
+                  "source": "rule",
+                  "confidence": 0.95,
+                  "isRequired": true,
+                  "isConfirmed": true,
+                  "needsUserReview": false,
+                  "metadata": {
+                    "ruleId": "walking_to_work_duration"
+                  },
+                  "categoryId": "category-walking",
+                  "resolutionStatus": "resolved_existing"
+                },
+                {
+                  "slug": "work",
+                  "title": "Work",
+                  "semanticLayer": "context",
+                  "categoryType": "life_domain",
+                  "source": "rule",
+                  "confidence": 0.9,
+                  "isRequired": true,
+                  "isConfirmed": true,
+                  "needsUserReview": false,
+                  "metadata": {
+                    "ruleId": "walking_to_work_duration"
+                  },
+                  "categoryId": null,
+                  "resolutionStatus": "unresolved"
+                }
+              ],
+              "metadata": {
+                "extractor": "ruleExtractor"
+              }
+            },
+            "error_json": null
+          },
+          "selectedColumns": "*"
+        }
+      ]
+    },
+    {
+      "id": "one_derivation_insert_failure_returns_partial_error",
+      "passed": true,
+      "result": {
+        "ok": false,
+        "derivationRunId": "mock-run-1",
+        "derivationRowsCreated": 1,
+        "candidateCount": 2,
+        "resolvedCandidateCount": 1,
+        "unresolvedCandidateCount": 1,
+        "warnings": [],
+        "errors": [
+          "Failed to insert activity_category_derivations for work: mock derivation insert failure for work"
+        ],
+        "runInsert": {
+          "activity_event_id": "event-partial-failure",
+          "actor_id": "actor-001",
+          "organization_id": null,
+          "input_text": "walked to work for 15 minutes",
+          "input_language": "en",
+          "processor_version": "category_derivation_v1",
+          "rule_version": "rules_v1",
+          "model_name": null,
+          "prompt_version": null,
+          "status": "completed",
+          "confidence": 0.92,
+          "needs_user_confirmation": false,
+          "input_json": {
+            "activityEventId": "event-partial-failure",
+            "inputText": "walked to work for 15 minutes",
+            "title": "Walked to work",
+            "description": "Mock persistence test",
+            "durationMinutes": 15,
+            "inputLanguage": "en",
+            "actorId": "actor-001",
+            "organizationId": null,
+            "metadata": {
+              "test": true
+            }
+          },
+          "output_json": {
+            "ok": true,
+            "skipped": false,
+            "skipReason": null,
+            "processorVersion": "category_derivation_v1",
+            "ruleVersion": "rules_v1",
+            "confidence": 0.92,
+            "warnings": [],
+            "errors": [],
+            "candidateCount": 2,
+            "resolvedCandidateCount": 1,
+            "unresolvedCandidateCount": 1,
+            "candidates": [
+              {
+                "slug": "walking",
+                "title": "Walking",
+                "semanticLayer": "action",
+                "categoryType": "activity_action",
+                "source": "rule",
+                "confidence": 0.95,
+                "isRequired": true,
+                "isConfirmed": true,
+                "needsUserReview": false,
+                "metadata": {
+                  "ruleId": "walking_to_work_duration"
+                },
+                "categoryId": "category-walking",
+                "resolutionStatus": "resolved_existing"
+              },
+              {
+                "slug": "work",
+                "title": "Work",
+                "semanticLayer": "context",
+                "categoryType": "life_domain",
+                "source": "rule",
+                "confidence": 0.9,
+                "isRequired": true,
+                "isConfirmed": true,
+                "needsUserReview": false,
+                "metadata": {
+                  "ruleId": "walking_to_work_duration"
+                },
+                "categoryId": null,
+                "resolutionStatus": "unresolved"
+              }
+            ],
+            "metadata": {
+              "extractor": "ruleExtractor"
+            }
+          },
+          "error_json": null
+        },
+        "derivationInserts": [
+          {
+            "activity_event_id": "event-partial-failure",
+            "derivation_run_id": "mock-run-1",
+            "category_id": "category-walking",
+            "candidate_slug": "walking",
+            "candidate_title": "Walking",
+            "semantic_layer": "action",
+            "category_type": "activity_action",
+            "source": "rule",
+            "confidence": 0.95,
+            "is_required": true,
+            "is_confirmed": true,
+            "needs_user_review": false,
+            "is_rejected": false,
+            "metadata_json": {
+              "ruleId": "walking_to_work_duration",
+              "resolutionStatus": "resolved_existing",
+              "categoryId": "category-walking"
+            }
+          },
+          {
+            "activity_event_id": "event-partial-failure",
+            "derivation_run_id": "mock-run-1",
+            "category_id": null,
+            "candidate_slug": "work",
+            "candidate_title": "Work",
+            "semantic_layer": "context",
+            "category_type": "life_domain",
+            "source": "rule",
+            "confidence": 0.9,
+            "is_required": true,
+            "is_confirmed": true,
+            "needs_user_review": false,
+            "is_rejected": false,
+            "metadata_json": {
+              "ruleId": "walking_to_work_duration",
+              "resolutionStatus": "unresolved",
+              "categoryId": null
+            }
+          }
+        ]
+      },
+      "inserts": [
+        {
+          "table": "category_derivation_runs",
+          "payload": {
+            "activity_event_id": "event-partial-failure",
+            "actor_id": "actor-001",
+            "organization_id": null,
+            "input_text": "walked to work for 15 minutes",
+            "input_language": "en",
+            "processor_version": "category_derivation_v1",
+            "rule_version": "rules_v1",
+            "model_name": null,
+            "prompt_version": null,
+            "status": "completed",
+            "confidence": 0.92,
+            "needs_user_confirmation": false,
+            "input_json": {
+              "activityEventId": "event-partial-failure",
+              "inputText": "walked to work for 15 minutes",
+              "title": "Walked to work",
+              "description": "Mock persistence test",
+              "durationMinutes": 15,
+              "inputLanguage": "en",
+              "actorId": "actor-001",
+              "organizationId": null,
+              "metadata": {
+                "test": true
+              }
+            },
+            "output_json": {
+              "ok": true,
+              "skipped": false,
+              "skipReason": null,
+              "processorVersion": "category_derivation_v1",
+              "ruleVersion": "rules_v1",
+              "confidence": 0.92,
+              "warnings": [],
+              "errors": [],
+              "candidateCount": 2,
+              "resolvedCandidateCount": 1,
+              "unresolvedCandidateCount": 1,
+              "candidates": [
+                {
+                  "slug": "walking",
+                  "title": "Walking",
+                  "semanticLayer": "action",
+                  "categoryType": "activity_action",
+                  "source": "rule",
+                  "confidence": 0.95,
+                  "isRequired": true,
+                  "isConfirmed": true,
+                  "needsUserReview": false,
+                  "metadata": {
+                    "ruleId": "walking_to_work_duration"
+                  },
+                  "categoryId": "category-walking",
+                  "resolutionStatus": "resolved_existing"
+                },
+                {
+                  "slug": "work",
+                  "title": "Work",
+                  "semanticLayer": "context",
+                  "categoryType": "life_domain",
+                  "source": "rule",
+                  "confidence": 0.9,
+                  "isRequired": true,
+                  "isConfirmed": true,
+                  "needsUserReview": false,
+                  "metadata": {
+                    "ruleId": "walking_to_work_duration"
+                  },
+                  "categoryId": null,
+                  "resolutionStatus": "unresolved"
+                }
+              ],
+              "metadata": {
+                "extractor": "ruleExtractor"
+              }
+            },
+            "error_json": null
+          },
+          "selectedColumns": "*"
+        },
+        {
+          "table": "activity_category_derivations",
+          "payload": {
+            "activity_event_id": "event-partial-failure",
+            "derivation_run_id": "mock-run-1",
+            "category_id": "category-walking",
+            "candidate_slug": "walking",
+            "candidate_title": "Walking",
+            "semantic_layer": "action",
+            "category_type": "activity_action",
+            "source": "rule",
+            "confidence": 0.95,
+            "is_required": true,
+            "is_confirmed": true,
+            "needs_user_review": false,
+            "is_rejected": false,
+            "metadata_json": {
+              "ruleId": "walking_to_work_duration",
+              "resolutionStatus": "resolved_existing",
+              "categoryId": "category-walking"
+            }
+          },
+          "selectedColumns": "*"
+        },
+        {
+          "table": "activity_category_derivations",
+          "payload": {
+            "activity_event_id": "event-partial-failure",
+            "derivation_run_id": "mock-run-1",
+            "category_id": null,
+            "candidate_slug": "work",
+            "candidate_title": "Work",
+            "semantic_layer": "context",
+            "category_type": "life_domain",
+            "source": "rule",
+            "confidence": 0.9,
+            "is_required": true,
+            "is_confirmed": true,
+            "needs_user_review": false,
+            "is_rejected": false,
+            "metadata_json": {
+              "ruleId": "walking_to_work_duration",
+              "resolutionStatus": "unresolved",
+              "categoryId": null
+            }
+          },
+          "selectedColumns": "*"
+        }
+      ]
+    },
+    {
+      "id": "without_resolved_candidates_persists_unresolved_fallback",
+      "passed": true,
+      "result": {
+        "ok": true,
+        "derivationRunId": "mock-run-1",
+        "derivationRowsCreated": 2,
+        "candidateCount": 2,
+        "resolvedCandidateCount": 0,
+        "unresolvedCandidateCount": 2,
+        "warnings": [],
+        "errors": [],
+        "runInsert": {
+          "activity_event_id": "event-unresolved-fallback",
+          "actor_id": "actor-001",
+          "organization_id": null,
+          "input_text": "walked to work for 15 minutes",
+          "input_language": "en",
+          "processor_version": "category_derivation_v1",
+          "rule_version": "rules_v1",
+          "model_name": null,
+          "prompt_version": null,
+          "status": "completed",
+          "confidence": 0.92,
+          "needs_user_confirmation": false,
+          "input_json": {
+            "activityEventId": "event-unresolved-fallback",
+            "inputText": "walked to work for 15 minutes",
+            "title": "Walked to work",
+            "description": "Mock persistence test",
+            "durationMinutes": 15,
+            "inputLanguage": "en",
+            "actorId": "actor-001",
+            "organizationId": null,
+            "metadata": {
+              "test": true
+            }
+          },
+          "output_json": {
+            "ok": true,
+            "skipped": false,
+            "skipReason": null,
+            "processorVersion": "category_derivation_v1",
+            "ruleVersion": "rules_v1",
+            "confidence": 0.92,
+            "warnings": [],
+            "errors": [],
+            "candidateCount": 2,
+            "resolvedCandidateCount": 0,
+            "unresolvedCandidateCount": 2,
+            "candidates": [
+              {
+                "slug": "walking",
+                "title": "Walking",
+                "semanticLayer": "action",
+                "categoryType": "activity_action",
+                "source": "rule",
+                "confidence": 0.95,
+                "isRequired": true,
+                "isConfirmed": true,
+                "needsUserReview": false,
+                "metadata": {
+                  "ruleId": "walking_to_work_duration"
+                },
+                "categoryId": null,
+                "resolutionStatus": "unresolved"
+              },
+              {
+                "slug": "work",
+                "title": "Work",
+                "semanticLayer": "context",
+                "categoryType": "life_domain",
+                "source": "rule",
+                "confidence": 0.9,
+                "isRequired": true,
+                "isConfirmed": true,
+                "needsUserReview": false,
+                "metadata": {
+                  "ruleId": "walking_to_work_duration"
+                },
+                "categoryId": null,
+                "resolutionStatus": "unresolved"
+              }
+            ],
+            "metadata": {
+              "extractor": "ruleExtractor"
+            }
+          },
+          "error_json": null
+        },
+        "derivationInserts": [
+          {
+            "activity_event_id": "event-unresolved-fallback",
+            "derivation_run_id": "mock-run-1",
+            "category_id": null,
+            "candidate_slug": "walking",
+            "candidate_title": "Walking",
+            "semantic_layer": "action",
+            "category_type": "activity_action",
+            "source": "rule",
+            "confidence": 0.95,
+            "is_required": true,
+            "is_confirmed": true,
+            "needs_user_review": false,
+            "is_rejected": false,
+            "metadata_json": {
+              "ruleId": "walking_to_work_duration",
+              "resolutionStatus": "unresolved",
+              "categoryId": null
+            }
+          },
+          {
+            "activity_event_id": "event-unresolved-fallback",
+            "derivation_run_id": "mock-run-1",
+            "category_id": null,
+            "candidate_slug": "work",
+            "candidate_title": "Work",
+            "semantic_layer": "context",
+            "category_type": "life_domain",
+            "source": "rule",
+            "confidence": 0.9,
+            "is_required": true,
+            "is_confirmed": true,
+            "needs_user_review": false,
+            "is_rejected": false,
+            "metadata_json": {
+              "ruleId": "walking_to_work_duration",
+              "resolutionStatus": "unresolved",
+              "categoryId": null
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
