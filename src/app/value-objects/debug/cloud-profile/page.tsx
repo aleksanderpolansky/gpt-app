@@ -1,658 +1,711 @@
 ﻿"use client";
 
-import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-type CategorySummaryItem = {
-  contextualCategorySlug: string | null;
-  contextualCategoryName: string | null;
-  contextualCategoryStatus: string | null;
-  contextualCategoryIsActive: boolean | null;
-  valueObjectsCount: number;
-  totalUsageCount: number;
-  totalExposureMinutes: number;
-  lastUsedAt: string | null;
-};
+type JsonRecord = Record<string, unknown>;
 
-type LatestObjectItem = {
-  userId: string;
-  valueObjectId: string;
-  categorySlug: string | null;
-  categoryName: string | null;
+type NormalizedHierarchyProfile = {
+  id: string;
+  title: string;
+  hierarchyRole: string;
+  parentValueObjectId: string | null;
+  parentTitle: string | null;
+  parentExists: boolean;
   usageCount: number;
   totalExposureMinutes: number;
   lastUsedAt: string | null;
-  latestEventId: string | null;
-  latestEventTitle: string | null;
-  latestActivityTemplateSlug: string | null;
-  latestExposureMinutes: number | null;
+  raw: JsonRecord;
 };
 
-type ObjectCloudProfile = {
-  userId: string;
-  valueObjectId: string;
-  category: {
-    table: string | null;
-    id: string | null;
-    role: string | null;
-    slug: string | null;
-    name: string | null;
-    status: string | null;
-    isActive: boolean | null;
-    linkSource: string | null;
-    linkConfidence: number | null;
-    linkCreatedAt: string | null;
-    linkUpdatedAt: string | null;
-  };
-  usage: {
-    aggregateId: string | null;
-    count: number;
-    totalExposureMinutes: number;
-    firstUsedAt: string | null;
-    lastUsedAt: string | null;
-    lastEventId: string | null;
-    source: string | null;
-    createdAt: string | null;
-    updatedAt: string | null;
-  };
-  latestExposure: {
-    eventValueObjectLinkId: string | null;
-    eventId: string | null;
-    eventTitle: string | null;
-    eventStatus: string | null;
-    eventDurationMinutes: number | null;
-    exposureMinutes: number | null;
-    activityTemplateSlug: string | null;
-    activityTemplateTitle: string | null;
-  };
-  snapshots: unknown;
-  dailyAggregates: unknown;
+type CheckStatus = "pass" | "fail" | "warn" | "pending";
+
+type VerificationCheck = {
+  label: string;
+  status: CheckStatus;
+  details: string;
 };
 
-type ObjectCloudApiResponse = {
-  ok: boolean;
-  endpoint?: string;
-  mode?: string;
-  source?: string;
-  filters?: {
-    userId?: string | null;
-    categorySlug?: string | null;
-    valueObjectId?: string | null;
-    limit?: number;
+const EXPECTED_PARENT_ID = "112bab0b-2a53-4f7a-bd62-b9fe760d0b54";
+const EXPECTED_CHILD_ID = "9177fea8-de25-446b-b418-b55a766d53db";
+const EXPECTED_ROOT_ID = "b7acc958-7966-42c2-82c5-35c4de26d7ea";
+
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getRecord(source: JsonRecord | null | undefined, keys: string[]): JsonRecord | null {
+  if (!source) return null;
+
+  for (const key of keys) {
+    const value = source[key];
+    if (isRecord(value)) return value;
+  }
+
+  return null;
+}
+
+function getArray(source: JsonRecord | null | undefined, keys: string[]): JsonRecord[] {
+  if (!source) return [];
+
+  for (const key of keys) {
+    const value = source[key];
+    if (Array.isArray(value)) {
+      return value.filter(isRecord);
+    }
+  }
+
+  return [];
+}
+
+function getNullableString(source: JsonRecord | null | undefined, keys: string[]): string | null {
+  if (!source) return null;
+
+  for (const key of keys) {
+    const value = source[key];
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value;
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value);
+    }
+  }
+
+  return null;
+}
+
+function getString(source: JsonRecord | null | undefined, keys: string[], fallback = "—"): string {
+  return getNullableString(source, keys) ?? fallback;
+}
+
+function getNumber(source: JsonRecord | null | undefined, keys: string[], fallback = 0): number {
+  if (!source) return fallback;
+
+  for (const key of keys) {
+    const value = source[key];
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+
+  return fallback;
+}
+
+function getBoolean(source: JsonRecord | null | undefined, keys: string[], fallback = false): boolean {
+  if (!source) return fallback;
+
+  for (const key of keys) {
+    const value = source[key];
+
+    if (typeof value === "boolean") return value;
+
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      if (normalized === "true") return true;
+      if (normalized === "false") return false;
+    }
+  }
+
+  return fallback;
+}
+
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat("en-US").format(value);
+}
+
+function formatMinutes(value: number): string {
+  return `${formatNumber(value)} min`;
+}
+
+function formatDate(value: string | null): string {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleString();
+}
+
+function normalizeHierarchyProfile(row: JsonRecord): NormalizedHierarchyProfile {
+  const parent = getRecord(row, [
+    "parent",
+    "parentValueObject",
+    "parent_value_object",
+    "parent_value_object_profile",
+  ]);
+
+  const id = getString(row, [
+    "valueObjectId",
+    "value_object_id",
+    "id",
+    "valueObjectID",
+  ]);
+
+  const parentValueObjectId =
+    getNullableString(row, [
+      "parentValueObjectId",
+      "parent_value_object_id",
+      "parentId",
+      "parent_id",
+    ]) ??
+    getNullableString(parent, [
+      "id",
+      "valueObjectId",
+      "value_object_id",
+    ]);
+
+  const parentTitle =
+    getNullableString(row, [
+      "parentTitle",
+      "parent_title",
+      "parentValueObjectTitle",
+      "parent_value_object_title",
+    ]) ??
+    getNullableString(parent, [
+      "title",
+      "name",
+      "valueObjectTitle",
+      "value_object_title",
+    ]);
+
+  const rawRole = getNullableString(row, [
+    "hierarchyRole",
+    "hierarchy_role",
+    "role",
+  ]);
+
+  const hierarchyRole = rawRole ?? (parentValueObjectId ? "child" : "root");
+
+  const parentExists = getBoolean(
+    row,
+    ["parentExists", "parent_exists"],
+    Boolean(parentValueObjectId),
+  );
+
+  return {
+    id,
+    title: getString(row, [
+      "title",
+      "valueObjectTitle",
+      "value_object_title",
+      "name",
+    ]),
+    hierarchyRole,
+    parentValueObjectId,
+    parentTitle,
+    parentExists,
+    usageCount: getNumber(row, [
+      "usageCount",
+      "usage_count",
+      "eventCount",
+      "event_count",
+    ]),
+    totalExposureMinutes: getNumber(row, [
+      "totalExposureMinutes",
+      "total_exposure_minutes",
+      "exposureMinutes",
+      "exposure_minutes",
+    ]),
+    lastUsedAt: getNullableString(row, [
+      "lastUsedAt",
+      "last_used_at",
+      "updatedAt",
+      "updated_at",
+      "createdAt",
+      "created_at",
+    ]),
+    raw: row,
   };
-  counts?: {
-    profiles?: number;
-    categorySummary?: number;
-    latestObjects?: number;
+}
+
+function buildVerificationChecks(
+  payload: JsonRecord | null,
+  hierarchyProfiles: NormalizedHierarchyProfile[],
+): VerificationCheck[] {
+  if (!payload) {
+    return [
+      {
+        label: "API payload loaded",
+        status: "pending",
+        details: "Waiting for /api/value-objects/debug/cloud-profile response.",
+      },
+    ];
+  }
+
+  const expectedChild =
+    hierarchyProfiles.find((profile) => profile.id === EXPECTED_CHILD_ID) ??
+    hierarchyProfiles.find((profile) =>
+      profile.title.toLowerCase().includes("business german"),
+    );
+
+  const expectedRoot =
+    hierarchyProfiles.find((profile) => profile.id === EXPECTED_ROOT_ID) ??
+    hierarchyProfiles.find((profile) =>
+      profile.title.toLowerCase().includes("knee training"),
+    );
+
+  const apiOk = getBoolean(payload, ["ok"], false);
+
+  const childHasExpectedParent =
+    expectedChild?.parentValueObjectId === EXPECTED_PARENT_ID ||
+    expectedChild?.parentTitle?.toLowerCase() === "learning";
+
+  return [
+    {
+      label: "API response is OK",
+      status: apiOk ? "pass" : "warn",
+      details: apiOk
+        ? "API returned ok=true."
+        : "API payload loaded, but ok=true was not found. Check raw JSON.",
+    },
+    {
+      label: "hierarchyProfiles exists",
+      status: hierarchyProfiles.length > 0 ? "pass" : "fail",
+      details:
+        hierarchyProfiles.length > 0
+          ? `Loaded ${hierarchyProfiles.length} hierarchy profile(s).`
+          : "No hierarchyProfiles were found in API payload.",
+    },
+    {
+      label: "Business German writing practice is visible",
+      status: expectedChild ? "pass" : "fail",
+      details: expectedChild
+        ? `${expectedChild.title} was found.`
+        : "Expected child profile was not found.",
+    },
+    {
+      label: "Business German points to Learning",
+      status: expectedChild
+        ? childHasExpectedParent
+          ? "pass"
+          : "fail"
+        : "pending",
+      details: expectedChild
+        ? `parentValueObjectId=${expectedChild.parentValueObjectId ?? "null"}, parentTitle=${
+            expectedChild.parentTitle ?? "null"
+          }`
+        : "Waiting for child profile.",
+    },
+    {
+      label: "Business German parentExists=true",
+      status: expectedChild
+        ? expectedChild.parentExists
+          ? "pass"
+          : "fail"
+        : "pending",
+      details: expectedChild
+        ? `parentExists=${String(expectedChild.parentExists)}`
+        : "Waiting for child profile.",
+    },
+    {
+      label: "Business German hierarchyRole=child",
+      status: expectedChild
+        ? expectedChild.hierarchyRole === "child" || Boolean(expectedChild.parentValueObjectId)
+          ? "pass"
+          : "fail"
+        : "pending",
+      details: expectedChild
+        ? `hierarchyRole=${expectedChild.hierarchyRole}`
+        : "Waiting for child profile.",
+    },
+    {
+      label: "Knee training practice remains root",
+      status: expectedRoot
+        ? expectedRoot.parentValueObjectId === null
+          ? "pass"
+          : "fail"
+        : "warn",
+      details: expectedRoot
+        ? `parentValueObjectId=${expectedRoot.parentValueObjectId ?? "null"}, hierarchyRole=${
+            expectedRoot.hierarchyRole
+          }`
+        : "Knee training practice was not found in hierarchyProfiles. Check raw JSON.",
+    },
+  ];
+}
+
+function StatusPill({ status }: { status: CheckStatus }) {
+  const labelByStatus: Record<CheckStatus, string> = {
+    pass: "OK",
+    fail: "FAIL",
+    warn: "CHECK",
+    pending: "PENDING",
   };
-  categorySummary?: CategorySummaryItem[];
-  latestObjects?: LatestObjectItem[];
-  profiles?: ObjectCloudProfile[];
-  error?: string;
-};
 
-type LoadState = "idle" | "loading" | "success" | "error";
+  const classNameByStatus: Record<CheckStatus, string> = {
+    pass: "border-emerald-500/60 bg-emerald-500/10 text-emerald-200",
+    fail: "border-red-500/60 bg-red-500/10 text-red-200",
+    warn: "border-amber-500/60 bg-amber-500/10 text-amber-200",
+    pending: "border-slate-500/60 bg-slate-500/10 text-slate-200",
+  };
 
-function normalizeLimit(value: string): number {
-  const parsed = Number(value);
-
-  if (!Number.isFinite(parsed)) {
-    return 20;
-  }
-
-  const integer = Math.trunc(parsed);
-
-  if (integer < 1) {
-    return 1;
-  }
-
-  if (integer > 100) {
-    return 100;
-  }
-
-  return integer;
+  return (
+    <span
+      className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${classNameByStatus[status]}`}
+    >
+      {labelByStatus[status]}
+    </span>
+  );
 }
 
-function formatDateTime(value: string | null | undefined): string {
-  if (!value) {
-    return "—";
-  }
-
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "short",
-      timeStyle: "medium",
-    }).format(new Date(value));
-  } catch {
-    return value;
-  }
-}
-
-function formatNumber(value: number | null | undefined): string {
-  if (typeof value !== "number" || Number.isNaN(value)) {
-    return "0";
-  }
-
-  return new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function stringifyDebugPayload(value: unknown): string {
-  if (value === null || value === undefined) {
-    return "[]";
-  }
-
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
-}
-
-function buildApiPath(filters: {
-  categorySlug: string;
-  valueObjectId: string;
-  limit: string;
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
 }) {
-  const searchParams = new URLSearchParams();
-  const categorySlug = filters.categorySlug.trim();
-  const valueObjectId = filters.valueObjectId.trim();
-  const limit = normalizeLimit(filters.limit);
-
-  searchParams.set("limit", String(limit));
-
-  if (categorySlug) {
-    searchParams.set("categorySlug", categorySlug);
-  }
-
-  if (valueObjectId) {
-    searchParams.set("valueObjectId", valueObjectId);
-  }
-
-  return `/api/value-objects/debug/cloud-profile?${searchParams.toString()}`;
+  return (
+    <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-lg">
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-slate-50">{title}</h2>
+        {description ? (
+          <p className="mt-1 text-sm text-slate-400">{description}</p>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
 }
 
-function MetricCard({
+function SummaryCard({
   label,
   value,
   hint,
 }: {
   label: string;
-  value: string | number;
+  value: string;
   hint?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 shadow-sm">
-      <div className="text-xs uppercase tracking-[0.22em] text-slate-500">
-        {label}
-      </div>
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
       <div className="mt-2 text-2xl font-semibold text-slate-50">{value}</div>
-      {hint ? <div className="mt-1 text-xs text-slate-500">{hint}</div> : null}
+      {hint ? <div className="mt-2 text-xs text-slate-400">{hint}</div> : null}
     </div>
   );
 }
 
-function StatusPill({
-  children,
-  tone = "default",
-}: {
-  children: ReactNode;
-  tone?: "default" | "success" | "warning" | "danger";
-}) {
-  const className =
-    tone === "success"
-      ? "border-emerald-800 bg-emerald-950/60 text-emerald-300"
-      : tone === "warning"
-        ? "border-amber-800 bg-amber-950/60 text-amber-300"
-        : tone === "danger"
-          ? "border-rose-800 bg-rose-950/60 text-rose-300"
-          : "border-slate-700 bg-slate-900 text-slate-300";
-
+function ProfileCard({ profile }: { profile: NormalizedHierarchyProfile }) {
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${className}`}
-    >
-      {children}
-    </span>
+    <article className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-base font-semibold text-slate-50">{profile.title}</h3>
+          <p className="mt-1 break-all text-xs text-slate-500">{profile.id}</p>
+        </div>
+        <span className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-300">
+          {profile.hierarchyRole}
+        </span>
+      </div>
+
+      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="text-slate-500">Parent ID</dt>
+          <dd className="mt-1 break-all text-slate-200">
+            {profile.parentValueObjectId ?? "null"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-slate-500">Parent title</dt>
+          <dd className="mt-1 text-slate-200">{profile.parentTitle ?? "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-500">parentExists</dt>
+          <dd className="mt-1 text-slate-200">{String(profile.parentExists)}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-500">Usage</dt>
+          <dd className="mt-1 text-slate-200">
+            {formatNumber(profile.usageCount)} use(s),{" "}
+            {formatMinutes(profile.totalExposureMinutes)}
+          </dd>
+        </div>
+        <div className="sm:col-span-2">
+          <dt className="text-slate-500">Last used</dt>
+          <dd className="mt-1 text-slate-200">{formatDate(profile.lastUsedAt)}</dd>
+        </div>
+      </dl>
+    </article>
   );
 }
 
-export default function ValueObjectCloudProfileDebugPage() {
-  const [categorySlug, setCategorySlug] = useState("");
-  const [valueObjectId, setValueObjectId] = useState("");
-  const [limit, setLimit] = useState("20");
-  const [loadState, setLoadState] = useState<LoadState>("idle");
-  const [payload, setPayload] = useState<ObjectCloudApiResponse | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
-
-  const apiPath = useMemo(
-    () => buildApiPath({ categorySlug, valueObjectId, limit }),
-    [categorySlug, valueObjectId, limit]
-  );
-
-  const loadCloudProfile = useCallback(async () => {
-    setLoadState("loading");
-    setErrorMessage(null);
-
-    try {
-      const response = await fetch(apiPath, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          accept: "application/json",
-        },
-      });
-
-      const text = await response.text();
-      let json: ObjectCloudApiResponse;
-
-      try {
-        json = JSON.parse(text) as ObjectCloudApiResponse;
-      } catch {
-        json = {
-          ok: false,
-          error: text || "Failed to parse JSON response.",
-        };
-      }
-
-      if (!response.ok || !json.ok) {
-        setPayload(json);
-        setErrorMessage(
-          json.error ?? `Request failed with HTTP status ${response.status}.`
-        );
-        setLoadState("error");
-        return;
-      }
-
-      setPayload(json);
-      setLastLoadedAt(new Date().toISOString());
-      setLoadState("success");
-    } catch (error) {
-      setPayload(null);
-      setErrorMessage(
-        error instanceof Error ? error.message : "Unknown request error."
-      );
-      setLoadState("error");
-    }
-  }, [apiPath]);
+export default function ValueObjectDebugCloudProfilePage() {
+  const [payload, setPayload] = useState<JsonRecord | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    void loadCloudProfile();
-  }, [loadCloudProfile]);
+    let isMounted = true;
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void loadCloudProfile();
-  }
+    async function loadDebugProfile() {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-  const categorySummary = payload?.categorySummary ?? [];
-  const latestObjects = payload?.latestObjects ?? [];
-  const profiles = payload?.profiles ?? [];
+        const response = await fetch("/api/value-objects/debug/cloud-profile", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        const contentType = response.headers.get("content-type") ?? "";
+        const text = await response.text();
+
+        if (!contentType.includes("application/json")) {
+          throw new Error(
+            `Expected JSON but received "${contentType || "unknown content-type"}". HTTP ${
+              response.status
+            }. Body preview: ${text.slice(0, 300)}`,
+          );
+        }
+
+        const json = JSON.parse(text) as unknown;
+
+        if (!isRecord(json)) {
+          throw new Error("API returned JSON, but root payload is not an object.");
+        }
+
+        if (!response.ok) {
+          const apiMessage =
+            getNullableString(json, ["error", "message"]) ??
+            `HTTP ${response.status}`;
+          throw new Error(apiMessage);
+        }
+
+        if (isMounted) {
+          setPayload(json);
+        }
+      } catch (caughtError) {
+        if (isMounted) {
+          setError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Unknown error while loading debug profile.",
+          );
+          setPayload(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadDebugProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const hierarchySummary = useMemo(() => {
+    return getRecord(payload, ["hierarchySummary", "hierarchy_summary"]);
+  }, [payload]);
+
+  const hierarchyProfiles = useMemo(() => {
+    return getArray(payload, ["hierarchyProfiles", "hierarchy_profiles"]).map(
+      normalizeHierarchyProfile,
+    );
+  }, [payload]);
+
+  const childProfiles = useMemo(() => {
+    return hierarchyProfiles.filter(
+      (profile) =>
+        profile.parentValueObjectId !== null || profile.hierarchyRole === "child",
+    );
+  }, [hierarchyProfiles]);
+
+  const rootProfiles = useMemo(() => {
+    return hierarchyProfiles.filter(
+      (profile) =>
+        profile.parentValueObjectId === null && profile.hierarchyRole !== "child",
+    );
+  }, [hierarchyProfiles]);
+
+  const verificationChecks = useMemo(() => {
+    return buildVerificationChecks(payload, hierarchyProfiles);
+  }, [payload, hierarchyProfiles]);
+
+  const totalProfiles =
+    getNumber(hierarchySummary, ["totalProfiles", "total_profiles"], hierarchyProfiles.length) ||
+    hierarchyProfiles.length;
+
+  const childCount =
+    getNumber(hierarchySummary, ["childCount", "child_count"], childProfiles.length) ||
+    childProfiles.length;
+
+  const rootCount =
+    getNumber(hierarchySummary, ["rootCount", "root_count"], rootProfiles.length) ||
+    rootProfiles.length;
+
+  const parentMissingCount = getNumber(
+    hierarchySummary,
+    ["parentMissingCount", "parent_missing_count", "missingParentCount", "missing_parent_count"],
+    hierarchyProfiles.filter(
+      (profile) => profile.parentValueObjectId !== null && !profile.parentExists,
+    ).length,
+  );
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-6 text-slate-100 sm:px-6 lg:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        <header className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-sm">
+    <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <header className="rounded-2xl border border-slate-800 bg-slate-950/80 p-6 shadow-lg">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-slate-500">
-                P4.9.8 debug/admin
-              </div>
-              <h1 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">
-                Value Object Cloud Profile
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">
+                P4.9.17-A1
+              </p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-50">
+                Value Object Debug Cloud Profile
               </h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-                Read-only debug page over{" "}
-                <code className="rounded bg-slate-950 px-1.5 py-0.5 text-slate-200">
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
+                Hierarchy-aware read-side verification page for{" "}
+                <code className="rounded bg-slate-900 px-1 py-0.5 text-slate-200">
                   /api/value-objects/debug/cloud-profile
-                </code>{" "}
-                and{" "}
-                <code className="rounded bg-slate-950 px-1.5 py-0.5 text-slate-200">
-                  public.value_object_cloud_profiles_v1
                 </code>
-                . This page does not write or mutate runtime data.
+                . This page must only read API data and must not write hierarchy
+                relations.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <StatusPill tone={payload?.ok ? "success" : "default"}>
-                {payload?.ok ? "API OK" : "Waiting"}
-              </StatusPill>
-              <StatusPill>read-only</StatusPill>
-              <StatusPill>debug</StatusPill>
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm">
+              <div className="font-semibold text-slate-200">Expected relation</div>
+              <div className="mt-2 text-slate-400">
+                Learning → Business German writing practice
+              </div>
+              <div className="mt-2 break-all text-xs text-slate-500">
+                parent: {EXPECTED_PARENT_ID}
+              </div>
+              <div className="mt-1 break-all text-xs text-slate-500">
+                child: {EXPECTED_CHILD_ID}
+              </div>
             </div>
           </div>
         </header>
 
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-sm"
-        >
-          <div className="grid gap-4 lg:grid-cols-[1fr_1fr_140px_auto] lg:items-end">
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-slate-300">
-                categorySlug
-              </span>
-              <input
-                value={categorySlug}
-                onChange={(event) => setCategorySlug(event.target.value)}
-                placeholder="business-german / knee-exercises"
-                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none ring-0 placeholder:text-slate-600 focus:border-slate-500"
-              />
-            </label>
+        {isLoading ? (
+          <Section title="Loading" description="Fetching debug API payload.">
+            <div className="text-sm text-slate-400">Loading hierarchy profiles...</div>
+          </Section>
+        ) : null}
 
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-slate-300">
-                valueObjectId
-              </span>
-              <input
-                value={valueObjectId}
-                onChange={(event) => setValueObjectId(event.target.value)}
-                placeholder="UUID"
-                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none ring-0 placeholder:text-slate-600 focus:border-slate-500"
-              />
-            </label>
-
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-slate-300">limit</span>
-              <input
-                value={limit}
-                onChange={(event) => setLimit(event.target.value)}
-                inputMode="numeric"
-                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none ring-0 placeholder:text-slate-600 focus:border-slate-500"
-              />
-            </label>
-
-            <button
-              type="submit"
-              disabled={loadState === "loading"}
-              className="rounded-xl border border-slate-600 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loadState === "loading" ? "Loading..." : "Refresh"}
-            </button>
-          </div>
-
-          <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs text-slate-400">
-            <span className="text-slate-500">Current API path:</span>{" "}
-            <code className="text-slate-200">{apiPath}</code>
-          </div>
-        </form>
-
-        {errorMessage ? (
-          <section className="rounded-2xl border border-rose-800 bg-rose-950/40 p-5 text-rose-200">
-            <div className="font-semibold">Request error</div>
-            <div className="mt-2 text-sm">{errorMessage}</div>
-          </section>
+        {error ? (
+          <Section title="API error" description="The page could not load debug data.">
+            <pre className="whitespace-pre-wrap rounded-2xl border border-red-500/40 bg-red-950/30 p-4 text-sm text-red-100">
+              {error}
+            </pre>
+          </Section>
         ) : null}
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            label="profiles"
-            value={payload?.counts?.profiles ?? profiles.length}
-            hint="Rows returned from API"
+          <SummaryCard
+            label="Hierarchy profiles"
+            value={formatNumber(totalProfiles)}
+            hint="Total profiles exposed by hierarchy read model."
           />
-          <MetricCard
-            label="categories"
-            value={payload?.counts?.categorySummary ?? categorySummary.length}
-            hint="Aggregated category groups"
+          <SummaryCard
+            label="Child profiles"
+            value={formatNumber(childCount)}
+            hint="Profiles with a parent Value Object."
           />
-          <MetricCard
-            label="latest objects"
-            value={payload?.counts?.latestObjects ?? latestObjects.length}
-            hint="Recent profile objects"
+          <SummaryCard
+            label="Root profiles"
+            value={formatNumber(rootCount)}
+            hint="Profiles without parent Value Object."
           />
-          <MetricCard
-            label="last loaded"
-            value={lastLoadedAt ? formatDateTime(lastLoadedAt) : "—"}
-            hint={loadState}
+          <SummaryCard
+            label="Missing parents"
+            value={formatNumber(parentMissingCount)}
+            hint="Should be 0 for verified hierarchy data."
           />
         </section>
 
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-          <h2 className="text-lg font-semibold text-white">Category summary</h2>
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full border-separate border-spacing-y-2 text-left text-sm">
-              <thead className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                <tr>
-                  <th className="px-3 py-2">Category</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Objects</th>
-                  <th className="px-3 py-2">Usage</th>
-                  <th className="px-3 py-2">Minutes</th>
-                  <th className="px-3 py-2">Last used</th>
-                </tr>
-              </thead>
-              <tbody>
-                {categorySummary.length === 0 ? (
-                  <tr>
-                    <td className="px-3 py-4 text-slate-500" colSpan={6}>
-                      No category summary rows.
-                    </td>
-                  </tr>
-                ) : (
-                  categorySummary.map((item) => (
-                    <tr
-                      key={item.contextualCategorySlug ?? item.contextualCategoryName ?? "unknown"}
-                      className="rounded-xl bg-slate-950/80 text-slate-200"
-                    >
-                      <td className="rounded-l-xl px-3 py-3">
-                        <div className="font-medium text-white">
-                          {item.contextualCategoryName ?? "Unnamed category"}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {item.contextualCategorySlug ?? "no-slug"}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <StatusPill
-                          tone={
-                            item.contextualCategoryIsActive
-                              ? "success"
-                              : "warning"
-                          }
-                        >
-                          {item.contextualCategoryStatus ?? "unknown"}
-                        </StatusPill>
-                      </td>
-                      <td className="px-3 py-3">
-                        {formatNumber(item.valueObjectsCount)}
-                      </td>
-                      <td className="px-3 py-3">
-                        {formatNumber(item.totalUsageCount)}
-                      </td>
-                      <td className="px-3 py-3">
-                        {formatNumber(item.totalExposureMinutes)}
-                      </td>
-                      <td className="rounded-r-xl px-3 py-3 text-slate-400">
-                        {formatDateTime(item.lastUsedAt)}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        <Section
+          title="P4.9.17 verification checks"
+          description="These checks confirm that the UI sees the same hierarchy that was already verified by SQL/API."
+        >
+          <div className="grid gap-3">
+            {verificationChecks.map((check) => (
+              <div
+                key={check.label}
+                className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:flex-row sm:items-start sm:justify-between"
+              >
+                <div>
+                  <div className="font-semibold text-slate-100">{check.label}</div>
+                  <div className="mt-1 text-sm text-slate-400">{check.details}</div>
+                </div>
+                <StatusPill status={check.status} />
+              </div>
+            ))}
           </div>
-        </section>
+        </Section>
 
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-          <h2 className="text-lg font-semibold text-white">Latest objects</h2>
-          <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            {latestObjects.length === 0 ? (
-              <div className="text-sm text-slate-500">No latest objects.</div>
-            ) : (
-              latestObjects.map((item) => (
-                <article
-                  key={`${item.valueObjectId}-${item.categorySlug ?? "no-category"}`}
-                  className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-semibold text-white">
-                        {item.categoryName ?? "Unnamed category"}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500">
-                        {item.categorySlug ?? "no-slug"}
-                      </div>
-                    </div>
-                    <StatusPill>usage {formatNumber(item.usageCount)}</StatusPill>
-                  </div>
+        <Section
+          title="Child hierarchy profiles"
+          description="Expected: Business German writing practice must be shown as child of Learning."
+        >
+          {childProfiles.length > 0 ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {childProfiles.map((profile) => (
+                <ProfileCard key={profile.id} profile={profile} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-amber-500/40 bg-amber-950/20 p-4 text-sm text-amber-100">
+              No child hierarchy profiles found.
+            </div>
+          )}
+        </Section>
 
-                  <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                    <div>
-                      <dt className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                        Total minutes
-                      </dt>
-                      <dd className="mt-1 text-slate-200">
-                        {formatNumber(item.totalExposureMinutes)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                        Last used
-                      </dt>
-                      <dd className="mt-1 text-slate-200">
-                        {formatDateTime(item.lastUsedAt)}
-                      </dd>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <dt className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                        Latest event
-                      </dt>
-                      <dd className="mt-1 break-words text-slate-200">
-                        {item.latestEventTitle ?? "—"}
-                      </dd>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <dt className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                        Template
-                      </dt>
-                      <dd className="mt-1 break-words text-slate-400">
-                        {item.latestActivityTemplateSlug ?? "—"}
-                      </dd>
-                    </div>
-                  </dl>
-                </article>
-              ))
-            )}
-          </div>
-        </section>
+        <Section
+          title="Root hierarchy profiles"
+          description="Expected: Knee training practice remains root until a separate controlled write block."
+        >
+          {rootProfiles.length > 0 ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {rootProfiles.map((profile) => (
+                <ProfileCard key={profile.id} profile={profile} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-amber-500/40 bg-amber-950/20 p-4 text-sm text-amber-100">
+              No root hierarchy profiles found.
+            </div>
+          )}
+        </Section>
 
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-          <h2 className="text-lg font-semibold text-white">Profiles</h2>
-          <div className="mt-4 grid gap-4">
-            {profiles.length === 0 ? (
-              <div className="text-sm text-slate-500">No profile rows.</div>
-            ) : (
-              profiles.map((profile) => (
-                <article
-                  key={`${profile.valueObjectId}-${profile.category.slug ?? profile.category.id ?? "category"}`}
-                  className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4"
-                >
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <div className="text-base font-semibold text-white">
-                        {profile.category.name ?? "Unnamed category"}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500">
-                        {profile.category.slug ?? "no-slug"} · role{" "}
-                        {profile.category.role ?? "unknown"}
-                      </div>
-                      <div className="mt-2 break-all text-xs text-slate-600">
-                        VO: {profile.valueObjectId}
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <StatusPill tone="success">
-                        usage {formatNumber(profile.usage.count)}
-                      </StatusPill>
-                      <StatusPill>
-                        {formatNumber(profile.usage.totalExposureMinutes)} min
-                      </StatusPill>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-4 lg:grid-cols-3">
-                    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
-                      <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                        Usage
-                      </div>
-                      <div className="mt-2 text-sm text-slate-300">
-                        First: {formatDateTime(profile.usage.firstUsedAt)}
-                      </div>
-                      <div className="mt-1 text-sm text-slate-300">
-                        Last: {formatDateTime(profile.usage.lastUsedAt)}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-600">
-                        Source: {profile.usage.source ?? "—"}
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
-                      <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                        Latest exposure
-                      </div>
-                      <div className="mt-2 text-sm text-slate-300">
-                        {profile.latestExposure.eventTitle ?? "—"}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-600">
-                        {profile.latestExposure.activityTemplateSlug ?? "—"}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-600">
-                        Minutes:{" "}
-                        {formatNumber(profile.latestExposure.exposureMinutes)}
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
-                      <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                        Category link
-                      </div>
-                      <div className="mt-2 text-sm text-slate-300">
-                        {profile.category.status ?? "—"} ·{" "}
-                        {profile.category.isActive ? "active" : "inactive"}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-600">
-                        Source: {profile.category.linkSource ?? "—"}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-600">
-                        Confidence:{" "}
-                        {formatNumber(profile.category.linkConfidence)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <details className="mt-4 rounded-xl border border-slate-800 bg-slate-900/50 p-3">
-                    <summary className="cursor-pointer text-sm font-medium text-slate-300">
-                      snapshots JSON
-                    </summary>
-                    <pre className="mt-3 max-h-80 overflow-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-400">
-                      {stringifyDebugPayload(profile.snapshots)}
-                    </pre>
-                  </details>
-
-                  <details className="mt-3 rounded-xl border border-slate-800 bg-slate-900/50 p-3">
-                    <summary className="cursor-pointer text-sm font-medium text-slate-300">
-                      dailyAggregates JSON
-                    </summary>
-                    <pre className="mt-3 max-h-80 overflow-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-400">
-                      {stringifyDebugPayload(profile.dailyAggregates)}
-                    </pre>
-                  </details>
-                </article>
-              ))
-            )}
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-          <h2 className="text-lg font-semibold text-white">Raw response</h2>
-          <pre className="mt-4 max-h-96 overflow-auto rounded-xl bg-slate-950 p-4 text-xs text-slate-400">
-            {stringifyDebugPayload(payload)}
+        <Section
+          title="Raw hierarchySummary"
+          description="Useful for checking exact API field names during debugging."
+        >
+          <pre className="max-h-[420px] overflow-auto rounded-2xl border border-slate-800 bg-black p-4 text-xs leading-5 text-slate-300">
+            {JSON.stringify(hierarchySummary ?? {}, null, 2)}
           </pre>
-        </section>
+        </Section>
+
+        <Section
+          title="Raw JSON"
+          description="Full API payload for browser-authenticated verification."
+        >
+          <pre className="max-h-[640px] overflow-auto rounded-2xl border border-slate-800 bg-black p-4 text-xs leading-5 text-slate-300">
+            {JSON.stringify(payload ?? {}, null, 2)}
+          </pre>
+        </Section>
       </div>
     </main>
   );
 }
-
