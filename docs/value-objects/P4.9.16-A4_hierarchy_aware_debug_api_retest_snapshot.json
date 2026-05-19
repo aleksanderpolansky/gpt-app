@@ -1,0 +1,70 @@
+﻿{
+  "p4Step": "P4.9.16-A3-A7-retest",
+  "mode": "browser_authenticated_hierarchy_aware_debug_api_verification",
+  "endpoint": "/api/value-objects/debug/cloud-profile",
+  "httpStatus": 200,
+  "contentType": "application/json",
+  "checkedAt": "2026-05-19T10:10:21.471Z",
+  "checks": [
+    { "name": "HTTP 200", "ok": true },
+    { "name": "Top-level hierarchyProfiles exists", "ok": true },
+    { "name": "Contains Learning parent id", "ok": true },
+    { "name": "Contains Business German child id", "ok": true },
+    { "name": "Contains Learning title", "ok": true },
+    { "name": "Child profile found", "ok": true },
+    { "name": "Child points to Learning", "ok": true },
+    { "name": "Child hierarchyRole is child", "ok": true },
+    { "name": "Child parentExists is true", "ok": true },
+    { "name": "Child isChild true", "ok": true },
+    { "name": "Child isRoot false", "ok": true },
+    { "name": "Parent object title is Learning", "ok": true },
+    { "name": "Second candidate still present", "ok": true },
+    { "name": "Second candidate still root", "ok": true }
+  ],
+  "counts": {
+    "profiles": 2,
+    "categorySummary": 2,
+    "latestObjects": 2,
+    "hierarchyProfiles": 2
+  },
+  "hierarchySummary": {
+    "totalRows": 2,
+    "rootRows": 1,
+    "childRows": 1,
+    "rowsWithParent": 1,
+    "rowsWithParentExists": 1,
+    "rowsWithChildren": 0
+  },
+  "child": {
+    "valueObjectId": "9177fea8-de25-446b-b418-b55a766d53db",
+    "title": "Business German writing practice",
+    "valueType": "skill",
+    "parentValueObjectId": "112bab0b-2a53-4f7a-bd62-b9fe760d0b54",
+    "parentExists": true,
+    "parentTitle": "Learning",
+    "parentValueType": "personal_development",
+    "hierarchyRole": "child",
+    "isRoot": false,
+    "isChild": true,
+    "categorySlug": "business-german",
+    "categoryName": "Business German",
+    "usageCount": 2,
+    "totalExposureMinutes": 22,
+    "latestActivityTemplateSlug": "german-marketing-handwriting-practice"
+  },
+  "secondCandidate": {
+    "valueObjectId": "b7acc958-7966-42c2-82c5-35c4de26d7ea",
+    "title": "Knee training practice",
+    "valueType": "health_activity",
+    "parentValueObjectId": null,
+    "parentExists": false,
+    "hierarchyRole": "root",
+    "isRoot": true,
+    "isChild": false,
+    "categorySlug": "knee-exercises",
+    "categoryName": "Knee exercises",
+    "usageCount": 1,
+    "totalExposureMinutes": 13,
+    "latestActivityTemplateSlug": "knee-training-health-practice"
+  }
+}
