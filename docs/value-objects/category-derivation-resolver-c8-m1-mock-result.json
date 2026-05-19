@@ -1,0 +1,196 @@
+{
+  "ok": true,
+  "checkId": "P4.10.0-C8-M1",
+  "checkedAt": "2026-05-19T17:35:23.930Z",
+  "resolverPath": "lib\\activity\\categoryDerivation\\resolver.ts",
+  "totalCases": 6,
+  "passedCases": 6,
+  "failedCases": 0,
+  "liveDbWrites": false,
+  "cases": [
+    {
+      "id": "normalize_unicode_slug",
+      "passed": true,
+      "input": "Математика / ребёнок’s test",
+      "actual": "математика-ребёнокs-test",
+      "expected": "математика-ребёнокs-test",
+      "actualCodePoints": [
+        "043c",
+        "0430",
+        "0442",
+        "0435",
+        "043c",
+        "0430",
+        "0442",
+        "0438",
+        "043a",
+        "0430",
+        "002d",
+        "0440",
+        "0435",
+        "0431",
+        "0451",
+        "043d",
+        "043e",
+        "043a",
+        "0073",
+        "002d",
+        "0074",
+        "0065",
+        "0073",
+        "0074"
+      ]
+    },
+    {
+      "id": "reuse_existing_by_slug_and_semantic_layer",
+      "passed": true,
+      "result": {
+        "ok": true,
+        "createdCount": 0,
+        "reusedCount": 1,
+        "unresolvedCount": 0,
+        "candidates": [
+          {
+            "slug": "walking",
+            "categoryId": "existing-walking-action",
+            "status": "resolved_existing"
+          }
+        ]
+      },
+      "selects": [
+        {
+          "table": "contextual_categories",
+          "selectedColumns": "*",
+          "filters": [
+            {
+              "column": "slug",
+              "value": "walking"
+            },
+            {
+              "column": "semantic_layer",
+              "value": "action"
+            }
+          ],
+          "limit": 1
+        }
+      ],
+      "inserts": []
+    },
+    {
+      "id": "create_suggested_for_missing_category",
+      "passed": true,
+      "result": {
+        "ok": true,
+        "createdCount": 1,
+        "reusedCount": 0,
+        "unresolvedCount": 0,
+        "candidates": [
+          {
+            "slug": "new-suggested-category",
+            "categoryId": "mock-created-1",
+            "status": "created_suggested"
+          }
+        ]
+      },
+      "insertedPayload": {
+        "slug": "new-suggested-category",
+        "semantic_layer": "context",
+        "category_type": "test_category",
+        "status": "suggested",
+        "source_type": "rule",
+        "aliases": [
+          {
+            "lang": "und",
+            "value": "New suggested category",
+            "source": "category_derivation_resolver"
+          }
+        ],
+        "metadata_json": {
+          "resolver": "categoryDerivationResolver",
+          "title": "New suggested category",
+          "originalSlug": "new suggested category",
+          "confidence": 0.55,
+          "isRequired": false,
+          "isConfirmed": false,
+          "needsUserReview": false
+        }
+      }
+    },
+    {
+      "id": "create_active_for_confirmed_required",
+      "passed": true,
+      "result": {
+        "ok": true,
+        "createdCount": 1,
+        "reusedCount": 0,
+        "unresolvedCount": 0,
+        "candidates": [
+          {
+            "slug": "confirmed-required-category",
+            "categoryId": "mock-created-1",
+            "status": "created_active"
+          }
+        ]
+      },
+      "insertedPayload": {
+        "slug": "confirmed-required-category",
+        "semantic_layer": "activity_meaning",
+        "category_type": "test_category",
+        "status": "active",
+        "source_type": "rule",
+        "aliases": [
+          {
+            "lang": "und",
+            "value": "Confirmed required category",
+            "source": "category_derivation_resolver"
+          }
+        ],
+        "metadata_json": {
+          "resolver": "categoryDerivationResolver",
+          "title": "Confirmed required category",
+          "originalSlug": "confirmed required category",
+          "confidence": 0.9,
+          "isRequired": true,
+          "isConfirmed": true,
+          "needsUserReview": false
+        }
+      }
+    },
+    {
+      "id": "dry_run_does_not_insert",
+      "passed": true,
+      "result": {
+        "ok": true,
+        "createdCount": 0,
+        "reusedCount": 0,
+        "unresolvedCount": 1,
+        "candidates": [
+          {
+            "slug": "dry-run-category",
+            "categoryId": null,
+            "status": "unresolved"
+          }
+        ]
+      },
+      "inserts": []
+    },
+    {
+      "id": "create_policy_never_does_not_insert",
+      "passed": true,
+      "result": {
+        "ok": true,
+        "createdCount": 0,
+        "reusedCount": 0,
+        "unresolvedCount": 1,
+        "candidates": [
+          {
+            "slug": "never-create-category",
+            "categoryId": null,
+            "status": "unresolved"
+          }
+        ]
+      },
+      "inserts": []
+    }
+  ]
+}
