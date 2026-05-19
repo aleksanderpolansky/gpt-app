@@ -186,6 +186,19 @@ export type ValueObjectBridgeCreatedItem = {
   valueObjectCategoryLinkId: string | null;
   valueObjectCategoryLinkError: string | null;
 
+  /**
+   * C8-P additive Category Derivation category links.
+   *
+   * Empty unless additionalCategoryLinks is passed to the bridge.
+   */
+  additionalValueObjectCategoryLinks: Array<{
+    valueObjectCategoryLinkId: string | null;
+    categoryId: string;
+    candidateSlug: string;
+    errorMessage: string | null;
+  }>;
+  additionalValueObjectCategoryLinkErrors: string[];
+
   skipped: boolean;
   skipReason: string | null;
 };
@@ -1176,6 +1189,7 @@ export async function processValueObjectBridgeForActivityEvent(
     source,
     allowNonCompletedEvent = false,
     processorName = "value_object_bridge_p4_7",
+    additionalCategoryLinks,
   } = input;
 
   const result: ProcessValueObjectBridgeResult = {
@@ -1243,6 +1257,8 @@ export async function processValueObjectBridgeForActivityEvent(
       v42ProjectionError: null,
       valueObjectCategoryLinkId: null,
       valueObjectCategoryLinkError: null,
+      additionalValueObjectCategoryLinks: [],
+      additionalValueObjectCategoryLinkErrors: [],
       skipped: false,
       skipReason: null,
     };
@@ -1424,6 +1440,38 @@ export async function processValueObjectBridgeForActivityEvent(
           errorMessage: categoryLink.errorMessage,
         });
       }
+    }
+
+    const additionalCategoryLinksResult =
+      await createAdditionalValueObjectCategoryLinks({
+        supabase,
+        eventId: event.id,
+        valueObjectId: mapping.valueObjectId,
+        activityEventValueObjectLinkId:
+          v42Projection.activityEventValueObjectLinkId,
+        processorName,
+        additionalCategoryLinks,
+      });
+
+    createdItem.additionalValueObjectCategoryLinks =
+      additionalCategoryLinksResult.created;
+    createdItem.additionalValueObjectCategoryLinkErrors =
+      additionalCategoryLinksResult.errors;
+
+    if (additionalCategoryLinksResult.errors.length > 0) {
+      /*
+       * C8-P compatibility rule:
+       * additionalCategoryLinks are additive and must not roll back
+       * the existing VOI, v4.2 projection, category-link, state delta,
+       * aggregate, or snapshot pipeline.
+       */
+      console.warn("C8-P3-B3 additional value_object_category_links warnings", {
+        eventId: event.id,
+        valueObjectId: mapping.valueObjectId,
+        activityEventValueObjectLinkId:
+          v42Projection.activityEventValueObjectLinkId,
+        errors: additionalCategoryLinksResult.errors,
+      });
     }
 
     const { data: deltaData, error: deltaError } = await supabase

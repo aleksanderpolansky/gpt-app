@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "checkId": "P4.10.0-C8-P3-B3",
+  "checkedAt": "2026-05-19T19:23:15.382Z",
+  "targetPath": "lib\\activity\\valueObjectBridge.ts",
+  "emittedJsLength": 37873,
+  "diagnosticsCount": 0,
+  "missingPatterns": [],
+  "diagnostics": [],
+  "note": "Targeted transpile/pattern smoke check for calling additionalCategoryLinks helper from the bridge loop."
+}
