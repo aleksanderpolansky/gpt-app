@@ -1,0 +1,6 @@
+﻿P4.10.0-C5b controlled fallback inspection summary
+
+mapper fallback evidence lines: 1640
+lifecycle flag usage evidence lines: 766
+registry rules fallback evidence lines: 1224
+controlled fallback key range lines: 821

@@ -1,0 +1,826 @@
+
+===== .\lib\activity\rubricatorValueObjectMapper.ts:60-160 =====
+.\lib\activity\rubricatorValueObjectMapper.ts:60:   skipped: boolean;
+.\lib\activity\rubricatorValueObjectMapper.ts:61:   skipReason: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:62:   eventId: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:63:   eventStatus: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:64:   classificationSummary: RubricatorClassificationSummary[];
+.\lib\activity\rubricatorValueObjectMapper.ts:65:   mappings: ValueObjectBridgeMapping[];
+.\lib\activity\rubricatorValueObjectMapper.ts:66:   errors: string[];
+.\lib\activity\rubricatorValueObjectMapper.ts:67: };
+.\lib\activity\rubricatorValueObjectMapper.ts:68: 
+.\lib\activity\rubricatorValueObjectMapper.ts:69: type ControlledRubricatorValueObjectRule = {
+.\lib\activity\rubricatorValueObjectMapper.ts:70:   ruleKey: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:71:   valueObjectTitle: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:72:   valueObjectType: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:73:   valueObjectDescription: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:74:   valueObjectUnitType: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:75:   defaultDurationMinutes: number | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:76:   objectTypeCode: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:77:   actionTypeCode: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:78:   contextCode: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:79:   contextualCategorySlug: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:80:   relationType: ValueObjectBridgeMapping["relationType"];
+.\lib\activity\rubricatorValueObjectMapper.ts:81:   metricKey: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:82:   metricUnit: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:83:   deltaDirection: ValueObjectBridgeMapping["deltaDirection"];
+.\lib\activity\rubricatorValueObjectMapper.ts:84:   aggregateType: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:85:   fallbackNeedleGroups: string[][];
+.\lib\activity\rubricatorValueObjectMapper.ts:86: };
+.\lib\activity\rubricatorValueObjectMapper.ts:87: 
+.\lib\activity\rubricatorValueObjectMapper.ts:88: const CONTROLLED_RUBRICATOR_VALUE_OBJECT_RULES: readonly ControlledRubricatorValueObjectRule[] = [
+.\lib\activity\rubricatorValueObjectMapper.ts:89:   {
+.\lib\activity\rubricatorValueObjectMapper.ts:90:     ruleKey: "german_business_writing_practice_duration",
+.\lib\activity\rubricatorValueObjectMapper.ts:91:     valueObjectTitle: "Business German writing practice",
+.\lib\activity\rubricatorValueObjectMapper.ts:92:     valueObjectType: "skill",
+.\lib\activity\rubricatorValueObjectMapper.ts:93:     valueObjectDescription:
+.\lib\activity\rubricatorValueObjectMapper.ts:94:       "Controlled P4.7-R value object for German business/marketing writing practice.",
+.\lib\activity\rubricatorValueObjectMapper.ts:95:     valueObjectUnitType: "minutes",
+.\lib\activity\rubricatorValueObjectMapper.ts:96:     defaultDurationMinutes: 25,
+.\lib\activity\rubricatorValueObjectMapper.ts:97:     objectTypeCode: "German_language",
+.\lib\activity\rubricatorValueObjectMapper.ts:98:     actionTypeCode: "practice",
+.\lib\activity\rubricatorValueObjectMapper.ts:99:     contextCode: "learning",
+.\lib\activity\rubricatorValueObjectMapper.ts:100:     contextualCategorySlug: "business-german",
+.\lib\activity\rubricatorValueObjectMapper.ts:101:     relationType: "executes",
+.\lib\activity\rubricatorValueObjectMapper.ts:102:     metricKey: "duration_minutes",
+.\lib\activity\rubricatorValueObjectMapper.ts:103:     metricUnit: "minutes",
+.\lib\activity\rubricatorValueObjectMapper.ts:104:     deltaDirection: "increase",
+.\lib\activity\rubricatorValueObjectMapper.ts:105:     aggregateType: "value_object",
+.\lib\activity\rubricatorValueObjectMapper.ts:106:     fallbackNeedleGroups: [
+.\lib\activity\rubricatorValueObjectMapper.ts:107:       ["german", "deutsch", "?????", "niemieck", "alemán"],
+.\lib\activity\rubricatorValueObjectMapper.ts:108:       [
+.\lib\activity\rubricatorValueObjectMapper.ts:109:         "practice",
+.\lib\activity\rubricatorValueObjectMapper.ts:110:         "practise",
+.\lib\activity\rubricatorValueObjectMapper.ts:111:         "learn",
+.\lib\activity\rubricatorValueObjectMapper.ts:112:         "learning",
+.\lib\activity\rubricatorValueObjectMapper.ts:113:         "write",
+.\lib\activity\rubricatorValueObjectMapper.ts:114:         "writing",
+.\lib\activity\rubricatorValueObjectMapper.ts:115:         "handwriting",
+.\lib\activity\rubricatorValueObjectMapper.ts:116:         "schrift",
+.\lib\activity\rubricatorValueObjectMapper.ts:117:         "schreiben",
+.\lib\activity\rubricatorValueObjectMapper.ts:118:         "üben",
+.\lib\activity\rubricatorValueObjectMapper.ts:119:         "marketing",
+.\lib\activity\rubricatorValueObjectMapper.ts:120:         "b2b",
+.\lib\activity\rubricatorValueObjectMapper.ts:121:         "business",
+.\lib\activity\rubricatorValueObjectMapper.ts:122:       ],
+.\lib\activity\rubricatorValueObjectMapper.ts:123:       [
+.\lib\activity\rubricatorValueObjectMapper.ts:124:         "learning",
+.\lib\activity\rubricatorValueObjectMapper.ts:125:         "education",
+.\lib\activity\rubricatorValueObjectMapper.ts:126:         "career",
+.\lib\activity\rubricatorValueObjectMapper.ts:127:         "work",
+.\lib\activity\rubricatorValueObjectMapper.ts:128:         "business",
+.\lib\activity\rubricatorValueObjectMapper.ts:129:         "marketing",
+.\lib\activity\rubricatorValueObjectMapper.ts:130:         "communication",
+.\lib\activity\rubricatorValueObjectMapper.ts:131:         "language",
+.\lib\activity\rubricatorValueObjectMapper.ts:132:         "skill",
+.\lib\activity\rubricatorValueObjectMapper.ts:133:         "jezyk",
+.\lib\activity\rubricatorValueObjectMapper.ts:134:         "idioma",
+.\lib\activity\rubricatorValueObjectMapper.ts:135:       ],
+.\lib\activity\rubricatorValueObjectMapper.ts:136:     ],
+.\lib\activity\rubricatorValueObjectMapper.ts:137:   },
+.\lib\activity\rubricatorValueObjectMapper.ts:138:   {
+.\lib\activity\rubricatorValueObjectMapper.ts:139:     ruleKey: "knee_training_health_practice_duration",
+.\lib\activity\rubricatorValueObjectMapper.ts:140:     valueObjectTitle: "Knee training practice",
+.\lib\activity\rubricatorValueObjectMapper.ts:141:     valueObjectType: "health_activity",
+.\lib\activity\rubricatorValueObjectMapper.ts:142:     valueObjectDescription:
+.\lib\activity\rubricatorValueObjectMapper.ts:143:       "Controlled P4.7.8-R-L5 value object for knee-focused exercise/training activity tracking. No medical diagnosis or treatment claim.",
+.\lib\activity\rubricatorValueObjectMapper.ts:144:     valueObjectUnitType: "minutes",
+.\lib\activity\rubricatorValueObjectMapper.ts:145:     defaultDurationMinutes: 10,
+.\lib\activity\rubricatorValueObjectMapper.ts:146:     objectTypeCode: "knee",
+.\lib\activity\rubricatorValueObjectMapper.ts:147:     actionTypeCode: "train",
+.\lib\activity\rubricatorValueObjectMapper.ts:148:     contextCode: "health",
+.\lib\activity\rubricatorValueObjectMapper.ts:149:     contextualCategorySlug: "knee-exercises",
+.\lib\activity\rubricatorValueObjectMapper.ts:150:     relationType: "executes",
+.\lib\activity\rubricatorValueObjectMapper.ts:151:     metricKey: "duration_minutes",
+.\lib\activity\rubricatorValueObjectMapper.ts:152:     metricUnit: "minutes",
+.\lib\activity\rubricatorValueObjectMapper.ts:153:     deltaDirection: "increase",
+.\lib\activity\rubricatorValueObjectMapper.ts:154:     aggregateType: "value_object",
+.\lib\activity\rubricatorValueObjectMapper.ts:155:     fallbackNeedleGroups: [
+.\lib\activity\rubricatorValueObjectMapper.ts:156:       ["knee", "??????", "kolano", "rodilla", "knie"],
+.\lib\activity\rubricatorValueObjectMapper.ts:157:       [
+.\lib\activity\rubricatorValueObjectMapper.ts:158:         "train",
+.\lib\activity\rubricatorValueObjectMapper.ts:159:         "training",
+.\lib\activity\rubricatorValueObjectMapper.ts:160:         "exercise",
+
+===== .\lib\activity\rubricatorValueObjectMapper.ts:160-320 =====
+.\lib\activity\rubricatorValueObjectMapper.ts:160:         "exercise",
+.\lib\activity\rubricatorValueObjectMapper.ts:161:         "mobility",
+.\lib\activity\rubricatorValueObjectMapper.ts:162:         "practice",
+.\lib\activity\rubricatorValueObjectMapper.ts:163:         "cwiczenie",
+.\lib\activity\rubricatorValueObjectMapper.ts:164:         "cwiczenia",
+.\lib\activity\rubricatorValueObjectMapper.ts:165:         "entrenamiento",
+.\lib\activity\rubricatorValueObjectMapper.ts:166:         "ejercicio",
+.\lib\activity\rubricatorValueObjectMapper.ts:167:         "übung",
+.\lib\activity\rubricatorValueObjectMapper.ts:168:         "training",
+.\lib\activity\rubricatorValueObjectMapper.ts:169:       ],
+.\lib\activity\rubricatorValueObjectMapper.ts:170:       ["health", "body", "rehab", "recovery", "load", "??????", "salud", "gesundheit"],
+.\lib\activity\rubricatorValueObjectMapper.ts:171:     ],
+.\lib\activity\rubricatorValueObjectMapper.ts:172:   },
+.\lib\activity\rubricatorValueObjectMapper.ts:173: ];
+.\lib\activity\rubricatorValueObjectMapper.ts:174: 
+.\lib\activity\rubricatorValueObjectMapper.ts:175: function getString(row: GenericRow | null | undefined, key: string): string | null {
+.\lib\activity\rubricatorValueObjectMapper.ts:176:   if (!row) {
+.\lib\activity\rubricatorValueObjectMapper.ts:177:     return null;
+.\lib\activity\rubricatorValueObjectMapper.ts:178:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:179: 
+.\lib\activity\rubricatorValueObjectMapper.ts:180:   const value = row[key];
+.\lib\activity\rubricatorValueObjectMapper.ts:181: 
+.\lib\activity\rubricatorValueObjectMapper.ts:182:   if (typeof value !== "string") {
+.\lib\activity\rubricatorValueObjectMapper.ts:183:     return null;
+.\lib\activity\rubricatorValueObjectMapper.ts:184:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:185: 
+.\lib\activity\rubricatorValueObjectMapper.ts:186:   const trimmed = value.trim();
+.\lib\activity\rubricatorValueObjectMapper.ts:187: 
+.\lib\activity\rubricatorValueObjectMapper.ts:188:   return trimmed.length > 0 ? trimmed : null;
+.\lib\activity\rubricatorValueObjectMapper.ts:189: }
+.\lib\activity\rubricatorValueObjectMapper.ts:190: 
+.\lib\activity\rubricatorValueObjectMapper.ts:191: function getBoolean(row: GenericRow | null | undefined, key: string): boolean {
+.\lib\activity\rubricatorValueObjectMapper.ts:192:   if (!row) {
+.\lib\activity\rubricatorValueObjectMapper.ts:193:     return false;
+.\lib\activity\rubricatorValueObjectMapper.ts:194:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:195: 
+.\lib\activity\rubricatorValueObjectMapper.ts:196:   return row[key] === true;
+.\lib\activity\rubricatorValueObjectMapper.ts:197: }
+.\lib\activity\rubricatorValueObjectMapper.ts:198: 
+.\lib\activity\rubricatorValueObjectMapper.ts:199: function getNumber(row: GenericRow | null | undefined, key: string): number | null {
+.\lib\activity\rubricatorValueObjectMapper.ts:200:   if (!row) {
+.\lib\activity\rubricatorValueObjectMapper.ts:201:     return null;
+.\lib\activity\rubricatorValueObjectMapper.ts:202:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:203: 
+.\lib\activity\rubricatorValueObjectMapper.ts:204:   const value = row[key];
+.\lib\activity\rubricatorValueObjectMapper.ts:205: 
+.\lib\activity\rubricatorValueObjectMapper.ts:206:   if (typeof value === "number" && Number.isFinite(value)) {
+.\lib\activity\rubricatorValueObjectMapper.ts:207:     return value;
+.\lib\activity\rubricatorValueObjectMapper.ts:208:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:209: 
+.\lib\activity\rubricatorValueObjectMapper.ts:210:   if (typeof value === "string") {
+.\lib\activity\rubricatorValueObjectMapper.ts:211:     const parsed = Number(value);
+.\lib\activity\rubricatorValueObjectMapper.ts:212:     return Number.isFinite(parsed) ? parsed : null;
+.\lib\activity\rubricatorValueObjectMapper.ts:213:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:214: 
+.\lib\activity\rubricatorValueObjectMapper.ts:215:   return null;
+.\lib\activity\rubricatorValueObjectMapper.ts:216: }
+.\lib\activity\rubricatorValueObjectMapper.ts:217: 
+.\lib\activity\rubricatorValueObjectMapper.ts:218: function getObject(row: GenericRow | null | undefined, key: string): Record<string, unknown> {
+.\lib\activity\rubricatorValueObjectMapper.ts:219:   if (!row) {
+.\lib\activity\rubricatorValueObjectMapper.ts:220:     return {};
+.\lib\activity\rubricatorValueObjectMapper.ts:221:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:222: 
+.\lib\activity\rubricatorValueObjectMapper.ts:223:   const value = row[key];
+.\lib\activity\rubricatorValueObjectMapper.ts:224: 
+.\lib\activity\rubricatorValueObjectMapper.ts:225:   if (!value || typeof value !== "object" || Array.isArray(value)) {
+.\lib\activity\rubricatorValueObjectMapper.ts:226:     return {};
+.\lib\activity\rubricatorValueObjectMapper.ts:227:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:228: 
+.\lib\activity\rubricatorValueObjectMapper.ts:229:   return value as Record<string, unknown>;
+.\lib\activity\rubricatorValueObjectMapper.ts:230: }
+.\lib\activity\rubricatorValueObjectMapper.ts:231: 
+.\lib\activity\rubricatorValueObjectMapper.ts:232: function normalizeConfidence(value: number | null): number {
+.\lib\activity\rubricatorValueObjectMapper.ts:233:   if (typeof value !== "number" || Number.isNaN(value)) {
+.\lib\activity\rubricatorValueObjectMapper.ts:234:     return 0.75;
+.\lib\activity\rubricatorValueObjectMapper.ts:235:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:236: 
+.\lib\activity\rubricatorValueObjectMapper.ts:237:   if (value < 0) {
+.\lib\activity\rubricatorValueObjectMapper.ts:238:     return 0;
+.\lib\activity\rubricatorValueObjectMapper.ts:239:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:240: 
+.\lib\activity\rubricatorValueObjectMapper.ts:241:   if (value > 1) {
+.\lib\activity\rubricatorValueObjectMapper.ts:242:     return 1;
+.\lib\activity\rubricatorValueObjectMapper.ts:243:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:244: 
+.\lib\activity\rubricatorValueObjectMapper.ts:245:   return value;
+.\lib\activity\rubricatorValueObjectMapper.ts:246: }
+.\lib\activity\rubricatorValueObjectMapper.ts:247: 
+.\lib\activity\rubricatorValueObjectMapper.ts:248: function normalizeText(value: string | null | undefined): string {
+.\lib\activity\rubricatorValueObjectMapper.ts:249:   return (value ?? "").toLowerCase();
+.\lib\activity\rubricatorValueObjectMapper.ts:250: }
+.\lib\activity\rubricatorValueObjectMapper.ts:251: 
+.\lib\activity\rubricatorValueObjectMapper.ts:252: function normalizeKey(value: string | null | undefined): string {
+.\lib\activity\rubricatorValueObjectMapper.ts:253:   return normalizeText(value).trim();
+.\lib\activity\rubricatorValueObjectMapper.ts:254: }
+.\lib\activity\rubricatorValueObjectMapper.ts:255: 
+.\lib\activity\rubricatorValueObjectMapper.ts:256: function joinSearchText(parts: Array<string | null | undefined>): string {
+.\lib\activity\rubricatorValueObjectMapper.ts:257:   return parts
+.\lib\activity\rubricatorValueObjectMapper.ts:258:     .map((item) => normalizeText(item))
+.\lib\activity\rubricatorValueObjectMapper.ts:259:     .filter((item) => item.length > 0)
+.\lib\activity\rubricatorValueObjectMapper.ts:260:     .join(" ");
+.\lib\activity\rubricatorValueObjectMapper.ts:261: }
+.\lib\activity\rubricatorValueObjectMapper.ts:262: 
+.\lib\activity\rubricatorValueObjectMapper.ts:263: function includesAny(text: string, needles: string[]): boolean {
+.\lib\activity\rubricatorValueObjectMapper.ts:264:   return needles.some((needle) => text.includes(needle.toLowerCase()));
+.\lib\activity\rubricatorValueObjectMapper.ts:265: }
+.\lib\activity\rubricatorValueObjectMapper.ts:266: 
+.\lib\activity\rubricatorValueObjectMapper.ts:267: function isApprovedActivityEventClassification(row: GenericRow): boolean {
+.\lib\activity\rubricatorValueObjectMapper.ts:268:   const entityType = getString(row, "entity_type");
+.\lib\activity\rubricatorValueObjectMapper.ts:269:   const status = getString(row, "status");
+.\lib\activity\rubricatorValueObjectMapper.ts:270: 
+.\lib\activity\rubricatorValueObjectMapper.ts:271:   return (
+.\lib\activity\rubricatorValueObjectMapper.ts:272:     (entityType === "activity_event" || entityType === "activity_events") &&
+.\lib\activity\rubricatorValueObjectMapper.ts:273:     status === "approved"
+.\lib\activity\rubricatorValueObjectMapper.ts:274:   );
+.\lib\activity\rubricatorValueObjectMapper.ts:275: }
+.\lib\activity\rubricatorValueObjectMapper.ts:276: 
+.\lib\activity\rubricatorValueObjectMapper.ts:277: async function readActivityEvent(
+.\lib\activity\rubricatorValueObjectMapper.ts:278:   supabase: SupabaseClient,
+.\lib\activity\rubricatorValueObjectMapper.ts:279:   eventId: string
+.\lib\activity\rubricatorValueObjectMapper.ts:280: ): Promise<{
+.\lib\activity\rubricatorValueObjectMapper.ts:281:   event: ActivityEventForRubricatorMapping | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:282:   errorMessage: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:283: }> {
+.\lib\activity\rubricatorValueObjectMapper.ts:284:   const { data, error } = await supabase
+.\lib\activity\rubricatorValueObjectMapper.ts:285:     .from("activity_events")
+.\lib\activity\rubricatorValueObjectMapper.ts:286:     .select(
+.\lib\activity\rubricatorValueObjectMapper.ts:287:       [
+.\lib\activity\rubricatorValueObjectMapper.ts:288:         "id",
+.\lib\activity\rubricatorValueObjectMapper.ts:289:         "user_id",
+.\lib\activity\rubricatorValueObjectMapper.ts:290:         "status",
+.\lib\activity\rubricatorValueObjectMapper.ts:291:         "title",
+.\lib\activity\rubricatorValueObjectMapper.ts:292:         "description",
+.\lib\activity\rubricatorValueObjectMapper.ts:293:         "input_text",
+.\lib\activity\rubricatorValueObjectMapper.ts:294:         "event_code",
+.\lib\activity\rubricatorValueObjectMapper.ts:295:         "duration_minutes",
+.\lib\activity\rubricatorValueObjectMapper.ts:296:         "started_at",
+.\lib\activity\rubricatorValueObjectMapper.ts:297:         "ended_at",
+.\lib\activity\rubricatorValueObjectMapper.ts:298:         "activity_template_id",
+.\lib\activity\rubricatorValueObjectMapper.ts:299:         "activity_type_id",
+.\lib\activity\rubricatorValueObjectMapper.ts:300:         "template_id",
+.\lib\activity\rubricatorValueObjectMapper.ts:301:         "performed_by_actor_id",
+.\lib\activity\rubricatorValueObjectMapper.ts:302:         "acting_as_actor_id",
+.\lib\activity\rubricatorValueObjectMapper.ts:303:         "acting_for_actor_id",
+.\lib\activity\rubricatorValueObjectMapper.ts:304:       ].join(", ")
+.\lib\activity\rubricatorValueObjectMapper.ts:305:     )
+.\lib\activity\rubricatorValueObjectMapper.ts:306:     .eq("id", eventId)
+.\lib\activity\rubricatorValueObjectMapper.ts:307:     .maybeSingle();
+.\lib\activity\rubricatorValueObjectMapper.ts:308: 
+.\lib\activity\rubricatorValueObjectMapper.ts:309:   if (error) {
+.\lib\activity\rubricatorValueObjectMapper.ts:310:     return {
+.\lib\activity\rubricatorValueObjectMapper.ts:311:       event: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:312:       errorMessage: error.message,
+.\lib\activity\rubricatorValueObjectMapper.ts:313:     };
+.\lib\activity\rubricatorValueObjectMapper.ts:314:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:315: 
+.\lib\activity\rubricatorValueObjectMapper.ts:316:   return {
+.\lib\activity\rubricatorValueObjectMapper.ts:317:     event: (data as ActivityEventForRubricatorMapping | null) ?? null,
+.\lib\activity\rubricatorValueObjectMapper.ts:318:     errorMessage: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:319:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:320: }
+
+===== .\lib\activity\rubricatorValueObjectMapper.ts:320-520 =====
+.\lib\activity\rubricatorValueObjectMapper.ts:320: }
+.\lib\activity\rubricatorValueObjectMapper.ts:321: 
+.\lib\activity\rubricatorValueObjectMapper.ts:322: async function readEntityClassifications(
+.\lib\activity\rubricatorValueObjectMapper.ts:323:   supabase: SupabaseClient,
+.\lib\activity\rubricatorValueObjectMapper.ts:324:   eventId: string
+.\lib\activity\rubricatorValueObjectMapper.ts:325: ): Promise<{
+.\lib\activity\rubricatorValueObjectMapper.ts:326:   rows: GenericRow[];
+.\lib\activity\rubricatorValueObjectMapper.ts:327:   errorMessage: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:328: }> {
+.\lib\activity\rubricatorValueObjectMapper.ts:329:   const { data, error } = await supabase
+.\lib\activity\rubricatorValueObjectMapper.ts:330:     .from("entity_classifications")
+.\lib\activity\rubricatorValueObjectMapper.ts:331:     .select("*")
+.\lib\activity\rubricatorValueObjectMapper.ts:332:     .eq("entity_id", eventId)
+.\lib\activity\rubricatorValueObjectMapper.ts:333:     .order("is_primary", { ascending: false })
+.\lib\activity\rubricatorValueObjectMapper.ts:334:     .order("created_at", { ascending: false })
+.\lib\activity\rubricatorValueObjectMapper.ts:335:     .limit(20);
+.\lib\activity\rubricatorValueObjectMapper.ts:336: 
+.\lib\activity\rubricatorValueObjectMapper.ts:337:   if (error) {
+.\lib\activity\rubricatorValueObjectMapper.ts:338:     return {
+.\lib\activity\rubricatorValueObjectMapper.ts:339:       rows: [],
+.\lib\activity\rubricatorValueObjectMapper.ts:340:       errorMessage: error.message,
+.\lib\activity\rubricatorValueObjectMapper.ts:341:     };
+.\lib\activity\rubricatorValueObjectMapper.ts:342:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:343: 
+.\lib\activity\rubricatorValueObjectMapper.ts:344:   const rows = ((data as GenericRow[] | null) ?? []).filter(
+.\lib\activity\rubricatorValueObjectMapper.ts:345:     isApprovedActivityEventClassification
+.\lib\activity\rubricatorValueObjectMapper.ts:346:   );
+.\lib\activity\rubricatorValueObjectMapper.ts:347: 
+.\lib\activity\rubricatorValueObjectMapper.ts:348:   return {
+.\lib\activity\rubricatorValueObjectMapper.ts:349:     rows,
+.\lib\activity\rubricatorValueObjectMapper.ts:350:     errorMessage: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:351:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:352: }
+.\lib\activity\rubricatorValueObjectMapper.ts:353: 
+.\lib\activity\rubricatorValueObjectMapper.ts:354: async function readLookupRow(
+.\lib\activity\rubricatorValueObjectMapper.ts:355:   supabase: SupabaseClient,
+.\lib\activity\rubricatorValueObjectMapper.ts:356:   tableName:
+.\lib\activity\rubricatorValueObjectMapper.ts:357:     | "object_types"
+.\lib\activity\rubricatorValueObjectMapper.ts:358:     | "action_types"
+.\lib\activity\rubricatorValueObjectMapper.ts:359:     | "contexts"
+.\lib\activity\rubricatorValueObjectMapper.ts:360:     | "contextual_categories",
+.\lib\activity\rubricatorValueObjectMapper.ts:361:   id: string | null
+.\lib\activity\rubricatorValueObjectMapper.ts:362: ): Promise<GenericRow | null> {
+.\lib\activity\rubricatorValueObjectMapper.ts:363:   if (!id) {
+.\lib\activity\rubricatorValueObjectMapper.ts:364:     return null;
+.\lib\activity\rubricatorValueObjectMapper.ts:365:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:366: 
+.\lib\activity\rubricatorValueObjectMapper.ts:367:   const { data, error } = await supabase
+.\lib\activity\rubricatorValueObjectMapper.ts:368:     .from(tableName)
+.\lib\activity\rubricatorValueObjectMapper.ts:369:     .select("*")
+.\lib\activity\rubricatorValueObjectMapper.ts:370:     .eq("id", id)
+.\lib\activity\rubricatorValueObjectMapper.ts:371:     .maybeSingle();
+.\lib\activity\rubricatorValueObjectMapper.ts:372: 
+.\lib\activity\rubricatorValueObjectMapper.ts:373:   if (error || !data) {
+.\lib\activity\rubricatorValueObjectMapper.ts:374:     return null;
+.\lib\activity\rubricatorValueObjectMapper.ts:375:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:376: 
+.\lib\activity\rubricatorValueObjectMapper.ts:377:   return data as GenericRow;
+.\lib\activity\rubricatorValueObjectMapper.ts:378: }
+.\lib\activity\rubricatorValueObjectMapper.ts:379: 
+.\lib\activity\rubricatorValueObjectMapper.ts:380: async function summarizeClassification(
+.\lib\activity\rubricatorValueObjectMapper.ts:381:   supabase: SupabaseClient,
+.\lib\activity\rubricatorValueObjectMapper.ts:382:   row: GenericRow
+.\lib\activity\rubricatorValueObjectMapper.ts:383: ): Promise<RubricatorClassificationSummary> {
+.\lib\activity\rubricatorValueObjectMapper.ts:384:   const objectTypeId = getString(row, "object_type_id");
+.\lib\activity\rubricatorValueObjectMapper.ts:385:   const actionTypeId = getString(row, "action_type_id");
+.\lib\activity\rubricatorValueObjectMapper.ts:386:   const contextId = getString(row, "context_id");
+.\lib\activity\rubricatorValueObjectMapper.ts:387:   const contextualCategoryId = getString(row, "contextual_category_id");
+.\lib\activity\rubricatorValueObjectMapper.ts:388: 
+.\lib\activity\rubricatorValueObjectMapper.ts:389:   const [objectType, actionType, context, contextualCategory] =
+.\lib\activity\rubricatorValueObjectMapper.ts:390:     await Promise.all([
+.\lib\activity\rubricatorValueObjectMapper.ts:391:       readLookupRow(supabase, "object_types", objectTypeId),
+.\lib\activity\rubricatorValueObjectMapper.ts:392:       readLookupRow(supabase, "action_types", actionTypeId),
+.\lib\activity\rubricatorValueObjectMapper.ts:393:       readLookupRow(supabase, "contexts", contextId),
+.\lib\activity\rubricatorValueObjectMapper.ts:394:       readLookupRow(supabase, "contextual_categories", contextualCategoryId),
+.\lib\activity\rubricatorValueObjectMapper.ts:395:     ]);
+.\lib\activity\rubricatorValueObjectMapper.ts:396: 
+.\lib\activity\rubricatorValueObjectMapper.ts:397:   return {
+.\lib\activity\rubricatorValueObjectMapper.ts:398:     classificationId: getString(row, "id") ?? "",
+.\lib\activity\rubricatorValueObjectMapper.ts:399:     entityType: getString(row, "entity_type"),
+.\lib\activity\rubricatorValueObjectMapper.ts:400:     entityId: getString(row, "entity_id"),
+.\lib\activity\rubricatorValueObjectMapper.ts:401:     objectTypeId,
+.\lib\activity\rubricatorValueObjectMapper.ts:402:     objectTypeCode: getString(objectType, "code"),
+.\lib\activity\rubricatorValueObjectMapper.ts:403:     objectTypeName: getString(objectType, "name"),
+.\lib\activity\rubricatorValueObjectMapper.ts:404:     actionTypeId,
+.\lib\activity\rubricatorValueObjectMapper.ts:405:     actionTypeCode: getString(actionType, "code"),
+.\lib\activity\rubricatorValueObjectMapper.ts:406:     actionTypeName: getString(actionType, "name"),
+.\lib\activity\rubricatorValueObjectMapper.ts:407:     contextId,
+.\lib\activity\rubricatorValueObjectMapper.ts:408:     contextCode: getString(context, "code"),
+.\lib\activity\rubricatorValueObjectMapper.ts:409:     contextName: getString(context, "name"),
+.\lib\activity\rubricatorValueObjectMapper.ts:410:     contextualCategoryId,
+.\lib\activity\rubricatorValueObjectMapper.ts:411:     contextualCategorySlug: getString(contextualCategory, "slug"),
+.\lib\activity\rubricatorValueObjectMapper.ts:412:     contextualCategoryName: getString(contextualCategory, "name"),
+.\lib\activity\rubricatorValueObjectMapper.ts:413:     classificationRole: getString(row, "classification_role"),
+.\lib\activity\rubricatorValueObjectMapper.ts:414:     isPrimary: getBoolean(row, "is_primary"),
+.\lib\activity\rubricatorValueObjectMapper.ts:415:     confidence: getNumber(row, "confidence"),
+.\lib\activity\rubricatorValueObjectMapper.ts:416:     status: getString(row, "status"),
+.\lib\activity\rubricatorValueObjectMapper.ts:417:     sourceType: getString(row, "source_type"),
+.\lib\activity\rubricatorValueObjectMapper.ts:418:     evidence: getObject(row, "evidence_json"),
+.\lib\activity\rubricatorValueObjectMapper.ts:419:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:420: }
+.\lib\activity\rubricatorValueObjectMapper.ts:421: 
+.\lib\activity\rubricatorValueObjectMapper.ts:422: function classificationMatchesRule(
+.\lib\activity\rubricatorValueObjectMapper.ts:423:   classification: RubricatorClassificationSummary,
+.\lib\activity\rubricatorValueObjectMapper.ts:424:   rule: ControlledRubricatorValueObjectRule
+.\lib\activity\rubricatorValueObjectMapper.ts:425: ): boolean {
+.\lib\activity\rubricatorValueObjectMapper.ts:426:   return (
+.\lib\activity\rubricatorValueObjectMapper.ts:427:     normalizeKey(classification.objectTypeCode) === normalizeKey(rule.objectTypeCode) &&
+.\lib\activity\rubricatorValueObjectMapper.ts:428:     normalizeKey(classification.actionTypeCode) === normalizeKey(rule.actionTypeCode) &&
+.\lib\activity\rubricatorValueObjectMapper.ts:429:     normalizeKey(classification.contextCode) === normalizeKey(rule.contextCode) &&
+.\lib\activity\rubricatorValueObjectMapper.ts:430:     normalizeKey(classification.contextualCategorySlug) ===
+.\lib\activity\rubricatorValueObjectMapper.ts:431:       normalizeKey(rule.contextualCategorySlug)
+.\lib\activity\rubricatorValueObjectMapper.ts:432:   );
+.\lib\activity\rubricatorValueObjectMapper.ts:433: }
+.\lib\activity\rubricatorValueObjectMapper.ts:434: 
+.\lib\activity\rubricatorValueObjectMapper.ts:435: function classificationSearchText(
+.\lib\activity\rubricatorValueObjectMapper.ts:436:   classification: RubricatorClassificationSummary | null
+.\lib\activity\rubricatorValueObjectMapper.ts:437: ): string {
+.\lib\activity\rubricatorValueObjectMapper.ts:438:   if (!classification) {
+.\lib\activity\rubricatorValueObjectMapper.ts:439:     return "";
+.\lib\activity\rubricatorValueObjectMapper.ts:440:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:441: 
+.\lib\activity\rubricatorValueObjectMapper.ts:442:   return joinSearchText([
+.\lib\activity\rubricatorValueObjectMapper.ts:443:     classification.objectTypeCode,
+.\lib\activity\rubricatorValueObjectMapper.ts:444:     classification.objectTypeName,
+.\lib\activity\rubricatorValueObjectMapper.ts:445:     classification.actionTypeCode,
+.\lib\activity\rubricatorValueObjectMapper.ts:446:     classification.actionTypeName,
+.\lib\activity\rubricatorValueObjectMapper.ts:447:     classification.contextCode,
+.\lib\activity\rubricatorValueObjectMapper.ts:448:     classification.contextName,
+.\lib\activity\rubricatorValueObjectMapper.ts:449:     classification.contextualCategorySlug,
+.\lib\activity\rubricatorValueObjectMapper.ts:450:     classification.contextualCategoryName,
+.\lib\activity\rubricatorValueObjectMapper.ts:451:   ]);
+.\lib\activity\rubricatorValueObjectMapper.ts:452: }
+.\lib\activity\rubricatorValueObjectMapper.ts:453: 
+.\lib\activity\rubricatorValueObjectMapper.ts:454: function eventSearchText(event: ActivityEventForRubricatorMapping): string {
+.\lib\activity\rubricatorValueObjectMapper.ts:455:   return joinSearchText([
+.\lib\activity\rubricatorValueObjectMapper.ts:456:     event.title,
+.\lib\activity\rubricatorValueObjectMapper.ts:457:     event.description,
+.\lib\activity\rubricatorValueObjectMapper.ts:458:     event.input_text,
+.\lib\activity\rubricatorValueObjectMapper.ts:459:     event.event_code,
+.\lib\activity\rubricatorValueObjectMapper.ts:460:   ]);
+.\lib\activity\rubricatorValueObjectMapper.ts:461: }
+.\lib\activity\rubricatorValueObjectMapper.ts:462: 
+.\lib\activity\rubricatorValueObjectMapper.ts:463: function eventOrClassificationMatchesFallbackRule(
+.\lib\activity\rubricatorValueObjectMapper.ts:464:   event: ActivityEventForRubricatorMapping,
+.\lib\activity\rubricatorValueObjectMapper.ts:465:   classification: RubricatorClassificationSummary | null,
+.\lib\activity\rubricatorValueObjectMapper.ts:466:   rule: ControlledRubricatorValueObjectRule,
+.\lib\activity\rubricatorValueObjectMapper.ts:467:   allowTextFallback: boolean
+.\lib\activity\rubricatorValueObjectMapper.ts:468: ): boolean {
+.\lib\activity\rubricatorValueObjectMapper.ts:469:   const haystack = joinSearchText([
+.\lib\activity\rubricatorValueObjectMapper.ts:470:     classificationSearchText(classification),
+.\lib\activity\rubricatorValueObjectMapper.ts:471:     allowTextFallback ? eventSearchText(event) : "",
+.\lib\activity\rubricatorValueObjectMapper.ts:472:   ]);
+.\lib\activity\rubricatorValueObjectMapper.ts:473: 
+.\lib\activity\rubricatorValueObjectMapper.ts:474:   if (!haystack) {
+.\lib\activity\rubricatorValueObjectMapper.ts:475:     return false;
+.\lib\activity\rubricatorValueObjectMapper.ts:476:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:477: 
+.\lib\activity\rubricatorValueObjectMapper.ts:478:   return rule.fallbackNeedleGroups.every((needleGroup) =>
+.\lib\activity\rubricatorValueObjectMapper.ts:479:     includesAny(haystack, needleGroup)
+.\lib\activity\rubricatorValueObjectMapper.ts:480:   );
+.\lib\activity\rubricatorValueObjectMapper.ts:481: }
+.\lib\activity\rubricatorValueObjectMapper.ts:482: 
+.\lib\activity\rubricatorValueObjectMapper.ts:483: function findControlledRubricatorValueObjectRule(input: {
+.\lib\activity\rubricatorValueObjectMapper.ts:484:   event: ActivityEventForRubricatorMapping;
+.\lib\activity\rubricatorValueObjectMapper.ts:485:   summaries: RubricatorClassificationSummary[];
+.\lib\activity\rubricatorValueObjectMapper.ts:486:   allowTextFallback: boolean;
+.\lib\activity\rubricatorValueObjectMapper.ts:487: }): {
+.\lib\activity\rubricatorValueObjectMapper.ts:488:   rule: ControlledRubricatorValueObjectRule;
+.\lib\activity\rubricatorValueObjectMapper.ts:489:   classification: RubricatorClassificationSummary | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:490: } | null {
+.\lib\activity\rubricatorValueObjectMapper.ts:491:   for (const summary of input.summaries) {
+.\lib\activity\rubricatorValueObjectMapper.ts:492:     const exactRule = CONTROLLED_RUBRICATOR_VALUE_OBJECT_RULES.find((rule) =>
+.\lib\activity\rubricatorValueObjectMapper.ts:493:       classificationMatchesRule(summary, rule)
+.\lib\activity\rubricatorValueObjectMapper.ts:494:     );
+.\lib\activity\rubricatorValueObjectMapper.ts:495: 
+.\lib\activity\rubricatorValueObjectMapper.ts:496:     if (exactRule) {
+.\lib\activity\rubricatorValueObjectMapper.ts:497:       return {
+.\lib\activity\rubricatorValueObjectMapper.ts:498:         rule: exactRule,
+.\lib\activity\rubricatorValueObjectMapper.ts:499:         classification: summary,
+.\lib\activity\rubricatorValueObjectMapper.ts:500:       };
+.\lib\activity\rubricatorValueObjectMapper.ts:501:     }
+.\lib\activity\rubricatorValueObjectMapper.ts:502:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:503: 
+.\lib\activity\rubricatorValueObjectMapper.ts:504:   if (!input.allowTextFallback) {
+.\lib\activity\rubricatorValueObjectMapper.ts:505:     return null;
+.\lib\activity\rubricatorValueObjectMapper.ts:506:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:507: 
+.\lib\activity\rubricatorValueObjectMapper.ts:508:   const fallbackRule = CONTROLLED_RUBRICATOR_VALUE_OBJECT_RULES.find((rule) =>
+.\lib\activity\rubricatorValueObjectMapper.ts:509:     eventOrClassificationMatchesFallbackRule(
+.\lib\activity\rubricatorValueObjectMapper.ts:510:       input.event,
+.\lib\activity\rubricatorValueObjectMapper.ts:511:       null,
+.\lib\activity\rubricatorValueObjectMapper.ts:512:       rule,
+.\lib\activity\rubricatorValueObjectMapper.ts:513:       input.allowTextFallback
+.\lib\activity\rubricatorValueObjectMapper.ts:514:     )
+.\lib\activity\rubricatorValueObjectMapper.ts:515:   );
+.\lib\activity\rubricatorValueObjectMapper.ts:516: 
+.\lib\activity\rubricatorValueObjectMapper.ts:517:   if (!fallbackRule) {
+.\lib\activity\rubricatorValueObjectMapper.ts:518:     return null;
+.\lib\activity\rubricatorValueObjectMapper.ts:519:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:520: 
+
+===== .\lib\activity\rubricatorValueObjectMapper.ts:520-740 =====
+.\lib\activity\rubricatorValueObjectMapper.ts:520: 
+.\lib\activity\rubricatorValueObjectMapper.ts:521:   return {
+.\lib\activity\rubricatorValueObjectMapper.ts:522:     rule: fallbackRule,
+.\lib\activity\rubricatorValueObjectMapper.ts:523:     classification: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:524:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:525: }
+.\lib\activity\rubricatorValueObjectMapper.ts:526: 
+.\lib\activity\rubricatorValueObjectMapper.ts:527: async function findControlledValueObject(
+.\lib\activity\rubricatorValueObjectMapper.ts:528:   supabase: SupabaseClient,
+.\lib\activity\rubricatorValueObjectMapper.ts:529:   event: ActivityEventForRubricatorMapping,
+.\lib\activity\rubricatorValueObjectMapper.ts:530:   rule: ControlledRubricatorValueObjectRule
+.\lib\activity\rubricatorValueObjectMapper.ts:531: ): Promise<{
+.\lib\activity\rubricatorValueObjectMapper.ts:532:   valueObjectId: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:533:   errorMessage: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:534: }> {
+.\lib\activity\rubricatorValueObjectMapper.ts:535:   const ownerActorId =
+.\lib\activity\rubricatorValueObjectMapper.ts:536:     event.acting_as_actor_id ?? event.performed_by_actor_id ?? null;
+.\lib\activity\rubricatorValueObjectMapper.ts:537: 
+.\lib\activity\rubricatorValueObjectMapper.ts:538:   let query = supabase
+.\lib\activity\rubricatorValueObjectMapper.ts:539:     .from("value_objects")
+.\lib\activity\rubricatorValueObjectMapper.ts:540:     .select("id")
+.\lib\activity\rubricatorValueObjectMapper.ts:541:     .eq("title", rule.valueObjectTitle)
+.\lib\activity\rubricatorValueObjectMapper.ts:542:     .eq("value_type", rule.valueObjectType)
+.\lib\activity\rubricatorValueObjectMapper.ts:543:     .eq("status", "active")
+.\lib\activity\rubricatorValueObjectMapper.ts:544:     .is("organization_id", null)
+.\lib\activity\rubricatorValueObjectMapper.ts:545:     .limit(1);
+.\lib\activity\rubricatorValueObjectMapper.ts:546: 
+.\lib\activity\rubricatorValueObjectMapper.ts:547:   if (ownerActorId) {
+.\lib\activity\rubricatorValueObjectMapper.ts:548:     query = query.eq("owner_actor_id", ownerActorId);
+.\lib\activity\rubricatorValueObjectMapper.ts:549:   } else {
+.\lib\activity\rubricatorValueObjectMapper.ts:550:     query = query.is("owner_actor_id", null);
+.\lib\activity\rubricatorValueObjectMapper.ts:551:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:552: 
+.\lib\activity\rubricatorValueObjectMapper.ts:553:   const { data, error } = await query.maybeSingle();
+.\lib\activity\rubricatorValueObjectMapper.ts:554: 
+.\lib\activity\rubricatorValueObjectMapper.ts:555:   if (error) {
+.\lib\activity\rubricatorValueObjectMapper.ts:556:     return {
+.\lib\activity\rubricatorValueObjectMapper.ts:557:       valueObjectId: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:558:       errorMessage: error.message,
+.\lib\activity\rubricatorValueObjectMapper.ts:559:     };
+.\lib\activity\rubricatorValueObjectMapper.ts:560:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:561: 
+.\lib\activity\rubricatorValueObjectMapper.ts:562:   return {
+.\lib\activity\rubricatorValueObjectMapper.ts:563:     valueObjectId: getString(data as GenericRow | null, "id"),
+.\lib\activity\rubricatorValueObjectMapper.ts:564:     errorMessage: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:565:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:566: }
+.\lib\activity\rubricatorValueObjectMapper.ts:567: 
+.\lib\activity\rubricatorValueObjectMapper.ts:568: async function createControlledValueObject(
+.\lib\activity\rubricatorValueObjectMapper.ts:569:   supabase: SupabaseClient,
+.\lib\activity\rubricatorValueObjectMapper.ts:570:   event: ActivityEventForRubricatorMapping,
+.\lib\activity\rubricatorValueObjectMapper.ts:571:   rule: ControlledRubricatorValueObjectRule
+.\lib\activity\rubricatorValueObjectMapper.ts:572: ): Promise<{
+.\lib\activity\rubricatorValueObjectMapper.ts:573:   valueObjectId: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:574:   errorMessage: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:575: }> {
+.\lib\activity\rubricatorValueObjectMapper.ts:576:   const ownerActorId =
+.\lib\activity\rubricatorValueObjectMapper.ts:577:     event.acting_as_actor_id ?? event.performed_by_actor_id ?? null;
+.\lib\activity\rubricatorValueObjectMapper.ts:578: 
+.\lib\activity\rubricatorValueObjectMapper.ts:579:   const { data, error } = await supabase
+.\lib\activity\rubricatorValueObjectMapper.ts:580:     .from("value_objects")
+.\lib\activity\rubricatorValueObjectMapper.ts:581:     .insert({
+.\lib\activity\rubricatorValueObjectMapper.ts:582:       owner_actor_id: ownerActorId,
+.\lib\activity\rubricatorValueObjectMapper.ts:583:       organization_id: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:584:       value_type: rule.valueObjectType,
+.\lib\activity\rubricatorValueObjectMapper.ts:585:       title: rule.valueObjectTitle,
+.\lib\activity\rubricatorValueObjectMapper.ts:586:       description: rule.valueObjectDescription,
+.\lib\activity\rubricatorValueObjectMapper.ts:587:       unit_type: rule.valueObjectUnitType,
+.\lib\activity\rubricatorValueObjectMapper.ts:588:       default_price: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:589:       default_currency: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:590:       default_duration_minutes:
+.\lib\activity\rubricatorValueObjectMapper.ts:591:         rule.defaultDurationMinutes ?? event.duration_minutes,
+.\lib\activity\rubricatorValueObjectMapper.ts:592:       is_marketplace_sellable: false,
+.\lib\activity\rubricatorValueObjectMapper.ts:593:       is_free_possible: false,
+.\lib\activity\rubricatorValueObjectMapper.ts:594:       status: "active",
+.\lib\activity\rubricatorValueObjectMapper.ts:595:     })
+.\lib\activity\rubricatorValueObjectMapper.ts:596:     .select("id")
+.\lib\activity\rubricatorValueObjectMapper.ts:597:     .single();
+.\lib\activity\rubricatorValueObjectMapper.ts:598: 
+.\lib\activity\rubricatorValueObjectMapper.ts:599:   if (error) {
+.\lib\activity\rubricatorValueObjectMapper.ts:600:     return {
+.\lib\activity\rubricatorValueObjectMapper.ts:601:       valueObjectId: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:602:       errorMessage: error.message,
+.\lib\activity\rubricatorValueObjectMapper.ts:603:     };
+.\lib\activity\rubricatorValueObjectMapper.ts:604:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:605: 
+.\lib\activity\rubricatorValueObjectMapper.ts:606:   return {
+.\lib\activity\rubricatorValueObjectMapper.ts:607:     valueObjectId: getString(data as GenericRow | null, "id"),
+.\lib\activity\rubricatorValueObjectMapper.ts:608:     errorMessage: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:609:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:610: }
+.\lib\activity\rubricatorValueObjectMapper.ts:611: 
+.\lib\activity\rubricatorValueObjectMapper.ts:612: async function findOrCreateControlledValueObject(
+.\lib\activity\rubricatorValueObjectMapper.ts:613:   supabase: SupabaseClient,
+.\lib\activity\rubricatorValueObjectMapper.ts:614:   event: ActivityEventForRubricatorMapping,
+.\lib\activity\rubricatorValueObjectMapper.ts:615:   rule: ControlledRubricatorValueObjectRule,
+.\lib\activity\rubricatorValueObjectMapper.ts:616:   createMissing: boolean
+.\lib\activity\rubricatorValueObjectMapper.ts:617: ): Promise<{
+.\lib\activity\rubricatorValueObjectMapper.ts:618:   valueObjectId: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:619:   created: boolean;
+.\lib\activity\rubricatorValueObjectMapper.ts:620:   errorMessage: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:621: }> {
+.\lib\activity\rubricatorValueObjectMapper.ts:622:   const existing = await findControlledValueObject(supabase, event, rule);
+.\lib\activity\rubricatorValueObjectMapper.ts:623: 
+.\lib\activity\rubricatorValueObjectMapper.ts:624:   if (existing.errorMessage) {
+.\lib\activity\rubricatorValueObjectMapper.ts:625:     return {
+.\lib\activity\rubricatorValueObjectMapper.ts:626:       valueObjectId: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:627:       created: false,
+.\lib\activity\rubricatorValueObjectMapper.ts:628:       errorMessage: existing.errorMessage,
+.\lib\activity\rubricatorValueObjectMapper.ts:629:     };
+.\lib\activity\rubricatorValueObjectMapper.ts:630:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:631: 
+.\lib\activity\rubricatorValueObjectMapper.ts:632:   if (existing.valueObjectId) {
+.\lib\activity\rubricatorValueObjectMapper.ts:633:     return {
+.\lib\activity\rubricatorValueObjectMapper.ts:634:       valueObjectId: existing.valueObjectId,
+.\lib\activity\rubricatorValueObjectMapper.ts:635:       created: false,
+.\lib\activity\rubricatorValueObjectMapper.ts:636:       errorMessage: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:637:     };
+.\lib\activity\rubricatorValueObjectMapper.ts:638:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:639: 
+.\lib\activity\rubricatorValueObjectMapper.ts:640:   if (!createMissing) {
+.\lib\activity\rubricatorValueObjectMapper.ts:641:     return {
+.\lib\activity\rubricatorValueObjectMapper.ts:642:       valueObjectId: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:643:       created: false,
+.\lib\activity\rubricatorValueObjectMapper.ts:644:       errorMessage: "controlled_value_object_missing",
+.\lib\activity\rubricatorValueObjectMapper.ts:645:     };
+.\lib\activity\rubricatorValueObjectMapper.ts:646:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:647: 
+.\lib\activity\rubricatorValueObjectMapper.ts:648:   const created = await createControlledValueObject(supabase, event, rule);
+.\lib\activity\rubricatorValueObjectMapper.ts:649: 
+.\lib\activity\rubricatorValueObjectMapper.ts:650:   return {
+.\lib\activity\rubricatorValueObjectMapper.ts:651:     valueObjectId: created.valueObjectId,
+.\lib\activity\rubricatorValueObjectMapper.ts:652:     created: Boolean(created.valueObjectId),
+.\lib\activity\rubricatorValueObjectMapper.ts:653:     errorMessage: created.errorMessage,
+.\lib\activity\rubricatorValueObjectMapper.ts:654:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:655: }
+.\lib\activity\rubricatorValueObjectMapper.ts:656: 
+.\lib\activity\rubricatorValueObjectMapper.ts:657: function buildControlledMapping(
+.\lib\activity\rubricatorValueObjectMapper.ts:658:   event: ActivityEventForRubricatorMapping,
+.\lib\activity\rubricatorValueObjectMapper.ts:659:   valueObjectId: string,
+.\lib\activity\rubricatorValueObjectMapper.ts:660:   classification: RubricatorClassificationSummary | null,
+.\lib\activity\rubricatorValueObjectMapper.ts:661:   valueObjectCreated: boolean,
+.\lib\activity\rubricatorValueObjectMapper.ts:662:   rule: ControlledRubricatorValueObjectRule
+.\lib\activity\rubricatorValueObjectMapper.ts:663: ): ValueObjectBridgeMapping | null {
+.\lib\activity\rubricatorValueObjectMapper.ts:664:   if (event.duration_minutes === null) {
+.\lib\activity\rubricatorValueObjectMapper.ts:665:     return null;
+.\lib\activity\rubricatorValueObjectMapper.ts:666:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:667: 
+.\lib\activity\rubricatorValueObjectMapper.ts:668:   const confidence = normalizeConfidence(classification?.confidence ?? null);
+.\lib\activity\rubricatorValueObjectMapper.ts:669: 
+.\lib\activity\rubricatorValueObjectMapper.ts:670:   return {
+.\lib\activity\rubricatorValueObjectMapper.ts:671:     valueObjectId,
+.\lib\activity\rubricatorValueObjectMapper.ts:672:     relationType: rule.relationType,
+.\lib\activity\rubricatorValueObjectMapper.ts:673:     weight: 1,
+.\lib\activity\rubricatorValueObjectMapper.ts:674:     confidence,
+.\lib\activity\rubricatorValueObjectMapper.ts:675:     source: "rule",
+.\lib\activity\rubricatorValueObjectMapper.ts:676:     instanceStatus: "completed",
+.\lib\activity\rubricatorValueObjectMapper.ts:677:     instanceTitle: event.title ?? rule.valueObjectTitle,
+.\lib\activity\rubricatorValueObjectMapper.ts:678:     instanceNote: event.description ?? event.input_text,
+.\lib\activity\rubricatorValueObjectMapper.ts:679:     resultStatus: "completed",
+.\lib\activity\rubricatorValueObjectMapper.ts:680:     qualityScore: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:681:     metricKey: rule.metricKey,
+.\lib\activity\rubricatorValueObjectMapper.ts:682:     metricUnit: rule.metricUnit,
+.\lib\activity\rubricatorValueObjectMapper.ts:683:     deltaValueNumeric: event.duration_minutes,
+.\lib\activity\rubricatorValueObjectMapper.ts:684:     deltaValueText: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:685:     deltaDirection: rule.deltaDirection,
+.\lib\activity\rubricatorValueObjectMapper.ts:686:     aggregateDate: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:687:     aggregateType: rule.aggregateType,
+.\lib\activity\rubricatorValueObjectMapper.ts:688:     aggregateKey: valueObjectId,
+.\lib\activity\rubricatorValueObjectMapper.ts:689:     metadata: {
+.\lib\activity\rubricatorValueObjectMapper.ts:690:       mapper: "rubricatorValueObjectMapper",
+.\lib\activity\rubricatorValueObjectMapper.ts:691:       mapperVersion: "p4_7_8_r_l5",
+.\lib\activity\rubricatorValueObjectMapper.ts:692:       controlledRule: rule.ruleKey,
+.\lib\activity\rubricatorValueObjectMapper.ts:693:       valueObjectCreated,
+.\lib\activity\rubricatorValueObjectMapper.ts:694:       classification,
+.\lib\activity\rubricatorValueObjectMapper.ts:695:     },
+.\lib\activity\rubricatorValueObjectMapper.ts:696:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:697: }
+.\lib\activity\rubricatorValueObjectMapper.ts:698: 
+.\lib\activity\rubricatorValueObjectMapper.ts:699: export async function resolveValueObjectMappingsFromRubricatorForActivityEvent(
+.\lib\activity\rubricatorValueObjectMapper.ts:700:   input: ResolveValueObjectMappingsFromRubricatorInput
+.\lib\activity\rubricatorValueObjectMapper.ts:701: ): Promise<RubricatorValueObjectMappingResult> {
+.\lib\activity\rubricatorValueObjectMapper.ts:702:   const {
+.\lib\activity\rubricatorValueObjectMapper.ts:703:     supabase,
+.\lib\activity\rubricatorValueObjectMapper.ts:704:     eventId,
+.\lib\activity\rubricatorValueObjectMapper.ts:705:     allowNonCompletedEvent = false,
+.\lib\activity\rubricatorValueObjectMapper.ts:706:     createMissingControlledValueObject = false,
+.\lib\activity\rubricatorValueObjectMapper.ts:707:     allowControlledTextFallback = false,
+.\lib\activity\rubricatorValueObjectMapper.ts:708:   } = input;
+.\lib\activity\rubricatorValueObjectMapper.ts:709: 
+.\lib\activity\rubricatorValueObjectMapper.ts:710:   const result: RubricatorValueObjectMappingResult = {
+.\lib\activity\rubricatorValueObjectMapper.ts:711:     ok: false,
+.\lib\activity\rubricatorValueObjectMapper.ts:712:     skipped: false,
+.\lib\activity\rubricatorValueObjectMapper.ts:713:     skipReason: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:714:     eventId,
+.\lib\activity\rubricatorValueObjectMapper.ts:715:     eventStatus: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:716:     classificationSummary: [],
+.\lib\activity\rubricatorValueObjectMapper.ts:717:     mappings: [],
+.\lib\activity\rubricatorValueObjectMapper.ts:718:     errors: [],
+.\lib\activity\rubricatorValueObjectMapper.ts:719:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:720: 
+.\lib\activity\rubricatorValueObjectMapper.ts:721:   const { event, errorMessage: eventError } = await readActivityEvent(
+.\lib\activity\rubricatorValueObjectMapper.ts:722:     supabase,
+.\lib\activity\rubricatorValueObjectMapper.ts:723:     eventId
+.\lib\activity\rubricatorValueObjectMapper.ts:724:   );
+.\lib\activity\rubricatorValueObjectMapper.ts:725: 
+.\lib\activity\rubricatorValueObjectMapper.ts:726:   if (eventError) {
+.\lib\activity\rubricatorValueObjectMapper.ts:727:     result.errors.push(eventError);
+.\lib\activity\rubricatorValueObjectMapper.ts:728:     return result;
+.\lib\activity\rubricatorValueObjectMapper.ts:729:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:730: 
+.\lib\activity\rubricatorValueObjectMapper.ts:731:   if (!event) {
+.\lib\activity\rubricatorValueObjectMapper.ts:732:     result.errors.push("Activity event not found.");
+.\lib\activity\rubricatorValueObjectMapper.ts:733:     return result;
+.\lib\activity\rubricatorValueObjectMapper.ts:734:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:735: 
+.\lib\activity\rubricatorValueObjectMapper.ts:736:   result.eventStatus = event.status;
+.\lib\activity\rubricatorValueObjectMapper.ts:737: 
+.\lib\activity\rubricatorValueObjectMapper.ts:738:   if (!allowNonCompletedEvent && event.status !== "completed") {
+.\lib\activity\rubricatorValueObjectMapper.ts:739:     result.ok = true;
+.\lib\activity\rubricatorValueObjectMapper.ts:740:     result.skipped = true;
+
+===== .\lib\activity\activityValueObjectLifecycle.ts:1-140 =====
+.\lib\activity\activityValueObjectLifecycle.ts:1: import type { SupabaseClient } from "@supabase/supabase-js";
+.\lib\activity\activityValueObjectLifecycle.ts:2: 
+.\lib\activity\activityValueObjectLifecycle.ts:3: import {
+.\lib\activity\activityValueObjectLifecycle.ts:4:   processValueObjectBridgeForActivityEvent,
+.\lib\activity\activityValueObjectLifecycle.ts:5:   type ProcessValueObjectBridgeResult,
+.\lib\activity\activityValueObjectLifecycle.ts:6: } from "./valueObjectBridge";
+.\lib\activity\activityValueObjectLifecycle.ts:7: 
+.\lib\activity\activityValueObjectLifecycle.ts:8: import {
+.\lib\activity\activityValueObjectLifecycle.ts:9:   resolveValueObjectMappingsFromRubricatorForActivityEvent,
+.\lib\activity\activityValueObjectLifecycle.ts:10:   type RubricatorValueObjectMappingResult,
+.\lib\activity\activityValueObjectLifecycle.ts:11: } from "./rubricatorValueObjectMapper";
+.\lib\activity\activityValueObjectLifecycle.ts:12: 
+.\lib\activity\activityValueObjectLifecycle.ts:13: export type ProcessActivityValueObjectBridgeInput = {
+.\lib\activity\activityValueObjectLifecycle.ts:14:   supabase: SupabaseClient;
+.\lib\activity\activityValueObjectLifecycle.ts:15:   eventId: string;
+.\lib\activity\activityValueObjectLifecycle.ts:16:   processorName: string;
+.\lib\activity\activityValueObjectLifecycle.ts:17:   allowNonCompletedEvent?: boolean;
+.\lib\activity\activityValueObjectLifecycle.ts:18: };
+.\lib\activity\activityValueObjectLifecycle.ts:19: 
+.\lib\activity\activityValueObjectLifecycle.ts:20: export type ProcessActivityValueObjectBridgeResult = {
+.\lib\activity\activityValueObjectLifecycle.ts:21:   ok: boolean;
+.\lib\activity\activityValueObjectLifecycle.ts:22:   skipped: boolean;
+.\lib\activity\activityValueObjectLifecycle.ts:23:   skipReason: string | null;
+.\lib\activity\activityValueObjectLifecycle.ts:24:   eventId: string;
+.\lib\activity\activityValueObjectLifecycle.ts:25:   processorName: string;
+.\lib\activity\activityValueObjectLifecycle.ts:26:   mappingResult: RubricatorValueObjectMappingResult | null;
+.\lib\activity\activityValueObjectLifecycle.ts:27:   bridgeResult: ProcessValueObjectBridgeResult | null;
+.\lib\activity\activityValueObjectLifecycle.ts:28:   errors: string[];
+.\lib\activity\activityValueObjectLifecycle.ts:29: };
+.\lib\activity\activityValueObjectLifecycle.ts:30: 
+.\lib\activity\activityValueObjectLifecycle.ts:31: function normalizeErrorMessage(error: unknown): string {
+.\lib\activity\activityValueObjectLifecycle.ts:32:   if (error instanceof Error) {
+.\lib\activity\activityValueObjectLifecycle.ts:33:     return error.message;
+.\lib\activity\activityValueObjectLifecycle.ts:34:   }
+.\lib\activity\activityValueObjectLifecycle.ts:35: 
+.\lib\activity\activityValueObjectLifecycle.ts:36:   if (typeof error === "string") {
+.\lib\activity\activityValueObjectLifecycle.ts:37:     return error;
+.\lib\activity\activityValueObjectLifecycle.ts:38:   }
+.\lib\activity\activityValueObjectLifecycle.ts:39: 
+.\lib\activity\activityValueObjectLifecycle.ts:40:   try {
+.\lib\activity\activityValueObjectLifecycle.ts:41:     return JSON.stringify(error);
+.\lib\activity\activityValueObjectLifecycle.ts:42:   } catch {
+.\lib\activity\activityValueObjectLifecycle.ts:43:     return "Unknown value object bridge lifecycle error.";
+.\lib\activity\activityValueObjectLifecycle.ts:44:   }
+.\lib\activity\activityValueObjectLifecycle.ts:45: }
+.\lib\activity\activityValueObjectLifecycle.ts:46: 
+.\lib\activity\activityValueObjectLifecycle.ts:47: /**
+.\lib\activity\activityValueObjectLifecycle.ts:48:  * Normal lifecycle wrapper for Activity Event -> Rubricator Mapper -> Value Object Bridge.
+.\lib\activity\activityValueObjectLifecycle.ts:49:  *
+.\lib\activity\activityValueObjectLifecycle.ts:50:  * Important:
+.\lib\activity\activityValueObjectLifecycle.ts:51:  * - This wrapper is for normal completed/confirmed lifecycle paths.
+.\lib\activity\activityValueObjectLifecycle.ts:52:  * - It does not create missing controlled Value Objects.
+.\lib\activity\activityValueObjectLifecycle.ts:53:  * - It does not use controlled text fallback.
+.\lib\activity\activityValueObjectLifecycle.ts:54:  * - It must not be called for imported_pending events before confirm.
+.\lib\activity\activityValueObjectLifecycle.ts:55:  * - Duplicate protection is delegated to processValueObjectBridgeForActivityEvent.
+.\lib\activity\activityValueObjectLifecycle.ts:56:  */
+.\lib\activity\activityValueObjectLifecycle.ts:57: export async function processActivityValueObjectBridge(
+.\lib\activity\activityValueObjectLifecycle.ts:58:   input: ProcessActivityValueObjectBridgeInput
+.\lib\activity\activityValueObjectLifecycle.ts:59: ): Promise<ProcessActivityValueObjectBridgeResult> {
+.\lib\activity\activityValueObjectLifecycle.ts:60:   const { supabase, eventId, processorName, allowNonCompletedEvent = false } =
+.\lib\activity\activityValueObjectLifecycle.ts:61:     input;
+.\lib\activity\activityValueObjectLifecycle.ts:62: 
+.\lib\activity\activityValueObjectLifecycle.ts:63:   try {
+.\lib\activity\activityValueObjectLifecycle.ts:64:     const mappingResult =
+.\lib\activity\activityValueObjectLifecycle.ts:65:       await resolveValueObjectMappingsFromRubricatorForActivityEvent({
+.\lib\activity\activityValueObjectLifecycle.ts:66:         supabase,
+.\lib\activity\activityValueObjectLifecycle.ts:67:         eventId,
+.\lib\activity\activityValueObjectLifecycle.ts:68:         createMissingControlledValueObject: false,
+.\lib\activity\activityValueObjectLifecycle.ts:69:         allowControlledTextFallback: false,
+.\lib\activity\activityValueObjectLifecycle.ts:70:       });
+.\lib\activity\activityValueObjectLifecycle.ts:71: 
+.\lib\activity\activityValueObjectLifecycle.ts:72:     if (!mappingResult.ok) {
+.\lib\activity\activityValueObjectLifecycle.ts:73:       return {
+.\lib\activity\activityValueObjectLifecycle.ts:74:         ok: false,
+.\lib\activity\activityValueObjectLifecycle.ts:75:         skipped: mappingResult.skipped,
+.\lib\activity\activityValueObjectLifecycle.ts:76:         skipReason: mappingResult.skipReason,
+.\lib\activity\activityValueObjectLifecycle.ts:77:         eventId,
+.\lib\activity\activityValueObjectLifecycle.ts:78:         processorName,
+.\lib\activity\activityValueObjectLifecycle.ts:79:         mappingResult,
+.\lib\activity\activityValueObjectLifecycle.ts:80:         bridgeResult: null,
+.\lib\activity\activityValueObjectLifecycle.ts:81:         errors: mappingResult.errors,
+.\lib\activity\activityValueObjectLifecycle.ts:82:       };
+.\lib\activity\activityValueObjectLifecycle.ts:83:     }
+.\lib\activity\activityValueObjectLifecycle.ts:84: 
+.\lib\activity\activityValueObjectLifecycle.ts:85:     if (mappingResult.skipped || mappingResult.mappings.length === 0) {
+.\lib\activity\activityValueObjectLifecycle.ts:86:       return {
+.\lib\activity\activityValueObjectLifecycle.ts:87:         ok: true,
+.\lib\activity\activityValueObjectLifecycle.ts:88:         skipped: true,
+.\lib\activity\activityValueObjectLifecycle.ts:89:         skipReason:
+.\lib\activity\activityValueObjectLifecycle.ts:90:           mappingResult.skipReason ??
+.\lib\activity\activityValueObjectLifecycle.ts:91:           (mappingResult.mappings.length === 0
+.\lib\activity\activityValueObjectLifecycle.ts:92:             ? "no_value_object_mappings"
+.\lib\activity\activityValueObjectLifecycle.ts:93:             : "mapping_skipped"),
+.\lib\activity\activityValueObjectLifecycle.ts:94:         eventId,
+.\lib\activity\activityValueObjectLifecycle.ts:95:         processorName,
+.\lib\activity\activityValueObjectLifecycle.ts:96:         mappingResult,
+.\lib\activity\activityValueObjectLifecycle.ts:97:         bridgeResult: null,
+.\lib\activity\activityValueObjectLifecycle.ts:98:         errors: mappingResult.errors,
+.\lib\activity\activityValueObjectLifecycle.ts:99:       };
+.\lib\activity\activityValueObjectLifecycle.ts:100:     }
+.\lib\activity\activityValueObjectLifecycle.ts:101: 
+.\lib\activity\activityValueObjectLifecycle.ts:102:     const bridgeResult = await processValueObjectBridgeForActivityEvent({
+.\lib\activity\activityValueObjectLifecycle.ts:103:       supabase,
+.\lib\activity\activityValueObjectLifecycle.ts:104:       eventId,
+.\lib\activity\activityValueObjectLifecycle.ts:105:       mappings: mappingResult.mappings,
+.\lib\activity\activityValueObjectLifecycle.ts:106:       allowNonCompletedEvent,
+.\lib\activity\activityValueObjectLifecycle.ts:107:       processorName,
+.\lib\activity\activityValueObjectLifecycle.ts:108:     });
+.\lib\activity\activityValueObjectLifecycle.ts:109: 
+.\lib\activity\activityValueObjectLifecycle.ts:110:     return {
+.\lib\activity\activityValueObjectLifecycle.ts:111:       ok: bridgeResult.ok,
+.\lib\activity\activityValueObjectLifecycle.ts:112:       skipped: bridgeResult.skipped,
+.\lib\activity\activityValueObjectLifecycle.ts:113:       skipReason: bridgeResult.skipReason,
+.\lib\activity\activityValueObjectLifecycle.ts:114:       eventId,
+.\lib\activity\activityValueObjectLifecycle.ts:115:       processorName,
+.\lib\activity\activityValueObjectLifecycle.ts:116:       mappingResult,
+.\lib\activity\activityValueObjectLifecycle.ts:117:       bridgeResult,
+.\lib\activity\activityValueObjectLifecycle.ts:118:       errors: [...mappingResult.errors, ...bridgeResult.errors],
+.\lib\activity\activityValueObjectLifecycle.ts:119:     };
+.\lib\activity\activityValueObjectLifecycle.ts:120:   } catch (error) {
+.\lib\activity\activityValueObjectLifecycle.ts:121:     return {
+.\lib\activity\activityValueObjectLifecycle.ts:122:       ok: false,
+.\lib\activity\activityValueObjectLifecycle.ts:123:       skipped: false,
+.\lib\activity\activityValueObjectLifecycle.ts:124:       skipReason: "exception",
+.\lib\activity\activityValueObjectLifecycle.ts:125:       eventId,
+.\lib\activity\activityValueObjectLifecycle.ts:126:       processorName,
+.\lib\activity\activityValueObjectLifecycle.ts:127:       mappingResult: null,
+.\lib\activity\activityValueObjectLifecycle.ts:128:       bridgeResult: null,
+.\lib\activity\activityValueObjectLifecycle.ts:129:       errors: [normalizeErrorMessage(error)],
+.\lib\activity\activityValueObjectLifecycle.ts:130:     };
+.\lib\activity\activityValueObjectLifecycle.ts:131:   }
+.\lib\activity\activityValueObjectLifecycle.ts:132: }
