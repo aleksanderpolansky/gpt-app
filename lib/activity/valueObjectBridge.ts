@@ -1014,6 +1014,158 @@ async function upsertV42ValueObjectCategoryLink(params: {
   };
 }
 
+function isAdditionalCategoryLinkMetadataRecord(
+  value: unknown
+): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+async function createAdditionalValueObjectCategoryLinks(params: {
+  supabase: SupabaseClient;
+  eventId: string;
+  valueObjectId: string;
+  activityEventValueObjectLinkId: string | null;
+  processorName: string;
+  additionalCategoryLinks: AdditionalValueObjectCategoryLink[] | null | undefined;
+}): Promise<{
+  created: Array<{
+    valueObjectCategoryLinkId: string | null;
+    categoryId: string;
+    candidateSlug: string;
+    errorMessage: string | null;
+  }>;
+  errors: string[];
+}> {
+  const {
+    supabase,
+    eventId,
+    valueObjectId,
+    activityEventValueObjectLinkId,
+    processorName,
+    additionalCategoryLinks,
+  } = params;
+
+  const created: Array<{
+    valueObjectCategoryLinkId: string | null;
+    categoryId: string;
+    candidateSlug: string;
+    errorMessage: string | null;
+  }> = [];
+  const errors: string[] = [];
+
+  if (!additionalCategoryLinks || additionalCategoryLinks.length === 0) {
+    return {
+      created,
+      errors,
+    };
+  }
+
+  for (const item of additionalCategoryLinks) {
+    if (!isUuid(item.categoryId)) {
+      errors.push(
+        `Skipped additional category link with invalid categoryId for candidate ${item.candidateSlug}.`
+      );
+      continue;
+    }
+
+    const categoryTable = item.categoryTable ?? "contextual_categories";
+
+    if (categoryTable !== "contextual_categories") {
+      errors.push(
+        `Skipped additional category link with unsupported categoryTable ${categoryTable} for candidate ${item.candidateSlug}.`
+      );
+      continue;
+    }
+
+    const categoryRole: ValueObjectCategoryRole =
+      item.categoryRole ?? "semantic_component";
+
+    const source: V42ProjectionSource = item.source ?? "rule";
+
+    const confidence =
+      typeof item.confidence === "number" && Number.isFinite(item.confidence)
+        ? item.confidence
+        : 1;
+
+    const inputMetadata = isAdditionalCategoryLinkMetadataRecord(item.metadata)
+      ? item.metadata
+      : {};
+
+    const metadataJson: Record<string, unknown> = {
+      ...inputMetadata,
+      sourceLayer: "category_derivation",
+      sourceProcessor: "category_derivation_rule_extractor",
+      p4Step: "P4.10.0-C8-P3-B2-fix1",
+      processorName,
+      eventId,
+      activityEventId: item.activityEventId ?? eventId,
+      activityEventValueObjectLinkId,
+      derivationRunId: item.derivationRunId ?? null,
+      activityCategoryDerivationId: item.activityCategoryDerivationId ?? null,
+      candidateSlug: item.candidateSlug,
+      candidateTitle: item.candidateTitle ?? null,
+      semanticLayer: item.semanticLayer ?? null,
+      categoryType: item.categoryType ?? null,
+      resolutionStatus: item.resolutionStatus ?? null,
+      confidence,
+      p492: {
+        projection: "value_object_category_links",
+        mode: "runtime_category_link_from_additional_category_links",
+        sourceEventId: eventId,
+        sourceProjectionId: activityEventValueObjectLinkId,
+      },
+    };
+
+    const { data, error } = await supabase
+      .from("value_object_category_links")
+      .upsert(
+        {
+          value_object_id: valueObjectId,
+          category_table: categoryTable,
+          category_id: item.categoryId,
+          category_role: categoryRole,
+          source,
+          confidence,
+          metadata_json: metadataJson,
+        },
+        {
+          onConflict: "value_object_id,category_table,category_id,category_role",
+        }
+      )
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      const errorMessage = error.message;
+
+      errors.push(
+        `Failed to upsert additional category link ${item.candidateSlug}: ${errorMessage}`
+      );
+
+      created.push({
+        valueObjectCategoryLinkId: null,
+        categoryId: item.categoryId,
+        candidateSlug: item.candidateSlug,
+        errorMessage,
+      });
+
+      continue;
+    }
+
+    created.push({
+      valueObjectCategoryLinkId:
+        typeof data?.id === "string" ? data.id : null,
+      categoryId: item.categoryId,
+      candidateSlug: item.candidateSlug,
+      errorMessage: null,
+    });
+  }
+
+  return {
+    created,
+    errors,
+  };
+}
 export async function processValueObjectBridgeForActivityEvent(
   input: ProcessValueObjectBridgeInput
 ): Promise<ProcessValueObjectBridgeResult> {

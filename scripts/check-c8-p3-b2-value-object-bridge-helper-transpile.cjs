@@ -54,7 +54,7 @@ function main() {
 
   const output = {
     ok: diagnostics.length === 0 && missingPatterns.length === 0,
-    checkId: "P4.10.0-C8-P3-B2",
+    checkId: "P4.10.0-C8-P3-B2-fix1",
     checkedAt: new Date().toISOString(),
     targetPath: path.relative(rootDir, targetPath),
     emittedJsLength: transpiled.outputText.length,
@@ -69,12 +69,12 @@ function main() {
           : diagnostic.messageText.messageText,
     })),
     note:
-      "This is a targeted transpile/pattern smoke check for the additive additionalCategoryLinks runtime helper.",
+      "Corrected B2 check after inserting createAdditionalValueObjectCategoryLinks before processValueObjectBridgeForActivityEvent.",
   };
 
   fs.writeFileSync(resultPath, `${JSON.stringify(output, null, 2)}\n`, "utf8");
 
-  console.log("P4.10.0-C8-P3-B2 — valueObjectBridge helper transpile smoke check");
+  console.log("P4.10.0-C8-P3-B2-fix1 — valueObjectBridge helper transpile smoke check");
   console.log("");
   console.log(`Target: ${path.relative(rootDir, targetPath)}`);
   console.log(`Diagnostics: ${diagnostics.length}`);
