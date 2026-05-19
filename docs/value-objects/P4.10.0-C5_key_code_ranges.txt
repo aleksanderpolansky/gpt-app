@@ -1,0 +1,2172 @@
+
+===== .\lib\activity\activityValueObjectLifecycle.ts:1-140 =====
+.\lib\activity\activityValueObjectLifecycle.ts:1: import type { SupabaseClient } from "@supabase/supabase-js";
+.\lib\activity\activityValueObjectLifecycle.ts:2: 
+.\lib\activity\activityValueObjectLifecycle.ts:3: import {
+.\lib\activity\activityValueObjectLifecycle.ts:4:   processValueObjectBridgeForActivityEvent,
+.\lib\activity\activityValueObjectLifecycle.ts:5:   type ProcessValueObjectBridgeResult,
+.\lib\activity\activityValueObjectLifecycle.ts:6: } from "./valueObjectBridge";
+.\lib\activity\activityValueObjectLifecycle.ts:7: 
+.\lib\activity\activityValueObjectLifecycle.ts:8: import {
+.\lib\activity\activityValueObjectLifecycle.ts:9:   resolveValueObjectMappingsFromRubricatorForActivityEvent,
+.\lib\activity\activityValueObjectLifecycle.ts:10:   type RubricatorValueObjectMappingResult,
+.\lib\activity\activityValueObjectLifecycle.ts:11: } from "./rubricatorValueObjectMapper";
+.\lib\activity\activityValueObjectLifecycle.ts:12: 
+.\lib\activity\activityValueObjectLifecycle.ts:13: export type ProcessActivityValueObjectBridgeInput = {
+.\lib\activity\activityValueObjectLifecycle.ts:14:   supabase: SupabaseClient;
+.\lib\activity\activityValueObjectLifecycle.ts:15:   eventId: string;
+.\lib\activity\activityValueObjectLifecycle.ts:16:   processorName: string;
+.\lib\activity\activityValueObjectLifecycle.ts:17:   allowNonCompletedEvent?: boolean;
+.\lib\activity\activityValueObjectLifecycle.ts:18: };
+.\lib\activity\activityValueObjectLifecycle.ts:19: 
+.\lib\activity\activityValueObjectLifecycle.ts:20: export type ProcessActivityValueObjectBridgeResult = {
+.\lib\activity\activityValueObjectLifecycle.ts:21:   ok: boolean;
+.\lib\activity\activityValueObjectLifecycle.ts:22:   skipped: boolean;
+.\lib\activity\activityValueObjectLifecycle.ts:23:   skipReason: string | null;
+.\lib\activity\activityValueObjectLifecycle.ts:24:   eventId: string;
+.\lib\activity\activityValueObjectLifecycle.ts:25:   processorName: string;
+.\lib\activity\activityValueObjectLifecycle.ts:26:   mappingResult: RubricatorValueObjectMappingResult | null;
+.\lib\activity\activityValueObjectLifecycle.ts:27:   bridgeResult: ProcessValueObjectBridgeResult | null;
+.\lib\activity\activityValueObjectLifecycle.ts:28:   errors: string[];
+.\lib\activity\activityValueObjectLifecycle.ts:29: };
+.\lib\activity\activityValueObjectLifecycle.ts:30: 
+.\lib\activity\activityValueObjectLifecycle.ts:31: function normalizeErrorMessage(error: unknown): string {
+.\lib\activity\activityValueObjectLifecycle.ts:32:   if (error instanceof Error) {
+.\lib\activity\activityValueObjectLifecycle.ts:33:     return error.message;
+.\lib\activity\activityValueObjectLifecycle.ts:34:   }
+.\lib\activity\activityValueObjectLifecycle.ts:35: 
+.\lib\activity\activityValueObjectLifecycle.ts:36:   if (typeof error === "string") {
+.\lib\activity\activityValueObjectLifecycle.ts:37:     return error;
+.\lib\activity\activityValueObjectLifecycle.ts:38:   }
+.\lib\activity\activityValueObjectLifecycle.ts:39: 
+.\lib\activity\activityValueObjectLifecycle.ts:40:   try {
+.\lib\activity\activityValueObjectLifecycle.ts:41:     return JSON.stringify(error);
+.\lib\activity\activityValueObjectLifecycle.ts:42:   } catch {
+.\lib\activity\activityValueObjectLifecycle.ts:43:     return "Unknown value object bridge lifecycle error.";
+.\lib\activity\activityValueObjectLifecycle.ts:44:   }
+.\lib\activity\activityValueObjectLifecycle.ts:45: }
+.\lib\activity\activityValueObjectLifecycle.ts:46: 
+.\lib\activity\activityValueObjectLifecycle.ts:47: /**
+.\lib\activity\activityValueObjectLifecycle.ts:48:  * Normal lifecycle wrapper for Activity Event -> Rubricator Mapper -> Value Object Bridge.
+.\lib\activity\activityValueObjectLifecycle.ts:49:  *
+.\lib\activity\activityValueObjectLifecycle.ts:50:  * Important:
+.\lib\activity\activityValueObjectLifecycle.ts:51:  * - This wrapper is for normal completed/confirmed lifecycle paths.
+.\lib\activity\activityValueObjectLifecycle.ts:52:  * - It does not create missing controlled Value Objects.
+.\lib\activity\activityValueObjectLifecycle.ts:53:  * - It does not use controlled text fallback.
+.\lib\activity\activityValueObjectLifecycle.ts:54:  * - It must not be called for imported_pending events before confirm.
+.\lib\activity\activityValueObjectLifecycle.ts:55:  * - Duplicate protection is delegated to processValueObjectBridgeForActivityEvent.
+.\lib\activity\activityValueObjectLifecycle.ts:56:  */
+.\lib\activity\activityValueObjectLifecycle.ts:57: export async function processActivityValueObjectBridge(
+.\lib\activity\activityValueObjectLifecycle.ts:58:   input: ProcessActivityValueObjectBridgeInput
+.\lib\activity\activityValueObjectLifecycle.ts:59: ): Promise<ProcessActivityValueObjectBridgeResult> {
+.\lib\activity\activityValueObjectLifecycle.ts:60:   const { supabase, eventId, processorName, allowNonCompletedEvent = false } =
+.\lib\activity\activityValueObjectLifecycle.ts:61:     input;
+.\lib\activity\activityValueObjectLifecycle.ts:62: 
+.\lib\activity\activityValueObjectLifecycle.ts:63:   try {
+.\lib\activity\activityValueObjectLifecycle.ts:64:     const mappingResult =
+.\lib\activity\activityValueObjectLifecycle.ts:65:       await resolveValueObjectMappingsFromRubricatorForActivityEvent({
+.\lib\activity\activityValueObjectLifecycle.ts:66:         supabase,
+.\lib\activity\activityValueObjectLifecycle.ts:67:         eventId,
+.\lib\activity\activityValueObjectLifecycle.ts:68:         createMissingControlledValueObject: false,
+.\lib\activity\activityValueObjectLifecycle.ts:69:         allowControlledTextFallback: false,
+.\lib\activity\activityValueObjectLifecycle.ts:70:       });
+.\lib\activity\activityValueObjectLifecycle.ts:71: 
+.\lib\activity\activityValueObjectLifecycle.ts:72:     if (!mappingResult.ok) {
+.\lib\activity\activityValueObjectLifecycle.ts:73:       return {
+.\lib\activity\activityValueObjectLifecycle.ts:74:         ok: false,
+.\lib\activity\activityValueObjectLifecycle.ts:75:         skipped: mappingResult.skipped,
+.\lib\activity\activityValueObjectLifecycle.ts:76:         skipReason: mappingResult.skipReason,
+.\lib\activity\activityValueObjectLifecycle.ts:77:         eventId,
+.\lib\activity\activityValueObjectLifecycle.ts:78:         processorName,
+.\lib\activity\activityValueObjectLifecycle.ts:79:         mappingResult,
+.\lib\activity\activityValueObjectLifecycle.ts:80:         bridgeResult: null,
+.\lib\activity\activityValueObjectLifecycle.ts:81:         errors: mappingResult.errors,
+.\lib\activity\activityValueObjectLifecycle.ts:82:       };
+.\lib\activity\activityValueObjectLifecycle.ts:83:     }
+.\lib\activity\activityValueObjectLifecycle.ts:84: 
+.\lib\activity\activityValueObjectLifecycle.ts:85:     if (mappingResult.skipped || mappingResult.mappings.length === 0) {
+.\lib\activity\activityValueObjectLifecycle.ts:86:       return {
+.\lib\activity\activityValueObjectLifecycle.ts:87:         ok: true,
+.\lib\activity\activityValueObjectLifecycle.ts:88:         skipped: true,
+.\lib\activity\activityValueObjectLifecycle.ts:89:         skipReason:
+.\lib\activity\activityValueObjectLifecycle.ts:90:           mappingResult.skipReason ??
+.\lib\activity\activityValueObjectLifecycle.ts:91:           (mappingResult.mappings.length === 0
+.\lib\activity\activityValueObjectLifecycle.ts:92:             ? "no_value_object_mappings"
+.\lib\activity\activityValueObjectLifecycle.ts:93:             : "mapping_skipped"),
+.\lib\activity\activityValueObjectLifecycle.ts:94:         eventId,
+.\lib\activity\activityValueObjectLifecycle.ts:95:         processorName,
+.\lib\activity\activityValueObjectLifecycle.ts:96:         mappingResult,
+.\lib\activity\activityValueObjectLifecycle.ts:97:         bridgeResult: null,
+.\lib\activity\activityValueObjectLifecycle.ts:98:         errors: mappingResult.errors,
+.\lib\activity\activityValueObjectLifecycle.ts:99:       };
+.\lib\activity\activityValueObjectLifecycle.ts:100:     }
+.\lib\activity\activityValueObjectLifecycle.ts:101: 
+.\lib\activity\activityValueObjectLifecycle.ts:102:     const bridgeResult = await processValueObjectBridgeForActivityEvent({
+.\lib\activity\activityValueObjectLifecycle.ts:103:       supabase,
+.\lib\activity\activityValueObjectLifecycle.ts:104:       eventId,
+.\lib\activity\activityValueObjectLifecycle.ts:105:       mappings: mappingResult.mappings,
+.\lib\activity\activityValueObjectLifecycle.ts:106:       allowNonCompletedEvent,
+.\lib\activity\activityValueObjectLifecycle.ts:107:       processorName,
+.\lib\activity\activityValueObjectLifecycle.ts:108:     });
+.\lib\activity\activityValueObjectLifecycle.ts:109: 
+.\lib\activity\activityValueObjectLifecycle.ts:110:     return {
+.\lib\activity\activityValueObjectLifecycle.ts:111:       ok: bridgeResult.ok,
+.\lib\activity\activityValueObjectLifecycle.ts:112:       skipped: bridgeResult.skipped,
+.\lib\activity\activityValueObjectLifecycle.ts:113:       skipReason: bridgeResult.skipReason,
+.\lib\activity\activityValueObjectLifecycle.ts:114:       eventId,
+.\lib\activity\activityValueObjectLifecycle.ts:115:       processorName,
+.\lib\activity\activityValueObjectLifecycle.ts:116:       mappingResult,
+.\lib\activity\activityValueObjectLifecycle.ts:117:       bridgeResult,
+.\lib\activity\activityValueObjectLifecycle.ts:118:       errors: [...mappingResult.errors, ...bridgeResult.errors],
+.\lib\activity\activityValueObjectLifecycle.ts:119:     };
+.\lib\activity\activityValueObjectLifecycle.ts:120:   } catch (error) {
+.\lib\activity\activityValueObjectLifecycle.ts:121:     return {
+.\lib\activity\activityValueObjectLifecycle.ts:122:       ok: false,
+.\lib\activity\activityValueObjectLifecycle.ts:123:       skipped: false,
+.\lib\activity\activityValueObjectLifecycle.ts:124:       skipReason: "exception",
+.\lib\activity\activityValueObjectLifecycle.ts:125:       eventId,
+.\lib\activity\activityValueObjectLifecycle.ts:126:       processorName,
+.\lib\activity\activityValueObjectLifecycle.ts:127:       mappingResult: null,
+.\lib\activity\activityValueObjectLifecycle.ts:128:       bridgeResult: null,
+.\lib\activity\activityValueObjectLifecycle.ts:129:       errors: [normalizeErrorMessage(error)],
+.\lib\activity\activityValueObjectLifecycle.ts:130:     };
+.\lib\activity\activityValueObjectLifecycle.ts:131:   }
+.\lib\activity\activityValueObjectLifecycle.ts:132: }
+
+===== .\lib\activity\rubricatorValueObjectMapper.ts:1-180 =====
+.\lib\activity\rubricatorValueObjectMapper.ts:1: import type { SupabaseClient } from "@supabase/supabase-js";
+.\lib\activity\rubricatorValueObjectMapper.ts:2: 
+.\lib\activity\rubricatorValueObjectMapper.ts:3: import type { ValueObjectBridgeMapping } from "./valueObjectBridge";
+.\lib\activity\rubricatorValueObjectMapper.ts:4: 
+.\lib\activity\rubricatorValueObjectMapper.ts:5: type GenericRow = Record<string, unknown>;
+.\lib\activity\rubricatorValueObjectMapper.ts:6: 
+.\lib\activity\rubricatorValueObjectMapper.ts:7: type ActivityEventForRubricatorMapping = {
+.\lib\activity\rubricatorValueObjectMapper.ts:8:   id: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:9:   user_id: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:10:   status: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:11:   title: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:12:   description: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:13:   input_text: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:14:   event_code: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:15:   duration_minutes: number | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:16:   started_at: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:17:   ended_at: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:18:   activity_template_id: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:19:   activity_type_id: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:20:   template_id: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:21:   performed_by_actor_id: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:22:   acting_as_actor_id: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:23:   acting_for_actor_id: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:24: };
+.\lib\activity\rubricatorValueObjectMapper.ts:25: 
+.\lib\activity\rubricatorValueObjectMapper.ts:26: export type RubricatorClassificationSummary = {
+.\lib\activity\rubricatorValueObjectMapper.ts:27:   classificationId: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:28:   entityType: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:29:   entityId: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:30:   objectTypeId: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:31:   objectTypeCode: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:32:   objectTypeName: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:33:   actionTypeId: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:34:   actionTypeCode: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:35:   actionTypeName: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:36:   contextId: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:37:   contextCode: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:38:   contextName: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:39:   contextualCategoryId: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:40:   contextualCategorySlug: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:41:   contextualCategoryName: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:42:   classificationRole: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:43:   isPrimary: boolean;
+.\lib\activity\rubricatorValueObjectMapper.ts:44:   confidence: number | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:45:   status: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:46:   sourceType: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:47:   evidence: Record<string, unknown>;
+.\lib\activity\rubricatorValueObjectMapper.ts:48: };
+.\lib\activity\rubricatorValueObjectMapper.ts:49: 
+.\lib\activity\rubricatorValueObjectMapper.ts:50: export type ResolveValueObjectMappingsFromRubricatorInput = {
+.\lib\activity\rubricatorValueObjectMapper.ts:51:   supabase: SupabaseClient;
+.\lib\activity\rubricatorValueObjectMapper.ts:52:   eventId: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:53:   allowNonCompletedEvent?: boolean;
+.\lib\activity\rubricatorValueObjectMapper.ts:54:   createMissingControlledValueObject?: boolean;
+.\lib\activity\rubricatorValueObjectMapper.ts:55:   allowControlledTextFallback?: boolean;
+.\lib\activity\rubricatorValueObjectMapper.ts:56: };
+.\lib\activity\rubricatorValueObjectMapper.ts:57: 
+.\lib\activity\rubricatorValueObjectMapper.ts:58: export type RubricatorValueObjectMappingResult = {
+.\lib\activity\rubricatorValueObjectMapper.ts:59:   ok: boolean;
+.\lib\activity\rubricatorValueObjectMapper.ts:60:   skipped: boolean;
+.\lib\activity\rubricatorValueObjectMapper.ts:61:   skipReason: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:62:   eventId: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:63:   eventStatus: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:64:   classificationSummary: RubricatorClassificationSummary[];
+.\lib\activity\rubricatorValueObjectMapper.ts:65:   mappings: ValueObjectBridgeMapping[];
+.\lib\activity\rubricatorValueObjectMapper.ts:66:   errors: string[];
+.\lib\activity\rubricatorValueObjectMapper.ts:67: };
+.\lib\activity\rubricatorValueObjectMapper.ts:68: 
+.\lib\activity\rubricatorValueObjectMapper.ts:69: type ControlledRubricatorValueObjectRule = {
+.\lib\activity\rubricatorValueObjectMapper.ts:70:   ruleKey: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:71:   valueObjectTitle: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:72:   valueObjectType: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:73:   valueObjectDescription: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:74:   valueObjectUnitType: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:75:   defaultDurationMinutes: number | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:76:   objectTypeCode: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:77:   actionTypeCode: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:78:   contextCode: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:79:   contextualCategorySlug: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:80:   relationType: ValueObjectBridgeMapping["relationType"];
+.\lib\activity\rubricatorValueObjectMapper.ts:81:   metricKey: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:82:   metricUnit: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:83:   deltaDirection: ValueObjectBridgeMapping["deltaDirection"];
+.\lib\activity\rubricatorValueObjectMapper.ts:84:   aggregateType: string;
+.\lib\activity\rubricatorValueObjectMapper.ts:85:   fallbackNeedleGroups: string[][];
+.\lib\activity\rubricatorValueObjectMapper.ts:86: };
+.\lib\activity\rubricatorValueObjectMapper.ts:87: 
+.\lib\activity\rubricatorValueObjectMapper.ts:88: const CONTROLLED_RUBRICATOR_VALUE_OBJECT_RULES: readonly ControlledRubricatorValueObjectRule[] = [
+.\lib\activity\rubricatorValueObjectMapper.ts:89:   {
+.\lib\activity\rubricatorValueObjectMapper.ts:90:     ruleKey: "german_business_writing_practice_duration",
+.\lib\activity\rubricatorValueObjectMapper.ts:91:     valueObjectTitle: "Business German writing practice",
+.\lib\activity\rubricatorValueObjectMapper.ts:92:     valueObjectType: "skill",
+.\lib\activity\rubricatorValueObjectMapper.ts:93:     valueObjectDescription:
+.\lib\activity\rubricatorValueObjectMapper.ts:94:       "Controlled P4.7-R value object for German business/marketing writing practice.",
+.\lib\activity\rubricatorValueObjectMapper.ts:95:     valueObjectUnitType: "minutes",
+.\lib\activity\rubricatorValueObjectMapper.ts:96:     defaultDurationMinutes: 25,
+.\lib\activity\rubricatorValueObjectMapper.ts:97:     objectTypeCode: "German_language",
+.\lib\activity\rubricatorValueObjectMapper.ts:98:     actionTypeCode: "practice",
+.\lib\activity\rubricatorValueObjectMapper.ts:99:     contextCode: "learning",
+.\lib\activity\rubricatorValueObjectMapper.ts:100:     contextualCategorySlug: "business-german",
+.\lib\activity\rubricatorValueObjectMapper.ts:101:     relationType: "executes",
+.\lib\activity\rubricatorValueObjectMapper.ts:102:     metricKey: "duration_minutes",
+.\lib\activity\rubricatorValueObjectMapper.ts:103:     metricUnit: "minutes",
+.\lib\activity\rubricatorValueObjectMapper.ts:104:     deltaDirection: "increase",
+.\lib\activity\rubricatorValueObjectMapper.ts:105:     aggregateType: "value_object",
+.\lib\activity\rubricatorValueObjectMapper.ts:106:     fallbackNeedleGroups: [
+.\lib\activity\rubricatorValueObjectMapper.ts:107:       ["german", "deutsch", "?????", "niemieck", "alemán"],
+.\lib\activity\rubricatorValueObjectMapper.ts:108:       [
+.\lib\activity\rubricatorValueObjectMapper.ts:109:         "practice",
+.\lib\activity\rubricatorValueObjectMapper.ts:110:         "practise",
+.\lib\activity\rubricatorValueObjectMapper.ts:111:         "learn",
+.\lib\activity\rubricatorValueObjectMapper.ts:112:         "learning",
+.\lib\activity\rubricatorValueObjectMapper.ts:113:         "write",
+.\lib\activity\rubricatorValueObjectMapper.ts:114:         "writing",
+.\lib\activity\rubricatorValueObjectMapper.ts:115:         "handwriting",
+.\lib\activity\rubricatorValueObjectMapper.ts:116:         "schrift",
+.\lib\activity\rubricatorValueObjectMapper.ts:117:         "schreiben",
+.\lib\activity\rubricatorValueObjectMapper.ts:118:         "üben",
+.\lib\activity\rubricatorValueObjectMapper.ts:119:         "marketing",
+.\lib\activity\rubricatorValueObjectMapper.ts:120:         "b2b",
+.\lib\activity\rubricatorValueObjectMapper.ts:121:         "business",
+.\lib\activity\rubricatorValueObjectMapper.ts:122:       ],
+.\lib\activity\rubricatorValueObjectMapper.ts:123:       [
+.\lib\activity\rubricatorValueObjectMapper.ts:124:         "learning",
+.\lib\activity\rubricatorValueObjectMapper.ts:125:         "education",
+.\lib\activity\rubricatorValueObjectMapper.ts:126:         "career",
+.\lib\activity\rubricatorValueObjectMapper.ts:127:         "work",
+.\lib\activity\rubricatorValueObjectMapper.ts:128:         "business",
+.\lib\activity\rubricatorValueObjectMapper.ts:129:         "marketing",
+.\lib\activity\rubricatorValueObjectMapper.ts:130:         "communication",
+.\lib\activity\rubricatorValueObjectMapper.ts:131:         "language",
+.\lib\activity\rubricatorValueObjectMapper.ts:132:         "skill",
+.\lib\activity\rubricatorValueObjectMapper.ts:133:         "jezyk",
+.\lib\activity\rubricatorValueObjectMapper.ts:134:         "idioma",
+.\lib\activity\rubricatorValueObjectMapper.ts:135:       ],
+.\lib\activity\rubricatorValueObjectMapper.ts:136:     ],
+.\lib\activity\rubricatorValueObjectMapper.ts:137:   },
+.\lib\activity\rubricatorValueObjectMapper.ts:138:   {
+.\lib\activity\rubricatorValueObjectMapper.ts:139:     ruleKey: "knee_training_health_practice_duration",
+.\lib\activity\rubricatorValueObjectMapper.ts:140:     valueObjectTitle: "Knee training practice",
+.\lib\activity\rubricatorValueObjectMapper.ts:141:     valueObjectType: "health_activity",
+.\lib\activity\rubricatorValueObjectMapper.ts:142:     valueObjectDescription:
+.\lib\activity\rubricatorValueObjectMapper.ts:143:       "Controlled P4.7.8-R-L5 value object for knee-focused exercise/training activity tracking. No medical diagnosis or treatment claim.",
+.\lib\activity\rubricatorValueObjectMapper.ts:144:     valueObjectUnitType: "minutes",
+.\lib\activity\rubricatorValueObjectMapper.ts:145:     defaultDurationMinutes: 10,
+.\lib\activity\rubricatorValueObjectMapper.ts:146:     objectTypeCode: "knee",
+.\lib\activity\rubricatorValueObjectMapper.ts:147:     actionTypeCode: "train",
+.\lib\activity\rubricatorValueObjectMapper.ts:148:     contextCode: "health",
+.\lib\activity\rubricatorValueObjectMapper.ts:149:     contextualCategorySlug: "knee-exercises",
+.\lib\activity\rubricatorValueObjectMapper.ts:150:     relationType: "executes",
+.\lib\activity\rubricatorValueObjectMapper.ts:151:     metricKey: "duration_minutes",
+.\lib\activity\rubricatorValueObjectMapper.ts:152:     metricUnit: "minutes",
+.\lib\activity\rubricatorValueObjectMapper.ts:153:     deltaDirection: "increase",
+.\lib\activity\rubricatorValueObjectMapper.ts:154:     aggregateType: "value_object",
+.\lib\activity\rubricatorValueObjectMapper.ts:155:     fallbackNeedleGroups: [
+.\lib\activity\rubricatorValueObjectMapper.ts:156:       ["knee", "??????", "kolano", "rodilla", "knie"],
+.\lib\activity\rubricatorValueObjectMapper.ts:157:       [
+.\lib\activity\rubricatorValueObjectMapper.ts:158:         "train",
+.\lib\activity\rubricatorValueObjectMapper.ts:159:         "training",
+.\lib\activity\rubricatorValueObjectMapper.ts:160:         "exercise",
+.\lib\activity\rubricatorValueObjectMapper.ts:161:         "mobility",
+.\lib\activity\rubricatorValueObjectMapper.ts:162:         "practice",
+.\lib\activity\rubricatorValueObjectMapper.ts:163:         "cwiczenie",
+.\lib\activity\rubricatorValueObjectMapper.ts:164:         "cwiczenia",
+.\lib\activity\rubricatorValueObjectMapper.ts:165:         "entrenamiento",
+.\lib\activity\rubricatorValueObjectMapper.ts:166:         "ejercicio",
+.\lib\activity\rubricatorValueObjectMapper.ts:167:         "übung",
+.\lib\activity\rubricatorValueObjectMapper.ts:168:         "training",
+.\lib\activity\rubricatorValueObjectMapper.ts:169:       ],
+.\lib\activity\rubricatorValueObjectMapper.ts:170:       ["health", "body", "rehab", "recovery", "load", "??????", "salud", "gesundheit"],
+.\lib\activity\rubricatorValueObjectMapper.ts:171:     ],
+.\lib\activity\rubricatorValueObjectMapper.ts:172:   },
+.\lib\activity\rubricatorValueObjectMapper.ts:173: ];
+.\lib\activity\rubricatorValueObjectMapper.ts:174: 
+.\lib\activity\rubricatorValueObjectMapper.ts:175: function getString(row: GenericRow | null | undefined, key: string): string | null {
+.\lib\activity\rubricatorValueObjectMapper.ts:176:   if (!row) {
+.\lib\activity\rubricatorValueObjectMapper.ts:177:     return null;
+.\lib\activity\rubricatorValueObjectMapper.ts:178:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:179: 
+.\lib\activity\rubricatorValueObjectMapper.ts:180:   const value = row[key];
+
+===== .\lib\activity\rubricatorValueObjectMapper.ts:520-760 =====
+.\lib\activity\rubricatorValueObjectMapper.ts:520: 
+.\lib\activity\rubricatorValueObjectMapper.ts:521:   return {
+.\lib\activity\rubricatorValueObjectMapper.ts:522:     rule: fallbackRule,
+.\lib\activity\rubricatorValueObjectMapper.ts:523:     classification: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:524:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:525: }
+.\lib\activity\rubricatorValueObjectMapper.ts:526: 
+.\lib\activity\rubricatorValueObjectMapper.ts:527: async function findControlledValueObject(
+.\lib\activity\rubricatorValueObjectMapper.ts:528:   supabase: SupabaseClient,
+.\lib\activity\rubricatorValueObjectMapper.ts:529:   event: ActivityEventForRubricatorMapping,
+.\lib\activity\rubricatorValueObjectMapper.ts:530:   rule: ControlledRubricatorValueObjectRule
+.\lib\activity\rubricatorValueObjectMapper.ts:531: ): Promise<{
+.\lib\activity\rubricatorValueObjectMapper.ts:532:   valueObjectId: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:533:   errorMessage: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:534: }> {
+.\lib\activity\rubricatorValueObjectMapper.ts:535:   const ownerActorId =
+.\lib\activity\rubricatorValueObjectMapper.ts:536:     event.acting_as_actor_id ?? event.performed_by_actor_id ?? null;
+.\lib\activity\rubricatorValueObjectMapper.ts:537: 
+.\lib\activity\rubricatorValueObjectMapper.ts:538:   let query = supabase
+.\lib\activity\rubricatorValueObjectMapper.ts:539:     .from("value_objects")
+.\lib\activity\rubricatorValueObjectMapper.ts:540:     .select("id")
+.\lib\activity\rubricatorValueObjectMapper.ts:541:     .eq("title", rule.valueObjectTitle)
+.\lib\activity\rubricatorValueObjectMapper.ts:542:     .eq("value_type", rule.valueObjectType)
+.\lib\activity\rubricatorValueObjectMapper.ts:543:     .eq("status", "active")
+.\lib\activity\rubricatorValueObjectMapper.ts:544:     .is("organization_id", null)
+.\lib\activity\rubricatorValueObjectMapper.ts:545:     .limit(1);
+.\lib\activity\rubricatorValueObjectMapper.ts:546: 
+.\lib\activity\rubricatorValueObjectMapper.ts:547:   if (ownerActorId) {
+.\lib\activity\rubricatorValueObjectMapper.ts:548:     query = query.eq("owner_actor_id", ownerActorId);
+.\lib\activity\rubricatorValueObjectMapper.ts:549:   } else {
+.\lib\activity\rubricatorValueObjectMapper.ts:550:     query = query.is("owner_actor_id", null);
+.\lib\activity\rubricatorValueObjectMapper.ts:551:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:552: 
+.\lib\activity\rubricatorValueObjectMapper.ts:553:   const { data, error } = await query.maybeSingle();
+.\lib\activity\rubricatorValueObjectMapper.ts:554: 
+.\lib\activity\rubricatorValueObjectMapper.ts:555:   if (error) {
+.\lib\activity\rubricatorValueObjectMapper.ts:556:     return {
+.\lib\activity\rubricatorValueObjectMapper.ts:557:       valueObjectId: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:558:       errorMessage: error.message,
+.\lib\activity\rubricatorValueObjectMapper.ts:559:     };
+.\lib\activity\rubricatorValueObjectMapper.ts:560:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:561: 
+.\lib\activity\rubricatorValueObjectMapper.ts:562:   return {
+.\lib\activity\rubricatorValueObjectMapper.ts:563:     valueObjectId: getString(data as GenericRow | null, "id"),
+.\lib\activity\rubricatorValueObjectMapper.ts:564:     errorMessage: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:565:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:566: }
+.\lib\activity\rubricatorValueObjectMapper.ts:567: 
+.\lib\activity\rubricatorValueObjectMapper.ts:568: async function createControlledValueObject(
+.\lib\activity\rubricatorValueObjectMapper.ts:569:   supabase: SupabaseClient,
+.\lib\activity\rubricatorValueObjectMapper.ts:570:   event: ActivityEventForRubricatorMapping,
+.\lib\activity\rubricatorValueObjectMapper.ts:571:   rule: ControlledRubricatorValueObjectRule
+.\lib\activity\rubricatorValueObjectMapper.ts:572: ): Promise<{
+.\lib\activity\rubricatorValueObjectMapper.ts:573:   valueObjectId: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:574:   errorMessage: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:575: }> {
+.\lib\activity\rubricatorValueObjectMapper.ts:576:   const ownerActorId =
+.\lib\activity\rubricatorValueObjectMapper.ts:577:     event.acting_as_actor_id ?? event.performed_by_actor_id ?? null;
+.\lib\activity\rubricatorValueObjectMapper.ts:578: 
+.\lib\activity\rubricatorValueObjectMapper.ts:579:   const { data, error } = await supabase
+.\lib\activity\rubricatorValueObjectMapper.ts:580:     .from("value_objects")
+.\lib\activity\rubricatorValueObjectMapper.ts:581:     .insert({
+.\lib\activity\rubricatorValueObjectMapper.ts:582:       owner_actor_id: ownerActorId,
+.\lib\activity\rubricatorValueObjectMapper.ts:583:       organization_id: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:584:       value_type: rule.valueObjectType,
+.\lib\activity\rubricatorValueObjectMapper.ts:585:       title: rule.valueObjectTitle,
+.\lib\activity\rubricatorValueObjectMapper.ts:586:       description: rule.valueObjectDescription,
+.\lib\activity\rubricatorValueObjectMapper.ts:587:       unit_type: rule.valueObjectUnitType,
+.\lib\activity\rubricatorValueObjectMapper.ts:588:       default_price: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:589:       default_currency: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:590:       default_duration_minutes:
+.\lib\activity\rubricatorValueObjectMapper.ts:591:         rule.defaultDurationMinutes ?? event.duration_minutes,
+.\lib\activity\rubricatorValueObjectMapper.ts:592:       is_marketplace_sellable: false,
+.\lib\activity\rubricatorValueObjectMapper.ts:593:       is_free_possible: false,
+.\lib\activity\rubricatorValueObjectMapper.ts:594:       status: "active",
+.\lib\activity\rubricatorValueObjectMapper.ts:595:     })
+.\lib\activity\rubricatorValueObjectMapper.ts:596:     .select("id")
+.\lib\activity\rubricatorValueObjectMapper.ts:597:     .single();
+.\lib\activity\rubricatorValueObjectMapper.ts:598: 
+.\lib\activity\rubricatorValueObjectMapper.ts:599:   if (error) {
+.\lib\activity\rubricatorValueObjectMapper.ts:600:     return {
+.\lib\activity\rubricatorValueObjectMapper.ts:601:       valueObjectId: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:602:       errorMessage: error.message,
+.\lib\activity\rubricatorValueObjectMapper.ts:603:     };
+.\lib\activity\rubricatorValueObjectMapper.ts:604:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:605: 
+.\lib\activity\rubricatorValueObjectMapper.ts:606:   return {
+.\lib\activity\rubricatorValueObjectMapper.ts:607:     valueObjectId: getString(data as GenericRow | null, "id"),
+.\lib\activity\rubricatorValueObjectMapper.ts:608:     errorMessage: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:609:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:610: }
+.\lib\activity\rubricatorValueObjectMapper.ts:611: 
+.\lib\activity\rubricatorValueObjectMapper.ts:612: async function findOrCreateControlledValueObject(
+.\lib\activity\rubricatorValueObjectMapper.ts:613:   supabase: SupabaseClient,
+.\lib\activity\rubricatorValueObjectMapper.ts:614:   event: ActivityEventForRubricatorMapping,
+.\lib\activity\rubricatorValueObjectMapper.ts:615:   rule: ControlledRubricatorValueObjectRule,
+.\lib\activity\rubricatorValueObjectMapper.ts:616:   createMissing: boolean
+.\lib\activity\rubricatorValueObjectMapper.ts:617: ): Promise<{
+.\lib\activity\rubricatorValueObjectMapper.ts:618:   valueObjectId: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:619:   created: boolean;
+.\lib\activity\rubricatorValueObjectMapper.ts:620:   errorMessage: string | null;
+.\lib\activity\rubricatorValueObjectMapper.ts:621: }> {
+.\lib\activity\rubricatorValueObjectMapper.ts:622:   const existing = await findControlledValueObject(supabase, event, rule);
+.\lib\activity\rubricatorValueObjectMapper.ts:623: 
+.\lib\activity\rubricatorValueObjectMapper.ts:624:   if (existing.errorMessage) {
+.\lib\activity\rubricatorValueObjectMapper.ts:625:     return {
+.\lib\activity\rubricatorValueObjectMapper.ts:626:       valueObjectId: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:627:       created: false,
+.\lib\activity\rubricatorValueObjectMapper.ts:628:       errorMessage: existing.errorMessage,
+.\lib\activity\rubricatorValueObjectMapper.ts:629:     };
+.\lib\activity\rubricatorValueObjectMapper.ts:630:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:631: 
+.\lib\activity\rubricatorValueObjectMapper.ts:632:   if (existing.valueObjectId) {
+.\lib\activity\rubricatorValueObjectMapper.ts:633:     return {
+.\lib\activity\rubricatorValueObjectMapper.ts:634:       valueObjectId: existing.valueObjectId,
+.\lib\activity\rubricatorValueObjectMapper.ts:635:       created: false,
+.\lib\activity\rubricatorValueObjectMapper.ts:636:       errorMessage: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:637:     };
+.\lib\activity\rubricatorValueObjectMapper.ts:638:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:639: 
+.\lib\activity\rubricatorValueObjectMapper.ts:640:   if (!createMissing) {
+.\lib\activity\rubricatorValueObjectMapper.ts:641:     return {
+.\lib\activity\rubricatorValueObjectMapper.ts:642:       valueObjectId: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:643:       created: false,
+.\lib\activity\rubricatorValueObjectMapper.ts:644:       errorMessage: "controlled_value_object_missing",
+.\lib\activity\rubricatorValueObjectMapper.ts:645:     };
+.\lib\activity\rubricatorValueObjectMapper.ts:646:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:647: 
+.\lib\activity\rubricatorValueObjectMapper.ts:648:   const created = await createControlledValueObject(supabase, event, rule);
+.\lib\activity\rubricatorValueObjectMapper.ts:649: 
+.\lib\activity\rubricatorValueObjectMapper.ts:650:   return {
+.\lib\activity\rubricatorValueObjectMapper.ts:651:     valueObjectId: created.valueObjectId,
+.\lib\activity\rubricatorValueObjectMapper.ts:652:     created: Boolean(created.valueObjectId),
+.\lib\activity\rubricatorValueObjectMapper.ts:653:     errorMessage: created.errorMessage,
+.\lib\activity\rubricatorValueObjectMapper.ts:654:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:655: }
+.\lib\activity\rubricatorValueObjectMapper.ts:656: 
+.\lib\activity\rubricatorValueObjectMapper.ts:657: function buildControlledMapping(
+.\lib\activity\rubricatorValueObjectMapper.ts:658:   event: ActivityEventForRubricatorMapping,
+.\lib\activity\rubricatorValueObjectMapper.ts:659:   valueObjectId: string,
+.\lib\activity\rubricatorValueObjectMapper.ts:660:   classification: RubricatorClassificationSummary | null,
+.\lib\activity\rubricatorValueObjectMapper.ts:661:   valueObjectCreated: boolean,
+.\lib\activity\rubricatorValueObjectMapper.ts:662:   rule: ControlledRubricatorValueObjectRule
+.\lib\activity\rubricatorValueObjectMapper.ts:663: ): ValueObjectBridgeMapping | null {
+.\lib\activity\rubricatorValueObjectMapper.ts:664:   if (event.duration_minutes === null) {
+.\lib\activity\rubricatorValueObjectMapper.ts:665:     return null;
+.\lib\activity\rubricatorValueObjectMapper.ts:666:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:667: 
+.\lib\activity\rubricatorValueObjectMapper.ts:668:   const confidence = normalizeConfidence(classification?.confidence ?? null);
+.\lib\activity\rubricatorValueObjectMapper.ts:669: 
+.\lib\activity\rubricatorValueObjectMapper.ts:670:   return {
+.\lib\activity\rubricatorValueObjectMapper.ts:671:     valueObjectId,
+.\lib\activity\rubricatorValueObjectMapper.ts:672:     relationType: rule.relationType,
+.\lib\activity\rubricatorValueObjectMapper.ts:673:     weight: 1,
+.\lib\activity\rubricatorValueObjectMapper.ts:674:     confidence,
+.\lib\activity\rubricatorValueObjectMapper.ts:675:     source: "rule",
+.\lib\activity\rubricatorValueObjectMapper.ts:676:     instanceStatus: "completed",
+.\lib\activity\rubricatorValueObjectMapper.ts:677:     instanceTitle: event.title ?? rule.valueObjectTitle,
+.\lib\activity\rubricatorValueObjectMapper.ts:678:     instanceNote: event.description ?? event.input_text,
+.\lib\activity\rubricatorValueObjectMapper.ts:679:     resultStatus: "completed",
+.\lib\activity\rubricatorValueObjectMapper.ts:680:     qualityScore: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:681:     metricKey: rule.metricKey,
+.\lib\activity\rubricatorValueObjectMapper.ts:682:     metricUnit: rule.metricUnit,
+.\lib\activity\rubricatorValueObjectMapper.ts:683:     deltaValueNumeric: event.duration_minutes,
+.\lib\activity\rubricatorValueObjectMapper.ts:684:     deltaValueText: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:685:     deltaDirection: rule.deltaDirection,
+.\lib\activity\rubricatorValueObjectMapper.ts:686:     aggregateDate: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:687:     aggregateType: rule.aggregateType,
+.\lib\activity\rubricatorValueObjectMapper.ts:688:     aggregateKey: valueObjectId,
+.\lib\activity\rubricatorValueObjectMapper.ts:689:     metadata: {
+.\lib\activity\rubricatorValueObjectMapper.ts:690:       mapper: "rubricatorValueObjectMapper",
+.\lib\activity\rubricatorValueObjectMapper.ts:691:       mapperVersion: "p4_7_8_r_l5",
+.\lib\activity\rubricatorValueObjectMapper.ts:692:       controlledRule: rule.ruleKey,
+.\lib\activity\rubricatorValueObjectMapper.ts:693:       valueObjectCreated,
+.\lib\activity\rubricatorValueObjectMapper.ts:694:       classification,
+.\lib\activity\rubricatorValueObjectMapper.ts:695:     },
+.\lib\activity\rubricatorValueObjectMapper.ts:696:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:697: }
+.\lib\activity\rubricatorValueObjectMapper.ts:698: 
+.\lib\activity\rubricatorValueObjectMapper.ts:699: export async function resolveValueObjectMappingsFromRubricatorForActivityEvent(
+.\lib\activity\rubricatorValueObjectMapper.ts:700:   input: ResolveValueObjectMappingsFromRubricatorInput
+.\lib\activity\rubricatorValueObjectMapper.ts:701: ): Promise<RubricatorValueObjectMappingResult> {
+.\lib\activity\rubricatorValueObjectMapper.ts:702:   const {
+.\lib\activity\rubricatorValueObjectMapper.ts:703:     supabase,
+.\lib\activity\rubricatorValueObjectMapper.ts:704:     eventId,
+.\lib\activity\rubricatorValueObjectMapper.ts:705:     allowNonCompletedEvent = false,
+.\lib\activity\rubricatorValueObjectMapper.ts:706:     createMissingControlledValueObject = false,
+.\lib\activity\rubricatorValueObjectMapper.ts:707:     allowControlledTextFallback = false,
+.\lib\activity\rubricatorValueObjectMapper.ts:708:   } = input;
+.\lib\activity\rubricatorValueObjectMapper.ts:709: 
+.\lib\activity\rubricatorValueObjectMapper.ts:710:   const result: RubricatorValueObjectMappingResult = {
+.\lib\activity\rubricatorValueObjectMapper.ts:711:     ok: false,
+.\lib\activity\rubricatorValueObjectMapper.ts:712:     skipped: false,
+.\lib\activity\rubricatorValueObjectMapper.ts:713:     skipReason: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:714:     eventId,
+.\lib\activity\rubricatorValueObjectMapper.ts:715:     eventStatus: null,
+.\lib\activity\rubricatorValueObjectMapper.ts:716:     classificationSummary: [],
+.\lib\activity\rubricatorValueObjectMapper.ts:717:     mappings: [],
+.\lib\activity\rubricatorValueObjectMapper.ts:718:     errors: [],
+.\lib\activity\rubricatorValueObjectMapper.ts:719:   };
+.\lib\activity\rubricatorValueObjectMapper.ts:720: 
+.\lib\activity\rubricatorValueObjectMapper.ts:721:   const { event, errorMessage: eventError } = await readActivityEvent(
+.\lib\activity\rubricatorValueObjectMapper.ts:722:     supabase,
+.\lib\activity\rubricatorValueObjectMapper.ts:723:     eventId
+.\lib\activity\rubricatorValueObjectMapper.ts:724:   );
+.\lib\activity\rubricatorValueObjectMapper.ts:725: 
+.\lib\activity\rubricatorValueObjectMapper.ts:726:   if (eventError) {
+.\lib\activity\rubricatorValueObjectMapper.ts:727:     result.errors.push(eventError);
+.\lib\activity\rubricatorValueObjectMapper.ts:728:     return result;
+.\lib\activity\rubricatorValueObjectMapper.ts:729:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:730: 
+.\lib\activity\rubricatorValueObjectMapper.ts:731:   if (!event) {
+.\lib\activity\rubricatorValueObjectMapper.ts:732:     result.errors.push("Activity event not found.");
+.\lib\activity\rubricatorValueObjectMapper.ts:733:     return result;
+.\lib\activity\rubricatorValueObjectMapper.ts:734:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:735: 
+.\lib\activity\rubricatorValueObjectMapper.ts:736:   result.eventStatus = event.status;
+.\lib\activity\rubricatorValueObjectMapper.ts:737: 
+.\lib\activity\rubricatorValueObjectMapper.ts:738:   if (!allowNonCompletedEvent && event.status !== "completed") {
+.\lib\activity\rubricatorValueObjectMapper.ts:739:     result.ok = true;
+.\lib\activity\rubricatorValueObjectMapper.ts:740:     result.skipped = true;
+.\lib\activity\rubricatorValueObjectMapper.ts:741:     result.skipReason = `event_status_${event.status}_not_completed`;
+.\lib\activity\rubricatorValueObjectMapper.ts:742:     return result;
+.\lib\activity\rubricatorValueObjectMapper.ts:743:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:744: 
+.\lib\activity\rubricatorValueObjectMapper.ts:745:   const { rows: classificationRows, errorMessage: classificationError } =
+.\lib\activity\rubricatorValueObjectMapper.ts:746:     await readEntityClassifications(supabase, eventId);
+.\lib\activity\rubricatorValueObjectMapper.ts:747: 
+.\lib\activity\rubricatorValueObjectMapper.ts:748:   if (classificationError) {
+.\lib\activity\rubricatorValueObjectMapper.ts:749:     result.errors.push(classificationError);
+.\lib\activity\rubricatorValueObjectMapper.ts:750:     return result;
+.\lib\activity\rubricatorValueObjectMapper.ts:751:   }
+.\lib\activity\rubricatorValueObjectMapper.ts:752: 
+.\lib\activity\rubricatorValueObjectMapper.ts:753:   const summaries = await Promise.all(
+.\lib\activity\rubricatorValueObjectMapper.ts:754:     classificationRows.map((row) => summarizeClassification(supabase, row))
+.\lib\activity\rubricatorValueObjectMapper.ts:755:   );
+.\lib\activity\rubricatorValueObjectMapper.ts:756: 
+.\lib\activity\rubricatorValueObjectMapper.ts:757:   result.classificationSummary = summaries;
+.\lib\activity\rubricatorValueObjectMapper.ts:758: 
+.\lib\activity\rubricatorValueObjectMapper.ts:759:   if (summaries.length === 0 && !allowControlledTextFallback) {
+.\lib\activity\rubricatorValueObjectMapper.ts:760:     result.ok = true;
+
+===== .\lib\activity\valueObjectBridge.ts:1-190 =====
+.\lib\activity\valueObjectBridge.ts:1: import type { SupabaseClient } from "@supabase/supabase-js";
+.\lib\activity\valueObjectBridge.ts:2: 
+.\lib\activity\valueObjectBridge.ts:3: type BridgeSource =
+.\lib\activity\valueObjectBridge.ts:4:   | "rule"
+.\lib\activity\valueObjectBridge.ts:5:   | "manual"
+.\lib\activity\valueObjectBridge.ts:6:   | "ai_draft"
+.\lib\activity\valueObjectBridge.ts:7:   | "api"
+.\lib\activity\valueObjectBridge.ts:8:   | "system"
+.\lib\activity\valueObjectBridge.ts:9:   | "correction"
+.\lib\activity\valueObjectBridge.ts:10:   | "commercial";
+.\lib\activity\valueObjectBridge.ts:11: 
+.\lib\activity\valueObjectBridge.ts:12: type V42ProjectionSource = "rule" | "ai" | "manual" | "system_seed" | "migration";
+.\lib\activity\valueObjectBridge.ts:13: 
+.\lib\activity\valueObjectBridge.ts:14: type ValueObjectCategoryRole =
+.\lib\activity\valueObjectBridge.ts:15:   | "primary"
+.\lib\activity\valueObjectBridge.ts:16:   | "semantic_component"
+.\lib\activity\valueObjectBridge.ts:17:   | "context"
+.\lib\activity\valueObjectBridge.ts:18:   | "object"
+.\lib\activity\valueObjectBridge.ts:19:   | "action"
+.\lib\activity\valueObjectBridge.ts:20:   | "goal"
+.\lib\activity\valueObjectBridge.ts:21:   | "protocol"
+.\lib\activity\valueObjectBridge.ts:22:   | "general_meaning"
+.\lib\activity\valueObjectBridge.ts:23:   | "system_suggested";
+.\lib\activity\valueObjectBridge.ts:24: 
+.\lib\activity\valueObjectBridge.ts:25: type ValueObjectStateDeltaDirection =
+.\lib\activity\valueObjectBridge.ts:26:   | "increase"
+.\lib\activity\valueObjectBridge.ts:27:   | "decrease"
+.\lib\activity\valueObjectBridge.ts:28:   | "neutral"
+.\lib\activity\valueObjectBridge.ts:29:   | "set";
+.\lib\activity\valueObjectBridge.ts:30: 
+.\lib\activity\valueObjectBridge.ts:31: type ValueObjectInstanceStatus =
+.\lib\activity\valueObjectBridge.ts:32:   | "draft"
+.\lib\activity\valueObjectBridge.ts:33:   | "planned"
+.\lib\activity\valueObjectBridge.ts:34:   | "active"
+.\lib\activity\valueObjectBridge.ts:35:   | "completed"
+.\lib\activity\valueObjectBridge.ts:36:   | "cancelled"
+.\lib\activity\valueObjectBridge.ts:37:   | "archived";
+.\lib\activity\valueObjectBridge.ts:38: 
+.\lib\activity\valueObjectBridge.ts:39: type ActivityEventForValueObjectBridge = {
+.\lib\activity\valueObjectBridge.ts:40:   id: string;
+.\lib\activity\valueObjectBridge.ts:41:   user_id: string;
+.\lib\activity\valueObjectBridge.ts:42:   status: string;
+.\lib\activity\valueObjectBridge.ts:43:   started_at: string | null;
+.\lib\activity\valueObjectBridge.ts:44:   ended_at: string | null;
+.\lib\activity\valueObjectBridge.ts:45:   duration_minutes: number | null;
+.\lib\activity\valueObjectBridge.ts:46:   title: string | null;
+.\lib\activity\valueObjectBridge.ts:47:   description: string | null;
+.\lib\activity\valueObjectBridge.ts:48:   performed_by_actor_id?: string | null;
+.\lib\activity\valueObjectBridge.ts:49:   acting_as_actor_id?: string | null;
+.\lib\activity\valueObjectBridge.ts:50:   acting_for_actor_id?: string | null;
+.\lib\activity\valueObjectBridge.ts:51: };
+.\lib\activity\valueObjectBridge.ts:52: 
+.\lib\activity\valueObjectBridge.ts:53: type ContextualCategoryForLink = {
+.\lib\activity\valueObjectBridge.ts:54:   id: string;
+.\lib\activity\valueObjectBridge.ts:55:   slug: string | null;
+.\lib\activity\valueObjectBridge.ts:56:   name: string | null;
+.\lib\activity\valueObjectBridge.ts:57:   status: string | null;
+.\lib\activity\valueObjectBridge.ts:58:   is_active: boolean | null;
+.\lib\activity\valueObjectBridge.ts:59: };
+.\lib\activity\valueObjectBridge.ts:60: 
+.\lib\activity\valueObjectBridge.ts:61: type ExtractedCategoryLinkMetadata = {
+.\lib\activity\valueObjectBridge.ts:62:   contextualCategoryId: string | null;
+.\lib\activity\valueObjectBridge.ts:63:   contextualCategorySlug: string | null;
+.\lib\activity\valueObjectBridge.ts:64:   contextualCategoryName: string | null;
+.\lib\activity\valueObjectBridge.ts:65:   classificationRole: string | null;
+.\lib\activity\valueObjectBridge.ts:66:   classificationId: string | null;
+.\lib\activity\valueObjectBridge.ts:67:   contextId: string | null;
+.\lib\activity\valueObjectBridge.ts:68:   contextCode: string | null;
+.\lib\activity\valueObjectBridge.ts:69:   contextName: string | null;
+.\lib\activity\valueObjectBridge.ts:70:   objectTypeId: string | null;
+.\lib\activity\valueObjectBridge.ts:71:   objectTypeCode: string | null;
+.\lib\activity\valueObjectBridge.ts:72:   objectTypeName: string | null;
+.\lib\activity\valueObjectBridge.ts:73:   actionTypeId: string | null;
+.\lib\activity\valueObjectBridge.ts:74:   actionTypeCode: string | null;
+.\lib\activity\valueObjectBridge.ts:75:   actionTypeName: string | null;
+.\lib\activity\valueObjectBridge.ts:76:   controlledRule: string | null;
+.\lib\activity\valueObjectBridge.ts:77:   mapper: string | null;
+.\lib\activity\valueObjectBridge.ts:78:   mapperVersion: string | null;
+.\lib\activity\valueObjectBridge.ts:79: };
+.\lib\activity\valueObjectBridge.ts:80: 
+.\lib\activity\valueObjectBridge.ts:81: export type ValueObjectBridgeMapping = {
+.\lib\activity\valueObjectBridge.ts:82:   valueObjectId: string;
+.\lib\activity\valueObjectBridge.ts:83: 
+.\lib\activity\valueObjectBridge.ts:84:   relationType?:
+.\lib\activity\valueObjectBridge.ts:85:     | "executes"
+.\lib\activity\valueObjectBridge.ts:86:     | "creates"
+.\lib\activity\valueObjectBridge.ts:87:     | "uses"
+.\lib\activity\valueObjectBridge.ts:88:     | "supports"
+.\lib\activity\valueObjectBridge.ts:89:     | "consumes"
+.\lib\activity\valueObjectBridge.ts:90:     | "updates_state"
+.\lib\activity\valueObjectBridge.ts:91:     | "commercial_source"
+.\lib\activity\valueObjectBridge.ts:92:     | "related_to";
+.\lib\activity\valueObjectBridge.ts:93: 
+.\lib\activity\valueObjectBridge.ts:94:   weight?: number;
+.\lib\activity\valueObjectBridge.ts:95:   confidence?: number;
+.\lib\activity\valueObjectBridge.ts:96:   source?: BridgeSource;
+.\lib\activity\valueObjectBridge.ts:97: 
+.\lib\activity\valueObjectBridge.ts:98:   instanceStatus?: ValueObjectInstanceStatus;
+.\lib\activity\valueObjectBridge.ts:99:   instanceTitle?: string | null;
+.\lib\activity\valueObjectBridge.ts:100:   instanceNote?: string | null;
+.\lib\activity\valueObjectBridge.ts:101:   resultStatus?: string | null;
+.\lib\activity\valueObjectBridge.ts:102:   qualityScore?: number | null;
+.\lib\activity\valueObjectBridge.ts:103: 
+.\lib\activity\valueObjectBridge.ts:104:   metricKey: string;
+.\lib\activity\valueObjectBridge.ts:105:   metricUnit?: string | null;
+.\lib\activity\valueObjectBridge.ts:106:   deltaValueNumeric?: number | null;
+.\lib\activity\valueObjectBridge.ts:107:   deltaValueText?: string | null;
+.\lib\activity\valueObjectBridge.ts:108:   deltaDirection?: ValueObjectStateDeltaDirection;
+.\lib\activity\valueObjectBridge.ts:109: 
+.\lib\activity\valueObjectBridge.ts:110:   aggregateDate?: string | null;
+.\lib\activity\valueObjectBridge.ts:111:   aggregateType?: string;
+.\lib\activity\valueObjectBridge.ts:112:   aggregateKey?: string;
+.\lib\activity\valueObjectBridge.ts:113: 
+.\lib\activity\valueObjectBridge.ts:114:   metadata?: Record<string, unknown>;
+.\lib\activity\valueObjectBridge.ts:115: };
+.\lib\activity\valueObjectBridge.ts:116: 
+.\lib\activity\valueObjectBridge.ts:117: export type ProcessValueObjectBridgeInput = {
+.\lib\activity\valueObjectBridge.ts:118:   supabase: SupabaseClient;
+.\lib\activity\valueObjectBridge.ts:119:   eventId: string;
+.\lib\activity\valueObjectBridge.ts:120:   mappings: ValueObjectBridgeMapping[];
+.\lib\activity\valueObjectBridge.ts:121:   source?: BridgeSource;
+.\lib\activity\valueObjectBridge.ts:122:   allowNonCompletedEvent?: boolean;
+.\lib\activity\valueObjectBridge.ts:123:   processorName?: string;
+.\lib\activity\valueObjectBridge.ts:124: };
+.\lib\activity\valueObjectBridge.ts:125: 
+.\lib\activity\valueObjectBridge.ts:126: export type ValueObjectBridgeCreatedItem = {
+.\lib\activity\valueObjectBridge.ts:127:   valueObjectId: string;
+.\lib\activity\valueObjectBridge.ts:128:   valueObjectInstanceId: string | null;
+.\lib\activity\valueObjectBridge.ts:129:   linkId: string | null;
+.\lib\activity\valueObjectBridge.ts:130:   stateDeltaId: string | null;
+.\lib\activity\valueObjectBridge.ts:131:   aggregateId: string | null;
+.\lib\activity\valueObjectBridge.ts:132:   snapshotId: string | null;
+.\lib\activity\valueObjectBridge.ts:133: 
+.\lib\activity\valueObjectBridge.ts:134:   /**
+.\lib\activity\valueObjectBridge.ts:135:    * P4.9.1 additive v4.2 projection fields.
+.\lib\activity\valueObjectBridge.ts:136:    *
+.\lib\activity\valueObjectBridge.ts:137:    * These do not replace the old VOI pipeline:
+.\lib\activity\valueObjectBridge.ts:138:    * - linkId still refers to activity_event_value_object_instance_links;
+.\lib\activity\valueObjectBridge.ts:139:    * - activityEventValueObjectLinkId refers to the new direct v4.2 projection table;
+.\lib\activity\valueObjectBridge.ts:140:    * - usageAggregateId refers to the new object-cloud/read-optimization aggregate.
+.\lib\activity\valueObjectBridge.ts:141:    */
+.\lib\activity\valueObjectBridge.ts:142:   activityEventValueObjectLinkId: string | null;
+.\lib\activity\valueObjectBridge.ts:143:   usageAggregateId: string | null;
+.\lib\activity\valueObjectBridge.ts:144:   v42ProjectionError: string | null;
+.\lib\activity\valueObjectBridge.ts:145: 
+.\lib\activity\valueObjectBridge.ts:146:   /**
+.\lib\activity\valueObjectBridge.ts:147:    * P4.9.2 additive category bridge fields.
+.\lib\activity\valueObjectBridge.ts:148:    *
+.\lib\activity\valueObjectBridge.ts:149:    * These connect a derived Value Object to reliable category/rubricator metadata.
+.\lib\activity\valueObjectBridge.ts:150:    * They do not replace VOI links, state deltas, aggregates, snapshots, or relation_type.
+.\lib\activity\valueObjectBridge.ts:151:    */
+.\lib\activity\valueObjectBridge.ts:152:   valueObjectCategoryLinkId: string | null;
+.\lib\activity\valueObjectBridge.ts:153:   valueObjectCategoryLinkError: string | null;
+.\lib\activity\valueObjectBridge.ts:154: 
+.\lib\activity\valueObjectBridge.ts:155:   skipped: boolean;
+.\lib\activity\valueObjectBridge.ts:156:   skipReason: string | null;
+.\lib\activity\valueObjectBridge.ts:157: };
+.\lib\activity\valueObjectBridge.ts:158: 
+.\lib\activity\valueObjectBridge.ts:159: export type ProcessValueObjectBridgeResult = {
+.\lib\activity\valueObjectBridge.ts:160:   ok: boolean;
+.\lib\activity\valueObjectBridge.ts:161:   skipped: boolean;
+.\lib\activity\valueObjectBridge.ts:162:   skipReason: string | null;
+.\lib\activity\valueObjectBridge.ts:163:   eventId: string;
+.\lib\activity\valueObjectBridge.ts:164:   eventStatus: string | null;
+.\lib\activity\valueObjectBridge.ts:165:   mappingsRequested: number;
+.\lib\activity\valueObjectBridge.ts:166:   created: ValueObjectBridgeCreatedItem[];
+.\lib\activity\valueObjectBridge.ts:167:   errors: string[];
+.\lib\activity\valueObjectBridge.ts:168: };
+.\lib\activity\valueObjectBridge.ts:169: 
+.\lib\activity\valueObjectBridge.ts:170: function clamp01(value: number | null | undefined, fallback: number): number {
+.\lib\activity\valueObjectBridge.ts:171:   if (typeof value !== "number" || Number.isNaN(value)) {
+.\lib\activity\valueObjectBridge.ts:172:     return fallback;
+.\lib\activity\valueObjectBridge.ts:173:   }
+.\lib\activity\valueObjectBridge.ts:174: 
+.\lib\activity\valueObjectBridge.ts:175:   if (value < 0) {
+.\lib\activity\valueObjectBridge.ts:176:     return 0;
+.\lib\activity\valueObjectBridge.ts:177:   }
+.\lib\activity\valueObjectBridge.ts:178: 
+.\lib\activity\valueObjectBridge.ts:179:   if (value > 1) {
+.\lib\activity\valueObjectBridge.ts:180:     return 1;
+.\lib\activity\valueObjectBridge.ts:181:   }
+.\lib\activity\valueObjectBridge.ts:182: 
+.\lib\activity\valueObjectBridge.ts:183:   return value;
+.\lib\activity\valueObjectBridge.ts:184: }
+.\lib\activity\valueObjectBridge.ts:185: 
+.\lib\activity\valueObjectBridge.ts:186: function normalizeSource(value: string | null | undefined): BridgeSource {
+.\lib\activity\valueObjectBridge.ts:187:   const allowed: BridgeSource[] = [
+.\lib\activity\valueObjectBridge.ts:188:     "rule",
+.\lib\activity\valueObjectBridge.ts:189:     "manual",
+.\lib\activity\valueObjectBridge.ts:190:     "ai_draft",
+
+===== .\lib\activity\valueObjectBridge.ts:970-1260 =====
+.\lib\activity\valueObjectBridge.ts:970:   if (error || !data) {
+.\lib\activity\valueObjectBridge.ts:971:     return {
+.\lib\activity\valueObjectBridge.ts:972:       valueObjectCategoryLinkId: null,
+.\lib\activity\valueObjectBridge.ts:973:       errorMessage: error?.message ?? "failed_to_upsert_value_object_category_link",
+.\lib\activity\valueObjectBridge.ts:974:     };
+.\lib\activity\valueObjectBridge.ts:975:   }
+.\lib\activity\valueObjectBridge.ts:976: 
+.\lib\activity\valueObjectBridge.ts:977:   return {
+.\lib\activity\valueObjectBridge.ts:978:     valueObjectCategoryLinkId: (data as { id: string }).id,
+.\lib\activity\valueObjectBridge.ts:979:     errorMessage: null,
+.\lib\activity\valueObjectBridge.ts:980:   };
+.\lib\activity\valueObjectBridge.ts:981: }
+.\lib\activity\valueObjectBridge.ts:982: 
+.\lib\activity\valueObjectBridge.ts:983: export async function processValueObjectBridgeForActivityEvent(
+.\lib\activity\valueObjectBridge.ts:984:   input: ProcessValueObjectBridgeInput
+.\lib\activity\valueObjectBridge.ts:985: ): Promise<ProcessValueObjectBridgeResult> {
+.\lib\activity\valueObjectBridge.ts:986:   const {
+.\lib\activity\valueObjectBridge.ts:987:     supabase,
+.\lib\activity\valueObjectBridge.ts:988:     eventId,
+.\lib\activity\valueObjectBridge.ts:989:     mappings,
+.\lib\activity\valueObjectBridge.ts:990:     source,
+.\lib\activity\valueObjectBridge.ts:991:     allowNonCompletedEvent = false,
+.\lib\activity\valueObjectBridge.ts:992:     processorName = "value_object_bridge_p4_7",
+.\lib\activity\valueObjectBridge.ts:993:   } = input;
+.\lib\activity\valueObjectBridge.ts:994: 
+.\lib\activity\valueObjectBridge.ts:995:   const result: ProcessValueObjectBridgeResult = {
+.\lib\activity\valueObjectBridge.ts:996:     ok: false,
+.\lib\activity\valueObjectBridge.ts:997:     skipped: false,
+.\lib\activity\valueObjectBridge.ts:998:     skipReason: null,
+.\lib\activity\valueObjectBridge.ts:999:     eventId,
+.\lib\activity\valueObjectBridge.ts:1000:     eventStatus: null,
+.\lib\activity\valueObjectBridge.ts:1001:     mappingsRequested: mappings.length,
+.\lib\activity\valueObjectBridge.ts:1002:     created: [],
+.\lib\activity\valueObjectBridge.ts:1003:     errors: [],
+.\lib\activity\valueObjectBridge.ts:1004:   };
+.\lib\activity\valueObjectBridge.ts:1005: 
+.\lib\activity\valueObjectBridge.ts:1006:   if (mappings.length === 0) {
+.\lib\activity\valueObjectBridge.ts:1007:     result.ok = true;
+.\lib\activity\valueObjectBridge.ts:1008:     result.skipped = true;
+.\lib\activity\valueObjectBridge.ts:1009:     result.skipReason = "no_mappings";
+.\lib\activity\valueObjectBridge.ts:1010:     return result;
+.\lib\activity\valueObjectBridge.ts:1011:   }
+.\lib\activity\valueObjectBridge.ts:1012: 
+.\lib\activity\valueObjectBridge.ts:1013:   const { event, errorMessage } = await readActivityEvent(supabase, eventId);
+.\lib\activity\valueObjectBridge.ts:1014: 
+.\lib\activity\valueObjectBridge.ts:1015:   if (errorMessage) {
+.\lib\activity\valueObjectBridge.ts:1016:     result.errors.push(errorMessage);
+.\lib\activity\valueObjectBridge.ts:1017:     return result;
+.\lib\activity\valueObjectBridge.ts:1018:   }
+.\lib\activity\valueObjectBridge.ts:1019: 
+.\lib\activity\valueObjectBridge.ts:1020:   if (!event) {
+.\lib\activity\valueObjectBridge.ts:1021:     result.errors.push("Activity event not found.");
+.\lib\activity\valueObjectBridge.ts:1022:     return result;
+.\lib\activity\valueObjectBridge.ts:1023:   }
+.\lib\activity\valueObjectBridge.ts:1024: 
+.\lib\activity\valueObjectBridge.ts:1025:   result.eventStatus = event.status;
+.\lib\activity\valueObjectBridge.ts:1026: 
+.\lib\activity\valueObjectBridge.ts:1027:   if (!allowNonCompletedEvent && event.status !== "completed") {
+.\lib\activity\valueObjectBridge.ts:1028:     result.ok = true;
+.\lib\activity\valueObjectBridge.ts:1029:     result.skipped = true;
+.\lib\activity\valueObjectBridge.ts:1030:     result.skipReason = `event_status_${event.status}_not_completed`;
+.\lib\activity\valueObjectBridge.ts:1031:     return result;
+.\lib\activity\valueObjectBridge.ts:1032:   }
+.\lib\activity\valueObjectBridge.ts:1033: 
+.\lib\activity\valueObjectBridge.ts:1034:   for (const mapping of mappings) {
+.\lib\activity\valueObjectBridge.ts:1035:     const mappingSource = normalizeSource(mapping.source ?? source);
+.\lib\activity\valueObjectBridge.ts:1036:     const confidence = clamp01(mapping.confidence, 1);
+.\lib\activity\valueObjectBridge.ts:1037:     const weight = clamp01(mapping.weight, 1);
+.\lib\activity\valueObjectBridge.ts:1038:     const deltaDirection = normalizeDeltaDirection(mapping.deltaDirection);
+.\lib\activity\valueObjectBridge.ts:1039:     const relationType = normalizeRelationType(mapping.relationType);
+.\lib\activity\valueObjectBridge.ts:1040:     const aggregateDate = mapping.aggregateDate ?? getDateFromEvent(event);
+.\lib\activity\valueObjectBridge.ts:1041:     const aggregateType = mapping.aggregateType ?? "value_object";
+.\lib\activity\valueObjectBridge.ts:1042:     const aggregateKey = mapping.aggregateKey ?? mapping.valueObjectId;
+.\lib\activity\valueObjectBridge.ts:1043:     const signedDelta = getSignedNumericDelta(
+.\lib\activity\valueObjectBridge.ts:1044:       mapping.deltaValueNumeric ?? null,
+.\lib\activity\valueObjectBridge.ts:1045:       deltaDirection
+.\lib\activity\valueObjectBridge.ts:1046:     );
+.\lib\activity\valueObjectBridge.ts:1047: 
+.\lib\activity\valueObjectBridge.ts:1048:     const createdItem: ValueObjectBridgeCreatedItem = {
+.\lib\activity\valueObjectBridge.ts:1049:       valueObjectId: mapping.valueObjectId,
+.\lib\activity\valueObjectBridge.ts:1050:       valueObjectInstanceId: null,
+.\lib\activity\valueObjectBridge.ts:1051:       linkId: null,
+.\lib\activity\valueObjectBridge.ts:1052:       stateDeltaId: null,
+.\lib\activity\valueObjectBridge.ts:1053:       aggregateId: null,
+.\lib\activity\valueObjectBridge.ts:1054:       snapshotId: null,
+.\lib\activity\valueObjectBridge.ts:1055:       activityEventValueObjectLinkId: null,
+.\lib\activity\valueObjectBridge.ts:1056:       usageAggregateId: null,
+.\lib\activity\valueObjectBridge.ts:1057:       v42ProjectionError: null,
+.\lib\activity\valueObjectBridge.ts:1058:       valueObjectCategoryLinkId: null,
+.\lib\activity\valueObjectBridge.ts:1059:       valueObjectCategoryLinkError: null,
+.\lib\activity\valueObjectBridge.ts:1060:       skipped: false,
+.\lib\activity\valueObjectBridge.ts:1061:       skipReason: null,
+.\lib\activity\valueObjectBridge.ts:1062:     };
+.\lib\activity\valueObjectBridge.ts:1063: 
+.\lib\activity\valueObjectBridge.ts:1064:     if (
+.\lib\activity\valueObjectBridge.ts:1065:       mapping.deltaValueNumeric === null &&
+.\lib\activity\valueObjectBridge.ts:1066:       mapping.deltaValueText === null &&
+.\lib\activity\valueObjectBridge.ts:1067:       typeof mapping.deltaValueNumeric !== "number" &&
+.\lib\activity\valueObjectBridge.ts:1068:       typeof mapping.deltaValueText !== "string"
+.\lib\activity\valueObjectBridge.ts:1069:     ) {
+.\lib\activity\valueObjectBridge.ts:1070:       createdItem.skipped = true;
+.\lib\activity\valueObjectBridge.ts:1071:       createdItem.skipReason = "missing_delta_value";
+.\lib\activity\valueObjectBridge.ts:1072:       result.created.push(createdItem);
+.\lib\activity\valueObjectBridge.ts:1073:       continue;
+.\lib\activity\valueObjectBridge.ts:1074:     }
+.\lib\activity\valueObjectBridge.ts:1075: 
+.\lib\activity\valueObjectBridge.ts:1076:     const existingStateDelta = await readExistingStateDeltaForMapping(
+.\lib\activity\valueObjectBridge.ts:1077:       supabase,
+.\lib\activity\valueObjectBridge.ts:1078:       event.id,
+.\lib\activity\valueObjectBridge.ts:1079:       mapping.valueObjectId,
+.\lib\activity\valueObjectBridge.ts:1080:       mapping.metricKey
+.\lib\activity\valueObjectBridge.ts:1081:     );
+.\lib\activity\valueObjectBridge.ts:1082: 
+.\lib\activity\valueObjectBridge.ts:1083:     if (existingStateDelta.errorMessage) {
+.\lib\activity\valueObjectBridge.ts:1084:       createdItem.skipped = true;
+.\lib\activity\valueObjectBridge.ts:1085:       createdItem.skipReason = existingStateDelta.errorMessage;
+.\lib\activity\valueObjectBridge.ts:1086:       result.created.push(createdItem);
+.\lib\activity\valueObjectBridge.ts:1087:       continue;
+.\lib\activity\valueObjectBridge.ts:1088:     }
+.\lib\activity\valueObjectBridge.ts:1089: 
+.\lib\activity\valueObjectBridge.ts:1090:     if (existingStateDelta.stateDeltaId) {
+.\lib\activity\valueObjectBridge.ts:1091:       createdItem.valueObjectInstanceId =
+.\lib\activity\valueObjectBridge.ts:1092:         existingStateDelta.valueObjectInstanceId;
+.\lib\activity\valueObjectBridge.ts:1093:       createdItem.stateDeltaId = existingStateDelta.stateDeltaId;
+.\lib\activity\valueObjectBridge.ts:1094:       createdItem.skipped = true;
+.\lib\activity\valueObjectBridge.ts:1095:       createdItem.skipReason = "already_processed_event_value_object_metric";
+.\lib\activity\valueObjectBridge.ts:1096:       result.created.push(createdItem);
+.\lib\activity\valueObjectBridge.ts:1097:       continue;
+.\lib\activity\valueObjectBridge.ts:1098:     }
+.\lib\activity\valueObjectBridge.ts:1099: 
+.\lib\activity\valueObjectBridge.ts:1100:     const ownerContext = await readValueObjectOwnerContext(
+.\lib\activity\valueObjectBridge.ts:1101:       supabase,
+.\lib\activity\valueObjectBridge.ts:1102:       mapping.valueObjectId
+.\lib\activity\valueObjectBridge.ts:1103:     );
+.\lib\activity\valueObjectBridge.ts:1104: 
+.\lib\activity\valueObjectBridge.ts:1105:     if (ownerContext.errorMessage) {
+.\lib\activity\valueObjectBridge.ts:1106:       createdItem.skipped = true;
+.\lib\activity\valueObjectBridge.ts:1107:       createdItem.skipReason = ownerContext.errorMessage;
+.\lib\activity\valueObjectBridge.ts:1108:       result.created.push(createdItem);
+.\lib\activity\valueObjectBridge.ts:1109:       continue;
+.\lib\activity\valueObjectBridge.ts:1110:     }
+.\lib\activity\valueObjectBridge.ts:1111: 
+.\lib\activity\valueObjectBridge.ts:1112:     const { data: voiData, error: voiError } = await supabase
+.\lib\activity\valueObjectBridge.ts:1113:       .from("value_object_instances")
+.\lib\activity\valueObjectBridge.ts:1114:       .insert({
+.\lib\activity\valueObjectBridge.ts:1115:         user_id: event.user_id,
+.\lib\activity\valueObjectBridge.ts:1116:         value_object_id: mapping.valueObjectId,
+.\lib\activity\valueObjectBridge.ts:1117:         source_event_id: event.id,
+.\lib\activity\valueObjectBridge.ts:1118:         owner_actor_id:
+.\lib\activity\valueObjectBridge.ts:1119:           ownerContext.ownerActorId ??
+.\lib\activity\valueObjectBridge.ts:1120:           event.acting_as_actor_id ??
+.\lib\activity\valueObjectBridge.ts:1121:           event.performed_by_actor_id ??
+.\lib\activity\valueObjectBridge.ts:1122:           null,
+.\lib\activity\valueObjectBridge.ts:1123:         organization_id: ownerContext.organizationId,
+.\lib\activity\valueObjectBridge.ts:1124:         status: mapping.instanceStatus ?? "completed",
+.\lib\activity\valueObjectBridge.ts:1125:         started_at: event.started_at,
+.\lib\activity\valueObjectBridge.ts:1126:         ended_at: event.ended_at,
+.\lib\activity\valueObjectBridge.ts:1127:         duration_minutes: event.duration_minutes,
+.\lib\activity\valueObjectBridge.ts:1128:         instance_title: mapping.instanceTitle ?? event.title,
+.\lib\activity\valueObjectBridge.ts:1129:         instance_note: mapping.instanceNote ?? event.description,
+.\lib\activity\valueObjectBridge.ts:1130:         result_status: mapping.resultStatus ?? null,
+.\lib\activity\valueObjectBridge.ts:1131:         quality_score: mapping.qualityScore ?? null,
+.\lib\activity\valueObjectBridge.ts:1132:         confidence,
+.\lib\activity\valueObjectBridge.ts:1133:         source: mappingSource,
+.\lib\activity\valueObjectBridge.ts:1134:         metadata_json: {
+.\lib\activity\valueObjectBridge.ts:1135:           processorName,
+.\lib\activity\valueObjectBridge.ts:1136:           eventId: event.id,
+.\lib\activity\valueObjectBridge.ts:1137:           mappingMetadata: mapping.metadata ?? {},
+.\lib\activity\valueObjectBridge.ts:1138:         },
+.\lib\activity\valueObjectBridge.ts:1139:       })
+.\lib\activity\valueObjectBridge.ts:1140:       .select("id")
+.\lib\activity\valueObjectBridge.ts:1141:       .single();
+.\lib\activity\valueObjectBridge.ts:1142: 
+.\lib\activity\valueObjectBridge.ts:1143:     if (voiError || !voiData) {
+.\lib\activity\valueObjectBridge.ts:1144:       createdItem.skipped = true;
+.\lib\activity\valueObjectBridge.ts:1145:       createdItem.skipReason = voiError?.message ?? "failed_to_create_voi";
+.\lib\activity\valueObjectBridge.ts:1146:       result.created.push(createdItem);
+.\lib\activity\valueObjectBridge.ts:1147:       continue;
+.\lib\activity\valueObjectBridge.ts:1148:     }
+.\lib\activity\valueObjectBridge.ts:1149: 
+.\lib\activity\valueObjectBridge.ts:1150:     const valueObjectInstanceId = (voiData as { id: string }).id;
+.\lib\activity\valueObjectBridge.ts:1151:     createdItem.valueObjectInstanceId = valueObjectInstanceId;
+.\lib\activity\valueObjectBridge.ts:1152: 
+.\lib\activity\valueObjectBridge.ts:1153:     const { data: linkData, error: linkError } = await supabase
+.\lib\activity\valueObjectBridge.ts:1154:       .from("activity_event_value_object_instance_links")
+.\lib\activity\valueObjectBridge.ts:1155:       .insert({
+.\lib\activity\valueObjectBridge.ts:1156:         user_id: event.user_id,
+.\lib\activity\valueObjectBridge.ts:1157:         event_id: event.id,
+.\lib\activity\valueObjectBridge.ts:1158:         value_object_instance_id: valueObjectInstanceId,
+.\lib\activity\valueObjectBridge.ts:1159:         relation_type: relationType,
+.\lib\activity\valueObjectBridge.ts:1160:         weight,
+.\lib\activity\valueObjectBridge.ts:1161:         confidence,
+.\lib\activity\valueObjectBridge.ts:1162:         source: mappingSource,
+.\lib\activity\valueObjectBridge.ts:1163:         metadata_json: {
+.\lib\activity\valueObjectBridge.ts:1164:           processorName,
+.\lib\activity\valueObjectBridge.ts:1165:           valueObjectId: mapping.valueObjectId,
+.\lib\activity\valueObjectBridge.ts:1166:         },
+.\lib\activity\valueObjectBridge.ts:1167:       })
+.\lib\activity\valueObjectBridge.ts:1168:       .select("id")
+.\lib\activity\valueObjectBridge.ts:1169:       .single();
+.\lib\activity\valueObjectBridge.ts:1170: 
+.\lib\activity\valueObjectBridge.ts:1171:     if (linkError) {
+.\lib\activity\valueObjectBridge.ts:1172:       result.errors.push(linkError.message);
+.\lib\activity\valueObjectBridge.ts:1173:     } else if (linkData) {
+.\lib\activity\valueObjectBridge.ts:1174:       createdItem.linkId = (linkData as { id: string }).id;
+.\lib\activity\valueObjectBridge.ts:1175: 
+.\lib\activity\valueObjectBridge.ts:1176:       const v42Projection = await upsertV42ValueObjectProjection({
+.\lib\activity\valueObjectBridge.ts:1177:         supabase,
+.\lib\activity\valueObjectBridge.ts:1178:         event,
+.\lib\activity\valueObjectBridge.ts:1179:         valueObjectId: mapping.valueObjectId,
+.\lib\activity\valueObjectBridge.ts:1180:         valueObjectInstanceId,
+.\lib\activity\valueObjectBridge.ts:1181:         oldVoiLinkId: createdItem.linkId,
+.\lib\activity\valueObjectBridge.ts:1182:         bridgeSource: mappingSource,
+.\lib\activity\valueObjectBridge.ts:1183:         confidence,
+.\lib\activity\valueObjectBridge.ts:1184:         processorName,
+.\lib\activity\valueObjectBridge.ts:1185:         mappingMetadata: mapping.metadata ?? {},
+.\lib\activity\valueObjectBridge.ts:1186:       });
+.\lib\activity\valueObjectBridge.ts:1187: 
+.\lib\activity\valueObjectBridge.ts:1188:       createdItem.activityEventValueObjectLinkId =
+.\lib\activity\valueObjectBridge.ts:1189:         v42Projection.activityEventValueObjectLinkId;
+.\lib\activity\valueObjectBridge.ts:1190:       createdItem.usageAggregateId = v42Projection.usageAggregateId;
+.\lib\activity\valueObjectBridge.ts:1191:       createdItem.v42ProjectionError = v42Projection.errorMessage;
+.\lib\activity\valueObjectBridge.ts:1192: 
+.\lib\activity\valueObjectBridge.ts:1193:       if (v42Projection.errorMessage) {
+.\lib\activity\valueObjectBridge.ts:1194:         /*
+.\lib\activity\valueObjectBridge.ts:1195:          * P4.9.1 compatibility rule:
+.\lib\activity\valueObjectBridge.ts:1196:          * The new v4.2 projection must not roll back the existing VOI pipeline.
+.\lib\activity\valueObjectBridge.ts:1197:          * Keep the old bridge flow running and expose the projection problem
+.\lib\activity\valueObjectBridge.ts:1198:          * in the created item + console warning for post-check diagnostics.
+.\lib\activity\valueObjectBridge.ts:1199:          */
+.\lib\activity\valueObjectBridge.ts:1200:         console.warn("P4.9.1 v4.2 projection failed", {
+.\lib\activity\valueObjectBridge.ts:1201:           eventId: event.id,
+.\lib\activity\valueObjectBridge.ts:1202:           valueObjectId: mapping.valueObjectId,
+.\lib\activity\valueObjectBridge.ts:1203:           valueObjectInstanceId,
+.\lib\activity\valueObjectBridge.ts:1204:           errorMessage: v42Projection.errorMessage,
+.\lib\activity\valueObjectBridge.ts:1205:         });
+.\lib\activity\valueObjectBridge.ts:1206:       }
+.\lib\activity\valueObjectBridge.ts:1207: 
+.\lib\activity\valueObjectBridge.ts:1208:       const categoryLink = await upsertV42ValueObjectCategoryLink({
+.\lib\activity\valueObjectBridge.ts:1209:         supabase,
+.\lib\activity\valueObjectBridge.ts:1210:         event,
+.\lib\activity\valueObjectBridge.ts:1211:         valueObjectId: mapping.valueObjectId,
+.\lib\activity\valueObjectBridge.ts:1212:         valueObjectInstanceId,
+.\lib\activity\valueObjectBridge.ts:1213:         oldVoiLinkId: createdItem.linkId,
+.\lib\activity\valueObjectBridge.ts:1214:         activityEventValueObjectLinkId:
+.\lib\activity\valueObjectBridge.ts:1215:           v42Projection.activityEventValueObjectLinkId,
+.\lib\activity\valueObjectBridge.ts:1216:         bridgeSource: mappingSource,
+.\lib\activity\valueObjectBridge.ts:1217:         confidence,
+.\lib\activity\valueObjectBridge.ts:1218:         processorName,
+.\lib\activity\valueObjectBridge.ts:1219:         mappingMetadata: mapping.metadata ?? {},
+.\lib\activity\valueObjectBridge.ts:1220:       });
+.\lib\activity\valueObjectBridge.ts:1221: 
+.\lib\activity\valueObjectBridge.ts:1222:       createdItem.valueObjectCategoryLinkId =
+.\lib\activity\valueObjectBridge.ts:1223:         categoryLink.valueObjectCategoryLinkId;
+.\lib\activity\valueObjectBridge.ts:1224:       createdItem.valueObjectCategoryLinkError = categoryLink.errorMessage;
+.\lib\activity\valueObjectBridge.ts:1225: 
+.\lib\activity\valueObjectBridge.ts:1226:       if (categoryLink.errorMessage) {
+.\lib\activity\valueObjectBridge.ts:1227:         /*
+.\lib\activity\valueObjectBridge.ts:1228:          * P4.9.2 compatibility rule:
+.\lib\activity\valueObjectBridge.ts:1229:          * Category-link creation is additive and must not roll back the existing VOI
+.\lib\activity\valueObjectBridge.ts:1230:          * pipeline or the already verified P4.9.1 projection layer.
+.\lib\activity\valueObjectBridge.ts:1231:          */
+.\lib\activity\valueObjectBridge.ts:1232:         console.warn("P4.9.2 value_object_category_links upsert failed", {
+.\lib\activity\valueObjectBridge.ts:1233:           eventId: event.id,
+.\lib\activity\valueObjectBridge.ts:1234:           valueObjectId: mapping.valueObjectId,
+.\lib\activity\valueObjectBridge.ts:1235:           valueObjectInstanceId,
+.\lib\activity\valueObjectBridge.ts:1236:           activityEventValueObjectLinkId:
+.\lib\activity\valueObjectBridge.ts:1237:             v42Projection.activityEventValueObjectLinkId,
+.\lib\activity\valueObjectBridge.ts:1238:           errorMessage: categoryLink.errorMessage,
+.\lib\activity\valueObjectBridge.ts:1239:         });
+.\lib\activity\valueObjectBridge.ts:1240:       }
+.\lib\activity\valueObjectBridge.ts:1241:     }
+.\lib\activity\valueObjectBridge.ts:1242: 
+.\lib\activity\valueObjectBridge.ts:1243:     const { data: deltaData, error: deltaError } = await supabase
+.\lib\activity\valueObjectBridge.ts:1244:       .from("value_object_state_deltas")
+.\lib\activity\valueObjectBridge.ts:1245:       .insert({
+.\lib\activity\valueObjectBridge.ts:1246:         user_id: event.user_id,
+.\lib\activity\valueObjectBridge.ts:1247:         event_id: event.id,
+.\lib\activity\valueObjectBridge.ts:1248:         value_object_instance_id: valueObjectInstanceId,
+.\lib\activity\valueObjectBridge.ts:1249:         value_object_id: mapping.valueObjectId,
+.\lib\activity\valueObjectBridge.ts:1250:         rule_id: null,
+.\lib\activity\valueObjectBridge.ts:1251:         metric_key: mapping.metricKey,
+.\lib\activity\valueObjectBridge.ts:1252:         delta_value_numeric:
+.\lib\activity\valueObjectBridge.ts:1253:           typeof mapping.deltaValueNumeric === "number"
+.\lib\activity\valueObjectBridge.ts:1254:             ? Math.abs(mapping.deltaValueNumeric)
+.\lib\activity\valueObjectBridge.ts:1255:             : null,
+.\lib\activity\valueObjectBridge.ts:1256:         delta_value_text: mapping.deltaValueText ?? null,
+.\lib\activity\valueObjectBridge.ts:1257:         metric_unit: mapping.metricUnit ?? null,
+.\lib\activity\valueObjectBridge.ts:1258:         delta_direction: deltaDirection,
+.\lib\activity\valueObjectBridge.ts:1259:         source: mappingSource,
+.\lib\activity\valueObjectBridge.ts:1260:         confidence,
+
+===== .\src\app\api\activity\record\route.ts:1200-1385 =====
+.\src\app\api\activity\record\route.ts:1200:         skipped: impactResult.skipped,
+.\src\app\api\activity\record\route.ts:1201:         reason: impactResult.reason,
+.\src\app\api\activity\record\route.ts:1202:         counts: impactResult.counts,
+.\src\app\api\activity\record\route.ts:1203:       },
+.\src\app\api\activity\record\route.ts:1204:       metadata: {
+.\src\app\api\activity\record\route.ts:1205:         endpoint: "/api/activity/record",
+.\src\app\api\activity\record\route.ts:1206:         mode: "template_first_completed",
+.\src\app\api\activity\record\route.ts:1207:       },
+.\src\app\api\activity\record\route.ts:1208:       startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\record\route.ts:1209:       finishedAt: new Date().toISOString(),
+.\src\app\api\activity\record\route.ts:1210:       durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\record\route.ts:1211:     });
+.\src\app\api\activity\record\route.ts:1212: 
+.\src\app\api\activity\record\route.ts:1213: 
+.\src\app\api\activity\record\route.ts:1214:     const rubricatorClassificationResult =
+.\src\app\api\activity\record\route.ts:1215:       await ensureActivityEventRubricatorClassificationForKnownTemplate({
+.\src\app\api\activity\record\route.ts:1216:         supabase,
+.\src\app\api\activity\record\route.ts:1217:         eventId: createdEvent.id,
+.\src\app\api\activity\record\route.ts:1218:         userId: appUser.id,
+.\src\app\api\activity\record\route.ts:1219:         activityTemplateId: createdEvent.activity_template_id,
+.\src\app\api\activity\record\route.ts:1220:         templateSlug: template.slug,
+.\src\app\api\activity\record\route.ts:1221:         processorName: "activity_record_route_known_template_rubricator_classification",
+.\src\app\api\activity\record\route.ts:1222:       });
+.\src\app\api\activity\record\route.ts:1223: 
+.\src\app\api\activity\record\route.ts:1224:     const rubricatorClassificationLogResult =
+.\src\app\api\activity\record\route.ts:1225:       await safeCreateActivityProcessingLog({
+.\src\app\api\activity\record\route.ts:1226:       userId: appUser.id,
+.\src\app\api\activity\record\route.ts:1227:       rawSignalId: rawSignal?.id ?? null,
+.\src\app\api\activity\record\route.ts:1228:       activityEventId: createdEvent.id,
+.\src\app\api\activity\record\route.ts:1229:       processingRunId,
+.\src\app\api\activity\record\route.ts:1230:       processorName: "activity_record_route_rubricator_classification",
+.\src\app\api\activity\record\route.ts:1231:       processingStage: "finalize",
+.\src\app\api\activity\record\route.ts:1232:       processingStatus: rubricatorClassificationResult.ok
+.\src\app\api\activity\record\route.ts:1233:         ? rubricatorClassificationResult.skipped
+.\src\app\api\activity\record\route.ts:1234:           ? "skipped"
+.\src\app\api\activity\record\route.ts:1235:           : "completed"
+.\src\app\api\activity\record\route.ts:1236:         : "warning",
+.\src\app\api\activity\record\route.ts:1237:       severity: rubricatorClassificationResult.ok ? "info" : "warning",
+.\src\app\api\activity\record\route.ts:1238:       message:
+.\src\app\api\activity\record\route.ts:1239:         "Known-template rubricator classification ensured before Value Object bridge.",
+.\src\app\api\activity\record\route.ts:1240:       input: {
+.\src\app\api\activity\record\route.ts:1241:         eventId: createdEvent.id,
+.\src\app\api\activity\record\route.ts:1242:         activityTemplateId: createdEvent.activity_template_id,
+.\src\app\api\activity\record\route.ts:1243:         templateSlug: template.slug,
+.\src\app\api\activity\record\route.ts:1244:       },
+.\src\app\api\activity\record\route.ts:1245:       output: {
+.\src\app\api\activity\record\route.ts:1246:         ok: rubricatorClassificationResult.ok,
+.\src\app\api\activity\record\route.ts:1247:         skipped: rubricatorClassificationResult.skipped,
+.\src\app\api\activity\record\route.ts:1248:         skipReason: rubricatorClassificationResult.skipReason,
+.\src\app\api\activity\record\route.ts:1249:         ruleKey: rubricatorClassificationResult.ruleKey,
+.\src\app\api\activity\record\route.ts:1250:         classificationId: rubricatorClassificationResult.classificationId,
+.\src\app\api\activity\record\route.ts:1251:         classificationStatus:
+.\src\app\api\activity\record\route.ts:1252:           rubricatorClassificationResult.classificationStatus,
+.\src\app\api\activity\record\route.ts:1253:         created: rubricatorClassificationResult.created,
+.\src\app\api\activity\record\route.ts:1254:         alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+.\src\app\api\activity\record\route.ts:1255:         errors: rubricatorClassificationResult.errors,
+.\src\app\api\activity\record\route.ts:1256:       },
+.\src\app\api\activity\record\route.ts:1257:       metadata: {
+.\src\app\api\activity\record\route.ts:1258:         endpoint: "/api/activity/record",
+.\src\app\api\activity\record\route.ts:1259:         mode: "template_first_record",
+.\src\app\api\activity\record\route.ts:1260:         p4Step: "P4.7.8-R-F2",
+.\src\app\api\activity\record\route.ts:1261:         ruleResolver: buildRubricatorResolverLogMetadata(rubricatorClassificationResult),
+.\src\app\api\activity\record\route.ts:1262:       },
+.\src\app\api\activity\record\route.ts:1263:       startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\record\route.ts:1264:       finishedAt: new Date().toISOString(),
+.\src\app\api\activity\record\route.ts:1265:       durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\record\route.ts:1266:     });
+.\src\app\api\activity\record\route.ts:1267: 
+.\src\app\api\activity\record\route.ts:1268:     const valueObjectBridgeResult = await processActivityValueObjectBridge({
+.\src\app\api\activity\record\route.ts:1269:       supabase,
+.\src\app\api\activity\record\route.ts:1270:       eventId: createdEvent.id,
+.\src\app\api\activity\record\route.ts:1271:       processorName: "activity_record_route_p4_7_7",
+.\src\app\api\activity\record\route.ts:1272:     });
+.\src\app\api\activity\record\route.ts:1273: 
+.\src\app\api\activity\record\route.ts:1274:     const valueObjectBridgeLogResult =
+.\src\app\api\activity\record\route.ts:1275:       await safeCreateActivityProcessingLog({
+.\src\app\api\activity\record\route.ts:1276:       userId: appUser.id,
+.\src\app\api\activity\record\route.ts:1277:       rawSignalId: rawSignal?.id ?? null,
+.\src\app\api\activity\record\route.ts:1278:       activityEventId: createdEvent.id,
+.\src\app\api\activity\record\route.ts:1279:       processingRunId,
+.\src\app\api\activity\record\route.ts:1280:       processorName: "activity_record_route_value_object_bridge",
+.\src\app\api\activity\record\route.ts:1281:       processingStage: "finalize",
+.\src\app\api\activity\record\route.ts:1282:       processingStatus: valueObjectBridgeResult.ok
+.\src\app\api\activity\record\route.ts:1283:         ? valueObjectBridgeResult.skipped
+.\src\app\api\activity\record\route.ts:1284:           ? "skipped"
+.\src\app\api\activity\record\route.ts:1285:           : "completed"
+.\src\app\api\activity\record\route.ts:1286:         : "warning",
+.\src\app\api\activity\record\route.ts:1287:       severity: valueObjectBridgeResult.ok ? "info" : "warning",
+.\src\app\api\activity\record\route.ts:1288:       message: "Value Object bridge processed after activity record.",
+.\src\app\api\activity\record\route.ts:1289:       input: {
+.\src\app\api\activity\record\route.ts:1290:         eventId: createdEvent.id,
+.\src\app\api\activity\record\route.ts:1291:       },
+.\src\app\api\activity\record\route.ts:1292:       output: {
+.\src\app\api\activity\record\route.ts:1293:         ok: valueObjectBridgeResult.ok,
+.\src\app\api\activity\record\route.ts:1294:         skipped: valueObjectBridgeResult.skipped,
+.\src\app\api\activity\record\route.ts:1295:         skipReason: valueObjectBridgeResult.skipReason,
+.\src\app\api\activity\record\route.ts:1296:         mappingSkipped: valueObjectBridgeResult.mappingResult?.skipped ?? null,
+.\src\app\api\activity\record\route.ts:1297:         mappingsCount: valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+.\src\app\api\activity\record\route.ts:1298:         bridgeCreatedCount: valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+.\src\app\api\activity\record\route.ts:1299:         errors: valueObjectBridgeResult.errors,
+.\src\app\api\activity\record\route.ts:1300:       },
+.\src\app\api\activity\record\route.ts:1301:       metadata: {
+.\src\app\api\activity\record\route.ts:1302:         endpoint: "/api/activity/record",
+.\src\app\api\activity\record\route.ts:1303:         mode: "template_first_completed",
+.\src\app\api\activity\record\route.ts:1304:         p4Step: "P4.7.7-R-E1",
+.\src\app\api\activity\record\route.ts:1305:       },
+.\src\app\api\activity\record\route.ts:1306:       startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\record\route.ts:1307:       finishedAt: new Date().toISOString(),
+.\src\app\api\activity\record\route.ts:1308:       durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\record\route.ts:1309:     });
+.\src\app\api\activity\record\route.ts:1310: 
+.\src\app\api\activity\record\route.ts:1311:     return NextResponse.json({
+.\src\app\api\activity\record\route.ts:1312:       ok: true,
+.\src\app\api\activity\record\route.ts:1313:       status: "recorded",
+.\src\app\api\activity\record\route.ts:1314:       event: createdEvent,
+.\src\app\api\activity\record\route.ts:1315:       eventLinks,
+.\src\app\api\activity\record\route.ts:1316:       impactEvents: impactResult.impactEvents,
+.\src\app\api\activity\record\route.ts:1317:       dailyAggregates: impactResult.dailyAggregates,
+.\src\app\api\activity\record\route.ts:1318:       currentSnapshots: impactResult.currentSnapshots,
+.\src\app\api\activity\record\route.ts:1319:       impactProcessor: {
+.\src\app\api\activity\record\route.ts:1320:         ok: impactResult.ok,
+.\src\app\api\activity\record\route.ts:1321:         skipped: impactResult.skipped,
+.\src\app\api\activity\record\route.ts:1322:         reason: impactResult.reason,
+.\src\app\api\activity\record\route.ts:1323:         counts: impactResult.counts,
+.\src\app\api\activity\record\route.ts:1324:       },
+.\src\app\api\activity\record\route.ts:1325:       rubricatorClassification: {
+.\src\app\api\activity\record\route.ts:1326:         ok: rubricatorClassificationResult.ok,
+.\src\app\api\activity\record\route.ts:1327:         skipped: rubricatorClassificationResult.skipped,
+.\src\app\api\activity\record\route.ts:1328:         skipReason: rubricatorClassificationResult.skipReason,
+.\src\app\api\activity\record\route.ts:1329:         ruleKey: rubricatorClassificationResult.ruleKey,
+.\src\app\api\activity\record\route.ts:1330:         classificationId: rubricatorClassificationResult.classificationId,
+.\src\app\api\activity\record\route.ts:1331:         classificationStatus:
+.\src\app\api\activity\record\route.ts:1332:           rubricatorClassificationResult.classificationStatus,
+.\src\app\api\activity\record\route.ts:1333:         created: rubricatorClassificationResult.created,
+.\src\app\api\activity\record\route.ts:1334:         alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+.\src\app\api\activity\record\route.ts:1335:         errors: rubricatorClassificationResult.errors,
+.\src\app\api\activity\record\route.ts:1336:       },
+.\src\app\api\activity\record\route.ts:1337:       valueObjectBridge: {
+.\src\app\api\activity\record\route.ts:1338:         ok: valueObjectBridgeResult.ok,
+.\src\app\api\activity\record\route.ts:1339:         skipped: valueObjectBridgeResult.skipped,
+.\src\app\api\activity\record\route.ts:1340:         skipReason: valueObjectBridgeResult.skipReason,
+.\src\app\api\activity\record\route.ts:1341:         errors: valueObjectBridgeResult.errors,
+.\src\app\api\activity\record\route.ts:1342:         mapping: valueObjectBridgeResult.mappingResult
+.\src\app\api\activity\record\route.ts:1343:           ? {
+.\src\app\api\activity\record\route.ts:1344:               ok: valueObjectBridgeResult.mappingResult.ok,
+.\src\app\api\activity\record\route.ts:1345:               skipped: valueObjectBridgeResult.mappingResult.skipped,
+.\src\app\api\activity\record\route.ts:1346:               skipReason: valueObjectBridgeResult.mappingResult.skipReason,
+.\src\app\api\activity\record\route.ts:1347:               classificationSummaryCount:
+.\src\app\api\activity\record\route.ts:1348:                 valueObjectBridgeResult.mappingResult.classificationSummary
+.\src\app\api\activity\record\route.ts:1349:                   .length,
+.\src\app\api\activity\record\route.ts:1350:               mappingsCount:
+.\src\app\api\activity\record\route.ts:1351:                 valueObjectBridgeResult.mappingResult.mappings.length,
+.\src\app\api\activity\record\route.ts:1352:             }
+.\src\app\api\activity\record\route.ts:1353:           : null,
+.\src\app\api\activity\record\route.ts:1354:         bridge: valueObjectBridgeResult.bridgeResult
+.\src\app\api\activity\record\route.ts:1355:           ? {
+.\src\app\api\activity\record\route.ts:1356:               ok: valueObjectBridgeResult.bridgeResult.ok,
+.\src\app\api\activity\record\route.ts:1357:               skipped: valueObjectBridgeResult.bridgeResult.skipped,
+.\src\app\api\activity\record\route.ts:1358:               skipReason: valueObjectBridgeResult.bridgeResult.skipReason,
+.\src\app\api\activity\record\route.ts:1359:               mappingsRequested:
+.\src\app\api\activity\record\route.ts:1360:                 valueObjectBridgeResult.bridgeResult.mappingsRequested,
+.\src\app\api\activity\record\route.ts:1361:               createdCount:
+.\src\app\api\activity\record\route.ts:1362:                 valueObjectBridgeResult.bridgeResult.created.length,
+.\src\app\api\activity\record\route.ts:1363:               created: valueObjectBridgeResult.bridgeResult.created,
+.\src\app\api\activity\record\route.ts:1364:               errors: valueObjectBridgeResult.bridgeResult.errors,
+.\src\app\api\activity\record\route.ts:1365:             }
+.\src\app\api\activity\record\route.ts:1366:           : null,
+.\src\app\api\activity\record\route.ts:1367:       },
+.\src\app\api\activity\record\route.ts:1368:       processingLogs: {
+.\src\app\api\activity\record\route.ts:1369:         rawSignalId: rawSignal?.id ?? null,
+.\src\app\api\activity\record\route.ts:1370:         processingRunId,
+.\src\app\api\activity\record\route.ts:1371:         rubricatorClassification: {
+.\src\app\api\activity\record\route.ts:1372:           ok: rubricatorClassificationLogResult.ok,
+.\src\app\api\activity\record\route.ts:1373:           error: rubricatorClassificationLogResult.error,
+.\src\app\api\activity\record\route.ts:1374:           logId: rubricatorClassificationLogResult.log?.id ?? null,
+.\src\app\api\activity\record\route.ts:1375:         },
+.\src\app\api\activity\record\route.ts:1376:         valueObjectBridge: {
+.\src\app\api\activity\record\route.ts:1377:           ok: valueObjectBridgeLogResult.ok,
+.\src\app\api\activity\record\route.ts:1378:           error: valueObjectBridgeLogResult.error,
+.\src\app\api\activity\record\route.ts:1379:           logId: valueObjectBridgeLogResult.log?.id ?? null,
+.\src\app\api\activity\record\route.ts:1380:         },
+.\src\app\api\activity\record\route.ts:1381:       },
+.\src\app\api\activity\record\route.ts:1382:       rawSignal: rawSignal
+.\src\app\api\activity\record\route.ts:1383:         ? {
+.\src\app\api\activity\record\route.ts:1384:             id: rawSignal.id,
+.\src\app\api\activity\record\route.ts:1385:             processingStatus:
+
+===== .\src\app\api\activity\complete\route.ts:670-850 =====
+.\src\app\api\activity\complete\route.ts:670:       metadata: {
+.\src\app\api\activity\complete\route.ts:671:         endpoint: "/api/activity/complete",
+.\src\app\api\activity\complete\route.ts:672:         mode: "template_first_complete",
+.\src\app\api\activity\complete\route.ts:673:       },
+.\src\app\api\activity\complete\route.ts:674:       startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\complete\route.ts:675:       finishedAt: new Date().toISOString(),
+.\src\app\api\activity\complete\route.ts:676:       durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\complete\route.ts:677:     });
+.\src\app\api\activity\complete\route.ts:678: 
+.\src\app\api\activity\complete\route.ts:679: 
+.\src\app\api\activity\complete\route.ts:680:     const rubricatorClassificationResult =
+.\src\app\api\activity\complete\route.ts:681:       await ensureActivityEventRubricatorClassificationForKnownTemplate({
+.\src\app\api\activity\complete\route.ts:682:         supabase,
+.\src\app\api\activity\complete\route.ts:683:         eventId: updatedEvent.id,
+.\src\app\api\activity\complete\route.ts:684:         userId: appUser.id,
+.\src\app\api\activity\complete\route.ts:685:         activityTemplateId: updatedEvent.activity_template_id,
+.\src\app\api\activity\complete\route.ts:686:         processorName:
+.\src\app\api\activity\complete\route.ts:687:           "activity_complete_route_known_template_rubricator_classification",
+.\src\app\api\activity\complete\route.ts:688:       });
+.\src\app\api\activity\complete\route.ts:689: 
+.\src\app\api\activity\complete\route.ts:690:     const rubricatorClassificationLogResult =
+.\src\app\api\activity\complete\route.ts:691:       await safeCreateActivityProcessingLog({
+.\src\app\api\activity\complete\route.ts:692:       userId: appUser.id,
+.\src\app\api\activity\complete\route.ts:693:       rawSignalId: rawSignal?.id ?? null,
+.\src\app\api\activity\complete\route.ts:694:       activityEventId: updatedEvent.id,
+.\src\app\api\activity\complete\route.ts:695:       processingRunId,
+.\src\app\api\activity\complete\route.ts:696:       processorName: "activity_complete_route_rubricator_classification",
+.\src\app\api\activity\complete\route.ts:697:       processingStage: "finalize",
+.\src\app\api\activity\complete\route.ts:698:       processingStatus: rubricatorClassificationResult.ok
+.\src\app\api\activity\complete\route.ts:699:         ? rubricatorClassificationResult.skipped
+.\src\app\api\activity\complete\route.ts:700:           ? "skipped"
+.\src\app\api\activity\complete\route.ts:701:           : "completed"
+.\src\app\api\activity\complete\route.ts:702:         : "warning",
+.\src\app\api\activity\complete\route.ts:703:       severity: rubricatorClassificationResult.ok ? "info" : "warning",
+.\src\app\api\activity\complete\route.ts:704:       message:
+.\src\app\api\activity\complete\route.ts:705:         "Known-template rubricator classification ensured before Value Object bridge.",
+.\src\app\api\activity\complete\route.ts:706:       input: {
+.\src\app\api\activity\complete\route.ts:707:         eventId: updatedEvent.id,
+.\src\app\api\activity\complete\route.ts:708:         activityTemplateId: updatedEvent.activity_template_id,
+.\src\app\api\activity\complete\route.ts:709:       },
+.\src\app\api\activity\complete\route.ts:710:       output: {
+.\src\app\api\activity\complete\route.ts:711:         ok: rubricatorClassificationResult.ok,
+.\src\app\api\activity\complete\route.ts:712:         skipped: rubricatorClassificationResult.skipped,
+.\src\app\api\activity\complete\route.ts:713:         skipReason: rubricatorClassificationResult.skipReason,
+.\src\app\api\activity\complete\route.ts:714:         ruleKey: rubricatorClassificationResult.ruleKey,
+.\src\app\api\activity\complete\route.ts:715:         classificationId: rubricatorClassificationResult.classificationId,
+.\src\app\api\activity\complete\route.ts:716:         classificationStatus:
+.\src\app\api\activity\complete\route.ts:717:           rubricatorClassificationResult.classificationStatus,
+.\src\app\api\activity\complete\route.ts:718:         created: rubricatorClassificationResult.created,
+.\src\app\api\activity\complete\route.ts:719:         alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+.\src\app\api\activity\complete\route.ts:720:         errors: rubricatorClassificationResult.errors,
+.\src\app\api\activity\complete\route.ts:721:       },
+.\src\app\api\activity\complete\route.ts:722:       metadata: {
+.\src\app\api\activity\complete\route.ts:723:         endpoint: "/api/activity/complete",
+.\src\app\api\activity\complete\route.ts:724:         mode: "template_first_complete",
+.\src\app\api\activity\complete\route.ts:725:         p4Step: "P4.7.8-R-G1",
+.\src\app\api\activity\complete\route.ts:726:         ruleResolver: buildRubricatorResolverLogMetadata(rubricatorClassificationResult),
+.\src\app\api\activity\complete\route.ts:727:       },
+.\src\app\api\activity\complete\route.ts:728:       startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\complete\route.ts:729:       finishedAt: new Date().toISOString(),
+.\src\app\api\activity\complete\route.ts:730:       durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\complete\route.ts:731:     });
+.\src\app\api\activity\complete\route.ts:732: 
+.\src\app\api\activity\complete\route.ts:733:     const valueObjectBridgeResult = await processActivityValueObjectBridge({
+.\src\app\api\activity\complete\route.ts:734:       supabase,
+.\src\app\api\activity\complete\route.ts:735:       eventId: updatedEvent.id,
+.\src\app\api\activity\complete\route.ts:736:       processorName: "activity_complete_route_p4_7_7",
+.\src\app\api\activity\complete\route.ts:737:     });
+.\src\app\api\activity\complete\route.ts:738: 
+.\src\app\api\activity\complete\route.ts:739:     const valueObjectBridgeLogResult =
+.\src\app\api\activity\complete\route.ts:740:       await safeCreateActivityProcessingLog({
+.\src\app\api\activity\complete\route.ts:741:       userId: appUser.id,
+.\src\app\api\activity\complete\route.ts:742:       rawSignalId: rawSignal?.id ?? null,
+.\src\app\api\activity\complete\route.ts:743:       activityEventId: updatedEvent.id,
+.\src\app\api\activity\complete\route.ts:744:       processingRunId,
+.\src\app\api\activity\complete\route.ts:745:       processorName: "activity_complete_route_value_object_bridge",
+.\src\app\api\activity\complete\route.ts:746:       processingStage: "finalize",
+.\src\app\api\activity\complete\route.ts:747:       processingStatus: valueObjectBridgeResult.ok
+.\src\app\api\activity\complete\route.ts:748:         ? valueObjectBridgeResult.skipped
+.\src\app\api\activity\complete\route.ts:749:           ? "skipped"
+.\src\app\api\activity\complete\route.ts:750:           : "completed"
+.\src\app\api\activity\complete\route.ts:751:         : "warning",
+.\src\app\api\activity\complete\route.ts:752:       severity: valueObjectBridgeResult.ok ? "info" : "warning",
+.\src\app\api\activity\complete\route.ts:753:       message: "Value Object bridge processed after activity completion.",
+.\src\app\api\activity\complete\route.ts:754:       input: {
+.\src\app\api\activity\complete\route.ts:755:         eventId: updatedEvent.id,
+.\src\app\api\activity\complete\route.ts:756:       },
+.\src\app\api\activity\complete\route.ts:757:       output: {
+.\src\app\api\activity\complete\route.ts:758:         ok: valueObjectBridgeResult.ok,
+.\src\app\api\activity\complete\route.ts:759:         skipped: valueObjectBridgeResult.skipped,
+.\src\app\api\activity\complete\route.ts:760:         skipReason: valueObjectBridgeResult.skipReason,
+.\src\app\api\activity\complete\route.ts:761:         mappingSkipped: valueObjectBridgeResult.mappingResult?.skipped ?? null,
+.\src\app\api\activity\complete\route.ts:762:         mappingsCount: valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+.\src\app\api\activity\complete\route.ts:763:         bridgeCreatedCount: valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+.\src\app\api\activity\complete\route.ts:764:         errors: valueObjectBridgeResult.errors,
+.\src\app\api\activity\complete\route.ts:765:       },
+.\src\app\api\activity\complete\route.ts:766:       metadata: {
+.\src\app\api\activity\complete\route.ts:767:         endpoint: "/api/activity/complete",
+.\src\app\api\activity\complete\route.ts:768:         mode: "template_first_complete",
+.\src\app\api\activity\complete\route.ts:769:         p4Step: "P4.7.7-R-E2",
+.\src\app\api\activity\complete\route.ts:770:       },
+.\src\app\api\activity\complete\route.ts:771:       startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\complete\route.ts:772:       finishedAt: new Date().toISOString(),
+.\src\app\api\activity\complete\route.ts:773:       durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\complete\route.ts:774:     });
+.\src\app\api\activity\complete\route.ts:775: 
+.\src\app\api\activity\complete\route.ts:776:     return NextResponse.json({
+.\src\app\api\activity\complete\route.ts:777:       ok: true,
+.\src\app\api\activity\complete\route.ts:778:       status: completedStatus,
+.\src\app\api\activity\complete\route.ts:779:       event: updatedEvent,
+.\src\app\api\activity\complete\route.ts:780:       impactEvents: impactResult.impactEvents,
+.\src\app\api\activity\complete\route.ts:781:       dailyAggregates: impactResult.dailyAggregates,
+.\src\app\api\activity\complete\route.ts:782:       currentSnapshots: impactResult.currentSnapshots,
+.\src\app\api\activity\complete\route.ts:783:       impactProcessor: {
+.\src\app\api\activity\complete\route.ts:784:         ok: impactResult.ok,
+.\src\app\api\activity\complete\route.ts:785:         skipped: impactResult.skipped,
+.\src\app\api\activity\complete\route.ts:786:         reason: impactResult.reason,
+.\src\app\api\activity\complete\route.ts:787:         counts: impactResult.counts,
+.\src\app\api\activity\complete\route.ts:788:       },
+.\src\app\api\activity\complete\route.ts:789:       rubricatorClassification: {
+.\src\app\api\activity\complete\route.ts:790:         ok: rubricatorClassificationResult.ok,
+.\src\app\api\activity\complete\route.ts:791:         skipped: rubricatorClassificationResult.skipped,
+.\src\app\api\activity\complete\route.ts:792:         skipReason: rubricatorClassificationResult.skipReason,
+.\src\app\api\activity\complete\route.ts:793:         ruleKey: rubricatorClassificationResult.ruleKey,
+.\src\app\api\activity\complete\route.ts:794:         classificationId: rubricatorClassificationResult.classificationId,
+.\src\app\api\activity\complete\route.ts:795:         classificationStatus:
+.\src\app\api\activity\complete\route.ts:796:           rubricatorClassificationResult.classificationStatus,
+.\src\app\api\activity\complete\route.ts:797:         created: rubricatorClassificationResult.created,
+.\src\app\api\activity\complete\route.ts:798:         alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+.\src\app\api\activity\complete\route.ts:799:         errors: rubricatorClassificationResult.errors,
+.\src\app\api\activity\complete\route.ts:800:       },
+.\src\app\api\activity\complete\route.ts:801:       valueObjectBridge: {
+.\src\app\api\activity\complete\route.ts:802:         ok: valueObjectBridgeResult.ok,
+.\src\app\api\activity\complete\route.ts:803:         skipped: valueObjectBridgeResult.skipped,
+.\src\app\api\activity\complete\route.ts:804:         skipReason: valueObjectBridgeResult.skipReason,
+.\src\app\api\activity\complete\route.ts:805:         errors: valueObjectBridgeResult.errors,
+.\src\app\api\activity\complete\route.ts:806:         mapping: valueObjectBridgeResult.mappingResult
+.\src\app\api\activity\complete\route.ts:807:           ? {
+.\src\app\api\activity\complete\route.ts:808:               ok: valueObjectBridgeResult.mappingResult.ok,
+.\src\app\api\activity\complete\route.ts:809:               skipped: valueObjectBridgeResult.mappingResult.skipped,
+.\src\app\api\activity\complete\route.ts:810:               skipReason: valueObjectBridgeResult.mappingResult.skipReason,
+.\src\app\api\activity\complete\route.ts:811:               classificationSummaryCount:
+.\src\app\api\activity\complete\route.ts:812:                 valueObjectBridgeResult.mappingResult.classificationSummary
+.\src\app\api\activity\complete\route.ts:813:                   .length,
+.\src\app\api\activity\complete\route.ts:814:               mappingsCount:
+.\src\app\api\activity\complete\route.ts:815:                 valueObjectBridgeResult.mappingResult.mappings.length,
+.\src\app\api\activity\complete\route.ts:816:             }
+.\src\app\api\activity\complete\route.ts:817:           : null,
+.\src\app\api\activity\complete\route.ts:818:         bridge: valueObjectBridgeResult.bridgeResult
+.\src\app\api\activity\complete\route.ts:819:           ? {
+.\src\app\api\activity\complete\route.ts:820:               ok: valueObjectBridgeResult.bridgeResult.ok,
+.\src\app\api\activity\complete\route.ts:821:               skipped: valueObjectBridgeResult.bridgeResult.skipped,
+.\src\app\api\activity\complete\route.ts:822:               skipReason: valueObjectBridgeResult.bridgeResult.skipReason,
+.\src\app\api\activity\complete\route.ts:823:               mappingsRequested:
+.\src\app\api\activity\complete\route.ts:824:                 valueObjectBridgeResult.bridgeResult.mappingsRequested,
+.\src\app\api\activity\complete\route.ts:825:               createdCount:
+.\src\app\api\activity\complete\route.ts:826:                 valueObjectBridgeResult.bridgeResult.created.length,
+.\src\app\api\activity\complete\route.ts:827:               created: valueObjectBridgeResult.bridgeResult.created,
+.\src\app\api\activity\complete\route.ts:828:               errors: valueObjectBridgeResult.bridgeResult.errors,
+.\src\app\api\activity\complete\route.ts:829:             }
+.\src\app\api\activity\complete\route.ts:830:           : null,
+.\src\app\api\activity\complete\route.ts:831:       },
+.\src\app\api\activity\complete\route.ts:832:       processingLogs: {
+.\src\app\api\activity\complete\route.ts:833:         rawSignalId: rawSignal?.id ?? null,
+.\src\app\api\activity\complete\route.ts:834:         processingRunId,
+.\src\app\api\activity\complete\route.ts:835:         rubricatorClassification: {
+.\src\app\api\activity\complete\route.ts:836:           ok: rubricatorClassificationLogResult.ok,
+.\src\app\api\activity\complete\route.ts:837:           error: rubricatorClassificationLogResult.error,
+.\src\app\api\activity\complete\route.ts:838:           logId: rubricatorClassificationLogResult.log?.id ?? null,
+.\src\app\api\activity\complete\route.ts:839:         },
+.\src\app\api\activity\complete\route.ts:840:         valueObjectBridge: {
+.\src\app\api\activity\complete\route.ts:841:           ok: valueObjectBridgeLogResult.ok,
+.\src\app\api\activity\complete\route.ts:842:           error: valueObjectBridgeLogResult.error,
+.\src\app\api\activity\complete\route.ts:843:           logId: valueObjectBridgeLogResult.log?.id ?? null,
+.\src\app\api\activity\complete\route.ts:844:         },
+.\src\app\api\activity\complete\route.ts:845:       },
+.\src\app\api\activity\complete\route.ts:846:       rawSignal: rawSignal
+.\src\app\api\activity\complete\route.ts:847:         ? {
+.\src\app\api\activity\complete\route.ts:848:             id: rawSignal.id,
+.\src\app\api\activity\complete\route.ts:849:             processingStatus:
+.\src\app\api\activity\complete\route.ts:850:               processedSignalResult?.signal?.processing_status ??
+
+===== .\src\app\api\activity\intake\events\[id]\confirm\route.ts:580-770 =====
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:580:       const rawSignalIdForProcessingLog =
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:581:         typeof (confirmedMetadataAfterImpacts as Record<string, unknown>).rawSignalId ===
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:582:         "string"
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:583:           ? ((confirmedMetadataAfterImpacts as Record<string, unknown>)
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:584:               .rawSignalId as string)
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:585:           : null;
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:586: 
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:587:       const rubricatorClassificationResult =
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:588:         await ensureActivityEventRubricatorClassificationForKnownTemplate({
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:589:           supabase,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:590:           eventId: updatedEvent.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:591:           userId: appUser.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:592:           activityTemplateId: updatedEvent.activity_template_id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:593:           processorName:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:594:             "activity_confirm_route_known_template_rubricator_classification",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:595:         });
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:596: 
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:597:       const rubricatorClassificationLogResult =
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:598:         await safeCreateActivityProcessingLog({
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:599:           userId: appUser.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:600:           rawSignalId: rawSignalIdForProcessingLog,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:601:           activityEventId: updatedEvent.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:602:         processingRunId,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:603:         processorName: "activity_confirm_route_rubricator_classification",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:604:         processingStage: "finalize",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:605:         processingStatus: rubricatorClassificationResult.ok
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:606:           ? rubricatorClassificationResult.skipped
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:607:             ? "skipped"
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:608:             : "completed"
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:609:           : "warning",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:610:         severity: rubricatorClassificationResult.ok ? "info" : "warning",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:611:         message:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:612:           "Known-template rubricator classification ensured before Value Object bridge.",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:613:         input: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:614:           eventId: updatedEvent.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:615:           activityTemplateId: updatedEvent.activity_template_id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:616:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:617:         output: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:618:           ok: rubricatorClassificationResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:619:           skipped: rubricatorClassificationResult.skipped,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:620:           skipReason: rubricatorClassificationResult.skipReason,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:621:           ruleKey: rubricatorClassificationResult.ruleKey,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:622:           classificationId: rubricatorClassificationResult.classificationId,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:623:           classificationStatus:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:624:             rubricatorClassificationResult.classificationStatus,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:625:           created: rubricatorClassificationResult.created,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:626:           alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:627:           errors: rubricatorClassificationResult.errors,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:628:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:629:         metadata: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:630:           endpoint: ENDPOINT,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:631:           mode: "imported_pending_confirm",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:632:           p4Step: "P4.7.8-R-H1",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:633:           ruleResolver: buildRubricatorResolverLogMetadata(rubricatorClassificationResult),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:634:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:635:         startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:636:         finishedAt: new Date().toISOString(),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:637:         durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:638:       });
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:639: 
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:640:       const valueObjectBridgeResult = await processActivityValueObjectBridge({
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:641:         supabase,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:642:         eventId: updatedEvent.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:643:         processorName: "activity_confirm_route_p4_7_7",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:644:       });
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:645: 
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:646:       const valueObjectBridgeLogResult =
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:647:         await safeCreateActivityProcessingLog({
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:648:           userId: appUser.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:649:           rawSignalId: rawSignalIdForProcessingLog,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:650:           activityEventId: updatedEvent.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:651:         processingRunId,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:652:         processorName: "activity_confirm_route_value_object_bridge",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:653:         processingStage: "finalize",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:654:         processingStatus: valueObjectBridgeResult.ok
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:655:           ? valueObjectBridgeResult.skipped
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:656:             ? "skipped"
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:657:             : "completed"
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:658:           : "warning",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:659:         severity: valueObjectBridgeResult.ok ? "info" : "warning",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:660:         message: "Value Object bridge processed after imported pending confirmation.",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:661:         input: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:662:           eventId: updatedEvent.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:663:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:664:         output: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:665:           ok: valueObjectBridgeResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:666:           skipped: valueObjectBridgeResult.skipped,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:667:           skipReason: valueObjectBridgeResult.skipReason,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:668:           mappingSkipped: valueObjectBridgeResult.mappingResult?.skipped ?? null,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:669:           mappingsCount: valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:670:           bridgeCreatedCount: valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:671:           errors: valueObjectBridgeResult.errors,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:672:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:673:         metadata: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:674:           endpoint: ENDPOINT,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:675:           mode: "imported_pending_confirm",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:676:           p4Step: "P4.7.7-R-E3",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:677:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:678:         startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:679:         finishedAt: new Date().toISOString(),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:680:         durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:681:       });
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:682: 
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:683:     return NextResponse.json({
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:684:       ok: true,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:685:       status: "confirmed_completed",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:686:       endpoint: ENDPOINT,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:687:       activityEvent: summarizeActivityEvent(updatedEvent),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:688:       impactEvents: impactResult.impactEvents,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:689:       dailyAggregates: impactResult.dailyAggregates,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:690:       currentSnapshots: impactResult.currentSnapshots,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:691:       impactProcessor: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:692:         ok: impactResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:693:         skipped: impactResult.skipped,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:694:         reason: impactResult.reason,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:695:         counts: impactResult.counts,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:696:       },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:697:       confirmMetadataUpdate: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:698:         ok: !confirmMetadataUpdateError,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:699:         error: confirmMetadataUpdateError?.message ?? null,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:700:         noImpactsCreated:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:701:           confirmedMetadataAfterImpacts.noImpactsCreated,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:702:         noDailyAggregatesCreated:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:703:           confirmedMetadataAfterImpacts.noDailyAggregatesCreated,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:704:         noCurrentSnapshotsCreated:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:705:           confirmedMetadataAfterImpacts.noCurrentSnapshotsCreated,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:706:         impactsCreatedAfterConfirm:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:707:           confirmedMetadataAfterImpacts.impactsCreatedAfterConfirm,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:708:         dailyAggregatesCreatedAfterConfirm:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:709:           confirmedMetadataAfterImpacts.dailyAggregatesCreatedAfterConfirm,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:710:         currentSnapshotsCreatedAfterConfirm:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:711:           confirmedMetadataAfterImpacts.currentSnapshotsCreatedAfterConfirm,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:712:       },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:713:       rubricatorClassification: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:714:         ok: rubricatorClassificationResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:715:         skipped: rubricatorClassificationResult.skipped,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:716:         skipReason: rubricatorClassificationResult.skipReason,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:717:         ruleKey: rubricatorClassificationResult.ruleKey,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:718:         classificationId: rubricatorClassificationResult.classificationId,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:719:         classificationStatus:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:720:           rubricatorClassificationResult.classificationStatus,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:721:         created: rubricatorClassificationResult.created,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:722:         alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:723:         errors: rubricatorClassificationResult.errors,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:724:       },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:725:       valueObjectBridge: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:726:         ok: valueObjectBridgeResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:727:         skipped: valueObjectBridgeResult.skipped,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:728:         skipReason: valueObjectBridgeResult.skipReason,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:729:         errors: valueObjectBridgeResult.errors,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:730:         mapping: valueObjectBridgeResult.mappingResult
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:731:           ? {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:732:               ok: valueObjectBridgeResult.mappingResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:733:               skipped: valueObjectBridgeResult.mappingResult.skipped,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:734:               skipReason: valueObjectBridgeResult.mappingResult.skipReason,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:735:               classificationSummaryCount:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:736:                 valueObjectBridgeResult.mappingResult.classificationSummary
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:737:                   .length,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:738:               mappingsCount:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:739:                 valueObjectBridgeResult.mappingResult.mappings.length,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:740:             }
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:741:           : null,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:742:         bridge: valueObjectBridgeResult.bridgeResult
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:743:           ? {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:744:               ok: valueObjectBridgeResult.bridgeResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:745:               skipped: valueObjectBridgeResult.bridgeResult.skipped,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:746:               skipReason: valueObjectBridgeResult.bridgeResult.skipReason,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:747:               mappingsRequested:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:748:                 valueObjectBridgeResult.bridgeResult.mappingsRequested,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:749:               createdCount:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:750:                 valueObjectBridgeResult.bridgeResult.created.length,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:751:               created: valueObjectBridgeResult.bridgeResult.created,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:752:               errors: valueObjectBridgeResult.bridgeResult.errors,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:753:             }
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:754:           : null,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:755:       },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:756:       processingLogs: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:757:         rawSignalId: rawSignalIdForProcessingLog,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:758:         rubricatorClassification: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:759:           ok: rubricatorClassificationLogResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:760:           error: rubricatorClassificationLogResult.error,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:761:           logId: rubricatorClassificationLogResult.log?.id ?? null,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:762:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:763:         valueObjectBridge: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:764:           ok: valueObjectBridgeLogResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:765:           error: valueObjectBridgeLogResult.error,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:766:           logId: valueObjectBridgeLogResult.log?.id ?? null,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:767:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:768:       },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:769:       note:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:770:         "Imported pending activity_event was confirmed into completed status. Rule-based impacts were processed when matching rules were available.",
+
+===== .\src\app\api\activity\record\route.ts:1200-1385 =====
+.\src\app\api\activity\record\route.ts:1200:         skipped: impactResult.skipped,
+.\src\app\api\activity\record\route.ts:1201:         reason: impactResult.reason,
+.\src\app\api\activity\record\route.ts:1202:         counts: impactResult.counts,
+.\src\app\api\activity\record\route.ts:1203:       },
+.\src\app\api\activity\record\route.ts:1204:       metadata: {
+.\src\app\api\activity\record\route.ts:1205:         endpoint: "/api/activity/record",
+.\src\app\api\activity\record\route.ts:1206:         mode: "template_first_completed",
+.\src\app\api\activity\record\route.ts:1207:       },
+.\src\app\api\activity\record\route.ts:1208:       startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\record\route.ts:1209:       finishedAt: new Date().toISOString(),
+.\src\app\api\activity\record\route.ts:1210:       durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\record\route.ts:1211:     });
+.\src\app\api\activity\record\route.ts:1212: 
+.\src\app\api\activity\record\route.ts:1213: 
+.\src\app\api\activity\record\route.ts:1214:     const rubricatorClassificationResult =
+.\src\app\api\activity\record\route.ts:1215:       await ensureActivityEventRubricatorClassificationForKnownTemplate({
+.\src\app\api\activity\record\route.ts:1216:         supabase,
+.\src\app\api\activity\record\route.ts:1217:         eventId: createdEvent.id,
+.\src\app\api\activity\record\route.ts:1218:         userId: appUser.id,
+.\src\app\api\activity\record\route.ts:1219:         activityTemplateId: createdEvent.activity_template_id,
+.\src\app\api\activity\record\route.ts:1220:         templateSlug: template.slug,
+.\src\app\api\activity\record\route.ts:1221:         processorName: "activity_record_route_known_template_rubricator_classification",
+.\src\app\api\activity\record\route.ts:1222:       });
+.\src\app\api\activity\record\route.ts:1223: 
+.\src\app\api\activity\record\route.ts:1224:     const rubricatorClassificationLogResult =
+.\src\app\api\activity\record\route.ts:1225:       await safeCreateActivityProcessingLog({
+.\src\app\api\activity\record\route.ts:1226:       userId: appUser.id,
+.\src\app\api\activity\record\route.ts:1227:       rawSignalId: rawSignal?.id ?? null,
+.\src\app\api\activity\record\route.ts:1228:       activityEventId: createdEvent.id,
+.\src\app\api\activity\record\route.ts:1229:       processingRunId,
+.\src\app\api\activity\record\route.ts:1230:       processorName: "activity_record_route_rubricator_classification",
+.\src\app\api\activity\record\route.ts:1231:       processingStage: "finalize",
+.\src\app\api\activity\record\route.ts:1232:       processingStatus: rubricatorClassificationResult.ok
+.\src\app\api\activity\record\route.ts:1233:         ? rubricatorClassificationResult.skipped
+.\src\app\api\activity\record\route.ts:1234:           ? "skipped"
+.\src\app\api\activity\record\route.ts:1235:           : "completed"
+.\src\app\api\activity\record\route.ts:1236:         : "warning",
+.\src\app\api\activity\record\route.ts:1237:       severity: rubricatorClassificationResult.ok ? "info" : "warning",
+.\src\app\api\activity\record\route.ts:1238:       message:
+.\src\app\api\activity\record\route.ts:1239:         "Known-template rubricator classification ensured before Value Object bridge.",
+.\src\app\api\activity\record\route.ts:1240:       input: {
+.\src\app\api\activity\record\route.ts:1241:         eventId: createdEvent.id,
+.\src\app\api\activity\record\route.ts:1242:         activityTemplateId: createdEvent.activity_template_id,
+.\src\app\api\activity\record\route.ts:1243:         templateSlug: template.slug,
+.\src\app\api\activity\record\route.ts:1244:       },
+.\src\app\api\activity\record\route.ts:1245:       output: {
+.\src\app\api\activity\record\route.ts:1246:         ok: rubricatorClassificationResult.ok,
+.\src\app\api\activity\record\route.ts:1247:         skipped: rubricatorClassificationResult.skipped,
+.\src\app\api\activity\record\route.ts:1248:         skipReason: rubricatorClassificationResult.skipReason,
+.\src\app\api\activity\record\route.ts:1249:         ruleKey: rubricatorClassificationResult.ruleKey,
+.\src\app\api\activity\record\route.ts:1250:         classificationId: rubricatorClassificationResult.classificationId,
+.\src\app\api\activity\record\route.ts:1251:         classificationStatus:
+.\src\app\api\activity\record\route.ts:1252:           rubricatorClassificationResult.classificationStatus,
+.\src\app\api\activity\record\route.ts:1253:         created: rubricatorClassificationResult.created,
+.\src\app\api\activity\record\route.ts:1254:         alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+.\src\app\api\activity\record\route.ts:1255:         errors: rubricatorClassificationResult.errors,
+.\src\app\api\activity\record\route.ts:1256:       },
+.\src\app\api\activity\record\route.ts:1257:       metadata: {
+.\src\app\api\activity\record\route.ts:1258:         endpoint: "/api/activity/record",
+.\src\app\api\activity\record\route.ts:1259:         mode: "template_first_record",
+.\src\app\api\activity\record\route.ts:1260:         p4Step: "P4.7.8-R-F2",
+.\src\app\api\activity\record\route.ts:1261:         ruleResolver: buildRubricatorResolverLogMetadata(rubricatorClassificationResult),
+.\src\app\api\activity\record\route.ts:1262:       },
+.\src\app\api\activity\record\route.ts:1263:       startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\record\route.ts:1264:       finishedAt: new Date().toISOString(),
+.\src\app\api\activity\record\route.ts:1265:       durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\record\route.ts:1266:     });
+.\src\app\api\activity\record\route.ts:1267: 
+.\src\app\api\activity\record\route.ts:1268:     const valueObjectBridgeResult = await processActivityValueObjectBridge({
+.\src\app\api\activity\record\route.ts:1269:       supabase,
+.\src\app\api\activity\record\route.ts:1270:       eventId: createdEvent.id,
+.\src\app\api\activity\record\route.ts:1271:       processorName: "activity_record_route_p4_7_7",
+.\src\app\api\activity\record\route.ts:1272:     });
+.\src\app\api\activity\record\route.ts:1273: 
+.\src\app\api\activity\record\route.ts:1274:     const valueObjectBridgeLogResult =
+.\src\app\api\activity\record\route.ts:1275:       await safeCreateActivityProcessingLog({
+.\src\app\api\activity\record\route.ts:1276:       userId: appUser.id,
+.\src\app\api\activity\record\route.ts:1277:       rawSignalId: rawSignal?.id ?? null,
+.\src\app\api\activity\record\route.ts:1278:       activityEventId: createdEvent.id,
+.\src\app\api\activity\record\route.ts:1279:       processingRunId,
+.\src\app\api\activity\record\route.ts:1280:       processorName: "activity_record_route_value_object_bridge",
+.\src\app\api\activity\record\route.ts:1281:       processingStage: "finalize",
+.\src\app\api\activity\record\route.ts:1282:       processingStatus: valueObjectBridgeResult.ok
+.\src\app\api\activity\record\route.ts:1283:         ? valueObjectBridgeResult.skipped
+.\src\app\api\activity\record\route.ts:1284:           ? "skipped"
+.\src\app\api\activity\record\route.ts:1285:           : "completed"
+.\src\app\api\activity\record\route.ts:1286:         : "warning",
+.\src\app\api\activity\record\route.ts:1287:       severity: valueObjectBridgeResult.ok ? "info" : "warning",
+.\src\app\api\activity\record\route.ts:1288:       message: "Value Object bridge processed after activity record.",
+.\src\app\api\activity\record\route.ts:1289:       input: {
+.\src\app\api\activity\record\route.ts:1290:         eventId: createdEvent.id,
+.\src\app\api\activity\record\route.ts:1291:       },
+.\src\app\api\activity\record\route.ts:1292:       output: {
+.\src\app\api\activity\record\route.ts:1293:         ok: valueObjectBridgeResult.ok,
+.\src\app\api\activity\record\route.ts:1294:         skipped: valueObjectBridgeResult.skipped,
+.\src\app\api\activity\record\route.ts:1295:         skipReason: valueObjectBridgeResult.skipReason,
+.\src\app\api\activity\record\route.ts:1296:         mappingSkipped: valueObjectBridgeResult.mappingResult?.skipped ?? null,
+.\src\app\api\activity\record\route.ts:1297:         mappingsCount: valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+.\src\app\api\activity\record\route.ts:1298:         bridgeCreatedCount: valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+.\src\app\api\activity\record\route.ts:1299:         errors: valueObjectBridgeResult.errors,
+.\src\app\api\activity\record\route.ts:1300:       },
+.\src\app\api\activity\record\route.ts:1301:       metadata: {
+.\src\app\api\activity\record\route.ts:1302:         endpoint: "/api/activity/record",
+.\src\app\api\activity\record\route.ts:1303:         mode: "template_first_completed",
+.\src\app\api\activity\record\route.ts:1304:         p4Step: "P4.7.7-R-E1",
+.\src\app\api\activity\record\route.ts:1305:       },
+.\src\app\api\activity\record\route.ts:1306:       startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\record\route.ts:1307:       finishedAt: new Date().toISOString(),
+.\src\app\api\activity\record\route.ts:1308:       durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\record\route.ts:1309:     });
+.\src\app\api\activity\record\route.ts:1310: 
+.\src\app\api\activity\record\route.ts:1311:     return NextResponse.json({
+.\src\app\api\activity\record\route.ts:1312:       ok: true,
+.\src\app\api\activity\record\route.ts:1313:       status: "recorded",
+.\src\app\api\activity\record\route.ts:1314:       event: createdEvent,
+.\src\app\api\activity\record\route.ts:1315:       eventLinks,
+.\src\app\api\activity\record\route.ts:1316:       impactEvents: impactResult.impactEvents,
+.\src\app\api\activity\record\route.ts:1317:       dailyAggregates: impactResult.dailyAggregates,
+.\src\app\api\activity\record\route.ts:1318:       currentSnapshots: impactResult.currentSnapshots,
+.\src\app\api\activity\record\route.ts:1319:       impactProcessor: {
+.\src\app\api\activity\record\route.ts:1320:         ok: impactResult.ok,
+.\src\app\api\activity\record\route.ts:1321:         skipped: impactResult.skipped,
+.\src\app\api\activity\record\route.ts:1322:         reason: impactResult.reason,
+.\src\app\api\activity\record\route.ts:1323:         counts: impactResult.counts,
+.\src\app\api\activity\record\route.ts:1324:       },
+.\src\app\api\activity\record\route.ts:1325:       rubricatorClassification: {
+.\src\app\api\activity\record\route.ts:1326:         ok: rubricatorClassificationResult.ok,
+.\src\app\api\activity\record\route.ts:1327:         skipped: rubricatorClassificationResult.skipped,
+.\src\app\api\activity\record\route.ts:1328:         skipReason: rubricatorClassificationResult.skipReason,
+.\src\app\api\activity\record\route.ts:1329:         ruleKey: rubricatorClassificationResult.ruleKey,
+.\src\app\api\activity\record\route.ts:1330:         classificationId: rubricatorClassificationResult.classificationId,
+.\src\app\api\activity\record\route.ts:1331:         classificationStatus:
+.\src\app\api\activity\record\route.ts:1332:           rubricatorClassificationResult.classificationStatus,
+.\src\app\api\activity\record\route.ts:1333:         created: rubricatorClassificationResult.created,
+.\src\app\api\activity\record\route.ts:1334:         alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+.\src\app\api\activity\record\route.ts:1335:         errors: rubricatorClassificationResult.errors,
+.\src\app\api\activity\record\route.ts:1336:       },
+.\src\app\api\activity\record\route.ts:1337:       valueObjectBridge: {
+.\src\app\api\activity\record\route.ts:1338:         ok: valueObjectBridgeResult.ok,
+.\src\app\api\activity\record\route.ts:1339:         skipped: valueObjectBridgeResult.skipped,
+.\src\app\api\activity\record\route.ts:1340:         skipReason: valueObjectBridgeResult.skipReason,
+.\src\app\api\activity\record\route.ts:1341:         errors: valueObjectBridgeResult.errors,
+.\src\app\api\activity\record\route.ts:1342:         mapping: valueObjectBridgeResult.mappingResult
+.\src\app\api\activity\record\route.ts:1343:           ? {
+.\src\app\api\activity\record\route.ts:1344:               ok: valueObjectBridgeResult.mappingResult.ok,
+.\src\app\api\activity\record\route.ts:1345:               skipped: valueObjectBridgeResult.mappingResult.skipped,
+.\src\app\api\activity\record\route.ts:1346:               skipReason: valueObjectBridgeResult.mappingResult.skipReason,
+.\src\app\api\activity\record\route.ts:1347:               classificationSummaryCount:
+.\src\app\api\activity\record\route.ts:1348:                 valueObjectBridgeResult.mappingResult.classificationSummary
+.\src\app\api\activity\record\route.ts:1349:                   .length,
+.\src\app\api\activity\record\route.ts:1350:               mappingsCount:
+.\src\app\api\activity\record\route.ts:1351:                 valueObjectBridgeResult.mappingResult.mappings.length,
+.\src\app\api\activity\record\route.ts:1352:             }
+.\src\app\api\activity\record\route.ts:1353:           : null,
+.\src\app\api\activity\record\route.ts:1354:         bridge: valueObjectBridgeResult.bridgeResult
+.\src\app\api\activity\record\route.ts:1355:           ? {
+.\src\app\api\activity\record\route.ts:1356:               ok: valueObjectBridgeResult.bridgeResult.ok,
+.\src\app\api\activity\record\route.ts:1357:               skipped: valueObjectBridgeResult.bridgeResult.skipped,
+.\src\app\api\activity\record\route.ts:1358:               skipReason: valueObjectBridgeResult.bridgeResult.skipReason,
+.\src\app\api\activity\record\route.ts:1359:               mappingsRequested:
+.\src\app\api\activity\record\route.ts:1360:                 valueObjectBridgeResult.bridgeResult.mappingsRequested,
+.\src\app\api\activity\record\route.ts:1361:               createdCount:
+.\src\app\api\activity\record\route.ts:1362:                 valueObjectBridgeResult.bridgeResult.created.length,
+.\src\app\api\activity\record\route.ts:1363:               created: valueObjectBridgeResult.bridgeResult.created,
+.\src\app\api\activity\record\route.ts:1364:               errors: valueObjectBridgeResult.bridgeResult.errors,
+.\src\app\api\activity\record\route.ts:1365:             }
+.\src\app\api\activity\record\route.ts:1366:           : null,
+.\src\app\api\activity\record\route.ts:1367:       },
+.\src\app\api\activity\record\route.ts:1368:       processingLogs: {
+.\src\app\api\activity\record\route.ts:1369:         rawSignalId: rawSignal?.id ?? null,
+.\src\app\api\activity\record\route.ts:1370:         processingRunId,
+.\src\app\api\activity\record\route.ts:1371:         rubricatorClassification: {
+.\src\app\api\activity\record\route.ts:1372:           ok: rubricatorClassificationLogResult.ok,
+.\src\app\api\activity\record\route.ts:1373:           error: rubricatorClassificationLogResult.error,
+.\src\app\api\activity\record\route.ts:1374:           logId: rubricatorClassificationLogResult.log?.id ?? null,
+.\src\app\api\activity\record\route.ts:1375:         },
+.\src\app\api\activity\record\route.ts:1376:         valueObjectBridge: {
+.\src\app\api\activity\record\route.ts:1377:           ok: valueObjectBridgeLogResult.ok,
+.\src\app\api\activity\record\route.ts:1378:           error: valueObjectBridgeLogResult.error,
+.\src\app\api\activity\record\route.ts:1379:           logId: valueObjectBridgeLogResult.log?.id ?? null,
+.\src\app\api\activity\record\route.ts:1380:         },
+.\src\app\api\activity\record\route.ts:1381:       },
+.\src\app\api\activity\record\route.ts:1382:       rawSignal: rawSignal
+.\src\app\api\activity\record\route.ts:1383:         ? {
+.\src\app\api\activity\record\route.ts:1384:             id: rawSignal.id,
+.\src\app\api\activity\record\route.ts:1385:             processingStatus:
+
+===== .\src\app\api\activity\complete\route.ts:670-850 =====
+.\src\app\api\activity\complete\route.ts:670:       metadata: {
+.\src\app\api\activity\complete\route.ts:671:         endpoint: "/api/activity/complete",
+.\src\app\api\activity\complete\route.ts:672:         mode: "template_first_complete",
+.\src\app\api\activity\complete\route.ts:673:       },
+.\src\app\api\activity\complete\route.ts:674:       startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\complete\route.ts:675:       finishedAt: new Date().toISOString(),
+.\src\app\api\activity\complete\route.ts:676:       durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\complete\route.ts:677:     });
+.\src\app\api\activity\complete\route.ts:678: 
+.\src\app\api\activity\complete\route.ts:679: 
+.\src\app\api\activity\complete\route.ts:680:     const rubricatorClassificationResult =
+.\src\app\api\activity\complete\route.ts:681:       await ensureActivityEventRubricatorClassificationForKnownTemplate({
+.\src\app\api\activity\complete\route.ts:682:         supabase,
+.\src\app\api\activity\complete\route.ts:683:         eventId: updatedEvent.id,
+.\src\app\api\activity\complete\route.ts:684:         userId: appUser.id,
+.\src\app\api\activity\complete\route.ts:685:         activityTemplateId: updatedEvent.activity_template_id,
+.\src\app\api\activity\complete\route.ts:686:         processorName:
+.\src\app\api\activity\complete\route.ts:687:           "activity_complete_route_known_template_rubricator_classification",
+.\src\app\api\activity\complete\route.ts:688:       });
+.\src\app\api\activity\complete\route.ts:689: 
+.\src\app\api\activity\complete\route.ts:690:     const rubricatorClassificationLogResult =
+.\src\app\api\activity\complete\route.ts:691:       await safeCreateActivityProcessingLog({
+.\src\app\api\activity\complete\route.ts:692:       userId: appUser.id,
+.\src\app\api\activity\complete\route.ts:693:       rawSignalId: rawSignal?.id ?? null,
+.\src\app\api\activity\complete\route.ts:694:       activityEventId: updatedEvent.id,
+.\src\app\api\activity\complete\route.ts:695:       processingRunId,
+.\src\app\api\activity\complete\route.ts:696:       processorName: "activity_complete_route_rubricator_classification",
+.\src\app\api\activity\complete\route.ts:697:       processingStage: "finalize",
+.\src\app\api\activity\complete\route.ts:698:       processingStatus: rubricatorClassificationResult.ok
+.\src\app\api\activity\complete\route.ts:699:         ? rubricatorClassificationResult.skipped
+.\src\app\api\activity\complete\route.ts:700:           ? "skipped"
+.\src\app\api\activity\complete\route.ts:701:           : "completed"
+.\src\app\api\activity\complete\route.ts:702:         : "warning",
+.\src\app\api\activity\complete\route.ts:703:       severity: rubricatorClassificationResult.ok ? "info" : "warning",
+.\src\app\api\activity\complete\route.ts:704:       message:
+.\src\app\api\activity\complete\route.ts:705:         "Known-template rubricator classification ensured before Value Object bridge.",
+.\src\app\api\activity\complete\route.ts:706:       input: {
+.\src\app\api\activity\complete\route.ts:707:         eventId: updatedEvent.id,
+.\src\app\api\activity\complete\route.ts:708:         activityTemplateId: updatedEvent.activity_template_id,
+.\src\app\api\activity\complete\route.ts:709:       },
+.\src\app\api\activity\complete\route.ts:710:       output: {
+.\src\app\api\activity\complete\route.ts:711:         ok: rubricatorClassificationResult.ok,
+.\src\app\api\activity\complete\route.ts:712:         skipped: rubricatorClassificationResult.skipped,
+.\src\app\api\activity\complete\route.ts:713:         skipReason: rubricatorClassificationResult.skipReason,
+.\src\app\api\activity\complete\route.ts:714:         ruleKey: rubricatorClassificationResult.ruleKey,
+.\src\app\api\activity\complete\route.ts:715:         classificationId: rubricatorClassificationResult.classificationId,
+.\src\app\api\activity\complete\route.ts:716:         classificationStatus:
+.\src\app\api\activity\complete\route.ts:717:           rubricatorClassificationResult.classificationStatus,
+.\src\app\api\activity\complete\route.ts:718:         created: rubricatorClassificationResult.created,
+.\src\app\api\activity\complete\route.ts:719:         alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+.\src\app\api\activity\complete\route.ts:720:         errors: rubricatorClassificationResult.errors,
+.\src\app\api\activity\complete\route.ts:721:       },
+.\src\app\api\activity\complete\route.ts:722:       metadata: {
+.\src\app\api\activity\complete\route.ts:723:         endpoint: "/api/activity/complete",
+.\src\app\api\activity\complete\route.ts:724:         mode: "template_first_complete",
+.\src\app\api\activity\complete\route.ts:725:         p4Step: "P4.7.8-R-G1",
+.\src\app\api\activity\complete\route.ts:726:         ruleResolver: buildRubricatorResolverLogMetadata(rubricatorClassificationResult),
+.\src\app\api\activity\complete\route.ts:727:       },
+.\src\app\api\activity\complete\route.ts:728:       startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\complete\route.ts:729:       finishedAt: new Date().toISOString(),
+.\src\app\api\activity\complete\route.ts:730:       durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\complete\route.ts:731:     });
+.\src\app\api\activity\complete\route.ts:732: 
+.\src\app\api\activity\complete\route.ts:733:     const valueObjectBridgeResult = await processActivityValueObjectBridge({
+.\src\app\api\activity\complete\route.ts:734:       supabase,
+.\src\app\api\activity\complete\route.ts:735:       eventId: updatedEvent.id,
+.\src\app\api\activity\complete\route.ts:736:       processorName: "activity_complete_route_p4_7_7",
+.\src\app\api\activity\complete\route.ts:737:     });
+.\src\app\api\activity\complete\route.ts:738: 
+.\src\app\api\activity\complete\route.ts:739:     const valueObjectBridgeLogResult =
+.\src\app\api\activity\complete\route.ts:740:       await safeCreateActivityProcessingLog({
+.\src\app\api\activity\complete\route.ts:741:       userId: appUser.id,
+.\src\app\api\activity\complete\route.ts:742:       rawSignalId: rawSignal?.id ?? null,
+.\src\app\api\activity\complete\route.ts:743:       activityEventId: updatedEvent.id,
+.\src\app\api\activity\complete\route.ts:744:       processingRunId,
+.\src\app\api\activity\complete\route.ts:745:       processorName: "activity_complete_route_value_object_bridge",
+.\src\app\api\activity\complete\route.ts:746:       processingStage: "finalize",
+.\src\app\api\activity\complete\route.ts:747:       processingStatus: valueObjectBridgeResult.ok
+.\src\app\api\activity\complete\route.ts:748:         ? valueObjectBridgeResult.skipped
+.\src\app\api\activity\complete\route.ts:749:           ? "skipped"
+.\src\app\api\activity\complete\route.ts:750:           : "completed"
+.\src\app\api\activity\complete\route.ts:751:         : "warning",
+.\src\app\api\activity\complete\route.ts:752:       severity: valueObjectBridgeResult.ok ? "info" : "warning",
+.\src\app\api\activity\complete\route.ts:753:       message: "Value Object bridge processed after activity completion.",
+.\src\app\api\activity\complete\route.ts:754:       input: {
+.\src\app\api\activity\complete\route.ts:755:         eventId: updatedEvent.id,
+.\src\app\api\activity\complete\route.ts:756:       },
+.\src\app\api\activity\complete\route.ts:757:       output: {
+.\src\app\api\activity\complete\route.ts:758:         ok: valueObjectBridgeResult.ok,
+.\src\app\api\activity\complete\route.ts:759:         skipped: valueObjectBridgeResult.skipped,
+.\src\app\api\activity\complete\route.ts:760:         skipReason: valueObjectBridgeResult.skipReason,
+.\src\app\api\activity\complete\route.ts:761:         mappingSkipped: valueObjectBridgeResult.mappingResult?.skipped ?? null,
+.\src\app\api\activity\complete\route.ts:762:         mappingsCount: valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+.\src\app\api\activity\complete\route.ts:763:         bridgeCreatedCount: valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+.\src\app\api\activity\complete\route.ts:764:         errors: valueObjectBridgeResult.errors,
+.\src\app\api\activity\complete\route.ts:765:       },
+.\src\app\api\activity\complete\route.ts:766:       metadata: {
+.\src\app\api\activity\complete\route.ts:767:         endpoint: "/api/activity/complete",
+.\src\app\api\activity\complete\route.ts:768:         mode: "template_first_complete",
+.\src\app\api\activity\complete\route.ts:769:         p4Step: "P4.7.7-R-E2",
+.\src\app\api\activity\complete\route.ts:770:       },
+.\src\app\api\activity\complete\route.ts:771:       startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\complete\route.ts:772:       finishedAt: new Date().toISOString(),
+.\src\app\api\activity\complete\route.ts:773:       durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\complete\route.ts:774:     });
+.\src\app\api\activity\complete\route.ts:775: 
+.\src\app\api\activity\complete\route.ts:776:     return NextResponse.json({
+.\src\app\api\activity\complete\route.ts:777:       ok: true,
+.\src\app\api\activity\complete\route.ts:778:       status: completedStatus,
+.\src\app\api\activity\complete\route.ts:779:       event: updatedEvent,
+.\src\app\api\activity\complete\route.ts:780:       impactEvents: impactResult.impactEvents,
+.\src\app\api\activity\complete\route.ts:781:       dailyAggregates: impactResult.dailyAggregates,
+.\src\app\api\activity\complete\route.ts:782:       currentSnapshots: impactResult.currentSnapshots,
+.\src\app\api\activity\complete\route.ts:783:       impactProcessor: {
+.\src\app\api\activity\complete\route.ts:784:         ok: impactResult.ok,
+.\src\app\api\activity\complete\route.ts:785:         skipped: impactResult.skipped,
+.\src\app\api\activity\complete\route.ts:786:         reason: impactResult.reason,
+.\src\app\api\activity\complete\route.ts:787:         counts: impactResult.counts,
+.\src\app\api\activity\complete\route.ts:788:       },
+.\src\app\api\activity\complete\route.ts:789:       rubricatorClassification: {
+.\src\app\api\activity\complete\route.ts:790:         ok: rubricatorClassificationResult.ok,
+.\src\app\api\activity\complete\route.ts:791:         skipped: rubricatorClassificationResult.skipped,
+.\src\app\api\activity\complete\route.ts:792:         skipReason: rubricatorClassificationResult.skipReason,
+.\src\app\api\activity\complete\route.ts:793:         ruleKey: rubricatorClassificationResult.ruleKey,
+.\src\app\api\activity\complete\route.ts:794:         classificationId: rubricatorClassificationResult.classificationId,
+.\src\app\api\activity\complete\route.ts:795:         classificationStatus:
+.\src\app\api\activity\complete\route.ts:796:           rubricatorClassificationResult.classificationStatus,
+.\src\app\api\activity\complete\route.ts:797:         created: rubricatorClassificationResult.created,
+.\src\app\api\activity\complete\route.ts:798:         alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+.\src\app\api\activity\complete\route.ts:799:         errors: rubricatorClassificationResult.errors,
+.\src\app\api\activity\complete\route.ts:800:       },
+.\src\app\api\activity\complete\route.ts:801:       valueObjectBridge: {
+.\src\app\api\activity\complete\route.ts:802:         ok: valueObjectBridgeResult.ok,
+.\src\app\api\activity\complete\route.ts:803:         skipped: valueObjectBridgeResult.skipped,
+.\src\app\api\activity\complete\route.ts:804:         skipReason: valueObjectBridgeResult.skipReason,
+.\src\app\api\activity\complete\route.ts:805:         errors: valueObjectBridgeResult.errors,
+.\src\app\api\activity\complete\route.ts:806:         mapping: valueObjectBridgeResult.mappingResult
+.\src\app\api\activity\complete\route.ts:807:           ? {
+.\src\app\api\activity\complete\route.ts:808:               ok: valueObjectBridgeResult.mappingResult.ok,
+.\src\app\api\activity\complete\route.ts:809:               skipped: valueObjectBridgeResult.mappingResult.skipped,
+.\src\app\api\activity\complete\route.ts:810:               skipReason: valueObjectBridgeResult.mappingResult.skipReason,
+.\src\app\api\activity\complete\route.ts:811:               classificationSummaryCount:
+.\src\app\api\activity\complete\route.ts:812:                 valueObjectBridgeResult.mappingResult.classificationSummary
+.\src\app\api\activity\complete\route.ts:813:                   .length,
+.\src\app\api\activity\complete\route.ts:814:               mappingsCount:
+.\src\app\api\activity\complete\route.ts:815:                 valueObjectBridgeResult.mappingResult.mappings.length,
+.\src\app\api\activity\complete\route.ts:816:             }
+.\src\app\api\activity\complete\route.ts:817:           : null,
+.\src\app\api\activity\complete\route.ts:818:         bridge: valueObjectBridgeResult.bridgeResult
+.\src\app\api\activity\complete\route.ts:819:           ? {
+.\src\app\api\activity\complete\route.ts:820:               ok: valueObjectBridgeResult.bridgeResult.ok,
+.\src\app\api\activity\complete\route.ts:821:               skipped: valueObjectBridgeResult.bridgeResult.skipped,
+.\src\app\api\activity\complete\route.ts:822:               skipReason: valueObjectBridgeResult.bridgeResult.skipReason,
+.\src\app\api\activity\complete\route.ts:823:               mappingsRequested:
+.\src\app\api\activity\complete\route.ts:824:                 valueObjectBridgeResult.bridgeResult.mappingsRequested,
+.\src\app\api\activity\complete\route.ts:825:               createdCount:
+.\src\app\api\activity\complete\route.ts:826:                 valueObjectBridgeResult.bridgeResult.created.length,
+.\src\app\api\activity\complete\route.ts:827:               created: valueObjectBridgeResult.bridgeResult.created,
+.\src\app\api\activity\complete\route.ts:828:               errors: valueObjectBridgeResult.bridgeResult.errors,
+.\src\app\api\activity\complete\route.ts:829:             }
+.\src\app\api\activity\complete\route.ts:830:           : null,
+.\src\app\api\activity\complete\route.ts:831:       },
+.\src\app\api\activity\complete\route.ts:832:       processingLogs: {
+.\src\app\api\activity\complete\route.ts:833:         rawSignalId: rawSignal?.id ?? null,
+.\src\app\api\activity\complete\route.ts:834:         processingRunId,
+.\src\app\api\activity\complete\route.ts:835:         rubricatorClassification: {
+.\src\app\api\activity\complete\route.ts:836:           ok: rubricatorClassificationLogResult.ok,
+.\src\app\api\activity\complete\route.ts:837:           error: rubricatorClassificationLogResult.error,
+.\src\app\api\activity\complete\route.ts:838:           logId: rubricatorClassificationLogResult.log?.id ?? null,
+.\src\app\api\activity\complete\route.ts:839:         },
+.\src\app\api\activity\complete\route.ts:840:         valueObjectBridge: {
+.\src\app\api\activity\complete\route.ts:841:           ok: valueObjectBridgeLogResult.ok,
+.\src\app\api\activity\complete\route.ts:842:           error: valueObjectBridgeLogResult.error,
+.\src\app\api\activity\complete\route.ts:843:           logId: valueObjectBridgeLogResult.log?.id ?? null,
+.\src\app\api\activity\complete\route.ts:844:         },
+.\src\app\api\activity\complete\route.ts:845:       },
+.\src\app\api\activity\complete\route.ts:846:       rawSignal: rawSignal
+.\src\app\api\activity\complete\route.ts:847:         ? {
+.\src\app\api\activity\complete\route.ts:848:             id: rawSignal.id,
+.\src\app\api\activity\complete\route.ts:849:             processingStatus:
+.\src\app\api\activity\complete\route.ts:850:               processedSignalResult?.signal?.processing_status ??
+
+===== .\src\app\api\activity\intake\events\[id]\confirm\route.ts:580-770 =====
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:580:       const rawSignalIdForProcessingLog =
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:581:         typeof (confirmedMetadataAfterImpacts as Record<string, unknown>).rawSignalId ===
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:582:         "string"
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:583:           ? ((confirmedMetadataAfterImpacts as Record<string, unknown>)
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:584:               .rawSignalId as string)
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:585:           : null;
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:586: 
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:587:       const rubricatorClassificationResult =
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:588:         await ensureActivityEventRubricatorClassificationForKnownTemplate({
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:589:           supabase,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:590:           eventId: updatedEvent.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:591:           userId: appUser.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:592:           activityTemplateId: updatedEvent.activity_template_id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:593:           processorName:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:594:             "activity_confirm_route_known_template_rubricator_classification",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:595:         });
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:596: 
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:597:       const rubricatorClassificationLogResult =
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:598:         await safeCreateActivityProcessingLog({
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:599:           userId: appUser.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:600:           rawSignalId: rawSignalIdForProcessingLog,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:601:           activityEventId: updatedEvent.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:602:         processingRunId,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:603:         processorName: "activity_confirm_route_rubricator_classification",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:604:         processingStage: "finalize",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:605:         processingStatus: rubricatorClassificationResult.ok
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:606:           ? rubricatorClassificationResult.skipped
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:607:             ? "skipped"
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:608:             : "completed"
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:609:           : "warning",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:610:         severity: rubricatorClassificationResult.ok ? "info" : "warning",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:611:         message:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:612:           "Known-template rubricator classification ensured before Value Object bridge.",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:613:         input: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:614:           eventId: updatedEvent.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:615:           activityTemplateId: updatedEvent.activity_template_id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:616:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:617:         output: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:618:           ok: rubricatorClassificationResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:619:           skipped: rubricatorClassificationResult.skipped,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:620:           skipReason: rubricatorClassificationResult.skipReason,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:621:           ruleKey: rubricatorClassificationResult.ruleKey,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:622:           classificationId: rubricatorClassificationResult.classificationId,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:623:           classificationStatus:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:624:             rubricatorClassificationResult.classificationStatus,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:625:           created: rubricatorClassificationResult.created,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:626:           alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:627:           errors: rubricatorClassificationResult.errors,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:628:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:629:         metadata: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:630:           endpoint: ENDPOINT,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:631:           mode: "imported_pending_confirm",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:632:           p4Step: "P4.7.8-R-H1",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:633:           ruleResolver: buildRubricatorResolverLogMetadata(rubricatorClassificationResult),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:634:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:635:         startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:636:         finishedAt: new Date().toISOString(),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:637:         durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:638:       });
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:639: 
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:640:       const valueObjectBridgeResult = await processActivityValueObjectBridge({
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:641:         supabase,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:642:         eventId: updatedEvent.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:643:         processorName: "activity_confirm_route_p4_7_7",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:644:       });
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:645: 
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:646:       const valueObjectBridgeLogResult =
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:647:         await safeCreateActivityProcessingLog({
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:648:           userId: appUser.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:649:           rawSignalId: rawSignalIdForProcessingLog,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:650:           activityEventId: updatedEvent.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:651:         processingRunId,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:652:         processorName: "activity_confirm_route_value_object_bridge",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:653:         processingStage: "finalize",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:654:         processingStatus: valueObjectBridgeResult.ok
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:655:           ? valueObjectBridgeResult.skipped
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:656:             ? "skipped"
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:657:             : "completed"
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:658:           : "warning",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:659:         severity: valueObjectBridgeResult.ok ? "info" : "warning",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:660:         message: "Value Object bridge processed after imported pending confirmation.",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:661:         input: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:662:           eventId: updatedEvent.id,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:663:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:664:         output: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:665:           ok: valueObjectBridgeResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:666:           skipped: valueObjectBridgeResult.skipped,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:667:           skipReason: valueObjectBridgeResult.skipReason,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:668:           mappingSkipped: valueObjectBridgeResult.mappingResult?.skipped ?? null,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:669:           mappingsCount: valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:670:           bridgeCreatedCount: valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:671:           errors: valueObjectBridgeResult.errors,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:672:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:673:         metadata: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:674:           endpoint: ENDPOINT,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:675:           mode: "imported_pending_confirm",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:676:           p4Step: "P4.7.7-R-E3",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:677:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:678:         startedAt: processingStartedAt.toISOString(),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:679:         finishedAt: new Date().toISOString(),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:680:         durationMs: getDurationMs(processingStartedAt),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:681:       });
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:682: 
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:683:     return NextResponse.json({
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:684:       ok: true,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:685:       status: "confirmed_completed",
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:686:       endpoint: ENDPOINT,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:687:       activityEvent: summarizeActivityEvent(updatedEvent),
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:688:       impactEvents: impactResult.impactEvents,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:689:       dailyAggregates: impactResult.dailyAggregates,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:690:       currentSnapshots: impactResult.currentSnapshots,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:691:       impactProcessor: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:692:         ok: impactResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:693:         skipped: impactResult.skipped,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:694:         reason: impactResult.reason,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:695:         counts: impactResult.counts,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:696:       },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:697:       confirmMetadataUpdate: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:698:         ok: !confirmMetadataUpdateError,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:699:         error: confirmMetadataUpdateError?.message ?? null,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:700:         noImpactsCreated:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:701:           confirmedMetadataAfterImpacts.noImpactsCreated,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:702:         noDailyAggregatesCreated:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:703:           confirmedMetadataAfterImpacts.noDailyAggregatesCreated,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:704:         noCurrentSnapshotsCreated:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:705:           confirmedMetadataAfterImpacts.noCurrentSnapshotsCreated,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:706:         impactsCreatedAfterConfirm:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:707:           confirmedMetadataAfterImpacts.impactsCreatedAfterConfirm,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:708:         dailyAggregatesCreatedAfterConfirm:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:709:           confirmedMetadataAfterImpacts.dailyAggregatesCreatedAfterConfirm,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:710:         currentSnapshotsCreatedAfterConfirm:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:711:           confirmedMetadataAfterImpacts.currentSnapshotsCreatedAfterConfirm,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:712:       },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:713:       rubricatorClassification: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:714:         ok: rubricatorClassificationResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:715:         skipped: rubricatorClassificationResult.skipped,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:716:         skipReason: rubricatorClassificationResult.skipReason,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:717:         ruleKey: rubricatorClassificationResult.ruleKey,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:718:         classificationId: rubricatorClassificationResult.classificationId,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:719:         classificationStatus:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:720:           rubricatorClassificationResult.classificationStatus,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:721:         created: rubricatorClassificationResult.created,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:722:         alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:723:         errors: rubricatorClassificationResult.errors,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:724:       },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:725:       valueObjectBridge: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:726:         ok: valueObjectBridgeResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:727:         skipped: valueObjectBridgeResult.skipped,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:728:         skipReason: valueObjectBridgeResult.skipReason,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:729:         errors: valueObjectBridgeResult.errors,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:730:         mapping: valueObjectBridgeResult.mappingResult
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:731:           ? {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:732:               ok: valueObjectBridgeResult.mappingResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:733:               skipped: valueObjectBridgeResult.mappingResult.skipped,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:734:               skipReason: valueObjectBridgeResult.mappingResult.skipReason,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:735:               classificationSummaryCount:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:736:                 valueObjectBridgeResult.mappingResult.classificationSummary
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:737:                   .length,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:738:               mappingsCount:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:739:                 valueObjectBridgeResult.mappingResult.mappings.length,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:740:             }
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:741:           : null,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:742:         bridge: valueObjectBridgeResult.bridgeResult
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:743:           ? {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:744:               ok: valueObjectBridgeResult.bridgeResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:745:               skipped: valueObjectBridgeResult.bridgeResult.skipped,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:746:               skipReason: valueObjectBridgeResult.bridgeResult.skipReason,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:747:               mappingsRequested:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:748:                 valueObjectBridgeResult.bridgeResult.mappingsRequested,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:749:               createdCount:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:750:                 valueObjectBridgeResult.bridgeResult.created.length,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:751:               created: valueObjectBridgeResult.bridgeResult.created,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:752:               errors: valueObjectBridgeResult.bridgeResult.errors,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:753:             }
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:754:           : null,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:755:       },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:756:       processingLogs: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:757:         rawSignalId: rawSignalIdForProcessingLog,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:758:         rubricatorClassification: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:759:           ok: rubricatorClassificationLogResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:760:           error: rubricatorClassificationLogResult.error,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:761:           logId: rubricatorClassificationLogResult.log?.id ?? null,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:762:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:763:         valueObjectBridge: {
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:764:           ok: valueObjectBridgeLogResult.ok,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:765:           error: valueObjectBridgeLogResult.error,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:766:           logId: valueObjectBridgeLogResult.log?.id ?? null,
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:767:         },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:768:       },
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:769:       note:
+.\src\app\api\activity\intake\events\[id]\confirm\route.ts:770:         "Imported pending activity_event was confirmed into completed status. Rule-based impacts were processed when matching rules were available.",
