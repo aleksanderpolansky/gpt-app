@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+﻿import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { ValueObjectBridgeMapping } from "./valueObjectBridge";
 
@@ -168,52 +168,6 @@ const CONTROLLED_RUBRICATOR_VALUE_OBJECT_RULES: readonly ControlledRubricatorVal
         "training",
       ],
       ["health", "body", "rehab", "recovery", "load", "здоров", "salud", "gesundheit"],
-    ],
-  },
-  {
-    ruleKey: "walking_to_work_duration",
-    valueObjectTitle: "Walking to work",
-    valueObjectType: "health_activity",
-    valueObjectDescription:
-      "Controlled P4.10.0-C6 free-text value object for walking to work / commuting on foot. No medical diagnosis or treatment claim.",
-    valueObjectUnitType: "minutes",
-    defaultDurationMinutes: 15,
-    objectTypeCode: "walking",
-    actionTypeCode: "walk",
-    contextCode: "commute",
-    contextualCategorySlug: "walking-to-work",
-    relationType: "executes",
-    metricKey: "duration_minutes",
-    metricUnit: "minutes",
-    deltaDirection: "increase",
-    aggregateType: "value_object",
-    fallbackNeedleGroups: [
-      [
-        "walk",
-        "walking",
-        "walked",
-        "foot",
-        "on foot",
-        "пешком",
-        "pieszo",
-        "caminar",
-        "andando",
-        "zu fuss",
-      ],
-      [
-        "work",
-        "job",
-        "office",
-        "commute",
-        "commuting",
-        "работ",
-        "praca",
-        "trabajo",
-        "oficina",
-        "arbeit",
-        "buro",
-        "buero",
-      ],
     ],
   },
 ];
