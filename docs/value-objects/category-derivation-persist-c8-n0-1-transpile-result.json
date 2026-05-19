@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "checkId": "P4.10.0-C8-N0.1",
+  "checkedAt": "2026-05-19T17:38:42.684Z",
+  "targetPath": "lib\\activity\\categoryDerivation\\persistDerivations.ts",
+  "emittedJsLength": 7817,
+  "diagnosticsCount": 0,
+  "diagnostics": [],
+  "note": "This is a syntax/transpile smoke check only. It does not mean global repo lint/typecheck is clean."
+}
