@@ -1,0 +1,234 @@
+{
+  "ok": true,
+  "checkId": "P4.10.0-C8-L1",
+  "checkedAt": "2026-05-19T17:23:45.931Z",
+  "extractorPath": "lib\\activity\\categoryDerivation\\ruleExtractor.ts",
+  "processorVersion": "category_derivation_v1",
+  "ruleVersion": "rules_v1",
+  "totalCases": 8,
+  "passedCases": 8,
+  "failedCases": 0,
+  "cases": [
+    {
+      "id": "walked_to_work",
+      "inputText": "walked to work for 15 minutes",
+      "passed": true,
+      "ok": true,
+      "skipped": false,
+      "skipReason": null,
+      "confidence": 0.922,
+      "candidateCount": 5,
+      "slugs": [
+        "commute-to-work",
+        "duration-minutes",
+        "walking",
+        "walking-to-work",
+        "work"
+      ],
+      "expectedSlugs": [
+        "walking",
+        "work",
+        "commute-to-work",
+        "walking-to-work",
+        "duration-minutes"
+      ],
+      "missingSlugs": [],
+      "forbiddenSlugs": [],
+      "forbiddenPresent": [],
+      "warnings": [],
+      "errors": []
+    },
+    {
+      "id": "walking_dog_ru",
+      "inputText": "гулял с собакой 20 минут",
+      "passed": true,
+      "ok": true,
+      "skipped": false,
+      "skipReason": null,
+      "confidence": 0.93,
+      "candidateCount": 4,
+      "slugs": [
+        "dog",
+        "duration-minutes",
+        "pet-care",
+        "walking"
+      ],
+      "expectedSlugs": [
+        "walking",
+        "dog",
+        "pet-care",
+        "duration-minutes"
+      ],
+      "missingSlugs": [],
+      "forbiddenSlugs": [],
+      "forbiddenPresent": [],
+      "warnings": [],
+      "errors": []
+    },
+    {
+      "id": "teach_math_with_child_ru",
+      "inputText": "учил математику с ребёнком 30 минут",
+      "passed": true,
+      "ok": true,
+      "skipped": false,
+      "skipReason": null,
+      "confidence": 0.9171,
+      "candidateCount": 7,
+      "slugs": [
+        "child",
+        "duration-minutes",
+        "family",
+        "helping-child-learn",
+        "mathematics",
+        "parental-care",
+        "teaching"
+      ],
+      "expectedSlugs": [
+        "teaching",
+        "mathematics",
+        "child",
+        "family",
+        "parental-care",
+        "helping-child-learn",
+        "duration-minutes"
+      ],
+      "missingSlugs": [],
+      "forbiddenSlugs": [],
+      "forbiddenPresent": [],
+      "warnings": [],
+      "errors": []
+    },
+    {
+      "id": "child_studied_nearby_ru",
+      "inputText": "ребёнок учил математику рядом со мной 30 минут",
+      "passed": true,
+      "ok": true,
+      "skipped": false,
+      "skipReason": null,
+      "confidence": 0.9,
+      "candidateCount": 4,
+      "slugs": [
+        "child",
+        "duration-minutes",
+        "mathematics",
+        "supervision"
+      ],
+      "expectedSlugs": [
+        "mathematics",
+        "child",
+        "supervision",
+        "duration-minutes"
+      ],
+      "missingSlugs": [],
+      "forbiddenSlugs": [
+        "parental-care",
+        "helping-child-learn"
+      ],
+      "forbiddenPresent": [],
+      "warnings": [],
+      "errors": []
+    },
+    {
+      "id": "watch_film_with_child_ru",
+      "inputText": "смотрел фильм с ребёнком",
+      "passed": true,
+      "ok": true,
+      "skipped": false,
+      "skipReason": null,
+      "confidence": 0.93,
+      "candidateCount": 3,
+      "slugs": [
+        "child",
+        "film",
+        "watching"
+      ],
+      "expectedSlugs": [
+        "watching",
+        "film",
+        "child"
+      ],
+      "missingSlugs": [],
+      "forbiddenSlugs": [],
+      "forbiddenPresent": [],
+      "warnings": [],
+      "errors": []
+    },
+    {
+      "id": "watch_english_cartoon_with_child_ru",
+      "inputText": "смотрел английский мультфильм с ребёнком и обсуждал слова",
+      "passed": true,
+      "ok": true,
+      "skipped": false,
+      "skipReason": null,
+      "confidence": 0.8917,
+      "candidateCount": 6,
+      "slugs": [
+        "cartoon",
+        "child",
+        "english-language",
+        "helping-child-learn",
+        "vocabulary-discussion",
+        "watching"
+      ],
+      "expectedSlugs": [
+        "watching",
+        "english-language",
+        "cartoon",
+        "child",
+        "vocabulary-discussion",
+        "helping-child-learn"
+      ],
+      "missingSlugs": [],
+      "forbiddenSlugs": [],
+      "forbiddenPresent": [],
+      "warnings": [],
+      "errors": []
+    },
+    {
+      "id": "write_commercial_proposal_ru",
+      "inputText": "писал коммерческое предложение клиенту",
+      "passed": true,
+      "ok": true,
+      "skipped": false,
+      "skipReason": null,
+      "confidence": 0.8975,
+      "candidateCount": 4,
+      "slugs": [
+        "b2b-sales",
+        "client",
+        "commercial-proposal",
+        "writing"
+      ],
+      "expectedSlugs": [
+        "writing",
+        "commercial-proposal",
+        "client",
+        "b2b-sales"
+      ],
+      "missingSlugs": [],
+      "forbiddenSlugs": [],
+      "forbiddenPresent": [],
+      "warnings": [],
+      "errors": []
+    },
+    {
+      "id": "no_rule_match",
+      "inputText": "случайная фраза без подходящего правила",
+      "passed": true,
+      "ok": true,
+      "skipped": true,
+      "skipReason": "no_rule_match",
+      "confidence": null,
+      "candidateCount": 0,
+      "slugs": [],
+      "expectedSlugs": [],
+      "missingSlugs": [],
+      "forbiddenSlugs": [],
+      "forbiddenPresent": [],
+      "warnings": [
+        "No deterministic category derivation rule matched the input text."
+      ],
+      "errors": []
+    }
+  ]
+}
