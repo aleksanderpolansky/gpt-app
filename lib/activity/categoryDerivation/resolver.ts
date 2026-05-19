@@ -52,18 +52,18 @@ interface ContextualCategoryRow {
   category_type?: string | null;
   status?: string | null;
   source_type?: string | null;
-  aliases?: JsonRecord[] | string[] | null;
+  aliases?: Array<JsonRecord | string> | null;
   metadata_json?: JsonRecord | null;
 }
 
-function normalizeSlug(value: string): string {
+export function normalizeCategoryCandidateSlug(value: string): string {
   return value
     .normalize("NFKC")
     .toLowerCase()
     .trim()
     .replace(/'/g, "")
-    .replace(/[’]/g, "")
-    .replace(/[^a-z0-9а-яё]+/gi, "-")
+    .replace(/\u2019/g, "")
+    .replace(/[^a-z0-9\u0400-\u04ff]+/gi, "-")
     .replace(/^-+|-+$/g, "")
     .replace(/-{2,}/g, "-");
 }
@@ -212,7 +212,7 @@ export async function resolveCategoryCandidates(
   let unresolvedCount = 0;
 
   for (const candidate of candidates) {
-    const normalizedSlug = normalizeSlug(candidate.slug);
+    const normalizedSlug = normalizeCategoryCandidateSlug(candidate.slug);
 
     if (normalizedSlug.length === 0) {
       unresolvedCount += 1;
