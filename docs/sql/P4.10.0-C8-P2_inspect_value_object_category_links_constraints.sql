@@ -2,15 +2,10 @@
 -- Date: 2026-05-19
 -- Project: gpt-app / AI-NAVIGATOR
 --
--- Goal:
--- Before TypeScript bridge integration, inspect live DB constraints for:
--- - value_object_category_links.category_role
--- - value_object_category_links.source
--- - unique constraint / upsert conflict target
--- - metadata_json object constraint
--- - current sample rows
---
--- Run this SQL only in Supabase SQL Editor.
+-- Safe A2 version:
+-- - no diagnostic json text section
+-- - only actual live DB metadata inspection
+-- - intended for Supabase SQL Editor
 
 with target_table as (
   select
@@ -31,7 +26,7 @@ table_columns as (
    and c.table_name = t.table_name
   order by c.ordinal_position
 ),
-pg_constraints as (
+pg_constraints_rows as (
   select
     con.conname as constraint_name,
     con.contype as constraint_type_code,
@@ -55,15 +50,15 @@ pg_constraints as (
 ),
 pg_indexes_rows as (
   select
-    schemaname,
-    tablename,
-    indexname,
-    indexdef
+    i.schemaname,
+    i.tablename,
+    i.indexname,
+    i.indexdef
   from pg_indexes i
   join target_table t
     on i.schemaname = t.table_schema
    and i.tablename = t.table_name
-  order by indexname
+  order by i.indexname
 ),
 category_role_values as (
   select
@@ -122,7 +117,7 @@ constraint_summary as (
     ) as has_metadata_json_column,
     exists (
       select 1
-      from pg_constraints
+      from pg_constraints_rows
       where constraint_type = 'unique'
         and constraint_definition ilike '%value_object_id%'
         and constraint_definition ilike '%category_table%'
@@ -131,7 +126,7 @@ constraint_summary as (
     ) as has_expected_unique_constraint,
     (
       select constraint_definition
-      from pg_constraints
+      from pg_constraints_rows
       where constraint_name ilike '%category_role%'
          or constraint_definition ilike '%category_role%'
       order by constraint_name
@@ -139,7 +134,7 @@ constraint_summary as (
     ) as category_role_constraint_definition,
     (
       select constraint_definition
-      from pg_constraints
+      from pg_constraints_rows
       where constraint_name ilike '%source%'
          or constraint_definition ilike '%source%'
       order by constraint_name
@@ -147,7 +142,7 @@ constraint_summary as (
     ) as source_constraint_definition,
     (
       select constraint_definition
-      from pg_constraints
+      from pg_constraints_rows
       where constraint_name ilike '%metadata%'
          or constraint_definition ilike '%metadata_json%'
       order by constraint_name
@@ -155,7 +150,7 @@ constraint_summary as (
     ) as metadata_constraint_definition,
     (
       select constraint_definition
-      from pg_constraints
+      from pg_constraints_rows
       where constraint_type = 'unique'
       order by constraint_name
       limit 1
@@ -173,7 +168,7 @@ union all
 select
   '02_constraints' as section,
   coalesce(
-    (select jsonb_agg(to_jsonb(c) order by c.constraint_type, c.constraint_name) from pg_constraints c),
+    (select jsonb_agg(to_jsonb(c) order by c.constraint_type, c.constraint_name) from pg_constraints_rows c),
     '[]'::jsonb
   ) as data
 
@@ -218,16 +213,4 @@ union all
 select
   '07_constraint_summary' as section,
   to_jsonb(s) as data
-from constraint_summary s
-
-union all
-
-select
-  '08_next_decision_inputs' as section,
-  jsonb_build_object(
-    'need_to_confirm_category_role_allows_semantic_component', true,
-    'need_to_confirm_source_allows_category_derivation', true,
-    'if_source_does_not_allow_category_derivation', 'use existing allowed source and put category_derivation into metadata_json_sourceLayer',
-    'expected_upsert_conflict_target', 'value_object_id, category_table, category_id, category_role',
-    'do_not_change_typescript_until_this_sql_is_reviewed', true
-  ) as data;
+from constraint_summary s;
