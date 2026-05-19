@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "checkId": "P4.10.0-C8-O1",
+  "checkedAt": "2026-05-19T17:47:20.638Z",
+  "targetPath": "src\\app\\api\\activity\\debug\\free-text-value-object-test\\route.ts",
+  "emittedJsLength": 19345,
+  "diagnosticsCount": 0,
+  "missingPatterns": [],
+  "diagnostics": [],
+  "note": "This is a route syntax/transpile smoke check only. Runtime verification is the next step."
+}

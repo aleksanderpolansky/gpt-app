@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 
 import {
@@ -9,6 +9,17 @@ import { getActivityUserContext } from "../../../../../../lib/activity/activityU
 import { processActivityValueObjectBridge } from "../../../../../../lib/activity/activityValueObjectLifecycle";
 import { safeCreateActivityProcessingLog } from "../../../../../../lib/activity/activityProcessingLogs";
 import { supabase } from "../../../../../../lib/supabase";
+import { deriveCategoryCandidates } from "../../../../../../lib/activity/categoryDerivation/ruleExtractor";
+import {
+  resolveCategoryCandidates,
+  type CategoryResolverCreatePolicy,
+  type CategoryResolverSupabaseClient,
+} from "../../../../../../lib/activity/categoryDerivation/resolver";
+import {
+  persistCategoryDerivations,
+  type CategoryDerivationPersistenceSupabaseClient,
+} from "../../../../../../lib/activity/categoryDerivation/persistDerivations";
+import type { CategoryDerivationInput } from "../../../../../../lib/activity/categoryDerivation/types";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +31,57 @@ type FreeTextValueObjectTestBody = {
   durationMinutes?: unknown;
   startedAt?: unknown;
   endedAt?: unknown;
+  enableCategoryDerivation?: unknown;
+  categoryDerivationEnabled?: unknown;
+  categoryDerivation?: unknown;
+  categoryDerivationDryRun?: unknown;
+  categoryDerivationCreatePolicy?: unknown;
+};
+
+type CategoryDerivationRouteOptions = {
+  enabled: boolean;
+  dryRun: boolean;
+  createPolicy: CategoryResolverCreatePolicy;
+};
+
+type CategoryDerivationRouteResult = {
+  enabled: boolean;
+  ok: boolean | null;
+  skipped: boolean;
+  reason?: string | null;
+  error?: string | null;
+  options: CategoryDerivationRouteOptions;
+  extraction?: {
+    ok: boolean;
+    skipped: boolean;
+    skipReason: string | null;
+    processorVersion: string;
+    ruleVersion: string | null;
+    confidence: number | null;
+    candidateCount: number;
+    warnings: string[];
+    errors: string[];
+    candidates: unknown[];
+  };
+  resolution?: {
+    ok: boolean;
+    createdCount: number;
+    reusedCount: number;
+    unresolvedCount: number;
+    warnings: string[];
+    errors: string[];
+    candidates: unknown[];
+  };
+  persistence?: {
+    ok: boolean;
+    derivationRunId: string | null;
+    derivationRowsCreated: number;
+    candidateCount: number;
+    resolvedCandidateCount: number;
+    unresolvedCandidateCount: number;
+    warnings: string[];
+    errors: string[];
+  };
 };
 
 function asString(value: unknown): string | null {
@@ -46,6 +108,68 @@ function asNumber(value: unknown): number | null {
   }
 
   return null;
+}
+
+function asBoolean(value: unknown): boolean | null {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (["true", "1", "yes", "y", "on"].includes(normalized)) {
+    return true;
+  }
+
+  if (["false", "0", "no", "n", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return null;
+}
+
+function resolveCategoryDerivationOptions(
+  body: FreeTextValueObjectTestBody
+):
+  | { ok: true; options: CategoryDerivationRouteOptions }
+  | { ok: false; error: string } {
+  const enabled =
+    asBoolean(body.enableCategoryDerivation) ??
+    asBoolean(body.categoryDerivationEnabled) ??
+    asBoolean(body.categoryDerivation) ??
+    false;
+
+  const dryRun = asBoolean(body.categoryDerivationDryRun) ?? false;
+
+  const rawCreatePolicy =
+    asString(body.categoryDerivationCreatePolicy) ?? "suggested_only";
+
+  const allowedPolicies: CategoryResolverCreatePolicy[] = [
+    "never",
+    "suggested_only",
+    "active_for_confirmed_required",
+  ];
+
+  if (!allowedPolicies.includes(rawCreatePolicy as CategoryResolverCreatePolicy)) {
+    return {
+      ok: false,
+      error:
+        "categoryDerivationCreatePolicy must be one of: never, suggested_only, active_for_confirmed_required.",
+    };
+  }
+
+  return {
+    ok: true,
+    options: {
+      enabled,
+      dryRun,
+      createPolicy: rawCreatePolicy as CategoryResolverCreatePolicy,
+    },
+  };
 }
 
 function resolveTiming(body: FreeTextValueObjectTestBody) {
@@ -131,6 +255,127 @@ function resolveTiming(body: FreeTextValueObjectTestBody) {
   };
 }
 
+async function runCategoryDerivationForDebugRoute(params: {
+  activityEventId: string;
+  inputText: string;
+  title: string | null;
+  description: string | null;
+  durationMinutes: number;
+  personActorId: string;
+  options: CategoryDerivationRouteOptions;
+}): Promise<CategoryDerivationRouteResult> {
+  const { options } = params;
+
+  if (!options.enabled) {
+    return {
+      enabled: false,
+      ok: null,
+      skipped: true,
+      reason: "feature_flag_disabled",
+      options,
+    };
+  }
+
+  try {
+    const derivationInput: CategoryDerivationInput = {
+      activityEventId: params.activityEventId,
+      inputText: params.inputText,
+      title: params.title,
+      description: params.description,
+      durationMinutes: params.durationMinutes,
+      inputLanguage: null,
+      actorId: params.personActorId,
+      organizationId: null,
+      metadata: {
+        endpoint: "/api/activity/debug/free-text-value-object-test",
+        p4Step: "P4.10.0-C8-O1",
+        featureFlag: "categoryDerivation",
+      },
+    };
+
+    const extractionResult = deriveCategoryCandidates(derivationInput);
+
+    const resolutionResult = await resolveCategoryCandidates(
+      supabase as unknown as CategoryResolverSupabaseClient,
+      extractionResult.candidates,
+      {
+        createPolicy: options.createPolicy,
+        dryRun: options.dryRun,
+        sourceType: "rule",
+        defaultCategoryType: "derived",
+      }
+    );
+
+    const persistenceResult = await persistCategoryDerivations(
+      supabase as unknown as CategoryDerivationPersistenceSupabaseClient,
+      {
+        activityEventId: params.activityEventId,
+        input: derivationInput,
+        derivationResult: extractionResult,
+        resolvedCandidates: resolutionResult.candidates,
+        actorId: params.personActorId,
+        organizationId: null,
+        modelName: null,
+        promptVersion: null,
+        needsUserConfirmation:
+          resolutionResult.unresolvedCount > 0 ||
+          extractionResult.candidates.some((candidate) =>
+            Boolean(candidate.needsUserReview)
+          ),
+      }
+    );
+
+    const ok =
+      extractionResult.ok && resolutionResult.ok && persistenceResult.ok;
+
+    return {
+      enabled: true,
+      ok,
+      skipped: false,
+      options,
+      extraction: {
+        ok: extractionResult.ok,
+        skipped: extractionResult.skipped ?? false,
+        skipReason: extractionResult.skipReason ?? null,
+        processorVersion: extractionResult.processorVersion,
+        ruleVersion: extractionResult.ruleVersion ?? null,
+        confidence: extractionResult.confidence ?? null,
+        candidateCount: extractionResult.candidates.length,
+        warnings: extractionResult.warnings,
+        errors: extractionResult.errors,
+        candidates: extractionResult.candidates,
+      },
+      resolution: {
+        ok: resolutionResult.ok,
+        createdCount: resolutionResult.createdCount,
+        reusedCount: resolutionResult.reusedCount,
+        unresolvedCount: resolutionResult.unresolvedCount,
+        warnings: resolutionResult.warnings,
+        errors: resolutionResult.errors,
+        candidates: resolutionResult.candidates,
+      },
+      persistence: {
+        ok: persistenceResult.ok,
+        derivationRunId: persistenceResult.derivationRunId,
+        derivationRowsCreated: persistenceResult.derivationRowsCreated,
+        candidateCount: persistenceResult.candidateCount,
+        resolvedCandidateCount: persistenceResult.resolvedCandidateCount,
+        unresolvedCandidateCount: persistenceResult.unresolvedCandidateCount,
+        warnings: persistenceResult.warnings,
+        errors: persistenceResult.errors,
+      },
+    };
+  } catch (error) {
+    return {
+      enabled: true,
+      ok: false,
+      skipped: false,
+      error: error instanceof Error ? error.message : String(error),
+      options,
+    };
+  }
+}
+
 export async function GET() {
   return NextResponse.json({
     ok: true,
@@ -140,10 +385,25 @@ export async function GET() {
     message: ACTIVITY_RECORDING_ENABLED
       ? "Debug-only endpoint for testing completed free-text Activity Event -> Value Object fallback mapping."
       : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+    categoryDerivation: {
+      available: true,
+      defaultEnabled: false,
+      enableFlag: "enableCategoryDerivation",
+      dryRunFlag: "categoryDerivationDryRun",
+      createPolicyField: "categoryDerivationCreatePolicy",
+      createPolicyValues: [
+        "never",
+        "suggested_only",
+        "active_for_confirmed_required",
+      ],
+    },
     example: {
       inputText: "walked to work for 15 minutes",
       durationMinutes: 15,
       title: "Walked to work",
+      enableCategoryDerivation: true,
+      categoryDerivationCreatePolicy: "suggested_only",
+      categoryDerivationDryRun: false,
     },
   });
 }
@@ -185,6 +445,7 @@ export async function POST(request: Request) {
       { status: 401 }
     );
   }
+
   const inputText = asString(body.inputText) ?? asString(body.naturalInput);
 
   if (!inputText) {
@@ -209,9 +470,25 @@ export async function POST(request: Request) {
     );
   }
 
+  const categoryDerivationOptionsResult =
+    resolveCategoryDerivationOptions(body);
+
+  if (!categoryDerivationOptionsResult.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: categoryDerivationOptionsResult.error,
+      },
+      { status: 400 }
+    );
+  }
+
+  const categoryDerivationOptions = categoryDerivationOptionsResult.options;
   const processingRunId = randomUUID();
   const processingStartedAt = new Date();
   const nowIso = new Date().toISOString();
+  const title = asString(body.title) ?? "Free-text activity test";
+  const description = asString(body.description);
 
   const { data: createdEventData, error: createError } = await supabase
     .from("activity_events")
@@ -225,8 +502,8 @@ export async function POST(request: Request) {
       template_id: null,
       event_code: null,
       input_text: inputText,
-      title: asString(body.title) ?? "Free-text activity test",
-      description: asString(body.description),
+      title,
+      description,
       started_at: timing.startedAt,
       ended_at: timing.endedAt,
       duration_minutes: timing.durationMinutes,
@@ -236,8 +513,11 @@ export async function POST(request: Request) {
       processing_status: "processed",
       metadata_json: {
         parser: "debug_free_text_value_object_test_v1",
-        p4Step: "P4.10.0-C7",
+        p4Step: "P4.10.0-C8-O1",
         freeTextValueObjectTest: true,
+        categoryDerivationEnabled: categoryDerivationOptions.enabled,
+        categoryDerivationDryRun: categoryDerivationOptions.dryRun,
+        categoryDerivationCreatePolicy: categoryDerivationOptions.createPolicy,
         aiUsed: false,
         createdAt: nowIso,
       },
@@ -257,12 +537,25 @@ export async function POST(request: Request) {
 
   const createdEvent = createdEventData as { id: string };
 
+  const categoryDerivationResult = await runCategoryDerivationForDebugRoute({
+    activityEventId: createdEvent.id,
+    inputText,
+    title,
+    description,
+    durationMinutes: timing.durationMinutes,
+    personActorId: personActor.id,
+    options: categoryDerivationOptions,
+  });
+
   const bridgeResult = await processActivityValueObjectBridge({
     supabase,
     eventId: createdEvent.id,
     processorName: "activity_debug_free_text_value_object_test",
     allowNonCompletedEvent: false,
   });
+
+  const categoryDerivationWarning =
+    categoryDerivationResult.enabled && categoryDerivationResult.ok === false;
 
   const logResult = await safeCreateActivityProcessingLog({
     userId: appUser.id,
@@ -272,16 +565,24 @@ export async function POST(request: Request) {
     processorName: "activity_debug_free_text_value_object_test",
     processingStage: "finalize",
     processingStatus: bridgeResult.ok
-      ? bridgeResult.skipped
-        ? "skipped"
-        : "completed"
+      ? categoryDerivationWarning
+        ? "warning"
+        : bridgeResult.skipped
+          ? "skipped"
+          : "completed"
       : "warning",
-    severity: bridgeResult.ok ? "info" : "warning",
+    severity:
+      bridgeResult.ok && !categoryDerivationWarning ? "info" : "warning",
     message: "Debug free-text Value Object bridge processed.",
     input: {
       eventId: createdEvent.id,
       inputText,
       durationMinutes: timing.durationMinutes,
+      categoryDerivation: {
+        enabled: categoryDerivationOptions.enabled,
+        dryRun: categoryDerivationOptions.dryRun,
+        createPolicy: categoryDerivationOptions.createPolicy,
+      },
     },
     output: {
       ok: bridgeResult.ok,
@@ -291,24 +592,47 @@ export async function POST(request: Request) {
       mappingsCount: bridgeResult.mappingResult?.mappings.length ?? 0,
       bridgeCreatedCount: bridgeResult.bridgeResult?.created.length ?? 0,
       errors: bridgeResult.errors,
+      categoryDerivation: {
+        enabled: categoryDerivationResult.enabled,
+        ok: categoryDerivationResult.ok,
+        skipped: categoryDerivationResult.skipped,
+        error: categoryDerivationResult.error ?? null,
+        extractionCandidateCount:
+          categoryDerivationResult.extraction?.candidateCount ?? null,
+        resolutionCreatedCount:
+          categoryDerivationResult.resolution?.createdCount ?? null,
+        resolutionReusedCount:
+          categoryDerivationResult.resolution?.reusedCount ?? null,
+        resolutionUnresolvedCount:
+          categoryDerivationResult.resolution?.unresolvedCount ?? null,
+        derivationRunId:
+          categoryDerivationResult.persistence?.derivationRunId ?? null,
+        derivationRowsCreated:
+          categoryDerivationResult.persistence?.derivationRowsCreated ?? null,
+      },
     },
     metadata: {
       endpoint: "/api/activity/debug/free-text-value-object-test",
-      p4Step: "P4.10.0-C7",
+      p4Step: "P4.10.0-C8-O1",
     },
     startedAt: processingStartedAt.toISOString(),
     finishedAt: new Date().toISOString(),
     durationMs: new Date().getTime() - processingStartedAt.getTime(),
   });
 
+  const responseOk =
+    bridgeResult.ok &&
+    (!categoryDerivationResult.enabled || categoryDerivationResult.ok !== false);
+
   return NextResponse.json({
-    ok: bridgeResult.ok,
+    ok: responseOk,
     status: bridgeResult.ok
       ? bridgeResult.skipped
         ? "created_but_bridge_skipped"
         : "created_and_bridge_processed"
       : "created_but_bridge_failed",
     event: createdEventData,
+    categoryDerivation: categoryDerivationResult,
     valueObjectBridge: {
       ok: bridgeResult.ok,
       skipped: bridgeResult.skipped,
@@ -347,5 +671,3 @@ export async function POST(request: Request) {
     },
   });
 }
-
-
