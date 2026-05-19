@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
+import { getValueObjectCloudDebugAccess } from "../../../../../../lib/value-objects/objectCloudDebugGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -252,6 +253,20 @@ function buildLatestObjects(rows: CloudProfileRow[]): LatestObjectItem[] {
 export async function GET(request: Request) {
   const endpoint = "/api/value-objects/debug/cloud-profile";
 
+  const debugAccess = getValueObjectCloudDebugAccess();
+
+  if (!debugAccess.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        endpoint,
+        error: "Value Object cloud debug endpoint is disabled.",
+        debugAccess,
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     const userContext = await getCurrentUserContext();
 
@@ -416,5 +431,6 @@ export async function GET(request: Request) {
     );
   }
 }
+
 
 
