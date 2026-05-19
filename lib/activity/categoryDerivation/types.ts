@@ -115,6 +115,10 @@ export interface CategoryDerivationRunInsert {
 }
 
 export interface ActivityCategoryDerivationInsert {
+  activity_event_id: string;
+  derivation_run_id?: string | null;
+  category_id?: string | null;
+  candidate_slug: string;
   candidate_title?: string | null;
   semantic_layer?: string | null;
   category_type?: string | null;
