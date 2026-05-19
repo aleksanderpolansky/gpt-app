@@ -1,0 +1,232 @@
+{
+  "ok": true,
+  "checkId": "P4.10.0-C8-L2",
+  "checkedAt": "2026-05-19T17:26:32.617Z",
+  "extractorPath": "lib\\activity\\categoryDerivation\\ruleExtractor.ts",
+  "processorVersion": "category_derivation_v1",
+  "ruleVersion": "rules_v1",
+  "purpose": "Confirm that real Unicode Cyrillic strings match deterministic rules, not only PowerShell-rendered text.",
+  "totalCases": 5,
+  "passedCases": 5,
+  "failedCases": 0,
+  "cases": [
+    {
+      "id": "unicode_walking_dog_ru",
+      "passed": true,
+      "inputText": "гулял с собакой 20 минут",
+      "firstCodePoints": [
+        "0433",
+        "0443",
+        "043b",
+        "044f",
+        "043b",
+        "0020",
+        "0441",
+        "0020",
+        "0441",
+        "043e",
+        "0431",
+        "0430"
+      ],
+      "ok": true,
+      "skipped": false,
+      "skipReason": null,
+      "confidence": 0.93,
+      "candidateCount": 4,
+      "slugs": [
+        "dog",
+        "duration-minutes",
+        "pet-care",
+        "walking"
+      ],
+      "expectedSlugs": [
+        "walking",
+        "dog",
+        "pet-care",
+        "duration-minutes"
+      ],
+      "missingSlugs": [],
+      "forbiddenSlugs": [],
+      "forbiddenPresent": [],
+      "warnings": [],
+      "errors": []
+    },
+    {
+      "id": "unicode_teach_math_with_child_ru",
+      "passed": true,
+      "inputText": "учил математику с ребёнком 30 минут",
+      "firstCodePoints": [
+        "0443",
+        "0447",
+        "0438",
+        "043b",
+        "0020",
+        "043c",
+        "0430",
+        "0442",
+        "0435",
+        "043c",
+        "0430",
+        "0442"
+      ],
+      "ok": true,
+      "skipped": false,
+      "skipReason": null,
+      "confidence": 0.9171,
+      "candidateCount": 7,
+      "slugs": [
+        "child",
+        "duration-minutes",
+        "family",
+        "helping-child-learn",
+        "mathematics",
+        "parental-care",
+        "teaching"
+      ],
+      "expectedSlugs": [
+        "teaching",
+        "mathematics",
+        "child",
+        "family",
+        "parental-care",
+        "helping-child-learn",
+        "duration-minutes"
+      ],
+      "missingSlugs": [],
+      "forbiddenSlugs": [],
+      "forbiddenPresent": [],
+      "warnings": [],
+      "errors": []
+    },
+    {
+      "id": "unicode_child_studied_nearby_ru",
+      "passed": true,
+      "inputText": "ребёнок учил математику рядом со мной 30 минут",
+      "firstCodePoints": [
+        "0440",
+        "0435",
+        "0431",
+        "0451",
+        "043d",
+        "043e",
+        "043a",
+        "0020",
+        "0443",
+        "0447",
+        "0438",
+        "043b"
+      ],
+      "ok": true,
+      "skipped": false,
+      "skipReason": null,
+      "confidence": 0.9,
+      "candidateCount": 4,
+      "slugs": [
+        "child",
+        "duration-minutes",
+        "mathematics",
+        "supervision"
+      ],
+      "expectedSlugs": [
+        "mathematics",
+        "child",
+        "supervision",
+        "duration-minutes"
+      ],
+      "missingSlugs": [],
+      "forbiddenSlugs": [
+        "parental-care",
+        "helping-child-learn"
+      ],
+      "forbiddenPresent": [],
+      "warnings": [],
+      "errors": []
+    },
+    {
+      "id": "unicode_watch_english_cartoon_ru",
+      "passed": true,
+      "inputText": "смотрел английский мультфильм с ребёнком и обсуждал слова",
+      "firstCodePoints": [
+        "0441",
+        "043c",
+        "043e",
+        "0442",
+        "0440",
+        "0435",
+        "043b",
+        "0020",
+        "0430",
+        "043d",
+        "0433",
+        "043b"
+      ],
+      "ok": true,
+      "skipped": false,
+      "skipReason": null,
+      "confidence": 0.8917,
+      "candidateCount": 6,
+      "slugs": [
+        "cartoon",
+        "child",
+        "english-language",
+        "helping-child-learn",
+        "vocabulary-discussion",
+        "watching"
+      ],
+      "expectedSlugs": [
+        "watching",
+        "english-language",
+        "cartoon",
+        "child",
+        "vocabulary-discussion",
+        "helping-child-learn"
+      ],
+      "missingSlugs": [],
+      "forbiddenSlugs": [],
+      "forbiddenPresent": [],
+      "warnings": [],
+      "errors": []
+    },
+    {
+      "id": "unicode_commercial_proposal_ru",
+      "passed": true,
+      "inputText": "писал коммерческое предложение клиенту",
+      "firstCodePoints": [
+        "043f",
+        "0438",
+        "0441",
+        "0430",
+        "043b",
+        "0020",
+        "043a",
+        "043e",
+        "043c",
+        "043c",
+        "0435",
+        "0440"
+      ],
+      "ok": true,
+      "skipped": false,
+      "skipReason": null,
+      "confidence": 0.8975,
+      "candidateCount": 4,
+      "slugs": [
+        "b2b-sales",
+        "client",
+        "commercial-proposal",
+        "writing"
+      ],
+      "expectedSlugs": [
+        "writing",
+        "commercial-proposal",
+        "client",
+        "b2b-sales"
+      ],
+      "missingSlugs": [],
+      "forbiddenSlugs": [],
+      "forbiddenPresent": [],
+      "warnings": [],
+      "errors": []
+    }
+  ]
+}
