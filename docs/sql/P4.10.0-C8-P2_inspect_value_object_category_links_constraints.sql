@@ -227,7 +227,7 @@ select
   jsonb_build_object(
     'need_to_confirm_category_role_allows_semantic_component', true,
     'need_to_confirm_source_allows_category_derivation', true,
-    'if_source_does_not_allow_category_derivation', 'use existing allowed source and put category_derivation into metadata_json.sourceLayer',
+    'if_source_does_not_allow_category_derivation', 'use existing allowed source and put category_derivation into metadata_json_sourceLayer',
     'expected_upsert_conflict_target', 'value_object_id, category_table, category_id, category_role',
     'do_not_change_typescript_until_this_sql_is_reviewed', true
   ) as data;
