@@ -1,4 +1,4 @@
-﻿import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type BridgeSource =
   | "rule"
@@ -114,6 +114,32 @@ export type ValueObjectBridgeMapping = {
   metadata?: Record<string, unknown>;
 };
 
+export type AdditionalValueObjectCategoryLink = {
+  /**
+   * C8-P additive optional category-link contract.
+   *
+   * This type is intentionally optional and is not used unless a caller passes
+   * additionalCategoryLinks into processValueObjectBridge().
+   */
+  categoryId: string;
+  categoryTable?: "contextual_categories";
+  categoryRole?: ValueObjectCategoryRole;
+  source?: V42ProjectionSource;
+  confidence?: number | null;
+
+  derivationRunId?: string | null;
+  activityCategoryDerivationId?: string | null;
+  activityEventId?: string | null;
+
+  candidateSlug: string;
+  candidateTitle?: string | null;
+  semanticLayer?: string | null;
+  categoryType?: string | null;
+  resolutionStatus?: string | null;
+
+  metadata?: Record<string, unknown>;
+};
+
 export type ProcessValueObjectBridgeInput = {
   supabase: SupabaseClient;
   eventId: string;
@@ -121,6 +147,14 @@ export type ProcessValueObjectBridgeInput = {
   source?: BridgeSource;
   allowNonCompletedEvent?: boolean;
   processorName?: string;
+
+  /**
+   * C8-P additive optional input.
+   *
+   * When absent, existing bridge behavior must remain unchanged.
+   * Runtime handling is intentionally implemented in a later checkpoint.
+   */
+  additionalCategoryLinks?: AdditionalValueObjectCategoryLink[];
 };
 
 export type ValueObjectBridgeCreatedItem = {

@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "checkId": "P4.10.0-C8-P3-B1",
+  "checkedAt": "2026-05-19T19:14:26.608Z",
+  "targetPath": "lib\\activity\\valueObjectBridge.ts",
+  "emittedJsLength": 32606,
+  "diagnosticsCount": 0,
+  "missingPatterns": [],
+  "diagnostics": [],
+  "note": "This is a targeted transpile/pattern smoke check for the additive additionalCategoryLinks type contract."
+}
