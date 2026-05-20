@@ -1,0 +1,27 @@
+{
+  "ok": false,
+  "checkId": "P4.10.0-C8-P3-B6-D-C-retry-check",
+  "checkedAt": "2026-05-20T09:55:14.812Z",
+  "targetPath": "lib\\activity\\categoryDerivation\\resolver.ts",
+  "diagnosticsCount": 0,
+  "missingPatterns": [
+    "DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE = \"personal_activity\"",
+    "function findDefaultCategoryDerivationContextId",
+    "function normalizeContextualCategorySourceType",
+    ".from<ContextRow>(\"contexts\")",
+    ".eq(\"code\", DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE)",
+    ".eq(\"is_active\", true)",
+    "contextId?: string | null",
+    ".eq(\"context_id\", contextId)",
+    "context_id: contextId",
+    "normalizeContextualCategorySourceType(options.sourceType)",
+    "const defaultContextResult =",
+    "const defaultContextId = defaultContextResult.contextId",
+    "Cannot create contextual category without default context",
+    "missingContextCode: DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE",
+    "defaultContextId,"
+  ],
+  "forbiddenFound": [],
+  "failedChecks": [],
+  "diagnostics": []
+}

@@ -1,0 +1,567 @@
+﻿P4.10.0-C8-P3-B6-D-C-retry0 — exact resolver blocks
+Date: 2026-05-20
+
+
+============================================================
+1. Git status
+============================================================
+
+?? docs/value-objects/category-derivation-resolver-retry0-exact-blocks.txt
+?? scripts/check-c8-p3-b6-d-c-retry-resolver-context.cjs
+?? scripts/patch-c8-p3-b6-d-c-retry-resolver-context.cjs
+
+============================================================
+2. Recent commits
+============================================================
+
+2d856cd Recover category derivation resolver after failed context patch
+bad18ee Fix category derivation resolver contextual category context
+c22056e Document live context resolution result for category derivation
+d0d4c96 Add live context resolution SQL check
+b0c4003 Map exact contextual categories schema and resolver create path
+0663508 Document category derivation route browser suite partial result
+f74fa90 Add category derivation route browser regression suite
+2da385a Fix category derivation route activity event id passthrough
+
+============================================================
+3. First 40 lines
+============================================================
+
+    1: import type {
+    2:   CategoryCandidate,
+    3:   CategoryResolutionResult,
+    4:   JsonRecord,
+    5:   ResolvedCategoryCandidate,
+    6: } from "./types";
+    7: 
+    8: export type CategoryResolverCreatePolicy =
+    9:   | "never"
+   10:   | "suggested_only"
+   11:   | "active_for_confirmed_required";
+   12: 
+   13: export interface CategoryResolverOptions {
+   14:   createPolicy?: CategoryResolverCreatePolicy;
+   15:   defaultStatus?: "active" | "suggested" | "needs_review";
+   16:   defaultCategoryType?: string;
+   17:   sourceType?: string;
+   18:   dryRun?: boolean;
+   19: }
+   20: 
+   21: interface SupabaseMaybeSingleResult<T> {
+   22:   data: T | null;
+   23:   error: { message?: string } | null;
+   24: }
+   25: 
+   26: interface SupabaseSelectBuilder<T> {
+   27:   eq(column: string, value: string): SupabaseSelectBuilder<T>;
+   28:   limit(count: number): SupabaseSelectBuilder<T>;
+   29:   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
+   30: }
+   31: 
+   32: interface SupabaseInsertBuilder<T> {
+   33:   select(columns?: string): SupabaseInsertBuilder<T>;
+   34:   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
+   35: }
+   36: 
+   37: interface SupabaseTableClient<T> {
+   38:   select(columns?: string): SupabaseSelectBuilder<T>;
+   39:   insert(payload: Record<string, unknown>): SupabaseInsertBuilder<T>;
+   40: }
+
+============================================================
+4. SupabaseSelectBuilder eq type
+============================================================
+
+MATCH COUNT: 1
+
+----- line 27 | pattern: eq(column -----
+      }
+      
+      interface SupabaseMaybeSingleResult<T> {
+        data: T | null;
+        error: { message?: string } | null;
+      }
+      
+      interface SupabaseSelectBuilder<T> {
+   27:   eq(column: string, value: string): SupabaseSelectBuilder<T>;
+        limit(count: number): SupabaseSelectBuilder<T>;
+        maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
+      }
+      
+      interface SupabaseInsertBuilder<T> {
+        select(columns?: string): SupabaseInsertBuilder<T>;
+        maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
+      }
+      
+      interface SupabaseTableClient<T> {
+        select(columns?: string): SupabaseSelectBuilder<T>;
+        insert(payload: Record<string, unknown>): SupabaseInsertBuilder<T>;
+      }
+      
+      export interface CategoryResolverSupabaseClient {
+        from<T = Record<string, unknown>>(table: string): SupabaseTableClient<T>;
+      }
+      
+      interface ContextualCategoryRow {
+        id: string;
+
+============================================================
+5. ContextualCategoryRow interface
+============================================================
+
+MATCH COUNT: 1
+
+----- line 46 | pattern: interface ContextualCategoryRow -----
+      
+      export interface CategoryResolverSupabaseClient {
+        from<T = Record<string, unknown>>(table: string): SupabaseTableClient<T>;
+      }
+      
+   46: interface ContextualCategoryRow {
+        id: string;
+        slug?: string | null;
+        title?: string | null;
+        name?: string | null;
+        semantic_layer?: string | null;
+        category_type?: string | null;
+        status?: string | null;
+        source_type?: string | null;
+        aliases?: Array<JsonRecord | string> | null;
+        metadata_json?: JsonRecord | null;
+      }
+      
+      export function normalizeCategoryCandidateSlug(value: string): string {
+        return value
+          .normalize("NFKC")
+          .toLowerCase()
+          .trim()
+          .replace(/'/g, "")
+          .replace(/\u2019/g, "")
+          .replace(/[^a-z0-9\u0400-\u04ff]+/gi, "-")
+          .replace(/^-+|-+$/g, "")
+          .replace(/-{2,}/g, "-");
+      }
+      
+      function normalizeTitle(candidate: CategoryCandidate): string {
+        if (candidate.title && candidate.title.trim().length > 0) {
+          return candidate.title.trim();
+        }
+      
+        return candidate.slug
+          .split("-")
+          .filter(Boolean)
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(" ");
+      }
+      
+      function errorMessage(error: { message?: string } | null): string | null {
+        return error?.message ?? null;
+      }
+      
+      async function findExistingCategory(
+        supabase: CategoryResolverSupabaseClient,
+        slug: string,
+        semanticLayer?: string,
+      ): Promise<{ row: ContextualCategoryRow | null; error: string | null }> {
+
+============================================================
+6. errorMessage anchor
+============================================================
+
+MATCH COUNT: 1
+
+----- line 83 | pattern: function errorMessage -----
+          .filter(Boolean)
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(" ");
+      }
+      
+   83: function errorMessage(error: { message?: string } | null): string | null {
+        return error?.message ?? null;
+      }
+      
+      async function findExistingCategory(
+        supabase: CategoryResolverSupabaseClient,
+        slug: string,
+        semanticLayer?: string,
+      ): Promise<{ row: ContextualCategoryRow | null; error: string | null }> {
+        let query = supabase
+          .from<ContextualCategoryRow>("contextual_categories")
+          .select("*")
+          .eq("slug", slug);
+      
+        if (semanticLayer && semanticLayer.trim().length > 0) {
+          query = query.eq("semantic_layer", semanticLayer);
+        }
+      
+        const result = await query.limit(1).maybeSingle();
+      
+        return {
+          row: result.data ?? null,
+          error: errorMessage(result.error),
+        };
+      }
+      
+
+============================================================
+7. findExistingCategory full block
+============================================================
+
+MATCH COUNT: 1
+
+----- line 87 | pattern: async function findExistingCategory -----
+      
+      function errorMessage(error: { message?: string } | null): string | null {
+        return error?.message ?? null;
+      }
+      
+   87: async function findExistingCategory(
+        supabase: CategoryResolverSupabaseClient,
+        slug: string,
+        semanticLayer?: string,
+      ): Promise<{ row: ContextualCategoryRow | null; error: string | null }> {
+        let query = supabase
+          .from<ContextualCategoryRow>("contextual_categories")
+          .select("*")
+          .eq("slug", slug);
+      
+        if (semanticLayer && semanticLayer.trim().length > 0) {
+          query = query.eq("semantic_layer", semanticLayer);
+        }
+      
+        const result = await query.limit(1).maybeSingle();
+      
+        return {
+          row: result.data ?? null,
+          error: errorMessage(result.error),
+        };
+      }
+      
+      function shouldCreateCategory(
+        candidate: CategoryCandidate,
+        createPolicy: CategoryResolverCreatePolicy,
+      ): boolean {
+        if (createPolicy === "never") {
+          return false;
+        }
+      
+        if (createPolicy === "suggested_only") {
+          return true;
+        }
+      
+        return Boolean(candidate.isRequired && candidate.isConfirmed);
+      }
+      
+      function categoryStatusForCandidate(
+        candidate: CategoryCandidate,
+        options: Required<Pick<CategoryResolverOptions, "createPolicy">> &
+          CategoryResolverOptions,
+      ): "active" | "suggested" | "needs_review" {
+        if (candidate.needsUserReview) {
+          return "needs_review";
+        }
+      
+        if (options.defaultStatus) {
+          return options.defaultStatus;
+        }
+      
+        if (
+          options.createPolicy === "active_for_confirmed_required" &&
+          candidate.isRequired &&
+          candidate.isConfirmed
+        ) {
+          return "active";
+        }
+      
+        return "suggested";
+      }
+      
+      async function createCategory(
+        supabase: CategoryResolverSupabaseClient,
+        candidate: CategoryCandidate,
+        normalizedSlug: string,
+        options: Required<Pick<CategoryResolverOptions, "createPolicy">> &
+
+============================================================
+8. createContextualCategory full block
+============================================================
+
+NO MATCH: async function createContextualCategory
+
+============================================================
+9. payload block
+============================================================
+
+MATCH COUNT: 1
+
+----- line 163 | pattern: const payload -----
+          CategoryResolverOptions,
+      ): Promise<{ row: ContextualCategoryRow | null; error: string | null }> {
+        const semanticLayer = candidate.semanticLayer
+          ? String(candidate.semanticLayer)
+          : null;
+        const categoryType =
+          candidate.categoryType ?? options.defaultCategoryType ?? "derived";
+        const status = categoryStatusForCandidate(candidate, options);
+        const title = normalizeTitle(candidate);
+      
+  163:   const payload: Record<string, unknown> = {
+          slug: normalizedSlug,
+          semantic_layer: semanticLayer,
+          category_type: categoryType,
+          status,
+          source_type: options.sourceType ?? "rule",
+          aliases: [
+            {
+              lang: "und",
+              value: title,
+              source: "category_derivation_resolver",
+            },
+          ],
+          metadata_json: {
+            ...(candidate.metadata ?? {}),
+            resolver: "categoryDerivationResolver",
+            title,
+            originalSlug: candidate.slug,
+            confidence: candidate.confidence ?? null,
+            isRequired: candidate.isRequired ?? false,
+            isConfirmed: candidate.isConfirmed ?? false,
+            needsUserReview: candidate.needsUserReview ?? false,
+          },
+        };
+      
+        const result = await supabase
+          .from<ContextualCategoryRow>("contextual_categories")
+          .insert(payload)
+          .select("*")
+          .maybeSingle();
+      
+        return {
+          row: result.data ?? null,
+          error: errorMessage(result.error),
+        };
+      }
+      
+      export async function resolveCategoryCandidates(
+        supabase: CategoryResolverSupabaseClient,
+        candidates: CategoryCandidate[],
+        options: CategoryResolverOptions = {},
+      ): Promise<CategoryResolutionResult> {
+        const createPolicy = options.createPolicy ?? "suggested_only";
+        const resolved: ResolvedCategoryCandidate[] = [];
+        const warnings: string[] = [];
+        const errors: string[] = [];
+      
+        let createdCount = 0;
+        let reusedCount = 0;
+        let unresolvedCount = 0;
+      
+        for (const candidate of candidates) {
+          const normalizedSlug = normalizeCategoryCandidateSlug(candidate.slug);
+      
+          if (normalizedSlug.length === 0) {
+            unresolvedCount += 1;
+            warnings.push(`Candidate slug could not be normalized: ${candidate.slug}`);
+            resolved.push({
+              ...candidate,
+              categoryId: null,
+              resolutionStatus: "unresolved",
+
+============================================================
+10. resolveCategoryCandidates start
+============================================================
+
+MATCH COUNT: 1
+
+----- line 200 | pattern: export async function resolveCategoryCandidates -----
+          row: result.data ?? null,
+          error: errorMessage(result.error),
+        };
+      }
+      
+  200: export async function resolveCategoryCandidates(
+        supabase: CategoryResolverSupabaseClient,
+        candidates: CategoryCandidate[],
+        options: CategoryResolverOptions = {},
+      ): Promise<CategoryResolutionResult> {
+        const createPolicy = options.createPolicy ?? "suggested_only";
+        const resolved: ResolvedCategoryCandidate[] = [];
+        const warnings: string[] = [];
+        const errors: string[] = [];
+      
+        let createdCount = 0;
+        let reusedCount = 0;
+        let unresolvedCount = 0;
+      
+        for (const candidate of candidates) {
+          const normalizedSlug = normalizeCategoryCandidateSlug(candidate.slug);
+      
+          if (normalizedSlug.length === 0) {
+            unresolvedCount += 1;
+            warnings.push(`Candidate slug could not be normalized: ${candidate.slug}`);
+            resolved.push({
+              ...candidate,
+              categoryId: null,
+              resolutionStatus: "unresolved",
+              metadata: {
+                ...(candidate.metadata ?? {}),
+                normalizedSlug,
+                resolverWarning: "empty_normalized_slug",
+              },
+            });
+            continue;
+          }
+      
+          const semanticLayer = candidate.semanticLayer
+            ? String(candidate.semanticLayer)
+            : undefined;
+          const existing = await findExistingCategory(
+            supabase,
+            normalizedSlug,
+            semanticLayer,
+          );
+      
+          if (existing.error) {
+            errors.push(`Lookup failed for ${normalizedSlug}: ${existing.error}`);
+          }
+      
+          if (existing.row?.id) {
+            reusedCount += 1;
+            resolved.push({
+              ...candidate,
+              slug: normalizedSlug,
+              title:
+                candidate.title ??
+                existing.row.title ??
+                existing.row.name ??
+                normalizeTitle(candidate),
+
+============================================================
+11. candidate loop
+============================================================
+
+MATCH COUNT: 1
+
+----- line 214 | pattern: for (const candidate of candidates) -----
+        return {
+          row: result.data ?? null,
+          error: errorMessage(result.error),
+        };
+      }
+      
+      export async function resolveCategoryCandidates(
+        supabase: CategoryResolverSupabaseClient,
+        candidates: CategoryCandidate[],
+        options: CategoryResolverOptions = {},
+      ): Promise<CategoryResolutionResult> {
+        const createPolicy = options.createPolicy ?? "suggested_only";
+        const resolved: ResolvedCategoryCandidate[] = [];
+        const warnings: string[] = [];
+        const errors: string[] = [];
+      
+        let createdCount = 0;
+        let reusedCount = 0;
+        let unresolvedCount = 0;
+      
+  214:   for (const candidate of candidates) {
+          const normalizedSlug = normalizeCategoryCandidateSlug(candidate.slug);
+      
+          if (normalizedSlug.length === 0) {
+            unresolvedCount += 1;
+            warnings.push(`Candidate slug could not be normalized: ${candidate.slug}`);
+            resolved.push({
+              ...candidate,
+              categoryId: null,
+              resolutionStatus: "unresolved",
+              metadata: {
+                ...(candidate.metadata ?? {}),
+                normalizedSlug,
+                resolverWarning: "empty_normalized_slug",
+              },
+            });
+            continue;
+          }
+      
+          const semanticLayer = candidate.semanticLayer
+            ? String(candidate.semanticLayer)
+            : undefined;
+          const existing = await findExistingCategory(
+            supabase,
+            normalizedSlug,
+            semanticLayer,
+          );
+      
+          if (existing.error) {
+            errors.push(`Lookup failed for ${normalizedSlug}: ${existing.error}`);
+          }
+      
+          if (existing.row?.id) {
+            reusedCount += 1;
+            resolved.push({
+              ...candidate,
+              slug: normalizedSlug,
+              title:
+                candidate.title ??
+                existing.row.title ??
+                existing.row.name ??
+                normalizeTitle(candidate),
+              categoryId: existing.row.id,
+              resolutionStatus: "resolved_existing",
+              metadata: {
+                ...(candidate.metadata ?? {}),
+                normalizedSlug,
+                existingStatus: existing.row.status ?? null,
+              },
+            });
+            continue;
+          }
+      
+          if (!shouldCreateCategory(candidate, createPolicy) || options.dryRun) {
+            unresolvedCount += 1;
+            resolved.push({
+              ...candidate,
+              slug: normalizedSlug,
+              categoryId: null,
+              resolutionStatus: "unresolved",
+              metadata: {
+                ...(candidate.metadata ?? {}),
+                normalizedSlug,
+                dryRun: options.dryRun ?? false,
+                createPolicy,
+              },
+            });
+            continue;
+          }
+      
+          const created = await createCategory(supabase, candidate, normalizedSlug, {
+            ...options,
+            createPolicy,
+          });
+      
+          if (created.error || !created.row?.id) {
+            unresolvedCount += 1;
+            errors.push(
+              `Create failed for ${normalizedSlug}: ${
+                created.error ?? "no row returned"
+              }`,
+            );
+            resolved.push({
+              ...candidate,
+              slug: normalizedSlug,
+              categoryId: null,
+              resolutionStatus: "unresolved",
+              metadata: {
+                ...(candidate.metadata ?? {}),
+                normalizedSlug,
+                createError: created.error ?? "no row returned",
+              },
+            });
+            continue;
+          }
+      
+
+============================================================
+12. createContextualCategory call
+============================================================
+
+NO MATCH: const created = await createContextualCategory
