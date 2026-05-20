@@ -1,0 +1,17 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-P3-B7-C2-D-B1 — TypeScript proof
+
+Generated: 2026-05-20 19:02:05
+Command: npx.cmd tsc --noEmit --pretty false
+ExitCode: 0
+StartedAt: 2026-05-20T19:01:32.7152424+02:00
+FinishedAt: 2026-05-20T19:02:05.0924103+02:00
+
+Route:
+src/app/api/activity/debug/value-object-bridge-proof/route.ts
+
+Purpose:
+Add read-only Value Object bridge proof route:
+GET /api/activity/debug/value-object-bridge-proof?eventId=...
+
+Output:
