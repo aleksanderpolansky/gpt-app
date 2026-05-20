@@ -24,7 +24,7 @@ interface SupabaseMaybeSingleResult<T> {
 }
 
 interface SupabaseSelectBuilder<T> {
-  eq(column: string, value: string): SupabaseSelectBuilder<T>;
+  eq(column: string, value: string | number | boolean | null): SupabaseSelectBuilder<T>;
   limit(count: number): SupabaseSelectBuilder<T>;
   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
 }
@@ -43,8 +43,17 @@ export interface CategoryResolverSupabaseClient {
   from<T = Record<string, unknown>>(table: string): SupabaseTableClient<T>;
 }
 
+interface ContextRow {
+  id: string;
+  code: string;
+  name?: string | null;
+  status?: string | null;
+  is_active?: boolean | null;
+}
+
 interface ContextualCategoryRow {
   id: string;
+  context_id?: string | null;
   slug?: string | null;
   title?: string | null;
   name?: string | null;
@@ -84,15 +93,59 @@ function errorMessage(error: { message?: string } | null): string | null {
   return error?.message ?? null;
 }
 
+const DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE = "personal_activity";
+
+const CONTEXTUAL_CATEGORY_ALLOWED_SOURCE_TYPES = new Set([
+  "system_seed",
+  "manual",
+  "ai_suggested",
+  "imported",
+  "migrated",
+  "owner_confirmed",
+  "platform_verified",
+]);
+
+function normalizeContextualCategorySourceType(sourceType: string | undefined): string {
+  const normalized = sourceType?.trim();
+
+  if (normalized && CONTEXTUAL_CATEGORY_ALLOWED_SOURCE_TYPES.has(normalized)) {
+    return normalized;
+  }
+
+  return "ai_suggested";
+}
+
+async function findDefaultCategoryDerivationContextId(
+  supabase: CategoryResolverSupabaseClient,
+): Promise<{ contextId: string | null; error: string | null }> {
+  const result = await supabase
+    .from<ContextRow>("contexts")
+    .select("id, code, status, is_active")
+    .eq("code", DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE)
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+
+  return {
+    contextId: result.data?.id ?? null,
+    error: errorMessage(result.error),
+  };
+}
+
 async function findExistingCategory(
   supabase: CategoryResolverSupabaseClient,
   slug: string,
   semanticLayer?: string,
+  contextId?: string | null,
 ): Promise<{ row: ContextualCategoryRow | null; error: string | null }> {
   let query = supabase
     .from<ContextualCategoryRow>("contextual_categories")
     .select("*")
     .eq("slug", slug);
+
+  if (contextId && contextId.trim().length > 0) {
+    query = query.eq("context_id", contextId);
+  }
 
   if (semanticLayer && semanticLayer.trim().length > 0) {
     query = query.eq("semantic_layer", semanticLayer);
@@ -149,6 +202,7 @@ async function createCategory(
   supabase: CategoryResolverSupabaseClient,
   candidate: CategoryCandidate,
   normalizedSlug: string,
+  contextId: string,
   options: Required<Pick<CategoryResolverOptions, "createPolicy">> &
     CategoryResolverOptions,
 ): Promise<{ row: ContextualCategoryRow | null; error: string | null }> {
@@ -161,11 +215,12 @@ async function createCategory(
   const title = normalizeTitle(candidate);
 
   const payload: Record<string, unknown> = {
+    context_id: contextId,
     slug: normalizedSlug,
     semantic_layer: semanticLayer,
     category_type: categoryType,
     status,
-    source_type: options.sourceType ?? "rule",
+    source_type: normalizeContextualCategorySourceType(options.sourceType),
     aliases: [
       {
         lang: "und",
@@ -211,6 +266,23 @@ export async function resolveCategoryCandidates(
   let reusedCount = 0;
   let unresolvedCount = 0;
 
+  const defaultContextResult =
+    await findDefaultCategoryDerivationContextId(supabase);
+
+  const defaultContextId = defaultContextResult.contextId;
+
+  if (defaultContextResult.error) {
+    warnings.push(
+      `Default category derivation context lookup failed: ${defaultContextResult.error}`,
+    );
+  }
+
+  if (!defaultContextId && createPolicy !== "never") {
+    warnings.push(
+      `Default category derivation context not found: ${DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE}`,
+    );
+  }
+
   for (const candidate of candidates) {
     const normalizedSlug = normalizeCategoryCandidateSlug(candidate.slug);
 
@@ -237,6 +309,7 @@ export async function resolveCategoryCandidates(
       supabase,
       normalizedSlug,
       semanticLayer,
+      defaultContextId,
     );
 
     if (existing.error) {
@@ -281,7 +354,26 @@ export async function resolveCategoryCandidates(
       continue;
     }
 
-    const created = await createCategory(supabase, candidate, normalizedSlug, {
+    if (!defaultContextId) {
+      unresolvedCount += 1;
+      warnings.push(
+        `Cannot create contextual category without default context: ${normalizedSlug}`,
+      );
+      resolved.push({
+        ...candidate,
+        categoryId: null,
+        resolutionStatus: "unresolved",
+        metadata: {
+          ...(candidate.metadata ?? {}),
+          normalizedSlug,
+          createPolicy,
+          missingContextCode: DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE,
+        },
+      });
+      continue;
+    }
+
+    const created = await createCategory(supabase, candidate, normalizedSlug, defaultContextId, {
       ...options,
       createPolicy,
     });
