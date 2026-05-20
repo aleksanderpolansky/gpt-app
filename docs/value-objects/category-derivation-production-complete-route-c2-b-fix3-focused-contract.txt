@@ -1,0 +1,2158 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-P3-B7-C2-B-FIX3-B — focused start/complete contract extraction
+Generated: 2026-05-20 17:20:33
+
+Purpose:
+Build the exact browser payload for /api/activity/start, then /api/activity/complete.
+
+Current HEAD:
+f79d2f7 Document non-completed setup route contracts
+
+Known facts from C2-B-FIX3-A:
+- /api/activity/record created draft event; /api/activity/complete rejected draft.
+- /api/activity/start inserts activity_events with ended_at null, duration_minutes null, processing_status pending.
+- /api/activity/start needs template resolution; plain inputText/title payload is not enough.
+
+============================================================
+A1) Complete route allowed statuses source
+FILE: lib/activity/activityRecordingConfig.ts
+PATTERN: ACTIVITY_COMPLETABLE_STATUSES
+============================================================
+NOT FOUND
+
+============================================================
+A2) Status transition rules
+FILE: lib/activity/activityRecordingConfig.ts
+PATTERN: canTransitionActivityStatus
+============================================================
+NOT FOUND
+
+============================================================
+A3) Completable status helper
+FILE: lib/activity/activityRecordingConfig.ts
+PATTERN: isCompletableActivityStatus
+============================================================
+NOT FOUND
+
+============================================================
+B1) ActivityStartBody exact fields
+FILE: src/app/api/activity/start/route.ts
+PATTERN: type ActivityStartBody
+============================================================
+
+MATCH LINE: 23
+    safeCreateActivityProcessingLog,
+  } from "../../../../../lib/activity/activityProcessingLogs";
+  import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+  import {
+    createRawActivitySignal,
+    markRawActivitySignalFailed,
+    markRawActivitySignalProcessed,
+  } from "../../../../../lib/activity/rawActivitySignals";
+  import { supabase } from "../../../../../lib/supabase";
+  
+  export const dynamic = "force-dynamic";
+  
+> type ActivityStartBody = {
+    templateId?: unknown;
+    templateSlug?: unknown;
+    shortcut?: unknown;
+    input?: unknown;
+    comment?: unknown;
+    title?: unknown;
+    startedAt?: unknown;
+    startTime?: unknown;
+    sourceType?: unknown;
+  };
+  
+  type ActivityTemplateRow = {
+    id: string;
+    legacy_activity_code_template_id: string | null;
+    owner_user_id: string | null;
+    owner_actor_id: string | null;
+    organization_id: string | null;
+    slug: string;
+    title: string;
+    short_title: string | null;
+    description: string | null;
+    template_group: string;
+    template_scope: string;
+    visibility: string;
+    source_type: string;
+    status: string;
+    default_activity_type_id: string | null;
+    default_duration_minutes: number | null;
+
+============================================================
+B2) resolveTemplate exact logic
+FILE: src/app/api/activity/start/route.ts
+PATTERN: function resolveTemplate
+============================================================
+
+MATCH LINE: 255
+      throw new Error(error.message);
+    }
+  
+    const shortcuts = (data ?? []) as ActivityShortcutRow[];
+  
+    const userShortcut = shortcuts.find(
+      (shortcut) => shortcut.user_id === appUserId
+    );
+  
+    return userShortcut ?? shortcuts[0] ?? null;
+  }
+  
+> async function resolveTemplate(params: {
+    body: ActivityStartBody;
+    appUserId: string;
+  }): Promise<ResolvedTemplate | null> {
+    const { body, appUserId } = params;
+  
+    const templateId = asString(body.templateId);
+    const templateSlug = asString(body.templateSlug);
+    const shortcutValue = asString(body.shortcut);
+    const input = asString(body.input);
+    const legacyShortcutFromInput = inferLegacyShortcutFromInput(input);
+  
+    if (templateId) {
+      const template = await getTemplateById(templateId, appUserId);
+  
+      return template
+        ? {
+            template,
+            resolvedBy: "templateId",
+            shortcut: null,
+          }
+        : null;
+    }
+  
+    if (templateSlug) {
+      const template = await getTemplateBySlug(templateSlug, appUserId);
+  
+      return template
+        ? {
+
+============================================================
+B3) lifecycleStatus exact logic
+FILE: src/app/api/activity/start/route.ts
+PATTERN: function resolveLifecycleStatus
+============================================================
+NOT FOUND
+
+============================================================
+B4) lifecycleStatus usage
+FILE: src/app/api/activity/start/route.ts
+PATTERN: const lifecycleStatus
+============================================================
+
+MATCH LINE: 543
+    }
+  
+    const { template, shortcut, resolvedBy } = resolvedTemplate;
+    const comment = asString(body.comment);
+    const title = asString(body.title) ?? template.title;
+    const source = normalizeSourceType(
+      body.sourceType,
+      shortcut?.shortcut_type === "legacy_code"
+        ? "legacy_code"
+        : template.default_source_type
+    );
+  
+>   const lifecycleStatus = ACTIVITY_STATUS_STARTED;
+  
+    const processingRunId = randomUUID();
+    const processingStartedAt = new Date();
+  
+    const rawSignalResult = await createRawActivitySignal({
+      userId: appUser.id,
+      sourceType: "manual_form",
+      rawPayload: {
+        endpoint: "/api/activity/start",
+        body,
+        resolvedBy,
+        source,
+        status: lifecycleStatus,
+      },
+      normalizedPreview: {
+        templateId: template.id,
+        templateSlug: template.slug,
+        title,
+        source,
+        status: lifecycleStatus,
+        startedAt,
+        endedAt: null,
+        durationMinutes: null,
+      },
+      occurredAt: startedAt,
+      trustLevel: "medium",
+      privacyScope:
+        template.default_privacy_scope === "shared_with_org" ||
+
+============================================================
+B5) templateSlug references
+FILE: src/app/api/activity/start/route.ts
+PATTERN: templateSlug
+============================================================
+
+MATCH LINE: 25
+  import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+  import {
+    createRawActivitySignal,
+    markRawActivitySignalFailed,
+    markRawActivitySignalProcessed,
+  } from "../../../../../lib/activity/rawActivitySignals";
+  import { supabase } from "../../../../../lib/supabase";
+  
+  export const dynamic = "force-dynamic";
+  
+  type ActivityStartBody = {
+    templateId?: unknown;
+>   templateSlug?: unknown;
+    shortcut?: unknown;
+    input?: unknown;
+    comment?: unknown;
+    title?: unknown;
+    startedAt?: unknown;
+    startTime?: unknown;
+    sourceType?: unknown;
+  };
+  
+  type ActivityTemplateRow = {
+    id: string;
+    legacy_activity_code_template_id: string | null;
+    owner_user_id: string | null;
+    owner_actor_id: string | null;
+    organization_id: string | null;
+    slug: string;
+    title: string;
+    short_title: string | null;
+    description: string | null;
+    template_group: string;
+    template_scope: string;
+    visibility: string;
+    source_type: string;
+    status: string;
+    default_activity_type_id: string | null;
+    default_duration_minutes: number | null;
+    quick_duration_minutes: number[] | null;
+    default_status: string;
+
+MATCH LINE: 111
+    show_in_default_ui: boolean;
+    is_deprecated_alias: boolean;
+    nfc_tag_id: string | null;
+    voice_phrase: string | null;
+    device_binding: string | null;
+    sort_order: number;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+  };
+  
+  type ResolvedTemplate = {
+    template: ActivityTemplateRow;
+>   resolvedBy: "templateId" | "templateSlug" | "shortcut" | "legacyInputShortcut";
+    shortcut: ActivityShortcutRow | null;
+  };
+  
+  
+  function asString(value: unknown): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+  
+    const trimmed = value.trim();
+  
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  
+  function normalizeSourceType(value: unknown, fallback: string) {
+    return normalizeActivityEventSourceType(
+      value,
+      normalizeActivityEventSourceType(fallback, "manual_form")
+    );
+  }
+  
+  function inferLegacyShortcutFromInput(input: string | null) {
+    if (!input) {
+      return null;
+    }
+  
+    const firstToken = input.split(/\s+/).filter(Boolean)[0];
+  
+
+MATCH LINE: 199
+      throw new Error(error.message);
+    }
+  
+    const template = data as ActivityTemplateRow | null;
+  
+    if (!template || !hasTemplateAccess(template, appUserId)) {
+      return null;
+    }
+  
+    return template;
+  }
+  
+> async function getTemplateBySlug(templateSlug: string, appUserId: string) {
+    const { data: systemTemplate, error: systemTemplateError } = await supabase
+      .from("activity_templates")
+      .select("*")
+      .eq("slug", templateSlug)
+      .eq("template_scope", "system")
+      .eq("is_active", true)
+      .maybeSingle();
+  
+    if (systemTemplateError) {
+      throw new Error(systemTemplateError.message);
+    }
+  
+    if (systemTemplate) {
+      return systemTemplate as ActivityTemplateRow;
+    }
+  
+    const { data: userTemplate, error: userTemplateError } = await supabase
+      .from("activity_templates")
+      .select("*")
+      .eq("slug", templateSlug)
+      .eq("template_scope", "user")
+      .eq("owner_user_id", appUserId)
+      .eq("is_active", true)
+      .maybeSingle();
+  
+    if (userTemplateError) {
+      throw new Error(userTemplateError.message);
+    }
+
+MATCH LINE: 203
+  
+    if (!template || !hasTemplateAccess(template, appUserId)) {
+      return null;
+    }
+  
+    return template;
+  }
+  
+  async function getTemplateBySlug(templateSlug: string, appUserId: string) {
+    const { data: systemTemplate, error: systemTemplateError } = await supabase
+      .from("activity_templates")
+      .select("*")
+>     .eq("slug", templateSlug)
+      .eq("template_scope", "system")
+      .eq("is_active", true)
+      .maybeSingle();
+  
+    if (systemTemplateError) {
+      throw new Error(systemTemplateError.message);
+    }
+  
+    if (systemTemplate) {
+      return systemTemplate as ActivityTemplateRow;
+    }
+  
+    const { data: userTemplate, error: userTemplateError } = await supabase
+      .from("activity_templates")
+      .select("*")
+      .eq("slug", templateSlug)
+      .eq("template_scope", "user")
+      .eq("owner_user_id", appUserId)
+      .eq("is_active", true)
+      .maybeSingle();
+  
+    if (userTemplateError) {
+      throw new Error(userTemplateError.message);
+    }
+  
+    return (userTemplate as ActivityTemplateRow | null) ?? null;
+  }
+  
+
+MATCH LINE: 219
+  
+    if (systemTemplateError) {
+      throw new Error(systemTemplateError.message);
+    }
+  
+    if (systemTemplate) {
+      return systemTemplate as ActivityTemplateRow;
+    }
+  
+    const { data: userTemplate, error: userTemplateError } = await supabase
+      .from("activity_templates")
+      .select("*")
+>     .eq("slug", templateSlug)
+      .eq("template_scope", "user")
+      .eq("owner_user_id", appUserId)
+      .eq("is_active", true)
+      .maybeSingle();
+  
+    if (userTemplateError) {
+      throw new Error(userTemplateError.message);
+    }
+  
+    return (userTemplate as ActivityTemplateRow | null) ?? null;
+  }
+  
+  async function getShortcut(shortcutValue: string, appUserId: string) {
+    const { data, error } = await supabase
+      .from("user_activity_shortcuts")
+      .select("*")
+      .eq("shortcut_value", shortcutValue)
+      .eq("is_active", true)
+      .or(`shortcut_scope.eq.system,user_id.eq.${appUserId}`)
+      .order("shortcut_scope", { ascending: false })
+      .order("sort_order", { ascending: true });
+  
+    if (error) {
+      throw new Error(error.message);
+    }
+  
+    const shortcuts = (data ?? []) as ActivityShortcutRow[];
+  
+
+MATCH LINE: 262
+    );
+  
+    return userShortcut ?? shortcuts[0] ?? null;
+  }
+  
+  async function resolveTemplate(params: {
+    body: ActivityStartBody;
+    appUserId: string;
+  }): Promise<ResolvedTemplate | null> {
+    const { body, appUserId } = params;
+  
+    const templateId = asString(body.templateId);
+>   const templateSlug = asString(body.templateSlug);
+    const shortcutValue = asString(body.shortcut);
+    const input = asString(body.input);
+    const legacyShortcutFromInput = inferLegacyShortcutFromInput(input);
+  
+    if (templateId) {
+      const template = await getTemplateById(templateId, appUserId);
+  
+      return template
+        ? {
+            template,
+            resolvedBy: "templateId",
+            shortcut: null,
+          }
+        : null;
+    }
+  
+    if (templateSlug) {
+      const template = await getTemplateBySlug(templateSlug, appUserId);
+  
+      return template
+        ? {
+            template,
+            resolvedBy: "templateSlug",
+            shortcut: null,
+          }
+        : null;
+    }
+  
+
+============================================================
+B6) shortcut references
+FILE: src/app/api/activity/start/route.ts
+PATTERN: shortcut
+============================================================
+
+MATCH LINE: 26
+  import {
+    createRawActivitySignal,
+    markRawActivitySignalFailed,
+    markRawActivitySignalProcessed,
+  } from "../../../../../lib/activity/rawActivitySignals";
+  import { supabase } from "../../../../../lib/supabase";
+  
+  export const dynamic = "force-dynamic";
+  
+  type ActivityStartBody = {
+    templateId?: unknown;
+    templateSlug?: unknown;
+>   shortcut?: unknown;
+    input?: unknown;
+    comment?: unknown;
+    title?: unknown;
+    startedAt?: unknown;
+    startTime?: unknown;
+    sourceType?: unknown;
+  };
+  
+  type ActivityTemplateRow = {
+    id: string;
+    legacy_activity_code_template_id: string | null;
+    owner_user_id: string | null;
+    owner_actor_id: string | null;
+    organization_id: string | null;
+    slug: string;
+    title: string;
+    short_title: string | null;
+    description: string | null;
+    template_group: string;
+    template_scope: string;
+    visibility: string;
+    source_type: string;
+    status: string;
+    default_activity_type_id: string | null;
+    default_duration_minutes: number | null;
+    quick_duration_minutes: number[] | null;
+    default_status: string;
+    default_source_type: string;
+
+MATCH LINE: 89
+    linked_entity_id: string | null;
+    linked_entity_key: string | null;
+    link_role: string;
+    relation_type: string;
+    default_weight: number;
+    default_confidence: number;
+    source_type: string;
+    is_required: boolean;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+  };
+  
+> type ActivityShortcutRow = {
+    id: string;
+    user_id: string | null;
+    template_id: string;
+    shortcut_scope: string;
+    shortcut_type: string;
+    shortcut_value: string;
+    label: string | null;
+    description: string | null;
+    is_favorite: boolean;
+    show_in_default_ui: boolean;
+    is_deprecated_alias: boolean;
+    nfc_tag_id: string | null;
+    voice_phrase: string | null;
+    device_binding: string | null;
+    sort_order: number;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+  };
+  
+  type ResolvedTemplate = {
+    template: ActivityTemplateRow;
+    resolvedBy: "templateId" | "templateSlug" | "shortcut" | "legacyInputShortcut";
+    shortcut: ActivityShortcutRow | null;
+  };
+  
+  
+  function asString(value: unknown): string | null {
+    if (typeof value !== "string") {
+
+MATCH LINE: 93
+    default_weight: number;
+    default_confidence: number;
+    source_type: string;
+    is_required: boolean;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+  };
+  
+  type ActivityShortcutRow = {
+    id: string;
+    user_id: string | null;
+    template_id: string;
+>   shortcut_scope: string;
+    shortcut_type: string;
+    shortcut_value: string;
+    label: string | null;
+    description: string | null;
+    is_favorite: boolean;
+    show_in_default_ui: boolean;
+    is_deprecated_alias: boolean;
+    nfc_tag_id: string | null;
+    voice_phrase: string | null;
+    device_binding: string | null;
+    sort_order: number;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+  };
+  
+  type ResolvedTemplate = {
+    template: ActivityTemplateRow;
+    resolvedBy: "templateId" | "templateSlug" | "shortcut" | "legacyInputShortcut";
+    shortcut: ActivityShortcutRow | null;
+  };
+  
+  
+  function asString(value: unknown): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+  
+    const trimmed = value.trim();
+
+MATCH LINE: 94
+    default_confidence: number;
+    source_type: string;
+    is_required: boolean;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+  };
+  
+  type ActivityShortcutRow = {
+    id: string;
+    user_id: string | null;
+    template_id: string;
+    shortcut_scope: string;
+>   shortcut_type: string;
+    shortcut_value: string;
+    label: string | null;
+    description: string | null;
+    is_favorite: boolean;
+    show_in_default_ui: boolean;
+    is_deprecated_alias: boolean;
+    nfc_tag_id: string | null;
+    voice_phrase: string | null;
+    device_binding: string | null;
+    sort_order: number;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+  };
+  
+  type ResolvedTemplate = {
+    template: ActivityTemplateRow;
+    resolvedBy: "templateId" | "templateSlug" | "shortcut" | "legacyInputShortcut";
+    shortcut: ActivityShortcutRow | null;
+  };
+  
+  
+  function asString(value: unknown): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+  
+    const trimmed = value.trim();
+  
+
+MATCH LINE: 95
+    source_type: string;
+    is_required: boolean;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+  };
+  
+  type ActivityShortcutRow = {
+    id: string;
+    user_id: string | null;
+    template_id: string;
+    shortcut_scope: string;
+    shortcut_type: string;
+>   shortcut_value: string;
+    label: string | null;
+    description: string | null;
+    is_favorite: boolean;
+    show_in_default_ui: boolean;
+    is_deprecated_alias: boolean;
+    nfc_tag_id: string | null;
+    voice_phrase: string | null;
+    device_binding: string | null;
+    sort_order: number;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+  };
+  
+  type ResolvedTemplate = {
+    template: ActivityTemplateRow;
+    resolvedBy: "templateId" | "templateSlug" | "shortcut" | "legacyInputShortcut";
+    shortcut: ActivityShortcutRow | null;
+  };
+  
+  
+  function asString(value: unknown): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+  
+    const trimmed = value.trim();
+  
+    return trimmed.length > 0 ? trimmed : null;
+
+MATCH LINE: 111
+    show_in_default_ui: boolean;
+    is_deprecated_alias: boolean;
+    nfc_tag_id: string | null;
+    voice_phrase: string | null;
+    device_binding: string | null;
+    sort_order: number;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+  };
+  
+  type ResolvedTemplate = {
+    template: ActivityTemplateRow;
+>   resolvedBy: "templateId" | "templateSlug" | "shortcut" | "legacyInputShortcut";
+    shortcut: ActivityShortcutRow | null;
+  };
+  
+  
+  function asString(value: unknown): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+  
+    const trimmed = value.trim();
+  
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  
+  function normalizeSourceType(value: unknown, fallback: string) {
+    return normalizeActivityEventSourceType(
+      value,
+      normalizeActivityEventSourceType(fallback, "manual_form")
+    );
+  }
+  
+  function inferLegacyShortcutFromInput(input: string | null) {
+    if (!input) {
+      return null;
+    }
+  
+    const firstToken = input.split(/\s+/).filter(Boolean)[0];
+  
+
+============================================================
+B7) legacy/code references
+FILE: src/app/api/activity/start/route.ts
+PATTERN: legacy
+============================================================
+
+MATCH LINE: 37
+    templateSlug?: unknown;
+    shortcut?: unknown;
+    input?: unknown;
+    comment?: unknown;
+    title?: unknown;
+    startedAt?: unknown;
+    startTime?: unknown;
+    sourceType?: unknown;
+  };
+  
+  type ActivityTemplateRow = {
+    id: string;
+>   legacy_activity_code_template_id: string | null;
+    owner_user_id: string | null;
+    owner_actor_id: string | null;
+    organization_id: string | null;
+    slug: string;
+    title: string;
+    short_title: string | null;
+    description: string | null;
+    template_group: string;
+    template_scope: string;
+    visibility: string;
+    source_type: string;
+    status: string;
+    default_activity_type_id: string | null;
+    default_duration_minutes: number | null;
+    quick_duration_minutes: number[] | null;
+    default_status: string;
+    default_source_type: string;
+    default_privacy_scope: string;
+    icon_key: string | null;
+    color_key: string | null;
+    show_in_quick_capture: boolean;
+    show_in_onboarding: boolean;
+    allow_manual_duration: boolean;
+    allow_comment: boolean;
+    allow_started_at_override: boolean;
+    allow_ended_at_override: boolean;
+    input_schema_json: Record<string, unknown> | null;
+    ui_schema_json: Record<string, unknown> | null;
+
+MATCH LINE: 111
+    show_in_default_ui: boolean;
+    is_deprecated_alias: boolean;
+    nfc_tag_id: string | null;
+    voice_phrase: string | null;
+    device_binding: string | null;
+    sort_order: number;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+  };
+  
+  type ResolvedTemplate = {
+    template: ActivityTemplateRow;
+>   resolvedBy: "templateId" | "templateSlug" | "shortcut" | "legacyInputShortcut";
+    shortcut: ActivityShortcutRow | null;
+  };
+  
+  
+  function asString(value: unknown): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+  
+    const trimmed = value.trim();
+  
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  
+  function normalizeSourceType(value: unknown, fallback: string) {
+    return normalizeActivityEventSourceType(
+      value,
+      normalizeActivityEventSourceType(fallback, "manual_form")
+    );
+  }
+  
+  function inferLegacyShortcutFromInput(input: string | null) {
+    if (!input) {
+      return null;
+    }
+  
+    const firstToken = input.split(/\s+/).filter(Boolean)[0];
+  
+
+MATCH LINE: 133
+    const trimmed = value.trim();
+  
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  
+  function normalizeSourceType(value: unknown, fallback: string) {
+    return normalizeActivityEventSourceType(
+      value,
+      normalizeActivityEventSourceType(fallback, "manual_form")
+    );
+  }
+  
+> function inferLegacyShortcutFromInput(input: string | null) {
+    if (!input) {
+      return null;
+    }
+  
+    const firstToken = input.split(/\s+/).filter(Boolean)[0];
+  
+    return firstToken ?? null;
+  }
+  
+  function resolveStartedAt(body: ActivityStartBody) {
+    const rawStartedAt = asString(body.startedAt) ?? asString(body.startTime);
+  
+    if (!rawStartedAt) {
+      return new Date().toISOString();
+    }
+  
+    const startedDate = new Date(rawStartedAt);
+  
+    if (Number.isNaN(startedDate.getTime())) {
+      return null;
+    }
+  
+    return startedDate.toISOString();
+  }
+  
+  function hasTemplateAccess(template: ActivityTemplateRow, appUserId: string) {
+    if (template.template_scope === "system") {
+      return true;
+
+MATCH LINE: 265
+  }
+  
+  async function resolveTemplate(params: {
+    body: ActivityStartBody;
+    appUserId: string;
+  }): Promise<ResolvedTemplate | null> {
+    const { body, appUserId } = params;
+  
+    const templateId = asString(body.templateId);
+    const templateSlug = asString(body.templateSlug);
+    const shortcutValue = asString(body.shortcut);
+    const input = asString(body.input);
+>   const legacyShortcutFromInput = inferLegacyShortcutFromInput(input);
+  
+    if (templateId) {
+      const template = await getTemplateById(templateId, appUserId);
+  
+      return template
+        ? {
+            template,
+            resolvedBy: "templateId",
+            shortcut: null,
+          }
+        : null;
+    }
+  
+    if (templateSlug) {
+      const template = await getTemplateBySlug(templateSlug, appUserId);
+  
+      return template
+        ? {
+            template,
+            resolvedBy: "templateSlug",
+            shortcut: null,
+          }
+        : null;
+    }
+  
+    if (shortcutValue) {
+      const shortcut = await getShortcut(shortcutValue, appUserId);
+  
+
+MATCH LINE: 309
+  
+      const template = await getTemplateById(shortcut.template_id, appUserId);
+  
+      return template
+        ? {
+            template,
+            resolvedBy: "shortcut",
+            shortcut,
+          }
+        : null;
+    }
+  
+>   if (legacyShortcutFromInput) {
+      const shortcut = await getShortcut(legacyShortcutFromInput, appUserId);
+  
+      if (!shortcut) {
+        return null;
+      }
+  
+      const template = await getTemplateById(shortcut.template_id, appUserId);
+  
+      return template
+        ? {
+            template,
+            resolvedBy: "legacyInputShortcut",
+            shortcut,
+          }
+        : null;
+    }
+  
+    return null;
+  }
+  
+  function mapTemplateLinkSourceToEventLinkSource(sourceType: string) {
+    if (sourceType === "ai_suggested") {
+      return "ai";
+    }
+  
+    if (sourceType === "imported") {
+      return "import";
+    }
+
+MATCH LINE: 310
+      const template = await getTemplateById(shortcut.template_id, appUserId);
+  
+      return template
+        ? {
+            template,
+            resolvedBy: "shortcut",
+            shortcut,
+          }
+        : null;
+    }
+  
+    if (legacyShortcutFromInput) {
+>     const shortcut = await getShortcut(legacyShortcutFromInput, appUserId);
+  
+      if (!shortcut) {
+        return null;
+      }
+  
+      const template = await getTemplateById(shortcut.template_id, appUserId);
+  
+      return template
+        ? {
+            template,
+            resolvedBy: "legacyInputShortcut",
+            shortcut,
+          }
+        : null;
+    }
+  
+    return null;
+  }
+  
+  function mapTemplateLinkSourceToEventLinkSource(sourceType: string) {
+    if (sourceType === "ai_suggested") {
+      return "ai";
+    }
+  
+    if (sourceType === "imported") {
+      return "import";
+    }
+  
+
+============================================================
+B8) start route response shape
+FILE: src/app/api/activity/start/route.ts
+PATTERN: return NextResponse.json
+============================================================
+
+MATCH LINE: 428
+  
+    return [
+      template.title,
+      "started",
+      comment,
+      shortcut ? `shortcut:${shortcut.shortcut_value}` : null,
+    ]
+      .filter(Boolean)
+      .join(" | ");
+  }
+  
+  export async function GET() {
+>   return NextResponse.json({
+      ok: true,
+      endpoint: "/api/activity/start",
+      method: "POST",
+      enabled: ACTIVITY_RECORDING_ENABLED,
+      status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+      message: ACTIVITY_RECORDING_ENABLED
+        ? "Start an activity session from a template without creating impacts yet."
+        : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+      example: {
+        templateSlug: "german-marketing-handwriting-practice",
+        comment: "Started lifecycle smoke test",
+        sourceType: "manual_form",
+      },
+    });
+  }
+  
+  export async function POST(request: Request) {
+    if (!ACTIVITY_RECORDING_ENABLED) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+        },
+        { status: 503 }
+      );
+    }
+  
+    const { appUser, personActor, errorResponse } =
+
+MATCH LINE: 447
+        ? "Start an activity session from a template without creating impacts yet."
+        : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+      example: {
+        templateSlug: "german-marketing-handwriting-practice",
+        comment: "Started lifecycle smoke test",
+        sourceType: "manual_form",
+      },
+    });
+  }
+  
+  export async function POST(request: Request) {
+    if (!ACTIVITY_RECORDING_ENABLED) {
+>     return NextResponse.json(
+        {
+          ok: false,
+          error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+        },
+        { status: 503 }
+      );
+    }
+  
+    const { appUser, personActor, errorResponse } =
+      await getActivityUserContext();
+  
+    if (errorResponse) {
+      return errorResponse;
+    }
+  
+    if (!appUser || !personActor) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "User context not found",
+        },
+        { status: 500 }
+      );
+    }
+  
+    let body: ActivityStartBody;
+  
+    try {
+
+MATCH LINE: 464
+        { status: 503 }
+      );
+    }
+  
+    const { appUser, personActor, errorResponse } =
+      await getActivityUserContext();
+  
+    if (errorResponse) {
+      return errorResponse;
+    }
+  
+    if (!appUser || !personActor) {
+>     return NextResponse.json(
+        {
+          ok: false,
+          error: "User context not found",
+        },
+        { status: 500 }
+      );
+    }
+  
+    let body: ActivityStartBody;
+  
+    try {
+      body = (await request.json()) as ActivityStartBody;
+    } catch {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Invalid JSON body",
+        },
+        { status: 400 }
+      );
+    }
+  
+    const startedAt = resolveStartedAt(body);
+  
+    if (!startedAt) {
+      return NextResponse.json(
+        {
+          ok: false,
+
+MATCH LINE: 478
+          ok: false,
+          error: "User context not found",
+        },
+        { status: 500 }
+      );
+    }
+  
+    let body: ActivityStartBody;
+  
+    try {
+      body = (await request.json()) as ActivityStartBody;
+    } catch {
+>     return NextResponse.json(
+        {
+          ok: false,
+          error: "Invalid JSON body",
+        },
+        { status: 400 }
+      );
+    }
+  
+    const startedAt = resolveStartedAt(body);
+  
+    if (!startedAt) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Invalid startedAt or startTime",
+        },
+        { status: 400 }
+      );
+    }
+  
+    let resolvedTemplate: ResolvedTemplate | null = null;
+  
+    try {
+      resolvedTemplate = await resolveTemplate({
+        body,
+        appUserId: appUser.id,
+      });
+    } catch (error) {
+
+MATCH LINE: 490
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Invalid JSON body",
+        },
+        { status: 400 }
+      );
+    }
+  
+    const startedAt = resolveStartedAt(body);
+  
+    if (!startedAt) {
+>     return NextResponse.json(
+        {
+          ok: false,
+          error: "Invalid startedAt or startTime",
+        },
+        { status: 400 }
+      );
+    }
+  
+    let resolvedTemplate: ResolvedTemplate | null = null;
+  
+    try {
+      resolvedTemplate = await resolveTemplate({
+        body,
+        appUserId: appUser.id,
+      });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to resolve activity template",
+        },
+        { status: 500 }
+      );
+    }
+  
+
+MATCH LINE: 507
+        { status: 400 }
+      );
+    }
+  
+    let resolvedTemplate: ResolvedTemplate | null = null;
+  
+    try {
+      resolvedTemplate = await resolveTemplate({
+        body,
+        appUserId: appUser.id,
+      });
+    } catch (error) {
+>     return NextResponse.json(
+        {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to resolve activity template",
+        },
+        { status: 500 }
+      );
+    }
+  
+    if (!resolvedTemplate) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "templateId, templateSlug, shortcut or input is required.",
+          example: {
+            templateSlug: "german-marketing-handwriting-practice",
+            comment: "Started lifecycle smoke test",
+          },
+        },
+        { status: 400 }
+      );
+    }
+  
+    const { template, shortcut, resolvedBy } = resolvedTemplate;
+    const comment = asString(body.comment);
+    const title = asString(body.title) ?? template.title;
+
+============================================================
+C1) templates route GET
+FILE: src/app/api/activity/templates/route.ts
+PATTERN: export async function GET
+============================================================
+
+MATCH LINE: 224
+  }
+  
+  function mapActivityTypesById(activityTypes: ActivityTypeRow[]) {
+    const result = new Map<string, ActivityTypeRow>();
+  
+    for (const activityType of activityTypes) {
+      result.set(activityType.id, activityType);
+    }
+  
+    return result;
+  }
+  
+> export async function GET(request: Request) {
+    if (!ACTIVITY_RECORDING_ENABLED) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+        },
+        { status: 503 }
+      );
+    }
+  
+    const { appUser, errorResponse } = await getActivityUserContext();
+  
+    if (errorResponse) {
+      return errorResponse;
+    }
+  
+    if (!appUser) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "User context not found",
+        },
+        { status: 500 }
+      );
+    }
+  
+    const url = new URL(request.url);
+    const limit = parseLimit(url.searchParams);
+
+============================================================
+C2) templates route selected fields
+FILE: src/app/api/activity/templates/route.ts
+PATTERN: template_scope
+============================================================
+
+MATCH LINE: 24
+  
+  type ActivityTemplateRow = {
+    id: string;
+    legacy_activity_code_template_id: string | null;
+    owner_user_id: string | null;
+    owner_actor_id: string | null;
+    organization_id: string | null;
+    slug: string;
+    title: string;
+    short_title: string | null;
+    description: string | null;
+    template_group: string;
+>   template_scope: string;
+    visibility: string;
+    source_type: string;
+    status: string;
+    default_activity_type_id: string | null;
+    default_duration_minutes: number | null;
+    quick_duration_minutes: number[] | null;
+    default_status: string;
+    default_source_type: string;
+    default_privacy_scope: string;
+    icon_key: string | null;
+    color_key: string | null;
+    show_in_quick_capture: boolean;
+    show_in_onboarding: boolean;
+    allow_manual_duration: boolean;
+    allow_comment: boolean;
+    allow_started_at_override: boolean;
+    allow_ended_at_override: boolean;
+    input_schema_json: Record<string, unknown> | null;
+    ui_schema_json: Record<string, unknown> | null;
+    default_metadata_json: Record<string, unknown> | null;
+    sort_order: number;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+  };
+  
+  type ActivityTemplateLinkRow = {
+    id: string;
+
+MATCH LINE: 165
+  
+    if (!normalizedQuery) {
+      return templates;
+    }
+  
+    return templates.filter((template) => {
+      const searchableText = [
+        template.slug,
+        template.title,
+        template.short_title,
+        template.description,
+        template.template_group,
+>       template.template_scope,
+        template.source_type,
+        template.status,
+      ]
+        .map((value) => normalizeText(value))
+        .join(" ");
+  
+      return searchableText.includes(normalizedQuery);
+    });
+  }
+  
+  function filterTemplatesByGroup(
+    templates: ActivityTemplateRow[],
+    group: string | null
+  ) {
+    const normalizedGroup = normalizeText(group);
+  
+    if (!normalizedGroup || normalizedGroup === "all") {
+      return templates;
+    }
+  
+    return templates.filter(
+      (template) => normalizeText(template.template_group) === normalizedGroup
+    );
+  }
+  
+  function filterTemplatesByQuickCapture(
+    templates: ActivityTemplateRow[],
+    quickCaptureOnly: boolean
+
+MATCH LINE: 262
+  
+    const url = new URL(request.url);
+    const limit = parseLimit(url.searchParams);
+    const query = url.searchParams.get("q");
+    const group = url.searchParams.get("group");
+    const quickCaptureOnly =
+      url.searchParams.get("quickCaptureOnly") === "true";
+  
+    const { data: systemTemplatesData, error: systemTemplatesError } =
+      await supabase
+        .from("activity_templates")
+        .select("*")
+>       .eq("template_scope", "system")
+        .eq("status", "active")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .order("title", { ascending: true });
+  
+    if (systemTemplatesError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: systemTemplatesError.message,
+        },
+        { status: 500 }
+      );
+    }
+  
+    const { data: userTemplatesData, error: userTemplatesError } = await supabase
+      .from("activity_templates")
+      .select("*")
+      .eq("template_scope", "user")
+      .eq("owner_user_id", appUser.id)
+      .eq("status", "active")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("title", { ascending: true });
+  
+    if (userTemplatesError) {
+      return NextResponse.json(
+        {
+
+MATCH LINE: 281
+      return NextResponse.json(
+        {
+          ok: false,
+          error: systemTemplatesError.message,
+        },
+        { status: 500 }
+      );
+    }
+  
+    const { data: userTemplatesData, error: userTemplatesError } = await supabase
+      .from("activity_templates")
+      .select("*")
+>     .eq("template_scope", "user")
+      .eq("owner_user_id", appUser.id)
+      .eq("status", "active")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("title", { ascending: true });
+  
+    if (userTemplatesError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: userTemplatesError.message,
+        },
+        { status: 500 }
+      );
+    }
+  
+    const systemTemplates = (systemTemplatesData ?? []) as ActivityTemplateRow[];
+    const userTemplates = (userTemplatesData ?? []) as ActivityTemplateRow[];
+  
+    let templates = mergeTemplates(systemTemplates, userTemplates);
+    templates = filterTemplatesByQuery(templates, query);
+    templates = filterTemplatesByGroup(templates, group);
+    templates = filterTemplatesByQuickCapture(templates, quickCaptureOnly);
+    templates = templates.slice(0, limit);
+  
+    const templateIds = uniqueStrings(templates.map((template) => template.id));
+    const activityTypeIds = uniqueStrings(
+      templates.map((template) => template.default_activity_type_id)
+
+MATCH LINE: 398
+      const shortcuts = shortcutsByTemplateId.get(template.id) ?? [];
+      const defaultActivityType = template.default_activity_type_id
+        ? activityTypesById.get(template.default_activity_type_id) ?? null
+        : null;
+  
+      return {
+        id: template.id,
+        slug: template.slug,
+        title: template.title,
+        shortTitle: template.short_title,
+        description: template.description,
+        templateGroup: template.template_group,
+>       templateScope: template.template_scope,
+        visibility: template.visibility,
+        sourceType: template.source_type,
+        status: template.status,
+        defaultActivityType,
+        defaultDurationMinutes: template.default_duration_minutes,
+        quickDurationMinutes: template.quick_duration_minutes ?? [],
+        defaultStatus: template.default_status,
+        defaultSourceType: template.default_source_type,
+        defaultPrivacyScope: template.default_privacy_scope,
+        iconKey: template.icon_key,
+        colorKey: template.color_key,
+        showInQuickCapture: template.show_in_quick_capture,
+        showInOnboarding: template.show_in_onboarding,
+        allowManualDuration: template.allow_manual_duration,
+        allowComment: template.allow_comment,
+        allowStartedAtOverride: template.allow_started_at_override,
+        allowEndedAtOverride: template.allow_ended_at_override,
+        inputSchema: template.input_schema_json ?? {},
+        uiSchema: template.ui_schema_json ?? {},
+        metadata: template.default_metadata_json ?? {},
+        links: links.map((link) => ({
+          id: link.id,
+          linkedEntityType: link.linked_entity_type,
+          linkedEntityId: link.linked_entity_id,
+          linkedEntityKey: link.linked_entity_key,
+          linkRole: link.link_role,
+          relationType: link.relation_type,
+          defaultWeight: link.default_weight,
+
+============================================================
+C3) templates route shortcut fields
+FILE: src/app/api/activity/templates/route.ts
+PATTERN: shortcut
+============================================================
+
+MATCH LINE: 69
+    link_role: string;
+    relation_type: string;
+    default_weight: number;
+    default_confidence: number;
+    source_type: string;
+    is_required: boolean;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+    created_at: string;
+    updated_at: string;
+  };
+  
+> type ActivityShortcutRow = {
+    id: string;
+    user_id: string | null;
+    template_id: string;
+    shortcut_scope: string;
+    shortcut_type: string;
+    shortcut_value: string;
+    label: string | null;
+    description: string | null;
+    is_favorite: boolean;
+    show_in_default_ui: boolean;
+    is_deprecated_alias: boolean;
+    nfc_tag_id: string | null;
+    voice_phrase: string | null;
+    device_binding: string | null;
+    sort_order: number;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+    created_at: string;
+    updated_at: string;
+  };
+  
+  type ActivityTypeRow = {
+    id: string;
+    code: string;
+    title: string;
+    description: string | null;
+    status: string;
+  };
+
+MATCH LINE: 73
+    source_type: string;
+    is_required: boolean;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+    created_at: string;
+    updated_at: string;
+  };
+  
+  type ActivityShortcutRow = {
+    id: string;
+    user_id: string | null;
+    template_id: string;
+>   shortcut_scope: string;
+    shortcut_type: string;
+    shortcut_value: string;
+    label: string | null;
+    description: string | null;
+    is_favorite: boolean;
+    show_in_default_ui: boolean;
+    is_deprecated_alias: boolean;
+    nfc_tag_id: string | null;
+    voice_phrase: string | null;
+    device_binding: string | null;
+    sort_order: number;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+    created_at: string;
+    updated_at: string;
+  };
+  
+  type ActivityTypeRow = {
+    id: string;
+    code: string;
+    title: string;
+    description: string | null;
+    status: string;
+  };
+  
+  function parseLimit(searchParams: URLSearchParams) {
+    const rawLimit = searchParams.get("limit");
+  
+
+MATCH LINE: 74
+    is_required: boolean;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+    created_at: string;
+    updated_at: string;
+  };
+  
+  type ActivityShortcutRow = {
+    id: string;
+    user_id: string | null;
+    template_id: string;
+    shortcut_scope: string;
+>   shortcut_type: string;
+    shortcut_value: string;
+    label: string | null;
+    description: string | null;
+    is_favorite: boolean;
+    show_in_default_ui: boolean;
+    is_deprecated_alias: boolean;
+    nfc_tag_id: string | null;
+    voice_phrase: string | null;
+    device_binding: string | null;
+    sort_order: number;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+    created_at: string;
+    updated_at: string;
+  };
+  
+  type ActivityTypeRow = {
+    id: string;
+    code: string;
+    title: string;
+    description: string | null;
+    status: string;
+  };
+  
+  function parseLimit(searchParams: URLSearchParams) {
+    const rawLimit = searchParams.get("limit");
+  
+    if (!rawLimit) {
+
+MATCH LINE: 75
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+    created_at: string;
+    updated_at: string;
+  };
+  
+  type ActivityShortcutRow = {
+    id: string;
+    user_id: string | null;
+    template_id: string;
+    shortcut_scope: string;
+    shortcut_type: string;
+>   shortcut_value: string;
+    label: string | null;
+    description: string | null;
+    is_favorite: boolean;
+    show_in_default_ui: boolean;
+    is_deprecated_alias: boolean;
+    nfc_tag_id: string | null;
+    voice_phrase: string | null;
+    device_binding: string | null;
+    sort_order: number;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+    created_at: string;
+    updated_at: string;
+  };
+  
+  type ActivityTypeRow = {
+    id: string;
+    code: string;
+    title: string;
+    description: string | null;
+    status: string;
+  };
+  
+  function parseLimit(searchParams: URLSearchParams) {
+    const rawLimit = searchParams.get("limit");
+  
+    if (!rawLimit) {
+      return ACTIVITY_RECORDING_DEFAULT_LIMIT;
+
+MATCH LINE: 333
+        : { data: [], error: null };
+  
+    if (linksError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: linksError.message,
+        },
+        { status: 500 }
+      );
+    }
+  
+>   const { data: shortcutsData, error: shortcutsError } =
+      templateIds.length > 0
+        ? await supabase
+            .from("user_activity_shortcuts")
+            .select("*")
+            .in("template_id", templateIds)
+            .or(`shortcut_scope.eq.system,user_id.eq.${appUser.id}`)
+            .eq("is_active", true)
+            .order("sort_order", { ascending: true })
+        : { data: [], error: null };
+  
+    if (shortcutsError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: shortcutsError.message,
+        },
+        { status: 500 }
+      );
+    }
+  
+    const { data: activityTypesData, error: activityTypesError } =
+      activityTypeIds.length > 0
+        ? await supabase
+            .from("activity_types")
+            .select("id, code, title, description, status")
+            .in("id", activityTypeIds)
+        : { data: [], error: null };
+  
+
+MATCH LINE: 336
+      return NextResponse.json(
+        {
+          ok: false,
+          error: linksError.message,
+        },
+        { status: 500 }
+      );
+    }
+  
+    const { data: shortcutsData, error: shortcutsError } =
+      templateIds.length > 0
+        ? await supabase
+>           .from("user_activity_shortcuts")
+            .select("*")
+            .in("template_id", templateIds)
+            .or(`shortcut_scope.eq.system,user_id.eq.${appUser.id}`)
+            .eq("is_active", true)
+            .order("sort_order", { ascending: true })
+        : { data: [], error: null };
+  
+    if (shortcutsError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: shortcutsError.message,
+        },
+        { status: 500 }
+      );
+    }
+  
+    const { data: activityTypesData, error: activityTypesError } =
+      activityTypeIds.length > 0
+        ? await supabase
+            .from("activity_types")
+            .select("id, code, title, description, status")
+            .in("id", activityTypeIds)
+        : { data: [], error: null };
+  
+    if (activityTypesError) {
+      return NextResponse.json(
+        {
+
+============================================================
+C4) quick capture templates
+FILE: src/app/api/activity/templates/route.ts
+PATTERN: show_in_quick_capture
+============================================================
+
+MATCH LINE: 36
+    template_scope: string;
+    visibility: string;
+    source_type: string;
+    status: string;
+    default_activity_type_id: string | null;
+    default_duration_minutes: number | null;
+    quick_duration_minutes: number[] | null;
+    default_status: string;
+    default_source_type: string;
+    default_privacy_scope: string;
+    icon_key: string | null;
+    color_key: string | null;
+>   show_in_quick_capture: boolean;
+    show_in_onboarding: boolean;
+    allow_manual_duration: boolean;
+    allow_comment: boolean;
+    allow_started_at_override: boolean;
+    allow_ended_at_override: boolean;
+    input_schema_json: Record<string, unknown> | null;
+    ui_schema_json: Record<string, unknown> | null;
+    default_metadata_json: Record<string, unknown> | null;
+    sort_order: number;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+  };
+  
+  type ActivityTemplateLinkRow = {
+    id: string;
+    template_id: string;
+    linked_entity_type: string;
+    linked_entity_id: string | null;
+    linked_entity_key: string | null;
+    link_role: string;
+    relation_type: string;
+    default_weight: number;
+    default_confidence: number;
+    source_type: string;
+    is_required: boolean;
+    is_active: boolean;
+    metadata_json: Record<string, unknown> | null;
+
+MATCH LINE: 199
+      (template) => normalizeText(template.template_group) === normalizedGroup
+    );
+  }
+  
+  function filterTemplatesByQuickCapture(
+    templates: ActivityTemplateRow[],
+    quickCaptureOnly: boolean
+  ) {
+    if (!quickCaptureOnly) {
+      return templates;
+    }
+  
+>   return templates.filter((template) => template.show_in_quick_capture);
+  }
+  
+  function mapByTemplateId<T extends { template_id: string }>(rows: T[]) {
+    const result = new Map<string, T[]>();
+  
+    for (const row of rows) {
+      const existingRows = result.get(row.template_id) ?? [];
+      existingRows.push(row);
+      result.set(row.template_id, existingRows);
+    }
+  
+    return result;
+  }
+  
+  function mapActivityTypesById(activityTypes: ActivityTypeRow[]) {
+    const result = new Map<string, ActivityTypeRow>();
+  
+    for (const activityType of activityTypes) {
+      result.set(activityType.id, activityType);
+    }
+  
+    return result;
+  }
+  
+  export async function GET(request: Request) {
+    if (!ACTIVITY_RECORDING_ENABLED) {
+      return NextResponse.json(
+        {
+
+MATCH LINE: 410
+        templateScope: template.template_scope,
+        visibility: template.visibility,
+        sourceType: template.source_type,
+        status: template.status,
+        defaultActivityType,
+        defaultDurationMinutes: template.default_duration_minutes,
+        quickDurationMinutes: template.quick_duration_minutes ?? [],
+        defaultStatus: template.default_status,
+        defaultSourceType: template.default_source_type,
+        defaultPrivacyScope: template.default_privacy_scope,
+        iconKey: template.icon_key,
+        colorKey: template.color_key,
+>       showInQuickCapture: template.show_in_quick_capture,
+        showInOnboarding: template.show_in_onboarding,
+        allowManualDuration: template.allow_manual_duration,
+        allowComment: template.allow_comment,
+        allowStartedAtOverride: template.allow_started_at_override,
+        allowEndedAtOverride: template.allow_ended_at_override,
+        inputSchema: template.input_schema_json ?? {},
+        uiSchema: template.ui_schema_json ?? {},
+        metadata: template.default_metadata_json ?? {},
+        links: links.map((link) => ({
+          id: link.id,
+          linkedEntityType: link.linked_entity_type,
+          linkedEntityId: link.linked_entity_id,
+          linkedEntityKey: link.linked_entity_key,
+          linkRole: link.link_role,
+          relationType: link.relation_type,
+          defaultWeight: link.default_weight,
+          defaultConfidence: link.default_confidence,
+          sourceType: link.source_type,
+          isRequired: link.is_required,
+          metadata: link.metadata_json ?? {},
+        })),
+        shortcuts: shortcuts.map((shortcut) => ({
+          id: shortcut.id,
+          shortcutScope: shortcut.shortcut_scope,
+          shortcutType: shortcut.shortcut_type,
+          shortcutValue: shortcut.shortcut_value,
+          label: shortcut.label,
+          description: shortcut.description,
+
+============================================================
+D1) complete route 409 message
+FILE: src/app/api/activity/complete/route.ts
+PATTERN: Activity event status
+============================================================
+
+MATCH LINE: 870
+                ? error.message
+                : "Failed to inspect completed activity event.",
+          },
+          { status: 500 }
+        );
+      }
+    }
+  
+    if (!isCompletableActivityStatus(event.status)) {
+      return NextResponse.json(
+        {
+          ok: false,
+>         error: `Activity event status '${event.status}' cannot be completed by this endpoint.`,
+          allowedStatuses: Array.from(ACTIVITY_COMPLETABLE_STATUSES),
+        },
+        { status: 409 }
+      );
+    }
+  
+    const timing = resolveCompletionTiming({
+      event,
+      body,
+    });
+  
+    if (!timing.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: timing.error,
+        },
+        { status: 400 }
+      );
+    }
+  
+    const comment = asString(body.comment);
+    const existingMetadata = asRecord(event.metadata_json);
+    const nowIso = new Date().toISOString();
+  
+    const processingRunId = randomUUID();
+    const processingStartedAt = new Date();
+  
+
+============================================================
+D2) complete route allowedStatuses response
+FILE: src/app/api/activity/complete/route.ts
+PATTERN: allowedStatuses
+============================================================
+
+MATCH LINE: 871
+                : "Failed to inspect completed activity event.",
+          },
+          { status: 500 }
+        );
+      }
+    }
+  
+    if (!isCompletableActivityStatus(event.status)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Activity event status '${event.status}' cannot be completed by this endpoint.`,
+>         allowedStatuses: Array.from(ACTIVITY_COMPLETABLE_STATUSES),
+        },
+        { status: 409 }
+      );
+    }
+  
+    const timing = resolveCompletionTiming({
+      event,
+      body,
+    });
+  
+    if (!timing.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: timing.error,
+        },
+        { status: 400 }
+      );
+    }
+  
+    const comment = asString(body.comment);
+    const existingMetadata = asRecord(event.metadata_json);
+    const nowIso = new Date().toISOString();
+  
+    const processingRunId = randomUUID();
+    const processingStartedAt = new Date();
+  
+    const rawSignalResult = await createRawActivitySignal({
+
+============================================================
+D3) complete route status check
+FILE: src/app/api/activity/complete/route.ts
+PATTERN: isCompletableActivityStatus
+============================================================
+
+MATCH LINE: 11
+  import { randomUUID } from "crypto";
+  import { NextResponse } from "next/server";
+  import {
+    ACTIVITY_RECORDING_DISABLED_MESSAGE,
+    ACTIVITY_RECORDING_ENABLED,
+  } from "../../../../../lib/activity/activityRecordingConfig";
+  import {
+    ACTIVITY_COMPLETABLE_STATUSES,
+    ACTIVITY_STATUS_COMPLETED,
+    canTransitionActivityStatus,
+>   isCompletableActivityStatus,
+  } from "../../../../../lib/activity/activityLifecycle";
+  import {
+    getDurationMs,
+    safeCreateActivityProcessingLog,
+  } from "../../../../../lib/activity/activityProcessingLogs";
+  import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+  import { processActivityImpacts } from "../../../../../lib/activity/activityImpactProcessor";
+  import { processActivityValueObjectBridge } from "../../../../../lib/activity/activityValueObjectLifecycle";
+  import { deriveCategoryCandidates } from "../../../../../lib/activity/categoryDerivation/ruleExtractor";
+  import {
+    resolveCategoryCandidates,
+    type CategoryResolverCreatePolicy,
+    type CategoryResolverSupabaseClient,
+  } from "../../../../../lib/activity/categoryDerivation/resolver";
+  import {
+    persistCategoryDerivations,
+    type CategoryDerivationPersistenceSupabaseClient,
+  } from "../../../../../lib/activity/categoryDerivation/persistDerivations";
+  import type { CategoryDerivationInput } from "../../../../../lib/activity/categoryDerivation/types";
+  import type { AdditionalValueObjectCategoryLink } from "../../../../../lib/activity/valueObjectBridge";
+  import { ensureActivityEventRubricatorClassificationForKnownTemplate } from "../../../../../lib/activity/activityRubricatorClassificationLifecycle";
+  import { buildRubricatorResolverLogMetadata } from "../../../../../lib/activity/rubricatorResolverLogMetadata";
+  import {
+    createRawActivitySignal,
+    markRawActivitySignalFailed,
+    markRawActivitySignalProcessed,
+  } from "../../../../../lib/activity/rawActivitySignals";
+  import { supabase } from "../../../../../lib/supabase";
+
+MATCH LINE: 866
+          {
+            ok: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to inspect completed activity event.",
+          },
+          { status: 500 }
+        );
+      }
+    }
+  
+>   if (!isCompletableActivityStatus(event.status)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Activity event status '${event.status}' cannot be completed by this endpoint.`,
+          allowedStatuses: Array.from(ACTIVITY_COMPLETABLE_STATUSES),
+        },
+        { status: 409 }
+      );
+    }
+  
+    const timing = resolveCompletionTiming({
+      event,
+      body,
+    });
+  
+    if (!timing.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: timing.error,
+        },
+        { status: 400 }
+      );
+    }
+  
+    const comment = asString(body.comment);
+    const existingMetadata = asRecord(event.metadata_json);
+    const nowIso = new Date().toISOString();
+
+============================================================
+D4) complete route transition check
+FILE: src/app/api/activity/complete/route.ts
+PATTERN: canTransitionActivityStatus
+============================================================
+
+MATCH LINE: 10
+  import { randomUUID } from "crypto";
+  import { NextResponse } from "next/server";
+  import {
+    ACTIVITY_RECORDING_DISABLED_MESSAGE,
+    ACTIVITY_RECORDING_ENABLED,
+  } from "../../../../../lib/activity/activityRecordingConfig";
+  import {
+    ACTIVITY_COMPLETABLE_STATUSES,
+    ACTIVITY_STATUS_COMPLETED,
+>   canTransitionActivityStatus,
+    isCompletableActivityStatus,
+  } from "../../../../../lib/activity/activityLifecycle";
+  import {
+    getDurationMs,
+    safeCreateActivityProcessingLog,
+  } from "../../../../../lib/activity/activityProcessingLogs";
+  import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+  import { processActivityImpacts } from "../../../../../lib/activity/activityImpactProcessor";
+  import { processActivityValueObjectBridge } from "../../../../../lib/activity/activityValueObjectLifecycle";
+  import { deriveCategoryCandidates } from "../../../../../lib/activity/categoryDerivation/ruleExtractor";
+  import {
+    resolveCategoryCandidates,
+    type CategoryResolverCreatePolicy,
+    type CategoryResolverSupabaseClient,
+  } from "../../../../../lib/activity/categoryDerivation/resolver";
+  import {
+    persistCategoryDerivations,
+    type CategoryDerivationPersistenceSupabaseClient,
+  } from "../../../../../lib/activity/categoryDerivation/persistDerivations";
+  import type { CategoryDerivationInput } from "../../../../../lib/activity/categoryDerivation/types";
+  import type { AdditionalValueObjectCategoryLink } from "../../../../../lib/activity/valueObjectBridge";
+  import { ensureActivityEventRubricatorClassificationForKnownTemplate } from "../../../../../lib/activity/activityRubricatorClassificationLifecycle";
+  import { buildRubricatorResolverLogMetadata } from "../../../../../lib/activity/rubricatorResolverLogMetadata";
+  import {
+    createRawActivitySignal,
+    markRawActivitySignalFailed,
+    markRawActivitySignalProcessed,
+  } from "../../../../../lib/activity/rawActivitySignals";
+
+============================================================
+E) NEXT DECISION
+============================================================
+After this focused extraction, build C2-B-FIX3 browser script:
+1) GET /api/activity/templates
+2) choose active/system quick-capture template with default_status started or other completable status
+3) POST /api/activity/start with exact template selector field
+4) POST /api/activity/complete
+5) verify category_derivation log + additionalValueObjectCategoryLinks
