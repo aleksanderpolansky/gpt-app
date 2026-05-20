@@ -1,0 +1,414 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-P3-B7-C2-C-B2 — clean free-text setup + production complete result
+
+Generated: 2026-05-20 18:49:23
+Current HEAD:
+805e6c2 Fix clean free-text setup route context contract
+
+============================================================
+1) FINAL DECISION
+============================================================
+
+C2-C-B2 status:
+
+PASS — clean free-text production completion proof.
+
+The browser script originally produced ok=false because its pass matrix expected eventLinks and impactEvents.
+That expectation was too strict for a clean free-text, template-less activity event.
+
+The actual production proof succeeded:
+- clean setup route created a non-completed free-text activity_event
+- no activity_template_id
+- no legacy template_id
+- input_text = walked to work for 15 minutes
+- /api/activity/complete returned HTTP 200
+- complete response ok=true
+- event.status became completed
+- event.processing_status became processed
+- Value Object bridge created the semantic bridge artifacts
+- additional value object category links were created for free-text semantics
+
+============================================================
+2) TEST EVENT
+============================================================
+
+Event ID:
+8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Setup route:
+POST /api/activity/debug/create-free-text-start-event
+
+Production route under test:
+POST /api/activity/complete
+
+Input:
+walked to work for 15 minutes
+
+Setup event:
+- status: started
+- processing_status: pending
+- activity_template_id: null
+- template_id: null
+- source: manual_form
+- privacy_scope: private
+
+Completed event:
+- status: completed
+- processing_status: processed
+- duration_minutes: 15
+- started_at: 2026-05-20T16:45:50.173+00:00
+- ended_at: 2026-05-20T17:00:50.173+00:00
+
+============================================================
+3) COMPLETE RESPONSE TOP-LEVEL PROOF
+============================================================
+
+Complete response keys:
+
+- ok
+- status
+- event
+- impactEvents
+- dailyAggregates
+- currentSnapshots
+- impactProcessor
+- rubricatorClassification
+- valueObjectBridge
+- processingLogs
+- rawSignal
+- processingRunId
+- lifecycle
+
+Complete response:
+- ok: true
+- status: completed
+
+Raw signal:
+- rawSignal.id: 4fbfd14e-2189-435a-b97f-92acd77300a9
+- rawSignal.processingStatus: processed
+
+Processing run:
+- processingRunId: 76c3c9b4-fbcd-4d99-b206-7f8e47f31378
+
+============================================================
+4) IMPACT PROCESSOR RESULT
+============================================================
+
+Impact processor result:
+
+- ok: true
+- skipped: true
+- reason: No active impact rules found for this activity event.
+- impactRules: 0
+- impactEvents: 0
+- dailyAggregates: 0
+- currentSnapshots: 0
+
+Interpretation:
+
+This is acceptable for clean free-text proof.
+
+The purpose of C2-C-B2 was not to prove impact rules.
+The purpose was to prove that free-text semantics can pass through production /api/activity/complete into the Value Object bridge and category links.
+
+============================================================
+5) RUBRICATOR CLASSIFICATION RESULT
+============================================================
+
+Rubricator classification result:
+
+- ok: true
+- skipped: true
+- skipReason: template_slug_missing_after_resolution
+- errors:
+  - Template slug was not resolved.
+
+Interpretation:
+
+This is expected for a clean free-text event with:
+- activity_template_id: null
+- template_id: null
+
+Known-template rubricator classification was invoked, but skipped because this event intentionally did not use a template.
+
+This is not a failure for free-text proof.
+
+============================================================
+6) VALUE OBJECT BRIDGE RESULT
+============================================================
+
+Value Object Bridge:
+
+- ok: true
+- skipped: false
+- errors: []
+
+Mapping:
+- ok: true
+- skipped: false
+- classificationSummaryCount: 0
+- mappingsCount: 1
+
+Bridge:
+- ok: true
+- skipped: false
+- mappingsRequested: 1
+- createdCount: 1
+- errors: []
+
+Created bridge artifacts:
+
+- valueObjectId: 291b2613-0f5b-406f-8bfc-f57eb619c107
+- valueObjectInstanceId: 1f9011cc-a3d2-4610-abcf-48a4a9a6735d
+- linkId: 04e8404a-1fb0-49f0-8a9d-90deca6741d7
+- stateDeltaId: 06a885ba-0d59-4a0e-b268-f6df251be8ab
+- aggregateId: 013b58eb-5a1f-415c-935b-44d2b9b2a35f
+- snapshotId: 360eac20-9cd2-426d-aea8-ccceae9f6f9d
+- activityEventValueObjectLinkId: 27ce4a60-6b6a-4dbb-a117-0dc5b9260656
+- usageAggregateId: 8bbe137f-edf3-402b-ae90-f4c800eb78e2
+- valueObjectCategoryLinkId: null
+- valueObjectCategoryLinkError: null
+
+============================================================
+7) ADDITIONAL VALUE OBJECT CATEGORY LINKS
+============================================================
+
+The most important C2-C-B2 proof:
+
+additionalValueObjectCategoryLinks count: 5
+
+Created category links:
+
+1. walking
+   - valueObjectCategoryLinkId: 290b416a-2f09-4fb7-b999-16dc565ad313
+   - categoryId: e821fd0f-f6f3-4b58-b107-93313939b1c4
+   - errorMessage: null
+
+2. work
+   - valueObjectCategoryLinkId: 5961b1ff-91c9-47c7-9844-46c6680e108f
+   - categoryId: b1c16819-b515-49ff-960e-aee835637322
+   - errorMessage: null
+
+3. commute-to-work
+   - valueObjectCategoryLinkId: d0939e24-6016-48fc-ae55-7b75dbd038a9
+   - categoryId: b2cacd1e-ec22-42bf-9619-b3f464412825
+   - errorMessage: null
+
+4. walking-to-work
+   - valueObjectCategoryLinkId: e15c70a6-fbf4-435c-99a8-113e28cfdc14
+   - categoryId: 7fd79307-29b1-483d-8ea0-be0091aaa340
+   - errorMessage: null
+
+5. duration-minutes
+   - valueObjectCategoryLinkId: 0197ac09-24ad-48ad-891f-e6ca76f77036
+   - categoryId: 7bb29faa-c678-4e73-96c9-c9ba41355dad
+   - errorMessage: null
+
+additionalValueObjectCategoryLinkErrors:
+[]
+
+Interpretation:
+
+This proves that clean free-text activity:
+"walked to work for 15 minutes"
+
+was semantically decomposed and attached to the created Value Object through additional category links.
+
+This is the key success criterion for the clean free-text production path.
+
+============================================================
+8) DEBUG TRACE SUMMARY LIMITATION
+============================================================
+
+Debug trace summary showed:
+
+- activityEvents: 1
+- rawActivitySignals: 1
+- activityProcessingLogs: 6
+- activityCorrections: 0
+- impactEvents: 0
+- eventLinks: 0
+
+This does not mean Value Object bridge failed.
+
+Reason:
+
+Current debug-trace summary exposes:
+- activity events
+- raw signals
+- processing timeline
+- impact summary
+- generic eventLinks summary
+
+But the successful free-text bridge artifacts are stored/reported through Value Object bridge structures, not through generic eventLinks or impactEvents.
+
+Therefore current debug-trace summary is incomplete for C2-C proof.
+
+The complete response already exposed the actual bridge proof:
+- created Value Object
+- created Value Object Instance
+- created activity-event/value-object link
+- created state delta
+- created aggregate
+- created snapshot
+- created usage aggregate
+- created 5 additional value object category links
+
+============================================================
+9) PROCESSING TIMELINE
+============================================================
+
+Processing timeline from debug-trace summary:
+
+1. Raw activity complete signal captured.
+2. Activity event completed from lifecycle complete flow.
+3. Rule-based activity impacts processed after completion.
+4. Known-template rubricator classification ensured before Value Object bridge.
+5. Rule-based Category Derivation processed before Value Object bridge.
+6. Value Object bridge processed after activity completion.
+
+Important:
+
+The labels "Known-template rubricator classification ensured..." and "Rule-based Category Derivation..." are route-stage logs.
+For this free-text event:
+- known-template classification was invoked but skipped because template slug was missing
+- free-text category derivation and bridge still produced additionalValueObjectCategoryLinks
+
+============================================================
+10) C2-C-B2 PASS CRITERIA REVIEW
+============================================================
+
+Passed:
+
+- setup HTTP 200
+- setup ok=true
+- setup event exists
+- setup event status = started
+- setup processing_status = pending
+- setup activity_template_id = null
+- setup template_id = null
+- input text = walked to work for 15 minutes
+- complete HTTP 200
+- complete ok=true
+- event completed
+- event processed
+- no German template pollution
+- no German skill impact
+- no marketing skill impact
+- no right hand/wrist handwriting template impact
+- Value Object bridge executed
+- Value Object bridge created 1 mapping
+- Value Object bridge created 1 Value Object bridge artifact set
+- additionalValueObjectCategoryLinks created count = 5
+- semantic category slugs include walking, work, commute-to-work, walking-to-work, duration-minutes
+- no additional category link errors
+
+Not applicable / not failure:
+
+- impactEvents = 0
+  Reason: no active impact rules for template-less free-text event.
+
+- eventLinksSummary = 0
+  Reason: debug-trace summary currently does not expose the Value Object bridge artifact tables in this summary field.
+
+============================================================
+11) DO NOT RERUN
+============================================================
+
+Do not rerun /api/activity/complete for event:
+
+8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Reason:
+The event is already completed and processed.
+A repeated request would test already-completed behavior, not the original production path.
+
+============================================================
+12) NEXT STEP
+============================================================
+
+Next block:
+
+P4.10.0-C8-P3-B7-C2-D — debug trace / proof visibility improvement.
+
+Goal:
+
+Make debug-trace or a narrow read-only verification route expose the Value Object bridge artifacts for an event, especially:
+
+- valueObjectId
+- valueObjectInstanceId
+- activityEventValueObjectLinkId
+- stateDeltaId
+- aggregateId
+- snapshotId
+- usageAggregateId
+- additionalValueObjectCategoryLinks
+- additionalValueObjectCategoryLinkErrors
+
+Reason:
+
+C2-C-B2 already proved the production path through the complete response.
+But the debug-trace summary still hides the most important bridge artifacts.
+Future tests should not need to inspect the raw complete response only.
+
+Recommended next route or debug-trace extension:
+
+Option A:
+Patch /api/activity/debug-trace summary to include valueObjectBridgeSummary and categoryLinkSummary.
+
+Option B:
+Create a narrow read-only route:
+
+/api/activity/debug/value-object-bridge-proof?eventId=...
+
+This route would read bridge artifacts for a completed activity event without rerunning completion.
+
+Preferred next action:
+
+Start with read-only inspection of existing tables/source to identify where these IDs are persisted:
+- activity_event_value_object_links
+- value_object_instances
+- value_object_category_links
+- value_object_state_deltas
+- value_object_daily_aggregates or equivalent aggregate table
+- value_object_current_snapshots or equivalent snapshot table
+
+Then decide whether to patch debug-trace or create the narrow proof route.
+
+============================================================
+13) SUMMARY FOR NEXT CHAT
+============================================================
+
+C2-C-B2 is a clean free-text production PASS.
+
+Important event:
+8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Clean setup:
+- no activity template
+- no legacy template
+- input_text: walked to work for 15 minutes
+
+Production complete:
+- HTTP 200
+- ok=true
+- completed
+- processed
+
+Free-text semantic bridge:
+- created 1 Value Object mapping
+- created 1 Value Object bridge artifact set
+- created 5 additional value object category links:
+  - walking
+  - work
+  - commute-to-work
+  - walking-to-work
+  - duration-minutes
+
+Main caveat:
+debug-trace summary currently shows eventLinks=0 and impactEvents=0.
+This is not a production failure.
+It is a debug/proof visibility limitation.
+
+Next:
+C2-D should improve read-only proof visibility for Value Object bridge artifacts.
