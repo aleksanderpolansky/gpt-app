@@ -1,0 +1,498 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-P3-B7-C2-D-C3 — final C2 block summary
+
+Generated: 2026-05-20 19:31:08
+Current HEAD:
+3a9d1a3 Document Value Object bridge proof route contract
+
+============================================================
+1) FINAL DECISION
+============================================================
+
+C2 block status:
+
+PASS.
+
+The full browser-authenticated production completion path for clean free-text activity was proven.
+
+The final proof chain is:
+
+1. clean free-text started event was created
+2. production /api/activity/complete completed it
+3. Category Derivation ran before Value Object bridge
+4. Value Object bridge created persisted artifacts
+5. additional value object category links were created
+6. read-only proof route verified persistence from tables
+7. route contract was documented
+
+Canonical free-text case:
+
+walked to work for 15 minutes
+
+Canonical event:
+
+8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+============================================================
+2) MAIN RESULT
+============================================================
+
+The platform now supports this production path:
+
+free-text activity_event
+-> /api/activity/complete
+-> lifecycle completion
+-> raw complete signal
+-> rule-based impact processor
+-> known-template classification stage
+-> Category Derivation stage
+-> Value Object bridge
+-> persisted Value Object artifacts
+-> persisted category links
+-> read-only bridge proof route
+
+Important semantic result:
+
+The free-text input:
+
+walked to work for 15 minutes
+
+produced expected semantic category slugs:
+
+- walking
+- work
+- commute-to-work
+- walking-to-work
+- duration-minutes
+
+============================================================
+3) IMPORTANT TEST EVENT
+============================================================
+
+Event ID:
+
+8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Original input:
+
+walked to work for 15 minutes
+
+Setup state:
+
+- status: started
+- processing_status: pending
+- activity_template_id: null
+- template_id: null
+- source: manual_form
+- privacy_scope: private
+
+Completed state:
+
+- status: completed
+- processing_status: processed
+- duration_minutes: 15
+
+Do not rerun /api/activity/complete for this event.
+
+Reason:
+
+The event is already completed and processed.
+A repeated completion request would test already-completed behavior, not the original production path.
+
+============================================================
+4) C2-B RESULT
+============================================================
+
+C2-B status:
+
+PARTIAL / TECHNICAL PASS.
+
+What was proven:
+
+- /api/activity/start created a completable activity_event.
+- /api/activity/complete returned HTTP 200.
+- complete response had ok=true.
+- event.status became completed.
+- event.processing_status became processed.
+- processing timeline order was correct:
+  start event
+  -> complete event
+  -> impacts
+  -> known-template classification
+  -> Category Derivation
+  -> Value Object bridge
+
+Why it was not final semantic PASS:
+
+The setup used german-marketing-handwriting-practice template while the title/comment said "walked to work for 15 minutes".
+
+Therefore C2-B proved technical production lifecycle order, but not clean walked-to-work semantics.
+
+============================================================
+5) C2-C RESULT
+============================================================
+
+C2-C status:
+
+PASS.
+
+What was added:
+
+/api/activity/debug/create-free-text-start-event
+
+Purpose:
+
+Create a clean non-completed free-text started event for production /api/activity/complete testing.
+
+Important fix:
+
+C2-C-A2 corrected the helper route context contract:
+
+- removed incorrect expectation that getActivityUserContext() returns supabase
+- aligned with existing project routes:
+  const { appUser, personActor, errorResponse } = await getActivityUserContext();
+- imported supabase directly from lib/supabase
+
+C2-C-B2 result:
+
+- setup HTTP 200
+- setup ok=true
+- event status = started
+- processing_status = pending
+- no activity_template_id
+- no template_id
+- input_text = walked to work for 15 minutes
+- production /api/activity/complete HTTP 200
+- complete ok=true
+- event completed
+- event processed
+- no German-template pollution
+- Value Object bridge created semantic artifacts
+- additionalValueObjectCategoryLinks count = 5
+
+============================================================
+6) C2-D RESULT
+============================================================
+
+C2-D status:
+
+PASS.
+
+Problem solved:
+
+/api/activity/debug-trace summary showed:
+
+- eventLinks = 0
+- impactEvents = 0
+
+This was not a production failure.
+
+It was a proof visibility limitation because debug-trace summary did not expose the Value Object bridge artifact tables.
+
+Solution:
+
+Created read-only proof route:
+
+GET /api/activity/debug/value-object-bridge-proof?eventId=...
+
+Purpose:
+
+Verify persisted Value Object bridge artifacts for a completed event without rerunning /api/activity/complete.
+
+============================================================
+7) C2-D PROOF ROUTE RESULT
+============================================================
+
+Route:
+
+/api/activity/debug/value-object-bridge-proof
+
+Method:
+
+GET
+
+Mode:
+
+read-only
+
+Canonical test:
+
+GET /api/activity/debug/value-object-bridge-proof?eventId=8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Final result after FIX1:
+
+- HTTP status: 200
+- route ok: true
+- criticalPass: true
+- semanticPass: true
+- errors: 0
+
+Persisted artifacts found:
+
+- activityEventValueObjectLinks: 1
+- activityEventValueObjectInstanceLinks: 1
+- valueObjects: 1
+- valueObjectInstances: 1
+- stateDeltas: 1
+- dailyAggregates: 2
+- stateSnapshots: 1
+- usageAggregates: 1
+- valueObjectCategoryLinks: 5
+- categorySlugs: 5
+
+All important artifacts were present.
+
+Missing artifacts:
+
+false for all important bridge proof categories.
+
+============================================================
+8) C2-D-B3 / FIX1 IMPORTANT CORRECTION
+============================================================
+
+Initial read-only proof route problem:
+
+It incorrectly queried non-existing columns:
+
+- activity_event_value_object_links.activity_event_id
+- activity_event_value_object_instance_links.activity_event_id
+- value_object_state_deltas.activity_event_id
+
+Corrected strategy:
+
+Use candidate event linkage columns:
+
+- event_id
+- source_event_id
+- activity_id
+- activity_record_id
+
+Then derive downstream proof through:
+
+- value_object_id
+- value_object_instance_id
+- category_id
+
+C2-D-B3 introduced the new strategy.
+
+C2-D-B3-FIX1 corrected TypeScript:
+
+selectEqWithCandidateColumns now always returns TableProof, not TableProof | null.
+
+After FIX1:
+
+- npx.cmd tsc --noEmit --pretty false passed
+- route was committed
+- browser proof rerun passed
+
+============================================================
+9) ROUTE CONTRACT DOCUMENTED
+============================================================
+
+C2-D-C1 documented the route contract in:
+
+docs/value-objects/category-derivation-production-complete-route-c2-d-c1-value-object-bridge-proof-contract.txt
+
+Commit:
+
+3a9d1a3 Document Value Object bridge proof route contract
+
+Contract includes:
+
+- endpoint
+- method
+- query parameter
+- read-only restrictions
+- response top-level fields
+- proofSummary contract
+- missingArtifacts contract
+- inspected tables
+- column strategy
+- known fix history
+- when to use this route
+- what this route does not prove
+
+============================================================
+10) FILES CREATED IN THIS C2 BLOCK
+============================================================
+
+Key result / contract documents:
+
+- docs/value-objects/category-derivation-production-complete-route-c2-b-result-and-next-plan.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-c-a-tsc.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-c-a2-tsc.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-c-b2-result.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-a-bridge-persistence-inventory.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-a2-targeted-bridge-source-schema.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-a3-fixed-targeted-bridge-source-schema.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-b1-tsc.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-b3-tsc.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-b3-fix1-tsc.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-b2-after-fix1-result.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-c1-value-object-bridge-proof-contract.txt
+
+Runtime/helper routes:
+
+- src/app/api/activity/debug/create-free-text-start-event/route.ts
+- src/app/api/activity/debug/value-object-bridge-proof/route.ts
+
+Production route involved:
+
+- src/app/api/activity/complete/route.ts
+
+============================================================
+11) IMPORTANT COMMITS
+============================================================
+
+Relevant commits from this block include:
+
+- 72af9a0 Document C2-B production flow result and next plan
+- 11f21ff Add clean free-text started event setup route
+- 805e6c2 Fix clean free-text setup route context contract
+- 5c81c25 Document clean free-text production complete proof
+- f87ac2f Inventory Value Object bridge proof persistence
+- 16f3d4b Document targeted Value Object bridge source schema
+- 8e284ba Fix targeted Value Object bridge source schema extraction
+- 25416ee Add read-only Value Object bridge proof route
+- 24ca6ec Fix Value Object bridge proof route column strategy
+- d197918 Fix nullable result in Value Object bridge proof route
+- 084bdcb Document Value Object bridge proof route pass
+- 3a9d1a3 Document Value Object bridge proof route contract
+
+============================================================
+12) WHAT NOT TO REPEAT
+============================================================
+
+Do not rerun /api/activity/complete for:
+
+8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Do not treat eventLinks=0 in debug-trace summary as a bridge failure.
+
+Do not require impactEvents > 0 for template-less clean free-text activity.
+
+Do not treat skipped known-template rubricator classification as failure when:
+
+- activity_template_id = null
+- template_id = null
+
+Do not re-investigate the C2-D-B2 activity_event_id column issue unless new schema errors appear.
+
+Do not patch /api/activity/debug-trace immediately unless there is a concrete need.
+The narrow read-only proof route is already safer and clearer.
+
+============================================================
+13) CURRENT PRODUCTION CONFIDENCE
+============================================================
+
+Confirmed:
+
+- production complete route works for authenticated browser session
+- clean free-text activity can be completed
+- Category Derivation runs before Value Object bridge
+- free-text semantic category links are passed into/persisted by the bridge
+- persisted bridge artifacts can be verified read-only
+- no German-template pollution in clean free-text case
+- proof route can verify bridge persistence from actual tables
+
+Not proven in this block:
+
+- full generic support for all activity types
+- impact rules for template-less free-text events
+- AI classifier integration
+- category_derivation_runs / activity_category_derivations schema hardening
+- full governance for suggested categories
+- UI/UX integration
+
+============================================================
+14) RECOMMENDED NEXT BLOCK
+============================================================
+
+C2 is now closed.
+
+Recommended next direction:
+
+Move from proof of production complete path to the next controlled Category Derivation Layer v1 hardening block.
+
+Candidate next block:
+
+P4.10.0-C8-E — exact implementation plan for Category Derivation Layer v1.
+
+Expected focus:
+
+1. Inventory exact current schema:
+   - contextual_categories
+   - value_object_category_links
+   - activity_event_value_object_links
+   - activity_processing_logs
+   - Value Object bridge tables
+
+2. Confirm or add semantic_layer / category_type fields additively only.
+
+3. Add or confirm:
+   - category_derivation_runs
+   - activity_category_derivations
+
+4. Define deterministic category candidate output contract.
+
+5. Update free-text fallback mapping metadata:
+   - categoryCandidates[]
+
+6. Ensure resolver behavior:
+   - slug -> existing category id
+   - if missing and policy allows, create suggested category
+   - no uncontrolled active-category creation
+
+7. Extend tests beyond walked-to-work:
+   - walking dog
+   - studied math
+   - studied math with child
+   - child studied nearby
+   - watched film with child
+
+8. Preserve rule-based pipeline without requiring AI.
+
+============================================================
+15) FINAL SUMMARY FOR NEXT CHAT
+============================================================
+
+C2 block is complete and should be treated as PASS.
+
+Canonical proof:
+
+Free-text:
+walked to work for 15 minutes
+
+Event:
+8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Production complete:
+
+- HTTP 200
+- ok=true
+- status completed
+- processing_status processed
+
+Semantic category links:
+
+- walking
+- work
+- commute-to-work
+- walking-to-work
+- duration-minutes
+
+Read-only bridge proof route:
+
+/api/activity/debug/value-object-bridge-proof?eventId=...
+
+Final proof status:
+
+- route ok=true
+- criticalPass=true
+- semanticPass=true
+- errors=0
+- all important persisted artifacts present
+
+Next:
+
+Proceed to next controlled Category Derivation Layer v1 hardening block, not UI/UX.
