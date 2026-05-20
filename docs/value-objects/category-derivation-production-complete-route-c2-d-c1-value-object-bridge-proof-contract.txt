@@ -1,0 +1,370 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-P3-B7-C2-D-C1 — value-object-bridge-proof route contract
+
+Generated: 2026-05-20 19:28:49
+Current HEAD:
+084bdcb Document Value Object bridge proof route pass
+
+============================================================
+1) PURPOSE
+============================================================
+
+This document defines the contract for the read-only proof route:
+
+GET /api/activity/debug/value-object-bridge-proof?eventId=...
+
+The route exists because /api/activity/debug-trace summary does not expose all persisted Value Object bridge artifacts.
+
+The route is used to verify that a completed activity event has persisted semantic Value Object bridge artifacts without rerunning /api/activity/complete.
+
+This route is especially important for proof of free-text activity processing.
+
+============================================================
+2) ROUTE
+============================================================
+
+Endpoint:
+
+/api/activity/debug/value-object-bridge-proof
+
+Method:
+
+GET
+
+Required query parameter:
+
+eventId
+
+Example:
+
+GET /api/activity/debug/value-object-bridge-proof?eventId=8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Mode:
+
+read-only
+
+Important restrictions:
+
+- Must not call /api/activity/complete.
+- Must not mutate activity_events.
+- Must not mutate Value Object tables.
+- Must only inspect persisted artifacts.
+- Must be browser-authenticated through existing user context.
+
+============================================================
+3) TARGET EVENT USED FOR PROOF
+============================================================
+
+Canonical tested event:
+
+8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Original free-text semantic input:
+
+walked to work for 15 minutes
+
+Expected semantic category slugs:
+
+- walking
+- work
+- commute-to-work
+- walking-to-work
+- duration-minutes
+
+Expected event state:
+
+- event.status = completed
+- event.processing_status = processed
+
+============================================================
+4) SUCCESSFUL C2-D-B2 AFTER FIX1 RESULT
+============================================================
+
+The route successfully returned:
+
+- HTTP status: 200
+- route ok: true
+- criticalPass: true
+- semanticPass: true
+- errors: 0
+
+Persisted artifacts found:
+
+- activityEventValueObjectLinks: 1
+- activityEventValueObjectInstanceLinks: 1
+- valueObjects: 1
+- valueObjectInstances: 1
+- stateDeltas: 1
+- dailyAggregates: 2
+- stateSnapshots: 1
+- usageAggregates: 1
+- valueObjectCategoryLinks: 5
+- categorySlugs: 5
+
+All expected free-text category slugs were found:
+
+- walking
+- work
+- commute-to-work
+- walking-to-work
+- duration-minutes
+
+============================================================
+5) RESPONSE TOP-LEVEL CONTRACT
+============================================================
+
+Expected top-level response fields:
+
+- ok
+- endpoint
+- p4Step
+- mode
+- eventId
+- proofSummary
+- missingArtifacts
+- errors
+- tables
+- proof
+- samples
+
+Expected endpoint value:
+
+/api/activity/debug/value-object-bridge-proof
+
+Expected mode:
+
+read_only
+
+Expected p4Step:
+
+P4.10.0-C8-P3-B7-C2-D-B3
+
+or later compatible C2-D proof step.
+
+============================================================
+6) proofSummary CONTRACT
+============================================================
+
+proofSummary should include:
+
+- eventId
+- eventFound
+- eventStatus
+- eventProcessingStatus
+- valueObjectIds
+- valueObjectInstanceIds
+- categoryIds
+- categorySlugsFromLinks
+- categorySlugsFromReferences
+- categorySlugs
+- expectedCategorySlugs
+- expectedCategorySlugsFound
+- missingExpectedCategorySlugs
+- counts
+
+Required count fields:
+
+- activityEventValueObjectLinks
+- activityEventValueObjectInstanceLinks
+- valueObjects
+- valueObjectInstances
+- stateDeltas
+- dailyAggregates
+- stateSnapshots
+- usageAggregates
+- valueObjectCategoryLinks
+- categorySlugs
+- errors
+
+============================================================
+7) missingArtifacts CONTRACT
+============================================================
+
+missingArtifacts should include:
+
+- event
+- activityEventValueObjectLinks
+- activityEventValueObjectInstanceLinks
+- valueObjects
+- valueObjectInstances
+- stateDeltas
+- dailyAggregates
+- stateSnapshots
+- usageAggregates
+- valueObjectCategoryLinks
+- categorySlugs
+- expectedFreeTextCategorySlugs
+
+For a full semantic PASS on the canonical free-text event, all of these should be false.
+
+============================================================
+8) TABLES INSPECTED
+============================================================
+
+The route should inspect:
+
+- activity_events
+- activity_event_value_object_links
+- activity_event_value_object_instance_links
+- value_object_instances
+- value_objects
+- value_object_state_deltas
+- value_object_daily_aggregates
+- value_object_state_snapshots
+- value_object_usage_aggregates
+- value_object_category_links
+- contextual_category_events if needed
+
+Important:
+contextual_category_events can be skipped if category slugs are already available from value_object_category_links.
+
+============================================================
+9) COLUMN STRATEGY
+============================================================
+
+The proof route must not assume only one column name for event linkage.
+
+For event-to-bridge link tables, it should use candidate columns such as:
+
+- event_id
+- source_event_id
+- activity_id
+- activity_record_id
+
+For downstream tables, it should derive query keys through IDs already found:
+
+- value_object_id
+- value_object_instance_id
+- category_id
+
+This avoids the earlier C2-D-B2 problem where the route queried non-existing activity_event_id columns.
+
+============================================================
+10) KNOWN FIX HISTORY
+============================================================
+
+Earlier C2-D-B2 problem:
+
+The route returned HTTP 200 but routeOk=false because it looked for non-existing columns:
+
+- activity_event_value_object_links.activity_event_id
+- activity_event_value_object_instance_links.activity_event_id
+- value_object_state_deltas.activity_event_id
+
+C2-D-B3 changed the lookup strategy, but an intermediate commit was created after a failed TypeScript check.
+
+C2-D-B3-FIX1 fixed the TypeScript issue:
+
+selectEqWithCandidateColumns now always returns TableProof, not TableProof | null.
+
+After FIX1:
+
+- npx.cmd tsc --noEmit --pretty false passed
+- route was committed
+- browser proof rerun passed
+- C2-D-B2 after FIX1 was documented
+
+============================================================
+11) WHEN TO USE THIS ROUTE
+============================================================
+
+Use this route after a production activity completion test when we need to verify:
+
+- Value Object was created or found
+- Value Object Instance exists
+- event-to-value-object link exists
+- event-to-value-object-instance link exists
+- state delta exists
+- daily aggregate exists
+- state snapshot exists
+- usage aggregate exists
+- category links exist
+- semantic category slugs match expectation
+
+Especially use it for free-text activities where:
+
+- no activity_template_id exists
+- no template_id exists
+- impactEvents may be 0
+- generic debug-trace eventLinks may be 0
+- proof must come from Value Object bridge tables
+
+============================================================
+12) WHAT THIS ROUTE DOES NOT PROVE
+============================================================
+
+This route does not prove that /api/activity/complete executed in real time.
+
+That is proven by the original completion response and processing logs.
+
+This route proves persisted state after completion.
+
+It also does not prove impact rules if the free-text event has no active impact rules.
+
+Impact processor proof is separate.
+
+============================================================
+13) DO NOT RERUN COMPLETION
+============================================================
+
+Do not rerun /api/activity/complete for:
+
+8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Reason:
+
+The event is already completed and processed.
+Rerunning completion would test already-completed behavior, not the original production path.
+
+============================================================
+14) NEXT DEVELOPMENT OPTIONS
+============================================================
+
+Recommended next steps:
+
+C2-D-C2:
+Add a small reusable browser verification script for:
+
+/api/activity/debug/value-object-bridge-proof?eventId=...
+
+C2-D-C3:
+Create final C2 block summary:
+- what was proven
+- what was fixed
+- what should not be retested
+- how to continue with the next production activity pipeline block
+
+Optional later:
+Patch /api/activity/debug-trace summary to include a compact valueObjectBridgeSummary.
+
+This is optional because the narrow proof route is already safer and clearer.
+
+============================================================
+15) SUMMARY
+============================================================
+
+C2-D now has a working read-only persisted bridge proof route.
+
+The route closes the previous proof visibility gap from debug-trace summary.
+
+Canonical proof event:
+
+8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Canonical semantic proof:
+
+walked to work for 15 minutes
+
+Expected slugs all found:
+
+- walking
+- work
+- commute-to-work
+- walking-to-work
+- duration-minutes
+
+Current decision:
+
+C2-D-B2 after FIX1 is PASS.
+C2-D-C1 documents the route contract.
+Next: C2-D-C2 or C2-D-C3.
