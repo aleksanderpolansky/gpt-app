@@ -1,0 +1,303 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-P3-B7-C2-B-FIX5 — browser-authenticated production-flow result and next plan
+
+Generated: 2026-05-20 18:33:13
+Current HEAD:
+553ecfb Document focused start complete route contract
+
+============================================================
+1) CONTEXT
+============================================================
+
+Target block:
+P4.10.0-C8-P3-B7-C2-B — browser-authenticated production-flow test.
+
+Production route under test:
+- /api/activity/complete
+
+Important test event:
+- bbd5baf9-9f39-4ba0-8e01-cba054baf5ed
+
+The purpose of C2-B was to prove that the production /api/activity/complete route can run the full completion pipeline in an authenticated browser session, including:
+- lifecycle completion
+- raw complete signal creation
+- rule-based impact processing
+- known-template rubricator classification before bridge
+- Category Derivation before Value Object bridge
+- Value Object bridge after completion
+
+============================================================
+2) WHAT WAS PROVEN
+============================================================
+
+The production lifecycle path was proven technically.
+
+Observed through browser-authenticated testing:
+
+- /api/activity/start created a completable activity_event.
+- /api/activity/complete returned HTTP 200.
+- complete response had ok=true.
+- event.status became completed.
+- event.processingStatus became processed.
+- debug-trace summary showed:
+  - activityEvents: 1
+  - rawActivitySignals: 2
+  - activityProcessingLogs: 9
+  - impactEvents: 5
+  - eventLinks: 11
+
+Processing timeline evidence from FIX4-D:
+
+0. Raw activity start signal captured.
+1. Activity start event created from template-first start flow.
+2. Activity start event links created.
+3. Raw activity complete signal captured.
+4. Activity event completed from lifecycle complete flow.
+5. Rule-based activity impacts processed after completion.
+6. Known-template rubricator classification ensured before Value Object bridge.
+7. Rule-based Category Derivation processed before Value Object bridge.
+8. Value Object bridge processed after activity completion.
+
+This proves the order of the production completion pipeline:
+
+start event
+→ complete event
+→ rule-based impacts
+→ known-template classification
+→ Category Derivation
+→ Value Object bridge
+
+============================================================
+3) WHY C2-B IS NOT A CLEAN FINAL PASS
+============================================================
+
+C2-B should not be marked as a clean semantic PASS yet.
+
+Reason 1:
+The successful setup selected this template:
+
+- german-marketing-handwriting-practice
+
+The event title/comment used "walked to work for 15 minutes", but the actual activity template was German marketing handwriting practice.
+
+Therefore the impact summary reflected the German/writing template, not a real walked-to-work semantic activity.
+
+Observed impact summary included:
+- german_skill / writing_practice_minutes
+- marketing_skill / exposure_minutes
+- right_hand / load_minutes
+- wrist / load_minutes
+- attention / cognitive_load
+
+This is technically useful for lifecycle proof, but semantically wrong for walked-to-work.
+
+Reason 2:
+Additional category links were not explicitly proven in the trace output.
+
+Observed:
+- Category Derivation processing log exists.
+- Value Object bridge processing log exists.
+- eventLinks exist.
+- But additionalCategoryLinks / additionalValueObjectCategoryLinks were not visible in the available debug-trace summary output.
+
+Reason 3:
+The debug-trace full mode failed:
+
+GET /api/activity/debug-trace?eventId=bbd5baf9-9f39-4ba0-8e01-cba054baf5ed&mode=full&limit=500
+→ HTTP 500
+
+Because full mode failed, detailed log outputs could not be read from that endpoint.
+
+============================================================
+4) IMPORTANT SIDE ERRORS OBSERVED
+============================================================
+
+During browser testing, the page also produced unrelated background errors:
+
+- POST /api/sync-user 500
+- GET /api/messages 500
+
+These were triggered by page.tsx initial loading logic and are not part of the C2-B route test itself.
+
+They should not be mixed with Category Derivation verification.
+
+They may be investigated later as a separate app health issue, but they should not block C2-C.
+
+============================================================
+5) CURRENT DECISION
+============================================================
+
+C2-B status:
+
+PARTIAL / TECHNICAL PASS
+
+Meaning:
+- Production complete route works in browser-authenticated flow.
+- Completion pipeline reaches Category Derivation and Value Object bridge.
+- The order of processing is correct.
+
+Not yet proven:
+- clean free-text walked-to-work production setup
+- additional category links count > 0 in production complete route
+- exact additional category links propagation into Value Object bridge
+- full debug trace output for processing logs
+
+============================================================
+6) DO NOT DO NEXT
+============================================================
+
+Do not rerun /api/activity/complete for the same event:
+
+- bbd5baf9-9f39-4ba0-8e01-cba054baf5ed
+
+Reason:
+The event is already completed.
+A repeated complete request can hit "already_completed" logic and will not prove the original path again.
+
+Do not use /api/activity/debug-trace mode=full as the main proof path until its HTTP 500 is investigated.
+
+Use mode=summary for safe inspection, or inspect source/contract first.
+
+Do not treat the German-template event as semantic walked-to-work proof.
+
+============================================================
+7) NEXT BLOCK: C2-C
+============================================================
+
+Next target:
+P4.10.0-C8-P3-B7-C2-C — clean non-completed free-text production setup.
+
+Goal:
+Create a real activity_event that is:
+- authenticated as current user
+- status = started or paused
+- processing_status = pending or processing-compatible
+- input_text = walked to work for 15 minutes
+- title = walked to work / walking to work
+- not already completed
+- not forced through German handwriting template
+- suitable for production /api/activity/complete
+
+Then call:
+
+POST /api/activity/complete
+
+Expected C2-C success criteria:
+
+- setup HTTP 200
+- setup event status is started or paused
+- complete HTTP 200
+- complete ok=true
+- event.status completed
+- event.processingStatus processed
+- Category Derivation log exists
+- Value Object bridge log exists
+- additional category links are present or explicitly explained if not persisted
+- no category derivation errors
+- no value object bridge errors
+- no semantic pollution from German template
+
+============================================================
+8) C2-C IMPLEMENTATION OPTIONS
+============================================================
+
+Preferred option:
+Create a narrow debug/setup route only for test setup.
+
+Important:
+This helper route must only create a non-completed free-text event.
+It must not test Category Derivation itself.
+The production route under test remains /api/activity/complete.
+
+Possible helper route:
+
+/api/activity/debug/create-free-text-start-event
+
+Required behavior:
+- authenticated browser only
+- create event for current appUser
+- use current personActor
+- insert into activity_events
+- status: started
+- processing_status: pending
+- source: manual_form or debug_test
+- input_text: request inputText
+- title: request title
+- description: request description
+- started_at: request startedAt
+- ended_at: null
+- duration_minutes: null
+- privacy_scope: private
+- metadata_json marks p4Step and debug setup purpose
+
+Then C2-C browser script:
+1. POST helper route to create started event.
+2. Take eventId.
+3. POST /api/activity/complete with durationMinutes=15 and endedAt.
+4. GET /api/activity/debug-trace mode=summary.
+5. Verify logs and links.
+
+Alternative option:
+Patch existing /api/activity/record or /api/activity/start to support a real free-text started event without template pollution.
+
+This may be more product-like, but riskier because it changes production capture behavior.
+
+For C2-C, the safer path is a narrow debug setup route.
+
+============================================================
+9) SEPARATE NEXT BLOCK: DEBUG TRACE FULL MODE
+============================================================
+
+Separate issue:
+P4.10.0-C8-P3-B7-C2-D — debug-trace full mode 500 investigation.
+
+Problem:
+- mode=summary works.
+- mode=full returns 500 for the tested event.
+
+Likely reason:
+- full mode may expose a field mapping or serialization problem in activityProcessingLogs/eventLinks/impactEvents.
+- It may be unrelated to the actual production complete route.
+
+Recommended order:
+1. Finish C2-C setup route and clean free-text production proof.
+2. Then inspect/fix debug-trace mode=full if detailed proof is still needed.
+
+============================================================
+10) FILES / COMMITS RELATED TO THIS BLOCK
+============================================================
+
+Relevant docs already created earlier:
+
+- docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-b-fix3-contract-inspection.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-b-fix3-focused-contract.txt
+
+This document:
+- docs/value-objects/category-derivation-production-complete-route-c2-b-result-and-next-plan.txt
+
+============================================================
+11) SUMMARY FOR NEXT CHAT / NEXT STEP
+============================================================
+
+We have proven that /api/activity/complete can run the production completion pipeline in an authenticated browser session.
+
+The successful event:
+bbd5baf9-9f39-4ba0-8e01-cba054baf5ed
+
+Status:
+- completed
+- processed
+- 5 impact events
+- 11 event links
+- 9 processing logs
+
+Important logs:
+- Known-template rubricator classification ensured before Value Object bridge.
+- Rule-based Category Derivation processed before Value Object bridge.
+- Value Object bridge processed after activity completion.
+
+But the setup used German marketing handwriting template, so it is not a clean walked-to-work semantic proof.
+
+Next step:
+Implement or inspect a clean free-text started-event setup route, then rerun production complete once on a new event.
