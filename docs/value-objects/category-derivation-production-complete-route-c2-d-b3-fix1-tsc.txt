@@ -1,0 +1,17 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-P3-B7-C2-D-B3-FIX1 — TypeScript proof
+
+Generated: 2026-05-20 19:23:28
+Command: npx.cmd tsc --noEmit --pretty false
+ExitCode: 0
+StartedAt: 2026-05-20T19:23:23.7013539+02:00
+FinishedAt: 2026-05-20T19:23:28.7930096+02:00
+
+Route:
+src/app/api/activity/debug/value-object-bridge-proof/route.ts
+
+Context:
+Previous C2-D-B3 was mistakenly committed after a failed TypeScript check.
+This FIX1 corrects selectEqWithCandidateColumns so it always returns TableProof, never TableProof | null.
+
+Output:

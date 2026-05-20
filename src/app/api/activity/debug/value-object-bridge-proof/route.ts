@@ -261,7 +261,7 @@ async function selectEqWithCandidateColumns(
   table: string,
   columns: string[],
   value: string
-) {
+): Promise<TableProof> {
   let firstOkZero: TableProof | null = null;
   let lastResult: TableProof | null = null;
   const triedColumns: string[] = [];
@@ -289,7 +289,27 @@ async function selectEqWithCandidateColumns(
     }
   }
 
-  return firstOkZero ?? lastResult;
+  if (firstOkZero) {
+    return firstOkZero;
+  }
+
+  if (lastResult) {
+    return lastResult;
+  }
+
+  return {
+    key,
+    table,
+    ok: true,
+    count: 0,
+    rows: [],
+    column: null,
+    valuesCount: 0,
+    skipped: true,
+    skipReason: "No candidate columns were available or no query was attempted.",
+    triedColumns,
+    error: null,
+  };
 }
 
 async function selectInWithCandidateGroups(
