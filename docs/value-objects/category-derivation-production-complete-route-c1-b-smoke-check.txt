@@ -1,0 +1,22 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-P3-B7-C1-B — production route patch smoke check
+Generated: 2026-05-20 16:35:05
+
+Route: src/app/api/activity/complete/route.ts
+
+Checks:
+- PASS: import deriveCategoryCandidates
+- PASS: import resolveCategoryCandidates
+- PASS: import persistCategoryDerivations
+- PASS: import CategoryDerivationInput
+- PASS: import AdditionalValueObjectCategoryLink
+- PASS: helper runCategoryDerivationForCompleteRoute
+- PASS: policy suggested_only
+- PASS: derive invocation
+- PASS: resolve invocation
+- PASS: persist invocation plural
+- PASS: bridge additionalCategoryLinks argument
+- PASS: no debug endpoint metadata in production patch
+- PASS: no client-controlled production dryRun body field
+
+Failed checks count: 0
