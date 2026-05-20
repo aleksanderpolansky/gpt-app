@@ -5,11 +5,12 @@ import {
   ACTIVITY_RECORDING_ENABLED,
 } from "../../../../../../lib/activity/activityRecordingConfig";
 import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+import { supabase } from "../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
 const ENDPOINT = "/api/activity/debug/create-free-text-start-event";
-const P4_STEP = "P4.10.0-C8-P3-B7-C2-C-A";
+const P4_STEP = "P4.10.0-C8-P3-B7-C2-C-A2";
 
 type GenericRecord = Record<string, unknown>;
 
@@ -36,43 +37,6 @@ type ActivityEventRow = {
   metadata_json: GenericRecord | null;
   created_at: string | null;
   updated_at: string | null;
-};
-
-type SupabaseErrorLike = {
-  message?: string;
-  details?: string;
-  hint?: string;
-  code?: string;
-};
-
-type SupabaseInsertResult<T> = Promise<{
-  data: T | null;
-  error: SupabaseErrorLike | null;
-}>;
-
-type SupabaseInsertBuilderLike<T> = {
-  insert: (value: GenericRecord) => {
-    select: (columns: string) => {
-      single: () => SupabaseInsertResult<T>;
-    };
-  };
-};
-
-type SupabaseClientLike = {
-  from: (table: string) => SupabaseInsertBuilderLike<ActivityEventRow>;
-};
-
-type ActivityUserContextLike = {
-  supabase?: SupabaseClientLike;
-  appUser?: {
-    id?: string | null;
-  } | null;
-  personActor?: {
-    id?: string | null;
-  } | null;
-  response?: Response;
-  errorResponse?: Response;
-  ok?: boolean;
 };
 
 function isRecord(value: unknown): value is GenericRecord {
@@ -132,28 +96,6 @@ function mapActivityEvent(event: ActivityEventRow) {
     createdAt: event.created_at,
     updatedAt: event.updated_at,
   };
-}
-
-function getContextResponse(context: unknown) {
-  if (context instanceof Response) {
-    return context;
-  }
-
-  if (!isRecord(context)) {
-    return null;
-  }
-
-  const response = context.response;
-  if (response instanceof Response) {
-    return response;
-  }
-
-  const errorResponse = context.errorResponse;
-  if (errorResponse instanceof Response) {
-    return errorResponse;
-  }
-
-  return null;
 }
 
 export async function POST(request: Request) {
@@ -231,27 +173,21 @@ export async function POST(request: Request) {
     asNonEmptyString(body.title) ?? "Free-text started activity — C2-C setup";
   const description = asNonEmptyString(body.description) ?? inputText;
 
-  const rawContext = await getActivityUserContext();
-  const contextResponse = getContextResponse(rawContext);
+  const { appUser, personActor, errorResponse } =
+    await getActivityUserContext();
 
-  if (contextResponse) {
-    return contextResponse;
+  if (errorResponse) {
+    return errorResponse;
   }
 
-  const context = rawContext as unknown as ActivityUserContextLike;
-
-  const supabase = context.supabase;
-  const appUserId = context.appUser?.id ?? null;
-  const personActorId = context.personActor?.id ?? null;
-
-  if (!supabase || !appUserId || !personActorId) {
+  if (!appUser || !personActor) {
     return NextResponse.json(
       {
         ok: false,
         endpoint: ENDPOINT,
-        error:
-          "Failed to resolve authenticated activity user context for debug setup route.",
-        contextShape: isRecord(rawContext) ? Object.keys(rawContext) : null,
+        error: "User context not found",
+        contextContract:
+          "Expected getActivityUserContext() to return appUser and personActor.",
       },
       { status: 500 }
     );
@@ -260,10 +196,10 @@ export async function POST(request: Request) {
   const bodyMetadata = isRecord(body.metadata) ? body.metadata : {};
 
   const insertRow: GenericRecord = {
-    user_id: appUserId,
-    performed_by_actor_id: personActorId,
-    acting_as_actor_id: personActorId,
-    acting_for_actor_id: null,
+    user_id: appUser.id,
+    performed_by_actor_id: personActor.id,
+    acting_as_actor_id: personActor.id,
+    acting_for_actor_id: personActor.id,
 
     activity_type_id: null,
     activity_template_id: null,
@@ -296,21 +232,23 @@ export async function POST(request: Request) {
     },
   };
 
-  const { data: createdEvent, error: createError } = await supabase
+  const { data, error } = await supabase
     .from("activity_events")
     .insert(insertRow)
     .select("*")
     .single();
 
-  if (createError || !createdEvent) {
+  const createdEvent = data as ActivityEventRow | null;
+
+  if (error || !createdEvent) {
     return NextResponse.json(
       {
         ok: false,
         endpoint: ENDPOINT,
-        error: createError?.message ?? "Failed to create free-text started event.",
-        details: createError?.details ?? null,
-        hint: createError?.hint ?? null,
-        code: createError?.code ?? null,
+        error: error?.message ?? "Failed to create free-text started event.",
+        details: error?.details ?? null,
+        hint: error?.hint ?? null,
+        code: error?.code ?? null,
       },
       { status: 500 }
     );

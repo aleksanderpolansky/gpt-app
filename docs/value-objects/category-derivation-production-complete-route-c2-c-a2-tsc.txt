@@ -1,0 +1,19 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-P3-B7-C2-C-A2 — TypeScript proof
+
+Generated: 2026-05-20 18:42:01
+Command: npx.cmd tsc --noEmit --pretty false
+ExitCode: 0
+StartedAt: 2026-05-20T18:41:52.3493584+02:00
+FinishedAt: 2026-05-20T18:42:00.8631168+02:00
+
+Route:
+src/app/api/activity/debug/create-free-text-start-event/route.ts
+
+Fix:
+- Removed incorrect expectation that getActivityUserContext() returns supabase.
+- Aligned helper route with existing project routes:
+  const { appUser, personActor, errorResponse } = await getActivityUserContext();
+  import { supabase } from "../../../../../../lib/supabase";
+
+Output:
