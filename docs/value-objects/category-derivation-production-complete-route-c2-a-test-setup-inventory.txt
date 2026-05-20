@@ -1,0 +1,2268 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-P3-B7-C2-A-FIX2 — robust production-flow test setup inventory
+Generated: 2026-05-20 17:09:23
+
+Purpose:
+Choose setup method for browser-authenticated /api/activity/complete production-flow test.
+
+Current HEAD:
+3eb63d9 Document real TypeScript verification for category derivation patch
+
+C1-B markers: confirmed
+Real TypeScript proof: confirmed ExitCode 0
+
+Decision preview:
+Preferred setup route for C2-B: /api/activity/debug/free-text-value-object-test
+Reason: it creates activity_events with input_text, user_id, performed_by_actor_id, acting_as_actor_id, and already matches the free-text walked-to-work baseline.
+Production route under test remains /api/activity/complete.
+
+============================================================
+A) API ROUTE FILES
+============================================================
+- FILE: src/app/api/activities/route.ts
+  ROUTE: /api/activities
+- FILE: src/app/api/activity/complete/route.ts
+  ROUTE: /api/activity/complete
+- FILE: src/app/api/activity/day-summary/route.ts
+  ROUTE: /api/activity/day-summary
+- FILE: src/app/api/activity/debug/free-text-value-object-test/route.ts
+  ROUTE: /api/activity/debug/free-text-value-object-test
+- FILE: src/app/api/activity/debug-known-template-registry/route.ts
+  ROUTE: /api/activity/debug-known-template-registry
+- FILE: src/app/api/activity/debug-rubricator-value-object-bridge/route.ts
+  ROUTE: /api/activity/debug-rubricator-value-object-bridge
+- FILE: src/app/api/activity/debug-trace/route.ts
+  ROUTE: /api/activity/debug-trace
+- FILE: src/app/api/activity/events/[id]/corrections/route.ts
+  ROUTE: /api/activity/events/[id]/corrections
+- FILE: src/app/api/activity/events/[id]/route.ts
+  ROUTE: /api/activity/events/[id]
+- FILE: src/app/api/activity/events/route.ts
+  ROUTE: /api/activity/events
+- FILE: src/app/api/activity/intake/events/[id]/confirm/route.ts
+  ROUTE: /api/activity/intake/events/[id]/confirm
+- FILE: src/app/api/activity/intake/events/[id]/reject/route.ts
+  ROUTE: /api/activity/intake/events/[id]/reject
+- FILE: src/app/api/activity/intake/events/[id]/route.ts
+  ROUTE: /api/activity/intake/events/[id]
+- FILE: src/app/api/activity/intake/events/route.ts
+  ROUTE: /api/activity/intake/events
+- FILE: src/app/api/activity/intake/route.ts
+  ROUTE: /api/activity/intake
+- FILE: src/app/api/activity/intake/signals/[id]/ignore/route.ts
+  ROUTE: /api/activity/intake/signals/[id]/ignore
+- FILE: src/app/api/activity/intake/signals/[id]/promote/route.ts
+  ROUTE: /api/activity/intake/signals/[id]/promote
+- FILE: src/app/api/activity/intake/signals/route.ts
+  ROUTE: /api/activity/intake/signals
+- FILE: src/app/api/activity/record/route.ts
+  ROUTE: /api/activity/record
+- FILE: src/app/api/activity/start/route.ts
+  ROUTE: /api/activity/start
+- FILE: src/app/api/activity/templates/route.ts
+  ROUTE: /api/activity/templates
+- FILE: src/app/api/availability-rules/route.ts
+  ROUTE: /api/availability-rules
+- FILE: src/app/api/bookings/[id]/cancel/route.ts
+  ROUTE: /api/bookings/[id]/cancel
+- FILE: src/app/api/bookings/[id]/complete/route.ts
+  ROUTE: /api/bookings/[id]/complete
+- FILE: src/app/api/bookings/[id]/confirm/route.ts
+  ROUTE: /api/bookings/[id]/confirm
+- FILE: src/app/api/bookings/route.ts
+  ROUTE: /api/bookings
+- FILE: src/app/api/calendar/events/route.ts
+  ROUTE: /api/calendar/events
+- FILE: src/app/api/certificates/cancel/route.ts
+  ROUTE: /api/certificates/cancel
+- FILE: src/app/api/certificates/expire-due/route.ts
+  ROUTE: /api/certificates/expire-due
+- FILE: src/app/api/certificates/redeem/route.ts
+  ROUTE: /api/certificates/redeem
+- FILE: src/app/api/certificates/request/route.ts
+  ROUTE: /api/certificates/request
+- FILE: src/app/api/directory/filters/route.ts
+  ROUTE: /api/directory/filters
+- FILE: src/app/api/directory/organizations/[slug]/offers/route.ts
+  ROUTE: /api/directory/organizations/[slug]/offers
+- FILE: src/app/api/directory/organizations/[slug]/route.ts
+  ROUTE: /api/directory/organizations/[slug]
+- FILE: src/app/api/directory/organizations/route.ts
+  ROUTE: /api/directory/organizations
+- FILE: src/app/api/geo/areas/route.ts
+  ROUTE: /api/geo/areas
+- FILE: src/app/api/geo/suggestions/route.ts
+  ROUTE: /api/geo/suggestions
+- FILE: src/app/api/locations/route.ts
+  ROUTE: /api/locations
+- FILE: src/app/api/me/route.ts
+  ROUTE: /api/me
+- FILE: src/app/api/messages/route.ts
+  ROUTE: /api/messages
+- FILE: src/app/api/my/purchase-confirmations/route.ts
+  ROUTE: /api/my/purchase-confirmations
+- FILE: src/app/api/object-action/categories/audit-verify/route.ts
+  ROUTE: /api/object-action/categories/audit-verify
+- FILE: src/app/api/object-action/categories/route.ts
+  ROUTE: /api/object-action/categories
+- FILE: src/app/api/object-action/suggestions/audit-verify/route.ts
+  ROUTE: /api/object-action/suggestions/audit-verify
+- FILE: src/app/api/object-action/suggestions/route.ts
+  ROUTE: /api/object-action/suggestions
+- FILE: src/app/api/offers/[id]/available-slots/route.ts
+  ROUTE: /api/offers/[id]/available-slots
+- FILE: src/app/api/offers/route.ts
+  ROUTE: /api/offers
+- FILE: src/app/api/organizations/[id]/location/route.ts
+  ROUTE: /api/organizations/[id]/location
+- FILE: src/app/api/organizations/route.ts
+  ROUTE: /api/organizations
+- FILE: src/app/api/points/transactions/route.ts
+  ROUTE: /api/points/transactions
+- FILE: src/app/api/points/wallet/route.ts
+  ROUTE: /api/points/wallet
+- FILE: src/app/api/public/purchase-history/route.ts
+  ROUTE: /api/public/purchase-history
+- FILE: src/app/api/public/rewards/route.ts
+  ROUTE: /api/public/rewards
+- FILE: src/app/api/purchase-confirmations/[id]/confirm/route.ts
+  ROUTE: /api/purchase-confirmations/[id]/confirm
+- FILE: src/app/api/purchase-confirmations/[id]/events/route.ts
+  ROUTE: /api/purchase-confirmations/[id]/events
+- FILE: src/app/api/purchase-confirmations/[id]/reject/route.ts
+  ROUTE: /api/purchase-confirmations/[id]/reject
+- FILE: src/app/api/purchase-confirmations/route.ts
+  ROUTE: /api/purchase-confirmations
+- FILE: src/app/api/sync-user/route.ts
+  ROUTE: /api/sync-user
+- FILE: src/app/api/test/route.ts
+  ROUTE: /api/test
+- FILE: src/app/api/time-blocks/route.ts
+  ROUTE: /api/time-blocks
+- FILE: src/app/api/value-objects/debug/cloud-profile/route.ts
+  ROUTE: /api/value-objects/debug/cloud-profile
+- FILE: src/app/api/value-objects/route.ts
+  ROUTE: /api/value-objects
+
+============================================================
+B) RELEVANT CANDIDATE ROUTES
+============================================================
+
+------------------------------------------------------------
+CANDIDATE FILE: src/app/api/activities/route.ts
+ROUTE: /api/activities
+SCORE: 4
+------------------------------------------------------------
+
+PATTERN: .insert(
+  LINE 199: .insert({
+      const { data: activity, error: activityError } = await supabase
+        .from("activities")
+  >     .insert({
+          user_id: appUser.id,
+          primary_actor_id: personActor.id,
+          primary_space_id: primarySpaceId,
+          activity_type: activityType,
+          title,
+  LINE 248: .insert(participantRows)
+      const { data: activityParticipants, error: participantsError } = await supabase
+        .from("activity_participants")
+  >     .insert(participantRows)
+        .select();
+    
+      if (participantsError) {
+        return NextResponse.json(
+          { error: participantsError.message },
+  LINE 265: .insert({
+          await supabase
+            .from("calendar_events")
+  >         .insert({
+              user_id: appUser.id,
+              actor_id: personActor.id,
+              space_id: primarySpaceId,
+              event_type: activityType,
+              title,
+  LINE 295: .insert({
+          await supabase
+            .from("activity_links")
+  >         .insert({
+              activity_id: activity.id,
+              linked_entity_type: "calendar_event",
+              linked_entity_id: calendarEvent.id,
+              link_type: "creates",
+            })
+
+PATTERN: insert({
+  LINE 199: .insert({
+      const { data: activity, error: activityError } = await supabase
+        .from("activities")
+  >     .insert({
+          user_id: appUser.id,
+          primary_actor_id: personActor.id,
+          primary_space_id: primarySpaceId,
+          activity_type: activityType,
+          title,
+  LINE 265: .insert({
+          await supabase
+            .from("calendar_events")
+  >         .insert({
+              user_id: appUser.id,
+              actor_id: personActor.id,
+              space_id: primarySpaceId,
+              event_type: activityType,
+              title,
+  LINE 295: .insert({
+          await supabase
+            .from("activity_links")
+  >         .insert({
+              activity_id: activity.id,
+              linked_entity_type: "calendar_event",
+              linked_entity_id: calendarEvent.id,
+              link_type: "creates",
+            })
+
+PATTERN: status:
+  LINE 23: { status: 401 }
+          errorResponse: NextResponse.json(
+            { error: "Not authenticated" },
+  >         { status: 401 }
+          ),
+        };
+      }
+    
+      const { data: appUser, error: appUserError } = await supabase
+  LINE 41: { status: 500 }
+          errorResponse: NextResponse.json(
+            { error: appUserError.message },
+  >         { status: 500 }
+          ),
+        };
+      }
+    
+      const { data: person, error: personError } = await supabase
+  LINE 59: { status: 500 }
+          errorResponse: NextResponse.json(
+            { error: personError.message },
+  >         { status: 500 }
+          ),
+        };
+      }
+    
+      const { data: personActor, error: personActorError } = await supabase
+  LINE 78: { status: 500 }
+          errorResponse: NextResponse.json(
+            { error: personActorError.message },
+  >         { status: 500 }
+          ),
+        };
+      }
+    
+      return {
+  LINE 122: { status: 500 }
+        return NextResponse.json(
+          { error: "User context not found" },
+  >       { status: 500 }
+        );
+      }
+    
+      const { data: activities, error: activitiesError } = await supabase
+        .from("activities")
+  LINE 141: { status: 500 }
+        return NextResponse.json(
+          { error: activitiesError.message },
+  >       { status: 500 }
+        );
+      }
+    
+      return NextResponse.json({
+        ok: true,
+
+PATTERN: complete
+  LINE 175: const status = body.status ?? "completed";
+      const locationId = body.locationId ?? null;
+      const primarySpaceId = body.primarySpaceId ?? null;
+  >   const status = body.status ?? "completed";
+      const source = body.source ?? "manual";
+      const aiConfidence = body.aiConfidence ?? null;
+      const shouldCreateCalendarEvent = body.createCalendarEvent ?? true;
+      const participants: ParticipantInput[] = body.participants ?? [];
+    
+
+------------------------------------------------------------
+CANDIDATE FILE: src/app/api/activity/complete/route.ts
+ROUTE: /api/activity/complete
+SCORE: 8
+------------------------------------------------------------
+
+PATTERN: activity_events
+  LINE 788: .from("activity_events")
+    
+      const { data: eventData, error: eventError } = await supabase
+  >     .from("activity_events")
+        .select("*")
+        .eq("id", eventId)
+        .eq("user_id", appUser.id)
+        .maybeSingle();
+    
+  LINE 980: .from("activity_events")
+    
+      const { data: updatedEventData, error: updateError } = await supabase
+  >     .from("activity_events")
+        .update({
+          ended_at: timing.endedAt,
+          duration_minutes: timing.durationMinutes,
+          status: completedStatus,
+          processing_status: "processed",
+  LINE 1471: .from("activity_events")
+    
+        await supabase
+  >       .from("activity_events")
+          .update({
+            processing_status: "failed",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", updatedEvent.id)
+
+PATTERN: status:
+  LINE 68: status: string;
+      duration_minutes: number | null;
+      source: string | null;
+  >   status: string;
+      privacy_scope: string | null;
+      processing_status: string | null;
+      metadata_json: Record<string, unknown> | null;
+      created_at: string;
+      updated_at: string;
+  LINE 70: processing_status: string | null;
+      status: string;
+      privacy_scope: string | null;
+  >   processing_status: string | null;
+      metadata_json: Record<string, unknown> | null;
+      created_at: string;
+      updated_at: string;
+    };
+    
+  LINE 279: completedStatus: string;
+    function getCategoryDerivationPolicyForCompleteRoute(params: {
+      event: ActivityEventRow;
+  >   completedStatus: string;
+    }): CategoryDerivationCompleteRoutePolicy {
+      const { event, completedStatus } = params;
+    
+      if (event.status !== completedStatus) {
+        return {
+  LINE 423: completedStatus: string;
+    async function runCategoryDerivationForCompleteRoute(params: {
+      event: ActivityEventRow;
+  >   completedStatus: string;
+    }): Promise<CategoryDerivationCompleteRouteResult> {
+      const policy = getCategoryDerivationPolicyForCompleteRoute(params);
+    
+      if (!policy.enabled || policy.inputText === null || policy.actorId === null) {
+        return {
+  LINE 718: status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+        method: "POST",
+        enabled: ACTIVITY_RECORDING_ENABLED,
+  >     status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+        message: ACTIVITY_RECORDING_ENABLED
+          ? "Complete a previously started activity event and process rule-based impacts."
+          : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+        example: {
+          eventId: "activity-event-uuid",
+  LINE 741: { status: 503 }
+            error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+          },
+  >       { status: 503 }
+        );
+      }
+    
+      const { appUser, errorResponse } = await getActivityUserContext();
+    
+
+PATTERN: input_text
+  LINE 61: input_text: string | null;
+      template_id: string | null;
+      event_code: string | null;
+  >   input_text: string | null;
+      title: string | null;
+      description: string | null;
+      started_at: string | null;
+      ended_at: string | null;
+      duration_minutes: number | null;
+  LINE 241: asStringForCategoryDerivation(event.input_text) ??
+    ): string | null {
+      return (
+  >     asStringForCategoryDerivation(event.input_text) ??
+        asStringForCategoryDerivation(event.title) ??
+        asStringForCategoryDerivation(event.description)
+      );
+    }
+    
+
+PATTERN: performed_by_actor_id
+  LINE 54: performed_by_actor_id: string | null;
+      id: string;
+      user_id: string;
+  >   performed_by_actor_id: string | null;
+      acting_as_actor_id: string | null;
+      acting_for_actor_id: string | null;
+      activity_type_id: string | null;
+      activity_template_id: string | null;
+      template_id: string | null;
+  LINE 313: event.performed_by_actor_id ??
+    
+      const actorId =
+  >     event.performed_by_actor_id ??
+        event.acting_as_actor_id ??
+        event.acting_for_actor_id;
+    
+      if (!isUuidLikeForCategoryDerivation(actorId)) {
+        return {
+
+PATTERN: acting_as_actor_id
+  LINE 55: acting_as_actor_id: string | null;
+      user_id: string;
+      performed_by_actor_id: string | null;
+  >   acting_as_actor_id: string | null;
+      acting_for_actor_id: string | null;
+      activity_type_id: string | null;
+      activity_template_id: string | null;
+      template_id: string | null;
+      event_code: string | null;
+  LINE 314: event.acting_as_actor_id ??
+      const actorId =
+        event.performed_by_actor_id ??
+  >     event.acting_as_actor_id ??
+        event.acting_for_actor_id;
+    
+      if (!isUuidLikeForCategoryDerivation(actorId)) {
+        return {
+          enabled: false,
+
+PATTERN: acting_for_actor_id
+  LINE 56: acting_for_actor_id: string | null;
+      performed_by_actor_id: string | null;
+      acting_as_actor_id: string | null;
+  >   acting_for_actor_id: string | null;
+      activity_type_id: string | null;
+      activity_template_id: string | null;
+      template_id: string | null;
+      event_code: string | null;
+      input_text: string | null;
+  LINE 315: event.acting_for_actor_id;
+        event.performed_by_actor_id ??
+        event.acting_as_actor_id ??
+  >     event.acting_for_actor_id;
+    
+      if (!isUuidLikeForCategoryDerivation(actorId)) {
+        return {
+          enabled: false,
+          reason: "missing_actor_id",
+
+PATTERN: complete
+  LINE 9: ACTIVITY_STATUS_COMPLETED,
+    import {
+      ACTIVITY_COMPLETABLE_STATUSES,
+  >   ACTIVITY_STATUS_COMPLETED,
+      canTransitionActivityStatus,
+      isCompletableActivityStatus,
+    } from "../../../../../lib/activity/activityLifecycle";
+    import {
+      getDurationMs,
+  LINE 43: type ActivityCompleteBody = {
+    export const dynamic = "force-dynamic";
+    
+  > type ActivityCompleteBody = {
+      eventId?: unknown;
+      endedAt?: unknown;
+      endTime?: unknown;
+      durationMinutes?: unknown;
+      comment?: unknown;
+  LINE 89: const CATEGORY_DERIVATION_COMPLETE_ROUTE_CREATE_POLICY: CategoryResolverCreatePolicy =
+    
+    
+  > const CATEGORY_DERIVATION_COMPLETE_ROUTE_CREATE_POLICY: CategoryResolverCreatePolicy =
+      "suggested_only";
+    
+    type CategoryDerivationCompleteRoutePolicy = {
+      enabled: boolean;
+      reason: string | null;
+  LINE 92: type CategoryDerivationCompleteRoutePolicy = {
+      "suggested_only";
+    
+  > type CategoryDerivationCompleteRoutePolicy = {
+      enabled: boolean;
+      reason: string | null;
+      inputText: string | null;
+      actorId: string | null;
+    };
+  LINE 99: type CategoryDerivationCompleteRouteResult = {
+    };
+    
+  > type CategoryDerivationCompleteRouteResult = {
+      enabled: boolean;
+      ok: boolean | null;
+      skipped: boolean;
+      reason: string | null;
+      error: string | null;
+  LINE 113: policy: CategoryDerivationCompleteRoutePolicy;
+      warnings: string[];
+      errors: string[];
+  >   policy: CategoryDerivationCompleteRoutePolicy;
+    };
+    
+    function asRecordForCategoryDerivation(
+      value: unknown
+    ): Record<string, unknown> {
+
+PATTERN: debug
+  LINE 264: "debug",
+        "free_text_manual",
+        "app_action",
+  >     "debug",
+        "debug_free_text",
+      ]);
+    
+      return (
+        directlyAllowedSources.has(normalizedSource) ||
+  LINE 265: "debug_free_text",
+        "app_action",
+        "debug",
+  >     "debug_free_text",
+      ]);
+    
+      return (
+        directlyAllowedSources.has(normalizedSource) ||
+        normalizedSource.includes("manual") ||
+  LINE 273: normalizedSource.includes("debug")
+        normalizedSource.includes("chat") ||
+        normalizedSource.includes("free_text") ||
+  >     normalizedSource.includes("debug")
+      );
+    }
+    
+    function getCategoryDerivationPolicyForCompleteRoute(params: {
+      event: ActivityEventRow;
+
+------------------------------------------------------------
+CANDIDATE FILE: src/app/api/activity/day-summary/route.ts
+ROUTE: /api/activity/day-summary
+SCORE: 9
+------------------------------------------------------------
+
+PATTERN: activity_events
+  LINE 503: .from("activity_events")
+    
+      const { data: rawEvents, error: eventsError } = await supabase
+  >     .from("activity_events")
+        .select("*")
+        .eq("user_id", appUser.id)
+        .or(`started_at.gte.${dayRange.from},created_at.gte.${dayRange.from}`)
+        .order("created_at", { ascending: false })
+        .limit(500);
+
+PATTERN: status:
+  LINE 46: status: string;
+      duration_minutes: number | string | null;
+      source: string;
+  >   status: string;
+      privacy_scope: string;
+      processing_status: string;
+      metadata_json: Record<string, unknown>;
+      created_at: string;
+      updated_at: string;
+  LINE 48: processing_status: string;
+      status: string;
+      privacy_scope: string;
+  >   processing_status: string;
+      metadata_json: Record<string, unknown>;
+      created_at: string;
+      updated_at: string;
+      activity_template_id: string | null;
+    };
+  LINE 334: status: event.status,
+        id: event.id,
+        title: event.title,
+  >     status: event.status,
+        source: event.source,
+        privacyScope: event.privacy_scope,
+        processingStatus: event.processing_status,
+        startedAt: event.started_at,
+        endedAt: event.ended_at,
+  LINE 337: processingStatus: event.processing_status,
+        source: event.source,
+        privacyScope: event.privacy_scope,
+  >     processingStatus: event.processing_status,
+        startedAt: event.started_at,
+        endedAt: event.ended_at,
+        durationMinutes: asNumber(event.duration_minutes),
+        comment: event.description ?? event.input_text,
+        activityTypeId: event.activity_type_id,
+  LINE 463: byStatus: countBy(events, (event) => event.status),
+        },
+    
+  >     byStatus: countBy(events, (event) => event.status),
+        byProcessingStatus: countBy(events, (event) => event.processing_status),
+        bySource: countBy(events, (event) => event.source),
+      };
+    }
+    
+  LINE 464: byProcessingStatus: countBy(events, (event) => event.processing_status),
+    
+        byStatus: countBy(events, (event) => event.status),
+  >     byProcessingStatus: countBy(events, (event) => event.processing_status),
+        bySource: countBy(events, (event) => event.source),
+      };
+    }
+    
+    export async function GET(request: Request) {
+
+PATTERN: planned
+  LINE 19: "planned",
+      "started",
+      "paused",
+  >   "planned",
+      "confirmed",
+    ]);
+    
+    const EXCLUDED_DURATION_STATUSES = new Set([
+      "cancelled",
+
+PATTERN: pending
+  LINE 418: event.processing_status === "pending"
+          event.status === "started" ||
+          event.status === "paused" ||
+  >       event.processing_status === "pending"
+      );
+    
+      const cancelledEvents = events.filter((event) => event.status === "cancelled");
+      const missedEvents = events.filter((event) => event.status === "missed");
+      const archivedEvents = events.filter((event) => event.status === "archived");
+  LINE 579: event.processing_status === "pending"
+          event.status === "started" ||
+          event.status === "paused" ||
+  >       event.processing_status === "pending"
+      );
+    
+      return NextResponse.json({
+        ok: true,
+        date,
+
+PATTERN: input_text
+  LINE 39: input_text: string | null;
+      template_id: string | null;
+      event_code: string | null;
+  >   input_text: string | null;
+      title: string | null;
+      description: string | null;
+      started_at: string | null;
+      ended_at: string | null;
+      duration_minutes: number | string | null;
+  LINE 341: comment: event.description ?? event.input_text,
+        endedAt: event.ended_at,
+        durationMinutes: asNumber(event.duration_minutes),
+  >     comment: event.description ?? event.input_text,
+        activityTypeId: event.activity_type_id,
+        activityTemplateId: event.activity_template_id,
+        legacyTemplateId: event.template_id,
+        createdAt: event.created_at,
+        updatedAt: event.updated_at,
+
+PATTERN: performed_by_actor_id
+  LINE 33: performed_by_actor_id: string | null;
+      id: string;
+      user_id: string;
+  >   performed_by_actor_id: string | null;
+      acting_as_actor_id: string | null;
+      acting_for_actor_id: string | null;
+      activity_type_id: string | null;
+      template_id: string | null;
+      event_code: string | null;
+
+PATTERN: acting_as_actor_id
+  LINE 34: acting_as_actor_id: string | null;
+      user_id: string;
+      performed_by_actor_id: string | null;
+  >   acting_as_actor_id: string | null;
+      acting_for_actor_id: string | null;
+      activity_type_id: string | null;
+      template_id: string | null;
+      event_code: string | null;
+      input_text: string | null;
+
+PATTERN: acting_for_actor_id
+  LINE 35: acting_for_actor_id: string | null;
+      performed_by_actor_id: string | null;
+      acting_as_actor_id: string | null;
+  >   acting_for_actor_id: string | null;
+      activity_type_id: string | null;
+      template_id: string | null;
+      event_code: string | null;
+      input_text: string | null;
+      title: string | null;
+
+PATTERN: complete
+  LINE 16: "completed",
+    
+    const EFFECTIVE_DURATION_STATUSES = new Set([
+  >   "completed",
+      "started",
+      "paused",
+      "planned",
+      "confirmed",
+    ]);
+  LINE 413: const completedEvents = events.filter((event) => event.status === "completed");
+    
+    function summarizeEvents(events: ActivityEventRow[]) {
+  >   const completedEvents = events.filter((event) => event.status === "completed");
+      const openEvents = events.filter(
+        (event) =>
+          event.status === "started" ||
+          event.status === "paused" ||
+          event.processing_status === "pending"
+  LINE 435: completedEvents: completedEvents.length,
+      return {
+        totalEvents: events.length,
+  >     completedEvents: completedEvents.length,
+        openEvents: openEvents.length,
+        cancelledEvents: cancelledEvents.length,
+        missedEvents: missedEvents.length,
+        archivedEvents: archivedEvents.length,
+        correctedEvents: correctedEvents.length,
+
+------------------------------------------------------------
+CANDIDATE FILE: src/app/api/activity/debug/free-text-value-object-test/route.ts
+ROUTE: /api/activity/debug/free-text-value-object-test
+SCORE: 11
+------------------------------------------------------------
+
+PATTERN: activity_events
+  LINE 761: .from("activity_events")
+    
+      const { data: createdEventData, error: createError } = await supabase
+  >     .from("activity_events")
+        .insert({
+          user_id: appUser.id,
+          performed_by_actor_id: personActor.id,
+          acting_as_actor_id: personActor.id,
+          acting_for_actor_id: null,
+
+PATTERN: .insert(
+  LINE 762: .insert({
+      const { data: createdEventData, error: createError } = await supabase
+        .from("activity_events")
+  >     .insert({
+          user_id: appUser.id,
+          performed_by_actor_id: personActor.id,
+          acting_as_actor_id: personActor.id,
+          acting_for_actor_id: null,
+          activity_type_id: null,
+
+PATTERN: insert({
+  LINE 762: .insert({
+      const { data: createdEventData, error: createError } = await supabase
+        .from("activity_events")
+  >     .insert({
+          user_id: appUser.id,
+          performed_by_actor_id: personActor.id,
+          acting_as_actor_id: personActor.id,
+          acting_for_actor_id: null,
+          activity_type_id: null,
+
+PATTERN: status:
+  LINE 651: status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+        endpoint: "/api/activity/debug/free-text-value-object-test",
+        enabled: ACTIVITY_RECORDING_ENABLED,
+  >     status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+        message: ACTIVITY_RECORDING_ENABLED
+          ? "Debug-only endpoint for testing completed free-text Activity Event -> Value Object fallback mapping."
+          : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+        categoryDerivation: {
+          available: true,
+  LINE 685: { status: 503 }
+            error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+          },
+  >       { status: 503 }
+        );
+      }
+    
+      let body: FreeTextValueObjectTestBody;
+    
+  LINE 699: { status: 400 }
+            error: "Invalid JSON body.",
+          },
+  >       { status: 400 }
+        );
+      }
+    
+      const userContext = await getActivityUserContext();
+      const { appUser, personActor } = userContext;
+  LINE 712: { status: 401 }
+            error: "Authenticated app user and person actor context are required.",
+          },
+  >       { status: 401 }
+        );
+      }
+    
+      const inputText = asString(body.inputText) ?? asString(body.naturalInput);
+    
+  LINE 724: { status: 400 }
+            error: "inputText or naturalInput is required.",
+          },
+  >       { status: 400 }
+        );
+      }
+    
+      const timing = resolveTiming(body);
+    
+  LINE 736: { status: 400 }
+            error: timing.error,
+          },
+  >       { status: 400 }
+        );
+      }
+    
+      const categoryDerivationOptionsResult =
+        resolveCategoryDerivationOptions(body);
+
+PATTERN: input_text
+  LINE 771: input_text: inputText,
+          template_id: null,
+          event_code: null,
+  >       input_text: inputText,
+          title,
+          description,
+          started_at: timing.startedAt,
+          ended_at: timing.endedAt,
+          duration_minutes: timing.durationMinutes,
+
+PATTERN: performed_by_actor_id
+  LINE 764: performed_by_actor_id: personActor.id,
+        .insert({
+          user_id: appUser.id,
+  >       performed_by_actor_id: personActor.id,
+          acting_as_actor_id: personActor.id,
+          acting_for_actor_id: null,
+          activity_type_id: null,
+          activity_template_id: null,
+          template_id: null,
+
+PATTERN: acting_as_actor_id
+  LINE 765: acting_as_actor_id: personActor.id,
+          user_id: appUser.id,
+          performed_by_actor_id: personActor.id,
+  >       acting_as_actor_id: personActor.id,
+          acting_for_actor_id: null,
+          activity_type_id: null,
+          activity_template_id: null,
+          template_id: null,
+          event_code: null,
+
+PATTERN: acting_for_actor_id
+  LINE 766: acting_for_actor_id: null,
+          performed_by_actor_id: personActor.id,
+          acting_as_actor_id: personActor.id,
+  >       acting_for_actor_id: null,
+          activity_type_id: null,
+          activity_template_id: null,
+          template_id: null,
+          event_code: null,
+          input_text: inputText,
+
+PATTERN: complete
+  LINE 653: ? "Debug-only endpoint for testing completed free-text Activity Event -> Value Object fallback mapping."
+        status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+        message: ACTIVITY_RECORDING_ENABLED
+  >       ? "Debug-only endpoint for testing completed free-text Activity Event -> Value Object fallback mapping."
+          : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+        categoryDerivation: {
+          available: true,
+          defaultEnabled: false,
+          enableFlag: "enableCategoryDerivation",
+  LINE 778: status: "completed",
+          duration_minutes: timing.durationMinutes,
+          source: "manual_chat",
+  >       status: "completed",
+          privacy_scope: "private",
+          processing_status: "processed",
+          metadata_json: {
+            parser: "debug_free_text_value_object_test_v1",
+            p4Step: "P4.10.0-C8-O1",
+  LINE 831: allowNonCompletedEvent: false,
+        eventId: createdEvent.id,
+        processorName: "activity_debug_free_text_value_object_test",
+  >     allowNonCompletedEvent: false,
+      });
+    
+      const categoryDerivationWarning =
+        categoryDerivationResult.enabled && categoryDerivationResult.ok === false;
+    
+  LINE 849: : "completed"
+            : bridgeResult.skipped
+              ? "skipped"
+  >           : "completed"
+          : "warning",
+        severity:
+          bridgeResult.ok && !categoryDerivationWarning ? "info" : "warning",
+        message: "Debug free-text Value Object bridge processed.",
+        input: {
+
+PATTERN: free-text-value-object-test
+  LINE 517: sourceRoute: "/api/activity/debug/free-text-value-object-test",
+          metadata: {
+            sourceLayer: "category_derivation",
+  >         sourceRoute: "/api/activity/debug/free-text-value-object-test",
+            p4Step: "P4.10.0-C8-P3-B5-B3",
+          },
+        });
+      }
+    
+  LINE 557: endpoint: "/api/activity/debug/free-text-value-object-test",
+          organizationId: null,
+          metadata: {
+  >         endpoint: "/api/activity/debug/free-text-value-object-test",
+            p4Step: "P4.10.0-C8-O1",
+            featureFlag: "categoryDerivation",
+          },
+        };
+    
+  LINE 649: endpoint: "/api/activity/debug/free-text-value-object-test",
+      return NextResponse.json({
+        ok: true,
+  >     endpoint: "/api/activity/debug/free-text-value-object-test",
+        enabled: ACTIVITY_RECORDING_ENABLED,
+        status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+        message: ACTIVITY_RECORDING_ENABLED
+          ? "Debug-only endpoint for testing completed free-text Activity Event -> Value Object fallback mapping."
+          : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  LINE 892: endpoint: "/api/activity/debug/free-text-value-object-test",
+        },
+        metadata: {
+  >       endpoint: "/api/activity/debug/free-text-value-object-test",
+          p4Step: "P4.10.0-C8-O1",
+        },
+        startedAt: processingStartedAt.toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: new Date().getTime() - processingStartedAt.getTime(),
+
+PATTERN: debug
+  LINE 517: sourceRoute: "/api/activity/debug/free-text-value-object-test",
+          metadata: {
+            sourceLayer: "category_derivation",
+  >         sourceRoute: "/api/activity/debug/free-text-value-object-test",
+            p4Step: "P4.10.0-C8-P3-B5-B3",
+          },
+        });
+      }
+    
+  LINE 525: async function runCategoryDerivationForDebugRoute(params: {
+      return links.length > 0 ? links : undefined;
+    }
+  > async function runCategoryDerivationForDebugRoute(params: {
+      activityEventId: string;
+      inputText: string;
+      title: string | null;
+      description: string | null;
+      durationMinutes: number;
+  LINE 557: endpoint: "/api/activity/debug/free-text-value-object-test",
+          organizationId: null,
+          metadata: {
+  >         endpoint: "/api/activity/debug/free-text-value-object-test",
+            p4Step: "P4.10.0-C8-O1",
+            featureFlag: "categoryDerivation",
+          },
+        };
+    
+  LINE 649: endpoint: "/api/activity/debug/free-text-value-object-test",
+      return NextResponse.json({
+        ok: true,
+  >     endpoint: "/api/activity/debug/free-text-value-object-test",
+        enabled: ACTIVITY_RECORDING_ENABLED,
+        status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+        message: ACTIVITY_RECORDING_ENABLED
+          ? "Debug-only endpoint for testing completed free-text Activity Event -> Value Object fallback mapping."
+          : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  LINE 653: ? "Debug-only endpoint for testing completed free-text Activity Event -> Value Object fallback mapping."
+        status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+        message: ACTIVITY_RECORDING_ENABLED
+  >       ? "Debug-only endpoint for testing completed free-text Activity Event -> Value Object fallback mapping."
+          : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+        categoryDerivation: {
+          available: true,
+          defaultEnabled: false,
+          enableFlag: "enableCategoryDerivation",
+  LINE 782: parser: "debug_free_text_value_object_test_v1",
+          processing_status: "processed",
+          metadata_json: {
+  >         parser: "debug_free_text_value_object_test_v1",
+            p4Step: "P4.10.0-C8-O1",
+            freeTextValueObjectTest: true,
+            categoryDerivationEnabled: categoryDerivationOptions.enabled,
+            categoryDerivationDryRun: categoryDerivationOptions.dryRun,
+            categoryDerivationCreatePolicy: categoryDerivationOptions.createPolicy,
+
+------------------------------------------------------------
+CANDIDATE FILE: src/app/api/activity/debug-rubricator-value-object-bridge/route.ts
+ROUTE: /api/activity/debug-rubricator-value-object-bridge
+SCORE: 3
+------------------------------------------------------------
+
+PATTERN: activity_events
+  LINE 118: .from("activity_events")
+    ): Promise<EventOwnershipResult> {
+      const { data, error } = await supabase
+  >     .from("activity_events")
+        .select("id, user_id")
+        .eq("id", eventId)
+        .eq("user_id", userId)
+        .maybeSingle();
+    
+
+PATTERN: status:
+  LINE 68: { status: 401 }
+              error: "Unauthorized.",
+            },
+  >         { status: 401 }
+          ),
+        };
+      }
+    
+      const { data, error } = await supabase
+  LINE 88: { status: 500 }
+              error: error.message,
+            },
+  >         { status: 500 }
+          ),
+        };
+      }
+    
+      if (!data) {
+  LINE 102: { status: 403 }
+              error: "Authenticated Auth0 user is not linked to app_users.",
+            },
+  >         { status: 403 }
+          ),
+        };
+      }
+    
+      return {
+  LINE 133: { status: 500 }
+              error: error.message,
+            },
+  >         { status: 500 }
+          ),
+        };
+      }
+    
+      if (!data) {
+  LINE 147: { status: 404 }
+              error: "Activity event not found for current user.",
+            },
+  >         { status: 404 }
+          ),
+        };
+      }
+    
+      return {
+  LINE 177: { status: 400 }
+            error: "Invalid JSON body.",
+          },
+  >       { status: 400 }
+        );
+      }
+    
+      const eventId = getString(body.eventId);
+    
+
+PATTERN: complete
+  LINE 10: allowNonCompletedEvent?: unknown;
+    type RequestBody = {
+      eventId?: unknown;
+  >   allowNonCompletedEvent?: unknown;
+      createMissingControlledValueObject?: unknown;
+      allowControlledTextFallback?: unknown;
+      dryRun?: unknown;
+    };
+    
+  LINE 200: const allowNonCompletedEvent = getBoolean(body.allowNonCompletedEvent);
+      }
+    
+  >   const allowNonCompletedEvent = getBoolean(body.allowNonCompletedEvent);
+      const requestedCreateMissingControlledValueObject = getBoolean(
+        body.createMissingControlledValueObject
+      );
+      const allowControlledTextFallback = getBoolean(
+        body.allowControlledTextFallback
+  LINE 217: allowNonCompletedEvent,
+          supabase,
+          eventId,
+  >       allowNonCompletedEvent,
+          createMissingControlledValueObject:
+            effectiveCreateMissingControlledValueObject,
+          allowControlledTextFallback,
+        });
+    
+  LINE 274: allowNonCompletedEvent,
+        mappings: mappingResult.mappings,
+        source: "rule",
+  >     allowNonCompletedEvent,
+        processorName: "debug_rubricator_value_object_bridge_p4_7_r",
+      });
+    
+      return NextResponse.json({
+        ok: mappingResult.ok && bridgeResult.ok,
+
+PATTERN: debug
+  LINE 65: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+            {
+              ok: false,
+  >           endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+              error: "Unauthorized.",
+            },
+            { status: 401 }
+          ),
+        };
+  LINE 85: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+            {
+              ok: false,
+  >           endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+              error: error.message,
+            },
+            { status: 500 }
+          ),
+        };
+  LINE 99: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+            {
+              ok: false,
+  >           endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+              error: "Authenticated Auth0 user is not linked to app_users.",
+            },
+            { status: 403 }
+          ),
+        };
+  LINE 130: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+            {
+              ok: false,
+  >           endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+              error: error.message,
+            },
+            { status: 500 }
+          ),
+        };
+  LINE 144: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+            {
+              ok: false,
+  >           endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+              error: "Activity event not found for current user.",
+            },
+            { status: 404 }
+          ),
+        };
+  LINE 174: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+          {
+            ok: false,
+  >         endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+            error: "Invalid JSON body.",
+          },
+          { status: 400 }
+        );
+      }
+
+------------------------------------------------------------
+CANDIDATE FILE: src/app/api/activity/debug-trace/route.ts
+ROUTE: /api/activity/debug-trace
+SCORE: 5
+------------------------------------------------------------
+
+PATTERN: activity_events
+  LINE 400: table: "activity_events",
+        activityEvents,
+        await fetchUserOwnedByIds({
+  >       table: "activity_events",
+          userId,
+          column: "id",
+          values: Array.from(eventIds),
+          limit,
+          orderBy: "created_at",
+  LINE 556: table: "activity_events",
+        activityEvents,
+        await fetchUserOwnedByIds({
+  >       table: "activity_events",
+          userId,
+          column: "id",
+          values: Array.from(eventIds),
+          limit,
+          orderBy: "created_at",
+  LINE 1188: sourceTable: "activity_events",
+        if (isProblemStatus(status)) {
+          problems.push({
+  >         sourceTable: "activity_events",
+            sourceId: getId(row),
+            severity: inferSeverity(status),
+            status,
+            stage: null,
+            message:
+
+PATTERN: status:
+  LINE 623: defaultActivityStatus: getRecordString(metadata, "defaultActivityStatus"),
+          ),
+          activityEventSource: getRecordString(metadata, "activityEventSource"),
+  >       defaultActivityStatus: getRecordString(metadata, "defaultActivityStatus"),
+          promotedActivityStatus: getRecordString(
+            metadata,
+            "promotedActivityStatus"
+          ),
+          requiresHumanReview: getRecordBoolean(metadata, "requiresHumanReview"),
+  LINE 624: promotedActivityStatus: getRecordString(
+          activityEventSource: getRecordString(metadata, "activityEventSource"),
+          defaultActivityStatus: getRecordString(metadata, "defaultActivityStatus"),
+  >       promotedActivityStatus: getRecordString(
+            metadata,
+            "promotedActivityStatus"
+          ),
+          requiresHumanReview: getRecordBoolean(metadata, "requiresHumanReview"),
+          noImpactsCreated: getRecordBoolean(metadata, "noImpactsCreated"),
+  LINE 650: importedPendingPreviousStatus: getRecordString(
+            "importedPendingConfirmedAt"
+          ),
+  >       importedPendingPreviousStatus: getRecordString(
+            metadata,
+            "importedPendingPreviousStatus"
+          ),
+          reviewNote: getRecordString(metadata, "reviewNote"),
+        },
+  LINE 671: activityStatus: getRecordString(promotion, "activityStatus"),
+          promotedAt: getRecordString(promotion, "promotedAt"),
+          activityEventId: getRecordString(promotion, "activityEventId"),
+  >       activityStatus: getRecordString(promotion, "activityStatus"),
+          activityProcessingStatus: getRecordString(
+            promotion,
+            "activityProcessingStatus"
+          ),
+          activityEventSource: getRecordString(promotion, "activityEventSource"),
+  LINE 672: activityProcessingStatus: getRecordString(
+          activityEventId: getRecordString(promotion, "activityEventId"),
+          activityStatus: getRecordString(promotion, "activityStatus"),
+  >       activityProcessingStatus: getRecordString(
+            promotion,
+            "activityProcessingStatus"
+          ),
+          activityEventSource: getRecordString(promotion, "activityEventSource"),
+          noImpactsCreated: getRecordBoolean(promotion, "noImpactsCreated"),
+  LINE 687: defaultActivityStatus: getRecordString(
+          sourceEventId: getRecordString(originalIntake, "sourceEventId"),
+          idempotencyKey: getRecordString(originalIntake, "idempotencyKey"),
+  >       defaultActivityStatus: getRecordString(
+            originalIntake,
+            "defaultActivityStatus"
+          ),
+          defaultRawProcessingStatus: getRecordString(
+            originalIntake,
+
+PATTERN: pending
+  LINE 642: importedPendingConfirmed: getRecordBoolean(
+        confirmation: {
+          confirmationFlow: getRecordString(metadata, "confirmationFlow"),
+  >       importedPendingConfirmed: getRecordBoolean(
+            metadata,
+            "importedPendingConfirmed"
+          ),
+          importedPendingConfirmedAt: getRecordString(
+            metadata,
+  LINE 644: "importedPendingConfirmed"
+          importedPendingConfirmed: getRecordBoolean(
+            metadata,
+  >         "importedPendingConfirmed"
+          ),
+          importedPendingConfirmedAt: getRecordString(
+            metadata,
+            "importedPendingConfirmedAt"
+          ),
+  LINE 646: importedPendingConfirmedAt: getRecordString(
+            "importedPendingConfirmed"
+          ),
+  >       importedPendingConfirmedAt: getRecordString(
+            metadata,
+            "importedPendingConfirmedAt"
+          ),
+          importedPendingPreviousStatus: getRecordString(
+            metadata,
+  LINE 648: "importedPendingConfirmedAt"
+          importedPendingConfirmedAt: getRecordString(
+            metadata,
+  >         "importedPendingConfirmedAt"
+          ),
+          importedPendingPreviousStatus: getRecordString(
+            metadata,
+            "importedPendingPreviousStatus"
+          ),
+  LINE 650: importedPendingPreviousStatus: getRecordString(
+            "importedPendingConfirmedAt"
+          ),
+  >       importedPendingPreviousStatus: getRecordString(
+            metadata,
+            "importedPendingPreviousStatus"
+          ),
+          reviewNote: getRecordString(metadata, "reviewNote"),
+        },
+  LINE 652: "importedPendingPreviousStatus"
+          importedPendingPreviousStatus: getRecordString(
+            metadata,
+  >         "importedPendingPreviousStatus"
+          ),
+          reviewNote: getRecordString(metadata, "reviewNote"),
+        },
+      };
+    }
+
+PATTERN: complete
+  LINE 1078: isCompleted: getStringField(event, "status") === "completed",
+            eventSource: getStringField(event, "source"),
+            isImportedPending: getStringField(event, "status") === "imported_pending",
+  >         isCompleted: getStringField(event, "status") === "completed",
+            isArchived: getStringField(event, "status") === "archived",
+            linkedRawSignalsCount: linkedRawSignals.length,
+            rawSignal: primaryRawSignal
+              ? {
+                  id: getId(primaryRawSignal),
+
+PATTERN: debug
+  LINE 1468: "/api/activity/debug-trace?eventId=<activity_event_id>",
+              "Provide at least one filter: eventId, rawSignalId, correctionId or processingRunId.",
+            examples: [
+  >           "/api/activity/debug-trace?eventId=<activity_event_id>",
+              "/api/activity/debug-trace?rawSignalId=<raw_signal_id>",
+              "/api/activity/debug-trace?processingRunId=<processing_run_id>",
+              "/api/activity/debug-trace?correctionId=<activity_correction_id>",
+              "/api/activity/debug-trace?eventId=<activity_event_id>&mode=summary",
+              "/api/activity/debug-trace?rawSignalId=<raw_signal_id>&mode=summary",
+  LINE 1469: "/api/activity/debug-trace?rawSignalId=<raw_signal_id>",
+            examples: [
+              "/api/activity/debug-trace?eventId=<activity_event_id>",
+  >           "/api/activity/debug-trace?rawSignalId=<raw_signal_id>",
+              "/api/activity/debug-trace?processingRunId=<processing_run_id>",
+              "/api/activity/debug-trace?correctionId=<activity_correction_id>",
+              "/api/activity/debug-trace?eventId=<activity_event_id>&mode=summary",
+              "/api/activity/debug-trace?rawSignalId=<raw_signal_id>&mode=summary",
+            ],
+  LINE 1470: "/api/activity/debug-trace?processingRunId=<processing_run_id>",
+              "/api/activity/debug-trace?eventId=<activity_event_id>",
+              "/api/activity/debug-trace?rawSignalId=<raw_signal_id>",
+  >           "/api/activity/debug-trace?processingRunId=<processing_run_id>",
+              "/api/activity/debug-trace?correctionId=<activity_correction_id>",
+              "/api/activity/debug-trace?eventId=<activity_event_id>&mode=summary",
+              "/api/activity/debug-trace?rawSignalId=<raw_signal_id>&mode=summary",
+            ],
+          },
+  LINE 1471: "/api/activity/debug-trace?correctionId=<activity_correction_id>",
+              "/api/activity/debug-trace?rawSignalId=<raw_signal_id>",
+              "/api/activity/debug-trace?processingRunId=<processing_run_id>",
+  >           "/api/activity/debug-trace?correctionId=<activity_correction_id>",
+              "/api/activity/debug-trace?eventId=<activity_event_id>&mode=summary",
+              "/api/activity/debug-trace?rawSignalId=<raw_signal_id>&mode=summary",
+            ],
+          },
+          { status: 400 }
+  LINE 1472: "/api/activity/debug-trace?eventId=<activity_event_id>&mode=summary",
+              "/api/activity/debug-trace?processingRunId=<processing_run_id>",
+              "/api/activity/debug-trace?correctionId=<activity_correction_id>",
+  >           "/api/activity/debug-trace?eventId=<activity_event_id>&mode=summary",
+              "/api/activity/debug-trace?rawSignalId=<raw_signal_id>&mode=summary",
+            ],
+          },
+          { status: 400 }
+        );
+  LINE 1473: "/api/activity/debug-trace?rawSignalId=<raw_signal_id>&mode=summary",
+              "/api/activity/debug-trace?correctionId=<activity_correction_id>",
+              "/api/activity/debug-trace?eventId=<activity_event_id>&mode=summary",
+  >           "/api/activity/debug-trace?rawSignalId=<raw_signal_id>&mode=summary",
+            ],
+          },
+          { status: 400 }
+        );
+      }
+
+============================================================
+C) DEBUG FREE-TEXT SETUP ROUTE — KEY EVIDENCE
+============================================================
+
+PATTERN: .from("activity_events")
+  LINE 761: .from("activity_events")
+    
+      const { data: createdEventData, error: createError } = await supabase
+  >     .from("activity_events")
+        .insert({
+          user_id: appUser.id,
+          performed_by_actor_id: personActor.id,
+          acting_as_actor_id: personActor.id,
+          acting_for_actor_id: null,
+
+PATTERN: .insert({
+  LINE 762: .insert({
+      const { data: createdEventData, error: createError } = await supabase
+        .from("activity_events")
+  >     .insert({
+          user_id: appUser.id,
+          performed_by_actor_id: personActor.id,
+          acting_as_actor_id: personActor.id,
+          acting_for_actor_id: null,
+          activity_type_id: null,
+
+PATTERN: user_id: appUser.id
+  LINE 763: user_id: appUser.id,
+        .from("activity_events")
+        .insert({
+  >       user_id: appUser.id,
+          performed_by_actor_id: personActor.id,
+          acting_as_actor_id: personActor.id,
+          acting_for_actor_id: null,
+          activity_type_id: null,
+          activity_template_id: null,
+
+PATTERN: performed_by_actor_id: personActor.id
+  LINE 764: performed_by_actor_id: personActor.id,
+        .insert({
+          user_id: appUser.id,
+  >       performed_by_actor_id: personActor.id,
+          acting_as_actor_id: personActor.id,
+          acting_for_actor_id: null,
+          activity_type_id: null,
+          activity_template_id: null,
+          template_id: null,
+
+PATTERN: acting_as_actor_id: personActor.id
+  LINE 765: acting_as_actor_id: personActor.id,
+          user_id: appUser.id,
+          performed_by_actor_id: personActor.id,
+  >       acting_as_actor_id: personActor.id,
+          acting_for_actor_id: null,
+          activity_type_id: null,
+          activity_template_id: null,
+          template_id: null,
+          event_code: null,
+
+PATTERN: input_text: inputText
+  LINE 771: input_text: inputText,
+          template_id: null,
+          event_code: null,
+  >       input_text: inputText,
+          title,
+          description,
+          started_at: timing.startedAt,
+          ended_at: timing.endedAt,
+          duration_minutes: timing.durationMinutes,
+
+PATTERN: title,
+  LINE 550: title: params.title,
+          activityEventId: params.activityEventId,
+          inputText: params.inputText,
+  >       title: params.title,
+          description: params.description,
+          durationMinutes: params.durationMinutes,
+          inputLanguage: null,
+          actorId: params.personActorId,
+          organizationId: null,
+  LINE 772: title,
+          event_code: null,
+          input_text: inputText,
+  >       title,
+          description,
+          started_at: timing.startedAt,
+          ended_at: timing.endedAt,
+          duration_minutes: timing.durationMinutes,
+          source: "manual_chat",
+  LINE 810: title,
+        activityEventId: createdEvent.id,
+        inputText,
+  >     title,
+        description,
+        durationMinutes: timing.durationMinutes,
+        personActorId: personActor.id,
+        options: categoryDerivationOptions,
+      });
+
+PATTERN: description,
+  LINE 551: description: params.description,
+          inputText: params.inputText,
+          title: params.title,
+  >       description: params.description,
+          durationMinutes: params.durationMinutes,
+          inputLanguage: null,
+          actorId: params.personActorId,
+          organizationId: null,
+          metadata: {
+  LINE 773: description,
+          input_text: inputText,
+          title,
+  >       description,
+          started_at: timing.startedAt,
+          ended_at: timing.endedAt,
+          duration_minutes: timing.durationMinutes,
+          source: "manual_chat",
+          status: "completed",
+  LINE 811: description,
+        inputText,
+        title,
+  >     description,
+        durationMinutes: timing.durationMinutes,
+        personActorId: personActor.id,
+        options: categoryDerivationOptions,
+      });
+    
+
+PATTERN: started_at:
+  LINE 774: started_at: timing.startedAt,
+          title,
+          description,
+  >       started_at: timing.startedAt,
+          ended_at: timing.endedAt,
+          duration_minutes: timing.durationMinutes,
+          source: "manual_chat",
+          status: "completed",
+          privacy_scope: "private",
+
+PATTERN: ended_at:
+  LINE 775: ended_at: timing.endedAt,
+          description,
+          started_at: timing.startedAt,
+  >       ended_at: timing.endedAt,
+          duration_minutes: timing.durationMinutes,
+          source: "manual_chat",
+          status: "completed",
+          privacy_scope: "private",
+          processing_status: "processed",
+
+PATTERN: duration_minutes:
+  LINE 776: duration_minutes: timing.durationMinutes,
+          started_at: timing.startedAt,
+          ended_at: timing.endedAt,
+  >       duration_minutes: timing.durationMinutes,
+          source: "manual_chat",
+          status: "completed",
+          privacy_scope: "private",
+          processing_status: "processed",
+          metadata_json: {
+
+PATTERN: processing_status:
+  LINE 780: processing_status: "processed",
+          status: "completed",
+          privacy_scope: "private",
+  >       processing_status: "processed",
+          metadata_json: {
+            parser: "debug_free_text_value_object_test_v1",
+            p4Step: "P4.10.0-C8-O1",
+            freeTextValueObjectTest: true,
+            categoryDerivationEnabled: categoryDerivationOptions.enabled,
+
+============================================================
+D) COMPLETE ROUTE CONTRACT
+============================================================
+
+PATTERN: type ActivityCompleteBody
+  LINE 43: type ActivityCompleteBody = {
+    export const dynamic = "force-dynamic";
+    
+  > type ActivityCompleteBody = {
+      eventId?: unknown;
+      endedAt?: unknown;
+      endTime?: unknown;
+      durationMinutes?: unknown;
+      comment?: unknown;
+    };
+
+PATTERN: eventId
+  LINE 44: eventId?: unknown;
+    
+    type ActivityCompleteBody = {
+  >   eventId?: unknown;
+      endedAt?: unknown;
+      endTime?: unknown;
+      durationMinutes?: unknown;
+      comment?: unknown;
+    };
+    
+  LINE 336: activityEventId: string;
+    function buildAdditionalCategoryLinksForCompleteRoute(params: {
+      enabled: boolean;
+  >   activityEventId: string;
+      derivationRunId: string | null;
+      resolutionResult: unknown;
+    }): AdditionalValueObjectCategoryLink[] {
+      const { enabled, activityEventId, derivationRunId, resolutionResult } = params;
+    
+      if (!enabled) {
+  LINE 340: const { enabled, activityEventId, derivationRunId, resolutionResult } = params;
+      resolutionResult: unknown;
+    }): AdditionalValueObjectCategoryLink[] {
+  >   const { enabled, activityEventId, derivationRunId, resolutionResult } = params;
+    
+      if (!enabled) {
+        return [];
+      }
+    
+      const resolutionRecord = asRecordForCategoryDerivation(resolutionResult);
+  LINE 402: activityEventId,
+          derivationRunId,
+          activityCategoryDerivationId: null,
+  >       activityEventId,
+          candidateSlug,
+          candidateTitle: readStringFieldForCategoryDerivation(candidate, [
+            "candidateTitle",
+            "candidate_title",
+            "title",
+            "label",
+  LINE 450: activityEventId: event.id,
+    
+        const derivationInput: CategoryDerivationInput = {
+  >       activityEventId: event.id,
+          inputText: policy.inputText,
+          title: event.title,
+          description: event.description,
+          durationMinutes: event.duration_minutes ?? 0,
+          inputLanguage: null,
+          actorId: policy.actorId,
+  LINE 481: activityEventId: event.id,
+          supabase as unknown as CategoryDerivationPersistenceSupabaseClient,
+          {
+  >         activityEventId: event.id,
+            input: derivationInput,
+            derivationResult: extractionResult,
+            resolvedCandidates: resolutionResult.candidates,
+            actorId: policy.actorId,
+            organizationId: null,
+            modelName: null,
+  LINE 512: activityEventId: event.id,
+        const additionalCategoryLinks = buildAdditionalCategoryLinksForCompleteRoute({
+          enabled: true,
+  >       activityEventId: event.id,
+          derivationRunId,
+          resolutionResult,
+        });
+    
+        const warnings = [
+          ...extractionResult.warnings,
+  LINE 696: async function getExistingImpactEventsCount(eventId: string) {
+    }
+    
+  > async function getExistingImpactEventsCount(eventId: string) {
+      const { count, error } = await supabase
+        .from("impact_events")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+
+PATTERN: durationMinutes
+  LINE 47: durationMinutes?: unknown;
+      endedAt?: unknown;
+      endTime?: unknown;
+  >   durationMinutes?: unknown;
+      comment?: unknown;
+    };
+    
+    type ActivityEventRow = {
+      id: string;
+      user_id: string;
+  LINE 81: durationMinutes: number;
+          startedAt: string;
+          endedAt: string;
+  >       durationMinutes: number;
+        }
+      | {
+          ok: false;
+          error: string;
+        };
+    
+  LINE 454: durationMinutes: event.duration_minutes ?? 0,
+          title: event.title,
+          description: event.description,
+  >       durationMinutes: event.duration_minutes ?? 0,
+          inputLanguage: null,
+          actorId: policy.actorId,
+          organizationId: null,
+          metadata: {
+            endpoint: "/api/activity/complete",
+            p4Step: "P4.10.0-C8-P3-B7-C1-B",
+  LINE 628: const explicitDurationMinutes = asNumber(body.durationMinutes);
+    
+      const rawEndedAt = asString(body.endedAt) ?? asString(body.endTime);
+  >   const explicitDurationMinutes = asNumber(body.durationMinutes);
+    
+      if (explicitDurationMinutes !== null && explicitDurationMinutes < 0) {
+        return {
+          ok: false,
+          error: "durationMinutes must be greater than or equal to 0.",
+        };
+  LINE 630: if (explicitDurationMinutes !== null && explicitDurationMinutes < 0) {
+      const explicitDurationMinutes = asNumber(body.durationMinutes);
+    
+  >   if (explicitDurationMinutes !== null && explicitDurationMinutes < 0) {
+        return {
+          ok: false,
+          error: "durationMinutes must be greater than or equal to 0.",
+        };
+      }
+    
+  LINE 633: error: "durationMinutes must be greater than or equal to 0.",
+        return {
+          ok: false,
+  >       error: "durationMinutes must be greater than or equal to 0.",
+        };
+      }
+    
+      if (rawEndedAt) {
+        const endedDate = new Date(rawEndedAt);
+    
+  LINE 658: durationMinutes: Math.round(
+          startedAt: startedDate.toISOString(),
+          endedAt: endedDate.toISOString(),
+  >       durationMinutes: Math.round(
+            (endedDate.getTime() - startedDate.getTime()) / 60000
+          ),
+        };
+      }
+    
+      if (explicitDurationMinutes !== null) {
+  LINE 664: if (explicitDurationMinutes !== null) {
+      }
+    
+  >   if (explicitDurationMinutes !== null) {
+        const endedDate = new Date(
+          startedDate.getTime() + explicitDurationMinutes * 60000
+        );
+    
+        return {
+          ok: true,
+
+PATTERN: endedAt
+  LINE 45: endedAt?: unknown;
+    type ActivityCompleteBody = {
+      eventId?: unknown;
+  >   endedAt?: unknown;
+      endTime?: unknown;
+      durationMinutes?: unknown;
+      comment?: unknown;
+    };
+    
+    type ActivityEventRow = {
+  LINE 80: endedAt: string;
+          ok: true;
+          startedAt: string;
+  >       endedAt: string;
+          durationMinutes: number;
+        }
+      | {
+          ok: false;
+          error: string;
+        };
+  LINE 627: const rawEndedAt = asString(body.endedAt) ?? asString(body.endTime);
+      }
+    
+  >   const rawEndedAt = asString(body.endedAt) ?? asString(body.endTime);
+      const explicitDurationMinutes = asNumber(body.durationMinutes);
+    
+      if (explicitDurationMinutes !== null && explicitDurationMinutes < 0) {
+        return {
+          ok: false,
+          error: "durationMinutes must be greater than or equal to 0.",
+  LINE 637: if (rawEndedAt) {
+      }
+    
+  >   if (rawEndedAt) {
+        const endedDate = new Date(rawEndedAt);
+    
+        if (Number.isNaN(endedDate.getTime())) {
+          return {
+            ok: false,
+            error: "Invalid endedAt or endTime.",
+  LINE 638: const endedDate = new Date(rawEndedAt);
+    
+      if (rawEndedAt) {
+  >     const endedDate = new Date(rawEndedAt);
+    
+        if (Number.isNaN(endedDate.getTime())) {
+          return {
+            ok: false,
+            error: "Invalid endedAt or endTime.",
+          };
+  LINE 643: error: "Invalid endedAt or endTime.",
+          return {
+            ok: false,
+  >         error: "Invalid endedAt or endTime.",
+          };
+        }
+    
+        if (endedDate.getTime() < startedDate.getTime()) {
+          return {
+            ok: false,
+  LINE 650: error: "endedAt must be greater than or equal to startedAt.",
+          return {
+            ok: false,
+  >         error: "endedAt must be greater than or equal to startedAt.",
+          };
+        }
+    
+        return {
+          ok: true,
+          startedAt: startedDate.toISOString(),
+  LINE 657: endedAt: endedDate.toISOString(),
+          ok: true,
+          startedAt: startedDate.toISOString(),
+  >       endedAt: endedDate.toISOString(),
+          durationMinutes: Math.round(
+            (endedDate.getTime() - startedDate.getTime()) / 60000
+          ),
+        };
+      }
+    
+
+PATTERN: endTime
+  LINE 46: endTime?: unknown;
+      eventId?: unknown;
+      endedAt?: unknown;
+  >   endTime?: unknown;
+      durationMinutes?: unknown;
+      comment?: unknown;
+    };
+    
+    type ActivityEventRow = {
+      id: string;
+  LINE 627: const rawEndedAt = asString(body.endedAt) ?? asString(body.endTime);
+      }
+    
+  >   const rawEndedAt = asString(body.endedAt) ?? asString(body.endTime);
+      const explicitDurationMinutes = asNumber(body.durationMinutes);
+    
+      if (explicitDurationMinutes !== null && explicitDurationMinutes < 0) {
+        return {
+          ok: false,
+          error: "durationMinutes must be greater than or equal to 0.",
+  LINE 643: error: "Invalid endedAt or endTime.",
+          return {
+            ok: false,
+  >         error: "Invalid endedAt or endTime.",
+          };
+        }
+    
+        if (endedDate.getTime() < startedDate.getTime()) {
+          return {
+            ok: false,
+  LINE 996: : asString(body.endedAt) || asString(body.endTime)
+              asNumber(body.durationMinutes) !== null
+                ? "explicit_duration"
+  >             : asString(body.endedAt) || asString(body.endTime)
+                  ? "explicit_end_time"
+                  : "current_time",
+          },
+          updated_at: nowIso,
+        })
+        .eq("id", event.id)
+
+PATTERN: comment
+  LINE 48: comment?: unknown;
+      endTime?: unknown;
+      durationMinutes?: unknown;
+  >   comment?: unknown;
+    };
+    
+    type ActivityEventRow = {
+      id: string;
+      user_id: string;
+      performed_by_actor_id: string | null;
+  LINE 724: comment: "Completed lifecycle smoke test",
+        example: {
+          eventId: "activity-event-uuid",
+  >       comment: "Completed lifecycle smoke test",
+        },
+        deterministicTestExample: {
+          eventId: "activity-event-uuid",
+          durationMinutes: 5,
+          comment: "Completed lifecycle smoke test with fixed duration",
+        },
+  LINE 729: comment: "Completed lifecycle smoke test with fixed duration",
+          eventId: "activity-event-uuid",
+          durationMinutes: 5,
+  >       comment: "Completed lifecycle smoke test with fixed duration",
+        },
+      });
+    }
+    
+    export async function POST(request: Request) {
+      if (!ACTIVITY_RECORDING_ENABLED) {
+  LINE 892: const comment = asString(body.comment);
+      }
+    
+  >   const comment = asString(body.comment);
+      const existingMetadata = asRecord(event.metadata_json);
+      const nowIso = new Date().toISOString();
+    
+      const processingRunId = randomUUID();
+      const processingStartedAt = new Date();
+    
+  LINE 986: description: comment ?? event.description,
+          status: completedStatus,
+          processing_status: "processed",
+  >       description: comment ?? event.description,
+          metadata_json: {
+            ...existingMetadata,
+            lifecycle: completedStatus,
+            lifecycle_completed_at: nowIso,
+            previous_status: event.status,
+            completion_comment: comment,
+  LINE 992: completion_comment: comment,
+            lifecycle_completed_at: nowIso,
+            previous_status: event.status,
+  >         completion_comment: comment,
+            completion_duration_source:
+              asNumber(body.durationMinutes) !== null
+                ? "explicit_duration"
+                : asString(body.endedAt) || asString(body.endTime)
+                  ? "explicit_end_time"
+                  : "current_time",
+
+PATTERN: .from("activity_events")
+  LINE 788: .from("activity_events")
+    
+      const { data: eventData, error: eventError } = await supabase
+  >     .from("activity_events")
+        .select("*")
+        .eq("id", eventId)
+        .eq("user_id", appUser.id)
+        .maybeSingle();
+    
+      if (eventError) {
+  LINE 980: .from("activity_events")
+    
+      const { data: updatedEventData, error: updateError } = await supabase
+  >     .from("activity_events")
+        .update({
+          ended_at: timing.endedAt,
+          duration_minutes: timing.durationMinutes,
+          status: completedStatus,
+          processing_status: "processed",
+          description: comment ?? event.description,
+  LINE 1471: .from("activity_events")
+    
+        await supabase
+  >       .from("activity_events")
+          .update({
+            processing_status: "failed",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", updatedEvent.id)
+          .eq("user_id", appUser.id);
+
+PATTERN: .eq("id", eventId)
+  LINE 790: .eq("id", eventId)
+        .from("activity_events")
+        .select("*")
+  >     .eq("id", eventId)
+        .eq("user_id", appUser.id)
+        .maybeSingle();
+    
+      if (eventError) {
+        return NextResponse.json(
+          {
+
+PATTERN: .eq("user_id", appUser.id)
+  LINE 791: .eq("user_id", appUser.id)
+        .select("*")
+        .eq("id", eventId)
+  >     .eq("user_id", appUser.id)
+        .maybeSingle();
+    
+      if (eventError) {
+        return NextResponse.json(
+          {
+            ok: false,
+  LINE 1003: .eq("user_id", appUser.id)
+        })
+        .eq("id", event.id)
+  >     .eq("user_id", appUser.id)
+        .select()
+        .single();
+    
+      if (updateError || !updatedEventData) {
+        if (rawSignal) {
+          await markRawActivitySignalFailed({
+  LINE 1477: .eq("user_id", appUser.id);
+          })
+          .eq("id", updatedEvent.id)
+  >       .eq("user_id", appUser.id);
+    
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              error instanceof Error
+
+PATTERN: processing_status
+  LINE 70: processing_status: string | null;
+      status: string;
+      privacy_scope: string | null;
+  >   processing_status: string | null;
+      metadata_json: Record<string, unknown> | null;
+      created_at: string;
+      updated_at: string;
+    };
+    
+    type CompletionTiming =
+  LINE 985: processing_status: "processed",
+          duration_minutes: timing.durationMinutes,
+          status: completedStatus,
+  >       processing_status: "processed",
+          description: comment ?? event.description,
+          metadata_json: {
+            ...existingMetadata,
+            lifecycle: completedStatus,
+            lifecycle_completed_at: nowIso,
+            previous_status: event.status,
+  LINE 1074: processingStatus: updatedEvent.processing_status,
+          activityEventId: updatedEvent.id,
+          status: updatedEvent.status,
+  >       processingStatus: updatedEvent.processing_status,
+        },
+        metadata: {
+          endpoint: "/api/activity/complete",
+          mode: "template_first_complete",
+        },
+        startedAt: processingStartedAt.toISOString(),
+  LINE 1413: processedSignalResult?.signal?.processing_status ??
+                id: rawSignal.id,
+                processingStatus:
+  >               processedSignalResult?.signal?.processing_status ??
+                  rawSignal.processing_status,
+              }
+            : null,
+          processingRunId,
+          lifecycle: {
+            startedAt: timing.startedAt,
+  LINE 1414: rawSignal.processing_status,
+                processingStatus:
+                  processedSignalResult?.signal?.processing_status ??
+  >               rawSignal.processing_status,
+              }
+            : null,
+          processingRunId,
+          lifecycle: {
+            startedAt: timing.startedAt,
+            endedAt: timing.endedAt,
+  LINE 1473: processing_status: "failed",
+          .from("activity_events")
+          .update({
+  >         processing_status: "failed",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", updatedEvent.id)
+          .eq("user_id", appUser.id);
+    
+        return NextResponse.json(
+
+PATTERN: processActivityValueObjectBridge
+  LINE 19: import { processActivityValueObjectBridge } from "../../../../../lib/activity/activityValueObjectLifecycle";
+    import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+    import { processActivityImpacts } from "../../../../../lib/activity/activityImpactProcessor";
+  > import { processActivityValueObjectBridge } from "../../../../../lib/activity/activityValueObjectLifecycle";
+    import { deriveCategoryCandidates } from "../../../../../lib/activity/categoryDerivation/ruleExtractor";
+    import {
+      resolveCategoryCandidates,
+      type CategoryResolverCreatePolicy,
+      type CategoryResolverSupabaseClient,
+    } from "../../../../../lib/activity/categoryDerivation/resolver";
+  LINE 1295: const valueObjectBridgeResult = await processActivityValueObjectBridge({
+        }
+    
+  >     const valueObjectBridgeResult = await processActivityValueObjectBridge({
+          supabase,
+          eventId: updatedEvent.id,
+          processorName: "activity_complete_route_p4_7_7",
+          additionalCategoryLinks: categoryDerivationBridgeAdditionalCategoryLinks,
+        });
+    
+
+PATTERN: categoryDerivationResult
+  LINE 1226: const categoryDerivationResult = await runCategoryDerivationForCompleteRoute({
+        });
+    
+  >     const categoryDerivationResult = await runCategoryDerivationForCompleteRoute({
+          event: updatedEvent,
+          completedStatus,
+        });
+    
+        const categoryDerivationBridgeAdditionalCategoryLinks =
+          categoryDerivationResult.additionalCategoryLinks;
+  LINE 1232: categoryDerivationResult.additionalCategoryLinks;
+    
+        const categoryDerivationBridgeAdditionalCategoryLinks =
+  >       categoryDerivationResult.additionalCategoryLinks;
+    
+        const categoryDerivationProcessingLogResult =
+          await safeCreateActivityProcessingLog({
+            userId: appUser.id,
+            rawSignalId: rawSignal?.id ?? null,
+            activityEventId: updatedEvent.id,
+  LINE 1242: processingStatus: categoryDerivationResult.skipped
+            processorName: "activity_complete_route_category_derivation",
+            processingStage: "finalize",
+  >         processingStatus: categoryDerivationResult.skipped
+              ? "skipped"
+              : categoryDerivationResult.ok
+                ? "completed"
+                : "warning",
+            severity: categoryDerivationResult.ok === false ? "warning" : "info",
+            message:
+  LINE 1244: : categoryDerivationResult.ok
+            processingStatus: categoryDerivationResult.skipped
+              ? "skipped"
+  >           : categoryDerivationResult.ok
+                ? "completed"
+                : "warning",
+            severity: categoryDerivationResult.ok === false ? "warning" : "info",
+            message:
+              "Rule-based Category Derivation processed before Value Object bridge.",
+            input: {
+  LINE 1247: severity: categoryDerivationResult.ok === false ? "warning" : "info",
+                ? "completed"
+                : "warning",
+  >         severity: categoryDerivationResult.ok === false ? "warning" : "info",
+            message:
+              "Rule-based Category Derivation processed before Value Object bridge.",
+            input: {
+              eventId: updatedEvent.id,
+              source: updatedEvent.source,
+              status: updatedEvent.status,
+  LINE 1254: policy: categoryDerivationResult.policy,
+              source: updatedEvent.source,
+              status: updatedEvent.status,
+  >           policy: categoryDerivationResult.policy,
+            },
+            output: {
+              enabled: categoryDerivationResult.enabled,
+              ok: categoryDerivationResult.ok,
+              skipped: categoryDerivationResult.skipped,
+              reason: categoryDerivationResult.reason,
+  LINE 1257: enabled: categoryDerivationResult.enabled,
+            },
+            output: {
+  >           enabled: categoryDerivationResult.enabled,
+              ok: categoryDerivationResult.ok,
+              skipped: categoryDerivationResult.skipped,
+              reason: categoryDerivationResult.reason,
+              error: categoryDerivationResult.error,
+              derivationRunId: categoryDerivationResult.derivationRunId,
+              extractionCandidateCount:
+  LINE 1258: ok: categoryDerivationResult.ok,
+            output: {
+              enabled: categoryDerivationResult.enabled,
+  >           ok: categoryDerivationResult.ok,
+              skipped: categoryDerivationResult.skipped,
+              reason: categoryDerivationResult.reason,
+              error: categoryDerivationResult.error,
+              derivationRunId: categoryDerivationResult.derivationRunId,
+              extractionCandidateCount:
+                categoryDerivationResult.extractionCandidateCount,
+
+PATTERN: return NextResponse.json
+  LINE 713: return NextResponse.json({
+    
+    export async function GET() {
+  >   return NextResponse.json({
+        ok: true,
+        endpoint: "/api/activity/complete",
+        method: "POST",
+        enabled: ACTIVITY_RECORDING_ENABLED,
+        status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+        message: ACTIVITY_RECORDING_ENABLED
+  LINE 736: return NextResponse.json(
+    export async function POST(request: Request) {
+      if (!ACTIVITY_RECORDING_ENABLED) {
+  >     return NextResponse.json(
+          {
+            ok: false,
+            error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+          },
+          { status: 503 }
+        );
+  LINE 752: return NextResponse.json(
+    
+      if (!appUser) {
+  >     return NextResponse.json(
+          {
+            ok: false,
+            error: "User context not found",
+          },
+          { status: 500 }
+        );
+  LINE 766: return NextResponse.json(
+        body = (await request.json()) as ActivityCompleteBody;
+      } catch {
+  >     return NextResponse.json(
+          {
+            ok: false,
+            error: "Invalid JSON body",
+          },
+          { status: 400 }
+        );
+  LINE 778: return NextResponse.json(
+    
+      if (!eventId) {
+  >     return NextResponse.json(
+          {
+            ok: false,
+            error: "eventId is required.",
+          },
+          { status: 400 }
+        );
+  LINE 795: return NextResponse.json(
+    
+      if (eventError) {
+  >     return NextResponse.json(
+          {
+            ok: false,
+            error: eventError.message,
+          },
+          { status: 500 }
+        );
+  LINE 805: return NextResponse.json(
+    
+      if (!eventData) {
+  >     return NextResponse.json(
+          {
+            ok: false,
+            error: "Activity event not found or access denied.",
+          },
+          { status: 404 }
+        );
+  LINE 832: return NextResponse.json({
+          });
+    
+  >       return NextResponse.json({
+            ok: true,
+            status: "already_completed",
+            event,
+            impactEvents: impactResult.impactEvents,
+            dailyAggregates: impactResult.dailyAggregates,
+            currentSnapshots: impactResult.currentSnapshots,
+
+============================================================
+E) C2-B TEST DECISION
+============================================================
+Use browser-authenticated JS.
+Step 1: create event through /api/activity/debug/free-text-value-object-test with enableCategoryDerivation false if supported or harmless default if not.
+Step 2: take created event id.
+Step 3: call production /api/activity/complete for that event id.
+Step 4: verify production response and debug-trace/logs.
+
+Success criteria:
+- setup response HTTP 200
+- complete response HTTP 200
+- complete response ok=true
+- event.status completed
+- event.processing_status processed
+- valueObjectBridge ok=true
+- bridge created count > 0
+- additional category links count > 0, expected 5 for walked-to-work baseline if current rules match debug proof
+- additional category link errors count = 0
+
+Important:
+C2-B is not a debug route test. Debug route is only setup helper. Production route under test is /api/activity/complete.
