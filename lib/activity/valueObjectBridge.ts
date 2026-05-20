@@ -1448,7 +1448,7 @@ export async function processValueObjectBridgeForActivityEvent(
         eventId: event.id,
         valueObjectId: mapping.valueObjectId,
         activityEventValueObjectLinkId:
-          v42Projection.activityEventValueObjectLinkId,
+          createdItem.activityEventValueObjectLinkId,
         processorName,
         additionalCategoryLinks,
       });
@@ -1469,7 +1469,7 @@ export async function processValueObjectBridgeForActivityEvent(
         eventId: event.id,
         valueObjectId: mapping.valueObjectId,
         activityEventValueObjectLinkId:
-          v42Projection.activityEventValueObjectLinkId,
+          createdItem.activityEventValueObjectLinkId,
         errors: additionalCategoryLinksResult.errors,
       });
     }

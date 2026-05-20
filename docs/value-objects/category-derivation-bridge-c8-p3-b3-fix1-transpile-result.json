@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "checkId": "P4.10.0-C8-P3-B3-fix1",
+  "checkedAt": "2026-05-20T08:01:28.346Z",
+  "targetPath": "lib\\activity\\valueObjectBridge.ts",
+  "diagnosticsCount": 0,
+  "missingPatterns": [],
+  "failedRegexChecks": [],
+  "additionalBlockLength": 1164,
+  "diagnostics": [],
+  "note": "Checks that the additionalCategoryLinks block uses createdItem.activityEventValueObjectLinkId instead of out-of-scope v42Projection."
+}
