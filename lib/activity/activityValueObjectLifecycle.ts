@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   processValueObjectBridgeForActivityEvent,
+  type AdditionalValueObjectCategoryLink,
   type ProcessValueObjectBridgeResult,
 } from "./valueObjectBridge";
 
@@ -15,6 +16,7 @@ export type ProcessActivityValueObjectBridgeInput = {
   eventId: string;
   processorName: string;
   allowNonCompletedEvent?: boolean;
+  additionalCategoryLinks?: AdditionalValueObjectCategoryLink[];
 };
 
 export type ProcessActivityValueObjectBridgeResult = {

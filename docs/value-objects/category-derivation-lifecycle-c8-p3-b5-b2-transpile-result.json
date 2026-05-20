@@ -1,0 +1,12 @@
+{
+  "ok": false,
+  "checkId": "P4.10.0-C8-P3-B5-B2",
+  "checkedAt": "2026-05-20T08:50:15.751Z",
+  "targetPath": "lib\\activity\\activityValueObjectLifecycle.ts",
+  "diagnosticsCount": 0,
+  "missingPatterns": [
+    "additionalCategoryLinks: input.additionalCategoryLinks"
+  ],
+  "diagnostics": [],
+  "note": "Targeted lifecycle wrapper transpile/pattern check for additionalCategoryLinks passthrough."
+}
