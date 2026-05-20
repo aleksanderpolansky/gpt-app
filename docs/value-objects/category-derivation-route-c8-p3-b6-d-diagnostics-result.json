@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "checkId": "P4.10.0-C8-P3-B6-D-route-fix",
+  "checkedAt": "2026-05-20T12:06:43.805Z",
+  "targetPath": "src\\app\\api\\activity\\debug\\free-text-value-object-test\\route.ts",
+  "diagnosticsCount": 0,
+  "missingPatterns": [],
+  "forbiddenFound": [],
+  "diagnostics": []
+}

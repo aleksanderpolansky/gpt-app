@@ -820,9 +820,7 @@ export async function POST(request: Request) {
         categoryDerivationDryRun: categoryDerivationOptions.dryRun,
         activityEventId: createdEvent.id,
         derivationRunId:
-          categoryDerivationResult?.derivationRunId ??
-          categoryDerivationResult?.runId ??
-          null,
+          categoryDerivationResult.persistence?.derivationRunId ?? null,
         categoryDerivationResult,
       });
   const bridgeResult = await processActivityValueObjectBridge({
