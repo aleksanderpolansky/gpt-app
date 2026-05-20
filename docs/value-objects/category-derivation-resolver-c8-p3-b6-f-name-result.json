@@ -1,16 +1,12 @@
 {
-  "ok": false,
-  "checkId": "P4.10.0-C8-P3-B6-F",
-  "checkedAt": "2026-05-20T12:16:47.062Z",
+  "ok": true,
+  "checkId": "P4.10.0-C8-P3-B6-F-fix1",
+  "checkedAt": "2026-05-20T12:19:40.975Z",
   "targetPath": "lib\\activity\\categoryDerivation\\resolver.ts",
   "diagnosticsCount": 0,
-  "missingPatterns": [
-    "name: title,"
-  ],
+  "missingPatterns": [],
   "forbiddenFound": [],
-  "failedChecks": [
-    "payload does not include name: title"
-  ],
-  "payloadBlockLength": 775,
+  "failedChecks": [],
+  "payloadBlockLength": 793,
   "diagnostics": []
 }

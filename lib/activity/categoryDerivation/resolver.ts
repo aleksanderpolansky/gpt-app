@@ -217,6 +217,7 @@ async function createCategory(
   const payload: Record<string, unknown> = {
     context_id: contextId,
     slug: normalizedSlug,
+    name: title,
     semantic_layer: semanticLayer,
     category_type: categoryType,
     status,

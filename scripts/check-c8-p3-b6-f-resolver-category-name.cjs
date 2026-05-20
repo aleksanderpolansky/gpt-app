@@ -47,6 +47,10 @@ function main() {
     failedChecks.push("payload does not include context_id");
   }
 
+  if (!payloadBlock.includes("slug: normalizedSlug,")) {
+    failedChecks.push("payload does not include slug");
+  }
+
   if (!payloadBlock.includes("name: title,")) {
     failedChecks.push("payload does not include name: title");
   }
@@ -70,7 +74,7 @@ function main() {
       missingPatterns.length === 0 &&
       forbiddenFound.length === 0 &&
       failedChecks.length === 0,
-    checkId: "P4.10.0-C8-P3-B6-F",
+    checkId: "P4.10.0-C8-P3-B6-F-fix1",
     checkedAt: new Date().toISOString(),
     targetPath: path.relative(rootDir, targetPath),
     diagnosticsCount: diagnostics.length,
@@ -90,7 +94,7 @@ function main() {
 
   fs.writeFileSync(resultPath, `${JSON.stringify(output, null, 2)}\n`, "utf8");
 
-  console.log("P4.10.0-C8-P3-B6-F — resolver category name payload check");
+  console.log("P4.10.0-C8-P3-B6-F-fix1 — resolver category name payload check");
   console.log(`Diagnostics: ${diagnostics.length}`);
   console.log(`Missing patterns: ${missingPatterns.length}`);
   console.log(`Forbidden found: ${forbiddenFound.length}`);
