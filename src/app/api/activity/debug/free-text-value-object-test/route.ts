@@ -814,7 +814,19 @@ export async function POST(request: Request) {
     options: categoryDerivationOptions,
   });
 
+    const categoryDerivationBridgeAdditionalCategoryLinks =
+      buildAdditionalCategoryLinksForBridge({
+        categoryDerivationEnabled: categoryDerivationOptions.enabled,
+        categoryDerivationDryRun: categoryDerivationOptions.dryRun,
+        activityEventId: event.id,
+        derivationRunId:
+          categoryDerivationResult?.derivationRunId ??
+          categoryDerivationResult?.runId ??
+          null,
+        categoryDerivationResult,
+      });
   const bridgeResult = await processActivityValueObjectBridge({
+      additionalCategoryLinks: categoryDerivationBridgeAdditionalCategoryLinks,
     supabase,
     eventId: createdEvent.id,
     processorName: "activity_debug_free_text_value_object_test",

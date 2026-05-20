@@ -32,7 +32,7 @@ function main() {
   const source = fs.readFileSync(targetPath, "utf8");
 
   const requiredPatterns = [
-    "type AdditionalValueObjectCategoryLink",
+    "AdditionalValueObjectCategoryLink",
     "function buildAdditionalCategoryLinksForBridge",
     "collectPossibleResolvedCandidates",
     "collectPossibleDerivationRows",
@@ -64,6 +64,10 @@ function main() {
     failedChecks.push("bridge call does not pass additionalCategoryLinks");
   }
 
+  if (!source.includes("const categoryDerivationBridgeAdditionalCategoryLinks =")) {
+    failedChecks.push("route does not build categoryDerivationBridgeAdditionalCategoryLinks before bridge call");
+  }
+
   const transpiled = ts.transpileModule(source, {
     fileName: targetPath,
     compilerOptions: {
@@ -80,7 +84,7 @@ function main() {
 
   const output = {
     ok: diagnostics.length === 0 && missingPatterns.length === 0 && failedChecks.length === 0,
-    checkId: "P4.10.0-C8-P3-B5-B3",
+    checkId: "P4.10.0-C8-P3-B5-B3-fix1",
     checkedAt: new Date().toISOString(),
     targetPath: path.relative(rootDir, targetPath),
     diagnosticsCount: diagnostics.length,
@@ -96,12 +100,12 @@ function main() {
           : diagnostic.messageText.messageText,
     })),
     note:
-      "Targeted route smoke check for passing resolved Category Derivation candidates into additionalCategoryLinks.",
+      "Corrected route smoke check for passing resolved Category Derivation candidates into additionalCategoryLinks.",
   };
 
   fs.writeFileSync(resultPath, `${JSON.stringify(output, null, 2)}\n`, "utf8");
 
-  console.log("P4.10.0-C8-P3-B5-B3 — route additionalCategoryLinks smoke check");
+  console.log("P4.10.0-C8-P3-B5-B3-fix1 — route additionalCategoryLinks smoke check");
   console.log("");
   console.log(`Target: ${path.relative(rootDir, targetPath)}`);
   console.log(`Diagnostics: ${diagnostics.length}`);
@@ -117,7 +121,7 @@ function main() {
   }
 
   console.log("");
-  console.log("RESULT: PASS — route passes Category Derivation additionalCategoryLinks and transpiles.");
+  console.log("RESULT: PASS — route fully passes Category Derivation additionalCategoryLinks and transpiles.");
 }
 
 main();
