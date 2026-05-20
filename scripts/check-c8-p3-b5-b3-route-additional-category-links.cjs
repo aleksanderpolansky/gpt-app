@@ -36,9 +36,11 @@ function main() {
     "function buildAdditionalCategoryLinksForBridge",
     "collectPossibleResolvedCandidates",
     "collectPossibleDerivationRows",
-    "categoryDerivationBridgeAdditionalCategoryLinks",
+    "const categoryDerivationBridgeAdditionalCategoryLinks =",
     "additionalCategoryLinks: categoryDerivationBridgeAdditionalCategoryLinks",
+    "categoryDerivationEnabled: categoryDerivationOptions.enabled",
     "categoryDerivationDryRun: categoryDerivationOptions.dryRun",
+    "activityEventId: createdEvent.id",
     "sourceRoute: \"/api/activity/debug/free-text-value-object-test\"",
     "p4Step: \"P4.10.0-C8-P3-B5-B3\"",
   ];
@@ -47,12 +49,23 @@ function main() {
 
   const failedChecks = [];
 
-  if (!source.includes("categoryDerivationEnabled: categoryDerivationOptions.enabled")) {
-    failedChecks.push("helper call does not use categoryDerivationOptions.enabled");
+  const prepStart = source.indexOf("const categoryDerivationBridgeAdditionalCategoryLinks =");
+  const prepEnd =
+    prepStart >= 0 ? source.indexOf("const bridgeResult = await processActivityValueObjectBridge", prepStart) : -1;
+
+  const prepBlock =
+    prepStart >= 0 && prepEnd > prepStart ? source.slice(prepStart, prepEnd) : "";
+
+  if (prepBlock.length === 0) {
+    failedChecks.push("could not isolate categoryDerivationBridgeAdditionalCategoryLinks prep block");
   }
 
-  if (!source.includes("categoryDerivationDryRun: categoryDerivationOptions.dryRun")) {
-    failedChecks.push("helper call does not use categoryDerivationOptions.dryRun");
+  if (!prepBlock.includes("activityEventId: createdEvent.id")) {
+    failedChecks.push("prep block does not use createdEvent.id for activityEventId");
+  }
+
+  if (prepBlock.includes("activityEventId: event.id")) {
+    failedChecks.push("prep block still uses out-of-scope event.id");
   }
 
   const callStart = source.indexOf("processActivityValueObjectBridge({");
@@ -64,8 +77,8 @@ function main() {
     failedChecks.push("bridge call does not pass additionalCategoryLinks");
   }
 
-  if (!source.includes("const categoryDerivationBridgeAdditionalCategoryLinks =")) {
-    failedChecks.push("route does not build categoryDerivationBridgeAdditionalCategoryLinks before bridge call");
+  if (!callBlock.includes("eventId: createdEvent.id")) {
+    failedChecks.push("bridge call does not use createdEvent.id");
   }
 
   const transpiled = ts.transpileModule(source, {
@@ -84,12 +97,13 @@ function main() {
 
   const output = {
     ok: diagnostics.length === 0 && missingPatterns.length === 0 && failedChecks.length === 0,
-    checkId: "P4.10.0-C8-P3-B5-B3-fix1",
+    checkId: "P4.10.0-C8-P3-B5-B3-fix2",
     checkedAt: new Date().toISOString(),
     targetPath: path.relative(rootDir, targetPath),
     diagnosticsCount: diagnostics.length,
     missingPatterns,
     failedChecks,
+    prepBlockLength: prepBlock.length,
     callBlockLength: callBlock.length,
     diagnostics: diagnostics.map((diagnostic) => ({
       code: diagnostic.code,
@@ -100,12 +114,12 @@ function main() {
           : diagnostic.messageText.messageText,
     })),
     note:
-      "Corrected route smoke check for passing resolved Category Derivation candidates into additionalCategoryLinks.",
+      "Checks route additionalCategoryLinks passthrough and ensures activityEventId uses createdEvent.id, not event.id.",
   };
 
   fs.writeFileSync(resultPath, `${JSON.stringify(output, null, 2)}\n`, "utf8");
 
-  console.log("P4.10.0-C8-P3-B5-B3-fix1 — route additionalCategoryLinks smoke check");
+  console.log("P4.10.0-C8-P3-B5-B3-fix2 — route additionalCategoryLinks runtime-safety smoke check");
   console.log("");
   console.log(`Target: ${path.relative(rootDir, targetPath)}`);
   console.log(`Diagnostics: ${diagnostics.length}`);
@@ -121,7 +135,7 @@ function main() {
   }
 
   console.log("");
-  console.log("RESULT: PASS — route fully passes Category Derivation additionalCategoryLinks and transpiles.");
+  console.log("RESULT: PASS — route additionalCategoryLinks passthrough is runtime-safe enough for browser tests.");
 }
 
 main();

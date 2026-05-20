@@ -1,12 +1,13 @@
 {
   "ok": true,
-  "checkId": "P4.10.0-C8-P3-B5-B3-fix1",
-  "checkedAt": "2026-05-20T09:05:59.535Z",
+  "checkId": "P4.10.0-C8-P3-B5-B3-fix2",
+  "checkedAt": "2026-05-20T09:08:44.475Z",
   "targetPath": "src\\app\\api\\activity\\debug\\free-text-value-object-test\\route.ts",
   "diagnosticsCount": 0,
   "missingPatterns": [],
   "failedChecks": [],
+  "prepBlockLength": 469,
   "callBlockLength": 262,
   "diagnostics": [],
-  "note": "Corrected route smoke check for passing resolved Category Derivation candidates into additionalCategoryLinks."
+  "note": "Checks route additionalCategoryLinks passthrough and ensures activityEventId uses createdEvent.id, not event.id."
 }

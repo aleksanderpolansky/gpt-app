@@ -818,7 +818,7 @@ export async function POST(request: Request) {
       buildAdditionalCategoryLinksForBridge({
         categoryDerivationEnabled: categoryDerivationOptions.enabled,
         categoryDerivationDryRun: categoryDerivationOptions.dryRun,
-        activityEventId: event.id,
+        activityEventId: createdEvent.id,
         derivationRunId:
           categoryDerivationResult?.derivationRunId ??
           categoryDerivationResult?.runId ??
