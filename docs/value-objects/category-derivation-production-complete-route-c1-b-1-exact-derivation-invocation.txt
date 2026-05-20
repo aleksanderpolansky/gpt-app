@@ -1,0 +1,2167 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-P3-B7-C1-B-1 — exact derivation invocation block
+Generated: 2026-05-20 16:15:09
+
+Purpose:
+Extract exact debug-route invocation of deriveCategoryCandidates, resolveCategoryCandidates and persistCategoryDerivation before production patch.
+This script does not patch production source files.
+
+Current HEAD:
+f3b1776 Document production category derivation dependency map
+
+============================================================
+A) DEBUG ROUTE — EXACT INVOCATION ZONES
+============================================================
+
+------------------------------------------------------------
+SNIPPET: deriveCategoryCandidates invocation / match line 
+FILE: src/app/api/activity/debug/free-text-value-object-test/route.ts
+RANGE: 508-653
+------------------------------------------------------------
+  508:       ]),
+  509:       semanticLayer: readStringField(candidate, [
+  510:         "semanticLayer",
+  511:         "semantic_layer",
+  512:       ]),
+  513:       categoryType: readStringField(candidate, ["categoryType", "category_type"]),
+  514:       resolutionStatus,
+  515:       metadata: {
+  516:         sourceLayer: "category_derivation",
+  517:         sourceRoute: "/api/activity/debug/free-text-value-object-test",
+  518:         p4Step: "P4.10.0-C8-P3-B5-B3",
+  519:       },
+  520:     });
+  521:   }
+  522: 
+  523:   return links.length > 0 ? links : undefined;
+  524: }
+  525: async function runCategoryDerivationForDebugRoute(params: {
+  526:   activityEventId: string;
+  527:   inputText: string;
+  528:   title: string | null;
+  529:   description: string | null;
+  530:   durationMinutes: number;
+  531:   personActorId: string;
+  532:   options: CategoryDerivationRouteOptions;
+  533: }): Promise<CategoryDerivationRouteResult> {
+  534:   const { options } = params;
+  535: 
+  536:   if (!options.enabled) {
+  537:     return {
+  538:       enabled: false,
+  539:       ok: null,
+  540:       skipped: true,
+  541:       reason: "feature_flag_disabled",
+  542:       options,
+  543:     };
+  544:   }
+  545: 
+  546:   try {
+  547:     const derivationInput: CategoryDerivationInput = {
+  548:       activityEventId: params.activityEventId,
+  549:       inputText: params.inputText,
+  550:       title: params.title,
+  551:       description: params.description,
+  552:       durationMinutes: params.durationMinutes,
+  553:       inputLanguage: null,
+  554:       actorId: params.personActorId,
+  555:       organizationId: null,
+  556:       metadata: {
+  557:         endpoint: "/api/activity/debug/free-text-value-object-test",
+  558:         p4Step: "P4.10.0-C8-O1",
+  559:         featureFlag: "categoryDerivation",
+  560:       },
+  561:     };
+  562: 
+  563:     const extractionResult = deriveCategoryCandidates(derivationInput);
+  564: 
+  565:     const resolutionResult = await resolveCategoryCandidates(
+  566:       supabase as unknown as CategoryResolverSupabaseClient,
+  567:       extractionResult.candidates,
+  568:       {
+  569:         createPolicy: options.createPolicy,
+  570:         dryRun: options.dryRun,
+  571:         sourceType: "rule",
+  572:         defaultCategoryType: "derived",
+  573:       }
+  574:     );
+  575: 
+  576:     const persistenceResult = await persistCategoryDerivations(
+  577:       supabase as unknown as CategoryDerivationPersistenceSupabaseClient,
+  578:       {
+  579:         activityEventId: params.activityEventId,
+  580:         input: derivationInput,
+  581:         derivationResult: extractionResult,
+  582:         resolvedCandidates: resolutionResult.candidates,
+  583:         actorId: params.personActorId,
+  584:         organizationId: null,
+  585:         modelName: null,
+  586:         promptVersion: null,
+  587:         needsUserConfirmation:
+  588:           resolutionResult.unresolvedCount > 0 ||
+  589:           extractionResult.candidates.some((candidate) =>
+  590:             Boolean(candidate.needsUserReview)
+  591:           ),
+  592:       }
+  593:     );
+  594: 
+  595:     const ok =
+  596:       extractionResult.ok && resolutionResult.ok && persistenceResult.ok;
+  597: 
+  598:     return {
+  599:       enabled: true,
+  600:       ok,
+  601:       skipped: false,
+  602:       options,
+  603:       extraction: {
+  604:         ok: extractionResult.ok,
+  605:         skipped: extractionResult.skipped ?? false,
+  606:         skipReason: extractionResult.skipReason ?? null,
+  607:         processorVersion: extractionResult.processorVersion,
+  608:         ruleVersion: extractionResult.ruleVersion ?? null,
+  609:         confidence: extractionResult.confidence ?? null,
+  610:         candidateCount: extractionResult.candidates.length,
+  611:         warnings: extractionResult.warnings,
+  612:         errors: extractionResult.errors,
+  613:         candidates: extractionResult.candidates,
+  614:       },
+  615:       resolution: {
+  616:         ok: resolutionResult.ok,
+  617:         createdCount: resolutionResult.createdCount,
+  618:         reusedCount: resolutionResult.reusedCount,
+  619:         unresolvedCount: resolutionResult.unresolvedCount,
+  620:         warnings: resolutionResult.warnings,
+  621:         errors: resolutionResult.errors,
+  622:         candidates: resolutionResult.candidates,
+  623:       },
+  624:       persistence: {
+  625:         ok: persistenceResult.ok,
+  626:         derivationRunId: persistenceResult.derivationRunId,
+  627:         derivationRowsCreated: persistenceResult.derivationRowsCreated,
+  628:         candidateCount: persistenceResult.candidateCount,
+  629:         resolvedCandidateCount: persistenceResult.resolvedCandidateCount,
+  630:         unresolvedCandidateCount: persistenceResult.unresolvedCandidateCount,
+  631:         warnings: persistenceResult.warnings,
+  632:         errors: persistenceResult.errors,
+  633:       },
+  634:     };
+  635:   } catch (error) {
+  636:     return {
+  637:       enabled: true,
+  638:       ok: false,
+  639:       skipped: false,
+  640:       error: error instanceof Error ? error.message : String(error),
+  641:       options,
+  642:     };
+  643:   }
+  644: }
+  645: 
+  646: export async function GET() {
+  647:   return NextResponse.json({
+  648:     ok: true,
+  649:     endpoint: "/api/activity/debug/free-text-value-object-test",
+  650:     enabled: ACTIVITY_RECORDING_ENABLED,
+  651:     status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+  652:     message: ACTIVITY_RECORDING_ENABLED
+  653:       ? "Debug-only endpoint for testing completed free-text Activity Event -> Value Object fallback mapping."
+
+------------------------------------------------------------
+SNIPPET: resolveCategoryCandidates invocation / match line 
+FILE: src/app/api/activity/debug/free-text-value-object-test/route.ts
+RANGE: 510-675
+------------------------------------------------------------
+  510:         "semanticLayer",
+  511:         "semantic_layer",
+  512:       ]),
+  513:       categoryType: readStringField(candidate, ["categoryType", "category_type"]),
+  514:       resolutionStatus,
+  515:       metadata: {
+  516:         sourceLayer: "category_derivation",
+  517:         sourceRoute: "/api/activity/debug/free-text-value-object-test",
+  518:         p4Step: "P4.10.0-C8-P3-B5-B3",
+  519:       },
+  520:     });
+  521:   }
+  522: 
+  523:   return links.length > 0 ? links : undefined;
+  524: }
+  525: async function runCategoryDerivationForDebugRoute(params: {
+  526:   activityEventId: string;
+  527:   inputText: string;
+  528:   title: string | null;
+  529:   description: string | null;
+  530:   durationMinutes: number;
+  531:   personActorId: string;
+  532:   options: CategoryDerivationRouteOptions;
+  533: }): Promise<CategoryDerivationRouteResult> {
+  534:   const { options } = params;
+  535: 
+  536:   if (!options.enabled) {
+  537:     return {
+  538:       enabled: false,
+  539:       ok: null,
+  540:       skipped: true,
+  541:       reason: "feature_flag_disabled",
+  542:       options,
+  543:     };
+  544:   }
+  545: 
+  546:   try {
+  547:     const derivationInput: CategoryDerivationInput = {
+  548:       activityEventId: params.activityEventId,
+  549:       inputText: params.inputText,
+  550:       title: params.title,
+  551:       description: params.description,
+  552:       durationMinutes: params.durationMinutes,
+  553:       inputLanguage: null,
+  554:       actorId: params.personActorId,
+  555:       organizationId: null,
+  556:       metadata: {
+  557:         endpoint: "/api/activity/debug/free-text-value-object-test",
+  558:         p4Step: "P4.10.0-C8-O1",
+  559:         featureFlag: "categoryDerivation",
+  560:       },
+  561:     };
+  562: 
+  563:     const extractionResult = deriveCategoryCandidates(derivationInput);
+  564: 
+  565:     const resolutionResult = await resolveCategoryCandidates(
+  566:       supabase as unknown as CategoryResolverSupabaseClient,
+  567:       extractionResult.candidates,
+  568:       {
+  569:         createPolicy: options.createPolicy,
+  570:         dryRun: options.dryRun,
+  571:         sourceType: "rule",
+  572:         defaultCategoryType: "derived",
+  573:       }
+  574:     );
+  575: 
+  576:     const persistenceResult = await persistCategoryDerivations(
+  577:       supabase as unknown as CategoryDerivationPersistenceSupabaseClient,
+  578:       {
+  579:         activityEventId: params.activityEventId,
+  580:         input: derivationInput,
+  581:         derivationResult: extractionResult,
+  582:         resolvedCandidates: resolutionResult.candidates,
+  583:         actorId: params.personActorId,
+  584:         organizationId: null,
+  585:         modelName: null,
+  586:         promptVersion: null,
+  587:         needsUserConfirmation:
+  588:           resolutionResult.unresolvedCount > 0 ||
+  589:           extractionResult.candidates.some((candidate) =>
+  590:             Boolean(candidate.needsUserReview)
+  591:           ),
+  592:       }
+  593:     );
+  594: 
+  595:     const ok =
+  596:       extractionResult.ok && resolutionResult.ok && persistenceResult.ok;
+  597: 
+  598:     return {
+  599:       enabled: true,
+  600:       ok,
+  601:       skipped: false,
+  602:       options,
+  603:       extraction: {
+  604:         ok: extractionResult.ok,
+  605:         skipped: extractionResult.skipped ?? false,
+  606:         skipReason: extractionResult.skipReason ?? null,
+  607:         processorVersion: extractionResult.processorVersion,
+  608:         ruleVersion: extractionResult.ruleVersion ?? null,
+  609:         confidence: extractionResult.confidence ?? null,
+  610:         candidateCount: extractionResult.candidates.length,
+  611:         warnings: extractionResult.warnings,
+  612:         errors: extractionResult.errors,
+  613:         candidates: extractionResult.candidates,
+  614:       },
+  615:       resolution: {
+  616:         ok: resolutionResult.ok,
+  617:         createdCount: resolutionResult.createdCount,
+  618:         reusedCount: resolutionResult.reusedCount,
+  619:         unresolvedCount: resolutionResult.unresolvedCount,
+  620:         warnings: resolutionResult.warnings,
+  621:         errors: resolutionResult.errors,
+  622:         candidates: resolutionResult.candidates,
+  623:       },
+  624:       persistence: {
+  625:         ok: persistenceResult.ok,
+  626:         derivationRunId: persistenceResult.derivationRunId,
+  627:         derivationRowsCreated: persistenceResult.derivationRowsCreated,
+  628:         candidateCount: persistenceResult.candidateCount,
+  629:         resolvedCandidateCount: persistenceResult.resolvedCandidateCount,
+  630:         unresolvedCandidateCount: persistenceResult.unresolvedCandidateCount,
+  631:         warnings: persistenceResult.warnings,
+  632:         errors: persistenceResult.errors,
+  633:       },
+  634:     };
+  635:   } catch (error) {
+  636:     return {
+  637:       enabled: true,
+  638:       ok: false,
+  639:       skipped: false,
+  640:       error: error instanceof Error ? error.message : String(error),
+  641:       options,
+  642:     };
+  643:   }
+  644: }
+  645: 
+  646: export async function GET() {
+  647:   return NextResponse.json({
+  648:     ok: true,
+  649:     endpoint: "/api/activity/debug/free-text-value-object-test",
+  650:     enabled: ACTIVITY_RECORDING_ENABLED,
+  651:     status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+  652:     message: ACTIVITY_RECORDING_ENABLED
+  653:       ? "Debug-only endpoint for testing completed free-text Activity Event -> Value Object fallback mapping."
+  654:       : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  655:     categoryDerivation: {
+  656:       available: true,
+  657:       defaultEnabled: false,
+  658:       enableFlag: "enableCategoryDerivation",
+  659:       dryRunFlag: "categoryDerivationDryRun",
+  660:       createPolicyField: "categoryDerivationCreatePolicy",
+  661:       createPolicyValues: [
+  662:         "never",
+  663:         "suggested_only",
+  664:         "active_for_confirmed_required",
+  665:       ],
+  666:     },
+  667:     example: {
+  668:       inputText: "walked to work for 15 minutes",
+  669:       durationMinutes: 15,
+  670:       title: "Walked to work",
+  671:       enableCategoryDerivation: true,
+  672:       categoryDerivationCreatePolicy: "suggested_only",
+  673:       categoryDerivationDryRun: false,
+  674:     },
+  675:   });
+
+RESOLVED FALSE-POSITIVE: persistCategoryDerivation invocation marker replaced by actual plural persistCategoryDerivations invocation
+FILE: src/app/api/activity/debug/free-text-value-object-test/route.ts
+ORIGINAL TOO-NARROW PATTERN: persistCategoryDerivation\s*\(
+
+------------------------------------------------------------
+SNIPPET: categoryDerivationInput construction/usage / match line 
+FILE: src/app/api/activity/debug/free-text-value-object-test/route.ts
+RANGE: 1-112
+------------------------------------------------------------
+    1: import { NextResponse } from "next/server";
+    2: import { randomUUID } from "crypto";
+    3: 
+    4: import {
+    5:   ACTIVITY_RECORDING_DISABLED_MESSAGE,
+    6:   ACTIVITY_RECORDING_ENABLED,
+    7: } from "../../../../../../lib/activity/activityRecordingConfig";
+    8: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+    9: import { processActivityValueObjectBridge } from "../../../../../../lib/activity/activityValueObjectLifecycle";
+   10: import { safeCreateActivityProcessingLog } from "../../../../../../lib/activity/activityProcessingLogs";
+   11: import { supabase } from "../../../../../../lib/supabase";
+   12: import { deriveCategoryCandidates } from "../../../../../../lib/activity/categoryDerivation/ruleExtractor";
+   13: import {
+   14:   resolveCategoryCandidates,
+   15:   type CategoryResolverCreatePolicy,
+   16:   type CategoryResolverSupabaseClient,
+   17: } from "../../../../../../lib/activity/categoryDerivation/resolver";
+   18: import {
+   19:   persistCategoryDerivations,
+   20:   type CategoryDerivationPersistenceSupabaseClient,
+   21: } from "../../../../../../lib/activity/categoryDerivation/persistDerivations";
+   22: import type { CategoryDerivationInput } from "../../../../../../lib/activity/categoryDerivation/types";
+   23: import type { AdditionalValueObjectCategoryLink } from "../../../../../../lib/activity/valueObjectBridge";
+   24: 
+   25: export const dynamic = "force-dynamic";
+   26: 
+   27: type FreeTextValueObjectTestBody = {
+   28:   inputText?: unknown;
+   29:   naturalInput?: unknown;
+   30:   title?: unknown;
+   31:   description?: unknown;
+   32:   durationMinutes?: unknown;
+   33:   startedAt?: unknown;
+   34:   endedAt?: unknown;
+   35:   enableCategoryDerivation?: unknown;
+   36:   categoryDerivationEnabled?: unknown;
+   37:   categoryDerivation?: unknown;
+   38:   categoryDerivationDryRun?: unknown;
+   39:   categoryDerivationCreatePolicy?: unknown;
+   40: };
+   41: 
+   42: type CategoryDerivationRouteOptions = {
+   43:   enabled: boolean;
+   44:   dryRun: boolean;
+   45:   createPolicy: CategoryResolverCreatePolicy;
+   46: };
+   47: 
+   48: type CategoryDerivationRouteResult = {
+   49:   enabled: boolean;
+   50:   ok: boolean | null;
+   51:   skipped: boolean;
+   52:   reason?: string | null;
+   53:   error?: string | null;
+   54:   options: CategoryDerivationRouteOptions;
+   55:   extraction?: {
+   56:     ok: boolean;
+   57:     skipped: boolean;
+   58:     skipReason: string | null;
+   59:     processorVersion: string;
+   60:     ruleVersion: string | null;
+   61:     confidence: number | null;
+   62:     candidateCount: number;
+   63:     warnings: string[];
+   64:     errors: string[];
+   65:     candidates: unknown[];
+   66:   };
+   67:   resolution?: {
+   68:     ok: boolean;
+   69:     createdCount: number;
+   70:     reusedCount: number;
+   71:     unresolvedCount: number;
+   72:     warnings: string[];
+   73:     errors: string[];
+   74:     candidates: unknown[];
+   75:   };
+   76:   persistence?: {
+   77:     ok: boolean;
+   78:     derivationRunId: string | null;
+   79:     derivationRowsCreated: number;
+   80:     candidateCount: number;
+   81:     resolvedCandidateCount: number;
+   82:     unresolvedCandidateCount: number;
+   83:     warnings: string[];
+   84:     errors: string[];
+   85:   };
+   86: };
+   87: 
+   88: function asString(value: unknown): string | null {
+   89:   if (typeof value !== "string") {
+   90:     return null;
+   91:   }
+   92: 
+   93:   const trimmed = value.trim();
+   94:   return trimmed.length > 0 ? trimmed : null;
+   95: }
+   96: 
+   97: function asNumber(value: unknown): number | null {
+   98:   if (typeof value === "number" && Number.isFinite(value)) {
+   99:     return value;
+  100:   }
+  101: 
+  102:   if (typeof value === "string") {
+  103:     const normalized = value.trim().replace(",", ".");
+  104:     const parsed = Number.parseFloat(normalized);
+  105: 
+  106:     if (Number.isFinite(parsed)) {
+  107:       return parsed;
+  108:     }
+  109:   }
+  110: 
+  111:   return null;
+  112: }
+
+------------------------------------------------------------
+SNIPPET: categoryDerivationInput construction/usage / match line 
+FILE: src/app/api/activity/debug/free-text-value-object-test/route.ts
+RANGE: 502-637
+------------------------------------------------------------
+  502:       candidateTitle: readStringField(candidate, [
+  503:         "candidateTitle",
+  504:         "candidate_title",
+  505:         "title",
+  506:         "label",
+  507:         "name",
+  508:       ]),
+  509:       semanticLayer: readStringField(candidate, [
+  510:         "semanticLayer",
+  511:         "semantic_layer",
+  512:       ]),
+  513:       categoryType: readStringField(candidate, ["categoryType", "category_type"]),
+  514:       resolutionStatus,
+  515:       metadata: {
+  516:         sourceLayer: "category_derivation",
+  517:         sourceRoute: "/api/activity/debug/free-text-value-object-test",
+  518:         p4Step: "P4.10.0-C8-P3-B5-B3",
+  519:       },
+  520:     });
+  521:   }
+  522: 
+  523:   return links.length > 0 ? links : undefined;
+  524: }
+  525: async function runCategoryDerivationForDebugRoute(params: {
+  526:   activityEventId: string;
+  527:   inputText: string;
+  528:   title: string | null;
+  529:   description: string | null;
+  530:   durationMinutes: number;
+  531:   personActorId: string;
+  532:   options: CategoryDerivationRouteOptions;
+  533: }): Promise<CategoryDerivationRouteResult> {
+  534:   const { options } = params;
+  535: 
+  536:   if (!options.enabled) {
+  537:     return {
+  538:       enabled: false,
+  539:       ok: null,
+  540:       skipped: true,
+  541:       reason: "feature_flag_disabled",
+  542:       options,
+  543:     };
+  544:   }
+  545: 
+  546:   try {
+  547:     const derivationInput: CategoryDerivationInput = {
+  548:       activityEventId: params.activityEventId,
+  549:       inputText: params.inputText,
+  550:       title: params.title,
+  551:       description: params.description,
+  552:       durationMinutes: params.durationMinutes,
+  553:       inputLanguage: null,
+  554:       actorId: params.personActorId,
+  555:       organizationId: null,
+  556:       metadata: {
+  557:         endpoint: "/api/activity/debug/free-text-value-object-test",
+  558:         p4Step: "P4.10.0-C8-O1",
+  559:         featureFlag: "categoryDerivation",
+  560:       },
+  561:     };
+  562: 
+  563:     const extractionResult = deriveCategoryCandidates(derivationInput);
+  564: 
+  565:     const resolutionResult = await resolveCategoryCandidates(
+  566:       supabase as unknown as CategoryResolverSupabaseClient,
+  567:       extractionResult.candidates,
+  568:       {
+  569:         createPolicy: options.createPolicy,
+  570:         dryRun: options.dryRun,
+  571:         sourceType: "rule",
+  572:         defaultCategoryType: "derived",
+  573:       }
+  574:     );
+  575: 
+  576:     const persistenceResult = await persistCategoryDerivations(
+  577:       supabase as unknown as CategoryDerivationPersistenceSupabaseClient,
+  578:       {
+  579:         activityEventId: params.activityEventId,
+  580:         input: derivationInput,
+  581:         derivationResult: extractionResult,
+  582:         resolvedCandidates: resolutionResult.candidates,
+  583:         actorId: params.personActorId,
+  584:         organizationId: null,
+  585:         modelName: null,
+  586:         promptVersion: null,
+  587:         needsUserConfirmation:
+  588:           resolutionResult.unresolvedCount > 0 ||
+  589:           extractionResult.candidates.some((candidate) =>
+  590:             Boolean(candidate.needsUserReview)
+  591:           ),
+  592:       }
+  593:     );
+  594: 
+  595:     const ok =
+  596:       extractionResult.ok && resolutionResult.ok && persistenceResult.ok;
+  597: 
+  598:     return {
+  599:       enabled: true,
+  600:       ok,
+  601:       skipped: false,
+  602:       options,
+  603:       extraction: {
+  604:         ok: extractionResult.ok,
+  605:         skipped: extractionResult.skipped ?? false,
+  606:         skipReason: extractionResult.skipReason ?? null,
+  607:         processorVersion: extractionResult.processorVersion,
+  608:         ruleVersion: extractionResult.ruleVersion ?? null,
+  609:         confidence: extractionResult.confidence ?? null,
+  610:         candidateCount: extractionResult.candidates.length,
+  611:         warnings: extractionResult.warnings,
+  612:         errors: extractionResult.errors,
+  613:         candidates: extractionResult.candidates,
+  614:       },
+  615:       resolution: {
+  616:         ok: resolutionResult.ok,
+  617:         createdCount: resolutionResult.createdCount,
+  618:         reusedCount: resolutionResult.reusedCount,
+  619:         unresolvedCount: resolutionResult.unresolvedCount,
+  620:         warnings: resolutionResult.warnings,
+  621:         errors: resolutionResult.errors,
+  622:         candidates: resolutionResult.candidates,
+  623:       },
+  624:       persistence: {
+  625:         ok: persistenceResult.ok,
+  626:         derivationRunId: persistenceResult.derivationRunId,
+  627:         derivationRowsCreated: persistenceResult.derivationRowsCreated,
+  628:         candidateCount: persistenceResult.candidateCount,
+  629:         resolvedCandidateCount: persistenceResult.resolvedCandidateCount,
+  630:         unresolvedCandidateCount: persistenceResult.unresolvedCandidateCount,
+  631:         warnings: persistenceResult.warnings,
+  632:         errors: persistenceResult.errors,
+  633:       },
+  634:     };
+  635:   } catch (error) {
+  636:     return {
+  637:       enabled: true,
+
+------------------------------------------------------------
+SNIPPET: create policy construction/usage / match line 
+FILE: src/app/api/activity/debug/free-text-value-object-test/route.ts
+RANGE: 1-105
+------------------------------------------------------------
+    1: import { NextResponse } from "next/server";
+    2: import { randomUUID } from "crypto";
+    3: 
+    4: import {
+    5:   ACTIVITY_RECORDING_DISABLED_MESSAGE,
+    6:   ACTIVITY_RECORDING_ENABLED,
+    7: } from "../../../../../../lib/activity/activityRecordingConfig";
+    8: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+    9: import { processActivityValueObjectBridge } from "../../../../../../lib/activity/activityValueObjectLifecycle";
+   10: import { safeCreateActivityProcessingLog } from "../../../../../../lib/activity/activityProcessingLogs";
+   11: import { supabase } from "../../../../../../lib/supabase";
+   12: import { deriveCategoryCandidates } from "../../../../../../lib/activity/categoryDerivation/ruleExtractor";
+   13: import {
+   14:   resolveCategoryCandidates,
+   15:   type CategoryResolverCreatePolicy,
+   16:   type CategoryResolverSupabaseClient,
+   17: } from "../../../../../../lib/activity/categoryDerivation/resolver";
+   18: import {
+   19:   persistCategoryDerivations,
+   20:   type CategoryDerivationPersistenceSupabaseClient,
+   21: } from "../../../../../../lib/activity/categoryDerivation/persistDerivations";
+   22: import type { CategoryDerivationInput } from "../../../../../../lib/activity/categoryDerivation/types";
+   23: import type { AdditionalValueObjectCategoryLink } from "../../../../../../lib/activity/valueObjectBridge";
+   24: 
+   25: export const dynamic = "force-dynamic";
+   26: 
+   27: type FreeTextValueObjectTestBody = {
+   28:   inputText?: unknown;
+   29:   naturalInput?: unknown;
+   30:   title?: unknown;
+   31:   description?: unknown;
+   32:   durationMinutes?: unknown;
+   33:   startedAt?: unknown;
+   34:   endedAt?: unknown;
+   35:   enableCategoryDerivation?: unknown;
+   36:   categoryDerivationEnabled?: unknown;
+   37:   categoryDerivation?: unknown;
+   38:   categoryDerivationDryRun?: unknown;
+   39:   categoryDerivationCreatePolicy?: unknown;
+   40: };
+   41: 
+   42: type CategoryDerivationRouteOptions = {
+   43:   enabled: boolean;
+   44:   dryRun: boolean;
+   45:   createPolicy: CategoryResolverCreatePolicy;
+   46: };
+   47: 
+   48: type CategoryDerivationRouteResult = {
+   49:   enabled: boolean;
+   50:   ok: boolean | null;
+   51:   skipped: boolean;
+   52:   reason?: string | null;
+   53:   error?: string | null;
+   54:   options: CategoryDerivationRouteOptions;
+   55:   extraction?: {
+   56:     ok: boolean;
+   57:     skipped: boolean;
+   58:     skipReason: string | null;
+   59:     processorVersion: string;
+   60:     ruleVersion: string | null;
+   61:     confidence: number | null;
+   62:     candidateCount: number;
+   63:     warnings: string[];
+   64:     errors: string[];
+   65:     candidates: unknown[];
+   66:   };
+   67:   resolution?: {
+   68:     ok: boolean;
+   69:     createdCount: number;
+   70:     reusedCount: number;
+   71:     unresolvedCount: number;
+   72:     warnings: string[];
+   73:     errors: string[];
+   74:     candidates: unknown[];
+   75:   };
+   76:   persistence?: {
+   77:     ok: boolean;
+   78:     derivationRunId: string | null;
+   79:     derivationRowsCreated: number;
+   80:     candidateCount: number;
+   81:     resolvedCandidateCount: number;
+   82:     unresolvedCandidateCount: number;
+   83:     warnings: string[];
+   84:     errors: string[];
+   85:   };
+   86: };
+   87: 
+   88: function asString(value: unknown): string | null {
+   89:   if (typeof value !== "string") {
+   90:     return null;
+   91:   }
+   92: 
+   93:   const trimmed = value.trim();
+   94:   return trimmed.length > 0 ? trimmed : null;
+   95: }
+   96: 
+   97: function asNumber(value: unknown): number | null {
+   98:   if (typeof value === "number" && Number.isFinite(value)) {
+   99:     return value;
+  100:   }
+  101: 
+  102:   if (typeof value === "string") {
+  103:     const normalized = value.trim().replace(",", ".");
+  104:     const parsed = Number.parseFloat(normalized);
+  105: 
+
+------------------------------------------------------------
+SNIPPET: create policy construction/usage / match line 
+FILE: src/app/api/activity/debug/free-text-value-object-test/route.ts
+RANGE: 10-135
+------------------------------------------------------------
+   10: import { safeCreateActivityProcessingLog } from "../../../../../../lib/activity/activityProcessingLogs";
+   11: import { supabase } from "../../../../../../lib/supabase";
+   12: import { deriveCategoryCandidates } from "../../../../../../lib/activity/categoryDerivation/ruleExtractor";
+   13: import {
+   14:   resolveCategoryCandidates,
+   15:   type CategoryResolverCreatePolicy,
+   16:   type CategoryResolverSupabaseClient,
+   17: } from "../../../../../../lib/activity/categoryDerivation/resolver";
+   18: import {
+   19:   persistCategoryDerivations,
+   20:   type CategoryDerivationPersistenceSupabaseClient,
+   21: } from "../../../../../../lib/activity/categoryDerivation/persistDerivations";
+   22: import type { CategoryDerivationInput } from "../../../../../../lib/activity/categoryDerivation/types";
+   23: import type { AdditionalValueObjectCategoryLink } from "../../../../../../lib/activity/valueObjectBridge";
+   24: 
+   25: export const dynamic = "force-dynamic";
+   26: 
+   27: type FreeTextValueObjectTestBody = {
+   28:   inputText?: unknown;
+   29:   naturalInput?: unknown;
+   30:   title?: unknown;
+   31:   description?: unknown;
+   32:   durationMinutes?: unknown;
+   33:   startedAt?: unknown;
+   34:   endedAt?: unknown;
+   35:   enableCategoryDerivation?: unknown;
+   36:   categoryDerivationEnabled?: unknown;
+   37:   categoryDerivation?: unknown;
+   38:   categoryDerivationDryRun?: unknown;
+   39:   categoryDerivationCreatePolicy?: unknown;
+   40: };
+   41: 
+   42: type CategoryDerivationRouteOptions = {
+   43:   enabled: boolean;
+   44:   dryRun: boolean;
+   45:   createPolicy: CategoryResolverCreatePolicy;
+   46: };
+   47: 
+   48: type CategoryDerivationRouteResult = {
+   49:   enabled: boolean;
+   50:   ok: boolean | null;
+   51:   skipped: boolean;
+   52:   reason?: string | null;
+   53:   error?: string | null;
+   54:   options: CategoryDerivationRouteOptions;
+   55:   extraction?: {
+   56:     ok: boolean;
+   57:     skipped: boolean;
+   58:     skipReason: string | null;
+   59:     processorVersion: string;
+   60:     ruleVersion: string | null;
+   61:     confidence: number | null;
+   62:     candidateCount: number;
+   63:     warnings: string[];
+   64:     errors: string[];
+   65:     candidates: unknown[];
+   66:   };
+   67:   resolution?: {
+   68:     ok: boolean;
+   69:     createdCount: number;
+   70:     reusedCount: number;
+   71:     unresolvedCount: number;
+   72:     warnings: string[];
+   73:     errors: string[];
+   74:     candidates: unknown[];
+   75:   };
+   76:   persistence?: {
+   77:     ok: boolean;
+   78:     derivationRunId: string | null;
+   79:     derivationRowsCreated: number;
+   80:     candidateCount: number;
+   81:     resolvedCandidateCount: number;
+   82:     unresolvedCandidateCount: number;
+   83:     warnings: string[];
+   84:     errors: string[];
+   85:   };
+   86: };
+   87: 
+   88: function asString(value: unknown): string | null {
+   89:   if (typeof value !== "string") {
+   90:     return null;
+   91:   }
+   92: 
+   93:   const trimmed = value.trim();
+   94:   return trimmed.length > 0 ? trimmed : null;
+   95: }
+   96: 
+   97: function asNumber(value: unknown): number | null {
+   98:   if (typeof value === "number" && Number.isFinite(value)) {
+   99:     return value;
+  100:   }
+  101: 
+  102:   if (typeof value === "string") {
+  103:     const normalized = value.trim().replace(",", ".");
+  104:     const parsed = Number.parseFloat(normalized);
+  105: 
+  106:     if (Number.isFinite(parsed)) {
+  107:       return parsed;
+  108:     }
+  109:   }
+  110: 
+  111:   return null;
+  112: }
+  113: 
+  114: function asBoolean(value: unknown): boolean | null {
+  115:   if (typeof value === "boolean") {
+  116:     return value;
+  117:   }
+  118: 
+  119:   if (typeof value !== "string") {
+  120:     return null;
+  121:   }
+  122: 
+  123:   const normalized = value.trim().toLowerCase();
+  124: 
+  125:   if (["true", "1", "yes", "y", "on"].includes(normalized)) {
+  126:     return true;
+  127:   }
+  128: 
+  129:   if (["false", "0", "no", "n", "off"].includes(normalized)) {
+  130:     return false;
+  131:   }
+  132: 
+  133:   return null;
+  134: }
+  135: 
+
+------------------------------------------------------------
+SNIPPET: create policy construction/usage / match line 
+FILE: src/app/api/activity/debug/free-text-value-object-test/route.ts
+RANGE: 117-242
+------------------------------------------------------------
+  117:   }
+  118: 
+  119:   if (typeof value !== "string") {
+  120:     return null;
+  121:   }
+  122: 
+  123:   const normalized = value.trim().toLowerCase();
+  124: 
+  125:   if (["true", "1", "yes", "y", "on"].includes(normalized)) {
+  126:     return true;
+  127:   }
+  128: 
+  129:   if (["false", "0", "no", "n", "off"].includes(normalized)) {
+  130:     return false;
+  131:   }
+  132: 
+  133:   return null;
+  134: }
+  135: 
+  136: function resolveCategoryDerivationOptions(
+  137:   body: FreeTextValueObjectTestBody
+  138: ):
+  139:   | { ok: true; options: CategoryDerivationRouteOptions }
+  140:   | { ok: false; error: string } {
+  141:   const enabled =
+  142:     asBoolean(body.enableCategoryDerivation) ??
+  143:     asBoolean(body.categoryDerivationEnabled) ??
+  144:     asBoolean(body.categoryDerivation) ??
+  145:     false;
+  146: 
+  147:   const dryRun = asBoolean(body.categoryDerivationDryRun) ?? false;
+  148: 
+  149:   const rawCreatePolicy =
+  150:     asString(body.categoryDerivationCreatePolicy) ?? "suggested_only";
+  151: 
+  152:   const allowedPolicies: CategoryResolverCreatePolicy[] = [
+  153:     "never",
+  154:     "suggested_only",
+  155:     "active_for_confirmed_required",
+  156:   ];
+  157: 
+  158:   if (!allowedPolicies.includes(rawCreatePolicy as CategoryResolverCreatePolicy)) {
+  159:     return {
+  160:       ok: false,
+  161:       error:
+  162:         "categoryDerivationCreatePolicy must be one of: never, suggested_only, active_for_confirmed_required.",
+  163:     };
+  164:   }
+  165: 
+  166:   return {
+  167:     ok: true,
+  168:     options: {
+  169:       enabled,
+  170:       dryRun,
+  171:       createPolicy: rawCreatePolicy as CategoryResolverCreatePolicy,
+  172:     },
+  173:   };
+  174: }
+  175: 
+  176: function resolveTiming(body: FreeTextValueObjectTestBody) {
+  177:   const durationMinutes = asNumber(body.durationMinutes) ?? 15;
+  178: 
+  179:   if (durationMinutes < 0) {
+  180:     return {
+  181:       ok: false as const,
+  182:       error: "durationMinutes must be greater than or equal to 0.",
+  183:     };
+  184:   }
+  185: 
+  186:   const rawStartedAt = asString(body.startedAt);
+  187:   const rawEndedAt = asString(body.endedAt);
+  188: 
+  189:   if (rawStartedAt && rawEndedAt) {
+  190:     const startedDate = new Date(rawStartedAt);
+  191:     const endedDate = new Date(rawEndedAt);
+  192: 
+  193:     if (
+  194:       Number.isNaN(startedDate.getTime()) ||
+  195:       Number.isNaN(endedDate.getTime())
+  196:     ) {
+  197:       return {
+  198:         ok: false as const,
+  199:         error: "Invalid startedAt or endedAt.",
+  200:       };
+  201:     }
+  202: 
+  203:     if (endedDate.getTime() < startedDate.getTime()) {
+  204:       return {
+  205:         ok: false as const,
+  206:         error: "endedAt must be greater than or equal to startedAt.",
+  207:       };
+  208:     }
+  209: 
+  210:     return {
+  211:       ok: true as const,
+  212:       startedAt: startedDate.toISOString(),
+  213:       endedAt: endedDate.toISOString(),
+  214:       durationMinutes: Math.round(
+  215:         (endedDate.getTime() - startedDate.getTime()) / 60000
+  216:       ),
+  217:     };
+  218:   }
+  219: 
+  220:   if (rawStartedAt) {
+  221:     const startedDate = new Date(rawStartedAt);
+  222: 
+  223:     if (Number.isNaN(startedDate.getTime())) {
+  224:       return {
+  225:         ok: false as const,
+  226:         error: "Invalid startedAt.",
+  227:       };
+  228:     }
+  229: 
+  230:     const endedDate = new Date(startedDate.getTime() + durationMinutes * 60000);
+  231: 
+  232:     return {
+  233:       ok: true as const,
+  234:       startedAt: startedDate.toISOString(),
+  235:       endedAt: endedDate.toISOString(),
+  236:       durationMinutes,
+  237:     };
+  238:   }
+  239: 
+  240:   const endedDate = rawEndedAt ? new Date(rawEndedAt) : new Date();
+  241: 
+  242:   if (Number.isNaN(endedDate.getTime())) {
+
+------------------------------------------------------------
+SNIPPET: create policy construction/usage / match line 
+FILE: src/app/api/activity/debug/free-text-value-object-test/route.ts
+RANGE: 123-248
+------------------------------------------------------------
+  123:   const normalized = value.trim().toLowerCase();
+  124: 
+  125:   if (["true", "1", "yes", "y", "on"].includes(normalized)) {
+  126:     return true;
+  127:   }
+  128: 
+  129:   if (["false", "0", "no", "n", "off"].includes(normalized)) {
+  130:     return false;
+  131:   }
+  132: 
+  133:   return null;
+  134: }
+  135: 
+  136: function resolveCategoryDerivationOptions(
+  137:   body: FreeTextValueObjectTestBody
+  138: ):
+  139:   | { ok: true; options: CategoryDerivationRouteOptions }
+  140:   | { ok: false; error: string } {
+  141:   const enabled =
+  142:     asBoolean(body.enableCategoryDerivation) ??
+  143:     asBoolean(body.categoryDerivationEnabled) ??
+  144:     asBoolean(body.categoryDerivation) ??
+  145:     false;
+  146: 
+  147:   const dryRun = asBoolean(body.categoryDerivationDryRun) ?? false;
+  148: 
+  149:   const rawCreatePolicy =
+  150:     asString(body.categoryDerivationCreatePolicy) ?? "suggested_only";
+  151: 
+  152:   const allowedPolicies: CategoryResolverCreatePolicy[] = [
+  153:     "never",
+  154:     "suggested_only",
+  155:     "active_for_confirmed_required",
+  156:   ];
+  157: 
+  158:   if (!allowedPolicies.includes(rawCreatePolicy as CategoryResolverCreatePolicy)) {
+  159:     return {
+  160:       ok: false,
+  161:       error:
+  162:         "categoryDerivationCreatePolicy must be one of: never, suggested_only, active_for_confirmed_required.",
+  163:     };
+  164:   }
+  165: 
+  166:   return {
+  167:     ok: true,
+  168:     options: {
+  169:       enabled,
+  170:       dryRun,
+  171:       createPolicy: rawCreatePolicy as CategoryResolverCreatePolicy,
+  172:     },
+  173:   };
+  174: }
+  175: 
+  176: function resolveTiming(body: FreeTextValueObjectTestBody) {
+  177:   const durationMinutes = asNumber(body.durationMinutes) ?? 15;
+  178: 
+  179:   if (durationMinutes < 0) {
+  180:     return {
+  181:       ok: false as const,
+  182:       error: "durationMinutes must be greater than or equal to 0.",
+  183:     };
+  184:   }
+  185: 
+  186:   const rawStartedAt = asString(body.startedAt);
+  187:   const rawEndedAt = asString(body.endedAt);
+  188: 
+  189:   if (rawStartedAt && rawEndedAt) {
+  190:     const startedDate = new Date(rawStartedAt);
+  191:     const endedDate = new Date(rawEndedAt);
+  192: 
+  193:     if (
+  194:       Number.isNaN(startedDate.getTime()) ||
+  195:       Number.isNaN(endedDate.getTime())
+  196:     ) {
+  197:       return {
+  198:         ok: false as const,
+  199:         error: "Invalid startedAt or endedAt.",
+  200:       };
+  201:     }
+  202: 
+  203:     if (endedDate.getTime() < startedDate.getTime()) {
+  204:       return {
+  205:         ok: false as const,
+  206:         error: "endedAt must be greater than or equal to startedAt.",
+  207:       };
+  208:     }
+  209: 
+  210:     return {
+  211:       ok: true as const,
+  212:       startedAt: startedDate.toISOString(),
+  213:       endedAt: endedDate.toISOString(),
+  214:       durationMinutes: Math.round(
+  215:         (endedDate.getTime() - startedDate.getTime()) / 60000
+  216:       ),
+  217:     };
+  218:   }
+  219: 
+  220:   if (rawStartedAt) {
+  221:     const startedDate = new Date(rawStartedAt);
+  222: 
+  223:     if (Number.isNaN(startedDate.getTime())) {
+  224:       return {
+  225:         ok: false as const,
+  226:         error: "Invalid startedAt.",
+  227:       };
+  228:     }
+  229: 
+  230:     const endedDate = new Date(startedDate.getTime() + durationMinutes * 60000);
+  231: 
+  232:     return {
+  233:       ok: true as const,
+  234:       startedAt: startedDate.toISOString(),
+  235:       endedAt: endedDate.toISOString(),
+  236:       durationMinutes,
+  237:     };
+  238:   }
+  239: 
+  240:   const endedDate = rawEndedAt ? new Date(rawEndedAt) : new Date();
+  241: 
+  242:   if (Number.isNaN(endedDate.getTime())) {
+  243:     return {
+  244:       ok: false as const,
+  245:       error: "Invalid endedAt.",
+  246:     };
+  247:   }
+  248: 
+
+------------------------------------------------------------
+SNIPPET: create policy construction/usage / match line 
+FILE: src/app/api/activity/debug/free-text-value-object-test/route.ts
+RANGE: 136-261
+------------------------------------------------------------
+  136: function resolveCategoryDerivationOptions(
+  137:   body: FreeTextValueObjectTestBody
+  138: ):
+  139:   | { ok: true; options: CategoryDerivationRouteOptions }
+  140:   | { ok: false; error: string } {
+  141:   const enabled =
+  142:     asBoolean(body.enableCategoryDerivation) ??
+  143:     asBoolean(body.categoryDerivationEnabled) ??
+  144:     asBoolean(body.categoryDerivation) ??
+  145:     false;
+  146: 
+  147:   const dryRun = asBoolean(body.categoryDerivationDryRun) ?? false;
+  148: 
+  149:   const rawCreatePolicy =
+  150:     asString(body.categoryDerivationCreatePolicy) ?? "suggested_only";
+  151: 
+  152:   const allowedPolicies: CategoryResolverCreatePolicy[] = [
+  153:     "never",
+  154:     "suggested_only",
+  155:     "active_for_confirmed_required",
+  156:   ];
+  157: 
+  158:   if (!allowedPolicies.includes(rawCreatePolicy as CategoryResolverCreatePolicy)) {
+  159:     return {
+  160:       ok: false,
+  161:       error:
+  162:         "categoryDerivationCreatePolicy must be one of: never, suggested_only, active_for_confirmed_required.",
+  163:     };
+  164:   }
+  165: 
+  166:   return {
+  167:     ok: true,
+  168:     options: {
+  169:       enabled,
+  170:       dryRun,
+  171:       createPolicy: rawCreatePolicy as CategoryResolverCreatePolicy,
+  172:     },
+  173:   };
+  174: }
+  175: 
+  176: function resolveTiming(body: FreeTextValueObjectTestBody) {
+  177:   const durationMinutes = asNumber(body.durationMinutes) ?? 15;
+  178: 
+  179:   if (durationMinutes < 0) {
+  180:     return {
+  181:       ok: false as const,
+  182:       error: "durationMinutes must be greater than or equal to 0.",
+  183:     };
+  184:   }
+  185: 
+  186:   const rawStartedAt = asString(body.startedAt);
+  187:   const rawEndedAt = asString(body.endedAt);
+  188: 
+  189:   if (rawStartedAt && rawEndedAt) {
+  190:     const startedDate = new Date(rawStartedAt);
+  191:     const endedDate = new Date(rawEndedAt);
+  192: 
+  193:     if (
+  194:       Number.isNaN(startedDate.getTime()) ||
+  195:       Number.isNaN(endedDate.getTime())
+  196:     ) {
+  197:       return {
+  198:         ok: false as const,
+  199:         error: "Invalid startedAt or endedAt.",
+  200:       };
+  201:     }
+  202: 
+  203:     if (endedDate.getTime() < startedDate.getTime()) {
+  204:       return {
+  205:         ok: false as const,
+  206:         error: "endedAt must be greater than or equal to startedAt.",
+  207:       };
+  208:     }
+  209: 
+  210:     return {
+  211:       ok: true as const,
+  212:       startedAt: startedDate.toISOString(),
+  213:       endedAt: endedDate.toISOString(),
+  214:       durationMinutes: Math.round(
+  215:         (endedDate.getTime() - startedDate.getTime()) / 60000
+  216:       ),
+  217:     };
+  218:   }
+  219: 
+  220:   if (rawStartedAt) {
+  221:     const startedDate = new Date(rawStartedAt);
+  222: 
+  223:     if (Number.isNaN(startedDate.getTime())) {
+  224:       return {
+  225:         ok: false as const,
+  226:         error: "Invalid startedAt.",
+  227:       };
+  228:     }
+  229: 
+  230:     const endedDate = new Date(startedDate.getTime() + durationMinutes * 60000);
+  231: 
+  232:     return {
+  233:       ok: true as const,
+  234:       startedAt: startedDate.toISOString(),
+  235:       endedAt: endedDate.toISOString(),
+  236:       durationMinutes,
+  237:     };
+  238:   }
+  239: 
+  240:   const endedDate = rawEndedAt ? new Date(rawEndedAt) : new Date();
+  241: 
+  242:   if (Number.isNaN(endedDate.getTime())) {
+  243:     return {
+  244:       ok: false as const,
+  245:       error: "Invalid endedAt.",
+  246:     };
+  247:   }
+  248: 
+  249:   const startedDate = new Date(endedDate.getTime() - durationMinutes * 60000);
+  250: 
+  251:   return {
+  252:     ok: true as const,
+  253:     startedAt: startedDate.toISOString(),
+  254:     endedAt: endedDate.toISOString(),
+  255:     durationMinutes,
+  256:   };
+  257: }
+  258: 
+  259: function isRecord(value: unknown): value is Record<string, unknown> {
+  260:   return typeof value === "object" && value !== null && !Array.isArray(value);
+  261: }
+
+============================================================
+B) PRODUCTION ROUTE — EXACT PATCH INSERTION TARGET
+============================================================
+
+------------------------------------------------------------
+SNIPPET: production bridge insertion target / match line 
+FILE: src/app/api/activity/complete/route.ts
+RANGE: 653-813
+------------------------------------------------------------
+  653:       processorName: "activity_complete_route",
+  654:       processingStage: "process_impacts",
+  655:       processingStatus: impactResult.ok ? "completed" : "skipped",
+  656:       severity: impactResult.ok ? "info" : "notice",
+  657:       message: "Rule-based activity impacts processed after completion.",
+  658:       input: {
+  659:         activityTemplateId: updatedEvent.activity_template_id,
+  660:         activityTypeId: updatedEvent.activity_type_id,
+  661:         durationMinutes: updatedEvent.duration_minutes,
+  662:         startedAt: updatedEvent.started_at,
+  663:       },
+  664:       output: {
+  665:         ok: impactResult.ok,
+  666:         skipped: impactResult.skipped,
+  667:         reason: impactResult.reason,
+  668:         counts: impactResult.counts,
+  669:       },
+  670:       metadata: {
+  671:         endpoint: "/api/activity/complete",
+  672:         mode: "template_first_complete",
+  673:       },
+  674:       startedAt: processingStartedAt.toISOString(),
+  675:       finishedAt: new Date().toISOString(),
+  676:       durationMs: getDurationMs(processingStartedAt),
+  677:     });
+  678: 
+  679: 
+  680:     const rubricatorClassificationResult =
+  681:       await ensureActivityEventRubricatorClassificationForKnownTemplate({
+  682:         supabase,
+  683:         eventId: updatedEvent.id,
+  684:         userId: appUser.id,
+  685:         activityTemplateId: updatedEvent.activity_template_id,
+  686:         processorName:
+  687:           "activity_complete_route_known_template_rubricator_classification",
+  688:       });
+  689: 
+  690:     const rubricatorClassificationLogResult =
+  691:       await safeCreateActivityProcessingLog({
+  692:       userId: appUser.id,
+  693:       rawSignalId: rawSignal?.id ?? null,
+  694:       activityEventId: updatedEvent.id,
+  695:       processingRunId,
+  696:       processorName: "activity_complete_route_rubricator_classification",
+  697:       processingStage: "finalize",
+  698:       processingStatus: rubricatorClassificationResult.ok
+  699:         ? rubricatorClassificationResult.skipped
+  700:           ? "skipped"
+  701:           : "completed"
+  702:         : "warning",
+  703:       severity: rubricatorClassificationResult.ok ? "info" : "warning",
+  704:       message:
+  705:         "Known-template rubricator classification ensured before Value Object bridge.",
+  706:       input: {
+  707:         eventId: updatedEvent.id,
+  708:         activityTemplateId: updatedEvent.activity_template_id,
+  709:       },
+  710:       output: {
+  711:         ok: rubricatorClassificationResult.ok,
+  712:         skipped: rubricatorClassificationResult.skipped,
+  713:         skipReason: rubricatorClassificationResult.skipReason,
+  714:         ruleKey: rubricatorClassificationResult.ruleKey,
+  715:         classificationId: rubricatorClassificationResult.classificationId,
+  716:         classificationStatus:
+  717:           rubricatorClassificationResult.classificationStatus,
+  718:         created: rubricatorClassificationResult.created,
+  719:         alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+  720:         errors: rubricatorClassificationResult.errors,
+  721:       },
+  722:       metadata: {
+  723:         endpoint: "/api/activity/complete",
+  724:         mode: "template_first_complete",
+  725:         p4Step: "P4.7.8-R-G1",
+  726:         ruleResolver: buildRubricatorResolverLogMetadata(rubricatorClassificationResult),
+  727:       },
+  728:       startedAt: processingStartedAt.toISOString(),
+  729:       finishedAt: new Date().toISOString(),
+  730:       durationMs: getDurationMs(processingStartedAt),
+  731:     });
+  732: 
+  733:     const valueObjectBridgeResult = await processActivityValueObjectBridge({
+  734:       supabase,
+  735:       eventId: updatedEvent.id,
+  736:       processorName: "activity_complete_route_p4_7_7",
+  737:     });
+  738: 
+  739:     const valueObjectBridgeLogResult =
+  740:       await safeCreateActivityProcessingLog({
+  741:       userId: appUser.id,
+  742:       rawSignalId: rawSignal?.id ?? null,
+  743:       activityEventId: updatedEvent.id,
+  744:       processingRunId,
+  745:       processorName: "activity_complete_route_value_object_bridge",
+  746:       processingStage: "finalize",
+  747:       processingStatus: valueObjectBridgeResult.ok
+  748:         ? valueObjectBridgeResult.skipped
+  749:           ? "skipped"
+  750:           : "completed"
+  751:         : "warning",
+  752:       severity: valueObjectBridgeResult.ok ? "info" : "warning",
+  753:       message: "Value Object bridge processed after activity completion.",
+  754:       input: {
+  755:         eventId: updatedEvent.id,
+  756:       },
+  757:       output: {
+  758:         ok: valueObjectBridgeResult.ok,
+  759:         skipped: valueObjectBridgeResult.skipped,
+  760:         skipReason: valueObjectBridgeResult.skipReason,
+  761:         mappingSkipped: valueObjectBridgeResult.mappingResult?.skipped ?? null,
+  762:         mappingsCount: valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+  763:         bridgeCreatedCount: valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+  764:         errors: valueObjectBridgeResult.errors,
+  765:       },
+  766:       metadata: {
+  767:         endpoint: "/api/activity/complete",
+  768:         mode: "template_first_complete",
+  769:         p4Step: "P4.7.7-R-E2",
+  770:       },
+  771:       startedAt: processingStartedAt.toISOString(),
+  772:       finishedAt: new Date().toISOString(),
+  773:       durationMs: getDurationMs(processingStartedAt),
+  774:     });
+  775: 
+  776:     return NextResponse.json({
+  777:       ok: true,
+  778:       status: completedStatus,
+  779:       event: updatedEvent,
+  780:       impactEvents: impactResult.impactEvents,
+  781:       dailyAggregates: impactResult.dailyAggregates,
+  782:       currentSnapshots: impactResult.currentSnapshots,
+  783:       impactProcessor: {
+  784:         ok: impactResult.ok,
+  785:         skipped: impactResult.skipped,
+  786:         reason: impactResult.reason,
+  787:         counts: impactResult.counts,
+  788:       },
+  789:       rubricatorClassification: {
+  790:         ok: rubricatorClassificationResult.ok,
+  791:         skipped: rubricatorClassificationResult.skipped,
+  792:         skipReason: rubricatorClassificationResult.skipReason,
+  793:         ruleKey: rubricatorClassificationResult.ruleKey,
+  794:         classificationId: rubricatorClassificationResult.classificationId,
+  795:         classificationStatus:
+  796:           rubricatorClassificationResult.classificationStatus,
+  797:         created: rubricatorClassificationResult.created,
+  798:         alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+  799:         errors: rubricatorClassificationResult.errors,
+  800:       },
+  801:       valueObjectBridge: {
+  802:         ok: valueObjectBridgeResult.ok,
+  803:         skipped: valueObjectBridgeResult.skipped,
+  804:         skipReason: valueObjectBridgeResult.skipReason,
+  805:         errors: valueObjectBridgeResult.errors,
+  806:         mapping: valueObjectBridgeResult.mappingResult
+  807:           ? {
+  808:               ok: valueObjectBridgeResult.mappingResult.ok,
+  809:               skipped: valueObjectBridgeResult.mappingResult.skipped,
+  810:               skipReason: valueObjectBridgeResult.mappingResult.skipReason,
+  811:               classificationSummaryCount:
+  812:                 valueObjectBridgeResult.mappingResult.classificationSummary
+  813:                   .length,
+
+------------------------------------------------------------
+SNIPPET: production updatedEvent creation target / match line 
+FILE: src/app/api/activity/complete/route.ts
+RANGE: 446-616
+------------------------------------------------------------
+  446: 
+  447:   const rawSignal = rawSignalResult.signal;
+  448: 
+  449:   await safeCreateActivityProcessingLog({
+  450:     userId: appUser.id,
+  451:     rawSignalId: rawSignal?.id ?? null,
+  452:     activityEventId: event.id,
+  453:     processingRunId,
+  454:     processorName: "activity_complete_route",
+  455:     processingStage: "ingest",
+  456:     processingStatus: rawSignalResult.ok ? "completed" : "warning",
+  457:     severity: rawSignalResult.ok ? "info" : "warning",
+  458:     message: rawSignalResult.ok
+  459:       ? "Raw activity complete signal captured."
+  460:       : "Raw activity complete signal creation failed; continuing without raw signal.",
+  461:     input: {
+  462:       eventId: event.id,
+  463:       previousStatus: event.status,
+  464:       endedAt: timing.endedAt,
+  465:       durationMinutes: timing.durationMinutes,
+  466:     },
+  467:     output: rawSignal
+  468:       ? {
+  469:           rawSignalId: rawSignal.id,
+  470:         }
+  471:       : {},
+  472:     error: rawSignalResult.ok
+  473:       ? {}
+  474:       : {
+  475:           message: rawSignalResult.error,
+  476:         },
+  477:     metadata: {
+  478:       endpoint: "/api/activity/complete",
+  479:       mode: "template_first_complete",
+  480:     },
+  481:     startedAt: processingStartedAt.toISOString(),
+  482:     finishedAt: new Date().toISOString(),
+  483:     durationMs: getDurationMs(processingStartedAt),
+  484:   });
+  485: 
+  486:   const { data: updatedEventData, error: updateError } = await supabase
+  487:     .from("activity_events")
+  488:     .update({
+  489:       ended_at: timing.endedAt,
+  490:       duration_minutes: timing.durationMinutes,
+  491:       status: completedStatus,
+  492:       processing_status: "processed",
+  493:       description: comment ?? event.description,
+  494:       metadata_json: {
+  495:         ...existingMetadata,
+  496:         lifecycle: completedStatus,
+  497:         lifecycle_completed_at: nowIso,
+  498:         previous_status: event.status,
+  499:         completion_comment: comment,
+  500:         completion_duration_source:
+  501:           asNumber(body.durationMinutes) !== null
+  502:             ? "explicit_duration"
+  503:             : asString(body.endedAt) || asString(body.endTime)
+  504:               ? "explicit_end_time"
+  505:               : "current_time",
+  506:       },
+  507:       updated_at: nowIso,
+  508:     })
+  509:     .eq("id", event.id)
+  510:     .eq("user_id", appUser.id)
+  511:     .select()
+  512:     .single();
+  513: 
+  514:   if (updateError || !updatedEventData) {
+  515:     if (rawSignal) {
+  516:       await markRawActivitySignalFailed({
+  517:         signalId: rawSignal.id,
+  518:         userId: appUser.id,
+  519:         error: updateError?.message ?? "Failed to complete activity event.",
+  520:       });
+  521:     }
+  522: 
+  523:     await safeCreateActivityProcessingLog({
+  524:       userId: appUser.id,
+  525:       rawSignalId: rawSignal?.id ?? null,
+  526:       activityEventId: event.id,
+  527:       processingRunId,
+  528:       processorName: "activity_complete_route",
+  529:       processingStage: "complete_event",
+  530:       processingStatus: "failed",
+  531:       severity: "error",
+  532:       message: "Failed to update activity event to completed status.",
+  533:       input: {
+  534:         eventId: event.id,
+  535:         previousStatus: event.status,
+  536:         endedAt: timing.endedAt,
+  537:         durationMinutes: timing.durationMinutes,
+  538:       },
+  539:       error: {
+  540:         message: updateError?.message ?? "Failed to complete activity event.",
+  541:       },
+  542:       metadata: {
+  543:         endpoint: "/api/activity/complete",
+  544:         mode: "template_first_complete",
+  545:       },
+  546:       startedAt: processingStartedAt.toISOString(),
+  547:       finishedAt: new Date().toISOString(),
+  548:       durationMs: getDurationMs(processingStartedAt),
+  549:     });
+  550: 
+  551:     return NextResponse.json(
+  552:       {
+  553:         ok: false,
+  554:         error: updateError?.message ?? "Failed to complete activity event.",
+  555:       },
+  556:       { status: 500 }
+  557:     );
+  558:   }
+  559: 
+  560:   const updatedEvent = updatedEventData as ActivityEventRow;
+  561: 
+  562:   await safeCreateActivityProcessingLog({
+  563:     userId: appUser.id,
+  564:     rawSignalId: rawSignal?.id ?? null,
+  565:     activityEventId: updatedEvent.id,
+  566:     processingRunId,
+  567:     processorName: "activity_complete_route",
+  568:     processingStage: "complete_event",
+  569:     processingStatus: "completed",
+  570:     severity: "info",
+  571:     message: "Activity event completed from lifecycle complete flow.",
+  572:     input: {
+  573:       eventId: event.id,
+  574:       previousStatus: event.status,
+  575:       endedAt: timing.endedAt,
+  576:       durationMinutes: timing.durationMinutes,
+  577:     },
+  578:     output: {
+  579:       activityEventId: updatedEvent.id,
+  580:       status: updatedEvent.status,
+  581:       processingStatus: updatedEvent.processing_status,
+  582:     },
+  583:     metadata: {
+  584:       endpoint: "/api/activity/complete",
+  585:       mode: "template_first_complete",
+  586:     },
+  587:     startedAt: processingStartedAt.toISOString(),
+  588:     finishedAt: new Date().toISOString(),
+  589:     durationMs: getDurationMs(processingStartedAt),
+  590:   });
+  591: 
+  592:   try {
+  593:     const impactResult = await processActivityImpacts({
+  594:       eventId: updatedEvent.id,
+  595:       userId: appUser.id,
+  596:       activityTemplateId: updatedEvent.activity_template_id,
+  597:       activityTypeId: updatedEvent.activity_type_id,
+  598:       durationMinutes: updatedEvent.duration_minutes,
+  599:       startedAt: updatedEvent.started_at,
+  600:     });
+  601: 
+  602:     const processedSignalResult = rawSignal
+  603:       ? await markRawActivitySignalProcessed({
+  604:           signalId: rawSignal.id,
+  605:           userId: appUser.id,
+  606:           outputEventId: updatedEvent.id,
+  607:           normalizedPreview: {
+  608:             activityEventId: updatedEvent.id,
+  609:             previousStatus: event.status,
+  610:             nextStatus: updatedEvent.status,
+  611:             startedAt: timing.startedAt,
+  612:             endedAt: timing.endedAt,
+  613:             durationMinutes: timing.durationMinutes,
+  614:             impactProcessor: {
+  615:               ok: impactResult.ok,
+  616:               skipped: impactResult.skipped,
+
+------------------------------------------------------------
+SNIPPET: production response payload target / match line 
+FILE: src/app/api/activity/complete/route.ts
+RANGE: 180-340
+------------------------------------------------------------
+  180:       durationMinutes: explicitDurationMinutes,
+  181:     };
+  182:   }
+  183: 
+  184:   const endedDate = new Date();
+  185: 
+  186:   if (endedDate.getTime() < startedDate.getTime()) {
+  187:     return {
+  188:       ok: false,
+  189:       error: "Current time is earlier than startedAt.",
+  190:     };
+  191:   }
+  192: 
+  193:   return {
+  194:     ok: true,
+  195:     startedAt: startedDate.toISOString(),
+  196:     endedAt: endedDate.toISOString(),
+  197:     durationMinutes: Math.round(
+  198:       (endedDate.getTime() - startedDate.getTime()) / 60000
+  199:     ),
+  200:   };
+  201: }
+  202: 
+  203: async function getExistingImpactEventsCount(eventId: string) {
+  204:   const { count, error } = await supabase
+  205:     .from("impact_events")
+  206:     .select("id", {
+  207:       count: "exact",
+  208:       head: true,
+  209:     })
+  210:     .eq("event_id", eventId);
+  211: 
+  212:   if (error) {
+  213:     throw new Error(error.message);
+  214:   }
+  215: 
+  216:   return count ?? 0;
+  217: }
+  218: 
+  219: export async function GET() {
+  220:   return NextResponse.json({
+  221:     ok: true,
+  222:     endpoint: "/api/activity/complete",
+  223:     method: "POST",
+  224:     enabled: ACTIVITY_RECORDING_ENABLED,
+  225:     status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+  226:     message: ACTIVITY_RECORDING_ENABLED
+  227:       ? "Complete a previously started activity event and process rule-based impacts."
+  228:       : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  229:     example: {
+  230:       eventId: "activity-event-uuid",
+  231:       comment: "Completed lifecycle smoke test",
+  232:     },
+  233:     deterministicTestExample: {
+  234:       eventId: "activity-event-uuid",
+  235:       durationMinutes: 5,
+  236:       comment: "Completed lifecycle smoke test with fixed duration",
+  237:     },
+  238:   });
+  239: }
+  240: 
+  241: export async function POST(request: Request) {
+  242:   if (!ACTIVITY_RECORDING_ENABLED) {
+  243:     return NextResponse.json(
+  244:       {
+  245:         ok: false,
+  246:         error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  247:       },
+  248:       { status: 503 }
+  249:     );
+  250:   }
+  251: 
+  252:   const { appUser, errorResponse } = await getActivityUserContext();
+  253: 
+  254:   if (errorResponse) {
+  255:     return errorResponse;
+  256:   }
+  257: 
+  258:   if (!appUser) {
+  259:     return NextResponse.json(
+  260:       {
+  261:         ok: false,
+  262:         error: "User context not found",
+  263:       },
+  264:       { status: 500 }
+  265:     );
+  266:   }
+  267: 
+  268:   let body: ActivityCompleteBody;
+  269: 
+  270:   try {
+  271:     body = (await request.json()) as ActivityCompleteBody;
+  272:   } catch {
+  273:     return NextResponse.json(
+  274:       {
+  275:         ok: false,
+  276:         error: "Invalid JSON body",
+  277:       },
+  278:       { status: 400 }
+  279:     );
+  280:   }
+  281: 
+  282:   const eventId = asString(body.eventId);
+  283: 
+  284:   if (!eventId) {
+  285:     return NextResponse.json(
+  286:       {
+  287:         ok: false,
+  288:         error: "eventId is required.",
+  289:       },
+  290:       { status: 400 }
+  291:     );
+  292:   }
+  293: 
+  294:   const { data: eventData, error: eventError } = await supabase
+  295:     .from("activity_events")
+  296:     .select("*")
+  297:     .eq("id", eventId)
+  298:     .eq("user_id", appUser.id)
+  299:     .maybeSingle();
+  300: 
+  301:   if (eventError) {
+  302:     return NextResponse.json(
+  303:       {
+  304:         ok: false,
+  305:         error: eventError.message,
+  306:       },
+  307:       { status: 500 }
+  308:     );
+  309:   }
+  310: 
+  311:   if (!eventData) {
+  312:     return NextResponse.json(
+  313:       {
+  314:         ok: false,
+  315:         error: "Activity event not found or access denied.",
+  316:       },
+  317:       { status: 404 }
+  318:     );
+  319:   }
+  320: 
+  321:   const event = eventData as ActivityEventRow;
+  322:   const completedStatus = ACTIVITY_STATUS_COMPLETED;
+  323: 
+  324:   if (event.status === completedStatus) {
+  325:     try {
+  326:       const existingImpactEventsCount = await getExistingImpactEventsCount(
+  327:         event.id
+  328:       );
+  329: 
+  330:       const impactResult = await processActivityImpacts({
+  331:         eventId: event.id,
+  332:         userId: appUser.id,
+  333:         activityTemplateId: event.activity_template_id,
+  334:         activityTypeId: event.activity_type_id,
+  335:         durationMinutes: event.duration_minutes,
+  336:         startedAt: event.started_at,
+  337:       });
+  338: 
+  339:       return NextResponse.json({
+  340:         ok: true,
+
+------------------------------------------------------------
+SNIPPET: production response payload target / match line 
+FILE: src/app/api/activity/complete/route.ts
+RANGE: 299-459
+------------------------------------------------------------
+  299:     .maybeSingle();
+  300: 
+  301:   if (eventError) {
+  302:     return NextResponse.json(
+  303:       {
+  304:         ok: false,
+  305:         error: eventError.message,
+  306:       },
+  307:       { status: 500 }
+  308:     );
+  309:   }
+  310: 
+  311:   if (!eventData) {
+  312:     return NextResponse.json(
+  313:       {
+  314:         ok: false,
+  315:         error: "Activity event not found or access denied.",
+  316:       },
+  317:       { status: 404 }
+  318:     );
+  319:   }
+  320: 
+  321:   const event = eventData as ActivityEventRow;
+  322:   const completedStatus = ACTIVITY_STATUS_COMPLETED;
+  323: 
+  324:   if (event.status === completedStatus) {
+  325:     try {
+  326:       const existingImpactEventsCount = await getExistingImpactEventsCount(
+  327:         event.id
+  328:       );
+  329: 
+  330:       const impactResult = await processActivityImpacts({
+  331:         eventId: event.id,
+  332:         userId: appUser.id,
+  333:         activityTemplateId: event.activity_template_id,
+  334:         activityTypeId: event.activity_type_id,
+  335:         durationMinutes: event.duration_minutes,
+  336:         startedAt: event.started_at,
+  337:       });
+  338: 
+  339:       return NextResponse.json({
+  340:         ok: true,
+  341:         status: "already_completed",
+  342:         event,
+  343:         impactEvents: impactResult.impactEvents,
+  344:         dailyAggregates: impactResult.dailyAggregates,
+  345:         currentSnapshots: impactResult.currentSnapshots,
+  346:         impactProcessor: {
+  347:           ok: impactResult.ok,
+  348:           skipped: impactResult.skipped,
+  349:           reason: impactResult.reason,
+  350:           counts: impactResult.counts,
+  351:           existingImpactEventsCount,
+  352:         },
+  353:         lifecycle: {
+  354:           alreadyCompleted: true,
+  355:           note:
+  356:             "Activity event was already completed. Duplicate impact processing was skipped if impacts already existed.",
+  357:         },
+  358:       });
+  359:     } catch (error) {
+  360:       return NextResponse.json(
+  361:         {
+  362:           ok: false,
+  363:           error:
+  364:             error instanceof Error
+  365:               ? error.message
+  366:               : "Failed to inspect completed activity event.",
+  367:         },
+  368:         { status: 500 }
+  369:       );
+  370:     }
+  371:   }
+  372: 
+  373:   if (!isCompletableActivityStatus(event.status)) {
+  374:     return NextResponse.json(
+  375:       {
+  376:         ok: false,
+  377:         error: `Activity event status '${event.status}' cannot be completed by this endpoint.`,
+  378:         allowedStatuses: Array.from(ACTIVITY_COMPLETABLE_STATUSES),
+  379:       },
+  380:       { status: 409 }
+  381:     );
+  382:   }
+  383: 
+  384:   const timing = resolveCompletionTiming({
+  385:     event,
+  386:     body,
+  387:   });
+  388: 
+  389:   if (!timing.ok) {
+  390:     return NextResponse.json(
+  391:       {
+  392:         ok: false,
+  393:         error: timing.error,
+  394:       },
+  395:       { status: 400 }
+  396:     );
+  397:   }
+  398: 
+  399:   const comment = asString(body.comment);
+  400:   const existingMetadata = asRecord(event.metadata_json);
+  401:   const nowIso = new Date().toISOString();
+  402: 
+  403:   const processingRunId = randomUUID();
+  404:   const processingStartedAt = new Date();
+  405: 
+  406:   const rawSignalResult = await createRawActivitySignal({
+  407:     userId: appUser.id,
+  408:     sourceType: "manual_form",
+  409:     sourceEventId: event.id,
+  410:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+  411:     rawPayload: {
+  412:       endpoint: "/api/activity/complete",
+  413:       body,
+  414:       eventId: event.id,
+  415:       previousStatus: event.status,
+  416:       timing,
+  417:     },
+  418:     normalizedPreview: {
+  419:       activityEventId: event.id,
+  420:       title: event.title,
+  421:       previousStatus: event.status,
+  422:       nextStatus: completedStatus,
+  423:       startedAt: timing.startedAt,
+  424:       endedAt: timing.endedAt,
+  425:       durationMinutes: timing.durationMinutes,
+  426:     },
+  427:     occurredAt: timing.endedAt,
+  428:     trustLevel: "medium",
+  429:     privacyScope:
+  430:       event.privacy_scope === "shared_with_org" ||
+  431:       event.privacy_scope === "public_masked" ||
+  432:       event.privacy_scope === "public"
+  433:         ? event.privacy_scope
+  434:         : "private",
+  435:     processingStatus: "processing",
+  436:     metadata: {
+  437:       parser: "template_first_v2",
+  438:       processingRunId,
+  439:       mode: "template_first_complete",
+  440:       lifecycle: completedStatus,
+  441:       previousStatus: event.status,
+  442:       activityTemplateId: event.activity_template_id,
+  443:       activityTypeId: event.activity_type_id,
+  444:     },
+  445:   });
+  446: 
+  447:   const rawSignal = rawSignalResult.signal;
+  448: 
+  449:   await safeCreateActivityProcessingLog({
+  450:     userId: appUser.id,
+  451:     rawSignalId: rawSignal?.id ?? null,
+  452:     activityEventId: event.id,
+  453:     processingRunId,
+  454:     processorName: "activity_complete_route",
+  455:     processingStage: "ingest",
+  456:     processingStatus: rawSignalResult.ok ? "completed" : "warning",
+  457:     severity: rawSignalResult.ok ? "info" : "warning",
+  458:     message: rawSignalResult.ok
+  459:       ? "Raw activity complete signal captured."
+
+------------------------------------------------------------
+SNIPPET: production response payload target / match line 
+FILE: src/app/api/activity/complete/route.ts
+RANGE: 736-896
+------------------------------------------------------------
+  736:       processorName: "activity_complete_route_p4_7_7",
+  737:     });
+  738: 
+  739:     const valueObjectBridgeLogResult =
+  740:       await safeCreateActivityProcessingLog({
+  741:       userId: appUser.id,
+  742:       rawSignalId: rawSignal?.id ?? null,
+  743:       activityEventId: updatedEvent.id,
+  744:       processingRunId,
+  745:       processorName: "activity_complete_route_value_object_bridge",
+  746:       processingStage: "finalize",
+  747:       processingStatus: valueObjectBridgeResult.ok
+  748:         ? valueObjectBridgeResult.skipped
+  749:           ? "skipped"
+  750:           : "completed"
+  751:         : "warning",
+  752:       severity: valueObjectBridgeResult.ok ? "info" : "warning",
+  753:       message: "Value Object bridge processed after activity completion.",
+  754:       input: {
+  755:         eventId: updatedEvent.id,
+  756:       },
+  757:       output: {
+  758:         ok: valueObjectBridgeResult.ok,
+  759:         skipped: valueObjectBridgeResult.skipped,
+  760:         skipReason: valueObjectBridgeResult.skipReason,
+  761:         mappingSkipped: valueObjectBridgeResult.mappingResult?.skipped ?? null,
+  762:         mappingsCount: valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+  763:         bridgeCreatedCount: valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+  764:         errors: valueObjectBridgeResult.errors,
+  765:       },
+  766:       metadata: {
+  767:         endpoint: "/api/activity/complete",
+  768:         mode: "template_first_complete",
+  769:         p4Step: "P4.7.7-R-E2",
+  770:       },
+  771:       startedAt: processingStartedAt.toISOString(),
+  772:       finishedAt: new Date().toISOString(),
+  773:       durationMs: getDurationMs(processingStartedAt),
+  774:     });
+  775: 
+  776:     return NextResponse.json({
+  777:       ok: true,
+  778:       status: completedStatus,
+  779:       event: updatedEvent,
+  780:       impactEvents: impactResult.impactEvents,
+  781:       dailyAggregates: impactResult.dailyAggregates,
+  782:       currentSnapshots: impactResult.currentSnapshots,
+  783:       impactProcessor: {
+  784:         ok: impactResult.ok,
+  785:         skipped: impactResult.skipped,
+  786:         reason: impactResult.reason,
+  787:         counts: impactResult.counts,
+  788:       },
+  789:       rubricatorClassification: {
+  790:         ok: rubricatorClassificationResult.ok,
+  791:         skipped: rubricatorClassificationResult.skipped,
+  792:         skipReason: rubricatorClassificationResult.skipReason,
+  793:         ruleKey: rubricatorClassificationResult.ruleKey,
+  794:         classificationId: rubricatorClassificationResult.classificationId,
+  795:         classificationStatus:
+  796:           rubricatorClassificationResult.classificationStatus,
+  797:         created: rubricatorClassificationResult.created,
+  798:         alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+  799:         errors: rubricatorClassificationResult.errors,
+  800:       },
+  801:       valueObjectBridge: {
+  802:         ok: valueObjectBridgeResult.ok,
+  803:         skipped: valueObjectBridgeResult.skipped,
+  804:         skipReason: valueObjectBridgeResult.skipReason,
+  805:         errors: valueObjectBridgeResult.errors,
+  806:         mapping: valueObjectBridgeResult.mappingResult
+  807:           ? {
+  808:               ok: valueObjectBridgeResult.mappingResult.ok,
+  809:               skipped: valueObjectBridgeResult.mappingResult.skipped,
+  810:               skipReason: valueObjectBridgeResult.mappingResult.skipReason,
+  811:               classificationSummaryCount:
+  812:                 valueObjectBridgeResult.mappingResult.classificationSummary
+  813:                   .length,
+  814:               mappingsCount:
+  815:                 valueObjectBridgeResult.mappingResult.mappings.length,
+  816:             }
+  817:           : null,
+  818:         bridge: valueObjectBridgeResult.bridgeResult
+  819:           ? {
+  820:               ok: valueObjectBridgeResult.bridgeResult.ok,
+  821:               skipped: valueObjectBridgeResult.bridgeResult.skipped,
+  822:               skipReason: valueObjectBridgeResult.bridgeResult.skipReason,
+  823:               mappingsRequested:
+  824:                 valueObjectBridgeResult.bridgeResult.mappingsRequested,
+  825:               createdCount:
+  826:                 valueObjectBridgeResult.bridgeResult.created.length,
+  827:               created: valueObjectBridgeResult.bridgeResult.created,
+  828:               errors: valueObjectBridgeResult.bridgeResult.errors,
+  829:             }
+  830:           : null,
+  831:       },
+  832:       processingLogs: {
+  833:         rawSignalId: rawSignal?.id ?? null,
+  834:         processingRunId,
+  835:         rubricatorClassification: {
+  836:           ok: rubricatorClassificationLogResult.ok,
+  837:           error: rubricatorClassificationLogResult.error,
+  838:           logId: rubricatorClassificationLogResult.log?.id ?? null,
+  839:         },
+  840:         valueObjectBridge: {
+  841:           ok: valueObjectBridgeLogResult.ok,
+  842:           error: valueObjectBridgeLogResult.error,
+  843:           logId: valueObjectBridgeLogResult.log?.id ?? null,
+  844:         },
+  845:       },
+  846:       rawSignal: rawSignal
+  847:         ? {
+  848:             id: rawSignal.id,
+  849:             processingStatus:
+  850:               processedSignalResult?.signal?.processing_status ??
+  851:               rawSignal.processing_status,
+  852:           }
+  853:         : null,
+  854:       processingRunId,
+  855:       lifecycle: {
+  856:         startedAt: timing.startedAt,
+  857:         endedAt: timing.endedAt,
+  858:         durationMinutes: timing.durationMinutes,
+  859:         impactsCreated: impactResult.counts.impactEvents > 0,
+  860:         note:
+  861:           "Activity event was completed. Rule-based impacts, daily aggregates and current snapshots were processed without AI.",
+  862:       },
+  863:     });
+  864:   } catch (error) {
+  865:     if (rawSignal) {
+  866:       await markRawActivitySignalFailed({
+  867:         signalId: rawSignal.id,
+  868:         userId: appUser.id,
+  869:         error:
+  870:           error instanceof Error
+  871:             ? error.message
+  872:             : "Failed to process rule-based activity impacts after completion.",
+  873:       });
+  874:     }
+  875: 
+  876:     await safeCreateActivityProcessingLog({
+  877:       userId: appUser.id,
+  878:       rawSignalId: rawSignal?.id ?? null,
+  879:       activityEventId: updatedEvent.id,
+  880:       processingRunId,
+  881:       processorName: "activity_complete_route",
+  882:       processingStage: "process_impacts",
+  883:       processingStatus: "failed",
+  884:       severity: "error",
+  885:       message: "Failed to process rule-based activity impacts after completion.",
+  886:       input: {
+  887:         activityTemplateId: updatedEvent.activity_template_id,
+  888:         activityTypeId: updatedEvent.activity_type_id,
+  889:         durationMinutes: updatedEvent.duration_minutes,
+  890:         startedAt: updatedEvent.started_at,
+  891:       },
+  892:       error: {
+  893:         message:
+  894:           error instanceof Error
+  895:             ? error.message
+  896:             : "Failed to process rule-based activity impacts after completion.",
+
+============================================================
+C) C1-B PATCH DECISION RULES
+============================================================
+Patch only after this file has no MISSING REQUIRED markers.
+Production derivation must run after updatedEvent and before processActivityValueObjectBridge.
+Policy: completed status, narrow manual/manual_chat compatible source, textual input exists.
+Dry run: false server-side.
+Create policy: suggested_only.
+Failure: graceful degradation, keep completion and old bridge working with additionalCategoryLinks=[].
+Bridge: pass only resolved categoryId links.
+Response: do not expose large derivation payload in normal response.
+
+============================================================
+D) C1-B-1-FIX1 FINAL VALIDATION
+============================================================
+Reason:
+The previous C1-B-1 scanner used a too-narrow singular pattern:
+persistCategoryDerivation
+
+Actual debug route uses the plural production helper:
+persistCategoryDerivations(...)
+
+Conclusion:
+This was a scanner false-positive, not a missing implementation.
+Production patch may reuse the actual plural helper import/call.
+
+Exact occurrences from debug route:
+
+FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\free-text-value-object-test\route.ts
+MATCH LINE: 576
+MATCH: const persistenceResult = await persistCategoryDerivations(
+  
+      const resolutionResult = await resolveCategoryCandidates(
+        supabase as unknown as CategoryResolverSupabaseClient,
+        extractionResult.candidates,
+        {
+          createPolicy: options.createPolicy,
+          dryRun: options.dryRun,
+          sourceType: "rule",
+          defaultCategoryType: "derived",
+        }
+      );
+  
+>     const persistenceResult = await persistCategoryDerivations(
+        supabase as unknown as CategoryDerivationPersistenceSupabaseClient,
+        {
+          activityEventId: params.activityEventId,
+          input: derivationInput,
+          derivationResult: extractionResult,
+          resolvedCandidates: resolutionResult.candidates,
+          actorId: params.personActorId,
+          organizationId: null,
+          modelName: null,
+          promptVersion: null,
+          needsUserConfirmation:
+            resolutionResult.unresolvedCount > 0 ||
+            extractionResult.candidates.some((candidate) =>
+              Boolean(candidate.needsUserReview)
+            ),
+        }
+      );
+  
+      const ok =
+        extractionResult.ok && resolutionResult.ok && persistenceResult.ok;
+  
+      return {
+        enabled: true,
+        ok,
+        skipped: false,
+        options,
+        extraction: {
+          ok: extractionResult.ok,
+          skipped: extractionResult.skipped ?? false,
+          skipReason: extractionResult.skipReason ?? null,
+          processorVersion: extractionResult.processorVersion,
+          ruleVersion: extractionResult.ruleVersion ?? null,
