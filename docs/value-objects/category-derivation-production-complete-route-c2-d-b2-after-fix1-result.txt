@@ -1,0 +1,312 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-P3-B7-C2-D-B2-AFTER-FIX1 — read-only Value Object bridge proof result
+
+Generated: 2026-05-20 19:26:33
+Current HEAD:
+d197918 Fix nullable result in Value Object bridge proof route
+
+============================================================
+1) FINAL DECISION
+============================================================
+
+C2-D-B2 after FIX1 status:
+
+PASS.
+
+The read-only route now proves persisted Value Object bridge artifacts for the completed clean free-text event without rerunning /api/activity/complete.
+
+Test route:
+
+GET /api/activity/debug/value-object-bridge-proof?eventId=8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Important:
+- Read-only only.
+- No complete rerun.
+- Same already-completed event was inspected.
+
+============================================================
+2) TEST EVENT
+============================================================
+
+Event ID:
+8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Event status:
+completed
+
+Event processing status:
+processed
+
+Original free-text input:
+walked to work for 15 minutes
+
+Original C2-C-B2 result:
+clean free-text production completion PASS.
+
+============================================================
+3) ROUTE RESULT
+============================================================
+
+HTTP status:
+200
+
+routeOk:
+true
+
+p4Step:
+P4.10.0-C8-P3-B7-C2-D-B3
+
+Browser test result:
+- ok: true
+- criticalPass: true
+- semanticPass: true
+
+Errors:
+[]
+
+============================================================
+4) PROOF SUMMARY
+============================================================
+
+valueObjectIds:
+- 291b2613-0f5b-406f-8bfc-f57eb619c107
+
+valueObjectInstanceIds:
+- 1f9011cc-a3d2-4610-abcf-48a4a9a6735d
+
+categoryIds:
+- b2cacd1e-ec22-42bf-9619-b3f464412825
+- 7fd79307-29b1-483d-8ea0-be0091aaa340
+- b1c16819-b515-49ff-960e-aee835637322
+- e821fd0f-f6f3-4b58-b107-93313939b1c4
+- 7bb29faa-c678-4e73-96c9-c9ba41355dad
+
+categorySlugs:
+- commute-to-work
+- walking-to-work
+- work
+- walking
+- duration-minutes
+
+Expected category slugs:
+- walking
+- work
+- commute-to-work
+- walking-to-work
+- duration-minutes
+
+Missing expected category slugs:
+[]
+
+============================================================
+5) COUNTS
+============================================================
+
+activityEventValueObjectLinks:
+1
+
+activityEventValueObjectInstanceLinks:
+1
+
+valueObjects:
+1
+
+valueObjectInstances:
+1
+
+stateDeltas:
+1
+
+dailyAggregates:
+2
+
+stateSnapshots:
+1
+
+usageAggregates:
+1
+
+valueObjectCategoryLinks:
+5
+
+categorySlugs:
+5
+
+errors:
+0
+
+============================================================
+6) MISSING ARTIFACTS
+============================================================
+
+All important artifacts are present.
+
+Missing artifacts result:
+
+- event: false
+- activityEventValueObjectLinks: false
+- activityEventValueObjectInstanceLinks: false
+- valueObjects: false
+- valueObjectInstances: false
+- stateDeltas: false
+- dailyAggregates: false
+- stateSnapshots: false
+- usageAggregates: false
+- valueObjectCategoryLinks: false
+- categorySlugs: false
+- expectedFreeTextCategorySlugs: false
+
+============================================================
+7) TABLE SUMMARY
+============================================================
+
+activity_events:
+- ok: true
+- count: 1
+- column: id
+
+activity_event_value_object_links:
+- ok: true
+- count: 1
+- column: event_id
+
+activity_event_value_object_instance_links:
+- ok: true
+- count: 1
+- column: event_id
+
+value_object_instances:
+- ok: true
+- count: 1
+- column: id
+
+value_objects:
+- ok: true
+- count: 1
+- column: id
+
+value_object_state_deltas:
+- ok: true
+- count: 1
+- column: value_object_instance_id
+
+value_object_daily_aggregates:
+- ok: true
+- count: 2
+- column: value_object_id
+
+value_object_state_snapshots:
+- ok: true
+- count: 1
+- column: value_object_id
+
+value_object_usage_aggregates:
+- ok: true
+- count: 1
+- column: value_object_id
+
+value_object_category_links:
+- ok: true
+- count: 5
+- column: value_object_id
+
+contextual_category_events:
+- ok: true
+- count: 0
+- skipped: true
+- skipReason: Category slugs already available from value_object_category_links.
+
+============================================================
+8) WHAT WAS FIXED BY C2-D-B3-FIX1
+============================================================
+
+Before FIX1, the proof route had TypeScript errors because selectEqWithCandidateColumns could return TableProof | null.
+
+FIX1 corrected the function so it always returns TableProof.
+
+After FIX1:
+- npx.cmd tsc --noEmit --pretty false passed with ExitCode 0.
+- route was committed and pushed.
+- browser proof rerun succeeded.
+
+============================================================
+9) WHAT IS NOW PROVEN
+============================================================
+
+The platform now has a read-only proof route that can verify persisted Value Object bridge artifacts for a completed activity event.
+
+This solves the C2-C limitation where /api/activity/debug-trace summary showed:
+- eventLinks = 0
+- impactEvents = 0
+
+That was not a production failure.
+It was only a proof visibility limitation.
+
+Now C2-D proves the bridge persistence directly from tables:
+- activity_event_value_object_links
+- activity_event_value_object_instance_links
+- value_objects
+- value_object_instances
+- value_object_state_deltas
+- value_object_daily_aggregates
+- value_object_state_snapshots
+- value_object_usage_aggregates
+- value_object_category_links
+
+============================================================
+10) DO NOT RERUN
+============================================================
+
+Do not rerun /api/activity/complete for event:
+
+8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Reason:
+The event is already completed and processed.
+A repeated complete call would test already-completed behavior, not the original production path.
+
+============================================================
+11) NEXT STEP
+============================================================
+
+Next recommended block:
+
+P4.10.0-C8-P3-B7-C2-D-C — integrate proof visibility into normal debugging flow or document route contract.
+
+Recommended order:
+
+1. Document /api/activity/debug/value-object-bridge-proof route contract.
+2. Add a small browser verification script to docs or keep it as dev-only script.
+3. Decide whether /api/activity/debug-trace summary should be patched later to include a compact valueObjectBridgeSummary.
+4. Do not patch debug-trace immediately unless needed; the narrow proof route is already safer and clearer.
+
+Possible next implementation:
+- C2-D-C1: document route contract and expected output.
+- C2-D-C2: optionally add debug-trace summary link/reference to the proof route.
+- C2-D-C3: final C2 block summary and move to the next production activity pipeline block.
+
+============================================================
+12) SUMMARY FOR NEXT CHAT
+============================================================
+
+C2-C-B2 proved clean free-text production completion.
+
+C2-D-B2 after FIX1 proved read-only persistence visibility.
+
+Important event:
+8c63cfc8-acb3-4a08-9de5-c5dbfd4c6d0a
+
+Free-text semantics:
+walked to work for 15 minutes
+
+Persisted semantic category slugs:
+- walking
+- work
+- commute-to-work
+- walking-to-work
+- duration-minutes
+
+All critical persisted bridge artifacts were found.
+No errors.
+No missing artifacts.
+C2-D-B2 after FIX1 is PASS.
