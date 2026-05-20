@@ -11,12 +11,13 @@ Goal: verify whether processActivityValueObjectBridge can accept and forward add
 ## 1. Git status
 
 ```text
-?? docs/value-objects/category-derivation-lifecycle-passthrough-anchors-c8-p3-b5-b1.md
+ M docs/value-objects/category-derivation-lifecycle-passthrough-anchors-c8-p3-b5-b1.md
 ```
 
 ## 2. Recent commits
 
 ```text
+7441d07 Map category derivation lifecycle passthrough anchors
 3635af8 Map category derivation route patch anchors
 e6393a6 Restore full category derivation route-side integration map
 b05ed56 Map category derivation route-side bridge integration
@@ -26,7 +27,6 @@ cd78bea Fix category derivation bridge additional link scope
 022c158 Add no-flag bridge regression browser test
 43bd1cc Call category derivation bridge additional category link helper
 7431272 Fix category derivation bridge additional category link helper insertion
-2cf42b2 Add category derivation bridge additional category link helper
 ```
 
 ## 3. File line counts
