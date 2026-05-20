@@ -22,14 +22,32 @@ function main() {
 
   const source = fs.readFileSync(targetPath, "utf8");
 
+  const callStart = source.indexOf("processValueObjectBridgeForActivityEvent({");
+  const callEnd =
+    callStart >= 0 ? source.indexOf("});", callStart) : -1;
+
+  const callBlock =
+    callStart >= 0 && callEnd > callStart
+      ? source.slice(callStart, callEnd)
+      : "";
+
   const requiredPatterns = [
     "type AdditionalValueObjectCategoryLink",
     "additionalCategoryLinks?: AdditionalValueObjectCategoryLink[]",
-    "additionalCategoryLinks: input.additionalCategoryLinks",
     "processValueObjectBridgeForActivityEvent",
   ];
 
   const missingPatterns = requiredPatterns.filter((pattern) => !source.includes(pattern));
+
+  const failedChecks = [];
+
+  if (!callBlock.includes("additionalCategoryLinks: input.additionalCategoryLinks")) {
+    failedChecks.push("bridge call does not forward additionalCategoryLinks");
+  }
+
+  if (callBlock.length === 0) {
+    failedChecks.push("could not isolate processValueObjectBridgeForActivityEvent call block");
+  }
 
   const transpiled = ts.transpileModule(source, {
     fileName: targetPath,
@@ -46,12 +64,14 @@ function main() {
   const diagnostics = transpiled.diagnostics || [];
 
   const output = {
-    ok: diagnostics.length === 0 && missingPatterns.length === 0,
-    checkId: "P4.10.0-C8-P3-B5-B2",
+    ok: diagnostics.length === 0 && missingPatterns.length === 0 && failedChecks.length === 0,
+    checkId: "P4.10.0-C8-P3-B5-B2-fix1",
     checkedAt: new Date().toISOString(),
     targetPath: path.relative(rootDir, targetPath),
     diagnosticsCount: diagnostics.length,
     missingPatterns,
+    failedChecks,
+    callBlockLength: callBlock.length,
     diagnostics: diagnostics.map((diagnostic) => ({
       code: diagnostic.code,
       category: ts.DiagnosticCategory[diagnostic.category],
@@ -61,16 +81,17 @@ function main() {
           : diagnostic.messageText.messageText,
     })),
     note:
-      "Targeted lifecycle wrapper transpile/pattern check for additionalCategoryLinks passthrough.",
+      "Checks lifecycle wrapper import/type plus actual additionalCategoryLinks forwarding into processValueObjectBridgeForActivityEvent.",
   };
 
   fs.writeFileSync(resultPath, `${JSON.stringify(output, null, 2)}\n`, "utf8");
 
-  console.log("P4.10.0-C8-P3-B5-B2 — lifecycle passthrough smoke check");
+  console.log("P4.10.0-C8-P3-B5-B2-fix1 — lifecycle passthrough smoke check");
   console.log("");
   console.log(`Target: ${path.relative(rootDir, targetPath)}`);
   console.log(`Diagnostics: ${diagnostics.length}`);
   console.log(`Missing patterns: ${missingPatterns.length}`);
+  console.log(`Failed checks: ${failedChecks.length}`);
   console.log(`Result JSON: ${path.relative(rootDir, resultPath)}`);
 
   if (!output.ok) {
@@ -81,7 +102,7 @@ function main() {
   }
 
   console.log("");
-  console.log("RESULT: PASS — lifecycle wrapper forwards additionalCategoryLinks and transpiles.");
+  console.log("RESULT: PASS — lifecycle wrapper fully forwards additionalCategoryLinks and transpiles.");
 }
 
 main();

@@ -103,6 +103,7 @@ export async function processActivityValueObjectBridge(
     }
 
     const bridgeResult = await processValueObjectBridgeForActivityEvent({
+      additionalCategoryLinks: input.additionalCategoryLinks,
       supabase,
       eventId,
       mappings: mappingResult.mappings,

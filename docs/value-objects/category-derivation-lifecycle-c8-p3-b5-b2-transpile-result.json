@@ -1,12 +1,12 @@
 {
-  "ok": false,
-  "checkId": "P4.10.0-C8-P3-B5-B2",
-  "checkedAt": "2026-05-20T08:50:15.751Z",
+  "ok": true,
+  "checkId": "P4.10.0-C8-P3-B5-B2-fix1",
+  "checkedAt": "2026-05-20T09:01:20.986Z",
   "targetPath": "lib\\activity\\activityValueObjectLifecycle.ts",
   "diagnosticsCount": 0,
-  "missingPatterns": [
-    "additionalCategoryLinks: input.additionalCategoryLinks"
-  ],
+  "missingPatterns": [],
+  "failedChecks": [],
+  "callBlockLength": 232,
   "diagnostics": [],
-  "note": "Targeted lifecycle wrapper transpile/pattern check for additionalCategoryLinks passthrough."
+  "note": "Checks lifecycle wrapper import/type plus actual additionalCategoryLinks forwarding into processValueObjectBridgeForActivityEvent."
 }
