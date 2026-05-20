@@ -1,0 +1,16 @@
+{
+  "ok": false,
+  "checkId": "P4.10.0-C8-P3-B6-F",
+  "checkedAt": "2026-05-20T12:16:47.062Z",
+  "targetPath": "lib\\activity\\categoryDerivation\\resolver.ts",
+  "diagnosticsCount": 0,
+  "missingPatterns": [
+    "name: title,"
+  ],
+  "forbiddenFound": [],
+  "failedChecks": [
+    "payload does not include name: title"
+  ],
+  "payloadBlockLength": 775,
+  "diagnostics": []
+}
