@@ -1,0 +1,38 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-P3-B7-C2-D-B3 — TypeScript proof
+
+Generated: 2026-05-20 19:17:59
+Command: npx.cmd tsc --noEmit --pretty false
+ExitCode: 2
+StartedAt: 2026-05-20T19:17:53.4827331+02:00
+FinishedAt: 2026-05-20T19:17:59.1916708+02:00
+
+Route:
+src/app/api/activity/debug/value-object-bridge-proof/route.ts
+
+Fix:
+- Replaced incorrect activity_event_id lookup strategy.
+- Uses event_id / source_event_id candidate strategy for bridge link tables.
+- Derives state deltas, aggregates, snapshots, usage aggregates and category links through value object / value object instance ids.
+- Does not rerun /api/activity/complete.
+- Keeps route read-only.
+
+Output:
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(437,21): error TS2345: Argument of type 'TableProof | null' is not assignable to parameter of type 'TableProof'.
+  Type 'null' is not assignable to type 'TableProof'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(446,21): error TS2345: Argument of type 'TableProof | null' is not assignable to parameter of type 'TableProof'.
+  Type 'null' is not assignable to type 'TableProof'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(450,10): error TS18047: 'activityEventValueObjectLinksResult' is possibly 'null'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(451,10): error TS18047: 'activityEventValueObjectInstanceLinksResult' is possibly 'null'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(465,10): error TS18047: 'activityEventValueObjectLinksResult' is possibly 'null'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(466,10): error TS18047: 'activityEventValueObjectInstanceLinksResult' is possibly 'null'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(675,7): error TS18047: 'activityEventValueObjectLinksResult' is possibly 'null'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(677,7): error TS18047: 'activityEventValueObjectInstanceLinksResult' is possibly 'null'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(693,5): error TS18047: 'activityEventValueObjectLinksResult' is possibly 'null'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(694,5): error TS18047: 'activityEventValueObjectInstanceLinksResult' is possibly 'null'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(732,11): error TS18047: 'activityEventValueObjectLinksResult' is possibly 'null'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(734,11): error TS18047: 'activityEventValueObjectInstanceLinksResult' is possibly 'null'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(751,38): error TS18047: 'activityEventValueObjectLinksResult' is possibly 'null'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(753,9): error TS18047: 'activityEventValueObjectInstanceLinksResult' is possibly 'null'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(765,9): error TS18047: 'activityEventValueObjectLinksResult' is possibly 'null'.
+src/app/api/activity/debug/value-object-bridge-proof/route.ts(768,9): error TS18047: 'activityEventValueObjectInstanceLinksResult' is possibly 'null'.
