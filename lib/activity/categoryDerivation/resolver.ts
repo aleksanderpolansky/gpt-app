@@ -1,31 +1,5 @@
-    if (!defaultContextId) {
-      unresolvedCount += 1;
-      warnings.push(
-        `Cannot create contextual category without default context: ${normalizedSlug}`,
-      );
-      resolved.push({
-        ...candidate,
-        categoryId: null,
-        resolutionStatus: "unresolved",
-        metadata: {
-          ...(candidate.metadata ?? {}),
-          normalizedSlug,
-          createPolicy,
-          missingContextCode: DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE,
-        },
-      });
-      continue;
-    }
-
-    const created = await createContextualCategory(
-      supabase,
-      candidate,
-      normalizedSlug,
-      defaultContextId,
-      options,
-    );import type {
-  Ca
-    context_id: contextId,tegoryCandidate,
+import type {
+  CategoryCandidate,
   CategoryResolutionResult,
   JsonRecord,
   ResolvedCategoryCandidate,
@@ -50,7 +24,7 @@ interface SupabaseMaybeSingleResult<T> {
 }
 
 interface SupabaseSelectBuilder<T> {
-  eq(column: string, value: string | number | boolean | null): SupabaseSelectBuilder<T>;
+  eq(column: string, value: string): SupabaseSelectBuilder<T>;
   limit(count: number): SupabaseSelectBuilder<T>;
   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
 }
@@ -69,13 +43,6 @@ export interface CategoryResolverSupabaseClient {
   from<T = Record<string, unknown>>(table: string): SupabaseTableClient<T>;
 }
 
-interface ContextRow {
-  id: string;
-  code: string;
-  name?: string | null;
-  status?: string | null;
-  is_active?: boolean | null;
-}
 interface ContextualCategoryRow {
   id: string;
   slug?: string | null;
@@ -116,39 +83,16 @@ function normalizeTitle(candidate: CategoryCandidate): string {
 function errorMessage(error: { message?: string } | null): string | null {
   return error?.message ?? null;
 }
-const DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE = "personal_activity";
-
-async function findDefaultCategoryDerivationContextId(
-  supabase: CategoryResolverSupabaseClient,
-): Promise<{ contextId: string | null; error: string | null }> {
-  const result = await supabase
-    .from<ContextRow>("contexts")
-    .select("id, code, status, is_active")
-    .eq("code", DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
-
-  return {
-    contextId: result.data?.id ?? null,
-    error: errorMessage(result.error),
-  };
-}
 
 async function findExistingCategory(
   supabase: CategoryResolverSupabaseClient,
   slug: string,
   semanticLayer?: string,
-  contextId?: string | null,
 ): Promise<{ row: ContextualCategoryRow | null; error: string | null }> {
   let query = supabase
     .from<ContextualCategoryRow>("contextual_categories")
     .select("*")
     .eq("slug", slug);
-
-  if (contextId && contextId.trim().length > 0) {
-    query = query.eq("context_id", contextId);
-  }
 
   if (semanticLayer && semanticLayer.trim().length > 0) {
     query = query.eq("semantic_layer", semanticLayer);
@@ -266,23 +210,6 @@ export async function resolveCategoryCandidates(
   let createdCount = 0;
   let reusedCount = 0;
   let unresolvedCount = 0;
-
-  const defaultContextResult =
-    await findDefaultCategoryDerivationContextId(supabase);
-
-  const defaultContextId = defaultContextResult.contextId;
-
-  if (defaultContextResult.error) {
-    warnings.push(
-      `Default category derivation context lookup failed: ${defaultContextResult.error}`,
-    );
-  }
-
-  if (!defaultContextId && createPolicy !== "never") {
-    warnings.push(
-      `Default category derivation context not found: ${DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE}`,
-    );
-  }
 
   for (const candidate of candidates) {
     const normalizedSlug = normalizeCategoryCandidateSlug(candidate.slug);
