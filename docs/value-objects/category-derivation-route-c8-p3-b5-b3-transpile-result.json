@@ -1,0 +1,18 @@
+{
+  "ok": false,
+  "checkId": "P4.10.0-C8-P3-B5-B3",
+  "checkedAt": "2026-05-20T09:04:00.637Z",
+  "targetPath": "src\\app\\api\\activity\\debug\\free-text-value-object-test\\route.ts",
+  "diagnosticsCount": 0,
+  "missingPatterns": [
+    "type AdditionalValueObjectCategoryLink",
+    "categoryDerivationBridgeAdditionalCategoryLinks",
+    "additionalCategoryLinks: categoryDerivationBridgeAdditionalCategoryLinks"
+  ],
+  "failedChecks": [
+    "bridge call does not pass additionalCategoryLinks"
+  ],
+  "callBlockLength": 181,
+  "diagnostics": [],
+  "note": "Targeted route smoke check for passing resolved Category Derivation candidates into additionalCategoryLinks."
+}

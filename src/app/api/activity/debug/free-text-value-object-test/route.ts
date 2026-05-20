@@ -20,6 +20,7 @@ import {
   type CategoryDerivationPersistenceSupabaseClient,
 } from "../../../../../../lib/activity/categoryDerivation/persistDerivations";
 import type { CategoryDerivationInput } from "../../../../../../lib/activity/categoryDerivation/types";
+import type { AdditionalValueObjectCategoryLink } from "../../../../../../lib/activity/valueObjectBridge";
 
 export const dynamic = "force-dynamic";
 
@@ -255,6 +256,272 @@ function resolveTiming(body: FreeTextValueObjectTestBody) {
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isUuidLike(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value
+    )
+  );
+}
+
+function readStringField(
+  record: Record<string, unknown>,
+  keys: string[]
+): string | null {
+  for (const key of keys) {
+    const value = record[key];
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function readNumberField(
+  record: Record<string, unknown>,
+  keys: string[]
+): number | null {
+  for (const key of keys) {
+    const value = record[key];
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      const parsed = Number(value);
+
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+}
+
+function readObjectArray(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(isRecord);
+}
+
+function collectPossibleResolvedCandidates(
+  categoryDerivationResult: unknown
+): Record<string, unknown>[] {
+  if (!isRecord(categoryDerivationResult)) {
+    return [];
+  }
+
+  const direct = readObjectArray(categoryDerivationResult.resolvedCandidates);
+
+  if (direct.length > 0) {
+    return direct;
+  }
+
+  const resolution = isRecord(categoryDerivationResult.resolution)
+    ? categoryDerivationResult.resolution
+    : null;
+
+  if (resolution) {
+    const fromResolution = readObjectArray(resolution.resolvedCandidates);
+
+    if (fromResolution.length > 0) {
+      return fromResolution;
+    }
+
+    const fromResolutionCandidates = readObjectArray(resolution.candidates);
+
+    if (fromResolutionCandidates.length > 0) {
+      return fromResolutionCandidates;
+    }
+  }
+
+  const result = isRecord(categoryDerivationResult.result)
+    ? categoryDerivationResult.result
+    : null;
+
+  if (result) {
+    const fromResult = readObjectArray(result.resolvedCandidates);
+
+    if (fromResult.length > 0) {
+      return fromResult;
+    }
+  }
+
+  return [];
+}
+
+function collectPossibleDerivationRows(
+  categoryDerivationResult: unknown
+): Record<string, unknown>[] {
+  if (!isRecord(categoryDerivationResult)) {
+    return [];
+  }
+
+  const direct = readObjectArray(categoryDerivationResult.activityCategoryDerivations);
+
+  if (direct.length > 0) {
+    return direct;
+  }
+
+  const persistence = isRecord(categoryDerivationResult.persistence)
+    ? categoryDerivationResult.persistence
+    : null;
+
+  if (persistence) {
+    const fromPersistence = readObjectArray(
+      persistence.activityCategoryDerivations
+    );
+
+    if (fromPersistence.length > 0) {
+      return fromPersistence;
+    }
+
+    const fromRows = readObjectArray(persistence.rows);
+
+    if (fromRows.length > 0) {
+      return fromRows;
+    }
+  }
+
+  return [];
+}
+
+function buildDerivationRowBySlug(
+  rows: Record<string, unknown>[]
+): Map<string, Record<string, unknown>> {
+  const result = new Map<string, Record<string, unknown>>();
+
+  for (const row of rows) {
+    const slug = readStringField(row, [
+      "candidateSlug",
+      "candidate_slug",
+      "categorySlug",
+      "category_slug",
+      "slug",
+    ]);
+
+    if (slug) {
+      result.set(slug, row);
+    }
+  }
+
+  return result;
+}
+
+function buildAdditionalCategoryLinksForBridge(params: {
+  categoryDerivationEnabled: boolean;
+  categoryDerivationDryRun: boolean;
+  activityEventId: string;
+  derivationRunId: string | null;
+  categoryDerivationResult: unknown;
+}): AdditionalValueObjectCategoryLink[] | undefined {
+  const {
+    categoryDerivationEnabled,
+    categoryDerivationDryRun,
+    activityEventId,
+    derivationRunId,
+    categoryDerivationResult,
+  } = params;
+
+  if (!categoryDerivationEnabled || categoryDerivationDryRun) {
+    return undefined;
+  }
+
+  const resolvedCandidates =
+    collectPossibleResolvedCandidates(categoryDerivationResult);
+  const derivationRowsBySlug = buildDerivationRowBySlug(
+    collectPossibleDerivationRows(categoryDerivationResult)
+  );
+
+  const allowedResolutionStatuses = new Set([
+    "resolved_existing",
+    "created_suggested",
+    "created_active",
+  ]);
+
+  const links: AdditionalValueObjectCategoryLink[] = [];
+
+  for (const candidate of resolvedCandidates) {
+    const categoryId = readStringField(candidate, [
+      "categoryId",
+      "category_id",
+      "resolvedCategoryId",
+      "resolved_category_id",
+    ]);
+
+    if (!isUuidLike(categoryId)) {
+      continue;
+    }
+
+    const resolutionStatus =
+      readStringField(candidate, ["resolutionStatus", "resolution_status"]) ??
+      "resolved_existing";
+
+    if (!allowedResolutionStatuses.has(resolutionStatus)) {
+      continue;
+    }
+
+    const candidateSlug =
+      readStringField(candidate, [
+        "candidateSlug",
+        "candidate_slug",
+        "categorySlug",
+        "category_slug",
+        "slug",
+      ]) ?? categoryId;
+
+    const derivationRow = derivationRowsBySlug.get(candidateSlug) ?? null;
+
+    const activityCategoryDerivationId = derivationRow
+      ? readStringField(derivationRow, ["id", "activityCategoryDerivationId"])
+      : null;
+
+    links.push({
+      categoryId,
+      categoryTable: "contextual_categories",
+      categoryRole: "semantic_component",
+      source: "rule",
+      confidence:
+        readNumberField(candidate, ["confidence", "score"]) ??
+        readNumberField(derivationRow ?? {}, ["confidence", "score"]),
+      derivationRunId,
+      activityCategoryDerivationId,
+      activityEventId,
+      candidateSlug,
+      candidateTitle: readStringField(candidate, [
+        "candidateTitle",
+        "candidate_title",
+        "title",
+        "label",
+        "name",
+      ]),
+      semanticLayer: readStringField(candidate, [
+        "semanticLayer",
+        "semantic_layer",
+      ]),
+      categoryType: readStringField(candidate, ["categoryType", "category_type"]),
+      resolutionStatus,
+      metadata: {
+        sourceLayer: "category_derivation",
+        sourceRoute: "/api/activity/debug/free-text-value-object-test",
+        p4Step: "P4.10.0-C8-P3-B5-B3",
+      },
+    });
+  }
+
+  return links.length > 0 ? links : undefined;
+}
 async function runCategoryDerivationForDebugRoute(params: {
   activityEventId: string;
   inputText: string;
