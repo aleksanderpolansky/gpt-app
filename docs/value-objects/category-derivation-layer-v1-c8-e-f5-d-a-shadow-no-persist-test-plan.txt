@@ -1,0 +1,271 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F5-D-A - Category Derivation shadow_no_persist Local Test Plan
+Created: 2026-05-21 19:54:20
+Base commit before this document: 7e4cd27
+
+STATUS
+Planning document only.
+No runtime code changes.
+No database changes.
+No /api/activity/complete patch.
+No OpenAI call.
+No UI changes.
+
+CURRENT VERIFIED BASELINE
+
+F5-C was completed successfully.
+
+Implemented production-route patch:
+src/app/api/activity/complete/route.ts
+
+Committed in:
+79d024b Patch complete route with disabled Category Derivation adapter
+
+Documented in:
+7e4cd27 Document complete route disabled Category Derivation adapter proof
+
+Verified default behavior:
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE is not set.
+Therefore routeRunner mode is disabled.
+
+Runtime proof:
+POST /api/activity/complete returned:
+- HTTP 200
+- ok: true
+- status: completed
+
+categoryDerivationRouteRunner returned:
+- enabled: false
+- mode: disabled
+- ok: true
+- skipped: true
+- reason: disabled
+- derivationRunId: null
+- candidateCount: 0
+- resolvedCandidateCount: 0
+- persistenceDerivationRowsCreated: 0
+- warnings: []
+- errors: []
+
+PURPOSE OF F5-D
+
+Test the new complete-route adapter in local shadow mode without persistence.
+
+Target mode:
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_no_persist
+
+Expected behavior:
+- complete route still completes activity_event;
+- routeRunner adapter executes;
+- routeRunner derives candidates;
+- routeRunner resolves candidates because adapter sets shouldResolve=true for routeRunner modes;
+- routeRunner does not persist because shouldPersist=false in shadow_no_persist;
+- no new category_derivation_runs row is created by routeRunner adapter;
+- no new activity_category_derivations rows are created by routeRunner adapter;
+- response contains categoryDerivationRouteRunner metadata.
+
+WHAT shadow_no_persist MEANS IN CURRENT CONFIG
+
+From config.ts:
+mode = shadow_no_persist
+
+Expected config-derived booleans:
+- isDisabled: false
+- isDebugOnly: false
+- usesLegacyExistingCompleteRouteFlow: false
+- usesRouteRunnerInCompleteRoute: true
+- shouldPersist: false
+- shouldResolve: true
+- isShadowMode: true
+- isProductionPersistMode: false
+
+Expected adapter behavior:
+- it does not skip because disabled/debug_only/legacy_existing are false;
+- it validates activityEvent.id;
+- it validates input text;
+- it validates actorId;
+- it does not run idempotency lookup because shouldPersist=false;
+- it calls runCategoryDerivationRoute with persist=false and resolve=true;
+- routeRunner returns derivation/resolution result without persistence rows.
+
+EXPECTED RESPONSE IN shadow_no_persist
+
+categoryDerivationRouteRunner should be approximately:
+
+enabled: true
+mode: shadow_no_persist
+ok: true
+skipped: false
+reason: route_runner_completed
+derivationRunId: null
+candidateCount: greater than 0
+resolvedCandidateCount: greater than 0
+persistenceDerivationRowsCreated: 0
+warnings: []
+errors: []
+
+Expected for phrase:
+walked to work for 15 minutes
+
+Likely candidates:
+- walking
+- work
+- commute-to-work
+- walking-to-work
+- duration-minutes
+
+IMPORTANT DATABASE EXPECTATION
+
+Because persist=false:
+- category_derivation_runs should not get a new routeRunner run from this adapter call;
+- activity_category_derivations should not get new rows from this adapter call.
+
+However:
+The legacy complete-route Category Derivation flow still exists and may persist its own legacy category derivation data.
+
+Therefore, verification must distinguish:
+1. legacy category derivation writes;
+2. new routeRunner adapter writes.
+
+The routeRunner adapter in shadow_no_persist should return:
+- derivationRunId: null
+- persistenceDerivationRowsCreated: 0
+
+This response-level check is the primary proof that adapter did not persist.
+
+LOCAL TEST SETUP
+
+This test requires local server restart with environment variable:
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_no_persist
+
+Because Next.js server-side process.env values are read by the local dev server process, restart local dev server before testing.
+
+Recommended PowerShell start command:
+
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE = "shadow_no_persist"; npm run dev
+
+After test, reset or restart without the variable for default disabled behavior.
+
+DO NOT set:
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_persist
+
+DO NOT set:
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+
+F5-D-B TEST EVENT PLAN
+
+Create a fresh activity_event with:
+- status = started
+- processing_status = pending
+- input_text = walked to work for 15 minutes
+- title = F5-D-B complete route shadow_no_persist routeRunner runtime test
+- metadata_json.testStep = P4.10.0-C8-E-F5-D-B
+- doNotUseAsCanonicalProof = true
+
+Do not reuse completed event:
+2e6f14c2-8478-479b-8173-83b86a53cad5
+
+Reason:
+It is already completed and cannot be completed again through the normal route.
+
+F5-D-B BROWSER TEST PLAN
+
+Browser:
+http://localhost:3000
+
+Console fetch:
+POST /api/activity/complete
+
+Payload:
+{
+  eventId: fresh_event_id,
+  status: "completed",
+  comment: "F5-D-B runtime test: complete route with routeRunner adapter shadow_no_persist."
+}
+
+EXPECTED CHECKS
+
+Response checks:
+- HTTP status: 200
+- json.ok: true
+- json.status: completed
+- event.id matches
+- categoryDerivationRouteRunner exists
+- routeRunner.enabled is true
+- routeRunner.mode is shadow_no_persist
+- routeRunner.ok is true
+- routeRunner.skipped is false
+- routeRunner.reason is route_runner_completed
+- routeRunner.derivationRunId is null
+- routeRunner.candidateCount > 0
+- routeRunner.resolvedCandidateCount > 0
+- routeRunner.persistenceDerivationRowsCreated is 0
+- valueObjectBridge exists
+- processingLogs exists
+
+SUPABASE READ-ONLY VERIFICATION PLAN
+
+After runtime test, run read-only SQL for the fresh event id.
+
+Verify:
+1. activity_event is completed.
+2. route response showed routeRunner derivationRunId = null.
+3. No routeRunner-specific category_derivation_runs row exists with:
+   schema_version = category_derivation_complete_route_v1
+   policy_version = c8-e-f4
+   activity_event_id = fresh_event_id
+   status in completed / completed_with_warnings
+
+Important:
+Legacy complete-route category derivation may create rows with older policy/schema naming.
+Do not treat legacy rows as shadow_no_persist routeRunner rows.
+
+F5-D-B SUCCESS CRITERIA
+
+PASS only if:
+- TypeScript remains clean.
+- Runtime POST returns HTTP 200.
+- categoryDerivationRouteRunner.mode = shadow_no_persist.
+- categoryDerivationRouteRunner.reason = route_runner_completed.
+- candidateCount > 0.
+- resolvedCandidateCount > 0.
+- derivationRunId = null.
+- persistenceDerivationRowsCreated = 0.
+- valueObjectBridge remains present.
+- processingLogs remain present.
+- no routeRunner-persisted run is created.
+
+F5-D-B FAIL CONDITIONS
+
+FAIL if:
+- HTTP status is not 200.
+- complete route fails.
+- routeRunner.mode is still disabled.
+- routeRunner.skipped is true.
+- routeRunner.derivationRunId is not null.
+- persistenceDerivationRowsCreated > 0.
+- a routeRunner completed run is inserted despite shadow_no_persist.
+- valueObjectBridge disappears.
+- processingLogs disappear.
+
+NO-GO
+
+Do not commit any code in F5-D-A.
+Do not patch /api/activity/complete in F5-D-A.
+Do not enable shadow_persist.
+Do not enable production_persist.
+Do not call OpenAI.
+Do not create UI.
+Do not create database migrations.
+Do not modify commercial core.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+Do not remove legacy Category Derivation code.
+
+NEXT STEP
+
+Proceed to:
+P4.10.0-C8-E-F5-D-B - run shadow_no_persist local runtime test.
+
+END OF F5-D-A SHADOW_NO_PERSIST LOCAL TEST PLAN
