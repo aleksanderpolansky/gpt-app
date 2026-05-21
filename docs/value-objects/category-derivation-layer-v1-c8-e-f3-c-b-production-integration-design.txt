@@ -1,0 +1,418 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F3-C-B - Category Derivation Production Integration Design
+Created: 2026-05-21 15:02:31
+Base commit before this document: d7bec1f
+
+STATUS
+Design document only.
+No runtime code changes.
+No database changes.
+No /api/activity/complete patch.
+No OpenAI call.
+No UI changes.
+
+PURPOSE
+
+Define how the new routeRunner.ts should be integrated with /api/activity/complete later, without duplicating or breaking the existing category-derivation logic already present in the complete route.
+
+BACKGROUND
+
+F3-C-A showed that /api/activity/complete/route.ts already contains Category Derivation logic.
+
+Important findings from F3-C-A:
+
+1. The route file is large and production-critical:
+- line_count: 1497
+- size_bytes: 44073
+
+2. Existing complete route imports:
+- deriveCategoryCandidates from ruleExtractor
+- resolveCategoryCandidates from resolver
+- persistCategoryDerivations from persistDerivations
+- CategoryDerivationInput from types
+
+3. Existing complete route already has internal policy/result structures:
+- CategoryDerivationCompleteRoutePolicy
+- CategoryDerivationCompleteRouteResult
+- getCategoryDerivationPolicyForCompleteRoute
+- categoryDerivationResult
+- derivationRunId
+- resolutionResult
+
+4. Existing complete route already performs the older flow:
+- deriveCategoryCandidates
+- resolveCategoryCandidates
+- persistCategoryDerivations
+
+5. Existing complete route does not directly mention:
+- category_derivation_runs
+- activity_category_derivations
+
+Interpretation:
+The old complete-route logic delegates DB writes to persistDerivations.ts. New routeRunner.ts must not be added blindly because that could create duplicate derivation runs and duplicate activity_category_derivations rows.
+
+CURRENT VERIFIED NEW STACK
+
+New files created and verified earlier:
+
+1. lib/activity/categoryDerivation/persistence.ts
+Provides:
+- buildCategoryDerivationInputHash
+- createCategoryDerivationRun
+- finishCategoryDerivationRun
+- failCategoryDerivationRun
+- persistActivityCategoryDerivations
+
+2. lib/activity/categoryDerivation/routeRunner.ts
+Provides:
+- runCategoryDerivationRoute
+- deterministic derivation
+- resolver integration
+- persistence integration
+- run finish/fail handling
+- unified result object
+
+3. Debug endpoint:
+src/app/api/activity/debug/category-derivation-route-runner-test/route.ts
+
+Runtime proof:
+- GET PASS
+- POST PASS
+- Supabase verification PASS
+
+Verified runtime result:
+- candidateCount: 5
+- resolvedCandidateCount: 5
+- rowsCreated: 5
+- warnings: []
+- errors: []
+- aiUsed: false
+- patchesCompleteRoute: false
+
+DESIGN DECISION
+
+Do not add routeRunner as an additional second Category Derivation flow inside /api/activity/complete.
+
+Instead, the final production integration should replace or wrap the existing older complete-route Category Derivation block with a feature-flagged adapter.
+
+Reason:
+Existing /api/activity/complete already derives, resolves, and persists categories. Running routeRunner in addition would likely duplicate work.
+
+TARGET INTEGRATION MODEL
+
+Use an adapter layer:
+
+lib/activity/categoryDerivation/completeRouteIntegration.ts
+
+This adapter should sit between /api/activity/complete and routeRunner.ts.
+
+The complete route should eventually call only one integration function, for example:
+
+runCategoryDerivationForCompleteRoute({
+  supabase,
+  activityEvent,
+  actorId,
+  mode,
+  includeResponseDebug,
+  failActivityComplete,
+})
+
+The adapter should:
+1. Preserve the current CategoryDerivationCompleteRouteResult response shape or provide a compatible shape.
+2. Use routeRunner internally when feature flag mode allows.
+3. Skip safely when disabled.
+4. Avoid duplicate category derivation rows.
+5. Convert routeRunner result into the same fields currently used by complete route response metadata.
+
+RECOMMENDED MODES
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE
+
+Allowed values:
+
+1. disabled
+No routeRunner execution.
+No writes.
+Complete route returns disabled/skipped metadata only.
+
+2. legacy_existing
+Keep current /api/activity/complete logic using old derive/resolve/persistDerivations flow.
+This mode may be useful temporarily during transition.
+
+3. shadow_no_persist
+Call routeRunner with:
+- persist: false
+- resolve: true or false depending on cost/safety choice
+
+Purpose:
+Verify derivation output without writing category_derivation_runs or activity_category_derivations.
+
+4. shadow_persist
+Call routeRunner with:
+- persist: true
+- resolve: true
+
+Purpose:
+Write rows, but treat failure as non-fatal.
+
+5. production_persist
+Call routeRunner with:
+- persist: true
+- resolve: true
+
+Purpose:
+Normal production behavior once proven.
+
+Recommended default:
+disabled
+
+Recommended first local test mode:
+shadow_no_persist
+
+Recommended second local test mode:
+shadow_persist
+
+Recommended production default:
+disabled until verified.
+
+ADDITIONAL FLAGS
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG
+
+Allowed:
+- true
+- false
+
+Default:
+false
+
+Purpose:
+Controls whether full routeRunner diagnostic metadata is included in /api/activity/complete response.
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE
+
+Allowed:
+- true
+- false
+
+Default:
+false
+
+Purpose:
+Controls whether category derivation failure should fail the whole activity completion request.
+
+Recommended:
+false until mature.
+
+IDEMPOTENCY POLICY
+
+Before any production persist mode, the adapter must check whether a completed category_derivation_run already exists for the same activity_event_id and same policy/schema/rule version.
+
+Recommended idempotency rule:
+
+Skip creating a new persistent run if there is already a completed run where:
+- activity_event_id matches
+- processor_version = category_derivation_v1
+- rule_version = rules_v1
+- schema_version matches the configured integration schema version
+- policy_version matches the configured integration policy version
+- status in completed / completed_with_warnings
+
+If a run exists:
+- return skipped_existing_completed_run
+- include existing derivationRunId
+- do not insert new activity_category_derivations
+
+Future revision logic:
+Only later add rerun/revision behavior if:
+- rule_version changes;
+- policy_version changes;
+- schema_version changes;
+- user correction requires re-derivation.
+
+ERROR POLICY
+
+Default production behavior:
+Category Derivation errors must not fail /api/activity/complete.
+
+If routeRunner fails:
+- capture error in categoryDerivationResult
+- set ok: false for category derivation only
+- keep activity completion successful unless fail flag is true
+
+If CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=true:
+- routeRunner failure may return a route error
+- this should be used only for controlled local tests, not default production
+
+RESPONSE SHAPE POLICY
+
+The complete route currently returns categoryDerivationResult-like metadata near the final response.
+
+The new integration should preserve a compact response shape:
+
+categoryDerivation: {
+  enabled: boolean,
+  mode: string,
+  ok: boolean,
+  skipped: boolean,
+  reason: string | null,
+  derivationRunId: string | null,
+  candidateCount: number,
+  resolvedCandidateCount: number,
+  persistenceDerivationRowsCreated: number,
+  warnings: string[],
+  errors: string[]
+}
+
+Optional debug extension only if INCLUDE_RESPONSE_DEBUG=true:
+
+categoryDerivationDebug: {
+  routeRunnerResult,
+  policy,
+  idempotency,
+  versions
+}
+
+PLACEMENT IN /api/activity/complete
+
+Based on F3-C-A, routeRunner integration should happen where existing categoryDerivationResult is currently produced, before Value Object Bridge response metadata is assembled.
+
+Important:
+Do not move Value Object Bridge / impact / aggregate / snapshot logic in this integration block.
+
+Production route order should remain conceptually:
+
+1. Validate ACTIVITY_RECORDING_ENABLED.
+2. Parse request.
+3. Resolve authenticated user/person actor context.
+4. Create or complete activity_event.
+5. Run existing core processing.
+6. Run Category Derivation integration adapter.
+7. Run or preserve Value Object Bridge / known-template / impact processing as currently designed.
+8. Return response with compact category derivation metadata.
+
+Important:
+The exact code placement must be confirmed immediately before patching, using the current route.ts line structure.
+
+RELATION TO EXISTING OLD COMPLETE-ROUTE CATEGORY DERIVATION BLOCK
+
+Because /api/activity/complete already has old category derivation logic, the patch must choose one of two paths:
+
+Option A - minimal safe transition:
+Keep old functions in place but gate old execution behind legacy_existing mode.
+Add new adapter but do not remove old code immediately.
+
+Option B - clean replacement:
+Remove old inline derive/resolve/persist block and replace it with completeRouteIntegration.ts.
+Riskier, but cleaner.
+
+Recommended:
+Option A first.
+
+Reason:
+It reduces risk and allows comparison between legacy_existing and routeRunner modes.
+
+F3-C-B DECISION
+
+Proceed with Option A:
+Feature-flagged adapter with legacy_existing available temporarily.
+
+Do not remove old complete-route category derivation logic yet.
+Do not run new routeRunner unconditionally.
+Do not write duplicate rows.
+
+F4 IMPLEMENTATION PLAN
+
+F4-A:
+Create config helper:
+lib/activity/categoryDerivation/config.ts
+
+Exports:
+- CategoryDerivationRouteRunnerMode
+- getCategoryDerivationRouteRunnerConfig
+
+Reads:
+- CATEGORY_DERIVATION_ROUTE_RUNNER_MODE
+- CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE
+
+Defaults:
+- mode: disabled
+- includeResponseDebug: false
+- failActivityComplete: false
+
+F4-B:
+Create read-only idempotency helper in persistence.ts or separate file:
+lib/activity/categoryDerivation/runLookup.ts
+
+Function:
+findExistingCompletedCategoryDerivationRunForActivityEvent(...)
+
+F4-C:
+Create complete route adapter:
+lib/activity/categoryDerivation/completeRouteIntegration.ts
+
+Function:
+runCategoryDerivationForCompleteRoute(...)
+
+This adapter should:
+- read config;
+- evaluate existing policy;
+- apply idempotency check;
+- call runCategoryDerivationRoute only when allowed;
+- map routeRunner result to compact complete-route result.
+
+F4-D:
+TypeScript verification and documentation.
+No /api/activity/complete patch yet.
+
+F5 IMPLEMENTATION PLAN
+
+F5-A:
+Patch /api/activity/complete behind feature flag.
+
+Initial mode:
+disabled by default.
+
+F5-B:
+Local test with disabled mode:
+- verify response remains stable;
+- no new DB writes.
+
+F5-C:
+Local test with shadow_no_persist:
+- verify routeRunner metadata;
+- no new category_derivation_runs;
+- no new activity_category_derivations.
+
+F5-D:
+Local test with shadow_persist:
+- verify one new run and rows;
+- verify idempotency on repeated request.
+
+F5-E:
+Document production route proof.
+
+NO-GO
+
+Do not patch /api/activity/complete in this step.
+Do not call OpenAI.
+Do not create UI.
+Do not modify commercial core.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+Do not remove old category derivation code yet.
+Do not enable persistent mode by default.
+
+FINAL DESIGN DECISION
+
+The new routeRunner is ready for controlled integration, but must be introduced through:
+1. config helper,
+2. idempotency helper,
+3. complete-route adapter,
+4. then feature-flagged production route patch.
+
+The immediate next implementation step is:
+P4.10.0-C8-E-F4-A - create Category Derivation routeRunner config helper.
+
+END OF F3-C-B PRODUCTION INTEGRATION DESIGN
