@@ -1,0 +1,133 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F4-D-FIX1 — Corrected Category Derivation Support-Layer Verification
+Created: 2026-05-21 16:47:10
+Base commit before this document: 5406c2e
+
+STATUS
+Correction note for F4-D verification.
+No runtime code changes.
+No database changes.
+No /api/activity/complete patch.
+No OpenAI call.
+No UI changes.
+
+WHY THIS FIX EXISTS
+
+During F4-D verification, the documentation file was created and committed successfully, TypeScript passed, and git status was clean.
+
+However, one marker verification check was too strict and failed:
+
+STOP: completeRouteIntegration.ts marker missing: shadow_no_persist
+
+This was not a TypeScript error and not a runtime-code error.
+
+The check was wrong because:
+- shadow_no_persist is a mode literal defined in config.ts;
+- completeRouteIntegration.ts does not need to contain that literal directly;
+- the adapter correctly works through config-derived booleans:
+  - config.usesRouteRunnerInCompleteRoute
+  - config.shouldPersist
+  - config.shouldResolve
+
+CORRECTED VERIFICATION RESULT
+
+Corrected marker verification passed.
+
+Verified files:
+1. lib/activity/categoryDerivation/config.ts
+2. lib/activity/categoryDerivation/runLookup.ts
+3. lib/activity/categoryDerivation/completeRouteIntegration.ts
+
+config.ts verified markers include:
+- CATEGORY_DERIVATION_ROUTE_RUNNER_MODE
+- CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE
+- disabled
+- debug_only
+- legacy_existing
+- shadow_no_persist
+- shadow_persist
+- production_persist
+- getCategoryDerivationRouteRunnerConfig
+- getCategoryDerivationRouteRunnerConfigSummary
+
+runLookup.ts verified markers include:
+- DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION
+- DEFAULT_CATEGORY_DERIVATION_RULE_VERSION
+- DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION
+- DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION
+- findExistingCompletedCategoryDerivationRunForActivityEvent
+- buildCompletedCategoryDerivationRunLookupQuery
+- summarizeExistingCompletedCategoryDerivationRunLookup
+- category_derivation_runs
+- completed_with_warnings
+
+completeRouteIntegration.ts verified markers include:
+- runCategoryDerivationForCompleteRoute
+- CategoryDerivationCompleteRouteIntegrationResult
+- getCategoryDerivationRouteRunnerConfig
+- findExistingCompletedCategoryDerivationRunForActivityEvent
+- runCategoryDerivationRoute
+- existing_completed_run_found
+- legacy_existing_mode_selected
+- missing_activity_event_id
+- missing_input_text
+- missing_actor_id
+- route_runner_completed
+- route_runner_failed
+- lookup_error
+- config.usesRouteRunnerInCompleteRoute
+- config.shouldPersist
+- config.shouldResolve
+
+TYPECHECK VERIFICATION
+
+Command:
+npx.cmd tsc --noEmit --pretty false
+
+Result:
+PASS — no TypeScript errors.
+
+CURRENT VERIFIED SUPPORT LAYER
+
+F4-A:
+config.ts created.
+
+F4-A-FIX1:
+config.ts TypeScript narrowing fixed.
+
+F4-B:
+runLookup.ts created.
+
+F4-C:
+completeRouteIntegration.ts created.
+
+F4-D:
+support-layer verification document created.
+
+F4-D-FIX1:
+corrected marker verification documented — this document.
+
+IMPORTANT INTERPRETATION
+
+F4 support layer is valid after this correction.
+
+The earlier F4-D document remains useful as a broad summary, but this F4-D-FIX1 document is the corrected verification record for the marker-check issue.
+
+NO-GO CONFIRMED
+
+/api/activity/complete has not been patched in F4.
+routeRunner is not connected to production route yet.
+OpenAI is not called.
+No UI was created.
+No database migration was executed.
+Commercial core was not modified.
+Canonical production proof event was not rerun.
+Semantic snapshot/correction/moderation tables were not created.
+
+NEXT STEP
+
+Proceed to:
+P4.10.0-C8-E-F5-A — pre-patch complete route integration inventory.
+
+END OF F4-D-FIX1 CORRECTED SUPPORT-LAYER VERIFICATION
