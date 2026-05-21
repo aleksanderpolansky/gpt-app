@@ -1,15 +1,15 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
   ACTIVITY_RECORDING_ENABLED,
-} from "././././././lib/activity/activityRecordingConfig";
-import { getActivityUserContext } from "././././././lib/activity/activityUserContext";
+} from "../../../../../../lib/activity/activityRecordingConfig";
+import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
 import {
   runCategoryDerivationRoute,
   type CategoryDerivationRouteRunnerSupabaseClient,
-} from "././././././lib/activity/categoryDerivation/routeRunner";
-import { supabase } from "././././././lib/supabase";
+} from "../../../../../../lib/activity/categoryDerivation/routeRunner";
+import { supabase } from "../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
