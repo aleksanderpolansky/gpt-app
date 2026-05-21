@@ -1,4 +1,4 @@
-﻿export const CATEGORY_DERIVATION_ROUTE_RUNNER_MODE_ENV =
+export const CATEGORY_DERIVATION_ROUTE_RUNNER_MODE_ENV =
   "CATEGORY_DERIVATION_ROUTE_RUNNER_MODE";
 
 export const CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG_ENV =
@@ -65,7 +65,7 @@ function readBooleanEnv(
   envName: string,
   warnings: string[],
 ): boolean {
-  const normalized = normalizeEnvText(value)?.toLowerCase();
+  const normalized = normalizeEnvText(value)?.toLowerCase() ?? null;
 
   if (normalized === null) {
     return defaultValue;
@@ -92,7 +92,7 @@ function readModeEnv(
   value: string | undefined,
   warnings: string[],
 ): CategoryDerivationRouteRunnerMode {
-  const normalized = normalizeEnvText(value)?.toLowerCase();
+  const normalized = normalizeEnvText(value)?.toLowerCase() ?? null;
 
   if (normalized === null) {
     return "disabled";
