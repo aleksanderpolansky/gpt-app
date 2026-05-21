@@ -1,0 +1,151 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-D4 — Category Derivation Additive Migration Execution Verification
+Created: 2026-05-21 11:23:07
+Base commit before this document: 4883271
+
+STATUS
+C8-E-D additive migration was executed in Supabase SQL Editor.
+Execution result shown by Supabase:
+Success. No rows returned.
+
+This is expected for:
+- ALTER TABLE ADD COLUMN IF NOT EXISTS
+- CREATE INDEX IF NOT EXISTS
+- COMMENT ON COLUMN
+- nullable FK constraints
+
+No destructive operation was executed.
+No DROP.
+No DELETE FROM.
+No UPDATE.
+No INSERT INTO.
+No destructive rename.
+No table recreation.
+
+MIGRATION EXECUTION SOURCE
+
+Executed SQL file:
+docs/value-objects/category-derivation-layer-v1-c8-e-d2-reviewed-execution-migration.sql
+
+Design source:
+docs/value-objects/category-derivation-layer-v1-c8-e-d-additive-migration-design.sql
+
+Previous audit result summary:
+docs/value-objects/category-derivation-layer-v1-c8-e-c-schema-audit-result-summary.txt
+
+POST-EXECUTION VERIFICATION QUERY RESULT
+
+The verification SQL returned exactly 13 rows.
+
+Result:
+
+table_name,column_name,data_type,is_nullable,column_default
+activity_category_derivations,evidence_json,jsonb,NO,'{}'::jsonb
+activity_category_derivations,is_core_meaning,boolean,NO,false
+activity_category_derivations,is_revoked,boolean,NO,false
+activity_category_derivations,status,text,NO,'candidate'::text
+category_derivation_runs,cost_json,jsonb,NO,'{}'::jsonb
+category_derivation_runs,input_hash,text,YES,null
+category_derivation_runs,model_alias,text,YES,null
+category_derivation_runs,policy_version,text,YES,null
+category_derivation_runs,schema_version,text,YES,null
+category_derivation_runs,token_usage_json,jsonb,NO,'{}'::jsonb
+value_object_category_links,activity_derivation_id,uuid,YES,null
+value_object_category_links,derivation_run_id,uuid,YES,null
+value_object_category_links,status,text,NO,'active'::text
+
+EXPECTED / ACTUAL MATCH
+
+1. activity_category_derivations
+Expected: 4 new columns.
+Actual: 4 new columns present.
+PASS:
+- evidence_json jsonb not null default '{}'
+- is_core_meaning boolean not null default false
+- is_revoked boolean not null default false
+- status text not null default 'candidate'
+
+2. category_derivation_runs
+Expected: 6 new columns.
+Actual: 6 new columns present.
+PASS:
+- cost_json jsonb not null default '{}'
+- input_hash text nullable
+- model_alias text nullable
+- policy_version text nullable
+- schema_version text nullable
+- token_usage_json jsonb not null default '{}'
+
+3. value_object_category_links
+Expected: 3 new columns.
+Actual: 3 new columns present.
+PASS:
+- activity_derivation_id uuid nullable
+- derivation_run_id uuid nullable
+- status text not null default 'active'
+
+IMPORTANT DESIGN DECISIONS CONFIRMED
+
+1. category_derivation_runs was not recreated.
+It was extended additively.
+
+2. activity_category_derivations was not recreated.
+It was extended additively.
+
+3. contextual_categories was not modified in this migration.
+No duplicate title, aliases_json, or parent_category_id was added.
+
+4. activity_event_value_object_links was not renamed.
+Existing event_id remains the canonical runtime column.
+
+5. Deferred tables were not created:
+- activity_semantic_interpretations
+- activity_category_corrections
+- category_moderation_items
+
+They remain intentionally postponed until semantic snapshots, correction UI/API, and moderation queue become necessary.
+
+CURRENT PROJECT POSITION AFTER D4
+
+C8-E-A: schema/source inventory — done.
+C8-E-B: additive implementation plan — done.
+C8-E-C: Supabase schema audit — done.
+C8-E-D1: additive migration design — done.
+C8-E-D2: reviewed execution migration copy — done.
+C8-E-D3: Supabase execution and post-execution verification — done.
+C8-E-D4: execution result documentation — this document.
+
+NEXT BLOCK
+
+Proceed to:
+P4.10.0-C8-E-E — Persistence layer hardening.
+
+Recommended next scope:
+1. Create or patch:
+   lib/activity/categoryDerivation/persistence.ts
+
+2. Do not patch runtime route immediately.
+First build the persistence contract against existing and newly added DB columns.
+
+3. Persistence layer should support:
+   - createCategoryDerivationRun
+   - finishCategoryDerivationRun
+   - failCategoryDerivationRun
+   - persistActivityCategoryDerivations
+   - map candidate rows to resolved/unresolved category derivations
+   - store token_usage_json / cost_json when AI is later introduced
+   - store evidence_json and status fields
+   - return IDs needed by Value Object Bridge
+
+4. routeRunner.ts should come after persistence.ts or in the next sub-block.
+
+NO-GO FOR NEXT BLOCK
+
+- Do not start UI.
+- Do not rerun canonical /api/activity/complete proof event.
+- Do not introduce AI model calls yet.
+- Do not create semantic snapshot / correction / moderation tables yet.
+- Do not change commercial core.
+- Do not rename event_id to activity_event_id.
+
+END OF C8-E-D4 VERIFICATION
