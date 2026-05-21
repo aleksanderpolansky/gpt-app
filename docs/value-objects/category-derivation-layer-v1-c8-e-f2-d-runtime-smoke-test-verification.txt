@@ -1,0 +1,299 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F2-D — Category Derivation routeRunner Runtime Smoke Test Verification
+Created: 2026-05-21 14:43:24
+Base commit before this document: 8060b25
+
+STATUS
+F2-C runtime smoke test was completed successfully.
+This document records the final runtime proof.
+
+SCOPE
+Debug route only:
+src/app/api/activity/debug/category-derivation-route-runner-test/route.ts
+
+Production route was not modified:
+/api/activity/complete was not patched.
+
+No OpenAI call was introduced.
+No UI was created.
+No commercial core code was modified.
+No semantic snapshot/correction/moderation tables were created.
+No canonical production proof event was rerun.
+
+LOCAL SERVER
+
+Local dev server:
+npm run dev
+
+Server URL used:
+http://127.0.0.1:3000
+
+GET RUNTIME SMOKE TEST
+
+Endpoint:
+GET /api/activity/debug/category-derivation-route-runner-test
+
+Result:
+HTTP 200
+Content-Type: application/json
+
+JSON markers verified:
+- ok: true
+- endpoint: /api/activity/debug/category-derivation-route-runner-test
+- enabled: true
+- status: ready
+- runtimeImpact.patchesCompleteRoute: false
+- runtimeImpact.callsOpenAI: false
+- runtimeImpact.createsUi: false
+- runtimeImpact.rerunsCanonicalProofEvent: false
+
+GET status:
+PASS
+
+POST RUNTIME SMOKE TEST
+
+Endpoint:
+POST /api/activity/debug/category-derivation-route-runner-test
+
+Payload:
+{
+  "inputText": "walked to work for 15 minutes",
+  "durationMinutes": 15,
+  "title": "F2-C-B routeRunner POST smoke test",
+  "description": "Debug-only POST smoke test for Category Derivation routeRunner",
+  "persist": true,
+  "resolve": true,
+  "createPolicy": "suggested_only",
+  "defaultStatus": "suggested"
+}
+
+Result:
+HTTP 200
+Content-Type: application/json
+
+Runtime response:
+- ok: true
+- status: created_and_route_runner_processed
+
+Created test activity event:
+6b5bc745-5324-4de8-8959-21a67df6bf95
+
+Created derivation run:
+114fc525-3ac2-4966-8d9a-8dd0f65707e8
+
+RouteRunner result:
+- routeRunner.ok: true
+- persisted: true
+- resolved: true
+- candidateCount: 5
+- resolvedCandidateCount: 5
+- warnings: []
+- errors: []
+
+Persistence result:
+- runCreateOk: true
+- rowsOk: true
+- rowsCreated: 5
+- runFinishOk: true
+- runFailOk: null
+
+Safety metadata:
+- aiUsed: false
+- patchesCompleteRoute: false
+- rerunsCanonicalProofEvent: false
+
+POST status:
+PASS
+
+DERIVED / RESOLVED CATEGORIES
+
+The runtime POST produced 5 category candidates and resolved all 5 as existing categories:
+
+1. walking
+- title: Walking
+- semanticLayer: action
+- categoryType: activity_action
+- confidence: 0.95
+- resolutionStatus: resolved_existing
+
+2. work
+- title: Work
+- semanticLayer: context
+- categoryType: life_domain
+- confidence: 0.90
+- resolutionStatus: resolved_existing
+
+3. commute-to-work
+- title: Commute to work
+- semanticLayer: purpose
+- categoryType: activity_meaning
+- confidence: 0.90
+- resolutionStatus: resolved_existing
+
+4. walking-to-work
+- title: Walking to work
+- semanticLayer: activity_meaning
+- categoryType: derived_activity_bundle
+- confidence: 0.88
+- resolutionStatus: resolved_existing
+
+5. duration-minutes
+- title: Duration in minutes
+- semanticLayer: metric
+- categoryType: measurement
+- confidence: 0.98
+- resolutionStatus: resolved_existing
+
+SUPABASE READ-ONLY VERIFICATION
+
+Supabase SQL verification was executed for:
+
+activity_event_id:
+6b5bc745-5324-4de8-8959-21a67df6bf95
+
+category_derivation_run_id:
+114fc525-3ac2-4966-8d9a-8dd0f65707e8
+
+Expected sections:
+- 01_activity_event
+- 02_category_derivation_run
+- 03_activity_category_derivations_summary
+- 04_activity_category_derivation_row
+
+Actual result:
+8 rows total:
+- 1 activity_event row
+- 1 category_derivation_run row
+- 1 activity_category_derivations_summary row
+- 5 activity_category_derivation rows
+
+SUPABASE SUMMARY RESULT
+
+activity_category_derivations summary:
+- rows_count: 5
+- resolved_rows: 5
+- candidate_rows: 0
+- resolved_status_rows: 0
+- confirmed_status_rows: 5
+- needs_review_rows: 0
+- rejected_rows: 0
+- revoked_rows: 0
+
+Supabase verification status:
+PASS
+
+CATEGORY_DERIVATION_RUN DETAILS
+
+Run row:
+- id: 114fc525-3ac2-4966-8d9a-8dd0f65707e8
+- activity_event_id: 6b5bc745-5324-4de8-8959-21a67df6bf95
+- status: completed
+- confidence: 0.922
+- processor_version: category_derivation_v1
+- rule_version: rules_v1
+- schema_version: category_derivation_route_runner_debug_v1
+- policy_version: c8-e-f2-a
+- input_hash: category-derivation-v1:9b0aaa9e
+- token_usage_json: {}
+- cost_json: {}
+- error_json: null
+- needs_user_confirmation: false
+
+This confirms that the C8-E-D added columns are used in runtime:
+- input_hash
+- schema_version
+- policy_version
+- token_usage_json
+- cost_json
+
+ACTIVITY_CATEGORY_DERIVATIONS DETAILS
+
+All 5 persisted rows:
+- have derivation_run_id = 114fc525-3ac2-4966-8d9a-8dd0f65707e8
+- have activity_event_id = 6b5bc745-5324-4de8-8959-21a67df6bf95
+- have category_id populated
+- have status = confirmed
+- have source = rule
+- have is_required = true
+- have is_confirmed = true
+- have needs_user_review = false
+- have is_rejected = false
+- have is_revoked = false
+- have metadata_json.persistence.categoryId
+- have metadata_json.persistence.resolutionStatus = resolved_existing
+
+This confirms that the C8-E-D added columns are used in runtime:
+- status
+- is_revoked
+- evidence_json
+- metadata_json persistence details
+
+IMPORTANT INTERPRETATION
+
+The isolated routeRunner debug endpoint now proves the full deterministic Category Derivation Layer v1 path:
+
+1. Create a fresh test activity_event.
+2. Derive rule-based category candidates.
+3. Resolve all candidates against existing contextual categories.
+4. Create category_derivation_runs row.
+5. Persist 5 activity_category_derivations rows.
+6. Finish derivation run as completed.
+7. Return structured runtime JSON.
+8. Confirm persistence in Supabase.
+
+CURRENT PROJECT POSITION AFTER F2-D
+
+C8-E-D:
+Additive migration applied and verified.
+
+C8-E-E:
+persistence.ts created and verified.
+
+F1:
+routeRunner.ts created and verified.
+
+F2-A:
+debug route created.
+
+F2-A-FIX1:
+debug route imports fixed.
+
+F2-A-FIX2:
+resolverOptions typing fixed.
+
+F2-B:
+debug route compile/fix verification documented.
+
+F2-C:
+runtime smoke test completed:
+- GET PASS
+- POST PASS
+- Supabase verification PASS
+
+F2-D:
+runtime smoke test verification documented — this document.
+
+NEXT BLOCK
+
+Proceed to:
+P4.10.0-C8-E-F3 — decide controlled integration strategy.
+
+Recommended next options:
+1. Keep routeRunner debug-only and add a second POST test for a different phrase.
+2. Add read-only/debug report endpoint for the derivation run.
+3. Prepare feature-flagged integration plan for /api/activity/complete, but do not patch it yet.
+4. Document routeRunner runtime proof as the closing point of the debug phase.
+
+Recommended next step:
+P4.10.0-C8-E-F3-A — create integration decision note before touching /api/activity/complete.
+
+NO-GO FOR NEXT BLOCK
+
+- Do not modify /api/activity/complete without a separate integration decision note.
+- Do not call OpenAI.
+- Do not create UI.
+- Do not rerun canonical production proof event.
+- Do not create semantic snapshot/correction/moderation tables.
+- Do not modify commercial core.
+
+END OF F2-D RUNTIME VERIFICATION
