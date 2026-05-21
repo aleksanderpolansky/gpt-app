@@ -1,0 +1,304 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F5-B — Exact Complete Route Patch Plan
+Created: 2026-05-21 17:06:39
+Base commit before this document: 5c7d32e
+
+STATUS
+Patch plan only.
+No runtime code changes.
+No database changes.
+No /api/activity/complete patch in this step.
+No OpenAI call.
+No UI changes.
+
+PURPOSE
+
+Define the exact safe patch strategy for integrating the new Category Derivation support layer into:
+
+src/app/api/activity/complete/route.ts
+
+This plan is based on F5-A inventory.
+
+F5-A CONFIRMED FACTS
+
+1. /api/activity/complete already contains legacy Category Derivation logic.
+
+Existing legacy imports:
+- deriveCategoryCandidates
+- resolveCategoryCandidates
+- persistCategoryDerivations
+- CategoryDerivationInput
+
+Existing legacy internal function:
+async function runCategoryDerivationForCompleteRoute(...)
+
+Existing legacy call:
+const categoryDerivationResult = await runCategoryDerivationForCompleteRoute(...)
+
+2. New support layer also exports:
+runCategoryDerivationForCompleteRoute
+
+File:
+lib/activity/categoryDerivation/completeRouteIntegration.ts
+
+Therefore, direct import is forbidden because it would conflict with the existing internal function name.
+
+MANDATORY IMPORT ALIAS
+
+Future /api/activity/complete patch must import the adapter with an alias:
+
+import {
+  runCategoryDerivationForCompleteRoute as runCategoryDerivationRouteRunnerForCompleteRoute,
+} from "../../../../../lib/activity/categoryDerivation/completeRouteIntegration";
+
+This avoids conflict with the existing legacy internal function:
+runCategoryDerivationForCompleteRoute
+
+CONFIG IMPORT
+
+Future patch should also import:
+
+import { getCategoryDerivationRouteRunnerConfig } from "../../../../../lib/activity/categoryDerivation/config";
+
+Optional later:
+getCategoryDerivationRouteRunnerConfigSummary
+
+But first patch can avoid summary import unless needed.
+
+PATCH STRATEGY CHOSEN
+
+Chosen option:
+Adapter call behind disabled-by-default config.
+
+Reason:
+- It proves the integration path without changing default behavior.
+- Default config mode is disabled.
+- In disabled mode, adapter returns skipped/disabled without DB writes.
+- It does not remove or bypass existing legacy Category Derivation logic.
+- It does not call OpenAI.
+- It does not change Value Object Bridge / impact / aggregate / snapshot logic.
+
+DO NOT DO
+
+Do not remove legacy function yet.
+Do not rename legacy function yet.
+Do not replace legacy categoryDerivationResult yet.
+Do not enable shadow_persist or production_persist by default.
+Do not call OpenAI.
+Do not create UI.
+Do not create DB migration.
+Do not change commercial core.
+
+EXACT FUTURE PATCH AREAS
+
+Area 1 — imports near top of route.ts
+
+Add new imports after existing Category Derivation imports or near them.
+
+Required future imports:
+
+import { getCategoryDerivationRouteRunnerConfig } from "../../../../../lib/activity/categoryDerivation/config";
+import {
+  runCategoryDerivationForCompleteRoute as runCategoryDerivationRouteRunnerForCompleteRoute,
+} from "../../../../../lib/activity/categoryDerivation/completeRouteIntegration";
+
+Important:
+Use alias.
+Do not import adapter function under its original name.
+
+Area 2 — after existing legacy categoryDerivationResult call
+
+Current existing legacy area:
+
+const categoryDerivationResult = await runCategoryDerivationForCompleteRoute({
+  ...
+});
+
+const additionalCategoryLinks =
+  categoryDerivationResult.additionalCategoryLinks;
+
+Future patch should add a new adapter result after legacy categoryDerivationResult is created and before response metadata is assembled.
+
+Suggested future shape:
+
+const categoryDerivationRouteRunnerConfig =
+  getCategoryDerivationRouteRunnerConfig();
+
+const categoryDerivationRouteRunnerResult =
+  await runCategoryDerivationRouteRunnerForCompleteRoute({
+    supabase,
+    activityEvent: {
+      id: updatedEvent.id,
+      input_text: updatedEvent.input_text,
+      title: updatedEvent.title,
+      description: updatedEvent.description,
+      duration_minutes: updatedEvent.duration_minutes,
+      source: updatedEvent.source,
+      metadata_json: asRecord(updatedEvent.metadata_json),
+    },
+    actorId:
+      updatedEvent.acting_as_actor_id ??
+      updatedEvent.performed_by_actor_id ??
+      null,
+    config: categoryDerivationRouteRunnerConfig,
+    metadata: {
+      completeRouteStep: "P4.10.0-C8-E-F5-C",
+      legacyCategoryDerivationOk: categoryDerivationResult.ok,
+      legacyDerivationRunId: categoryDerivationResult.derivationRunId,
+    },
+  });
+
+Notes:
+- Exact ActivityEventRow fields must be confirmed immediately before code patch.
+- If TypeScript shows field mismatch, use the fields already present in ActivityEventRow.
+- In default disabled mode, adapter does not use event details for DB writes.
+- actorId must be mapped carefully before any non-disabled mode.
+
+Area 3 — response metadata
+
+Existing response already includes categoryDerivation metadata based on legacy categoryDerivationResult.
+
+Do not replace it in the first patch.
+
+Add a separate field, for example:
+
+categoryDerivationRouteRunner: {
+  enabled: categoryDerivationRouteRunnerResult.enabled,
+  mode: categoryDerivationRouteRunnerResult.mode,
+  ok: categoryDerivationRouteRunnerResult.ok,
+  skipped: categoryDerivationRouteRunnerResult.skipped,
+  reason: categoryDerivationRouteRunnerResult.reason,
+  derivationRunId: categoryDerivationRouteRunnerResult.derivationRunId,
+  candidateCount: categoryDerivationRouteRunnerResult.candidateCount,
+  resolvedCandidateCount:
+    categoryDerivationRouteRunnerResult.resolvedCandidateCount,
+  persistenceDerivationRowsCreated:
+    categoryDerivationRouteRunnerResult.persistenceDerivationRowsCreated,
+  warnings: categoryDerivationRouteRunnerResult.warnings,
+  errors: categoryDerivationRouteRunnerResult.errors,
+}
+
+Reason:
+- It avoids changing existing categoryDerivation response semantics.
+- It makes new adapter visible for verification.
+- It keeps legacy and routeRunner results separated.
+- It reduces risk of breaking existing callers.
+
+Area 4 — activity_processing_logs
+
+Do not add extra processing log in the first patch unless necessary.
+
+Reason:
+There is already legacy category derivation logging around the existing result.
+The first patch should be minimal.
+
+If logging is added later, use a separate processing_status and clear metadata:
+category_derivation_route_runner_disabled
+category_derivation_route_runner_shadow_no_persist
+category_derivation_route_runner_shadow_persist
+
+But not in F5-C initial patch.
+
+EXPECTED DEFAULT RUNTIME RESULT AFTER FUTURE PATCH
+
+Because default env mode is disabled:
+
+categoryDerivationRouteRunner should return approximately:
+- enabled: false
+- mode: disabled
+- ok: true
+- skipped: true
+- reason: disabled
+- derivationRunId: null
+- candidateCount: 0
+- resolvedCandidateCount: 0
+- persistenceDerivationRowsCreated: 0
+- warnings: []
+- errors: []
+
+Expected DB effect:
+- no new category_derivation_runs from routeRunner adapter;
+- no new activity_category_derivations from routeRunner adapter;
+- legacy Category Derivation behavior remains unchanged.
+
+FUTURE F5-C TEST PLAN
+
+After the code patch:
+
+1. Run TypeScript:
+npx.cmd tsc --noEmit --pretty false
+
+2. Run git status and verify only:
+src/app/api/activity/complete/route.ts
+
+3. Start local dev server if needed:
+npm run dev
+
+4. Run existing complete route test with default env.
+
+5. Confirm response contains:
+- existing legacy categoryDerivation
+- new categoryDerivationRouteRunner with mode disabled
+
+6. Confirm Supabase:
+- no routeRunner-created category_derivation_runs for disabled mode;
+- no duplicate routeRunner rows.
+
+7. Commit only after:
+- tsc PASS
+- runtime response PASS
+- no unexpected DB writes
+
+FUTURE F5-C CODE PATCH RULES
+
+1. Use full file or automated exact patch only.
+2. Do not manually edit large route.ts without verification.
+3. Do not use the same function name as adapter import.
+4. Alias adapter import.
+5. Do not delete legacy logic.
+6. Do not alter Value Object Bridge.
+7. Do not alter impact processing.
+8. Do not alter daily aggregates.
+9. Do not alter current snapshots.
+10. Do not alter commercial core.
+
+IMPORTANT RISK
+
+The complete route file is large and production-critical.
+
+F5-A inventory showed:
+- line_count around 1496
+- existing legacy function around line 421
+- existing legacy call around line 1226
+- final response around line 1339
+- error response around line 1479
+
+Because line numbers can shift, future code patch must search by markers, not rely only on hard-coded line numbers.
+
+RECOMMENDED NEXT STEP
+
+Proceed to:
+P4.10.0-C8-E-F5-C-A — patch /api/activity/complete with disabled-by-default routeRunner adapter metadata.
+
+Patch should:
+- add alias import;
+- add config import;
+- add adapter call after legacy categoryDerivationResult;
+- add separate response metadata field;
+- keep default mode disabled;
+- verify tsc;
+- do not commit until runtime test passes.
+
+NO-GO
+
+Do not patch /api/activity/complete in F5-B.
+Do not remove old category derivation code.
+Do not run routeRunner persist mode.
+Do not call OpenAI.
+Do not create UI.
+Do not create database migrations.
+Do not touch commercial core.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+
+END OF F5-B EXACT COMPLETE ROUTE PATCH PLAN
