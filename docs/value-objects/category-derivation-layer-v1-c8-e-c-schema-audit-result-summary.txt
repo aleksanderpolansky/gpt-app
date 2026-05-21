@@ -1,0 +1,266 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-C — Supabase Schema Audit Result Summary
+Created: 2026-05-21 11:00:23
+Base commit before this summary: 9a5edd9
+
+STATUS
+C8-E-C SQL audit was executed in Supabase SQL Editor.
+The audit was read-only.
+No database migration was executed in C8-E-C.
+No runtime code was changed in C8-E-C.
+
+SOURCE
+Manual Supabase SQL Editor result pasted back into the working dialogue after running:
+docs/value-objects/category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql
+
+HIGH-LEVEL RESULT
+The current database already contains the two core Category Derivation v1 tables:
+- category_derivation_runs
+- activity_category_derivations
+
+This means C8-E-D must not create these tables from zero.
+The next migration must be additive and selective:
+- add missing columns where needed;
+- add missing semantic/correction/moderation tables only if they are needed for the next runtime phase;
+- do not drop, rename destructively, or rewrite existing data.
+
+TABLE EXISTENCE RESULT
+
+Existing:
+- activity_events
+- contextual_categories
+- contextual_category_events
+- category_derivation_runs
+- activity_category_derivations
+- value_objects
+- value_object_category_links
+- activity_event_value_object_links
+- activity_processing_logs
+- value_object_instances
+- value_object_state_deltas
+- value_object_daily_aggregates
+- value_object_state_snapshots
+- value_object_usage_aggregates
+
+Missing:
+- activity_semantic_interpretations
+- category_moderation_items
+- activity_category_corrections
+
+All existing target tables in the audit have RLS enabled.
+
+KEY ACTUAL STRUCTURES
+
+1. category_derivation_runs exists.
+Actual useful columns:
+- id
+- activity_event_id
+- actor_id
+- organization_id
+- input_text
+- input_language
+- processor_version
+- rule_version
+- model_name
+- prompt_version
+- status
+- confidence
+- needs_user_confirmation
+- started_at
+- finished_at
+- input_json
+- output_json
+- error_json
+- created_at
+- updated_at
+
+Important interpretation:
+The table already supports a basic versioned derivation run.
+It uses input_json/output_json instead of input_summary_json/output_summary_json.
+This is acceptable and should be preserved.
+
+Missing / recommended additions:
+- input_hash
+- policy_version
+- schema_version
+- model_alias
+- token_usage_json
+- cost_json
+
+Do not force model_version now.
+model_name already exists and is the correct practical runtime identifier for the next phase.
+
+2. activity_category_derivations exists.
+Actual useful columns:
+- id
+- activity_event_id
+- derivation_run_id
+- category_id
+- candidate_slug
+- candidate_title
+- semantic_layer
+- category_type
+- source
+- confidence
+- is_required
+- is_confirmed
+- needs_user_review
+- is_rejected
+- metadata_json
+- created_at
+- updated_at
+
+Important interpretation:
+The table already supports per-activity category candidate persistence.
+metadata_json can temporarily hold evidence/reason/details.
+needs_user_review and is_rejected already cover part of governance behavior.
+
+Missing / recommended additions:
+- status
+- is_revoked
+- is_core_meaning
+- evidence_json
+
+Decision for C8-E-D:
+Prefer adding status and is_revoked.
+is_core_meaning and evidence_json are useful but can also be represented in metadata_json if we want to keep the first migration smaller.
+
+3. contextual_categories exists.
+Actual useful columns:
+- id
+- context_id
+- parent_id
+- slug
+- name
+- description
+- status
+- source_type
+- sort_order
+- is_active
+- created_at
+- updated_at
+- semantic_layer
+- category_type
+- aliases
+- metadata_json
+
+Important interpretation:
+The table already has semantic_layer, category_type, status, source_type, aliases and metadata_json.
+The existing parent column is parent_id, not parent_category_id.
+Do not add parent_category_id unless there is a strong reason.
+Use parent_id as the canonical parent/child field for this table.
+
+Missing / optional target additions:
+- context_scope
+- confidence_default
+- title is not needed because name exists.
+- aliases_json is not needed because aliases exists.
+
+Decision for C8-E-D:
+Do not add title.
+Do not add aliases_json.
+Do not add parent_category_id.
+Optional: add context_scope and confidence_default later only if runtime requires them.
+
+4. value_object_category_links exists.
+Actual useful columns:
+- id
+- value_object_id
+- category_table
+- category_id
+- category_role
+- source
+- confidence
+- metadata_json
+- created_at
+- updated_at
+
+Missing / recommended additions:
+- derivation_run_id
+- activity_derivation_id
+- status
+
+Decision for C8-E-D:
+Add derivation_run_id and activity_derivation_id if foreign key constraints can be done safely.
+Add status if we want link-level governance.
+If minimizing migration, derivation IDs may be stored in metadata_json temporarily, but typed columns are better for traceability.
+
+5. activity_event_value_object_links exists.
+Actual useful columns:
+- id
+- user_id
+- event_id
+- value_object_id
+- exposure_minutes
+- source
+- confidence
+- metadata_json
+- created_at
+- updated_at
+
+Important interpretation:
+The existing event linkage column is event_id.
+Do not add activity_event_id merely for naming preference.
+Use event_id in code and documentation unless a later compatibility layer is needed.
+
+NO-GO DECISIONS AFTER AUDIT
+- Do not recreate category_derivation_runs.
+- Do not recreate activity_category_derivations.
+- Do not add duplicate title when name already exists in contextual_categories.
+- Do not add aliases_json when aliases already exists.
+- Do not add parent_category_id when parent_id already exists.
+- Do not rename event_id to activity_event_id in activity_event_value_object_links.
+- Do not start UI/UX.
+- Do not execute migrations before C8-E-D design is reviewed.
+
+C8-E-D ADDITIVE MIGRATION DESIGN — RECOMMENDED SCOPE
+
+Recommended small migration scope:
+1. category_derivation_runs
+   Add:
+   - input_hash text nullable
+   - policy_version text nullable
+   - schema_version text nullable
+   - model_alias text nullable
+   - token_usage_json jsonb not null default '{}'
+   - cost_json jsonb not null default '{}'
+
+2. activity_category_derivations
+   Add:
+   - status text not null default 'candidate'
+   - is_revoked boolean not null default false
+   - is_core_meaning boolean not null default false
+   - evidence_json jsonb not null default '{}'
+
+3. value_object_category_links
+   Add:
+   - derivation_run_id uuid nullable references category_derivation_runs(id)
+   - activity_derivation_id uuid nullable references activity_category_derivations(id)
+   - status text not null default 'active'
+
+4. activity_semantic_interpretations
+   Consider creating only if we need full interpretation snapshots immediately.
+   If not needed in C8-E-E runtime, defer to later semantic capital phase.
+
+5. activity_category_corrections
+   Defer until user correction endpoints/panel phase.
+
+6. category_moderation_items
+   Defer until moderation queue phase.
+
+C8-E-D DESIGN PRINCIPLE
+The next SQL file must be a migration design, not immediately executed.
+It must be additive only:
+- CREATE TABLE only for missing optional tables if selected.
+- ALTER TABLE ADD COLUMN only.
+- CREATE INDEX if needed.
+- CREATE POLICY only after RLS ownership model is clear.
+- No DROP.
+- No destructive rename.
+- No data rewrite.
+
+NEXT STEP
+Proceed to:
+P4.10.0-C8-E-D1 — create additive migration design SQL file, not execute it.
+
+END OF C8-E-C AUDIT RESULT SUMMARY
