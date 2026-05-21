@@ -1,0 +1,138 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F2-B — Category Derivation routeRunner Debug Route Verification
+Created: 2026-05-21 14:26:23
+Base commit before this document: 0e2a289
+
+STATUS
+F2-A debug route was created and fixed.
+F2-B documents the final verified state.
+
+CREATED DEBUG ROUTE
+src/app/api/activity/debug/category-derivation-route-runner-test/route.ts
+
+COMMITS
+
+1. 8e2b726 Add Category Derivation route runner debug test
+Initial debug route creation.
+
+2. f8efeff Fix Category Derivation route runner debug imports
+Fixed broken import paths:
+- removed ././././././lib import pattern
+- replaced with correct relative imports from the route folder
+
+3. 0e2a289 Fix Category Derivation route runner resolver options typing
+Fixed CategoryResolverOptions typing:
+- added import type { CategoryResolverOptions }
+- resolverOptionsFromBody now explicitly returns CategoryResolverOptions
+- createPolicy and defaultStatus are typed through CategoryResolverOptions indexed types
+
+FINAL VERIFICATION
+
+TypeScript check executed:
+npx.cmd tsc --noEmit --pretty false
+
+Result:
+PASS — no TypeScript errors were printed.
+
+Final git status:
+PASS — working tree clean after cleanup.
+
+DEBUG ROUTE PURPOSE
+
+Endpoint:
+GET /api/activity/debug/category-derivation-route-runner-test
+POST /api/activity/debug/category-derivation-route-runner-test
+
+Purpose:
+Isolated routeRunner smoke test for Category Derivation Layer v1.
+
+This endpoint is debug-only and does not patch the production completion route.
+
+WHAT THE ROUTE DOES
+
+GET:
+- returns readiness/status payload
+- confirms debug endpoint metadata
+- confirms no OpenAI call
+- confirms no /api/activity/complete patch
+- provides example POST body
+
+POST:
+- requires ACTIVITY_RECORDING_ENABLED
+- reads authenticated app user and person actor context
+- creates a fresh test activity_event
+- calls runCategoryDerivationRoute
+- uses deterministic rule extraction
+- optionally resolves categories
+- optionally persists:
+  - category_derivation_runs
+  - activity_category_derivations
+- returns event, derivation, resolution, and persistence summary
+
+IMPORTANT SAFETY DECISIONS
+
+1. /api/activity/complete was not modified.
+The canonical production route remains untouched.
+
+2. OpenAI was not called.
+The route is deterministic-only at this stage.
+
+3. No UI was created.
+This is backend proof/debug infrastructure only.
+
+4. No canonical production proof event was rerun.
+The debug route creates a fresh test activity event.
+
+5. No semantic snapshot/correction/moderation tables were created.
+Those remain deferred.
+
+6. Commercial core was not modified.
+
+CURRENT PROJECT POSITION AFTER F2-B
+
+F1-B:
+routeRunner.ts created and compiled.
+
+F1-C:
+routeRunner verification documented.
+
+F2-A:
+debug route created.
+
+F2-A-FIX1:
+debug route imports fixed.
+
+F2-A-FIX2:
+resolverOptions typing fixed.
+
+F2-B:
+debug route final verification documented — this document.
+
+NEXT BLOCK
+
+Proceed to:
+P4.10.0-C8-E-F2-C — browser/runtime smoke test for debug route.
+
+Recommended test sequence:
+1. Start or confirm local dev server is running.
+2. Open GET endpoint in browser:
+   /api/activity/debug/category-derivation-route-runner-test
+3. Run POST from browser console or PowerShell.
+4. Confirm JSON result:
+   - ok
+   - event.id
+   - routeRunner.derivationRunId
+   - routeRunner.candidateCount
+   - routeRunner.persistence.rowsCreated
+5. Then run Supabase read-only verification SQL for the created event/run.
+
+NO-GO FOR NEXT BLOCK
+
+- Do not modify /api/activity/complete.
+- Do not call OpenAI.
+- Do not create UI.
+- Do not rerun canonical production proof event.
+- Do not create semantic snapshot/correction/moderation tables.
+- Do not modify commercial core.
+
+END OF F2-B VERIFICATION
