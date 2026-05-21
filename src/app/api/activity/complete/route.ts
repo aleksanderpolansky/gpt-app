@@ -28,6 +28,11 @@ import {
   type CategoryDerivationPersistenceSupabaseClient,
 } from "../../../../../lib/activity/categoryDerivation/persistDerivations";
 import type { CategoryDerivationInput } from "../../../../../lib/activity/categoryDerivation/types";
+import { getCategoryDerivationRouteRunnerConfig } from "../../../../../lib/activity/categoryDerivation/config";
+import {
+  runCategoryDerivationForCompleteRoute as runCategoryDerivationRouteRunnerForCompleteRoute,
+  type CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+} from "../../../../../lib/activity/categoryDerivation/completeRouteIntegration";
 import type { AdditionalValueObjectCategoryLink } from "../../../../../lib/activity/valueObjectBridge";
 import { ensureActivityEventRubricatorClassificationForKnownTemplate } from "../../../../../lib/activity/activityRubricatorClassificationLifecycle";
 import { buildRubricatorResolverLogMetadata } from "../../../../../lib/activity/rubricatorResolverLogMetadata";
@@ -1231,6 +1236,35 @@ export async function POST(request: Request) {
     const categoryDerivationBridgeAdditionalCategoryLinks =
       categoryDerivationResult.additionalCategoryLinks;
 
+    const categoryDerivationRouteRunnerConfig =
+      getCategoryDerivationRouteRunnerConfig();
+
+    const categoryDerivationRouteRunnerResult =
+      await runCategoryDerivationRouteRunnerForCompleteRoute({
+        supabase:
+          supabase as unknown as CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+        activityEvent: {
+          id: updatedEvent.id,
+          input_text: updatedEvent.input_text,
+          title: updatedEvent.title,
+          description: updatedEvent.description,
+          duration_minutes: updatedEvent.duration_minutes,
+          source: updatedEvent.source,
+          metadata_json: asRecord(updatedEvent.metadata_json),
+        },
+        actorId:
+          updatedEvent.performed_by_actor_id ??
+          updatedEvent.acting_as_actor_id ??
+          updatedEvent.acting_for_actor_id ??
+          null,
+        config: categoryDerivationRouteRunnerConfig,
+        metadata: {
+          completeRouteStep: "P4.10.0-C8-E-F5-C-A-FIX2",
+          legacyCategoryDerivationOk: categoryDerivationResult.ok,
+          legacyDerivationRunId: categoryDerivationResult.derivationRunId,
+        },
+      });
+
     const categoryDerivationProcessingLogResult =
       await safeCreateActivityProcessingLog({
         userId: appUser.id,
@@ -1360,6 +1394,21 @@ export async function POST(request: Request) {
         created: rubricatorClassificationResult.created,
         alreadyExisted: rubricatorClassificationResult.alreadyExisted,
         errors: rubricatorClassificationResult.errors,
+      },
+      categoryDerivationRouteRunner: {
+        enabled: categoryDerivationRouteRunnerResult.enabled,
+        mode: categoryDerivationRouteRunnerResult.mode,
+        ok: categoryDerivationRouteRunnerResult.ok,
+        skipped: categoryDerivationRouteRunnerResult.skipped,
+        reason: categoryDerivationRouteRunnerResult.reason,
+        derivationRunId: categoryDerivationRouteRunnerResult.derivationRunId,
+        candidateCount: categoryDerivationRouteRunnerResult.candidateCount,
+        resolvedCandidateCount:
+          categoryDerivationRouteRunnerResult.resolvedCandidateCount,
+        persistenceDerivationRowsCreated:
+          categoryDerivationRouteRunnerResult.persistenceDerivationRowsCreated,
+        warnings: categoryDerivationRouteRunnerResult.warnings,
+        errors: categoryDerivationRouteRunnerResult.errors,
       },
       valueObjectBridge: {
         ok: valueObjectBridgeResult.ok,
