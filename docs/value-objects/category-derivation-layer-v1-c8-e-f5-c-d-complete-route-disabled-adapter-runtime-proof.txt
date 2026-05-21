@@ -1,0 +1,260 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F5-C-D — Complete Route Disabled Adapter Runtime Proof
+Created: 2026-05-21 19:51:51
+Base commit before this document: 79d024b
+
+STATUS
+F5-C complete route disabled-by-default adapter patch was implemented, runtime-tested, committed, and pushed.
+
+SCOPE
+Production route touched:
+src/app/api/activity/complete/route.ts
+
+No OpenAI call was added.
+No UI was created.
+No database migration was executed.
+No commercial core code was modified.
+No canonical production proof event was rerun.
+No semantic snapshot/correction/moderation tables were created.
+RouteRunner persistent mode was not enabled.
+
+IMPLEMENTED PATCH
+
+Patch step:
+P4.10.0-C8-E-F5-C-A-FIX2
+
+Committed in:
+79d024b Patch complete route with disabled Category Derivation adapter
+
+Changed file:
+src/app/api/activity/complete/route.ts
+
+Change size:
+49 insertions
+
+Added imports:
+- getCategoryDerivationRouteRunnerConfig
+- runCategoryDerivationForCompleteRoute as runCategoryDerivationRouteRunnerForCompleteRoute
+- CategoryDerivationCompleteRouteIntegrationSupabaseClient
+
+Important:
+The adapter import uses alias:
+runCategoryDerivationRouteRunnerForCompleteRoute
+
+Reason:
+The complete route already contains an internal legacy function named:
+runCategoryDerivationForCompleteRoute
+
+This avoided a naming conflict.
+
+PATCH LOCATION
+
+1. Adapter config/result was inserted after legacy Category Derivation links:
+
+const categoryDerivationBridgeAdditionalCategoryLinks =
+  categoryDerivationResult.additionalCategoryLinks;
+
+2. New response metadata field was inserted before valueObjectBridge:
+
+categoryDerivationRouteRunner: { ... },
+valueObjectBridge: { ... }
+
+LEGACY FLOW PRESERVED
+
+Existing legacy Category Derivation flow remains in place:
+- deriveCategoryCandidates
+- resolveCategoryCandidates
+- persistCategoryDerivations
+- categoryDerivationResult
+- categoryDerivationBridgeAdditionalCategoryLinks
+- legacy processing log
+
+The new adapter does not replace legacy result yet.
+The new adapter adds separate response metadata only.
+
+DEFAULT CONFIG BEHAVIOR
+
+Default config:
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE is not set.
+
+Therefore:
+mode = disabled
+enabled = false
+skipped = true
+reason = disabled
+
+This means:
+- no routeRunner derivation execution;
+- no routeRunner persistence;
+- no new category_derivation_runs from the adapter;
+- no new activity_category_derivations from the adapter.
+
+RUNTIME TEST
+
+Runtime step:
+P4.10.0-C8-E-F5-C-B
+
+Test endpoint:
+POST /api/activity/complete
+
+Local URL:
+http://localhost:3000/api/activity/complete
+
+Test event:
+2e6f14c2-8478-479b-8173-83b86a53cad5
+
+Initial issue:
+The test event was first inserted with status planned.
+The endpoint rejected it correctly with:
+409 Conflict
+Activity event status 'planned' cannot be completed by this endpoint.
+allowedStatuses: started, paused
+
+Fix:
+The same test event was updated to:
+status = started
+processing_status = pending
+
+No second test event was inserted.
+
+FINAL RUNTIME RESULT
+
+HTTP status:
+200
+
+Response:
+ok = true
+status = completed
+
+Event:
+id = 2e6f14c2-8478-479b-8173-83b86a53cad5
+status = completed
+processing_status = processed
+
+categoryDerivationRouteRunner response:
+- enabled: false
+- mode: disabled
+- ok: true
+- skipped: true
+- reason: disabled
+- derivationRunId: null
+- candidateCount: 0
+- resolvedCandidateCount: 0
+- persistenceDerivationRowsCreated: 0
+- warnings: []
+- errors: []
+
+Runtime checks:
+- response.ok: OK
+- json.ok is true: OK
+- json.status is completed: OK
+- event.id matches: OK
+- categoryDerivationRouteRunner exists: OK
+- routeRunner.enabled is false: OK
+- routeRunner.mode is disabled: OK
+- routeRunner.ok is true: OK
+- routeRunner.skipped is true: OK
+- routeRunner.reason is disabled: OK
+- routeRunner.derivationRunId is null: OK
+- routeRunner.candidateCount is 0: OK
+- routeRunner.resolvedCandidateCount is 0: OK
+- routeRunner.persistenceDerivationRowsCreated is 0: OK
+- valueObjectBridge exists: OK
+- processingLogs exists: OK
+
+Runtime status:
+PASS
+
+VALUE OBJECT BRIDGE RESULT
+
+The response included valueObjectBridge and processingLogs.
+
+valueObjectBridge:
+- ok: true
+- skipped: false
+- mapping ok: true
+- mappingsCount: 1
+- bridge ok: true
+- createdCount: 1
+
+This confirms the new disabled adapter metadata did not break the existing downstream Value Object Bridge path.
+
+IMPORTANT INTERPRETATION
+
+The complete route now exposes routeRunner adapter metadata safely while default mode remains disabled.
+
+This proves:
+1. imports compile;
+2. alias avoids naming conflict;
+3. adapter can be called from complete route;
+4. disabled config produces safe skip result;
+5. response can include categoryDerivationRouteRunner metadata;
+6. existing completion flow still reaches valueObjectBridge;
+7. existing processingLogs still exist;
+8. no routeRunner persistence happened in default mode.
+
+CURRENT PROJECT POSITION
+
+F5-A:
+Pre-patch complete route inventory completed.
+
+F5-B:
+Exact complete route patch plan completed.
+
+F5-C-A:
+Initial patch attempt failed and was recovered.
+
+F5-C-A-FIX1-PRE:
+Exact final response anchors inspected.
+
+F5-C-A-FIX1:
+Line-ending-sensitive patch attempt failed before write; no file damage.
+
+F5-C-A-FIX2:
+Regex-safe patch succeeded without commit.
+
+F5-C-B:
+Runtime test with default disabled mode passed.
+
+F5-C-C:
+Patch committed and pushed:
+79d024b Patch complete route with disabled Category Derivation adapter
+
+F5-C-D:
+This runtime proof document.
+
+NEXT RECOMMENDED BLOCK
+
+Proceed to:
+P4.10.0-C8-E-F5-D-A — create shadow_no_persist local test plan.
+
+Purpose:
+Test routeRunner execution without persistence.
+
+Expected future mode:
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_no_persist
+
+Expected behavior:
+- routeRunner executes;
+- candidates are derived;
+- candidates may be resolved depending on adapter config;
+- no category_derivation_runs rows are created;
+- no activity_category_derivations rows are created;
+- complete route still returns ok true.
+
+Important:
+Do not enable shadow_persist yet.
+Do not enable production_persist yet.
+
+NO-GO
+
+Do not call OpenAI.
+Do not create UI.
+Do not create database migrations.
+Do not modify commercial core.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+Do not enable persistent routeRunner mode by default.
+Do not remove legacy Category Derivation code yet.
+
+END OF F5-C-D COMPLETE ROUTE DISABLED ADAPTER RUNTIME PROOF
