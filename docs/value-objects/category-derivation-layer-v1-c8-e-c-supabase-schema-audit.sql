@@ -162,6 +162,7 @@ expected_columns(table_name, column_name, importance) as (
     ('activity_event_value_object_links', 'metadata_json', 'recommended'),
     ('activity_event_value_object_links', 'created_at', 'recommended')
 )
+select * from (
 select
   '01_table_existence' as section,
   jsonb_build_object(
@@ -316,4 +317,5 @@ where c.table_schema = 'public'
     or c.table_name ilike '%activity%'
   )
 
+) as audit_result
 order by section, record_json::text;
