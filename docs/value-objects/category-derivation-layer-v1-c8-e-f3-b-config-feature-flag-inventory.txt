@@ -1,0 +1,1422 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F3-B — Config / Feature Flag Inventory
+Created: 2026-05-21 14:54:17
+Base commit: 2e9be1b
+
+STATUS
+Inventory only.
+No runtime code changes.
+No database changes.
+No /api/activity/complete patch.
+No OpenAI call.
+No UI changes.
+
+PURPOSE
+Before adding Category Derivation production feature flags, inspect existing config patterns, environment variable usage, activity recording config, debug route config style, and /api/activity/complete structure.
+
+NO SECRETS POLICY
+This inventory intentionally does not print .env file contents.
+It only lists .env file existence and searches source files for process.env usage.
+
+PATH EXISTENCE CHECK
+
+FOUND FILE: .\lib\activity\activityRecordingConfig.ts
+FOUND FILE: .\lib\activity\activityUserContext.ts
+FOUND FILE: .\lib\activity\categoryDerivation\routeRunner.ts
+FOUND FILE: .\lib\activity\categoryDerivation\persistence.ts
+FOUND FILE: .\src\app\api\activity\complete\route.ts
+FOUND FILE: .\src\app\api\activity\debug\category-derivation-route-runner-test\route.ts
+FOUND FILE: .\src\app\api\activity\debug\free-text-value-object-test\route.ts
+FOUND FILE: .\src\app\api\activity\debug\value-object-bridge-proof\route.ts
+FOUND FILE: .\lib\supabase.ts
+FOUND FILE: .\package.json
+FOUND FILE: .\tsconfig.json
+FOUND FILE: .\.env.local
+MISSING   : .\.env
+MISSING   : .\.env.development
+MISSING   : .\.env.production
+
+ENV FILE CONTENTS
+Not included.
+Reason: avoid leaking local secrets into docs/git.
+
+
+SOURCE MARKER SEARCH
+
+
+MARKER: process.env
+  lib\activity\activityRecordingConfig.ts line 2: process.env.ACTIVITY_RECORDING_ENABLED === "true";
+  lib\ai\openaiClient.ts line 8: const apiKey = process.env.OPENAI_API_KEY;
+  lib\ai\openaiConfig.ts line 2: process.env.OPENAI_DEFAULT_MODEL || "gpt-5-nano";
+  lib\ai\openaiConfig.ts line 5: process.env.OPENAI_MAX_OUTPUT_TOKENS || "300"
+  lib\ai\openaiConfig.ts line 9: process.env.OPENAI_TEMPERATURE || "0.2"
+  lib\ai\openaiConfig.ts line 12: export const AI_ENABLED = process.env.AI_ENABLED !== "false";
+  lib\ai\openaiConfig.ts line 14: export const AI_ADMIN_ONLY = process.env.AI_ADMIN_ONLY !== "false";
+  lib\objectAction\suggestionAnalysis.ts line 151: if (!process.env.OPENAI_API_KEY) {
+  lib\objectAction\suggestionAnalysis.ts line 156: apiKey: process.env.OPENAI_API_KEY,
+  lib\supabase.ts line 3: const supabaseUrl = process.env.SUPABASE_URL;
+  lib\supabase.ts line 4: const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  lib\value-objects\objectCloudDebugGuard.ts line 11: const nodeEnv = process.env.NODE_ENV ?? "unknown";
+  lib\value-objects\objectCloudDebugGuard.ts line 12: const vercelEnv = process.env.VERCEL_ENV ?? null;
+  lib\value-objects\objectCloudDebugGuard.ts line 13: const flagEnabled = process.env.VALUE_OBJECT_CLOUD_DEBUG_ENABLED === "true";
+  src\app\api\certificates\expire-due\route.ts line 17: const certificateCronSecret = process.env.CERTIFICATE_CRON_SECRET;
+  src\app\api\certificates\expire-due\route.ts line 18: const vercelCronSecret = process.env.CRON_SECRET;
+  src\app\directory\page.tsx line 205: const publicAppUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  src\app\directory\page.tsx line 211: if (process.env.VERCEL_URL) {
+  src\app\directory\page.tsx line 212: return `https://${process.env.VERCEL_URL}`;
+
+MARKER: ACTIVITY_RECORDING
+  lib\activity\activityRecordingConfig.ts line 1: export const ACTIVITY_RECORDING_ENABLED =
+  lib\activity\activityRecordingConfig.ts line 2: process.env.ACTIVITY_RECORDING_ENABLED === "true";
+  lib\activity\activityRecordingConfig.ts line 4: export const ACTIVITY_RECORDING_DISABLED_MESSAGE =
+  lib\activity\activityRecordingConfig.ts line 5: "Activity Recording Layer is disabled. Set ACTIVITY_RECORDING_ENABLED=true to enable it.";
+  lib\activity\activityRecordingConfig.ts line 7: export const ACTIVITY_RECORDING_DEFAULT_LIMIT = 20;
+  lib\activity\activityRecordingConfig.ts line 9: export const ACTIVITY_RECORDING_MAX_LIMIT = 100;
+  src\app\api\activity\complete\route.ts line 4: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\complete\route.ts line 5: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\complete\route.ts line 717: enabled: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\complete\route.ts line 718: status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+  src\app\api\activity\complete\route.ts line 719: message: ACTIVITY_RECORDING_ENABLED
+  src\app\api\activity\complete\route.ts line 721: : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\complete\route.ts line 735: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\complete\route.ts line 739: error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\day-summary\route.ts line 3: ACTIVITY_RECORDING_DEFAULT_LIMIT,
+  src\app\api\activity\day-summary\route.ts line 4: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\day-summary\route.ts line 5: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\day-summary\route.ts line 6: ACTIVITY_RECORDING_MAX_LIMIT,
+  src\app\api\activity\day-summary\route.ts line 136: return ACTIVITY_RECORDING_DEFAULT_LIMIT;
+  src\app\api\activity\day-summary\route.ts line 142: return ACTIVITY_RECORDING_DEFAULT_LIMIT;
+  src\app\api\activity\day-summary\route.ts line 145: return Math.min(parsedLimit, ACTIVITY_RECORDING_MAX_LIMIT);
+  src\app\api\activity\day-summary\route.ts line 470: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\day-summary\route.ts line 474: error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 4: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 5: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 142: enabled: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 143: status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 144: message: ACTIVITY_RECORDING_ENABLED
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 146: : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 164: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 168: error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 4: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 5: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 102: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 107: error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 5: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 6: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 650: enabled: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 651: status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 652: message: ACTIVITY_RECORDING_ENABLED
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 654: : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 679: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 683: error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 4: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 5: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 398: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 404: error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\debug-known-template-registry\route.ts line 3: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\debug-known-template-registry\route.ts line 4: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\debug-known-template-registry\route.ts line 308: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\debug-known-template-registry\route.ts line 313: error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\debug-trace\route.ts line 3: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\debug-trace\route.ts line 4: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\debug-trace\route.ts line 1389: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\debug-trace\route.ts line 1393: error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\events\[id]\corrections\route.ts line 3: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\events\[id]\corrections\route.ts line 4: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\events\[id]\corrections\route.ts line 220: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\events\[id]\corrections\route.ts line 224: error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\events\[id]\route.ts line 4: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\events\[id]\route.ts line 5: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\events\[id]\route.ts line 980: enabled: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\events\[id]\route.ts line 981: status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+  src\app\api\activity\events\[id]\route.ts line 1001: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\events\[id]\route.ts line 1005: error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\events\route.ts line 3: ACTIVITY_RECORDING_DEFAULT_LIMIT,
+  src\app\api\activity\events\route.ts line 4: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\events\route.ts line 5: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\events\route.ts line 6: ACTIVITY_RECORDING_MAX_LIMIT,
+  src\app\api\activity\events\route.ts line 24: return ACTIVITY_RECORDING_DEFAULT_LIMIT;
+  src\app\api\activity\events\route.ts line 30: return ACTIVITY_RECORDING_DEFAULT_LIMIT;
+  src\app\api\activity\events\route.ts line 33: return Math.min(parsedLimit, ACTIVITY_RECORDING_MAX_LIMIT);
+  src\app\api\activity\events\route.ts line 257: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\events\route.ts line 261: error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\intake\events\[id]\confirm\route.ts line 3: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  src\app\api\activity\intake\events\[id]\confirm\route.ts line 4: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\intake\events\[id]\confirm\route.ts line 304: enabled: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\intake\events\[id]\confirm\route.ts line 305: status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+  src\app\api\activity\intake\events\[id]\confirm\route.ts line 306: message: ACTIVITY_RECORDING_ENABLED
+  src\app\api\activity\intake\events\[id]\confirm\route.ts line 308: : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+
+MARKER: ENABLED
+  lib\activity\activityRecordingConfig.ts line 1: export const ACTIVITY_RECORDING_ENABLED =
+  lib\activity\activityRecordingConfig.ts line 2: process.env.ACTIVITY_RECORDING_ENABLED === "true";
+  lib\activity\activityRecordingConfig.ts line 5: "Activity Recording Layer is disabled. Set ACTIVITY_RECORDING_ENABLED=true to enable it.";
+  lib\activity\categoryDerivation\routeRunner.ts line 220: const persistEnabled = shouldPersist(input);
+  lib\activity\categoryDerivation\routeRunner.ts line 221: const resolveEnabled = shouldResolve(input);
+  lib\activity\categoryDerivation\routeRunner.ts line 235: persist: persistEnabled,
+  lib\activity\categoryDerivation\routeRunner.ts line 236: resolve: resolveEnabled,
+  lib\activity\categoryDerivation\routeRunner.ts line 240: if (persistEnabled) {
+  lib\activity\categoryDerivation\routeRunner.ts line 282: if (resolveEnabled && derivation.candidates.length > 0) {
+  lib\activity\categoryDerivation\routeRunner.ts line 300: if (persistEnabled && runCreate?.derivationRunId) {
+  lib\activity\categoryDerivation\routeRunner.ts line 315: if (persistEnabled && runCreate?.derivationRunId) {
+  lib\activity\categoryDerivation\routeRunner.ts line 357: persisted: persistEnabled,
+  lib\activity\knownTemplateRegistryMetadata.ts line 20: enabled: boolean;
+  lib\activity\knownTemplateRegistryMetadata.ts line 192: const enabled = readBoolean(block, "enabled", errors, path);
+  lib\activity\knownTemplateRegistryMetadata.ts line 221: if (enabled !== true) {
+  lib\activity\knownTemplateRegistryMetadata.ts line 222: errors.push(`${path}.enabled must be true`);
+  lib\activity\knownTemplateRegistryMetadata.ts line 234: enabled === null ||
+  lib\activity\knownTemplateRegistryMetadata.ts line 246: enabled,
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 311: enabled: snapshot.enabled,
+  lib\activity\knownTemplateRegistryTable.ts line 8: "enabled",
+  lib\activity\knownTemplateRegistryTable.ts line 35: enabled: boolean;
+  lib\activity\knownTemplateRegistryTable.ts line 62: enabled: boolean;
+  lib\activity\knownTemplateRegistryTable.ts line 363: enabled: readRequiredBoolean(input, "enabled", errors),
+  lib\activity\knownTemplateRegistryTable.ts line 410: enabled: row.enabled,
+  lib\activity\knownTemplateRegistryTable.ts line 439: const expectedEnabled = readExpectedBooleanWithDefault(
+  lib\activity\knownTemplateRegistryTable.ts line 441: ["knownTemplateRegistry", "enabled"],
+  lib\activity\knownTemplateRegistryTable.ts line 451: enabled: snapshot.enabled === expectedEnabled,
+  lib\activity\knownTemplateRegistryTable.ts line 587: .eq("enabled", true)
+  lib\activity\knownTemplateRegistryTable.ts line 602: "No enabled registry table row found for template slug."
+  lib\ai\openaiClient.ts line 3: AI_ENABLED,
+  lib\ai\openaiClient.ts line 95: if (!AI_ENABLED) {
+  lib\ai\openaiClient.ts line 96: throw new Error("AI is disabled by AI_ENABLED=false");
+  lib\ai\openaiConfig.ts line 12: export const AI_ENABLED = process.env.AI_ENABLED !== "false";
+  lib\value-objects\objectCloudDebugGuard.ts line 5: flagName: "VALUE_OBJECT_CLOUD_DEBUG_ENABLED";
+  lib\value-objects\objectCloudDebugGuard.ts line 6: flagEnabled: boolean;
+  lib\value-objects\objectCloudDebugGuard.ts line 13: const flagEnabled = process.env.VALUE_OBJECT_CLOUD_DEBUG_ENABLED === "true";
+  lib\value-objects\objectCloudDebugGuard.ts line 20: flagName: "VALUE_OBJECT_CLOUD_DEBUG_ENABLED",
+  lib\value-objects\objectCloudDebugGuard.ts line 21: flagEnabled,
+  lib\value-objects\objectCloudDebugGuard.ts line 26: if (flagEnabled) {
+  lib\value-objects\objectCloudDebugGuard.ts line 31: flagName: "VALUE_OBJECT_CLOUD_DEBUG_ENABLED",
+  lib\value-objects\objectCloudDebugGuard.ts line 32: flagEnabled,
+  lib\value-objects\objectCloudDebugGuard.ts line 34: "Allowed because VALUE_OBJECT_CLOUD_DEBUG_ENABLED is explicitly true.",
+  lib\value-objects\objectCloudDebugGuard.ts line 42: flagName: "VALUE_OBJECT_CLOUD_DEBUG_ENABLED",
+  lib\value-objects\objectCloudDebugGuard.ts line 43: flagEnabled,
+  lib\value-objects\objectCloudDebugGuard.ts line 45: "Blocked because NODE_ENV is production and VALUE_OBJECT_CLOUD_DEBUG_ENABLED is not true.",
+  src\app\api\activity\complete\route.ts line 5: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\complete\route.ts line 93: enabled: boolean;
+  src\app\api\activity\complete\route.ts line 100: enabled: boolean;
+  src\app\api\activity\complete\route.ts line 285: enabled: false,
+  src\app\api\activity\complete\route.ts line 294: enabled: false,
+  src\app\api\activity\complete\route.ts line 305: enabled: false,
+  src\app\api\activity\complete\route.ts line 319: enabled: false,
+  src\app\api\activity\complete\route.ts line 327: enabled: true,
+  src\app\api\activity\complete\route.ts line 335: enabled: boolean;
+  src\app\api\activity\complete\route.ts line 340: const { enabled, activityEventId, derivationRunId, resolutionResult } = params;
+  src\app\api\activity\complete\route.ts line 342: if (!enabled) {
+  src\app\api\activity\complete\route.ts line 427: if (!policy.enabled || policy.inputText === null || policy.actorId === null) {
+  src\app\api\activity\complete\route.ts line 429: enabled: false,
+  src\app\api\activity\complete\route.ts line 511: enabled: true,
+  src\app\api\activity\complete\route.ts line 532: enabled: true,
+  src\app\api\activity\complete\route.ts line 552: enabled: true,
+  src\app\api\activity\complete\route.ts line 717: enabled: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\complete\route.ts line 718: status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+  src\app\api\activity\complete\route.ts line 719: message: ACTIVITY_RECORDING_ENABLED
+  src\app\api\activity\complete\route.ts line 735: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\complete\route.ts line 1257: enabled: categoryDerivationResult.enabled,
+  src\app\api\activity\day-summary\route.ts line 5: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\day-summary\route.ts line 470: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 5: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 142: enabled: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 143: status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 144: message: ACTIVITY_RECORDING_ENABLED
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 164: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 5: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 102: if (!ACTIVITY_RECORDING_ENABLED) {
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 6: ACTIVITY_RECORDING_ENABLED,
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 36: categoryDerivationEnabled?: unknown;
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 43: enabled: boolean;
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 49: enabled: boolean;
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 141: const enabled =
+
+MARKER: DEBUG
+  lib\activity\activityProcessingLogs.ts line 22: | "debug";
+  lib\activity\activityProcessingLogs.ts line 35: | "debug"
+  lib\ai\openaiClient.ts line 71: function getResponseDebugInfo(response: unknown) {
+  lib\ai\openaiClient.ts line 126: `OpenAI returned empty output_text. Debug: ${JSON.stringify(
+  lib\ai\openaiClient.ts line 127: getResponseDebugInfo(response)
+  lib\value-objects\objectCloudDebugGuard.ts line 1: export type ValueObjectCloudDebugAccess = {
+  lib\value-objects\objectCloudDebugGuard.ts line 5: flagName: "VALUE_OBJECT_CLOUD_DEBUG_ENABLED";
+  lib\value-objects\objectCloudDebugGuard.ts line 10: export function getValueObjectCloudDebugAccess(): ValueObjectCloudDebugAccess {
+  lib\value-objects\objectCloudDebugGuard.ts line 13: const flagEnabled = process.env.VALUE_OBJECT_CLOUD_DEBUG_ENABLED === "true";
+  lib\value-objects\objectCloudDebugGuard.ts line 20: flagName: "VALUE_OBJECT_CLOUD_DEBUG_ENABLED",
+  lib\value-objects\objectCloudDebugGuard.ts line 31: flagName: "VALUE_OBJECT_CLOUD_DEBUG_ENABLED",
+  lib\value-objects\objectCloudDebugGuard.ts line 34: "Allowed because VALUE_OBJECT_CLOUD_DEBUG_ENABLED is explicitly true.",
+  lib\value-objects\objectCloudDebugGuard.ts line 42: flagName: "VALUE_OBJECT_CLOUD_DEBUG_ENABLED",
+  lib\value-objects\objectCloudDebugGuard.ts line 45: "Blocked because NODE_ENV is production and VALUE_OBJECT_CLOUD_DEBUG_ENABLED is not true.",
+  src\app\activity-today\page.tsx line 732: Technical counters for debugging
+  src\app\activity-today\page.tsx line 2210: tracked progress metrics. Technical records stay in debug.
+  src\app\activity-today\page.tsx line 2610: Debug and technical details
+  src\app\activity-today\page.tsx line 2614: section when debugging records, rollbacks, timezone ranges or
+  src\app\activity-today\page.tsx line 2636: <EmptyState text="Raw JSON is hidden. Use the debug button to inspect the full day-summary response." />
+  src\app\api\activity\complete\route.ts line 264: "debug",
+  src\app\api\activity\complete\route.ts line 265: "debug_free_text",
+  src\app\api\activity\complete\route.ts line 273: normalizedSource.includes("debug")
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 17: type RouteRunnerDebugBody = {
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 92: function resolveTiming(body: RouteRunnerDebugBody): {
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 113: function resolverOptionsFromBody(body: RouteRunnerDebugBody): CategoryResolverOptions {
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 141: endpoint: "/api/activity/debug/category-derivation-route-runner-test",
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 145: ? "Debug-only endpoint for isolated Category Derivation routeRunner smoke tests."
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 174: let body: RouteRunnerDebugBody;
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 177: body = (await request.json()) as RouteRunnerDebugBody;
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 246: parser: "debug_category_derivation_route_runner_test_v1",
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 282: endpoint: "/api/activity/debug/category-derivation-route-runner-test",
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 291: schemaVersion: "category_derivation_route_runner_debug_v1",
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 296: endpoint: "/api/activity/debug/category-derivation-route-runner-test",
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 371: endpoint: "/api/activity/debug/category-derivation-route-runner-test",
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 12: const ENDPOINT = "/api/activity/debug/create-free-text-start-event";
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 231: createdBy: "debug_setup_route",
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 517: sourceRoute: "/api/activity/debug/free-text-value-object-test",
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 525: async function runCategoryDerivationForDebugRoute(params: {
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 557: endpoint: "/api/activity/debug/free-text-value-object-test",
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 649: endpoint: "/api/activity/debug/free-text-value-object-test",
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 653: ? "Debug-only endpoint for testing completed free-text Activity Event -> Value Object fallback mapping."
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 782: parser: "debug_free_text_value_object_test_v1",
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 807: const categoryDerivationResult = await runCategoryDerivationForDebugRoute({
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 830: processorName: "activity_debug_free_text_value_object_test",
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 842: processorName: "activity_debug_free_text_value_object_test",
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 853: message: "Debug free-text Value Object bridge processed.",
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 892: endpoint: "/api/activity/debug/free-text-value-object-test",
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 12: const ENDPOINT = "/api/activity/debug/value-object-bridge-proof";
+  src\app\api\activity\debug-known-template-registry\route.ts line 19: const ENDPOINT = "/api/activity/debug-known-template-registry";
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 65: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 85: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 99: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 130: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 144: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 174: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 187: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 227: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 242: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 257: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 275: processorName: "debug_rubricator_value_object_bridge_p4_7_r",
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 280: endpoint: "/api/activity/debug-rubricator-value-object-bridge",
+  src\app\api\activity\debug-trace\route.ts line 1468: "/api/activity/debug-trace?eventId=<activity_event_id>",
+  src\app\api\activity\debug-trace\route.ts line 1469: "/api/activity/debug-trace?rawSignalId=<raw_signal_id>",
+  src\app\api\activity\debug-trace\route.ts line 1470: "/api/activity/debug-trace?processingRunId=<processing_run_id>",
+  src\app\api\activity\debug-trace\route.ts line 1471: "/api/activity/debug-trace?correctionId=<activity_correction_id>",
+  src\app\api\activity\debug-trace\route.ts line 1472: "/api/activity/debug-trace?eventId=<activity_event_id>&mode=summary",
+  src\app\api\activity\debug-trace\route.ts line 1473: "/api/activity/debug-trace?rawSignalId=<raw_signal_id>&mode=summary",
+  src\app\api\activity\debug-trace\route.ts line 1494: endpoint: "/api/activity/debug-trace",
+  src\app\api\activity\debug-trace\route.ts line 1511: : "Full mode returns owner-only raw rows for private debugging. Do not expose full mode in public UI.",
+  src\app\api\activity\debug-trace\route.ts line 1520: : "Failed to load activity debug trace.",
+  src\app\api\activity\intake\events\[id]\route.ts line 1386: "The activity event was already updated. Create or repair the missing activity_corrections audit row before relying on this event for lifecycle debugging.",
+  src\app\api\activity\intake\events\route.ts line 505: ? "Full mode is still owner-only and intentionally excludes raw payloads. It adds minimal internal identifiers and available column keys for private debug workflows."
+  src\app\api\activity\intake\signals\[id]\ignore\route.ts line 154: reviewedBy: "manual-debug",
+  src\app\api\activity\intake\signals\route.ts line 280: : "Summary mode does not include full rawPayload, normalizedPreview or metadata. Use mode=full only for private debug/review workflows.",
+  src\app\api\value-objects\debug\cloud-profile\route.ts line 4: import { getValueObjectCloudDebugAccess } from "../../../../../../lib/value-objects/objectCloudDebugGuard";
+  src\app\api\value-objects\debug\cloud-profile\route.ts line 273: endpoint: "/api/value-objects/debug/cloud-profile",
+  src\app\api\value-objects\debug\cloud-profile\route.ts line 293: endpoint: "/api/value-objects/debug/cloud-profile",
+  src\app\api\value-objects\debug\cloud-profile\route.ts line 307: endpoint: "/api/value-objects/debug/cloud-profile",
+  src\app\api\value-objects\debug\cloud-profile\route.ts line 322: const endpoint = "/api/value-objects/debug/cloud-profile";
+  src\app\api\value-objects\debug\cloud-profile\route.ts line 323: const debugAccess = getValueObjectCloudDebugAccess();
+
+MARKER: FEATURE
+  src\app\api\activity\complete\route.ts line 461: featureFlag: "categoryDerivation",
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 284: featureFlag: "routeRunnerSmokeTest",
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 541: reason: "feature_flag_disabled",
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 559: featureFlag: "categoryDerivation",
+
+MARKER: MODE
+  lib\activity\activityImpactProcessor.ts line 17: impact_value_mode: string;
+  lib\activity\activityImpactProcessor.ts line 352: if (rule.impact_value_mode === "duration_minutes") {
+  lib\activity\activityImpactProcessor.ts line 359: if (rule.impact_value_mode === "fixed") {
+  lib\activity\activityImpactProcessor.ts line 366: if (rule.impact_value_mode === "multiplier") {
+  lib\activity\activityImpactProcessor.ts line 411: processor_update_mode: "atomic_rpc",
+  lib\activity\activityImpactProcessor.ts line 415: impact_value_mode: rule.impact_value_mode,
+  lib\activity\activityImpactProcessor.ts line 457: dateMode: "stored_timezone",
+  lib\activity\activityImpactProcessor.ts line 464: dateMode: "legacy_utc",
+  lib\activity\activityImpactProcessor.ts line 505: rollbackDateMode?: string | null;
+  lib\activity\activityImpactProcessor.ts line 518: rollbackDateMode = null,
+  lib\activity\activityImpactProcessor.ts line 523: processor_update_mode: "atomic_rpc",
+  lib\activity\activityImpactProcessor.ts line 531: if (rollbackDateMode) {
+  lib\activity\activityImpactProcessor.ts line 532: metadata.rollback_date_mode = rollbackDateMode;
+  lib\activity\activityImpactProcessor.ts line 587: processor_update_mode: "atomic_rpc",
+  lib\activity\activityImpactProcessor.ts line 735: rollbackDateMode: rollbackInfo.dateMode,
+  lib\activity\activityRubricatorClassificationLifecycle.ts line 359: mode: "prefer_registry_table",
+  lib\activity\categoryDerivation\persistDerivations.ts line 51: modelName?: string | null;
+  lib\activity\categoryDerivation\persistDerivations.ts line 133: model_name: params.modelName ?? null,
+  lib\activity\categoryDerivation\persistence.ts line 61: model_name?: string | null;
+  lib\activity\categoryDerivation\persistence.ts line 62: model_alias?: string | null;
+  lib\activity\categoryDerivation\persistence.ts line 110: modelName?: string | null;
+  lib\activity\categoryDerivation\persistence.ts line 111: modelAlias?: string | null;
+  lib\activity\categoryDerivation\persistence.ts line 289: model_name: nullableText(params.modelName),
+  lib\activity\categoryDerivation\persistence.ts line 290: model_alias: nullableText(params.modelAlias),
+  lib\activity\categoryDerivation\routeRunner.ts line 35: modelName?: string | null;
+  lib\activity\categoryDerivation\routeRunner.ts line 36: modelAlias?: string | null;
+  lib\activity\categoryDerivation\routeRunner.ts line 246: modelName: input.modelName ?? null,
+  lib\activity\categoryDerivation\routeRunner.ts line 247: modelAlias: input.modelAlias ?? null,
+  lib\activity\categoryDerivation\types.ts line 107: model_name?: string | null;
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 22: export type KnownTemplateRuleResolverMode =
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 29: mode: KnownTemplateRuleResolverMode;
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 52: mode?: KnownTemplateRuleResolverMode;
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 73: mode: KnownTemplateRuleResolverMode
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 77: mode,
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 453: const mode = input.mode ?? "prefer_registry_table";
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 454: const diagnostics = createBaseDiagnostics(input.templateSlug, mode);
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 486: if (mode === "hardcoded_only") {
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 489: "Resolver mode is hardcoded_only; registry table and DB metadata were not read."
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 501: if (mode === "prefer_registry_table") {
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 520: "Resolver mode is prefer_db_metadata; registry table was not read."
+  lib\activity\rubricatorResolverLogMetadata.ts line 38: mode: getString(diagnostics, "mode"),
+  lib\activity\valueObjectBridge.ts line 792: mode: "additive_v4_2_runtime_projection",
+  lib\activity\valueObjectBridge.ts line 868: mode: "additive_v4_2_runtime_projection",
+  lib\activity\valueObjectBridge.ts line 1003: mode: "runtime_category_link_from_bridge_mapping_metadata",
+  lib\activity\valueObjectBridge.ts line 1126: mode: "runtime_category_link_from_additional_category_links",
+  lib\ai\openaiClient.ts line 4: OPENAI_DEFAULT_MODEL,
+  lib\ai\openaiClient.ts line 21: model?: string;
+  lib\ai\openaiClient.ts line 92: model,
+  lib\ai\openaiClient.ts line 100: model: model || OPENAI_DEFAULT_MODEL,
+  lib\ai\openaiConfig.ts line 1: export const OPENAI_DEFAULT_MODEL =
+  lib\ai\openaiConfig.ts line 2: process.env.OPENAI_DEFAULT_MODEL || "gpt-5-nano";
+  lib\objectAction\suggestionAnalysis.ts line 3: OPENAI_DEFAULT_MODEL,
+  lib\objectAction\suggestionAnalysis.ts line 38: aiModel: string | null;
+  lib\objectAction\suggestionAnalysis.ts line 68: const DEFAULT_MODEL = OPENAI_DEFAULT_MODEL;
+  lib\objectAction\suggestionAnalysis.ts line 160: function getModelName() {
+  lib\objectAction\suggestionAnalysis.ts line 161: return DEFAULT_MODEL;
+  lib\objectAction\suggestionAnalysis.ts line 246: aiModel: getModelName(),
+  lib\objectAction\suggestionAnalysis.ts line 298: "Keep all string fields short and practical for an admin moderation panel.",
+  lib\objectAction\suggestionAnalysis.ts line 465: aiModel: string
+  lib\objectAction\suggestionAnalysis.ts line 499: aiModel,
+  lib\objectAction\suggestionAnalysis.ts line 509: const aiModel = getModelName();
+  lib\objectAction\suggestionAnalysis.ts line 525: model: aiModel,
+  lib\objectAction\suggestionAnalysis.ts line 570: return normalizeRawAnalysisResult(rawAnalysisJson, input, aiModel);
+  lib\objectAction\types.ts line 325: resolution_mode:
+  lib\objectAction\types.ts line 353: resolutionMode: ResolveContextualCategoryResult["resolution_mode"];
+  lib\objectAction\types.ts line 435: resolutionMode: row.resolution_mode,
+  src\app\activity-capture\page.tsx line 502: Template-first recording with two modes: direct completed
+  src\app\activity-today\page.tsx line 69: timezoneMode?: string;
+  src\app\activity-today\page.tsx line 143: type CorrectionMode = "duration_comment" | "advanced_timing" | "cancelled";
+  src\app\activity-today\page.tsx line 1448: onSubmit: (mode: CorrectionMode) => void;
+  src\app\activity-today\page.tsx line 1798: onSubmit: (mode: CorrectionMode) => void;
+  src\app\activity-today\page.tsx line 2050: async function submitCorrection(event: DaySummaryEvent, mode: CorrectionMode) {
+  src\app\activity-today\page.tsx line 2064: (mode === "cancelled"
+  src\app\activity-today\page.tsx line 2066: : mode === "advanced_timing"
+  src\app\activity-today\page.tsx line 2075: if (mode === "duration_comment") {
+  src\app\activity-today\page.tsx line 2090: if (mode === "advanced_timing") {
+  src\app\activity-today\page.tsx line 2129: if (mode === "cancelled") {
+  src\app\activity-today\page.tsx line 2187: const timezoneMode = summary?.timezoneMode ?? "local";
+  src\app\activity-today\page.tsx line 2213: Current date mode: {activeTimezone} local day. API timezone
+  src\app\activity-today\page.tsx line 2214: mode: {timezoneMode}.
+
+MARKER: FAILS
+  src\app\api\activity\events\[id]\route.ts line 996: "B11.3a supports completed event timing/duration/comment corrections. B11.3b supports rollback-only status corrections for completed events. B11.4.1 adds metadata recovery when correction audit insert fails after partial...
+
+MARKER: INCLUDE
+  lib\activity\activityLifecycle.ts line 332: if (!allowedNextStatuses.includes(toStatus)) {
+  lib\activity\categoryDerivation\ruleExtractor.ts line 23: function includesAny(text: string, needles: string[]): boolean {
+  lib\activity\categoryDerivation\ruleExtractor.ts line 24: return needles.some((needle) => text.includes(needle));
+  lib\activity\categoryDerivation\ruleExtractor.ts line 135: const walkedToWork = includesAny(text, [
+  lib\activity\categoryDerivation\ruleExtractor.ts line 191: const walkingDog = includesAny(text, [
+  lib\activity\categoryDerivation\ruleExtractor.ts line 236: const childStudiedNearby = includesAny(text, [
+  lib\activity\categoryDerivation\ruleExtractor.ts line 245: includesAny(text, [
+  lib\activity\categoryDerivation\ruleExtractor.ts line 358: const watchedFilmWithChild = includesAny(text, [
+  lib\activity\categoryDerivation\ruleExtractor.ts line 400: const watchedEnglishCartoonWithChild = includesAny(text, [
+  lib\activity\categoryDerivation\ruleExtractor.ts line 406: const discussedWords = includesAny(text, [
+  lib\activity\categoryDerivation\ruleExtractor.ts line 483: const wroteCommercialProposal = includesAny(text, [
+  lib\activity\importedActivityTemplateMapping.ts line 318: if (slug && searchText.includes(slug)) {
+  lib\activity\importedActivityTemplateMapping.ts line 323: if (title && searchText.includes(title)) {
+  lib\activity\importedActivityTemplateMapping.ts line 328: if (shortTitle && searchText.includes(shortTitle)) {
+  lib\activity\importedActivityTemplateMapping.ts line 333: if (group && searchText.includes(group)) {
+  lib\activity\importedActivityTemplateMapping.ts line 361: searchText.includes(word)
+  lib\activity\importedActivityTemplateMapping.ts line 379: .filter((word) => searchText.includes(word))
+  lib\activity\rubricatorValueObjectMapper.ts line 309: function includesAny(text: string, needles: string[]): boolean {
+  lib\activity\rubricatorValueObjectMapper.ts line 310: return needles.some((needle) => text.includes(needle.toLowerCase()));
+  lib\activity\rubricatorValueObjectMapper.ts line 525: includesAny(haystack, needleGroup)
+  lib\activity\valueObjectBridge.ts line 244: if (allowed.includes(value as BridgeSource)) {
+  lib\activity\valueObjectBridge.ts line 284: if (allowed.includes(value as ValueObjectStateDeltaDirection)) {
+  lib\activity\valueObjectBridge.ts line 306: allowed.includes(value as NonNullable<ValueObjectBridgeMapping["relationType"]>)
+  lib\activity\valueObjectBridge.ts line 329: if (allowed.includes(value as ValueObjectCategoryRole)) {
+  lib\objectAction\queries.ts line 81: includeInactive?: boolean;
+  lib\objectAction\queries.ts line 86: includeInactive?: boolean;
+  lib\objectAction\queries.ts line 224: if (!input.includeInactive) {
+  lib\objectAction\queries.ts line 259: if (!input.includeInactive) {
+  lib\objectAction\types.ts line 382: return OBJECT_ACTION_STATUSES.includes(value as ObjectActionStatus);
+  lib\objectAction\types.ts line 388: return OBJECT_ACTION_SOURCE_TYPES.includes(value as ObjectActionSourceType);
+  lib\objectAction\types.ts line 394: return ENTITY_CLASSIFICATION_ROLES.includes(
+  lib\objectAction\types.ts line 400: return CONCEPT_TYPES.includes(value as ConceptType);
+  lib\objectAction\types.ts line 404: return KNOWN_ENTITY_TYPES.includes(value as KnownEntityType);
+  src\app\activity-capture\page.tsx line 258: return searchable.includes(normalizedQuery);
+  src\app\api\activity\complete\route.ts line 270: normalizedSource.includes("manual") ||
+  src\app\api\activity\complete\route.ts line 271: normalizedSource.includes("chat") ||
+  src\app\api\activity\complete\route.ts line 272: normalizedSource.includes("free_text") ||
+  src\app\api\activity\complete\route.ts line 273: normalizedSource.includes("debug")
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 64: if (["true", "1", "yes", "y"].includes(normalized)) {
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 68: if (["false", "0", "no", "n"].includes(normalized)) {
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 125: if (["true", "1", "yes", "y", "on"].includes(normalized)) {
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 129: if (["false", "0", "no", "n", "off"].includes(normalized)) {
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 158: if (!allowedPolicies.includes(rawCreatePolicy as CategoryResolverCreatePolicy)) {
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 685: (slug) => categorySlugs.includes(slug)
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 689: (slug) => !categorySlugs.includes(slug)
+  src\app\api\activity\debug-trace\route.ts line 931: if (eventId && !existing.eventIds.includes(eventId)) {
+  src\app\api\activity\debug-trace\route.ts line 1141: normalized.includes("fail") ||
+  src\app\api\activity\debug-trace\route.ts line 1142: normalized.includes("error") ||
+  src\app\api\activity\debug-trace\route.ts line 1143: normalized.includes("warn") ||
+  src\app\api\activity\debug-trace\route.ts line 1144: normalized.includes("invalid")
+  src\app\api\activity\debug-trace\route.ts line 1156: normalized.includes("fail") ||
+  src\app\api\activity\debug-trace\route.ts line 1157: normalized.includes("error") ||
+  src\app\api\activity\debug-trace\route.ts line 1158: normalized.includes("invalid")
+  src\app\api\activity\debug-trace\route.ts line 1510: ? "Summary mode includes rawImportedLinkage, sourceEventId, idempotencyKey and lifecycle metadata keys without exposing rawPayload, audit snapshots or recalculation JSON."
+  src\app\api\activity\events\[id]\route.ts line 875: if (changedFields.includes("status")) {
+  src\app\api\activity\events\[id]\route.ts line 880: changedFields.includes("started_at") ||
+  src\app\api\activity\events\[id]\route.ts line 881: changedFields.includes("ended_at")
+  src\app\api\activity\events\[id]\route.ts line 886: if (changedFields.includes("duration_minutes")) {
+  src\app\api\activity\events\[id]\route.ts line 890: if (changedFields.includes("description")) {
+  src\app\api\activity\events\[id]\route.ts line 1969: changedFields.includes("started_at") ||
+  src\app\api\activity\events\[id]\route.ts line 1970: changedFields.includes("ended_at") ||
+  src\app\api\activity\events\[id]\route.ts line 1971: changedFields.includes("duration_minutes");
+  src\app\api\activity\events\route.ts line 58: return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
+  src\app\api\activity\events\route.ts line 289: const includeDetails = parseBooleanFlag(url.searchParams, "includeDetails");
+  src\app\api\activity\events\route.ts line 291: const mode = includeDetails ? "details" : "summary";
+  src\app\api\activity\events\route.ts line 338: includeDetails,
+  src\app\api\activity\events\route.ts line 352: const eventLinkSelect = includeDetails ? "*" : "id,event_id";
+  src\app\api\activity\events\route.ts line 353: const impactEventSelect = includeDetails ? "*" : "id,event_id";
+  src\app\api\activity\events\route.ts line 391: if (!includeDetails) {
+  src\app\api\activity\intake\events\[id]\route.ts line 482: if (!changedFields.includes("duration_minutes")) {
+  src\app\api\activity\intake\events\[id]\route.ts line 496: if (!changedFields.includes("ended_at")) {
+  src\app\api\activity\intake\events\[id]\route.ts line 510: if (!changedFields.includes("started_at")) {
+  src\app\api\activity\intake\events\[id]\route.ts line 541: changedFields.includes("started_at") ||
+  src\app\api\activity\intake\events\[id]\route.ts line 542: changedFields.includes("ended_at")
+  src\app\api\activity\intake\events\[id]\route.ts line 547: if (changedFields.includes("duration_minutes")) {
+  src\app\api\activity\intake\events\[id]\route.ts line 551: if (changedFields.includes("description")) {
+  src\app\api\activity\intake\events\[id]\route.ts line 1134: fullPayloadIncluded: mode === "full",
+  src\app\api\activity\intake\events\[id]\route.ts line 1150: ? "Full mode includes linked raw signal payload for the authenticated owner only. Do not expose full mode in public UI."
+  src\app\api\activity\intake\events\[id]\route.ts line 1151: : "Summary mode is safe for private review workflows and does not include raw payload or heavy metadata.",
+  src\app\api\activity\intake\events\route.ts line 181: if (rawValues.includes("all")) {
+
+MARKER: shadow
+  src\app\activity-capture\page.tsx line 492: <header className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-5 shadow-2xl shadow-black/40">
+  src\app\activity-capture\page.tsx line 613: ? "border-emerald-500 bg-emerald-950/30 shadow-lg shadow-emerald-950/40"
+  src\app\activity-today\page.tsx line 2198: <header className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-5 shadow-2xl shadow-black/40">
+  src\app\admin\object-action\categories\page.tsx line 1183: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\categories\page.tsx line 1200: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\categories\page.tsx line 1217: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\categories\page.tsx line 1234: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\categories\page.tsx line 1408: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\categories\page.tsx line 1463: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\classifications\page.tsx line 968: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\classifications\page.tsx line 985: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\classifications\page.tsx line 1002: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\classifications\page.tsx line 1025: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\classifications\page.tsx line 1154: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\classifications\page.tsx line 1220: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\page.tsx line 340: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\page.tsx line 366: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\page.tsx line 405: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\suggestions\page.tsx line 1045: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\suggestions\page.tsx line 1062: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\suggestions\page.tsx line 1079: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\suggestions\page.tsx line 1096: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\suggestions\page.tsx line 1170: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\object-action\suggestions\page.tsx line 1281: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\page.tsx line 330: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\page.tsx line 356: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\admin\page.tsx line 397: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\certificates\new\page.tsx line 450: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\certificates\new\page.tsx line 467: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\certificates\new\page.tsx line 485: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\certificates\new\page.tsx line 521: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\certificates\new\page.tsx line 626: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\certificates\redeem\page.tsx line 449: boxShadow: "0 4px 18px rgba(0,0,0,0.05)",
+  src\app\directory\[slug]\page.tsx line 1196: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\[slug]\page.tsx line 1213: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\[slug]\page.tsx line 1230: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\[slug]\page.tsx line 1248: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\[slug]\page.tsx line 1386: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\[slug]\page.tsx line 1459: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\components\DirectorySuggestionRequestForm.tsx line 211: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\page.tsx line 792: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\page.tsx line 1150: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\page.tsx line 1167: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\page.tsx line 1184: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\page.tsx line 1201: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\page.tsx line 1218: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\page.tsx line 1235: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\page.tsx line 1281: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\directory\page.tsx line 1332: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\my-certificates\page.tsx line 634: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\my-certificates\page.tsx line 651: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\my-certificates\page.tsx line 668: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\my-certificates\page.tsx line 685: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\my-certificates\page.tsx line 735: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\my-purchase-confirmations\page.tsx line 362: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\my-purchase-confirmations\page.tsx line 379: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\my-purchase-confirmations\page.tsx line 396: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\my-purchase-confirmations\page.tsx line 413: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\my-purchase-confirmations\page.tsx line 430: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\my-purchase-confirmations\page.tsx line 462: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\offers\[id]\page.tsx line 598: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\offers\[id]\page.tsx line 617: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\offers\[id]\page.tsx line 635: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\offers\[id]\page.tsx line 675: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\offers\[id]\page.tsx line 795: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\offers\new\page.tsx line 809: boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+  src\app\offers\page.tsx line 415: boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+  src\app\organizations\[id]\OrganizationLocationEditForm.tsx line 167: boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+  src\app\organizations\[id]\page.tsx line 1037: boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+  src\app\organizations\new\page.tsx line 744: boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+  src\app\organizations\page.tsx line 267: boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+  src\app\organizations\page.tsx line 400: boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+  src\app\points\page.tsx line 416: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\points\page.tsx line 435: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\points\page.tsx line 455: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\points\page.tsx line 473: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\points\page.tsx line 495: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\points\page.tsx line 527: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\purchase-confirmations\[id]\events\page.tsx line 511: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+  src\app\purchase-confirmations\[id]\events\page.tsx line 528: boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+
+MARKER: production
+  lib\activity\activityRubricatorClassificationLifecycle.ts line 534: purpose: "deterministic known-template activity_event classification before production value object bridge",
+  lib\activity\activityRubricatorClassificationLifecycle.ts line 564: "Deterministic known-template classification created by P4.7.8-R helper before production Value Object bridge.",
+  lib\value-objects\objectCloudDebugGuard.ts line 15: if (nodeEnv !== "production") {
+  lib\value-objects\objectCloudDebugGuard.ts line 22: reason: "Allowed because NODE_ENV is not production.",
+  lib\value-objects\objectCloudDebugGuard.ts line 45: "Blocked because NODE_ENV is production and VALUE_OBJECT_CLOUD_DEBUG_ENABLED is not true.",
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 226: "Clean non-completed free-text activity_event for production /api/activity/complete test.",
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 230: productionRouteUnderTest: "/api/activity/complete",
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 264: productionRouteUnderTest: "/api/activity/complete",
+  src\app\api\activity\debug-known-template-registry\route.ts line 407: "Production runtime source order is unchanged.",
+
+MARKER: dynamic =
+  src\app\admin\object-action\categories\page.tsx line 6: export const dynamic = "force-dynamic";
+  src\app\admin\object-action\classifications\page.tsx line 5: export const dynamic = "force-dynamic";
+  src\app\admin\object-action\page.tsx line 5: export const dynamic = "force-dynamic";
+  src\app\admin\object-action\suggestions\page.tsx line 6: export const dynamic = "force-dynamic";
+  src\app\admin\page.tsx line 5: export const dynamic = "force-dynamic";
+  src\app\api\activity\complete\route.ts line 41: export const dynamic = "force-dynamic";
+  src\app\api\activity\day-summary\route.ts line 11: export const dynamic = "force-dynamic";
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 15: export const dynamic = "force-dynamic";
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 10: export const dynamic = "force-dynamic";
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 25: export const dynamic = "force-dynamic";
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 10: export const dynamic = "force-dynamic";
+  src\app\api\activity\debug-known-template-registry\route.ts line 17: export const dynamic = "force-dynamic";
+  src\app\api\activity\debug-trace\route.ts line 9: export const dynamic = "force-dynamic";
+  src\app\api\activity\events\[id]\corrections\route.ts line 9: export const dynamic = "force-dynamic";
+  src\app\api\activity\events\[id]\route.ts line 29: export const dynamic = "force-dynamic";
+  src\app\api\activity\events\route.ts line 11: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\events\[id]\confirm\route.ts line 17: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\events\[id]\reject\route.ts line 9: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\events\[id]\route.ts line 12: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\events\route.ts line 12: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\route.ts line 21: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\signals\[id]\ignore\route.ts line 9: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\signals\[id]\promote\route.ts line 18: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\signals\route.ts line 18: export const dynamic = "force-dynamic";
+  src\app\api\activity\record\route.ts line 25: export const dynamic = "force-dynamic";
+  src\app\api\activity\start\route.ts line 21: export const dynamic = "force-dynamic";
+  src\app\api\activity\templates\route.ts line 11: export const dynamic = "force-dynamic";
+  src\app\api\certificates\expire-due\route.ts line 4: export const dynamic = "force-dynamic";
+  src\app\api\directory\filters\route.ts line 4: export const dynamic = "force-dynamic";
+  src\app\api\directory\organizations\[slug]\offers\route.ts line 4: export const dynamic = "force-dynamic";
+  src\app\api\directory\organizations\[slug]\route.ts line 4: export const dynamic = "force-dynamic";
+  src\app\api\directory\organizations\route.ts line 4: export const dynamic = "force-dynamic";
+  src\app\api\geo\areas\route.ts line 5: export const dynamic = "force-dynamic";
+  src\app\api\geo\suggestions\route.ts line 5: export const dynamic = "force-dynamic";
+  src\app\api\object-action\categories\audit-verify\route.ts line 6: export const dynamic = "force-dynamic";
+  src\app\api\object-action\categories\route.ts line 6: export const dynamic = "force-dynamic";
+  src\app\api\object-action\suggestions\audit-verify\route.ts line 6: export const dynamic = "force-dynamic";
+  src\app\api\object-action\suggestions\route.ts line 10: export const dynamic = "force-dynamic";
+  src\app\api\organizations\[id]\location\route.ts line 6: export const dynamic = "force-dynamic";
+  src\app\api\public\rewards\route.ts line 4: export const dynamic = "force-dynamic";
+  src\app\api\test\route.ts line 6: export const dynamic = "force-dynamic";
+  src\app\api\value-objects\debug\cloud-profile\route.ts line 6: export const dynamic = "force-dynamic";
+  src\app\api\value-objects\route.ts line 5: export const dynamic = "force-dynamic";
+  src\app\certificates\new\page.tsx line 4: export const dynamic = "force-dynamic";
+  src\app\certificates\redeem\page.tsx line 6: export const dynamic = "force-dynamic";
+  src\app\directory\[slug]\page.tsx line 6: export const dynamic = "force-dynamic";
+  src\app\directory\page.tsx line 7: export const dynamic = "force-dynamic";
+  src\app\my-certificates\page.tsx line 7: export const dynamic = "force-dynamic";
+  src\app\my-purchase-confirmations\page.tsx line 5: export const dynamic = "force-dynamic";
+  src\app\offers\[id]\page.tsx line 5: export const dynamic = "force-dynamic";
+  src\app\organizations\[id]\page.tsx line 7: export const dynamic = "force-dynamic";
+  src\app\purchase-confirmations\[id]\events\page.tsx line 5: export const dynamic = "force-dynamic";
+  src\app\purchase-confirmations\page.tsx line 5: export const dynamic = "force-dynamic";
+  src\app\rewards\page.tsx line 4: export const dynamic = "force-dynamic";
+  src\app\seller-certificates\page.tsx line 6: export const dynamic = "force-dynamic";
+
+MARKER: force-dynamic
+  src\app\admin\object-action\categories\page.tsx line 6: export const dynamic = "force-dynamic";
+  src\app\admin\object-action\classifications\page.tsx line 5: export const dynamic = "force-dynamic";
+  src\app\admin\object-action\page.tsx line 5: export const dynamic = "force-dynamic";
+  src\app\admin\object-action\suggestions\page.tsx line 6: export const dynamic = "force-dynamic";
+  src\app\admin\page.tsx line 5: export const dynamic = "force-dynamic";
+  src\app\api\activity\complete\route.ts line 41: export const dynamic = "force-dynamic";
+  src\app\api\activity\day-summary\route.ts line 11: export const dynamic = "force-dynamic";
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 15: export const dynamic = "force-dynamic";
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 10: export const dynamic = "force-dynamic";
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 25: export const dynamic = "force-dynamic";
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 10: export const dynamic = "force-dynamic";
+  src\app\api\activity\debug-known-template-registry\route.ts line 17: export const dynamic = "force-dynamic";
+  src\app\api\activity\debug-trace\route.ts line 9: export const dynamic = "force-dynamic";
+  src\app\api\activity\events\[id]\corrections\route.ts line 9: export const dynamic = "force-dynamic";
+  src\app\api\activity\events\[id]\route.ts line 29: export const dynamic = "force-dynamic";
+  src\app\api\activity\events\route.ts line 11: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\events\[id]\confirm\route.ts line 17: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\events\[id]\reject\route.ts line 9: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\events\[id]\route.ts line 12: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\events\route.ts line 12: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\route.ts line 21: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\signals\[id]\ignore\route.ts line 9: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\signals\[id]\promote\route.ts line 18: export const dynamic = "force-dynamic";
+  src\app\api\activity\intake\signals\route.ts line 18: export const dynamic = "force-dynamic";
+  src\app\api\activity\record\route.ts line 25: export const dynamic = "force-dynamic";
+  src\app\api\activity\start\route.ts line 21: export const dynamic = "force-dynamic";
+  src\app\api\activity\templates\route.ts line 11: export const dynamic = "force-dynamic";
+  src\app\api\certificates\expire-due\route.ts line 4: export const dynamic = "force-dynamic";
+  src\app\api\directory\filters\route.ts line 4: export const dynamic = "force-dynamic";
+  src\app\api\directory\organizations\[slug]\offers\route.ts line 4: export const dynamic = "force-dynamic";
+  src\app\api\directory\organizations\[slug]\route.ts line 4: export const dynamic = "force-dynamic";
+  src\app\api\directory\organizations\route.ts line 4: export const dynamic = "force-dynamic";
+  src\app\api\geo\areas\route.ts line 5: export const dynamic = "force-dynamic";
+  src\app\api\geo\suggestions\route.ts line 5: export const dynamic = "force-dynamic";
+  src\app\api\object-action\categories\audit-verify\route.ts line 6: export const dynamic = "force-dynamic";
+  src\app\api\object-action\categories\route.ts line 6: export const dynamic = "force-dynamic";
+  src\app\api\object-action\suggestions\audit-verify\route.ts line 6: export const dynamic = "force-dynamic";
+  src\app\api\object-action\suggestions\route.ts line 10: export const dynamic = "force-dynamic";
+  src\app\api\organizations\[id]\location\route.ts line 6: export const dynamic = "force-dynamic";
+  src\app\api\public\rewards\route.ts line 4: export const dynamic = "force-dynamic";
+  src\app\api\test\route.ts line 6: export const dynamic = "force-dynamic";
+  src\app\api\value-objects\debug\cloud-profile\route.ts line 6: export const dynamic = "force-dynamic";
+  src\app\api\value-objects\route.ts line 5: export const dynamic = "force-dynamic";
+  src\app\certificates\new\page.tsx line 4: export const dynamic = "force-dynamic";
+  src\app\certificates\redeem\page.tsx line 6: export const dynamic = "force-dynamic";
+  src\app\directory\[slug]\page.tsx line 6: export const dynamic = "force-dynamic";
+  src\app\directory\page.tsx line 7: export const dynamic = "force-dynamic";
+  src\app\my-certificates\page.tsx line 7: export const dynamic = "force-dynamic";
+  src\app\my-purchase-confirmations\page.tsx line 5: export const dynamic = "force-dynamic";
+  src\app\offers\[id]\page.tsx line 5: export const dynamic = "force-dynamic";
+  src\app\organizations\[id]\page.tsx line 7: export const dynamic = "force-dynamic";
+  src\app\purchase-confirmations\[id]\events\page.tsx line 5: export const dynamic = "force-dynamic";
+  src\app\purchase-confirmations\page.tsx line 5: export const dynamic = "force-dynamic";
+  src\app\rewards\page.tsx line 4: export const dynamic = "force-dynamic";
+  src\app\seller-certificates\page.tsx line 6: export const dynamic = "force-dynamic";
+
+MARKER: NextResponse.json
+  lib\activity\activityUserContext.ts line 39: errorResponse: NextResponse.json(
+  lib\activity\activityUserContext.ts line 57: errorResponse: NextResponse.json(
+  lib\activity\activityUserContext.ts line 77: errorResponse: NextResponse.json(
+  lib\activity\activityUserContext.ts line 98: errorResponse: NextResponse.json(
+  src\app\api\activities\route.ts line 21: errorResponse: NextResponse.json(
+  src\app\api\activities\route.ts line 39: errorResponse: NextResponse.json(
+  src\app\api\activities\route.ts line 57: errorResponse: NextResponse.json(
+  src\app\api\activities\route.ts line 76: errorResponse: NextResponse.json(
+  src\app\api\activities\route.ts line 120: return NextResponse.json(
+  src\app\api\activities\route.ts line 139: return NextResponse.json(
+  src\app\api\activities\route.ts line 145: return NextResponse.json({
+  src\app\api\activities\route.ts line 159: return NextResponse.json(
+  src\app\api\activities\route.ts line 182: return NextResponse.json(
+  src\app\api\activities\route.ts line 191: return NextResponse.json(
+  src\app\api\activities\route.ts line 219: return NextResponse.json(
+  src\app\api\activities\route.ts line 252: return NextResponse.json(
+  src\app\api\activities\route.ts line 284: return NextResponse.json(
+  src\app\api\activities\route.ts line 305: return NextResponse.json(
+  src\app\api\activities\route.ts line 314: return NextResponse.json({
+  src\app\api\activity\complete\route.ts line 713: return NextResponse.json({
+  src\app\api\activity\complete\route.ts line 736: return NextResponse.json(
+  src\app\api\activity\complete\route.ts line 752: return NextResponse.json(
+  src\app\api\activity\complete\route.ts line 766: return NextResponse.json(
+  src\app\api\activity\complete\route.ts line 778: return NextResponse.json(
+  src\app\api\activity\complete\route.ts line 795: return NextResponse.json(
+  src\app\api\activity\complete\route.ts line 805: return NextResponse.json(
+  src\app\api\activity\complete\route.ts line 832: return NextResponse.json({
+  src\app\api\activity\complete\route.ts line 853: return NextResponse.json(
+  src\app\api\activity\complete\route.ts line 867: return NextResponse.json(
+  src\app\api\activity\complete\route.ts line 883: return NextResponse.json(
+  src\app\api\activity\complete\route.ts line 1044: return NextResponse.json(
+  src\app\api\activity\complete\route.ts line 1339: return NextResponse.json({
+  src\app\api\activity\complete\route.ts line 1479: return NextResponse.json(
+  src\app\api\activity\day-summary\route.ts line 471: return NextResponse.json(
+  src\app\api\activity\day-summary\route.ts line 487: return NextResponse.json(
+  src\app\api\activity\day-summary\route.ts line 511: return NextResponse.json(
+  src\app\api\activity\day-summary\route.ts line 544: return NextResponse.json(
+  src\app\api\activity\day-summary\route.ts line 562: return NextResponse.json(
+  src\app\api\activity\day-summary\route.ts line 582: return NextResponse.json({
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 139: return NextResponse.json({
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 165: return NextResponse.json(
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 179: return NextResponse.json(
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 195: return NextResponse.json(
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 207: return NextResponse.json(
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 257: return NextResponse.json(
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 302: return NextResponse.json({
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 103: return NextResponse.json(
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 119: return NextResponse.json(
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 131: return NextResponse.json(
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 148: return NextResponse.json(
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 162: return NextResponse.json(
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 184: return NextResponse.json(
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 244: return NextResponse.json(
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 257: return NextResponse.json({
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 647: return NextResponse.json({
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 680: return NextResponse.json(
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 694: return NextResponse.json(
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 707: return NextResponse.json(
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 719: return NextResponse.json(
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 731: return NextResponse.json(
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 744: return NextResponse.json(
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 796: return NextResponse.json(
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 904: return NextResponse.json({
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 399: return NextResponse.json(
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 414: return NextResponse.json(
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 432: return NextResponse.json(
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 725: return NextResponse.json({
+  src\app\api\activity\debug-known-template-registry\route.ts line 309: return NextResponse.json(
+  src\app\api\activity\debug-known-template-registry\route.ts line 326: return NextResponse.json(
+  src\app\api\activity\debug-known-template-registry\route.ts line 339: return NextResponse.json(
+  src\app\api\activity\debug-known-template-registry\route.ts line 379: return NextResponse.json({
+  src\app\api\activity\debug-known-template-registry\route.ts line 411: return NextResponse.json(
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 62: errorResponse: NextResponse.json(
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 82: errorResponse: NextResponse.json(
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 96: errorResponse: NextResponse.json(
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 127: errorResponse: NextResponse.json(
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 141: errorResponse: NextResponse.json(
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 171: return NextResponse.json(
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 184: return NextResponse.json(
+  src\app\api\activity\debug-rubricator-value-object-bridge\route.ts line 224: return NextResponse.json(
+
+MARKER: getActivityUserContext
+  lib\activity\activityUserContext.ts line 31: export async function getActivityUserContext(): Promise<ActivityUserContext> {
+  src\app\api\activity\complete\route.ts line 17: import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\complete\route.ts line 745: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\day-summary\route.ts line 8: import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\day-summary\route.ts line 480: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 7: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 188: const { appUser, personActor, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 7: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 177: await getActivityUserContext();
+  src\app\api\activity\debug\create-free-text-start-event\route.ts line 190: "Expected getActivityUserContext() to return appUser and personActor.",
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 8: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\debug\free-text-value-object-test\route.ts line 703: const userContext = await getActivityUserContext();
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 7: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\debug\value-object-bridge-proof\route.ts line 425: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\debug-known-template-registry\route.ts line 6: import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\debug-known-template-registry\route.ts line 319: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\debug-trace\route.ts line 6: import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\debug-trace\route.ts line 1399: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\events\[id]\corrections\route.ts line 6: import { getActivityUserContext } from "../../../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\events\[id]\corrections\route.ts line 230: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\events\[id]\route.ts line 11: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\events\[id]\route.ts line 1011: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\events\route.ts line 8: import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\events\route.ts line 267: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\intake\events\[id]\confirm\route.ts line 10: import { getActivityUserContext } from "../../../../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\intake\events\[id]\confirm\route.ts line 339: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\intake\events\[id]\reject\route.ts line 6: import { getActivityUserContext } from "../../../../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\intake\events\[id]\reject\route.ts line 211: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\intake\events\[id]\route.ts line 6: import { getActivityUserContext } from "../../../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\intake\events\[id]\route.ts line 1064: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\intake\events\[id]\route.ts line 1183: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\intake\events\route.ts line 6: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\intake\events\route.ts line 390: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\intake\route.ts line 6: import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\intake\route.ts line 285: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\intake\signals\[id]\ignore\route.ts line 6: import { getActivityUserContext } from "../../../../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\intake\signals\[id]\ignore\route.ts line 174: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\intake\signals\[id]\promote\route.ts line 6: import { getActivityUserContext } from "../../../../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\intake\signals\[id]\promote\route.ts line 467: await getActivityUserContext();
+  src\app\api\activity\intake\signals\route.ts line 6: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\intake\signals\route.ts line 188: const { appUser, errorResponse } = await getActivityUserContext();
+  src\app\api\activity\record\route.ts line 13: import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\record\route.ts line 689: await getActivityUserContext();
+  src\app\api\activity\start\route.ts line 13: import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\start\route.ts line 457: await getActivityUserContext();
+  src\app\api\activity\templates\route.ts line 8: import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+  src\app\api\activity\templates\route.ts line 235: const { appUser, errorResponse } = await getActivityUserContext();
+
+MARKER: runCategoryDerivationRoute
+  lib\activity\categoryDerivation\routeRunner.ts line 30: export interface RunCategoryDerivationRouteInput {
+  lib\activity\categoryDerivation\routeRunner.ts line 45: export interface RunCategoryDerivationRouteResult {
+  lib\activity\categoryDerivation\routeRunner.ts line 110: function shouldPersist(input: RunCategoryDerivationRouteInput): boolean {
+  lib\activity\categoryDerivation\routeRunner.ts line 114: function shouldResolve(input: RunCategoryDerivationRouteInput): boolean {
+  lib\activity\categoryDerivation\routeRunner.ts line 189: }): RunCategoryDerivationRouteResult {
+  lib\activity\categoryDerivation\routeRunner.ts line 212: export async function runCategoryDerivationRoute(
+  lib\activity\categoryDerivation\routeRunner.ts line 213: input: RunCategoryDerivationRouteInput,
+  lib\activity\categoryDerivation\routeRunner.ts line 214: ): Promise<RunCategoryDerivationRouteResult> {
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 10: runCategoryDerivationRoute,
+  src\app\api\activity\debug\category-derivation-route-runner-test\route.ts line 269: const routeRunnerResult = await runCategoryDerivationRoute({
+
+MARKER: activity_processing_logs
+  lib\activity\activityProcessingLogs.ts line 158: .from("activity_processing_logs")
+  src\app\api\activity\debug-trace\route.ts line 439: table: "activity_processing_logs",
+  src\app\api\activity\debug-trace\route.ts line 491: table: "activity_processing_logs",
+  src\app\api\activity\debug-trace\route.ts line 517: table: "activity_processing_logs",
+  src\app\api\activity\debug-trace\route.ts line 530: table: "activity_processing_logs",
+  src\app\api\activity\debug-trace\route.ts line 1230: sourceTable: "activity_processing_logs",
+
+MARKER: category_derivation_runs
+  lib\activity\categoryDerivation\persistDerivations.ts line 212: .from<CategoryDerivationRunRow>("category_derivation_runs")
+  lib\activity\categoryDerivation\persistDerivations.ts line 279: `Failed to insert category_derivation_runs: ${
+  lib\activity\categoryDerivation\persistence.ts line 306: .from<CategoryDerivationRunRow>("category_derivation_runs")
+  lib\activity\categoryDerivation\persistence.ts line 348: .from<CategoryDerivationRunRow>("category_derivation_runs")
+  lib\activity\categoryDerivation\persistence.ts line 401: .from<CategoryDerivationRunRow>("category_derivation_runs")
+
+MARKER: activity_category_derivations
+  lib\activity\categoryDerivation\persistDerivations.ts line 231: .from<ActivityCategoryDerivationRow>("activity_category_derivations")
+  lib\activity\categoryDerivation\persistDerivations.ts line 302: `Failed to insert activity_category_derivations for ${insertPayload.candidate_slug}: ${
+  lib\activity\categoryDerivation\persistence.ts line 532: .from<ActivityCategoryDerivationRow>("activity_category_derivations")
+
+IMPORT / EXPORT SUMMARY FOR KEY FILES
+
+
+------------------------------------------------------------
+IMPORTS / EXPORTS
+File: .\lib\activity\activityRecordingConfig.ts
+------------------------------------------------------------
+line 1: export const ACTIVITY_RECORDING_ENABLED =
+line 4: export const ACTIVITY_RECORDING_DISABLED_MESSAGE =
+line 7: export const ACTIVITY_RECORDING_DEFAULT_LIMIT = 20;
+line 9: export const ACTIVITY_RECORDING_MAX_LIMIT = 100;
+
+------------------------------------------------------------
+IMPORTS / EXPORTS
+File: .\lib\activity\activityUserContext.ts
+------------------------------------------------------------
+line 1: import { NextResponse } from "next/server";
+line 2: import { auth0 } from "../auth0";
+line 3: import { supabase } from "../supabase";
+line 5: export type ActivityAppUser = {
+line 11: export type ActivityPerson = {
+line 17: export type ActivityActor = {
+line 24: export type ActivityUserContext = {
+line 31: export async function getActivityUserContext(): Promise<ActivityUserContext> {
+
+------------------------------------------------------------
+IMPORTS / EXPORTS
+File: .\lib\activity\categoryDerivation\routeRunner.ts
+------------------------------------------------------------
+line 1: import { deriveCategoryCandidates } from "./ruleExtractor";
+line 2: import {
+line 7: import {
+line 17: import type {
+line 27: export type CategoryDerivationRouteRunnerSupabaseClient =
+line 30: export interface RunCategoryDerivationRouteInput {
+line 45: export interface RunCategoryDerivationRouteResult {
+line 212: export async function runCategoryDerivationRoute(
+
+------------------------------------------------------------
+IMPORTS / EXPORTS
+File: .\lib\activity\categoryDerivation\persistence.ts
+------------------------------------------------------------
+line 1: import type {
+line 39: export interface CategoryDerivationPersistenceClient {
+line 43: export type ActivityCategoryDerivationStatus =
+line 52: export interface CategoryDerivationRunRow {
+line 81: export interface ActivityCategoryDerivationRow {
+line 105: export interface CreateCategoryDerivationRunInput {
+line 124: export interface CreateCategoryDerivationRunResult {
+line 133: export interface FinishCategoryDerivationRunInput {
+line 143: export interface FailCategoryDerivationRunInput {
+line 149: export interface UpdateCategoryDerivationRunResult {
+line 157: export interface PersistActivityCategoryDerivationsInput {
+line 164: export interface PersistActivityCategoryDerivationsResult {
+line 238: export function buildCategoryDerivationInputHash(input: CategoryDerivationInput): string {
+line 272: export async function createCategoryDerivationRun(
+line 332: export async function finishCategoryDerivationRun(
+line 389: export async function failCategoryDerivationRun(
+line 505: export async function persistActivityCategoryDerivations(
+
+------------------------------------------------------------
+IMPORTS / EXPORTS
+File: .\src\app\api\activity\complete\route.ts
+------------------------------------------------------------
+line 1: import { randomUUID } from "crypto";
+line 2: import { NextResponse } from "next/server";
+line 3: import {
+line 7: import {
+line 13: import {
+line 17: import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+line 18: import { processActivityImpacts } from "../../../../../lib/activity/activityImpactProcessor";
+line 19: import { processActivityValueObjectBridge } from "../../../../../lib/activity/activityValueObjectLifecycle";
+line 20: import { deriveCategoryCandidates } from "../../../../../lib/activity/categoryDerivation/ruleExtractor";
+line 21: import {
+line 26: import {
+line 30: import type { CategoryDerivationInput } from "../../../../../lib/activity/categoryDerivation/types";
+line 31: import type { AdditionalValueObjectCategoryLink } from "../../../../../lib/activity/valueObjectBridge";
+line 32: import { ensureActivityEventRubricatorClassificationForKnownTemplate } from "../../../../../lib/activity/activityRubricatorClassificationLifecycle";
+line 33: import { buildRubricatorResolverLogMetadata } from "../../../../../lib/activity/rubricatorResolverLogMetadata";
+line 34: import {
+line 39: import { supabase } from "../../../../../lib/supabase";
+line 41: export const dynamic = "force-dynamic";
+line 712: export async function GET() {
+line 734: export async function POST(request: Request) {
+
+------------------------------------------------------------
+IMPORTS / EXPORTS
+File: .\src\app\api\activity\debug\category-derivation-route-runner-test\route.ts
+------------------------------------------------------------
+line 1: import { NextResponse } from "next/server";
+line 3: import {
+line 7: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+line 8: import type { CategoryResolverOptions } from "../../../../../../lib/activity/categoryDerivation/resolver";
+line 9: import {
+line 13: import { supabase } from "../../../../../../lib/supabase";
+line 15: export const dynamic = "force-dynamic";
+line 138: export async function GET() {
+line 163: export async function POST(request: Request) {
+
+KEY FILE SNIPPETS
+
+
+------------------------------------------------------------
+SNIPPET
+File: .\lib\activity\activityRecordingConfig.ts
+Pattern: process.env
+------------------------------------------------------------
+    1: export const ACTIVITY_RECORDING_ENABLED =
+    2:   process.env.ACTIVITY_RECORDING_ENABLED === "true";
+    3: 
+    4: export const ACTIVITY_RECORDING_DISABLED_MESSAGE =
+    5:   "Activity Recording Layer is disabled. Set ACTIVITY_RECORDING_ENABLED=true to enable it.";
+    6: 
+    7: export const ACTIVITY_RECORDING_DEFAULT_LIMIT = 20;
+    8: 
+    9: export const ACTIVITY_RECORDING_MAX_LIMIT = 100;
+
+------------------------------------------------------------
+SNIPPET
+File: .\lib\activity\activityRecordingConfig.ts
+Pattern: ACTIVITY_RECORDING_ENABLED
+------------------------------------------------------------
+    1: export const ACTIVITY_RECORDING_ENABLED =
+    2:   process.env.ACTIVITY_RECORDING_ENABLED === "true";
+    3: 
+    4: export const ACTIVITY_RECORDING_DISABLED_MESSAGE =
+    5:   "Activity Recording Layer is disabled. Set ACTIVITY_RECORDING_ENABLED=true to enable it.";
+    6: 
+    7: export const ACTIVITY_RECORDING_DEFAULT_LIMIT = 20;
+    8: 
+    9: export const ACTIVITY_RECORDING_MAX_LIMIT = 100;
+
+------------------------------------------------------------
+SNIPPET
+File: .\src\app\api\activity\complete\route.ts
+Pattern: export async function POST
+------------------------------------------------------------
+  694: }
+  695: 
+  696: async function getExistingImpactEventsCount(eventId: string) {
+  697:   const { count, error } = await supabase
+  698:     .from("impact_events")
+  699:     .select("id", {
+  700:       count: "exact",
+  701:       head: true,
+  702:     })
+  703:     .eq("event_id", eventId);
+  704: 
+  705:   if (error) {
+  706:     throw new Error(error.message);
+  707:   }
+  708: 
+  709:   return count ?? 0;
+  710: }
+  711: 
+  712: export async function GET() {
+  713:   return NextResponse.json({
+  714:     ok: true,
+  715:     endpoint: "/api/activity/complete",
+  716:     method: "POST",
+  717:     enabled: ACTIVITY_RECORDING_ENABLED,
+  718:     status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+  719:     message: ACTIVITY_RECORDING_ENABLED
+  720:       ? "Complete a previously started activity event and process rule-based impacts."
+  721:       : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  722:     example: {
+  723:       eventId: "activity-event-uuid",
+  724:       comment: "Completed lifecycle smoke test",
+  725:     },
+  726:     deterministicTestExample: {
+  727:       eventId: "activity-event-uuid",
+  728:       durationMinutes: 5,
+  729:       comment: "Completed lifecycle smoke test with fixed duration",
+  730:     },
+  731:   });
+  732: }
+  733: 
+  734: export async function POST(request: Request) {
+  735:   if (!ACTIVITY_RECORDING_ENABLED) {
+  736:     return NextResponse.json(
+  737:       {
+  738:         ok: false,
+  739:         error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  740:       },
+  741:       { status: 503 }
+  742:     );
+  743:   }
+  744: 
+  745:   const { appUser, errorResponse } = await getActivityUserContext();
+  746: 
+  747:   if (errorResponse) {
+  748:     return errorResponse;
+  749:   }
+  750: 
+  751:   if (!appUser) {
+  752:     return NextResponse.json(
+  753:       {
+  754:         ok: false,
+  755:         error: "User context not found",
+  756:       },
+  757:       { status: 500 }
+  758:     );
+  759:   }
+  760: 
+  761:   let body: ActivityCompleteBody;
+  762: 
+  763:   try {
+  764:     body = (await request.json()) as ActivityCompleteBody;
+  765:   } catch {
+  766:     return NextResponse.json(
+  767:       {
+  768:         ok: false,
+  769:         error: "Invalid JSON body",
+  770:       },
+  771:       { status: 400 }
+  772:     );
+  773:   }
+  774: 
+  775:   const eventId = asString(body.eventId);
+  776: 
+  777:   if (!eventId) {
+  778:     return NextResponse.json(
+  779:       {
+  780:         ok: false,
+  781:         error: "eventId is required.",
+  782:       },
+  783:       { status: 400 }
+  784:     );
+  785:   }
+  786: 
+  787:   const { data: eventData, error: eventError } = await supabase
+  788:     .from("activity_events")
+  789:     .select("*")
+  790:     .eq("id", eventId)
+  791:     .eq("user_id", appUser.id)
+  792:     .maybeSingle();
+  793: 
+  794:   if (eventError) {
+  795:     return NextResponse.json(
+  796:       {
+  797:         ok: false,
+  798:         error: eventError.message,
+  799:       },
+  800:       { status: 500 }
+  801:     );
+  802:   }
+  803: 
+  804:   if (!eventData) {
+  805:     return NextResponse.json(
+  806:       {
+  807:         ok: false,
+  808:         error: "Activity event not found or access denied.",
+  809:       },
+  810:       { status: 404 }
+  811:     );
+  812:   }
+  813: 
+  814:   const event = eventData as ActivityEventRow;
+  815:   const completedStatus = ACTIVITY_STATUS_COMPLETED;
+  816: 
+  817:   if (event.status === completedStatus) {
+  818:     try {
+  819:       const existingImpactEventsCount = await getExistingImpactEventsCount(
+  820:         event.id
+  821:       );
+  822: 
+  823:       const impactResult = await processActivityImpacts({
+  824:         eventId: event.id,
+  825:         userId: appUser.id,
+  826:         activityTemplateId: event.activity_template_id,
+  827:         activityTypeId: event.activity_type_id,
+  828:         durationMinutes: event.duration_minutes,
+  829:         startedAt: event.started_at,
+  830:       });
+  831: 
+  832:       return NextResponse.json({
+  833:         ok: true,
+  834:         status: "already_completed",
+  835:         event,
+  836:         impactEvents: impactResult.impactEvents,
+  837:         dailyAggregates: impactResult.dailyAggregates,
+  838:         currentSnapshots: impactResult.currentSnapshots,
+  839:         impactProcessor: {
+  840:           ok: impactResult.ok,
+  841:           skipped: impactResult.skipped,
+  842:           reason: impactResult.reason,
+  843:           counts: impactResult.counts,
+  844:           existingImpactEventsCount,
+  845:         },
+  846:         lifecycle: {
+  847:           alreadyCompleted: true,
+  848:           note:
+  849:             "Activity event was already completed. Duplicate impact processing was skipped if impacts already existed.",
+  850:         },
+  851:       });
+  852:     } catch (error) {
+  853:       return NextResponse.json(
+  854:         {
+
+------------------------------------------------------------
+SNIPPET
+File: .\src\app\api\activity\complete\route.ts
+Pattern: activity_processing_logs
+------------------------------------------------------------
+NOT FOUND
+
+------------------------------------------------------------
+SNIPPET
+File: .\src\app\api\activity\complete\route.ts
+Pattern: activity_event_value_object_links
+------------------------------------------------------------
+NOT FOUND
+
+------------------------------------------------------------
+SNIPPET
+File: .\src\app\api\activity\debug\category-derivation-route-runner-test\route.ts
+Pattern: ACTIVITY_RECORDING_ENABLED
+------------------------------------------------------------
+    1: import { NextResponse } from "next/server";
+    2: 
+    3: import {
+    4:   ACTIVITY_RECORDING_DISABLED_MESSAGE,
+    5:   ACTIVITY_RECORDING_ENABLED,
+    6: } from "../../../../../../lib/activity/activityRecordingConfig";
+    7: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+    8: import type { CategoryResolverOptions } from "../../../../../../lib/activity/categoryDerivation/resolver";
+    9: import {
+   10:   runCategoryDerivationRoute,
+   11:   type CategoryDerivationRouteRunnerSupabaseClient,
+   12: } from "../../../../../../lib/activity/categoryDerivation/routeRunner";
+   13: import { supabase } from "../../../../../../lib/supabase";
+   14: 
+   15: export const dynamic = "force-dynamic";
+   16: 
+   17: type RouteRunnerDebugBody = {
+   18:   inputText?: unknown;
+   19:   naturalInput?: unknown;
+   20:   title?: unknown;
+   21:   description?: unknown;
+   22:   durationMinutes?: unknown;
+   23:   startedAt?: unknown;
+   24:   endedAt?: unknown;
+   25:   persist?: unknown;
+   26:   resolve?: unknown;
+   27:   createPolicy?: unknown;
+   28:   defaultStatus?: unknown;
+   29: };
+   30: 
+   31: function asString(value: unknown): string | null {
+   32:   if (typeof value !== "string") {
+   33:     return null;
+   34:   }
+   35: 
+   36:   const trimmed = value.trim();
+   37:   return trimmed.length > 0 ? trimmed : null;
+   38: }
+   39: 
+   40: function asNumber(value: unknown): number | null {
+   41:   if (typeof value === "number" && Number.isFinite(value)) {
+   42:     return value;
+   43:   }
+   44: 
+   45:   if (typeof value === "string") {
+   46:     const parsed = Number.parseFloat(value.trim().replace(",", "."));
+   47: 
+   48:     if (Number.isFinite(parsed)) {
+   49:       return parsed;
+   50:     }
+   51:   }
+   52: 
+   53:   return null;
+   54: }
+   55: 
+   56: function asBoolean(value: unknown): boolean | null {
+   57:   if (typeof value === "boolean") {
+   58:     return value;
+   59:   }
+   60: 
+   61:   if (typeof value === "string") {
+   62:     const normalized = value.trim().toLowerCase();
+   63: 
+   64:     if (["true", "1", "yes", "y"].includes(normalized)) {
+   65:       return true;
+   66:     }
+   67: 
+   68:     if (["false", "0", "no", "n"].includes(normalized)) {
+   69:       return false;
+   70:     }
+   71:   }
+   72: 
+   73:   return null;
+   74: }
+   75: 
+   76: function asIsoOrNull(value: unknown): string | null {
+   77:   const text = asString(value);
+   78: 
+   79:   if (!text) {
+   80:     return null;
+   81:   }
+   82: 
+   83:   const date = new Date(text);
+   84: 
+   85:   if (Number.isNaN(date.getTime())) {
+
+------------------------------------------------------------
+SNIPPET
+File: .\src\app\api\activity\debug\category-derivation-route-runner-test\route.ts
+Pattern: runCategoryDerivationRoute
+------------------------------------------------------------
+    1: import { NextResponse } from "next/server";
+    2: 
+    3: import {
+    4:   ACTIVITY_RECORDING_DISABLED_MESSAGE,
+    5:   ACTIVITY_RECORDING_ENABLED,
+    6: } from "../../../../../../lib/activity/activityRecordingConfig";
+    7: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+    8: import type { CategoryResolverOptions } from "../../../../../../lib/activity/categoryDerivation/resolver";
+    9: import {
+   10:   runCategoryDerivationRoute,
+   11:   type CategoryDerivationRouteRunnerSupabaseClient,
+   12: } from "../../../../../../lib/activity/categoryDerivation/routeRunner";
+   13: import { supabase } from "../../../../../../lib/supabase";
+   14: 
+   15: export const dynamic = "force-dynamic";
+   16: 
+   17: type RouteRunnerDebugBody = {
+   18:   inputText?: unknown;
+   19:   naturalInput?: unknown;
+   20:   title?: unknown;
+   21:   description?: unknown;
+   22:   durationMinutes?: unknown;
+   23:   startedAt?: unknown;
+   24:   endedAt?: unknown;
+   25:   persist?: unknown;
+   26:   resolve?: unknown;
+   27:   createPolicy?: unknown;
+   28:   defaultStatus?: unknown;
+   29: };
+   30: 
+   31: function asString(value: unknown): string | null {
+   32:   if (typeof value !== "string") {
+   33:     return null;
+   34:   }
+   35: 
+   36:   const trimmed = value.trim();
+   37:   return trimmed.length > 0 ? trimmed : null;
+   38: }
+   39: 
+   40: function asNumber(value: unknown): number | null {
+   41:   if (typeof value === "number" && Number.isFinite(value)) {
+   42:     return value;
+   43:   }
+   44: 
+   45:   if (typeof value === "string") {
+   46:     const parsed = Number.parseFloat(value.trim().replace(",", "."));
+   47: 
+   48:     if (Number.isFinite(parsed)) {
+   49:       return parsed;
+   50:     }
+   51:   }
+   52: 
+   53:   return null;
+   54: }
+   55: 
+   56: function asBoolean(value: unknown): boolean | null {
+   57:   if (typeof value === "boolean") {
+   58:     return value;
+   59:   }
+   60: 
+   61:   if (typeof value === "string") {
+   62:     const normalized = value.trim().toLowerCase();
+   63: 
+   64:     if (["true", "1", "yes", "y"].includes(normalized)) {
+   65:       return true;
+   66:     }
+   67: 
+   68:     if (["false", "0", "no", "n"].includes(normalized)) {
+   69:       return false;
+   70:     }
+   71:   }
+   72: 
+   73:   return null;
+   74: }
+   75: 
+   76: function asIsoOrNull(value: unknown): string | null {
+   77:   const text = asString(value);
+   78: 
+   79:   if (!text) {
+   80:     return null;
+   81:   }
+   82: 
+   83:   const date = new Date(text);
+   84: 
+   85:   if (Number.isNaN(date.getTime())) {
+   86:     return null;
+   87:   }
+   88: 
+   89:   return date.toISOString();
+   90: }
+   91: 
+   92: function resolveTiming(body: RouteRunnerDebugBody): {
+   93:   startedAt: string;
+   94:   endedAt: string;
+   95:   durationMinutes: number;
+   96: } {
+   97:   const durationMinutes = asNumber(body.durationMinutes) ?? 15;
+   98:   const explicitEndedAt = asIsoOrNull(body.endedAt);
+   99:   const explicitStartedAt = asIsoOrNull(body.startedAt);
+  100: 
+  101:   const endedAt = explicitEndedAt ? new Date(explicitEndedAt) : new Date();
+  102:   const startedAt = explicitStartedAt
+  103:     ? new Date(explicitStartedAt)
+  104:     : new Date(endedAt.getTime() - durationMinutes * 60_000);
+  105: 
+  106:   return {
+  107:     startedAt: startedAt.toISOString(),
+  108:     endedAt: endedAt.toISOString(),
+  109:     durationMinutes,
+  110:   };
+
+PRELIMINARY INVENTORY CONCLUSIONS
+
+1. Existing activity recording config must be used as the style reference.
+2. New Category Derivation feature flags should not be added before confirming current environment variable conventions.
+3. /api/activity/complete must not be patched in this inventory step.
+4. The debug route already demonstrates a safe runtimeImpact metadata style.
+5. The production integration must be feature-flagged, idempotent, and non-breaking.
+
+RECOMMENDED FEATURE FLAG DESIGN TO CONFIRM IN F3-C
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE
+Allowed values:
+- disabled
+- debug_only
+- shadow_no_persist
+- shadow_persist
+- production_persist
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG
+Allowed values:
+- true
+- false
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE
+Allowed values:
+- true
+- false
+
+Recommended defaults:
+- CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=disabled
+- CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=false
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+
+NEXT STEP
+Proceed to P4.10.0-C8-E-F3-C — design production integration behavior for /api/activity/complete.
+
+NO-GO
+- Do not patch /api/activity/complete yet.
+- Do not add config helper code yet.
+- Do not call OpenAI.
+- Do not create UI.
+- Do not rerun canonical production proof event.
+- Do not create semantic snapshot/correction/moderation tables.
+- Do not modify commercial core.
+
+END OF F3-B CONFIG / FEATURE FLAG INVENTORY
