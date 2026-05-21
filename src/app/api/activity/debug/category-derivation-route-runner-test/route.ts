@@ -5,6 +5,7 @@ import {
   ACTIVITY_RECORDING_ENABLED,
 } from "../../../../../../lib/activity/activityRecordingConfig";
 import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+import type { CategoryResolverOptions } from "../../../../../../lib/activity/categoryDerivation/resolver";
 import {
   runCategoryDerivationRoute,
   type CategoryDerivationRouteRunnerSupabaseClient,
@@ -109,23 +110,27 @@ function resolveTiming(body: RouteRunnerDebugBody): {
   };
 }
 
-function resolverOptionsFromBody(body: RouteRunnerDebugBody) {
+function resolverOptionsFromBody(body: RouteRunnerDebugBody): CategoryResolverOptions {
   const createPolicy = asString(body.createPolicy);
   const defaultStatus = asString(body.defaultStatus);
 
+  const resolvedCreatePolicy: CategoryResolverOptions["createPolicy"] =
+    createPolicy === "never" ||
+    createPolicy === "suggested_only" ||
+    createPolicy === "active_for_confirmed_required"
+      ? createPolicy
+      : "suggested_only";
+
+  const resolvedDefaultStatus: CategoryResolverOptions["defaultStatus"] =
+    defaultStatus === "active" ||
+    defaultStatus === "suggested" ||
+    defaultStatus === "needs_review"
+      ? defaultStatus
+      : "suggested";
+
   return {
-    createPolicy:
-      createPolicy === "never" ||
-      createPolicy === "suggested_only" ||
-      createPolicy === "active_for_confirmed_required"
-        ? createPolicy
-        : "suggested_only",
-    defaultStatus:
-      defaultStatus === "active" ||
-      defaultStatus === "suggested" ||
-      defaultStatus === "needs_review"
-        ? defaultStatus
-        : "suggested",
+    createPolicy: resolvedCreatePolicy,
+    defaultStatus: resolvedDefaultStatus,
     sourceType: "category_derivation_route_runner_test",
   };
 }
