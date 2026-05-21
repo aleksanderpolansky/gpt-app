@@ -1,0 +1,288 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F3-A — Category Derivation Integration Decision Note
+Created: 2026-05-21 14:52:33
+Base commit before this document: bda59a4
+
+STATUS
+Decision note only.
+No runtime code changes.
+No database changes.
+No /api/activity/complete patch.
+No OpenAI call.
+No UI changes.
+
+CURRENT VERIFIED STATE
+
+C8-E-D:
+Additive Supabase migration was applied and verified.
+
+New runtime-used columns include:
+- category_derivation_runs.input_hash
+- category_derivation_runs.policy_version
+- category_derivation_runs.schema_version
+- category_derivation_runs.model_alias
+- category_derivation_runs.token_usage_json
+- category_derivation_runs.cost_json
+- activity_category_derivations.status
+- activity_category_derivations.is_revoked
+- activity_category_derivations.is_core_meaning
+- activity_category_derivations.evidence_json
+- value_object_category_links.derivation_run_id
+- value_object_category_links.activity_derivation_id
+- value_object_category_links.status
+
+C8-E-E:
+lib/activity/categoryDerivation/persistence.ts was created and verified.
+
+Persistence contract provides:
+- buildCategoryDerivationInputHash
+- createCategoryDerivationRun
+- finishCategoryDerivationRun
+- failCategoryDerivationRun
+- persistActivityCategoryDerivations
+
+F1:
+lib/activity/categoryDerivation/routeRunner.ts was created and verified.
+
+Route runner provides:
+- deterministic derivation through ruleExtractor
+- optional resolver integration
+- optional persistence integration
+- run completion/failure handling
+- unified runtime result object
+
+F2:
+Debug route was created and runtime-tested:
+src/app/api/activity/debug/category-derivation-route-runner-test/route.ts
+
+Runtime proof:
+- GET endpoint PASS
+- POST endpoint PASS
+- Supabase read-only verification PASS
+
+Verified test event:
+6b5bc745-5324-4de8-8959-21a67df6bf95
+
+Verified derivation run:
+114fc525-3ac2-4966-8d9a-8dd0f65707e8
+
+Runtime summary:
+- HTTP 200
+- routeRunner.ok: true
+- persisted: true
+- resolved: true
+- candidateCount: 5
+- resolvedCandidateCount: 5
+- rowsCreated: 5
+- warnings: []
+- errors: []
+- aiUsed: false
+- patchesCompleteRoute: false
+- rerunsCanonicalProofEvent: false
+
+SUPABASE VERIFICATION SUMMARY
+
+activity_category_derivations:
+- rows_count: 5
+- resolved_rows: 5
+- confirmed_status_rows: 5
+- needs_review_rows: 0
+- rejected_rows: 0
+- revoked_rows: 0
+
+Derived categories:
+1. walking
+2. work
+3. commute-to-work
+4. walking-to-work
+5. duration-minutes
+
+DECISION QUESTION
+
+Should routeRunner now be integrated into the production /api/activity/complete route?
+
+SHORT DECISION
+Not yet.
+
+Reason:
+The routeRunner deterministic runtime path is now proven in isolation, but production integration should be controlled by a feature flag and preceded by one more integration design step.
+
+WHY NOT PATCH /api/activity/complete IMMEDIATELY
+
+1. /api/activity/complete is the canonical production route.
+It already participates in activity processing, Value Object Bridge, aggregates, snapshots, and previous proof events.
+
+2. Category Derivation now writes to new tables.
+Production integration must avoid duplicate derivation runs, accidental repeated inserts, or unexpected side effects on existing processing flows.
+
+3. Runtime proof used a debug-created activity_event.
+Production route may have different timing, user context, metadata, activity template, processing status, and existing bridge flow.
+
+4. We need an explicit feature flag.
+The correct integration should allow:
+- disabled mode
+- debug-only mode
+- production-shadow mode
+- production-write mode
+
+5. We need idempotency / duplication policy.
+Before production integration, define whether repeated processing of the same activity_event should:
+- skip if a completed category_derivation_run already exists;
+- create a new run every time;
+- only rerun if rule_version / schema_version / policy_version changed;
+- create a correction/revision later.
+
+6. We must not call OpenAI yet.
+AI-assisted derivation should come after deterministic routeRunner is safely integrated or after shadow mode exists.
+
+RECOMMENDED CONTROLLED INTEGRATION STRATEGY
+
+Phase F3:
+Decision and design only.
+
+F3-A:
+Create this integration decision note.
+
+F3-B:
+Create a feature flag / config inventory for activity/category derivation.
+
+F3-C:
+Design production integration behavior for /api/activity/complete:
+- where routeRunner is called;
+- when routeRunner is skipped;
+- what result is added to response metadata;
+- how errors are isolated;
+- how repeated event processing is handled.
+
+F3-D:
+Create a feature-flagged integration plan document.
+
+Phase F4:
+Non-production code support.
+
+F4-A:
+Add config helper for Category Derivation routeRunner mode.
+
+Suggested modes:
+- disabled
+- debug_only
+- shadow_no_persist
+- shadow_persist
+- production_persist
+
+F4-B:
+Create read-only helper to check existing completed category_derivation_runs for an activity_event.
+
+F4-C:
+Create isolated helper function that can be called from production route without changing route behavior.
+
+Phase F5:
+Production route integration.
+
+F5-A:
+Patch /api/activity/complete only behind feature flag.
+
+Initial safe mode:
+shadow_no_persist or disabled by default.
+
+F5-B:
+Run local test where /api/activity/complete response includes routeRunner shadow metadata, but does not write rows.
+
+F5-C:
+Only after shadow proof, enable shadow_persist in local environment.
+
+F5-D:
+Supabase verification for production-route-created event.
+
+INTEGRATION DESIGN REQUIREMENTS
+
+The production route integration must:
+
+1. Be feature-flag controlled.
+No unconditional write path.
+
+2. Be non-breaking.
+If category derivation fails, /api/activity/complete must still complete its existing work unless the failure is explicitly configured as fatal.
+
+3. Return debug metadata only when safe.
+Avoid bloating normal production response.
+
+4. Preserve existing Value Object Bridge behavior.
+Do not change activity_event_value_object_links or aggregate/snapshot logic in this block.
+
+5. Avoid duplicate processing.
+A repeated request should not create uncontrolled duplicate derivation rows.
+
+6. Keep AI disabled.
+No OpenAI calls in this integration block.
+
+7. Keep canonical production proof event untouched.
+Do not rerun old canonical proof event.
+
+8. Keep semantic snapshot/correction/moderation deferred.
+Do not create:
+- activity_semantic_interpretations
+- activity_category_corrections
+- category_moderation_items
+
+RECOMMENDED FEATURE FLAG NAMES
+
+Possible environment/config names:
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE
+Allowed values:
+- disabled
+- debug_only
+- shadow_no_persist
+- shadow_persist
+- production_persist
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG
+Allowed values:
+- true
+- false
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE
+Allowed values:
+- true
+- false
+
+Recommended defaults:
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=disabled
+CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=false
+CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+
+RECOMMENDED NEXT STEP
+
+Proceed to:
+P4.10.0-C8-E-F3-B — inventory existing config / feature flag patterns.
+
+Purpose:
+Before adding new feature flags, inspect:
+- lib/activity/activityRecordingConfig.ts
+- environment variable patterns
+- existing debug route config style
+- /api/activity/complete current structure
+- any existing route mode / debug flag conventions
+
+NO-GO AFTER THIS DOCUMENT
+
+Do not patch /api/activity/complete yet.
+Do not add new production feature flag code before config inventory.
+Do not call OpenAI.
+Do not create UI.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+Do not modify commercial core.
+
+FINAL DECISION
+
+The routeRunner deterministic runtime pipeline is proven.
+Production integration is technically possible.
+However, integration into /api/activity/complete must proceed through a feature-flagged, idempotent, non-breaking design path.
+
+Decision:
+Proceed to config/feature flag inventory first.
+Do not patch production route yet.
+
+END OF F3-A INTEGRATION DECISION NOTE
