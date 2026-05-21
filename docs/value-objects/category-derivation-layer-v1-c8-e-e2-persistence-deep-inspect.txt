@@ -1,0 +1,3239 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-E2 — Persistence Deep Inspect
+Created: 2026-05-21 11:27:04
+Base commit: 718ebc2
+
+STATUS
+Deep source inspection only.
+No runtime code changes.
+No database changes.
+
+PURPOSE
+Before creating lib/activity/categoryDerivation/persistence.ts, inspect the already existing persistence-like file:
+- lib/activity/categoryDerivation/persistDerivations.ts
+
+Decision after this step:
+1. extend persistDerivations.ts,
+2. create persistence.ts as a wrapper,
+3. or create persistence.ts and later migrate imports safely.
+
+FILES INSPECTED
+
+FOUND: .\lib\activity\categoryDerivation\types.ts
+  size_bytes: 3313
+  last_write_time: 2026-05-19 19:19:15
+FOUND: .\lib\activity\categoryDerivation\persistDerivations.ts
+  size_bytes: 10095
+  last_write_time: 2026-05-19 19:37:30
+FOUND: .\lib\activity\categoryDerivation\resolver.ts
+  size_bytes: 12084
+  last_write_time: 2026-05-20 14:19:39
+FOUND: .\lib\activity\categoryDerivation\ruleExtractor.ts
+  size_bytes: 17096
+  last_write_time: 2026-05-19 19:21:43
+FOUND: .\lib\activity\activityProcessingLogs.ts
+  size_bytes: 5622
+  last_write_time: 2026-05-16 11:45:39
+FOUND: .\lib\supabase.ts
+  size_bytes: 415
+  last_write_time: 2026-04-24 13:57:29
+FOUND: .\src\app\api\activity\debug\free-text-value-object-test\route.ts
+  size_bytes: 26708
+  last_write_time: 2026-05-20 14:06:42
+FOUND: .\src\app\api\activity\debug\value-object-bridge-proof\route.ts
+  size_bytes: 20310
+  last_write_time: 2026-05-20 19:23:23
+
+============================================================
+FULL / IMPORTANT FILE CONTENTS
+============================================================
+
+############################################################
+FILE: .\lib\activity\categoryDerivation\types.ts
+############################################################
+
+LINE_COUNT: 133
+
+export type JsonPrimitive = string | number | boolean | null;
+
+export type JsonValue =
+  | JsonPrimitive
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
+export type JsonRecord = Record<string, JsonValue>;
+
+export type CategoryDerivationSource =
+  | "rule"
+  | "ai"
+  | "user"
+  | "system"
+  | "migration";
+
+export type CategoryDerivationSemanticLayer =
+  | "action"
+  | "object"
+  | "domain"
+  | "participant"
+  | "relationship_context"
+  | "role"
+  | "duty"
+  | "responsibility"
+  | "care_function"
+  | "purpose"
+  | "activity_meaning"
+  | "metric"
+  | "context"
+  | "other";
+
+export type CategoryDerivationResolutionStatus =
+  | "resolved_existing"
+  | "created_suggested"
+  | "created_active"
+  | "unresolved";
+
+export type CategoryDerivationRunStatus =
+  | "started"
+  | "completed"
+  | "completed_with_warnings"
+  | "failed";
+
+export interface CategoryCandidate {
+  slug: string;
+  title?: string;
+  semanticLayer?: CategoryDerivationSemanticLayer | string;
+  categoryType?: string;
+  confidence?: number;
+  source: CategoryDerivationSource;
+  isRequired?: boolean;
+  isConfirmed?: boolean;
+  needsUserReview?: boolean;
+  metadata?: JsonRecord;
+}
+
+export interface ResolvedCategoryCandidate extends CategoryCandidate {
+  categoryId: string | null;
+  resolutionStatus: CategoryDerivationResolutionStatus;
+}
+
+export interface CategoryDerivationInput {
+  activityEventId?: string;
+  inputText: string;
+  title?: string | null;
+  description?: string | null;
+  durationMinutes?: number | null;
+  inputLanguage?: string | null;
+  actorId?: string | null;
+  organizationId?: string | null;
+  metadata?: JsonRecord;
+}
+
+export interface CategoryDerivationResult {
+  ok: boolean;
+  skipped?: boolean;
+  skipReason?: string | null;
+  processorVersion: string;
+  ruleVersion?: string | null;
+  confidence?: number | null;
+  candidates: CategoryCandidate[];
+  warnings: string[];
+  errors: string[];
+  metadata?: JsonRecord;
+}
+
+export interface CategoryResolutionResult {
+  ok: boolean;
+  candidates: ResolvedCategoryCandidate[];
+  createdCount: number;
+  reusedCount: number;
+  unresolvedCount: number;
+  warnings: string[];
+  errors: string[];
+  metadata?: JsonRecord;
+}
+
+export interface CategoryDerivationRunInsert {
+  activity_event_id: string;
+  actor_id?: string | null;
+  organization_id?: string | null;
+  input_text?: string | null;
+  input_language?: string | null;
+  processor_version: string;
+  rule_version?: string | null;
+  model_name?: string | null;
+  prompt_version?: string | null;
+  status: CategoryDerivationRunStatus;
+  confidence?: number | null;
+  needs_user_confirmation?: boolean;
+  input_json?: JsonRecord;
+  output_json?: JsonRecord;
+  error_json?: JsonRecord | null;
+}
+
+export interface ActivityCategoryDerivationInsert {
+  activity_event_id: string;
+  derivation_run_id?: string | null;
+  category_id?: string | null;
+  candidate_slug: string;
+  candidate_title?: string | null;
+  semantic_layer?: string | null;
+  category_type?: string | null;
+  source: CategoryDerivationSource;
+  confidence?: number | null;
+  is_required?: boolean;
+  is_confirmed?: boolean;
+  needs_user_review?: boolean;
+  is_rejected?: boolean;
+  metadata_json?: JsonRecord;
+}
+
+
+############################################################
+FILE: .\lib\activity\categoryDerivation\persistDerivations.ts
+############################################################
+
+LINE_COUNT: 328
+
+import type {
+  ActivityCategoryDerivationInsert,
+  CategoryCandidate,
+  CategoryDerivationInput,
+  CategoryDerivationResult,
+  CategoryDerivationRunInsert,
+  CategoryDerivationRunStatus,
+  JsonRecord,
+  ResolvedCategoryCandidate,
+} from "./types";
+
+interface SupabaseMaybeSingleResult<T> {
+  data: T | null;
+  error: { message?: string } | null;
+}
+
+interface SupabaseInsertBuilder<T> {
+  select(columns?: string): SupabaseInsertBuilder<T>;
+  maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
+}
+
+interface SupabaseTableClient<T> {
+  insert(payload: Record<string, unknown>): SupabaseInsertBuilder<T>;
+}
+
+export interface CategoryDerivationPersistenceSupabaseClient {
+  from<T = Record<string, unknown>>(table: string): SupabaseTableClient<T>;
+}
+
+interface CategoryDerivationRunRow {
+  id: string;
+  activity_event_id?: string | null;
+  status?: string | null;
+}
+
+interface ActivityCategoryDerivationRow {
+  id: string;
+  activity_event_id?: string | null;
+  derivation_run_id?: string | null;
+  category_id?: string | null;
+  candidate_slug?: string | null;
+}
+
+export interface PersistCategoryDerivationsParams {
+  activityEventId: string;
+  input: CategoryDerivationInput;
+  derivationResult: CategoryDerivationResult;
+  resolvedCandidates?: ResolvedCategoryCandidate[];
+  actorId?: string | null;
+  organizationId?: string | null;
+  modelName?: string | null;
+  promptVersion?: string | null;
+  needsUserConfirmation?: boolean;
+}
+
+export interface PersistCategoryDerivationsResult {
+  ok: boolean;
+  derivationRunId: string | null;
+  derivationRowsCreated: number;
+  candidateCount: number;
+  resolvedCandidateCount: number;
+  unresolvedCandidateCount: number;
+  warnings: string[];
+  errors: string[];
+  runInsert?: CategoryDerivationRunInsert;
+  derivationInserts?: ActivityCategoryDerivationInsert[];
+}
+
+function errorMessage(error: { message?: string } | null): string | null {
+  return error?.message ?? null;
+}
+
+function toJsonRecord(value: Record<string, unknown>): JsonRecord {
+  return JSON.parse(JSON.stringify(value)) as JsonRecord;
+}
+
+function candidateSource(candidate: CategoryCandidate): CategoryCandidate["source"] {
+  return candidate.source ?? "rule";
+}
+
+function normalizeRunStatus(
+  derivationResult: CategoryDerivationResult,
+): CategoryDerivationRunStatus {
+  if (derivationResult.errors.length > 0 || derivationResult.ok === false) {
+    return "failed";
+  }
+
+  if (derivationResult.warnings.length > 0) {
+    return "completed_with_warnings";
+  }
+
+  return "completed";
+}
+
+function resolvedOrUnresolvedCandidates(
+  derivationResult: CategoryDerivationResult,
+  resolvedCandidates?: ResolvedCategoryCandidate[],
+): ResolvedCategoryCandidate[] {
+  if (resolvedCandidates && resolvedCandidates.length > 0) {
+    return resolvedCandidates;
+  }
+
+  return derivationResult.candidates.map((candidate) => ({
+    ...candidate,
+    categoryId: null,
+    resolutionStatus: "unresolved",
+  }));
+}
+
+function countResolved(candidates: ResolvedCategoryCandidate[]): number {
+  return candidates.filter((candidate) => Boolean(candidate.categoryId)).length;
+}
+
+function countUnresolved(candidates: ResolvedCategoryCandidate[]): number {
+  return candidates.filter((candidate) => !candidate.categoryId).length;
+}
+
+function buildRunInsert(
+  params: PersistCategoryDerivationsParams,
+  candidates: ResolvedCategoryCandidate[],
+): CategoryDerivationRunInsert {
+  const status = normalizeRunStatus(params.derivationResult);
+
+  return {
+    activity_event_id: params.activityEventId,
+    actor_id: params.actorId ?? params.input.actorId ?? null,
+    organization_id:
+      params.organizationId ?? params.input.organizationId ?? null,
+    input_text: params.input.inputText ?? null,
+    input_language: params.input.inputLanguage ?? null,
+    processor_version: params.derivationResult.processorVersion,
+    rule_version: params.derivationResult.ruleVersion ?? null,
+    model_name: params.modelName ?? null,
+    prompt_version: params.promptVersion ?? null,
+    status,
+    confidence: params.derivationResult.confidence ?? null,
+    needs_user_confirmation: params.needsUserConfirmation ?? false,
+    input_json: toJsonRecord({
+      activityEventId: params.activityEventId,
+      inputText: params.input.inputText,
+      title: params.input.title ?? null,
+      description: params.input.description ?? null,
+      durationMinutes: params.input.durationMinutes ?? null,
+      inputLanguage: params.input.inputLanguage ?? null,
+      actorId: params.actorId ?? params.input.actorId ?? null,
+      organizationId:
+        params.organizationId ?? params.input.organizationId ?? null,
+      metadata: params.input.metadata ?? {},
+    }),
+    output_json: toJsonRecord({
+      ok: params.derivationResult.ok,
+      skipped: params.derivationResult.skipped ?? false,
+      skipReason: params.derivationResult.skipReason ?? null,
+      processorVersion: params.derivationResult.processorVersion,
+      ruleVersion: params.derivationResult.ruleVersion ?? null,
+      confidence: params.derivationResult.confidence ?? null,
+      warnings: params.derivationResult.warnings,
+      errors: params.derivationResult.errors,
+      candidateCount: params.derivationResult.candidates.length,
+      resolvedCandidateCount: countResolved(candidates),
+      unresolvedCandidateCount: countUnresolved(candidates),
+      candidates,
+      metadata: params.derivationResult.metadata ?? {},
+    }),
+    error_json:
+      status === "failed"
+        ? toJsonRecord({
+            errors: params.derivationResult.errors,
+            warnings: params.derivationResult.warnings,
+          })
+        : null,
+  };
+}
+
+function buildDerivationInsert(
+  activityEventId: string,
+  derivationRunId: string,
+  candidate: ResolvedCategoryCandidate,
+): ActivityCategoryDerivationInsert {
+  return {
+    activity_event_id: activityEventId,
+    derivation_run_id: derivationRunId,
+    category_id: candidate.categoryId ?? null,
+    candidate_slug: candidate.slug,
+    candidate_title: candidate.title ?? null,
+    semantic_layer: candidate.semanticLayer
+      ? String(candidate.semanticLayer)
+      : null,
+    category_type: candidate.categoryType ?? null,
+    source: candidateSource(candidate),
+    confidence: candidate.confidence ?? null,
+    is_required: candidate.isRequired ?? false,
+    is_confirmed: candidate.isConfirmed ?? false,
+    needs_user_review: candidate.needsUserReview ?? false,
+    is_rejected: false,
+    metadata_json: toJsonRecord({
+      ...(candidate.metadata ?? {}),
+      resolutionStatus: candidate.resolutionStatus,
+      categoryId: candidate.categoryId ?? null,
+    }),
+  };
+}
+
+async function insertDerivationRun(
+  supabase: CategoryDerivationPersistenceSupabaseClient,
+  payload: CategoryDerivationRunInsert,
+): Promise<{
+  row: CategoryDerivationRunRow | null;
+  error: string | null;
+}> {
+  const result = await supabase
+    .from<CategoryDerivationRunRow>("category_derivation_runs")
+    .insert(payload as unknown as Record<string, unknown>)
+    .select("*")
+    .maybeSingle();
+
+  return {
+    row: result.data ?? null,
+    error: errorMessage(result.error),
+  };
+}
+
+async function insertActivityCategoryDerivation(
+  supabase: CategoryDerivationPersistenceSupabaseClient,
+  payload: ActivityCategoryDerivationInsert,
+): Promise<{
+  row: ActivityCategoryDerivationRow | null;
+  error: string | null;
+}> {
+  const result = await supabase
+    .from<ActivityCategoryDerivationRow>("activity_category_derivations")
+    .insert(payload as unknown as Record<string, unknown>)
+    .select("*")
+    .maybeSingle();
+
+  return {
+    row: result.data ?? null,
+    error: errorMessage(result.error),
+  };
+}
+
+export async function persistCategoryDerivations(
+  supabase: CategoryDerivationPersistenceSupabaseClient,
+  params: PersistCategoryDerivationsParams,
+): Promise<PersistCategoryDerivationsResult> {
+  const warnings: string[] = [];
+  const errors: string[] = [];
+
+  if (!params.activityEventId || params.activityEventId.trim().length === 0) {
+    return {
+      ok: false,
+      derivationRunId: null,
+      derivationRowsCreated: 0,
+      candidateCount: params.derivationResult.candidates.length,
+      resolvedCandidateCount: 0,
+      unresolvedCandidateCount: params.derivationResult.candidates.length,
+      warnings,
+      errors: ["activityEventId is required."],
+    };
+  }
+
+  const candidates = resolvedOrUnresolvedCandidates(
+    params.derivationResult,
+    params.resolvedCandidates,
+  );
+  const runInsert = buildRunInsert(params, candidates);
+  const runResult = await insertDerivationRun(supabase, runInsert);
+
+  if (runResult.error || !runResult.row?.id) {
+    return {
+      ok: false,
+      derivationRunId: null,
+      derivationRowsCreated: 0,
+      candidateCount: candidates.length,
+      resolvedCandidateCount: countResolved(candidates),
+      unresolvedCandidateCount: countUnresolved(candidates),
+      warnings,
+      errors: [
+        `Failed to insert category_derivation_runs: ${
+          runResult.error ?? "no row returned"
+        }`,
+      ],
+      runInsert,
+    };
+  }
+
+  const derivationRunId = runResult.row.id;
+  const derivationInserts = candidates.map((candidate) =>
+    buildDerivationInsert(params.activityEventId, derivationRunId, candidate),
+  );
+
+  let derivationRowsCreated = 0;
+
+  for (const insertPayload of derivationInserts) {
+    const insertResult = await insertActivityCategoryDerivation(
+      supabase,
+      insertPayload,
+    );
+
+    if (insertResult.error || !insertResult.row?.id) {
+      errors.push(
+        `Failed to insert activity_category_derivations for ${insertPayload.candidate_slug}: ${
+          insertResult.error ?? "no row returned"
+        }`,
+      );
+      continue;
+    }
+
+    derivationRowsCreated += 1;
+  }
+
+  return {
+    ok: errors.length === 0,
+    derivationRunId,
+    derivationRowsCreated,
+    candidateCount: candidates.length,
+    resolvedCandidateCount: countResolved(candidates),
+    unresolvedCandidateCount: countUnresolved(candidates),
+    warnings,
+    errors,
+    runInsert,
+    derivationInserts,
+  };
+}
+
+export const categoryDerivationPersistence = {
+  persistCategoryDerivations,
+};
+
+############################################################
+FILE: .\lib\activity\categoryDerivation\resolver.ts
+############################################################
+
+LINE_COUNT: 443
+
+import type {
+  CategoryCandidate,
+  CategoryResolutionResult,
+  JsonRecord,
+  ResolvedCategoryCandidate,
+} from "./types";
+
+export type CategoryResolverCreatePolicy =
+  | "never"
+  | "suggested_only"
+  | "active_for_confirmed_required";
+
+export interface CategoryResolverOptions {
+  createPolicy?: CategoryResolverCreatePolicy;
+  defaultStatus?: "active" | "suggested" | "needs_review";
+  defaultCategoryType?: string;
+  sourceType?: string;
+  dryRun?: boolean;
+}
+
+interface SupabaseMaybeSingleResult<T> {
+  data: T | null;
+  error: { message?: string } | null;
+}
+
+interface SupabaseSelectBuilder<T> {
+  eq(column: string, value: string | number | boolean | null): SupabaseSelectBuilder<T>;
+  limit(count: number): SupabaseSelectBuilder<T>;
+  maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
+}
+
+interface SupabaseInsertBuilder<T> {
+  select(columns?: string): SupabaseInsertBuilder<T>;
+  maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
+}
+
+interface SupabaseTableClient<T> {
+  select(columns?: string): SupabaseSelectBuilder<T>;
+  insert(payload: Record<string, unknown>): SupabaseInsertBuilder<T>;
+}
+
+export interface CategoryResolverSupabaseClient {
+  from<T = Record<string, unknown>>(table: string): SupabaseTableClient<T>;
+}
+
+interface ContextRow {
+  id: string;
+  code: string;
+  name?: string | null;
+  status?: string | null;
+  is_active?: boolean | null;
+}
+
+interface ContextualCategoryRow {
+  id: string;
+  context_id?: string | null;
+  slug?: string | null;
+  title?: string | null;
+  name?: string | null;
+  semantic_layer?: string | null;
+  category_type?: string | null;
+  status?: string | null;
+  source_type?: string | null;
+  aliases?: Array<JsonRecord | string> | null;
+  metadata_json?: JsonRecord | null;
+}
+
+export function normalizeCategoryCandidateSlug(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .trim()
+    .replace(/'/g, "")
+    .replace(/\u2019/g, "")
+    .replace(/[^a-z0-9\u0400-\u04ff]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+}
+
+function normalizeTitle(candidate: CategoryCandidate): string {
+  if (candidate.title && candidate.title.trim().length > 0) {
+    return candidate.title.trim();
+  }
+
+  return candidate.slug
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function errorMessage(error: { message?: string } | null): string | null {
+  return error?.message ?? null;
+}
+
+const DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE = "personal_activity";
+
+const CONTEXTUAL_CATEGORY_ALLOWED_SOURCE_TYPES = new Set([
+  "system_seed",
+  "manual",
+  "ai_suggested",
+  "imported",
+  "migrated",
+  "owner_confirmed",
+  "platform_verified",
+]);
+
+function normalizeContextualCategorySourceType(sourceType: string | undefined): string {
+  const normalized = sourceType?.trim();
+
+  if (normalized && CONTEXTUAL_CATEGORY_ALLOWED_SOURCE_TYPES.has(normalized)) {
+    return normalized;
+  }
+
+  return "ai_suggested";
+}
+
+async function findDefaultCategoryDerivationContextId(
+  supabase: CategoryResolverSupabaseClient,
+): Promise<{ contextId: string | null; error: string | null }> {
+  const result = await supabase
+    .from<ContextRow>("contexts")
+    .select("id, code, status, is_active")
+    .eq("code", DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE)
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+
+  return {
+    contextId: result.data?.id ?? null,
+    error: errorMessage(result.error),
+  };
+}
+
+async function findExistingCategory(
+  supabase: CategoryResolverSupabaseClient,
+  slug: string,
+  semanticLayer?: string,
+  contextId?: string | null,
+): Promise<{ row: ContextualCategoryRow | null; error: string | null }> {
+  let query = supabase
+    .from<ContextualCategoryRow>("contextual_categories")
+    .select("*")
+    .eq("slug", slug);
+
+  if (contextId && contextId.trim().length > 0) {
+    query = query.eq("context_id", contextId);
+  }
+
+  if (semanticLayer && semanticLayer.trim().length > 0) {
+    query = query.eq("semantic_layer", semanticLayer);
+  }
+
+  const result = await query.limit(1).maybeSingle();
+
+  return {
+    row: result.data ?? null,
+    error: errorMessage(result.error),
+  };
+}
+
+function shouldCreateCategory(
+  candidate: CategoryCandidate,
+  createPolicy: CategoryResolverCreatePolicy,
+): boolean {
+  if (createPolicy === "never") {
+    return false;
+  }
+
+  if (createPolicy === "suggested_only") {
+    return true;
+  }
+
+  return Boolean(candidate.isRequired && candidate.isConfirmed);
+}
+
+function categoryStatusForCandidate(
+  candidate: CategoryCandidate,
+  options: Required<Pick<CategoryResolverOptions, "createPolicy">> &
+    CategoryResolverOptions,
+): "active" | "suggested" | "needs_review" {
+  if (candidate.needsUserReview) {
+    return "needs_review";
+  }
+
+  if (options.defaultStatus) {
+    return options.defaultStatus;
+  }
+
+  if (
+    options.createPolicy === "active_for_confirmed_required" &&
+    candidate.isRequired &&
+    candidate.isConfirmed
+  ) {
+    return "active";
+  }
+
+  return "suggested";
+}
+
+async function createCategory(
+  supabase: CategoryResolverSupabaseClient,
+  candidate: CategoryCandidate,
+  normalizedSlug: string,
+  contextId: string,
+  options: Required<Pick<CategoryResolverOptions, "createPolicy">> &
+    CategoryResolverOptions,
+): Promise<{ row: ContextualCategoryRow | null; error: string | null }> {
+  const semanticLayer = candidate.semanticLayer
+    ? String(candidate.semanticLayer)
+    : null;
+  const categoryType =
+    candidate.categoryType ?? options.defaultCategoryType ?? "derived";
+  const status = categoryStatusForCandidate(candidate, options);
+  const title = normalizeTitle(candidate);
+
+  const payload: Record<string, unknown> = {
+    context_id: contextId,
+    slug: normalizedSlug,
+    name: title,
+    semantic_layer: semanticLayer,
+    category_type: categoryType,
+    status,
+    source_type: normalizeContextualCategorySourceType(options.sourceType),
+    aliases: [
+      {
+        lang: "und",
+        value: title,
+        source: "category_derivation_resolver",
+      },
+    ],
+    metadata_json: {
+      ...(candidate.metadata ?? {}),
+      resolver: "categoryDerivationResolver",
+      title,
+      originalSlug: candidate.slug,
+      confidence: candidate.confidence ?? null,
+      isRequired: candidate.isRequired ?? false,
+      isConfirmed: candidate.isConfirmed ?? false,
+      needsUserReview: candidate.needsUserReview ?? false,
+    },
+  };
+
+  const result = await supabase
+    .from<ContextualCategoryRow>("contextual_categories")
+    .insert(payload)
+    .select("*")
+    .maybeSingle();
+
+  return {
+    row: result.data ?? null,
+    error: errorMessage(result.error),
+  };
+}
+
+export async function resolveCategoryCandidates(
+  supabase: CategoryResolverSupabaseClient,
+  candidates: CategoryCandidate[],
+  options: CategoryResolverOptions = {},
+): Promise<CategoryResolutionResult> {
+  const createPolicy = options.createPolicy ?? "suggested_only";
+  const resolved: ResolvedCategoryCandidate[] = [];
+  const warnings: string[] = [];
+  const errors: string[] = [];
+
+  let createdCount = 0;
+  let reusedCount = 0;
+  let unresolvedCount = 0;
+
+  const defaultContextResult =
+    await findDefaultCategoryDerivationContextId(supabase);
+
+  const defaultContextId = defaultContextResult.contextId;
+
+  if (defaultContextResult.error) {
+    warnings.push(
+      `Default category derivation context lookup failed: ${defaultContextResult.error}`,
+    );
+  }
+
+  if (!defaultContextId && createPolicy !== "never") {
+    warnings.push(
+      `Default category derivation context not found: ${DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE}`,
+    );
+  }
+
+  for (const candidate of candidates) {
+    const normalizedSlug = normalizeCategoryCandidateSlug(candidate.slug);
+
+    if (normalizedSlug.length === 0) {
+      unresolvedCount += 1;
+      warnings.push(`Candidate slug could not be normalized: ${candidate.slug}`);
+      resolved.push({
+        ...candidate,
+        categoryId: null,
+        resolutionStatus: "unresolved",
+        metadata: {
+          ...(candidate.metadata ?? {}),
+          normalizedSlug,
+          resolverWarning: "empty_normalized_slug",
+        },
+      });
+      continue;
+    }
+
+    const semanticLayer = candidate.semanticLayer
+      ? String(candidate.semanticLayer)
+      : undefined;
+    const existing = await findExistingCategory(
+      supabase,
+      normalizedSlug,
+      semanticLayer,
+      defaultContextId,
+    );
+
+    if (existing.error) {
+      errors.push(`Lookup failed for ${normalizedSlug}: ${existing.error}`);
+    }
+
+    if (existing.row?.id) {
+      reusedCount += 1;
+      resolved.push({
+        ...candidate,
+        slug: normalizedSlug,
+        title:
+          candidate.title ??
+          existing.row.title ??
+          existing.row.name ??
+          normalizeTitle(candidate),
+        categoryId: existing.row.id,
+        resolutionStatus: "resolved_existing",
+        metadata: {
+          ...(candidate.metadata ?? {}),
+          normalizedSlug,
+          existingStatus: existing.row.status ?? null,
+        },
+      });
+      continue;
+    }
+
+    if (!shouldCreateCategory(candidate, createPolicy) || options.dryRun) {
+      unresolvedCount += 1;
+      resolved.push({
+        ...candidate,
+        slug: normalizedSlug,
+        categoryId: null,
+        resolutionStatus: "unresolved",
+        metadata: {
+          ...(candidate.metadata ?? {}),
+          normalizedSlug,
+          dryRun: options.dryRun ?? false,
+          createPolicy,
+        },
+      });
+      continue;
+    }
+
+    if (!defaultContextId) {
+      unresolvedCount += 1;
+      warnings.push(
+        `Cannot create contextual category without default context: ${normalizedSlug}`,
+      );
+      resolved.push({
+        ...candidate,
+        categoryId: null,
+        resolutionStatus: "unresolved",
+        metadata: {
+          ...(candidate.metadata ?? {}),
+          normalizedSlug,
+          createPolicy,
+          missingContextCode: DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE,
+        },
+      });
+      continue;
+    }
+
+    const created = await createCategory(supabase, candidate, normalizedSlug, defaultContextId, {
+      ...options,
+      createPolicy,
+    });
+
+    if (created.error || !created.row?.id) {
+      unresolvedCount += 1;
+      errors.push(
+        `Create failed for ${normalizedSlug}: ${
+          created.error ?? "no row returned"
+        }`,
+      );
+      resolved.push({
+        ...candidate,
+        slug: normalizedSlug,
+        categoryId: null,
+        resolutionStatus: "unresolved",
+        metadata: {
+          ...(candidate.metadata ?? {}),
+          normalizedSlug,
+          createError: created.error ?? "no row returned",
+        },
+      });
+      continue;
+    }
+
+    createdCount += 1;
+    resolved.push({
+      ...candidate,
+      slug: normalizedSlug,
+      title:
+        candidate.title ??
+        created.row.title ??
+        created.row.name ??
+        normalizeTitle(candidate),
+      categoryId: created.row.id,
+      resolutionStatus:
+        created.row.status === "active" ? "created_active" : "created_suggested",
+      metadata: {
+        ...(candidate.metadata ?? {}),
+        normalizedSlug,
+        createdStatus: created.row.status ?? null,
+      },
+    });
+  }
+
+  return {
+    ok: errors.length === 0,
+    candidates: resolved,
+    createdCount,
+    reusedCount,
+    unresolvedCount,
+    warnings,
+    errors,
+    metadata: {
+      resolver: "categoryDerivationResolver",
+      createPolicy,
+      dryRun: options.dryRun ?? false,
+      inputCandidateCount: candidates.length,
+    },
+  };
+}
+
+export const categoryDerivationResolver = {
+  resolveCategoryCandidates,
+};
+
+
+############################################################
+FILE: .\lib\activity\categoryDerivation\ruleExtractor.ts
+############################################################
+
+LINE_COUNT: 575
+
+NOTE: ruleExtractor.ts is long. Capturing imports/exports and category derivation signatures, not full file.
+
+FIRST 180 LINES:
+import type {
+  CategoryCandidate,
+  CategoryDerivationInput,
+  CategoryDerivationResult,
+  JsonRecord,
+} from "./types";
+
+export const CATEGORY_DERIVATION_PROCESSOR_VERSION = "category_derivation_v1";
+export const CATEGORY_DERIVATION_RULE_VERSION = "rules_v1";
+
+type CandidateDraft = Omit<CategoryCandidate, "source"> & {
+  source?: CategoryCandidate["source"];
+};
+
+function normalizeInputText(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function includesAny(text: string, needles: string[]): boolean {
+  return needles.some((needle) => text.includes(needle));
+}
+
+function makeMetadata(
+  ruleId: string,
+  evidence: string[],
+  extra: Record<string, string | number | boolean> = {},
+): JsonRecord {
+  return {
+    ruleId,
+    evidence,
+    ...extra,
+  };
+}
+
+function dedupeCandidates(candidates: CategoryCandidate[]): CategoryCandidate[] {
+  const byKey = new Map<string, CategoryCandidate>();
+
+  for (const candidate of candidates) {
+    const key = `${candidate.semanticLayer ?? "other"}::${candidate.slug}`;
+    const existing = byKey.get(key);
+
+    if (!existing) {
+      byKey.set(key, candidate);
+      continue;
+    }
+
+    const existingConfidence = existing.confidence ?? 0;
+    const candidateConfidence = candidate.confidence ?? 0;
+
+    byKey.set(key, {
+      ...existing,
+      ...candidate,
+      confidence: Math.max(existingConfidence, candidateConfidence),
+      isRequired: Boolean(existing.isRequired || candidate.isRequired),
+      isConfirmed: Boolean(existing.isConfirmed || candidate.isConfirmed),
+      needsUserReview: Boolean(
+        existing.needsUserReview || candidate.needsUserReview,
+      ),
+    });
+  }
+
+  return Array.from(byKey.values());
+}
+
+function addCandidate(
+  target: CategoryCandidate[],
+  candidate: CandidateDraft,
+): void {
+  target.push({
+    source: "rule",
+    ...candidate,
+  });
+}
+
+function addDurationMetricCandidate(
+  target: CategoryCandidate[],
+  input: CategoryDerivationInput,
+  text: string,
+): void {
+  const hasDuration =
+    typeof input.durationMinutes === "number" ||
+    /\b\d+\s*(minute|minutes|min)\b/.test(text) ||
+    /\b\d+\s*(минута|минуты|минут)\b/.test(text);
+
+  if (!hasDuration) {
+    return;
+  }
+
+  addCandidate(target, {
+    slug: "duration-minutes",
+    title: "Duration in minutes",
+    semanticLayer: "metric",
+    categoryType: "measurement",
+    confidence: 0.98,
+    isRequired: true,
+    isConfirmed: true,
+    metadata: makeMetadata("duration_minutes_metric", ["durationMinutes or minute expression"]),
+  });
+}
+
+export function deriveCategoryCandidates(
+  input: CategoryDerivationInput,
+): CategoryDerivationResult {
+  const rawText = [input.inputText, input.title ?? "", input.description ?? ""]
+    .filter(Boolean)
+    .join(" ");
+
+  const text = normalizeInputText(rawText);
+  const candidates: CategoryCandidate[] = [];
+  const warnings: string[] = [];
+  const errors: string[] = [];
+
+  if (text.length === 0) {
+    return {
+      ok: true,
+      skipped: true,
+      skipReason: "empty_input_text",
+      processorVersion: CATEGORY_DERIVATION_PROCESSOR_VERSION,
+      ruleVersion: CATEGORY_DERIVATION_RULE_VERSION,
+      confidence: null,
+      candidates: [],
+      warnings: ["No input text was available for deterministic category derivation."],
+      errors: [],
+      metadata: {
+        extractor: "ruleExtractor",
+        extractorVersion: CATEGORY_DERIVATION_RULE_VERSION,
+      },
+    };
+  }
+
+  const walkedToWork = includesAny(text, [
+    "walked to work",
+    "walking to work",
+    "walk to work",
+    "шёл на работу",
+    "шел на работу",
+    "ходил на работу",
+    "пешком на работу",
+  ]);
+
+  if (walkedToWork) {
+    addCandidate(candidates, {
+      slug: "walking",
+      title: "Walking",
+      semanticLayer: "action",
+      categoryType: "activity_action",
+      confidence: 0.95,
+      isRequired: true,
+      isConfirmed: true,
+      metadata: makeMetadata("walking_to_work_duration", ["walked to work"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "work",
+      title: "Work",
+      semanticLayer: "context",
+      categoryType: "life_domain",
+      confidence: 0.9,
+      isRequired: true,
+      isConfirmed: true,
+      metadata: makeMetadata("walking_to_work_duration", ["work destination"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "commute-to-work",
+      title: "Commute to work",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.9,
+      isRequired: true,
+      isConfirmed: true,
+      metadata: makeMetadata("walking_to_work_duration", ["walked to work"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "walking-to-work",
+
+EXPORT / VERSION MARKERS:
+line 2: CategoryCandidate,
+line 8: export const CATEGORY_DERIVATION_PROCESSOR_VERSION = "category_derivation_v1";
+line 9: export const CATEGORY_DERIVATION_RULE_VERSION = "rules_v1";
+line 11: type CandidateDraft = Omit<CategoryCandidate, "source"> & {
+line 12: source?: CategoryCandidate["source"];
+line 39: function dedupeCandidates(candidates: CategoryCandidate[]): CategoryCandidate[] {
+line 40: const byKey = new Map<string, CategoryCandidate>();
+line 70: target: CategoryCandidate[],
+line 80: target: CategoryCandidate[],
+line 105: export function deriveCategoryCandidates(
+line 113: const candidates: CategoryCandidate[] = [];
+line 122: processorVersion: CATEGORY_DERIVATION_PROCESSOR_VERSION,
+line 123: ruleVersion: CATEGORY_DERIVATION_RULE_VERSION,
+line 130: extractorVersion: CATEGORY_DERIVATION_RULE_VERSION,
+line 562: processorVersion: CATEGORY_DERIVATION_PROCESSOR_VERSION,
+line 563: ruleVersion: CATEGORY_DERIVATION_RULE_VERSION,
+line 570: extractorVersion: CATEGORY_DERIVATION_RULE_VERSION,
+
+############################################################
+FILE: .\lib\activity\activityProcessingLogs.ts
+############################################################
+
+LINE_COUNT: 229
+
+import { supabase } from "../supabase";
+import type { JsonObject, JsonValue } from "./rawActivitySignals";
+
+export type ActivityProcessingStage =
+  | "ingest"
+  | "parse"
+  | "normalize"
+  | "validate"
+  | "deduplicate"
+  | "create_event"
+  | "complete_event"
+  | "link_event"
+  | "process_impacts"
+  | "aggregate"
+  | "snapshot"
+  | "correction"
+  | "rollback"
+  | "timeline_check"
+  | "timeline_adjustment"
+  | "finalize"
+  | "error"
+  | "debug";
+
+export type ActivityProcessingStatus =
+  | "started"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "skipped"
+  | "warning"
+  | "retrying"
+  | "cancelled";
+
+export type ActivityProcessingSeverity =
+  | "debug"
+  | "info"
+  | "notice"
+  | "warning"
+  | "error"
+  | "critical";
+
+export type ActivityProcessingLogRow = {
+  id: string;
+  user_id: string;
+  raw_signal_id: string | null;
+  activity_event_id: string | null;
+  activity_correction_id: string | null;
+  processing_run_id: string | null;
+  processor_name: string;
+  processor_version: string | null;
+  processing_stage: ActivityProcessingStage;
+  processing_status: ActivityProcessingStatus;
+  severity: ActivityProcessingSeverity;
+  message: string | null;
+  input_json: JsonObject;
+  output_json: JsonObject;
+  error_json: JsonObject;
+  metadata_json: JsonObject;
+  started_at: string;
+  finished_at: string | null;
+  duration_ms: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateActivityProcessingLogInput = {
+  userId: string;
+  rawSignalId?: string | null;
+  activityEventId?: string | null;
+  activityCorrectionId?: string | null;
+  processingRunId?: string | null;
+  processorName: string;
+  processorVersion?: string | null;
+  processingStage: ActivityProcessingStage;
+  processingStatus?: ActivityProcessingStatus;
+  severity?: ActivityProcessingSeverity;
+  message?: string | null;
+  input?: unknown;
+  output?: unknown;
+  error?: unknown;
+  metadata?: unknown;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  durationMs?: number | null;
+};
+
+export type CreateActivityProcessingLogResult = {
+  ok: boolean;
+  log: ActivityProcessingLogRow | null;
+  error: string | null;
+};
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toJsonValue(value: unknown): JsonValue {
+  if (value === undefined) {
+    return null;
+  }
+
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+
+  if (value instanceof Error) {
+    return {
+      name: value.name,
+      message: value.message,
+      stack: value.stack ?? null,
+    };
+  }
+
+  try {
+    return JSON.parse(JSON.stringify(value)) as JsonValue;
+  } catch {
+    return String(value);
+  }
+}
+
+function toJsonObject(value: unknown): JsonObject {
+  if (isJsonObject(value)) {
+    return value;
+  }
+
+  if (value === undefined || value === null) {
+    return {};
+  }
+
+  if (value instanceof Error) {
+    return {
+      name: value.name,
+      message: value.message,
+      stack: value.stack ?? null,
+    };
+  }
+
+  return {
+    value: toJsonValue(value),
+  };
+}
+
+function nullableText(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+
+  return trimmed ? trimmed : null;
+}
+
+export async function createActivityProcessingLog(
+  input: CreateActivityProcessingLogInput
+): Promise<CreateActivityProcessingLogResult> {
+  const { data, error } = await supabase
+    .from("activity_processing_logs")
+    .insert({
+      user_id: input.userId,
+      raw_signal_id: input.rawSignalId ?? null,
+      activity_event_id: input.activityEventId ?? null,
+      activity_correction_id: input.activityCorrectionId ?? null,
+      processing_run_id: input.processingRunId ?? null,
+      processor_name: input.processorName,
+      processor_version: nullableText(input.processorVersion),
+      processing_stage: input.processingStage,
+      processing_status: input.processingStatus ?? "completed",
+      severity: input.severity ?? "info",
+      message: nullableText(input.message),
+      input_json: toJsonObject(input.input),
+      output_json: toJsonObject(input.output),
+      error_json: toJsonObject(input.error),
+      metadata_json: toJsonObject(input.metadata),
+      started_at: input.startedAt ?? new Date().toISOString(),
+      finished_at: input.finishedAt ?? null,
+      duration_ms: input.durationMs ?? null,
+    })
+    .select()
+    .single();
+
+  if (error || !data) {
+    return {
+      ok: false,
+      log: null,
+      error: error?.message ?? "Failed to create activity processing log",
+    };
+  }
+
+  return {
+    ok: true,
+    log: data as ActivityProcessingLogRow,
+    error: null,
+  };
+}
+
+export function getDurationMs(
+  startedAt: string | Date,
+  finishedAt?: string | Date
+): number {
+  const started = startedAt instanceof Date ? startedAt : new Date(startedAt);
+  const finished =
+    finishedAt === undefined
+      ? new Date()
+      : finishedAt instanceof Date
+        ? finishedAt
+        : new Date(finishedAt);
+
+  const duration = finished.getTime() - started.getTime();
+
+  return Number.isFinite(duration) && duration >= 0 ? duration : 0;
+}
+
+export async function safeCreateActivityProcessingLog(
+  input: CreateActivityProcessingLogInput
+): Promise<CreateActivityProcessingLogResult> {
+  try {
+    return await createActivityProcessingLog(input);
+  } catch (error) {
+    // Logging must never break the main activity recording flow.
+    return {
+      ok: false,
+      log: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+
+
+############################################################
+FILE: .\lib\supabase.ts
+############################################################
+
+LINE_COUNT: 14
+
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl) {
+  throw new Error("Missing SUPABASE_URL");
+}
+
+if (!supabaseServiceRoleKey) {
+  throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+}
+
+export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+############################################################
+FILE: .\src\app\api\activity\debug\free-text-value-object-test\route.ts
+############################################################
+
+LINE_COUNT: 950
+
+import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
+
+import {
+  ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  ACTIVITY_RECORDING_ENABLED,
+} from "../../../../../../lib/activity/activityRecordingConfig";
+import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+import { processActivityValueObjectBridge } from "../../../../../../lib/activity/activityValueObjectLifecycle";
+import { safeCreateActivityProcessingLog } from "../../../../../../lib/activity/activityProcessingLogs";
+import { supabase } from "../../../../../../lib/supabase";
+import { deriveCategoryCandidates } from "../../../../../../lib/activity/categoryDerivation/ruleExtractor";
+import {
+  resolveCategoryCandidates,
+  type CategoryResolverCreatePolicy,
+  type CategoryResolverSupabaseClient,
+} from "../../../../../../lib/activity/categoryDerivation/resolver";
+import {
+  persistCategoryDerivations,
+  type CategoryDerivationPersistenceSupabaseClient,
+} from "../../../../../../lib/activity/categoryDerivation/persistDerivations";
+import type { CategoryDerivationInput } from "../../../../../../lib/activity/categoryDerivation/types";
+import type { AdditionalValueObjectCategoryLink } from "../../../../../../lib/activity/valueObjectBridge";
+
+export const dynamic = "force-dynamic";
+
+type FreeTextValueObjectTestBody = {
+  inputText?: unknown;
+  naturalInput?: unknown;
+  title?: unknown;
+  description?: unknown;
+  durationMinutes?: unknown;
+  startedAt?: unknown;
+  endedAt?: unknown;
+  enableCategoryDerivation?: unknown;
+  categoryDerivationEnabled?: unknown;
+  categoryDerivation?: unknown;
+  categoryDerivationDryRun?: unknown;
+  categoryDerivationCreatePolicy?: unknown;
+};
+
+type CategoryDerivationRouteOptions = {
+  enabled: boolean;
+  dryRun: boolean;
+  createPolicy: CategoryResolverCreatePolicy;
+};
+
+type CategoryDerivationRouteResult = {
+  enabled: boolean;
+  ok: boolean | null;
+  skipped: boolean;
+  reason?: string | null;
+  error?: string | null;
+  options: CategoryDerivationRouteOptions;
+  extraction?: {
+    ok: boolean;
+    skipped: boolean;
+    skipReason: string | null;
+    processorVersion: string;
+    ruleVersion: string | null;
+    confidence: number | null;
+    candidateCount: number;
+    warnings: string[];
+    errors: string[];
+    candidates: unknown[];
+  };
+  resolution?: {
+    ok: boolean;
+    createdCount: number;
+    reusedCount: number;
+    unresolvedCount: number;
+    warnings: string[];
+    errors: string[];
+    candidates: unknown[];
+  };
+  persistence?: {
+    ok: boolean;
+    derivationRunId: string | null;
+    derivationRowsCreated: number;
+    candidateCount: number;
+    resolvedCandidateCount: number;
+    unresolvedCandidateCount: number;
+    warnings: string[];
+    errors: string[];
+  };
+};
+
+function asString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function asNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().replace(",", ".");
+    const parsed = Number.parseFloat(normalized);
+
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function asBoolean(value: unknown): boolean | null {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (["true", "1", "yes", "y", "on"].includes(normalized)) {
+    return true;
+  }
+
+  if (["false", "0", "no", "n", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return null;
+}
+
+function resolveCategoryDerivationOptions(
+  body: FreeTextValueObjectTestBody
+):
+  | { ok: true; options: CategoryDerivationRouteOptions }
+  | { ok: false; error: string } {
+  const enabled =
+    asBoolean(body.enableCategoryDerivation) ??
+    asBoolean(body.categoryDerivationEnabled) ??
+    asBoolean(body.categoryDerivation) ??
+    false;
+
+  const dryRun = asBoolean(body.categoryDerivationDryRun) ?? false;
+
+  const rawCreatePolicy =
+    asString(body.categoryDerivationCreatePolicy) ?? "suggested_only";
+
+  const allowedPolicies: CategoryResolverCreatePolicy[] = [
+    "never",
+    "suggested_only",
+    "active_for_confirmed_required",
+  ];
+
+  if (!allowedPolicies.includes(rawCreatePolicy as CategoryResolverCreatePolicy)) {
+    return {
+      ok: false,
+      error:
+        "categoryDerivationCreatePolicy must be one of: never, suggested_only, active_for_confirmed_required.",
+    };
+  }
+
+  return {
+    ok: true,
+    options: {
+      enabled,
+      dryRun,
+      createPolicy: rawCreatePolicy as CategoryResolverCreatePolicy,
+    },
+  };
+}
+
+function resolveTiming(body: FreeTextValueObjectTestBody) {
+  const durationMinutes = asNumber(body.durationMinutes) ?? 15;
+
+  if (durationMinutes < 0) {
+    return {
+      ok: false as const,
+      error: "durationMinutes must be greater than or equal to 0.",
+    };
+  }
+
+  const rawStartedAt = asString(body.startedAt);
+  const rawEndedAt = asString(body.endedAt);
+
+  if (rawStartedAt && rawEndedAt) {
+    const startedDate = new Date(rawStartedAt);
+    const endedDate = new Date(rawEndedAt);
+
+    if (
+      Number.isNaN(startedDate.getTime()) ||
+      Number.isNaN(endedDate.getTime())
+    ) {
+      return {
+        ok: false as const,
+        error: "Invalid startedAt or endedAt.",
+      };
+    }
+
+    if (endedDate.getTime() < startedDate.getTime()) {
+      return {
+        ok: false as const,
+        error: "endedAt must be greater than or equal to startedAt.",
+      };
+    }
+
+    return {
+      ok: true as const,
+      startedAt: startedDate.toISOString(),
+      endedAt: endedDate.toISOString(),
+      durationMinutes: Math.round(
+        (endedDate.getTime() - startedDate.getTime()) / 60000
+      ),
+    };
+  }
+
+  if (rawStartedAt) {
+    const startedDate = new Date(rawStartedAt);
+
+    if (Number.isNaN(startedDate.getTime())) {
+      return {
+        ok: false as const,
+        error: "Invalid startedAt.",
+      };
+    }
+
+    const endedDate = new Date(startedDate.getTime() + durationMinutes * 60000);
+
+    return {
+      ok: true as const,
+      startedAt: startedDate.toISOString(),
+      endedAt: endedDate.toISOString(),
+      durationMinutes,
+    };
+  }
+
+  const endedDate = rawEndedAt ? new Date(rawEndedAt) : new Date();
+
+  if (Number.isNaN(endedDate.getTime())) {
+    return {
+      ok: false as const,
+      error: "Invalid endedAt.",
+    };
+  }
+
+  const startedDate = new Date(endedDate.getTime() - durationMinutes * 60000);
+
+  return {
+    ok: true as const,
+    startedAt: startedDate.toISOString(),
+    endedAt: endedDate.toISOString(),
+    durationMinutes,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isUuidLike(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value
+    )
+  );
+}
+
+function readStringField(
+  record: Record<string, unknown>,
+  keys: string[]
+): string | null {
+  for (const key of keys) {
+    const value = record[key];
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function readNumberField(
+  record: Record<string, unknown>,
+  keys: string[]
+): number | null {
+  for (const key of keys) {
+    const value = record[key];
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      const parsed = Number(value);
+
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+}
+
+function readObjectArray(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(isRecord);
+}
+
+function collectPossibleResolvedCandidates(
+  categoryDerivationResult: unknown
+): Record<string, unknown>[] {
+  if (!isRecord(categoryDerivationResult)) {
+    return [];
+  }
+
+  const direct = readObjectArray(categoryDerivationResult.resolvedCandidates);
+
+  if (direct.length > 0) {
+    return direct;
+  }
+
+  const resolution = isRecord(categoryDerivationResult.resolution)
+    ? categoryDerivationResult.resolution
+    : null;
+
+  if (resolution) {
+    const fromResolution = readObjectArray(resolution.resolvedCandidates);
+
+    if (fromResolution.length > 0) {
+      return fromResolution;
+    }
+
+    const fromResolutionCandidates = readObjectArray(resolution.candidates);
+
+    if (fromResolutionCandidates.length > 0) {
+      return fromResolutionCandidates;
+    }
+  }
+
+  const result = isRecord(categoryDerivationResult.result)
+    ? categoryDerivationResult.result
+    : null;
+
+  if (result) {
+    const fromResult = readObjectArray(result.resolvedCandidates);
+
+    if (fromResult.length > 0) {
+      return fromResult;
+    }
+  }
+
+  return [];
+}
+
+function collectPossibleDerivationRows(
+  categoryDerivationResult: unknown
+): Record<string, unknown>[] {
+  if (!isRecord(categoryDerivationResult)) {
+    return [];
+  }
+
+  const direct = readObjectArray(categoryDerivationResult.activityCategoryDerivations);
+
+  if (direct.length > 0) {
+    return direct;
+  }
+
+  const persistence = isRecord(categoryDerivationResult.persistence)
+    ? categoryDerivationResult.persistence
+    : null;
+
+  if (persistence) {
+    const fromPersistence = readObjectArray(
+      persistence.activityCategoryDerivations
+    );
+
+    if (fromPersistence.length > 0) {
+      return fromPersistence;
+    }
+
+    const fromRows = readObjectArray(persistence.rows);
+
+    if (fromRows.length > 0) {
+      return fromRows;
+    }
+  }
+
+  return [];
+}
+
+function buildDerivationRowBySlug(
+  rows: Record<string, unknown>[]
+): Map<string, Record<string, unknown>> {
+  const result = new Map<string, Record<string, unknown>>();
+
+  for (const row of rows) {
+    const slug = readStringField(row, [
+      "candidateSlug",
+      "candidate_slug",
+      "categorySlug",
+      "category_slug",
+      "slug",
+    ]);
+
+    if (slug) {
+      result.set(slug, row);
+    }
+  }
+
+  return result;
+}
+
+function buildAdditionalCategoryLinksForBridge(params: {
+  categoryDerivationEnabled: boolean;
+  categoryDerivationDryRun: boolean;
+  activityEventId: string;
+  derivationRunId: string | null;
+  categoryDerivationResult: unknown;
+}): AdditionalValueObjectCategoryLink[] | undefined {
+  const {
+    categoryDerivationEnabled,
+    categoryDerivationDryRun,
+    activityEventId,
+    derivationRunId,
+    categoryDerivationResult,
+  } = params;
+
+  if (!categoryDerivationEnabled || categoryDerivationDryRun) {
+    return undefined;
+  }
+
+  const resolvedCandidates =
+    collectPossibleResolvedCandidates(categoryDerivationResult);
+  const derivationRowsBySlug = buildDerivationRowBySlug(
+    collectPossibleDerivationRows(categoryDerivationResult)
+  );
+
+  const allowedResolutionStatuses = new Set([
+    "resolved_existing",
+    "created_suggested",
+    "created_active",
+  ]);
+
+  const links: AdditionalValueObjectCategoryLink[] = [];
+
+  for (const candidate of resolvedCandidates) {
+    const categoryId = readStringField(candidate, [
+      "categoryId",
+      "category_id",
+      "resolvedCategoryId",
+      "resolved_category_id",
+    ]);
+
+    if (!isUuidLike(categoryId)) {
+      continue;
+    }
+
+    const resolutionStatus =
+      readStringField(candidate, ["resolutionStatus", "resolution_status"]) ??
+      "resolved_existing";
+
+    if (!allowedResolutionStatuses.has(resolutionStatus)) {
+      continue;
+    }
+
+    const candidateSlug =
+      readStringField(candidate, [
+        "candidateSlug",
+        "candidate_slug",
+        "categorySlug",
+        "category_slug",
+        "slug",
+      ]) ?? categoryId;
+
+    const derivationRow = derivationRowsBySlug.get(candidateSlug) ?? null;
+
+    const activityCategoryDerivationId = derivationRow
+      ? readStringField(derivationRow, ["id", "activityCategoryDerivationId"])
+      : null;
+
+    links.push({
+      categoryId,
+      categoryTable: "contextual_categories",
+      categoryRole: "semantic_component",
+      source: "rule",
+      confidence:
+        readNumberField(candidate, ["confidence", "score"]) ??
+        readNumberField(derivationRow ?? {}, ["confidence", "score"]),
+      derivationRunId,
+      activityCategoryDerivationId,
+      activityEventId,
+      candidateSlug,
+      candidateTitle: readStringField(candidate, [
+        "candidateTitle",
+        "candidate_title",
+        "title",
+        "label",
+        "name",
+      ]),
+      semanticLayer: readStringField(candidate, [
+        "semanticLayer",
+        "semantic_layer",
+      ]),
+      categoryType: readStringField(candidate, ["categoryType", "category_type"]),
+      resolutionStatus,
+      metadata: {
+        sourceLayer: "category_derivation",
+        sourceRoute: "/api/activity/debug/free-text-value-object-test",
+        p4Step: "P4.10.0-C8-P3-B5-B3",
+      },
+    });
+  }
+
+  return links.length > 0 ? links : undefined;
+}
+async function runCategoryDerivationForDebugRoute(params: {
+  activityEventId: string;
+  inputText: string;
+  title: string | null;
+  description: string | null;
+  durationMinutes: number;
+  personActorId: string;
+  options: CategoryDerivationRouteOptions;
+}): Promise<CategoryDerivationRouteResult> {
+  const { options } = params;
+
+  if (!options.enabled) {
+    return {
+      enabled: false,
+      ok: null,
+      skipped: true,
+      reason: "feature_flag_disabled",
+      options,
+    };
+  }
+
+  try {
+    const derivationInput: CategoryDerivationInput = {
+      activityEventId: params.activityEventId,
+      inputText: params.inputText,
+      title: params.title,
+      description: params.description,
+      durationMinutes: params.durationMinutes,
+      inputLanguage: null,
+      actorId: params.personActorId,
+      organizationId: null,
+      metadata: {
+        endpoint: "/api/activity/debug/free-text-value-object-test",
+        p4Step: "P4.10.0-C8-O1",
+        featureFlag: "categoryDerivation",
+      },
+    };
+
+    const extractionResult = deriveCategoryCandidates(derivationInput);
+
+    const resolutionResult = await resolveCategoryCandidates(
+      supabase as unknown as CategoryResolverSupabaseClient,
+      extractionResult.candidates,
+      {
+        createPolicy: options.createPolicy,
+        dryRun: options.dryRun,
+        sourceType: "rule",
+        defaultCategoryType: "derived",
+      }
+    );
+
+    const persistenceResult = await persistCategoryDerivations(
+      supabase as unknown as CategoryDerivationPersistenceSupabaseClient,
+      {
+        activityEventId: params.activityEventId,
+        input: derivationInput,
+        derivationResult: extractionResult,
+        resolvedCandidates: resolutionResult.candidates,
+        actorId: params.personActorId,
+        organizationId: null,
+        modelName: null,
+        promptVersion: null,
+        needsUserConfirmation:
+          resolutionResult.unresolvedCount > 0 ||
+          extractionResult.candidates.some((candidate) =>
+            Boolean(candidate.needsUserReview)
+          ),
+      }
+    );
+
+    const ok =
+      extractionResult.ok && resolutionResult.ok && persistenceResult.ok;
+
+    return {
+      enabled: true,
+      ok,
+      skipped: false,
+      options,
+      extraction: {
+        ok: extractionResult.ok,
+        skipped: extractionResult.skipped ?? false,
+        skipReason: extractionResult.skipReason ?? null,
+        processorVersion: extractionResult.processorVersion,
+        ruleVersion: extractionResult.ruleVersion ?? null,
+        confidence: extractionResult.confidence ?? null,
+        candidateCount: extractionResult.candidates.length,
+        warnings: extractionResult.warnings,
+        errors: extractionResult.errors,
+        candidates: extractionResult.candidates,
+      },
+      resolution: {
+        ok: resolutionResult.ok,
+        createdCount: resolutionResult.createdCount,
+        reusedCount: resolutionResult.reusedCount,
+        unresolvedCount: resolutionResult.unresolvedCount,
+        warnings: resolutionResult.warnings,
+        errors: resolutionResult.errors,
+        candidates: resolutionResult.candidates,
+      },
+      persistence: {
+        ok: persistenceResult.ok,
+        derivationRunId: persistenceResult.derivationRunId,
+        derivationRowsCreated: persistenceResult.derivationRowsCreated,
+        candidateCount: persistenceResult.candidateCount,
+        resolvedCandidateCount: persistenceResult.resolvedCandidateCount,
+        unresolvedCandidateCount: persistenceResult.unresolvedCandidateCount,
+        warnings: persistenceResult.warnings,
+        errors: persistenceResult.errors,
+      },
+    };
+  } catch (error) {
+    return {
+      enabled: true,
+      ok: false,
+      skipped: false,
+      error: error instanceof Error ? error.message : String(error),
+      options,
+    };
+  }
+}
+
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    endpoint: "/api/activity/debug/free-text-value-object-test",
+    enabled: ACTIVITY_RECORDING_ENABLED,
+    status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+    message: ACTIVITY_RECORDING_ENABLED
+      ? "Debug-only endpoint for testing completed free-text Activity Event -> Value Object fallback mapping."
+      : ACTIVITY_RECORDING_DISABLED_MESSAGE,
+    categoryDerivation: {
+      available: true,
+      defaultEnabled: false,
+      enableFlag: "enableCategoryDerivation",
+      dryRunFlag: "categoryDerivationDryRun",
+      createPolicyField: "categoryDerivationCreatePolicy",
+      createPolicyValues: [
+        "never",
+        "suggested_only",
+        "active_for_confirmed_required",
+      ],
+    },
+    example: {
+      inputText: "walked to work for 15 minutes",
+      durationMinutes: 15,
+      title: "Walked to work",
+      enableCategoryDerivation: true,
+      categoryDerivationCreatePolicy: "suggested_only",
+      categoryDerivationDryRun: false,
+    },
+  });
+}
+
+export async function POST(request: Request) {
+  if (!ACTIVITY_RECORDING_ENABLED) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+      },
+      { status: 503 }
+    );
+  }
+
+  let body: FreeTextValueObjectTestBody;
+
+  try {
+    body = (await request.json()) as FreeTextValueObjectTestBody;
+  } catch {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Invalid JSON body.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const userContext = await getActivityUserContext();
+  const { appUser, personActor } = userContext;
+
+  if (!appUser || !personActor) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Authenticated app user and person actor context are required.",
+      },
+      { status: 401 }
+    );
+  }
+
+  const inputText = asString(body.inputText) ?? asString(body.naturalInput);
+
+  if (!inputText) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "inputText or naturalInput is required.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const timing = resolveTiming(body);
+
+  if (!timing.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: timing.error,
+      },
+      { status: 400 }
+    );
+  }
+
+  const categoryDerivationOptionsResult =
+    resolveCategoryDerivationOptions(body);
+
+  if (!categoryDerivationOptionsResult.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: categoryDerivationOptionsResult.error,
+      },
+      { status: 400 }
+    );
+  }
+
+  const categoryDerivationOptions = categoryDerivationOptionsResult.options;
+  const processingRunId = randomUUID();
+  const processingStartedAt = new Date();
+  const nowIso = new Date().toISOString();
+  const title = asString(body.title) ?? "Free-text activity test";
+  const description = asString(body.description);
+
+  const { data: createdEventData, error: createError } = await supabase
+    .from("activity_events")
+    .insert({
+      user_id: appUser.id,
+      performed_by_actor_id: personActor.id,
+      acting_as_actor_id: personActor.id,
+      acting_for_actor_id: null,
+      activity_type_id: null,
+      activity_template_id: null,
+      template_id: null,
+      event_code: null,
+      input_text: inputText,
+      title,
+      description,
+      started_at: timing.startedAt,
+      ended_at: timing.endedAt,
+      duration_minutes: timing.durationMinutes,
+      source: "manual_chat",
+      status: "completed",
+      privacy_scope: "private",
+      processing_status: "processed",
+      metadata_json: {
+        parser: "debug_free_text_value_object_test_v1",
+        p4Step: "P4.10.0-C8-O1",
+        freeTextValueObjectTest: true,
+        categoryDerivationEnabled: categoryDerivationOptions.enabled,
+        categoryDerivationDryRun: categoryDerivationOptions.dryRun,
+        categoryDerivationCreatePolicy: categoryDerivationOptions.createPolicy,
+        aiUsed: false,
+        createdAt: nowIso,
+      },
+    })
+    .select()
+    .single();
+
+  if (createError || !createdEventData) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: createError?.message ?? "Failed to create activity event.",
+      },
+      { status: 500 }
+    );
+  }
+
+  const createdEvent = createdEventData as { id: string };
+
+  const categoryDerivationResult = await runCategoryDerivationForDebugRoute({
+    activityEventId: createdEvent.id,
+    inputText,
+    title,
+    description,
+    durationMinutes: timing.durationMinutes,
+    personActorId: personActor.id,
+    options: categoryDerivationOptions,
+  });
+
+    const categoryDerivationBridgeAdditionalCategoryLinks =
+      buildAdditionalCategoryLinksForBridge({
+        categoryDerivationEnabled: categoryDerivationOptions.enabled,
+        categoryDerivationDryRun: categoryDerivationOptions.dryRun,
+        activityEventId: createdEvent.id,
+        derivationRunId:
+          categoryDerivationResult.persistence?.derivationRunId ?? null,
+        categoryDerivationResult,
+      });
+  const bridgeResult = await processActivityValueObjectBridge({
+      additionalCategoryLinks: categoryDerivationBridgeAdditionalCategoryLinks,
+    supabase,
+    eventId: createdEvent.id,
+    processorName: "activity_debug_free_text_value_object_test",
+    allowNonCompletedEvent: false,
+  });
+
+  const categoryDerivationWarning =
+    categoryDerivationResult.enabled && categoryDerivationResult.ok === false;
+
+  const logResult = await safeCreateActivityProcessingLog({
+    userId: appUser.id,
+    rawSignalId: null,
+    activityEventId: createdEvent.id,
+    processingRunId,
+    processorName: "activity_debug_free_text_value_object_test",
+    processingStage: "finalize",
+    processingStatus: bridgeResult.ok
+      ? categoryDerivationWarning
+        ? "warning"
+        : bridgeResult.skipped
+          ? "skipped"
+          : "completed"
+      : "warning",
+    severity:
+      bridgeResult.ok && !categoryDerivationWarning ? "info" : "warning",
+    message: "Debug free-text Value Object bridge processed.",
+    input: {
+      eventId: createdEvent.id,
+      inputText,
+      durationMinutes: timing.durationMinutes,
+      categoryDerivation: {
+        enabled: categoryDerivationOptions.enabled,
+        dryRun: categoryDerivationOptions.dryRun,
+        createPolicy: categoryDerivationOptions.createPolicy,
+      },
+    },
+    output: {
+      ok: bridgeResult.ok,
+      skipped: bridgeResult.skipped,
+      skipReason: bridgeResult.skipReason,
+      mappingSkipped: bridgeResult.mappingResult?.skipped ?? null,
+      mappingsCount: bridgeResult.mappingResult?.mappings.length ?? 0,
+      bridgeCreatedCount: bridgeResult.bridgeResult?.created.length ?? 0,
+      errors: bridgeResult.errors,
+      categoryDerivation: {
+        enabled: categoryDerivationResult.enabled,
+        ok: categoryDerivationResult.ok,
+        skipped: categoryDerivationResult.skipped,
+        error: categoryDerivationResult.error ?? null,
+        extractionCandidateCount:
+          categoryDerivationResult.extraction?.candidateCount ?? null,
+        resolutionCreatedCount:
+          categoryDerivationResult.resolution?.createdCount ?? null,
+        resolutionReusedCount:
+          categoryDerivationResult.resolution?.reusedCount ?? null,
+        resolutionUnresolvedCount:
+          categoryDerivationResult.resolution?.unresolvedCount ?? null,
+        derivationRunId:
+          categoryDerivationResult.persistence?.derivationRunId ?? null,
+        derivationRowsCreated:
+          categoryDerivationResult.persistence?.derivationRowsCreated ?? null,
+      },
+    },
+    metadata: {
+      endpoint: "/api/activity/debug/free-text-value-object-test",
+      p4Step: "P4.10.0-C8-O1",
+    },
+    startedAt: processingStartedAt.toISOString(),
+    finishedAt: new Date().toISOString(),
+    durationMs: new Date().getTime() - processingStartedAt.getTime(),
+  });
+
+  const responseOk =
+    bridgeResult.ok &&
+    (!categoryDerivationResult.enabled || categoryDerivationResult.ok !== false);
+
+  return NextResponse.json({
+    ok: responseOk,
+    status: bridgeResult.ok
+      ? bridgeResult.skipped
+        ? "created_but_bridge_skipped"
+        : "created_and_bridge_processed"
+      : "created_but_bridge_failed",
+    event: createdEventData,
+    categoryDerivation: categoryDerivationResult,
+    valueObjectBridge: {
+      ok: bridgeResult.ok,
+      skipped: bridgeResult.skipped,
+      skipReason: bridgeResult.skipReason,
+      errors: bridgeResult.errors,
+      mapping: bridgeResult.mappingResult
+        ? {
+            ok: bridgeResult.mappingResult.ok,
+            skipped: bridgeResult.mappingResult.skipped,
+            skipReason: bridgeResult.mappingResult.skipReason,
+            classificationSummaryCount:
+              bridgeResult.mappingResult.classificationSummary.length,
+            mappingsCount: bridgeResult.mappingResult.mappings.length,
+            mappings: bridgeResult.mappingResult.mappings,
+          }
+        : null,
+      bridge: bridgeResult.bridgeResult
+        ? {
+            ok: bridgeResult.bridgeResult.ok,
+            skipped: bridgeResult.bridgeResult.skipped,
+            skipReason: bridgeResult.bridgeResult.skipReason,
+            mappingsRequested: bridgeResult.bridgeResult.mappingsRequested,
+            createdCount: bridgeResult.bridgeResult.created.length,
+            created: bridgeResult.bridgeResult.created,
+            errors: bridgeResult.bridgeResult.errors,
+          }
+        : null,
+    },
+    processingLogs: {
+      processingRunId,
+      valueObjectBridge: {
+        ok: logResult.ok,
+        error: logResult.error,
+        logId: logResult.log?.id ?? null,
+      },
+    },
+  });
+}
+
+############################################################
+FILE: .\src\app\api\activity\debug\value-object-bridge-proof\route.ts
+############################################################
+
+LINE_COUNT: 800
+
+import { NextResponse } from "next/server";
+
+import {
+  ACTIVITY_RECORDING_DISABLED_MESSAGE,
+  ACTIVITY_RECORDING_ENABLED,
+} from "../../../../../../lib/activity/activityRecordingConfig";
+import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+import { supabase } from "../../../../../../lib/supabase";
+
+export const dynamic = "force-dynamic";
+
+const ENDPOINT = "/api/activity/debug/value-object-bridge-proof";
+const P4_STEP = "P4.10.0-C8-P3-B7-C2-D-B3";
+
+type Row = Record<string, unknown>;
+
+type NormalizedError = {
+  message: string;
+  details: string | null;
+  hint: string | null;
+  code: string | null;
+};
+
+type TableProof = {
+  key: string;
+  table: string;
+  ok: boolean;
+  count: number;
+  rows: Row[];
+  column: string | null;
+  valuesCount: number;
+  skipped: boolean;
+  skipReason: string | null;
+  triedColumns: string[];
+  error: NormalizedError | null;
+};
+
+type CandidateGroup = {
+  values: string[];
+  columns: string[];
+};
+
+const supabaseAny = supabase as unknown as {
+  from: (table: string) => unknown;
+};
+
+const EXPECTED_FREE_TEXT_CATEGORY_SLUGS = [
+  "walking",
+  "work",
+  "commute-to-work",
+  "walking-to-work",
+  "duration-minutes",
+];
+
+function isRecord(value: unknown): value is Row {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeError(error: unknown): NormalizedError | null {
+  if (!isRecord(error)) {
+    return null;
+  }
+
+  const message =
+    typeof error.message === "string" ? error.message : "Unknown Supabase error";
+
+  return {
+    message,
+    details: typeof error.details === "string" ? error.details : null,
+    hint: typeof error.hint === "string" ? error.hint : null,
+    code: typeof error.code === "string" ? error.code : null,
+  };
+}
+
+function asRows(data: unknown): Row[] {
+  if (Array.isArray(data)) {
+    return data.filter(isRecord);
+  }
+
+  if (isRecord(data)) {
+    return [data];
+  }
+
+  return [];
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(
+      values
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+    )
+  );
+}
+
+function getString(row: Row, keys: string[]) {
+  for (const key of keys) {
+    const value = row[key];
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}
+
+function getNestedString(row: Row, objectKeys: string[], valueKeys: string[]) {
+  for (const objectKey of objectKeys) {
+    const nested = row[objectKey];
+
+    if (!isRecord(nested)) {
+      continue;
+    }
+
+    const value = getString(nested, valueKeys);
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function collectIds(rows: Row[], keys: string[]) {
+  return uniqueStrings(rows.map((row) => getString(row, keys)));
+}
+
+function collectCategorySlugs(rows: Row[]) {
+  return uniqueStrings(
+    rows.map((row) => {
+      return (
+        getString(row, [
+          "candidate_slug",
+          "candidateSlug",
+          "category_slug",
+          "categorySlug",
+          "semantic_slug",
+          "semanticSlug",
+          "slug",
+          "category_key",
+          "categoryKey",
+          "key",
+          "name",
+          "label",
+        ]) ??
+        getNestedString(
+          row,
+          ["metadata_json", "metadata", "details_json", "details"],
+          [
+            "candidate_slug",
+            "candidateSlug",
+            "category_slug",
+            "categorySlug",
+            "semantic_slug",
+            "semanticSlug",
+            "slug",
+            "category_key",
+            "categoryKey",
+            "key",
+            "name",
+            "label",
+          ]
+        )
+      );
+    })
+  );
+}
+
+async function executeQuery(
+  key: string,
+  table: string,
+  column: string | null,
+  valuesCount: number,
+  buildQuery: (baseQuery: any) => PromiseLike<unknown>
+): Promise<TableProof> {
+  try {
+    const baseQuery = (supabaseAny.from(table) as any).select("*");
+    const result = (await buildQuery(baseQuery)) as {
+      data?: unknown;
+      error?: unknown;
+    };
+
+    const error = normalizeError(result.error);
+
+    if (error) {
+      return {
+        key,
+        table,
+        ok: false,
+        count: 0,
+        rows: [],
+        column,
+        valuesCount,
+        skipped: false,
+        skipReason: null,
+        triedColumns: column ? [column] : [],
+        error,
+      };
+    }
+
+    const rows = asRows(result.data);
+
+    return {
+      key,
+      table,
+      ok: true,
+      count: rows.length,
+      rows,
+      column,
+      valuesCount,
+      skipped: false,
+      skipReason: null,
+      triedColumns: column ? [column] : [],
+      error: null,
+    };
+  } catch (error) {
+    return {
+      key,
+      table,
+      ok: false,
+      count: 0,
+      rows: [],
+      column,
+      valuesCount,
+      skipped: false,
+      skipReason: null,
+      triedColumns: column ? [column] : [],
+      error: normalizeError(error) ?? {
+        message: error instanceof Error ? error.message : "Unknown thrown error",
+        details: null,
+        hint: null,
+        code: null,
+      },
+    };
+  }
+}
+
+async function selectById(
+  key: string,
+  table: string,
+  id: string,
+  appUserId: string | null = null
+) {
+  return executeQuery(key, table, "id", 1, (query) => {
+    let nextQuery = query.eq("id", id);
+
+    if (appUserId) {
+      nextQuery = nextQuery.eq("user_id", appUserId);
+    }
+
+    return nextQuery.limit(1);
+  });
+}
+
+async function selectEqWithCandidateColumns(
+  key: string,
+  table: string,
+  columns: string[],
+  value: string
+): Promise<TableProof> {
+  let firstOkZero: TableProof | null = null;
+  let lastResult: TableProof | null = null;
+  const triedColumns: string[] = [];
+
+  for (const column of columns) {
+    triedColumns.push(column);
+
+    const result = await executeQuery(key, table, column, 1, (query) =>
+      query.eq(column, value).limit(500)
+    );
+
+    result.triedColumns = [...triedColumns];
+    lastResult = result;
+
+    if (result.ok && result.count > 0) {
+      return result;
+    }
+
+    if (result.ok && result.count === 0 && !firstOkZero) {
+      firstOkZero = result;
+    }
+
+    if (!result.ok && result.error?.code !== "42703") {
+      return result;
+    }
+  }
+
+  if (firstOkZero) {
+    return firstOkZero;
+  }
+
+  if (lastResult) {
+    return lastResult;
+  }
+
+  return {
+    key,
+    table,
+    ok: true,
+    count: 0,
+    rows: [],
+    column: null,
+    valuesCount: 0,
+    skipped: true,
+    skipReason: "No candidate columns were available or no query was attempted.",
+    triedColumns,
+    error: null,
+  };
+}
+
+async function selectInWithCandidateGroups(
+  key: string,
+  table: string,
+  groups: CandidateGroup[]
+): Promise<TableProof> {
+  let firstOkZero: TableProof | null = null;
+  let lastResult: TableProof | null = null;
+  const triedColumns: string[] = [];
+
+  for (const group of groups) {
+    const values = uniqueStrings(group.values);
+
+    if (values.length === 0) {
+      continue;
+    }
+
+    for (const column of group.columns) {
+      triedColumns.push(column);
+
+      const result = await executeQuery(key, table, column, values.length, (query) =>
+        query.in(column, values).limit(1000)
+      );
+
+      result.triedColumns = [...triedColumns];
+      lastResult = result;
+
+      if (result.ok && result.count > 0) {
+        return result;
+      }
+
+      if (result.ok && result.count === 0 && !firstOkZero) {
+        firstOkZero = result;
+      }
+
+      if (!result.ok && result.error?.code !== "42703") {
+        return result;
+      }
+    }
+  }
+
+  if (firstOkZero) {
+    return firstOkZero;
+  }
+
+  if (lastResult) {
+    return lastResult;
+  }
+
+  return {
+    key,
+    table,
+    ok: true,
+    count: 0,
+    rows: [],
+    column: null,
+    valuesCount: 0,
+    skipped: true,
+    skipReason: "No candidate values available.",
+    triedColumns: [],
+    error: null,
+  };
+}
+
+function limitRows(rows: Row[], limit = 5) {
+  return rows.slice(0, limit);
+}
+
+function tableSummary(result: TableProof) {
+  return {
+    key: result.key,
+    table: result.table,
+    ok: result.ok,
+    count: result.count,
+    column: result.column,
+    valuesCount: result.valuesCount,
+    skipped: result.skipped,
+    skipReason: result.skipReason,
+    triedColumns: result.triedColumns,
+    error: result.error,
+  };
+}
+
+export async function GET(request: Request) {
+  if (!ACTIVITY_RECORDING_ENABLED) {
+    return NextResponse.json(
+      {
+        ok: false,
+        endpoint: ENDPOINT,
+        p4Step: P4_STEP,
+        error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+      },
+      { status: 503 }
+    );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const eventId = searchParams.get("eventId")?.trim();
+
+  if (!eventId) {
+    return NextResponse.json(
+      {
+        ok: false,
+        endpoint: ENDPOINT,
+        p4Step: P4_STEP,
+        error: "Missing eventId query parameter.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const { appUser, errorResponse } = await getActivityUserContext();
+
+  if (errorResponse) {
+    return errorResponse;
+  }
+
+  if (!appUser) {
+    return NextResponse.json(
+      {
+        ok: false,
+        endpoint: ENDPOINT,
+        p4Step: P4_STEP,
+        error: "User context not found.",
+      },
+      { status: 500 }
+    );
+  }
+
+  const tableResults: TableProof[] = [];
+
+  const eventResult = await selectById("event", "activity_events", eventId, appUser.id);
+  tableResults.push(eventResult);
+
+  const event = eventResult.rows[0] ?? null;
+
+  const activityEventValueObjectLinksResult =
+    await selectEqWithCandidateColumns(
+      "activityEventValueObjectLinks",
+      "activity_event_value_object_links",
+      ["event_id", "source_event_id", "activity_id", "activity_record_id"],
+      eventId
+    );
+  tableResults.push(activityEventValueObjectLinksResult);
+
+  const activityEventValueObjectInstanceLinksResult =
+    await selectEqWithCandidateColumns(
+      "activityEventValueObjectInstanceLinks",
+      "activity_event_value_object_instance_links",
+      ["event_id", "source_event_id", "activity_id", "activity_record_id"],
+      eventId
+    );
+  tableResults.push(activityEventValueObjectInstanceLinksResult);
+
+  const initialValueObjectIds = collectIds(
+    [
+      ...activityEventValueObjectLinksResult.rows,
+      ...activityEventValueObjectInstanceLinksResult.rows,
+    ],
+    [
+      "value_object_id",
+      "valueObjectId",
+      "target_value_object_id",
+      "targetValueObjectId",
+      "object_id",
+      "objectId",
+    ]
+  );
+
+  const initialValueObjectInstanceIds = collectIds(
+    [
+      ...activityEventValueObjectLinksResult.rows,
+      ...activityEventValueObjectInstanceLinksResult.rows,
+    ],
+    [
+      "value_object_instance_id",
+      "valueObjectInstanceId",
+      "instance_id",
+      "instanceId",
+      "target_value_object_instance_id",
+      "targetValueObjectInstanceId",
+    ]
+  );
+
+  const valueObjectInstancesResult = await selectInWithCandidateGroups(
+    "valueObjectInstances",
+    "value_object_instances",
+    [
+      {
+        values: initialValueObjectInstanceIds,
+        columns: ["id"],
+      },
+      {
+        values: initialValueObjectIds,
+        columns: ["value_object_id", "object_id"],
+      },
+    ]
+  );
+  tableResults.push(valueObjectInstancesResult);
+
+  const valueObjectIdsFromInstances = collectIds(valueObjectInstancesResult.rows, [
+    "value_object_id",
+    "valueObjectId",
+    "object_id",
+    "objectId",
+  ]);
+
+  const valueObjectIds = uniqueStrings([
+    ...initialValueObjectIds,
+    ...valueObjectIdsFromInstances,
+  ]);
+
+  const valueObjectInstanceIds = uniqueStrings([
+    ...initialValueObjectInstanceIds,
+    ...collectIds(valueObjectInstancesResult.rows, ["id"]),
+  ]);
+
+  const valueObjectsResult = await selectInWithCandidateGroups(
+    "valueObjects",
+    "value_objects",
+    [
+      {
+        values: valueObjectIds,
+        columns: ["id"],
+      },
+    ]
+  );
+  tableResults.push(valueObjectsResult);
+
+  const stateDeltasResult = await selectInWithCandidateGroups(
+    "stateDeltas",
+    "value_object_state_deltas",
+    [
+      {
+        values: valueObjectInstanceIds,
+        columns: ["value_object_instance_id", "instance_id"],
+      },
+      {
+        values: valueObjectIds,
+        columns: ["value_object_id", "object_id"],
+      },
+    ]
+  );
+  tableResults.push(stateDeltasResult);
+
+  const dailyAggregatesResult = await selectInWithCandidateGroups(
+    "dailyAggregates",
+    "value_object_daily_aggregates",
+    [
+      {
+        values: valueObjectInstanceIds,
+        columns: ["value_object_instance_id", "instance_id"],
+      },
+      {
+        values: valueObjectIds,
+        columns: ["value_object_id", "object_id"],
+      },
+    ]
+  );
+  tableResults.push(dailyAggregatesResult);
+
+  const stateSnapshotsResult = await selectInWithCandidateGroups(
+    "stateSnapshots",
+    "value_object_state_snapshots",
+    [
+      {
+        values: valueObjectInstanceIds,
+        columns: ["value_object_instance_id", "instance_id"],
+      },
+      {
+        values: valueObjectIds,
+        columns: ["value_object_id", "object_id"],
+      },
+    ]
+  );
+  tableResults.push(stateSnapshotsResult);
+
+  const usageAggregatesResult = await selectInWithCandidateGroups(
+    "usageAggregates",
+    "value_object_usage_aggregates",
+    [
+      {
+        values: valueObjectInstanceIds,
+        columns: ["value_object_instance_id", "instance_id"],
+      },
+      {
+        values: valueObjectIds,
+        columns: ["value_object_id", "object_id"],
+      },
+    ]
+  );
+  tableResults.push(usageAggregatesResult);
+
+  const valueObjectCategoryLinksResult = await selectInWithCandidateGroups(
+    "valueObjectCategoryLinks",
+    "value_object_category_links",
+    [
+      {
+        values: valueObjectIds,
+        columns: ["value_object_id", "object_id"],
+      },
+      {
+        values: valueObjectInstanceIds,
+        columns: ["value_object_instance_id", "instance_id"],
+      },
+    ]
+  );
+  tableResults.push(valueObjectCategoryLinksResult);
+
+  const categoryIds = collectIds(valueObjectCategoryLinksResult.rows, [
+    "category_id",
+    "categoryId",
+    "linked_category_id",
+    "linkedCategoryId",
+  ]);
+
+  const categorySlugsFromLinks = collectCategorySlugs(
+    valueObjectCategoryLinksResult.rows
+  );
+
+  const categoryReferenceResult =
+    categoryIds.length > 0 && categorySlugsFromLinks.length === 0
+      ? await selectInWithCandidateGroups(
+          "categoryReferences",
+          "contextual_category_events",
+          [
+            {
+              values: categoryIds,
+              columns: ["id", "category_id"],
+            },
+          ]
+        )
+      : {
+          key: "categoryReferences",
+          table: "contextual_category_events",
+          ok: true,
+          count: 0,
+          rows: [],
+          column: null,
+          valuesCount: categoryIds.length,
+          skipped: true,
+          skipReason:
+            categoryIds.length === 0
+              ? "No category ids available."
+              : "Category slugs already available from value_object_category_links.",
+          triedColumns: [],
+          error: null,
+        };
+
+  tableResults.push(categoryReferenceResult);
+
+  const categorySlugsFromReferences = collectCategorySlugs(
+    categoryReferenceResult.rows
+  );
+
+  const categorySlugs = uniqueStrings([
+    ...categorySlugsFromLinks,
+    ...categorySlugsFromReferences,
+  ]);
+
+  const errors = tableResults
+    .filter((result) => !result.ok)
+    .map((result) => ({
+      key: result.key,
+      table: result.table,
+      column: result.column,
+      triedColumns: result.triedColumns,
+      error: result.error,
+    }));
+
+  const expectedCategorySlugsFound = EXPECTED_FREE_TEXT_CATEGORY_SLUGS.filter(
+    (slug) => categorySlugs.includes(slug)
+  );
+
+  const missingExpectedCategorySlugs = EXPECTED_FREE_TEXT_CATEGORY_SLUGS.filter(
+    (slug) => !categorySlugs.includes(slug)
+  );
+
+  const missingArtifacts = {
+    event: !event,
+    activityEventValueObjectLinks:
+      activityEventValueObjectLinksResult.rows.length === 0,
+    activityEventValueObjectInstanceLinks:
+      activityEventValueObjectInstanceLinksResult.rows.length === 0,
+    valueObjects: valueObjectsResult.rows.length === 0,
+    valueObjectInstances: valueObjectInstancesResult.rows.length === 0,
+    stateDeltas: stateDeltasResult.rows.length === 0,
+    dailyAggregates: dailyAggregatesResult.rows.length === 0,
+    stateSnapshots: stateSnapshotsResult.rows.length === 0,
+    usageAggregates: usageAggregatesResult.rows.length === 0,
+    valueObjectCategoryLinks: valueObjectCategoryLinksResult.rows.length === 0,
+    categorySlugs: categorySlugs.length === 0,
+    expectedFreeTextCategorySlugs: missingExpectedCategorySlugs.length > 0,
+  };
+
+  const criticalPass =
+    Boolean(event) &&
+    event?.status === "completed" &&
+    event?.processing_status === "processed" &&
+    activityEventValueObjectLinksResult.rows.length > 0 &&
+    activityEventValueObjectInstanceLinksResult.rows.length > 0 &&
+    valueObjectsResult.rows.length > 0 &&
+    valueObjectInstancesResult.rows.length > 0 &&
+    valueObjectCategoryLinksResult.rows.length > 0 &&
+    errors.length === 0;
+
+  const semanticPass =
+    expectedCategorySlugsFound.length === EXPECTED_FREE_TEXT_CATEGORY_SLUGS.length;
+
+  const ok = criticalPass && semanticPass;
+
+  return NextResponse.json({
+    ok,
+    endpoint: ENDPOINT,
+    p4Step: P4_STEP,
+    mode: "read_only",
+    eventId,
+    criticalPass,
+    semanticPass,
+    proofSummary: {
+      eventId,
+      eventFound: Boolean(event),
+      eventStatus: typeof event?.status === "string" ? event.status : null,
+      eventProcessingStatus:
+        typeof event?.processing_status === "string"
+          ? event.processing_status
+          : null,
+      valueObjectIds,
+      valueObjectInstanceIds,
+      categoryIds,
+      categorySlugsFromLinks,
+      categorySlugsFromReferences,
+      categorySlugs,
+      expectedCategorySlugs: EXPECTED_FREE_TEXT_CATEGORY_SLUGS,
+      expectedCategorySlugsFound,
+      missingExpectedCategorySlugs,
+      counts: {
+        activityEventValueObjectLinks:
+          activityEventValueObjectLinksResult.rows.length,
+        activityEventValueObjectInstanceLinks:
+          activityEventValueObjectInstanceLinksResult.rows.length,
+        valueObjects: valueObjectsResult.rows.length,
+        valueObjectInstances: valueObjectInstancesResult.rows.length,
+        stateDeltas: stateDeltasResult.rows.length,
+        dailyAggregates: dailyAggregatesResult.rows.length,
+        stateSnapshots: stateSnapshotsResult.rows.length,
+        usageAggregates: usageAggregatesResult.rows.length,
+        valueObjectCategoryLinks: valueObjectCategoryLinksResult.rows.length,
+        categorySlugs: categorySlugs.length,
+        errors: errors.length,
+      },
+    },
+    missingArtifacts,
+    errors,
+    tables: tableResults.map(tableSummary),
+    proof: {
+      event,
+      activityEventValueObjectLinks: activityEventValueObjectLinksResult.rows,
+      activityEventValueObjectInstanceLinks:
+        activityEventValueObjectInstanceLinksResult.rows,
+      valueObjects: valueObjectsResult.rows,
+      valueObjectInstances: valueObjectInstancesResult.rows,
+      stateDeltas: stateDeltasResult.rows,
+      dailyAggregates: dailyAggregatesResult.rows,
+      stateSnapshots: stateSnapshotsResult.rows,
+      usageAggregates: usageAggregatesResult.rows,
+      valueObjectCategoryLinks: valueObjectCategoryLinksResult.rows,
+      categoryReferences: categoryReferenceResult.rows,
+    },
+    samples: {
+      activityEventValueObjectLinks: limitRows(
+        activityEventValueObjectLinksResult.rows
+      ),
+      activityEventValueObjectInstanceLinks: limitRows(
+        activityEventValueObjectInstanceLinksResult.rows
+      ),
+      valueObjects: limitRows(valueObjectsResult.rows),
+      valueObjectInstances: limitRows(valueObjectInstancesResult.rows),
+      stateDeltas: limitRows(stateDeltasResult.rows),
+      dailyAggregates: limitRows(dailyAggregatesResult.rows),
+      stateSnapshots: limitRows(stateSnapshotsResult.rows),
+      usageAggregates: limitRows(usageAggregatesResult.rows),
+      valueObjectCategoryLinks: limitRows(valueObjectCategoryLinksResult.rows),
+      categoryReferences: limitRows(categoryReferenceResult.rows),
+    },
+  });
+}
+
+============================================================
+TARGET PERSISTENCE CONTRACT AFTER C8-E-D
+============================================================
+
+Required exported functions to design next:
+- createCategoryDerivationRun
+- finishCategoryDerivationRun
+- failCategoryDerivationRun
+- persistActivityCategoryDerivations
+- buildCategoryDerivationInputHash
+
+Required DB tables:
+- category_derivation_runs
+- activity_category_derivations
+
+Required post-migration columns:
+- category_derivation_runs.input_hash
+- category_derivation_runs.policy_version
+- category_derivation_runs.schema_version
+- category_derivation_runs.model_alias
+- category_derivation_runs.token_usage_json
+- category_derivation_runs.cost_json
+- activity_category_derivations.status
+- activity_category_derivations.is_revoked
+- activity_category_derivations.is_core_meaning
+- activity_category_derivations.evidence_json
+
+NO-GO
+- Do not patch /api/activity/complete yet.
+- Do not add AI calls yet.
+- Do not create semantic snapshot/correction/moderation tables yet.
+- Do not rename persistDerivations.ts blindly.
+
+END OF E2 DEEP INSPECT
