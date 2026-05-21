@@ -1,0 +1,142 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-E4 — Category Derivation Persistence Contract Verification
+Created: 2026-05-21 11:36:12
+Base commit before this document: 3ecd321
+
+STATUS
+C8-E-E3 persistence contract creation was completed.
+C8-E-E4 documents the verification result.
+
+CREATED FILE
+lib/activity/categoryDerivation/persistence.ts
+
+COMMIT
+3ecd321 Add Category Derivation persistence contract
+
+VERIFICATION
+TypeScript check executed:
+npx.cmd tsc --noEmit --pretty false
+
+Result:
+PASS — no TypeScript errors were printed.
+
+RUNTIME IMPACT
+No runtime route was patched.
+No /api/activity/complete changes.
+No debug route was added.
+No AI model calls were introduced.
+No database migration was executed in this block.
+
+WHAT persistence.ts NOW PROVIDES
+
+Exported persistence client abstraction:
+- CategoryDerivationPersistenceClient
+
+Exported row types:
+- CategoryDerivationRunRow
+- ActivityCategoryDerivationRow
+
+Exported input/result contracts:
+- CreateCategoryDerivationRunInput
+- CreateCategoryDerivationRunResult
+- FinishCategoryDerivationRunInput
+- FailCategoryDerivationRunInput
+- UpdateCategoryDerivationRunResult
+- PersistActivityCategoryDerivationsInput
+- PersistActivityCategoryDerivationsResult
+
+Exported functions:
+- buildCategoryDerivationInputHash
+- createCategoryDerivationRun
+- finishCategoryDerivationRun
+- failCategoryDerivationRun
+- persistActivityCategoryDerivations
+
+DATABASE CONTRACT COVERED
+
+category_derivation_runs:
+- activity_event_id
+- actor_id
+- organization_id
+- input_text
+- input_language
+- processor_version
+- rule_version
+- model_name
+- model_alias
+- prompt_version
+- schema_version
+- policy_version
+- status
+- confidence
+- needs_user_confirmation
+- input_hash
+- token_usage_json
+- cost_json
+- input_json
+- output_json
+- error_json
+- finished_at
+
+activity_category_derivations:
+- activity_event_id
+- derivation_run_id
+- category_id
+- candidate_slug
+- candidate_title
+- semantic_layer
+- category_type
+- source
+- confidence
+- is_required
+- is_confirmed
+- needs_user_review
+- is_rejected
+- status
+- is_revoked
+- is_core_meaning
+- evidence_json
+- metadata_json
+
+IMPORTANT DESIGN DECISIONS
+
+1. New persistence.ts was created instead of overwriting persistDerivations.ts.
+Reason:
+Existing persistDerivations.ts is already present and may be used by earlier code.
+The new file creates a clean contract for the post-C8-E-D schema.
+
+2. Existing runtime routes were not modified.
+Reason:
+The persistence contract must first compile and be documented before orchestration is attached.
+
+3. No canonical event was rerun.
+Reason:
+Canonical /api/activity/complete production proof remains closed and must not be disturbed.
+
+4. No AI calls were added.
+Reason:
+AI function layer comes after persistence/orchestrator governance and feature flag readiness.
+
+NEXT BLOCK
+
+Proceed to:
+P4.10.0-C8-E-F1 — create routeRunner.ts additive orchestrator contract.
+
+Recommended next scope:
+- create lib/activity/categoryDerivation/routeRunner.ts;
+- import ruleExtractor, resolver, and the new persistence.ts;
+- do not patch /api/activity/complete yet;
+- do not call OpenAI yet;
+- provide one orchestrator function that can later be called by debug route or complete route;
+- run TypeScript check;
+- commit as isolated block.
+
+NO-GO FOR NEXT BLOCK
+- Do not modify /api/activity/complete.
+- Do not modify commercial core.
+- Do not create UI.
+- Do not create semantic snapshot/correction/moderation tables.
+- Do not introduce AI client yet.
+- Do not rerun canonical production proof event.
+
+END OF E4 VERIFICATION
