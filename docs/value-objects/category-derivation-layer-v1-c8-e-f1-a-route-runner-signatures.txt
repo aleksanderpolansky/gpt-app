@@ -1,0 +1,698 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F1-A — routeRunner dependency signatures
+Created: 2026-05-21 11:38:41
+Base commit: e343f9a
+
+STATUS
+Signature inventory only.
+No runtime code changes.
+No database changes.
+
+PURPOSE
+Before creating lib/activity/categoryDerivation/routeRunner.ts, capture exact local signatures for:
+- deriveCategoryCandidates
+- resolveCategoryCandidates
+- persistence.ts exported functions
+- CategoryDerivationInput / CategoryDerivationResult / CategoryResolutionResult
+
+NO-GO
+- Do not modify /api/activity/complete.
+- Do not call OpenAI.
+- Do not create UI.
+- Do not rerun canonical production proof event.
+
+
+------------------------------------------------------------
+SNIPPET
+File: .\lib\activity\categoryDerivation\types.ts
+Pattern: export interface CategoryDerivationInput
+------------------------------------------------------------
+   59:   categoryId: string | null;
+   60:   resolutionStatus: CategoryDerivationResolutionStatus;
+   61: }
+   62: 
+   63: export interface CategoryDerivationInput {
+   64:   activityEventId?: string;
+   65:   inputText: string;
+   66:   title?: string | null;
+   67:   description?: string | null;
+   68:   durationMinutes?: number | null;
+   69:   inputLanguage?: string | null;
+   70:   actorId?: string | null;
+   71:   organizationId?: string | null;
+   72:   metadata?: JsonRecord;
+   73: }
+   74: 
+   75: export interface CategoryDerivationResult {
+   76:   ok: boolean;
+   77:   skipped?: boolean;
+   78:   skipReason?: string | null;
+   79:   processorVersion: string;
+   80:   ruleVersion?: string | null;
+   81:   confidence?: number | null;
+   82:   candidates: CategoryCandidate[];
+   83:   warnings: string[];
+   84:   errors: string[];
+   85:   metadata?: JsonRecord;
+   86: }
+   87: 
+   88: export interface CategoryResolutionResult {
+   89:   ok: boolean;
+   90:   candidates: ResolvedCategoryCandidate[];
+   91:   createdCount: number;
+   92:   reusedCount: number;
+   93:   unresolvedCount: number;
+   94:   warnings: string[];
+   95:   errors: string[];
+   96:   metadata?: JsonRecord;
+   97: }
+   98: 
+   99: export interface CategoryDerivationRunInsert {
+  100:   activity_event_id: string;
+  101:   actor_id?: string | null;
+  102:   organization_id?: string | null;
+  103:   input_text?: string | null;
+  104:   input_language?: string | null;
+  105:   processor_version: string;
+  106:   rule_version?: string | null;
+  107:   model_name?: string | null;
+  108:   prompt_version?: string | null;
+  109:   status: CategoryDerivationRunStatus;
+  110:   confidence?: number | null;
+  111:   needs_user_confirmation?: boolean;
+  112:   input_json?: JsonRecord;
+  113:   output_json?: JsonRecord;
+  114:   error_json?: JsonRecord | null;
+  115: }
+  116: 
+  117: export interface ActivityCategoryDerivationInsert {
+  118:   activity_event_id: string;
+  119:   derivation_run_id?: string | null;
+  120:   category_id?: string | null;
+  121:   candidate_slug: string;
+  122:   candidate_title?: string | null;
+  123:   semantic_layer?: string | null;
+  124:   category_type?: string | null;
+  125:   source: CategoryDerivationSource;
+  126:   confidence?: number | null;
+  127:   is_required?: boolean;
+  128:   is_confirmed?: boolean;
+  129:   needs_user_review?: boolean;
+  130:   is_rejected?: boolean;
+  131:   metadata_json?: JsonRecord;
+  132: }
+
+------------------------------------------------------------
+SNIPPET
+File: .\lib\activity\categoryDerivation\ruleExtractor.ts
+Pattern: export function deriveCategoryCandidates
+------------------------------------------------------------
+   85:     typeof input.durationMinutes === "number" ||
+   86:     /\b\d+\s*(minute|minutes|min)\b/.test(text) ||
+   87:     /\b\d+\s*(минута|минуты|минут)\b/.test(text);
+   88: 
+   89:   if (!hasDuration) {
+   90:     return;
+   91:   }
+   92: 
+   93:   addCandidate(target, {
+   94:     slug: "duration-minutes",
+   95:     title: "Duration in minutes",
+   96:     semanticLayer: "metric",
+   97:     categoryType: "measurement",
+   98:     confidence: 0.98,
+   99:     isRequired: true,
+  100:     isConfirmed: true,
+  101:     metadata: makeMetadata("duration_minutes_metric", ["durationMinutes or minute expression"]),
+  102:   });
+  103: }
+  104: 
+  105: export function deriveCategoryCandidates(
+  106:   input: CategoryDerivationInput,
+  107: ): CategoryDerivationResult {
+  108:   const rawText = [input.inputText, input.title ?? "", input.description ?? ""]
+  109:     .filter(Boolean)
+  110:     .join(" ");
+  111: 
+  112:   const text = normalizeInputText(rawText);
+  113:   const candidates: CategoryCandidate[] = [];
+  114:   const warnings: string[] = [];
+  115:   const errors: string[] = [];
+  116: 
+  117:   if (text.length === 0) {
+  118:     return {
+  119:       ok: true,
+  120:       skipped: true,
+  121:       skipReason: "empty_input_text",
+  122:       processorVersion: CATEGORY_DERIVATION_PROCESSOR_VERSION,
+  123:       ruleVersion: CATEGORY_DERIVATION_RULE_VERSION,
+  124:       confidence: null,
+  125:       candidates: [],
+  126:       warnings: ["No input text was available for deterministic category derivation."],
+  127:       errors: [],
+  128:       metadata: {
+  129:         extractor: "ruleExtractor",
+  130:         extractorVersion: CATEGORY_DERIVATION_RULE_VERSION,
+  131:       },
+  132:     };
+  133:   }
+  134: 
+  135:   const walkedToWork = includesAny(text, [
+  136:     "walked to work",
+  137:     "walking to work",
+  138:     "walk to work",
+  139:     "шёл на работу",
+  140:     "шел на работу",
+  141:     "ходил на работу",
+  142:     "пешком на работу",
+  143:   ]);
+  144: 
+  145:   if (walkedToWork) {
+  146:     addCandidate(candidates, {
+  147:       slug: "walking",
+  148:       title: "Walking",
+  149:       semanticLayer: "action",
+  150:       categoryType: "activity_action",
+  151:       confidence: 0.95,
+  152:       isRequired: true,
+  153:       isConfirmed: true,
+  154:       metadata: makeMetadata("walking_to_work_duration", ["walked to work"]),
+  155:     });
+  156: 
+  157:     addCandidate(candidates, {
+  158:       slug: "work",
+  159:       title: "Work",
+  160:       semanticLayer: "context",
+  161:       categoryType: "life_domain",
+  162:       confidence: 0.9,
+  163:       isRequired: true,
+  164:       isConfirmed: true,
+  165:       metadata: makeMetadata("walking_to_work_duration", ["work destination"]),
+  166:     });
+  167: 
+  168:     addCandidate(candidates, {
+  169:       slug: "commute-to-work",
+  170:       title: "Commute to work",
+  171:       semanticLayer: "purpose",
+  172:       categoryType: "activity_meaning",
+  173:       confidence: 0.9,
+  174:       isRequired: true,
+  175:       isConfirmed: true,
+  176:       metadata: makeMetadata("walking_to_work_duration", ["walked to work"]),
+  177:     });
+  178: 
+  179:     addCandidate(candidates, {
+  180:       slug: "walking-to-work",
+  181:       title: "Walking to work",
+  182:       semanticLayer: "activity_meaning",
+  183:       categoryType: "derived_activity_bundle",
+  184:       confidence: 0.88,
+  185:       isRequired: true,
+
+------------------------------------------------------------
+SNIPPET
+File: .\lib\activity\categoryDerivation\resolver.ts
+Pattern: export interface CategoryResolverOptions
+------------------------------------------------------------
+    5:   ResolvedCategoryCandidate,
+    6: } from "./types";
+    7: 
+    8: export type CategoryResolverCreatePolicy =
+    9:   | "never"
+   10:   | "suggested_only"
+   11:   | "active_for_confirmed_required";
+   12: 
+   13: export interface CategoryResolverOptions {
+   14:   createPolicy?: CategoryResolverCreatePolicy;
+   15:   defaultStatus?: "active" | "suggested" | "needs_review";
+   16:   defaultCategoryType?: string;
+   17:   sourceType?: string;
+   18:   dryRun?: boolean;
+   19: }
+   20: 
+   21: interface SupabaseMaybeSingleResult<T> {
+   22:   data: T | null;
+   23:   error: { message?: string } | null;
+   24: }
+   25: 
+   26: interface SupabaseSelectBuilder<T> {
+   27:   eq(column: string, value: string | number | boolean | null): SupabaseSelectBuilder<T>;
+   28:   limit(count: number): SupabaseSelectBuilder<T>;
+   29:   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
+   30: }
+   31: 
+   32: interface SupabaseInsertBuilder<T> {
+   33:   select(columns?: string): SupabaseInsertBuilder<T>;
+   34:   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
+   35: }
+   36: 
+   37: interface SupabaseTableClient<T> {
+   38:   select(columns?: string): SupabaseSelectBuilder<T>;
+   39:   insert(payload: Record<string, unknown>): SupabaseInsertBuilder<T>;
+   40: }
+   41: 
+   42: export interface CategoryResolverSupabaseClient {
+   43:   from<T = Record<string, unknown>>(table: string): SupabaseTableClient<T>;
+   44: }
+   45: 
+   46: interface ContextRow {
+   47:   id: string;
+   48:   code: string;
+   49:   name?: string | null;
+   50:   status?: string | null;
+   51:   is_active?: boolean | null;
+   52: }
+   53: 
+   54: interface ContextualCategoryRow {
+   55:   id: string;
+   56:   context_id?: string | null;
+   57:   slug?: string | null;
+   58:   title?: string | null;
+   59:   name?: string | null;
+   60:   semantic_layer?: string | null;
+   61:   category_type?: string | null;
+   62:   status?: string | null;
+   63:   source_type?: string | null;
+   64:   aliases?: Array<JsonRecord | string> | null;
+   65:   metadata_json?: JsonRecord | null;
+   66: }
+   67: 
+   68: export function normalizeCategoryCandidateSlug(value: string): string {
+   69:   return value
+   70:     .normalize("NFKC")
+   71:     .toLowerCase()
+   72:     .trim()
+   73:     .replace(/'/g, "")
+   74:     .replace(/\u2019/g, "")
+   75:     .replace(/[^a-z0-9\u0400-\u04ff]+/gi, "-")
+   76:     .replace(/^-+|-+$/g, "")
+   77:     .replace(/-{2,}/g, "-");
+   78: }
+   79: 
+   80: function normalizeTitle(candidate: CategoryCandidate): string {
+   81:   if (candidate.title && candidate.title.trim().length > 0) {
+   82:     return candidate.title.trim();
+   83:   }
+   84: 
+   85:   return candidate.slug
+   86:     .split("-")
+   87:     .filter(Boolean)
+   88:     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+   89:     .join(" ");
+   90: }
+   91: 
+   92: function errorMessage(error: { message?: string } | null): string | null {
+   93:   return error?.message ?? null;
+
+------------------------------------------------------------
+SNIPPET
+File: .\lib\activity\categoryDerivation\resolver.ts
+Pattern: export async function resolveCategoryCandidates
+------------------------------------------------------------
+  236:       originalSlug: candidate.slug,
+  237:       confidence: candidate.confidence ?? null,
+  238:       isRequired: candidate.isRequired ?? false,
+  239:       isConfirmed: candidate.isConfirmed ?? false,
+  240:       needsUserReview: candidate.needsUserReview ?? false,
+  241:     },
+  242:   };
+  243: 
+  244:   const result = await supabase
+  245:     .from<ContextualCategoryRow>("contextual_categories")
+  246:     .insert(payload)
+  247:     .select("*")
+  248:     .maybeSingle();
+  249: 
+  250:   return {
+  251:     row: result.data ?? null,
+  252:     error: errorMessage(result.error),
+  253:   };
+  254: }
+  255: 
+  256: export async function resolveCategoryCandidates(
+  257:   supabase: CategoryResolverSupabaseClient,
+  258:   candidates: CategoryCandidate[],
+  259:   options: CategoryResolverOptions = {},
+  260: ): Promise<CategoryResolutionResult> {
+  261:   const createPolicy = options.createPolicy ?? "suggested_only";
+  262:   const resolved: ResolvedCategoryCandidate[] = [];
+  263:   const warnings: string[] = [];
+  264:   const errors: string[] = [];
+  265: 
+  266:   let createdCount = 0;
+  267:   let reusedCount = 0;
+  268:   let unresolvedCount = 0;
+  269: 
+  270:   const defaultContextResult =
+  271:     await findDefaultCategoryDerivationContextId(supabase);
+  272: 
+  273:   const defaultContextId = defaultContextResult.contextId;
+  274: 
+  275:   if (defaultContextResult.error) {
+  276:     warnings.push(
+  277:       `Default category derivation context lookup failed: ${defaultContextResult.error}`,
+  278:     );
+  279:   }
+  280: 
+  281:   if (!defaultContextId && createPolicy !== "never") {
+  282:     warnings.push(
+  283:       `Default category derivation context not found: ${DEFAULT_CATEGORY_DERIVATION_CONTEXT_CODE}`,
+  284:     );
+  285:   }
+  286: 
+  287:   for (const candidate of candidates) {
+  288:     const normalizedSlug = normalizeCategoryCandidateSlug(candidate.slug);
+  289: 
+  290:     if (normalizedSlug.length === 0) {
+  291:       unresolvedCount += 1;
+  292:       warnings.push(`Candidate slug could not be normalized: ${candidate.slug}`);
+  293:       resolved.push({
+  294:         ...candidate,
+  295:         categoryId: null,
+  296:         resolutionStatus: "unresolved",
+  297:         metadata: {
+  298:           ...(candidate.metadata ?? {}),
+  299:           normalizedSlug,
+  300:           resolverWarning: "empty_normalized_slug",
+  301:         },
+  302:       });
+  303:       continue;
+  304:     }
+  305: 
+  306:     const semanticLayer = candidate.semanticLayer
+  307:       ? String(candidate.semanticLayer)
+  308:       : undefined;
+  309:     const existing = await findExistingCategory(
+  310:       supabase,
+  311:       normalizedSlug,
+  312:       semanticLayer,
+  313:       defaultContextId,
+  314:     );
+  315: 
+  316:     if (existing.error) {
+  317:       errors.push(`Lookup failed for ${normalizedSlug}: ${existing.error}`);
+  318:     }
+  319: 
+  320:     if (existing.row?.id) {
+  321:       reusedCount += 1;
+  322:       resolved.push({
+  323:         ...candidate,
+  324:         slug: normalizedSlug,
+  325:         title:
+  326:           candidate.title ??
+  327:           existing.row.title ??
+  328:           existing.row.name ??
+  329:           normalizeTitle(candidate),
+  330:         categoryId: existing.row.id,
+  331:         resolutionStatus: "resolved_existing",
+  332:         metadata: {
+  333:           ...(candidate.metadata ?? {}),
+  334:           normalizedSlug,
+  335:           existingStatus: existing.row.status ?? null,
+  336:         },
+  337:       });
+  338:       continue;
+  339:     }
+  340: 
+  341:     if (!shouldCreateCategory(candidate, createPolicy) || options.dryRun) {
+  342:       unresolvedCount += 1;
+  343:       resolved.push({
+  344:         ...candidate,
+  345:         slug: normalizedSlug,
+  346:         categoryId: null,
+  347:         resolutionStatus: "unresolved",
+  348:         metadata: {
+  349:           ...(candidate.metadata ?? {}),
+  350:           normalizedSlug,
+  351:           dryRun: options.dryRun ?? false,
+  352:           createPolicy,
+  353:         },
+  354:       });
+  355:       continue;
+  356:     }
+
+------------------------------------------------------------
+SNIPPET
+File: .\lib\activity\categoryDerivation\persistence.ts
+Pattern: export async function createCategoryDerivationRun
+------------------------------------------------------------
+  252: }
+  253: 
+  254: function buildRunInputJson(params: CreateCategoryDerivationRunInput): JsonRecord {
+  255:   return {
+  256:     ...(params.inputJson ?? {}),
+  257:     input: {
+  258:       activityEventId: params.activityEventId,
+  259:       inputText: params.input.inputText,
+  260:       title: params.input.title ?? null,
+  261:       description: params.input.description ?? null,
+  262:       durationMinutes: params.input.durationMinutes ?? null,
+  263:       inputLanguage: params.input.inputLanguage ?? null,
+  264:       actorId: params.input.actorId ?? null,
+  265:       organizationId: params.input.organizationId ?? null,
+  266:       metadata: params.input.metadata ?? {},
+  267:     },
+  268:     metadata: params.metadata ?? {},
+  269:   };
+  270: }
+  271: 
+  272: export async function createCategoryDerivationRun(
+  273:   supabase: CategoryDerivationPersistenceClient,
+  274:   params: CreateCategoryDerivationRunInput,
+  275: ): Promise<CreateCategoryDerivationRunResult> {
+  276:   const inputHash = buildCategoryDerivationInputHash({
+  277:     ...params.input,
+  278:     activityEventId: params.activityEventId,
+  279:   });
+  280: 
+  281:   const payload: Record<string, unknown> = {
+  282:     activity_event_id: params.activityEventId,
+  283:     actor_id: params.input.actorId ?? null,
+  284:     organization_id: params.input.organizationId ?? null,
+  285:     input_text: params.input.inputText ?? null,
+  286:     input_language: params.input.inputLanguage ?? null,
+  287:     processor_version: params.processorVersion,
+  288:     rule_version: nullableText(params.ruleVersion),
+  289:     model_name: nullableText(params.modelName),
+  290:     model_alias: nullableText(params.modelAlias),
+  291:     prompt_version: nullableText(params.promptVersion),
+  292:     schema_version: nullableText(params.schemaVersion),
+  293:     policy_version: nullableText(params.policyVersion),
+  294:     status: "started",
+  295:     confidence: nullableNumber(params.confidence),
+  296:     needs_user_confirmation: params.needsUserConfirmation ?? false,
+  297:     input_hash: inputHash,
+  298:     token_usage_json: asJsonRecord(params.tokenUsage),
+  299:     cost_json: asJsonRecord(params.cost),
+  300:     input_json: buildRunInputJson(params),
+  301:     output_json: asJsonRecord(params.outputJson),
+  302:     error_json: null,
+  303:   };
+  304: 
+  305:   const { data, error } = await supabase
+  306:     .from<CategoryDerivationRunRow>("category_derivation_runs")
+  307:     .insert(payload)
+  308:     .select("*")
+  309:     .maybeSingle();
+  310: 
+  311:   if (error || !data) {
+  312:     return {
+  313:       ok: false,
+  314:       derivationRunId: null,
+  315:       inputHash,
+  316:       row: null,
+  317:       errors: [errorMessage(error)],
+  318:       warnings: [],
+  319:     };
+  320:   }
+  321: 
+  322:   return {
+  323:     ok: true,
+  324:     derivationRunId: data.id,
+  325:     inputHash,
+  326:     row: data,
+  327:     errors: [],
+  328:     warnings: [],
+  329:   };
+  330: }
+  331: 
+  332: export async function finishCategoryDerivationRun(
+  333:   supabase: CategoryDerivationPersistenceClient,
+  334:   params: FinishCategoryDerivationRunInput,
+  335: ): Promise<UpdateCategoryDerivationRunResult> {
+  336:   const payload: Record<string, unknown> = {
+  337:     status: params.status ?? "completed",
+  338:     confidence: nullableNumber(params.confidence),
+  339:     needs_user_confirmation: params.needsUserConfirmation ?? false,
+  340:     output_json: asJsonRecord(params.outputJson),
+  341:     token_usage_json: asJsonRecord(params.tokenUsage),
+  342:     cost_json: asJsonRecord(params.cost),
+  343:     error_json: null,
+  344:     finished_at: new Date().toISOString(),
+  345:   };
+  346: 
+  347:   const { data, error } = await supabase
+  348:     .from<CategoryDerivationRunRow>("category_derivation_runs")
+  349:     .update(payload)
+  350:     .eq("id", params.derivationRunId)
+  351:     .select("*")
+  352:     .maybeSingle();
+
+------------------------------------------------------------
+SNIPPET
+File: .\lib\activity\categoryDerivation\persistence.ts
+Pattern: export async function persistActivityCategoryDerivations
+------------------------------------------------------------
+  480:   const status = candidateStatus(candidate);
+  481:   const categoryId = isResolvedCandidate(candidate) ? candidate.categoryId : null;
+  482: 
+  483:   return {
+  484:     activity_event_id: input.activityEventId,
+  485:     derivation_run_id: input.derivationRunId ?? null,
+  486:     category_id: categoryId,
+  487:     candidate_slug: candidate.slug,
+  488:     candidate_title: candidate.title ?? null,
+  489:     semantic_layer: candidate.semanticLayer ?? null,
+  490:     category_type: candidate.categoryType ?? null,
+  491:     source: candidate.source ?? input.defaultSource ?? "rule",
+  492:     confidence: nullableNumber(candidate.confidence),
+  493:     is_required: candidate.isRequired ?? false,
+  494:     is_confirmed: candidate.isConfirmed ?? false,
+  495:     needs_user_review: candidate.needsUserReview ?? status === "needs_review",
+  496:     is_rejected: status === "rejected",
+  497:     status,
+  498:     is_revoked: status === "revoked",
+  499:     is_core_meaning: Boolean(candidate.metadata?.isCoreMeaning),
+  500:     evidence_json: candidateEvidence(candidate),
+  501:     metadata_json: candidateMetadata(candidate),
+  502:   };
+  503: }
+  504: 
+  505: export async function persistActivityCategoryDerivations(
+  506:   supabase: CategoryDerivationPersistenceClient,
+  507:   input: PersistActivityCategoryDerivationsInput,
+  508: ): Promise<PersistActivityCategoryDerivationsResult> {
+  509:   const rows: ActivityCategoryDerivationRow[] = [];
+  510:   const errors: string[] = [];
+  511:   const warnings: string[] = [];
+  512:   let resolvedCount = 0;
+  513:   let unresolvedCount = 0;
+  514:   let needsReviewCount = 0;
+  515: 
+  516:   for (const candidate of input.candidates) {
+  517:     const status = candidateStatus(candidate);
+  518: 
+  519:     if (status === "resolved" || status === "confirmed") {
+  520:       resolvedCount += 1;
+  521:     }
+  522: 
+  523:     if (status === "unresolved") {
+  524:       unresolvedCount += 1;
+  525:     }
+  526: 
+  527:     if (status === "needs_review") {
+  528:       needsReviewCount += 1;
+  529:     }
+  530: 
+  531:     const { data, error } = await supabase
+  532:       .from<ActivityCategoryDerivationRow>("activity_category_derivations")
+  533:       .insert(candidatePayload(input, candidate))
+  534:       .select("*")
+  535:       .maybeSingle();
+  536: 
+  537:     if (error || !data) {
+  538:       errors.push(`${candidate.slug}: ${errorMessage(error)}`);
+  539:       continue;
+  540:     }
+  541: 
+  542:     rows.push(data);
+  543:   }
+  544: 
+  545:   return {
+  546:     ok: errors.length === 0,
+  547:     activityEventId: input.activityEventId,
+  548:     derivationRunId: input.derivationRunId ?? null,
+  549:     rows,
+  550:     rowsCreated: rows.length,
+  551:     resolvedCount,
+  552:     unresolvedCount,
+  553:     needsReviewCount,
+  554:     errors,
+  555:     warnings,
+  556:   };
+  557: }
+
+------------------------------------------------------------
+SNIPPET
+File: .\lib\supabase.ts
+Pattern: export
+------------------------------------------------------------
+    9: 
+   10: if (!supabaseServiceRoleKey) {
+   11:   throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+   12: }
+   13: 
+   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+IMPORT / EXPORT SUMMARY
+
+
+FILE: .\lib\activity\categoryDerivation\types.ts
+line 1: export type JsonPrimitive = string | number | boolean | null;
+line 3: export type JsonValue =
+line 8: export type JsonRecord = Record<string, JsonValue>;
+line 10: export type CategoryDerivationSource =
+line 17: export type CategoryDerivationSemanticLayer =
+line 33: export type CategoryDerivationResolutionStatus =
+line 39: export type CategoryDerivationRunStatus =
+line 45: export interface CategoryCandidate {
+line 58: export interface ResolvedCategoryCandidate extends CategoryCandidate {
+line 63: export interface CategoryDerivationInput {
+line 75: export interface CategoryDerivationResult {
+line 88: export interface CategoryResolutionResult {
+line 99: export interface CategoryDerivationRunInsert {
+line 117: export interface ActivityCategoryDerivationInsert {
+
+FILE: .\lib\activity\categoryDerivation\ruleExtractor.ts
+line 1: import type {
+line 8: export const CATEGORY_DERIVATION_PROCESSOR_VERSION = "category_derivation_v1";
+line 9: export const CATEGORY_DERIVATION_RULE_VERSION = "rules_v1";
+line 105: export function deriveCategoryCandidates(
+
+FILE: .\lib\activity\categoryDerivation\resolver.ts
+line 1: import type {
+line 8: export type CategoryResolverCreatePolicy =
+line 13: export interface CategoryResolverOptions {
+line 42: export interface CategoryResolverSupabaseClient {
+line 68: export function normalizeCategoryCandidateSlug(value: string): string {
+line 256: export async function resolveCategoryCandidates(
+line 440: export const categoryDerivationResolver = {
+
+FILE: .\lib\activity\categoryDerivation\persistence.ts
+line 1: import type {
+line 39: export interface CategoryDerivationPersistenceClient {
+line 43: export type ActivityCategoryDerivationStatus =
+line 52: export interface CategoryDerivationRunRow {
+line 81: export interface ActivityCategoryDerivationRow {
+line 105: export interface CreateCategoryDerivationRunInput {
+line 124: export interface CreateCategoryDerivationRunResult {
+line 133: export interface FinishCategoryDerivationRunInput {
+line 143: export interface FailCategoryDerivationRunInput {
+line 149: export interface UpdateCategoryDerivationRunResult {
+line 157: export interface PersistActivityCategoryDerivationsInput {
+line 164: export interface PersistActivityCategoryDerivationsResult {
+line 238: export function buildCategoryDerivationInputHash(input: CategoryDerivationInput): string {
+line 272: export async function createCategoryDerivationRun(
+line 332: export async function finishCategoryDerivationRun(
+line 389: export async function failCategoryDerivationRun(
+line 505: export async function persistActivityCategoryDerivations(
+
+FILE: .\lib\supabase.ts
+line 1: import { createClient } from "@supabase/supabase-js";
+line 14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+NEXT STEP
+Use this signature inventory to create:
+lib/activity/categoryDerivation/routeRunner.ts
+
+END OF F1-A SIGNATURE INVENTORY
