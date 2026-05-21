@@ -1,0 +1,225 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F4-D — Category Derivation Non-Production Support Layer Verification
+Created: 2026-05-21 16:36:50
+Base commit before this document: e7c3ab5
+
+STATUS
+F4 non-production support layer was created and verified.
+This document records the final F4 support-layer state.
+
+SCOPE
+Support code only.
+No /api/activity/complete patch.
+No production route integration.
+No OpenAI call.
+No UI changes.
+No database migration.
+No commercial core changes.
+No canonical production proof event rerun.
+No semantic snapshot/correction/moderation tables created.
+
+FILES VERIFIED
+
+1. lib/activity/categoryDerivation/config.ts
+Created in:
+89e627a Add Category Derivation route runner config
+
+Fixed in:
+2d7173d Fix Category Derivation route runner config typing
+
+Purpose:
+Feature flag / configuration helper for future complete-route integration.
+
+Exports:
+- CATEGORY_DERIVATION_ROUTE_RUNNER_MODE_ENV
+- CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG_ENV
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE_ENV
+- CATEGORY_DERIVATION_ROUTE_RUNNER_MODES
+- CategoryDerivationRouteRunnerMode
+- CategoryDerivationRouteRunnerRawConfig
+- CategoryDerivationRouteRunnerConfig
+- getCategoryDerivationRouteRunnerConfig
+- getCategoryDerivationRouteRunnerConfigSummary
+
+Supported modes:
+- disabled
+- debug_only
+- legacy_existing
+- shadow_no_persist
+- shadow_persist
+- production_persist
+
+Default behavior:
+- mode: disabled
+- includeResponseDebug: false
+- failActivityComplete: false
+
+Important safety interpretation:
+By default, the future complete-route integration remains disabled unless explicitly enabled by environment variable.
+
+2. lib/activity/categoryDerivation/runLookup.ts
+Created in:
+77ea6c1 Add Category Derivation run lookup helper
+
+Purpose:
+Read-only idempotency helper for looking up already completed category_derivation_runs.
+
+Exports:
+- DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION
+- DEFAULT_CATEGORY_DERIVATION_RULE_VERSION
+- DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION
+- DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION
+- DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES
+- CompletedCategoryDerivationRunStatus
+- CategoryDerivationRunLookupClient
+- FindExistingCompletedCategoryDerivationRunInput
+- FindExistingCompletedCategoryDerivationRunQuery
+- FindExistingCompletedCategoryDerivationRunReason
+- FindExistingCompletedCategoryDerivationRunResult
+- buildCompletedCategoryDerivationRunLookupQuery
+- findExistingCompletedCategoryDerivationRunForActivityEvent
+- summarizeExistingCompletedCategoryDerivationRunLookup
+
+Default lookup filter:
+- activity_event_id
+- processor_version = category_derivation_v1
+- rule_version = rules_v1
+- schema_version = category_derivation_complete_route_v1
+- policy_version = c8-e-f4
+- status in completed / completed_with_warnings
+
+Important safety interpretation:
+This helper is read-only.
+It exists to prevent duplicate persistent derivation runs once routeRunner is integrated into /api/activity/complete.
+
+3. lib/activity/categoryDerivation/completeRouteIntegration.ts
+Created in:
+e7c3ab5 Add Category Derivation complete route adapter
+
+Purpose:
+Adapter between future /api/activity/complete integration and routeRunner.ts.
+
+Exports:
+- CategoryDerivationCompleteRouteIntegrationSupabaseClient
+- CategoryDerivationCompleteRouteActivityEvent
+- RunCategoryDerivationForCompleteRouteInput
+- CategoryDerivationCompleteRouteIntegrationReason
+- CategoryDerivationCompleteRouteIntegrationResult
+- runCategoryDerivationForCompleteRoute
+
+Core behavior:
+- reads Category Derivation config;
+- skips safely when disabled;
+- skips safely in debug_only mode;
+- skips safely in legacy_existing mode;
+- validates activityEvent.id;
+- extracts input text from input_text / title / description;
+- validates actorId;
+- checks idempotency before persistent modes;
+- calls runCategoryDerivationRoute only in routeRunner-enabled modes;
+- maps routeRunner result into compact complete-route compatible result.
+
+Adapter skip reasons:
+- disabled
+- debug_only
+- legacy_existing_mode_selected
+- missing_activity_event_id
+- missing_input_text
+- missing_actor_id
+- existing_completed_run_found
+- not_route_runner_mode
+
+Adapter execution reasons:
+- route_runner_completed
+- route_runner_failed
+- lookup_error
+
+IMPORTANT DESIGN DECISIONS VERIFIED
+
+1. /api/activity/complete remains untouched.
+F4 only prepared external helpers.
+
+2. routeRunner is not yet connected to production route.
+No production request path is changed.
+
+3. Default mode is disabled.
+Future integration should not create DB writes unless environment mode is explicitly changed.
+
+4. Idempotency support exists before production patch.
+This reduces risk of duplicate category_derivation_runs and activity_category_derivations.
+
+5. legacy_existing mode exists.
+This allows a controlled transition because /api/activity/complete already contains older category derivation logic.
+
+6. OpenAI remains disabled/unrelated.
+No AI call was added to the support layer.
+
+7. Debug output is controlled.
+Full diagnostic payload should only be returned when includeResponseDebug is true.
+
+TYPECHECK VERIFICATION
+
+Command executed:
+npx.cmd tsc --noEmit --pretty false
+
+Result:
+PASS — no TypeScript errors.
+
+GIT STATE
+
+Expected final state after this document:
+- clean working tree
+- HEAD includes:
+  - 89e627a Add Category Derivation route runner config
+  - 2d7173d Fix Category Derivation route runner config typing
+  - 77ea6c1 Add Category Derivation run lookup helper
+  - e7c3ab5 Add Category Derivation complete route adapter
+
+CURRENT PROJECT POSITION
+
+F4-A:
+Category Derivation config helper created.
+
+F4-A-FIX1:
+TypeScript narrowing fixed.
+
+F4-B:
+Read-only idempotency / run lookup helper created.
+
+F4-C:
+Complete-route integration adapter created.
+
+F4-D:
+Support-layer verification documented — this document.
+
+NEXT BLOCK
+
+Proceed to:
+P4.10.0-C8-E-F5-A — pre-patch complete route integration inventory.
+
+Recommended F5-A scope:
+- inspect current /api/activity/complete route again immediately before patch;
+- identify exact lines/imports to replace or preserve;
+- plan minimal disabled-mode patch;
+- do not patch yet unless the exact patch plan is documented.
+
+Recommended F5 implementation strategy:
+1. Add imports for config/adapter only when patching.
+2. Keep old category derivation code available under legacy_existing transition mode.
+3. Add disabled-mode adapter path first.
+4. Confirm default env does not trigger routeRunner.
+5. Verify /api/activity/complete response remains stable.
+6. Only later test shadow_no_persist, then shadow_persist.
+
+NO-GO
+
+Do not patch /api/activity/complete in this F4-D step.
+Do not call OpenAI.
+Do not create UI.
+Do not modify commercial core.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+Do not enable persistent mode by default.
+Do not remove old complete-route category derivation logic yet.
+
+END OF F4-D NON-PRODUCTION SUPPORT LAYER VERIFICATION
