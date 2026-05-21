@@ -1,0 +1,145 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F1-C — Category Derivation routeRunner Verification
+Created: 2026-05-21 11:44:59
+Base commit before this document: 3298a3f
+
+STATUS
+F1-B routeRunner contract creation was completed.
+F1-C documents the verification result.
+
+CREATED FILE
+lib/activity/categoryDerivation/routeRunner.ts
+
+COMMIT
+3298a3f Add Category Derivation route runner contract
+
+VERIFICATION
+TypeScript check executed:
+npx.cmd tsc --noEmit --pretty false
+
+Result:
+PASS — no TypeScript errors were printed.
+
+RUNTIME IMPACT
+No /api/activity/complete changes.
+No debug route was added.
+No UI was created.
+No OpenAI / AI model call was introduced.
+No database migration was executed in this block.
+No canonical production proof event was rerun.
+
+WHAT routeRunner.ts NOW PROVIDES
+
+Exported type:
+- CategoryDerivationRouteRunnerSupabaseClient
+
+Exported input contract:
+- RunCategoryDerivationRouteInput
+
+Exported result contract:
+- RunCategoryDerivationRouteResult
+
+Exported function:
+- runCategoryDerivationRoute
+
+INTERNAL PIPELINE PROVIDED BY routeRunner.ts
+
+1. Build route input
+- copies CategoryDerivationInput
+- enforces activityEventId from the route runner input
+
+2. Run deterministic category derivation
+- calls deriveCategoryCandidates(routeInput)
+
+3. Optionally create derivation run
+- calls createCategoryDerivationRun
+- stores processorVersion
+- stores ruleVersion
+- stores modelName/modelAlias/promptVersion/schemaVersion/policyVersion when provided
+- stores input_hash through persistence.ts
+- stores input_json/output_json
+
+4. Optionally resolve category candidates
+- calls resolveCategoryCandidates
+- default resolver policy:
+  createPolicy: suggested_only
+  defaultStatus: suggested
+  sourceType: category_derivation
+
+5. Persist activity-category derivation rows
+- calls persistActivityCategoryDerivations
+- persists resolved candidates if resolution was enabled
+- otherwise persists raw deterministic candidates
+- stores derivation_run_id
+- stores status/evidence_json/metadata_json through persistence.ts
+
+6. Finish or fail derivation run
+- calls finishCategoryDerivationRun if no errors
+- calls failCategoryDerivationRun if errors exist
+
+7. Return unified result object
+- derivation
+- resolution
+- persistence details
+- candidates
+- resolvedCandidates
+- warnings
+- errors
+- metadata
+
+IMPORTANT DESIGN DECISIONS
+
+1. routeRunner.ts is additive.
+It does not patch any route yet.
+
+2. routeRunner.ts is deterministic-only at this stage.
+It does not call OpenAI or any external AI client.
+
+3. routeRunner.ts is persistence-aware.
+It can create a derivation run and persist activity category derivations through the new persistence.ts contract.
+
+4. routeRunner.ts is resolver-aware.
+It can call resolver.ts but defaults to safe suggested-only creation policy.
+
+5. routeRunner.ts is feature-flag ready by design.
+It supports:
+- persist?: boolean
+- resolve?: boolean
+
+6. routeRunner.ts keeps canonical production proof untouched.
+No /api/activity/complete rerun happened.
+
+CURRENT PROJECT POSITION AFTER F1-C
+
+C8-E-E3: persistence.ts created — done.
+C8-E-E4: persistence contract verification — done.
+F1-A: routeRunner dependency signature inventory — done.
+F1-B: routeRunner.ts created — done.
+F1-C: routeRunner verification documentation — this document.
+
+NEXT BLOCK
+
+Proceed to:
+P4.10.0-C8-E-F2-A — create isolated debug route for routeRunner smoke test.
+
+Recommended next scope:
+- create a new debug endpoint only;
+- do not patch /api/activity/complete;
+- use routeRunner.ts;
+- use a fresh test activity event, not the canonical production proof event;
+- run TypeScript check;
+- browser/Supabase verification only after the endpoint compiles.
+
+Recommended route name:
+src/app/api/activity/debug/category-derivation-route-runner-test/route.ts
+
+NO-GO FOR NEXT BLOCK
+
+- Do not modify /api/activity/complete.
+- Do not modify commercial core.
+- Do not create UI.
+- Do not call OpenAI.
+- Do not rerun canonical production proof event.
+- Do not create semantic snapshot/correction/moderation tables.
+
+END OF F1-C VERIFICATION
