@@ -1,0 +1,676 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-E1 — Persistence Layer Source Inventory
+Created: 2026-05-21 11:25:19
+Base commit: b8d2a77
+
+STATUS
+Inventory only.
+No runtime code changes.
+No database changes.
+
+PURPOSE
+Prepare safe creation of lib/activity/categoryDerivation/persistence.ts after C8-E-D migration execution.
+The next persistence file must match current project style, Supabase client usage, route patterns, and existing category derivation contracts.
+
+PATH EXISTENCE CHECK
+
+FOUND DIR : .\lib\activity\categoryDerivation
+FOUND FILE: .\lib\activity\categoryDerivation\ruleExtractor.ts
+FOUND FILE: .\lib\activity\categoryDerivation\resolver.ts
+MISSING   : .\lib\activity\categoryDerivation\persistence.ts
+MISSING   : .\lib\activity\categoryDerivation\routeRunner.ts
+FOUND FILE: .\lib\activity\activityProcessingLogs.ts
+FOUND FILE: .\lib\activity\valueObjectBridge.ts
+FOUND FILE: .\lib\activity\activityValueObjectLifecycle.ts
+FOUND FILE: .\lib\activity\rubricatorValueObjectMapper.ts
+FOUND FILE: .\src\app\api\activity\complete\route.ts
+FOUND FILE: .\src\app\api\activity\debug\free-text-value-object-test\route.ts
+FOUND FILE: .\src\app\api\activity\debug\value-object-bridge-proof\route.ts
+MISSING   : .\lib\supabase
+FOUND FILE: .\lib\supabase.ts
+MISSING   : .\lib\supabaseAdmin.ts
+MISSING   : .\lib\server
+FOUND DIR : .\src\lib
+FOUND FILE: .\package.json
+FOUND FILE: .\tsconfig.json
+
+CATEGORY DERIVATION DIRECTORY TREE
+
+FILE: lib\activity\categoryDerivation\persistDerivations.ts
+FILE: lib\activity\categoryDerivation\resolver.ts
+FILE: lib\activity\categoryDerivation\ruleExtractor.ts
+FILE: lib\activity\categoryDerivation\types.ts
+
+SOURCE MARKERS
+
+
+------------------------------------------------------------
+FILE MARKERS: .\lib\activity\categoryDerivation\ruleExtractor.ts
+------------------------------------------------------------
+FOUND MARKER: export function
+  line 105: export function deriveCategoryCandidates(
+FOUND MARKER: from(
+  line 66: return Array.from(byKey.values());
+FOUND MARKER: .from(
+  line 66: return Array.from(byKey.values());
+FOUND MARKER: processor_version
+  line 8: export const CATEGORY_DERIVATION_PROCESSOR_VERSION = "category_derivation_v1";
+  line 122: processorVersion: CATEGORY_DERIVATION_PROCESSOR_VERSION,
+  line 562: processorVersion: CATEGORY_DERIVATION_PROCESSOR_VERSION,
+FOUND MARKER: rule_version
+  line 9: export const CATEGORY_DERIVATION_RULE_VERSION = "rules_v1";
+  line 123: ruleVersion: CATEGORY_DERIVATION_RULE_VERSION,
+  line 130: extractorVersion: CATEGORY_DERIVATION_RULE_VERSION,
+  line 563: ruleVersion: CATEGORY_DERIVATION_RULE_VERSION,
+  line 570: extractorVersion: CATEGORY_DERIVATION_RULE_VERSION,
+
+------------------------------------------------------------
+FILE MARKERS: .\lib\activity\categoryDerivation\resolver.ts
+------------------------------------------------------------
+FOUND MARKER: export type
+  line 8: export type CategoryResolverCreatePolicy =
+FOUND MARKER: export interface
+  line 13: export interface CategoryResolverOptions {
+  line 42: export interface CategoryResolverSupabaseClient {
+FOUND MARKER: export function
+  line 68: export function normalizeCategoryCandidateSlug(value: string): string {
+FOUND MARKER: export async function
+  line 256: export async function resolveCategoryCandidates(
+FOUND MARKER: supabase
+  line 21: interface SupabaseMaybeSingleResult<T> {
+  line 26: interface SupabaseSelectBuilder<T> {
+  line 27: eq(column: string, value: string | number | boolean | null): SupabaseSelectBuilder<T>;
+  line 28: limit(count: number): SupabaseSelectBuilder<T>;
+  line 29: maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
+  line 32: interface SupabaseInsertBuilder<T> {
+  line 33: select(columns?: string): SupabaseInsertBuilder<T>;
+  line 34: maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
+FOUND MARKER: SupabaseClient
+  line 42: export interface CategoryResolverSupabaseClient {
+  line 119: supabase: CategoryResolverSupabaseClient,
+  line 136: supabase: CategoryResolverSupabaseClient,
+  line 202: supabase: CategoryResolverSupabaseClient,
+  line 257: supabase: CategoryResolverSupabaseClient,
+FOUND MARKER: contextual_categories
+  line 142: .from<ContextualCategoryRow>("contextual_categories")
+  line 245: .from<ContextualCategoryRow>("contextual_categories")
+FOUND MARKER: metadata_json
+  line 65: metadata_json?: JsonRecord | null;
+  line 232: metadata_json: {
+FOUND MARKER: status
+  line 15: defaultStatus?: "active" | "suggested" | "needs_review";
+  line 50: status?: string | null;
+  line 62: status?: string | null;
+  line 123: .select("id, code, status, is_active")
+  line 177: function categoryStatusForCandidate(
+  line 186: if (options.defaultStatus) {
+  line 187: return options.defaultStatus;
+  line 214: const status = categoryStatusForCandidate(candidate, options);
+
+------------------------------------------------------------
+FILE MARKERS: .\lib\activity\activityProcessingLogs.ts
+------------------------------------------------------------
+FOUND MARKER: export type
+  line 4: export type ActivityProcessingStage =
+  line 24: export type ActivityProcessingStatus =
+  line 34: export type ActivityProcessingSeverity =
+  line 42: export type ActivityProcessingLogRow = {
+  line 66: export type CreateActivityProcessingLogInput = {
+  line 87: export type CreateActivityProcessingLogResult = {
+FOUND MARKER: export function
+  line 197: export function getDurationMs(
+FOUND MARKER: export async function
+  line 154: export async function createActivityProcessingLog(
+  line 214: export async function safeCreateActivityProcessingLog(
+FOUND MARKER: from(
+  line 158: .from("activity_processing_logs")
+FOUND MARKER: .from(
+  line 158: .from("activity_processing_logs")
+FOUND MARKER: supabase
+  line 1: import { supabase } from "../supabase";
+  line 157: const { data, error } = await supabase
+FOUND MARKER: activity_processing_logs
+  line 158: .from("activity_processing_logs")
+FOUND MARKER: processor_version
+  line 50: processor_version: string | null;
+  line 166: processor_version: nullableText(input.processorVersion),
+FOUND MARKER: metadata_json
+  line 58: metadata_json: JsonObject;
+  line 174: metadata_json: toJsonObject(input.metadata),
+FOUND MARKER: status
+  line 24: export type ActivityProcessingStatus =
+  line 52: processing_status: ActivityProcessingStatus;
+  line 75: processingStatus?: ActivityProcessingStatus;
+  line 168: processing_status: input.processingStatus ?? "completed",
+
+------------------------------------------------------------
+FILE MARKERS: .\lib\activity\valueObjectBridge.ts
+------------------------------------------------------------
+FOUND MARKER: export type
+  line 81: export type ValueObjectBridgeMapping = {
+  line 117: export type AdditionalValueObjectCategoryLink = {
+  line 143: export type ProcessValueObjectBridgeInput = {
+  line 160: export type ValueObjectBridgeCreatedItem = {
+  line 206: export type ProcessValueObjectBridgeResult = {
+FOUND MARKER: export async function
+  line 1182: export async function processValueObjectBridgeForActivityEvent(
+FOUND MARKER: from(
+  line 454: .from("activity_events")
+  line 495: .from("value_objects")
+  line 536: .from("contextual_categories")
+  line 572: .from("value_object_state_deltas")
+  line 617: let query = supabase.from(tableName).select(valueColumn);
+  line 654: .from("activity_event_value_object_links")
+  line 686: .from("value_object_usage_aggregates")
+  line 775: .from("activity_event_value_object_links")
+FOUND MARKER: .from(
+  line 454: .from("activity_events")
+  line 495: .from("value_objects")
+  line 536: .from("contextual_categories")
+  line 572: .from("value_object_state_deltas")
+  line 617: let query = supabase.from(tableName).select(valueColumn);
+  line 654: .from("activity_event_value_object_links")
+  line 686: .from("value_object_usage_aggregates")
+  line 775: .from("activity_event_value_object_links")
+FOUND MARKER: supabase
+  line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+  line 144: supabase: SupabaseClient;
+  line 447: supabase: SupabaseClient,
+  line 453: const { data, error } = await supabase
+  line 487: supabase: SupabaseClient,
+  line 494: const { data, error } = await supabase
+  line 529: supabase: SupabaseClient,
+  line 535: const { data, error } = await supabase
+FOUND MARKER: SupabaseClient
+  line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+  line 144: supabase: SupabaseClient;
+  line 447: supabase: SupabaseClient,
+  line 487: supabase: SupabaseClient,
+  line 529: supabase: SupabaseClient,
+  line 562: supabase: SupabaseClient,
+  line 612: supabase: SupabaseClient,
+  line 645: supabase: SupabaseClient,
+FOUND MARKER: contextual_categories
+  line 125: categoryTable?: "contextual_categories";
+  line 536: .from("contextual_categories")
+  line 964: category_table: "contextual_categories",
+  line 1084: const categoryTable = item.categoryTable ?? "contextual_categories";
+  line 1086: if (categoryTable !== "contextual_categories") {
+FOUND MARKER: value_object_category_links
+  line 960: .from("value_object_category_links")
+  line 1002: projection: "value_object_category_links",
+  line 1125: projection: "value_object_category_links",
+  line 1133: .from("value_object_category_links")
+  line 1434: console.warn("P4.9.2 value_object_category_links upsert failed", {
+  line 1468: console.warn("C8-P3-B3 additional value_object_category_links warnings", {
+FOUND MARKER: activity_event_value_object_links
+  line 654: .from("activity_event_value_object_links")
+  line 775: .from("activity_event_value_object_links")
+  line 791: projection: "activity_event_value_object_links",
+FOUND MARKER: metadata_json
+  line 784: metadata_json: {
+  line 859: metadata_json: {
+  line 969: metadata_json: {
+  line 1142: metadata_json: metadataJson,
+  line 1336: metadata_json: {
+  line 1365: metadata_json: {
+  line 1495: metadata_json: {
+  line 1550: metadata_json: {
+FOUND MARKER: status
+  line 31: type ValueObjectInstanceStatus =
+  line 42: status: string;
+  line 57: status: string | null;
+  line 98: instanceStatus?: ValueObjectInstanceStatus;
+  line 101: resultStatus?: string | null;
+  line 138: resolutionStatus?: string | null;
+  line 211: eventStatus: string | null;
+  line 459: "status",
+
+------------------------------------------------------------
+FILE MARKERS: .\lib\activity\activityValueObjectLifecycle.ts
+------------------------------------------------------------
+FOUND MARKER: export type
+  line 14: export type ProcessActivityValueObjectBridgeInput = {
+  line 22: export type ProcessActivityValueObjectBridgeResult = {
+FOUND MARKER: export async function
+  line 59: export async function processActivityValueObjectBridge(
+FOUND MARKER: supabase
+  line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+  line 15: supabase: SupabaseClient;
+  line 62: const { supabase, eventId, processorName, allowNonCompletedEvent = false } =
+  line 68: supabase,
+  line 107: supabase,
+FOUND MARKER: SupabaseClient
+  line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+  line 15: supabase: SupabaseClient;
+
+------------------------------------------------------------
+FILE MARKERS: .\lib\activity\rubricatorValueObjectMapper.ts
+------------------------------------------------------------
+FOUND MARKER: export type
+  line 26: export type RubricatorClassificationSummary = {
+  line 50: export type ResolveValueObjectMappingsFromRubricatorInput = {
+  line 58: export type RubricatorValueObjectMappingResult = {
+FOUND MARKER: export async function
+  line 745: export async function resolveValueObjectMappingsFromRubricatorForActivityEvent(
+FOUND MARKER: from(
+  line 331: .from("activity_events")
+  line 376: .from("entity_classifications")
+  line 414: .from(tableName)
+  line 585: .from("value_objects")
+  line 626: .from("value_objects")
+FOUND MARKER: .from(
+  line 331: .from("activity_events")
+  line 376: .from("entity_classifications")
+  line 414: .from(tableName)
+  line 585: .from("value_objects")
+  line 626: .from("value_objects")
+FOUND MARKER: supabase
+  line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+  line 51: supabase: SupabaseClient;
+  line 324: supabase: SupabaseClient,
+  line 330: const { data, error } = await supabase
+  line 369: supabase: SupabaseClient,
+  line 375: const { data, error } = await supabase
+  line 401: supabase: SupabaseClient,
+  line 413: const { data, error } = await supabase
+FOUND MARKER: SupabaseClient
+  line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+  line 51: supabase: SupabaseClient;
+  line 324: supabase: SupabaseClient,
+  line 369: supabase: SupabaseClient,
+  line 401: supabase: SupabaseClient,
+  line 427: supabase: SupabaseClient,
+  line 574: supabase: SupabaseClient,
+  line 615: supabase: SupabaseClient,
+FOUND MARKER: contextual_categories
+  line 406: | "contextual_categories",
+  line 440: readLookupRow(supabase, "contextual_categories", contextualCategoryId),
+FOUND MARKER: evidence_json
+  line 464: evidence: getObject(row, "evidence_json"),
+FOUND MARKER: status
+  line 10: status: string;
+  line 45: status: string | null;
+  line 63: eventStatus: string | null;
+  line 315: const status = getString(row, "status");
+  line 319: status === "approved"
+  line 336: "status",
+  line 462: status: getString(row, "status"),
+  line 589: .eq("status", "active")
+
+------------------------------------------------------------
+FILE MARKERS: .\src\app\api\activity\complete\route.ts
+------------------------------------------------------------
+FOUND MARKER: export async function
+  line 712: export async function GET() {
+  line 734: export async function POST(request: Request) {
+FOUND MARKER: from(
+  line 698: .from("impact_events")
+  line 788: .from("activity_events")
+  line 871: allowedStatuses: Array.from(ACTIVITY_COMPLETABLE_STATUSES),
+  line 980: .from("activity_events")
+  line 1471: .from("activity_events")
+FOUND MARKER: .from(
+  line 698: .from("impact_events")
+  line 788: .from("activity_events")
+  line 871: allowedStatuses: Array.from(ACTIVITY_COMPLETABLE_STATUSES),
+  line 980: .from("activity_events")
+  line 1471: .from("activity_events")
+FOUND MARKER: supabase
+  line 24: type CategoryResolverSupabaseClient,
+  line 28: type CategoryDerivationPersistenceSupabaseClient,
+  line 39: import { supabase } from "../../../../../lib/supabase";
+  line 468: supabase as unknown as CategoryResolverSupabaseClient,
+  line 479: supabase as unknown as CategoryDerivationPersistenceSupabaseClient,
+  line 697: const { count, error } = await supabase
+  line 787: const { data: eventData, error: eventError } = await supabase
+  line 979: const { data: updatedEventData, error: updateError } = await supabase
+FOUND MARKER: SupabaseClient
+  line 24: type CategoryResolverSupabaseClient,
+  line 28: type CategoryDerivationPersistenceSupabaseClient,
+  line 468: supabase as unknown as CategoryResolverSupabaseClient,
+  line 479: supabase as unknown as CategoryDerivationPersistenceSupabaseClient,
+FOUND MARKER: contextual_categories
+  line 393: categoryTable: "contextual_categories",
+FOUND MARKER: metadata_json
+  line 71: metadata_json: Record<string, unknown> | null;
+  line 893: const existingMetadata = asRecord(event.metadata_json);
+  line 987: metadata_json: {
+FOUND MARKER: status
+  line 8: ACTIVITY_COMPLETABLE_STATUSES,
+  line 9: ACTIVITY_STATUS_COMPLETED,
+  line 10: canTransitionActivityStatus,
+  line 11: isCompletableActivityStatus,
+  line 68: status: string;
+  line 70: processing_status: string | null;
+  line 279: completedStatus: string;
+  line 281: const { event, completedStatus } = params;
+
+------------------------------------------------------------
+FILE MARKERS: .\src\app\api\activity\debug\free-text-value-object-test\route.ts
+------------------------------------------------------------
+FOUND MARKER: export async function
+  line 646: export async function GET() {
+  line 678: export async function POST(request: Request) {
+FOUND MARKER: from(
+  line 761: .from("activity_events")
+FOUND MARKER: .from(
+  line 761: .from("activity_events")
+FOUND MARKER: supabase
+  line 11: import { supabase } from "../../../../../../lib/supabase";
+  line 16: type CategoryResolverSupabaseClient,
+  line 20: type CategoryDerivationPersistenceSupabaseClient,
+  line 566: supabase as unknown as CategoryResolverSupabaseClient,
+  line 577: supabase as unknown as CategoryDerivationPersistenceSupabaseClient,
+  line 760: const { data: createdEventData, error: createError } = await supabase
+  line 828: supabase,
+FOUND MARKER: SupabaseClient
+  line 16: type CategoryResolverSupabaseClient,
+  line 20: type CategoryDerivationPersistenceSupabaseClient,
+  line 566: supabase as unknown as CategoryResolverSupabaseClient,
+  line 577: supabase as unknown as CategoryDerivationPersistenceSupabaseClient,
+FOUND MARKER: contextual_categories
+  line 492: categoryTable: "contextual_categories",
+FOUND MARKER: metadata_json
+  line 781: metadata_json: {
+FOUND MARKER: status
+  line 447: const allowedResolutionStatuses = new Set([
+  line 467: const resolutionStatus =
+  line 468: readStringField(candidate, ["resolutionStatus", "resolution_status"]) ??
+  line 471: if (!allowedResolutionStatuses.has(resolutionStatus)) {
+  line 514: resolutionStatus,
+  line 651: status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+  line 685: { status: 503 }
+  line 699: { status: 400 }
+
+------------------------------------------------------------
+FILE MARKERS: .\src\app\api\activity\debug\value-object-bridge-proof\route.ts
+------------------------------------------------------------
+FOUND MARKER: export async function
+  line 397: export async function GET(request: Request) {
+FOUND MARKER: from(
+  line 88: return Array.from(
+  line 181: const baseQuery = (supabaseAny.from(table) as any).select("*");
+FOUND MARKER: .from(
+  line 88: return Array.from(
+  line 181: const baseQuery = (supabaseAny.from(table) as any).select("*");
+FOUND MARKER: supabase
+  line 8: import { supabase } from "../../../../../../lib/supabase";
+  line 43: const supabaseAny = supabase as unknown as {
+  line 65: typeof error.message === "string" ? error.message : "Unknown Supabase error";
+  line 181: const baseQuery = (supabaseAny.from(table) as any).select("*");
+FOUND MARKER: value_object_category_links
+  line 609: "value_object_category_links",
+  line 658: : "Category slugs already available from value_object_category_links.",
+FOUND MARKER: activity_event_value_object_links
+  line 453: "activity_event_value_object_links",
+FOUND MARKER: metadata_json
+  line 152: ["metadata_json", "metadata", "details_json", "details"],
+FOUND MARKER: status
+  line 406: { status: 503 }
+  line 421: { status: 400 }
+  line 439: { status: 500 }
+  line 711: event?.status === "completed" &&
+  line 712: event?.processing_status === "processed" &&
+  line 736: eventStatus: typeof event?.status === "string" ? event.status : null,
+  line 737: eventProcessingStatus:
+  line 738: typeof event?.processing_status === "string"
+
+IMPORTS / EXPORTS SNAPSHOT
+
+
+------------------------------------------------------------
+IMPORTS/EXPORTS: .\lib\activity\categoryDerivation\ruleExtractor.ts
+------------------------------------------------------------
+line 1: import type {
+line 8: export const CATEGORY_DERIVATION_PROCESSOR_VERSION = "category_derivation_v1";
+line 9: export const CATEGORY_DERIVATION_RULE_VERSION = "rules_v1";
+line 105: export function deriveCategoryCandidates(
+
+------------------------------------------------------------
+IMPORTS/EXPORTS: .\lib\activity\categoryDerivation\resolver.ts
+------------------------------------------------------------
+line 1: import type {
+line 8: export type CategoryResolverCreatePolicy =
+line 13: export interface CategoryResolverOptions {
+line 42: export interface CategoryResolverSupabaseClient {
+line 68: export function normalizeCategoryCandidateSlug(value: string): string {
+line 256: export async function resolveCategoryCandidates(
+line 440: export const categoryDerivationResolver = {
+
+------------------------------------------------------------
+IMPORTS/EXPORTS: .\lib\activity\activityProcessingLogs.ts
+------------------------------------------------------------
+line 1: import { supabase } from "../supabase";
+line 2: import type { JsonObject, JsonValue } from "./rawActivitySignals";
+line 4: export type ActivityProcessingStage =
+line 24: export type ActivityProcessingStatus =
+line 34: export type ActivityProcessingSeverity =
+line 42: export type ActivityProcessingLogRow = {
+line 66: export type CreateActivityProcessingLogInput = {
+line 87: export type CreateActivityProcessingLogResult = {
+line 154: export async function createActivityProcessingLog(
+line 197: export function getDurationMs(
+line 214: export async function safeCreateActivityProcessingLog(
+
+------------------------------------------------------------
+IMPORTS/EXPORTS: .\lib\activity\valueObjectBridge.ts
+------------------------------------------------------------
+line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+line 81: export type ValueObjectBridgeMapping = {
+line 117: export type AdditionalValueObjectCategoryLink = {
+line 143: export type ProcessValueObjectBridgeInput = {
+line 160: export type ValueObjectBridgeCreatedItem = {
+line 206: export type ProcessValueObjectBridgeResult = {
+line 1182: export async function processValueObjectBridgeForActivityEvent(
+
+------------------------------------------------------------
+IMPORTS/EXPORTS: .\lib\activity\activityValueObjectLifecycle.ts
+------------------------------------------------------------
+line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+line 3: import {
+line 9: import {
+line 14: export type ProcessActivityValueObjectBridgeInput = {
+line 22: export type ProcessActivityValueObjectBridgeResult = {
+line 59: export async function processActivityValueObjectBridge(
+
+------------------------------------------------------------
+IMPORTS/EXPORTS: .\lib\activity\rubricatorValueObjectMapper.ts
+------------------------------------------------------------
+line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+line 3: import type { ValueObjectBridgeMapping } from "./valueObjectBridge";
+line 26: export type RubricatorClassificationSummary = {
+line 50: export type ResolveValueObjectMappingsFromRubricatorInput = {
+line 58: export type RubricatorValueObjectMappingResult = {
+line 745: export async function resolveValueObjectMappingsFromRubricatorForActivityEvent(
+
+------------------------------------------------------------
+IMPORTS/EXPORTS: .\src\app\api\activity\complete\route.ts
+------------------------------------------------------------
+line 1: import { randomUUID } from "crypto";
+line 2: import { NextResponse } from "next/server";
+line 3: import {
+line 7: import {
+line 13: import {
+line 17: import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
+line 18: import { processActivityImpacts } from "../../../../../lib/activity/activityImpactProcessor";
+line 19: import { processActivityValueObjectBridge } from "../../../../../lib/activity/activityValueObjectLifecycle";
+line 20: import { deriveCategoryCandidates } from "../../../../../lib/activity/categoryDerivation/ruleExtractor";
+line 21: import {
+line 26: import {
+line 30: import type { CategoryDerivationInput } from "../../../../../lib/activity/categoryDerivation/types";
+line 31: import type { AdditionalValueObjectCategoryLink } from "../../../../../lib/activity/valueObjectBridge";
+line 32: import { ensureActivityEventRubricatorClassificationForKnownTemplate } from "../../../../../lib/activity/activityRubricatorClassificationLifecycle";
+line 33: import { buildRubricatorResolverLogMetadata } from "../../../../../lib/activity/rubricatorResolverLogMetadata";
+line 34: import {
+line 39: import { supabase } from "../../../../../lib/supabase";
+line 41: export const dynamic = "force-dynamic";
+line 712: export async function GET() {
+line 734: export async function POST(request: Request) {
+
+------------------------------------------------------------
+IMPORTS/EXPORTS: .\src\app\api\activity\debug\free-text-value-object-test\route.ts
+------------------------------------------------------------
+line 1: import { NextResponse } from "next/server";
+line 2: import { randomUUID } from "crypto";
+line 4: import {
+line 8: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+line 9: import { processActivityValueObjectBridge } from "../../../../../../lib/activity/activityValueObjectLifecycle";
+line 10: import { safeCreateActivityProcessingLog } from "../../../../../../lib/activity/activityProcessingLogs";
+line 11: import { supabase } from "../../../../../../lib/supabase";
+line 12: import { deriveCategoryCandidates } from "../../../../../../lib/activity/categoryDerivation/ruleExtractor";
+line 13: import {
+line 18: import {
+line 22: import type { CategoryDerivationInput } from "../../../../../../lib/activity/categoryDerivation/types";
+line 23: import type { AdditionalValueObjectCategoryLink } from "../../../../../../lib/activity/valueObjectBridge";
+line 25: export const dynamic = "force-dynamic";
+line 646: export async function GET() {
+line 678: export async function POST(request: Request) {
+
+------------------------------------------------------------
+IMPORTS/EXPORTS: .\src\app\api\activity\debug\value-object-bridge-proof\route.ts
+------------------------------------------------------------
+line 1: import { NextResponse } from "next/server";
+line 3: import {
+line 7: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+line 8: import { supabase } from "../../../../../../lib/supabase";
+line 10: export const dynamic = "force-dynamic";
+line 397: export async function GET(request: Request) {
+
+SUPABASE CLIENT / DB ACCESS SEARCH
+
+
+DB MARKER SEARCH: createClient
+  lib\supabase.ts line 1: import { createClient } from "@supabase/supabase-js";
+  lib\supabase.ts line 14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+DB MARKER SEARCH: SupabaseClient
+  lib\activity\categoryDerivation\persistDerivations.ts line 26: export interface CategoryDerivationPersistenceSupabaseClient {
+  lib\activity\categoryDerivation\persistDerivations.ts line 205: supabase: CategoryDerivationPersistenceSupabaseClient,
+  lib\activity\categoryDerivation\persistDerivations.ts line 224: supabase: CategoryDerivationPersistenceSupabaseClient,
+  lib\activity\categoryDerivation\persistDerivations.ts line 243: supabase: CategoryDerivationPersistenceSupabaseClient,
+  lib\activity\categoryDerivation\resolver.ts line 42: export interface CategoryResolverSupabaseClient {
+  lib\activity\categoryDerivation\resolver.ts line 119: supabase: CategoryResolverSupabaseClient,
+  lib\activity\categoryDerivation\resolver.ts line 136: supabase: CategoryResolverSupabaseClient,
+  lib\activity\categoryDerivation\resolver.ts line 202: supabase: CategoryResolverSupabaseClient,
+  lib\activity\categoryDerivation\resolver.ts line 257: supabase: CategoryResolverSupabaseClient,
+  lib\activity\activityRubricatorClassificationLifecycle.ts line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+  lib\activity\activityRubricatorClassificationLifecycle.ts line 18: supabase: SupabaseClient;
+  lib\activity\activityRubricatorClassificationLifecycle.ts line 143: supabase: SupabaseClient;
+  lib\activity\activityRubricatorClassificationLifecycle.ts line 186: supabase: SupabaseClient;
+  lib\activity\activityRubricatorClassificationLifecycle.ts line 213: supabase: SupabaseClient;
+  lib\activity\activityRubricatorClassificationLifecycle.ts line 264: supabase: SupabaseClient;
+  lib\activity\activityValueObjectLifecycle.ts line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+  lib\activity\activityValueObjectLifecycle.ts line 15: supabase: SupabaseClient;
+  lib\activity\knownTemplateRegistryMetadata.ts line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+  lib\activity\knownTemplateRegistryMetadata.ts line 450: supabase: SupabaseClient,
+  lib\activity\knownTemplateRegistryMetadata.ts line 508: supabase: SupabaseClient,
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 50: supabase: SupabaseClient;
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 337: supabase: SupabaseClient;
+  lib\activity\knownTemplateRegistryRuleResolver.ts line 396: supabase: SupabaseClient;
+  lib\activity\rubricatorValueObjectMapper.ts line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+  lib\activity\rubricatorValueObjectMapper.ts line 51: supabase: SupabaseClient;
+  lib\activity\rubricatorValueObjectMapper.ts line 324: supabase: SupabaseClient,
+  lib\activity\rubricatorValueObjectMapper.ts line 369: supabase: SupabaseClient,
+  lib\activity\rubricatorValueObjectMapper.ts line 401: supabase: SupabaseClient,
+  lib\activity\rubricatorValueObjectMapper.ts line 427: supabase: SupabaseClient,
+  lib\activity\rubricatorValueObjectMapper.ts line 574: supabase: SupabaseClient,
+  lib\activity\rubricatorValueObjectMapper.ts line 615: supabase: SupabaseClient,
+  lib\activity\rubricatorValueObjectMapper.ts line 659: supabase: SupabaseClient,
+  lib\activity\valueObjectBridge.ts line 1: import type { SupabaseClient } from "@supabase/supabase-js";
+  lib\activity\valueObjectBridge.ts line 144: supabase: SupabaseClient;
+  lib\activity\valueObjectBridge.ts line 447: supabase: SupabaseClient,
+  lib\activity\valueObjectBridge.ts line 487: supabase: SupabaseClient,
+  lib\activity\valueObjectBridge.ts line 529: supabase: SupabaseClient,
+  lib\activity\valueObjectBridge.ts line 562: supabase: SupabaseClient,
+  lib\activity\valueObjectBridge.ts line 612: supabase: SupabaseClient,
+
+DB MARKER SEARCH: SUPABASE_SERVICE_ROLE_KEY
+  lib\supabase.ts line 4: const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  lib\supabase.ts line 11: throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+
+DB MARKER SEARCH: NEXT_PUBLIC_SUPABASE_URL
+  NOT FOUND
+
+DB MARKER SEARCH: createServerClient
+  NOT FOUND
+
+DB MARKER SEARCH: service_role
+  lib\supabase.ts line 4: const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  lib\supabase.ts line 11: throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+
+DB MARKER SEARCH: supabaseAdmin
+  NOT FOUND
+
+DB MARKER SEARCH: getSupabase
+  NOT FOUND
+
+DB MARKER SEARCH: getSupabaseClient
+  NOT FOUND
+
+DB MARKER SEARCH: getServiceSupabase
+  NOT FOUND
+
+CURRENT DB COLUMNS AFTER C8-E-D MIGRATION
+
+category_derivation_runs expected persistence columns:
+- id
+- activity_event_id
+- actor_id
+- organization_id
+- input_text
+- input_language
+- processor_version
+- rule_version
+- model_name
+- model_alias
+- prompt_version
+- schema_version
+- policy_version
+- status
+- confidence
+- needs_user_confirmation
+- input_hash
+- token_usage_json
+- cost_json
+- input_json
+- output_json
+- error_json
+- started_at
+- finished_at
+- created_at
+- updated_at
+
+activity_category_derivations expected persistence columns:
+- id
+- activity_event_id
+- derivation_run_id
+- category_id
+- candidate_slug
+- candidate_title
+- semantic_layer
+- category_type
+- source
+- confidence
+- is_required
+- is_confirmed
+- needs_user_review
+- is_rejected
+- status
+- is_revoked
+- is_core_meaning
+- evidence_json
+- metadata_json
+- created_at
+- updated_at
+
+value_object_category_links new traceability columns:
+- derivation_run_id
+- activity_derivation_id
+- status
+
+NEXT EXPECTED FILE
+lib/activity/categoryDerivation/persistence.ts
+
+END OF E1 INVENTORY
