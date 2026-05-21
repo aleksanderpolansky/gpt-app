@@ -1,0 +1,447 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-B — Category Derivation Layer v1 Additive Implementation Plan
+Created: 2026-05-21 10:45:44
+Base commit before this document: a80b65d
+
+STATUS
+C8-E-B is a documentation / planning block only.
+No runtime code changes are included in this block.
+No database migration is executed in this block.
+No /api/activity/complete rerun is allowed for the canonical event.
+
+MAIN SOURCE HIERARCHY
+1. генеральный_план_v4_4.docx is the current master architecture.
+2. 20_мая_19_30_AI_Function_Category_Derivation_Master_Plan.docx is the consolidated operational plan.
+3. docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt is the immediate technical inventory source for this block.
+
+CURRENT CONFIRMED PROJECT POSITION
+C2 production complete proof is closed as PASS.
+C8-E-A schema/source inventory is done.
+C8-E-B must transform inventory findings into an exact additive implementation plan.
+The next block after C8-E-B is C8-E-C: exact Supabase schema audit SQL.
+
+IMPORTANT ANTI-ERROR RULES
+- Do not rerun /api/activity/complete for canonical completed event.
+- Do not execute SQL in PowerShell.
+- SQL must be prepared as a file and executed only in Supabase SQL Editor.
+- Do not start full UI/UX in this phase.
+- Do not create uncontrolled active categories from AI.
+- Do not mix categories and Value Objects.
+- Do not introduce typed relation edges now; parent/child only remains the rule.
+- One controlled block = one commit = one proof/result document.
+
+C8-E-A / B1 OBSERVATIONS
+
+A. Confirmed inventory markers present
+The inventory contains references or planned markers for:
+- contextual_categories
+- value_object_category_links
+- activity_event_value_object_links
+- activity_processing_logs
+- category_derivation_runs
+- activity_category_derivations
+- semantic_layer
+- category_type
+- categoryCandidates
+- createPolicy
+- suggested
+- needs_review
+- confidence
+- is_required
+- is_confirmed
+- processor_version
+- rule_version
+- prompt_version
+
+B. Confirmed missing / weak marker
+- model_version marker was not found.
+Decision:
+The next schema audit must check whether the existing planned table uses model_name instead of model_version.
+Recommended additive direction:
+Use model_name as runtime model identifier and, if needed, add model_version/model_alias/model_family only after exact SQL audit.
+Do not guess column names before C8-E-C.
+
+C. Confirmed source files/directories present
+- lib/activity/categoryDerivation
+- lib/activity/categoryDerivation/ruleExtractor.ts
+- lib/activity/categoryDerivation/resolver.ts
+- lib/activity/valueObjectBridge.ts
+- lib/activity/activityValueObjectLifecycle.ts
+- lib/activity/rubricatorValueObjectMapper.ts
+- lib/activity/activityProcessingLogs.ts
+- src/app/api/activity/complete/route.ts
+- src/app/api/activity/debug/value-object-bridge-proof/route.ts
+- src/app/api/activity/debug/free-text-value-object-test/route.ts
+- package.json
+- tsconfig.json
+
+D. Confirmed source files not present
+- lib/activity/categoryDerivation/persistence.ts
+- lib/activity/categoryDerivation/routeRunner.ts
+
+Decision:
+These two files are likely correct additive targets for upcoming runtime hardening, but they must not be created in C8-E-B.
+They should be introduced only after C8-E-C schema audit and C8-E-D migration design.
+
+TARGET ARCHITECTURE FOR CATEGORY DERIVATION LAYER V1
+
+The target pipeline is:
+
+raw Activity Event
+-> pre-processing / normalization
+-> category_derivation_run
+-> rule-based categoryCandidates
+-> optional AI structured classifier behind feature flag
+-> candidate merge
+-> resolver / governance
+-> activity_category_derivations
+-> Value Object Bridge handoff
+-> value_object_category_links
+-> activity_event_value_object_links
+-> aggregates / snapshots
+-> proof routes / benchmark records
+-> Semantic Capital records
+
+The key principle:
+AI output is not truth.
+AI output is a versioned interpretation that must be persisted, resolved, governed, and corrected.
+
+REQUIRED SEMANTIC LAYERS
+
+The category bundle should support:
+- action
+- object / domain
+- participant
+- relationship_context
+- role
+- duty / responsibility
+- care_function
+- purpose / activity_meaning
+- metric
+- state / context hooks for future next-best-action logic
+
+Mandatory benchmark example:
+Input: "учил математику с ребёнком"
+Expected structure:
+- action: teach/help
+- domain: mathematics
+- participant: child
+- relationship_context: family
+- role: parent/caregiver
+- care_function: childcare/parental-care
+- purpose: helping-child-learn
+- metric: duration_minutes
+
+Important negative / ambiguous example:
+Input: "ребёнок учил математику рядом со мной"
+Expected:
+- mathematics
+- child
+- learning
+- possible supervision only with lower confidence
+- no automatic childcare as canonical meaning without evidence
+
+EXISTS / MISSING / PARTIAL MATRIX
+
+1. contextual_categories
+Status: exists in inventory references.
+C8-E-C action:
+Check exact columns:
+- id
+- slug
+- name/title
+- description
+- semantic_layer
+- category_type
+- status
+- context_id / context_scope
+- parent_category_id
+- aliases / aliases_json
+- metadata_json
+- source_type
+- confidence_default
+- created_at
+- updated_at
+
+2. value_object_category_links
+Status: exists in source references and proof route.
+C8-E-C action:
+Check exact columns:
+- value_object_id
+- category_id
+- category_role / is_primary
+- source
+- confidence
+- derivation_run_id
+- activity_derivation_id
+- status
+- metadata_json
+- created_at
+
+3. activity_event_value_object_links
+Status: exists in source references and proof route.
+C8-E-C action:
+Check exact event linkage columns:
+- event_id
+- source_event_id
+- activity_id
+- activity_record_id
+- value_object_id
+- exposure_minutes
+- confidence
+- source
+- metadata_json
+
+4. activity_processing_logs
+Status: exists in source references.
+C8-E-C action:
+Check if it can store Category Derivation run metadata or whether a dedicated derivation table is still required.
+
+5. category_derivation_runs
+Status: marker exists in inventory, exact database state requires SQL audit.
+C8-E-C action:
+Check whether table exists.
+If missing, design additive migration.
+Required target columns:
+- id
+- activity_event_id
+- input_hash
+- processor_version
+- rule_version
+- model_name
+- prompt_version
+- policy_version
+- status
+- started_at
+- finished_at
+- input_summary_json
+- output_summary_json
+- token_usage_json
+- cost_json
+- error_json
+- created_at
+- updated_at
+
+6. activity_category_derivations
+Status: marker exists in inventory, exact database state requires SQL audit.
+C8-E-C action:
+Check whether table exists.
+If missing, design additive migration.
+Required target columns:
+- id
+- activity_event_id
+- derivation_run_id
+- category_id
+- candidate_slug
+- candidate_title
+- semantic_layer
+- category_type
+- source
+- confidence
+- status
+- is_required
+- is_core_meaning
+- is_confirmed
+- is_revoked
+- evidence_json
+- created_at
+- updated_at
+
+7. activity_semantic_interpretations
+Status: target model element, exact database state unknown.
+C8-E-C action:
+Check whether table exists.
+If missing, consider additive migration after core derivation tables.
+Target purpose:
+Store full semantic interpretation snapshot, possible meanings, normalized activity, final decision, and JSON output.
+
+8. category_moderation_items
+Status: target model element, probably not first runtime requirement.
+C8-E-C action:
+Check table existence.
+If missing, defer to post-runtime governance step unless needed immediately.
+
+9. activity_category_corrections
+Status: target model element for supervised signal.
+C8-E-C action:
+Check table existence.
+If missing, defer until minimal correction endpoints are planned.
+
+10. ruleExtractor.ts
+Status: exists.
+Additive direction after schema audit:
+Expand deterministic rules for benchmark cases:
+- walked to work
+- walking dog
+- studied math
+- studied math with child
+- child studied nearby
+- watched film with child
+- wrote client proposal
+
+11. resolver.ts
+Status: exists.
+Additive direction after schema audit:
+Strengthen resolver governance:
+- existing slug/alias/context lookup first
+- no uncontrolled active category creation
+- allow only working_draft / suggested / needs_review where policy allows
+- unresolved candidates persist but are not passed into bridge
+
+12. persistence.ts
+Status: missing.
+Additive direction after schema audit:
+Create as dedicated persistence layer for:
+- category_derivation_runs
+- activity_category_derivations
+- semantic interpretation snapshots
+- correction records later
+Do not mix this responsibility into route code.
+
+13. routeRunner.ts
+Status: missing.
+Additive direction after schema audit:
+Create as orchestrator runtime wrapper:
+- input event/context/policy
+- run rules
+- optional AI
+- merge candidates
+- resolve
+- persist
+- return bridge-ready category ids
+
+14. valueObjectBridge.ts
+Status: exists.
+Additive direction after schema audit:
+Ensure bridge receives only resolved categoryId items.
+Persist warnings/skips for unresolved candidates.
+Every accepted category must be traceable into value_object_category_links.
+
+15. complete/route.ts
+Status: exists and C2 production path already proved.
+Additive direction:
+Patch only when orchestrator contract is ready.
+Do not rerun canonical completed event.
+Use fresh controlled setup events for future runtime tests.
+
+PROPOSED IMPLEMENTATION ORDER AFTER C8-E-B
+
+C8-E-C — Exact Supabase schema audit SQL
+Goal:
+Produce one SQL audit file to run in Supabase SQL Editor.
+No runtime code.
+No migration yet.
+
+C8-E-D — Additive migration design
+Goal:
+Based on C8-E-C results, design exact additive DB migration.
+No DROP.
+No destructive rename.
+No data rewrite.
+
+C8-E-E — Persistence layer hardening
+Goal:
+Create or patch persistence.ts only after tables are confirmed.
+Persist derivation runs and derivation rows.
+
+C8-E-F — Resolver governance
+Goal:
+Strengthen resolver status policy:
+active / working_draft / suggested / needs_review / revoked / rejected / archived.
+
+C8-E-G — categoryCandidates contract
+Goal:
+Create stable TypeScript contract for categoryCandidates[].
+Include:
+- candidateSlug
+- candidateTitle
+- semanticLayer
+- categoryType
+- source
+- confidence
+- isRequired
+- isCoreMeaning
+- isWorkingDraftAllowed
+- reason
+- evidence
+
+C8-E-H — bridge handoff hardening
+Goal:
+Bridge accepts resolved category IDs only.
+Unresolved candidates are persisted and skipped with traceable warnings.
+
+C8-E-I — benchmark suite
+Goal:
+Create deterministic benchmark route/script for:
+- walked to work
+- walking dog
+- studied math
+- studied math with child
+- child studied nearby
+- watched film with child
+- wrote client proposal
+
+AI FUNCTION LAYER INTEGRATION ORDER
+
+AI must not be implemented before schema/governance readiness.
+Correct order:
+1. Schema audit
+2. Migration design
+3. Persistence contract
+4. Governance statuses
+5. Structured AI client
+6. Orchestrator feature flag
+7. Benchmarks
+8. Cost-control and model routing
+9. User correction loop
+10. Moderation queue
+
+Recommended AI metadata:
+- model_name
+- prompt_version
+- schema_version
+- policy_version
+- input_hash
+- token_usage_json
+- cost_json
+- output_json
+- validation_status
+- error_json
+
+MODEL VERSION DECISION
+Because model_version marker was missing, do not force the name model_version now.
+C8-E-C must inspect actual DB expectations.
+Recommended practical naming:
+- model_name for exact model id
+- model_alias for configured alias such as cheap/default/strong
+- prompt_version for prompt contract
+- schema_version for structured output contract
+- policy_version for routing and escalation policy
+
+DEFINITION OF DONE FOR C8-E-B
+
+C8-E-B is complete when:
+- This additive implementation plan exists under docs/value-objects.
+- It contains exists/missing/partial matrix from C8-E-A/B1.
+- It gives a safe sequence for C8-E-C through C8-E-I.
+- It does not modify runtime code.
+- It does not modify database schema.
+- It is committed as a documentation-only block.
+- Final git status is clean after commit/push.
+
+NEXT IMMEDIATE BLOCK AFTER THIS DOCUMENT
+
+P4.10.0-C8-E-C — exact Supabase schema audit SQL file.
+
+The next file should be:
+docs/value-objects/category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql
+
+The SQL must inspect:
+- table existence
+- column existence
+- constraints
+- indexes
+- RLS policies where relevant
+- references between activity events, categories, derivation rows, Value Object links and bridge artifacts
+
+END OF C8-E-B PLAN
