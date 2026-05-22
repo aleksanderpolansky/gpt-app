@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 const ENDPOINT =
   "/api/activity/debug/category-derivation-complete-route-adapter-failure-test";
 
-const P4_STEP = "P4.10.0-C8-E-F5-G-F-C";
+const P4_STEP = "P4.10.0-C8-E-F5-G-F-H-A-FIX3";
 
 const EXPECTED_MODE = "shadow_persist";
 
@@ -361,14 +361,22 @@ export async function POST(request: Request) {
     );
   }
 
-  if (expectedFailActivityComplete !== false) {
+  const strictSimulatedPersistenceFailureProofAllowed =
+    scenario === "simulated_persistence_failure" &&
+    expectedFailActivityComplete === true;
+
+  if (
+    expectedFailActivityComplete !== false &&
+    !strictSimulatedPersistenceFailureProofAllowed
+  ) {
     return NextResponse.json(
       {
         ok: false,
         endpoint: ENDPOINT,
         p4Step: P4_STEP,
         error:
-          "This first failure-behavior proof requires expectFailActivityComplete=false.",
+          "This failure-behavior proof requires expectFailActivityComplete=false unless scenario=simulated_persistence_failure strict proof.",
+        receivedScenario: scenario,
         receivedExpectFailActivityComplete: expectedFailActivityComplete,
       },
       { status: 400 },
@@ -413,14 +421,22 @@ export async function POST(request: Request) {
     );
   }
 
-  if (config.failActivityComplete !== false) {
+  const strictFailActivityCompleteConfigAllowed =
+    scenario === "simulated_persistence_failure" &&
+    config.failActivityComplete === true;
+
+  if (
+    config.failActivityComplete !== false &&
+    !strictFailActivityCompleteConfigAllowed
+  ) {
     return NextResponse.json(
       {
         ok: false,
         endpoint: ENDPOINT,
         p4Step: P4_STEP,
         error:
-          "This first failure-behavior proof requires CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false.",
+          "This failure-behavior proof requires CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false unless scenario=simulated_persistence_failure strict proof.",
+        receivedScenario: scenario,
         currentConfig: configSummary,
       },
       { status: 409 },
