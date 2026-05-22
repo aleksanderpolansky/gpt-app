@@ -1,0 +1,318 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F5-F-B - Direct Adapter Idempotency Proof Plan
+Created: 2026-05-22 11:08:27
+Base commit before this document: f691076
+
+STATUS
+Planning document only.
+No runtime code changes.
+No database changes.
+No /api/activity/complete patch.
+No OpenAI call.
+No UI changes.
+production_persist is not enabled in this step.
+
+WHY THIS STEP IS NEEDED
+
+F5-E proved that shadow_persist works through /api/activity/complete.
+
+However, /api/activity/complete cannot fully prove routeRunner adapter idempotency because the complete route lifecycle changes the activity_event status to completed.
+
+Current complete route behavior:
+1. First POST completes the event and runs the full pipeline.
+2. Second POST for the same event normally returns already_completed.
+3. The already_completed branch skips the full pipeline.
+4. Therefore the second call does not re-enter the routeRunner adapter path.
+
+Conclusion:
+Idempotency cannot be proven by calling /api/activity/complete twice on the same completed event.
+
+GOAL OF F5-F-B
+
+Design a controlled proof that calls the Category Derivation complete-route adapter directly, outside the complete-route lifecycle early return.
+
+The proof must show:
+
+First adapter call:
+- creates exactly one routeRunner-specific category_derivation_runs row;
+- creates exactly five activity_category_derivations rows for walked to work for 15 minutes;
+- returns reason = route_runner_completed;
+- returns non-null derivationRunId;
+- returns persistenceDerivationRowsCreated = 5.
+
+Second adapter call with the same activity_event_id:
+- detects the existing completed routeRunner run;
+- does not create another category_derivation_runs row;
+- does not create duplicate activity_category_derivations rows;
+- returns reason = existing_completed_run_found;
+- returns the same derivationRunId;
+- returns persistenceDerivationRowsCreated = 0.
+
+DATABASE FINAL STATE:
+- exactly one routeRunner-specific completed category_derivation_runs row exists for the event;
+- exactly five activity_category_derivations rows exist for that routeRunner derivation_run_id;
+- no duplicate completed routeRunner run exists for the same activity_event_id.
+
+CURRENT VERIFIED BASELINE
+
+F5-C:
+Disabled-by-default adapter integration passed.
+
+F5-D:
+shadow_no_persist mode passed.
+
+F5-E:
+shadow_persist mode passed through /api/activity/complete.
+
+F5-F-A:
+production_persist transition and legacy consolidation strategy was documented.
+
+Current HEAD before this plan:
+f691076
+
+IMPORTANT EXISTING IMPLEMENTATION POINTS
+
+Adapter:
+lib/activity/categoryDerivation/completeRouteIntegration.ts
+
+Important function:
+runCategoryDerivationForCompleteRoute
+
+Important lookup:
+findExistingCompletedCategoryDerivationRunForActivityEvent
+
+Important expected existing-run reason:
+existing_completed_run_found
+
+Important routeRunner:
+runCategoryDerivationRoute
+
+Important persistence:
+- createCategoryDerivationRun
+- finishCategoryDerivationRun
+- persistActivityCategoryDerivations
+
+Important routeRunner-specific filters:
+- schema_version = category_derivation_complete_route_v1
+- policy_version = c8-e-f4
+- processor_version = category_derivation_v1
+- rule_version = rules_v1
+- status in completed / completed_with_warnings
+
+RECOMMENDED TECHNICAL APPROACH
+
+Use a debug-only local API route rather than /api/activity/complete.
+
+Recommended route:
+src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts
+
+Recommended method:
+POST
+
+Recommended purpose:
+Call runCategoryDerivationForCompleteRoute directly twice for the same prepared activity_event.
+
+Recommended safety:
+- debug-only route;
+- no UI;
+- no OpenAI call;
+- no production_persist;
+- no commercial core changes;
+- only rule-based Category Derivation routeRunner;
+- should require authenticated browser session like existing debug endpoints if project convention supports it;
+- should clearly return metadata proving both adapter calls.
+
+WHY A DEBUG ROUTE IS BETTER THAN A SCRIPT
+
+A local script could call lower-level code, but a debug route is more consistent with the existing test workflow:
+
+- browser-authenticated fetch can reuse current session;
+- Supabase client setup can follow existing server route patterns;
+- results can be printed in Browser Console;
+- it can be removed or kept under debug namespace;
+- it avoids changing /api/activity/complete lifecycle behavior.
+
+TEST EVENT PLAN
+
+Create one fresh activity_event with:
+
+- status = started
+- processing_status = pending
+- input_text = walked to work for 15 minutes
+- title = F5-F-C direct adapter idempotency routeRunner test
+- description = Direct adapter idempotency proof for Category Derivation complete-route adapter.
+- duration_minutes = 15
+- source = manual
+- privacy_scope = private
+- metadata_json.testStep = P4.10.0-C8-E-F5-F-C
+- metadata_json.doNotUseAsCanonicalProof = true
+
+Important:
+The idempotency debug route should not complete the event.
+It should use this event only as adapter input.
+
+EXPECTED DEBUG ROUTE INPUT
+
+POST body:
+
+{
+  "eventId": "fresh_event_id",
+  "mode": "shadow_persist",
+  "callTwice": true
+}
+
+The mode should be enforced inside the debug route by passing config or by requiring local env:
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_persist
+
+Recommended safer approach:
+- require the local dev server to run with CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_persist;
+- debug route verifies config.mode === shadow_persist;
+- if mode is not shadow_persist, route returns 409 and does not run the adapter.
+
+EXPECTED DEBUG ROUTE INTERNAL FLOW
+
+1. Validate request body.
+2. Verify event exists.
+3. Verify event status is not completed.
+4. Verify config.mode is shadow_persist.
+5. Build activityEvent object for adapter:
+   - id
+   - input_text
+   - title
+   - description
+   - duration_minutes
+   - source
+   - metadata_json
+6. Determine actorId from:
+   - performed_by_actor_id
+   - acting_as_actor_id
+   - acting_for_actor_id
+7. Call runCategoryDerivationForCompleteRoute once.
+8. Call runCategoryDerivationForCompleteRoute again with the same event and actorId.
+9. Read database state after both calls.
+10. Return compact proof JSON.
+
+EXPECTED FIRST CALL RESULT
+
+firstCall:
+- enabled: true
+- mode: shadow_persist
+- ok: true
+- skipped: false
+- reason: route_runner_completed
+- derivationRunId: non-null uuid
+- candidateCount: 5
+- resolvedCandidateCount: 5
+- persistenceDerivationRowsCreated: 5
+- warnings: []
+- errors: []
+
+EXPECTED SECOND CALL RESULT
+
+secondCall:
+- enabled: true
+- mode: shadow_persist
+- ok: true
+- skipped: true or false depending on adapter result shape
+- reason: existing_completed_run_found
+- derivationRunId: same as firstCall.derivationRunId
+- candidateCount: 0 or existing count depending on adapter result shape
+- resolvedCandidateCount: 0 or existing count depending on adapter result shape
+- persistenceDerivationRowsCreated: 0
+- warnings: []
+- errors: []
+
+Important:
+The critical expected proof is:
+- secondCall.reason = existing_completed_run_found
+- secondCall.derivationRunId = firstCall.derivationRunId
+- secondCall.persistenceDerivationRowsCreated = 0
+
+EXPECTED DATABASE VERIFICATION
+
+After both calls:
+- route_runner_specific_runs_count.actual_count = 1
+- route_runner_specific_runs_count.pass = true
+- route_runner_activity_category_derivations_count.actual_count = 5
+- route_runner_activity_category_derivations_count.pass = true
+- duplicate_route_runner_completed_runs_check.actual_count = 1
+- duplicate_route_runner_completed_runs_check.pass = true
+
+EXPECTED BROWSER CONSOLE CHECKS
+
+Response checks:
+- response.ok = true
+- json.ok = true
+- json.status = idempotency_test_pass
+- json.event.id matches
+- firstCall exists
+- secondCall exists
+- firstCall.reason = route_runner_completed
+- secondCall.reason = existing_completed_run_found
+- firstCall.derivationRunId is not null
+- secondCall.derivationRunId equals firstCall.derivationRunId
+- firstCall.persistenceDerivationRowsCreated = 5
+- secondCall.persistenceDerivationRowsCreated = 0
+- dbVerification.routeRunnerSpecificRunsCount = 1
+- dbVerification.activityCategoryDerivationsCount = 5
+- dbVerification.noDuplicateRuns = true
+
+SUCCESS CRITERIA
+
+PASS only if:
+1. TypeScript remains clean.
+2. Debug route compiles.
+3. Browser POST returns HTTP 200.
+4. First adapter call creates one routeRunner run.
+5. Second adapter call finds the existing completed run.
+6. Second adapter call does not create duplicate rows.
+7. DB has exactly one routeRunner-specific completed run for the event.
+8. DB has exactly five routeRunner-linked activity_category_derivations.
+9. The event does not need to be forced back from completed to started.
+10. OpenAI is not called.
+11. /api/activity/complete is not modified.
+
+FAIL CONDITIONS
+
+FAIL if:
+- debug route calls /api/activity/complete instead of adapter directly;
+- second call creates another category_derivation_runs row;
+- second call creates duplicate activity_category_derivations rows;
+- second call does not return existing_completed_run_found;
+- derivationRunId differs between first and second call;
+- persistenceDerivationRowsCreated is greater than 0 on second call;
+- routeRunner mode is disabled or shadow_no_persist;
+- production_persist is enabled;
+- OpenAI is called;
+- /api/activity/complete is patched in this step.
+
+NO-GO
+
+Do not enable production_persist.
+Do not modify /api/activity/complete.
+Do not remove legacy Category Derivation.
+Do not switch Value Object Bridge source.
+Do not call OpenAI.
+Do not create UI.
+Do not create database migrations.
+Do not modify commercial core.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+Do not force-reset completed events.
+
+RECOMMENDED NEXT STEP
+
+Proceed to:
+P4.10.0-C8-E-F5-F-C - implement debug-only direct adapter idempotency endpoint.
+
+Expected implementation:
+- one new debug route file only;
+- no complete-route patch;
+- no production_persist;
+- local shadow_persist mode only;
+- TypeScript check;
+- runtime Browser Console test;
+- Supabase read-only verification;
+- commit only after test passes.
+
+END OF F5-F-B DIRECT ADAPTER IDEMPOTENCY PROOF PLAN
