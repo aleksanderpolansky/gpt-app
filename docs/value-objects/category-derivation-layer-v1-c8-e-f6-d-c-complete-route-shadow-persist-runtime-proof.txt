@@ -1,0 +1,255 @@
+﻿GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-D-C
+Real complete-route shadow_persist runtime proof
+Created: 2026-05-22
+
+1. Purpose
+
+This document records the F6-D-B runtime proof result.
+
+The proof verifies that the real production-adjacent complete route:
+
+- /api/activity/complete
+
+still works after the F5-G failure behavior block and after F6-C/F6-D-A planning.
+
+This is not a debug-only route proof.
+
+2. Baseline
+
+Current implementation baseline before proof documentation:
+
+- d66861b — Prepare Category Derivation complete-route shadow persist proof
+
+Previous decision:
+
+- 3f94bfd — Decide Category Derivation transition after failure behavior inspection
+
+F6-D-A preparation established:
+
+- observability enough for runtime plan: True
+- no source code change needed before browser runtime proof
+- proof should use real /api/activity/complete
+- mode should be shadow_persist
+- failActivityComplete should be false
+- production_persist forbidden
+
+3. Runtime setup
+
+Dev server mode:
+
+- CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_persist
+- CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=false
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+
+Setup endpoint:
+
+- /api/activity/debug/create-free-text-start-event
+
+Proof endpoint:
+
+- /api/activity/complete
+
+Setup endpoint was used only to create a clean started free-text activity event. The actual proof was performed through the real /api/activity/complete route.
+
+4. Setup result
+
+Setup payload created this started free-text activity:
+
+- inputText: walked to work for 10 minutes while thinking about B2B sales and German learning
+- title: F6-D-B real complete-route shadow_persist proof
+- proof marker: P4.10.0-C8-E-F6-D-B
+
+Setup response:
+
+- HTTP status: 200
+- setupJson.ok: true
+- setup status: created_started_free_text_event
+- event status: started
+- event source: manual_form
+- productionRouteUnderTest: /api/activity/complete
+- categoryDerivationExecutedHere: false
+
+Created event id:
+
+- 4fc8f8a9-9e21-4fca-a2ed-5d6428145f9d
+
+5. Complete-route proof result
+
+Complete payload:
+
+- eventId: 4fc8f8a9-9e21-4fca-a2ed-5d6428145f9d
+- durationMinutes: 10
+- comment: F6-D-B real complete-route shadow_persist post-F5-G smoke proof.
+
+Complete response:
+
+- HTTP status: 200
+- completeJson.ok: true
+- completeJson.status: completed
+- completed event id matched setup event id
+- completed event status: completed
+- duration_minutes: 10
+- processing_status: processed
+
+6. Category Derivation routeRunner result
+
+categoryDerivationRouteRunner:
+
+- enabled: true
+- mode: shadow_persist
+- ok: true
+- skipped: false
+- reason: route_runner_completed
+- derivationRunId: 607cdd92-fee3-4b6f-af51-c6bba41dadc4
+- candidateCount: 5
+- resolvedCandidateCount: 5
+- persistenceDerivationRowsCreated: 5
+- warnings: []
+- errors: []
+
+This proves that the real /api/activity/complete path reached Category Derivation and completed the routeRunner successfully in shadow_persist mode.
+
+7. Value Object Bridge result
+
+valueObjectBridge:
+
+- ok: true
+- skipped: false
+- skipReason: null
+- mapping.ok: true
+- mapping.mappingsCount: 1
+- bridge.ok: true
+- bridge.createdCount: 1
+
+Created bridge result included:
+
+- valueObjectId: 9177fea8-de25-446b-b418-b55a766d53db
+- valueObjectInstanceId: eb86e008-559b-4f08-816e-487d22177b1e
+- linkId: fd7a2a2f-f673-4541-a28a-fd79e7ba82af
+- stateDeltaId: 92e37869-9aef-4d28-aaf6-11e1774fbc94
+- aggregateId: 98e47020-2c93-4224-89d8-567134183fdb
+- snapshotId: bab651f8-eb3e-480f-aea1-2260e99f74a3
+
+Additional category links were created for:
+
+- walking
+- work
+- commute-to-work
+- walking-to-work
+- duration-minutes
+
+8. Raw signal / processing logs
+
+rawSignal:
+
+- id: 3891279c-2e78-4a47-9de5-8c1f4fae88ce
+- processingStatus: processed
+
+processingRunId:
+
+- 7efcce36-20ef-4741-b480-c3cb12c4d335
+
+processingLogs:
+
+- rubricatorClassification.ok: true
+- valueObjectBridge.ok: true
+
+9. Impact processor result
+
+impactProcessor:
+
+- ok: true
+- skipped: true
+- reason: No active impact rules found for this activity event.
+- impactRules: 0
+- impactEvents: 0
+- dailyAggregates: 0
+- currentSnapshots: 0
+
+This is acceptable for this proof, because this proof was focused on the real complete route and Category Derivation shadow_persist path, not on impact rules.
+
+10. Safety result
+
+Proof checks passed:
+
+- real /api/activity/complete endpoint was used
+- failure debug route was not used as the proof endpoint
+- production_persist was not enabled
+- routeRunner mode was shadow_persist
+- complete route completed successfully
+- routeRunner completed successfully
+- adapter behavior was non-blocking
+- warnings array existed and was empty
+- errors array existed and was empty
+
+The lifecycle note stated that the activity event was completed and rule-based impacts, daily aggregates and current snapshots were processed without AI.
+
+11. What this proof demonstrates
+
+This proof demonstrates that after F5-G:
+
+- the real /api/activity/complete route still completes events;
+- Category Derivation is reached through the real complete route;
+- shadow_persist mode works in the real complete route path;
+- routeRunner completes with reason route_runner_completed;
+- candidates are derived and resolved;
+- persistence rows are created in shadow_persist mode;
+- value object bridge still works after completion;
+- rawSignal is processed;
+- production_persist is not enabled.
+
+12. What this proof does not demonstrate
+
+This proof does not approve:
+
+- production_persist transition;
+- OpenAI calls;
+- UI work;
+- schema changes;
+- RLS or permission changes;
+- broad refactor;
+- treating debug routes as canonical production proof.
+
+13. Decision after proof
+
+F6-D-B runtime proof passed.
+
+Recommended next step:
+
+- commit this proof document as F6-D-C;
+- then create F6-D-D or F6-E transition decision:
+  decide whether the complete-route shadow_persist proof is sufficient to close F6, or whether an additional proof/document is needed before production-readiness planning.
+
+14. Anti-regression notes
+
+Stable success signal for this proof:
+
+- completeJson.status=completed
+- categoryDerivationRouteRunner.mode=shadow_persist
+- categoryDerivationRouteRunner.ok=true
+- categoryDerivationRouteRunner.skipped=false
+- categoryDerivationRouteRunner.reason=route_runner_completed
+- categoryDerivationRouteRunner.candidateCount=5
+- categoryDerivationRouteRunner.resolvedCandidateCount=5
+- categoryDerivationRouteRunner.persistenceDerivationRowsCreated=5
+
+Do not repeat this proof unnecessarily unless a later code change affects:
+
+- /api/activity/complete
+- completeRouteIntegration
+- routeRunner
+- config
+- valueObjectBridge
+- rawSignal/processing logs
+
+15. Definition of Done
+
+This F6-D-C proof documentation step is complete when:
+
+- this document exists under docs/value-objects;
+- only this document is changed;
+- document is committed and pushed;
+- working tree is clean;
+- recent git log shows this proof document above d66861b.
