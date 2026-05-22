@@ -153,9 +153,9 @@ Because Next.js server-side process.env values are read by the local dev server 
 
 Recommended PowerShell start command:
 
- = "shadow_persist"
- = "false"
- = "false"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE = "shadow_persist"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG = "false"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE = "false"
 npm.cmd run dev
 
 After test, reset or restart without the variable for default disabled behavior.
