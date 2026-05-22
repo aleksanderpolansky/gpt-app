@@ -1,0 +1,127 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-B
+Production-readiness gates inspection
+Created: 2026-05-22
+
+1. Purpose
+
+This document inspects production-readiness gates after F6-E-A.
+
+No runtime/source code changes are made in this step.
+
+2. Baseline
+
+Current HEAD before inspection:
+
+- faf0d90
+
+Expected baseline:
+
+- faf0d90 — Plan Category Derivation production readiness transition
+
+3. Gate summary
+
+- has production_persist mode: True
+- has failActivityComplete config: True
+- has shouldPersist config: True
+- routeRunner uses runLookup: False
+- routeRunner creates derivation run: True
+- routeRunner persists derivations: True
+- routeRunner has simulated persistence boundary: True
+- runLookup filters by activityEventId: True
+- runLookup filters by processor/rule/schema/policy versions: True
+- runLookup includes completed/completed_with_warnings statuses: True
+- adapter has non-blocking failActivityComplete logic: True
+- adapter has F5-G failure reasons: True
+- adapter exposes persistenceDerivationRowsCreated: True
+- adapter exposes routeRunner state: True
+- complete route calls adapter: True
+- complete route returns categoryDerivationRouteRunner: True
+- complete route returns valueObjectBridge: True
+- complete route returns rawSignal: True
+- idempotency debug route uses adapter: True
+- idempotency debug route checks existing marker: True
+- idempotency debug route has safety marker: True
+- idempotency debug route has doNotUseAsCanonicalProof marker: False
+- F6-E-A requests F6-E-B: True
+- F6-E-A forbids production_persist: True
+- idempotency gate looks reasonable: False
+- production_persist not ready for direct enable: True
+
+4. Preliminary answers to F6-E-A questions
+
+Question: Is idempotency strong enough for production_persist?
+
+Preliminary answer:
+Idempotency has visible support through runLookup and the idempotency debug route, but production_persist should not be enabled directly before a specific idempotency proof/decision confirms duplicate-run behavior at current HEAD.
+
+Question: Does runLookup prevent duplicate completed runs?
+
+Preliminary answer:
+runLookup filters by event=True, versions=True, completed statuses=True. This is promising but requires proof before production_persist.
+
+Question: What happens if routeRunner fails after category_derivation_run creation but before derivation rows are persisted?
+
+Preliminary answer:
+This inspection can identify the risk, but it does not prove safe recovery. A later decision must decide whether to add a dedicated partial-persistence failure simulation or rollback note.
+
+Question: What happens if valueObjectBridge succeeds but Category Derivation persistence has partial results?
+
+Preliminary answer:
+This remains a cross-pipeline consistency risk. It should be addressed before broad production_persist rollout.
+
+Question: Are proof/test events distinguishable enough?
+
+Preliminary answer:
+Recent proofs use metadata markers, but this inspection does not yet prove a cleanup/retention policy.
+
+Question: What rollback or cleanup strategy exists?
+
+Preliminary answer:
+No complete rollback/cleanup strategy is approved by this inspection. Production_persist should wait for a rollback/cleanup decision.
+
+Question: Should failActivityComplete remain false for first production_persist stage?
+
+Preliminary answer:
+Yes, first production_persist stage should likely remain non-blocking unless a later decision proves strict mode is safe for normal users.
+
+Question: Is production_persist better introduced by a narrow controlled proof route rather than real /api/activity/complete?
+
+Preliminary answer:
+Yes, based on current risks, a narrow controlled production_persist proof is safer than enabling production_persist broadly on /api/activity/complete.
+
+5. Inspection conclusion
+
+Conclusion:
+
+- production_persist exists as a mode, but is not approved for direct enablement.
+- shadow_persist proof is strong enough to proceed to production-readiness decision work.
+- idempotency support appears present but should receive a focused proof or decision before production_persist.
+- rollback/cleanup strategy is not yet sufficient.
+- first production_persist experiment should likely be controlled, narrow, non-blocking and proof/test marked.
+
+Recommended next step:
+
+- P4.10.0-C8-E-F6-E-C — production-readiness decision after gate inspection
+
+6. Safety gates preserved
+
+- no production_persist
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no SQL in PowerShell
+- no runtime/source code changes
+- no broad refactor
+
+7. Definition of Done
+
+This F6-E-B inspection step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this inspection document above faf0d90
