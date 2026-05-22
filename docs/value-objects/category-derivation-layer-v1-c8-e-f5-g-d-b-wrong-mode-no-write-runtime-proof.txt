@@ -1,0 +1,307 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F5-G-D-B - Wrong-Mode / No-Write Runtime Proof
+Created: 2026-05-22 12:32:40
+Base commit before this document: 4eb8bbf
+
+STATUS
+F5-G-D-A wrong-mode / no-write runtime test passed.
+This document records the proof that the adapter failure debug route refuses to run when server mode is disabled while request mode asks for shadow_persist.
+
+SCOPE
+Documentation only.
+No runtime code changes.
+No database migration.
+No /api/activity/complete patch.
+No OpenAI call.
+No UI changes.
+No commercial core changes.
+production_persist was not enabled.
+
+CURRENT CODE BASELINE
+
+Failure behavior test plan:
+e62c815 Plan Category Derivation failure behavior tests
+
+Adapter failure debug route:
+6e33ace Add Category Derivation adapter failure test route
+
+Adapter validation failure proof:
+4eb8bbf Document Category Derivation adapter validation failure proof
+
+Debug route:
+src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts
+
+Complete route:
+src/app/api/activity/complete/route.ts
+
+Important:
+The complete route was not modified in F5-G-D-A.
+This step did not change code.
+
+WHY THIS PROOF WAS NEEDED
+
+The previous validation-failure proof confirmed that the adapter can safely handle a controlled missing activityEvent.id validation failure when the server is correctly running in shadow_persist mode.
+
+This proof checks a different safety boundary:
+
+wrong server mode.
+
+The debug route is intended to run only when the local dev server is explicitly configured for:
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_persist
+
+If the server is in disabled mode, the debug route must refuse before calling the adapter.
+
+This proves:
+- no accidental adapter execution;
+- no routeRunner execution;
+- no DB write path reached;
+- no misleading success status;
+- no production_persist.
+
+TEST MODE
+
+Local dev server was restarted with:
+
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE = "disabled"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG = "false"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE = "false"
+npm.cmd run dev
+
+Expected server config:
+- mode = disabled
+- includeResponseDebug = false
+- failActivityComplete = false
+- isDisabled = true
+- isDebugOnly = false
+- usesLegacyExistingCompleteRouteFlow = false
+- usesRouteRunnerInCompleteRoute = false
+- shouldPersist = false
+- shouldResolve = false
+- isShadowMode = false
+- isProductionPersistMode = false
+- warnings = []
+
+RUNTIME TEST
+
+Endpoint:
+POST /api/activity/debug/category-derivation-complete-route-adapter-failure-test
+
+Payload:
+{
+  "scenario": "missing_activity_event_id",
+  "mode": "shadow_persist",
+  "expectFailActivityComplete": false
+}
+
+Expected result:
+- HTTP 409
+- ok = false
+- expectedMode = shadow_persist
+- currentMode = disabled
+- adapterResult absent
+- expectedChecks absent
+- safety absent because adapter did not run
+- no success status returned
+
+RUNTIME RESULT
+
+HTTP status:
+409
+
+Response:
+- ok = false
+- endpoint = /api/activity/debug/category-derivation-complete-route-adapter-failure-test
+- p4Step = P4.10.0-C8-E-F5-G-C-A
+- error = Local dev server must run with CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_persist.
+- expectedMode = shadow_persist
+- currentMode = disabled
+
+currentConfig:
+- mode = disabled
+- includeResponseDebug = false
+- failActivityComplete = false
+- isDisabled = true
+- isDebugOnly = false
+- usesLegacyExistingCompleteRouteFlow = false
+- usesRouteRunnerInCompleteRoute = false
+- shouldPersist = false
+- shouldResolve = false
+- isShadowMode = false
+- isProductionPersistMode = false
+- warnings = []
+
+BROWSER CONSOLE CHECKS
+
+All checks passed:
+
+1. response.ok is false
+   OK
+
+2. HTTP status is 409
+   OK
+
+3. json.ok is false
+   OK
+
+4. error says local dev server must run with shadow_persist
+   OK
+
+5. expectedMode is shadow_persist
+   OK
+
+6. currentMode is disabled
+   OK
+
+7. currentConfig exists
+   OK
+
+8. currentConfig.mode is disabled
+   OK
+
+9. currentConfig.isDisabled is true
+   OK
+
+10. currentConfig.usesRouteRunnerInCompleteRoute is false
+    OK
+
+11. currentConfig.shouldPersist is false
+    OK
+
+12. currentConfig.shouldResolve is false
+    OK
+
+13. currentConfig.isProductionPersistMode is false
+    OK
+
+14. currentConfig.failActivityComplete is false
+    OK
+
+15. adapterResult is absent
+    OK
+
+16. expectedChecks is absent
+    OK
+
+17. safety object is absent because adapter did not run
+    OK
+
+18. no success status returned
+    OK
+
+Runtime status:
+PASS
+
+WHAT WAS PROVEN
+
+This step proves wrong-mode / no-write behavior:
+
+1. The debug route refuses to run when server config mode is disabled.
+2. Request-side mode = shadow_persist is not enough.
+3. Server-side config is authoritative.
+4. The route returns HTTP 409 Conflict.
+5. The route returns a clear configuration error.
+6. The route returns currentConfig for diagnosis.
+7. The adapter is not called.
+8. routeRunner is not executed.
+9. No category_derivation_runs write path is reached.
+10. No activity_category_derivations write path is reached.
+11. No success status is returned.
+12. production_persist remains disabled.
+13. failActivityComplete remains false.
+14. /api/activity/complete remains unchanged.
+15. OpenAI is not called.
+
+ARCHITECTURAL MEANING
+
+This is an important rollout safety proof.
+
+The debug failure route is protected by server-side mode validation. It will not accidentally execute adapter tests just because the browser request asks for shadow_persist.
+
+This reduces the risk of:
+- accidental persistence in disabled mode;
+- accidental routeRunner execution during ordinary development;
+- confusing debug output when the server is not configured for the intended test.
+
+IMPORTANT LIMITATION
+
+This proof covers wrong-mode refusal only.
+
+It does not yet prove:
+- missing or invalid actorId behavior;
+- persistence failure simulation;
+- complete route non-blocking failure behavior;
+- complete route blocking behavior under failActivityComplete=true;
+- Value Object Bridge migration safety;
+- production_persist rollout safety.
+
+CURRENT PROJECT POSITION
+
+F5-C:
+Disabled-by-default adapter integration was proven and documented.
+
+F5-D:
+shadow_no_persist mode was proven and documented.
+
+F5-E:
+shadow_persist mode through /api/activity/complete was proven and documented.
+
+F5-F:
+Direct adapter idempotency was planned, implemented, runtime-tested, committed and documented.
+
+F5-G-A:
+Failure behavior test plan was created.
+
+F5-G-B:
+Failure handling and simulation hooks were inspected.
+
+F5-G-C:
+Adapter validation failure behavior was implemented, runtime-tested, committed and documented.
+
+F5-G-D-A:
+Wrong-mode / no-write runtime test passed.
+
+F5-G-D-B:
+This document records wrong-mode / no-write proof.
+
+NEXT RECOMMENDED BLOCK
+
+Proceed to:
+P4.10.0-C8-E-F5-G-E-A - plan missing/invalid actorId validation behavior.
+
+Purpose:
+Prove that the adapter or debug route handles missing/invalid actor context safely, without persistence and without corrupting state.
+
+Recommended next approach:
+1. Inspect whether current adapter validates actorId before routeRunner.
+2. If not, decide whether validation belongs in adapter or debug route.
+3. Add a controlled debug-only scenario if needed.
+4. Test with failActivityComplete=false first.
+5. Do not enable production_persist.
+
+NO-GO
+
+Do not enable production_persist.
+Do not remove legacy Category Derivation code.
+Do not switch Value Object Bridge source.
+Do not call OpenAI.
+Do not create UI.
+Do not create database migrations.
+Do not modify commercial core.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+Do not force-reset completed events.
+Do not simulate failure by corrupting schema or permissions.
+
+SERVER RESET NOTE
+
+After this wrong-mode test, ordinary development can continue in disabled mode.
+
+Current recommended local dev mode:
+
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE = "disabled"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG = "false"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE = "false"
+npm.cmd run dev
+
+END OF F5-G-D-B WRONG-MODE / NO-WRITE RUNTIME PROOF
