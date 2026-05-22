@@ -1,0 +1,369 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F5-G-A - Category Derivation routeRunner Failure Behavior Test Plan
+Created: 2026-05-22 12:05:50
+Base commit before this document: ffedaa0
+
+STATUS
+Planning document only.
+No runtime code changes.
+No database changes.
+No /api/activity/complete patch.
+No OpenAI call.
+No UI changes.
+No commercial core changes.
+production_persist is not enabled in this step.
+
+CURRENT VERIFIED BASELINE
+
+F5-C:
+Disabled-by-default complete route adapter integration was proven and documented.
+
+F5-D:
+shadow_no_persist mode was proven and documented.
+
+F5-E:
+shadow_persist mode through /api/activity/complete was proven and documented.
+
+F5-F-A:
+Production transition and legacy consolidation strategy was documented.
+
+F5-F-B:
+Direct adapter idempotency proof plan was created.
+
+F5-F-C:
+Direct adapter idempotency was implemented, runtime-tested, committed and documented.
+
+Latest relevant commits:
+- f691076 Plan Category Derivation production transition
+- 7d16e48 Plan Category Derivation direct adapter idempotency proof
+- 6bebca3 Add Category Derivation direct adapter idempotency test route
+- ffedaa0 Document Category Derivation direct adapter idempotency proof
+
+CURRENT POSITION
+
+The routeRunner adapter now has verified positive-path behavior:
+
+1. disabled mode:
+   - routeRunner does not run;
+   - complete route remains safe.
+
+2. shadow_no_persist:
+   - routeRunner derives and resolves candidates;
+   - it does not persist category_derivation_runs;
+   - it does not persist activity_category_derivations.
+
+3. shadow_persist via /api/activity/complete:
+   - complete route completes event;
+   - routeRunner persists one category_derivation_runs row;
+   - routeRunner persists five activity_category_derivations rows for walked to work for 15 minutes.
+
+4. direct adapter idempotency:
+   - first direct adapter call creates one completed routeRunner run;
+   - second direct adapter call returns existing_completed_run_found;
+   - second call does not create duplicate run;
+   - second call does not create duplicate derivation rows.
+
+WHAT IS STILL NOT PROVEN
+
+Failure behavior is not yet proven.
+
+Before production_persist can be considered, we must know what happens when routeRunner adapter cannot complete successfully.
+
+Main unanswered questions:
+1. If routeRunner fails and failActivityComplete=false, does /api/activity/complete still complete safely?
+2. If routeRunner fails and failActivityComplete=true, does /api/activity/complete block completion in a controlled way?
+3. If actorId is missing or invalid, does adapter return a structured error without corrupting state?
+4. If persistence fails, does adapter return structured errors and avoid partial duplicate data?
+5. If routeRunner produces no useful input, does it skip safely?
+6. Should production_persist ever use failActivityComplete=true?
+7. What is the default production-safe behavior?
+
+WHY FAILURE TESTS MUST COME BEFORE production_persist
+
+Positive-path persistence is not enough.
+
+production_persist means persisted Category Derivation data may become canonical or semi-canonical. Before that, the system must prove:
+
+- no accidental activity completion blocking unless explicitly configured;
+- no silent data corruption;
+- no duplicate persistence after partial failures;
+- clear response metadata;
+- no OpenAI calls;
+- clear distinction between recoverable adapter failure and complete-route failure;
+- predictable behavior under missing data or bad input.
+
+CURRENT CONFIG SWITCHES
+
+Relevant config fields:
+- mode
+- includeResponseDebug
+- failActivityComplete
+- shouldPersist
+- shouldResolve
+- isProductionPersistMode
+- usesRouteRunnerInCompleteRoute
+
+Current safety default:
+CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+
+Meaning:
+routeRunner failure should not block activity completion unless explicitly configured otherwise.
+
+TESTING PRINCIPLE
+
+Failure behavior tests must be staged from safest to riskiest.
+
+Do not begin by creating real DB failure.
+First test validation and controlled failure paths.
+
+Recommended order:
+
+G-B:
+Inspect exact failure-handling code paths and available hooks.
+
+G-C:
+Implement or use debug-only failure simulation, without touching /api/activity/complete.
+
+G-D:
+Test adapter-level failure behavior with failActivityComplete=false.
+
+G-E:
+Test complete-route behavior with failActivityComplete=false.
+
+G-F:
+Only after safe failure tests, optionally test failActivityComplete=true in local debug mode.
+
+G-G:
+Document final recommended production failure policy.
+
+IMPORTANT SAFETY BOUNDARY
+
+Do not simulate DB corruption by damaging real schema.
+Do not disable RLS or modify permissions for this test.
+Do not force production_persist.
+Do not call OpenAI.
+Do not test on canonical proof events.
+Do not patch commercial core.
+Do not change Value Object Bridge source.
+Do not remove legacy Category Derivation logic.
+
+RECOMMENDED NEXT STEP: F5-G-B
+
+Proceed to:
+P4.10.0-C8-E-F5-G-B - inspect failure handling and simulation hooks.
+
+Purpose:
+Before writing any failure-test code, inspect:
+
+1. completeRouteIntegration.ts
+   - how runCategoryDerivationForCompleteRoute catches errors;
+   - whether it returns ok=false or throws;
+   - how failActivityComplete is used;
+   - how validation failures are represented;
+   - whether invalid actorId causes structured result or thrown error;
+   - whether missing input text returns skipped or error.
+
+2. routeRunner.ts
+   - how runCategoryDerivationRoute handles persistence errors;
+   - how it calls createCategoryDerivationRun;
+   - how it calls failCategoryDerivationRun;
+   - whether it returns partial state when persistence fails;
+   - whether output contains warnings/errors.
+
+3. persistence.ts
+   - createCategoryDerivationRun failure behavior;
+   - persistActivityCategoryDerivations failure behavior;
+   - finishCategoryDerivationRun failure behavior;
+   - failCategoryDerivationRun behavior.
+
+4. config.ts
+   - exact env variable names;
+   - failActivityComplete parsing;
+   - includeResponseDebug parsing;
+   - mode behavior.
+
+5. /api/activity/complete route.ts
+   - how categoryDerivationRouteRunnerResult is used;
+   - whether complete route throws when routeRunner fails;
+   - whether activity status can be completed despite routeRunner error;
+   - whether failActivityComplete is only present in config/adapter rather than directly in complete route.
+
+6. existing debug routes
+   - useful patterns for controlled bad-input tests;
+   - auth/context handling;
+   - safe route naming.
+
+F5-G-B should be inspection only:
+- no code changes;
+- no database changes;
+- no commit unless a document is intentionally created afterward.
+
+FAILURE TEST TYPES TO DESIGN
+
+TYPE 1 - Missing event input text
+
+Goal:
+Prove adapter handles empty/missing input safely.
+
+Possible setup:
+- create activity_event with input_text = null or empty string;
+- call direct adapter debug route or new failure debug route;
+- expect skipped or structured error;
+- no category_derivation_runs persisted;
+- no activity_category_derivations persisted.
+
+Expected safety:
+- no OpenAI call;
+- no duplicate rows;
+- no event completion by debug route.
+
+TYPE 2 - Invalid or missing actorId
+
+Goal:
+Prove adapter validates actorId and does not persist under missing actor context.
+
+Possible setup:
+- dedicated debug route calls adapter with actorId = null or empty string;
+- or creates event with no actor ids if schema permits;
+- expect structured error or skipped result.
+
+Expected safety:
+- no category_derivation_runs persisted;
+- no activity_category_derivations persisted;
+- no crash;
+- no event completion by debug route.
+
+TYPE 3 - Wrong mode
+
+Goal:
+Prove debug route refuses to run unless mode is expected.
+
+Already partly implemented in idempotency debug route:
+- requires mode = shadow_persist;
+- rejects production_persist for debug proof.
+
+Failure test should verify:
+- if server config mode is disabled but request asks shadow_persist, route returns 409;
+- no DB writes.
+
+TYPE 4 - Persistence failure simulation
+
+Goal:
+Prove routeRunner behavior when persistence fails.
+
+Possible safe simulation options:
+A. Add debug-only wrapper that passes a restricted/mock Supabase client causing insert failure.
+B. Add debug-only flag to routeRunner input to force a controlled throw before persistence.
+C. Use impossible input values that violate DB constraints in a controlled way.
+
+Recommended:
+Prefer A or B.
+Do not modify real DB schema or permissions.
+
+Expected:
+- structured errors;
+- failCategoryDerivationRun behavior understood;
+- no duplicate completed run;
+- partial run, if any, has failed status and error_json;
+- complete route policy decided later.
+
+TYPE 5 - Complete route non-blocking failure
+
+Goal:
+Prove /api/activity/complete can still complete event if routeRunner fails and failActivityComplete=false.
+
+Required:
+- controlled failure simulation available in routeRunner adapter path;
+- fresh activity_event status = started;
+- server env:
+  CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_persist
+  CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+- request POST /api/activity/complete.
+
+Expected:
+- HTTP 200 or expected success response;
+- event status becomes completed;
+- routeRunner metadata reports failure/skipped/error;
+- valueObjectBridge and processingLogs behavior understood;
+- no OpenAI call.
+
+Important:
+This test may require a controlled failure hook. Do not improvise by breaking real DB.
+
+TYPE 6 - Complete route blocking failure
+
+Goal:
+Only if needed, prove failActivityComplete=true blocks completion safely.
+
+Required:
+- local-only;
+- controlled failure simulation;
+- fresh event;
+- server env:
+  CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_persist
+  CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=true
+
+Expected:
+- endpoint returns controlled error status;
+- event remains not completed or state is explicitly understood;
+- error response is structured;
+- no partial duplicate persistence.
+
+This is not recommended until non-blocking failure behavior is proven.
+
+SUCCESS CRITERIA FOR FAILURE BEHAVIOR BLOCK
+
+The failure behavior block is complete only when:
+
+1. All failure paths are documented.
+2. At least one adapter-level validation failure is runtime-tested.
+3. At least one wrong-mode/no-write test is runtime-tested.
+4. If a persistence failure simulation is implemented, it is debug-only and safe.
+5. Non-blocking complete-route failure behavior is tested with failActivityComplete=false.
+6. No production_persist is enabled.
+7. No OpenAI call occurs.
+8. /api/activity/complete is not modified unless there is a dedicated plan.
+9. No canonical proof events are reused.
+10. All tests are documented and committed.
+
+RECOMMENDED PRODUCTION FAILURE POLICY, PROVISIONAL
+
+Provisional default:
+- production_persist should not block activity completion at first.
+- failActivityComplete should remain false by default.
+- routeRunner failures should be visible in metadata/logging.
+- failed routeRunner runs should not be treated as canonical derivations.
+- retry/reprocessing should be handled by a later controlled job or admin/debug tool.
+
+Reason:
+Activity completion is the user-facing workflow.
+Category Derivation is important, but during rollout it should not make basic activity completion fragile.
+
+This policy may change only after failure tests prove strict mode is safe.
+
+NO-GO
+
+Do not enable production_persist.
+Do not remove legacy Category Derivation code.
+Do not switch Value Object Bridge source.
+Do not call OpenAI.
+Do not create UI.
+Do not create database migrations without a dedicated plan.
+Do not modify commercial core.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+Do not force-reset completed events.
+Do not simulate failure by corrupting production-like schema or permissions.
+
+SERVER RESET NOTE
+
+After shadow_persist/debug testing, local dev server should be restarted in disabled mode before ordinary development.
+
+Recommended reset command:
+
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE = "disabled"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG = "false"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE = "false"
+npm.cmd run dev
+
+END OF F5-G-A FAILURE BEHAVIOR TEST PLAN
