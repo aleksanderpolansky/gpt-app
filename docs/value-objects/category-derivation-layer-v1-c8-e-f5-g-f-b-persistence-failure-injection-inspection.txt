@@ -51,7 +51,7 @@ Relevant snippets:
      32:   source?: string | null;
      33:   metadata_json?: Record<string, unknown> | null;
      34: }
-     35: 
+     35:
 >    36: export interface RunCategoryDerivationForCompleteRouteInput {
      37:   supabase: CategoryDerivationCompleteRouteIntegrationSupabaseClient;
      38:   activityEvent: CategoryDerivationCompleteRouteActivityEvent;
@@ -62,26 +62,26 @@ Relevant snippets:
     218:     },
     219:   });
     220: }
-    221: 
+    221:
 >   222: export async function runCategoryDerivationForCompleteRoute(
     223:   params: RunCategoryDerivationForCompleteRouteInput,
     224: ): Promise<CategoryDerivationCompleteRouteIntegrationResult> {
     225:   const config = params.config ?? getCategoryDerivationRouteRunnerConfig();
-    226: 
+    226:
 
 ----- pattern: runCategoryDerivationForCompleteRoute | line: 223 | context: 219-227 -----
     219:   });
     220: }
-    221: 
+    221:
     222: export async function runCategoryDerivationForCompleteRoute(
 >   223:   params: RunCategoryDerivationForCompleteRouteInput,
     224: ): Promise<CategoryDerivationCompleteRouteIntegrationResult> {
     225:   const config = params.config ?? getCategoryDerivationRouteRunnerConfig();
-    226: 
+    226:
     227:   if (config.isDisabled) {
 
 ----- pattern: failActivityComplete | line: 268 | context: 264-272 -----
-    264: 
+    264:
     265:   if (!activityEventId) {
     266:     return baseResult({
     267:       config,
@@ -92,7 +92,7 @@ Relevant snippets:
     272:     });
 
 ----- pattern: failActivityComplete | line: 334 | context: 330-338 -----
-    330: 
+    330:
     331:     if (!idempotency.ok) {
     332:       const result = baseResult({
     333:         config,
@@ -106,12 +106,12 @@ Relevant snippets:
     341:           idempotency,
     342:         },
     343:       });
-    344: 
+    344:
 >   345:       if (config.failActivityComplete) {
     346:         return result;
     347:       }
     348:     }
-    349: 
+    349:
 
 ----- pattern: routeRunner | line: 2 | context: 1-6 -----
       1: import {
@@ -149,7 +149,7 @@ Relevant snippets:
      19:   type RunCategoryDerivationRouteResult,
      20: } from "./routeRunner";
      21: import type { JsonRecord, JsonValue } from "./types";
-     22: 
+     22:
 
 ----- pattern: routeRunner | line: 20 | context: 16-24 -----
      16: import {
@@ -158,17 +158,17 @@ Relevant snippets:
      19:   type RunCategoryDerivationRouteResult,
 >    20: } from "./routeRunner";
      21: import type { JsonRecord, JsonValue } from "./types";
-     22: 
+     22:
      23: export type CategoryDerivationCompleteRouteIntegrationSupabaseClient =
      24:   CategoryDerivationRouteRunnerSupabaseClient & CategoryDerivationRunLookupClient;
 
 ----- pattern: routeRunner | line: 24 | context: 20-28 -----
      20: } from "./routeRunner";
      21: import type { JsonRecord, JsonValue } from "./types";
-     22: 
+     22:
      23: export type CategoryDerivationCompleteRouteIntegrationSupabaseClient =
 >    24:   CategoryDerivationRouteRunnerSupabaseClient & CategoryDerivationRunLookupClient;
-     25: 
+     25:
      26: export interface CategoryDerivationCompleteRouteActivityEvent {
      27:   id?: string | null;
      28:   input_text?: string | null;
@@ -209,7 +209,7 @@ Relevant snippets:
 ----- pattern: routeRunner | line: 148 | context: 144-152 -----
     144:   );
     145: }
-    146: 
+    146:
     147: function baseResult(params: {
 >   148:   config: CategoryDerivationRouteRunnerConfig;
     149:   ok: boolean;
@@ -309,7 +309,7 @@ Relevant snippets:
     188:     debug: params.config.includeResponseDebug ? params.debug ?? null : null,
     189:   };
     190: }
-    191: 
+    191:
 >   192: function mapRouteRunnerResult(params: {
     193:   config: CategoryDerivationRouteRunnerConfig;
     194:   routeRunnerResult: RunCategoryDerivationRouteResult;
@@ -319,7 +319,7 @@ Relevant snippets:
 ----- pattern: routeRunner | line: 193 | context: 189-197 -----
     189:   };
     190: }
-    191: 
+    191:
     192: function mapRouteRunnerResult(params: {
 >   193:   config: CategoryDerivationRouteRunnerConfig;
     194:   routeRunnerResult: RunCategoryDerivationRouteResult;
@@ -329,14 +329,14 @@ Relevant snippets:
 
 ----- pattern: routeRunner | line: 194 | context: 190-198 -----
     190: }
-    191: 
+    191:
     192: function mapRouteRunnerResult(params: {
     193:   config: CategoryDerivationRouteRunnerConfig;
 >   194:   routeRunnerResult: RunCategoryDerivationRouteResult;
     195:   idempotency: FindExistingCompletedCategoryDerivationRunResult | null;
     196: }): CategoryDerivationCompleteRouteIntegrationResult {
     197:   const rowsCreated = params.routeRunnerResult.persistence.rows?.rowsCreated ?? 0;
-    198: 
+    198:
 
 ----- pattern: routeRunner | line: 197 | context: 193-201 -----
     193:   config: CategoryDerivationRouteRunnerConfig;
@@ -344,14 +344,14 @@ Relevant snippets:
     195:   idempotency: FindExistingCompletedCategoryDerivationRunResult | null;
     196: }): CategoryDerivationCompleteRouteIntegrationResult {
 >   197:   const rowsCreated = params.routeRunnerResult.persistence.rows?.rowsCreated ?? 0;
-    198: 
+    198:
     199:   return baseResult({
     200:     config: params.config,
     201:     ok: params.routeRunnerResult.ok,
 
 ----- pattern: routeRunner | line: 201 | context: 197-205 -----
     197:   const rowsCreated = params.routeRunnerResult.persistence.rows?.rowsCreated ?? 0;
-    198: 
+    198:
     199:   return baseResult({
     200:     config: params.config,
 >   201:     ok: params.routeRunnerResult.ok,
@@ -468,15 +468,15 @@ Relevant snippets:
     218:     },
     219:   });
     220: }
-    221: 
+    221:
 
 ----- pattern: routeRunner | line: 225 | context: 221-229 -----
-    221: 
+    221:
     222: export async function runCategoryDerivationForCompleteRoute(
     223:   params: RunCategoryDerivationForCompleteRouteInput,
     224: ): Promise<CategoryDerivationCompleteRouteIntegrationResult> {
 >   225:   const config = params.config ?? getCategoryDerivationRouteRunnerConfig();
-    226: 
+    226:
     227:   if (config.isDisabled) {
     228:     return baseResult({
     229:       config,
@@ -485,7 +485,7 @@ Relevant snippets:
     250:       reason: "legacy_existing_mode_selected",
     251:     });
     252:   }
-    253: 
+    253:
 >   254:   if (!config.usesRouteRunnerInCompleteRoute) {
     255:     return baseResult({
     256:       config,
@@ -496,7 +496,7 @@ Relevant snippets:
     363:       });
     364:     }
     365:   }
-    366: 
+    366:
 >   367:   const routeRunnerResult = await runCategoryDerivationRoute({
     368:     supabase: params.supabase,
     369:     activityEventId,
@@ -512,13 +512,13 @@ Relevant snippets:
     405:       adapterMetadata: asJsonRecord(params.metadata),
     406:     },
     407:   });
-    408: 
+    408:
 
 ----- pattern: routeRunner | line: 409 | context: 405-413 -----
     405:       adapterMetadata: asJsonRecord(params.metadata),
     406:     },
     407:   });
-    408: 
+    408:
 >   409:   return mapRouteRunnerResult({
     410:     config,
     411:     routeRunnerResult,
@@ -527,7 +527,7 @@ Relevant snippets:
 
 ----- pattern: routeRunner | line: 411 | context: 407-414 -----
     407:   });
-    408: 
+    408:
     409:   return mapRouteRunnerResult({
     410:     config,
 >   411:     routeRunnerResult,
@@ -547,7 +547,7 @@ Relevant snippets:
      71:   resolvedCandidateCount: number;
 
 ----- pattern: skipped | line: 150 | context: 146-154 -----
-    146: 
+    146:
     147: function baseResult(params: {
     148:   config: CategoryDerivationRouteRunnerConfig;
     149:   ok: boolean;
@@ -569,7 +569,7 @@ Relevant snippets:
     172:     resolvedCandidateCount: params.resolvedCandidateCount ?? 0,
 
 ----- pattern: skipped | line: 202 | context: 198-206 -----
-    198: 
+    198:
     199:   return baseResult({
     200:     config: params.config,
     201:     ok: params.routeRunnerResult.ok,
@@ -588,7 +588,7 @@ Relevant snippets:
     232:       reason: "disabled",
     233:     });
     234:   }
-    235: 
+    235:
 
 ----- pattern: skipped | line: 240 | context: 236-244 -----
     236:   if (config.isDebugOnly) {
@@ -599,7 +599,7 @@ Relevant snippets:
     241:       reason: "debug_only",
     242:     });
     243:   }
-    244: 
+    244:
 
 ----- pattern: skipped | line: 249 | context: 245-253 -----
     245:   if (config.usesLegacyExistingCompleteRouteFlow) {
@@ -610,7 +610,7 @@ Relevant snippets:
     250:       reason: "legacy_existing_mode_selected",
     251:     });
     252:   }
-    253: 
+    253:
 
 ----- pattern: skipped | line: 258 | context: 254-262 -----
     254:   if (!config.usesRouteRunnerInCompleteRoute) {
@@ -621,7 +621,7 @@ Relevant snippets:
     259:       reason: "not_route_runner_mode",
     260:     });
     261:   }
-    262: 
+    262:
 
 ----- pattern: skipped | line: 269 | context: 265-273 -----
     265:   if (!activityEventId) {
@@ -682,7 +682,7 @@ Relevant snippets:
      46:   ruleVersion?: string;
      47:   metadata?: JsonRecord;
      48: }
-     49: 
+     49:
 >    50: export type CategoryDerivationCompleteRouteIntegrationReason =
      51:   | "disabled"
      52:   | "debug_only"
@@ -741,7 +741,7 @@ Relevant snippets:
 >   232:       reason: "disabled",
     233:     });
     234:   }
-    235: 
+    235:
     236:   if (config.isDebugOnly) {
 
 ----- pattern: reason | line: 241 | context: 237-245 -----
@@ -752,7 +752,7 @@ Relevant snippets:
 >   241:       reason: "debug_only",
     242:     });
     243:   }
-    244: 
+    244:
     245:   if (config.usesLegacyExistingCompleteRouteFlow) {
 
 ----- pattern: reason | line: 250 | context: 246-254 -----
@@ -763,7 +763,7 @@ Relevant snippets:
 >   250:       reason: "legacy_existing_mode_selected",
     251:     });
     252:   }
-    253: 
+    253:
     254:   if (!config.usesRouteRunnerInCompleteRoute) {
 
 ----- pattern: reason | line: 259 | context: 255-263 -----
@@ -774,7 +774,7 @@ Relevant snippets:
 >   259:       reason: "not_route_runner_mode",
     260:     });
     261:   }
-    262: 
+    262:
     263:   const activityEventId = normalizeText(params.activityEvent.id);
 
 ----- pattern: reason | line: 270 | context: 266-274 -----
@@ -786,7 +786,7 @@ Relevant snippets:
     271:       errors: ["activityEvent.id is required for Category Derivation."],
     272:     });
     273:   }
-    274: 
+    274:
 
 ----- pattern: reason | line: 282 | context: 278-286 -----
     278:     return baseResult({
@@ -797,7 +797,7 @@ Relevant snippets:
     283:       derivationRunId: null,
     284:     });
     285:   }
-    286: 
+    286:
 
 ----- pattern: reason | line: 294 | context: 290-298 -----
     290:     return baseResult({
@@ -808,7 +808,7 @@ Relevant snippets:
     295:       derivationRunId: null,
     296:     });
     297:   }
-    298: 
+    298:
 
 ----- pattern: reason | line: 336 | context: 332-340 -----
     332:       const result = baseResult({
@@ -884,7 +884,7 @@ Relevant snippets:
 >   271:       errors: ["activityEvent.id is required for Category Derivation."],
     272:     });
     273:   }
-    274: 
+    274:
     275:   const inputText = getActivityEventInputText(params.activityEvent);
 
 ----- pattern: errors | line: 338 | context: 334-342 -----
@@ -991,18 +991,18 @@ Relevant snippets:
      23:   JsonValue,
      24:   ResolvedCategoryCandidate,
      25: } from "./types";
-     26: 
+     26:
 >    27: export type CategoryDerivationRouteRunnerSupabaseClient =
      28:   CategoryResolverSupabaseClient & CategoryDerivationPersistenceClient;
-     29: 
+     29:
      30: export interface RunCategoryDerivationRouteInput {
      31:   supabase: CategoryDerivationRouteRunnerSupabaseClient;
 
 ----- pattern: run | line: 30 | context: 26-34 -----
-     26: 
+     26:
      27: export type CategoryDerivationRouteRunnerSupabaseClient =
      28:   CategoryResolverSupabaseClient & CategoryDerivationPersistenceClient;
-     29: 
+     29:
 >    30: export interface RunCategoryDerivationRouteInput {
      31:   supabase: CategoryDerivationRouteRunnerSupabaseClient;
      32:   activityEventId: string;
@@ -1012,7 +1012,7 @@ Relevant snippets:
 ----- pattern: run | line: 31 | context: 27-35 -----
      27: export type CategoryDerivationRouteRunnerSupabaseClient =
      28:   CategoryResolverSupabaseClient & CategoryDerivationPersistenceClient;
-     29: 
+     29:
      30: export interface RunCategoryDerivationRouteInput {
 >    31:   supabase: CategoryDerivationRouteRunnerSupabaseClient;
      32:   activityEventId: string;
@@ -1024,7 +1024,7 @@ Relevant snippets:
      41:   resolve?: boolean;
      42:   metadata?: JsonRecord;
      43: }
-     44: 
+     44:
 >    45: export interface RunCategoryDerivationRouteResult {
      46:   ok: boolean;
      47:   activityEventId: string;
@@ -1079,22 +1079,22 @@ Relevant snippets:
     106: function countUnresolved(candidates: ResolvedCategoryCandidate[]): number {
     107:   return candidates.filter((candidate) => !candidate.categoryId).length;
     108: }
-    109: 
+    109:
 >   110: function shouldPersist(input: RunCategoryDerivationRouteInput): boolean {
     111:   return input.persist !== false;
     112: }
-    113: 
+    113:
     114: function shouldResolve(input: RunCategoryDerivationRouteInput): boolean {
 
 ----- pattern: run | line: 114 | context: 110-118 -----
     110: function shouldPersist(input: RunCategoryDerivationRouteInput): boolean {
     111:   return input.persist !== false;
     112: }
-    113: 
+    113:
 >   114: function shouldResolve(input: RunCategoryDerivationRouteInput): boolean {
     115:   return input.resolve !== false;
     116: }
-    117: 
+    117:
     118: function buildOutputJson(params: {
 
 ----- pattern: run | line: 172 | context: 168-176 -----
@@ -1120,7 +1120,7 @@ Relevant snippets:
     177:     metadata: asJsonRecord(params.metadata),
 
 ----- pattern: run | line: 184 | context: 180-188 -----
-    180: 
+    180:
     181: function makeFailureResult(params: {
     182:   activityEventId: string;
     183:   derivation: CategoryDerivationResult;
@@ -1211,7 +1211,7 @@ Relevant snippets:
     208:     metadata: asJsonRecord(params.metadata),
     209:   };
     210: }
-    211: 
+    211:
 >   212: export async function runCategoryDerivationRoute(
     213:   input: RunCategoryDerivationRouteInput,
     214: ): Promise<RunCategoryDerivationRouteResult> {
@@ -1221,7 +1221,7 @@ Relevant snippets:
 ----- pattern: run | line: 213 | context: 209-217 -----
     209:   };
     210: }
-    211: 
+    211:
     212: export async function runCategoryDerivationRoute(
 >   213:   input: RunCategoryDerivationRouteInput,
     214: ): Promise<RunCategoryDerivationRouteResult> {
@@ -1231,7 +1231,7 @@ Relevant snippets:
 
 ----- pattern: run | line: 214 | context: 210-218 -----
     210: }
-    211: 
+    211:
     212: export async function runCategoryDerivationRoute(
     213:   input: RunCategoryDerivationRouteInput,
 >   214: ): Promise<RunCategoryDerivationRouteResult> {
@@ -1244,7 +1244,7 @@ Relevant snippets:
     223:   const derivation = deriveCategoryCandidates(routeInput);
     224:   const warnings: string[] = [...derivation.warnings];
     225:   const errors: string[] = [...derivation.errors];
-    226: 
+    226:
 >   227:   let runCreate: CreateCategoryDerivationRunResult | null = null;
     228:   let runFinish: UpdateCategoryDerivationRunResult | null = null;
     229:   let runFail: UpdateCategoryDerivationRunResult | null = null;
@@ -1254,29 +1254,29 @@ Relevant snippets:
 ----- pattern: run | line: 228 | context: 224-232 -----
     224:   const warnings: string[] = [...derivation.warnings];
     225:   const errors: string[] = [...derivation.errors];
-    226: 
+    226:
     227:   let runCreate: CreateCategoryDerivationRunResult | null = null;
 >   228:   let runFinish: UpdateCategoryDerivationRunResult | null = null;
     229:   let runFail: UpdateCategoryDerivationRunResult | null = null;
     230:   let resolution: CategoryResolutionResult | null = null;
     231:   let persistedRows: PersistActivityCategoryDerivationsResult | null = null;
-    232: 
+    232:
 
 ----- pattern: run | line: 229 | context: 225-233 -----
     225:   const errors: string[] = [...derivation.errors];
-    226: 
+    226:
     227:   let runCreate: CreateCategoryDerivationRunResult | null = null;
     228:   let runFinish: UpdateCategoryDerivationRunResult | null = null;
 >   229:   let runFail: UpdateCategoryDerivationRunResult | null = null;
     230:   let resolution: CategoryResolutionResult | null = null;
     231:   let persistedRows: PersistActivityCategoryDerivationsResult | null = null;
-    232: 
+    232:
     233:   const metadata = resultMetadata({
 
 ----- pattern: run | line: 241 | context: 237-245 -----
     237:     metadata: input.metadata,
     238:   });
-    239: 
+    239:
     240:   if (persistEnabled) {
 >   241:     runCreate = await createCategoryDerivationRun(input.supabase, {
     242:       activityEventId: input.activityEventId,
@@ -1288,26 +1288,26 @@ Relevant snippets:
     263:       },
     264:       metadata,
     265:     });
-    266: 
+    266:
 >   267:     if (!runCreate.ok) {
     268:       errors.push(...runCreate.errors);
-    269: 
+    269:
     270:       return makeFailureResult({
     271:         activityEventId: input.activityEventId,
 
 ----- pattern: run | line: 268 | context: 264-272 -----
     264:       metadata,
     265:     });
-    266: 
+    266:
     267:     if (!runCreate.ok) {
 >   268:       errors.push(...runCreate.errors);
-    269: 
+    269:
     270:       return makeFailureResult({
     271:         activityEventId: input.activityEventId,
     272:         derivation,
 
 ----- pattern: run | line: 273 | context: 269-277 -----
-    269: 
+    269:
     270:       return makeFailureResult({
     271:         activityEventId: input.activityEventId,
     272:         derivation,
@@ -1340,10 +1340,10 @@ Relevant snippets:
     279:     }
 
 ----- pattern: run | line: 300 | context: 296-304 -----
-    296: 
+    296:
     297:   const candidatesToPersist: Array<CategoryCandidate | ResolvedCategoryCandidate> =
     298:     resolution?.candidates ?? derivation.candidates;
-    299: 
+    299:
 >   300:   if (persistEnabled && runCreate?.derivationRunId) {
     301:     persistedRows = await persistActivityCategoryDerivations(input.supabase, {
     302:       activityEventId: input.activityEventId,
@@ -1351,7 +1351,7 @@ Relevant snippets:
     304:       candidates: candidatesToPersist,
 
 ----- pattern: run | line: 303 | context: 299-307 -----
-    299: 
+    299:
     300:   if (persistEnabled && runCreate?.derivationRunId) {
     301:     persistedRows = await persistActivityCategoryDerivations(input.supabase, {
     302:       activityEventId: input.activityEventId,
@@ -1359,13 +1359,13 @@ Relevant snippets:
     304:       candidates: candidatesToPersist,
     305:       defaultSource: "rule",
     306:     });
-    307: 
+    307:
 
 ----- pattern: run | line: 315 | context: 311-319 -----
-    311: 
+    311:
     312:   const hasWarnings = warnings.length > 0;
     313:   const hasErrors = errors.length > 0;
-    314: 
+    314:
 >   315:   if (persistEnabled && runCreate?.derivationRunId) {
     316:     if (hasErrors) {
     317:       runFail = await failCategoryDerivationRun(input.supabase, {
@@ -1374,7 +1374,7 @@ Relevant snippets:
 
 ----- pattern: run | line: 317 | context: 313-321 -----
     313:   const hasErrors = errors.length > 0;
-    314: 
+    314:
     315:   if (persistEnabled && runCreate?.derivationRunId) {
     316:     if (hasErrors) {
 >   317:       runFail = await failCategoryDerivationRun(input.supabase, {
@@ -1384,7 +1384,7 @@ Relevant snippets:
     321:           errors,
 
 ----- pattern: run | line: 318 | context: 314-322 -----
-    314: 
+    314:
     315:   if (persistEnabled && runCreate?.derivationRunId) {
     316:     if (hasErrors) {
     317:       runFail = await failCategoryDerivationRun(input.supabase, {
@@ -1431,22 +1431,22 @@ Relevant snippets:
     343:           metadata,
     344:         }),
     345:       });
-    346: 
+    346:
 >   347:       warnings.push(...runFinish.warnings);
     348:       errors.push(...runFinish.errors);
     349:     }
     350:   }
-    351: 
+    351:
 
 ----- pattern: run | line: 348 | context: 344-352 -----
     344:         }),
     345:       });
-    346: 
+    346:
     347:       warnings.push(...runFinish.warnings);
 >   348:       errors.push(...runFinish.errors);
     349:     }
     350:   }
-    351: 
+    351:
     352:   const resolvedCandidates = resolution?.candidates ?? [];
 
 ----- pattern: run | line: 359 | context: 355-363 -----
@@ -1501,14 +1501,14 @@ Relevant snippets:
       5:   type CategoryResolverSupabaseClient,
 
 ----- pattern: derive | line: 223 | context: 219-227 -----
-    219: 
+    219:
     220:   const persistEnabled = shouldPersist(input);
     221:   const resolveEnabled = shouldResolve(input);
-    222: 
+    222:
 >   223:   const derivation = deriveCategoryCandidates(routeInput);
     224:   const warnings: string[] = [...derivation.warnings];
     225:   const errors: string[] = [...derivation.errors];
-    226: 
+    226:
     227:   let runCreate: CreateCategoryDerivationRunResult | null = null;
 
 ----- pattern: resolve | line: 3 | context: 1-7 -----
@@ -1559,17 +1559,17 @@ Relevant snippets:
      23:   JsonValue,
 >    24:   ResolvedCategoryCandidate,
      25: } from "./types";
-     26: 
+     26:
      27: export type CategoryDerivationRouteRunnerSupabaseClient =
      28:   CategoryResolverSupabaseClient & CategoryDerivationPersistenceClient;
 
 ----- pattern: resolve | line: 28 | context: 24-32 -----
      24:   ResolvedCategoryCandidate,
      25: } from "./types";
-     26: 
+     26:
      27: export type CategoryDerivationRouteRunnerSupabaseClient =
 >    28:   CategoryResolverSupabaseClient & CategoryDerivationPersistenceClient;
-     29: 
+     29:
      30: export interface RunCategoryDerivationRouteInput {
      31:   supabase: CategoryDerivationRouteRunnerSupabaseClient;
      32:   activityEventId: string;
@@ -1593,7 +1593,7 @@ Relevant snippets:
 >    41:   resolve?: boolean;
      42:   metadata?: JsonRecord;
      43: }
-     44: 
+     44:
      45: export interface RunCategoryDerivationRouteResult {
 
 ----- pattern: resolve | line: 49 | context: 45-53 -----
@@ -1619,46 +1619,46 @@ Relevant snippets:
      64: }
 
 ----- pattern: resolve | line: 102 | context: 98-106 -----
-     98: 
+     98:
      99:   return String(value);
     100: }
-    101: 
+    101:
 >   102: function countResolved(candidates: ResolvedCategoryCandidate[]): number {
     103:   return candidates.filter((candidate) => Boolean(candidate.categoryId)).length;
     104: }
-    105: 
+    105:
     106: function countUnresolved(candidates: ResolvedCategoryCandidate[]): number {
 
 ----- pattern: resolve | line: 106 | context: 102-110 -----
     102: function countResolved(candidates: ResolvedCategoryCandidate[]): number {
     103:   return candidates.filter((candidate) => Boolean(candidate.categoryId)).length;
     104: }
-    105: 
+    105:
 >   106: function countUnresolved(candidates: ResolvedCategoryCandidate[]): number {
     107:   return candidates.filter((candidate) => !candidate.categoryId).length;
     108: }
-    109: 
+    109:
     110: function shouldPersist(input: RunCategoryDerivationRouteInput): boolean {
 
 ----- pattern: resolve | line: 114 | context: 110-118 -----
     110: function shouldPersist(input: RunCategoryDerivationRouteInput): boolean {
     111:   return input.persist !== false;
     112: }
-    113: 
+    113:
 >   114: function shouldResolve(input: RunCategoryDerivationRouteInput): boolean {
     115:   return input.resolve !== false;
     116: }
-    117: 
+    117:
     118: function buildOutputJson(params: {
 
 ----- pattern: resolve | line: 115 | context: 111-119 -----
     111:   return input.persist !== false;
     112: }
-    113: 
+    113:
     114: function shouldResolve(input: RunCategoryDerivationRouteInput): boolean {
 >   115:   return input.resolve !== false;
     116: }
-    117: 
+    117:
     118: function buildOutputJson(params: {
     119:   derivation: CategoryDerivationResult;
 
@@ -1709,7 +1709,7 @@ Relevant snippets:
 ----- pattern: resolve | line: 166 | context: 162-170 -----
     162:   };
     163: }
-    164: 
+    164:
     165: function resultMetadata(params: {
 >   166:   resolverOptions?: CategoryResolverOptions;
     167:   persist: boolean;
@@ -1718,7 +1718,7 @@ Relevant snippets:
     170: }): JsonRecord {
 
 ----- pattern: resolve | line: 168 | context: 164-172 -----
-    164: 
+    164:
     165: function resultMetadata(params: {
     166:   resolverOptions?: CategoryResolverOptions;
     167:   persist: boolean;
@@ -1748,7 +1748,7 @@ Relevant snippets:
     177:     metadata: asJsonRecord(params.metadata),
     178:   };
     179: }
-    180: 
+    180:
 
 ----- pattern: resolve | line: 194 | context: 190-198 -----
     190:   return {
@@ -1775,10 +1775,10 @@ Relevant snippets:
 ----- pattern: resolve | line: 221 | context: 217-225 -----
     217:     activityEventId: input.activityEventId,
     218:   };
-    219: 
+    219:
     220:   const persistEnabled = shouldPersist(input);
 >   221:   const resolveEnabled = shouldResolve(input);
-    222: 
+    222:
     223:   const derivation = deriveCategoryCandidates(routeInput);
     224:   const warnings: string[] = [...derivation.warnings];
     225:   const errors: string[] = [...derivation.errors];
@@ -1786,7 +1786,7 @@ Relevant snippets:
 ----- pattern: resolve | line: 234 | context: 230-238 -----
     230:   let resolution: CategoryResolutionResult | null = null;
     231:   let persistedRows: PersistActivityCategoryDerivationsResult | null = null;
-    232: 
+    232:
     233:   const metadata = resultMetadata({
 >   234:     resolverOptions: input.resolverOptions,
     235:     persist: persistEnabled,
@@ -1795,21 +1795,21 @@ Relevant snippets:
     238:   });
 
 ----- pattern: resolve | line: 236 | context: 232-240 -----
-    232: 
+    232:
     233:   const metadata = resultMetadata({
     234:     resolverOptions: input.resolverOptions,
     235:     persist: persistEnabled,
 >   236:     resolve: resolveEnabled,
     237:     metadata: input.metadata,
     238:   });
-    239: 
+    239:
     240:   if (persistEnabled) {
 
 ----- pattern: resolve | line: 282 | context: 278-286 -----
     278:       });
     279:     }
     280:   }
-    281: 
+    281:
 >   282:   if (resolveEnabled && derivation.candidates.length > 0) {
     283:     resolution = await resolveCategoryCandidates(
     284:       input.supabase,
@@ -1819,7 +1819,7 @@ Relevant snippets:
 ----- pattern: resolve | line: 283 | context: 279-287 -----
     279:     }
     280:   }
-    281: 
+    281:
     282:   if (resolveEnabled && derivation.candidates.length > 0) {
 >   283:     resolution = await resolveCategoryCandidates(
     284:       input.supabase,
@@ -1842,10 +1842,10 @@ Relevant snippets:
     293:     warnings.push(...resolution.warnings);
     294:     errors.push(...resolution.errors);
     295:   }
-    296: 
+    296:
 >   297:   const candidatesToPersist: Array<CategoryCandidate | ResolvedCategoryCandidate> =
     298:     resolution?.candidates ?? derivation.candidates;
-    299: 
+    299:
     300:   if (persistEnabled && runCreate?.derivationRunId) {
     301:     persistedRows = await persistActivityCategoryDerivations(input.supabase, {
 
@@ -1864,9 +1864,9 @@ Relevant snippets:
     348:       errors.push(...runFinish.errors);
     349:     }
     350:   }
-    351: 
+    351:
 >   352:   const resolvedCandidates = resolution?.candidates ?? [];
-    353: 
+    353:
     354:   return {
     355:     ok: errors.length === 0,
     356:     activityEventId: input.activityEventId,
@@ -1940,10 +1940,10 @@ Relevant snippets:
 ----- pattern: persist | line: 28 | context: 24-32 -----
      24:   ResolvedCategoryCandidate,
      25: } from "./types";
-     26: 
+     26:
      27: export type CategoryDerivationRouteRunnerSupabaseClient =
 >    28:   CategoryResolverSupabaseClient & CategoryDerivationPersistenceClient;
-     29: 
+     29:
      30: export interface RunCategoryDerivationRouteInput {
      31:   supabase: CategoryDerivationRouteRunnerSupabaseClient;
      32:   activityEventId: string;
@@ -1957,10 +1957,10 @@ Relevant snippets:
      41:   resolve?: boolean;
      42:   metadata?: JsonRecord;
      43: }
-     44: 
+     44:
 
 ----- pattern: persist | line: 48 | context: 44-52 -----
-     44: 
+     44:
      45: export interface RunCategoryDerivationRouteResult {
      46:   ok: boolean;
      47:   activityEventId: string;
@@ -1996,26 +1996,26 @@ Relevant snippets:
     106: function countUnresolved(candidates: ResolvedCategoryCandidate[]): number {
     107:   return candidates.filter((candidate) => !candidate.categoryId).length;
     108: }
-    109: 
+    109:
 >   110: function shouldPersist(input: RunCategoryDerivationRouteInput): boolean {
     111:   return input.persist !== false;
     112: }
-    113: 
+    113:
     114: function shouldResolve(input: RunCategoryDerivationRouteInput): boolean {
 
 ----- pattern: persist | line: 111 | context: 107-115 -----
     107:   return candidates.filter((candidate) => !candidate.categoryId).length;
     108: }
-    109: 
+    109:
     110: function shouldPersist(input: RunCategoryDerivationRouteInput): boolean {
 >   111:   return input.persist !== false;
     112: }
-    113: 
+    113:
     114: function shouldResolve(input: RunCategoryDerivationRouteInput): boolean {
     115:   return input.resolve !== false;
 
 ----- pattern: persist | line: 121 | context: 117-125 -----
-    117: 
+    117:
     118: function buildOutputJson(params: {
     119:   derivation: CategoryDerivationResult;
     120:   resolution: CategoryResolutionResult | null;
@@ -2115,7 +2115,7 @@ Relevant snippets:
 
 ----- pattern: persist | line: 167 | context: 163-171 -----
     163: }
-    164: 
+    164:
     165: function resultMetadata(params: {
     166:   resolverOptions?: CategoryResolverOptions;
 >   167:   persist: boolean;
@@ -2161,10 +2161,10 @@ Relevant snippets:
     216:     ...input.input,
     217:     activityEventId: input.activityEventId,
     218:   };
-    219: 
+    219:
 >   220:   const persistEnabled = shouldPersist(input);
     221:   const resolveEnabled = shouldResolve(input);
-    222: 
+    222:
     223:   const derivation = deriveCategoryCandidates(routeInput);
     224:   const warnings: string[] = [...derivation.warnings];
 
@@ -2174,27 +2174,27 @@ Relevant snippets:
     229:   let runFail: UpdateCategoryDerivationRunResult | null = null;
     230:   let resolution: CategoryResolutionResult | null = null;
 >   231:   let persistedRows: PersistActivityCategoryDerivationsResult | null = null;
-    232: 
+    232:
     233:   const metadata = resultMetadata({
     234:     resolverOptions: input.resolverOptions,
     235:     persist: persistEnabled,
 
 ----- pattern: persist | line: 235 | context: 231-239 -----
     231:   let persistedRows: PersistActivityCategoryDerivationsResult | null = null;
-    232: 
+    232:
     233:   const metadata = resultMetadata({
     234:     resolverOptions: input.resolverOptions,
 >   235:     persist: persistEnabled,
     236:     resolve: resolveEnabled,
     237:     metadata: input.metadata,
     238:   });
-    239: 
+    239:
 
 ----- pattern: persist | line: 240 | context: 236-244 -----
     236:     resolve: resolveEnabled,
     237:     metadata: input.metadata,
     238:   });
-    239: 
+    239:
 >   240:   if (persistEnabled) {
     241:     runCreate = await createCategoryDerivationRun(input.supabase, {
     242:       activityEventId: input.activityEventId,
@@ -2205,18 +2205,18 @@ Relevant snippets:
     293:     warnings.push(...resolution.warnings);
     294:     errors.push(...resolution.errors);
     295:   }
-    296: 
+    296:
 >   297:   const candidatesToPersist: Array<CategoryCandidate | ResolvedCategoryCandidate> =
     298:     resolution?.candidates ?? derivation.candidates;
-    299: 
+    299:
     300:   if (persistEnabled && runCreate?.derivationRunId) {
     301:     persistedRows = await persistActivityCategoryDerivations(input.supabase, {
 
 ----- pattern: persist | line: 300 | context: 296-304 -----
-    296: 
+    296:
     297:   const candidatesToPersist: Array<CategoryCandidate | ResolvedCategoryCandidate> =
     298:     resolution?.candidates ?? derivation.candidates;
-    299: 
+    299:
 >   300:   if (persistEnabled && runCreate?.derivationRunId) {
     301:     persistedRows = await persistActivityCategoryDerivations(input.supabase, {
     302:       activityEventId: input.activityEventId,
@@ -2226,7 +2226,7 @@ Relevant snippets:
 ----- pattern: persist | line: 301 | context: 297-305 -----
     297:   const candidatesToPersist: Array<CategoryCandidate | ResolvedCategoryCandidate> =
     298:     resolution?.candidates ?? derivation.candidates;
-    299: 
+    299:
     300:   if (persistEnabled && runCreate?.derivationRunId) {
 >   301:     persistedRows = await persistActivityCategoryDerivations(input.supabase, {
     302:       activityEventId: input.activityEventId,
@@ -2242,36 +2242,36 @@ Relevant snippets:
 >   304:       candidates: candidatesToPersist,
     305:       defaultSource: "rule",
     306:     });
-    307: 
+    307:
     308:     warnings.push(...persistedRows.warnings);
 
 ----- pattern: persist | line: 308 | context: 304-312 -----
     304:       candidates: candidatesToPersist,
     305:       defaultSource: "rule",
     306:     });
-    307: 
+    307:
 >   308:     warnings.push(...persistedRows.warnings);
     309:     errors.push(...persistedRows.errors);
     310:   }
-    311: 
+    311:
     312:   const hasWarnings = warnings.length > 0;
 
 ----- pattern: persist | line: 309 | context: 305-313 -----
     305:       defaultSource: "rule",
     306:     });
-    307: 
+    307:
     308:     warnings.push(...persistedRows.warnings);
 >   309:     errors.push(...persistedRows.errors);
     310:   }
-    311: 
+    311:
     312:   const hasWarnings = warnings.length > 0;
     313:   const hasErrors = errors.length > 0;
 
 ----- pattern: persist | line: 315 | context: 311-319 -----
-    311: 
+    311:
     312:   const hasWarnings = warnings.length > 0;
     313:   const hasErrors = errors.length > 0;
-    314: 
+    314:
 >   315:   if (persistEnabled && runCreate?.derivationRunId) {
     316:     if (hasErrors) {
     317:       runFail = await failCategoryDerivationRun(input.supabase, {
@@ -2298,10 +2298,10 @@ Relevant snippets:
     343:           metadata,
     344:         }),
     345:       });
-    346: 
+    346:
 
 ----- pattern: persist | line: 357 | context: 353-361 -----
-    353: 
+    353:
     354:   return {
     355:     ok: errors.length === 0,
     356:     activityEventId: input.activityEventId,
@@ -2337,21 +2337,21 @@ Relevant snippets:
     106: function countUnresolved(candidates: ResolvedCategoryCandidate[]): number {
     107:   return candidates.filter((candidate) => !candidate.categoryId).length;
     108: }
-    109: 
+    109:
 >   110: function shouldPersist(input: RunCategoryDerivationRouteInput): boolean {
     111:   return input.persist !== false;
     112: }
-    113: 
+    113:
     114: function shouldResolve(input: RunCategoryDerivationRouteInput): boolean {
 
 ----- pattern: shouldPersist | line: 220 | context: 216-224 -----
     216:     ...input.input,
     217:     activityEventId: input.activityEventId,
     218:   };
-    219: 
+    219:
 >   220:   const persistEnabled = shouldPersist(input);
     221:   const resolveEnabled = shouldResolve(input);
-    222: 
+    222:
     223:   const derivation = deriveCategoryCandidates(routeInput);
     224:   const warnings: string[] = [...derivation.warnings];
 
@@ -2380,10 +2380,10 @@ Relevant snippets:
 ----- pattern: persistence | line: 28 | context: 24-32 -----
      24:   ResolvedCategoryCandidate,
      25: } from "./types";
-     26: 
+     26:
      27: export type CategoryDerivationRouteRunnerSupabaseClient =
 >    28:   CategoryResolverSupabaseClient & CategoryDerivationPersistenceClient;
-     29: 
+     29:
      30: export interface RunCategoryDerivationRouteInput {
      31:   supabase: CategoryDerivationRouteRunnerSupabaseClient;
      32:   activityEventId: string;
@@ -2400,7 +2400,7 @@ Relevant snippets:
      57:     runFail: UpdateCategoryDerivationRunResult | null;
 
 ----- pattern: persistence | line: 121 | context: 117-125 -----
-    117: 
+    117:
     118: function buildOutputJson(params: {
     119:   derivation: CategoryDerivationResult;
     120:   resolution: CategoryResolutionResult | null;
@@ -2529,7 +2529,7 @@ Relevant snippets:
     343:           metadata,
     344:         }),
     345:       });
-    346: 
+    346:
 
 ----- pattern: persistence | line: 362 | context: 358-366 -----
     358:     resolved: Boolean(resolution),
@@ -2568,18 +2568,18 @@ Relevant snippets:
 ----- pattern: category_derivation_runs | line: 306 | context: 302-310 -----
     302:     error_json: null,
     303:   };
-    304: 
+    304:
     305:   const { data, error } = await supabase
 >   306:     .from<CategoryDerivationRunRow>("category_derivation_runs")
     307:     .insert(payload)
     308:     .select("*")
     309:     .maybeSingle();
-    310: 
+    310:
 
 ----- pattern: category_derivation_runs | line: 348 | context: 344-352 -----
     344:     finished_at: new Date().toISOString(),
     345:   };
-    346: 
+    346:
     347:   const { data, error } = await supabase
 >   348:     .from<CategoryDerivationRunRow>("category_derivation_runs")
     349:     .update(payload)
@@ -2590,7 +2590,7 @@ Relevant snippets:
 ----- pattern: category_derivation_runs | line: 401 | context: 397-405 -----
     397:     finished_at: new Date().toISOString(),
     398:   };
-    399: 
+    399:
     400:   const { data, error } = await supabase
 >   401:     .from<CategoryDerivationRunRow>("category_derivation_runs")
     402:     .update(payload)
@@ -2601,96 +2601,96 @@ Relevant snippets:
 ----- pattern: activity_category_derivations | line: 532 | context: 528-536 -----
     528:       needsReviewCount += 1;
     529:     }
-    530: 
+    530:
     531:     const { data, error } = await supabase
 >   532:       .from<ActivityCategoryDerivationRow>("activity_category_derivations")
     533:       .insert(candidatePayload(input, candidate))
     534:       .select("*")
     535:       .maybeSingle();
-    536: 
+    536:
 
 ----- pattern: insert | line: 23 | context: 19-27 -----
      19:   data: T | null;
      20:   error: SupabaseErrorLike | null;
      21: };
-     22: 
+     22:
 >    23: interface SupabaseInsertSelectBuilder<T> {
      24:   select(columns?: string): SupabaseInsertSelectBuilder<T>;
      25:   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
      26: }
-     27: 
+     27:
 
 ----- pattern: insert | line: 24 | context: 20-28 -----
      20:   error: SupabaseErrorLike | null;
      21: };
-     22: 
+     22:
      23: interface SupabaseInsertSelectBuilder<T> {
 >    24:   select(columns?: string): SupabaseInsertSelectBuilder<T>;
      25:   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
      26: }
-     27: 
+     27:
      28: interface SupabaseUpdateSelectBuilder<T> {
 
 ----- pattern: insert | line: 35 | context: 31-39 -----
      31:   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
      32: }
-     33: 
+     33:
      34: interface SupabaseTableClient<T> {
 >    35:   insert(payload: Record<string, unknown>): SupabaseInsertSelectBuilder<T>;
      36:   update(payload: Record<string, unknown>): SupabaseUpdateSelectBuilder<T>;
      37: }
-     38: 
+     38:
      39: export interface CategoryDerivationPersistenceClient {
 
 ----- pattern: insert | line: 307 | context: 303-311 -----
     303:   };
-    304: 
+    304:
     305:   const { data, error } = await supabase
     306:     .from<CategoryDerivationRunRow>("category_derivation_runs")
 >   307:     .insert(payload)
     308:     .select("*")
     309:     .maybeSingle();
-    310: 
+    310:
     311:   if (error || !data) {
 
 ----- pattern: insert | line: 533 | context: 529-537 -----
     529:     }
-    530: 
+    530:
     531:     const { data, error } = await supabase
     532:       .from<ActivityCategoryDerivationRow>("activity_category_derivations")
 >   533:       .insert(candidatePayload(input, candidate))
     534:       .select("*")
     535:       .maybeSingle();
-    536: 
+    536:
     537:     if (error || !data) {
 
 ----- pattern: select | line: 23 | context: 19-27 -----
      19:   data: T | null;
      20:   error: SupabaseErrorLike | null;
      21: };
-     22: 
+     22:
 >    23: interface SupabaseInsertSelectBuilder<T> {
      24:   select(columns?: string): SupabaseInsertSelectBuilder<T>;
      25:   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
      26: }
-     27: 
+     27:
 
 ----- pattern: select | line: 24 | context: 20-28 -----
      20:   error: SupabaseErrorLike | null;
      21: };
-     22: 
+     22:
      23: interface SupabaseInsertSelectBuilder<T> {
 >    24:   select(columns?: string): SupabaseInsertSelectBuilder<T>;
      25:   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
      26: }
-     27: 
+     27:
      28: interface SupabaseUpdateSelectBuilder<T> {
 
 ----- pattern: select | line: 28 | context: 24-32 -----
      24:   select(columns?: string): SupabaseInsertSelectBuilder<T>;
      25:   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
      26: }
-     27: 
+     27:
 >    28: interface SupabaseUpdateSelectBuilder<T> {
      29:   eq(column: string, value: string | number | boolean | null): SupabaseUpdateSelectBuilder<T>;
      30:   select(columns?: string): SupabaseUpdateSelectBuilder<T>;
@@ -2700,55 +2700,55 @@ Relevant snippets:
 ----- pattern: select | line: 29 | context: 25-33 -----
      25:   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
      26: }
-     27: 
+     27:
      28: interface SupabaseUpdateSelectBuilder<T> {
 >    29:   eq(column: string, value: string | number | boolean | null): SupabaseUpdateSelectBuilder<T>;
      30:   select(columns?: string): SupabaseUpdateSelectBuilder<T>;
      31:   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
      32: }
-     33: 
+     33:
 
 ----- pattern: select | line: 30 | context: 26-34 -----
      26: }
-     27: 
+     27:
      28: interface SupabaseUpdateSelectBuilder<T> {
      29:   eq(column: string, value: string | number | boolean | null): SupabaseUpdateSelectBuilder<T>;
 >    30:   select(columns?: string): SupabaseUpdateSelectBuilder<T>;
      31:   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
      32: }
-     33: 
+     33:
      34: interface SupabaseTableClient<T> {
 
 ----- pattern: select | line: 35 | context: 31-39 -----
      31:   maybeSingle(): Promise<SupabaseMaybeSingleResult<T>>;
      32: }
-     33: 
+     33:
      34: interface SupabaseTableClient<T> {
 >    35:   insert(payload: Record<string, unknown>): SupabaseInsertSelectBuilder<T>;
      36:   update(payload: Record<string, unknown>): SupabaseUpdateSelectBuilder<T>;
      37: }
-     38: 
+     38:
      39: export interface CategoryDerivationPersistenceClient {
 
 ----- pattern: select | line: 36 | context: 32-40 -----
      32: }
-     33: 
+     33:
      34: interface SupabaseTableClient<T> {
      35:   insert(payload: Record<string, unknown>): SupabaseInsertSelectBuilder<T>;
 >    36:   update(payload: Record<string, unknown>): SupabaseUpdateSelectBuilder<T>;
      37: }
-     38: 
+     38:
      39: export interface CategoryDerivationPersistenceClient {
      40:   from<T = Record<string, unknown>>(table: string): SupabaseTableClient<T>;
 
 ----- pattern: select | line: 308 | context: 304-312 -----
-    304: 
+    304:
     305:   const { data, error } = await supabase
     306:     .from<CategoryDerivationRunRow>("category_derivation_runs")
     307:     .insert(payload)
 >   308:     .select("*")
     309:     .maybeSingle();
-    310: 
+    310:
     311:   if (error || !data) {
     312:     return {
 
@@ -2759,7 +2759,7 @@ Relevant snippets:
     350:     .eq("id", params.derivationRunId)
 >   351:     .select("*")
     352:     .maybeSingle();
-    353: 
+    353:
     354:   if (error || !data) {
     355:     return {
 
@@ -2770,18 +2770,18 @@ Relevant snippets:
     403:     .eq("id", params.derivationRunId)
 >   404:     .select("*")
     405:     .maybeSingle();
-    406: 
+    406:
     407:   if (error || !data) {
     408:     return {
 
 ----- pattern: select | line: 534 | context: 530-538 -----
-    530: 
+    530:
     531:     const { data, error } = await supabase
     532:       .from<ActivityCategoryDerivationRow>("activity_category_derivations")
     533:       .insert(candidatePayload(input, candidate))
 >   534:       .select("*")
     535:       .maybeSingle();
-    536: 
+    536:
     537:     if (error || !data) {
     538:       errors.push(`${candidate.slug}: ${errorMessage(error)}`);
 
@@ -2789,7 +2789,7 @@ Relevant snippets:
       7:   JsonValue,
       8:   ResolvedCategoryCandidate,
       9: } from "./types";
-     10: 
+     10:
 >    11: type SupabaseErrorLike = {
      12:   message?: string;
      13:   details?: string;
@@ -2798,12 +2798,12 @@ Relevant snippets:
 
 ----- pattern: error | line: 20 | context: 16-24 -----
      16: };
-     17: 
+     17:
      18: type SupabaseMaybeSingleResult<T> = {
      19:   data: T | null;
 >    20:   error: SupabaseErrorLike | null;
      21: };
-     22: 
+     22:
      23: interface SupabaseInsertSelectBuilder<T> {
      24:   select(columns?: string): SupabaseInsertSelectBuilder<T>;
 
@@ -2826,18 +2826,18 @@ Relevant snippets:
 >   129:   errors: string[];
     130:   warnings: string[];
     131: }
-    132: 
+    132:
     133: export interface FinishCategoryDerivationRunInput {
 
 ----- pattern: error | line: 145 | context: 141-149 -----
     141: }
-    142: 
+    142:
     143: export interface FailCategoryDerivationRunInput {
     144:   derivationRunId: string;
 >   145:   error: string | Error | JsonRecord;
     146:   outputJson?: JsonRecord;
     147: }
-    148: 
+    148:
     149: export interface UpdateCategoryDerivationRunResult {
 
 ----- pattern: error | line: 153 | context: 149-157 -----
@@ -2848,7 +2848,7 @@ Relevant snippets:
 >   153:   errors: string[];
     154:   warnings: string[];
     155: }
-    156: 
+    156:
     157: export interface PersistActivityCategoryDerivationsInput {
 
 ----- pattern: error | line: 173 | context: 169-177 -----
@@ -2859,39 +2859,39 @@ Relevant snippets:
 >   173:   errors: string[];
     174:   warnings: string[];
     175: }
-    176: 
+    176:
     177: function errorMessage(error: SupabaseErrorLike | string | Error | null | undefined): string {
 
 ----- pattern: error | line: 177 | context: 173-181 -----
     173:   errors: string[];
     174:   warnings: string[];
     175: }
-    176: 
+    176:
 >   177: function errorMessage(error: SupabaseErrorLike | string | Error | null | undefined): string {
     178:   if (!error) {
     179:     return "Unknown error";
     180:   }
-    181: 
+    181:
 
 ----- pattern: error | line: 178 | context: 174-182 -----
     174:   warnings: string[];
     175: }
-    176: 
+    176:
     177: function errorMessage(error: SupabaseErrorLike | string | Error | null | undefined): string {
 >   178:   if (!error) {
     179:     return "Unknown error";
     180:   }
-    181: 
+    181:
     182:   if (typeof error === "string") {
 
 ----- pattern: error | line: 179 | context: 175-183 -----
     175: }
-    176: 
+    176:
     177: function errorMessage(error: SupabaseErrorLike | string | Error | null | undefined): string {
     178:   if (!error) {
 >   179:     return "Unknown error";
     180:   }
-    181: 
+    181:
     182:   if (typeof error === "string") {
     183:     return error;
 
@@ -2899,21 +2899,21 @@ Relevant snippets:
     178:   if (!error) {
     179:     return "Unknown error";
     180:   }
-    181: 
+    181:
 >   182:   if (typeof error === "string") {
     183:     return error;
     184:   }
-    185: 
+    185:
     186:   if (error instanceof Error) {
 
 ----- pattern: error | line: 183 | context: 179-187 -----
     179:     return "Unknown error";
     180:   }
-    181: 
+    181:
     182:   if (typeof error === "string") {
 >   183:     return error;
     184:   }
-    185: 
+    185:
     186:   if (error instanceof Error) {
     187:     return error.message;
 
@@ -2921,21 +2921,21 @@ Relevant snippets:
     182:   if (typeof error === "string") {
     183:     return error;
     184:   }
-    185: 
+    185:
 >   186:   if (error instanceof Error) {
     187:     return error.message;
     188:   }
-    189: 
+    189:
     190:   return error.message ?? JSON.stringify(error);
 
 ----- pattern: error | line: 187 | context: 183-191 -----
     183:     return error;
     184:   }
-    185: 
+    185:
     186:   if (error instanceof Error) {
 >   187:     return error.message;
     188:   }
-    189: 
+    189:
     190:   return error.message ?? JSON.stringify(error);
     191: }
 
@@ -2943,10 +2943,10 @@ Relevant snippets:
     186:   if (error instanceof Error) {
     187:     return error.message;
     188:   }
-    189: 
+    189:
 >   190:   return error.message ?? JSON.stringify(error);
     191: }
-    192: 
+    192:
     193: function asJsonRecord(value: JsonRecord | null | undefined): JsonRecord {
     194:   return value ?? {};
 
@@ -2957,7 +2957,7 @@ Relevant snippets:
     301:     output_json: asJsonRecord(params.outputJson),
 >   302:     error_json: null,
     303:   };
-    304: 
+    304:
     305:   const { data, error } = await supabase
     306:     .from<CategoryDerivationRunRow>("category_derivation_runs")
 
@@ -2965,7 +2965,7 @@ Relevant snippets:
     301:     output_json: asJsonRecord(params.outputJson),
     302:     error_json: null,
     303:   };
-    304: 
+    304:
 >   305:   const { data, error } = await supabase
     306:     .from<CategoryDerivationRunRow>("category_derivation_runs")
     307:     .insert(payload)
@@ -2976,7 +2976,7 @@ Relevant snippets:
     307:     .insert(payload)
     308:     .select("*")
     309:     .maybeSingle();
-    310: 
+    310:
 >   311:   if (error || !data) {
     312:     return {
     313:       ok: false,
@@ -2992,7 +2992,7 @@ Relevant snippets:
     318:       warnings: [],
     319:     };
     320:   }
-    321: 
+    321:
 
 ----- pattern: error | line: 327 | context: 323-331 -----
     323:     ok: true,
@@ -3003,7 +3003,7 @@ Relevant snippets:
     328:     warnings: [],
     329:   };
     330: }
-    331: 
+    331:
 
 ----- pattern: error | line: 343 | context: 339-347 -----
     339:     needs_user_confirmation: params.needsUserConfirmation ?? false,
@@ -3013,14 +3013,14 @@ Relevant snippets:
 >   343:     error_json: null,
     344:     finished_at: new Date().toISOString(),
     345:   };
-    346: 
+    346:
     347:   const { data, error } = await supabase
 
 ----- pattern: error | line: 347 | context: 343-351 -----
     343:     error_json: null,
     344:     finished_at: new Date().toISOString(),
     345:   };
-    346: 
+    346:
 >   347:   const { data, error } = await supabase
     348:     .from<CategoryDerivationRunRow>("category_derivation_runs")
     349:     .update(payload)
@@ -3031,7 +3031,7 @@ Relevant snippets:
     350:     .eq("id", params.derivationRunId)
     351:     .select("*")
     352:     .maybeSingle();
-    353: 
+    353:
 >   354:   if (error || !data) {
     355:     return {
     356:       ok: false,
@@ -3047,7 +3047,7 @@ Relevant snippets:
     360:       warnings: [],
     361:     };
     362:   }
-    363: 
+    363:
 
 ----- pattern: error | line: 368 | context: 364-372 -----
     364:   return {
@@ -3058,38 +3058,38 @@ Relevant snippets:
     369:     warnings: [],
     370:   };
     371: }
-    372: 
+    372:
 
 ----- pattern: error | line: 373 | context: 369-377 -----
     369:     warnings: [],
     370:   };
     371: }
-    372: 
+    372:
 >   373: function normalizeFailureError(error: string | Error | JsonRecord): JsonRecord {
     374:   if (typeof error === "string") {
     375:     return { message: error };
     376:   }
-    377: 
+    377:
 
 ----- pattern: error | line: 374 | context: 370-378 -----
     370:   };
     371: }
-    372: 
+    372:
     373: function normalizeFailureError(error: string | Error | JsonRecord): JsonRecord {
 >   374:   if (typeof error === "string") {
     375:     return { message: error };
     376:   }
-    377: 
+    377:
     378:   if (error instanceof Error) {
 
 ----- pattern: error | line: 375 | context: 371-379 -----
     371: }
-    372: 
+    372:
     373: function normalizeFailureError(error: string | Error | JsonRecord): JsonRecord {
     374:   if (typeof error === "string") {
 >   375:     return { message: error };
     376:   }
-    377: 
+    377:
     378:   if (error instanceof Error) {
     379:     return {
 
@@ -3097,7 +3097,7 @@ Relevant snippets:
     374:   if (typeof error === "string") {
     375:     return { message: error };
     376:   }
-    377: 
+    377:
 >   378:   if (error instanceof Error) {
     379:     return {
     380:       message: error.message,
@@ -3106,7 +3106,7 @@ Relevant snippets:
 
 ----- pattern: error | line: 380 | context: 376-384 -----
     376:   }
-    377: 
+    377:
     378:   if (error instanceof Error) {
     379:     return {
 >   380:       message: error.message,
@@ -3116,7 +3116,7 @@ Relevant snippets:
     384:   }
 
 ----- pattern: error | line: 381 | context: 377-385 -----
-    377: 
+    377:
     378:   if (error instanceof Error) {
     379:     return {
     380:       message: error.message,
@@ -3124,7 +3124,7 @@ Relevant snippets:
     382:       stack: error.stack ?? null,
     383:     };
     384:   }
-    385: 
+    385:
 
 ----- pattern: error | line: 382 | context: 378-386 -----
     378:   if (error instanceof Error) {
@@ -3134,17 +3134,17 @@ Relevant snippets:
 >   382:       stack: error.stack ?? null,
     383:     };
     384:   }
-    385: 
+    385:
     386:   return error;
 
 ----- pattern: error | line: 386 | context: 382-390 -----
     382:       stack: error.stack ?? null,
     383:     };
     384:   }
-    385: 
+    385:
 >   386:   return error;
     387: }
-    388: 
+    388:
     389: export async function failCategoryDerivationRun(
     390:   supabase: CategoryDerivationPersistenceClient,
 
@@ -3156,14 +3156,14 @@ Relevant snippets:
 >   396:     error_json: normalizeFailureError(params.error),
     397:     finished_at: new Date().toISOString(),
     398:   };
-    399: 
+    399:
     400:   const { data, error } = await supabase
 
 ----- pattern: error | line: 400 | context: 396-404 -----
     396:     error_json: normalizeFailureError(params.error),
     397:     finished_at: new Date().toISOString(),
     398:   };
-    399: 
+    399:
 >   400:   const { data, error } = await supabase
     401:     .from<CategoryDerivationRunRow>("category_derivation_runs")
     402:     .update(payload)
@@ -3174,7 +3174,7 @@ Relevant snippets:
     403:     .eq("id", params.derivationRunId)
     404:     .select("*")
     405:     .maybeSingle();
-    406: 
+    406:
 >   407:   if (error || !data) {
     408:     return {
     409:       ok: false,
@@ -3190,7 +3190,7 @@ Relevant snippets:
     413:       warnings: [],
     414:     };
     415:   }
-    416: 
+    416:
 
 ----- pattern: error | line: 421 | context: 417-425 -----
     417:   return {
@@ -3201,7 +3201,7 @@ Relevant snippets:
     422:     warnings: [],
     423:   };
     424: }
-    425: 
+    425:
 
 ----- pattern: error | line: 510 | context: 506-514 -----
     506:   supabase: CategoryDerivationPersistenceClient,
@@ -3218,7 +3218,7 @@ Relevant snippets:
     527:     if (status === "needs_review") {
     528:       needsReviewCount += 1;
     529:     }
-    530: 
+    530:
 >   531:     const { data, error } = await supabase
     532:       .from<ActivityCategoryDerivationRow>("activity_category_derivations")
     533:       .insert(candidatePayload(input, candidate))
@@ -3229,28 +3229,28 @@ Relevant snippets:
     533:       .insert(candidatePayload(input, candidate))
     534:       .select("*")
     535:       .maybeSingle();
-    536: 
+    536:
 >   537:     if (error || !data) {
     538:       errors.push(`${candidate.slug}: ${errorMessage(error)}`);
     539:       continue;
     540:     }
-    541: 
+    541:
 
 ----- pattern: error | line: 538 | context: 534-542 -----
     534:       .select("*")
     535:       .maybeSingle();
-    536: 
+    536:
     537:     if (error || !data) {
 >   538:       errors.push(`${candidate.slug}: ${errorMessage(error)}`);
     539:       continue;
     540:     }
-    541: 
+    541:
     542:     rows.push(data);
 
 ----- pattern: error | line: 546 | context: 542-550 -----
     542:     rows.push(data);
     543:   }
-    544: 
+    544:
     545:   return {
 >   546:     ok: errors.length === 0,
     547:     activityEventId: input.activityEventId,
@@ -3272,18 +3272,18 @@ Relevant snippets:
      35:   insert(payload: Record<string, unknown>): SupabaseInsertSelectBuilder<T>;
      36:   update(payload: Record<string, unknown>): SupabaseUpdateSelectBuilder<T>;
      37: }
-     38: 
+     38:
 >    39: export interface CategoryDerivationPersistenceClient {
      40:   from<T = Record<string, unknown>>(table: string): SupabaseTableClient<T>;
      41: }
-     42: 
+     42:
      43: export type ActivityCategoryDerivationStatus =
 
 ----- pattern: persist | line: 157 | context: 153-161 -----
     153:   errors: string[];
     154:   warnings: string[];
     155: }
-    156: 
+    156:
 >   157: export interface PersistActivityCategoryDerivationsInput {
     158:   activityEventId: string;
     159:   derivationRunId?: string | null;
@@ -3294,7 +3294,7 @@ Relevant snippets:
     160:   candidates: Array<CategoryCandidate | ResolvedCategoryCandidate>;
     161:   defaultSource?: CategoryDerivationSource;
     162: }
-    163: 
+    163:
 >   164: export interface PersistActivityCategoryDerivationsResult {
     165:   ok: boolean;
     166:   activityEventId: string;
@@ -3304,7 +3304,7 @@ Relevant snippets:
 ----- pattern: persist | line: 273 | context: 269-277 -----
     269:   };
     270: }
-    271: 
+    271:
     272: export async function createCategoryDerivationRun(
 >   273:   supabase: CategoryDerivationPersistenceClient,
     274:   params: CreateCategoryDerivationRunInput,
@@ -3315,7 +3315,7 @@ Relevant snippets:
 ----- pattern: persist | line: 333 | context: 329-337 -----
     329:   };
     330: }
-    331: 
+    331:
     332: export async function finishCategoryDerivationRun(
 >   333:   supabase: CategoryDerivationPersistenceClient,
     334:   params: FinishCategoryDerivationRunInput,
@@ -3326,7 +3326,7 @@ Relevant snippets:
 ----- pattern: persist | line: 390 | context: 386-394 -----
     386:   return error;
     387: }
-    388: 
+    388:
     389: export async function failCategoryDerivationRun(
 >   390:   supabase: CategoryDerivationPersistenceClient,
     391:   params: FailCategoryDerivationRunInput,
@@ -3335,7 +3335,7 @@ Relevant snippets:
     394:     status: "failed",
 
 ----- pattern: persist | line: 468 | context: 464-472 -----
-    464: 
+    464:
     465: function candidateMetadata(candidate: CategoryCandidate | ResolvedCategoryCandidate): JsonRecord {
     466:   return {
     467:     ...(candidate.metadata ?? {}),
@@ -3348,7 +3348,7 @@ Relevant snippets:
 ----- pattern: persist | line: 477 | context: 473-481 -----
     473:   };
     474: }
-    475: 
+    475:
     476: function candidatePayload(
 >   477:   input: PersistActivityCategoryDerivationsInput,
     478:   candidate: CategoryCandidate | ResolvedCategoryCandidate,
@@ -3360,7 +3360,7 @@ Relevant snippets:
     501:     metadata_json: candidateMetadata(candidate),
     502:   };
     503: }
-    504: 
+    504:
 >   505: export async function persistActivityCategoryDerivations(
     506:   supabase: CategoryDerivationPersistenceClient,
     507:   input: PersistActivityCategoryDerivationsInput,
@@ -3370,7 +3370,7 @@ Relevant snippets:
 ----- pattern: persist | line: 506 | context: 502-510 -----
     502:   };
     503: }
-    504: 
+    504:
     505: export async function persistActivityCategoryDerivations(
 >   506:   supabase: CategoryDerivationPersistenceClient,
     507:   input: PersistActivityCategoryDerivationsInput,
@@ -3380,7 +3380,7 @@ Relevant snippets:
 
 ----- pattern: persist | line: 507 | context: 503-511 -----
     503: }
-    504: 
+    504:
     505: export async function persistActivityCategoryDerivations(
     506:   supabase: CategoryDerivationPersistenceClient,
 >   507:   input: PersistActivityCategoryDerivationsInput,
@@ -3390,7 +3390,7 @@ Relevant snippets:
     511:   const warnings: string[] = [];
 
 ----- pattern: persist | line: 508 | context: 504-512 -----
-    504: 
+    504:
     505: export async function persistActivityCategoryDerivations(
     506:   supabase: CategoryDerivationPersistenceClient,
     507:   input: PersistActivityCategoryDerivationsInput,
@@ -3402,7 +3402,7 @@ Relevant snippets:
 
 ----- pattern: derivationRunId | line: 126 | context: 122-130 -----
     122: }
-    123: 
+    123:
     124: export interface CreateCategoryDerivationRunResult {
     125:   ok: boolean;
 >   126:   derivationRunId: string | null;
@@ -3414,7 +3414,7 @@ Relevant snippets:
 ----- pattern: derivationRunId | line: 134 | context: 130-138 -----
     130:   warnings: string[];
     131: }
-    132: 
+    132:
     133: export interface FinishCategoryDerivationRunInput {
 >   134:   derivationRunId: string;
     135:   status?: Extract<CategoryDerivationRunStatus, "completed" | "completed_with_warnings">;
@@ -3425,17 +3425,17 @@ Relevant snippets:
 ----- pattern: derivationRunId | line: 144 | context: 140-148 -----
     140:   cost?: JsonRecord;
     141: }
-    142: 
+    142:
     143: export interface FailCategoryDerivationRunInput {
 >   144:   derivationRunId: string;
     145:   error: string | Error | JsonRecord;
     146:   outputJson?: JsonRecord;
     147: }
-    148: 
+    148:
 
 ----- pattern: derivationRunId | line: 151 | context: 147-155 -----
     147: }
-    148: 
+    148:
     149: export interface UpdateCategoryDerivationRunResult {
     150:   ok: boolean;
 >   151:   derivationRunId: string;
@@ -3446,17 +3446,17 @@ Relevant snippets:
 
 ----- pattern: derivationRunId | line: 159 | context: 155-163 -----
     155: }
-    156: 
+    156:
     157: export interface PersistActivityCategoryDerivationsInput {
     158:   activityEventId: string;
 >   159:   derivationRunId?: string | null;
     160:   candidates: Array<CategoryCandidate | ResolvedCategoryCandidate>;
     161:   defaultSource?: CategoryDerivationSource;
     162: }
-    163: 
+    163:
 
 ----- pattern: derivationRunId | line: 167 | context: 163-171 -----
-    163: 
+    163:
     164: export interface PersistActivityCategoryDerivationsResult {
     165:   ok: boolean;
     166:   activityEventId: string;
@@ -3467,7 +3467,7 @@ Relevant snippets:
     171:   unresolvedCount: number;
 
 ----- pattern: derivationRunId | line: 314 | context: 310-318 -----
-    310: 
+    310:
     311:   if (error || !data) {
     312:     return {
     313:       ok: false,
@@ -3479,7 +3479,7 @@ Relevant snippets:
 
 ----- pattern: derivationRunId | line: 324 | context: 320-328 -----
     320:   }
-    321: 
+    321:
     322:   return {
     323:     ok: true,
 >   324:     derivationRunId: data.id,
@@ -3489,18 +3489,18 @@ Relevant snippets:
     328:     warnings: [],
 
 ----- pattern: derivationRunId | line: 350 | context: 346-354 -----
-    346: 
+    346:
     347:   const { data, error } = await supabase
     348:     .from<CategoryDerivationRunRow>("category_derivation_runs")
     349:     .update(payload)
 >   350:     .eq("id", params.derivationRunId)
     351:     .select("*")
     352:     .maybeSingle();
-    353: 
+    353:
     354:   if (error || !data) {
 
 ----- pattern: derivationRunId | line: 357 | context: 353-361 -----
-    353: 
+    353:
     354:   if (error || !data) {
     355:     return {
     356:       ok: false,
@@ -3512,7 +3512,7 @@ Relevant snippets:
 
 ----- pattern: derivationRunId | line: 366 | context: 362-370 -----
     362:   }
-    363: 
+    363:
     364:   return {
     365:     ok: true,
 >   366:     derivationRunId: params.derivationRunId,
@@ -3522,18 +3522,18 @@ Relevant snippets:
     370:   };
 
 ----- pattern: derivationRunId | line: 403 | context: 399-407 -----
-    399: 
+    399:
     400:   const { data, error } = await supabase
     401:     .from<CategoryDerivationRunRow>("category_derivation_runs")
     402:     .update(payload)
 >   403:     .eq("id", params.derivationRunId)
     404:     .select("*")
     405:     .maybeSingle();
-    406: 
+    406:
     407:   if (error || !data) {
 
 ----- pattern: derivationRunId | line: 410 | context: 406-414 -----
-    406: 
+    406:
     407:   if (error || !data) {
     408:     return {
     409:       ok: false,
@@ -3545,7 +3545,7 @@ Relevant snippets:
 
 ----- pattern: derivationRunId | line: 419 | context: 415-423 -----
     415:   }
-    416: 
+    416:
     417:   return {
     418:     ok: true,
 >   419:     derivationRunId: params.derivationRunId,
@@ -3556,7 +3556,7 @@ Relevant snippets:
 
 ----- pattern: derivationRunId | line: 485 | context: 481-489 -----
     481:   const categoryId = isResolvedCandidate(candidate) ? candidate.categoryId : null;
-    482: 
+    482:
     483:   return {
     484:     activity_event_id: input.activityEventId,
 >   485:     derivation_run_id: input.derivationRunId ?? null,
@@ -3566,7 +3566,7 @@ Relevant snippets:
     489:     semantic_layer: candidate.semanticLayer ?? null,
 
 ----- pattern: derivationRunId | line: 548 | context: 544-552 -----
-    544: 
+    544:
     545:   return {
     546:     ok: errors.length === 0,
     547:     activityEventId: input.activityEventId,
@@ -3622,7 +3622,7 @@ Relevant snippets:
 ----- pattern: disabled | line: 11 | context: 7-15 -----
       7: export const CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE_ENV =
       8:   "CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE";
-      9: 
+      9:
      10: export const CATEGORY_DERIVATION_ROUTE_RUNNER_MODES = [
 >    11:   "disabled",
      12:   "debug_only",
@@ -3644,22 +3644,22 @@ Relevant snippets:
 ----- pattern: disabled | line: 98 | context: 94-102 -----
      94: ): CategoryDerivationRouteRunnerMode {
      95:   const normalized = normalizeEnvText(value)?.toLowerCase() ?? null;
-     96: 
+     96:
      97:   if (normalized === null) {
 >    98:     return "disabled";
      99:   }
-    100: 
+    100:
     101:   if (isCategoryDerivationRouteRunnerMode(normalized)) {
     102:     return normalized;
 
 ----- pattern: disabled | line: 106 | context: 102-110 -----
     102:     return normalized;
     103:   }
-    104: 
+    104:
     105:   warnings.push(
 >   106:     `${CATEGORY_DERIVATION_ROUTE_RUNNER_MODE_ENV} has unsupported value "${value}". Falling back to disabled.`,
     107:   );
-    108: 
+    108:
     109:   return "disabled";
     110: }
 
@@ -3667,10 +3667,10 @@ Relevant snippets:
     105:   warnings.push(
     106:     `${CATEGORY_DERIVATION_ROUTE_RUNNER_MODE_ENV} has unsupported value "${value}". Falling back to disabled.`,
     107:   );
-    108: 
+    108:
 >   109:   return "disabled";
     110: }
-    111: 
+    111:
     112: export function getCategoryDerivationRouteRunnerConfig(
     113:   env: NodeJS.ProcessEnv = process.env,
 
@@ -3678,7 +3678,7 @@ Relevant snippets:
     137:     CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE_ENV,
     138:     warnings,
     139:   );
-    140: 
+    140:
 >   141:   const isDisabled = mode === "disabled";
     142:   const isDebugOnly = mode === "debug_only";
     143:   const usesLegacyExistingCompleteRouteFlow = mode === "legacy_existing";
@@ -3716,7 +3716,7 @@ Relevant snippets:
      15:   "shadow_persist",
      16:   "production_persist",
      17: ] as const;
-     18: 
+     18:
 
 ----- pattern: shadow_no_persist | line: 145 | context: 141-149 -----
     141:   const isDisabled = mode === "disabled";
@@ -3726,17 +3726,17 @@ Relevant snippets:
 >   145:     mode === "shadow_no_persist" ||
     146:     mode === "shadow_persist" ||
     147:     mode === "production_persist";
-    148: 
+    148:
     149:   const shouldPersist =
 
 ----- pattern: shadow_no_persist | line: 154 | context: 150-158 -----
     150:     mode === "shadow_persist" || mode === "production_persist";
-    151: 
+    151:
     152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
     153:   const isShadowMode =
 >   154:     mode === "shadow_no_persist" || mode === "shadow_persist";
     155:   const isProductionPersistMode = mode === "production_persist";
-    156: 
+    156:
     157:   return {
     158:     mode,
 
@@ -3748,7 +3748,7 @@ Relevant snippets:
 >    15:   "shadow_persist",
      16:   "production_persist",
      17: ] as const;
-     18: 
+     18:
      19: export type CategoryDerivationRouteRunnerMode =
 
 ----- pattern: shadow_persist | line: 146 | context: 142-150 -----
@@ -3758,29 +3758,29 @@ Relevant snippets:
     145:     mode === "shadow_no_persist" ||
 >   146:     mode === "shadow_persist" ||
     147:     mode === "production_persist";
-    148: 
+    148:
     149:   const shouldPersist =
     150:     mode === "shadow_persist" || mode === "production_persist";
 
 ----- pattern: shadow_persist | line: 150 | context: 146-154 -----
     146:     mode === "shadow_persist" ||
     147:     mode === "production_persist";
-    148: 
+    148:
     149:   const shouldPersist =
 >   150:     mode === "shadow_persist" || mode === "production_persist";
-    151: 
+    151:
     152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
     153:   const isShadowMode =
     154:     mode === "shadow_no_persist" || mode === "shadow_persist";
 
 ----- pattern: shadow_persist | line: 154 | context: 150-158 -----
     150:     mode === "shadow_persist" || mode === "production_persist";
-    151: 
+    151:
     152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
     153:   const isShadowMode =
 >   154:     mode === "shadow_no_persist" || mode === "shadow_persist";
     155:   const isProductionPersistMode = mode === "production_persist";
-    156: 
+    156:
     157:   return {
     158:     mode,
 
@@ -3791,7 +3791,7 @@ Relevant snippets:
      15:   "shadow_persist",
 >    16:   "production_persist",
      17: ] as const;
-     18: 
+     18:
      19: export type CategoryDerivationRouteRunnerMode =
      20:   (typeof CATEGORY_DERIVATION_ROUTE_RUNNER_MODES)[number];
 
@@ -3801,46 +3801,46 @@ Relevant snippets:
     145:     mode === "shadow_no_persist" ||
     146:     mode === "shadow_persist" ||
 >   147:     mode === "production_persist";
-    148: 
+    148:
     149:   const shouldPersist =
     150:     mode === "shadow_persist" || mode === "production_persist";
-    151: 
+    151:
 
 ----- pattern: production_persist | line: 150 | context: 146-154 -----
     146:     mode === "shadow_persist" ||
     147:     mode === "production_persist";
-    148: 
+    148:
     149:   const shouldPersist =
 >   150:     mode === "shadow_persist" || mode === "production_persist";
-    151: 
+    151:
     152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
     153:   const isShadowMode =
     154:     mode === "shadow_no_persist" || mode === "shadow_persist";
 
 ----- pattern: production_persist | line: 155 | context: 151-159 -----
-    151: 
+    151:
     152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
     153:   const isShadowMode =
     154:     mode === "shadow_no_persist" || mode === "shadow_persist";
 >   155:   const isProductionPersistMode = mode === "production_persist";
-    156: 
+    156:
     157:   return {
     158:     mode,
     159:     includeResponseDebug,
 
 ----- pattern: failActivityComplete | line: 25 | context: 21-29 -----
-     21: 
+     21:
      22: export interface CategoryDerivationRouteRunnerRawConfig {
      23:   mode: string | undefined;
      24:   includeResponseDebug: string | undefined;
 >    25:   failActivityComplete: string | undefined;
      26: }
-     27: 
+     27:
      28: export interface CategoryDerivationRouteRunnerConfig {
      29:   mode: CategoryDerivationRouteRunnerMode;
 
 ----- pattern: failActivityComplete | line: 31 | context: 27-35 -----
-     27: 
+     27:
      28: export interface CategoryDerivationRouteRunnerConfig {
      29:   mode: CategoryDerivationRouteRunnerMode;
      30:   includeResponseDebug: boolean;
@@ -3858,14 +3858,14 @@ Relevant snippets:
 >   121:     failActivityComplete:
     122:       env[CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE_ENV],
     123:   };
-    124: 
+    124:
     125:   const mode = readModeEnv(raw.mode, warnings);
 
 ----- pattern: failActivityComplete | line: 134 | context: 130-138 -----
     130:     CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG_ENV,
     131:     warnings,
     132:   );
-    133: 
+    133:
 >   134:   const failActivityComplete = readBooleanEnv(
     135:     raw.failActivityComplete,
     136:     false,
@@ -3875,7 +3875,7 @@ Relevant snippets:
 ----- pattern: failActivityComplete | line: 135 | context: 131-139 -----
     131:     warnings,
     132:   );
-    133: 
+    133:
     134:   const failActivityComplete = readBooleanEnv(
 >   135:     raw.failActivityComplete,
     136:     false,
@@ -3884,7 +3884,7 @@ Relevant snippets:
     139:   );
 
 ----- pattern: failActivityComplete | line: 160 | context: 156-164 -----
-    156: 
+    156:
     157:   return {
     158:     mode,
     159:     includeResponseDebug,
@@ -3920,10 +3920,10 @@ Relevant snippets:
     145:     mode === "shadow_no_persist" ||
     146:     mode === "shadow_persist" ||
     147:     mode === "production_persist";
-    148: 
+    148:
 >   149:   const shouldPersist =
     150:     mode === "shadow_persist" || mode === "production_persist";
-    151: 
+    151:
     152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
     153:   const isShadowMode =
 
@@ -3961,15 +3961,15 @@ Relevant snippets:
      41:   warnings: string[];
 
 ----- pattern: shouldResolve | line: 152 | context: 148-156 -----
-    148: 
+    148:
     149:   const shouldPersist =
     150:     mode === "shadow_persist" || mode === "production_persist";
-    151: 
+    151:
 >   152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
     153:   const isShadowMode =
     154:     mode === "shadow_no_persist" || mode === "shadow_persist";
     155:   const isProductionPersistMode = mode === "production_persist";
-    156: 
+    156:
 
 ----- pattern: shouldResolve | line: 166 | context: 162-170 -----
     162:     isDebugOnly,
@@ -3995,18 +3995,18 @@ Relevant snippets:
 
 ----- pattern: includeResponseDebug | line: 24 | context: 20-28 -----
      20:   (typeof CATEGORY_DERIVATION_ROUTE_RUNNER_MODES)[number];
-     21: 
+     21:
      22: export interface CategoryDerivationRouteRunnerRawConfig {
      23:   mode: string | undefined;
 >    24:   includeResponseDebug: string | undefined;
      25:   failActivityComplete: string | undefined;
      26: }
-     27: 
+     27:
      28: export interface CategoryDerivationRouteRunnerConfig {
 
 ----- pattern: includeResponseDebug | line: 30 | context: 26-34 -----
      26: }
-     27: 
+     27:
      28: export interface CategoryDerivationRouteRunnerConfig {
      29:   mode: CategoryDerivationRouteRunnerMode;
 >    30:   includeResponseDebug: boolean;
@@ -4017,7 +4017,7 @@ Relevant snippets:
 
 ----- pattern: includeResponseDebug | line: 119 | context: 115-123 -----
     115:   const warnings: string[] = [];
-    116: 
+    116:
     117:   const raw: CategoryDerivationRouteRunnerRawConfig = {
     118:     mode: env[CATEGORY_DERIVATION_ROUTE_RUNNER_MODE_ENV],
 >   119:     includeResponseDebug:
@@ -4028,9 +4028,9 @@ Relevant snippets:
 
 ----- pattern: includeResponseDebug | line: 127 | context: 123-131 -----
     123:   };
-    124: 
+    124:
     125:   const mode = readModeEnv(raw.mode, warnings);
-    126: 
+    126:
 >   127:   const includeResponseDebug = readBooleanEnv(
     128:     raw.includeResponseDebug,
     129:     false,
@@ -4038,9 +4038,9 @@ Relevant snippets:
     131:     warnings,
 
 ----- pattern: includeResponseDebug | line: 128 | context: 124-132 -----
-    124: 
+    124:
     125:   const mode = readModeEnv(raw.mode, warnings);
-    126: 
+    126:
     127:   const includeResponseDebug = readBooleanEnv(
 >   128:     raw.includeResponseDebug,
     129:     false,
@@ -4050,7 +4050,7 @@ Relevant snippets:
 
 ----- pattern: includeResponseDebug | line: 159 | context: 155-163 -----
     155:   const isProductionPersistMode = mode === "production_persist";
-    156: 
+    156:
     157:   return {
     158:     mode,
 >   159:     includeResponseDebug,
@@ -4095,35 +4095,35 @@ Relevant snippets:
 
 ----- pattern: SUPPORTED_SCENARIOS | line: 28 | context: 24-32 -----
      24: const P4_STEP = "P4.10.0-C8-E-F5-G-E-B-B-FIX2C";
-     25: 
+     25:
      26: const EXPECTED_MODE = "shadow_persist";
-     27: 
+     27:
 >    28: const SUPPORTED_SCENARIOS = [
      29:   "missing_activity_event_id",
      30:   "missing_actor_id",
      31: ] as const;
-     32: 
+     32:
 
 ----- pattern: SUPPORTED_SCENARIOS | line: 33 | context: 29-37 -----
      29:   "missing_activity_event_id",
      30:   "missing_actor_id",
      31: ] as const;
-     32: 
+     32:
 >    33: type SupportedScenario = (typeof SUPPORTED_SCENARIOS)[number];
-     34: 
+     34:
      35: type JsonRecord = Record<string, unknown>;
-     36: 
+     36:
      37: type DebugBody = {
 
 ----- pattern: SUPPORTED_SCENARIOS | line: 80 | context: 76-84 -----
-     76: 
+     76:
      77: function isSupportedScenario(value: string | null): value is SupportedScenario {
      78:   return Boolean(
      79:     value &&
 >    80:       (SUPPORTED_SCENARIOS as readonly string[]).includes(value),
      81:   );
      82: }
-     83: 
+     83:
      84: function compactAdapterResult(
 
 ----- pattern: SUPPORTED_SCENARIOS | line: 256 | context: 252-260 -----
@@ -4149,29 +4149,29 @@ Relevant snippets:
     346:     );
 
 ----- pattern: missing_activity_event_id | line: 29 | context: 25-33 -----
-     25: 
+     25:
      26: const EXPECTED_MODE = "shadow_persist";
-     27: 
+     27:
      28: const SUPPORTED_SCENARIOS = [
 >    29:   "missing_activity_event_id",
      30:   "missing_actor_id",
      31: ] as const;
-     32: 
+     32:
      33: type SupportedScenario = (typeof SUPPORTED_SCENARIOS)[number];
 
 ----- pattern: missing_activity_event_id | line: 111 | context: 107-115 -----
     107:   if (scenario === "missing_actor_id") {
     108:     return "missing_actor_id";
     109:   }
-    110: 
+    110:
 >   111:   return "missing_activity_event_id";
     112: }
-    113: 
+    113:
     114: function errorMatchesScenario(params: {
     115:   scenario: SupportedScenario;
 
 ----- pattern: missing_activity_event_id | line: 216 | context: 212-220 -----
-    212: 
+    212:
     213: function buildAdapterActivityEvent(scenario: SupportedScenario) {
     214:   return {
     215:     id:
@@ -4194,46 +4194,46 @@ Relevant snippets:
 
 ----- pattern: missing_actor_id | line: 30 | context: 26-34 -----
      26: const EXPECTED_MODE = "shadow_persist";
-     27: 
+     27:
      28: const SUPPORTED_SCENARIOS = [
      29:   "missing_activity_event_id",
 >    30:   "missing_actor_id",
      31: ] as const;
-     32: 
+     32:
      33: type SupportedScenario = (typeof SUPPORTED_SCENARIOS)[number];
-     34: 
+     34:
 
 ----- pattern: missing_actor_id | line: 107 | context: 103-111 -----
     103:   };
     104: }
-    105: 
+    105:
     106: function expectedReasonForScenario(scenario: SupportedScenario) {
 >   107:   if (scenario === "missing_actor_id") {
     108:     return "missing_actor_id";
     109:   }
-    110: 
+    110:
     111:   return "missing_activity_event_id";
 
 ----- pattern: missing_actor_id | line: 108 | context: 104-112 -----
     104: }
-    105: 
+    105:
     106: function expectedReasonForScenario(scenario: SupportedScenario) {
     107:   if (scenario === "missing_actor_id") {
 >   108:     return "missing_actor_id";
     109:   }
-    110: 
+    110:
     111:   return "missing_activity_event_id";
     112: }
 
 ----- pattern: missing_actor_id | line: 132 | context: 128-136 -----
     128:   }
-    129: 
+    129:
     130:   const joinedErrors = params.errors.join(" ").toLowerCase();
-    131: 
+    131:
 >   132:   if (params.scenario === "missing_actor_id") {
     133:     return joinedErrors.includes("actor") && joinedErrors.includes("required");
     134:   }
-    135: 
+    135:
     136:   return (
 
 ----- pattern: missing_actor_id | line: 221 | context: 217-225 -----
@@ -4261,12 +4261,12 @@ Relevant snippets:
 ----- pattern: missing_actor_id | line: 240 | context: 236-244 -----
     236:   };
     237: }
-    238: 
+    238:
     239: function buildAdapterActorId(scenario: SupportedScenario, personActorId: string) {
 >   240:   if (scenario === "missing_actor_id") {
     241:     return "";
     242:   }
-    243: 
+    243:
     244:   return personActorId;
 
 ----- pattern: missing_actor_id | line: 487 | context: 483-491 -----
@@ -4284,7 +4284,7 @@ Relevant snippets:
     209:     pass: checks.every((check) => check.pass),
     210:   };
     211: }
-    212: 
+    212:
 >   213: function buildAdapterActivityEvent(scenario: SupportedScenario) {
     214:   return {
     215:     id:
@@ -4292,7 +4292,7 @@ Relevant snippets:
     217:         ? ""
 
 ----- pattern: buildAdapterActivityEvent | line: 445 | context: 441-449 -----
-    441: 
+    441:
     442:   const adapterResult = await runCategoryDerivationForCompleteRoute({
     443:     supabase:
     444:       supabase as unknown as CategoryDerivationCompleteRouteIntegrationSupabaseClient,
@@ -4306,12 +4306,12 @@ Relevant snippets:
     235:     },
     236:   };
     237: }
-    238: 
+    238:
 >   239: function buildAdapterActorId(scenario: SupportedScenario, personActorId: string) {
     240:   if (scenario === "missing_actor_id") {
     241:     return "";
     242:   }
-    243: 
+    243:
 
 ----- pattern: buildAdapterActorId | line: 446 | context: 442-450 -----
     442:   const adapterResult = await runCategoryDerivationForCompleteRoute({
@@ -4328,12 +4328,12 @@ Relevant snippets:
     102:     config: result.config,
     103:   };
     104: }
-    105: 
+    105:
 >   106: function expectedReasonForScenario(scenario: SupportedScenario) {
     107:   if (scenario === "missing_actor_id") {
     108:     return "missing_actor_id";
     109:   }
-    110: 
+    110:
 
 ----- pattern: expectedReasonForScenario | line: 119 | context: 115-123 -----
     115:   scenario: SupportedScenario;
@@ -4341,7 +4341,7 @@ Relevant snippets:
     117:   errors: string[];
     118: }) {
 >   119:   const expectedReason = expectedReasonForScenario(params.scenario);
-    120: 
+    120:
     121:   const actualReason =
     122:     typeof params.reason === "string"
     123:       ? params.reason.toLowerCase()
@@ -4352,7 +4352,7 @@ Relevant snippets:
     149:   const { scenario, result, failActivityComplete } = params;
     150:   const expectedOk = !failActivityComplete;
 >   151:   const expectedReason = expectedReasonForScenario(scenario);
-    152: 
+    152:
     153:   const checks = [
     154:     {
     155:       name: "adapter result ok follows !failActivityComplete",
@@ -4366,15 +4366,15 @@ Relevant snippets:
     456:       doNotUseAsCanonicalProof: true,
     457:     },
     458:   });
-    459: 
+    459:
 
 ----- pattern: expectedReasonForScenario | line: 466 | context: 462-470 -----
     462:     result: adapterResult,
     463:     failActivityComplete: config.failActivityComplete,
     464:   });
-    465: 
+    465:
 >   466:   const expectedReason = expectedReasonForScenario(scenario);
-    467: 
+    467:
     468:   const fullPass =
     469:     expectedChecks.pass &&
     470:     adapterResult.ok === true &&
@@ -4383,7 +4383,7 @@ Relevant snippets:
     140:       joinedErrors.includes("required"))
     141:   );
     142: }
-    143: 
+    143:
 >   144: function buildExpectedResultChecks(params: {
     145:   scenario: SupportedScenario;
     146:   result: CategoryDerivationCompleteRouteIntegrationResult;
@@ -4394,7 +4394,7 @@ Relevant snippets:
     456:       doNotUseAsCanonicalProof: true,
     457:     },
     458:   });
-    459: 
+    459:
 >   460:   const expectedChecks = buildExpectedResultChecks({
     461:     scenario,
     462:     result: adapterResult,
@@ -4464,10 +4464,10 @@ Relevant snippets:
      37: import { ensureActivityEventRubricatorClassificationForKnownTemplate } from "../../../../../lib/activity/activityRubricatorClassificationLifecycle";
 
 ----- pattern: runCategoryDerivationForCompleteRoute | line: 426 | context: 422-430 -----
-    422: 
+    422:
     423:   return links;
     424: }
-    425: 
+    425:
 >   426: async function runCategoryDerivationForCompleteRoute(params: {
     427:   event: ActivityEventRow;
     428:   completedStatus: string;
@@ -4478,21 +4478,21 @@ Relevant snippets:
    1227:       finishedAt: new Date().toISOString(),
    1228:       durationMs: getDurationMs(processingStartedAt),
    1229:     });
-   1230: 
+   1230:
 >  1231:     const categoryDerivationResult = await runCategoryDerivationForCompleteRoute({
    1232:       event: updatedEvent,
    1233:       completedStatus,
    1234:     });
-   1235: 
+   1235:
 
 ----- pattern: CATEGORY_DERIVATION | line: 94 | context: 90-98 -----
      90:       error: string;
      91:     };
-     92: 
-     93: 
+     92:
+     93:
 >    94: const CATEGORY_DERIVATION_COMPLETE_ROUTE_CREATE_POLICY: CategoryResolverCreatePolicy =
      95:   "suggested_only";
-     96: 
+     96:
      97: type CategoryDerivationCompleteRoutePolicy = {
      98:   enabled: boolean;
 
@@ -4575,9 +4575,9 @@ Relevant snippets:
 
 ----- pattern: complete | line: 48 | context: 44-52 -----
      44: import { supabase } from "../../../../../lib/supabase";
-     45: 
+     45:
      46: export const dynamic = "force-dynamic";
-     47: 
+     47:
 >    48: type ActivityCompleteBody = {
      49:   eventId?: unknown;
      50:   endedAt?: unknown;
@@ -4587,19 +4587,19 @@ Relevant snippets:
 ----- pattern: complete | line: 94 | context: 90-98 -----
      90:       error: string;
      91:     };
-     92: 
-     93: 
+     92:
+     93:
 >    94: const CATEGORY_DERIVATION_COMPLETE_ROUTE_CREATE_POLICY: CategoryResolverCreatePolicy =
      95:   "suggested_only";
-     96: 
+     96:
      97: type CategoryDerivationCompleteRoutePolicy = {
      98:   enabled: boolean;
 
 ----- pattern: complete | line: 97 | context: 93-101 -----
-     93: 
+     93:
      94: const CATEGORY_DERIVATION_COMPLETE_ROUTE_CREATE_POLICY: CategoryResolverCreatePolicy =
      95:   "suggested_only";
-     96: 
+     96:
 >    97: type CategoryDerivationCompleteRoutePolicy = {
      98:   enabled: boolean;
      99:   reason: string | null;
@@ -4610,7 +4610,7 @@ Relevant snippets:
     100:   inputText: string | null;
     101:   actorId: string | null;
     102: };
-    103: 
+    103:
 >   104: type CategoryDerivationCompleteRouteResult = {
     105:   enabled: boolean;
     106:   ok: boolean | null;
@@ -4624,7 +4624,7 @@ Relevant snippets:
     117:   errors: string[];
 >   118:   policy: CategoryDerivationCompleteRoutePolicy;
     119: };
-    120: 
+    120:
     121: function asRecordForCategoryDerivation(
     122:   value: unknown
 
@@ -4632,7 +4632,7 @@ Relevant snippets:
     238:     value.trim()
     239:   );
     240: }
-    241: 
+    241:
 >   242: function getCategoryDerivationInputTextForCompleteRoute(
     243:   event: ActivityEventRow
     244: ): string | null {
@@ -4643,18 +4643,18 @@ Relevant snippets:
     248:     asStringForCategoryDerivation(event.description)
     249:   );
     250: }
-    251: 
+    251:
 >   252: function isCategoryDerivationSourceAllowedForCompleteRoute(
     253:   source: string | null
     254: ): boolean {
     255:   const normalizedSource = asStringForCategoryDerivation(source)?.toLowerCase() ?? null;
-    256: 
+    256:
 
 ----- pattern: complete | line: 282 | context: 278-286 -----
     278:     normalizedSource.includes("debug")
     279:   );
     280: }
-    281: 
+    281:
 >   282: function getCategoryDerivationPolicyForCompleteRoute(params: {
     283:   event: ActivityEventRow;
     284:   completedStatus: string;
@@ -4663,23 +4663,23 @@ Relevant snippets:
 
 ----- pattern: complete | line: 284 | context: 280-288 -----
     280: }
-    281: 
+    281:
     282: function getCategoryDerivationPolicyForCompleteRoute(params: {
     283:   event: ActivityEventRow;
 >   284:   completedStatus: string;
     285: }): CategoryDerivationCompleteRoutePolicy {
     286:   const { event, completedStatus } = params;
-    287: 
+    287:
     288:   if (event.status !== completedStatus) {
 
 ----- pattern: complete | line: 285 | context: 281-289 -----
-    281: 
+    281:
     282: function getCategoryDerivationPolicyForCompleteRoute(params: {
     283:   event: ActivityEventRow;
     284:   completedStatus: string;
 >   285: }): CategoryDerivationCompleteRoutePolicy {
     286:   const { event, completedStatus } = params;
-    287: 
+    287:
     288:   if (event.status !== completedStatus) {
     289:     return {
 
@@ -4689,7 +4689,7 @@ Relevant snippets:
     284:   completedStatus: string;
     285: }): CategoryDerivationCompleteRoutePolicy {
 >   286:   const { event, completedStatus } = params;
-    287: 
+    287:
     288:   if (event.status !== completedStatus) {
     289:     return {
     290:       enabled: false,
@@ -4698,7 +4698,7 @@ Relevant snippets:
     284:   completedStatus: string;
     285: }): CategoryDerivationCompleteRoutePolicy {
     286:   const { event, completedStatus } = params;
-    287: 
+    287:
 >   288:   if (event.status !== completedStatus) {
     289:     return {
     290:       enabled: false,
@@ -4706,7 +4706,7 @@ Relevant snippets:
     292:       inputText: null,
 
 ----- pattern: complete | line: 291 | context: 287-295 -----
-    287: 
+    287:
     288:   if (event.status !== completedStatus) {
     289:     return {
     290:       enabled: false,
@@ -4720,7 +4720,7 @@ Relevant snippets:
     293:       actorId: null,
     294:     };
     295:   }
-    296: 
+    296:
 >   297:   if (!isCategoryDerivationSourceAllowedForCompleteRoute(event.source)) {
     298:     return {
     299:       enabled: false,
@@ -4731,9 +4731,9 @@ Relevant snippets:
     302:       actorId: null,
     303:     };
     304:   }
-    305: 
+    305:
 >   306:   const inputText = getCategoryDerivationInputTextForCompleteRoute(event);
-    307: 
+    307:
     308:   if (inputText === null) {
     309:     return {
     310:       enabled: false,
@@ -4742,7 +4742,7 @@ Relevant snippets:
     335:     actorId,
     336:   };
     337: }
-    338: 
+    338:
 >   339: function buildAdditionalCategoryLinksForCompleteRoute(params: {
     340:   enabled: boolean;
     341:   activityEventId: string;
@@ -4750,10 +4750,10 @@ Relevant snippets:
     343:   resolutionResult: unknown;
 
 ----- pattern: complete | line: 426 | context: 422-430 -----
-    422: 
+    422:
     423:   return links;
     424: }
-    425: 
+    425:
 >   426: async function runCategoryDerivationForCompleteRoute(params: {
     427:   event: ActivityEventRow;
     428:   completedStatus: string;
@@ -4762,23 +4762,23 @@ Relevant snippets:
 
 ----- pattern: complete | line: 428 | context: 424-432 -----
     424: }
-    425: 
+    425:
     426: async function runCategoryDerivationForCompleteRoute(params: {
     427:   event: ActivityEventRow;
 >   428:   completedStatus: string;
     429: }): Promise<CategoryDerivationCompleteRouteResult> {
     430:   const policy = getCategoryDerivationPolicyForCompleteRoute(params);
-    431: 
+    431:
     432:   if (!policy.enabled || policy.inputText === null || policy.actorId === null) {
 
 ----- pattern: complete | line: 429 | context: 425-433 -----
-    425: 
+    425:
     426: async function runCategoryDerivationForCompleteRoute(params: {
     427:   event: ActivityEventRow;
     428:   completedStatus: string;
 >   429: }): Promise<CategoryDerivationCompleteRouteResult> {
     430:   const policy = getCategoryDerivationPolicyForCompleteRoute(params);
-    431: 
+    431:
     432:   if (!policy.enabled || policy.inputText === null || policy.actorId === null) {
     433:     return {
 
@@ -4788,7 +4788,7 @@ Relevant snippets:
     428:   completedStatus: string;
     429: }): Promise<CategoryDerivationCompleteRouteResult> {
 >   430:   const policy = getCategoryDerivationPolicyForCompleteRoute(params);
-    431: 
+    431:
     432:   if (!policy.enabled || policy.inputText === null || policy.actorId === null) {
     433:     return {
     434:       enabled: false,
@@ -4819,7 +4819,7 @@ Relevant snippets:
     511:         "derivationRowsCreated",
     512:         "derivation_rows_created",
     513:       ]) ?? 0;
-    514: 
+    514:
 >   515:     const additionalCategoryLinks = buildAdditionalCategoryLinksForCompleteRoute({
     516:       enabled: true,
     517:       activityEventId: event.id,
@@ -4828,28 +4828,28 @@ Relevant snippets:
 
 ----- pattern: complete | line: 612 | context: 608-616 -----
     608: }
-    609: 
+    609:
     610: function resolveCompletionTiming(params: {
     611:   event: ActivityEventRow;
 >   612:   body: ActivityCompleteBody;
     613: }): CompletionTiming {
     614:   const { event, body } = params;
-    615: 
+    615:
     616:   if (!event.started_at) {
 
 ----- pattern: complete | line: 619 | context: 615-623 -----
-    615: 
+    615:
     616:   if (!event.started_at) {
     617:     return {
     618:       ok: false,
 >   619:       error: "Cannot complete activity event without started_at.",
     620:     };
     621:   }
-    622: 
+    622:
     623:   const startedDate = new Date(event.started_at);
 
 ----- pattern: complete | line: 720 | context: 716-724 -----
-    716: 
+    716:
     717: export async function GET() {
     718:   return NextResponse.json({
     719:     ok: true,
@@ -4890,23 +4890,23 @@ Relevant snippets:
     735:     },
     736:   });
     737: }
-    738: 
+    738:
 
 ----- pattern: complete | line: 766 | context: 762-770 -----
     762:       { status: 500 }
     763:     );
     764:   }
-    765: 
+    765:
 >   766:   let body: ActivityCompleteBody;
-    767: 
+    767:
     768:   try {
     769:     body = (await request.json()) as ActivityCompleteBody;
     770:   } catch {
 
 ----- pattern: complete | line: 769 | context: 765-773 -----
-    765: 
+    765:
     766:   let body: ActivityCompleteBody;
-    767: 
+    767:
     768:   try {
 >   769:     body = (await request.json()) as ActivityCompleteBody;
     770:   } catch {
@@ -4917,19 +4917,19 @@ Relevant snippets:
 ----- pattern: complete | line: 820 | context: 816-824 -----
     816:     );
     817:   }
-    818: 
+    818:
     819:   const event = eventData as ActivityEventRow;
 >   820:   const completedStatus = ACTIVITY_STATUS_COMPLETED;
-    821: 
+    821:
     822:   if (event.status === completedStatus) {
     823:     try {
     824:       const existingImpactEventsCount = await getExistingImpactEventsCount(
 
 ----- pattern: complete | line: 822 | context: 818-826 -----
-    818: 
+    818:
     819:   const event = eventData as ActivityEventRow;
     820:   const completedStatus = ACTIVITY_STATUS_COMPLETED;
-    821: 
+    821:
 >   822:   if (event.status === completedStatus) {
     823:     try {
     824:       const existingImpactEventsCount = await getExistingImpactEventsCount(
@@ -4938,7 +4938,7 @@ Relevant snippets:
 
 ----- pattern: complete | line: 839 | context: 835-843 -----
     835:       });
-    836: 
+    836:
     837:       return NextResponse.json({
     838:         ok: true,
 >   839:         status: "already_completed",
@@ -5153,7 +5153,7 @@ Relevant snippets:
 >  1017:         error: updateError?.message ?? "Failed to complete activity event.",
    1018:       });
    1019:     }
-   1020: 
+   1020:
    1021:     await safeCreateActivityProcessingLog({
 
 ----- pattern: complete | line: 1026 | context: 1022-1030 -----
@@ -5223,7 +5223,7 @@ Relevant snippets:
    1046:       durationMs: getDurationMs(processingStartedAt),
 
 ----- pattern: complete | line: 1052 | context: 1048-1056 -----
-   1048: 
+   1048:
    1049:     return NextResponse.json(
    1050:       {
    1051:         ok: false,
@@ -5394,7 +5394,7 @@ Relevant snippets:
    1184:         processorName:
 >  1185:           "activity_complete_route_known_template_rubricator_classification",
    1186:       });
-   1187: 
+   1187:
    1188:     const rubricatorClassificationLogResult =
    1189:       await safeCreateActivityProcessingLog({
 
@@ -5446,28 +5446,28 @@ Relevant snippets:
    1227:       finishedAt: new Date().toISOString(),
    1228:       durationMs: getDurationMs(processingStartedAt),
    1229:     });
-   1230: 
+   1230:
 >  1231:     const categoryDerivationResult = await runCategoryDerivationForCompleteRoute({
    1232:       event: updatedEvent,
    1233:       completedStatus,
    1234:     });
-   1235: 
+   1235:
 
 ----- pattern: complete | line: 1233 | context: 1229-1237 -----
    1229:     });
-   1230: 
+   1230:
    1231:     const categoryDerivationResult = await runCategoryDerivationForCompleteRoute({
    1232:       event: updatedEvent,
 >  1233:       completedStatus,
    1234:     });
-   1235: 
+   1235:
    1236:     const categoryDerivationBridgeAdditionalCategoryLinks =
    1237:       categoryDerivationResult.additionalCategoryLinks;
 
 ----- pattern: complete | line: 1243 | context: 1239-1247 -----
    1239:     const categoryDerivationRouteRunnerConfig =
    1240:       getCategoryDerivationRouteRunnerConfig();
-   1241: 
+   1241:
    1242:     const categoryDerivationRouteRunnerResult =
 >  1243:       await runCategoryDerivationRouteRunnerForCompleteRoute({
    1244:         supabase:
@@ -5476,7 +5476,7 @@ Relevant snippets:
    1247:           id: updatedEvent.id,
 
 ----- pattern: complete | line: 1245 | context: 1241-1249 -----
-   1241: 
+   1241:
    1242:     const categoryDerivationRouteRunnerResult =
    1243:       await runCategoryDerivationRouteRunnerForCompleteRoute({
    1244:         supabase:
@@ -5553,14 +5553,14 @@ Relevant snippets:
    1318:         finishedAt: new Date().toISOString(),
 
 ----- pattern: complete | line: 1332 | context: 1328-1336 -----
-   1328: 
+   1328:
    1329:     const valueObjectBridgeResult = await processActivityValueObjectBridge({
    1330:       supabase,
    1331:       eventId: updatedEvent.id,
 >  1332:       processorName: "activity_complete_route_p4_7_7",
    1333:       additionalCategoryLinks: categoryDerivationBridgeAdditionalCategoryLinks,
    1334:     });
-   1335: 
+   1335:
    1336:     const valueObjectBridgeLogResult =
 
 ----- pattern: complete | line: 1342 | context: 1338-1346 -----
@@ -5609,7 +5609,7 @@ Relevant snippets:
 
 ----- pattern: complete | line: 1375 | context: 1371-1379 -----
    1371:     });
-   1372: 
+   1372:
    1373:     return NextResponse.json({
    1374:       ok: true,
 >  1375:       status: completedStatus,
@@ -5666,18 +5666,18 @@ Relevant snippets:
     447:       policy,
     448:     };
     449:   }
-    450: 
+    450:
 >   451:   try {
     452:     const { event } = params;
-    453: 
+    453:
     454:     const derivationInput: CategoryDerivationInput = {
     455:       activityEventId: event.id,
 
 ----- pattern: try | line: 768 | context: 764-772 -----
     764:   }
-    765: 
+    765:
     766:   let body: ActivityCompleteBody;
-    767: 
+    767:
 >   768:   try {
     769:     body = (await request.json()) as ActivityCompleteBody;
     770:   } catch {
@@ -5687,19 +5687,19 @@ Relevant snippets:
 ----- pattern: try | line: 823 | context: 819-827 -----
     819:   const event = eventData as ActivityEventRow;
     820:   const completedStatus = ACTIVITY_STATUS_COMPLETED;
-    821: 
+    821:
     822:   if (event.status === completedStatus) {
 >   823:     try {
     824:       const existingImpactEventsCount = await getExistingImpactEventsCount(
     825:         event.id
     826:       );
-    827: 
+    827:
 
 ----- pattern: try | line: 1090 | context: 1086-1094 -----
    1086:     finishedAt: new Date().toISOString(),
    1087:     durationMs: getDurationMs(processingStartedAt),
    1088:   });
-   1089: 
+   1089:
 >  1090:   try {
    1091:     const impactResult = await processActivityImpacts({
    1092:       eventId: updatedEvent.id,
@@ -5714,12 +5714,12 @@ Relevant snippets:
 >   552:   } catch (error) {
     553:     const message =
     554:       error instanceof Error ? error.message : "Unknown Category Derivation error";
-    555: 
+    555:
     556:     return {
 
 ----- pattern: catch | line: 770 | context: 766-774 -----
     766:   let body: ActivityCompleteBody;
-    767: 
+    767:
     768:   try {
     769:     body = (await request.json()) as ActivityCompleteBody;
 >   770:   } catch {
