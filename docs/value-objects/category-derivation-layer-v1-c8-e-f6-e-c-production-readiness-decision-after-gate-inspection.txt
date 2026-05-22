@@ -1,0 +1,160 @@
+﻿GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-C
+Production-readiness decision after gate inspection
+Created: 2026-05-22
+
+1. Purpose
+
+This document records the production-readiness decision after F6-E-B gate inspection.
+
+No runtime/source code changes are made in this step.
+
+2. Current baseline
+
+Current HEAD before this decision:
+
+- c25b52c — Inspect Category Derivation production readiness gates
+
+Immediately relevant commits:
+
+- faf0d90 — Plan Category Derivation production readiness transition
+- c25b52c — Inspect Category Derivation production readiness gates
+
+3. F6-E-B inspection result
+
+F6-E-B established the following key facts:
+
+- production_persist mode exists: True
+- complete route calls adapter: True
+- adapter non-blocking logic exists: True
+- runLookup filters by activityEventId: True
+- runLookup filters by processor/rule/schema/policy versions: True
+- runLookup includes completed/completed_with_warnings statuses: True
+- idempotency debug route uses adapter: True
+- production_persist not ready for direct enable: True
+
+Critical negative finding:
+
+- routeRunner uses runLookup: False
+- idempotency gate looks reasonable: False
+
+4. Core decision
+
+Decision:
+
+Do not enable production_persist.
+
+Do not create a production_persist runtime proof yet.
+
+Do not modify /api/activity/complete yet.
+
+Do not modify source code in this step.
+
+Reason:
+
+The repository contains runLookup and an idempotency debug route, but F6-E-B showed that the current routeRunner does not appear to use runLookup at current HEAD.
+
+Because of this, production_persist must be blocked until the idempotency gap is understood and resolved or explicitly accepted with a controlled alternative.
+
+5. Why this is a hard gate
+
+production_persist can create durable category_derivation_runs and activity_category_derivations rows.
+
+If routeRunner does not use completed-run lookup/idempotency protection, repeated completions or retries may create:
+
+- duplicate derivation runs for the same activity event;
+- duplicate activity_category_derivations rows;
+- inconsistent routeRunner state;
+- difficult cleanup/rollback requirements;
+- misleading analytics;
+- incorrect confidence in production-readiness.
+
+Therefore production_persist must not be enabled directly.
+
+6. Approved next step
+
+Approved next step:
+
+P4.10.0-C8-E-F6-E-D-A — inspect routeRunner idempotency gap before production_persist
+
+This next step should be inspection/design only, not implementation.
+
+It should answer:
+
+- Why does F6-E-B report routeRunner uses runLookup: False?
+- Is runLookup imported but unused, removed, renamed, or replaced?
+- Did earlier idempotency proof cover a different route or older implementation?
+- Does current idempotency debug route prove current routeRunner behavior or only adapter behavior?
+- Where exactly should completed-run lookup happen if production_persist is later enabled?
+- Should lookup happen inside routeRunner, inside adapter, or in the persistence layer?
+- What is the safest minimal implementation path?
+- What runtime proof would verify duplicate-run prevention?
+- What cleanup/rollback policy is needed for proof/test rows?
+
+7. Not approved yet
+
+Not approved:
+
+- production_persist
+- controlled production_persist proof
+- direct production_persist on /api/activity/complete
+- strict failActivityComplete=true for normal users
+- schema changes
+- migrations
+- RLS changes
+- permission changes
+- UI work
+- OpenAI calls
+- broad refactor
+
+8. Safe direction after this decision
+
+The safe path is:
+
+F6-E-D-A — inspect idempotency gap.
+F6-E-D-B — create idempotency decision/design document.
+F6-E-D-C — implement smallest idempotency fix only if needed and approved.
+F6-E-D-D — TypeScript / marker checks.
+F6-E-D-E — runtime idempotency proof in shadow_persist or controlled mode.
+F6-E-D-F — commit implementation only after runtime proof passes.
+F6-E-D-G — proof document.
+Only after that:
+reconsider production_persist readiness.
+
+9. Preliminary implementation hypothesis
+
+Based on F6-E-B, likely candidates for the idempotency gap are:
+
+- routeRunner no longer calls findExistingCompletedCategoryDerivationRun;
+- runLookup exists but is not wired into current routeRunner;
+- idempotency debug route may verify adapter response behavior but not actual duplicate prevention in current routeRunner;
+- old proof commits may not reflect current HEAD behavior.
+
+This is only a hypothesis.
+
+F6-E-D-A must inspect source before implementation.
+
+10. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no production_persist
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no SQL in PowerShell
+- no runtime/source code changes in F6-E-C
+- no broad refactor
+- no proof/test route as substitute for real production-readiness
+
+11. Definition of Done
+
+This F6-E-C decision step is complete when:
+
+- this document exists under docs/value-objects;
+- only this document is changed;
+- document is committed and pushed;
+- working tree is clean;
+- recent git log shows this decision document above c25b52c.
