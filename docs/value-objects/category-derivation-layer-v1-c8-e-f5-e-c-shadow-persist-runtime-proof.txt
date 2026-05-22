@@ -1,0 +1,346 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F5-E-C - Category Derivation shadow_persist Runtime Proof
+Created: 2026-05-22 09:54:02
+Base commit before this document: 9862cec
+
+STATUS
+F5-E-B shadow_persist local runtime test passed.
+This document records runtime proof and read-only Supabase verification.
+
+SCOPE
+Documentation only.
+No runtime code changes.
+No database migration.
+No /api/activity/complete patch.
+No OpenAI call.
+No UI changes.
+No commercial core changes.
+production_persist was not enabled.
+
+CURRENT CODE BASELINE
+
+Complete route adapter patch:
+79d024b Patch complete route with disabled Category Derivation adapter
+
+Disabled-mode runtime proof:
+7e4cd27 Document complete route disabled Category Derivation adapter proof
+
+shadow_no_persist proof:
+bce0daa Document Category Derivation shadow no persist proof
+
+shadow_persist plan:
+4069537 Plan Category Derivation shadow persist test
+
+shadow_persist plan command fix:
+9862cec Fix Category Derivation shadow persist test plan command
+
+TEST MODE
+
+Local dev server was restarted with:
+
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE = "shadow_persist"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG = "false"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE = "false"
+npm.cmd run dev
+
+Expected config-derived behavior:
+- enabled = true
+- mode = shadow_persist
+- shouldResolve = true
+- shouldPersist = true
+- isShadowMode = true
+- isProductionPersistMode = false
+- failActivityComplete = false
+- includeResponseDebug = false
+
+TEST EVENT
+
+Fresh event id:
+0d1d8a79-9f56-4cf0-92e8-b0fd8e1a5b49
+
+Inserted as:
+- status = started
+- processing_status = pending
+- input_text = walked to work for 15 minutes
+- title = F5-E-B complete route shadow_persist routeRunner runtime test
+- metadata_json.testStep = P4.10.0-C8-E-F5-E-B
+- metadata_json.doNotUseAsCanonicalProof = true
+
+RUNTIME TEST
+
+Endpoint:
+POST /api/activity/complete
+
+Local URL:
+http://localhost:3000/api/activity/complete
+
+Payload:
+{
+  eventId: "0d1d8a79-9f56-4cf0-92e8-b0fd8e1a5b49",
+  status: "completed",
+  comment: "F5-E-B runtime test: complete route with routeRunner adapter shadow_persist."
+}
+
+RUNTIME RESULT
+
+HTTP status:
+200
+
+Response:
+- ok: true
+- status: completed
+
+Event:
+- id: 0d1d8a79-9f56-4cf0-92e8-b0fd8e1a5b49
+- status: completed
+- processing_status: processed
+- duration_minutes: 15
+
+categoryDerivationRouteRunner:
+- enabled: true
+- mode: shadow_persist
+- ok: true
+- skipped: false
+- reason: route_runner_completed
+- derivationRunId: f2bfa16f-4120-4bb6-9969-ef5a2288cc9f
+- candidateCount: 5
+- resolvedCandidateCount: 5
+- persistenceDerivationRowsCreated: 5
+- warnings: []
+- errors: []
+
+Runtime checks:
+- response.ok: OK
+- json.ok is true: OK
+- json.status is completed: OK
+- event.id matches: OK
+- categoryDerivationRouteRunner exists: OK
+- routeRunner.enabled is true: OK
+- routeRunner.mode is shadow_persist: OK
+- routeRunner.ok is true: OK
+- routeRunner.skipped is false: OK
+- routeRunner.reason is route_runner_completed: OK
+- routeRunner.derivationRunId is not null: OK
+- routeRunner.candidateCount > 0: OK
+- routeRunner.resolvedCandidateCount > 0: OK
+- routeRunner.persistenceDerivationRowsCreated > 0: OK
+- valueObjectBridge exists: OK
+- processingLogs exists: OK
+
+Runtime status:
+PASS
+
+ROUTERUNNER PERSISTENCE RESULT
+
+RouteRunner-specific derivation run:
+f2bfa16f-4120-4bb6-9969-ef5a2288cc9f
+
+Run properties:
+- status: completed
+- schema_version: category_derivation_complete_route_v1
+- policy_version: c8-e-f4
+- processor_version: category_derivation_v1
+- rule_version: rules_v1
+- activity_event_id: 0d1d8a79-9f56-4cf0-92e8-b0fd8e1a5b49
+- actor_id: d4727330-1cd4-475a-ac0b-aaba89087f4a
+- confidence: 0.922
+- input_hash: category-derivation-v1:29035a93
+- token_usage_json: {}
+- cost_json: {}
+- model_name: null
+- model_alias: null
+
+This confirms:
+- no OpenAI model was called;
+- rule-based routeRunner persisted a completed run;
+- run metadata correctly identifies the complete_route_integration_adapter source.
+
+PERSISTED ACTIVITY CATEGORY DERIVATIONS
+
+Expected count:
+5
+
+Actual count:
+5
+
+Persisted candidates:
+1. work
+   - semantic_layer: context
+   - category_type: life_domain
+   - confidence: 0.9
+   - status: confirmed
+
+2. walking-to-work
+   - semantic_layer: activity_meaning
+   - category_type: derived_activity_bundle
+   - confidence: 0.88
+   - status: confirmed
+
+3. walking
+   - semantic_layer: action
+   - category_type: activity_action
+   - confidence: 0.95
+   - status: confirmed
+
+4. commute-to-work
+   - semantic_layer: purpose
+   - category_type: activity_meaning
+   - confidence: 0.9
+   - status: confirmed
+
+5. duration-minutes
+   - semantic_layer: metric
+   - category_type: measurement
+   - confidence: 0.98
+   - status: confirmed
+
+SUPABASE READ-ONLY VERIFICATION
+
+Read-only verification was executed for event:
+0d1d8a79-9f56-4cf0-92e8-b0fd8e1a5b49
+
+activity_event:
+- status: completed
+- processing_status: processed
+- title: F5-E-B complete route shadow_persist routeRunner runtime test
+- input_text: walked to work for 15 minutes
+- duration_minutes: 15
+- metadata_json.testStep: P4.10.0-C8-E-F5-E-B
+
+route_runner_specific_runs_count:
+- expected_count: 1
+- actual_count: 1
+- pass: true
+- expected_derivation_run_id: f2bfa16f-4120-4bb6-9969-ef5a2288cc9f
+- filter_schema_version: category_derivation_complete_route_v1
+- filter_policy_version: c8-e-f4
+- filter_processor_version: category_derivation_v1
+- filter_rule_version: rules_v1
+- filter_statuses: completed, completed_with_warnings
+
+route_runner_expected_run_exists:
+- actual_count: 1
+- pass: true
+- expected_derivation_run_id: f2bfa16f-4120-4bb6-9969-ef5a2288cc9f
+
+route_runner_activity_category_derivations_count:
+- expected_count: 5
+- actual_count: 5
+- pass: true
+
+duplicate_route_runner_completed_runs_check:
+- expected_max_count: 1
+- actual_count: 1
+- pass: true
+
+legacy_or_other_category_derivation_runs_count:
+- actual_count: 0
+- note: Legacy complete-route Category Derivation rows may exist and are not treated as routeRunner shadow_persist writes.
+
+SUPABASE VERIFICATION STATUS
+
+PASS
+
+The read-only database verification confirms:
+- exactly one routeRunner-specific completed category_derivation_runs row was created;
+- the expected derivation run id exists;
+- exactly five routeRunner-linked activity_category_derivations rows were created;
+- no duplicate routeRunner-specific completed runs exist for the same event;
+- the activity event completed successfully.
+
+IMPORTANT INTERPRETATION
+
+shadow_persist mode is now proven for the complete route.
+
+This proves:
+1. server-side env mode was read correctly;
+2. adapter did not stay disabled or shadow_no_persist;
+3. routeRunner executed with persist=true and resolve=true;
+4. rule-based derivation produced 5 candidates;
+5. resolver resolved 5 candidates;
+6. routeRunner created exactly one completed category_derivation_runs row;
+7. routeRunner created exactly five activity_category_derivations rows;
+8. duplicate completed routeRunner run count is 1, not greater than 1;
+9. /api/activity/complete still completed the activity event;
+10. valueObjectBridge remained available;
+11. processingLogs remained available;
+12. OpenAI was not called.
+
+IMPORTANT DISTINCTION
+
+The complete route still has legacy Category Derivation behavior and Value Object Bridge category links.
+
+The shadow_persist proof is based on:
+- response-level routeRunner.derivationRunId being non-null;
+- response-level routeRunner.persistenceDerivationRowsCreated = 5;
+- read-only SQL route_runner_specific_runs_count.actual_count = 1;
+- read-only SQL route_runner_activity_category_derivations_count.actual_count = 5;
+- read-only SQL duplicate_route_runner_completed_runs_check.pass = true.
+
+IDEMPOTENCY NOTE
+
+The complete route endpoint changes the event status to completed.
+A repeated POST for the same event normally returns already_completed and skips the full pipeline.
+
+Therefore advanced idempotency testing should not be done by calling /api/activity/complete twice on the same completed event.
+
+Recommended later idempotency proof:
+- use a controlled debug endpoint or direct adapter route;
+- or create a specific test that bypasses the complete-route lifecycle early return;
+- do not force-reset completed events without a dedicated plan.
+
+CURRENT PROJECT POSITION
+
+F5-C:
+Disabled-by-default complete route adapter integration was proven and documented.
+
+F5-D:
+shadow_no_persist mode was proven and documented.
+
+F5-E-A:
+shadow_persist test plan was created and corrected.
+
+F5-E-B:
+shadow_persist runtime test and database verification passed.
+
+F5-E-C:
+This proof document records the passed shadow_persist runtime test and DB verification.
+
+NEXT RECOMMENDED BLOCK
+
+Proceed to:
+P4.10.0-C8-E-F5-F-A - plan safe production_persist transition or routeRunner-vs-legacy consolidation strategy.
+
+Important:
+Do not enable production_persist yet without a dedicated plan.
+
+Before production_persist, decide:
+1. whether legacy Category Derivation should remain active in complete route;
+2. whether routeRunner should replace legacy derivation or run beside it;
+3. how idempotency should be verified outside the complete-route early return path;
+4. how persisted routeRunner rows should connect to Value Object Bridge category links;
+5. whether response metadata should include more debug detail only in non-production modes.
+
+NO-GO
+
+Do not enable production_persist yet.
+Do not call OpenAI.
+Do not create UI.
+Do not create database migrations without a dedicated plan.
+Do not modify commercial core.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+Do not remove legacy Category Derivation code yet.
+
+SERVER RESET NOTE
+
+After finishing shadow_persist testing, local dev server should be restarted without CATEGORY_DERIVATION_ROUTE_RUNNER_MODE or explicitly with disabled mode before returning to ordinary development.
+
+Recommended reset command:
+
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE = "disabled"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG = "false"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE = "false"
+npm.cmd run dev
+
+END OF F5-E-C SHADOW_PERSIST RUNTIME PROOF
