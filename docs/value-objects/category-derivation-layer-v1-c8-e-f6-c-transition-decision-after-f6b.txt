@@ -1,0 +1,176 @@
+﻿GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-C
+Transition decision after F6-B inspection
+Created: 2026-05-22
+
+1. Purpose
+
+This document records the transition decision after F6-A planning, F6-B inspection and F6-B-FIX2 correction.
+
+No runtime/source code changes are made in this step.
+
+2. Current baseline
+
+Current HEAD before this decision:
+
+- 5c79475 — Clarify Category Derivation F6-B missing debug route inspection
+
+Relevant immediately preceding commits:
+
+- f0e627f — Plan Category Derivation transition after failure behavior block
+- 9dada8d — Inspect Category Derivation transition state after failure behavior block
+- 94e513b — Inspect Category Derivation transition state after failure behavior block
+- 5c79475 — Clarify Category Derivation F6-B missing debug route inspection
+
+3. What F6-B established
+
+F6-B established the current transition state after the closed F5-G failure behavior block.
+
+Important inspected areas:
+
+- /api/activity/complete references runCategoryDerivationForCompleteRoute;
+- completeRouteIntegration contains normalized F5-G failure reasons;
+- routeRunner contains simulated persistence failure boundary;
+- config contains shadow_persist and production_persist markers;
+- runLookup contains completed / completed_with_warnings lookup logic;
+- F5-G closure states the failure behavior block is complete enough to proceed.
+
+4. What F6-B-FIX2 corrected
+
+F6-B-FIX2 clarified that this expected path does not exist:
+
+- src/app/api/activity/debug/category-derivation-direct-adapter-idempotency-test/route.ts
+
+Actual debug route inventory found:
+
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts
+- src/app/api/activity/debug/category-derivation-route-runner-test/route.ts
+- src/app/api/activity/debug/create-free-text-start-event/route.ts
+- src/app/api/activity/debug/free-text-value-object-test/route.ts
+- src/app/api/activity/debug/value-object-bridge-proof/route.ts
+
+Decision on missing route:
+
+The missing direct-adapter route should not block F6-C.
+
+The relevant current idempotency candidate is:
+
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts
+
+The earlier missing path is treated as outdated naming from previous planning/proof wording, not as a runtime blocker.
+
+5. Core transition decision
+
+Decision:
+
+Proceed with a controlled real complete-route shadow_persist proof only if it verifies the current post-F5-G state under /api/activity/complete and does not repeat old proof work blindly.
+
+This proof is useful because:
+
+- F5-G changed and extended adapter/routeRunner failure behavior;
+- /api/activity/complete is the production-adjacent integration point;
+- debug-only proofs do not prove current real complete-route behavior;
+- a minimal post-F5-G smoke proof can confirm no regression in the real complete route path.
+
+This proof must not become a production transition.
+
+6. Approved next step
+
+Approved next step:
+
+P4.10.0-C8-E-F6-D — prepare controlled complete-route shadow_persist proof after F5-G
+
+F6-D should first inspect whether the existing complete route output already exposes enough information for proof.
+
+If enough observability exists:
+
+- do not change source code;
+- proceed directly to runtime proof planning.
+
+If observability is insufficient:
+
+- add the smallest observation-only debug/safety marker;
+- do not change business behavior;
+- do not enable production_persist;
+- do not call OpenAI;
+- do not modify schema/RLS/permissions.
+
+7. Runtime proof target
+
+The target proof should use:
+
+- route: /api/activity/complete
+- mode: shadow_persist
+- failActivityComplete: false
+- includeResponseDebug: false unless F6-D proves debug output is required
+- production_persist: forbidden
+- OpenAI call: forbidden
+- schema/RLS/permissions changes: forbidden
+
+Expected proof purpose:
+
+- verify current /api/activity/complete still calls Category Derivation adapter safely;
+- verify complete-route completion still succeeds;
+- verify adapter result is non-blocking;
+- verify no production_persist;
+- verify no OpenAI call;
+- verify no schema/RLS/permission changes;
+- verify no duplicate canonical proof is repeated without new reason.
+
+8. What not to do
+
+Do not jump directly to production_persist.
+
+Do not add UI.
+
+Do not add OpenAI calls.
+
+Do not modify database schema.
+
+Do not modify RLS or permissions.
+
+Do not run SQL in PowerShell.
+
+Do not treat debug-only route proof as a canonical complete-route proof.
+
+Do not rely only on raw error messages.
+
+Do not generalize strict simulated_persistence_failure guard exceptions.
+
+9. Why this is not a duplicate
+
+Previous proof documents show earlier complete-route states, including disabled, shadow_no_persist and shadow_persist phases.
+
+This next proof is not a duplicate only if it is explicitly framed as:
+
+- post-F5-G regression/smoke proof;
+- current HEAD proof;
+- real /api/activity/complete proof;
+- confirmation that F5-G debug/failure-path changes did not break production-adjacent complete route behavior.
+
+10. Decision status
+
+Approved:
+
+- proceed to F6-D preparation.
+
+Not approved yet:
+
+- source code change;
+- production_persist;
+- OpenAI;
+- schema/migration/RLS/permission changes;
+- UI work;
+- broad refactor.
+
+11. Definition of Done
+
+This F6-C decision step is complete when:
+
+- this document exists under docs/value-objects;
+- only this document is changed;
+- the document is committed and pushed;
+- working tree is clean;
+- recent git log shows this decision document above 5c79475.
