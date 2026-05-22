@@ -1,0 +1,99 @@
+﻿GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-B-FIX2
+F6-B missing debug route inspection correction
+Created: 2026-05-22
+
+1. Purpose
+
+This document corrects and clarifies the F6-B inspection result after the initial F6-B report was committed in two commits:
+
+- 9dada8d — Inspect Category Derivation transition state after failure behavior block
+- 94e513b — Inspect Category Derivation transition state after failure behavior block
+
+The second commit cleaned trailing whitespace, but it did not address one substantive inspection issue: an expected debug route path was missing during report generation.
+
+2. Current HEAD
+
+Current HEAD before this correction:
+
+- 94e513b
+
+3. Issue found
+
+During F6-B report generation, PowerShell reported that this file did not exist:
+
+- src/app/api/activity/debug/category-derivation-direct-adapter-idempotency-test/route.ts
+
+This means that the original F6-B inspection attempted to inspect a direct adapter idempotency debug route at an expected path, but that exact path was not present in the current repository.
+
+4. Expected path existence
+
+Expected path exists:
+
+- False
+
+5. Actual debug route inventory
+
+All current debug route.ts files under src/app/api/activity/debug:
+
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts
+- src/app/api/activity/debug/category-derivation-route-runner-test/route.ts
+- src/app/api/activity/debug/create-free-text-start-event/route.ts
+- src/app/api/activity/debug/free-text-value-object-test/route.ts
+- src/app/api/activity/debug/value-object-bridge-proof/route.ts
+
+6. Idempotency / direct-adapter candidate routes
+
+Candidate routes found by name search for idempot/direct-adapter/adapter:
+
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts
+
+7. Correction conclusion
+
+The F6-B report should be treated as valid for these inspected areas:
+
+- complete route
+- completeRouteIntegration adapter
+- routeRunner
+- config
+- runLookup
+- failureDebugRoute
+- F5-G closure document
+- strict persistence proof
+- non-blocking persistence proof
+- F6-A plan
+
+But the direct adapter idempotency route section must be treated as incomplete unless one of the candidate routes above is manually confirmed as the intended replacement.
+
+This correction prevents F6-C from relying blindly on a missing expected route path.
+
+8. Impact on next step
+
+F6-C may still proceed, but it must include this decision:
+
+- either the missing direct adapter idempotency debug route is no longer relevant and can be ignored;
+- or the actual route path must be located and inspected before production-readiness planning;
+- or a follow-up inspection should be performed specifically for direct adapter idempotency proof route inventory.
+
+9. Safety gates remain unchanged
+
+- no production_persist
+- no OpenAI call
+- no schema or migration changes
+- no RLS or permission changes
+- no UI work
+- no SQL in PowerShell
+- no runtime/source code changes in this correction step
+
+10. Definition of Done
+
+This correction is complete when:
+
+- this document exists under docs/value-objects;
+- only this document is changed;
+- the document is committed and pushed;
+- working tree is clean;
+- recent git log shows this correction document above 94e513b.
