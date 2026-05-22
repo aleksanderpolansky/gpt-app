@@ -1,0 +1,1295 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-D-C
+Adapter-level idempotency runtime proof preparation
+Created: 2026-05-22
+
+1. Purpose
+
+This document prepares the adapter-level idempotency runtime proof approved in F6-E-D-B.
+
+No runtime/source code changes are made in this step.
+
+2. Baseline
+
+Current HEAD before preparation:
+
+- 1fcfe76
+
+Expected baseline:
+
+- 1fcfe76 — Decide Category Derivation idempotency ownership before production readiness
+
+3. Preparation marker summary
+
+- route uses adapter: True
+- route mentions idempotency: True
+- route mentions existing: True
+- route mentions derivationRunId: True
+- route mentions persistenceDerivationRowsCreated: True
+- route mentions safety: True
+- route has doNotUseAsCanonicalProof marker: False
+- route mentions first/second call: True
+- adapter uses runLookup: True
+- adapter imports runLookup: True
+- adapter non-blocking: True
+- adapter exposes derivationRunId: True
+- adapter exposes persistence rows: True
+- runLookup exists: True
+- runLookup filters event: True
+- runLookup filters versions: True
+- runLookup completed statuses: True
+- routeRunner uses runLookup: False
+- decision approved proof: True
+- prep can proceed: True
+
+4. Preparation decision
+
+Decision: runtime proof can proceed without source code changes.
+
+5. Runtime proof target
+
+Target debug route:
+
+- /api/activity/debug/category-derivation-complete-route-adapter-idempotency-test
+
+Target proof nature:
+
+- debug-only
+- current HEAD
+- adapter-level idempotency
+- no source code changes
+- no production_persist
+- no OpenAI
+- no schema/RLS/permission changes
+- no UI work
+
+6. Runtime proof questions
+
+The runtime proof should answer:
+
+- Does the first adapter call create or reuse a derivation run as expected?
+- Does the second adapter call detect the existing completed/completed_with_warnings run?
+- Is derivationRunId stable across repeated adapter calls?
+- Does persistenceDerivationRowsCreated avoid duplicating rows on the second call?
+- Is the result non-blocking?
+- Is production_persist still disabled?
+- Does the route remain clearly debug-only and non-canonical?
+
+7. Required dev-server mode
+
+Recommended dev-server environment for F6-E-D-D:
+
+- CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_persist
+- CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=false
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+
+8. Safety gates
+
+- no production_persist
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no SQL in PowerShell
+- no runtime/source code changes
+- no broad refactor
+- no debug route as substitute for final production readiness
+
+9. Source snippets
+
+## idempotency debug route
+
+Path: .\src\app\api\activity\debug\category-derivation-complete-route-adapter-idempotency-test\route.ts
+
+Marker summary:
+- FOUND: idempotency
+- FOUND: runCategoryDerivationForCompleteRoute
+- FOUND: existing
+- FOUND: derivationRunId
+- FOUND: persistenceDerivationRowsCreated
+- MISSING: doNotUseAsCanonicalProof
+- FOUND: safety
+- FOUND: first
+- FOUND: second
+
+Relevant snippets:
+
+----- pattern: idempotency | line: 22 | context: 16-28 -----
+     16: } from "../../../../../../lib/activity/categoryDerivation/completeRouteIntegration";
+     17: import { supabase } from "../../../../../../lib/supabase";
+     18:
+     19: export const dynamic = "force-dynamic";
+     20:
+     21: const ENDPOINT =
+>    22:   "/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test";
+     23:
+     24: const P4_STEP = "P4.10.0-C8-E-F5-F-C-A";
+     25:
+     26: const EXPECTED_MODE = "shadow_persist";
+     27:
+     28: const ROUTE_RUNNER_SCHEMA_VERSION = "category_derivation_complete_route_v1";
+
+----- pattern: idempotency | line: 180 | context: 174-186 -----
+    174:     candidateCount: result.candidateCount,
+    175:     resolvedCandidateCount: result.resolvedCandidateCount,
+    176:     persistenceDerivationRowsCreated:
+    177:       result.persistenceDerivationRowsCreated,
+    178:     warnings: result.warnings,
+    179:     errors: result.errors,
+>   180:     idempotency: result.idempotency,
+    181:     routeRunner: result.routeRunner,
+    182:     config: result.config,
+    183:   };
+    184: }
+    185:
+    186: function getActorId(event: ActivityEventRow, fallbackActorId: string | null) {
+
+----- pattern: idempotency | line: 295 | context: 289-301 -----
+    289:     endpoint: ENDPOINT,
+    290:     p4Step: P4_STEP,
+    291:     enabled: ACTIVITY_RECORDING_ENABLED,
+    292:     expectedMode: EXPECTED_MODE,
+    293:     currentConfig: getCategoryDerivationRouteRunnerConfigSummary(config),
+    294:     purpose:
+>   295:       "Debug-only direct adapter idempotency proof endpoint. POST calls the complete-route Category Derivation adapter twice for the same event.",
+    296:     safety: {
+    297:       modifiesCompleteRoute: false,
+    298:       callsOpenAI: false,
+    299:       enablesProductionPersist: false,
+    300:       createsUi: false,
+    301:       createsMigration: false,
+
+----- pattern: idempotency | line: 385 | context: 379-391 -----
+    379:   if (callTwice !== true) {
+    380:     return NextResponse.json(
+    381:       {
+    382:         ok: false,
+    383:         endpoint: ENDPOINT,
+    384:         p4Step: P4_STEP,
+>   385:         error: "callTwice must be true for this idempotency proof.",
+    386:       },
+    387:       { status: 400 },
+    388:     );
+    389:   }
+    390:
+    391:   const { appUser, personActor, errorResponse } =
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 13 | context: 7-19 -----
+      7: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+      8: import {
+      9:   getCategoryDerivationRouteRunnerConfig,
+     10:   getCategoryDerivationRouteRunnerConfigSummary,
+     11: } from "../../../../../../lib/activity/categoryDerivation/config";
+     12: import {
+>    13:   runCategoryDerivationForCompleteRoute,
+     14:   type CategoryDerivationCompleteRouteIntegrationResult,
+     15:   type CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+     16: } from "../../../../../../lib/activity/categoryDerivation/completeRouteIntegration";
+     17: import { supabase } from "../../../../../../lib/supabase";
+     18:
+     19: export const dynamic = "force-dynamic";
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 533 | context: 527-539 -----
+    527:     actorId,
+    528:     organizationId: null,
+    529:     inputLanguage: null,
+    530:     config,
+    531:   };
+    532:
+>   533:   const firstCall = await runCategoryDerivationForCompleteRoute({
+    534:     ...adapterInput,
+    535:     metadata: {
+    536:       endpoint: ENDPOINT,
+    537:       p4Step: P4_STEP,
+    538:       call: "first",
+    539:       proof: "direct_adapter_idempotency",
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 544 | context: 538-550 -----
+    538:       call: "first",
+    539:       proof: "direct_adapter_idempotency",
+    540:       activityEventMetadata: toJsonValue(event.metadata_json),
+    541:     },
+    542:   });
+    543:
+>   544:   const secondCall = await runCategoryDerivationForCompleteRoute({
+    545:     ...adapterInput,
+    546:     metadata: {
+    547:       endpoint: ENDPOINT,
+    548:       p4Step: P4_STEP,
+    549:       call: "second",
+    550:       proof: "direct_adapter_idempotency",
+
+----- pattern: existing | line: 610 | context: 604-616 -----
+    604:     typeof firstCall.derivationRunId === "string" &&
+    605:     firstCall.derivationRunId.length > 0 &&
+    606:     firstCall.persistenceDerivationRowsCreated === 5;
+    607:
+    608:   const secondCallPass =
+    609:     secondCall.ok === true &&
+>   610:     secondCall.reason === "existing_completed_run_found" &&
+    611:     secondCall.derivationRunId === firstCall.derivationRunId &&
+    612:     secondCall.persistenceDerivationRowsCreated === 0;
+    613:
+    614:   const fullPass = firstCallPass && secondCallPass && dbVerification.pass;
+    615:
+    616:   return NextResponse.json({
+
+----- pattern: derivationRunId | line: 173 | context: 167-179 -----
+    167:   return {
+    168:     enabled: result.enabled,
+    169:     mode: result.mode,
+    170:     ok: result.ok,
+    171:     skipped: result.skipped,
+    172:     reason: result.reason,
+>   173:     derivationRunId: result.derivationRunId,
+    174:     candidateCount: result.candidateCount,
+    175:     resolvedCandidateCount: result.resolvedCandidateCount,
+    176:     persistenceDerivationRowsCreated:
+    177:       result.persistenceDerivationRowsCreated,
+    178:     warnings: result.warnings,
+    179:     errors: result.errors,
+
+----- pattern: derivationRunId | line: 269 | context: 263-275 -----
+    263:   const activityCategoryDerivationsCount = derivations.length;
+    264:   const noDuplicateRuns = routeRunnerSpecificRunsCount <= 1;
+    265:
+    266:   return {
+    267:     routeRunnerSpecificRunsCount,
+    268:     routeRunnerSpecificRunsPass: routeRunnerSpecificRunsCount === 1,
+>   269:     expectedDerivationRunId: expectedRunId,
+    270:     expectedDerivationRunExists: matchingExpectedRunCount === 1,
+    271:     expectedDerivationRunActualCount: matchingExpectedRunCount,
+    272:     activityCategoryDerivationsCount,
+    273:     activityCategoryDerivationsPass: activityCategoryDerivationsCount === 5,
+    274:     noDuplicateRuns,
+    275:     duplicateRouteRunnerCompletedRunsActualCount: routeRunnerSpecificRunsCount,
+
+----- pattern: derivationRunId | line: 551 | context: 545-557 -----
+    545:     ...adapterInput,
+    546:     metadata: {
+    547:       endpoint: ENDPOINT,
+    548:       p4Step: P4_STEP,
+    549:       call: "second",
+    550:       proof: "direct_adapter_idempotency",
+>   551:       firstDerivationRunId: firstCall.derivationRunId,
+    552:       activityEventMetadata: toJsonValue(event.metadata_json),
+    553:     },
+    554:   });
+    555:
+    556:   const runsResult = await fetchRouteRunnerRuns(event.id);
+    557:
+
+----- pattern: derivationRunId | line: 596 | context: 590-602 -----
+    590:     );
+    591:   }
+    592:
+    593:   const routeRunnerDerivations = derivationsResult.data ?? [];
+    594:   const dbVerification = makeDbVerification({
+    595:     eventId: event.id,
+>   596:     expectedRunId: firstCall.derivationRunId,
+    597:     runs: routeRunnerRuns,
+    598:     derivations: routeRunnerDerivations,
+    599:   });
+    600:
+    601:   const firstCallPass =
+    602:     firstCall.ok === true &&
+
+----- pattern: persistenceDerivationRowsCreated | line: 176 | context: 170-182 -----
+    170:     ok: result.ok,
+    171:     skipped: result.skipped,
+    172:     reason: result.reason,
+    173:     derivationRunId: result.derivationRunId,
+    174:     candidateCount: result.candidateCount,
+    175:     resolvedCandidateCount: result.resolvedCandidateCount,
+>   176:     persistenceDerivationRowsCreated:
+    177:       result.persistenceDerivationRowsCreated,
+    178:     warnings: result.warnings,
+    179:     errors: result.errors,
+    180:     idempotency: result.idempotency,
+    181:     routeRunner: result.routeRunner,
+    182:     config: result.config,
+
+----- pattern: persistenceDerivationRowsCreated | line: 177 | context: 171-183 -----
+    171:     skipped: result.skipped,
+    172:     reason: result.reason,
+    173:     derivationRunId: result.derivationRunId,
+    174:     candidateCount: result.candidateCount,
+    175:     resolvedCandidateCount: result.resolvedCandidateCount,
+    176:     persistenceDerivationRowsCreated:
+>   177:       result.persistenceDerivationRowsCreated,
+    178:     warnings: result.warnings,
+    179:     errors: result.errors,
+    180:     idempotency: result.idempotency,
+    181:     routeRunner: result.routeRunner,
+    182:     config: result.config,
+    183:   };
+
+----- pattern: persistenceDerivationRowsCreated | line: 606 | context: 600-612 -----
+    600:
+    601:   const firstCallPass =
+    602:     firstCall.ok === true &&
+    603:     firstCall.reason === "route_runner_completed" &&
+    604:     typeof firstCall.derivationRunId === "string" &&
+    605:     firstCall.derivationRunId.length > 0 &&
+>   606:     firstCall.persistenceDerivationRowsCreated === 5;
+    607:
+    608:   const secondCallPass =
+    609:     secondCall.ok === true &&
+    610:     secondCall.reason === "existing_completed_run_found" &&
+    611:     secondCall.derivationRunId === firstCall.derivationRunId &&
+    612:     secondCall.persistenceDerivationRowsCreated === 0;
+
+----- pattern: persistenceDerivationRowsCreated | line: 612 | context: 606-618 -----
+    606:     firstCall.persistenceDerivationRowsCreated === 5;
+    607:
+    608:   const secondCallPass =
+    609:     secondCall.ok === true &&
+    610:     secondCall.reason === "existing_completed_run_found" &&
+    611:     secondCall.derivationRunId === firstCall.derivationRunId &&
+>   612:     secondCall.persistenceDerivationRowsCreated === 0;
+    613:
+    614:   const fullPass = firstCallPass && secondCallPass && dbVerification.pass;
+    615:
+    616:   return NextResponse.json({
+    617:     ok: fullPass,
+    618:     status: fullPass ? "idempotency_test_pass" : "idempotency_test_failed",
+
+----- pattern: safety | line: 296 | context: 290-302 -----
+    290:     p4Step: P4_STEP,
+    291:     enabled: ACTIVITY_RECORDING_ENABLED,
+    292:     expectedMode: EXPECTED_MODE,
+    293:     currentConfig: getCategoryDerivationRouteRunnerConfigSummary(config),
+    294:     purpose:
+    295:       "Debug-only direct adapter idempotency proof endpoint. POST calls the complete-route Category Derivation adapter twice for the same event.",
+>   296:     safety: {
+    297:       modifiesCompleteRoute: false,
+    298:       callsOpenAI: false,
+    299:       enablesProductionPersist: false,
+    300:       createsUi: false,
+    301:       createsMigration: false,
+    302:     },
+
+----- pattern: safety | line: 675 | context: 669-681 -----
+    669:         category_type: row.category_type ?? null,
+    670:         status: row.status ?? null,
+    671:         confidence: row.confidence ?? null,
+    672:         created_at: row.created_at ?? null,
+    673:       })),
+    674:     },
+>   675:     safety: {
+    676:       completeRouteModified: false,
+    677:       eventCompletedByThisRoute: false,
+    678:       productionPersistEnabled: false,
+    679:       openAiCalled: false,
+    680:       uiCreated: false,
+    681:       migrationCreated: false,
+
+----- pattern: first | line: 533 | context: 527-539 -----
+    527:     actorId,
+    528:     organizationId: null,
+    529:     inputLanguage: null,
+    530:     config,
+    531:   };
+    532:
+>   533:   const firstCall = await runCategoryDerivationForCompleteRoute({
+    534:     ...adapterInput,
+    535:     metadata: {
+    536:       endpoint: ENDPOINT,
+    537:       p4Step: P4_STEP,
+    538:       call: "first",
+    539:       proof: "direct_adapter_idempotency",
+
+----- pattern: first | line: 538 | context: 532-544 -----
+    532:
+    533:   const firstCall = await runCategoryDerivationForCompleteRoute({
+    534:     ...adapterInput,
+    535:     metadata: {
+    536:       endpoint: ENDPOINT,
+    537:       p4Step: P4_STEP,
+>   538:       call: "first",
+    539:       proof: "direct_adapter_idempotency",
+    540:       activityEventMetadata: toJsonValue(event.metadata_json),
+    541:     },
+    542:   });
+    543:
+    544:   const secondCall = await runCategoryDerivationForCompleteRoute({
+
+----- pattern: first | line: 551 | context: 545-557 -----
+    545:     ...adapterInput,
+    546:     metadata: {
+    547:       endpoint: ENDPOINT,
+    548:       p4Step: P4_STEP,
+    549:       call: "second",
+    550:       proof: "direct_adapter_idempotency",
+>   551:       firstDerivationRunId: firstCall.derivationRunId,
+    552:       activityEventMetadata: toJsonValue(event.metadata_json),
+    553:     },
+    554:   });
+    555:
+    556:   const runsResult = await fetchRouteRunnerRuns(event.id);
+    557:
+
+----- pattern: first | line: 565 | context: 559-571 -----
+    559:     return NextResponse.json(
+    560:       {
+    561:         ok: false,
+    562:         endpoint: ENDPOINT,
+    563:         p4Step: P4_STEP,
+    564:         error: errorMessage(runsResult.error) ?? "Failed to read routeRunner runs.",
+>   565:         firstCall: compactAdapterResult(firstCall),
+    566:         secondCall: compactAdapterResult(secondCall),
+    567:       },
+    568:       { status: 500 },
+    569:     );
+    570:   }
+    571:
+
+----- pattern: second | line: 544 | context: 538-550 -----
+    538:       call: "first",
+    539:       proof: "direct_adapter_idempotency",
+    540:       activityEventMetadata: toJsonValue(event.metadata_json),
+    541:     },
+    542:   });
+    543:
+>   544:   const secondCall = await runCategoryDerivationForCompleteRoute({
+    545:     ...adapterInput,
+    546:     metadata: {
+    547:       endpoint: ENDPOINT,
+    548:       p4Step: P4_STEP,
+    549:       call: "second",
+    550:       proof: "direct_adapter_idempotency",
+
+----- pattern: second | line: 549 | context: 543-555 -----
+    543:
+    544:   const secondCall = await runCategoryDerivationForCompleteRoute({
+    545:     ...adapterInput,
+    546:     metadata: {
+    547:       endpoint: ENDPOINT,
+    548:       p4Step: P4_STEP,
+>   549:       call: "second",
+    550:       proof: "direct_adapter_idempotency",
+    551:       firstDerivationRunId: firstCall.derivationRunId,
+    552:       activityEventMetadata: toJsonValue(event.metadata_json),
+    553:     },
+    554:   });
+    555:
+
+----- pattern: second | line: 566 | context: 560-572 -----
+    560:       {
+    561:         ok: false,
+    562:         endpoint: ENDPOINT,
+    563:         p4Step: P4_STEP,
+    564:         error: errorMessage(runsResult.error) ?? "Failed to read routeRunner runs.",
+    565:         firstCall: compactAdapterResult(firstCall),
+>   566:         secondCall: compactAdapterResult(secondCall),
+    567:       },
+    568:       { status: 500 },
+    569:     );
+    570:   }
+    571:
+    572:   const routeRunnerRuns = runsResult.data ?? [];
+
+----- pattern: second | line: 586 | context: 580-592 -----
+    580:         endpoint: ENDPOINT,
+    581:         p4Step: P4_STEP,
+    582:         error:
+    583:           errorMessage(derivationsResult.error) ??
+    584:           "Failed to read routeRunner activity_category_derivations.",
+    585:         firstCall: compactAdapterResult(firstCall),
+>   586:         secondCall: compactAdapterResult(secondCall),
+    587:         routeRunnerRunsCount: routeRunnerRuns.length,
+    588:       },
+    589:       { status: 500 },
+    590:     );
+    591:   }
+    592:
+
+----
+
+## completeRouteIntegration adapter
+
+Path: .\lib\activity\categoryDerivation\completeRouteIntegration.ts
+
+Marker summary:
+- FOUND: findExistingCompletedCategoryDerivationRunForActivityEvent
+- FOUND: runCategoryDerivationForCompleteRoute
+- FOUND: persistenceDerivationRowsCreated
+- FOUND: derivationRunId
+- FOUND: ok: routeRunnerOk ? true : !params.config.failActivityComplete
+- FOUND: routeRunnerExecuted
+- FOUND: routeRunnerPersisted
+- FOUND: routeRunnerResolved
+
+Relevant snippets:
+
+----- pattern: findExistingCompletedCategoryDerivationRunForActivityEvent | line: 11 | context: 5-17 -----
+      5: } from "./config";
+      6: import {
+      7:   DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION,
+      8:   DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION,
+      9:   DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION,
+     10:   DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+>    11:   findExistingCompletedCategoryDerivationRunForActivityEvent,
+     12:   summarizeExistingCompletedCategoryDerivationRunLookup,
+     13:   type CategoryDerivationRunLookupClient,
+     14:   type FindExistingCompletedCategoryDerivationRunResult,
+     15: } from "./runLookup";
+     16: import {
+     17:   runCategoryDerivationRoute,
+
+----- pattern: findExistingCompletedCategoryDerivationRunForActivityEvent | line: 337 | context: 331-343 -----
+    331:
+    332:   let idempotency: FindExistingCompletedCategoryDerivationRunResult | null =
+    333:     null;
+    334:
+    335:   if (config.shouldPersist) {
+    336:     idempotency =
+>   337:       await findExistingCompletedCategoryDerivationRunForActivityEvent(
+    338:         params.supabase,
+    339:         {
+    340:           activityEventId,
+    341:           processorVersion,
+    342:           ruleVersion,
+    343:           schemaVersion,
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 36 | context: 30-42 -----
+     30:   description?: string | null;
+     31:   duration_minutes?: number | null;
+     32:   source?: string | null;
+     33:   metadata_json?: Record<string, unknown> | null;
+     34: }
+     35:
+>    36: export interface RunCategoryDerivationForCompleteRouteInput {
+     37:   supabase: CategoryDerivationCompleteRouteIntegrationSupabaseClient;
+     38:   activityEvent: CategoryDerivationCompleteRouteActivityEvent;
+     39:   actorId: string | null;
+     40:   organizationId?: string | null;
+     41:   inputLanguage?: string | null;
+     42:   config?: CategoryDerivationRouteRunnerConfig;
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 239 | context: 233-245 -----
+    233:     debug: {
+    234:       routeRunnerResult: params.routeRunnerResult,
+    235:     },
+    236:   });
+    237: }
+    238:
+>   239: export async function runCategoryDerivationForCompleteRoute(
+    240:   params: RunCategoryDerivationForCompleteRouteInput,
+    241: ): Promise<CategoryDerivationCompleteRouteIntegrationResult> {
+    242:   const config = params.config ?? getCategoryDerivationRouteRunnerConfig();
+    243:
+    244:   if (config.isDisabled) {
+    245:     return baseResult({
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 240 | context: 234-246 -----
+    234:       routeRunnerResult: params.routeRunnerResult,
+    235:     },
+    236:   });
+    237: }
+    238:
+    239: export async function runCategoryDerivationForCompleteRoute(
+>   240:   params: RunCategoryDerivationForCompleteRouteInput,
+    241: ): Promise<CategoryDerivationCompleteRouteIntegrationResult> {
+    242:   const config = params.config ?? getCategoryDerivationRouteRunnerConfig();
+    243:
+    244:   if (config.isDisabled) {
+    245:     return baseResult({
+    246:       config,
+
+----- pattern: persistenceDerivationRowsCreated | line: 73 | context: 67-79 -----
+     67:   ok: boolean;
+     68:   skipped: boolean;
+     69:   reason: CategoryDerivationCompleteRouteIntegrationReason;
+     70:   derivationRunId: string | null;
+     71:   candidateCount: number;
+     72:   resolvedCandidateCount: number;
+>    73:   persistenceDerivationRowsCreated: number;
+     74:   warnings: string[];
+     75:   errors: string[];
+     76:   config: ReturnType<typeof getCategoryDerivationRouteRunnerConfigSummary>;
+     77:   idempotency: ReturnType<
+     78:     typeof summarizeExistingCompletedCategoryDerivationRunLookup
+     79:   > | null;
+
+----- pattern: persistenceDerivationRowsCreated | line: 156 | context: 150-162 -----
+    150:   ok: boolean;
+    151:   skipped: boolean;
+    152:   reason: CategoryDerivationCompleteRouteIntegrationReason;
+    153:   derivationRunId?: string | null;
+    154:   candidateCount?: number;
+    155:   resolvedCandidateCount?: number;
+>   156:   persistenceDerivationRowsCreated?: number;
+    157:   warnings?: string[];
+    158:   errors?: string[];
+    159:   idempotency?: FindExistingCompletedCategoryDerivationRunResult | null;
+    160:   routeRunnerExecuted?: boolean;
+    161:   routeRunnerPersisted?: boolean;
+    162:   routeRunnerResolved?: boolean;
+
+----- pattern: persistenceDerivationRowsCreated | line: 174 | context: 168-180 -----
+    168:     ok: params.ok,
+    169:     skipped: params.skipped,
+    170:     reason: params.reason,
+    171:     derivationRunId: params.derivationRunId ?? null,
+    172:     candidateCount: params.candidateCount ?? 0,
+    173:     resolvedCandidateCount: params.resolvedCandidateCount ?? 0,
+>   174:     persistenceDerivationRowsCreated:
+    175:       params.persistenceDerivationRowsCreated ?? 0,
+    176:     warnings: [...params.config.warnings, ...(params.warnings ?? [])],
+    177:     errors: params.errors ?? [],
+    178:     config: getCategoryDerivationRouteRunnerConfigSummary(params.config),
+    179:     idempotency: params.idempotency
+    180:       ? summarizeExistingCompletedCategoryDerivationRunLookup(
+
+----- pattern: persistenceDerivationRowsCreated | line: 175 | context: 169-181 -----
+    169:     skipped: params.skipped,
+    170:     reason: params.reason,
+    171:     derivationRunId: params.derivationRunId ?? null,
+    172:     candidateCount: params.candidateCount ?? 0,
+    173:     resolvedCandidateCount: params.resolvedCandidateCount ?? 0,
+    174:     persistenceDerivationRowsCreated:
+>   175:       params.persistenceDerivationRowsCreated ?? 0,
+    176:     warnings: [...params.config.warnings, ...(params.warnings ?? [])],
+    177:     errors: params.errors ?? [],
+    178:     config: getCategoryDerivationRouteRunnerConfigSummary(params.config),
+    179:     idempotency: params.idempotency
+    180:       ? summarizeExistingCompletedCategoryDerivationRunLookup(
+    181:           params.idempotency,
+
+----- pattern: derivationRunId | line: 70 | context: 64-76 -----
+     64: export interface CategoryDerivationCompleteRouteIntegrationResult {
+     65:   enabled: boolean;
+     66:   mode: string;
+     67:   ok: boolean;
+     68:   skipped: boolean;
+     69:   reason: CategoryDerivationCompleteRouteIntegrationReason;
+>    70:   derivationRunId: string | null;
+     71:   candidateCount: number;
+     72:   resolvedCandidateCount: number;
+     73:   persistenceDerivationRowsCreated: number;
+     74:   warnings: string[];
+     75:   errors: string[];
+     76:   config: ReturnType<typeof getCategoryDerivationRouteRunnerConfigSummary>;
+
+----- pattern: derivationRunId | line: 153 | context: 147-159 -----
+    147:
+    148: function baseResult(params: {
+    149:   config: CategoryDerivationRouteRunnerConfig;
+    150:   ok: boolean;
+    151:   skipped: boolean;
+    152:   reason: CategoryDerivationCompleteRouteIntegrationReason;
+>   153:   derivationRunId?: string | null;
+    154:   candidateCount?: number;
+    155:   resolvedCandidateCount?: number;
+    156:   persistenceDerivationRowsCreated?: number;
+    157:   warnings?: string[];
+    158:   errors?: string[];
+    159:   idempotency?: FindExistingCompletedCategoryDerivationRunResult | null;
+
+----- pattern: derivationRunId | line: 171 | context: 165-177 -----
+    165:   return {
+    166:     enabled: !params.config.isDisabled,
+    167:     mode: params.config.mode,
+    168:     ok: params.ok,
+    169:     skipped: params.skipped,
+    170:     reason: params.reason,
+>   171:     derivationRunId: params.derivationRunId ?? null,
+    172:     candidateCount: params.candidateCount ?? 0,
+    173:     resolvedCandidateCount: params.resolvedCandidateCount ?? 0,
+    174:     persistenceDerivationRowsCreated:
+    175:       params.persistenceDerivationRowsCreated ?? 0,
+    176:     warnings: [...params.config.warnings, ...(params.warnings ?? [])],
+    177:     errors: params.errors ?? [],
+
+----- pattern: derivationRunId | line: 223 | context: 217-229 -----
+    217:
+    218:   return baseResult({
+    219:     config: params.config,
+    220:     ok: routeRunnerOk ? true : !params.config.failActivityComplete,
+    221:     skipped: false,
+    222:     reason,
+>   223:     derivationRunId: params.routeRunnerResult.derivationRunId,
+    224:     candidateCount: params.routeRunnerResult.candidates.length,
+    225:     resolvedCandidateCount: params.routeRunnerResult.resolvedCandidates.length,
+    226:     persistenceDerivationRowsCreated: rowsCreated,
+    227:     warnings: params.routeRunnerResult.warnings,
+    228:     errors: params.routeRunnerResult.errors,
+    229:     idempotency: params.idempotency,
+
+----- pattern: ok: routeRunnerOk ? true : !params.config.failActivityComplete | line: 220 | context: 214-226 -----
+    214:   const reason = routeRunnerOk
+    215:     ? "route_runner_completed"
+    216:     : getRouteRunnerFailureReason(params.routeRunnerResult);
+    217:
+    218:   return baseResult({
+    219:     config: params.config,
+>   220:     ok: routeRunnerOk ? true : !params.config.failActivityComplete,
+    221:     skipped: false,
+    222:     reason,
+    223:     derivationRunId: params.routeRunnerResult.derivationRunId,
+    224:     candidateCount: params.routeRunnerResult.candidates.length,
+    225:     resolvedCandidateCount: params.routeRunnerResult.resolvedCandidates.length,
+    226:     persistenceDerivationRowsCreated: rowsCreated,
+
+----- pattern: routeRunnerExecuted | line: 160 | context: 154-166 -----
+    154:   candidateCount?: number;
+    155:   resolvedCandidateCount?: number;
+    156:   persistenceDerivationRowsCreated?: number;
+    157:   warnings?: string[];
+    158:   errors?: string[];
+    159:   idempotency?: FindExistingCompletedCategoryDerivationRunResult | null;
+>   160:   routeRunnerExecuted?: boolean;
+    161:   routeRunnerPersisted?: boolean;
+    162:   routeRunnerResolved?: boolean;
+    163:   debug?: unknown | null;
+    164: }): CategoryDerivationCompleteRouteIntegrationResult {
+    165:   return {
+    166:     enabled: !params.config.isDisabled,
+
+----- pattern: routeRunnerExecuted | line: 185 | context: 179-191 -----
+    179:     idempotency: params.idempotency
+    180:       ? summarizeExistingCompletedCategoryDerivationRunLookup(
+    181:           params.idempotency,
+    182:         )
+    183:       : null,
+    184:     routeRunner: {
+>   185:       executed: params.routeRunnerExecuted ?? false,
+    186:       persisted: params.routeRunnerPersisted ?? false,
+    187:       resolved: params.routeRunnerResolved ?? false,
+    188:     },
+    189:     debug: params.config.includeResponseDebug ? params.debug ?? null : null,
+    190:   };
+    191: }
+
+----- pattern: routeRunnerExecuted | line: 230 | context: 224-236 -----
+    224:     candidateCount: params.routeRunnerResult.candidates.length,
+    225:     resolvedCandidateCount: params.routeRunnerResult.resolvedCandidates.length,
+    226:     persistenceDerivationRowsCreated: rowsCreated,
+    227:     warnings: params.routeRunnerResult.warnings,
+    228:     errors: params.routeRunnerResult.errors,
+    229:     idempotency: params.idempotency,
+>   230:     routeRunnerExecuted: true,
+    231:     routeRunnerPersisted: params.routeRunnerResult.persisted,
+    232:     routeRunnerResolved: params.routeRunnerResult.resolved,
+    233:     debug: {
+    234:       routeRunnerResult: params.routeRunnerResult,
+    235:     },
+    236:   });
+
+----- pattern: routeRunnerPersisted | line: 161 | context: 155-167 -----
+    155:   resolvedCandidateCount?: number;
+    156:   persistenceDerivationRowsCreated?: number;
+    157:   warnings?: string[];
+    158:   errors?: string[];
+    159:   idempotency?: FindExistingCompletedCategoryDerivationRunResult | null;
+    160:   routeRunnerExecuted?: boolean;
+>   161:   routeRunnerPersisted?: boolean;
+    162:   routeRunnerResolved?: boolean;
+    163:   debug?: unknown | null;
+    164: }): CategoryDerivationCompleteRouteIntegrationResult {
+    165:   return {
+    166:     enabled: !params.config.isDisabled,
+    167:     mode: params.config.mode,
+
+----- pattern: routeRunnerPersisted | line: 186 | context: 180-192 -----
+    180:       ? summarizeExistingCompletedCategoryDerivationRunLookup(
+    181:           params.idempotency,
+    182:         )
+    183:       : null,
+    184:     routeRunner: {
+    185:       executed: params.routeRunnerExecuted ?? false,
+>   186:       persisted: params.routeRunnerPersisted ?? false,
+    187:       resolved: params.routeRunnerResolved ?? false,
+    188:     },
+    189:     debug: params.config.includeResponseDebug ? params.debug ?? null : null,
+    190:   };
+    191: }
+    192:
+
+----- pattern: routeRunnerPersisted | line: 231 | context: 225-237 -----
+    225:     resolvedCandidateCount: params.routeRunnerResult.resolvedCandidates.length,
+    226:     persistenceDerivationRowsCreated: rowsCreated,
+    227:     warnings: params.routeRunnerResult.warnings,
+    228:     errors: params.routeRunnerResult.errors,
+    229:     idempotency: params.idempotency,
+    230:     routeRunnerExecuted: true,
+>   231:     routeRunnerPersisted: params.routeRunnerResult.persisted,
+    232:     routeRunnerResolved: params.routeRunnerResult.resolved,
+    233:     debug: {
+    234:       routeRunnerResult: params.routeRunnerResult,
+    235:     },
+    236:   });
+    237: }
+
+----- pattern: routeRunnerResolved | line: 162 | context: 156-168 -----
+    156:   persistenceDerivationRowsCreated?: number;
+    157:   warnings?: string[];
+    158:   errors?: string[];
+    159:   idempotency?: FindExistingCompletedCategoryDerivationRunResult | null;
+    160:   routeRunnerExecuted?: boolean;
+    161:   routeRunnerPersisted?: boolean;
+>   162:   routeRunnerResolved?: boolean;
+    163:   debug?: unknown | null;
+    164: }): CategoryDerivationCompleteRouteIntegrationResult {
+    165:   return {
+    166:     enabled: !params.config.isDisabled,
+    167:     mode: params.config.mode,
+    168:     ok: params.ok,
+
+----- pattern: routeRunnerResolved | line: 187 | context: 181-193 -----
+    181:           params.idempotency,
+    182:         )
+    183:       : null,
+    184:     routeRunner: {
+    185:       executed: params.routeRunnerExecuted ?? false,
+    186:       persisted: params.routeRunnerPersisted ?? false,
+>   187:       resolved: params.routeRunnerResolved ?? false,
+    188:     },
+    189:     debug: params.config.includeResponseDebug ? params.debug ?? null : null,
+    190:   };
+    191: }
+    192:
+    193: function getRouteRunnerFailureReason(
+
+----- pattern: routeRunnerResolved | line: 232 | context: 226-238 -----
+    226:     persistenceDerivationRowsCreated: rowsCreated,
+    227:     warnings: params.routeRunnerResult.warnings,
+    228:     errors: params.routeRunnerResult.errors,
+    229:     idempotency: params.idempotency,
+    230:     routeRunnerExecuted: true,
+    231:     routeRunnerPersisted: params.routeRunnerResult.persisted,
+>   232:     routeRunnerResolved: params.routeRunnerResult.resolved,
+    233:     debug: {
+    234:       routeRunnerResult: params.routeRunnerResult,
+    235:     },
+    236:   });
+    237: }
+    238:
+
+----
+
+## runLookup helper
+
+Path: .\lib\activity\categoryDerivation\runLookup.ts
+
+Marker summary:
+- FOUND: findExistingCompletedCategoryDerivationRunForActivityEvent
+- FOUND: activityEventId
+- FOUND: processorVersion
+- FOUND: ruleVersion
+- FOUND: schemaVersion
+- FOUND: policyVersion
+- FOUND: completed
+- FOUND: completed_with_warnings
+
+Relevant snippets:
+
+----- pattern: findExistingCompletedCategoryDerivationRunForActivityEvent | line: 167 | context: 161-173 -----
+    161:       normalizeRequiredText(input.policyVersion) ??
+    162:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION,
+    163:     statuses: normalizeStatuses(input.statuses),
+    164:   };
+    165: }
+    166:
+>   167: export async function findExistingCompletedCategoryDerivationRunForActivityEvent(
+    168:   supabase: CategoryDerivationRunLookupClient,
+    169:   input: FindExistingCompletedCategoryDerivationRunInput,
+    170: ): Promise<FindExistingCompletedCategoryDerivationRunResult> {
+    171:   const query = buildCompletedCategoryDerivationRunLookupQuery(input);
+    172:
+    173:   if (!query) {
+
+----- pattern: activityEventId | line: 64 | context: 58-70 -----
+     58:
+     59: export interface CategoryDerivationRunLookupClient {
+     60:   from<T = Record<string, unknown>>(table: string): SupabaseTableSelectClient<T>;
+     61: }
+     62:
+     63: export interface FindExistingCompletedCategoryDerivationRunInput {
+>    64:   activityEventId: string;
+     65:   processorVersion?: string;
+     66:   ruleVersion?: string;
+     67:   schemaVersion?: string;
+     68:   policyVersion?: string;
+     69:   statuses?: string[];
+     70: }
+
+----- pattern: activityEventId | line: 73 | context: 67-79 -----
+     67:   schemaVersion?: string;
+     68:   policyVersion?: string;
+     69:   statuses?: string[];
+     70: }
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+>    73:   activityEventId: string;
+     74:   processorVersion: string;
+     75:   ruleVersion: string;
+     76:   schemaVersion: string;
+     77:   policyVersion: string;
+     78:   statuses: string[];
+     79: }
+
+----- pattern: activityEventId | line: 143 | context: 137-149 -----
+    137:   return Array.from(new Set(normalized));
+    138: }
+    139:
+    140: export function buildCompletedCategoryDerivationRunLookupQuery(
+    141:   input: FindExistingCompletedCategoryDerivationRunInput,
+    142: ): FindExistingCompletedCategoryDerivationRunQuery | null {
+>   143:   const activityEventId = normalizeRequiredText(input.activityEventId);
+    144:
+    145:   if (!activityEventId) {
+    146:     return null;
+    147:   }
+    148:
+    149:   return {
+
+----- pattern: activityEventId | line: 145 | context: 139-151 -----
+    139:
+    140: export function buildCompletedCategoryDerivationRunLookupQuery(
+    141:   input: FindExistingCompletedCategoryDerivationRunInput,
+    142: ): FindExistingCompletedCategoryDerivationRunQuery | null {
+    143:   const activityEventId = normalizeRequiredText(input.activityEventId);
+    144:
+>   145:   if (!activityEventId) {
+    146:     return null;
+    147:   }
+    148:
+    149:   return {
+    150:     activityEventId,
+    151:     processorVersion:
+
+----- pattern: processorVersion | line: 65 | context: 59-71 -----
+     59: export interface CategoryDerivationRunLookupClient {
+     60:   from<T = Record<string, unknown>>(table: string): SupabaseTableSelectClient<T>;
+     61: }
+     62:
+     63: export interface FindExistingCompletedCategoryDerivationRunInput {
+     64:   activityEventId: string;
+>    65:   processorVersion?: string;
+     66:   ruleVersion?: string;
+     67:   schemaVersion?: string;
+     68:   policyVersion?: string;
+     69:   statuses?: string[];
+     70: }
+     71:
+
+----- pattern: processorVersion | line: 74 | context: 68-80 -----
+     68:   policyVersion?: string;
+     69:   statuses?: string[];
+     70: }
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+     73:   activityEventId: string;
+>    74:   processorVersion: string;
+     75:   ruleVersion: string;
+     76:   schemaVersion: string;
+     77:   policyVersion: string;
+     78:   statuses: string[];
+     79: }
+     80:
+
+----- pattern: processorVersion | line: 151 | context: 145-157 -----
+    145:   if (!activityEventId) {
+    146:     return null;
+    147:   }
+    148:
+    149:   return {
+    150:     activityEventId,
+>   151:     processorVersion:
+    152:       normalizeRequiredText(input.processorVersion) ??
+    153:       DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION,
+    154:     ruleVersion:
+    155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+    157:     schemaVersion:
+
+----- pattern: processorVersion | line: 152 | context: 146-158 -----
+    146:     return null;
+    147:   }
+    148:
+    149:   return {
+    150:     activityEventId,
+    151:     processorVersion:
+>   152:       normalizeRequiredText(input.processorVersion) ??
+    153:       DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION,
+    154:     ruleVersion:
+    155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+    157:     schemaVersion:
+    158:       normalizeRequiredText(input.schemaVersion) ??
+
+----- pattern: ruleVersion | line: 66 | context: 60-72 -----
+     60:   from<T = Record<string, unknown>>(table: string): SupabaseTableSelectClient<T>;
+     61: }
+     62:
+     63: export interface FindExistingCompletedCategoryDerivationRunInput {
+     64:   activityEventId: string;
+     65:   processorVersion?: string;
+>    66:   ruleVersion?: string;
+     67:   schemaVersion?: string;
+     68:   policyVersion?: string;
+     69:   statuses?: string[];
+     70: }
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+
+----- pattern: ruleVersion | line: 75 | context: 69-81 -----
+     69:   statuses?: string[];
+     70: }
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+     73:   activityEventId: string;
+     74:   processorVersion: string;
+>    75:   ruleVersion: string;
+     76:   schemaVersion: string;
+     77:   policyVersion: string;
+     78:   statuses: string[];
+     79: }
+     80:
+     81: export type FindExistingCompletedCategoryDerivationRunReason =
+
+----- pattern: ruleVersion | line: 154 | context: 148-160 -----
+    148:
+    149:   return {
+    150:     activityEventId,
+    151:     processorVersion:
+    152:       normalizeRequiredText(input.processorVersion) ??
+    153:       DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION,
+>   154:     ruleVersion:
+    155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+    157:     schemaVersion:
+    158:       normalizeRequiredText(input.schemaVersion) ??
+    159:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION,
+    160:     policyVersion:
+
+----- pattern: ruleVersion | line: 155 | context: 149-161 -----
+    149:   return {
+    150:     activityEventId,
+    151:     processorVersion:
+    152:       normalizeRequiredText(input.processorVersion) ??
+    153:       DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION,
+    154:     ruleVersion:
+>   155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+    157:     schemaVersion:
+    158:       normalizeRequiredText(input.schemaVersion) ??
+    159:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION,
+    160:     policyVersion:
+    161:       normalizeRequiredText(input.policyVersion) ??
+
+----- pattern: schemaVersion | line: 67 | context: 61-73 -----
+     61: }
+     62:
+     63: export interface FindExistingCompletedCategoryDerivationRunInput {
+     64:   activityEventId: string;
+     65:   processorVersion?: string;
+     66:   ruleVersion?: string;
+>    67:   schemaVersion?: string;
+     68:   policyVersion?: string;
+     69:   statuses?: string[];
+     70: }
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+     73:   activityEventId: string;
+
+----- pattern: schemaVersion | line: 76 | context: 70-82 -----
+     70: }
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+     73:   activityEventId: string;
+     74:   processorVersion: string;
+     75:   ruleVersion: string;
+>    76:   schemaVersion: string;
+     77:   policyVersion: string;
+     78:   statuses: string[];
+     79: }
+     80:
+     81: export type FindExistingCompletedCategoryDerivationRunReason =
+     82:   | "existing_completed_run_found"
+
+----- pattern: schemaVersion | line: 157 | context: 151-163 -----
+    151:     processorVersion:
+    152:       normalizeRequiredText(input.processorVersion) ??
+    153:       DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION,
+    154:     ruleVersion:
+    155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+>   157:     schemaVersion:
+    158:       normalizeRequiredText(input.schemaVersion) ??
+    159:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION,
+    160:     policyVersion:
+    161:       normalizeRequiredText(input.policyVersion) ??
+    162:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION,
+    163:     statuses: normalizeStatuses(input.statuses),
+
+----- pattern: schemaVersion | line: 158 | context: 152-164 -----
+    152:       normalizeRequiredText(input.processorVersion) ??
+    153:       DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION,
+    154:     ruleVersion:
+    155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+    157:     schemaVersion:
+>   158:       normalizeRequiredText(input.schemaVersion) ??
+    159:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION,
+    160:     policyVersion:
+    161:       normalizeRequiredText(input.policyVersion) ??
+    162:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION,
+    163:     statuses: normalizeStatuses(input.statuses),
+    164:   };
+
+----- pattern: policyVersion | line: 68 | context: 62-74 -----
+     62:
+     63: export interface FindExistingCompletedCategoryDerivationRunInput {
+     64:   activityEventId: string;
+     65:   processorVersion?: string;
+     66:   ruleVersion?: string;
+     67:   schemaVersion?: string;
+>    68:   policyVersion?: string;
+     69:   statuses?: string[];
+     70: }
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+     73:   activityEventId: string;
+     74:   processorVersion: string;
+
+----- pattern: policyVersion | line: 77 | context: 71-83 -----
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+     73:   activityEventId: string;
+     74:   processorVersion: string;
+     75:   ruleVersion: string;
+     76:   schemaVersion: string;
+>    77:   policyVersion: string;
+     78:   statuses: string[];
+     79: }
+     80:
+     81: export type FindExistingCompletedCategoryDerivationRunReason =
+     82:   | "existing_completed_run_found"
+     83:   | "no_existing_completed_run"
+
+----- pattern: policyVersion | line: 160 | context: 154-166 -----
+    154:     ruleVersion:
+    155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+    157:     schemaVersion:
+    158:       normalizeRequiredText(input.schemaVersion) ??
+    159:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION,
+>   160:     policyVersion:
+    161:       normalizeRequiredText(input.policyVersion) ??
+    162:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION,
+    163:     statuses: normalizeStatuses(input.statuses),
+    164:   };
+    165: }
+    166:
+
+----- pattern: policyVersion | line: 161 | context: 155-167 -----
+    155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+    157:     schemaVersion:
+    158:       normalizeRequiredText(input.schemaVersion) ??
+    159:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION,
+    160:     policyVersion:
+>   161:       normalizeRequiredText(input.policyVersion) ??
+    162:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION,
+    163:     statuses: normalizeStatuses(input.statuses),
+    164:   };
+    165: }
+    166:
+    167: export async function findExistingCompletedCategoryDerivationRunForActivityEvent(
+
+----- pattern: completed | line: 14 | context: 8-20 -----
+      8: export const DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION =
+      9:   "category_derivation_complete_route_v1";
+     10:
+     11: export const DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION =
+     12:   "c8-e-f4";
+     13:
+>    14: export const DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES = [
+     15:   "completed",
+     16:   "completed_with_warnings",
+     17: ] as const;
+     18:
+     19: export type CompletedCategoryDerivationRunStatus =
+     20:   (typeof DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES)[number];
+
+----- pattern: completed | line: 15 | context: 9-21 -----
+      9:   "category_derivation_complete_route_v1";
+     10:
+     11: export const DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION =
+     12:   "c8-e-f4";
+     13:
+     14: export const DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES = [
+>    15:   "completed",
+     16:   "completed_with_warnings",
+     17: ] as const;
+     18:
+     19: export type CompletedCategoryDerivationRunStatus =
+     20:   (typeof DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES)[number];
+     21:
+
+----- pattern: completed | line: 16 | context: 10-22 -----
+     10:
+     11: export const DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION =
+     12:   "c8-e-f4";
+     13:
+     14: export const DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES = [
+     15:   "completed",
+>    16:   "completed_with_warnings",
+     17: ] as const;
+     18:
+     19: export type CompletedCategoryDerivationRunStatus =
+     20:   (typeof DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES)[number];
+     21:
+     22: type SupabaseErrorLike = {
+
+----- pattern: completed | line: 19 | context: 13-25 -----
+     13:
+     14: export const DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES = [
+     15:   "completed",
+     16:   "completed_with_warnings",
+     17: ] as const;
+     18:
+>    19: export type CompletedCategoryDerivationRunStatus =
+     20:   (typeof DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES)[number];
+     21:
+     22: type SupabaseErrorLike = {
+     23:   message?: string;
+     24:   details?: string;
+     25:   hint?: string;
+
+----- pattern: completed_with_warnings | line: 16 | context: 10-22 -----
+     10:
+     11: export const DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION =
+     12:   "c8-e-f4";
+     13:
+     14: export const DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES = [
+     15:   "completed",
+>    16:   "completed_with_warnings",
+     17: ] as const;
+     18:
+     19: export type CompletedCategoryDerivationRunStatus =
+     20:   (typeof DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES)[number];
+     21:
+     22: type SupabaseErrorLike = {
+
+----
+
+10. Next step
+
+If this preparation document is committed successfully, the next step is:
+
+- P4.10.0-C8-E-F6-E-D-D — run adapter-level idempotency runtime proof
+
+11. Definition of Done
+
+This F6-E-D-C preparation step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this preparation document above 1fcfe76
