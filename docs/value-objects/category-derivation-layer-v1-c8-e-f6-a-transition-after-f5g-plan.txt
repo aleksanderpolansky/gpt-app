@@ -1,0 +1,173 @@
+﻿GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-A
+Transition plan after F5-G failure behavior block
+Created: 2026-05-22
+
+1. Purpose
+
+This document starts the next Category Derivation transition block after the completed F5-G failure behavior block.
+
+The goal is not to change runtime behavior immediately.
+
+The goal is to define the next safe transition from debug-only proofs toward controlled complete-route shadow_persist verification, while avoiding premature production_persist, UI work, OpenAI changes or schema changes.
+
+2. Current baseline
+
+Current HEAD before this plan:
+
+- c717d3f — Close Category Derivation failure behavior block
+
+F5-G closure document:
+
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-i-a-failure-behavior-closure-and-next-transition.txt
+
+3. What is already proven
+
+The completed F5-G chain proves:
+
+- missing_activity_event_id is handled as a controlled validation skip;
+- wrong-mode / no-write is handled safely before adapter and DB write paths;
+- missing_actor_id is handled as a controlled validation skip;
+- simulated_persistence_failure works in non-blocking mode:
+  failActivityComplete=false,
+  adapterResult.ok=true,
+  routeRunner.executed=true,
+  no rows created;
+- simulated_persistence_failure works in strict mode:
+  failActivityComplete=true,
+  adapterResult.ok=false,
+  routeRunner.executed=true,
+  no rows created;
+- normalized adapterResult.reason is the stable failure signal;
+- no production_persist was enabled;
+- no OpenAI calls were introduced;
+- no schema/RLS/permission changes were used;
+- /api/activity/complete remained protected during strict debug proof support.
+
+4. Transition question
+
+The next transition question is:
+
+Can we safely move from debug-only failure proofs toward a controlled complete-route shadow_persist proof, without changing production behavior and without repeating already completed canonical proof work unnecessarily?
+
+This must be answered by inspection first, not by immediate runtime code changes.
+
+5. F6 block objective
+
+The objective of F6 is to decide and implement the smallest safe transition after F5-G.
+
+Possible direction:
+
+- inspect current complete route integration;
+- verify that complete route behavior can be observed in shadow_persist;
+- decide whether a new controlled complete-route proof is needed;
+- avoid canonical proof repetition unless the next proof gives new information;
+- preserve all F5-G anti-regression rules.
+
+6. Proposed F6 sequence
+
+F6-A — this transition plan document.
+No runtime/source code changes.
+
+F6-B — inspect current complete route, adapter, routeRunner, config and proof documents.
+Goal:
+- identify exact current production-adjacent state;
+- identify whether /api/activity/complete already uses adapter safely;
+- identify whether new complete-route shadow_persist proof gives new information.
+
+F6-C — create decision document.
+Possible decisions:
+- proceed with controlled complete-route shadow_persist proof;
+- or skip duplicate proof and move to a different transition;
+- or add a tiny observation-only safety marker if current route lacks enough observability.
+
+F6-D — implement smallest safe change only if F6-C requires it.
+Forbidden unless explicitly justified:
+- production_persist;
+- schema changes;
+- OpenAI calls;
+- UI work;
+- broad refactor.
+
+F6-E — runtime proof.
+Only after TypeScript and marker checks pass.
+
+F6-F — commit implementation only after runtime proof passes.
+
+F6-G — proof document.
+
+7. Files to inspect in F6-B
+
+Primary files:
+
+- src/app/api/activity/complete/route.ts
+- lib/activity/categoryDerivation/completeRouteIntegration.ts
+- lib/activity/categoryDerivation/routeRunner.ts
+- lib/activity/categoryDerivation/config.ts
+- lib/activity/categoryDerivation/runLookup.ts
+
+Debug/proof files:
+
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts
+- src/app/api/activity/debug/category-derivation-direct-adapter-idempotency-test/route.ts
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-i-a-failure-behavior-closure-and-next-transition.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-h-c-strict-simulated-persistence-failure-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-g-simulated-persistence-failure-runtime-proof.txt
+
+8. Safety gates
+
+F6 must keep these gates:
+
+- no production_persist;
+- no OpenAI call;
+- no schema or migration changes;
+- no RLS or permission changes;
+- no UI work;
+- no SQL in PowerShell;
+- no repeated canonical proof unless it gives new information;
+- no modification of /api/activity/complete unless F6-C explicitly approves it;
+- no commit before runtime proof if source code changes are made.
+
+9. Anti-regression rules inherited from F5-G
+
+Stable failure signals:
+
+- missing_activity_event_id
+- missing_actor_id
+- simulated_persistence_failure
+
+Do not rely only on raw error messages.
+
+Use normalized adapterResult.reason as the primary signal.
+
+Do not generalize strict debug-route guard exceptions to other scenarios without separate proof.
+
+Do not simulate DB failure by damaging the real DB.
+
+10. Recommended immediate next step
+
+After this plan is committed, perform:
+
+P4.10.0-C8-E-F6-B — inspect current transition state after F5-G
+
+The inspection should produce a document, not code.
+
+The inspection should answer:
+
+- Does /api/activity/complete currently call runCategoryDerivationForCompleteRoute?
+- Which config modes are safe for complete-route proof?
+- What complete-route proof has already been done?
+- What would be duplicate?
+- What would give genuinely new information?
+- Is a new runtime test needed, or should the next transition be planning toward production readiness?
+
+11. Definition of Done
+
+This F6-A planning step is complete when:
+
+- this document exists under docs/value-objects;
+- only this document is changed;
+- document is committed and pushed;
+- working tree is clean;
+- recent git log shows this plan document above c717d3f.
