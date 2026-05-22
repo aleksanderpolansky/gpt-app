@@ -1,0 +1,376 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F5-F-A - Safe production_persist Transition and Legacy Consolidation Plan
+Created: 2026-05-22 10:34:34
+Base commit before this document: 9b272a1
+
+STATUS
+Planning document only.
+No runtime code changes.
+No database changes.
+No /api/activity/complete patch.
+No OpenAI call.
+No UI changes.
+production_persist is not enabled in this step.
+
+CURRENT VERIFIED BASELINE
+
+F5-C:
+Disabled-by-default complete route adapter integration was implemented, tested, committed and documented.
+
+Key result:
+- complete route returns categoryDerivationRouteRunner metadata;
+- default mode remains disabled;
+- routeRunner does not persist in disabled mode;
+- complete route still reaches valueObjectBridge and processingLogs.
+
+F5-D:
+shadow_no_persist mode was tested and documented.
+
+Key result:
+- mode: shadow_no_persist
+- routeRunner executed;
+- candidateCount: 5
+- resolvedCandidateCount: 5
+- derivationRunId: null
+- persistenceDerivationRowsCreated: 0
+- no routeRunner-specific category_derivation_runs row was created;
+- no routeRunner-linked activity_category_derivations rows were created.
+
+F5-E:
+shadow_persist mode was tested and documented.
+
+Key result:
+- mode: shadow_persist
+- routeRunner executed;
+- candidateCount: 5
+- resolvedCandidateCount: 5
+- derivationRunId: f2bfa16f-4120-4bb6-9969-ef5a2288cc9f
+- persistenceDerivationRowsCreated: 5
+- exactly one routeRunner-specific category_derivation_runs row was created;
+- exactly five routeRunner-linked activity_category_derivations rows were created;
+- no duplicate routeRunner-specific completed runs existed for the test event;
+- valueObjectBridge and processingLogs remained present;
+- OpenAI was not called.
+
+CURRENT COMPLETE ROUTE STATE
+
+File:
+src/app/api/activity/complete/route.ts
+
+Current behavior:
+1. Complete route still contains legacy Category Derivation logic.
+2. New routeRunner adapter is called after legacy Category Derivation links are prepared.
+3. New routeRunner result is exposed as separate response metadata:
+   categoryDerivationRouteRunner
+4. Value Object Bridge still uses the existing complete-route bridge logic.
+5. Legacy additional category links still feed Value Object Bridge.
+6. routeRunner-persisted activity_category_derivations do not yet replace the legacy bridge input.
+
+Current routeRunner adapter import:
+runCategoryDerivationForCompleteRoute as runCategoryDerivationRouteRunnerForCompleteRoute
+
+Reason:
+The complete route still has an internal legacy function named:
+runCategoryDerivationForCompleteRoute
+
+CURRENT CONFIG MODES
+
+disabled:
+- safe default;
+- adapter returns skipped;
+- no routeRunner execution;
+- no routeRunner persistence.
+
+shadow_no_persist:
+- routeRunner executes;
+- resolves candidates;
+- does not persist category_derivation_runs or activity_category_derivations.
+
+shadow_persist:
+- routeRunner executes;
+- resolves candidates;
+- persists category_derivation_runs;
+- persists activity_category_derivations;
+- still considered shadow because legacy route behavior remains active.
+
+production_persist:
+- not yet enabled;
+- must not be enabled until consolidation decisions are made.
+
+CENTRAL QUESTION BEFORE production_persist
+
+Before production_persist, we must decide what becomes the authoritative Category Derivation path for /api/activity/complete.
+
+There are three possible strategies.
+
+OPTION A - Keep legacy and routeRunner running side-by-side
+
+Description:
+- legacy Category Derivation remains active;
+- routeRunner persists category_derivation_runs and activity_category_derivations;
+- Value Object Bridge continues to use legacy additional category links;
+- routeRunner persistence is used as audit/proof/analytics layer.
+
+Pros:
+- lowest risk;
+- no immediate change to Value Object Bridge;
+- preserves existing complete-route behavior;
+- routeRunner persistence can be accumulated safely.
+
+Cons:
+- duplicated derivation logic;
+- two derivation sources may diverge;
+- harder to reason about source of truth;
+- long-term technical debt.
+
+Recommended use:
+- short transitional period only.
+
+OPTION B - routeRunner becomes authoritative for persistence, legacy remains only as bridge fallback
+
+Description:
+- routeRunner persists canonical category_derivation_runs and activity_category_derivations;
+- legacy Category Derivation remains temporarily only to feed current Value Object Bridge if bridge still depends on old data shape;
+- response metadata distinguishes routeRunner canonical result from legacy fallback.
+
+Pros:
+- routeRunner persistence becomes the source of truth;
+- lower risk than removing legacy immediately;
+- allows later Value Object Bridge migration.
+
+Cons:
+- still has duplicate runtime work;
+- requires clear naming and logging;
+- requires later bridge refactor.
+
+Recommended use:
+- best next step before production_persist.
+
+OPTION C - routeRunner fully replaces legacy Category Derivation in complete route
+
+Description:
+- legacy internal function is removed or bypassed;
+- routeRunner is the only Category Derivation path;
+- Value Object Bridge consumes routeRunner output or persisted derivations.
+
+Pros:
+- clean architecture;
+- single source of truth;
+- lower long-term complexity.
+
+Cons:
+- highest immediate risk;
+- requires Value Object Bridge input adaptation;
+- requires more regression tests;
+- should not be done in one step without controlled bridge migration.
+
+Recommended use:
+- later target state, not immediate next step.
+
+RECOMMENDED STRATEGY
+
+Recommended path:
+B first, C later.
+
+Meaning:
+1. Keep production default disabled for now.
+2. Use shadow_persist for local tests only.
+3. Add an explicit plan to make routeRunner the canonical persistence path.
+4. Keep legacy complete-route Category Derivation as temporary bridge fallback.
+5. Do not remove legacy logic until Value Object Bridge can consume routeRunner result or persisted derivations directly.
+6. Do not enable production_persist until idempotency and bridge semantics are verified.
+
+WHY NOT production_persist IMMEDIATELY
+
+production_persist currently technically works in local routeRunner tests, but enabling it too early would create architectural ambiguity:
+
+- Are activity_category_derivations canonical?
+- Are value_object_category_links still created from legacy additionalCategoryLinks?
+- Which derivation_run_id should downstream analytics trust?
+- Should Value Object Bridge use routeRunner-derived candidates directly?
+- Should legacy Category Derivation still persist its own run?
+- What happens if routeRunner persistence succeeds but Value Object Bridge fails?
+- What happens if Value Object Bridge succeeds but routeRunner persistence fails?
+- Should category derivation failure block activity completion in production?
+- How do we test idempotency when complete route returns already_completed on repeated POST?
+
+These questions must be answered before production_persist is enabled.
+
+DECISION RULES FOR NEXT BLOCKS
+
+Rule 1:
+Do not enable production_persist until routeRunner-vs-legacy source-of-truth decision is documented.
+
+Rule 2:
+Do not remove legacy Category Derivation code before Value Object Bridge input compatibility is confirmed.
+
+Rule 3:
+Do not make routeRunner failure block complete route until failure behavior is tested separately.
+
+Rule 4:
+Do not test idempotency by calling /api/activity/complete twice on the same completed event.
+
+Rule 5:
+Do not force-reset completed test events without a dedicated test plan.
+
+Rule 6:
+Do not call OpenAI in this path until rule-based production flow is stable.
+
+Rule 7:
+Keep all production transition modes behind environment config.
+
+SOURCE OF TRUTH PROPOSAL
+
+Short-term source of truth:
+- existing complete-route behavior for user-visible completion and Value Object Bridge;
+- routeRunner persisted rows as shadow canonical candidate store.
+
+Medium-term source of truth:
+- routeRunner category_derivation_runs and activity_category_derivations become canonical Category Derivation persistence;
+- legacy complete-route Category Derivation becomes fallback only.
+
+Long-term source of truth:
+- routeRunner becomes the only Category Derivation path;
+- Value Object Bridge consumes routeRunner result or persisted activity_category_derivations;
+- legacy internal complete-route derivation function is removed.
+
+VALUE OBJECT BRIDGE CONSOLIDATION PLAN
+
+Current:
+- Value Object Bridge receives additional category links from legacy categoryDerivationResult.additionalCategoryLinks.
+- routeRunner-persisted activity_category_derivations are stored separately.
+
+Required future bridge work:
+1. Inspect processActivityValueObjectBridge input contract.
+2. Determine whether it can accept routeRunner candidates directly.
+3. Determine whether it can load activity_category_derivations by derivation_run_id.
+4. Add adapter function if needed:
+   mapActivityCategoryDerivationsToValueObjectBridgeCategoryLinks
+5. Compare bridge output using:
+   legacy additionalCategoryLinks
+   versus
+   routeRunner persisted activity_category_derivations
+6. Run both paths in a debug endpoint before changing production complete route.
+7. Only then switch Value Object Bridge to routeRunner source.
+
+IDEMPOTENCY PLAN
+
+Current complete route behavior:
+- first POST completes event and runs pipeline;
+- second POST returns already_completed and skips full pipeline.
+
+Therefore:
+- idempotency of routeRunner adapter cannot be fully proven by repeated complete-route POST.
+
+Recommended idempotency proof:
+1. Create a dedicated debug endpoint or local test route that calls the adapter directly.
+2. Use the same activity_event_id twice while event state remains controlled.
+3. First call should create one completed routeRunner run.
+4. Second call should detect existing completed run through findExistingCompletedCategoryDerivationRunForActivityEvent.
+5. Second call should return:
+   reason = existing_completed_run_found
+   derivationRunId = same run id
+   persistenceDerivationRowsCreated = 0
+6. Verify database still has exactly one routeRunner-specific completed run and exactly five derivation rows.
+
+Recommended future step:
+P4.10.0-C8-E-F5-F-B - design direct adapter idempotency proof endpoint or script.
+
+FAILURE BEHAVIOR PLAN
+
+Current:
+CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+
+Meaning:
+- routeRunner failure should not block /api/activity/complete.
+
+Before production_persist:
+1. Test invalid input path.
+2. Test missing actorId path if possible.
+3. Test persistence failure simulation if possible.
+4. Confirm complete route can still complete activity when failActivityComplete=false.
+5. Only later consider failActivityComplete=true for stricter modes.
+
+Recommended future step:
+P4.10.0-C8-E-F5-F-C - design failure behavior tests.
+
+RESPONSE METADATA PLAN
+
+Current response field:
+categoryDerivationRouteRunner
+
+Current production-safe metadata:
+- enabled
+- mode
+- ok
+- skipped
+- reason
+- derivationRunId
+- candidateCount
+- resolvedCandidateCount
+- persistenceDerivationRowsCreated
+- warnings
+- errors
+
+Recommended:
+- keep detailed internal derivation output out of normal response;
+- only include detailed routeRunner output when includeResponseDebug=true;
+- default production response should remain compact.
+
+PRODUCTION_PERSIST READINESS CHECKLIST
+
+production_persist can be considered only after:
+
+1. shadow_persist passed.
+2. direct adapter idempotency proof passed.
+3. failure behavior proof passed.
+4. Value Object Bridge source-of-truth decision documented.
+5. legacy fallback behavior documented.
+6. response metadata production shape confirmed.
+7. server reset procedure confirmed.
+8. no OpenAI call remains in the path.
+9. no duplicate category_derivation_runs are produced.
+10. no duplicate activity_category_derivations are produced.
+11. migration/cleanup needs are explicitly assessed.
+12. production env rollout plan is documented.
+
+RECOMMENDED NEXT STEP
+
+Proceed to:
+P4.10.0-C8-E-F5-F-B - plan direct adapter idempotency proof.
+
+Purpose:
+Create a controlled way to prove idempotency outside the complete-route lifecycle early return.
+
+Expected deliverable:
+- documentation-only plan first;
+- then a debug-only route or script if needed;
+- no production_persist;
+- no UI;
+- no OpenAI call.
+
+NO-GO
+
+Do not enable production_persist yet.
+Do not remove legacy Category Derivation code yet.
+Do not switch Value Object Bridge source yet.
+Do not call OpenAI.
+Do not create UI.
+Do not create database migrations without a dedicated plan.
+Do not modify commercial core.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+Do not force-reset completed test events without a dedicated plan.
+
+SERVER RESET NOTE
+
+After shadow_persist testing, local dev server should be restarted in disabled mode before ordinary development.
+
+Recommended reset command:
+
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE = "disabled"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG = "false"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE = "false"
+npm.cmd run dev
+
+END OF F5-F-A PRODUCTION TRANSITION AND LEGACY CONSOLIDATION PLAN
