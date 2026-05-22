@@ -1,0 +1,84 @@
+﻿GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F5-G-F-B
+Persistence failure simulation injection inspection
+Created: 2026-05-22
+
+1. Purpose
+
+This document inspects the current Category Derivation adapter, routeRunner, persistence, config and debug failure route code before implementing safe simulated persistence failure.
+
+No runtime code changes are made in this step.
+
+2. Baseline
+
+Current HEAD before inspection:
+
+- 60d7c96
+
+Previous plan commit:
+
+- 60d7c96 — Plan Category Derivation persistence failure simulation
+
+3. Files inspected
+
+4. Inspection findings
+
+- Adapter has try/catch-like handling markers: False
+- Adapter contains failActivityComplete marker: True
+- Adapter references routeRunner: True
+- Persistence layer contains insert/upsert/table markers: True
+- Debug failure route has SUPPORTED_SCENARIOS marker: True
+- Production /api/activity/complete references adapter: True
+
+5. Preliminary injection recommendation
+
+The safest first implementation path should remain debug-only.
+
+Preferred option for F5-G-F-C:
+
+1. Extend the debug failure route with scenario simulated_persistence_failure.
+2. Use a valid synthetic activity event and valid actorId.
+3. Add a narrow debug-only simulation signal that causes a controlled persistence failure without damaging DB schema, RLS or permissions.
+4. Keep /api/activity/complete unchanged.
+5. Keep production_persist disabled.
+6. Keep OpenAI disabled/not called.
+7. Prefer zero actual DB rows created for the first safe proof.
+
+Do not simulate persistence failure by changing real Supabase schema, RLS or permissions.
+
+6. Decision needed for F5-G-F-C
+
+After reading this inspection output, choose one exact injection point:
+
+A. Debug route-level simulated adapter result.
+   Safest, but proves less of routeRunner internals.
+
+B. Adapter-level debug-only option before persistence.
+   Good balance: adapter normalization can be tested without touching /api/activity/complete.
+
+C. routeRunner-level debug-only option before persistence write.
+   Stronger proof, but requires more careful narrow typing.
+
+D. persistence-layer debug-only mock/failing client.
+   Strongest but riskier; should be avoided unless inspection proves it is still narrow and non-destructive.
+
+Preliminary preference before manual review: B or C.
+
+7. Safety gates for F5-G-F-C
+
+- no /api/activity/complete changes
+- no schema or migration files
+- no production_persist
+- no OpenAI call
+- no SQL in PowerShell
+- TypeScript PASS before runtime
+- implementation commit only after runtime PASS
+
+8. Definition of Done for F5-G-F-B
+
+- inspection report exists under docs/value-objects
+- no runtime/source code files changed
+- only this report is committed
+- git status clean after commit
+- recent log shows this inspection commit above 60d7c96
