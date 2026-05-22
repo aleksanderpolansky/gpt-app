@@ -21,11 +21,14 @@ export const dynamic = "force-dynamic";
 const ENDPOINT =
   "/api/activity/debug/category-derivation-complete-route-adapter-failure-test";
 
-const P4_STEP = "P4.10.0-C8-E-F5-G-C-A";
+const P4_STEP = "P4.10.0-C8-E-F5-G-E-B-B-FIX2C";
 
 const EXPECTED_MODE = "shadow_persist";
 
-const SUPPORTED_SCENARIOS = ["missing_activity_event_id"] as const;
+const SUPPORTED_SCENARIOS = [
+  "missing_activity_event_id",
+  "missing_actor_id",
+] as const;
 
 type SupportedScenario = (typeof SUPPORTED_SCENARIOS)[number];
 
@@ -100,86 +103,145 @@ function compactAdapterResult(
   };
 }
 
+function expectedReasonForScenario(scenario: SupportedScenario) {
+  if (scenario === "missing_actor_id") {
+    return "missing_actor_id";
+  }
+
+  return "missing_activity_event_id";
+}
+
+function errorMatchesScenario(params: {
+  scenario: SupportedScenario;
+  reason: unknown;
+  errors: string[];
+}) {
+  const expectedReason = expectedReasonForScenario(params.scenario);
+
+  const actualReason =
+    typeof params.reason === "string"
+      ? params.reason.toLowerCase()
+      : "";
+
+  if (actualReason === expectedReason) {
+    return true;
+  }
+
+  const joinedErrors = params.errors.join(" ").toLowerCase();
+
+  if (params.scenario === "missing_actor_id") {
+    return joinedErrors.includes("actor") && joinedErrors.includes("required");
+  }
+
+  return (
+    joinedErrors.includes("activityevent.id") ||
+    (joinedErrors.includes("activity") &&
+      joinedErrors.includes("event") &&
+      joinedErrors.includes("required"))
+  );
+}
+
 function buildExpectedResultChecks(params: {
   scenario: SupportedScenario;
   result: CategoryDerivationCompleteRouteIntegrationResult;
   failActivityComplete: boolean;
 }) {
   const { scenario, result, failActivityComplete } = params;
+  const expectedOk = !failActivityComplete;
+  const expectedReason = expectedReasonForScenario(scenario);
 
-  if (scenario === "missing_activity_event_id") {
-    const expectedOk = !failActivityComplete;
-
-    const checks = [
-      {
-        name: "adapter result ok follows !failActivityComplete",
-        pass: result.ok === expectedOk,
-      },
-      {
-        name: "adapter skipped is true",
-        pass: result.skipped === true,
-      },
-      {
-        name: "adapter reason is missing_activity_event_id",
-        pass: result.reason === "missing_activity_event_id",
-      },
-      {
-        name: "derivationRunId is null",
-        pass: result.derivationRunId === null,
-      },
-      {
-        name: "candidateCount is 0",
-        pass: result.candidateCount === 0,
-      },
-      {
-        name: "resolvedCandidateCount is 0",
-        pass: result.resolvedCandidateCount === 0,
-      },
-      {
-        name: "persistenceDerivationRowsCreated is 0",
-        pass: result.persistenceDerivationRowsCreated === 0,
-      },
-      {
-        name: "routeRunner.executed is false",
-        pass: result.routeRunner.executed === false,
-      },
-      {
-        name: "routeRunner.persisted is false",
-        pass: result.routeRunner.persisted === false,
-      },
-      {
-        name: "routeRunner.resolved is false",
-        pass: result.routeRunner.resolved === false,
-      },
-      {
-        name: "errors include missing activityEvent.id",
-        pass: result.errors.some((error) =>
-          error.includes("activityEvent.id is required"),
-        ),
-      },
-    ];
-
-    return {
-      scenario,
-      expectedOk,
-      checks,
-      pass: checks.every((check) => check.pass),
-    };
-  }
-
-  const fallbackChecks = [
+  const checks = [
     {
-      name: "unsupported scenario should never reach adapter execution",
-      pass: false,
+      name: "adapter result ok follows !failActivityComplete",
+      pass: result.ok === expectedOk,
+    },
+    {
+      name: "adapter skipped is true",
+      pass: result.skipped === true,
+    },
+    {
+      name: `adapter reason is ${expectedReason}`,
+      pass: result.reason === expectedReason,
+    },
+    {
+      name: "derivationRunId is null",
+      pass: result.derivationRunId === null,
+    },
+    {
+      name: "candidateCount is 0",
+      pass: result.candidateCount === 0,
+    },
+    {
+      name: "resolvedCandidateCount is 0",
+      pass: result.resolvedCandidateCount === 0,
+    },
+    {
+      name: "persistenceDerivationRowsCreated is 0",
+      pass: result.persistenceDerivationRowsCreated === 0,
+    },
+    {
+      name: "routeRunner.executed is false",
+      pass: result.routeRunner.executed === false,
+    },
+    {
+      name: "routeRunner.persisted is false",
+      pass: result.routeRunner.persisted === false,
+    },
+    {
+      name: "routeRunner.resolved is false",
+      pass: result.routeRunner.resolved === false,
+    },
+    {
+      name: `validation signal matches ${expectedReason}`,
+      pass: errorMatchesScenario({
+        scenario,
+        reason: result.reason,
+        errors: result.errors,
+      }),
     },
   ];
 
   return {
     scenario,
-    expectedOk: false,
-    checks: fallbackChecks,
-    pass: false,
+    expectedOk,
+    expectedReason,
+    checks,
+    pass: checks.every((check) => check.pass),
   };
+}
+
+function buildAdapterActivityEvent(scenario: SupportedScenario) {
+  return {
+    id:
+      scenario === "missing_activity_event_id"
+        ? ""
+        : "00000000-0000-4000-8000-0000000000e5",
+    input_text: "walked to work for 15 minutes",
+    title:
+      scenario === "missing_actor_id"
+        ? "F5-G-E-B missing actor id validation failure proof"
+        : "F5-G-C-B missing activity event id validation failure proof",
+    description:
+      scenario === "missing_actor_id"
+        ? "Debug-only adapter validation proof. actorId is intentionally empty."
+        : "Debug-only adapter validation proof. activityEvent.id is intentionally empty.",
+    duration_minutes: 15,
+    source: "manual",
+    metadata_json: {
+      endpoint: ENDPOINT,
+      p4Step: P4_STEP,
+      scenario,
+      doNotUseAsCanonicalProof: true,
+    },
+  };
+}
+
+function buildAdapterActorId(scenario: SupportedScenario, personActorId: string) {
+  if (scenario === "missing_actor_id") {
+    return "";
+  }
+
+  return personActorId;
 }
 
 export async function GET() {
@@ -380,22 +442,8 @@ export async function POST(request: Request) {
   const adapterResult = await runCategoryDerivationForCompleteRoute({
     supabase:
       supabase as unknown as CategoryDerivationCompleteRouteIntegrationSupabaseClient,
-    activityEvent: {
-      id: "",
-      input_text: "walked to work for 15 minutes",
-      title: "F5-G-C-B missing activity event id validation failure proof",
-      description:
-        "Debug-only adapter validation proof. activityEvent.id is intentionally empty.",
-      duration_minutes: 15,
-      source: "manual",
-      metadata_json: {
-        endpoint: ENDPOINT,
-        p4Step: P4_STEP,
-        scenario,
-        doNotUseAsCanonicalProof: true,
-      },
-    },
-    actorId: personActor.id,
+    activityEvent: buildAdapterActivityEvent(scenario),
+    actorId: buildAdapterActorId(scenario, personActor.id),
     organizationId: null,
     inputLanguage: null,
     config,
@@ -404,7 +452,7 @@ export async function POST(request: Request) {
       p4Step: P4_STEP,
       scenario,
       proof: "adapter_validation_failure",
-      expectedFailure: "missing_activity_event_id",
+      expectedFailure: expectedReasonForScenario(scenario),
       doNotUseAsCanonicalProof: true,
     },
   });
@@ -415,11 +463,13 @@ export async function POST(request: Request) {
     failActivityComplete: config.failActivityComplete,
   });
 
+  const expectedReason = expectedReasonForScenario(scenario);
+
   const fullPass =
     expectedChecks.pass &&
     adapterResult.ok === true &&
     adapterResult.skipped === true &&
-    adapterResult.reason === "missing_activity_event_id" &&
+    adapterResult.reason === expectedReason &&
     adapterResult.derivationRunId === null &&
     adapterResult.persistenceDerivationRowsCreated === 0;
 
@@ -432,7 +482,9 @@ export async function POST(request: Request) {
     p4Step: P4_STEP,
     scenario,
     event: {
-      intentionallyMissingActivityEventId: true,
+      intentionallyMissingActivityEventId:
+        scenario === "missing_activity_event_id",
+      intentionallyMissingActorId: scenario === "missing_actor_id",
       completedByThisRoute: false,
       persistedByThisRoute: false,
     },
