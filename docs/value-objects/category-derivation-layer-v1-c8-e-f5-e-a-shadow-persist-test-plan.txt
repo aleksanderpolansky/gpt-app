@@ -1,0 +1,294 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F5-E-A - Category Derivation shadow_persist Local Test Plan
+Created: 2026-05-22 08:43:58
+Base commit before this document: bce0daa
+
+STATUS
+Planning document only.
+No runtime code changes.
+No database changes in this step.
+No /api/activity/complete patch.
+No OpenAI call.
+No UI changes.
+
+CURRENT VERIFIED BASELINE
+
+F5-C completed:
+- complete route was patched with disabled-by-default Category Derivation adapter;
+- commit: 79d024b Patch complete route with disabled Category Derivation adapter;
+- default disabled runtime proof was documented in 7e4cd27.
+
+F5-D completed:
+- shadow_no_persist plan was documented in 9efff9e;
+- shadow_no_persist runtime test passed;
+- shadow_no_persist proof was documented in bce0daa.
+
+Verified shadow_no_persist result:
+- mode: shadow_no_persist
+- enabled: true
+- skipped: false
+- reason: route_runner_completed
+- derivationRunId: null
+- candidateCount: 5
+- resolvedCandidateCount: 5
+- persistenceDerivationRowsCreated: 0
+- route_runner_specific_runs_count.actual_count: 0
+- route_runner_activity_category_derivations_count.actual_count: 0
+
+PURPOSE OF F5-E
+
+Test routeRunner persistent mode in local shadow mode.
+
+Target mode:
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_persist
+
+Expected behavior:
+- complete route still completes activity_event;
+- routeRunner adapter executes;
+- routeRunner derives candidates;
+- routeRunner resolves candidates;
+- routeRunner persists one category_derivation_runs row;
+- routeRunner persists 5 activity_category_derivations rows for the phrase walked to work for 15 minutes;
+- complete route returns ok true;
+- valueObjectBridge remains present;
+- processingLogs remain present;
+- idempotency behavior must be reviewed carefully.
+
+WHAT shadow_persist MEANS IN CURRENT CONFIG
+
+From config.ts:
+mode = shadow_persist
+
+Expected config-derived booleans:
+- isDisabled: false
+- isDebugOnly: false
+- usesLegacyExistingCompleteRouteFlow: false
+- usesRouteRunnerInCompleteRoute: true
+- shouldPersist: true
+- shouldResolve: true
+- isShadowMode: true
+- isProductionPersistMode: false
+
+Expected adapter behavior:
+- it does not skip because disabled/debug_only/legacy_existing are false;
+- it validates activityEvent.id;
+- it validates input text;
+- it validates actorId;
+- it runs idempotency lookup because shouldPersist=true;
+- if no existing completed routeRunner run exists, it calls runCategoryDerivationRoute with persist=true and resolve=true;
+- routeRunner creates a category_derivation_runs row;
+- routeRunner persists activity_category_derivations rows;
+- routeRunner finishes the run as completed or completed_with_warnings.
+
+EXPECTED RESPONSE IN shadow_persist
+
+categoryDerivationRouteRunner should be approximately:
+
+enabled: true
+mode: shadow_persist
+ok: true
+skipped: false
+reason: route_runner_completed
+derivationRunId: non-null uuid
+candidateCount: greater than 0
+resolvedCandidateCount: greater than 0
+persistenceDerivationRowsCreated: greater than 0
+warnings: []
+errors: []
+
+Expected for phrase:
+walked to work for 15 minutes
+
+Likely candidates:
+- walking
+- work
+- commute-to-work
+- walking-to-work
+- duration-minutes
+
+Expected counts:
+- candidateCount: 5
+- resolvedCandidateCount: 5
+- persistenceDerivationRowsCreated: 5
+
+IMPORTANT DATABASE EXPECTATION
+
+Because persist=true:
+- category_derivation_runs should get one routeRunner-specific run;
+- activity_category_derivations should get rows linked to that derivation_run_id;
+- expected routeRunner-specific run filter:
+  schema_version = category_derivation_complete_route_v1
+  policy_version = c8-e-f4
+  processor_version = category_derivation_v1
+  rule_version = rules_v1
+  status in completed / completed_with_warnings
+
+Expected read-only verification:
+- route_runner_specific_runs_count.actual_count = 1
+- route_runner_specific_runs_count.pass = true
+- route_runner_activity_category_derivations_count.actual_count = 5
+- route_runner_activity_category_derivations_count.pass = true
+
+IDEMPOTENCY RISK
+
+The complete route endpoint changes event status to completed.
+A repeated POST for the same event normally returns already_completed and skips the full pipeline.
+
+Therefore, idempotency should not be tested by simply calling /api/activity/complete twice on the same completed event.
+
+Safer idempotency checks for F5-E:
+1. Verify that the first shadow_persist call creates exactly one routeRunner-specific run.
+2. Verify that no duplicate routeRunner-specific completed runs exist for the same activity_event_id.
+3. Defer advanced idempotency testing to a later controlled debug endpoint or direct adapter test where the same event can be processed without the complete-route lifecycle early return.
+
+Do not force-reset the completed event back to started just to test idempotency unless a separate controlled plan is created.
+
+LOCAL TEST SETUP
+
+This test requires local server restart with environment variable:
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_persist
+
+Because Next.js server-side process.env values are read by the local dev server process, restart local dev server before testing.
+
+Recommended PowerShell start command:
+
+ = "shadow_persist"
+ = "false"
+ = "false"
+npm.cmd run dev
+
+After test, reset or restart without the variable for default disabled behavior.
+
+DO NOT set:
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+
+F5-E-B TEST EVENT PLAN
+
+Create a fresh activity_event with:
+- status = started
+- processing_status = pending
+- input_text = walked to work for 15 minutes
+- title = F5-E-B complete route shadow_persist routeRunner runtime test
+- metadata_json.testStep = P4.10.0-C8-E-F5-E-B
+- doNotUseAsCanonicalProof = true
+
+Do not reuse completed events:
+- 2e6f14c2-8478-479b-8173-83b86a53cad5
+- b3ef44ff-b5e1-4eae-bafe-df67b94b4eb2
+- 6e983d3b-71ac-4f8c-87e5-9040e44362f7
+- b74f89d6-0d4f-4cf8-aea6-57208691af53
+
+Reason:
+They are already completed and cannot be completed again through the normal route.
+
+F5-E-B BROWSER TEST PLAN
+
+Browser:
+http://localhost:3000
+
+Console fetch:
+POST /api/activity/complete
+
+Payload:
+{
+  eventId: fresh_event_id,
+  status: "completed",
+  comment: "F5-E-B runtime test: complete route with routeRunner adapter shadow_persist."
+}
+
+EXPECTED CHECKS
+
+Response checks:
+- HTTP status: 200
+- json.ok: true
+- json.status: completed
+- event.id matches
+- categoryDerivationRouteRunner exists
+- routeRunner.enabled is true
+- routeRunner.mode is shadow_persist
+- routeRunner.ok is true
+- routeRunner.skipped is false
+- routeRunner.reason is route_runner_completed
+- routeRunner.derivationRunId is not null
+- routeRunner.candidateCount > 0
+- routeRunner.resolvedCandidateCount > 0
+- routeRunner.persistenceDerivationRowsCreated > 0
+- valueObjectBridge exists
+- processingLogs exists
+
+SUPABASE READ-ONLY VERIFICATION PLAN
+
+After runtime test, run read-only SQL for the fresh event id.
+
+Verify:
+1. activity_event is completed.
+2. route response showed routeRunner derivationRunId is a uuid.
+3. category_derivation_runs has exactly one routeRunner-specific completed run:
+   - schema_version = category_derivation_complete_route_v1
+   - policy_version = c8-e-f4
+   - activity_event_id = fresh_event_id
+   - status in completed / completed_with_warnings
+4. activity_category_derivations has rows linked to that routeRunner derivation_run_id.
+5. Expected derivation row count for walked to work for 15 minutes is 5.
+6. No duplicate routeRunner-specific completed runs exist for the same event.
+
+Important:
+Legacy complete-route Category Derivation and Value Object Bridge category links may also exist.
+Do not confuse:
+- routeRunner activity_category_derivations
+with
+- value_object_category_links
+or legacy additionalValueObjectCategoryLinks.
+
+F5-E-B SUCCESS CRITERIA
+
+PASS only if:
+- TypeScript remains clean.
+- Runtime POST returns HTTP 200.
+- categoryDerivationRouteRunner.mode = shadow_persist.
+- categoryDerivationRouteRunner.reason = route_runner_completed.
+- candidateCount > 0.
+- resolvedCandidateCount > 0.
+- derivationRunId is not null.
+- persistenceDerivationRowsCreated > 0.
+- valueObjectBridge remains present.
+- processingLogs remain present.
+- exactly one routeRunner-specific completed category_derivation_runs row exists for the event.
+- expected routeRunner-linked activity_category_derivations rows exist.
+- no duplicate routeRunner-specific completed runs exist for the event.
+
+F5-E-B FAIL CONDITIONS
+
+FAIL if:
+- HTTP status is not 200.
+- complete route fails.
+- routeRunner.mode is disabled or shadow_no_persist.
+- routeRunner.skipped is true.
+- routeRunner.derivationRunId is null.
+- persistenceDerivationRowsCreated is 0.
+- no routeRunner-specific run is inserted.
+- more than one routeRunner-specific completed run is inserted for one event.
+- activity_category_derivations rows are missing.
+- valueObjectBridge disappears.
+- processingLogs disappear.
+
+NO-GO
+
+Do not commit code in F5-E-A.
+Do not patch /api/activity/complete in F5-E-A.
+Do not enable production_persist.
+Do not call OpenAI.
+Do not create UI.
+Do not create database migrations.
+Do not modify commercial core.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+Do not remove legacy Category Derivation code.
+
+NEXT STEP
+
+Proceed to:
+P4.10.0-C8-E-F5-E-B - run shadow_persist local runtime test.
+
+END OF F5-E-A SHADOW_PERSIST LOCAL TEST PLAN
