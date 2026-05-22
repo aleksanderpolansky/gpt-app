@@ -1,0 +1,253 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F5-D-C — Category Derivation shadow_no_persist Runtime Proof
+Created: 2026-05-22 08:41:31
+Base commit before this document: 9efff9e
+
+STATUS
+F5-D-B shadow_no_persist local runtime test passed.
+This document records the runtime proof and read-only Supabase verification.
+
+SCOPE
+Documentation only.
+No runtime code changes.
+No database migration.
+No /api/activity/complete patch.
+No OpenAI call.
+No UI changes.
+No commercial core changes.
+
+CURRENT CODE BASELINE
+
+Complete route adapter patch:
+79d024b Patch complete route with disabled Category Derivation adapter
+
+Disabled-mode runtime proof:
+7e4cd27 Document complete route disabled Category Derivation adapter proof
+
+shadow_no_persist test plan:
+9efff9e Plan Category Derivation shadow no persist test
+
+The complete route contains:
+- getCategoryDerivationRouteRunnerConfig
+- runCategoryDerivationRouteRunnerForCompleteRoute alias import
+- categoryDerivationRouteRunner response metadata
+- legacy Category Derivation flow still preserved
+- valueObjectBridge still preserved
+
+TEST MODE
+
+Local dev server was restarted with:
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_no_persist
+CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=false
+CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+
+Expected config-derived behavior:
+- enabled = true
+- mode = shadow_no_persist
+- shouldResolve = true
+- shouldPersist = false
+- isShadowMode = true
+- isProductionPersistMode = false
+
+TEST EVENT
+
+Fresh event id:
+b74f89d6-0d4f-4cf8-aea6-57208691af53
+
+Inserted as:
+- status = started
+- processing_status = pending
+- input_text = walked to work for 15 minutes
+- title = F5-D-B retry2 complete route shadow_no_persist routeRunner runtime test
+- metadata_json.testStep = P4.10.0-C8-E-F5-D-B-RETRY2
+- metadata_json.doNotUseAsCanonicalProof = true
+
+RUNTIME TEST
+
+Endpoint:
+POST /api/activity/complete
+
+Local URL:
+http://localhost:3000/api/activity/complete
+
+Payload:
+{
+  eventId: "b74f89d6-0d4f-4cf8-aea6-57208691af53",
+  status: "completed",
+  comment: "F5-D-B retry2 runtime test: complete route with routeRunner adapter shadow_no_persist."
+}
+
+RUNTIME RESULT
+
+HTTP status:
+200
+
+Response:
+- ok: true
+- status: completed
+
+Event:
+- id: b74f89d6-0d4f-4cf8-aea6-57208691af53
+- status: completed
+- processing_status: processed
+- duration_minutes: 15
+
+categoryDerivationRouteRunner:
+- enabled: true
+- mode: shadow_no_persist
+- ok: true
+- skipped: false
+- reason: route_runner_completed
+- derivationRunId: null
+- candidateCount: 5
+- resolvedCandidateCount: 5
+- persistenceDerivationRowsCreated: 0
+- warnings: []
+- errors: []
+
+Runtime checks:
+- response.ok: OK
+- json.ok is true: OK
+- json.status is completed: OK
+- event.id matches: OK
+- categoryDerivationRouteRunner exists: OK
+- routeRunner.enabled is true: OK
+- routeRunner.mode is shadow_no_persist: OK
+- routeRunner.ok is true: OK
+- routeRunner.skipped is false: OK
+- routeRunner.reason is route_runner_completed: OK
+- routeRunner.derivationRunId is null: OK
+- routeRunner.candidateCount > 0: OK
+- routeRunner.resolvedCandidateCount > 0: OK
+- routeRunner.persistenceDerivationRowsCreated is 0: OK
+- valueObjectBridge exists: OK
+- processingLogs exists: OK
+
+Runtime status:
+PASS
+
+INTERPRETATION
+
+The complete route successfully called the new Category Derivation routeRunner adapter in shadow_no_persist mode.
+
+This proves:
+1. The server-side env mode was read correctly.
+2. The adapter did not stay in disabled mode.
+3. routeRunner executed.
+4. rule-based derivation produced 5 candidates.
+5. resolver resolved 5 candidates.
+6. routeRunner did not create a derivation run because persist=false.
+7. routeRunner did not create activity_category_derivations because persist=false.
+8. /api/activity/complete still completed the activity event.
+9. valueObjectBridge remained available.
+10. processingLogs remained available.
+
+SUPABASE READ-ONLY VERIFICATION
+
+Read-only verification was executed for event:
+b74f89d6-0d4f-4cf8-aea6-57208691af53
+
+activity_event:
+- status: completed
+- processing_status: processed
+- title: F5-D-B retry2 complete route shadow_no_persist routeRunner runtime test
+- input_text: walked to work for 15 minutes
+- duration_minutes: 15
+- metadata_json.testStep: P4.10.0-C8-E-F5-D-B-RETRY2
+
+route_runner_specific_runs_count:
+- expected_count: 0
+- actual_count: 0
+- pass: true
+- filter_schema_version: category_derivation_complete_route_v1
+- filter_policy_version: c8-e-f4
+- filter_statuses: completed, completed_with_warnings
+
+route_runner_specific_runs_rows:
+- rows: []
+
+route_runner_activity_category_derivations_count:
+- expected_count: 0
+- actual_count: 0
+- pass: true
+
+legacy_or_other_category_derivation_runs_count:
+- actual_count: 0
+- note: Legacy complete-route Category Derivation rows may exist and are not treated as routeRunner shadow_no_persist writes.
+
+SUPABASE VERIFICATION STATUS
+
+PASS
+
+The read-only database verification confirms:
+- no routeRunner-specific completed category_derivation_runs row was created;
+- no routeRunner-linked activity_category_derivations rows were created;
+- shadow_no_persist behaved as non-persistent mode.
+
+IMPORTANT DISTINCTION
+
+The complete route still has legacy Category Derivation behavior and Value Object Bridge category links.
+
+The shadow_no_persist routeRunner proof is based on:
+- response-level routeRunner.derivationRunId = null;
+- response-level routeRunner.persistenceDerivationRowsCreated = 0;
+- read-only SQL route_runner_specific_runs_count.actual_count = 0;
+- read-only SQL route_runner_activity_category_derivations_count.actual_count = 0.
+
+CURRENT PROJECT POSITION
+
+F5-C:
+Disabled-by-default adapter integration was proven and documented.
+
+F5-D-A:
+shadow_no_persist local test plan was created and committed.
+
+F5-D-B:
+shadow_no_persist runtime test passed after server was correctly restarted with CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_no_persist.
+
+F5-D-C:
+This proof document records the passed runtime test and DB verification.
+
+NEXT RECOMMENDED BLOCK
+
+Proceed to:
+P4.10.0-C8-E-F5-E-A — plan shadow_persist test.
+
+Purpose:
+Test routeRunner persistent mode only after the non-persistent shadow mode is proven.
+
+Future mode:
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_persist
+
+Expected:
+- routeRunner executes;
+- candidates are derived;
+- candidates are resolved;
+- one category_derivation_runs row is created;
+- 5 activity_category_derivations rows are created;
+- idempotency behavior must be verified on repeated requests or controlled rerun;
+- complete route still returns ok true;
+- valueObjectBridge and processingLogs remain present.
+
+IMPORTANT:
+Before shadow_persist, create a dedicated test plan document.
+Do not enable production_persist.
+Do not call OpenAI.
+
+NO-GO
+
+Do not enable production_persist.
+Do not call OpenAI.
+Do not create UI.
+Do not create database migrations.
+Do not modify commercial core.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+Do not remove legacy Category Derivation code yet.
+
+SERVER RESET NOTE
+
+After finishing shadow_no_persist testing, local dev server should be restarted without CATEGORY_DERIVATION_ROUTE_RUNNER_MODE or explicitly with disabled mode before returning to ordinary development.
+
+END OF F5-D-C SHADOW_NO_PERSIST RUNTIME PROOF
