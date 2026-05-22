@@ -57,6 +57,7 @@ export type CategoryDerivationCompleteRouteIntegrationReason =
   | "existing_completed_run_found"
   | "route_runner_completed"
   | "route_runner_failed"
+  | "simulated_persistence_failure"
   | "lookup_error"
   | "not_route_runner_mode";
 
@@ -189,20 +190,36 @@ function baseResult(params: {
   };
 }
 
+function getRouteRunnerFailureReason(
+  routeRunnerResult: RunCategoryDerivationRouteResult,
+): CategoryDerivationCompleteRouteIntegrationReason {
+  const normalizedErrors = routeRunnerResult.errors.join(" ").toLowerCase();
+
+  if (normalizedErrors.includes("simulated_persistence_failure")) {
+    return "simulated_persistence_failure";
+  }
+
+  return "route_runner_failed";
+}
+
 function mapRouteRunnerResult(params: {
   config: CategoryDerivationRouteRunnerConfig;
   routeRunnerResult: RunCategoryDerivationRouteResult;
   idempotency: FindExistingCompletedCategoryDerivationRunResult | null;
 }): CategoryDerivationCompleteRouteIntegrationResult {
-  const rowsCreated = params.routeRunnerResult.persistence.rows?.rowsCreated ?? 0;
+  const rowsCreated =
+    params.routeRunnerResult.persistence.rows?.rowsCreated ?? 0;
+
+  const routeRunnerOk = params.routeRunnerResult.ok;
+  const reason = routeRunnerOk
+    ? "route_runner_completed"
+    : getRouteRunnerFailureReason(params.routeRunnerResult);
 
   return baseResult({
     config: params.config,
-    ok: params.routeRunnerResult.ok,
+    ok: routeRunnerOk ? true : !params.config.failActivityComplete,
     skipped: false,
-    reason: params.routeRunnerResult.ok
-      ? "route_runner_completed"
-      : "route_runner_failed",
+    reason,
     derivationRunId: params.routeRunnerResult.derivationRunId,
     candidateCount: params.routeRunnerResult.candidates.length,
     resolvedCandidateCount: params.routeRunnerResult.resolvedCandidates.length,

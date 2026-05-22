@@ -21,13 +21,14 @@ export const dynamic = "force-dynamic";
 const ENDPOINT =
   "/api/activity/debug/category-derivation-complete-route-adapter-failure-test";
 
-const P4_STEP = "P4.10.0-C8-E-F5-G-E-B-B-FIX2C";
+const P4_STEP = "P4.10.0-C8-E-F5-G-F-C";
 
 const EXPECTED_MODE = "shadow_persist";
 
 const SUPPORTED_SCENARIOS = [
   "missing_activity_event_id",
   "missing_actor_id",
+  "simulated_persistence_failure",
 ] as const;
 
 type SupportedScenario = (typeof SUPPORTED_SCENARIOS)[number];
@@ -108,6 +109,10 @@ function expectedReasonForScenario(scenario: SupportedScenario) {
     return "missing_actor_id";
   }
 
+  if (scenario === "simulated_persistence_failure") {
+    return "simulated_persistence_failure";
+  }
+
   return "missing_activity_event_id";
 }
 
@@ -149,6 +154,8 @@ function buildExpectedResultChecks(params: {
   const { scenario, result, failActivityComplete } = params;
   const expectedOk = !failActivityComplete;
   const expectedReason = expectedReasonForScenario(scenario);
+  const isSimulatedPersistenceFailure =
+    scenario === "simulated_persistence_failure";
 
   const checks = [
     {
@@ -156,8 +163,8 @@ function buildExpectedResultChecks(params: {
       pass: result.ok === expectedOk,
     },
     {
-      name: "adapter skipped is true",
-      pass: result.skipped === true,
+      name: `adapter skipped is ${!isSimulatedPersistenceFailure}`,
+      pass: result.skipped === !isSimulatedPersistenceFailure,
     },
     {
       name: `adapter reason is ${expectedReason}`,
@@ -168,8 +175,12 @@ function buildExpectedResultChecks(params: {
       pass: result.derivationRunId === null,
     },
     {
-      name: "candidateCount is 0",
-      pass: result.candidateCount === 0,
+      name: isSimulatedPersistenceFailure
+        ? "candidateCount is greater than 0"
+        : "candidateCount is 0",
+      pass: isSimulatedPersistenceFailure
+        ? result.candidateCount > 0
+        : result.candidateCount === 0,
     },
     {
       name: "resolvedCandidateCount is 0",
@@ -180,8 +191,8 @@ function buildExpectedResultChecks(params: {
       pass: result.persistenceDerivationRowsCreated === 0,
     },
     {
-      name: "routeRunner.executed is false",
-      pass: result.routeRunner.executed === false,
+      name: `routeRunner.executed is ${isSimulatedPersistenceFailure}`,
+      pass: result.routeRunner.executed === isSimulatedPersistenceFailure,
     },
     {
       name: "routeRunner.persisted is false",
@@ -218,13 +229,17 @@ function buildAdapterActivityEvent(scenario: SupportedScenario) {
         : "00000000-0000-4000-8000-0000000000e5",
     input_text: "walked to work for 15 minutes",
     title:
-      scenario === "missing_actor_id"
-        ? "F5-G-E-B missing actor id validation failure proof"
-        : "F5-G-C-B missing activity event id validation failure proof",
+      scenario === "simulated_persistence_failure"
+        ? "F5-G-F simulated persistence failure proof"
+        : scenario === "missing_actor_id"
+          ? "F5-G-E-B missing actor id validation failure proof"
+          : "F5-G-C-B missing activity event id validation failure proof",
     description:
-      scenario === "missing_actor_id"
-        ? "Debug-only adapter validation proof. actorId is intentionally empty."
-        : "Debug-only adapter validation proof. activityEvent.id is intentionally empty.",
+      scenario === "simulated_persistence_failure"
+        ? "Debug-only adapter failure proof. Persistence failure is simulated before run creation."
+        : scenario === "missing_actor_id"
+          ? "Debug-only adapter validation proof. actorId is intentionally empty."
+          : "Debug-only adapter validation proof. activityEvent.id is intentionally empty.",
     duration_minutes: 15,
     source: "manual",
     metadata_json: {
@@ -453,6 +468,10 @@ export async function POST(request: Request) {
       scenario,
       proof: "adapter_validation_failure",
       expectedFailure: expectedReasonForScenario(scenario),
+      simulatePersistenceFailure:
+        scenario === "simulated_persistence_failure"
+          ? "before_run_create"
+          : null,
       doNotUseAsCanonicalProof: true,
     },
   });
@@ -465,10 +484,12 @@ export async function POST(request: Request) {
 
   const expectedReason = expectedReasonForScenario(scenario);
 
+  const expectedSkipped = scenario !== "simulated_persistence_failure";
+
   const fullPass =
     expectedChecks.pass &&
-    adapterResult.ok === true &&
-    adapterResult.skipped === true &&
+    adapterResult.ok === !config.failActivityComplete &&
+    adapterResult.skipped === expectedSkipped &&
     adapterResult.reason === expectedReason &&
     adapterResult.derivationRunId === null &&
     adapterResult.persistenceDerivationRowsCreated === 0;
@@ -485,6 +506,8 @@ export async function POST(request: Request) {
       intentionallyMissingActivityEventId:
         scenario === "missing_activity_event_id",
       intentionallyMissingActorId: scenario === "missing_actor_id",
+      intentionallySimulatedPersistenceFailure:
+        scenario === "simulated_persistence_failure",
       completedByThisRoute: false,
       persistedByThisRoute: false,
     },

@@ -178,6 +178,62 @@ function resultMetadata(params: {
   };
 }
 
+function getStringProperty(record: JsonRecord | null | undefined, key: string): string | null {
+  const value = record?.[key];
+  return typeof value === "string" ? value : null;
+}
+
+function getRecordProperty(record: JsonRecord | null | undefined, key: string): JsonRecord | null {
+  const value = record?.[key];
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value)
+  ) {
+    return value as JsonRecord;
+  }
+
+  return null;
+}
+
+function getDebugSimulatedPersistenceFailure(metadata?: JsonRecord): string | null {
+  const directValue = getStringProperty(metadata, "simulatePersistenceFailure");
+  if (directValue) {
+    return directValue;
+  }
+
+  const directAdapterMetadata = getRecordProperty(metadata, "adapterMetadata");
+  const directAdapterValue = getStringProperty(
+    directAdapterMetadata,
+    "simulatePersistenceFailure",
+  );
+
+  if (directAdapterValue) {
+    return directAdapterValue;
+  }
+
+  const nestedMetadata = getRecordProperty(metadata, "metadata");
+  const nestedMetadataValue = getStringProperty(
+    nestedMetadata,
+    "simulatePersistenceFailure",
+  );
+
+  if (nestedMetadataValue) {
+    return nestedMetadataValue;
+  }
+
+  const nestedAdapterMetadata = getRecordProperty(
+    nestedMetadata,
+    "adapterMetadata",
+  );
+
+  return getStringProperty(
+    nestedAdapterMetadata,
+    "simulatePersistenceFailure",
+  );
+}
+
 function makeFailureResult(params: {
   activityEventId: string;
   derivation: CategoryDerivationResult;
@@ -209,6 +265,8 @@ function makeFailureResult(params: {
   };
 }
 
+
+
 export async function runCategoryDerivationRoute(
   input: RunCategoryDerivationRouteInput,
 ): Promise<RunCategoryDerivationRouteResult> {
@@ -236,6 +294,28 @@ export async function runCategoryDerivationRoute(
     resolve: resolveEnabled,
     metadata: input.metadata,
   });
+
+  const simulatedPersistenceFailure =
+    getDebugSimulatedPersistenceFailure(metadata);
+
+  if (
+    persistEnabled &&
+    simulatedPersistenceFailure === "before_run_create"
+  ) {
+    return makeFailureResult({
+      activityEventId: input.activityEventId,
+      derivation,
+      runCreate: null,
+      runFail: null,
+      error: "simulated_persistence_failure",
+      warnings,
+      metadata: {
+        ...metadata,
+        simulatedPersistenceFailure,
+        simulatedPersistenceFailureBoundary: "before_run_create",
+      },
+    });
+  }
 
   if (persistEnabled) {
     runCreate = await createCategoryDerivationRun(input.supabase, {
