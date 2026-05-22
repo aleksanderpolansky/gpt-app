@@ -1,0 +1,273 @@
+﻿GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F5-G-F-G
+simulated_persistence_failure runtime proof
+Created: 2026-05-22
+Context: F5-G failure behavior / safe persistence failure simulation
+
+1. Purpose
+
+This proof documents the runtime behavior of the Category Derivation complete-route adapter when a persistence-layer failure is simulated safely before real DB run creation.
+
+The tested scenario is:
+
+- endpoint:
+  /api/activity/debug/category-derivation-complete-route-adapter-failure-test
+
+- scenario:
+  simulated_persistence_failure
+
+- mode:
+  shadow_persist
+
+- failActivityComplete:
+  false
+
+The purpose is to prove that the adapter and routeRunner can handle a controlled persistence-boundary failure as a non-blocking result when failActivityComplete=false, without corrupting data and without modifying the production complete route.
+
+2. Source hierarchy
+
+Main architecture source:
+- General Plan v4.4
+
+Operational continuation source:
+- GPT-APP_22_мая_13_00_аналитическая_справка_перенос_контекста_F5G
+
+Relevant previous planning and inspection commits:
+- 60d7c96 — Plan Category Derivation persistence failure simulation
+- 0c4aa06 — Inspect Category Derivation persistence failure injection points
+- 5ca795f — Correct Category Derivation persistence failure injection inspection
+- daddbfd — Correct Category Derivation persistence failure injection inspection
+
+Current implementation commit:
+- 737137c — Add Category Derivation simulated persistence failure path
+
+3. Code scope
+
+Changed and committed implementation files:
+
+- lib/activity/categoryDerivation/completeRouteIntegration.ts
+- lib/activity/categoryDerivation/routeRunner.ts
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts
+
+Files intentionally not changed:
+
+- src/app/api/activity/complete/route.ts
+- schema / migrations
+- RLS / permissions
+- UI files
+- OpenAI integration
+
+4. Implementation summary
+
+The implementation adds a debug-only simulated persistence failure path.
+
+The debug failure route now supports:
+
+- missing_activity_event_id
+- missing_actor_id
+- simulated_persistence_failure
+
+For simulated_persistence_failure:
+
+- the debug route passes adapterMetadata.simulatePersistenceFailure = "before_run_create";
+- routeRunner reads this flag from metadata, including nested adapter metadata;
+- routeRunner stops before createCategoryDerivationRun;
+- routeRunner returns a failure result with error "simulated_persistence_failure";
+- completeRouteIntegration normalizes this into adapterResult.reason = "simulated_persistence_failure";
+- because failActivityComplete=false, adapterResult.ok remains true;
+- no derivation run is created;
+- no activity category derivation rows are created.
+
+5. Important correction during implementation
+
+Initial runtime test showed that the simulation flag did not reach routeRunner at the expected metadata depth.
+
+Observed initial failed runtime result:
+
+- adapterResult.ok: true
+- adapterResult.skipped: false
+- adapterResult.reason: route_runner_failed
+- adapterResult.errors: ["category_derivation_run_create_failed"]
+- routeRunner.executed: true
+- persistenceDerivationRowsCreated: 0
+- safety flags: all safe
+
+Diagnosis:
+
+- the simulation flag was nested deeper than the helper originally checked;
+- routeRunner was checking direct metadata and adapterMetadata;
+- actual metadata nesting included deeper paths.
+
+Correction:
+
+- routeRunner helper was expanded to check:
+  - direct simulatePersistenceFailure
+  - direct adapterMetadata.simulatePersistenceFailure
+  - nested metadata.simulatePersistenceFailure
+  - nested metadata.adapterMetadata.simulatePersistenceFailure
+
+After this correction, runtime proof passed.
+
+6. Final runtime test result
+
+Browser Console test:
+
+P4.10.0-C8-E-F5-G-F-E-FIX1 — simulated_persistence_failure runtime retest
+
+Payload:
+
+{
+  "scenario": "simulated_persistence_failure",
+  "mode": "shadow_persist",
+  "expectFailActivityComplete": false
+}
+
+HTTP result:
+
+- HTTP status: 200
+- Content-Type: application/json
+- json.ok: true
+- json.status: adapter_validation_failure_test_pass
+- json.p4Step: P4.10.0-C8-E-F5-G-F-C
+- json.scenario: simulated_persistence_failure
+
+Adapter result:
+
+- enabled: true
+- mode: shadow_persist
+- ok: true
+- skipped: false
+- reason: simulated_persistence_failure
+- derivationRunId: null
+- candidateCount: 5
+- resolvedCandidateCount: 0
+- persistenceDerivationRowsCreated: 0
+- warnings: []
+- errors: ["simulated_persistence_failure"]
+- routeRunner.executed: true
+- routeRunner.persisted: false
+- routeRunner.resolved: false
+
+Expected checks:
+
+- adapter result ok follows !failActivityComplete: PASS
+- adapter skipped is false: PASS
+- adapter reason is simulated_persistence_failure: PASS
+- derivationRunId is null: PASS
+- candidateCount is greater than 0: PASS
+- resolvedCandidateCount is 0: PASS
+- persistenceDerivationRowsCreated is 0: PASS
+- routeRunner.executed is true: PASS
+- routeRunner.persisted is false: PASS
+- routeRunner.resolved is false: PASS
+- validation signal matches simulated_persistence_failure: PASS
+- expectedChecks.pass: true
+
+Safety checks:
+
+- completeRouteModified: false
+- activityEventCompletedByThisRoute: false
+- categoryDerivationRunCreated: false
+- activityCategoryDerivationsCreated: false
+- productionPersistEnabled: false
+- openAiCalled: false
+- uiCreated: false
+- migrationCreated: false
+- schemaOrPermissionsModified: false
+
+7. Commit result
+
+After successful runtime proof, implementation was committed and pushed.
+
+Commit:
+
+737137c — Add Category Derivation simulated persistence failure path
+
+Post-commit checks:
+
+- TypeScript final check: PASS
+- git status: clean
+- origin/main updated from daddbfd to 737137c
+
+8. What this proof demonstrates
+
+This proof demonstrates that in shadow_persist mode with failActivityComplete=false:
+
+- the adapter is enabled;
+- routeRunner executes;
+- derivation candidates are produced;
+- the simulated persistence failure occurs before real run creation;
+- the failure is normalized as simulated_persistence_failure;
+- the adapter remains non-blocking;
+- no category_derivation_runs row is created;
+- no activity_category_derivations rows are created;
+- no production_persist is enabled;
+- OpenAI is not called;
+- schema, migrations, RLS and permissions are not modified;
+- /api/activity/complete remains unchanged.
+
+9. Anti-regression notes
+
+Do not simulate persistence failure by damaging the real DB.
+
+Do not use DROP, ALTER TABLE, broken RLS, broken permissions or schema corruption for this proof type.
+
+Do not rely only on raw exception messages.
+
+The stable signal for this simulated failure is:
+
+- adapterResult.reason = "simulated_persistence_failure"
+
+The routeRunner error array may contain:
+
+- "simulated_persistence_failure"
+
+The first safe proof intentionally uses zero created rows.
+
+10. Current status after this proof
+
+Completed:
+
+- F5-G-C validation failure / missing_activity_event_id proof
+- F5-G-D wrong-mode / no-write proof
+- F5-G-E-B missing_actor_id runtime proof
+- F5-G-F-A persistence failure simulation plan
+- F5-G-F-B/FIX1/W1 persistence failure injection inspection
+- F5-G-F-C/FIX1 implementation
+- F5-G-F-E/FIX1 runtime proof
+- F5-G-F-F implementation commit
+
+Current HEAD after implementation commit:
+
+- 737137c
+
+Next logical step:
+
+- Commit this proof document.
+- Then decide whether strict failActivityComplete=true proof gives new information.
+- If strict proof is useful, perform it as a separate step after this proof document.
+- Otherwise move to the next Category Derivation transition step according to the 22 May operational plan and General Plan v4.4.
+
+11. Do not repeat unnecessarily
+
+Do not rerun completed canonical /api/activity/complete proof events.
+
+Do not use this debug route as a canonical completion proof.
+
+Do not modify /api/activity/complete for this proof.
+
+Do not run SQL in PowerShell.
+
+Do not enable production_persist.
+
+Do not damage schema/RLS/permissions to simulate persistence failure.
+
+12. Definition of Done
+
+This proof is complete when:
+
+- this document exists under docs/value-objects;
+- the document is committed and pushed;
+- working tree is clean;
+- recent git log shows the proof document commit above 737137c.
