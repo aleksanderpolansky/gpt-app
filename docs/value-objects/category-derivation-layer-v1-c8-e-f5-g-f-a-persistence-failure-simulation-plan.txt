@@ -1,0 +1,265 @@
+﻿GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F5-G-F-A
+Safe persistence failure simulation plan
+Created: 2026-05-22
+
+1. Purpose
+
+This document defines the next controlled failure-behavior block after:
+
+- F5-G-C validation failure / missing_activity_event_id proof
+- F5-G-D wrong-mode / no-write proof
+- F5-G-E-B missing_actor_id runtime proof
+- F5-G-E-B-D proof document
+
+The next major block is safe persistence failure simulation.
+
+The goal is to prove that Category Derivation complete-route integration can handle a persistence-layer failure in a controlled way without corrupting production data, without modifying schema/RLS/permissions, without calling OpenAI, and without enabling production_persist.
+
+2. Current baseline
+
+Current HEAD before this plan:
+
+- 9b9e510 — Document Category Derivation missing actor validation proof
+
+Relevant implementation commit:
+
+- 4886858 — Extend Category Derivation adapter failure test route with missing actor scenario
+
+Relevant previous proof:
+
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-e-b-d-missing-actor-id-runtime-proof.txt
+
+Known completed F5-G proofs:
+
+- missing_activity_event_id:
+  adapterResult.ok=true when failActivityComplete=false,
+  skipped=true,
+  reason=missing_activity_event_id,
+  routeRunner.executed=false,
+  no DB rows created.
+
+- wrong-mode / no-write:
+  server disabled,
+  request shadow_persist,
+  HTTP 409,
+  adapter was not reached,
+  DB write path was not reached.
+
+- missing_actor_id:
+  adapterResult.ok=true when failActivityComplete=false,
+  skipped=true,
+  reason=missing_actor_id,
+  routeRunner.executed=false,
+  no category_derivation_runs,
+  no activity_category_derivations,
+  OpenAI=false,
+  production_persist=false.
+
+3. Why persistence failure simulation is needed
+
+The previous failure tests prove validation and mode-safety behavior before persistence starts.
+
+They do not yet prove what happens if:
+
+- the adapter is enabled;
+- mode is shadow_persist;
+- event and actor are valid;
+- routeRunner is allowed to execute;
+- derivation candidates are produced;
+- persistence layer starts or is about to start;
+- a controlled simulated persistence failure occurs.
+
+This is important before any later complete-route non-blocking failure proof, because the failure must be contained, observable, and non-destructive.
+
+4. Safety principles
+
+This block must not simulate failure by damaging the real database.
+
+Forbidden methods:
+
+- no DROP;
+- no ALTER TABLE just to break persistence;
+- no RLS/permission corruption;
+- no removal of columns or indexes;
+- no production_persist;
+- no OpenAI call;
+- no full UI/UX;
+- no commercial core changes;
+- no changes to /api/activity/complete until debug-only proof is green;
+- no SQL in PowerShell.
+
+Allowed methods:
+
+- debug-only route;
+- injected test flag;
+- explicit simulation switch in debug-only path;
+- controlled throw before actual DB write or at a safe mock boundary;
+- safety response proving no DB rows were created;
+- TypeScript-only code changes with narrow scope;
+- proof document after runtime PASS.
+
+5. Preferred simulation design
+
+Preferred approach:
+
+Create or extend a debug-only route for Category Derivation adapter failure behavior.
+
+The route should accept:
+
+{
+  "scenario": "simulated_persistence_failure",
+  "mode": "shadow_persist",
+  "expectFailActivityComplete": false
+}
+
+The route should prepare a valid synthetic activity event and valid actorId, then trigger a controlled simulated persistence failure inside a debug-only path.
+
+Important:
+
+The simulation must not depend on real DB schema failure.
+The simulation must not require changing Supabase permissions.
+The simulation must not write partial rows unless the proof explicitly verifies rollback/no partial state.
+The safest first proof is to throw before persistence writes after derivation/resolution preparation, or to inject a failing persistence adapter in a debug-only wrapper.
+
+6. Expected non-blocking result
+
+For failActivityComplete=false, expected behavior:
+
+- HTTP status: 200 or controlled proof status;
+- json.ok: true for the debug proof if expected failure is handled;
+- adapterResult.ok: true;
+- adapterResult.skipped: false or true depending on implementation boundary;
+- adapterResult.reason: simulated_persistence_failure or persistence_failed;
+- adapterResult.derivationRunId: null unless a run is intentionally created before failure;
+- persistenceDerivationRowsCreated: 0;
+- routeRunner.executed: true if the simulation occurs inside routeRunner path;
+- routeRunner.persisted: false;
+- routeRunner.resolved: true/false depending on injection point;
+- safety.categoryDerivationRunCreated: false unless deliberately testing partial run;
+- safety.activityCategoryDerivationsCreated: false;
+- safety.productionPersistEnabled: false;
+- safety.openAiCalled: false;
+- safety.completeRouteModified: false;
+- safety.schemaOrPermissionsModified: false.
+
+The first safe variant should prefer zero created rows.
+
+7. Expected blocking result later, not now
+
+Strict/blocking mode must not be tested first.
+
+Later, after non-blocking proof is green, test:
+
+{
+  "scenario": "simulated_persistence_failure",
+  "mode": "shadow_persist",
+  "expectFailActivityComplete": true
+}
+
+Expected later behavior:
+
+- adapterResult.ok=false;
+- failure is surfaced clearly;
+- still no schema/RLS/permission damage;
+- no production_persist;
+- no OpenAI call.
+
+This later blocking proof should be a separate step.
+
+8. Proposed step sequence
+
+F5-G-F-A — this plan document only.
+No runtime code changes.
+
+F5-G-F-B — inspect current adapter/routeRunner/persistence code.
+Goal: decide exact injection point for safe simulated failure.
+No runtime code changes unless the inspection proves a minimal helper is required.
+
+F5-G-F-C — implement debug-only simulation path.
+Allowed files only after inspection:
+- debug failure test route, or
+- a narrow debug-only adapter option,
+- possibly a test-only helper under lib/activity/categoryDerivation.
+
+Forbidden in F5-G-F-C:
+- /api/activity/complete changes,
+- schema changes,
+- migration files,
+- production_persist,
+- OpenAI integration.
+
+F5-G-F-D — TypeScript + marker verification.
+Confirm only expected files changed.
+
+F5-G-F-E — runtime test: simulated_persistence_failure, shadow_persist, failActivityComplete=false.
+
+F5-G-F-F — if PASS, commit implementation.
+
+F5-G-F-G — document runtime proof.
+
+F5-G-F-H — decide whether strict failActivityComplete=true proof gives new information.
+
+9. Files to inspect in F5-G-F-B
+
+Primary:
+
+- lib/activity/categoryDerivation/completeRouteIntegration.ts
+- lib/activity/categoryDerivation/routeRunner.ts
+- lib/activity/categoryDerivation/persistence.ts
+- lib/activity/categoryDerivation/config.ts
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts
+
+Secondary, only if needed:
+
+- lib/activity/categoryDerivation/runLookup.ts
+- src/app/api/activity/complete/route.ts
+
+Important:
+
+src/app/api/activity/complete/route.ts should be inspected but not modified in the debug-only persistence failure simulation block.
+
+10. Runtime proof acceptance criteria
+
+The runtime proof can be accepted only if:
+
+- response is valid JSON;
+- expected scenario is simulated_persistence_failure;
+- mode is shadow_persist;
+- failActivityComplete is false;
+- failure is simulated by debug-only code, not real DB damage;
+- route reports controlled failure reason;
+- no production persist;
+- OpenAI not called;
+- schema/permissions not modified;
+- /api/activity/complete unchanged;
+- no unexpected DB rows;
+- TypeScript PASS;
+- implementation committed only after runtime PASS;
+- proof document committed after implementation commit.
+
+11. Anti-regression notes
+
+Do not repeat the earlier mistake where the test harness required a specific error text even when adapterResult.reason already contains the normalized failure reason.
+
+For simulated persistence failures, define one stable primary signal:
+
+- adapterResult.reason
+or
+- adapterResult.errorCode
+or
+- expectedChecks.normalizedFailureReason
+
+Do not rely only on raw exception message text.
+
+12. Definition of Done for this planning step
+
+This planning step is done when:
+
+- this document exists under docs/value-objects;
+- no runtime code was changed;
+- git status showed only this document before commit;
+- document is committed and pushed;
+- working tree is clean;
+- recent log shows the plan document above 9b9e510.
