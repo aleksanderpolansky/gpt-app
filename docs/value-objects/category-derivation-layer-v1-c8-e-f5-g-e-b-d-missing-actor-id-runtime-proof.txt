@@ -1,0 +1,226 @@
+﻿GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F5-G-E-B-D
+missing_actor_id runtime proof
+Created: 2026-05-22
+Context: F5-G failure behavior / complete route adapter validation
+
+1. Purpose
+
+This proof documents the runtime behavior of the Category Derivation complete route adapter when actorId is intentionally missing.
+
+The tested scenario is:
+
+- endpoint:
+  /api/activity/debug/category-derivation-complete-route-adapter-failure-test
+
+- scenario:
+  missing_actor_id
+
+- mode:
+  shadow_persist
+
+- failActivityComplete:
+  false
+
+The purpose is to prove that the adapter handles missing actor id as a controlled non-blocking validation skip when failActivityComplete=false, without executing routeRunner and without creating Category Derivation persistence artifacts.
+
+2. Source hierarchy
+
+Main architecture source:
+- General Plan v4.4
+
+Operational continuation source:
+- GPT-APP_22_мая_13_00_аналитическая_справка_перенос_контекста_F5G
+
+Relevant previous committed proof:
+- 6107605 — Document Category Derivation wrong-mode no-write proof
+
+Current implementation commit:
+- 4886858 — Extend Category Derivation adapter failure test route with missing actor scenario
+
+3. Code scope
+
+Changed and committed file:
+
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts
+
+Files intentionally not changed:
+
+- src/app/api/activity/complete/route.ts
+- production routes
+- schema / migrations
+- UI files
+- OpenAI integration
+
+This proof route is debug-only and must not be treated as a canonical activity completion proof.
+
+4. Implementation summary
+
+The failure debug route now supports two validation scenarios:
+
+- missing_activity_event_id
+- missing_actor_id
+
+For missing_actor_id, the route:
+
+- builds a synthetic debug activity event with a stable non-empty activityEvent.id;
+- intentionally passes an empty actorId to runCategoryDerivationForCompleteRoute;
+- expects adapterResult.reason = "missing_actor_id";
+- expects adapterResult.ok = true when failActivityComplete=false;
+- expects adapterResult.skipped = true;
+- expects no derivation run id;
+- expects no candidates and no resolved candidates;
+- expects no category derivation rows;
+- expects routeRunner not to execute;
+- checks safety flags to ensure no production or schema side effects.
+
+The original too-strict validation expected an actor-related error string in adapterResult.errors. Runtime showed that adapterResult.errors can be empty while adapterResult.reason correctly reports missing_actor_id. Therefore the debug-route validation harness was relaxed to accept result.reason as the validation signal.
+
+5. Runtime test result
+
+Browser Console test:
+
+P4.10.0-C8-E-F5-G-E-B-B-FIX2C — missing_actor_id runtime retest
+
+Payload:
+
+{
+  "scenario": "missing_actor_id",
+  "mode": "shadow_persist",
+  "expectFailActivityComplete": false
+}
+
+HTTP result:
+
+- HTTP status: 200
+- Content-Type: application/json
+- json.ok: true
+- json.status: adapter_validation_failure_test_pass
+- json.p4Step: P4.10.0-C8-E-F5-G-E-B-B-FIX2C
+- json.scenario: missing_actor_id
+
+Adapter result:
+
+- enabled: true
+- mode: shadow_persist
+- ok: true
+- skipped: true
+- reason: missing_actor_id
+- derivationRunId: null
+- candidateCount: 0
+- resolvedCandidateCount: 0
+- persistenceDerivationRowsCreated: 0
+- warnings: []
+- errors: []
+- routeRunner.executed: false
+- routeRunner.persisted: false
+- routeRunner.resolved: false
+
+Expected checks:
+
+- adapter result ok follows !failActivityComplete: PASS
+- adapter skipped is true: PASS
+- adapter reason is missing_actor_id: PASS
+- derivationRunId is null: PASS
+- candidateCount is 0: PASS
+- resolvedCandidateCount is 0: PASS
+- persistenceDerivationRowsCreated is 0: PASS
+- routeRunner.executed is false: PASS
+- routeRunner.persisted is false: PASS
+- routeRunner.resolved is false: PASS
+- validation signal matches missing_actor_id: PASS
+- expectedChecks.pass: true
+
+Safety checks:
+
+- completeRouteModified: false
+- activityEventCompletedByThisRoute: false
+- categoryDerivationRunCreated: false
+- activityCategoryDerivationsCreated: false
+- productionPersistEnabled: false
+- openAiCalled: false
+- uiCreated: false
+- migrationCreated: false
+- schemaOrPermissionsModified: false
+
+6. Commit result
+
+After successful runtime proof, the debug route was committed and pushed.
+
+Commit:
+
+4886858 — Extend Category Derivation adapter failure test route with missing actor scenario
+
+Post-commit checks:
+
+- TypeScript final check: PASS
+- git status: clean
+- origin/main updated from 6107605 to 4886858
+
+7. What this proof demonstrates
+
+This proof demonstrates that in shadow_persist mode with failActivityComplete=false:
+
+- missing actor id does not crash the complete-route adapter;
+- missing actor id does not execute routeRunner;
+- missing actor id does not create category_derivation_runs;
+- missing actor id does not create activity_category_derivations;
+- missing actor id does not call OpenAI;
+- missing actor id does not enable production_persist;
+- missing actor id does not modify schema or permissions;
+- missing actor id returns a controlled adapter skip with reason missing_actor_id;
+- the debug failure harness can verify validation by adapterResult.reason, not only by adapterResult.errors.
+
+8. Anti-regression notes
+
+Do not reintroduce the old assumption that validation failure must always populate adapterResult.errors.
+
+For this adapter contract, reason is the primary validation signal for these skip cases:
+
+- missing_activity_event_id
+- missing_actor_id
+
+The errors array may be empty when the adapter has already normalized the failure into a controlled reason.
+
+9. Current status after this proof
+
+Completed:
+
+- F5-G-C validation failure / missing_activity_event_id proof
+- F5-G-D wrong-mode / no-write proof
+- F5-G-E-B missing_actor_id runtime proof
+- F5-G-E-B-C commit pushed
+
+Current HEAD after implementation commit:
+
+- 4886858
+
+Next logical step:
+
+- Commit this proof document.
+- Then continue the F5-G failure behavior block with the next missing/negative scenario only if it gives new information.
+- Otherwise move toward the next planned Category Derivation transition step according to the 22 May operational plan and General Plan v4.4.
+
+10. Do not repeat unnecessarily
+
+Do not rerun completed canonical /api/activity/complete proof events.
+
+Do not use this debug route as a canonical completion proof.
+
+Do not modify /api/activity/complete for this proof.
+
+Do not run SQL in PowerShell.
+
+Do not enable production_persist.
+
+Do not begin full UI/UX before the backend/data structure checkpoint.
+
+11. Definition of Done
+
+This proof is complete when:
+
+- this document exists under docs/value-objects;
+- the document is committed and pushed;
+- working tree is clean;
+- recent git log shows the proof document commit above 4886858.
