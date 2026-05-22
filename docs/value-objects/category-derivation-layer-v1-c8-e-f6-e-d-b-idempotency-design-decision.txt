@@ -1,0 +1,196 @@
+﻿GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-D-B
+Idempotency design decision after routeRunner gap inspection
+Created: 2026-05-22
+
+1. Purpose
+
+This document records the idempotency design decision after F6-E-D-A inspection.
+
+No runtime/source code changes are made in this step.
+
+2. Current baseline
+
+Current HEAD before this decision:
+
+- 4375a6f — Inspect Category Derivation route runner idempotency gap
+
+Immediately relevant commits:
+
+- c25b52c — Inspect Category Derivation production readiness gates
+- fca327b — Decide Category Derivation production readiness after gate inspection
+- 4375a6f — Inspect Category Derivation route runner idempotency gap
+
+3. What F6-E-D-A established
+
+F6-E-D-A established:
+
+- runLookup function exists: True
+- routeRunner references runLookup function: False
+- routeRunner references runLookup file/name: False
+- routeRunner imports runLookup: False
+- adapter references runLookup function: True
+- idempotency route references runLookup function: False
+- idempotency route uses adapter: True
+- routeRunner creates derivation run: True
+- routeRunner persists derivation rows: True
+- routeRunner returns existing reason/state marker: False
+- F6-E-B detected idempotency gap: True
+- F6-E-C blocks production_persist: True
+- gap confirmed by inspection: True
+
+4. Corrected interpretation
+
+The gap is not simply "there is no idempotency anywhere".
+
+The corrected interpretation is:
+
+- runLookup exists;
+- completeRouteIntegration.ts references and uses runLookup;
+- current idempotency debug route uses the adapter;
+- routeRunner itself does not import or call runLookup;
+- routeRunner itself is therefore not internally idempotency-protected;
+- adapter-level idempotency may protect /api/activity/complete integration;
+- but routeRunner-level production readiness remains ambiguous if routeRunner can be called directly or by future callers.
+
+5. Architectural decision
+
+Decision:
+
+Do not immediately move runLookup into routeRunner.
+
+Do not immediately enable production_persist.
+
+Do not immediately modify /api/activity/complete.
+
+First prove the current adapter-level idempotency behavior at current HEAD.
+
+Reason:
+
+The current system appears to have idempotency protection at the completeRouteIntegration adapter layer. Before changing architecture, we should prove whether the existing adapter-level guard already prevents duplicate completed runs for the real complete-route integration path.
+
+6. Approved next step
+
+Approved next step:
+
+P4.10.0-C8-E-F6-E-D-C — prepare adapter-level idempotency runtime proof at current HEAD
+
+This step should not change source code.
+
+It should prepare a controlled runtime proof using the existing debug route:
+
+- /api/activity/debug/category-derivation-complete-route-adapter-idempotency-test
+
+The proof should answer:
+
+- Does the first adapter call create or reuse a derivation run as expected?
+- Does the second adapter call detect the existing completed/completed_with_warnings run?
+- Is derivationRunId stable across repeated adapter calls?
+- Does persistenceDerivationRowsCreated avoid duplicating rows on the second call?
+- Is the result non-blocking?
+- Is production_persist still disabled?
+- Does the proof route clearly remain non-canonical and debug-only?
+
+7. Why this proof comes before implementation
+
+Implementation should wait because:
+
+- adapter already references runLookup;
+- idempotency route already uses adapter;
+- we need evidence of current behavior before changing routeRunner;
+- routeRunner-level idempotency may still be desirable later, but it should be justified by proof, not assumed;
+- changing both adapter and routeRunner could create duplicated lookup logic or ambiguous ownership.
+
+8. Idempotency ownership decision for now
+
+Temporary ownership decision:
+
+- For /api/activity/complete integration, idempotency ownership remains in completeRouteIntegration adapter until proven insufficient.
+- routeRunner remains the lower-level derive/resolve/persist executor.
+- routeRunner-level idempotency is not approved yet.
+- production_persist is not approved yet.
+
+9. Conditions that would require routeRunner-level idempotency
+
+RouteRunner-level idempotency should be reconsidered if the next proof shows:
+
+- adapter does not actually prevent duplicate derivation runs;
+- second call creates a new derivationRunId;
+- second call creates additional activity_category_derivations rows;
+- direct routeRunner calls are intended to be supported as production path;
+- future code paths can bypass completeRouteIntegration;
+- production_persist needs protection independent of caller.
+
+10. Not approved yet
+
+Not approved:
+
+- production_persist
+- controlled production_persist proof
+- direct production_persist on /api/activity/complete
+- strict failActivityComplete=true for normal users
+- moving runLookup into routeRunner
+- changing completeRouteIntegration
+- changing routeRunner
+- changing schema
+- migrations
+- RLS changes
+- permission changes
+- UI work
+- OpenAI calls
+- broad refactor
+
+11. Safe path after this decision
+
+The safe path is:
+
+F6-E-D-C — prepare current adapter-level idempotency runtime proof.
+F6-E-D-D — run current adapter-level idempotency proof.
+F6-E-D-E — document proof result.
+Then decide:
+
+- if proof passes, decide whether adapter-level idempotency is sufficient for the next controlled production-readiness step;
+- if proof fails, design the smallest idempotency fix;
+- if routeRunner-level idempotency is needed, implement only after a separate design document.
+
+12. Runtime proof target for next step
+
+Target debug route:
+
+- /api/activity/debug/category-derivation-complete-route-adapter-idempotency-test
+
+Target proof nature:
+
+- debug-only
+- current HEAD
+- adapter-level idempotency
+- no source code changes
+- no production_persist
+- no OpenAI
+- no schema/RLS/permission changes
+- no UI work
+
+13. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no production_persist
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no SQL in PowerShell
+- no runtime/source code changes in F6-E-D-B
+- no broad refactor
+- no proof/test route as substitute for real production readiness
+
+14. Definition of Done
+
+This F6-E-D-B decision step is complete when:
+
+- this document exists under docs/value-objects;
+- only this document is changed;
+- document is committed and pushed;
+- working tree is clean;
+- recent git log shows this decision document above 4375a6f.
