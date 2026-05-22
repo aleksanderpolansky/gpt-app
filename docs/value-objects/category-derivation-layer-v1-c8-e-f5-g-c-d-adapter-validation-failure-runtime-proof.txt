@@ -1,0 +1,349 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F5-G-C-D - Adapter Validation Failure Runtime Proof
+Created: 2026-05-22 12:25:15
+Base commit before this document: 6e33ace
+
+STATUS
+F5-G-C-B adapter validation failure runtime test passed.
+F5-G-C-C committed the debug-only adapter failure test route.
+This document records the validation-failure proof.
+
+SCOPE
+Documentation only.
+No runtime code changes.
+No database migration.
+No /api/activity/complete patch.
+No OpenAI call.
+No UI changes.
+No commercial core changes.
+production_persist was not enabled.
+
+CURRENT CODE BASELINE
+
+Failure behavior test plan:
+e62c815 Plan Category Derivation failure behavior tests
+
+Adapter failure debug route:
+6e33ace Add Category Derivation adapter failure test route
+
+Debug route:
+src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts
+
+Complete route:
+src/app/api/activity/complete/route.ts
+
+Important:
+The complete route was not modified in F5-G-C-A / F5-G-C-B / F5-G-C-C.
+
+WHY THIS PROOF WAS NEEDED
+
+Before production_persist can be considered, the Category Derivation routeRunner adapter must prove safe behavior not only on positive paths but also on controlled failure paths.
+
+This proof verifies the safest validation failure scenario:
+
+missing_activity_event_id
+
+The adapter is called directly with an intentionally empty activityEvent.id.
+
+This tests that the adapter:
+- does not crash;
+- does not call routeRunner;
+- does not persist category_derivation_runs;
+- does not persist activity_category_derivations;
+- returns structured metadata;
+- respects failActivityComplete=false;
+- does not block the surrounding flow.
+
+TEST MODE
+
+Local dev server was run with:
+
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE = "shadow_persist"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG = "false"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE = "false"
+npm.cmd run dev
+
+Expected config:
+- mode = shadow_persist
+- includeResponseDebug = false
+- failActivityComplete = false
+- isDisabled = false
+- usesRouteRunnerInCompleteRoute = true
+- shouldPersist = true
+- shouldResolve = true
+- isShadowMode = true
+- isProductionPersistMode = false
+- warnings = []
+
+RUNTIME TEST
+
+Endpoint:
+POST /api/activity/debug/category-derivation-complete-route-adapter-failure-test
+
+Scenario:
+missing_activity_event_id
+
+Payload:
+{
+  "scenario": "missing_activity_event_id",
+  "mode": "shadow_persist",
+  "expectFailActivityComplete": false
+}
+
+Runtime result:
+- HTTP status = 200
+- ok = true
+- status = adapter_validation_failure_test_pass
+- scenario = missing_activity_event_id
+
+ADAPTER RESULT
+
+Adapter result:
+- enabled = true
+- mode = shadow_persist
+- ok = true
+- skipped = true
+- reason = missing_activity_event_id
+- derivationRunId = null
+- candidateCount = 0
+- resolvedCandidateCount = 0
+- persistenceDerivationRowsCreated = 0
+- warnings = []
+- errors = activityEvent.id is required for Category Derivation.
+
+RouteRunner state:
+- executed = false
+- persisted = false
+- resolved = false
+
+Interpretation:
+Because failActivityComplete=false, this validation failure is treated as a non-blocking adapter failure.
+The adapter reports the failure clearly but returns ok=true for the surrounding activity completion flow.
+
+EXPECTED CHECKS
+
+Expected checks all passed:
+
+1. adapter result ok follows !failActivityComplete
+   pass = true
+
+2. adapter skipped is true
+   pass = true
+
+3. adapter reason is missing_activity_event_id
+   pass = true
+
+4. derivationRunId is null
+   pass = true
+
+5. candidateCount is 0
+   pass = true
+
+6. resolvedCandidateCount is 0
+   pass = true
+
+7. persistenceDerivationRowsCreated is 0
+   pass = true
+
+8. routeRunner.executed is false
+   pass = true
+
+9. routeRunner.persisted is false
+   pass = true
+
+10. routeRunner.resolved is false
+    pass = true
+
+11. errors include missing activityEvent.id
+    pass = true
+
+expectedChecks.pass = true
+
+SAFETY RESULT
+
+Safety object:
+- completeRouteModified = false
+- activityEventCompletedByThisRoute = false
+- categoryDerivationRunCreated = false
+- activityCategoryDerivationsCreated = false
+- productionPersistEnabled = false
+- openAiCalled = false
+- uiCreated = false
+- migrationCreated = false
+- schemaOrPermissionsModified = false
+
+This confirms:
+- no activity event was completed;
+- no routeRunner persistence occurred;
+- no production mode was enabled;
+- no OpenAI call occurred;
+- no schema or permissions were modified;
+- /api/activity/complete was not modified.
+
+RUNTIME CHECKS
+
+Browser Console checks:
+- response.ok: OK
+- json.ok is true: OK
+- json.status is adapter_validation_failure_test_pass: OK
+- scenario is missing_activity_event_id: OK
+- config exists: OK
+- config.mode is shadow_persist: OK
+- config.failActivityComplete is false: OK
+- config.shouldPersist is true: OK
+- config.shouldResolve is true: OK
+- config.isProductionPersistMode is false: OK
+- adapterResult exists: OK
+- adapterResult.enabled is true: OK
+- adapterResult.mode is shadow_persist: OK
+- adapterResult.ok is true because failActivityComplete=false: OK
+- adapterResult.skipped is true: OK
+- adapterResult.reason is missing_activity_event_id: OK
+- adapterResult.derivationRunId is null: OK
+- adapterResult.candidateCount is 0: OK
+- adapterResult.resolvedCandidateCount is 0: OK
+- adapterResult.persistenceDerivationRowsCreated is 0: OK
+- routeRunner.executed is false: OK
+- routeRunner.persisted is false: OK
+- routeRunner.resolved is false: OK
+- errors include activityEvent.id is required: OK
+- expectedChecks exists: OK
+- expectedChecks.pass is true: OK
+- all expectedChecks checks pass: OK
+- safety exists: OK
+- safety.completeRouteModified is false: OK
+- safety.activityEventCompletedByThisRoute is false: OK
+- safety.categoryDerivationRunCreated is false: OK
+- safety.activityCategoryDerivationsCreated is false: OK
+- safety.productionPersistEnabled is false: OK
+- safety.openAiCalled is false: OK
+- safety.uiCreated is false: OK
+- safety.migrationCreated is false: OK
+- safety.schemaOrPermissionsModified is false: OK
+
+Runtime status:
+PASS
+
+WHAT WAS PROVEN
+
+This step proves the first controlled validation-failure behavior:
+
+1. The adapter safely handles a missing activityEvent.id.
+2. The adapter returns reason = missing_activity_event_id.
+3. The adapter returns skipped = true.
+4. The adapter returns ok = true when failActivityComplete=false.
+5. The adapter does not call routeRunner.
+6. The adapter does not create category_derivation_runs.
+7. The adapter does not create activity_category_derivations.
+8. The adapter returns a clear error message.
+9. The debug route does not complete any activity event.
+10. /api/activity/complete remains unchanged.
+11. production_persist remains disabled.
+12. OpenAI is not called.
+13. No schema or permissions are modified.
+
+ARCHITECTURAL MEANING
+
+The failure-behavior block now has its first runtime proof.
+
+Before this proof:
+The routeRunner adapter had positive-path proof and idempotency proof, but no validation-failure proof.
+
+After this proof:
+The adapter has a verified non-blocking validation-failure path under failActivityComplete=false.
+
+This supports the provisional production policy:
+- production_persist should not block activity completion at first;
+- failActivityComplete should remain false by default;
+- routeRunner failures should be visible in metadata/logging;
+- failed routeRunner results should not be treated as canonical derivations.
+
+IMPORTANT LIMITATION
+
+This proof covers only one validation failure:
+
+missing_activity_event_id
+
+It does not yet prove:
+- wrong mode / no-write behavior;
+- missing or invalid actorId behavior;
+- persistence failure simulation;
+- complete route non-blocking failure behavior;
+- complete route blocking failure behavior under failActivityComplete=true;
+- Value Object Bridge migration safety;
+- production_persist rollout safety.
+
+CURRENT PROJECT POSITION
+
+F5-C:
+Disabled-by-default adapter integration was proven and documented.
+
+F5-D:
+shadow_no_persist mode was proven and documented.
+
+F5-E:
+shadow_persist mode through /api/activity/complete was proven and documented.
+
+F5-F:
+Direct adapter idempotency was planned, implemented, runtime-tested, committed and documented.
+
+F5-G-A:
+Failure behavior test plan was created.
+
+F5-G-B:
+Failure handling and simulation hooks were inspected.
+
+F5-G-C-A:
+Debug-only adapter validation failure route was implemented.
+
+F5-G-C-B:
+Adapter validation failure runtime test passed.
+
+F5-G-C-C:
+Debug-only adapter validation failure route was committed.
+
+F5-G-C-D:
+This document records the adapter validation failure proof.
+
+NEXT RECOMMENDED BLOCK
+
+Proceed to:
+P4.10.0-C8-E-F5-G-D-A - plan and test wrong-mode/no-write behavior.
+
+Purpose:
+Prove the debug route refuses to run if server mode is not shadow_persist and creates no DB rows.
+
+Recommended test:
+- restart local dev server with CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=disabled;
+- call the failure debug route with mode=shadow_persist;
+- expect HTTP 409;
+- expect no adapter call;
+- expect no routeRunner execution;
+- expect no DB writes.
+
+NO-GO
+
+Do not enable production_persist.
+Do not remove legacy Category Derivation code.
+Do not switch Value Object Bridge source.
+Do not call OpenAI.
+Do not create UI.
+Do not create database migrations.
+Do not modify commercial core.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+Do not force-reset completed events.
+Do not simulate failure by corrupting schema or permissions.
+
+SERVER RESET NOTE
+
+After shadow_persist/debug testing, local dev server should be restarted in disabled mode before ordinary development.
+
+Recommended reset command:
+
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE = "disabled"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG = "false"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE = "false"
+npm.cmd run dev
+
+END OF F5-G-C-D ADAPTER VALIDATION FAILURE RUNTIME PROOF
