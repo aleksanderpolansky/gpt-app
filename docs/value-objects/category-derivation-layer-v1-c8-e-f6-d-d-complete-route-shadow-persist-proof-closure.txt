@@ -1,0 +1,169 @@
+﻿GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-D-D
+Complete-route shadow_persist proof closure and next transition decision
+Created: 2026-05-22
+
+1. Purpose
+
+This document closes the F6-D complete-route shadow_persist proof block.
+
+No runtime/source code changes are made in this step.
+
+2. Current baseline
+
+Current HEAD before this closure:
+
+- 92787b1 — Document Category Derivation complete-route shadow persist proof
+
+Immediately relevant commits:
+
+- 3f94bfd — Decide Category Derivation transition after failure behavior inspection
+- d66861b — Prepare Category Derivation complete-route shadow persist proof
+- 92787b1 — Document Category Derivation complete-route shadow persist proof
+
+3. What F6-D established
+
+F6-D established that a post-F5-G proof through the real production-adjacent route is possible and already passed.
+
+Real route under proof:
+
+- /api/activity/complete
+
+Mode:
+
+- shadow_persist
+
+Fail behavior:
+
+- failActivityComplete=false
+
+Result:
+
+- setup event created successfully through /api/activity/debug/create-free-text-start-event
+- real /api/activity/complete completed the event
+- completeJson.status=completed
+- categoryDerivationRouteRunner.enabled=true
+- categoryDerivationRouteRunner.mode=shadow_persist
+- categoryDerivationRouteRunner.ok=true
+- categoryDerivationRouteRunner.skipped=false
+- categoryDerivationRouteRunner.reason=route_runner_completed
+- candidateCount=5
+- resolvedCandidateCount=5
+- persistenceDerivationRowsCreated=5
+- valueObjectBridge.ok=true
+- rawSignal.processingStatus=processed
+- production_persist was not enabled
+
+4. Why this proof is sufficient for F6-D
+
+The purpose of F6-D was not to move to production_persist.
+
+The purpose was to confirm that after F5-G failure-behavior work, the real /api/activity/complete path still works with Category Derivation in shadow_persist.
+
+That has now been proven.
+
+Additional runtime tests inside F6-D would likely be duplicate unless a new code change affects one of these areas:
+
+- /api/activity/complete
+- completeRouteIntegration
+- routeRunner
+- config
+- valueObjectBridge
+- rawSignal / processing logs
+
+5. Decision
+
+Decision:
+
+- F6-D complete-route shadow_persist proof is sufficient.
+- Do not add another runtime proof inside F6-D.
+- Do not modify source code in F6-D.
+- Move to a planning/decision step for the next transition.
+
+Recommended next step:
+
+- P4.10.0-C8-E-F6-E-A — plan production-readiness transition after complete-route shadow_persist proof
+
+6. What is not approved
+
+This closure does not approve:
+
+- production_persist
+- OpenAI calls
+- UI work
+- schema changes
+- migrations
+- RLS changes
+- permission changes
+- broad refactor
+- repeating canonical proof without new reason
+
+7. Safety gates for next transition
+
+The next transition must still keep these gates unless explicitly changed by a new approved plan:
+
+- no production_persist until separate production-readiness plan is created
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no SQL in PowerShell
+- no debug route as substitute for real complete-route proof
+- no reliance on raw error strings when normalized signals exist
+
+8. Stable success signals to carry forward
+
+For real complete-route shadow_persist proof:
+
+- completeJson.status=completed
+- categoryDerivationRouteRunner.mode=shadow_persist
+- categoryDerivationRouteRunner.ok=true
+- categoryDerivationRouteRunner.skipped=false
+- categoryDerivationRouteRunner.reason=route_runner_completed
+- categoryDerivationRouteRunner.candidateCount=5
+- categoryDerivationRouteRunner.resolvedCandidateCount=5
+- categoryDerivationRouteRunner.persistenceDerivationRowsCreated=5
+- valueObjectBridge.ok=true
+- rawSignal.processingStatus=processed
+
+9. Current block status
+
+Closed:
+
+- F5-G failure behavior block
+- F6-A transition plan
+- F6-B current-state inspection
+- F6-B-FIX2 missing debug route correction
+- F6-C transition decision
+- F6-D-A complete-route shadow_persist proof preparation
+- F6-D-B runtime proof
+- F6-D-C proof document
+
+Now closing:
+
+- F6-D-D complete-route shadow_persist proof closure
+
+10. Recommended next block
+
+Recommended next block:
+
+P4.10.0-C8-E-F6-E-A — plan production-readiness transition after complete-route shadow_persist proof
+
+The next block should answer:
+
+- What exact conditions must be met before production_persist?
+- What risks remain after shadow_persist?
+- What should be observed before enabling production persistence?
+- Whether production_persist should be introduced through a narrow debug-only transition, a feature flag, or another staged proof.
+- Whether additional database safety checks are needed before production_persist.
+
+11. Definition of Done
+
+This F6-D-D closure step is complete when:
+
+- this document exists under docs/value-objects;
+- only this document is changed;
+- document is committed and pushed;
+- working tree is clean;
+- recent git log shows this closure document above 92787b1.
