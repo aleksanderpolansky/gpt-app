@@ -1,0 +1,225 @@
+﻿GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F5-G-I-A
+F5-G failure behavior closure and next transition
+Created: 2026-05-22
+
+1. Purpose
+
+This document closes the F5-G failure behavior block for the Category Derivation complete-route adapter.
+
+The purpose is to summarize what was proven, what should not be repeated, what is now safe to rely on, and what the next transition step should be.
+
+2. Current HEAD
+
+Current HEAD after strict proof document:
+
+- ca94353 — Document Category Derivation strict simulated persistence failure proof
+
+3. Completed F5-G proof chain
+
+Completed commits and documents:
+
+- e62c815 — Plan Category Derivation failure behavior tests
+- 6e33ace — Add Category Derivation adapter failure test route
+- 4eb8bbf — Document Category Derivation adapter validation failure proof
+- 6107605 — Document Category Derivation wrong-mode no-write proof
+- 4886858 — Extend Category Derivation adapter failure test route with missing actor scenario
+- 9b9e510 — Document Category Derivation missing actor validation proof
+- 60d7c96 — Plan Category Derivation persistence failure simulation
+- 0c4aa06 — Inspect Category Derivation persistence failure injection points
+- 5ca795f — Correct Category Derivation persistence failure injection inspection
+- daddbfd — Correct Category Derivation persistence failure injection inspection
+- 737137c — Add Category Derivation simulated persistence failure path
+- 19ea8c3 — Document Category Derivation simulated persistence failure proof
+- faf575a — Allow strict Category Derivation simulated persistence failure proof
+- ca94353 — Document Category Derivation strict simulated persistence failure proof
+
+4. Proofs completed
+
+4.1 missing_activity_event_id
+
+Result:
+
+- adapter handles missing activityEvent.id as controlled validation skip;
+- adapterResult.ok=true when failActivityComplete=false;
+- adapterResult.skipped=true;
+- reason=missing_activity_event_id;
+- routeRunner.executed=false;
+- no category_derivation_runs;
+- no activity_category_derivations;
+- no OpenAI;
+- no production_persist.
+
+4.2 wrong-mode / no-write
+
+Result:
+
+- server mode disabled;
+- request mode shadow_persist;
+- route returns controlled 409;
+- adapter is not reached;
+- routeRunner is not reached;
+- DB write path is not reached;
+- no production_persist;
+- no OpenAI.
+
+4.3 missing_actor_id
+
+Result:
+
+- adapter handles missing actorId as controlled validation skip;
+- adapterResult.ok=true when failActivityComplete=false;
+- adapterResult.skipped=true;
+- reason=missing_actor_id;
+- routeRunner.executed=false;
+- no category_derivation_runs;
+- no activity_category_derivations;
+- no OpenAI;
+- no production_persist.
+
+Important correction:
+
+- validation signal must be accepted from adapterResult.reason;
+- raw adapterResult.errors may be empty.
+
+4.4 simulated_persistence_failure non-blocking
+
+Result:
+
+- routeRunner executes;
+- candidates are produced;
+- simulated failure happens before real run creation;
+- adapterResult.ok=true when failActivityComplete=false;
+- adapterResult.skipped=false;
+- reason=simulated_persistence_failure;
+- candidateCount=5;
+- derivationRunId=null;
+- persistenceDerivationRowsCreated=0;
+- routeRunner.persisted=false;
+- routeRunner.resolved=false;
+- no category_derivation_runs;
+- no activity_category_derivations;
+- no OpenAI;
+- no production_persist;
+- no schema/RLS/permission changes.
+
+4.5 simulated_persistence_failure strict
+
+Result:
+
+- routeRunner executes;
+- candidates are produced;
+- simulated failure happens before real run creation;
+- adapterResult.ok=false when failActivityComplete=true;
+- adapterResult.skipped=false;
+- reason=simulated_persistence_failure;
+- candidateCount=5;
+- derivationRunId=null;
+- persistenceDerivationRowsCreated=0;
+- routeRunner.persisted=false;
+- routeRunner.resolved=false;
+- no category_derivation_runs;
+- no activity_category_derivations;
+- no OpenAI;
+- no production_persist;
+- no schema/RLS/permission changes.
+
+5. Important safety conclusions
+
+F5-G proves that the Category Derivation adapter can handle:
+
+- validation failure before routeRunner starts;
+- wrong-mode no-write condition;
+- missing required actor;
+- simulated persistence-boundary failure in non-blocking mode;
+- simulated persistence-boundary failure in strict blocking mode.
+
+The proof chain did not modify:
+
+- src/app/api/activity/complete/route.ts during the strict proof support step;
+- schema;
+- migrations;
+- RLS;
+- permissions;
+- UI;
+- OpenAI integration.
+
+6. Anti-regression rules
+
+Do not repeat completed canonical /api/activity/complete proof events unnecessarily.
+
+Do not treat the debug failure route as canonical completion proof.
+
+Do not enable production_persist until a separate production transition step explicitly allows it.
+
+Do not simulate DB failure by breaking schema, RLS or permissions.
+
+Do not rely only on raw error messages. Normalized adapterResult.reason is the stable signal.
+
+Do not generalize strict guard exceptions to other scenarios without separate proof.
+
+7. Current technical status
+
+The adapter failure behavior block is complete enough to proceed to the next transition step.
+
+Current stable signals:
+
+- missing_activity_event_id:
+  adapterResult.reason=missing_activity_event_id
+
+- missing_actor_id:
+  adapterResult.reason=missing_actor_id
+
+- simulated persistence failure:
+  adapterResult.reason=simulated_persistence_failure
+
+- non-blocking:
+  failActivityComplete=false
+  adapterResult.ok=true
+
+- strict/blocking:
+  failActivityComplete=true
+  adapterResult.ok=false
+
+8. Recommended next transition
+
+Recommended next step after this closure document:
+
+P4.10.0-C8-E-F6-A — plan next Category Derivation transition after F5-G
+
+The next block should not immediately change production behavior.
+
+Recommended sequence:
+
+F6-A — create transition plan after F5-G.
+F6-B — inspect current complete route, adapter, routeRunner and existing proof docs.
+F6-C — decide whether to move from debug-only proofs toward controlled complete-route shadow_persist proof.
+F6-D — only after decision, implement the smallest safe transition.
+F6-E — runtime proof.
+F6-F — commit implementation after proof.
+F6-G — proof document.
+
+9. Do not do next
+
+Do not jump directly to production_persist.
+
+Do not add UI.
+
+Do not add OpenAI calls for this transition.
+
+Do not run SQL in PowerShell.
+
+Do not modify database schema before a separate schema plan.
+
+Do not change /api/activity/complete unless the next transition plan explicitly requires it.
+
+10. Definition of Done
+
+This closure step is complete when:
+
+- this document exists under docs/value-objects;
+- only this document is changed;
+- the document is committed and pushed;
+- working tree is clean;
+- recent git log shows this closure document above ca94353.
