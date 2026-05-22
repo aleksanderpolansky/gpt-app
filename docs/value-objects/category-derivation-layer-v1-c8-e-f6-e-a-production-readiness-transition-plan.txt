@@ -1,0 +1,229 @@
+﻿GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-A
+Production-readiness transition plan after complete-route shadow_persist proof
+Created: 2026-05-22
+
+1. Purpose
+
+This document starts the next transition after the real complete-route shadow_persist proof.
+
+No runtime/source code changes are made in this step.
+
+The goal is to plan the path from proven shadow_persist behavior toward production readiness, without enabling production_persist yet.
+
+2. Current baseline
+
+Current HEAD before this plan:
+
+- 15c77a3 — Close Category Derivation complete-route shadow persist proof
+
+Immediately relevant commits:
+
+- d66861b — Prepare Category Derivation complete-route shadow persist proof
+- 92787b1 — Document Category Derivation complete-route shadow persist proof
+- 15c77a3 — Close Category Derivation complete-route shadow persist proof
+
+3. What is already proven
+
+The previous blocks have proven:
+
+F5-G failure behavior:
+
+- missing_activity_event_id handled safely;
+- wrong-mode / no-write handled safely;
+- missing_actor_id handled safely;
+- simulated_persistence_failure handled in non-blocking mode;
+- simulated_persistence_failure handled in strict blocking mode;
+- normalized adapterResult.reason is the stable failure signal.
+
+F6-D complete-route shadow_persist:
+
+- real /api/activity/complete completed an event successfully;
+- categoryDerivationRouteRunner.enabled=true;
+- categoryDerivationRouteRunner.mode=shadow_persist;
+- categoryDerivationRouteRunner.ok=true;
+- categoryDerivationRouteRunner.skipped=false;
+- categoryDerivationRouteRunner.reason=route_runner_completed;
+- candidateCount=5;
+- resolvedCandidateCount=5;
+- persistenceDerivationRowsCreated=5;
+- valueObjectBridge.ok=true;
+- rawSignal.processingStatus=processed;
+- production_persist was not enabled.
+
+4. Production-readiness question
+
+The next question is not:
+
+"Can we enable production_persist immediately?"
+
+The correct next question is:
+
+"What exact safety conditions, inspection results, rollback strategy and observability gates must exist before production_persist can be enabled?"
+
+5. Core decision for F6-E-A
+
+Decision:
+
+Do not enable production_persist in F6-E-A.
+
+Do not modify source code in F6-E-A.
+
+Create a staged production-readiness plan first.
+
+6. Main production_persist risks
+
+Before production_persist can be enabled, these risks must be understood:
+
+- duplicate derivation runs for the same activity event;
+- duplicate activity_category_derivations rows;
+- incomplete or partially persisted routeRunner state;
+- unresolved candidates being persisted incorrectly;
+- valueObjectBridge creating duplicate or conflicting value objects;
+- rawSignal / processingLogs mismatch;
+- routeRunner failure causing activity completion failure unexpectedly;
+- strict mode accidentally blocking /api/activity/complete for normal users;
+- performance cost from persistence on each completion;
+- unclear rollback if production persistence creates wrong rows;
+- inability to distinguish proof/test activity events from real business data;
+- insufficient audit trail for production persistence.
+
+7. Required safety gates before production_persist
+
+Before any production_persist transition is approved, we need a separate inspection and decision step covering:
+
+- idempotency behavior;
+- duplicate run prevention;
+- completed / completed_with_warnings lookup behavior;
+- routeRunner retry behavior;
+- rollback / cleanup strategy;
+- auditability;
+- production feature flag behavior;
+- non-blocking vs strict behavior;
+- whether failActivityComplete should remain false during first production transition;
+- whether production_persist should first run only through a debug or controlled proof route;
+- whether proof/test events need a dedicated marker or cleanup policy.
+
+8. Recommended F6-E sequence
+
+F6-E-A — this production-readiness transition plan.
+No runtime/source code changes.
+
+F6-E-B — inspect production readiness gates.
+Inspect source and docs only. No runtime/source code changes.
+
+Files to inspect:
+
+- lib/activity/categoryDerivation/config.ts
+- lib/activity/categoryDerivation/routeRunner.ts
+- lib/activity/categoryDerivation/runLookup.ts
+- lib/activity/categoryDerivation/completeRouteIntegration.ts
+- src/app/api/activity/complete/route.ts
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-d-complete-route-shadow-persist-proof-closure.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-c-complete-route-shadow-persist-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-i-a-failure-behavior-closure-and-next-transition.txt
+
+F6-E-C — production-readiness decision document.
+Decide whether to:
+
+- continue with more shadow_persist/idempotency proof;
+- add observation-only safety markers;
+- design a controlled production_persist proof;
+- postpone production_persist until more safeguards exist.
+
+F6-E-D — implementation only if F6-E-C approves it.
+Forbidden by default:
+- broad refactor;
+- UI work;
+- OpenAI;
+- schema changes;
+- RLS changes;
+- permission changes.
+
+F6-E-E — runtime proof only after approved implementation or approved no-code proof plan.
+
+F6-E-F — commit implementation only after runtime proof passes, if implementation exists.
+
+F6-E-G — proof document.
+
+9. Strong recommendation
+
+The first production-readiness move should probably not be direct production_persist on /api/activity/complete for all events.
+
+Safer options to evaluate in F6-E-C:
+
+Option A:
+Keep /api/activity/complete in shadow_persist and add no code.
+
+Option B:
+Create a controlled production_persist proof using a debug setup event and a narrow proof path.
+
+Option C:
+Use production_persist only when a proof/test metadata marker is present.
+
+Option D:
+Keep failActivityComplete=false during initial production_persist so that completion remains non-blocking.
+
+Option E:
+Require idempotency proof and cleanup/rollback notes before production_persist.
+
+10. What is not approved
+
+This plan does not approve:
+
+- production_persist;
+- OpenAI calls;
+- UI work;
+- schema changes;
+- migrations;
+- RLS changes;
+- permission changes;
+- broad refactor;
+- immediate modification of /api/activity/complete;
+- immediate production rollout.
+
+11. Safety rules for all next steps
+
+Keep these rules until explicitly changed by a later approved document:
+
+- no production_persist without a separate decision;
+- no OpenAI call;
+- no schema or migration change;
+- no RLS or permission change;
+- no UI work;
+- no SQL in PowerShell;
+- no debug route as substitute for real complete-route proof;
+- no reliance only on raw error strings;
+- use normalized reason/status fields whenever available;
+- do not repeat runtime proofs unless they add new information.
+
+12. Recommended immediate next step
+
+After this plan is committed:
+
+P4.10.0-C8-E-F6-E-B — inspect production-readiness gates
+
+F6-E-B should be an inspection document only.
+
+It should answer:
+
+- Is idempotency strong enough for production_persist?
+- Does runLookup prevent duplicate completed runs?
+- What happens if routeRunner fails after category_derivation_run creation but before derivation rows are persisted?
+- What happens if valueObjectBridge succeeds but Category Derivation persistence has partial results?
+- Are proof/test events distinguishable enough?
+- What rollback or cleanup strategy exists?
+- Should failActivityComplete remain false for first production_persist stage?
+- Is production_persist better introduced by a narrow controlled proof route rather than real /api/activity/complete?
+
+13. Definition of Done
+
+This F6-E-A planning step is complete when:
+
+- this document exists under docs/value-objects;
+- only this document is changed;
+- document is committed and pushed;
+- working tree is clean;
+- recent git log shows this plan document above 15c77a3.
