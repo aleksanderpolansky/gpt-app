@@ -1,0 +1,477 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-E-F5-F-C-D - Direct Adapter Idempotency Runtime Proof
+Created: 2026-05-22 12:00:02
+Base commit before this document: 6bebca3
+
+STATUS
+F5-F-C-B direct adapter idempotency runtime test passed.
+F5-F-C-C committed the debug-only direct adapter idempotency route.
+This document records runtime proof, database verification, and implementation status.
+
+SCOPE
+Documentation only.
+No runtime code changes.
+No database migration.
+No /api/activity/complete patch.
+No OpenAI call.
+No UI changes.
+No commercial core changes.
+production_persist was not enabled.
+
+CURRENT CODE BASELINE
+
+Production transition / legacy consolidation plan:
+f691076 Plan Category Derivation production transition
+
+Direct adapter idempotency proof plan:
+7d16e48 Plan Category Derivation direct adapter idempotency proof
+
+Debug route implementation commit:
+6bebca3 Add Category Derivation direct adapter idempotency test route
+
+Debug route:
+src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts
+
+Complete route:
+src/app/api/activity/complete/route.ts
+
+Important:
+The complete route was not modified in F5-F-C-A / F5-F-C-B / F5-F-C-C.
+
+WHY THIS PROOF WAS NEEDED
+
+The normal endpoint /api/activity/complete cannot fully prove routeRunner adapter idempotency.
+
+Reason:
+- first POST completes the event and runs the full pipeline;
+- second POST for the same event returns already_completed;
+- already_completed skips the full pipeline;
+- therefore the second POST does not re-enter the routeRunner adapter.
+
+The new debug route solves this by calling:
+
+runCategoryDerivationForCompleteRoute
+
+directly twice for the same non-completed activity_event.
+
+TEST MODE
+
+Local dev server was run with:
+
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE = "shadow_persist"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG = "false"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE = "false"
+npm.cmd run dev
+
+Expected config:
+- mode = shadow_persist
+- shouldPersist = true
+- shouldResolve = true
+- isShadowMode = true
+- isProductionPersistMode = false
+- failActivityComplete = false
+- includeResponseDebug = false
+- usesRouteRunnerInCompleteRoute = true
+
+TEST EVENT
+
+Fresh event id:
+e653240e-7723-41be-9750-ff5fb7a8c129
+
+Inserted as:
+- user_id = ef87b038-64d4-4ded-8dcd-67ca56093e61
+- performed_by_actor_id = d4727330-1cd4-475a-ac0b-aaba89087f4a
+- acting_as_actor_id = d4727330-1cd4-475a-ac0b-aaba89087f4a
+- acting_for_actor_id = d4727330-1cd4-475a-ac0b-aaba89087f4a
+- input_text = walked to work for 15 minutes
+- title = F5-F-C-B direct adapter idempotency routeRunner test
+- description = Direct adapter idempotency proof for Category Derivation complete-route adapter.
+- duration_minutes = 15
+- status = started
+- processing_status = pending
+- source = manual
+- privacy_scope = private
+- metadata_json.testStep = P4.10.0-C8-E-F5-F-C-B
+- metadata_json.doNotUseAsCanonicalProof = true
+
+Important:
+The event was intentionally not completed by the debug route.
+
+RUNTIME TEST
+
+Endpoint:
+POST /api/activity/debug/category-derivation-complete-route-adapter-idempotency-test
+
+Payload:
+{
+  "eventId": "e653240e-7723-41be-9750-ff5fb7a8c129",
+  "mode": "shadow_persist",
+  "callTwice": true
+}
+
+Runtime result:
+- HTTP status = 200
+- ok = true
+- status = idempotency_test_pass
+
+DEBUG ROUTE RESPONSE SUMMARY
+
+Config:
+- mode = shadow_persist
+- includeResponseDebug = false
+- failActivityComplete = false
+- isDisabled = false
+- isDebugOnly = false
+- usesLegacyExistingCompleteRouteFlow = false
+- usesRouteRunnerInCompleteRoute = true
+- shouldPersist = true
+- shouldResolve = true
+- isShadowMode = true
+- isProductionPersistMode = false
+
+First adapter call:
+- enabled = true
+- mode = shadow_persist
+- ok = true
+- skipped = false
+- reason = route_runner_completed
+- derivationRunId = 410ea4e5-0cfa-4cfa-a370-a3923e1a55ee
+- candidateCount = 5
+- resolvedCandidateCount = 5
+- persistenceDerivationRowsCreated = 5
+- warnings = []
+- errors = []
+- routeRunner.executed = true
+- routeRunner.persisted = true
+- routeRunner.resolved = true
+
+First call idempotency lookup:
+- ok = true
+- found = false
+- reason = no_existing_completed_run
+- derivationRunId = null
+- schemaVersion = category_derivation_complete_route_v1
+- policyVersion = c8-e-f4
+- processorVersion = category_derivation_v1
+- ruleVersion = rules_v1
+- statuses = completed, completed_with_warnings
+
+Second adapter call:
+- enabled = true
+- mode = shadow_persist
+- ok = true
+- skipped = true
+- reason = existing_completed_run_found
+- derivationRunId = 410ea4e5-0cfa-4cfa-a370-a3923e1a55ee
+- candidateCount = 0
+- resolvedCandidateCount = 0
+- persistenceDerivationRowsCreated = 0
+- warnings = []
+- errors = []
+- routeRunner.executed = false
+- routeRunner.persisted = false
+- routeRunner.resolved = false
+
+Second call idempotency lookup:
+- ok = true
+- found = true
+- reason = existing_completed_run_found
+- derivationRunId = 410ea4e5-0cfa-4cfa-a370-a3923e1a55ee
+- schemaVersion = category_derivation_complete_route_v1
+- policyVersion = c8-e-f4
+- processorVersion = category_derivation_v1
+- ruleVersion = rules_v1
+- statuses = completed, completed_with_warnings
+
+Proof object:
+- firstCallPass = true
+- secondCallPass = true
+- sameDerivationRunId = true
+- firstDerivationRunId = 410ea4e5-0cfa-4cfa-a370-a3923e1a55ee
+- secondDerivationRunId = 410ea4e5-0cfa-4cfa-a370-a3923e1a55ee
+- secondCallDidNotPersist = true
+
+Safety object:
+- completeRouteModified = false
+- eventCompletedByThisRoute = false
+- productionPersistEnabled = false
+- openAiCalled = false
+- uiCreated = false
+- migrationCreated = false
+
+RUNTIME CHECKS
+
+Browser Console checks:
+- response.ok: OK
+- json.ok is true: OK
+- json.status is idempotency_test_pass: OK
+- event.id matches: OK
+- firstCall exists: OK
+- secondCall exists: OK
+- proof exists: OK
+- dbVerification exists: OK
+- firstCall.mode is shadow_persist: OK
+- secondCall.mode is shadow_persist: OK
+- firstCall.ok is true: OK
+- secondCall.ok is true: OK
+- firstCall.reason is route_runner_completed: OK
+- secondCall.reason is existing_completed_run_found: OK
+- firstCall.derivationRunId is not null: OK
+- secondCall.derivationRunId equals firstCall.derivationRunId: OK
+- firstCall.persistenceDerivationRowsCreated is 5: OK
+- secondCall.persistenceDerivationRowsCreated is 0: OK
+- dbVerification.routeRunnerSpecificRunsCount is 1: OK
+- dbVerification.routeRunnerSpecificRunsPass is true: OK
+- dbVerification.expectedDerivationRunExists is true: OK
+- dbVerification.activityCategoryDerivationsCount is 5: OK
+- dbVerification.activityCategoryDerivationsPass is true: OK
+- dbVerification.noDuplicateRuns is true: OK
+- dbVerification.pass is true: OK
+- proof.firstCallPass is true: OK
+- proof.secondCallPass is true: OK
+- proof.sameDerivationRunId is true: OK
+- proof.secondCallDidNotPersist is true: OK
+- safety.completeRouteModified is false: OK
+- safety.eventCompletedByThisRoute is false: OK
+- safety.productionPersistEnabled is false: OK
+- safety.openAiCalled is false: OK
+- safety.uiCreated is false: OK
+- safety.migrationCreated is false: OK
+
+Runtime status:
+PASS
+
+SUPABASE READ-ONLY VERIFICATION
+
+Independent Supabase verification was executed for:
+
+event_id:
+e653240e-7723-41be-9750-ff5fb7a8c129
+
+expected_derivation_run_id:
+410ea4e5-0cfa-4cfa-a370-a3923e1a55ee
+
+activity_event:
+- id = e653240e-7723-41be-9750-ff5fb7a8c129
+- status = started
+- processing_status = pending
+- title = F5-F-C-B direct adapter idempotency routeRunner test
+- input_text = walked to work for 15 minutes
+- duration_minutes = 15
+- metadata_json.testStep = P4.10.0-C8-E-F5-F-C-B
+
+route_runner_specific_runs_count:
+- expected_count = 1
+- actual_count = 1
+- pass = true
+- expected_derivation_run_id = 410ea4e5-0cfa-4cfa-a370-a3923e1a55ee
+- schema_version = category_derivation_complete_route_v1
+- policy_version = c8-e-f4
+- processor_version = category_derivation_v1
+- rule_version = rules_v1
+- status = completed / completed_with_warnings
+
+route_runner_expected_run_exists:
+- actual_count = 1
+- pass = true
+- expected_derivation_run_id = 410ea4e5-0cfa-4cfa-a370-a3923e1a55ee
+
+route_runner_activity_category_derivations_count:
+- expected_count = 5
+- actual_count = 5
+- pass = true
+
+duplicate_route_runner_completed_runs_check:
+- expected_max_count = 1
+- actual_count = 1
+- pass = true
+
+legacy_or_other_category_derivation_runs_count:
+- actual_count = 0
+- note = Legacy complete-route Category Derivation rows may exist and are not treated as routeRunner direct adapter idempotency writes.
+
+SUPABASE VERIFICATION STATUS
+
+PASS
+
+PERSISTED ROUTERUNNER RUN
+
+Run id:
+410ea4e5-0cfa-4cfa-a370-a3923e1a55ee
+
+Run properties:
+- status = completed
+- activity_event_id = e653240e-7723-41be-9750-ff5fb7a8c129
+- actor_id = d4727330-1cd4-475a-ac0b-aaba89087f4a
+- schema_version = category_derivation_complete_route_v1
+- policy_version = c8-e-f4
+- processor_version = category_derivation_v1
+- rule_version = rules_v1
+- confidence = 0.922
+- input_hash = category-derivation-v1:3a69154f
+- model_name = null
+- model_alias = null
+- token_usage_json = {}
+- cost_json = {}
+
+This confirms:
+- no OpenAI model was called;
+- rule-based routeRunner persisted the run;
+- persistence metadata identifies complete_route_integration_adapter as source;
+- the first adapter call wrote data;
+- the second adapter call detected existing completed run and wrote nothing.
+
+PERSISTED ACTIVITY CATEGORY DERIVATIONS
+
+Expected count:
+5
+
+Actual count:
+5
+
+Persisted rows:
+1. walking
+   - semantic_layer = action
+   - category_type = activity_action
+   - confidence = 0.95
+   - status = confirmed
+
+2. work
+   - semantic_layer = context
+   - category_type = life_domain
+   - confidence = 0.9
+   - status = confirmed
+
+3. commute-to-work
+   - semantic_layer = purpose
+   - category_type = activity_meaning
+   - confidence = 0.9
+   - status = confirmed
+
+4. walking-to-work
+   - semantic_layer = activity_meaning
+   - category_type = derived_activity_bundle
+   - confidence = 0.88
+   - status = confirmed
+
+5. duration-minutes
+   - semantic_layer = metric
+   - category_type = measurement
+   - confidence = 0.98
+   - status = confirmed
+
+WHAT WAS PROVEN
+
+This step proves direct adapter idempotency:
+
+1. First direct adapter call found no existing completed run.
+2. First direct adapter call executed routeRunner.
+3. First direct adapter call created one completed category_derivation_runs row.
+4. First direct adapter call created five activity_category_derivations rows.
+5. Second direct adapter call found the existing completed run.
+6. Second direct adapter call returned existing_completed_run_found.
+7. Second direct adapter call did not execute routeRunner.
+8. Second direct adapter call did not create a duplicate category_derivation_runs row.
+9. Second direct adapter call did not create duplicate activity_category_derivations rows.
+10. Both calls returned the same derivationRunId.
+11. Database ended with exactly one routeRunner-specific completed run.
+12. Database ended with exactly five routeRunner-linked derivation rows.
+13. The test activity_event remained started/pending.
+14. /api/activity/complete was not modified.
+15. production_persist was not enabled.
+16. OpenAI was not called.
+
+ARCHITECTURAL MEANING
+
+Before this proof:
+shadow_persist worked through /api/activity/complete, but repeated complete-route POST could not prove adapter idempotency because of the already_completed early return.
+
+After this proof:
+The Category Derivation complete-route adapter itself has a verified idempotency path:
+- it checks for an existing completed routeRunner run;
+- it returns existing_completed_run_found;
+- it avoids duplicate persistence.
+
+This reduces the risk of enabling a future production-like persistence mode, but does not yet mean production_persist should be enabled.
+
+IMPORTANT LIMITATION
+
+The proof is debug-route based.
+It proves adapter idempotency outside the complete-route lifecycle early return.
+
+It does not yet prove:
+- production_persist rollout safety;
+- Value Object Bridge migration to routeRunner-derived category rows;
+- failure behavior when persistence errors occur;
+- whether routeRunner failure should block activity completion;
+- final removal of legacy Category Derivation logic.
+
+CURRENT PROJECT POSITION
+
+F5-C:
+Disabled-by-default adapter integration was proven and documented.
+
+F5-D:
+shadow_no_persist mode was proven and documented.
+
+F5-E:
+shadow_persist mode through /api/activity/complete was proven and documented.
+
+F5-F-A:
+Production transition and legacy consolidation strategy was planned.
+
+F5-F-B:
+Direct adapter idempotency proof plan was created.
+
+F5-F-C-A:
+Debug-only direct adapter idempotency endpoint was implemented.
+
+F5-F-C-B:
+Runtime proof passed.
+
+F5-F-C-C:
+Debug route was committed.
+
+F5-F-C-D:
+This document records the direct adapter idempotency proof.
+
+NEXT RECOMMENDED BLOCK
+
+Proceed to:
+P4.10.0-C8-E-F5-G-A - plan failure behavior tests for Category Derivation routeRunner adapter.
+
+Purpose:
+Prove that routeRunner failure behavior is safe before production_persist is considered.
+
+Key questions:
+1. If routeRunner fails and failActivityComplete=false, does /api/activity/complete still complete safely?
+2. If actorId is missing or invalid, is error reported without corrupting state?
+3. If persistence fails, does the adapter return structured errors?
+4. Should production_persist ever use failActivityComplete=true?
+5. What should be the default production safety behavior?
+
+NO-GO
+
+Do not enable production_persist yet.
+Do not remove legacy Category Derivation code yet.
+Do not switch Value Object Bridge source yet.
+Do not call OpenAI.
+Do not create UI.
+Do not create database migrations without a dedicated plan.
+Do not modify commercial core.
+Do not rerun canonical production proof event.
+Do not create semantic snapshot/correction/moderation tables.
+Do not force-reset completed test events.
+
+SERVER RESET NOTE
+
+After shadow_persist/debug testing, local dev server should be restarted in disabled mode before ordinary development.
+
+Recommended reset command:
+
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE = "disabled"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG = "false"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE = "false"
+npm.cmd run dev
+
+END OF F5-F-C-D DIRECT ADAPTER IDEMPOTENCY RUNTIME PROOF
