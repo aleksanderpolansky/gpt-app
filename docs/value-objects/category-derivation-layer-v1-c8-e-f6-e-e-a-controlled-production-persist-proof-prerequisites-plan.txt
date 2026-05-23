@@ -93,6 +93,8 @@ Minimum cleanup/rollback requirements:
 
 7. Proof/test metadata marker prerequisite
 
+Exact marker: proof/test metadata marker
+
 All proof/test rows must include enough metadata to identify the proof scenario.
 
 Required marker concept:
