@@ -1,0 +1,292 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-E-R
+Decision: proof-safe patch strategy for real complete route Category Derivation proof
+Created: 2026-05-23
+
+1. Purpose
+
+This document records the patch strategy decision after F6-E-E-Q inspection.
+
+This is a documentation-only decision step.
+
+No runtime proof is executed here.
+
+No SQL is executed here.
+
+No cleanup is executed here.
+
+No source code is changed here.
+
+2. Current baseline
+
+Current HEAD before this decision:
+
+- e39f571 Inspect Category Derivation complete route proof response exposure
+
+Relevant previous commits:
+
+- 822d5b2 Document Category Derivation real complete route proof diagnosis
+- e39f571 Inspect Category Derivation complete route proof response exposure
+
+3. Inputs reviewed
+
+Reviewed documents:
+
+- F6-E-E-N real complete route proof procedure plan
+- F6-E-E-P partial result and diagnosis
+- F6-E-E-Q proof-safe event creation and complete response exposure inspection
+
+Reviewed source files:
+
+- .\src\app\api\activity\complete\route.ts
+- .\src\app\api\activity\debug\create-free-text-start-event\route.ts
+- .\lib\activity\categoryDerivation\completeRouteIntegration.ts
+- .\lib\activity\categoryDerivation\config.ts
+
+4. Facts carried forward from F6-E-E-Q
+
+Static facts:
+
+- complete route mentions runCategoryDerivationForCompleteRoute: True
+- complete route contains derivationRunId token: True
+- complete route contains persistence row count token: True
+- create-free-text-start-event contains proof token: False
+- create-free-text-start-event contains cleanupEligible token: False
+- create-free-text-start-event contains old hardcoded P4 step: True
+- integration contains persistenceDerivationRowsCreated: True
+- config has includeResponseDebug marker: True
+
+5. Problem statement
+
+F6-E-E-O proved real /api/activity/complete lifecycle behavior but did not prove full Category Derivation production_persist behavior.
+
+Known result:
+
+- eventId payload works
+- activityEventId payload does not work
+- proof-created event can be completed
+- repeated complete call returns already_completed
+- event.status remains completed
+
+Unresolved:
+
+- real complete response did not visibly expose Category Derivation proof data
+- proof event metadata did not preserve F6-E-E-O proof markers
+- cleanup attribution is weaker than required
+- Category Derivation production_persist remains inconclusive
+
+6. Decision 1 - patch strategy is required before another proof
+
+Decision:
+
+Do not run another /api/activity/complete proof before implementing a proof-safe patch.
+
+Reason:
+
+The previous proof did not preserve proof metadata and did not expose enough Category Derivation diagnostic data.
+
+7. Decision 2 - use minimal two-file patch strategy
+
+Decision:
+
+Use a minimal two-file patch strategy:
+
+1. Patch create-free-text-start-event to preserve proof metadata.
+2. Patch /api/activity/complete to expose Category Derivation diagnostic result only in proof/debug mode.
+
+No schema change is required.
+
+No SQL is required.
+
+No cleanup is required before this patch.
+
+8. Patch target A - create-free-text-start-event
+
+Patch goal:
+
+The debug setup route must preserve caller-supplied proof metadata in the created activity_event.metadata_json.
+
+Required preserved fields:
+
+- proof
+- p4Step
+- purpose
+- cleanupEligible
+- productionPersistProof
+- nonCanonicalBusinessEvent
+
+The route may also preserve the old setup route marker under a separate key such as:
+
+- setupRouteP4Step: P4.10.0-C8-P3-B7-C2-C-A2
+
+Preferred behavior:
+
+- metadata_json.p4Step should reflect the current proof step if supplied
+- metadata_json.setupRouteP4Step should preserve the older setup route marker
+- metadata_json.endpoint should remain /api/activity/debug/create-free-text-start-event
+- metadata_json.createdBy should remain debug_setup_route
+- metadata_json.productionRouteUnderTest should remain /api/activity/complete
+- metadata_json.categoryDerivationExecutedHere should remain false
+
+9. Patch target B - /api/activity/complete response exposure
+
+Patch goal:
+
+The real complete route should expose enough Category Derivation diagnostic data to prove production_persist in a controlled proof mode.
+
+The response should expose this data only when at least one proof/debug gate is true.
+
+Allowed proof/debug gates:
+
+- request body contains proof marker for P4.10.0-C8-E-F6-E
+- request body contains p4Step starting with P4.10.0-C8-E-F6-E
+- route runner config includeResponseDebug is true
+
+The exposed diagnostic block should be sanitized and limited.
+
+Recommended response key:
+
+- categoryDerivation
+
+Recommended exposed fields:
+
+- ok
+- status
+- mode
+- reason
+- derivationRunId
+- persistenceDerivationRowsCreated
+- activityCategoryDerivationsCount
+- existingCompletedRunFound
+- routeRunnerReason
+- failedButCompletionContinued
+
+Do not expose secrets.
+
+Do not expose raw Supabase credentials.
+
+Do not expose full internal database rows unless required.
+
+10. Decision 3 - failActivityComplete remains false
+
+Decision:
+
+The next proof must keep:
+
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+
+Reason:
+
+The first successful real complete route proof should not allow Category Derivation failure to break the normal completion lifecycle.
+
+11. Decision 4 - includeResponseDebug may be used only in proof mode
+
+Decision:
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG may be enabled in the future proof only after the response exposure patch is implemented and reviewed.
+
+Reason:
+
+Debug response exposure must remain controlled and not become normal production behavior.
+
+12. Decision 5 - no cleanup before new proof
+
+Decision:
+
+Do not cleanup the previous proof event now.
+
+Reason:
+
+The previous event remains useful audit evidence for the partial diagnostic result.
+
+Cleanup should wait until proof attribution and cleanup marker behavior are fixed.
+
+13. Recommended next step
+
+Recommended next step:
+
+P4.10.0-C8-E-F6-E-E-S - patch proof metadata preservation and Category Derivation diagnostic response exposure
+
+Scope of S:
+
+- source-code patch
+- no SQL
+- no cleanup
+- no runtime proof
+- no schema change
+- no RLS change
+- no broad refactor
+
+Files expected to change:
+
+- src/app/api/activity/debug/create-free-text-start-event/route.ts
+- src/app/api/activity/complete/route.ts
+
+Possibly inspected but not changed:
+
+- lib/activity/categoryDerivation/completeRouteIntegration.ts
+- lib/activity/categoryDerivation/config.ts
+
+14. Later step after S
+
+After S is patched and committed, the next proof plan should be:
+
+P4.10.0-C8-E-F6-E-E-T - plan patched real complete route proof
+
+The next runtime proof should not happen until T exists.
+
+15. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no cleanup command
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no additional /api/activity/complete runtime proof yet
+- no normal user activity used for proof
+- no failActivityComplete=true
+
+16. Exact verification markers
+
+- P4.10.0-C8-E-F6-E-E-R
+- decide proof-safe patch strategy for real complete route Category Derivation proof
+- e39f571 Inspect Category Derivation complete route proof response exposure
+- two-file patch strategy
+- preserve proof metadata
+- expose Category Derivation diagnostic result only in proof/debug mode
+- proof
+- p4Step
+- purpose
+- cleanupEligible
+- productionPersistProof
+- nonCanonicalBusinessEvent
+- setupRouteP4Step
+- categoryDerivation
+- derivationRunId
+- persistenceDerivationRowsCreated
+- activityCategoryDerivationsCount
+- existingCompletedRunFound
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+- Do not cleanup the previous proof event now
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+- No source code is changed here
+- P4.10.0-C8-E-F6-E-E-S
+- patch proof metadata preservation and Category Derivation diagnostic response exposure
+
+17. Definition of Done
+
+This F6-E-E-R decision step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above e39f571
