@@ -1,0 +1,654 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-G-A — Business/Sales Semantic Coverage Benchmark Inventory
+
+Status: DOC-ONLY PLAN / INVENTORY
+Created after: P4.10.0-C8-F-F deterministic semantic coverage proof PASS
+Current baseline HEAD before this document: 06a6c85 — Document Category Derivation semantic coverage proof PASS
+Target next block after this document: P4.10.0-C8-G-B — inspect current ruleExtractor support for business/sales benchmark cases
+
+1. Purpose
+
+This document defines the second semantic coverage benchmark group for Category Derivation Layer v1.
+
+C8-F proved extractor-level semantic coverage for family / child / care / supervision cases.
+C8-G starts the next expansion domain: business / sales / client responsibility.
+
+The goal is not to manually create an endless taxonomy.
+The goal is to define a small, controlled benchmark set that proves whether the same semantic mechanism can recognize:
+
+- action
+- object / domain
+- participant
+- relationship_context
+- role
+- duty / responsibility
+- purpose / activity_meaning
+- metric
+- ambiguity / forbidden overclaim rules
+
+2. Non-goals for C8-G-A
+
+C8-G-A must not:
+
+- change source code
+- change ruleExtractor.ts
+- change resolver / bridge / persistence
+- create SQL migrations
+- run SQL
+- call OpenAI
+- run /api/activity/complete
+- run runtime proof
+- create UI
+- create a large manual taxonomy dump
+- prove database persistence
+- prove Value Object Bridge handoff
+
+C8-G-A only creates the benchmark inventory and expected semantic outputs.
+
+3. Why business / sales is the next domain
+
+Family / childcare benchmark proved that a phrase can require deeper semantic layers beyond visible nouns.
+
+Example from C8-F logic:
+- "учил математику с ребёнком" is not only math + child + learning.
+- It also requires role/care/purpose meanings such as childcare, parental-care, helping-child-learn.
+- Ambiguous phrases must not overclaim active teaching.
+
+Business / sales has the same structural problem.
+
+Example:
+"писал коммерческое предложение клиенту"
+
+This is not only:
+- writing
+- document
+- client
+
+It also includes:
+- B2B sales
+- work responsibility
+- customer responsibility
+- income generation / revenue generation
+- business development
+- commercial intent
+
+But the system must not overclaim:
+- closed deal
+- payment received
+- contract signed
+- meeting happened
+- customer support case
+unless explicit evidence exists.
+
+4. Core semantic layers for business/sales benchmark
+
+Layer: action
+Purpose: what the user did.
+Examples: write, send, call, negotiate, update, prepare, research, analyze, discuss, learn
+
+Layer: object / domain
+Purpose: what the action was about.
+Examples: proposal, offer, CRM, lead list, sales script, client objection, pricing, partnership terms, B2B sales
+
+Layer: participant
+Purpose: who was involved or targeted.
+Examples: client, potential-client, lead, partner, colleague, friend, prospect
+
+Layer: relationship_context
+Purpose: social/business context.
+Examples: work, business, B2B, marketplace, partnership, sales-process
+
+Layer: role
+Purpose: in which role the user acted.
+Examples: seller, sales-manager, consultant, business-developer, negotiator, account-manager, learner
+
+Layer: duty / responsibility
+Purpose: what responsibility the activity served.
+Examples: work-responsibility, customer-responsibility, sales-responsibility, partner-responsibility, pipeline-responsibility
+
+Layer: purpose / activity_meaning
+Purpose: why the activity was performed.
+Examples: income-generation, revenue-generation, client-acquisition, lead-nurturing, deal-preparation, objection-handling, relationship-management, professional-development
+
+Layer: metric
+Purpose: how the activity is measured.
+Examples: duration-minutes, number-of-calls, number-of-leads, number-of-messages, amount-money
+
+Layer: ambiguity / risk
+Purpose: prevent overclaiming.
+Examples: possible-learning-only, possible-informal-conversation, possible-admin-only, possible-sales-context, not-confirmed-client-work
+
+5. Candidate slug pool for benchmark discussion
+
+Important: this is not a final taxonomy dump.
+This is a controlled benchmark vocabulary for expected outputs and later patch design.
+
+Business / sales domain:
+- b2b-sales
+- sales-activity
+- business-development
+- client-acquisition
+- lead-generation
+- prospecting
+- outbound-sales
+- sales-pipeline
+- pipeline-management
+- sales-process
+- revenue-generation
+- income-generation
+
+Documents / artifacts:
+- commercial-proposal
+- sales-proposal
+- offer-document
+- sales-script
+- follow-up-message
+- crm-record
+- lead-list
+- pricing-terms
+
+Participants:
+- client
+- potential-client
+- lead
+- prospect
+- business-partner
+- colleague
+- friend
+
+Actions:
+- writing
+- sending
+- calling
+- negotiating
+- preparing
+- updating
+- researching
+- analyzing
+- learning
+- practicing
+- discussing
+
+Responsibilities:
+- work-responsibility
+- customer-responsibility
+- sales-responsibility
+- partner-responsibility
+- pipeline-responsibility
+
+Purposes:
+- client-acquisition
+- lead-nurturing
+- deal-preparation
+- objection-handling
+- price-negotiation
+- relationship-management
+- professional-development
+- sales-training
+
+Ambiguity / possible meanings:
+- possible-sales-learning
+- possible-informal-discussion
+- possible-admin-only
+- possible-client-work
+- possible-business-development
+- no-confirmed-sale
+- no-confirmed-client-duty
+
+6. Benchmark cases
+
+Case S1 — clear commercial proposal to client
+
+Input:
+писал коммерческое предложение клиенту 40 минут
+
+Expected required/core candidates:
+- writing
+- commercial-proposal
+- client
+- b2b-sales
+- work-responsibility
+- customer-responsibility
+- sales-responsibility
+- income-generation
+- duration-minutes
+
+Expected possible/secondary candidates:
+- business-development
+- deal-preparation
+- relationship-management
+
+Forbidden overclaims:
+- do not infer closed-deal
+- do not infer payment-received
+- do not infer contract-signed
+- do not infer meeting unless stated
+- do not infer successful-sale
+
+Control:
+This is the main positive benchmark equivalent to the existing "писал коммерческое предложение клиенту" example from the Master Plan.
+
+Case S2 — proposal to potential client
+
+Input:
+prepared a proposal for a potential client
+
+Expected required/core candidates:
+- preparing
+- commercial-proposal
+- potential-client
+- b2b-sales
+- sales-responsibility
+- business-development
+- client-acquisition
+- deal-preparation
+
+Expected possible/secondary candidates:
+- income-generation
+- lead-nurturing
+
+Forbidden overclaims:
+- do not infer existing-client
+- do not infer closed-deal
+- do not infer signed-contract
+- do not infer payment-received
+
+Control:
+Potential client must be separated from existing client.
+
+Case S3 — follow-up after meeting
+
+Input:
+wysłałem follow-up do klienta po spotkaniu
+
+Expected required/core candidates:
+- sending
+- follow-up-message
+- client
+- meeting-follow-up
+- b2b-sales
+- customer-responsibility
+- relationship-management
+- sales-responsibility
+
+Expected possible/secondary candidates:
+- lead-nurturing
+- deal-preparation
+- pipeline-management
+
+Forbidden overclaims:
+- do not infer new proposal unless stated
+- do not infer successful-sale
+- do not infer contract-signed
+- do not infer payment-received
+
+Control:
+Follow-up is a responsibility/action after a contact, not proof of deal closure.
+
+Case S4 — objection handling / price
+
+Input:
+llamé a un cliente para aclarar objeciones sobre el precio
+
+Expected required/core candidates:
+- calling
+- client
+- objection-handling
+- price-objection
+- negotiation
+- b2b-sales
+- customer-responsibility
+- sales-responsibility
+
+Expected possible/secondary candidates:
+- deal-preparation
+- relationship-management
+- income-generation
+
+Forbidden overclaims:
+- do not infer complaint-support-only
+- do not infer discount-given
+- do not infer deal-closed
+- do not infer payment-received
+
+Control:
+The system must see objection-handling and price negotiation, not only a generic client call.
+
+Case S5 — CRM update after lead call
+
+Input:
+aktualizowałem CRM po rozmowie z leadem
+
+Expected required/core candidates:
+- updating
+- crm-record
+- lead
+- post-call-documentation
+- sales-admin
+- pipeline-management
+- work-responsibility
+- sales-responsibility
+
+Expected possible/secondary candidates:
+- business-development
+- lead-nurturing
+
+Forbidden overclaims:
+- do not infer client
+- do not infer proposal-written
+- do not infer deal-closed
+- do not infer customer-responsibility if lead is not yet client
+
+Control:
+CRM activity is business/sales work, but often administrative; responsibility is pipeline/sales, not necessarily direct customer duty.
+
+Case S6 — outbound lead list
+
+Input:
+tworzyłem listę potencjalnych klientów dla kampanii outbound
+
+Expected required/core candidates:
+- lead-list
+- potential-client
+- prospecting
+- outbound-sales
+- lead-generation
+- business-development
+- b2b-sales
+- sales-responsibility
+- client-acquisition
+
+Expected possible/secondary candidates:
+- pipeline-management
+- income-generation
+
+Forbidden overclaims:
+- do not infer contacted-client
+- do not infer existing-client
+- do not infer proposal-sent
+- do not infer meeting-held
+- do not infer successful-sale
+
+Control:
+This case tests pre-client acquisition work.
+
+Case S7 — partnership negotiation
+
+Input:
+negocjowałem warunki współpracy z partnerem
+
+Expected required/core candidates:
+- negotiating
+- business-partner
+- partnership
+- cooperation-terms
+- business-development
+- partner-responsibility
+- work-responsibility
+
+Expected possible/secondary candidates:
+- income-generation
+- revenue-generation
+- b2b-sales
+- strategic-partnership
+
+Forbidden overclaims:
+- do not infer client
+- do not infer sales proposal
+- do not infer contract-signed
+- do not infer payment-received
+
+Control:
+Partner negotiation is business responsibility, but not necessarily client sales.
+
+Case S8 — sales language training
+
+Input:
+учил немецкие фразы для B2B-продаж
+
+Expected required/core candidates:
+- learning
+- german-language
+- b2b-sales
+- sales-training
+- professional-development
+- career-development
+- preparation
+
+Expected possible/secondary candidates:
+- future-client-communication
+- income-generation
+
+Forbidden overclaims:
+- do not infer actual-client-work
+- do not infer commercial-proposal
+- do not infer customer-responsibility
+- do not infer active-sales-call
+
+Control:
+This is preparation for sales, not actual sales activity.
+
+Case S9 — passive reading about sales
+
+Input:
+читал статью о продажах за кофе
+
+Expected required/core candidates:
+- reading
+- sales-topic
+- self-education
+- passive-learning
+
+Expected possible/secondary candidates:
+- professional-development
+- business-development
+- rest-context
+
+Forbidden overclaims:
+- do not infer work-responsibility automatically
+- do not infer client
+- do not infer B2B sales action
+- do not infer sales-responsibility unless context says it was work task
+- do not infer customer-responsibility
+
+Control:
+Reading about sales can support development, but it is not automatically a business duty.
+
+Case S10 — informal conversation about sales
+
+Input:
+разговаривал с другом о продажах
+
+Expected required/core candidates:
+- conversation
+- friend
+- sales-topic
+- informal-discussion
+
+Expected possible/secondary candidates:
+- reflection
+- possible-sales-learning
+- possible-business-idea
+
+Forbidden overclaims:
+- do not infer client
+- do not infer lead
+- do not infer work-responsibility
+- do not infer sales-responsibility
+- do not infer income-generation automatically
+- do not infer business-development unless explicit business intent exists
+
+Control:
+The system must avoid turning every sales-related word into professional sales work.
+
+Case S11 — client discovery call
+
+Input:
+I had a discovery call with a new B2B lead
+
+Expected required/core candidates:
+- discovery-call
+- new-lead
+- b2b-sales
+- client-acquisition
+- sales-process
+- business-development
+- sales-responsibility
+- lead-qualification
+
+Expected possible/secondary candidates:
+- relationship-management
+- income-generation
+- deal-preparation
+
+Forbidden overclaims:
+- do not infer existing-client
+- do not infer proposal-sent
+- do not infer deal-closed
+- do not infer payment-received
+
+Control:
+Discovery call is a sales-process step, not final conversion.
+
+Case S12 — customer support ambiguity
+
+Input:
+позвонил клиенту, чтобы помочь с проблемой после покупки
+
+Expected required/core candidates:
+- calling
+- client
+- post-purchase-support
+- customer-support
+- customer-responsibility
+- relationship-management
+
+Expected possible/secondary candidates:
+- retention
+- account-management
+- business-responsibility
+
+Forbidden overclaims:
+- do not infer new-sale
+- do not infer b2b-sales as core if the input is support-only
+- do not infer lead-generation
+- do not infer income-generation as core meaning
+
+Control:
+This distinguishes customer responsibility from active sales.
+
+7. Minimum expected benchmark behavior
+
+The future C8-G patch/proof should show:
+
+- clear sales work is classified as sales / business / responsibility / purpose
+- preparatory learning is classified as preparation/professional-development, not actual sales
+- informal sales-topic conversation is not overclassified as work responsibility
+- lead/prospect/potential-client are not collapsed into existing client
+- support after purchase is not overclassified as new sales
+- negotiation can be partner/business responsibility without client-sale overclaim
+- income/revenue generation can be possible or purpose only where evidence supports it
+
+8. Forbidden overclaim list for the whole group
+
+The extractor/classifier must not infer the following unless explicit evidence exists:
+
+- closed-deal
+- contract-signed
+- payment-received
+- invoice-paid
+- successful-sale
+- discount-given
+- meeting-held
+- proposal-sent
+- client-acquired
+- existing-client
+- customer-responsibility
+- work-responsibility
+- income-generation
+
+Important nuance:
+Some of these can be possible meanings or secondary candidates in specific cases, but must not be required/core if the phrase does not support them.
+
+9. Candidate confidence policy for future C8-G-B/C/D
+
+Suggested confidence bands:
+
+High confidence / required:
+- explicit client + proposal
+- explicit B2B lead + discovery call
+- explicit follow-up to client after meeting
+- explicit price objections
+- explicit CRM after lead call
+- explicit outbound potential-client list
+
+Medium confidence / possible:
+- sales-related reading
+- informal sales discussion
+- business partner negotiation where sales context is unclear
+- income-generation where commercial intent exists but outcome is unknown
+
+Low confidence / do not canonicalize automatically:
+- sales word appears only as topic
+- friend/family discussion without work context
+- learning content without client/work action
+- support-only context that may not be sales
+
+10. Multilingual coverage requirement
+
+C8-G should preserve the multilingual direction already used in the project.
+
+Benchmark inputs currently include:
+- Russian: писал коммерческое предложение клиенту; учил немецкие фразы для B2B-продаж; читал статью о продажах; разговаривал с другом о продажах; позвонил клиенту...
+- English: prepared a proposal for a potential client; I had a discovery call with a new B2B lead
+- Polish: wysłałem follow-up do klienta; aktualizowałem CRM; tworzyłem listę potencjalnych klientów; negocjowałem warunki współpracy
+- Spanish: llamé a un cliente para aclarar objeciones sobre el precio
+
+Later benchmark expansion may add German, Ukrainian and Czech cases, but C8-G-A does not need to solve them now.
+
+11. Expected next steps
+
+C8-G-B:
+Static inspection only.
+Inspect current ruleExtractor support for the benchmark cases.
+Do not patch during inspection.
+
+C8-G-C:
+Decide minimal additive business/sales patch strategy.
+Define exact cases, exact slugs, forbidden overclaims, language separation rules, and patch surface.
+
+C8-G-D0/D1:
+If code patch is needed, create source snapshot / compact pack / exact file decision first.
+
+C8-G-D2/D3:
+Patch deterministic business/sales candidates only in exact source file(s).
+Validate TypeScript and targeted ESLint.
+Commit/push.
+
+C8-G-E:
+Extractor-level deterministic proof.
+Use tsc -> node runner pattern.
+No /api/activity/complete.
+No SQL.
+No OpenAI.
+
+C8-G-F:
+Document PASS/FAIL and decide next expansion or fix.
+
+12. Definition of Done for C8-G-A
+
+C8-G-A is done when:
+
+- this benchmark inventory document exists under docs/value-objects
+- document clearly states purpose, non-goals, cases, expected outputs and forbidden overclaims
+- no source-code files changed
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run
+- git diff contains only this document
+- document is committed and pushed
+- final git status is clean
+
+13. Commit message
+
+Create Business Sales Semantic Coverage benchmark inventory
