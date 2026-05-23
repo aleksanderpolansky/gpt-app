@@ -1,0 +1,346 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-G-B — Current Business/Sales Semantic Coverage Support Inspection
+
+Status: DOC-ONLY STATIC INSPECTION
+Generated at: 2026-05-23 14:28:13 +02:00
+Baseline HEAD: 0f71355
+Previous block: P4.10.0-C8-G-A — Business/Sales Semantic Coverage Benchmark Inventory
+Next planned block: P4.10.0-C8-G-C — decide minimal additive business/sales patch strategy
+
+1. Purpose
+
+This document records a static inspection of current ruleExtractor support for the C8-G-A business/sales benchmark group.
+
+This is not a runtime proof.
+This is not a source-code patch.
+This is not a SQL or persistence check.
+This is a controlled inspection document to decide whether a minimal additive patch is needed.
+
+2. Source files inspected
+
+Inventory:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-a-business-sales-semantic-coverage-benchmark-inventory.txt
+SHA256: FC1FB9DE002BA97B15944244866D6AF756C075975A467E67D7511925E46BCD30
+
+Primary source:
+.\lib\activity\categoryDerivation\ruleExtractor.ts
+SHA256: 2154FAF9E60FDA11CAF52A516198FA746EC751FEF948FFC6EA2C29A8119B9CD9
+
+3. Process constraints
+
+C8-G-B did not:
+
+- change ruleExtractor.ts
+- change resolver / bridge / persistence
+- run SQL
+- call OpenAI
+- run /api/activity/complete
+- run runtime proof
+- create UI
+- create category seeds
+- create a manual taxonomy dump
+
+Only this inspection document is expected to be created and committed.
+
+4. High-level static result
+
+Business broad markers detected in ruleExtractor.ts: True
+C8-F family baseline markers detected in ruleExtractor.ts: True
+
+Interpretation:
+
+- C8-F family/childcare semantic coverage is expected to already exist in ruleExtractor.ts after the D3 patch.
+- C8-G business/sales coverage must not be assumed from generic terms such as "client" or "sales".
+- Exact expected candidates from C8-G-A must be checked case by case.
+- Static marker presence is not runtime proof; it only determines whether the current source appears to contain explicit support for the benchmark vocabulary.
+
+5. Slug group inspection
+
+Group: business_sales_domain
+Present: b2b-sales
+Missing: sales-activity, business-development, client-acquisition, lead-generation, prospecting, outbound-sales, sales-pipeline, pipeline-management, sales-process, revenue-generation, income-generation
+
+Group: documents_artifacts
+Present: commercial-proposal
+Missing: sales-proposal, offer-document, sales-script, follow-up-message, crm-record, lead-list, pricing-terms
+
+Group: participants
+Present: client
+Missing: potential-client, lead, prospect, business-partner, colleague, friend
+
+Group: responsibilities
+Present: none
+Missing: work-responsibility, customer-responsibility, sales-responsibility, partner-responsibility, pipeline-responsibility
+
+Group: purposes
+Present: none
+Missing: client-acquisition, lead-nurturing, deal-preparation, objection-handling, price-negotiation, relationship-management, professional-development, sales-training
+
+Group: forbidden_overclaims
+Present: none
+Missing: closed-deal, contract-signed, payment-received, invoice-paid, successful-sale, discount-given, meeting-held, proposal-sent, client-acquired, existing-client
+
+Group: c8_f_family_baseline_markers
+Present: teach_math_with_child_care_semantics, child_studied_math_nearby_supervision_ambiguity, child_homework_supervision_ambiguity, helping-child-learn, parental-care, family-duty
+Missing: none
+
+
+6. Case-by-case inspection
+
+Case S1 — clear commercial proposal to client
+Input: писал коммерческое предложение клиенту 40 минут
+Inspection question: Does ruleExtractor currently detect commercial proposal + client + B2B/sales responsibility semantics?
+Static support status: PARTIAL
+Expected core present in source: writing, commercial-proposal, client, b2b-sales, duration-minutes
+Expected core missing in source: work-responsibility, customer-responsibility, sales-responsibility, income-generation
+Line hits for broad patterns:
+  - L683: const wroteCommercialProposal = includesAny(text, [
+  - L684: "писал коммерческое предложение клиенту",
+  - L685: "написал коммерческое предложение клиенту",
+  - L686: "commercial proposal to client",
+  - L687: "wrote proposal to client",
+  - L688: "wrote commercial offer to client",
+  - L691: if (wroteCommercialProposal) {
+  - L700: metadata: makeMetadata("write_commercial_proposal_to_client", ["writing proposal"]),
+
+Case S2 — proposal to potential client
+Input: prepared a proposal for a potential client
+Inspection question: Does ruleExtractor separate potential client from existing client?
+Static support status: MISSING_OR_ONLY_GENERIC
+Expected core present in source: commercial-proposal, b2b-sales
+Expected core missing in source: preparing, potential-client, sales-responsibility, business-development, client-acquisition, deal-preparation
+Line hits for broad patterns:
+  - L683: const wroteCommercialProposal = includesAny(text, [
+  - L686: "commercial proposal to client",
+  - L687: "wrote proposal to client",
+  - L688: "wrote commercial offer to client",
+  - L691: if (wroteCommercialProposal) {
+  - L700: metadata: makeMetadata("write_commercial_proposal_to_client", ["writing proposal"]),
+  - L704: slug: "commercial-proposal",
+  - L705: title: "Commercial proposal",
+
+Case S3 — follow-up after meeting
+Input: wysłałem follow-up do klienta po spotkaniu
+Inspection question: Does ruleExtractor detect follow-up as a sales/customer responsibility without overclaiming deal closure?
+Static support status: MISSING_OR_ONLY_GENERIC
+Expected core present in source: client, b2b-sales
+Expected core missing in source: sending, follow-up-message, meeting-follow-up, customer-responsibility, relationship-management, sales-responsibility
+Line hits for broad patterns:
+  - L686: "commercial proposal to client",
+  - L687: "wrote proposal to client",
+  - L688: "wrote commercial offer to client",
+  - L700: metadata: makeMetadata("write_commercial_proposal_to_client", ["writing proposal"]),
+  - L711: metadata: makeMetadata("write_commercial_proposal_to_client", ["commercial proposal"]),
+  - L715: slug: "client",
+  - L716: title: "Client",
+  - L722: metadata: makeMetadata("write_commercial_proposal_to_client", ["client"]),
+
+Case S4 — objection handling / price
+Input: llamé a un cliente para aclarar objeciones sobre el precio
+Inspection question: Does ruleExtractor detect price objections and negotiation, not only generic client call?
+Static support status: MISSING_OR_ONLY_GENERIC
+Expected core present in source: client, b2b-sales
+Expected core missing in source: calling, objection-handling, price-objection, negotiation, customer-responsibility, sales-responsibility
+Line hits for broad patterns:
+  - L477: semanticLayer: "object",
+  - L580: semanticLayer: "object",
+  - L581: categoryType: "media_object",
+  - L639: semanticLayer: "object",
+  - L640: categoryType: "media_object",
+  - L686: "commercial proposal to client",
+  - L687: "wrote proposal to client",
+  - L688: "wrote commercial offer to client",
+
+Case S5 — CRM update after lead call
+Input: aktualizowałem CRM po rozmowie z leadem
+Inspection question: Does ruleExtractor support CRM/lead/pipeline administrative sales work?
+Static support status: MISSING_OR_ONLY_GENERIC
+Expected core present in source: none
+Expected core missing in source: updating, crm-record, lead, post-call-documentation, sales-admin, pipeline-management, work-responsibility, sales-responsibility
+Line hits for broad patterns:
+  - L726: slug: "b2b-sales",
+  - L727: title: "B2B sales",
+
+Case S6 — outbound lead list
+Input: tworzyłem listę potencjalnych klientów dla kampanii outbound
+Inspection question: Does ruleExtractor detect pre-client acquisition work?
+Static support status: MISSING_OR_ONLY_GENERIC
+Expected core present in source: b2b-sales
+Expected core missing in source: lead-list, potential-client, prospecting, outbound-sales, lead-generation, business-development, sales-responsibility, client-acquisition
+Line hits for broad patterns:
+  - L686: "commercial proposal to client",
+  - L687: "wrote proposal to client",
+  - L688: "wrote commercial offer to client",
+  - L700: metadata: makeMetadata("write_commercial_proposal_to_client", ["writing proposal"]),
+  - L711: metadata: makeMetadata("write_commercial_proposal_to_client", ["commercial proposal"]),
+  - L715: slug: "client",
+  - L716: title: "Client",
+  - L722: metadata: makeMetadata("write_commercial_proposal_to_client", ["client"]),
+
+Case S7 — partnership negotiation
+Input: negocjowałem warunki współpracy z partnerem
+Inspection question: Does ruleExtractor distinguish partner negotiation from client sales?
+Static support status: MISSING_OR_ONLY_GENERIC
+Expected core present in source: none
+Expected core missing in source: negotiating, business-partner, partnership, cooperation-terms, business-development, partner-responsibility, work-responsibility
+Line hits for broad patterns:
+  - none
+
+Case S8 — sales language training
+Input: учил немецкие фразы для B2B-продаж
+Inspection question: Does ruleExtractor classify sales-language learning as preparation/professional development, not actual client work?
+Static support status: MISSING_OR_ONLY_GENERIC
+Expected core present in source: learning, b2b-sales
+Expected core missing in source: german-language, sales-training, professional-development, career-development, preparation
+Line hits for broad patterns:
+  - L626: slug: "english-language",
+  - L627: title: "English language",
+  - L633: metadata: makeMetadata("watch_english_cartoon_with_child", ["english language"]),
+  - L726: slug: "b2b-sales",
+  - L727: title: "B2B sales",
+
+Case S9 — passive reading about sales
+Input: читал статью о продажах за кофе
+Inspection question: Does ruleExtractor avoid overclassifying passive sales reading as work responsibility?
+Static support status: MISSING_OR_ONLY_GENERIC
+Expected core present in source: none
+Expected core missing in source: reading, sales-topic, self-education, passive-learning
+Line hits for broad patterns:
+  - L726: slug: "b2b-sales",
+  - L727: title: "B2B sales",
+
+Case S10 — informal conversation about sales
+Input: разговаривал с другом о продажах
+Inspection question: Does ruleExtractor avoid turning every sales-topic conversation into professional sales work?
+Static support status: MISSING_OR_ONLY_GENERIC
+Expected core present in source: none
+Expected core missing in source: conversation, friend, sales-topic, informal-discussion
+Line hits for broad patterns:
+  - L726: slug: "b2b-sales",
+  - L727: title: "B2B sales",
+
+Case S11 — client discovery call
+Input: I had a discovery call with a new B2B lead
+Inspection question: Does ruleExtractor support discovery call and lead qualification as sales-process step?
+Static support status: MISSING_OR_ONLY_GENERIC
+Expected core present in source: b2b-sales
+Expected core missing in source: discovery-call, new-lead, client-acquisition, sales-process, business-development, sales-responsibility, lead-qualification
+Line hits for broad patterns:
+  - L726: slug: "b2b-sales",
+  - L727: title: "B2B sales",
+
+Case S12 — customer support ambiguity
+Input: позвонил клиенту, чтобы помочь с проблемой после покупки
+Inspection question: Does ruleExtractor distinguish post-purchase support from new sales?
+Static support status: MISSING_OR_ONLY_GENERIC
+Expected core present in source: client
+Expected core missing in source: calling, post-purchase-support, customer-support, customer-responsibility, relationship-management
+Line hits for broad patterns:
+  - L351: metadata: makeMetadata("teach_math_with_child_care_semantics", ["caregiving role in child learning support"]),
+  - L663: categoryType: "learning_support",
+  - L684: "писал коммерческое предложение клиенту",
+  - L685: "написал коммерческое предложение клиенту",
+  - L686: "commercial proposal to client",
+  - L687: "wrote proposal to client",
+  - L688: "wrote commercial offer to client",
+  - L700: metadata: makeMetadata("write_commercial_proposal_to_client", ["writing proposal"]),
+
+
+7. Broad business/sales line hits
+
+- L477: semanticLayer: "object",
+- L580: semanticLayer: "object",
+- L581: categoryType: "media_object",
+- L639: semanticLayer: "object",
+- L640: categoryType: "media_object",
+- L683: const wroteCommercialProposal = includesAny(text, [
+- L684: "писал коммерческое предложение клиенту",
+- L685: "написал коммерческое предложение клиенту",
+- L686: "commercial proposal to client",
+- L687: "wrote proposal to client",
+- L688: "wrote commercial offer to client",
+- L691: if (wroteCommercialProposal) {
+- L700: metadata: makeMetadata("write_commercial_proposal_to_client", ["writing proposal"]),
+- L704: slug: "commercial-proposal",
+- L705: title: "Commercial proposal",
+- L706: semanticLayer: "object",
+- L711: metadata: makeMetadata("write_commercial_proposal_to_client", ["commercial proposal"]),
+- L715: slug: "client",
+- L716: title: "Client",
+- L722: metadata: makeMetadata("write_commercial_proposal_to_client", ["client"]),
+- L726: slug: "b2b-sales",
+- L727: title: "B2B sales",
+- L733: metadata: makeMetadata("write_commercial_proposal_to_client", ["commercial proposal to client"]),
+
+8. C8-F family baseline line hits
+
+- L263: metadata: makeMetadata("teach_math_with_child_care_semantics", ["teach math with child"]),
+- L274: metadata: makeMetadata("teach_math_with_child_care_semantics", ["mathematics"]),
+- L285: metadata: makeMetadata("teach_math_with_child_care_semantics", ["child participant"]),
+- L296: metadata: makeMetadata("teach_math_with_child_care_semantics", ["child learning"]),
+- L307: metadata: makeMetadata("teach_math_with_child_care_semantics", ["family context inferred from child"]),
+- L311: slug: "helping-child-learn",
+- L318: metadata: makeMetadata("teach_math_with_child_care_semantics", ["teaching math with child"]),
+- L322: slug: "childcare",
+- L323: title: "Childcare",
+- L329: metadata: makeMetadata("teach_math_with_child_care_semantics", ["adult care responsibility while helping child learn"]),
+- L333: slug: "parental-care",
+- L340: metadata: makeMetadata("teach_math_with_child_care_semantics", ["parental care while helping child learn"]),
+- L351: metadata: makeMetadata("teach_math_with_child_care_semantics", ["caregiving role in child learning support"]),
+- L355: slug: "family-duty",
+- L362: metadata: makeMetadata("teach_math_with_child_care_semantics", ["family responsibility"]),
+- L375: metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["child studied mathematics nearby"]),
+- L386: metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["child"]),
+- L397: metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["child learning"]),
+- L409: metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["family context likely but not explicit"]),
+- L421: metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["nearby adult context"]),
+
+9. Inspection conclusion
+
+The C8-G-A inventory defines a new business/sales benchmark group. This C8-G-B static inspection checks whether current ruleExtractor.ts already contains explicit deterministic support for that group.
+
+Expected decision logic for C8-G-C:
+
+- If most C8-G-A core candidates are missing, create a minimal additive patch strategy.
+- Patch only deterministic candidates that are necessary for benchmark proof.
+- Keep the patch focused on business/sales responsibility semantics.
+- Do not broaden into a full taxonomy dump.
+- Do not touch resolver / bridge / persistence unless static evidence proves it is necessary.
+- Preserve C8-F family/childcare behavior.
+- Future proof must stay extractor-level deterministic first.
+- Do not use /api/activity/complete, SQL or OpenAI for the first C8-G proof.
+
+10. Recommended next block
+
+P4.10.0-C8-G-C — Decide minimal additive business/sales patch strategy.
+
+C8-G-C should:
+
+- read this inspection document
+- read C8-G-A benchmark inventory
+- decide exact cases for the first minimal patch
+- define exact slugs and forbidden overclaims
+- decide exact patch surface
+- remain doc-only unless a later D-step explicitly patches source
+- avoid manual taxonomy expansion beyond benchmark needs
+
+11. Definition of Done for C8-G-B
+
+C8-G-B is done when:
+
+- this inspection document exists under docs/value-objects
+- it records source files inspected and hashes
+- it records business/sales marker status
+- it records C8-F baseline marker status
+- it records case-by-case support status for S1-S12
+- no source-code files changed
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run
+- git diff contains only this document
+- document is committed and pushed
+- final git status is clean
+
+12. Commit message
+
+Inspect Business Sales Semantic Coverage support
