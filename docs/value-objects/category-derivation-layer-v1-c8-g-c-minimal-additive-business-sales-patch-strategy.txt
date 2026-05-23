@@ -1,0 +1,501 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-G-C — Minimal Additive Business/Sales Semantic Coverage Patch Strategy
+
+Status: DOC-ONLY DECISION / STRATEGY
+Generated at: 2026-05-23 14:29:43 +02:00
+Baseline HEAD: 01b7f36
+Previous block: P4.10.0-C8-G-B — current business/sales support inspection
+Next planned block: P4.10.0-C8-G-D0 — create source snapshot for exact patch planning
+
+1. Purpose
+
+This document decides the minimal additive patch strategy for the C8-G business/sales semantic coverage benchmark group.
+
+C8-G-A created the benchmark inventory.
+C8-G-B inspected current ruleExtractor support.
+C8-G-C decides what should be patched later and what must not be touched yet.
+
+This document does not patch source code.
+
+2. Sources used
+
+C8-G-A inventory:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-a-business-sales-semantic-coverage-benchmark-inventory.txt
+SHA256: FC1FB9DE002BA97B15944244866D6AF756C075975A467E67D7511925E46BCD30
+
+C8-G-B inspection:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-b-current-business-sales-support-inspection.txt
+SHA256: 1E3814AC0E64042FC77C09B7FBC55ED394114AB939CC773698377E0671D6D553
+
+Primary source inspected by C8-G-B:
+.\lib\activity\categoryDerivation\ruleExtractor.ts
+SHA256: 2154FAF9E60FDA11CAF52A516198FA746EC751FEF948FFC6EA2C29A8119B9CD9
+
+3. Process constraints
+
+C8-G-C does not:
+
+- change ruleExtractor.ts
+- change resolver / bridge / persistence
+- create or modify SQL
+- run SQL
+- call OpenAI
+- run /api/activity/complete
+- run runtime proof
+- create UI
+- create category seeds
+- create a manual taxonomy dump
+
+Only this strategy document is expected to be created and committed.
+
+4. Inputs from C8-G-B
+
+Business broad markers detected in ruleExtractor.ts: True
+C8-F family baseline markers detected in ruleExtractor.ts: True
+
+Interpretation:
+
+- Business broad markers being present is not enough.
+- Generic words such as client, sales, proposal, lead or partner do not prove deterministic semantic coverage.
+- The C8-G benchmark requires explicit role / duty / responsibility / purpose / ambiguity behavior.
+- C8-F baseline markers must be preserved and must not regress.
+
+5. Decision
+
+Minimal additive business/sales patch is needed.
+
+Reason:
+
+C8-G-A defines a new benchmark group with S1-S12 cases.
+C8-G-B confirms only static marker presence, not full deterministic support.
+The next code patch must therefore add focused deterministic candidates for business/sales responsibility semantics, while avoiding full taxonomy expansion.
+
+6. Patch surface decision
+
+Allowed primary patch surface:
+
+- lib/activity/categoryDerivation/ruleExtractor.ts
+
+Not allowed in the first C8-G patch unless a later exact-file inspection proves otherwise:
+
+- resolver changes
+- bridge changes
+- persistence changes
+- SQL migrations
+- category seed expansion
+- OpenAI classifier changes
+- /api/activity/complete changes
+- UI changes
+
+Reason:
+
+C8-F proved that semantic expansion can be validated first at extractor level.
+C8-G should follow the same pattern: deterministic extractor-level patch first, then proof, then only later resolver/persistence/bridge if needed.
+
+7. First minimal patch scope
+
+The first patch should not try to support all business/sales scenarios as a complete ontology.
+It should add deterministic support for a focused benchmark subset that proves the semantic mechanism.
+
+Recommended first deterministic group:
+
+S1 — clear commercial proposal to client
+Input:
+писал коммерческое предложение клиенту 40 минут
+
+Required/core candidates:
+- writing
+- commercial-proposal
+- client
+- b2b-sales
+- work-responsibility
+- customer-responsibility
+- sales-responsibility
+- income-generation
+- duration-minutes
+
+Secondary/possible candidates:
+- business-development
+- deal-preparation
+- relationship-management
+
+Forbidden overclaims:
+- closed-deal
+- payment-received
+- contract-signed
+- meeting-held
+- successful-sale
+
+S2 — proposal to potential client
+Input:
+prepared a proposal for a potential client
+
+Required/core candidates:
+- preparing
+- commercial-proposal
+- potential-client
+- b2b-sales
+- sales-responsibility
+- business-development
+- client-acquisition
+- deal-preparation
+
+Secondary/possible candidates:
+- income-generation
+- lead-nurturing
+
+Forbidden overclaims:
+- existing-client
+- closed-deal
+- signed-contract
+- payment-received
+
+S3 — follow-up after meeting
+Input:
+wysłałem follow-up do klienta po spotkaniu
+
+Required/core candidates:
+- sending
+- follow-up-message
+- client
+- meeting-follow-up
+- b2b-sales
+- customer-responsibility
+- relationship-management
+- sales-responsibility
+
+Secondary/possible candidates:
+- lead-nurturing
+- deal-preparation
+- pipeline-management
+
+Forbidden overclaims:
+- new-proposal unless stated
+- successful-sale
+- contract-signed
+- payment-received
+
+S4 — objection handling / price
+Input:
+llamé a un cliente para aclarar objeciones sobre el precio
+
+Required/core candidates:
+- calling
+- client
+- objection-handling
+- price-objection
+- negotiation
+- b2b-sales
+- customer-responsibility
+- sales-responsibility
+
+Secondary/possible candidates:
+- deal-preparation
+- relationship-management
+- income-generation
+
+Forbidden overclaims:
+- complaint-support-only
+- discount-given
+- deal-closed
+- payment-received
+
+S5 — CRM update after lead call
+Input:
+aktualizowałem CRM po rozmowie z leadem
+
+Required/core candidates:
+- updating
+- crm-record
+- lead
+- post-call-documentation
+- sales-admin
+- pipeline-management
+- work-responsibility
+- sales-responsibility
+
+Secondary/possible candidates:
+- business-development
+- lead-nurturing
+
+Forbidden overclaims:
+- client
+- proposal-written
+- deal-closed
+- customer-responsibility if lead is not yet client
+
+S8 — sales language training
+Input:
+учил немецкие фразы для B2B-продаж
+
+Required/core candidates:
+- learning
+- german-language
+- b2b-sales
+- sales-training
+- professional-development
+- career-development
+- preparation
+
+Secondary/possible candidates:
+- future-client-communication
+- income-generation
+
+Forbidden overclaims:
+- actual-client-work
+- commercial-proposal
+- customer-responsibility
+- active-sales-call
+
+S9 — passive reading about sales
+Input:
+читал статью о продажах за кофе
+
+Required/core candidates:
+- reading
+- sales-topic
+- self-education
+- passive-learning
+
+Secondary/possible candidates:
+- professional-development
+- business-development
+- rest-context
+
+Forbidden overclaims:
+- work-responsibility automatically
+- client
+- B2B sales action
+- sales-responsibility unless explicit work context exists
+- customer-responsibility
+
+S10 — informal conversation about sales
+Input:
+разговаривал с другом о продажах
+
+Required/core candidates:
+- conversation
+- friend
+- sales-topic
+- informal-discussion
+
+Secondary/possible candidates:
+- reflection
+- possible-sales-learning
+- possible-business-idea
+
+Forbidden overclaims:
+- client
+- lead
+- work-responsibility
+- sales-responsibility
+- income-generation automatically
+- business-development unless explicit business intent exists
+
+8. Cases intentionally postponed from first patch
+
+The following cases may be kept in the benchmark inventory but can be postponed if the first patch becomes too broad:
+
+S6 — outbound lead list
+Reason:
+Useful, but can be added after basic client/proposal/follow-up/learning/reading ambiguity is stable.
+
+S7 — partnership negotiation
+Reason:
+Important, but partner responsibility is adjacent to sales and may require separate partnership semantics.
+
+S11 — client discovery call
+Reason:
+Important sales-process case, but discovery/qualification vocabulary may deserve a second sales-process patch.
+
+S12 — customer support ambiguity
+Reason:
+Very important distinction, but support vs. sales can be a separate ambiguity-hardening patch.
+
+Postponing these cases is acceptable only if the proof document clearly states the smaller proof scope.
+
+9. Candidate construction policy
+
+Every deterministic candidate added in the later patch should have:
+
+- candidateSlug
+- candidateTitle or equivalent existing internal structure
+- semantic layer / category type if supported by current ruleExtractor pattern
+- source = rule or equivalent rule-source marker
+- confidence
+- required/core vs possible/secondary meaning where current structure supports it
+- evidence / reason marker where current structure supports it
+- no uncontrolled active category creation
+
+The patch must follow the existing style of ruleExtractor.ts.
+Do not invent a new candidate object format if the current file has an established helper pattern.
+
+10. Confidence policy
+
+High confidence / required:
+
+- explicit client + commercial proposal
+- explicit potential client + proposal
+- explicit client follow-up after meeting
+- explicit client price objections
+- explicit CRM after lead call
+- explicit B2B sales language training as preparation, not real client work
+
+Medium confidence / possible:
+
+- income-generation when commercial intent exists but result is not known
+- business-development for proposals, lead work and sales preparation
+- relationship-management for follow-up and client contact
+- lead-nurturing for potential client / follow-up / CRM cases
+
+Low confidence / not canonical core:
+
+- sales topic appears only in reading
+- sales topic appears only in informal friend conversation
+- income-generation in learning/reading/conversation cases
+- work-responsibility without work/client/business evidence
+- customer-responsibility without actual customer/client evidence
+
+11. Forbidden-overclaim policy
+
+The later patch must explicitly avoid or test absence of:
+
+- closed-deal
+- contract-signed
+- payment-received
+- invoice-paid
+- successful-sale
+- discount-given
+- meeting-held where meeting is not stated
+- proposal-sent where only writing/preparing is stated
+- client-acquired
+- existing-client where the phrase says potential client / lead
+- customer-responsibility where only lead/prospect is present
+- work-responsibility where the phrase is only informal conversation or passive reading
+- income-generation as core meaning in learning/reading/friend-conversation cases
+
+12. Multilingual strategy
+
+The first patch should preserve multilingual behavior but remain small.
+
+Required languages in first scope:
+
+- Russian:
+  - писал коммерческое предложение клиенту 40 минут
+  - учил немецкие фразы для B2B-продаж
+  - читал статью о продажах за кофе
+  - разговаривал с другом о продажах
+
+- English:
+  - prepared a proposal for a potential client
+
+- Polish:
+  - wysłałem follow-up do klienta po spotkaniu
+  - aktualizowałem CRM po rozmowie z leadem
+
+- Spanish:
+  - llamé a un cliente para aclarar objeciones sobre el precio
+
+Do not add broad automatic support for all languages at once.
+Add deterministic pattern groups only where the benchmark requires it.
+
+13. Exact next steps
+
+C8-G-D0 — source snapshot
+
+Create a source snapshot for exact patch planning.
+Include at minimum:
+
+- ruleExtractor.ts
+- C8-G-A benchmark inventory
+- C8-G-B inspection document
+- C8-G-C strategy document
+- relevant nearby docs from C8-F D1/D3/D4/F if needed
+
+No source changes.
+
+C8-G-D1 — exact files to patch decision
+
+Decide exact patch files.
+Expected decision:
+- ruleExtractor.ts only
+
+No source changes.
+
+C8-G-D2/D3 — source patch
+
+Patch deterministic business/sales candidates.
+Keep patch additive and focused.
+No resolver / bridge / persistence / SQL / OpenAI.
+
+C8-G-D4 — validation and proof plan
+
+Validate TypeScript and targeted ESLint.
+Prepare deterministic extractor-level proof plan.
+
+C8-G-E — deterministic proof
+
+Use tsc -> node runner pattern.
+No /api/activity/complete.
+No SQL.
+No OpenAI.
+
+C8-G-F — document PASS/FAIL and next expansion decision
+
+Document proof result and choose either:
+- second business/sales expansion group, or
+- fix strategy if proof fails.
+
+14. Risk controls
+
+Risk:
+The patch becomes a manual taxonomy dump.
+
+Control:
+Only implement benchmark-needed deterministic candidates.
+
+Risk:
+The patch overclassifies every sales-topic phrase as work/sales responsibility.
+
+Control:
+S9 and S10 must remain negative/ambiguity controls.
+
+Risk:
+The patch collapses lead/prospect/potential-client into existing client.
+
+Control:
+S2 and S5 must separate potential-client/lead from client.
+
+Risk:
+The patch infers outcomes that did not happen.
+
+Control:
+Forbidden overclaim checks must include closed-deal, payment-received, contract-signed, successful-sale.
+
+Risk:
+The patch breaks C8-F family/childcare behavior.
+
+Control:
+C8-F baseline markers must remain present and future proof should include a quick baseline preservation check.
+
+15. Definition of Done for C8-G-C
+
+C8-G-C is done when:
+
+- this strategy document exists under docs/value-objects
+- it states that a minimal additive patch is needed
+- it defines patch surface as ruleExtractor.ts only for the first patch
+- it defines first patch scope and postponed cases
+- it defines candidate construction, confidence, multilingual and forbidden-overclaim policies
+- it defines next steps D0/D1/D2-D3/D4/E/F
+- no source-code files changed
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run
+- git diff contains only this document
+- document is committed and pushed
+- final git status is clean
+
+16. Commit message
+
+Decide Business Sales Semantic Coverage patch strategy
