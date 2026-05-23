@@ -1,0 +1,401 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-H-D1
+Exact files to patch decision for postponed business/sales cases
+
+Status: DOC-ONLY EXACT FILES DECISION
+Generated at: 2026-05-23 16:43:03 +02:00
+Baseline HEAD: 3934bd2
+Previous block: P4.10.0-C8-H-C-FIX1 — minimal additive patch strategy for postponed business/sales cases
+Next planned block: P4.10.0-C8-H-D2 — compact patch source pack / exact patch authoring preparation
+
+Exact verifier markers intentionally present:
+- No SQL
+- No OpenAI
+- No runtime proof
+- /api/activity/complete was not used
+
+1. Purpose
+
+This document records the exact files decision for the future C8-H source patch.
+
+This step does not patch source code.
+This step does not run SQL.
+This step does not call OpenAI.
+This step does not run /api/activity/complete.
+This step does not run runtime proof.
+
+2. Sources used
+
+Current source:
+.\lib\activity\categoryDerivation\ruleExtractor.ts
+SHA256: BF8380B96858336F2FF34B76630622F609DD6032F7C7F6224F23CEC8C1272AA2
+SIZE_BYTES: 49363
+LINE_COUNT: 1562
+
+C8-H-A benchmark inventory:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-a-postponed-business-sales-cases-benchmark-inventory.txt
+SHA256: 02001D6B9984520C260744980002CEFFA0FE579E8AE6702665AD235BC833CDD6
+
+C8-H-B static inspection:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-b-current-postponed-business-sales-support-inspection.txt
+SHA256: F023CC56EC02F85EEA2131DF7F1069B6BB3B60730256088E44BF8BEE32A37E23
+
+C8-H-C strategy:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-c-minimal-additive-postponed-business-sales-patch-strategy.txt
+SHA256: 90B6671C22CA1DEADC5697232DB7BCA630CB5EA791AEE734696B675C14F53B5E
+
+C8-G-F proof PASS and expansion decision:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-f-deterministic-proof-pass-and-expansion-decision.txt
+SHA256: 729AC3E3E3A7005DD31AB1BA41EC4115736FB78E35AB596442ECAE4E2F39DA63
+
+C8-G-E-RECOVERY1 proof output:
+C:\Users\Admin\Downloads\P4_10_0_C8_G_E_RECOVERY1_deterministic_extractor_proof_output.txt
+SHA256: E320E87047A995D2701E6E5D333651724558D20B6828BF3C0CC9E98403543DB6
+SIZE_BYTES: 4926
+
+3. Decision
+
+The future C8-H source patch may change exactly one source file:
+
+- lib/activity/categoryDerivation/ruleExtractor.ts
+
+The future C8-H source patch should also create exactly one documentation file for the patch step:
+
+- docs/value-objects/category-derivation-layer-v1-c8-h-d3-postponed-business-sales-semantic-candidate-patch.txt
+
+No other project files should be changed in the first C8-H source patch.
+
+4. Files allowed for C8-H-D3
+
+Allowed source file:
+
+- lib/activity/categoryDerivation/ruleExtractor.ts
+
+Allowed documentation file:
+
+- docs/value-objects/category-derivation-layer-v1-c8-h-d3-postponed-business-sales-semantic-candidate-patch.txt
+
+5. Files explicitly forbidden for C8-H-D3
+
+Do not change:
+
+- resolver files
+- bridge files
+- persistence files
+- SQL migration files
+- Supabase schema files
+- category seed files
+- OpenAI classifier files
+- /api/activity/complete route files
+- browser UI files
+- page components
+- unrelated API routes
+- package.json
+- package-lock.json
+- tsconfig files
+- eslint config
+- environment files
+
+6. Patch scope confirmed
+
+The future C8-H-D3 source patch should add deterministic extractor-level candidates for:
+
+S6 — outbound lead list
+Input:
+tworzyłem listę potencjalnych klientów dla kampanii outbound
+
+S7 — partnership negotiation
+Input:
+negocjowałem warunki współpracy z partnerem
+
+S11 — discovery call with a new B2B lead
+Input:
+I had a discovery call with a new B2B lead
+
+S12 — post-purchase customer support ambiguity
+Input:
+позвонил клиенту, чтобы помочь с проблемой после покупки
+
+7. Required deterministic markers for future C8-H-D3 source patch
+
+The future patch should add or use these exact semantic markers:
+
+- business_sales_outbound_lead_list_semantics
+- business_sales_partnership_negotiation_semantics
+- business_sales_discovery_call_new_lead_semantics
+- business_sales_post_purchase_support_ambiguity
+
+8. C8-H risk-control markers for future C8-H-D3 source patch
+
+The future patch should include these risk-control markers where appropriate:
+
+- lead-not-client
+- potential-client-not-client
+- partner-not-client
+- support-not-new-sale
+
+9. S6 future source patch requirements
+
+S6 required/core candidates:
+
+- creating
+- lead-list
+- potential-client
+- prospecting
+- outbound-sales
+- lead-generation
+- business-development
+- b2b-sales
+- sales-responsibility
+- client-acquisition
+
+S6 secondary/possible candidates:
+
+- pipeline-management
+- income-generation
+- outbound-campaign
+- potential-client-list
+- no-confirmed-contact
+- no-confirmed-client
+- lead-not-client
+- potential-client-not-client
+
+S6 forbidden overclaims:
+
+- client
+- existing-client
+- contacted-client
+- customer-responsibility
+- proposal-sent
+- meeting-held
+- discovery-call
+- closed-deal
+- successful-sale
+- contract-signed
+- payment-received
+
+10. S7 future source patch requirements
+
+S7 required/core candidates:
+
+- negotiating
+- business-partner
+- partnership
+- cooperation-terms
+- business-development
+- partner-responsibility
+- work-responsibility
+
+S7 secondary/possible candidates:
+
+- strategic-partnership
+- relationship-management
+- income-generation
+- revenue-generation
+- b2b-sales
+- business-responsibility
+- partner-not-client
+
+S7 forbidden overclaims:
+
+- client
+- potential-client
+- lead
+- prospect
+- customer-responsibility
+- sales-proposal
+- commercial-proposal
+- discovery-call
+- closed-deal
+- contract-signed
+- payment-received
+- successful-sale
+
+11. S11 future source patch requirements
+
+S11 required/core candidates:
+
+- discovery-call
+- calling
+- new-lead
+- lead
+- b2b-sales
+- client-acquisition
+- sales-process
+- business-development
+- sales-responsibility
+- lead-qualification
+
+S11 secondary/possible candidates:
+
+- relationship-management
+- income-generation
+- deal-preparation
+- pipeline-management
+- possible-business-development
+- lead-not-client
+
+S11 forbidden overclaims:
+
+- client
+- existing-client
+- customer-responsibility
+- commercial-proposal
+- proposal-sent
+- closed-deal
+- contract-signed
+- payment-received
+- successful-sale
+- client-acquired
+
+12. S12 future source patch requirements
+
+S12 required/core candidates:
+
+- calling
+- client
+- post-purchase-support
+- customer-support
+- customer-responsibility
+- relationship-management
+- support-responsibility
+
+S12 secondary/possible candidates:
+
+- retention
+- account-management
+- customer-success
+- business-responsibility
+- support-not-new-sale
+
+S12 forbidden overclaims:
+
+- new-sale
+- lead-generation
+- prospecting
+- outbound-sales
+- client-acquisition
+- sales-responsibility
+- b2b-sales
+- discovery-call
+- commercial-proposal
+- proposal-sent
+- price-objection
+- closed-deal
+- contract-signed
+- payment-received
+- successful-sale
+- income-generation as core
+
+13. Candidate construction constraints
+
+The C8-H-D3 patch must use the existing ruleExtractor.ts candidate construction style.
+
+Use existing helpers/patterns already present in the file, such as:
+
+- addCandidate
+- makeMetadata
+
+Do not invent a new candidate object format.
+
+Do not create a new taxonomy engine.
+
+Do not create a new resolver layer.
+
+Do not create category seeds.
+
+14. Preservation requirements
+
+The C8-H-D3 patch must preserve C8-G proven behavior.
+
+C8-G markers to preserve:
+
+- business_sales_commercial_proposal_client_semantics
+- business_sales_potential_client_proposal_semantics
+- business_sales_follow_up_after_meeting_semantics
+- business_sales_price_objection_semantics
+- business_sales_crm_lead_update_semantics
+- business_sales_language_training_preparation_semantics
+- business_sales_passive_reading_ambiguity
+- business_sales_informal_conversation_ambiguity
+
+The C8-H-D3 patch must preserve C8-F family/childcare behavior.
+
+C8-F markers to preserve:
+
+- teach_math_with_child_care_semantics
+- child_studied_math_nearby_supervision_ambiguity
+- child_homework_supervision_ambiguity
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+
+15. Validation required after C8-H-D3 source patch
+
+After the future source patch, run:
+
+- source marker verification
+- C8-H risk-control marker verification
+- forbidden overclaim absence check
+- C8-G marker preservation check
+- C8-F marker preservation check
+- git diff --check
+- npx.cmd tsc --noEmit --pretty false
+- targeted ESLint for lib/activity/categoryDerivation/ruleExtractor.ts
+- cached diff check
+- commit and push
+
+16. What not to run in C8-H-D3
+
+Do not run:
+
+- SQL
+- OpenAI
+- /api/activity/complete
+- browser runtime route proof
+- resolver proof
+- bridge proof
+- persistence proof
+- UI proof
+
+17. Recommended next step
+
+P4.10.0-C8-H-D2 — compact patch source pack / exact patch authoring preparation.
+
+C8-H-D2 should:
+
+- create a compact local source/context pack if needed
+- include ruleExtractor.ts current source snapshot
+- include C8-H-A/B/C/D1 summaries
+- include C8-G preservation markers
+- include C8-F preservation markers
+- make no source changes
+- make no commit unless only a documentation/source-pack decision file is intentionally added
+
+18. Definition of Done for C8-H-D1
+
+C8-H-D1 is done when:
+
+- this document exists under docs/value-objects
+- it states that only lib/activity/categoryDerivation/ruleExtractor.ts may be patched
+- it identifies the allowed C8-H-D3 documentation file
+- it forbids resolver/bridge/persistence/SQL/OpenAI/API/UI changes
+- it defines required C8-H semantic markers
+- it defines C8-H risk-control markers
+- it defines S6/S7/S11/S12 patch requirements
+- it defines preservation requirements for C8-G and C8-F
+- it defines validation requirements for the future source patch
+- no source-code files changed
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run
+- git diff contains only this document
+- document is committed and pushed
+- final git status is clean
+
+19. Commit message
+
+Decide Postponed Business Sales patch files
