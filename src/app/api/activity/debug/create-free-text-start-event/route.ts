@@ -52,6 +52,44 @@ function asNonEmptyString(value: unknown) {
   return text && text.length > 0 ? text : null;
 }
 
+function asBoolean(value: unknown) {
+  return typeof value === "boolean" ? value : null;
+}
+
+function readNonEmptyStringFromRecords(
+  records: GenericRecord[],
+  fieldNames: string[]
+) {
+  for (const record of records) {
+    for (const fieldName of fieldNames) {
+      const value = asNonEmptyString(record[fieldName]);
+
+      if (value) {
+        return value;
+      }
+    }
+  }
+
+  return null;
+}
+
+function readBooleanFromRecords(
+  records: GenericRecord[],
+  fieldNames: string[]
+) {
+  for (const record of records) {
+    for (const fieldName of fieldNames) {
+      const value = asBoolean(record[fieldName]);
+
+      if (value !== null) {
+        return value;
+      }
+    }
+  }
+
+  return null;
+}
+
 function resolveStartedAt(body: GenericRecord) {
   const rawStartedAt =
     asNonEmptyString(body.startedAt) ??
@@ -194,6 +232,55 @@ export async function POST(request: Request) {
   }
 
   const bodyMetadata = isRecord(body.metadata) ? body.metadata : {};
+  const metadataSources = [body, bodyMetadata];
+
+  const proof = readNonEmptyStringFromRecords(metadataSources, [
+    "proof",
+    "proofMarker",
+    "proof_marker",
+  ]);
+  const requestedP4Step =
+    readNonEmptyStringFromRecords(metadataSources, ["p4Step", "p4_step"]) ??
+    P4_STEP;
+  const purpose = readNonEmptyStringFromRecords(metadataSources, [
+    "purpose",
+    "proofPurpose",
+    "proof_purpose",
+  ]);
+  const cleanupEligible = readBooleanFromRecords(metadataSources, [
+    "cleanupEligible",
+    "cleanup_eligible",
+  ]);
+  const productionPersistProof = readBooleanFromRecords(metadataSources, [
+    "productionPersistProof",
+    "production_persist_proof",
+  ]);
+  const nonCanonicalBusinessEvent = readBooleanFromRecords(metadataSources, [
+    "nonCanonicalBusinessEvent",
+    "non_canonical_business_event",
+  ]);
+
+  const proofMetadata: GenericRecord = {};
+
+  if (proof) {
+    proofMetadata.proof = proof;
+  }
+
+  if (purpose) {
+    proofMetadata.purpose = purpose;
+  }
+
+  if (cleanupEligible !== null) {
+    proofMetadata.cleanupEligible = cleanupEligible;
+  }
+
+  if (productionPersistProof !== null) {
+    proofMetadata.productionPersistProof = productionPersistProof;
+  }
+
+  if (nonCanonicalBusinessEvent !== null) {
+    proofMetadata.nonCanonicalBusinessEvent = nonCanonicalBusinessEvent;
+  }
 
   const insertRow: GenericRecord = {
     user_id: appUser.id,
@@ -220,8 +307,10 @@ export async function POST(request: Request) {
 
     metadata_json: {
       ...bodyMetadata,
+      ...proofMetadata,
       endpoint: ENDPOINT,
-      p4Step: P4_STEP,
+      setupRouteP4Step: P4_STEP,
+      p4Step: requestedP4Step,
       setupPurpose:
         "Clean non-completed free-text activity_event for production /api/activity/complete test.",
       semanticBaseline: "walked-to-work-free-text",
@@ -269,6 +358,15 @@ export async function POST(request: Request) {
       legacyTemplateId: createdEvent.template_id,
       expectedNextStep:
         "POST /api/activity/complete once with this event id, durationMinutes and endedAt.",
+      proofMetadataPreserved: {
+        proof: proof ?? null,
+        p4Step: requestedP4Step,
+        purpose: purpose ?? null,
+        cleanupEligible,
+        productionPersistProof,
+        nonCanonicalBusinessEvent,
+        setupRouteP4Step: P4_STEP,
+      },
     },
   });
 }

@@ -28,7 +28,10 @@ import {
   type CategoryDerivationPersistenceSupabaseClient,
 } from "../../../../../lib/activity/categoryDerivation/persistDerivations";
 import type { CategoryDerivationInput } from "../../../../../lib/activity/categoryDerivation/types";
-import { getCategoryDerivationRouteRunnerConfig } from "../../../../../lib/activity/categoryDerivation/config";
+import {
+  getCategoryDerivationRouteRunnerConfig,
+  type CategoryDerivationRouteRunnerConfig,
+} from "../../../../../lib/activity/categoryDerivation/config";
 import {
   runCategoryDerivationForCompleteRoute as runCategoryDerivationRouteRunnerForCompleteRoute,
   type CategoryDerivationCompleteRouteIntegrationSupabaseClient,
@@ -51,6 +54,9 @@ type ActivityCompleteBody = {
   endTime?: unknown;
   durationMinutes?: unknown;
   comment?: unknown;
+  proof?: unknown;
+  p4Step?: unknown;
+  purpose?: unknown;
 };
 
 type ActivityEventRow = {
@@ -227,6 +233,143 @@ function readStringArrayFieldForCategoryDerivation(
   }
 
   return [];
+}
+
+function readStringFieldFromCompleteRouteBody(
+  body: ActivityCompleteBody,
+  fieldNames: string[]
+): string | null {
+  return readStringFieldForCategoryDerivation(body, fieldNames);
+}
+
+function isCategoryDerivationProofDebugRequestForCompleteRoute(
+  body: ActivityCompleteBody
+): boolean {
+  const proof = readStringFieldFromCompleteRouteBody(body, [
+    "proof",
+    "proofMarker",
+    "proof_marker",
+  ]);
+
+  const p4Step = readStringFieldFromCompleteRouteBody(body, [
+    "p4Step",
+    "p4_step",
+  ]);
+
+  const purpose = readStringFieldFromCompleteRouteBody(body, [
+    "purpose",
+    "proofPurpose",
+    "proof_purpose",
+  ]);
+
+  return (
+    proof?.includes("P4.10.0-C8-E-F6-E") === true ||
+    p4Step?.startsWith("P4.10.0-C8-E-F6-E") === true ||
+    purpose === "real_complete_route_production_persist_proof"
+  );
+}
+
+function shouldExposeCategoryDerivationDiagnosticForCompleteRoute(params: {
+  body: ActivityCompleteBody;
+  config: CategoryDerivationRouteRunnerConfig;
+}): boolean {
+  return (
+    params.config.includeResponseDebug ||
+    isCategoryDerivationProofDebugRequestForCompleteRoute(params.body)
+  );
+}
+
+type CategoryDerivationRouteRunnerCompleteRouteResult = Awaited<
+  ReturnType<typeof runCategoryDerivationRouteRunnerForCompleteRoute>
+>;
+
+function buildCategoryDerivationDiagnosticForCompleteRoute(params: {
+  result: CategoryDerivationRouteRunnerCompleteRouteResult;
+  exposureReason: string;
+}) {
+  const { result, exposureReason } = params;
+  const idempotencyRecord = asRecordForCategoryDerivation(result.idempotency);
+  const idempotencyFound =
+    readBooleanFieldForCategoryDerivation(idempotencyRecord, ["found"]) ??
+    null;
+
+  const existingCompletedRunFound =
+    result.reason === "existing_completed_run_found" ||
+    idempotencyFound === true;
+
+  const routeRunnerReason = result.reason;
+  const failedButCompletionContinued =
+    result.ok === true &&
+    (routeRunnerReason === "route_runner_failed" ||
+      routeRunnerReason === "simulated_persistence_failure" ||
+      routeRunnerReason === "lookup_error");
+
+  return {
+    ok: result.ok,
+    status: result.skipped ? "skipped" : result.ok ? "completed" : "warning",
+    mode: result.mode,
+    reason: result.reason,
+    derivationRunId: result.derivationRunId,
+    persistenceDerivationRowsCreated:
+      result.persistenceDerivationRowsCreated,
+    activityCategoryDerivationsCount:
+      result.persistenceDerivationRowsCreated,
+    existingCompletedRunFound,
+    routeRunnerReason,
+    failedButCompletionContinued,
+    enabled: result.enabled,
+    skipped: result.skipped,
+    candidateCount: result.candidateCount,
+    resolvedCandidateCount: result.resolvedCandidateCount,
+    routeRunner: result.routeRunner,
+    idempotency: result.idempotency,
+    warnings: result.warnings,
+    errors: result.errors,
+    exposure: {
+      exposed: true,
+      reason: exposureReason,
+      sanitized: true,
+      rawRowsExposed: false,
+      secretsExposed: false,
+    },
+  };
+}
+
+function buildAlreadyCompletedCategoryDerivationDiagnosticForCompleteRoute(params: {
+  config: CategoryDerivationRouteRunnerConfig;
+  exposureReason: string;
+}) {
+  return {
+    ok: true,
+    status: "already_completed_not_executed",
+    mode: params.config.mode,
+    reason: "already_completed",
+    derivationRunId: null,
+    persistenceDerivationRowsCreated: 0,
+    activityCategoryDerivationsCount: 0,
+    existingCompletedRunFound: null,
+    routeRunnerReason: "already_completed",
+    failedButCompletionContinued: false,
+    enabled: !params.config.isDisabled,
+    skipped: true,
+    candidateCount: 0,
+    resolvedCandidateCount: 0,
+    routeRunner: {
+      executed: false,
+      persisted: false,
+      resolved: false,
+    },
+    idempotency: null,
+    warnings: params.config.warnings,
+    errors: [],
+    exposure: {
+      exposed: true,
+      reason: params.exposureReason,
+      sanitized: true,
+      rawRowsExposed: false,
+      secretsExposed: false,
+    },
+  };
 }
 
 function isUuidLikeForCategoryDerivation(value: unknown): value is string {
@@ -834,6 +977,24 @@ export async function POST(request: Request) {
         startedAt: event.started_at,
       });
 
+      const categoryDerivationRouteRunnerConfig =
+        getCategoryDerivationRouteRunnerConfig();
+      const shouldExposeCategoryDerivationDiagnostic =
+        shouldExposeCategoryDerivationDiagnosticForCompleteRoute({
+          body,
+          config: categoryDerivationRouteRunnerConfig,
+        });
+      const categoryDerivationDiagnostic =
+        shouldExposeCategoryDerivationDiagnostic
+          ? buildAlreadyCompletedCategoryDerivationDiagnosticForCompleteRoute({
+              config: categoryDerivationRouteRunnerConfig,
+              exposureReason:
+                categoryDerivationRouteRunnerConfig.includeResponseDebug
+                  ? "include_response_debug"
+                  : "proof_request_marker",
+            })
+          : undefined;
+
       return NextResponse.json({
         ok: true,
         status: "already_completed",
@@ -848,6 +1009,7 @@ export async function POST(request: Request) {
           counts: impactResult.counts,
           existingImpactEventsCount,
         },
+        categoryDerivation: categoryDerivationDiagnostic,
         lifecycle: {
           alreadyCompleted: true,
           note:
@@ -1259,11 +1421,27 @@ export async function POST(request: Request) {
           null,
         config: categoryDerivationRouteRunnerConfig,
         metadata: {
-          completeRouteStep: "P4.10.0-C8-E-F5-C-A-FIX2",
+          completeRouteStep: "P4.10.0-C8-E-F6-E-E-S",
           legacyCategoryDerivationOk: categoryDerivationResult.ok,
           legacyDerivationRunId: categoryDerivationResult.derivationRunId,
         },
       });
+
+    const shouldExposeCategoryDerivationDiagnostic =
+      shouldExposeCategoryDerivationDiagnosticForCompleteRoute({
+        body,
+        config: categoryDerivationRouteRunnerConfig,
+      });
+    const categoryDerivationDiagnostic =
+      shouldExposeCategoryDerivationDiagnostic
+        ? buildCategoryDerivationDiagnosticForCompleteRoute({
+            result: categoryDerivationRouteRunnerResult,
+            exposureReason:
+              categoryDerivationRouteRunnerConfig.includeResponseDebug
+                ? "include_response_debug"
+                : "proof_request_marker",
+          })
+        : undefined;
 
     const categoryDerivationProcessingLogResult =
       await safeCreateActivityProcessingLog({
@@ -1410,6 +1588,7 @@ export async function POST(request: Request) {
         warnings: categoryDerivationRouteRunnerResult.warnings,
         errors: categoryDerivationRouteRunnerResult.errors,
       },
+      categoryDerivation: categoryDerivationDiagnostic,
       valueObjectBridge: {
         ok: valueObjectBridgeResult.ok,
         skipped: valueObjectBridgeResult.skipped,
@@ -1538,8 +1717,3 @@ export async function POST(request: Request) {
     );
   }
 }
-
-
-
-
-
