@@ -1,0 +1,573 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-F-A
+Semantic Coverage Benchmark Inventory
+Created: 2026-05-23
+
+1. Purpose
+
+This document starts the next block after the closed F6-E-E production_persist proof block.
+
+C8-F-A creates a benchmark inventory for semantic coverage in Category Derivation Layer v1.
+
+This is a documentation-only benchmark inventory step.
+
+No runtime proof is executed here.
+
+No SQL is executed here.
+
+No cleanup is executed here.
+
+No source code is changed here.
+
+2. Current baseline
+
+Current HEAD before this document:
+
+- 83838ea Close Category Derivation proof block and select next benchmark block
+
+Relevant previous commits:
+
+- c85e2f5 Document Category Derivation patched complete route proof PASS
+- 1b1fabd Decide Category Derivation post PASS transition
+- 83838ea Close Category Derivation proof block and select next benchmark block
+
+3. Why this block exists
+
+F6-E-E proved that the real /api/activity/complete route can run Category Derivation in production_persist mode and persist category derivations.
+
+The next risk is not persistence.
+
+The next risk is semantic usefulness.
+
+A technically working pipeline can still be semantically weak if it misses role, duty, care, purpose, business responsibility, family responsibility, and multilingual intent.
+
+4. Goal of C8-F-A
+
+C8-F-A defines benchmark inputs and expected semantic layers.
+
+The goal is to create a testable reference for future inspection and implementation blocks.
+
+C8-F-A does not claim that current code already passes these benchmarks.
+
+C8-F-A only defines the benchmark inventory and expected outputs.
+
+5. Required semantic layers
+
+Each benchmark should be evaluated across these layers:
+
+1. action
+2. object / topic / domain
+3. participant
+4. relationship context
+5. location or environment
+6. purpose
+7. role
+8. duty / responsibility
+9. care function
+10. business function
+11. personal development function
+12. health / physiology function
+13. time / duration / metric
+14. language of input
+15. language-learning target, if applicable
+16. ambiguity / confidence / missing context
+17. working draft / suggested category need
+18. Value Object Bridge relevance
+
+6. Benchmark group A - movement and commute
+
+A1. Input:
+
+walked to work for 15 minutes
+
+Expected semantic layers:
+
+- action: walking
+- purpose: commute-to-work
+- context: work
+- route / activity meaning: walking-to-work
+- metric: duration-minutes
+- possible health layer: light physical activity
+- possible productivity layer: commute
+- no care function expected
+- no family duty expected
+- Value Object Bridge relevance: walking, work, commute-to-work, walking-to-work, duration-minutes
+
+A2. Input:
+
+walked the dog for 20 minutes
+
+Expected semantic layers:
+
+- action: walking
+- participant: dog
+- responsibility: pet care
+- care function: animal care
+- purpose: dog walking / pet exercise
+- possible health layer: light physical activity
+- metric: duration-minutes
+- Value Object Bridge relevance: walking, pet-care, dog-walking, animal-care, duration-minutes
+
+A3. Input:
+
+walked in the park to calm down after work
+
+Expected semantic layers:
+
+- action: walking
+- environment: park
+- purpose: emotional regulation
+- state target: stress reduction / calming down
+- context: after work
+- health / mental recovery function: recovery
+- metric: duration if provided
+- Value Object Bridge relevance: walking, park, recovery, emotional-regulation, stress-reduction
+
+7. Benchmark group B - childcare, family responsibility and learning
+
+B1. Input:
+
+учил математику с ребёнком
+
+Expected semantic layers:
+
+- action: teaching / helping learn
+- domain: mathematics
+- participant: child
+- relationship context: family
+- role: parent / adult caregiver / helper
+- duty / responsibility: family duty
+- care function: childcare / parental care / caregiving
+- purpose: helping child learn
+- education function: child education support
+- language of input: Russian
+- Value Object Bridge relevance: mathematics, learning, child, family, childcare, parental-care, helping-child-learn
+
+Important anti-regression rule:
+
+This input must not be reduced only to:
+
+- math
+- child
+- learning
+- family
+
+The care/responsibility layer is required.
+
+B2. Input:
+
+ребёнок учил математику рядом со мной
+
+Expected semantic layers:
+
+- action by child: studying / learning
+- domain: mathematics
+- participant: child
+- user role: supervision / nearby presence
+- care function: child supervision if the user was responsible
+- ambiguity: user may or may not have actively helped
+- required clarification possibility: was the user teaching, supervising, or just observing?
+- language of input: Russian
+- Value Object Bridge relevance: mathematics, child-learning, supervision if implied, family context if implied
+
+Important distinction:
+
+This is not the same as "I taught mathematics with a child."
+
+B3. Input:
+
+смотрел фильм с ребёнком
+
+Expected semantic layers:
+
+- action: watching film
+- participant: child
+- relationship context: family
+- possible purpose: shared leisure / bonding
+- possible care function: childcare / spending time with child
+- ambiguity: entertainment vs. supervision vs. family bonding
+- language of input: Russian
+- Value Object Bridge relevance: film, family time, child, shared leisure, childcare if responsibility context is present
+
+B4. Input:
+
+helped my daughter prepare for school
+
+Expected semantic layers:
+
+- action: helping / preparing
+- participant: daughter
+- relationship context: family
+- role: parent / caregiver
+- duty: family duty
+- care function: childcare / parental care
+- purpose: school preparation
+- language of input: English
+- Value Object Bridge relevance: childcare, parental-care, school-preparation, helping-child
+
+8. Benchmark group C - business and sales responsibility
+
+C1. Input:
+
+wrote a commercial proposal to a client
+
+Expected semantic layers:
+
+- action: writing
+- object: commercial proposal
+- business function: sales / business development
+- participant: client
+- purpose: client acquisition / deal progression
+- responsibility: professional duty
+- output: proposal document
+- Value Object Bridge relevance: commercial-proposal, sales, client, business-development
+
+C2. Input:
+
+followed up with a German client after a B2B sales call
+
+Expected semantic layers:
+
+- action: follow-up
+- participant: German client
+- context: B2B sales
+- previous activity link: sales call
+- purpose: deal progression / relationship management
+- language / market context: German / Germany
+- responsibility: sales responsibility
+- Value Object Bridge relevance: follow-up, B2B-sales, German-client, deal-progression
+
+C3. Input:
+
+prepared objections handling script in Polish for a restaurant owner
+
+Expected semantic layers:
+
+- action: preparation / writing
+- object: objections handling script
+- business function: sales enablement
+- participant / target persona: restaurant owner
+- language target: Polish
+- purpose: improve sales conversation
+- Value Object Bridge relevance: objection-handling, sales-script, Polish-language, restaurant-owner
+
+9. Benchmark group D - multilingual and language-learning separation
+
+D1. Input:
+
+practiced German phrases about invoices for 30 minutes
+
+Expected semantic layers:
+
+- action: language practice
+- target language: German
+- topic: invoices
+- business context: office / accounting / B2B communication
+- metric: duration-minutes
+- personal development function: language learning
+- Value Object Bridge relevance: German, invoice-phrases, business-language, language-learning
+
+D2. Input:
+
+napisałem maila po polsku do klienta
+
+Expected semantic layers:
+
+- language of input: Polish
+- action: wrote email
+- communication language: Polish
+- participant: client
+- business function: client communication
+- purpose: business correspondence
+- Value Object Bridge relevance: Polish, email-writing, client-communication, business-correspondence
+
+Important distinction:
+
+Language of input and target language are not always the same thing.
+
+D3. Input:
+
+traduzco esta frase del español al alemán
+
+Expected semantic layers:
+
+- language of input: Spanish
+- action: translation
+- source language: Spanish
+- target language: German
+- personal development function: language learning
+- Value Object Bridge relevance: translation, Spanish, German, language-learning
+
+10. Benchmark group E - health, training and body state
+
+E1. Input:
+
+did Bulgarian split squats for quadriceps hypertrophy
+
+Expected semantic layers:
+
+- action: exercise
+- protocol / method: Bulgarian split squat
+- body target: quadriceps
+- purpose: hypertrophy
+- physical development function: strength / muscle growth
+- metric: reps / sets / duration if provided
+- Value Object Bridge relevance: Bulgarian-split-squat, quadriceps, hypertrophy, strength-training
+
+E2. Input:
+
+stretched my calves because they felt tight after walking
+
+Expected semantic layers:
+
+- action: stretching
+- body target: calves
+- state: tightness
+- cause / context: after walking
+- purpose: mobility / recovery
+- health function: flexibility / recovery
+- Value Object Bridge relevance: calves, stretching, tightness, walking-aftereffect, recovery
+
+E3. Input:
+
+felt tired after working at the post office
+
+Expected semantic layers:
+
+- state: fatigue
+- context: work
+- work role: post office work
+- possible cause: physical / cognitive work load
+- purpose: state logging
+- Value Object Bridge relevance: fatigue, work, post-office, recovery-need
+
+11. Benchmark group F - ambiguous cases
+
+F1. Input:
+
+I was with my child while they did homework
+
+Expected semantic layers:
+
+- participant: child
+- action by child: homework
+- user action: being with / supervision
+- ambiguity: active help vs. passive supervision
+- possible role: parent / caregiver
+- possible care function: childcare
+- required system behavior: preserve ambiguity, do not overclaim active teaching
+- Value Object Bridge relevance: child, homework, supervision, childcare if responsibility context is present
+
+F2. Input:
+
+talked to a client
+
+Expected semantic layers:
+
+- action: conversation
+- participant: client
+- business context likely but under-specified
+- ambiguity: sales, support, relationship management, negotiation, complaint handling
+- required system behavior: create broad candidate and possibly suggest clarification
+- Value Object Bridge relevance: client-communication, business-conversation
+
+F3. Input:
+
+read for one hour
+
+Expected semantic layers:
+
+- action: reading
+- metric: duration
+- ambiguity: leisure, study, professional development, language learning
+- required system behavior: avoid over-specific category without context
+- Value Object Bridge relevance: reading, duration-minutes, unknown-purpose
+
+12. Benchmark group G - AI Function Layer and working drafts
+
+G1. Input:
+
+I did a strange exercise for the small muscle near the knee
+
+Expected semantic layers:
+
+- action: exercise
+- object/body target: uncertain small muscle near knee
+- ambiguity: anatomical target unclear
+- working draft needed: possible suggested category
+- required system behavior: create candidate with low confidence and do not block pipeline
+- governance: suggested / needs_review
+- Value Object Bridge relevance: exercise, knee-area, uncertain-body-target, working-draft
+
+G2. Input:
+
+I worked on the association idea for business owners
+
+Expected semantic layers:
+
+- action: project work
+- project: association idea
+- target group: business owners
+- business function: community / network development
+- purpose: business ecosystem building
+- ambiguity: planning, writing, outreach, strategy
+- working draft possibility: association-project / business-owner-community
+- Value Object Bridge relevance: association-idea, business-owners, community-building, strategy
+
+G3. Input:
+
+I organized my thoughts about the semantic core
+
+Expected semantic layers:
+
+- action: thinking / organizing
+- object: semantic core
+- project context: platform architecture
+- purpose: conceptual design
+- personal/professional development: system design
+- working draft possibility: semantic-core-design
+- Value Object Bridge relevance: semantic-core, architecture, conceptual-design
+
+13. Benchmark matrix summary
+
+Minimum benchmark cases for the next inspection block:
+
+- A1 walked to work for 15 minutes
+- A2 walked the dog for 20 minutes
+- A3 walked in the park to calm down after work
+- B1 учил математику с ребёнком
+- B2 ребёнок учил математику рядом со мной
+- B3 смотрел фильм с ребёнком
+- B4 helped my daughter prepare for school
+- C1 wrote a commercial proposal to a client
+- C2 followed up with a German client after a B2B sales call
+- C3 prepared objections handling script in Polish for a restaurant owner
+- D1 practiced German phrases about invoices for 30 minutes
+- D2 napisałem maila po polsku do klienta
+- D3 traduzco esta frase del español al alemán
+- E1 did Bulgarian split squats for quadriceps hypertrophy
+- E2 stretched my calves because they felt tight after walking
+- E3 felt tired after working at the post office
+- F1 I was with my child while they did homework
+- F2 talked to a client
+- F3 read for one hour
+- G1 I did a strange exercise for the small muscle near the knee
+- G2 I worked on the association idea for business owners
+- G3 I organized my thoughts about the semantic core
+
+14. Expected current-code inspection targets for C8-F-B
+
+The next inspection should locate and review:
+
+- rule extractor implementation
+- category candidate type definitions
+- resolver implementation
+- contextual category seed data
+- category status / governance model
+- working draft or suggested category model
+- Value Object Bridge category consumption
+- multilingual handling points
+- confidence / ambiguity handling
+- processing logs for derivation
+
+15. Expected gap classes
+
+C8-F-B should classify gaps into:
+
+1. missing category seed
+2. missing extractor rule
+3. missing resolver support
+4. missing confidence / ambiguity model
+5. missing working draft governance
+6. missing Value Object Bridge consumption
+7. missing multilingual separation
+8. missing role/care/purpose semantic layer
+9. missing benchmark test route
+10. missing documentation only
+
+16. Pass criteria for the whole C8-F block
+
+The later C8-F block can be considered successful when:
+
+- each benchmark has an expected category candidate set
+- current system behavior is compared against the benchmark
+- role/care/purpose cases are not flattened into only action/object/context
+- ambiguous cases preserve uncertainty
+- suggested/working draft governance is planned or implemented
+- multilingual examples distinguish input language from target language
+- runtime proof demonstrates at least the most important benchmarks without OpenAI first
+- later OpenAI-assisted interpretation can be added without breaking deterministic baseline
+
+17. Recommended next step
+
+Recommended next step:
+
+P4.10.0-C8-F-B - inspect current ruleExtractor/resolver/category seed support for semantic coverage benchmarks
+
+C8-F-B should be inspection-only first.
+
+C8-F-B must not execute runtime proof.
+
+C8-F-B must not execute SQL.
+
+C8-F-B must not cleanup proof events.
+
+C8-F-B must not change source code.
+
+18. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no cleanup command
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no additional /api/activity/complete runtime proof
+- no normal user activity used for proof
+- no failActivityComplete=true
+
+19. Exact verification markers
+
+- P4.10.0-C8-F-A
+- Semantic Coverage Benchmark Inventory
+- 83838ea Close Category Derivation proof block and select next benchmark block
+- semantic usefulness
+- role / duty / responsibility / care / purpose
+- walked to work for 15 minutes
+- walked the dog for 20 minutes
+- учил математику с ребёнком
+- ребёнок учил математику рядом со мной
+- watched a film with a child
+- wrote a commercial proposal to a client
+- practiced German phrases about invoices for 30 minutes
+- napisałem maila po polsku do klienta
+- traduzco esta frase del español al alemán
+- Bulgarian split squats for quadriceps hypertrophy
+- working draft
+- suggested category
+- language-learning vs. language-of-input separation
+- parental-care
+- childcare
+- caregiving
+- helping-child-learn
+- P4.10.0-C8-F-B
+- inspect current ruleExtractor/resolver/category seed support for semantic coverage benchmarks
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+- No source code is changed here
+
+20. Definition of Done
+
+This C8-F-A benchmark inventory step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above 83838ea
