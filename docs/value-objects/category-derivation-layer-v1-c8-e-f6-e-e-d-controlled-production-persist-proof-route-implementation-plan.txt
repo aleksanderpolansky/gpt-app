@@ -1,0 +1,427 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-E-D
+Controlled production_persist proof route implementation plan
+Created: 2026-05-23
+
+1. Purpose
+
+This document defines the implementation plan for the separate controlled production_persist proof route selected in F6-E-E-C.
+
+No runtime/source code changes are made in this step.
+
+This document does not approve production_persist runtime execution.
+
+2. Current baseline
+
+Current HEAD before this plan:
+
+- 8169b19 — Decide Category Derivation production persist proof route strategy
+
+Immediately relevant commits:
+
+- 67d28f9 — Inspect Category Derivation production persist proof route options
+- 8169b19 — Decide Category Derivation production persist proof route strategy
+
+3. Strategy inherited from F6-E-E-C
+
+F6-E-E-C decided:
+
+- create a separate controlled production_persist debug proof route;
+- do not reuse the existing idempotency debug route as-is;
+- do not patch /api/activity/complete for the first production_persist proof;
+- do not enable production_persist globally;
+- keep runtime proof blocked until implementation, cleanup/rollback, and runtime proof plans are approved separately.
+
+4. Exact route to implement later
+
+Exact route path:
+
+- /api/activity/debug/category-derivation-controlled-production-persist-proof
+
+Exact file path:
+
+- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+
+This route must be debug-only, authenticated, proof/test-only and non-canonical.
+
+5. Route implementation concept
+
+Preferred implementation concept:
+
+Self-contained controlled proof route.
+
+The route should create its own proof activity_event internally and then run the Category Derivation adapter against that proof event.
+
+Reason:
+
+- avoids relying on the current create-free-text-start-event route as-is;
+- guarantees required proof metadata markers are present;
+- avoids mixing proof setup with normal business activity setup;
+- makes cleanup eligibility explicit;
+- keeps /api/activity/complete untouched.
+
+6. Request payload
+
+The route should accept POST JSON only.
+
+Planned request payload:
+
+{
+  "proof": "P4.10.0-C8-E-F6-E-controlled-production-persist-proof",
+  "mode": "production_persist",
+  "callTwice": true,
+  "inputText": "walked to work for 10 minutes during controlled production persist proof",
+  "title": "F6-E controlled production_persist proof",
+  "durationMinutes": 10
+}
+
+Required fields:
+
+- proof
+- mode
+- callTwice
+
+Optional fields:
+
+- inputText
+- title
+- durationMinutes
+
+Default values should be used if optional fields are omitted.
+
+7. Request validation
+
+The route must reject the request if:
+
+- method is not POST;
+- user is not authenticated;
+- proof is not exactly P4.10.0-C8-E-F6-E-controlled-production-persist-proof;
+- mode is not exactly production_persist;
+- callTwice is not true;
+- durationMinutes is invalid;
+- inputText is empty after defaulting;
+- title is empty after defaulting.
+
+8. Environment requirements for later runtime proof
+
+The later runtime proof must run only when the dev server is explicitly started with:
+
+- CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+- CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=false
+
+The route must verify in the response safety object that:
+
+- config.mode is production_persist;
+- config.isProductionPersistMode is true;
+- config.shouldPersist is true;
+- config.shouldResolve is true;
+- config.failActivityComplete is false.
+
+9. Proof activity_event creation
+
+The controlled route should create one proof activity_event internally.
+
+The proof event should be created as a non-canonical proof/test event.
+
+Planned event status:
+
+- started
+
+Planned processing status:
+
+- pending
+
+Planned source:
+
+- debug_proof_route or manual_form depending on current table constraints
+
+Planned metadata:
+
+{
+  "proof": "P4.10.0-C8-E-F6-E-controlled-production-persist-proof",
+  "purpose": "controlled_production_persist_proof",
+  "doNotUseAsCanonicalBusinessEvent": true,
+  "cleanupEligible": true,
+  "productionPersistProof": true,
+  "createdBy": "controlled_proof_route",
+  "productionRouteUnderTest": false,
+  "categoryDerivationRouteUnderTest": true,
+  "completeRouteModified": false,
+  "openAiExpected": false
+}
+
+10. Adapter call requirements
+
+The route must call:
+
+- runCategoryDerivationForCompleteRoute
+
+The route must not call routeRunner directly.
+
+The route must not call /api/activity/complete.
+
+The route must use completeRouteIntegration adapter-level idempotency.
+
+The route must run:
+
+- first adapter call;
+- second adapter call when callTwice=true.
+
+Expected first call:
+
+- ok=true
+- reason=route_runner_completed
+- derivationRunId exists
+- persistenceDerivationRowsCreated > 0
+- routeRunner executed
+- rows persisted
+
+Expected second call:
+
+- ok=true
+- reason=existing_completed_run_found
+- derivationRunId equals first derivationRunId
+- persistenceDerivationRowsCreated=0
+- routeRunner skipped
+- no duplicate rows created
+
+11. Route response shape
+
+The route should return JSON with this top-level shape:
+
+{
+  "ok": true,
+  "status": "controlled_production_persist_proof_pass",
+  "p4Step": "P4.10.0-C8-E-F6-E-E-controlled-production-persist-proof",
+  "route": "/api/activity/debug/category-derivation-controlled-production-persist-proof",
+  "event": {},
+  "config": {},
+  "firstCall": {},
+  "secondCall": {},
+  "proof": {},
+  "dbVerification": {},
+  "safety": {}
+}
+
+On failure, the route should return:
+
+{
+  "ok": false,
+  "status": "controlled_production_persist_proof_fail",
+  "error": "...",
+  "details": {}
+}
+
+12. Config response object
+
+The response config object should include:
+
+{
+  "mode": "production_persist",
+  "isProductionPersistMode": true,
+  "shouldPersist": true,
+  "shouldResolve": true,
+  "failActivityComplete": false,
+  "includeResponseDebug": false
+}
+
+13. Proof object
+
+The response proof object should include:
+
+{
+  "firstCallPass": true,
+  "secondCallPass": true,
+  "sameDerivationRunId": true,
+  "firstDerivationRunId": "...",
+  "secondDerivationRunId": "...",
+  "secondCallDidNotPersist": true,
+  "productionPersistActuallyUsed": true,
+  "eventWasProofMarked": true
+}
+
+14. DB verification object
+
+The dbVerification object should include:
+
+{
+  "pass": true,
+  "proofEventExists": true,
+  "proofEventHasRequiredMarkers": true,
+  "routeRunnerSpecificRunsCount": 1,
+  "routeRunnerSpecificRunsPass": true,
+  "expectedDerivationRunId": "...",
+  "expectedDerivationRunExists": true,
+  "expectedDerivationRunActualCount": 1,
+  "activityCategoryDerivationsCount": 5,
+  "activityCategoryDerivationsPass": true,
+  "noDuplicateRuns": true,
+  "duplicateRouteRunnerCompletedRunsActualCount": 1
+}
+
+If the number of derived rows is not fixed at 5 in the implementation, the route must define the expected count explicitly in the response and verify against that expected count.
+
+15. Safety object
+
+The safety object must include:
+
+{
+  "completeRouteModified": false,
+  "completeRouteCalled": false,
+  "eventCompletedByThisRoute": false,
+  "productionPersistEnabled": true,
+  "productionPersistAllowedOnlyForThisDebugProof": true,
+  "failActivityComplete": false,
+  "openAiCalled": false,
+  "uiCreated": false,
+  "migrationCreated": false,
+  "schemaChanged": false,
+  "rlsChanged": false,
+  "permissionsChanged": false,
+  "sqlExecutedByPowerShell": false,
+  "cleanupEligible": true,
+  "debugOnly": true,
+  "nonCanonicalBusinessEvent": true
+}
+
+16. Forbidden behavior in implementation
+
+The later implementation must not:
+
+- modify /api/activity/complete;
+- call /api/activity/complete;
+- call routeRunner directly;
+- enable production_persist globally;
+- use strict failActivityComplete=true;
+- call OpenAI;
+- create UI;
+- create migrations;
+- change schema;
+- change RLS;
+- change permissions;
+- execute SQL;
+- run cleanup;
+- modify existing idempotency proof route semantics;
+- modify existing shadow_persist proof documents.
+
+17. Cleanup / rollback dependency
+
+Runtime proof must remain blocked until cleanup/rollback planning exists.
+
+Before runtime execution, a separate document must define:
+
+- proof event cleanup eligibility;
+- exact rows that may be cleaned;
+- exact rows that must never be cleaned;
+- category_derivation_runs cleanup scope;
+- activity_category_derivations cleanup scope;
+- whether cleanup is manual or optional;
+- where SQL may be executed;
+- confirmation that SQL must not be run in PowerShell.
+
+18. Implementation checklist for later code step
+
+Later code implementation step should:
+
+1. Create directory:
+
+- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof
+
+2. Create file:
+
+- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+
+3. Reuse authentication pattern from existing debug routes.
+
+4. Reuse Supabase server client pattern from existing debug routes.
+
+5. Import completeRouteIntegration adapter:
+
+- runCategoryDerivationForCompleteRoute
+
+6. Import/resolve Category Derivation config.
+
+7. Validate request payload.
+
+8. Create proof activity_event with required metadata markers.
+
+9. Call adapter first time.
+
+10. Call adapter second time when callTwice=true.
+
+11. Query DB for verification.
+
+12. Build proof object.
+
+13. Build safety object.
+
+14. Return JSON.
+
+15. Do not commit until marker checks, diff checks and TypeScript/lint relevant checks pass.
+
+19. TypeScript / quality checks for later implementation
+
+Later implementation should run only relevant checks that add new information.
+
+Minimum checks after implementation:
+
+- git status --short
+- npm run typecheck if configured and known to be useful
+- route source marker inspection
+- browser authenticated runtime check only in non-production_persist or disabled mode first if applicable
+
+Full/security checks are not required in this planning step.
+
+20. Runtime proof remains blocked
+
+This plan does not approve:
+
+- starting dev server with production_persist;
+- calling the controlled route;
+- running production_persist proof;
+- SQL cleanup;
+- SQL verification from PowerShell;
+- direct /api/activity/complete production_persist proof.
+
+21. Approved next step
+
+Approved next step:
+
+P4.10.0-C8-E-F6-E-E-E — implement controlled production_persist proof route without runtime proof
+
+Scope of next step:
+
+- create only the new debug proof route;
+- do not run production_persist runtime proof;
+- do not change /api/activity/complete;
+- do not change schema/migrations/RLS/permissions;
+- do not call OpenAI;
+- do not execute SQL;
+- do not run cleanup.
+
+22. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no production_persist runtime execution;
+- no OpenAI call;
+- no schema or migration change;
+- no RLS or permission change;
+- no UI work;
+- no SQL in PowerShell;
+- no runtime/source code changes in F6-E-E-D;
+- no broad refactor;
+- no cleanup command without separate review;
+- no real /api/activity/complete production_persist proof yet.
+
+23. Definition of Done
+
+This F6-E-E-D implementation planning step is complete when:
+
+- this document exists under docs/value-objects;
+- only this document is changed;
+- document is committed and pushed;
+- working tree is clean;
+- recent git log shows this implementation plan above 8169b19.
