@@ -1,0 +1,2305 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-E-B
+Inspect controlled production_persist proof route options
+Created: 2026-05-23
+
+1. Purpose
+
+This document inspects controlled production_persist proof route options after F6-E-E-A prerequisites planning.
+
+No runtime/source code changes are made in this step.
+
+This document does not approve production_persist.
+
+2. Baseline
+
+Current HEAD before inspection:
+
+- a435f0a
+
+Expected baseline:
+
+- a435f0a — Fix Category Derivation production persist metadata marker
+
+3. Inspection marker summary
+
+- config supports production_persist: True
+- config supports shadow_persist: True
+- config has failActivityComplete: True
+- config has isProductionPersistMode: True
+- config has shouldPersist: True
+- config has shouldResolve: True
+
+- adapter uses runLookup: True
+- adapter uses routeRunner: True
+- adapter exposes production persist mode: False
+- adapter non-blocking: True
+- adapter exposes rows created: True
+- adapter exposes derivationRunId: True
+
+- routeRunner supports production_persist: False
+- routeRunner uses runLookup: False
+- routeRunner creates run: True
+- routeRunner persists rows: True
+
+- runLookup supports version tuple: True
+- runLookup completed statuses: True
+
+- idempotency route uses adapter: True
+- idempotency route accepts mode input: True
+- idempotency route mentions shadow_persist: True
+- idempotency route mentions production_persist: True
+- idempotency route has callTwice: True
+- idempotency route has dbVerification: True
+- idempotency route has safety: True
+- idempotency route has doNotUseAsCanonicalProof: False
+- idempotency route has OpenAI safety: True
+- idempotency route has productionPersist safety: True
+- idempotency route completes event marker found: False
+- idempotency route has cleanupEligible marker: False
+- idempotency route has productionPersistProof marker: False
+- idempotency route has controlled proof marker: False
+
+- setup route creates started event: True
+- setup route has doNotUseAsCanonicalBusinessEvent: False
+- setup route has productionRouteUnderTest: True
+- setup route has cleanupEligible marker: False
+- setup route has productionPersistProof marker: False
+- setup route has controlled proof marker: False
+
+- complete route uses adapter: True
+- complete route mentions production_persist: False
+- complete route mentions failActivityComplete: False
+- complete route completes activity marker found: True
+- complete route has debug marker: True
+
+- plan requires cleanup: True
+- plan requires metadata marker: True
+- plan keeps production blocked: True
+- decision accepts adapter idempotency: True
+- proof passed: True
+
+- existing debug route candidate: True
+- existing debug route ready for controlled production_persist as-is: False
+- setup route ready for controlled production_persist as-is: False
+- real complete route recommended for first proof: False
+
+4. Route option evaluation
+
+Option A: real /api/activity/complete as first production_persist proof target.
+
+Decision: not recommended as first controlled proof target.
+
+Reason:
+
+- real complete route is closer to production behavior;
+- but it also increases risk of mixing proof rows with normal business flow;
+- F6-E-E-A requires explicit proof/test metadata and cleanup strategy before any runtime proof;
+- first proof should remain controlled and narrow.
+
+Option B: reuse existing adapter idempotency debug route as-is.
+
+Inspection result: strong technical candidate, but not ready as-is for controlled production_persist proof because production-persist proof markers and cleanup markers are incomplete.
+
+Option C: create or adjust a controlled proof-marker route.
+
+Inspection result: safest recommended direction if current routes lack exact production_persist proof markers.
+
+This option keeps the first production_persist proof debug-only, explicitly marked, cleanup-aware and not mixed with normal complete-route behavior.
+
+5. Preliminary conclusion
+
+production_persist remains blocked.
+
+The existing routes should not be treated as fully ready for controlled production_persist proof as-is.
+
+A follow-up decision should choose whether to patch existing debug routes with explicit proof markers and guards, or create a separate controlled proof route.
+
+6. Recommended next step
+
+Recommended next step:
+
+- P4.10.0-C8-E-F6-E-E-C — decide controlled production_persist proof route strategy
+
+The decision must answer:
+
+- reuse existing idempotency debug route as-is;
+- patch existing debug/setup routes with controlled proof markers;
+- create a separate controlled production_persist proof route;
+- keep /api/activity/complete out of the first production_persist proof;
+- define whether cleanup SQL planning is required before implementation;
+- keep production_persist blocked until that strategy is committed.
+
+7. Repository grep: production_persist
+
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt:171:- production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt:238:- production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:1393:- production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-b-production-integration-design.txt:158:5. production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f4-d-fix1-corrected-support-verification.txt:50:- production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f4-d-non-production-support-verification.txt:50:- production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:12785:   16:   "production_persist",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-b-exact-complete-route-patch-plan.txt:86:Do not enable shadow_persist or production_persist by default.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-c-d-complete-route-disabled-adapter-runtime-proof.txt:247:Do not enable production_persist yet.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-d-a-shadow-no-persist-test-plan.txt:154:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-d-a-shadow-no-persist-test-plan.txt:257:Do not enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-d-c-shadow-no-persist-runtime-proof.txt:235:Do not enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-d-c-shadow-no-persist-runtime-proof.txt:240:Do not enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-e-a-shadow-persist-test-plan.txt:164:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-e-a-shadow-persist-test-plan.txt:280:Do not enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-e-c-shadow-persist-runtime-proof.txt:18:production_persist was not enabled.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-e-c-shadow-persist-runtime-proof.txt:312:P4.10.0-C8-E-F5-F-A - plan safe production_persist transition or routeRunner-vs-legacy consolidation strategy.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-e-c-shadow-persist-runtime-proof.txt:315:Do not enable production_persist yet without a dedicated plan.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-e-c-shadow-persist-runtime-proof.txt:317:Before production_persist, decide:
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-e-c-shadow-persist-runtime-proof.txt:326:Do not enable production_persist yet.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:2:P4.10.0-C8-E-F5-F-A - Safe production_persist Transition and Legacy Consolidation Plan
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:13:production_persist is not enabled in this step.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:96:production_persist:
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:100:CENTRAL QUESTION BEFORE production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:102:Before production_persist, we must decide what becomes the authoritative Category Derivation path for /api/activity/complete.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:147:- best next step before production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:181:6. Do not enable production_persist until idempotency and bridge semantics are verified.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:183:WHY NOT production_persist IMMEDIATELY
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:185:production_persist currently technically works in local routeRunner tests, but enabling it too early would create architectural ambiguity:
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:197:These questions must be answered before production_persist is enabled.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:202:Do not enable production_persist until routeRunner-vs-legacy source-of-truth decision is documented.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:287:Before production_persist:
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:322:production_persist can be considered only after:
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:348:- no production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt:354:Do not enable production_persist yet.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-b-direct-adapter-idempotency-proof-plan.txt:13:production_persist is not enabled in this step.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-b-direct-adapter-idempotency-proof-plan.txt:68:production_persist transition and legacy consolidation strategy was documented.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-b-direct-adapter-idempotency-proof-plan.txt:119:- no production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-b-direct-adapter-idempotency-proof-plan.txt:285:- production_persist is enabled;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-b-direct-adapter-idempotency-proof-plan.txt:291:Do not enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-b-direct-adapter-idempotency-proof-plan.txt:311:- no production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-c-d-direct-adapter-idempotency-runtime-proof.txt:19:production_persist was not enabled.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-c-d-direct-adapter-idempotency-runtime-proof.txt:381:15. production_persist was not enabled.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-c-d-direct-adapter-idempotency-runtime-proof.txt:395:This reduces the risk of enabling a future production-like persistence mode, but does not yet mean production_persist should be enabled.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-c-d-direct-adapter-idempotency-runtime-proof.txt:403:- production_persist rollout safety;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-c-d-direct-adapter-idempotency-runtime-proof.txt:444:Prove that routeRunner failure behavior is safe before production_persist is considered.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-c-d-direct-adapter-idempotency-runtime-proof.txt:450:4. Should production_persist ever use failActivityComplete=true?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-c-d-direct-adapter-idempotency-runtime-proof.txt:455:Do not enable production_persist yet.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-a-failure-behavior-test-plan.txt:14:production_persist is not enabled in this step.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-a-failure-behavior-test-plan.txt:70:Before production_persist can be considered, we must know what happens when routeRunner adapter cannot complete successfully.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-a-failure-behavior-test-plan.txt:78:6. Should production_persist ever use failActivityComplete=true?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-a-failure-behavior-test-plan.txt:81:WHY FAILURE TESTS MUST COME BEFORE production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-a-failure-behavior-test-plan.txt:85:production_persist means persisted Category Derivation data may become canonical or semi-canonical. Before that, the system must prove:
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-a-failure-behavior-test-plan.txt:143:Do not force production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-a-failure-behavior-test-plan.txt:243:- rejects production_persist for debug proof.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-a-failure-behavior-test-plan.txt:323:6. No production_persist is enabled.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-a-failure-behavior-test-plan.txt:332:- production_persist should not block activity completion at first.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-a-failure-behavior-test-plan.txt:346:Do not enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-c-d-adapter-validation-failure-runtime-proof.txt:19:production_persist was not enabled.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-c-d-adapter-validation-failure-runtime-proof.txt:40:Before production_persist can be considered, the Category Derivation routeRunner adapter must prove safe behavior not only on positive paths but also on controlled failure paths.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-c-d-adapter-validation-failure-runtime-proof.txt:241:11. production_persist remains disabled.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-c-d-adapter-validation-failure-runtime-proof.txt:256:- production_persist should not block activity completion at first;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-c-d-adapter-validation-failure-runtime-proof.txt:274:- production_persist rollout safety.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-c-d-adapter-validation-failure-runtime-proof.txt:326:Do not enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-d-b-wrong-mode-no-write-runtime-proof.txt:18:production_persist was not enabled.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-d-b-wrong-mode-no-write-runtime-proof.txt:60:- no production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-d-b-wrong-mode-no-write-runtime-proof.txt:210:12. production_persist remains disabled.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-d-b-wrong-mode-no-write-runtime-proof.txt:236:- production_persist rollout safety.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-d-b-wrong-mode-no-write-runtime-proof.txt:280:5. Do not enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-d-b-wrong-mode-no-write-runtime-proof.txt:284:Do not enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-e-b-d-missing-actor-id-runtime-proof.txt:170:- missing actor id does not enable production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-e-b-d-missing-actor-id-runtime-proof.txt:215:Do not enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-a-persistence-failure-simulation-plan.txt:18:The goal is to prove that Category Derivation complete-route integration can handle a persistence-layer failure in a controlled way without corrupting production data, without modifying schema/RLS/permissions, without calling OpenAI, and without enabling production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-a-persistence-failure-simulation-plan.txt:58:  production_persist=false.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-a-persistence-failure-simulation-plan.txt:86:- no production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-a-persistence-failure-simulation-plan.txt:166:- no production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-a-persistence-failure-simulation-plan.txt:190:- production_persist,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3606:Purpose: Feature flags and mode contract; must verify no production_persist is enabled.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3614:- FOUND: production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3717:     16:   "production_persist",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3728:    147:     mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3733:    150:     mode === "shadow_persist" || mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3738:    155:   const isProductionPersistMode = mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3749:     16:   "production_persist",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3760:    147:     mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3763:    150:     mode === "shadow_persist" || mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3767:    147:     mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3770:>   150:     mode === "shadow_persist" || mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3777:    150:     mode === "shadow_persist" || mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3782:    155:   const isProductionPersistMode = mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3787:----- pattern: production_persist | line: 16 | context: 12-20 -----
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3792:>    16:   "production_persist",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3798:----- pattern: production_persist | line: 147 | context: 143-151 -----
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3803:>   147:     mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3806:    150:     mode === "shadow_persist" || mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3809:----- pattern: production_persist | line: 150 | context: 146-154 -----
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3811:    147:     mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3814:>   150:     mode === "shadow_persist" || mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3820:----- pattern: production_persist | line: 155 | context: 151-159 -----
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3825:>   155:   const isProductionPersistMode = mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3922:    147:     mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3925:    150:     mode === "shadow_persist" || mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3966:    150:     mode === "shadow_persist" || mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:3971:    155:   const isProductionPersistMode = mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:4052:    155:   const isProductionPersistMode = mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt:5793:- no production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-g-simulated-persistence-failure-runtime-proof.txt:205:- no production_persist is enabled;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-g-simulated-persistence-failure-runtime-proof.txt:262:Do not enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-h-c-strict-simulated-persistence-failure-runtime-proof.txt:45:- no production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-h-c-strict-simulated-persistence-failure-runtime-proof.txt:203:- no production_persist is enabled;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-h-c-strict-simulated-persistence-failure-runtime-proof.txt:267:Do not enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-i-a-failure-behavior-closure-and-next-transition.txt:52:- no production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-i-a-failure-behavior-closure-and-next-transition.txt:64:- no production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-i-a-failure-behavior-closure-and-next-transition.txt:79:- no production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-i-a-failure-behavior-closure-and-next-transition.txt:104:- no production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-i-a-failure-behavior-closure-and-next-transition.txt:125:- no production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-i-a-failure-behavior-closure-and-next-transition.txt:154:Do not enable production_persist until a separate production transition step explicitly allows it.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-i-a-failure-behavior-closure-and-next-transition.txt:205:Do not jump directly to production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-a-transition-after-f5g-plan.txt:13:The goal is to define the next safe transition from debug-only proofs toward controlled complete-route shadow_persist verification, while avoiding premature production_persist, UI work, OpenAI changes or schema changes.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-a-transition-after-f5g-plan.txt:43:- no production_persist was enabled;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-a-transition-after-f5g-plan.txt:87:- production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-a-transition-after-f5g-plan.txt:122:- no production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:663:- FOUND: production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:701:     16:   "production_persist",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:712:    147:     mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:722:     16:   "production_persist",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:733:    147:     mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:736:    150:     mode === "shadow_persist" || mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:738:----- pattern: production_persist | line: 16 | context: 12-20 -----
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:743:>    16:   "production_persist",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:749:----- pattern: production_persist | line: 147 | context: 143-151 -----
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:754:>   147:     mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:757:    150:     mode === "shadow_persist" || mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:818:    147:     mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:821:    150:     mode === "shadow_persist" || mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:840:    150:     mode === "shadow_persist" || mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:845:    155:   const isProductionPersistMode = mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:864:>   155:   const isProductionPersistMode = mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:1307:     64: - no production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:1406:    203: - no production_persist is enabled;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:1570:- FOUND: no production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:1646:     87: - production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:1650:----- pattern: no production_persist | line: 43 | context: 39-47 -----
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:1655:>    43: - no production_persist was enabled;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:1661:----- pattern: no production_persist | line: 122 | context: 118-126 -----
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:1666:>   122: - no production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:1678:- config includes production_persist marker: True
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:1691:Preliminary answer: shadow_persist is the candidate mode for controlled proof. production_persist must remain forbidden until a separate production transition step.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:1718:- no production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-fix2-missing-debug-route-inspection-correction.txt:83:- no production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-c-transition-decision-after-f6b.txt:35:- config contains shadow_persist and production_persist markers;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-c-transition-decision-after-f6b.txt:96:- do not enable production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-c-transition-decision-after-f6b.txt:108:- production_persist: forbidden
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-c-transition-decision-after-f6b.txt:117:- verify no production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-c-transition-decision-after-f6b.txt:124:Do not jump directly to production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-c-transition-decision-after-f6b.txt:162:- production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-a-complete-route-shadow-persist-proof-prep.txt:61:- production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-a-complete-route-shadow-persist-proof-prep.txt:91:- production_persist is not enabled
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-a-complete-route-shadow-persist-proof-prep.txt:333:     16:   "production_persist",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-a-complete-route-shadow-persist-proof-prep.txt:346:    147:     mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-a-complete-route-shadow-persist-proof-prep.txt:349:    150:     mode === "shadow_persist" || mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-a-complete-route-shadow-persist-proof-prep.txt:352:----- pattern: production_persist | line: 16 | context: 11-21 -----
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-a-complete-route-shadow-persist-proof-prep.txt:358:>    16:   "production_persist",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-a-complete-route-shadow-persist-proof-prep.txt:365:----- pattern: production_persist | line: 147 | context: 142-152 -----
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-a-complete-route-shadow-persist-proof-prep.txt:371:>   147:     mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-a-complete-route-shadow-persist-proof-prep.txt:374:    150:     mode === "shadow_persist" || mode === "production_persist";
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-c-complete-route-shadow-persist-runtime-proof.txt:36:- production_persist forbidden
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-c-complete-route-shadow-persist-runtime-proof.txt:179:- production_persist was not enabled
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-c-complete-route-shadow-persist-runtime-proof.txt:201:- production_persist is not enabled.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-c-complete-route-shadow-persist-runtime-proof.txt:207:- production_persist transition;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-d-complete-route-shadow-persist-proof-closure.txt:56:- production_persist was not enabled
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-d-complete-route-shadow-persist-proof-closure.txt:60:The purpose of F6-D was not to move to production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-d-complete-route-shadow-persist-proof-closure.txt:92:- production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-d-complete-route-shadow-persist-proof-closure.txt:106:- no production_persist until separate production-readiness plan is created
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-d-complete-route-shadow-persist-proof-closure.txt:155:- What exact conditions must be met before production_persist?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-d-complete-route-shadow-persist-proof-closure.txt:158:- Whether production_persist should be introduced through a narrow debug-only transition, a feature flag, or another staged proof.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-d-complete-route-shadow-persist-proof-closure.txt:159:- Whether additional database safety checks are needed before production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:13:The goal is to plan the path from proven shadow_persist behavior toward production readiness, without enabling production_persist yet.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:53:- production_persist was not enabled.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:59:"Can we enable production_persist immediately?"
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:63:"What exact safety conditions, inspection results, rollback strategy and observability gates must exist before production_persist can be enabled?"
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:69:Do not enable production_persist in F6-E-A.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:75:6. Main production_persist risks
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:77:Before production_persist can be enabled, these risks must be understood:
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:92:7. Required safety gates before production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:94:Before any production_persist transition is approved, we need a separate inspection and decision step covering:
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:105:- whether production_persist should first run only through a debug or controlled proof route;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:133:- design a controlled production_persist proof;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:134:- postpone production_persist until more safeguards exist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:153:The first production-readiness move should probably not be direct production_persist on /api/activity/complete for all events.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:161:Create a controlled production_persist proof using a debug setup event and a narrow proof path.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:164:Use production_persist only when a proof/test metadata marker is present.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:167:Keep failActivityComplete=false during initial production_persist so that completion remains non-blocking.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:170:Require idempotency proof and cleanup/rollback notes before production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:176:- production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:191:- no production_persist without a separate decision;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:212:- Is idempotency strong enough for production_persist?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:218:- Should failActivityComplete remain false for first production_persist stage?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt:219:- Is production_persist better introduced by a narrow controlled proof route rather than real /api/activity/complete?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:25:- has production_persist mode: True
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:48:- F6-E-A forbids production_persist: True
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:50:- production_persist not ready for direct enable: True
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:54:Question: Is idempotency strong enough for production_persist?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:57:Idempotency has visible support through runLookup and the idempotency debug route, but production_persist should not be enabled directly before a specific idempotency proof/decision confirms duplicate-run behavior at current HEAD.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:62:runLookup filters by event=True, versions=True, completed statuses=True. This is promising but requires proof before production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:72:This remains a cross-pipeline consistency risk. It should be addressed before broad production_persist rollout.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:84:Question: Should failActivityComplete remain false for first production_persist stage?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:87:Yes, first production_persist stage should likely remain non-blocking unless a later decision proves strict mode is safe for normal users.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:89:Question: Is production_persist better introduced by a narrow controlled proof route rather than real /api/activity/complete?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:92:Yes, based on current risks, a narrow controlled production_persist proof is safer than enabling production_persist broadly on /api/activity/complete.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:98:- production_persist exists as a mode, but is not approved for direct enablement.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:100:- idempotency support appears present but should receive a focused proof or decision before production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:102:- first production_persist experiment should likely be controlled, narrow, non-blocking and proof/test marked.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt:110:- no production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt:28:- production_persist mode exists: True
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt:35:- production_persist not ready for direct enable: True
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt:46:Do not enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt:48:Do not create a production_persist runtime proof yet.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt:58:Because of this, production_persist must be blocked until the idempotency gap is understood and resolved or explicitly accepted with a controlled alternative.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt:62:production_persist can create durable category_derivation_runs and activity_category_derivations rows.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt:73:Therefore production_persist must not be enabled directly.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt:79:P4.10.0-C8-E-F6-E-D-A ÔÇö inspect routeRunner idempotency gap before production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt:89:- Where exactly should completed-run lookup happen if production_persist is later enabled?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt:99:- production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt:100:- controlled production_persist proof
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt:101:- direct production_persist on /api/activity/complete
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt:123:reconsider production_persist readiness.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt:142:- no production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-a-route-runner-idempotency-gap-inspection.txt:4:routeRunner idempotency gap inspection before production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-a-route-runner-idempotency-gap-inspection.txt:36:- F6-E-C blocks production_persist: True
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-a-route-runner-idempotency-gap-inspection.txt:65:This means the production-readiness blocker from F6-E-B is real enough to require a focused idempotency design before production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-a-route-runner-idempotency-gap-inspection.txt:76:- whether existing-run detection should be active in shadow_persist, production_persist, or both;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-a-route-runner-idempotency-gap-inspection.txt:77:- how to prove duplicate-run prevention without enabling broad production_persist;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-a-route-runner-idempotency-gap-inspection.txt:87:- prove behavior through a controlled idempotency runtime proof before any production_persist transition.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-a-route-runner-idempotency-gap-inspection.txt:93:- no production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-b-idempotency-design-decision.txt:40:- F6-E-C blocks production_persist: True
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-b-idempotency-design-decision.txt:63:Do not immediately enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-b-idempotency-design-decision.txt:92:- Is production_persist still disabled?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-b-idempotency-design-decision.txt:112:- production_persist is not approved yet.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-b-idempotency-design-decision.txt:123:- production_persist needs protection independent of caller.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-b-idempotency-design-decision.txt:129:- production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-b-idempotency-design-decision.txt:130:- controlled production_persist proof
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-b-idempotency-design-decision.txt:131:- direct production_persist on /api/activity/complete
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-b-idempotency-design-decision.txt:169:- no production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-b-idempotency-design-decision.txt:178:- no production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-c-adapter-idempotency-runtime-proof-prep.txt:62:- no production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-c-adapter-idempotency-runtime-proof-prep.txt:76:- Is production_persist still disabled?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-c-adapter-idempotency-runtime-proof-prep.txt:89:- no production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-e-adapter-idempotency-runtime-proof.txt:201:- production_persist was not enabled.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-e-adapter-idempotency-runtime-proof.txt:224:- production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-e-adapter-idempotency-runtime-proof.txt:225:- production_persist runtime proof
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-e-adapter-idempotency-runtime-proof.txt:226:- direct production_persist on /api/activity/complete
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-e-adapter-idempotency-runtime-proof.txt:250:- production_persist is still not automatically approved;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-e-adapter-idempotency-runtime-proof.txt:251:- the next step should decide whether adapter-level idempotency is sufficient for a narrow controlled production-readiness proof, or whether routeRunner-level idempotency must be implemented before any production_persist stage.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-e-adapter-idempotency-runtime-proof.txt:262:- Is routeRunner-level idempotency still required before production_persist?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-e-adapter-idempotency-runtime-proof.txt:263:- Can a narrow controlled production_persist proof be planned, or should production_persist remain blocked?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-e-adapter-idempotency-runtime-proof.txt:264:- Does a proof/test cleanup policy need to be written before any production_persist proof?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:64:- broad production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:65:- direct production_persist on /api/activity/complete for normal user activity
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:67:- production_persist runtime proof without a cleanup/rollback plan
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:88:However, production_persist is still not approved because other production-readiness gates remain open:
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:92:- decision whether first production_persist proof should use debug-only proof route or real /api/activity/complete;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:93:- decision whether failActivityComplete must remain false during first production_persist stage;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:101:P4.10.0-C8-E-F6-E-E-A ÔÇö plan controlled production_persist proof prerequisites
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:107:- What cleanup or rollback policy is required before any production_persist proof?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:109:- Should the first production_persist proof be debug-only, real complete-route, or staged through a proof marker?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:110:- Should failActivityComplete remain false for the first production_persist proof?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:120:- production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:121:- controlled production_persist runtime proof
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:122:- direct production_persist on /api/activity/complete
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:139:- no production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:156:- production_persist remains blocked until cleanup/rollback and controlled proof prerequisites are planned;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt:157:- next work should move from idempotency blocker resolution to production_persist proof prerequisite planning.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:4:Controlled production_persist proof prerequisites plan
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:9:This document starts the controlled production_persist proof prerequisites block.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:13:This document does not approve production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:15:The goal is to define exactly what must be inspected, decided and prepared before any controlled production_persist runtime proof can be attempted.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:52:- production_persist remains blocked until cleanup/rollback and controlled proof prerequisites are planned.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:56:This plan does not enable production_persist.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:58:This plan does not approve a production_persist runtime proof.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:60:This plan does not approve direct production_persist on /api/activity/complete.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:66:Before any controlled production_persist proof, we must answer:
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:68:- What cleanup or rollback policy is required before any production_persist proof?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:70:- Should the first production_persist proof be debug-only, real complete-route, or staged through a proof marker?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:71:- Should failActivityComplete remain false for the first production_persist proof?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:81:A controlled production_persist proof must not proceed until there is an explicit cleanup/rollback plan.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:103:- purpose: controlled_production_persist_proof
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:113:A first controlled production_persist proof may create only the rows required to prove the Category Derivation persistence path.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:128:- production_persist mode was intentionally enabled only for the controlled proof context;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:133:9. Recommended first production_persist proof shape
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:139:The first production_persist proof should not be broad production_persist on /api/activity/complete for all normal events.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:145:- enable production_persist only in a controlled dev-server environment;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:156:Initial production_persist proof should keep:
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:162:The first production_persist proof should verify durable persistence behavior without risking activity completion failure for normal route behavior.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:164:Strict blocking mode may be considered only after non-blocking production_persist proof is proven safe.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:166:11. production_persist mode prerequisite
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:170:- CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:186:P4.10.0-C8-E-F6-E-E-B ÔÇö inspect controlled production_persist proof route options
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:205:- Can the existing adapter idempotency debug route be reused for controlled production_persist proof?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:206:- Does the route explicitly reject or allow production_persist?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:210:- Is /api/activity/complete needed for the first production_persist proof, or is debug-only safer?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:212:- What exact new information would production_persist proof add?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:219:- production_persist
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:220:- runtime production_persist proof
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:221:- direct production_persist on /api/activity/complete
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:239:- no production_persist
+- lib/activity/categoryDerivation/config.ts:16:  "production_persist",
+- lib/activity/categoryDerivation/config.ts:147:    mode === "production_persist";
+- lib/activity/categoryDerivation/config.ts:150:    mode === "shadow_persist" || mode === "production_persist";
+- lib/activity/categoryDerivation/config.ts:155:  const isProductionPersistMode = mode === "production_persist";
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts:466:        error: "production_persist must not be enabled for this debug proof.",
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts:449:        error: "production_persist must not be enabled for this debug proof.",
+
+8. Repository grep: cleanupEligible
+
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:105:- cleanupEligible: true
+
+9. Repository grep: controlled_production_persist_proof
+
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:103:- purpose: controlled_production_persist_proof
+
+10. Repository grep: productionPersistProof
+
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt:106:- productionPersistProof: true
+
+11. Source snippets
+
+## config.ts
+
+Path: .\lib\activity\categoryDerivation\config.ts
+
+Marker summary:
+- FOUND: production_persist
+- FOUND: shadow_persist
+- FOUND: failActivityComplete
+- FOUND: isProductionPersistMode
+- FOUND: shouldPersist
+- FOUND: shouldResolve
+
+Relevant snippets:
+
+----- pattern: production_persist | line: 16 | context: 10-22 -----
+     10: export const CATEGORY_DERIVATION_ROUTE_RUNNER_MODES = [
+     11:   "disabled",
+     12:   "debug_only",
+     13:   "legacy_existing",
+     14:   "shadow_no_persist",
+     15:   "shadow_persist",
+>    16:   "production_persist",
+     17: ] as const;
+     18:
+     19: export type CategoryDerivationRouteRunnerMode =
+     20:   (typeof CATEGORY_DERIVATION_ROUTE_RUNNER_MODES)[number];
+     21:
+     22: export interface CategoryDerivationRouteRunnerRawConfig {
+
+----- pattern: production_persist | line: 147 | context: 141-153 -----
+    141:   const isDisabled = mode === "disabled";
+    142:   const isDebugOnly = mode === "debug_only";
+    143:   const usesLegacyExistingCompleteRouteFlow = mode === "legacy_existing";
+    144:   const usesRouteRunnerInCompleteRoute =
+    145:     mode === "shadow_no_persist" ||
+    146:     mode === "shadow_persist" ||
+>   147:     mode === "production_persist";
+    148:
+    149:   const shouldPersist =
+    150:     mode === "shadow_persist" || mode === "production_persist";
+    151:
+    152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
+    153:   const isShadowMode =
+
+----- pattern: production_persist | line: 150 | context: 144-156 -----
+    144:   const usesRouteRunnerInCompleteRoute =
+    145:     mode === "shadow_no_persist" ||
+    146:     mode === "shadow_persist" ||
+    147:     mode === "production_persist";
+    148:
+    149:   const shouldPersist =
+>   150:     mode === "shadow_persist" || mode === "production_persist";
+    151:
+    152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
+    153:   const isShadowMode =
+    154:     mode === "shadow_no_persist" || mode === "shadow_persist";
+    155:   const isProductionPersistMode = mode === "production_persist";
+    156:
+
+----- pattern: production_persist | line: 155 | context: 149-161 -----
+    149:   const shouldPersist =
+    150:     mode === "shadow_persist" || mode === "production_persist";
+    151:
+    152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
+    153:   const isShadowMode =
+    154:     mode === "shadow_no_persist" || mode === "shadow_persist";
+>   155:   const isProductionPersistMode = mode === "production_persist";
+    156:
+    157:   return {
+    158:     mode,
+    159:     includeResponseDebug,
+    160:     failActivityComplete,
+    161:     isDisabled,
+
+----- pattern: shadow_persist | line: 15 | context: 9-21 -----
+      9:
+     10: export const CATEGORY_DERIVATION_ROUTE_RUNNER_MODES = [
+     11:   "disabled",
+     12:   "debug_only",
+     13:   "legacy_existing",
+     14:   "shadow_no_persist",
+>    15:   "shadow_persist",
+     16:   "production_persist",
+     17: ] as const;
+     18:
+     19: export type CategoryDerivationRouteRunnerMode =
+     20:   (typeof CATEGORY_DERIVATION_ROUTE_RUNNER_MODES)[number];
+     21:
+
+----- pattern: shadow_persist | line: 146 | context: 140-152 -----
+    140:
+    141:   const isDisabled = mode === "disabled";
+    142:   const isDebugOnly = mode === "debug_only";
+    143:   const usesLegacyExistingCompleteRouteFlow = mode === "legacy_existing";
+    144:   const usesRouteRunnerInCompleteRoute =
+    145:     mode === "shadow_no_persist" ||
+>   146:     mode === "shadow_persist" ||
+    147:     mode === "production_persist";
+    148:
+    149:   const shouldPersist =
+    150:     mode === "shadow_persist" || mode === "production_persist";
+    151:
+    152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
+
+----- pattern: shadow_persist | line: 150 | context: 144-156 -----
+    144:   const usesRouteRunnerInCompleteRoute =
+    145:     mode === "shadow_no_persist" ||
+    146:     mode === "shadow_persist" ||
+    147:     mode === "production_persist";
+    148:
+    149:   const shouldPersist =
+>   150:     mode === "shadow_persist" || mode === "production_persist";
+    151:
+    152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
+    153:   const isShadowMode =
+    154:     mode === "shadow_no_persist" || mode === "shadow_persist";
+    155:   const isProductionPersistMode = mode === "production_persist";
+    156:
+
+----- pattern: shadow_persist | line: 154 | context: 148-160 -----
+    148:
+    149:   const shouldPersist =
+    150:     mode === "shadow_persist" || mode === "production_persist";
+    151:
+    152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
+    153:   const isShadowMode =
+>   154:     mode === "shadow_no_persist" || mode === "shadow_persist";
+    155:   const isProductionPersistMode = mode === "production_persist";
+    156:
+    157:   return {
+    158:     mode,
+    159:     includeResponseDebug,
+    160:     failActivityComplete,
+
+----- pattern: failActivityComplete | line: 25 | context: 19-31 -----
+     19: export type CategoryDerivationRouteRunnerMode =
+     20:   (typeof CATEGORY_DERIVATION_ROUTE_RUNNER_MODES)[number];
+     21:
+     22: export interface CategoryDerivationRouteRunnerRawConfig {
+     23:   mode: string | undefined;
+     24:   includeResponseDebug: string | undefined;
+>    25:   failActivityComplete: string | undefined;
+     26: }
+     27:
+     28: export interface CategoryDerivationRouteRunnerConfig {
+     29:   mode: CategoryDerivationRouteRunnerMode;
+     30:   includeResponseDebug: boolean;
+     31:   failActivityComplete: boolean;
+
+----- pattern: failActivityComplete | line: 31 | context: 25-37 -----
+     25:   failActivityComplete: string | undefined;
+     26: }
+     27:
+     28: export interface CategoryDerivationRouteRunnerConfig {
+     29:   mode: CategoryDerivationRouteRunnerMode;
+     30:   includeResponseDebug: boolean;
+>    31:   failActivityComplete: boolean;
+     32:   isDisabled: boolean;
+     33:   isDebugOnly: boolean;
+     34:   usesLegacyExistingCompleteRouteFlow: boolean;
+     35:   usesRouteRunnerInCompleteRoute: boolean;
+     36:   shouldPersist: boolean;
+     37:   shouldResolve: boolean;
+
+----- pattern: failActivityComplete | line: 121 | context: 115-127 -----
+    115:   const warnings: string[] = [];
+    116:
+    117:   const raw: CategoryDerivationRouteRunnerRawConfig = {
+    118:     mode: env[CATEGORY_DERIVATION_ROUTE_RUNNER_MODE_ENV],
+    119:     includeResponseDebug:
+    120:       env[CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG_ENV],
+>   121:     failActivityComplete:
+    122:       env[CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE_ENV],
+    123:   };
+    124:
+    125:   const mode = readModeEnv(raw.mode, warnings);
+    126:
+    127:   const includeResponseDebug = readBooleanEnv(
+
+----- pattern: failActivityComplete | line: 134 | context: 128-140 -----
+    128:     raw.includeResponseDebug,
+    129:     false,
+    130:     CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG_ENV,
+    131:     warnings,
+    132:   );
+    133:
+>   134:   const failActivityComplete = readBooleanEnv(
+    135:     raw.failActivityComplete,
+    136:     false,
+    137:     CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE_ENV,
+    138:     warnings,
+    139:   );
+    140:
+
+----- pattern: isProductionPersistMode | line: 39 | context: 33-45 -----
+     33:   isDebugOnly: boolean;
+     34:   usesLegacyExistingCompleteRouteFlow: boolean;
+     35:   usesRouteRunnerInCompleteRoute: boolean;
+     36:   shouldPersist: boolean;
+     37:   shouldResolve: boolean;
+     38:   isShadowMode: boolean;
+>    39:   isProductionPersistMode: boolean;
+     40:   raw: CategoryDerivationRouteRunnerRawConfig;
+     41:   warnings: string[];
+     42: }
+     43:
+     44: function normalizeEnvText(value: string | undefined): string | null {
+     45:   if (typeof value !== "string") {
+
+----- pattern: isProductionPersistMode | line: 155 | context: 149-161 -----
+    149:   const shouldPersist =
+    150:     mode === "shadow_persist" || mode === "production_persist";
+    151:
+    152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
+    153:   const isShadowMode =
+    154:     mode === "shadow_no_persist" || mode === "shadow_persist";
+>   155:   const isProductionPersistMode = mode === "production_persist";
+    156:
+    157:   return {
+    158:     mode,
+    159:     includeResponseDebug,
+    160:     failActivityComplete,
+    161:     isDisabled,
+
+----- pattern: isProductionPersistMode | line: 168 | context: 162-174 -----
+    162:     isDebugOnly,
+    163:     usesLegacyExistingCompleteRouteFlow,
+    164:     usesRouteRunnerInCompleteRoute,
+    165:     shouldPersist,
+    166:     shouldResolve,
+    167:     isShadowMode,
+>   168:     isProductionPersistMode,
+    169:     raw,
+    170:     warnings,
+    171:   };
+    172: }
+    173:
+    174: export function getCategoryDerivationRouteRunnerConfigSummary(
+
+----- pattern: isProductionPersistMode | line: 189 | context: 183-192 -----
+    183:     usesLegacyExistingCompleteRouteFlow:
+    184:       config.usesLegacyExistingCompleteRouteFlow,
+    185:     usesRouteRunnerInCompleteRoute: config.usesRouteRunnerInCompleteRoute,
+    186:     shouldPersist: config.shouldPersist,
+    187:     shouldResolve: config.shouldResolve,
+    188:     isShadowMode: config.isShadowMode,
+>   189:     isProductionPersistMode: config.isProductionPersistMode,
+    190:     warnings: config.warnings,
+    191:   };
+    192: }
+
+----- pattern: shouldPersist | line: 36 | context: 30-42 -----
+     30:   includeResponseDebug: boolean;
+     31:   failActivityComplete: boolean;
+     32:   isDisabled: boolean;
+     33:   isDebugOnly: boolean;
+     34:   usesLegacyExistingCompleteRouteFlow: boolean;
+     35:   usesRouteRunnerInCompleteRoute: boolean;
+>    36:   shouldPersist: boolean;
+     37:   shouldResolve: boolean;
+     38:   isShadowMode: boolean;
+     39:   isProductionPersistMode: boolean;
+     40:   raw: CategoryDerivationRouteRunnerRawConfig;
+     41:   warnings: string[];
+     42: }
+
+----- pattern: shouldPersist | line: 149 | context: 143-155 -----
+    143:   const usesLegacyExistingCompleteRouteFlow = mode === "legacy_existing";
+    144:   const usesRouteRunnerInCompleteRoute =
+    145:     mode === "shadow_no_persist" ||
+    146:     mode === "shadow_persist" ||
+    147:     mode === "production_persist";
+    148:
+>   149:   const shouldPersist =
+    150:     mode === "shadow_persist" || mode === "production_persist";
+    151:
+    152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
+    153:   const isShadowMode =
+    154:     mode === "shadow_no_persist" || mode === "shadow_persist";
+    155:   const isProductionPersistMode = mode === "production_persist";
+
+----- pattern: shouldPersist | line: 165 | context: 159-171 -----
+    159:     includeResponseDebug,
+    160:     failActivityComplete,
+    161:     isDisabled,
+    162:     isDebugOnly,
+    163:     usesLegacyExistingCompleteRouteFlow,
+    164:     usesRouteRunnerInCompleteRoute,
+>   165:     shouldPersist,
+    166:     shouldResolve,
+    167:     isShadowMode,
+    168:     isProductionPersistMode,
+    169:     raw,
+    170:     warnings,
+    171:   };
+
+----- pattern: shouldPersist | line: 186 | context: 180-192 -----
+    180:     failActivityComplete: config.failActivityComplete,
+    181:     isDisabled: config.isDisabled,
+    182:     isDebugOnly: config.isDebugOnly,
+    183:     usesLegacyExistingCompleteRouteFlow:
+    184:       config.usesLegacyExistingCompleteRouteFlow,
+    185:     usesRouteRunnerInCompleteRoute: config.usesRouteRunnerInCompleteRoute,
+>   186:     shouldPersist: config.shouldPersist,
+    187:     shouldResolve: config.shouldResolve,
+    188:     isShadowMode: config.isShadowMode,
+    189:     isProductionPersistMode: config.isProductionPersistMode,
+    190:     warnings: config.warnings,
+    191:   };
+    192: }
+
+----- pattern: shouldResolve | line: 37 | context: 31-43 -----
+     31:   failActivityComplete: boolean;
+     32:   isDisabled: boolean;
+     33:   isDebugOnly: boolean;
+     34:   usesLegacyExistingCompleteRouteFlow: boolean;
+     35:   usesRouteRunnerInCompleteRoute: boolean;
+     36:   shouldPersist: boolean;
+>    37:   shouldResolve: boolean;
+     38:   isShadowMode: boolean;
+     39:   isProductionPersistMode: boolean;
+     40:   raw: CategoryDerivationRouteRunnerRawConfig;
+     41:   warnings: string[];
+     42: }
+     43:
+
+----- pattern: shouldResolve | line: 152 | context: 146-158 -----
+    146:     mode === "shadow_persist" ||
+    147:     mode === "production_persist";
+    148:
+    149:   const shouldPersist =
+    150:     mode === "shadow_persist" || mode === "production_persist";
+    151:
+>   152:   const shouldResolve = usesRouteRunnerInCompleteRoute;
+    153:   const isShadowMode =
+    154:     mode === "shadow_no_persist" || mode === "shadow_persist";
+    155:   const isProductionPersistMode = mode === "production_persist";
+    156:
+    157:   return {
+    158:     mode,
+
+----- pattern: shouldResolve | line: 166 | context: 160-172 -----
+    160:     failActivityComplete,
+    161:     isDisabled,
+    162:     isDebugOnly,
+    163:     usesLegacyExistingCompleteRouteFlow,
+    164:     usesRouteRunnerInCompleteRoute,
+    165:     shouldPersist,
+>   166:     shouldResolve,
+    167:     isShadowMode,
+    168:     isProductionPersistMode,
+    169:     raw,
+    170:     warnings,
+    171:   };
+    172: }
+
+----- pattern: shouldResolve | line: 187 | context: 181-192 -----
+    181:     isDisabled: config.isDisabled,
+    182:     isDebugOnly: config.isDebugOnly,
+    183:     usesLegacyExistingCompleteRouteFlow:
+    184:       config.usesLegacyExistingCompleteRouteFlow,
+    185:     usesRouteRunnerInCompleteRoute: config.usesRouteRunnerInCompleteRoute,
+    186:     shouldPersist: config.shouldPersist,
+>   187:     shouldResolve: config.shouldResolve,
+    188:     isShadowMode: config.isShadowMode,
+    189:     isProductionPersistMode: config.isProductionPersistMode,
+    190:     warnings: config.warnings,
+    191:   };
+    192: }
+
+----
+
+## completeRouteIntegration.ts
+
+Path: .\lib\activity\categoryDerivation\completeRouteIntegration.ts
+
+Marker summary:
+- FOUND: findExistingCompletedCategoryDerivationRunForActivityEvent
+- FOUND: runCategoryDerivationForCompleteRoute
+- MISSING: isProductionPersistMode
+- FOUND: persistenceDerivationRowsCreated
+- FOUND: derivationRunId
+- FOUND: ok: routeRunnerOk ? true : !params.config.failActivityComplete
+
+Relevant snippets:
+
+----- pattern: findExistingCompletedCategoryDerivationRunForActivityEvent | line: 11 | context: 5-17 -----
+      5: } from "./config";
+      6: import {
+      7:   DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION,
+      8:   DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION,
+      9:   DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION,
+     10:   DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+>    11:   findExistingCompletedCategoryDerivationRunForActivityEvent,
+     12:   summarizeExistingCompletedCategoryDerivationRunLookup,
+     13:   type CategoryDerivationRunLookupClient,
+     14:   type FindExistingCompletedCategoryDerivationRunResult,
+     15: } from "./runLookup";
+     16: import {
+     17:   runCategoryDerivationRoute,
+
+----- pattern: findExistingCompletedCategoryDerivationRunForActivityEvent | line: 337 | context: 331-343 -----
+    331:
+    332:   let idempotency: FindExistingCompletedCategoryDerivationRunResult | null =
+    333:     null;
+    334:
+    335:   if (config.shouldPersist) {
+    336:     idempotency =
+>   337:       await findExistingCompletedCategoryDerivationRunForActivityEvent(
+    338:         params.supabase,
+    339:         {
+    340:           activityEventId,
+    341:           processorVersion,
+    342:           ruleVersion,
+    343:           schemaVersion,
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 36 | context: 30-42 -----
+     30:   description?: string | null;
+     31:   duration_minutes?: number | null;
+     32:   source?: string | null;
+     33:   metadata_json?: Record<string, unknown> | null;
+     34: }
+     35:
+>    36: export interface RunCategoryDerivationForCompleteRouteInput {
+     37:   supabase: CategoryDerivationCompleteRouteIntegrationSupabaseClient;
+     38:   activityEvent: CategoryDerivationCompleteRouteActivityEvent;
+     39:   actorId: string | null;
+     40:   organizationId?: string | null;
+     41:   inputLanguage?: string | null;
+     42:   config?: CategoryDerivationRouteRunnerConfig;
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 239 | context: 233-245 -----
+    233:     debug: {
+    234:       routeRunnerResult: params.routeRunnerResult,
+    235:     },
+    236:   });
+    237: }
+    238:
+>   239: export async function runCategoryDerivationForCompleteRoute(
+    240:   params: RunCategoryDerivationForCompleteRouteInput,
+    241: ): Promise<CategoryDerivationCompleteRouteIntegrationResult> {
+    242:   const config = params.config ?? getCategoryDerivationRouteRunnerConfig();
+    243:
+    244:   if (config.isDisabled) {
+    245:     return baseResult({
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 240 | context: 234-246 -----
+    234:       routeRunnerResult: params.routeRunnerResult,
+    235:     },
+    236:   });
+    237: }
+    238:
+    239: export async function runCategoryDerivationForCompleteRoute(
+>   240:   params: RunCategoryDerivationForCompleteRouteInput,
+    241: ): Promise<CategoryDerivationCompleteRouteIntegrationResult> {
+    242:   const config = params.config ?? getCategoryDerivationRouteRunnerConfig();
+    243:
+    244:   if (config.isDisabled) {
+    245:     return baseResult({
+    246:       config,
+
+----- pattern: persistenceDerivationRowsCreated | line: 73 | context: 67-79 -----
+     67:   ok: boolean;
+     68:   skipped: boolean;
+     69:   reason: CategoryDerivationCompleteRouteIntegrationReason;
+     70:   derivationRunId: string | null;
+     71:   candidateCount: number;
+     72:   resolvedCandidateCount: number;
+>    73:   persistenceDerivationRowsCreated: number;
+     74:   warnings: string[];
+     75:   errors: string[];
+     76:   config: ReturnType<typeof getCategoryDerivationRouteRunnerConfigSummary>;
+     77:   idempotency: ReturnType<
+     78:     typeof summarizeExistingCompletedCategoryDerivationRunLookup
+     79:   > | null;
+
+----- pattern: persistenceDerivationRowsCreated | line: 156 | context: 150-162 -----
+    150:   ok: boolean;
+    151:   skipped: boolean;
+    152:   reason: CategoryDerivationCompleteRouteIntegrationReason;
+    153:   derivationRunId?: string | null;
+    154:   candidateCount?: number;
+    155:   resolvedCandidateCount?: number;
+>   156:   persistenceDerivationRowsCreated?: number;
+    157:   warnings?: string[];
+    158:   errors?: string[];
+    159:   idempotency?: FindExistingCompletedCategoryDerivationRunResult | null;
+    160:   routeRunnerExecuted?: boolean;
+    161:   routeRunnerPersisted?: boolean;
+    162:   routeRunnerResolved?: boolean;
+
+----- pattern: persistenceDerivationRowsCreated | line: 174 | context: 168-180 -----
+    168:     ok: params.ok,
+    169:     skipped: params.skipped,
+    170:     reason: params.reason,
+    171:     derivationRunId: params.derivationRunId ?? null,
+    172:     candidateCount: params.candidateCount ?? 0,
+    173:     resolvedCandidateCount: params.resolvedCandidateCount ?? 0,
+>   174:     persistenceDerivationRowsCreated:
+    175:       params.persistenceDerivationRowsCreated ?? 0,
+    176:     warnings: [...params.config.warnings, ...(params.warnings ?? [])],
+    177:     errors: params.errors ?? [],
+    178:     config: getCategoryDerivationRouteRunnerConfigSummary(params.config),
+    179:     idempotency: params.idempotency
+    180:       ? summarizeExistingCompletedCategoryDerivationRunLookup(
+
+----- pattern: persistenceDerivationRowsCreated | line: 175 | context: 169-181 -----
+    169:     skipped: params.skipped,
+    170:     reason: params.reason,
+    171:     derivationRunId: params.derivationRunId ?? null,
+    172:     candidateCount: params.candidateCount ?? 0,
+    173:     resolvedCandidateCount: params.resolvedCandidateCount ?? 0,
+    174:     persistenceDerivationRowsCreated:
+>   175:       params.persistenceDerivationRowsCreated ?? 0,
+    176:     warnings: [...params.config.warnings, ...(params.warnings ?? [])],
+    177:     errors: params.errors ?? [],
+    178:     config: getCategoryDerivationRouteRunnerConfigSummary(params.config),
+    179:     idempotency: params.idempotency
+    180:       ? summarizeExistingCompletedCategoryDerivationRunLookup(
+    181:           params.idempotency,
+
+----- pattern: derivationRunId | line: 70 | context: 64-76 -----
+     64: export interface CategoryDerivationCompleteRouteIntegrationResult {
+     65:   enabled: boolean;
+     66:   mode: string;
+     67:   ok: boolean;
+     68:   skipped: boolean;
+     69:   reason: CategoryDerivationCompleteRouteIntegrationReason;
+>    70:   derivationRunId: string | null;
+     71:   candidateCount: number;
+     72:   resolvedCandidateCount: number;
+     73:   persistenceDerivationRowsCreated: number;
+     74:   warnings: string[];
+     75:   errors: string[];
+     76:   config: ReturnType<typeof getCategoryDerivationRouteRunnerConfigSummary>;
+
+----- pattern: derivationRunId | line: 153 | context: 147-159 -----
+    147:
+    148: function baseResult(params: {
+    149:   config: CategoryDerivationRouteRunnerConfig;
+    150:   ok: boolean;
+    151:   skipped: boolean;
+    152:   reason: CategoryDerivationCompleteRouteIntegrationReason;
+>   153:   derivationRunId?: string | null;
+    154:   candidateCount?: number;
+    155:   resolvedCandidateCount?: number;
+    156:   persistenceDerivationRowsCreated?: number;
+    157:   warnings?: string[];
+    158:   errors?: string[];
+    159:   idempotency?: FindExistingCompletedCategoryDerivationRunResult | null;
+
+----- pattern: derivationRunId | line: 171 | context: 165-177 -----
+    165:   return {
+    166:     enabled: !params.config.isDisabled,
+    167:     mode: params.config.mode,
+    168:     ok: params.ok,
+    169:     skipped: params.skipped,
+    170:     reason: params.reason,
+>   171:     derivationRunId: params.derivationRunId ?? null,
+    172:     candidateCount: params.candidateCount ?? 0,
+    173:     resolvedCandidateCount: params.resolvedCandidateCount ?? 0,
+    174:     persistenceDerivationRowsCreated:
+    175:       params.persistenceDerivationRowsCreated ?? 0,
+    176:     warnings: [...params.config.warnings, ...(params.warnings ?? [])],
+    177:     errors: params.errors ?? [],
+
+----- pattern: derivationRunId | line: 223 | context: 217-229 -----
+    217:
+    218:   return baseResult({
+    219:     config: params.config,
+    220:     ok: routeRunnerOk ? true : !params.config.failActivityComplete,
+    221:     skipped: false,
+    222:     reason,
+>   223:     derivationRunId: params.routeRunnerResult.derivationRunId,
+    224:     candidateCount: params.routeRunnerResult.candidates.length,
+    225:     resolvedCandidateCount: params.routeRunnerResult.resolvedCandidates.length,
+    226:     persistenceDerivationRowsCreated: rowsCreated,
+    227:     warnings: params.routeRunnerResult.warnings,
+    228:     errors: params.routeRunnerResult.errors,
+    229:     idempotency: params.idempotency,
+
+----- pattern: ok: routeRunnerOk ? true : !params.config.failActivityComplete | line: 220 | context: 214-226 -----
+    214:   const reason = routeRunnerOk
+    215:     ? "route_runner_completed"
+    216:     : getRouteRunnerFailureReason(params.routeRunnerResult);
+    217:
+    218:   return baseResult({
+    219:     config: params.config,
+>   220:     ok: routeRunnerOk ? true : !params.config.failActivityComplete,
+    221:     skipped: false,
+    222:     reason,
+    223:     derivationRunId: params.routeRunnerResult.derivationRunId,
+    224:     candidateCount: params.routeRunnerResult.candidates.length,
+    225:     resolvedCandidateCount: params.routeRunnerResult.resolvedCandidates.length,
+    226:     persistenceDerivationRowsCreated: rowsCreated,
+
+----
+
+## routeRunner.ts
+
+Path: .\lib\activity\categoryDerivation\routeRunner.ts
+
+Marker summary:
+- MISSING: production_persist
+- FOUND: createCategoryDerivationRun
+- FOUND: persistActivityCategoryDerivations
+- MISSING: findExistingCompletedCategoryDerivationRunForActivityEvent
+- FOUND: derivationRunId
+
+Relevant snippets:
+
+----- pattern: createCategoryDerivationRun | line: 8 | context: 2-14 -----
+      2: import {
+      3:   resolveCategoryCandidates,
+      4:   type CategoryResolverOptions,
+      5:   type CategoryResolverSupabaseClient,
+      6: } from "./resolver";
+      7: import {
+>     8:   createCategoryDerivationRun,
+      9:   failCategoryDerivationRun,
+     10:   finishCategoryDerivationRun,
+     11:   persistActivityCategoryDerivations,
+     12:   type CategoryDerivationPersistenceClient,
+     13:   type CreateCategoryDerivationRunResult,
+     14:   type PersistActivityCategoryDerivationsResult,
+
+----- pattern: createCategoryDerivationRun | line: 13 | context: 7-19 -----
+      7: import {
+      8:   createCategoryDerivationRun,
+      9:   failCategoryDerivationRun,
+     10:   finishCategoryDerivationRun,
+     11:   persistActivityCategoryDerivations,
+     12:   type CategoryDerivationPersistenceClient,
+>    13:   type CreateCategoryDerivationRunResult,
+     14:   type PersistActivityCategoryDerivationsResult,
+     15:   type UpdateCategoryDerivationRunResult,
+     16: } from "./persistence";
+     17: import type {
+     18:   CategoryCandidate,
+     19:   CategoryDerivationInput,
+
+----- pattern: createCategoryDerivationRun | line: 54 | context: 48-60 -----
+     48:   persisted: boolean;
+     49:   resolved: boolean;
+     50:   derivationRunId: string | null;
+     51:   derivation: CategoryDerivationResult;
+     52:   resolution: CategoryResolutionResult | null;
+     53:   persistence: {
+>    54:     runCreate: CreateCategoryDerivationRunResult | null;
+     55:     rows: PersistActivityCategoryDerivationsResult | null;
+     56:     runFinish: UpdateCategoryDerivationRunResult | null;
+     57:     runFail: UpdateCategoryDerivationRunResult | null;
+     58:   };
+     59:   candidates: CategoryCandidate[];
+     60:   resolvedCandidates: ResolvedCategoryCandidate[];
+
+----- pattern: createCategoryDerivationRun | line: 240 | context: 234-246 -----
+    234:   );
+    235: }
+    236:
+    237: function makeFailureResult(params: {
+    238:   activityEventId: string;
+    239:   derivation: CategoryDerivationResult;
+>   240:   runCreate: CreateCategoryDerivationRunResult | null;
+    241:   runFail: UpdateCategoryDerivationRunResult | null;
+    242:   error: string;
+    243:   warnings?: string[];
+    244:   metadata?: JsonRecord;
+    245: }): RunCategoryDerivationRouteResult {
+    246:   return {
+
+----- pattern: persistActivityCategoryDerivations | line: 11 | context: 5-17 -----
+      5:   type CategoryResolverSupabaseClient,
+      6: } from "./resolver";
+      7: import {
+      8:   createCategoryDerivationRun,
+      9:   failCategoryDerivationRun,
+     10:   finishCategoryDerivationRun,
+>    11:   persistActivityCategoryDerivations,
+     12:   type CategoryDerivationPersistenceClient,
+     13:   type CreateCategoryDerivationRunResult,
+     14:   type PersistActivityCategoryDerivationsResult,
+     15:   type UpdateCategoryDerivationRunResult,
+     16: } from "./persistence";
+     17: import type {
+
+----- pattern: persistActivityCategoryDerivations | line: 14 | context: 8-20 -----
+      8:   createCategoryDerivationRun,
+      9:   failCategoryDerivationRun,
+     10:   finishCategoryDerivationRun,
+     11:   persistActivityCategoryDerivations,
+     12:   type CategoryDerivationPersistenceClient,
+     13:   type CreateCategoryDerivationRunResult,
+>    14:   type PersistActivityCategoryDerivationsResult,
+     15:   type UpdateCategoryDerivationRunResult,
+     16: } from "./persistence";
+     17: import type {
+     18:   CategoryCandidate,
+     19:   CategoryDerivationInput,
+     20:   CategoryDerivationResult,
+
+----- pattern: persistActivityCategoryDerivations | line: 55 | context: 49-61 -----
+     49:   resolved: boolean;
+     50:   derivationRunId: string | null;
+     51:   derivation: CategoryDerivationResult;
+     52:   resolution: CategoryResolutionResult | null;
+     53:   persistence: {
+     54:     runCreate: CreateCategoryDerivationRunResult | null;
+>    55:     rows: PersistActivityCategoryDerivationsResult | null;
+     56:     runFinish: UpdateCategoryDerivationRunResult | null;
+     57:     runFail: UpdateCategoryDerivationRunResult | null;
+     58:   };
+     59:   candidates: CategoryCandidate[];
+     60:   resolvedCandidates: ResolvedCategoryCandidate[];
+     61:   warnings: string[];
+
+----- pattern: persistActivityCategoryDerivations | line: 121 | context: 115-127 -----
+    115:   return input.resolve !== false;
+    116: }
+    117:
+    118: function buildOutputJson(params: {
+    119:   derivation: CategoryDerivationResult;
+    120:   resolution: CategoryResolutionResult | null;
+>   121:   persistenceRows: PersistActivityCategoryDerivationsResult | null;
+    122:   metadata?: JsonRecord;
+    123: }): JsonRecord {
+    124:   return {
+    125:     derivation: {
+    126:       ok: params.derivation.ok,
+    127:       skipped: params.derivation.skipped ?? false,
+
+----- pattern: derivationRunId | line: 50 | context: 44-56 -----
+     44:
+     45: export interface RunCategoryDerivationRouteResult {
+     46:   ok: boolean;
+     47:   activityEventId: string;
+     48:   persisted: boolean;
+     49:   resolved: boolean;
+>    50:   derivationRunId: string | null;
+     51:   derivation: CategoryDerivationResult;
+     52:   resolution: CategoryResolutionResult | null;
+     53:   persistence: {
+     54:     runCreate: CreateCategoryDerivationRunResult | null;
+     55:     rows: PersistActivityCategoryDerivationsResult | null;
+     56:     runFinish: UpdateCategoryDerivationRunResult | null;
+
+----- pattern: derivationRunId | line: 251 | context: 245-257 -----
+    245: }): RunCategoryDerivationRouteResult {
+    246:   return {
+    247:     ok: false,
+    248:     activityEventId: params.activityEventId,
+    249:     persisted: Boolean(params.runCreate?.ok),
+    250:     resolved: false,
+>   251:     derivationRunId: params.runCreate?.derivationRunId ?? null,
+    252:     derivation: params.derivation,
+    253:     resolution: null,
+    254:     persistence: {
+    255:       runCreate: params.runCreate,
+    256:       rows: null,
+    257:       runFinish: null,
+
+----- pattern: derivationRunId | line: 380 | context: 374-386 -----
+    374:     errors.push(...resolution.errors);
+    375:   }
+    376:
+    377:   const candidatesToPersist: Array<CategoryCandidate | ResolvedCategoryCandidate> =
+    378:     resolution?.candidates ?? derivation.candidates;
+    379:
+>   380:   if (persistEnabled && runCreate?.derivationRunId) {
+    381:     persistedRows = await persistActivityCategoryDerivations(input.supabase, {
+    382:       activityEventId: input.activityEventId,
+    383:       derivationRunId: runCreate.derivationRunId,
+    384:       candidates: candidatesToPersist,
+    385:       defaultSource: "rule",
+    386:     });
+
+----- pattern: derivationRunId | line: 383 | context: 377-389 -----
+    377:   const candidatesToPersist: Array<CategoryCandidate | ResolvedCategoryCandidate> =
+    378:     resolution?.candidates ?? derivation.candidates;
+    379:
+    380:   if (persistEnabled && runCreate?.derivationRunId) {
+    381:     persistedRows = await persistActivityCategoryDerivations(input.supabase, {
+    382:       activityEventId: input.activityEventId,
+>   383:       derivationRunId: runCreate.derivationRunId,
+    384:       candidates: candidatesToPersist,
+    385:       defaultSource: "rule",
+    386:     });
+    387:
+    388:     warnings.push(...persistedRows.warnings);
+    389:     errors.push(...persistedRows.errors);
+
+----
+
+## runLookup.ts
+
+Path: .\lib\activity\categoryDerivation\runLookup.ts
+
+Marker summary:
+- FOUND: findExistingCompletedCategoryDerivationRunForActivityEvent
+- FOUND: activityEventId
+- FOUND: processorVersion
+- FOUND: ruleVersion
+- FOUND: schemaVersion
+- FOUND: policyVersion
+- FOUND: completed
+- FOUND: completed_with_warnings
+
+Relevant snippets:
+
+----- pattern: findExistingCompletedCategoryDerivationRunForActivityEvent | line: 167 | context: 161-173 -----
+    161:       normalizeRequiredText(input.policyVersion) ??
+    162:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION,
+    163:     statuses: normalizeStatuses(input.statuses),
+    164:   };
+    165: }
+    166:
+>   167: export async function findExistingCompletedCategoryDerivationRunForActivityEvent(
+    168:   supabase: CategoryDerivationRunLookupClient,
+    169:   input: FindExistingCompletedCategoryDerivationRunInput,
+    170: ): Promise<FindExistingCompletedCategoryDerivationRunResult> {
+    171:   const query = buildCompletedCategoryDerivationRunLookupQuery(input);
+    172:
+    173:   if (!query) {
+
+----- pattern: activityEventId | line: 64 | context: 58-70 -----
+     58:
+     59: export interface CategoryDerivationRunLookupClient {
+     60:   from<T = Record<string, unknown>>(table: string): SupabaseTableSelectClient<T>;
+     61: }
+     62:
+     63: export interface FindExistingCompletedCategoryDerivationRunInput {
+>    64:   activityEventId: string;
+     65:   processorVersion?: string;
+     66:   ruleVersion?: string;
+     67:   schemaVersion?: string;
+     68:   policyVersion?: string;
+     69:   statuses?: string[];
+     70: }
+
+----- pattern: activityEventId | line: 73 | context: 67-79 -----
+     67:   schemaVersion?: string;
+     68:   policyVersion?: string;
+     69:   statuses?: string[];
+     70: }
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+>    73:   activityEventId: string;
+     74:   processorVersion: string;
+     75:   ruleVersion: string;
+     76:   schemaVersion: string;
+     77:   policyVersion: string;
+     78:   statuses: string[];
+     79: }
+
+----- pattern: activityEventId | line: 143 | context: 137-149 -----
+    137:   return Array.from(new Set(normalized));
+    138: }
+    139:
+    140: export function buildCompletedCategoryDerivationRunLookupQuery(
+    141:   input: FindExistingCompletedCategoryDerivationRunInput,
+    142: ): FindExistingCompletedCategoryDerivationRunQuery | null {
+>   143:   const activityEventId = normalizeRequiredText(input.activityEventId);
+    144:
+    145:   if (!activityEventId) {
+    146:     return null;
+    147:   }
+    148:
+    149:   return {
+
+----- pattern: activityEventId | line: 145 | context: 139-151 -----
+    139:
+    140: export function buildCompletedCategoryDerivationRunLookupQuery(
+    141:   input: FindExistingCompletedCategoryDerivationRunInput,
+    142: ): FindExistingCompletedCategoryDerivationRunQuery | null {
+    143:   const activityEventId = normalizeRequiredText(input.activityEventId);
+    144:
+>   145:   if (!activityEventId) {
+    146:     return null;
+    147:   }
+    148:
+    149:   return {
+    150:     activityEventId,
+    151:     processorVersion:
+
+----- pattern: processorVersion | line: 65 | context: 59-71 -----
+     59: export interface CategoryDerivationRunLookupClient {
+     60:   from<T = Record<string, unknown>>(table: string): SupabaseTableSelectClient<T>;
+     61: }
+     62:
+     63: export interface FindExistingCompletedCategoryDerivationRunInput {
+     64:   activityEventId: string;
+>    65:   processorVersion?: string;
+     66:   ruleVersion?: string;
+     67:   schemaVersion?: string;
+     68:   policyVersion?: string;
+     69:   statuses?: string[];
+     70: }
+     71:
+
+----- pattern: processorVersion | line: 74 | context: 68-80 -----
+     68:   policyVersion?: string;
+     69:   statuses?: string[];
+     70: }
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+     73:   activityEventId: string;
+>    74:   processorVersion: string;
+     75:   ruleVersion: string;
+     76:   schemaVersion: string;
+     77:   policyVersion: string;
+     78:   statuses: string[];
+     79: }
+     80:
+
+----- pattern: processorVersion | line: 151 | context: 145-157 -----
+    145:   if (!activityEventId) {
+    146:     return null;
+    147:   }
+    148:
+    149:   return {
+    150:     activityEventId,
+>   151:     processorVersion:
+    152:       normalizeRequiredText(input.processorVersion) ??
+    153:       DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION,
+    154:     ruleVersion:
+    155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+    157:     schemaVersion:
+
+----- pattern: processorVersion | line: 152 | context: 146-158 -----
+    146:     return null;
+    147:   }
+    148:
+    149:   return {
+    150:     activityEventId,
+    151:     processorVersion:
+>   152:       normalizeRequiredText(input.processorVersion) ??
+    153:       DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION,
+    154:     ruleVersion:
+    155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+    157:     schemaVersion:
+    158:       normalizeRequiredText(input.schemaVersion) ??
+
+----- pattern: ruleVersion | line: 66 | context: 60-72 -----
+     60:   from<T = Record<string, unknown>>(table: string): SupabaseTableSelectClient<T>;
+     61: }
+     62:
+     63: export interface FindExistingCompletedCategoryDerivationRunInput {
+     64:   activityEventId: string;
+     65:   processorVersion?: string;
+>    66:   ruleVersion?: string;
+     67:   schemaVersion?: string;
+     68:   policyVersion?: string;
+     69:   statuses?: string[];
+     70: }
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+
+----- pattern: ruleVersion | line: 75 | context: 69-81 -----
+     69:   statuses?: string[];
+     70: }
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+     73:   activityEventId: string;
+     74:   processorVersion: string;
+>    75:   ruleVersion: string;
+     76:   schemaVersion: string;
+     77:   policyVersion: string;
+     78:   statuses: string[];
+     79: }
+     80:
+     81: export type FindExistingCompletedCategoryDerivationRunReason =
+
+----- pattern: ruleVersion | line: 154 | context: 148-160 -----
+    148:
+    149:   return {
+    150:     activityEventId,
+    151:     processorVersion:
+    152:       normalizeRequiredText(input.processorVersion) ??
+    153:       DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION,
+>   154:     ruleVersion:
+    155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+    157:     schemaVersion:
+    158:       normalizeRequiredText(input.schemaVersion) ??
+    159:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION,
+    160:     policyVersion:
+
+----- pattern: ruleVersion | line: 155 | context: 149-161 -----
+    149:   return {
+    150:     activityEventId,
+    151:     processorVersion:
+    152:       normalizeRequiredText(input.processorVersion) ??
+    153:       DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION,
+    154:     ruleVersion:
+>   155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+    157:     schemaVersion:
+    158:       normalizeRequiredText(input.schemaVersion) ??
+    159:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION,
+    160:     policyVersion:
+    161:       normalizeRequiredText(input.policyVersion) ??
+
+----- pattern: schemaVersion | line: 67 | context: 61-73 -----
+     61: }
+     62:
+     63: export interface FindExistingCompletedCategoryDerivationRunInput {
+     64:   activityEventId: string;
+     65:   processorVersion?: string;
+     66:   ruleVersion?: string;
+>    67:   schemaVersion?: string;
+     68:   policyVersion?: string;
+     69:   statuses?: string[];
+     70: }
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+     73:   activityEventId: string;
+
+----- pattern: schemaVersion | line: 76 | context: 70-82 -----
+     70: }
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+     73:   activityEventId: string;
+     74:   processorVersion: string;
+     75:   ruleVersion: string;
+>    76:   schemaVersion: string;
+     77:   policyVersion: string;
+     78:   statuses: string[];
+     79: }
+     80:
+     81: export type FindExistingCompletedCategoryDerivationRunReason =
+     82:   | "existing_completed_run_found"
+
+----- pattern: schemaVersion | line: 157 | context: 151-163 -----
+    151:     processorVersion:
+    152:       normalizeRequiredText(input.processorVersion) ??
+    153:       DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION,
+    154:     ruleVersion:
+    155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+>   157:     schemaVersion:
+    158:       normalizeRequiredText(input.schemaVersion) ??
+    159:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION,
+    160:     policyVersion:
+    161:       normalizeRequiredText(input.policyVersion) ??
+    162:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION,
+    163:     statuses: normalizeStatuses(input.statuses),
+
+----- pattern: schemaVersion | line: 158 | context: 152-164 -----
+    152:       normalizeRequiredText(input.processorVersion) ??
+    153:       DEFAULT_CATEGORY_DERIVATION_PROCESSOR_VERSION,
+    154:     ruleVersion:
+    155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+    157:     schemaVersion:
+>   158:       normalizeRequiredText(input.schemaVersion) ??
+    159:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION,
+    160:     policyVersion:
+    161:       normalizeRequiredText(input.policyVersion) ??
+    162:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION,
+    163:     statuses: normalizeStatuses(input.statuses),
+    164:   };
+
+----- pattern: policyVersion | line: 68 | context: 62-74 -----
+     62:
+     63: export interface FindExistingCompletedCategoryDerivationRunInput {
+     64:   activityEventId: string;
+     65:   processorVersion?: string;
+     66:   ruleVersion?: string;
+     67:   schemaVersion?: string;
+>    68:   policyVersion?: string;
+     69:   statuses?: string[];
+     70: }
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+     73:   activityEventId: string;
+     74:   processorVersion: string;
+
+----- pattern: policyVersion | line: 77 | context: 71-83 -----
+     71:
+     72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+     73:   activityEventId: string;
+     74:   processorVersion: string;
+     75:   ruleVersion: string;
+     76:   schemaVersion: string;
+>    77:   policyVersion: string;
+     78:   statuses: string[];
+     79: }
+     80:
+     81: export type FindExistingCompletedCategoryDerivationRunReason =
+     82:   | "existing_completed_run_found"
+     83:   | "no_existing_completed_run"
+
+----- pattern: policyVersion | line: 160 | context: 154-166 -----
+    154:     ruleVersion:
+    155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+    157:     schemaVersion:
+    158:       normalizeRequiredText(input.schemaVersion) ??
+    159:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION,
+>   160:     policyVersion:
+    161:       normalizeRequiredText(input.policyVersion) ??
+    162:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION,
+    163:     statuses: normalizeStatuses(input.statuses),
+    164:   };
+    165: }
+    166:
+
+----- pattern: policyVersion | line: 161 | context: 155-167 -----
+    155:       normalizeRequiredText(input.ruleVersion) ??
+    156:       DEFAULT_CATEGORY_DERIVATION_RULE_VERSION,
+    157:     schemaVersion:
+    158:       normalizeRequiredText(input.schemaVersion) ??
+    159:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION,
+    160:     policyVersion:
+>   161:       normalizeRequiredText(input.policyVersion) ??
+    162:       DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION,
+    163:     statuses: normalizeStatuses(input.statuses),
+    164:   };
+    165: }
+    166:
+    167: export async function findExistingCompletedCategoryDerivationRunForActivityEvent(
+
+----- pattern: completed | line: 14 | context: 8-20 -----
+      8: export const DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_SCHEMA_VERSION =
+      9:   "category_derivation_complete_route_v1";
+     10:
+     11: export const DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION =
+     12:   "c8-e-f4";
+     13:
+>    14: export const DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES = [
+     15:   "completed",
+     16:   "completed_with_warnings",
+     17: ] as const;
+     18:
+     19: export type CompletedCategoryDerivationRunStatus =
+     20:   (typeof DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES)[number];
+
+----- pattern: completed | line: 15 | context: 9-21 -----
+      9:   "category_derivation_complete_route_v1";
+     10:
+     11: export const DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION =
+     12:   "c8-e-f4";
+     13:
+     14: export const DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES = [
+>    15:   "completed",
+     16:   "completed_with_warnings",
+     17: ] as const;
+     18:
+     19: export type CompletedCategoryDerivationRunStatus =
+     20:   (typeof DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES)[number];
+     21:
+
+----- pattern: completed | line: 16 | context: 10-22 -----
+     10:
+     11: export const DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION =
+     12:   "c8-e-f4";
+     13:
+     14: export const DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES = [
+     15:   "completed",
+>    16:   "completed_with_warnings",
+     17: ] as const;
+     18:
+     19: export type CompletedCategoryDerivationRunStatus =
+     20:   (typeof DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES)[number];
+     21:
+     22: type SupabaseErrorLike = {
+
+----- pattern: completed | line: 19 | context: 13-25 -----
+     13:
+     14: export const DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES = [
+     15:   "completed",
+     16:   "completed_with_warnings",
+     17: ] as const;
+     18:
+>    19: export type CompletedCategoryDerivationRunStatus =
+     20:   (typeof DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES)[number];
+     21:
+     22: type SupabaseErrorLike = {
+     23:   message?: string;
+     24:   details?: string;
+     25:   hint?: string;
+
+----- pattern: completed_with_warnings | line: 16 | context: 10-22 -----
+     10:
+     11: export const DEFAULT_CATEGORY_DERIVATION_COMPLETE_ROUTE_POLICY_VERSION =
+     12:   "c8-e-f4";
+     13:
+     14: export const DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES = [
+     15:   "completed",
+>    16:   "completed_with_warnings",
+     17: ] as const;
+     18:
+     19: export type CompletedCategoryDerivationRunStatus =
+     20:   (typeof DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES)[number];
+     21:
+     22: type SupabaseErrorLike = {
+
+----
+
+## idempotency debug route
+
+Path: .\src\app\api\activity\debug\category-derivation-complete-route-adapter-idempotency-test\route.ts
+
+Marker summary:
+- FOUND: production_persist
+- FOUND: shadow_persist
+- FOUND: callTwice
+- FOUND: runCategoryDerivationForCompleteRoute
+- FOUND: dbVerification
+- FOUND: safety
+- FOUND: productionPersistEnabled
+- FOUND: openAiCalled
+- MISSING: cleanupEligible
+- MISSING: productionPersistProof
+- MISSING: controlled_production_persist_proof
+
+Relevant snippets:
+
+----- pattern: production_persist | line: 449 | context: 443-455 -----
+    443:   if (config.isProductionPersistMode) {
+    444:     return NextResponse.json(
+    445:       {
+    446:         ok: false,
+    447:         endpoint: ENDPOINT,
+    448:         p4Step: P4_STEP,
+>   449:         error: "production_persist must not be enabled for this debug proof.",
+    450:         currentConfig: configSummary,
+    451:       },
+    452:       { status: 409 },
+    453:     );
+    454:   }
+    455:
+
+----- pattern: shadow_persist | line: 26 | context: 20-32 -----
+     20:
+     21: const ENDPOINT =
+     22:   "/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test";
+     23:
+     24: const P4_STEP = "P4.10.0-C8-E-F5-F-C-A";
+     25:
+>    26: const EXPECTED_MODE = "shadow_persist";
+     27:
+     28: const ROUTE_RUNNER_SCHEMA_VERSION = "category_derivation_complete_route_v1";
+     29: const ROUTE_RUNNER_POLICY_VERSION = "c8-e-f4";
+     30: const ROUTE_RUNNER_PROCESSOR_VERSION = "category_derivation_v1";
+     31: const ROUTE_RUNNER_RULE_VERSION = "rules_v1";
+     32: const COMPLETED_RUN_STATUSES = ["completed", "completed_with_warnings"];
+
+----- pattern: shadow_persist | line: 371 | context: 365-377 -----
+    365:   if (requestedMode !== EXPECTED_MODE) {
+    366:     return NextResponse.json(
+    367:       {
+    368:         ok: false,
+    369:         endpoint: ENDPOINT,
+    370:         p4Step: P4_STEP,
+>   371:         error: "mode must be shadow_persist.",
+    372:         expectedMode: EXPECTED_MODE,
+    373:         receivedMode: requestedMode,
+    374:       },
+    375:       { status: 400 },
+    376:     );
+    377:   }
+
+----- pattern: shadow_persist | line: 420 | context: 414-426 -----
+    414:     return NextResponse.json(
+    415:       {
+    416:         ok: false,
+    417:         endpoint: ENDPOINT,
+    418:         p4Step: P4_STEP,
+    419:         error:
+>   420:           "Local dev server must run with CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=shadow_persist.",
+    421:         expectedMode: EXPECTED_MODE,
+    422:         currentMode: config.mode,
+    423:         currentConfig: configSummary,
+    424:       },
+    425:       { status: 409 },
+    426:     );
+
+----- pattern: callTwice | line: 42 | context: 36-48 -----
+     36: type JsonObject = { [key: string]: JsonValue };
+     37: type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
+     38:
+     39: type DebugBody = {
+     40:   eventId?: unknown;
+     41:   mode?: unknown;
+>    42:   callTwice?: unknown;
+     43: };
+     44:
+     45: type ActivityEventRow = {
+     46:   id: string;
+     47:   user_id: string | null;
+     48:   performed_by_actor_id: string | null;
+
+----- pattern: callTwice | line: 351 | context: 345-357 -----
+    345:       { status: 400 },
+    346:     );
+    347:   }
+    348:
+    349:   const eventId = asNonEmptyString(body.eventId);
+    350:   const requestedMode = asNonEmptyString(body.mode);
+>   351:   const callTwice = asBoolean(body.callTwice);
+    352:
+    353:   if (!eventId) {
+    354:     return NextResponse.json(
+    355:       {
+    356:         ok: false,
+    357:         endpoint: ENDPOINT,
+
+----- pattern: callTwice | line: 379 | context: 373-385 -----
+    373:         receivedMode: requestedMode,
+    374:       },
+    375:       { status: 400 },
+    376:     );
+    377:   }
+    378:
+>   379:   if (callTwice !== true) {
+    380:     return NextResponse.json(
+    381:       {
+    382:         ok: false,
+    383:         endpoint: ENDPOINT,
+    384:         p4Step: P4_STEP,
+    385:         error: "callTwice must be true for this idempotency proof.",
+
+----- pattern: callTwice | line: 385 | context: 379-391 -----
+    379:   if (callTwice !== true) {
+    380:     return NextResponse.json(
+    381:       {
+    382:         ok: false,
+    383:         endpoint: ENDPOINT,
+    384:         p4Step: P4_STEP,
+>   385:         error: "callTwice must be true for this idempotency proof.",
+    386:       },
+    387:       { status: 400 },
+    388:     );
+    389:   }
+    390:
+    391:   const { appUser, personActor, errorResponse } =
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 13 | context: 7-19 -----
+      7: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+      8: import {
+      9:   getCategoryDerivationRouteRunnerConfig,
+     10:   getCategoryDerivationRouteRunnerConfigSummary,
+     11: } from "../../../../../../lib/activity/categoryDerivation/config";
+     12: import {
+>    13:   runCategoryDerivationForCompleteRoute,
+     14:   type CategoryDerivationCompleteRouteIntegrationResult,
+     15:   type CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+     16: } from "../../../../../../lib/activity/categoryDerivation/completeRouteIntegration";
+     17: import { supabase } from "../../../../../../lib/supabase";
+     18:
+     19: export const dynamic = "force-dynamic";
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 533 | context: 527-539 -----
+    527:     actorId,
+    528:     organizationId: null,
+    529:     inputLanguage: null,
+    530:     config,
+    531:   };
+    532:
+>   533:   const firstCall = await runCategoryDerivationForCompleteRoute({
+    534:     ...adapterInput,
+    535:     metadata: {
+    536:       endpoint: ENDPOINT,
+    537:       p4Step: P4_STEP,
+    538:       call: "first",
+    539:       proof: "direct_adapter_idempotency",
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 544 | context: 538-550 -----
+    538:       call: "first",
+    539:       proof: "direct_adapter_idempotency",
+    540:       activityEventMetadata: toJsonValue(event.metadata_json),
+    541:     },
+    542:   });
+    543:
+>   544:   const secondCall = await runCategoryDerivationForCompleteRoute({
+    545:     ...adapterInput,
+    546:     metadata: {
+    547:       endpoint: ENDPOINT,
+    548:       p4Step: P4_STEP,
+    549:       call: "second",
+    550:       proof: "direct_adapter_idempotency",
+
+----- pattern: dbVerification | line: 250 | context: 244-256 -----
+    244: function extractRunIds(rows: JsonRecord[]) {
+    245:   return rows
+    246:     .map((row) => asNonEmptyString(row.id))
+    247:     .filter((id): id is string => Boolean(id));
+    248: }
+    249:
+>   250: function makeDbVerification(params: {
+    251:   eventId: string;
+    252:   expectedRunId: string | null;
+    253:   runs: JsonRecord[];
+    254:   derivations: JsonRecord[];
+    255: }) {
+    256:   const { expectedRunId, runs, derivations } = params;
+
+----- pattern: dbVerification | line: 594 | context: 588-600 -----
+    588:       },
+    589:       { status: 500 },
+    590:     );
+    591:   }
+    592:
+    593:   const routeRunnerDerivations = derivationsResult.data ?? [];
+>   594:   const dbVerification = makeDbVerification({
+    595:     eventId: event.id,
+    596:     expectedRunId: firstCall.derivationRunId,
+    597:     runs: routeRunnerRuns,
+    598:     derivations: routeRunnerDerivations,
+    599:   });
+    600:
+
+----- pattern: dbVerification | line: 614 | context: 608-620 -----
+    608:   const secondCallPass =
+    609:     secondCall.ok === true &&
+    610:     secondCall.reason === "existing_completed_run_found" &&
+    611:     secondCall.derivationRunId === firstCall.derivationRunId &&
+    612:     secondCall.persistenceDerivationRowsCreated === 0;
+    613:
+>   614:   const fullPass = firstCallPass && secondCallPass && dbVerification.pass;
+    615:
+    616:   return NextResponse.json({
+    617:     ok: fullPass,
+    618:     status: fullPass ? "idempotency_test_pass" : "idempotency_test_failed",
+    619:     endpoint: ENDPOINT,
+    620:     p4Step: P4_STEP,
+
+----- pattern: dbVerification | line: 646 | context: 640-652 -----
+    640:         secondCall.derivationRunId === firstCall.derivationRunId,
+    641:       firstDerivationRunId: firstCall.derivationRunId,
+    642:       secondDerivationRunId: secondCall.derivationRunId,
+    643:       secondCallDidNotPersist:
+    644:         secondCall.persistenceDerivationRowsCreated === 0,
+    645:     },
+>   646:     dbVerification,
+    647:     rows: {
+    648:       routeRunnerRuns: routeRunnerRuns.map((row) => ({
+    649:         id: row.id ?? null,
+    650:         status: row.status ?? null,
+    651:         activity_event_id: row.activity_event_id ?? null,
+    652:         schema_version: row.schema_version ?? null,
+
+----- pattern: safety | line: 296 | context: 290-302 -----
+    290:     p4Step: P4_STEP,
+    291:     enabled: ACTIVITY_RECORDING_ENABLED,
+    292:     expectedMode: EXPECTED_MODE,
+    293:     currentConfig: getCategoryDerivationRouteRunnerConfigSummary(config),
+    294:     purpose:
+    295:       "Debug-only direct adapter idempotency proof endpoint. POST calls the complete-route Category Derivation adapter twice for the same event.",
+>   296:     safety: {
+    297:       modifiesCompleteRoute: false,
+    298:       callsOpenAI: false,
+    299:       enablesProductionPersist: false,
+    300:       createsUi: false,
+    301:       createsMigration: false,
+    302:     },
+
+----- pattern: safety | line: 675 | context: 669-681 -----
+    669:         category_type: row.category_type ?? null,
+    670:         status: row.status ?? null,
+    671:         confidence: row.confidence ?? null,
+    672:         created_at: row.created_at ?? null,
+    673:       })),
+    674:     },
+>   675:     safety: {
+    676:       completeRouteModified: false,
+    677:       eventCompletedByThisRoute: false,
+    678:       productionPersistEnabled: false,
+    679:       openAiCalled: false,
+    680:       uiCreated: false,
+    681:       migrationCreated: false,
+
+----- pattern: productionPersistEnabled | line: 678 | context: 672-684 -----
+    672:         created_at: row.created_at ?? null,
+    673:       })),
+    674:     },
+    675:     safety: {
+    676:       completeRouteModified: false,
+    677:       eventCompletedByThisRoute: false,
+>   678:       productionPersistEnabled: false,
+    679:       openAiCalled: false,
+    680:       uiCreated: false,
+    681:       migrationCreated: false,
+    682:     },
+    683:   });
+    684: }
+
+----- pattern: openAiCalled | line: 679 | context: 673-684 -----
+    673:       })),
+    674:     },
+    675:     safety: {
+    676:       completeRouteModified: false,
+    677:       eventCompletedByThisRoute: false,
+    678:       productionPersistEnabled: false,
+>   679:       openAiCalled: false,
+    680:       uiCreated: false,
+    681:       migrationCreated: false,
+    682:     },
+    683:   });
+    684: }
+
+----
+
+## setup route
+
+Path: .\src\app\api\activity\debug\create-free-text-start-event\route.ts
+
+Marker summary:
+- FOUND: created_started_free_text_event
+- MISSING: doNotUseAsCanonicalBusinessEvent
+- FOUND: productionRouteUnderTest
+- MISSING: cleanupEligible
+- MISSING: productionPersistProof
+- MISSING: controlled_production_persist_proof
+
+Relevant snippets:
+
+----- pattern: created_started_free_text_event | line: 261 | context: 255-267 -----
+    255:   }
+    256:
+    257:   return NextResponse.json({
+    258:     ok: true,
+    259:     endpoint: ENDPOINT,
+    260:     p4Step: P4_STEP,
+>   261:     status: "created_started_free_text_event",
+    262:     event: mapActivityEvent(createdEvent),
+    263:     setupContract: {
+    264:       productionRouteUnderTest: "/api/activity/complete",
+    265:       createdStatus: createdEvent.status,
+    266:       createdProcessingStatus: createdEvent.processing_status,
+    267:       inputText: createdEvent.input_text,
+
+----- pattern: productionRouteUnderTest | line: 230 | context: 224-236 -----
+    224:       p4Step: P4_STEP,
+    225:       setupPurpose:
+    226:         "Clean non-completed free-text activity_event for production /api/activity/complete test.",
+    227:       semanticBaseline: "walked-to-work-free-text",
+    228:       templatePollutionAllowed: false,
+    229:       categoryDerivationExecutedHere: false,
+>   230:       productionRouteUnderTest: "/api/activity/complete",
+    231:       createdBy: "debug_setup_route",
+    232:     },
+    233:   };
+    234:
+    235:   const { data, error } = await supabase
+    236:     .from("activity_events")
+
+----- pattern: productionRouteUnderTest | line: 264 | context: 258-270 -----
+    258:     ok: true,
+    259:     endpoint: ENDPOINT,
+    260:     p4Step: P4_STEP,
+    261:     status: "created_started_free_text_event",
+    262:     event: mapActivityEvent(createdEvent),
+    263:     setupContract: {
+>   264:       productionRouteUnderTest: "/api/activity/complete",
+    265:       createdStatus: createdEvent.status,
+    266:       createdProcessingStatus: createdEvent.processing_status,
+    267:       inputText: createdEvent.input_text,
+    268:       activityTemplateId: createdEvent.activity_template_id,
+    269:       legacyTemplateId: createdEvent.template_id,
+    270:       expectedNextStep:
+
+----
+
+## real complete route
+
+Path: .\src\app\api\activity\complete\route.ts
+
+Marker summary:
+- FOUND: runCategoryDerivationForCompleteRoute
+- MISSING: production_persist
+- MISSING: failActivityComplete
+- FOUND: completed
+- FOUND: metadata
+- FOUND: activity
+
+Relevant snippets:
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 33 | context: 27-39 -----
+     27:   persistCategoryDerivations,
+     28:   type CategoryDerivationPersistenceSupabaseClient,
+     29: } from "../../../../../lib/activity/categoryDerivation/persistDerivations";
+     30: import type { CategoryDerivationInput } from "../../../../../lib/activity/categoryDerivation/types";
+     31: import { getCategoryDerivationRouteRunnerConfig } from "../../../../../lib/activity/categoryDerivation/config";
+     32: import {
+>    33:   runCategoryDerivationForCompleteRoute as runCategoryDerivationRouteRunnerForCompleteRoute,
+     34:   type CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+     35: } from "../../../../../lib/activity/categoryDerivation/completeRouteIntegration";
+     36: import type { AdditionalValueObjectCategoryLink } from "../../../../../lib/activity/valueObjectBridge";
+     37: import { ensureActivityEventRubricatorClassificationForKnownTemplate } from "../../../../../lib/activity/activityRubricatorClassificationLifecycle";
+     38: import { buildRubricatorResolverLogMetadata } from "../../../../../lib/activity/rubricatorResolverLogMetadata";
+     39: import {
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 426 | context: 420-432 -----
+    420:     });
+    421:   }
+    422:
+    423:   return links;
+    424: }
+    425:
+>   426: async function runCategoryDerivationForCompleteRoute(params: {
+    427:   event: ActivityEventRow;
+    428:   completedStatus: string;
+    429: }): Promise<CategoryDerivationCompleteRouteResult> {
+    430:   const policy = getCategoryDerivationPolicyForCompleteRoute(params);
+    431:
+    432:   if (!policy.enabled || policy.inputText === null || policy.actorId === null) {
+
+----- pattern: runCategoryDerivationForCompleteRoute | line: 1231 | context: 1225-1237 -----
+   1225:       },
+   1226:       startedAt: processingStartedAt.toISOString(),
+   1227:       finishedAt: new Date().toISOString(),
+   1228:       durationMs: getDurationMs(processingStartedAt),
+   1229:     });
+   1230:
+>  1231:     const categoryDerivationResult = await runCategoryDerivationForCompleteRoute({
+   1232:       event: updatedEvent,
+   1233:       completedStatus,
+   1234:     });
+   1235:
+   1236:     const categoryDerivationBridgeAdditionalCategoryLinks =
+   1237:       categoryDerivationResult.additionalCategoryLinks;
+
+----- pattern: completed | line: 9 | context: 3-15 -----
+      3: import {
+      4:   ACTIVITY_RECORDING_DISABLED_MESSAGE,
+      5:   ACTIVITY_RECORDING_ENABLED,
+      6: } from "../../../../../lib/activity/activityRecordingConfig";
+      7: import {
+      8:   ACTIVITY_COMPLETABLE_STATUSES,
+>     9:   ACTIVITY_STATUS_COMPLETED,
+     10:   canTransitionActivityStatus,
+     11:   isCompletableActivityStatus,
+     12: } from "../../../../../lib/activity/activityLifecycle";
+     13: import {
+     14:   getDurationMs,
+     15:   safeCreateActivityProcessingLog,
+
+----- pattern: completed | line: 284 | context: 278-290 -----
+    278:     normalizedSource.includes("debug")
+    279:   );
+    280: }
+    281:
+    282: function getCategoryDerivationPolicyForCompleteRoute(params: {
+    283:   event: ActivityEventRow;
+>   284:   completedStatus: string;
+    285: }): CategoryDerivationCompleteRoutePolicy {
+    286:   const { event, completedStatus } = params;
+    287:
+    288:   if (event.status !== completedStatus) {
+    289:     return {
+    290:       enabled: false,
+
+----- pattern: completed | line: 286 | context: 280-292 -----
+    280: }
+    281:
+    282: function getCategoryDerivationPolicyForCompleteRoute(params: {
+    283:   event: ActivityEventRow;
+    284:   completedStatus: string;
+    285: }): CategoryDerivationCompleteRoutePolicy {
+>   286:   const { event, completedStatus } = params;
+    287:
+    288:   if (event.status !== completedStatus) {
+    289:     return {
+    290:       enabled: false,
+    291:       reason: "not_completed_status",
+    292:       inputText: null,
+
+----- pattern: completed | line: 288 | context: 282-294 -----
+    282: function getCategoryDerivationPolicyForCompleteRoute(params: {
+    283:   event: ActivityEventRow;
+    284:   completedStatus: string;
+    285: }): CategoryDerivationCompleteRoutePolicy {
+    286:   const { event, completedStatus } = params;
+    287:
+>   288:   if (event.status !== completedStatus) {
+    289:     return {
+    290:       enabled: false,
+    291:       reason: "not_completed_status",
+    292:       inputText: null,
+    293:       actorId: null,
+    294:     };
+
+----- pattern: metadata | line: 38 | context: 32-44 -----
+     32: import {
+     33:   runCategoryDerivationForCompleteRoute as runCategoryDerivationRouteRunnerForCompleteRoute,
+     34:   type CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+     35: } from "../../../../../lib/activity/categoryDerivation/completeRouteIntegration";
+     36: import type { AdditionalValueObjectCategoryLink } from "../../../../../lib/activity/valueObjectBridge";
+     37: import { ensureActivityEventRubricatorClassificationForKnownTemplate } from "../../../../../lib/activity/activityRubricatorClassificationLifecycle";
+>    38: import { buildRubricatorResolverLogMetadata } from "../../../../../lib/activity/rubricatorResolverLogMetadata";
+     39: import {
+     40:   createRawActivitySignal,
+     41:   markRawActivitySignalFailed,
+     42:   markRawActivitySignalProcessed,
+     43: } from "../../../../../lib/activity/rawActivitySignals";
+     44: import { supabase } from "../../../../../lib/supabase";
+
+----- pattern: metadata | line: 76 | context: 70-82 -----
+     70:   ended_at: string | null;
+     71:   duration_minutes: number | null;
+     72:   source: string | null;
+     73:   status: string;
+     74:   privacy_scope: string | null;
+     75:   processing_status: string | null;
+>    76:   metadata_json: Record<string, unknown> | null;
+     77:   created_at: string;
+     78:   updated_at: string;
+     79: };
+     80:
+     81: type CompletionTiming =
+     82:   | {
+
+----- pattern: metadata | line: 463 | context: 457-469 -----
+    457:       title: event.title,
+    458:       description: event.description,
+    459:       durationMinutes: event.duration_minutes ?? 0,
+    460:       inputLanguage: null,
+    461:       actorId: policy.actorId,
+    462:       organizationId: null,
+>   463:       metadata: {
+    464:         endpoint: "/api/activity/complete",
+    465:         p4Step: "P4.10.0-C8-P3-B7-C1-B",
+    466:         featureFlag: "categoryDerivation",
+    467:       },
+    468:     };
+    469:
+
+----- pattern: metadata | line: 898 | context: 892-904 -----
+    892:       },
+    893:       { status: 400 }
+    894:     );
+    895:   }
+    896:
+    897:   const comment = asString(body.comment);
+>   898:   const existingMetadata = asRecord(event.metadata_json);
+    899:   const nowIso = new Date().toISOString();
+    900:
+    901:   const processingRunId = randomUUID();
+    902:   const processingStartedAt = new Date();
+    903:
+    904:   const rawSignalResult = await createRawActivitySignal({
+
+----- pattern: activity | line: 4 | context: 1-10 -----
+      1: import { randomUUID } from "crypto";
+      2: import { NextResponse } from "next/server";
+      3: import {
+>     4:   ACTIVITY_RECORDING_DISABLED_MESSAGE,
+      5:   ACTIVITY_RECORDING_ENABLED,
+      6: } from "../../../../../lib/activity/activityRecordingConfig";
+      7: import {
+      8:   ACTIVITY_COMPLETABLE_STATUSES,
+      9:   ACTIVITY_STATUS_COMPLETED,
+     10:   canTransitionActivityStatus,
+
+----- pattern: activity | line: 5 | context: 1-11 -----
+      1: import { randomUUID } from "crypto";
+      2: import { NextResponse } from "next/server";
+      3: import {
+      4:   ACTIVITY_RECORDING_DISABLED_MESSAGE,
+>     5:   ACTIVITY_RECORDING_ENABLED,
+      6: } from "../../../../../lib/activity/activityRecordingConfig";
+      7: import {
+      8:   ACTIVITY_COMPLETABLE_STATUSES,
+      9:   ACTIVITY_STATUS_COMPLETED,
+     10:   canTransitionActivityStatus,
+     11:   isCompletableActivityStatus,
+
+----- pattern: activity | line: 6 | context: 1-12 -----
+      1: import { randomUUID } from "crypto";
+      2: import { NextResponse } from "next/server";
+      3: import {
+      4:   ACTIVITY_RECORDING_DISABLED_MESSAGE,
+      5:   ACTIVITY_RECORDING_ENABLED,
+>     6: } from "../../../../../lib/activity/activityRecordingConfig";
+      7: import {
+      8:   ACTIVITY_COMPLETABLE_STATUSES,
+      9:   ACTIVITY_STATUS_COMPLETED,
+     10:   canTransitionActivityStatus,
+     11:   isCompletableActivityStatus,
+     12: } from "../../../../../lib/activity/activityLifecycle";
+
+----- pattern: activity | line: 8 | context: 2-14 -----
+      2: import { NextResponse } from "next/server";
+      3: import {
+      4:   ACTIVITY_RECORDING_DISABLED_MESSAGE,
+      5:   ACTIVITY_RECORDING_ENABLED,
+      6: } from "../../../../../lib/activity/activityRecordingConfig";
+      7: import {
+>     8:   ACTIVITY_COMPLETABLE_STATUSES,
+      9:   ACTIVITY_STATUS_COMPLETED,
+     10:   canTransitionActivityStatus,
+     11:   isCompletableActivityStatus,
+     12: } from "../../../../../lib/activity/activityLifecycle";
+     13: import {
+     14:   getDurationMs,
+
+----
+
+12. Not approved
+
+Not approved in this step:
+
+- production_persist
+- runtime production_persist proof
+- direct production_persist on /api/activity/complete
+- strict failActivityComplete=true
+- routeRunner-level idempotency implementation
+- completeRouteIntegration changes
+- routeRunner changes
+- schema changes
+- migrations
+- RLS changes
+- permission changes
+- UI work
+- OpenAI calls
+- SQL execution
+- broad refactor
+
+13. Safety gates preserved
+
+- no production_persist
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no SQL in PowerShell
+- no runtime/source code changes in F6-E-E-B
+- no broad refactor
+- no cleanup command without separate review
+
+14. Definition of Done
+
+This F6-E-E-B inspection step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this inspection document above a435f0a
