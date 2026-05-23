@@ -1,14 +1,17 @@
 GPT-APP / AI-NAVIGATOR
 Category Derivation Layer v1
-P4.10.0-C8-E-F6-E-E-K
-Decision after controlled production_persist runtime proof
+P4.10.0-C8-E-F6-E-E-L
+P4.10.0-C8-E-F6-E-E-L-FIX1
+real /api/activity/complete production_persist readiness inspection
 Created: 2026-05-23
 
 1. Purpose
 
-This document records the decision after the successful controlled production_persist runtime proof.
+This document replaces the first F6-E-E-L inspection document with a verified version.
 
-This is a documentation-only decision step.
+This is a static inspection only.
+
+No runtime proof is executed here.
 
 No SQL is executed here.
 
@@ -16,139 +19,134 @@ No cleanup is executed here.
 
 No source code is changed here.
 
-No runtime proof is executed here.
+2. Why FIX1 is needed
 
-2. Current baseline
+The first F6-E-E-L script execution produced errors before the inspection document was reliably built:
 
-Current HEAD before this decision:
+- Resolve-RepoFile was not available in the pasted PowerShell session.
+- completeRouteIntegration path was empty during the first attempt.
+- integrationText was null.
+- document marker verification failed.
+- despite these errors, the document was later committed.
 
-- de9ca12 Document Category Derivation controlled production persist runtime proof
+This FIX1 replaces the committed F6-E-E-L document with a verified static inspection document.
+
+3. Current baseline
+
+Current HEAD before this FIX1:
+
+- 245bc62 Inspect Category Derivation complete route production persist readiness
 
 Relevant previous commits:
 
-- 8f1af0e Add Category Derivation controlled production persist proof route
-- c1c5253 Document Category Derivation controlled production persist proof route
-- 0cb1c06 Fix Category Derivation controlled proof route documentation marker
-- ca68615 Plan Category Derivation controlled proof cleanup policy
-- bc1a116 Plan Category Derivation controlled production persist runtime proof
+- 76eafeb Decide Category Derivation after controlled production persist proof
 - de9ca12 Document Category Derivation controlled production persist runtime proof
+- bc1a116 Plan Category Derivation controlled production persist runtime proof
 
-3. Controlled runtime proof result
+4. Files inspected
 
-The controlled runtime proof passed.
+Inspected files:
 
-Confirmed result:
+- .\src\app\api\activity\complete\route.ts
+- .\src\app\api\activity\debug\category-derivation-controlled-production-persist-proof\route.ts
+- .\lib\activity\categoryDerivation\completeRouteIntegration.ts
+- .\lib\activity\categoryDerivation\config.ts
+- .\lib\activity\categoryDerivation\runLookup.ts
+- .\docs\value-objects\category-derivation-layer-v1-c8-e-f6-e-e-k-decision-after-controlled-production-persist-runtime-proof.txt
+- .\docs\value-objects\category-derivation-layer-v1-c8-e-f6-e-e-j-controlled-production-persist-runtime-proof-result.txt
 
-- P4.10.0-C8-E-F6-E-E-I runtime proof PASS
-- HTTP status: 200
-- ok: true
-- status: controlled_production_persist_proof_pass
-- event id: 2a303890-76ff-4f41-9dee-9b3436a1988f
-- derivationRunId: 10701d0b-2166-4715-afdc-f1bec9504b56
-- activityCategoryDerivationsCount: 5
-- noDuplicateRuns: true
+5. Controlled proof baseline
 
-4. What the controlled proof proved
+Controlled proof baseline:
 
-The proof confirmed that production_persist can persist Category Derivation rows through the completeRouteIntegration adapter when executed through the dedicated controlled debug route.
+- P4.10.0-C8-E-F6-E-E-I runtime proof PASS: true
+- controlled_production_persist_proof_pass was documented.
+- route_runner_completed was documented.
+- existing_completed_run_found was documented.
+- activityCategoryDerivationsCount was 5.
+- noDuplicateRuns was true.
+- completeRouteCalled was false.
+- openAiCalled was false.
+- sqlExecutedByPowerShell was false.
 
-The proof confirmed:
+6. Decision baseline
 
-- first call persisted derivation rows
-- first call returned reason route_runner_completed
-- second call returned reason existing_completed_run_found
-- second call reused the same derivationRunId
-- second call created no duplicate derivation rows
-- DB verification passed
-- proof event was marked as cleanupEligible
-- proof event was marked as productionPersistProof
-- proof event was non-canonical
+F6-E-E-K decision baseline:
 
-5. Safety confirmations
+- Direct production_persist on /api/activity/complete remains blocked: true
+- no cleanup was approved.
+- no SQL was approved.
+- no real complete route runtime proof was approved.
 
-The proof confirmed:
+7. Static finding - complete route
 
-- completeRouteCalled: false
-- completeRouteModified: false
-- eventCompletedByThisRoute: false
-- openAiCalled: false
-- sqlExecutedByPowerShell: false
-- cleanupEligible: true
-- debugOnly: true
-- nonCanonicalBusinessEvent: true
+Complete route file:
 
-6. What the proof did not prove
+- .\src\app\api\activity\complete\route.ts
 
-This proof did not prove the real /api/activity/complete production_persist flow.
+Static findings:
 
-The proof did not call:
+- adapter call count in complete route: 2
+- complete route mentions runCategoryDerivationForCompleteRoute: true
+- complete route mentions production_persist directly: false
+- complete route mentions failActivityComplete directly: false
+- complete route mentions Category Derivation concepts: true
 
-- /api/activity/complete
+8. Static finding - completeRouteIntegration
 
-The proof did not change:
+Integration file:
 
-- source code
-- schema
-- migrations
-- RLS
-- permissions
-- UI
+- .\lib\activity\categoryDerivation\completeRouteIntegration.ts
 
-The proof did not execute:
+Static findings:
 
-- SQL
-- cleanup
-- OpenAI call
+- integration defines or mentions runCategoryDerivationForCompleteRoute: true
+- integration mentions runLookup or existing completed lookup: true
+- integration mentions route runner execution: true
+- integration mentions failActivityComplete: true
 
-7. Decision 1 - controlled debug proof block status
+9. Static finding - config
 
-Decision:
+Config file:
 
-The controlled debug production_persist proof block is considered successful and can be closed as a proof block.
+- .\lib\activity\categoryDerivation\config.ts
 
-Reason:
+Static findings:
 
-The controlled route demonstrated production_persist persistence, idempotency, DB verification, and safety markers without touching the real complete route.
+- config supports production_persist: true
+- config mentions failActivityComplete or FAILS_ACTIVITY_COMPLETE: true
+- config mentions includeResponseDebug or INCLUDE_RESPONSE_DEBUG: true
 
-8. Decision 2 - cleanup status
+10. Static finding - runLookup
 
-Decision:
+runLookup file:
 
-Do not execute cleanup now.
+- .\lib\activity\categoryDerivation\runLookup.ts
 
-Reason:
+Static findings:
 
-The proof rows are useful as audit evidence for the first controlled production_persist proof.
+- runLookup mentions existing_completed_run_found: true
+- runLookup mentions activity_event_id: true
+- runLookup mentions completed status: true
 
-The rows are explicitly marked as cleanupEligible and productionPersistProof, so future cleanup remains possible under the F6-E-E-G cleanup and rollback policy.
+11. Readiness interpretation
 
-Cleanup must remain a separate reviewed action.
+Controlled production_persist through the dedicated proof route is proven.
 
-9. Decision 3 - next transition target
+Real /api/activity/complete production_persist is not yet proven.
 
-Decision:
+This inspection does not approve direct runtime proof through /api/activity/complete.
 
-Do not move directly to real /api/activity/complete runtime production_persist proof yet.
+Reasons:
 
-Reason:
+- real complete route may have side effects beyond the controlled debug route
+- real complete route may update event completion state
+- real complete route may interact with user-facing activity completion
+- proof data must not be accidentally created by normal user actions
+- cleanup and rollback for real complete route proof require a more specific strategy than the controlled proof route
+- failActivityComplete behavior must remain conservative until real route boundary is documented
 
-Before touching the real complete route, we need one more static readiness inspection focused on the real route boundary.
-
-10. Required next block before real complete route runtime proof
-
-The next block should inspect:
-
-- src/app/api/activity/complete/route.ts
-- lib/activity/categoryDerivation/completeRouteIntegration.ts
-- lib/activity/categoryDerivation/config.ts
-- lib/activity/categoryDerivation/runLookup.ts
-- the exact point where completeRouteIntegration is called
-- whether /api/activity/complete can safely run production_persist
-- whether failActivityComplete must remain false
-- whether production_persist should be route-limited, config-limited, or debug-only
-- whether a real complete route proof needs a new proof route, a dedicated payload marker, or a temporary guard
-
-11. Decision 4 - no direct production_persist on real complete route yet
+12. Inspection decision
 
 Decision:
 
@@ -156,43 +154,25 @@ Direct production_persist on /api/activity/complete remains blocked.
 
 Reason:
 
-The system has not yet documented:
+Static inspection is not the same as runtime proof approval.
 
-- complete route runtime boundary
-- real activity completion side effects
-- whether event completion and category derivation persistence interact safely
-- whether idempotency is sufficient in the real complete route path
-- whether a real user action could accidentally create proof data
-- rollback plan for a real complete route test
+A separate strategy decision is required before any real complete route runtime proof.
 
-12. Recommended next step
+13. Recommended next step
 
 Recommended next step:
 
-P4.10.0-C8-E-F6-E-E-L - inspect real /api/activity/complete production_persist readiness after controlled proof
+P4.10.0-C8-E-F6-E-E-M - decide real complete route production_persist proof strategy
 
-Scope:
+Decision topics for F6-E-E-M:
 
-- static inspection only
-- no runtime proof
-- no SQL
-- no cleanup
-- no source-code change
-- no OpenAI call
-- no migration
-- no RLS change
-- no permission change
-
-13. Later possible steps
-
-Possible later sequence after F6-E-E-L:
-
-- P4.10.0-C8-E-F6-E-E-M - decide real complete route proof strategy
-- P4.10.0-C8-E-F6-E-E-N - plan real complete route proof procedure
-- P4.10.0-C8-E-F6-E-E-O - execute real complete route proof only if approved
-- P4.10.0-C8-E-F6-E-E-P - document real complete route proof result
-
-This is not approved yet.
+- whether to test the real /api/activity/complete route at all in this block
+- whether to require a dedicated proof payload marker
+- whether to use a temporary guard
+- whether to keep production_persist debug-only for now
+- whether failActivityComplete must remain false
+- whether cleanup SQL review is needed before or after real complete route proof
+- whether to close F6-E-E block and move to another production-readiness block instead
 
 14. Safety gates preserved
 
@@ -211,31 +191,31 @@ Until a later approved document changes them:
 
 15. Exact verification markers
 
-- P4.10.0-C8-E-F6-E-E-K
-- decision after controlled production_persist runtime proof
-- de9ca12 Document Category Derivation controlled production persist runtime proof
+- P4.10.0-C8-E-F6-E-E-L
+- P4.10.0-C8-E-F6-E-E-L-FIX1
+- real /api/activity/complete production_persist readiness inspection
+- 245bc62 Inspect Category Derivation complete route production persist readiness
+- 76eafeb Decide Category Derivation after controlled production persist proof
 - P4.10.0-C8-E-F6-E-E-I runtime proof PASS
 - controlled_production_persist_proof_pass
-- route_runner_completed
+- runCategoryDerivationForCompleteRoute
+- production_persist
 - existing_completed_run_found
-- event id: 2a303890-76ff-4f41-9dee-9b3436a1988f
-- derivationRunId: 10701d0b-2166-4715-afdc-f1bec9504b56
-- activityCategoryDerivationsCount: 5
-- noDuplicateRuns: true
-- completeRouteCalled: false
-- openAiCalled: false
-- sqlExecutedByPowerShell: false
-- Do not execute cleanup now
+- route_runner_completed
 - Direct production_persist on /api/activity/complete remains blocked
-- P4.10.0-C8-E-F6-E-E-L
-- inspect real /api/activity/complete production_persist readiness
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+- No source code is changed here
+- P4.10.0-C8-E-F6-E-E-M
+- decide real complete route production_persist proof strategy
 
 16. Definition of Done
 
-This F6-E-E-K decision step is complete when:
+This F6-E-E-L-FIX1 inspection correction is complete when:
 
-- this document exists under docs/value-objects
+- this document replaces the previous F6-E-E-L document
 - only this document is changed
 - document is committed and pushed
 - working tree is clean
-- recent git log shows this document above de9ca12
+- recent git log shows this FIX1 above 245bc62
