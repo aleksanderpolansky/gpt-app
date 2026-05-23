@@ -1,0 +1,228 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-E-G
+Cleanup and rollback policy before controlled production_persist runtime proof
+Created: 2026-05-23
+
+1. Purpose
+
+This document defines the cleanup and rollback policy required before any controlled production_persist runtime proof.
+
+This is a documentation-only step.
+
+No production_persist runtime proof is executed here.
+
+No SQL is executed here.
+
+2. Current baseline
+
+Current HEAD before this policy:
+
+- 0cb1c06 Fix Category Derivation controlled proof route documentation marker
+
+Relevant previous commits:
+
+- 8f1af0e Add Category Derivation controlled production persist proof route
+- c1c5253 Document Category Derivation controlled production persist proof route
+- 0cb1c06 Fix Category Derivation controlled proof route documentation marker
+
+3. Controlled proof route
+
+Controlled route:
+
+- /api/activity/debug/category-derivation-controlled-production-persist-proof
+
+Controlled route file:
+
+- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+
+The route creates a proof activity_event internally and then calls runCategoryDerivationForCompleteRoute.
+
+4. Cleanup policy principle
+
+Cleanup is allowed only for rows that are explicitly marked as proof/test rows.
+
+Cleanup must never rely only on time, title, input text, or guessed content.
+
+Cleanup must be based on exact metadata markers and exact links between rows.
+
+5. Required proof markers
+
+The proof event must include these metadata markers:
+
+- proof: P4.10.0-C8-E-F6-E-controlled-production-persist-proof
+- purpose: controlled_production_persist_proof
+- doNotUseAsCanonicalBusinessEvent: true
+- cleanupEligible: true
+- productionPersistProof: true
+- createdBy: controlled_proof_route
+- productionRouteUnderTest: false
+- categoryDerivationRouteUnderTest: true
+- completeRouteModified: false
+- openAiExpected: false
+
+6. Rows that may be cleaned
+
+Cleanup may target only rows connected to proof events with all required markers.
+
+Eligible cleanup scope:
+
+- activity_events created by the controlled proof route
+- category_derivation_runs linked to those proof activity_events
+- activity_category_derivations linked to those proof derivation_run_id values
+- optional processing/debug rows only if they are explicitly linked to the proof event or proof derivation_run_id and separately reviewed
+
+7. Rows that must never be cleaned
+
+Cleanup must never delete:
+
+- normal user activity_events
+- rows without cleanupEligible: true
+- rows without productionPersistProof: true
+- rows without purpose: controlled_production_persist_proof
+- rows created by /api/activity/complete normal business flow
+- rows not linked to the proof event
+- rows not linked to the proof derivation_run_id
+- organization, actor, user, category, rubricator, value object, offer, certificate, purchase, wallet, or booking data
+- migrations
+- schema objects
+- RLS policies
+- permissions
+- application source code
+
+8. Cleanup order
+
+If cleanup is later approved, the safe logical order is:
+
+1. Identify proof activity_events by exact metadata markers.
+2. Identify category_derivation_runs where activity_event_id is one of those proof event ids.
+3. Identify activity_category_derivations where derivation_run_id is one of those proof run ids.
+4. Review counts before deletion.
+5. Delete activity_category_derivations linked to proof derivation runs.
+6. Delete category_derivation_runs linked to proof events.
+7. Optionally delete proof activity_events only after linked proof derivations and runs are removed.
+8. Re-check counts after deletion.
+
+9. Rollback policy
+
+Rollback for a controlled proof means returning the database to the state before the proof rows were created.
+
+Rollback may include deleting the proof rows defined in this policy.
+
+Rollback must not revert source code automatically.
+
+Rollback must not modify schema, migrations, RLS, permissions, or normal business data.
+
+If runtime proof reveals a route bug, source-code rollback must be handled separately through Git.
+
+10. SQL execution policy
+
+No SQL may be executed in PowerShell.
+
+No cleanup SQL may be executed in this step.
+
+No cleanup SQL may be executed automatically by ChatGPT.
+
+If cleanup SQL is later created, it must be reviewed separately and executed only in an approved database tool, such as Supabase SQL Editor, after explicit approval.
+
+11. Required pre-cleanup evidence
+
+Before any cleanup command is executed later, collect:
+
+- proof activity_event id
+- proof derivation_run_id
+- count of matching proof activity_events
+- count of matching proof category_derivation_runs
+- count of matching proof activity_category_derivations
+- confirmation that all matching activity_events have required proof markers
+- confirmation that no normal activity_events are included
+- confirmation that no unrelated derivation runs are included
+- confirmation that no unrelated derivation rows are included
+
+12. Runtime proof remains blocked
+
+This policy still does not approve:
+
+- starting dev server with CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+- calling the controlled proof route in production_persist mode
+- direct production_persist on /api/activity/complete
+- strict failActivityComplete=true
+- cleanup SQL execution
+- SQL verification from PowerShell
+- schema changes
+- migrations
+- RLS changes
+- permission changes
+- UI work
+- OpenAI calls
+- broad refactor
+
+13. What this policy unlocks
+
+This policy allows the next planning step to define a controlled runtime proof procedure.
+
+It does not itself execute the proof.
+
+The next step may define:
+
+- how to start the dev server with production_persist mode
+- how to call the controlled debug route from browser console
+- what response fields must be checked
+- what DB verification data must appear in the route response
+- how to confirm idempotency
+- how to confirm no duplicate rows
+- how to confirm no /api/activity/complete modification
+- how to confirm no OpenAI call
+- how to confirm no SQL in PowerShell
+
+14. Approved next step
+
+Approved next step:
+
+P4.10.0-C8-E-F6-E-E-H - plan controlled production_persist runtime proof procedure
+
+Scope of next step:
+
+- document runtime proof commands and browser-console request
+- keep production_persist runtime execution blocked until that procedure is committed
+- do not execute runtime proof yet
+- do not execute SQL
+- do not change source code
+- do not modify /api/activity/complete
+
+15. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no production_persist runtime execution
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no SQL in PowerShell
+- no broad refactor
+- no cleanup command without separate review
+- no real /api/activity/complete production_persist proof yet
+
+16. Exact verification markers
+
+- P4.10.0-C8-E-F6-E-E-G
+- cleanup and rollback policy
+- controlled production_persist runtime proof
+- cleanupEligible
+- productionPersistProof
+- controlled_production_persist_proof
+- No SQL is executed here
+- no SQL in PowerShell
+- No production_persist runtime proof is executed here
+- P4.10.0-C8-E-F6-E-E-H
+
+17. Definition of Done
+
+This F6-E-E-G policy step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above 0cb1c06
