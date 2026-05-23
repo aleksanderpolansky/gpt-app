@@ -1,0 +1,506 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-H-D4
+Source patch validation summary and deterministic proof plan
+
+Status: DOC-ONLY VALIDATION SUMMARY / PROOF PLAN
+Generated at: 2026-05-23 17:19:45 +02:00
+Baseline HEAD: dfdc140
+Previous block: P4.10.0-C8-H-D3 — source patch for postponed business/sales semantic candidates
+Next planned block: P4.10.0-C8-H-E — deterministic extractor-level proof for postponed business/sales cases
+
+Exact verifier markers intentionally present:
+- No SQL
+- No OpenAI
+- No runtime proof in this D4 step
+- /api/activity/complete was not used
+
+1. Purpose
+
+This document records the validation result of the C8-H-D3 source patch and prepares the deterministic proof plan for C8-H-E.
+
+D4 does not change source code.
+D4 does not run SQL.
+D4 does not call OpenAI.
+D4 does not run /api/activity/complete.
+D4 does not run a runtime proof.
+
+2. Sources used
+
+Current source:
+.\lib\activity\categoryDerivation\ruleExtractor.ts
+SHA256: FC209046D75D0ECA7B1AA3F130288999454D0C21DEDA6EB3E9240264291DDE21
+SIZE_BYTES: 75268
+LINE_COUNT: 2340
+
+C8-H-A benchmark inventory:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-a-postponed-business-sales-cases-benchmark-inventory.txt
+SHA256: 02001D6B9984520C260744980002CEFFA0FE579E8AE6702665AD235BC833CDD6
+
+C8-H-B static inspection:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-b-current-postponed-business-sales-support-inspection.txt
+SHA256: F023CC56EC02F85EEA2131DF7F1069B6BB3B60730256088E44BF8BEE32A37E23
+
+C8-H-C patch strategy:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-c-minimal-additive-postponed-business-sales-patch-strategy.txt
+SHA256: 90B6671C22CA1DEADC5697232DB7BCA630CB5EA791AEE734696B675C14F53B5E
+
+C8-H-D1 exact files decision:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-d1-exact-files-to-patch-decision.txt
+SHA256: 8971D4C746EBED5C79E0AB7DABDEA1FD730E8CA9A19987216DDE26E1CF1C4512
+
+C8-H-D2 local source/context pack:
+C:\Users\Admin\Downloads\P4_10_0_C8_H_D2_compact_postponed_business_sales_patch_source_pack.txt
+SHA256: 4642A6E58FA3E44058497EFE7A9BB0DEF7BC0ACEE0F725B51854A51878A2817B
+SIZE_BYTES: 91331
+
+C8-H-D3 source patch document:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-d3-postponed-business-sales-semantic-candidate-patch.txt
+SHA256: B1A51346A77DBE73CE7214EC99DDDEA23CFD4F3333367A42491B550A9811016F
+
+C8-G-F proof PASS and expansion decision:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-f-deterministic-proof-pass-and-expansion-decision.txt
+SHA256: 729AC3E3E3A7005DD31AB1BA41EC4115736FB78E35AB596442ECAE4E2F39DA63
+
+C8-G-E-RECOVERY1 proof output:
+C:\Users\Admin\Downloads\P4_10_0_C8_G_E_RECOVERY1_deterministic_extractor_proof_output.txt
+SHA256: E320E87047A995D2701E6E5D333651724558D20B6828BF3C0CC9E98403543DB6
+SIZE_BYTES: 4926
+
+3. D3 result recorded
+
+C8-H-D3 finished successfully.
+
+Commit:
+dfdc140 — Patch Postponed Business Sales Semantic Coverage candidates
+
+D3 changed only:
+
+- lib/activity/categoryDerivation/ruleExtractor.ts
+- docs/value-objects/category-derivation-layer-v1-c8-h-d3-postponed-business-sales-semantic-candidate-patch.txt
+
+D3 validation recorded:
+
+- C8-H-D3 source markers verified
+- C8-G preservation markers verified
+- C8-F preservation markers verified
+- global forbidden outcome overclaim markers absent
+- git diff --check PASS
+- TypeScript PASS
+- targeted ESLint PASS
+- commit and push completed
+- final working tree clean
+- no runtime proof executed
+- no SQL executed
+- no OpenAI call executed
+
+4. New deterministic C8-H source markers
+
+The D3 patch added deterministic support for:
+
+- business_sales_outbound_lead_list_semantics
+- business_sales_partnership_negotiation_semantics
+- business_sales_discovery_call_new_lead_semantics
+- business_sales_post_purchase_support_ambiguity
+
+5. Risk-control markers added by D3
+
+The D3 patch added risk-control / ambiguity markers:
+
+- lead-not-client
+- potential-client-not-client
+- partner-not-client
+- support-not-new-sale
+
+6. C8-G markers that must remain preserved
+
+C8-H-E proof must preserve the previously proven C8-G markers:
+
+- business_sales_commercial_proposal_client_semantics
+- business_sales_potential_client_proposal_semantics
+- business_sales_follow_up_after_meeting_semantics
+- business_sales_price_objection_semantics
+- business_sales_crm_lead_update_semantics
+- business_sales_language_training_preparation_semantics
+- business_sales_passive_reading_ambiguity
+- business_sales_informal_conversation_ambiguity
+
+7. C8-F markers that must remain preserved
+
+C8-H-E proof must preserve the C8-F family/childcare baseline:
+
+- teach_math_with_child_care_semantics
+- child_studied_math_nearby_supervision_ambiguity
+- child_homework_supervision_ambiguity
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+
+8. C8-H-E proof type
+
+C8-H-E must be an extractor-level deterministic proof.
+
+It must not be:
+
+- SQL proof
+- OpenAI proof
+- /api/activity/complete proof
+- browser runtime route proof
+- resolver proof
+- bridge proof
+- persistence proof
+- UI proof
+
+Reason:
+
+C8-H-D3 changed only ruleExtractor.ts.
+Therefore C8-H-E should prove that ruleExtractor deterministically produces the expected candidates and avoids forbidden overclaims.
+
+9. C8-H-E proof method
+
+Recommended method:
+
+- create a temporary local runner outside committed source
+- import or execute deriveCategoryCandidates from lib/activity/categoryDerivation/ruleExtractor.ts
+- use the same local TypeScript loader pattern used in C8-G-E/C8-G-E-RECOVERY1
+- run deterministic test cases S6/S7/S11/S12
+- include at least one C8-G preservation case
+- include at least one C8-F baseline preservation case
+- verify required slugs are present
+- verify secondary/possible slugs intentionally added by D3 are present
+- verify forbidden slugs are absent
+- verify required JSON metadata markers are present
+- write proof output to Downloads
+- remove temporary runner
+- verify repository stayed clean
+- do not commit during E
+
+10. C8-H-E proof output file
+
+Recommended output path:
+
+C:\Users\Admin\Downloads\P4_10_0_C8_H_E_deterministic_extractor_proof_output.txt
+
+11. C8-H-E benchmark case S6 — outbound lead list
+
+Input:
+tworzyłem listę potencjalnych klientów dla kampanii outbound
+
+Required/core slugs:
+
+- creating
+- lead-list
+- potential-client
+- prospecting
+- outbound-sales
+- lead-generation
+- business-development
+- b2b-sales
+- sales-responsibility
+- client-acquisition
+
+Secondary/possible slugs:
+
+- pipeline-management
+- income-generation
+- outbound-campaign
+- potential-client-list
+- no-confirmed-contact
+- no-confirmed-client
+- lead-not-client
+- potential-client-not-client
+
+Forbidden slugs:
+
+- client
+- existing-client
+- contacted-client
+- customer-responsibility
+- proposal-sent
+- meeting-held
+- discovery-call
+- closed-deal
+- successful-sale
+- contract-signed
+- payment-received
+
+Required JSON marker:
+
+- business_sales_outbound_lead_list_semantics
+
+Important:
+S6 is pre-contact acquisition work. It must not infer contact, existing client, meeting, proposal, sale, contract or payment.
+
+12. C8-H-E benchmark case S7 — partnership negotiation
+
+Input:
+negocjowałem warunki współpracy z partnerem
+
+Required/core slugs:
+
+- negotiating
+- business-partner
+- partnership
+- cooperation-terms
+- business-development
+- partner-responsibility
+- work-responsibility
+
+Secondary/possible slugs:
+
+- strategic-partnership
+- relationship-management
+- income-generation
+- revenue-generation
+- b2b-sales
+- business-responsibility
+- partner-not-client
+
+Forbidden slugs:
+
+- client
+- potential-client
+- lead
+- prospect
+- customer-responsibility
+- sales-proposal
+- commercial-proposal
+- discovery-call
+- closed-deal
+- contract-signed
+- payment-received
+- successful-sale
+
+Required JSON marker:
+
+- business_sales_partnership_negotiation_semantics
+
+Important:
+S7 is partner/business responsibility. It must not collapse partner into client, lead or customer responsibility.
+
+13. C8-H-E benchmark case S11 — discovery call with a new B2B lead
+
+Input:
+I had a discovery call with a new B2B lead
+
+Required/core slugs:
+
+- discovery-call
+- calling
+- new-lead
+- lead
+- b2b-sales
+- client-acquisition
+- sales-process
+- business-development
+- sales-responsibility
+- lead-qualification
+
+Secondary/possible slugs:
+
+- relationship-management
+- income-generation
+- deal-preparation
+- pipeline-management
+- possible-business-development
+- lead-not-client
+
+Forbidden slugs:
+
+- client
+- existing-client
+- customer-responsibility
+- commercial-proposal
+- proposal-sent
+- closed-deal
+- contract-signed
+- payment-received
+- successful-sale
+- client-acquired
+
+Required JSON marker:
+
+- business_sales_discovery_call_new_lead_semantics
+
+Important:
+S11 is a sales-process / lead qualification step. It must not infer proposal, contract, payment, closed deal or existing client.
+
+14. C8-H-E benchmark case S12 — post-purchase customer support ambiguity
+
+Input:
+позвонил клиенту, чтобы помочь с проблемой после покупки
+
+Required/core slugs:
+
+- calling
+- client
+- post-purchase-support
+- customer-support
+- customer-responsibility
+- relationship-management
+- support-responsibility
+
+Secondary/possible slugs:
+
+- retention
+- account-management
+- customer-success
+- business-responsibility
+- support-not-new-sale
+
+Forbidden slugs:
+
+- new-sale
+- lead-generation
+- prospecting
+- outbound-sales
+- client-acquisition
+- sales-responsibility
+- b2b-sales
+- discovery-call
+- commercial-proposal
+- proposal-sent
+- price-objection
+- closed-deal
+- contract-signed
+- payment-received
+- successful-sale
+
+Required JSON marker:
+
+- business_sales_post_purchase_support_ambiguity
+
+Important:
+S12 is customer support after purchase, not new sales acquisition.
+
+15. C8-G preservation proof case
+
+Include this C8-G preservation case:
+
+Input:
+prepared a proposal for a potential client
+
+Required slugs:
+
+- preparing
+- commercial-proposal
+- potential-client
+- b2b-sales
+- sales-responsibility
+- business-development
+- client-acquisition
+- deal-preparation
+- income-generation
+- lead-nurturing
+
+Forbidden slugs:
+
+- existing-client
+- closed-deal
+- contract-signed
+- payment-received
+- client
+
+Required JSON marker:
+
+- business_sales_potential_client_proposal_semantics
+
+16. C8-F baseline preservation proof case
+
+Include this C8-F baseline case:
+
+Input:
+учил математику с ребёнком 30 минут
+
+Required slugs:
+
+- mathematics
+- child
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+
+Required JSON marker:
+
+- teach_math_with_child_care_semantics
+
+17. C8-H-E PASS criteria
+
+C8-H-E can be marked PASS only if:
+
+- S6 returns all required/core slugs
+- S6 returns all secondary/possible slugs intentionally added by D3
+- S6 forbidden overclaims are absent
+- S7 returns all required/core slugs
+- S7 returns all secondary/possible slugs intentionally added by D3
+- S7 forbidden overclaims are absent
+- S11 returns all required/core slugs
+- S11 returns all secondary/possible slugs intentionally added by D3
+- S11 forbidden overclaims are absent
+- S12 returns all required/core slugs
+- S12 returns all secondary/possible slugs intentionally added by D3
+- S12 forbidden overclaims are absent
+- C8-G preservation case still passes
+- C8-F baseline preservation case still passes
+- all required JSON markers are present
+- no SQL is executed
+- no OpenAI call is executed
+- no /api/activity/complete call is executed
+- repository remains clean
+
+18. C8-H-E FAIL handling
+
+If C8-H-E fails:
+
+- do not patch immediately inside the proof step
+- do not commit
+- save full proof output
+- identify exact failed case
+- identify missing required/secondary slug or forbidden overclaim
+- create a separate fix plan step before source changes
+- preserve D3 as the last completed source patch unless a controlled fix is planned
+
+19. What not to repeat now
+
+Do not repeat C8-H-A/B/C/D1/D2.
+Do not repeat D3 source patch.
+Do not re-run SQL.
+Do not call OpenAI.
+Do not call /api/activity/complete.
+Do not start resolver/bridge/persistence work.
+Do not start UI work.
+Do not start state layers yet.
+
+20. Recommended next step
+
+P4.10.0-C8-H-E — deterministic extractor-level proof for postponed business/sales cases.
+
+21. Definition of Done for C8-H-D4
+
+C8-H-D4 is done when:
+
+- this document exists under docs/value-objects
+- it records D3 source patch validation
+- it records D3 commit dfdc140
+- it records C8-H markers
+- it records C8-H risk-control markers
+- it records C8-G preservation requirements
+- it records C8-F preservation requirements
+- it defines S6/S7/S11/S12 expected and forbidden slugs
+- it defines C8-G and C8-F preservation proof cases
+- it defines PASS/FAIL criteria
+- no source-code files changed
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run
+- git diff contains only this document
+- document is committed and pushed
+- final git status is clean
+
+22. Commit message
+
+Plan Postponed Business Sales deterministic proof
