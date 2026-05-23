@@ -1,0 +1,536 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-E-Q
+Inspection: proof-safe event creation and complete route Category Derivation response exposure
+Created: 2026-05-23
+
+1. Purpose
+
+This document records a static inspection after the F6-E-E-O partial diagnostic result.
+
+This is a static inspection only.
+
+No runtime proof is executed here.
+
+No SQL is executed here.
+
+No cleanup is executed here.
+
+No source code is changed here.
+
+2. Current baseline
+
+Current HEAD before this inspection:
+
+- 822d5b2 Document Category Derivation real complete route proof diagnosis
+
+Relevant previous commits:
+
+- 29b05dd Plan Category Derivation real complete route production persist proof
+- 822d5b2 Document Category Derivation real complete route proof diagnosis
+
+3. Inputs reviewed
+
+Documents reviewed:
+
+- .\docs\value-objects\category-derivation-layer-v1-c8-e-f6-e-e-p-real-complete-route-production-persist-proof-partial-result-diagnosis.txt
+- .\docs\value-objects\category-derivation-layer-v1-c8-e-f6-e-e-n-real-complete-route-production-persist-proof-procedure-plan.txt
+- .\docs\value-objects\category-derivation-layer-v1-c8-e-f6-e-e-m-real-complete-route-production-persist-proof-strategy-decision.txt
+- .\docs\value-objects\category-derivation-layer-v1-c8-e-f6-e-e-l-real-complete-route-production-persist-readiness-inspection.txt
+
+Source files inspected:
+
+- .\src\app\api\activity\complete\route.ts
+- .\src\app\api\activity\debug\create-free-text-start-event\route.ts
+- .\lib\activity\categoryDerivation\completeRouteIntegration.ts
+- .\lib\activity\categoryDerivation\config.ts
+- .\lib\activity\categoryDerivation\runLookup.ts
+
+4. Diagnostic baseline from F6-E-E-P
+
+F6-E-E-P recorded a partial / diagnostic result.
+
+Proven:
+
+- /api/activity/complete requires eventId, not activityEventId
+- corrected eventId payload returned HTTP 200
+- proof event reached completed state
+- repeated call returned already_completed
+- lifecycle idempotency worked for the proof event
+
+Not proven:
+
+- full Category Derivation production_persist through real /api/activity/complete
+- visible derivationRunId from real complete response
+- visible persistenceDerivationRowsCreated from real complete response
+- visible activityCategoryDerivationsCount from real complete response
+- proof metadata preservation by create-free-text-start-event
+
+5. Static inspection - complete route response exposure
+
+Complete route file:
+
+- .\src\app\api\activity\complete\route.ts
+
+Findings:
+
+- runCategoryDerivationForCompleteRoute call count: 2
+- complete route mentions runCategoryDerivationForCompleteRoute: true
+- complete route contains categoryDerivation token: true
+- complete route contains derivationRunId token: true
+- complete route contains persistence row count token: true
+- complete route contains already_completed token: true
+- complete route contains eventId is required token: true
+- complete route contains NextResponse.json token: true
+- complete route contains impactProcessor token: true
+
+Relevant complete route lines:
+
+- 8: ACTIVITY_COMPLETABLE_STATUSES,
+- 9: ACTIVITY_STATUS_COMPLETED,
+- 10: canTransitionActivityStatus,
+- 11: isCompletableActivityStatus,
+- 18: import { processActivityImpacts } from "../../../../../lib/activity/activityImpactProcessor";
+- 20: import { deriveCategoryCandidates } from "../../../../../lib/activity/categoryDerivation/ruleExtractor";
+- 25: } from "../../../../../lib/activity/categoryDerivation/resolver";
+- 27: persistCategoryDerivations,
+- 28: type CategoryDerivationPersistenceSupabaseClient,
+- 29: } from "../../../../../lib/activity/categoryDerivation/persistDerivations";
+- 30: import type { CategoryDerivationInput } from "../../../../../lib/activity/categoryDerivation/types";
+- 31: import { getCategoryDerivationRouteRunnerConfig } from "../../../../../lib/activity/categoryDerivation/config";
+- 33: runCategoryDerivationForCompleteRoute as runCategoryDerivationRouteRunnerForCompleteRoute,
+- 34: type CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+- 35: } from "../../../../../lib/activity/categoryDerivation/completeRouteIntegration";
+- 73: status: string;
+- 75: processing_status: string | null;
+- 97: type CategoryDerivationCompleteRoutePolicy = {
+- 104: type CategoryDerivationCompleteRouteResult = {
+- 110: derivationRunId: string | null;
+- 114: persistenceDerivationRowsCreated: number;
+- 118: policy: CategoryDerivationCompleteRoutePolicy;
+- 121: function asRecordForCategoryDerivation(
+- 131: function asStringForCategoryDerivation(value: unknown): string | null {
+- 140: function asNumberForCategoryDerivation(value: unknown): number | null {
+- 153: function asBooleanForCategoryDerivation(value: unknown): boolean | null {
+- 161: function readStringFieldForCategoryDerivation(
+- 165: const record = asRecordForCategoryDerivation(value);
+- 168: const parsed = asStringForCategoryDerivation(record[fieldName]);
+- 178: function readNumberFieldForCategoryDerivation(
+- 182: const record = asRecordForCategoryDerivation(value);
+- 185: const parsed = asNumberForCategoryDerivation(record[fieldName]);
+- 195: function readBooleanFieldForCategoryDerivation(
+- 199: const record = asRecordForCategoryDerivation(value);
+- 202: const parsed = asBooleanForCategoryDerivation(record[fieldName]);
+- 212: function readStringArrayFieldForCategoryDerivation(
+- 216: const record = asRecordForCategoryDerivation(value);
+- 232: function isUuidLikeForCategoryDerivation(value: unknown): value is string {
+- 242: function getCategoryDerivationInputTextForCompleteRoute(
+- 246: asStringForCategoryDerivation(event.input_text) ??
+- 247: asStringForCategoryDerivation(event.title) ??
+- 248: asStringForCategoryDerivation(event.description)
+- 252: function isCategoryDerivationSourceAllowedForCompleteRoute(
+- 255: const normalizedSource = asStringForCategoryDerivation(source)?.toLowerCase() ?? null;
+- 282: function getCategoryDerivationPolicyForCompleteRoute(params: {
+- 284: completedStatus: string;
+- 285: }): CategoryDerivationCompleteRoutePolicy {
+- 286: const { event, completedStatus } = params;
+- 288: if (event.status !== completedStatus) {
+- 291: reason: "not_completed_status",
+- 297: if (!isCategoryDerivationSourceAllowedForCompleteRoute(event.source)) {
+- 306: const inputText = getCategoryDerivationInputTextForCompleteRoute(event);
+- 322: if (!isUuidLikeForCategoryDerivation(actorId)) {
+- 342: derivationRunId: string | null;
+- 345: const { enabled, activityEventId, derivationRunId, resolutionResult } = params;
+- 351: const resolutionRecord = asRecordForCategoryDerivation(resolutionResult);
+- 357: const allowedResolutionStatuses = new Set([
+- 366: const categoryId = readStringFieldForCategoryDerivation(candidate, [
+- 373: if (!isUuidLikeForCategoryDerivation(categoryId)) {
+- 377: const resolutionStatus =
+- 378: readStringFieldForCategoryDerivation(candidate, [
+- 379: "resolutionStatus",
+- 380: "resolution_status",
+- 383: if (!allowedResolutionStatuses.has(resolutionStatus)) {
+- 388: readStringFieldForCategoryDerivation(candidate, [
+- 401: confidence: readNumberFieldForCategoryDerivation(candidate, [
+- 405: derivationRunId,
+- 406: activityCategoryDerivationId: null,
+- 409: candidateTitle: readStringFieldForCategoryDerivation(candidate, [
+- 416: semanticLayer: readStringFieldForCategoryDerivation(candidate, [
+- 426: async function runCategoryDerivationForCompleteRoute(params: {
+- 428: completedStatus: string;
+- 429: }): Promise<CategoryDerivationCompleteRouteResult> {
+- 430: const policy = getCategoryDerivationPolicyForCompleteRoute(params);
+- 439: derivationRunId: null,
+- 443: persistenceDerivationRowsCreated: 0,
+- 454: const derivationInput: CategoryDerivationInput = {
+- 466: featureFlag: "categoryDerivation",
+- 483: const persistenceResult = await persistCategoryDerivations(
+- 484: supabase as unknown as CategoryDerivationPersistenceSupabaseClient,
+- 503: readBooleanFieldForCategoryDerivation(persistenceResult, ["ok"]) ?? false;
+- 504: const derivationRunId = readStringFieldForCategoryDerivation(
+- 506: ["derivationRunId", "derivation_run_id", "runId", "run_id"]
+- 509: const persistenceDerivationRowsCreated =
+- 510: readNumberFieldForCategoryDerivation(persistenceResult, [
+- 518: derivationRunId,
+- 525: ...readStringArrayFieldForCategoryDerivation(persistenceResult, ["warnings"]),
+- 531: ...readStringArrayFieldForCategoryDerivation(persistenceResult, ["errors"]),
+- 542: derivationRunId,
+- 546: persistenceDerivationRowsCreated,
+- 554: error instanceof Error ? error.message : "Unknown Category Derivation error";
+- 562: derivationRunId: null,
+- 566: persistenceDerivationRowsCreated: 0,
+- 718: return NextResponse.json({
+- 723: status: ACTIVITY_RECORDING_ENABLED ? "ready" : "disabled",
+- 729: comment: "Completed lifecycle smoke test",
+- 734: comment: "Completed lifecycle smoke test with fixed duration",
+- 741: return NextResponse.json(
+- 746: { status: 503 }
+- 757: return NextResponse.json(
+- 762: { status: 500 }
+- 771: return NextResponse.json(
+- 776: { status: 400 }
+- 783: return NextResponse.json(
+- 786: error: "eventId is required.",
+- 788: { status: 400 }
+- 800: return NextResponse.json(
+- 805: { status: 500 }
+- 810: return NextResponse.json(
+- 815: { status: 404 }
+- 820: const completedStatus = ACTIVITY_STATUS_COMPLETED;
+- 822: if (event.status === completedStatus) {
+- 837: return NextResponse.json({
+- 839: status: "already_completed",
+- 844: impactProcessor: {
+- 852: alreadyCompleted: true,
+- 854: "Activity event was already completed. Duplicate impact processing was skipped if impacts already existed.",
+- 858: return NextResponse.json(
+- 864: : "Failed to inspect completed activity event.",
+- 866: { status: 500 }
+- ... truncated after 120 lines ...
+
+6. Static inspection - create-free-text-start-event metadata preservation
+
+Create route file:
+
+- .\src\app\api\activity\debug\create-free-text-start-event\route.ts
+
+Findings:
+
+- create route contains proof token: false
+- create route contains p4Step token: true
+- create route contains cleanupEligible token: false
+- create route contains productionPersistProof token: false
+- create route contains nonCanonicalBusinessEvent token: false
+- create route contains hardcoded old p4Step P4.10.0-C8-P3-B7-C2-C-A2: true
+- create route contains setupPurpose token: true
+- create route contains productionRouteUnderTest token: true
+- create route contains categoryDerivationExecutedHere false marker: true
+- create route contains metadata_json or metadataJson token: true
+
+Relevant create route lines:
+
+- 13: const P4_STEP = "P4.10.0-C8-P3-B7-C2-C-A2";
+- 37: metadata_json: GenericRecord | null;
+- 85: inputText: event.input_text,
+- 90: durationMinutes: event.duration_minutes,
+- 95: metadata: event.metadata_json,
+- 141: const inputText =
+- 142: asNonEmptyString(body.inputText) ??
+- 147: if (!inputText) {
+- 153: "Missing inputText. Provide inputText or naturalInput, for example: walked to work for 15 minutes.",
+- 174: const description = asNonEmptyString(body.description) ?? inputText;
+- 209: input_text: inputText,
+- 221: metadata_json: {
+- 224: p4Step: P4_STEP,
+- 225: setupPurpose:
+- 229: categoryDerivationExecutedHere: false,
+- 230: productionRouteUnderTest: "/api/activity/complete",
+- 260: p4Step: P4_STEP,
+- 264: productionRouteUnderTest: "/api/activity/complete",
+- 267: inputText: createdEvent.input_text,
+- 271: "POST /api/activity/complete once with this event id, durationMinutes and endedAt.",
+
+7. Static inspection - completeRouteIntegration response capability
+
+Integration file:
+
+- .\lib\activity\categoryDerivation\completeRouteIntegration.ts
+
+Findings:
+
+- integration contains runCategoryDerivationForCompleteRoute: true
+- integration contains route_runner_completed: true
+- integration contains existing_completed_run_found: true
+- integration contains persistenceDerivationRowsCreated: true
+- integration contains derivationRunId or derivation_run_id: true
+
+Relevant integration lines:
+
+- 2: getCategoryDerivationRouteRunnerConfig,
+- 3: getCategoryDerivationRouteRunnerConfigSummary,
+- 4: type CategoryDerivationRouteRunnerConfig,
+- 11: findExistingCompletedCategoryDerivationRunForActivityEvent,
+- 12: summarizeExistingCompletedCategoryDerivationRunLookup,
+- 13: type CategoryDerivationRunLookupClient,
+- 14: type FindExistingCompletedCategoryDerivationRunResult,
+- 17: runCategoryDerivationRoute,
+- 18: type CategoryDerivationRouteRunnerSupabaseClient,
+- 19: type RunCategoryDerivationRouteResult,
+- 23: export type CategoryDerivationCompleteRouteIntegrationSupabaseClient =
+- 24: CategoryDerivationRouteRunnerSupabaseClient & CategoryDerivationRunLookupClient;
+- 26: export interface CategoryDerivationCompleteRouteActivityEvent {
+- 36: export interface RunCategoryDerivationForCompleteRouteInput {
+- 37: supabase: CategoryDerivationCompleteRouteIntegrationSupabaseClient;
+- 38: activityEvent: CategoryDerivationCompleteRouteActivityEvent;
+- 42: config?: CategoryDerivationRouteRunnerConfig;
+- 50: export type CategoryDerivationCompleteRouteIntegrationReason =
+- 57: | "existing_completed_run_found"
+- 58: | "route_runner_completed"
+- 64: export interface CategoryDerivationCompleteRouteIntegrationResult {
+- 69: reason: CategoryDerivationCompleteRouteIntegrationReason;
+- 70: derivationRunId: string | null;
+- 73: persistenceDerivationRowsCreated: number;
+- 76: config: ReturnType<typeof getCategoryDerivationRouteRunnerConfigSummary>;
+- 77: idempotency: ReturnType<
+- 78: typeof summarizeExistingCompletedCategoryDerivationRunLookup
+- 89: return value ?? {};
+- 99: return value;
+- 103: return value.map((item) => toJsonValue(item));
+- 118: return result;
+- 121: return String(value);
+- 126: return null;
+- 131: return trimmed.length > 0 ? trimmed : null;
+- 135: return typeof value === "number" && Number.isFinite(value) ? value : null;
+- 139: activityEvent: CategoryDerivationCompleteRouteActivityEvent,
+- 141: return (
+- 149: config: CategoryDerivationRouteRunnerConfig;
+- 152: reason: CategoryDerivationCompleteRouteIntegrationReason;
+- 153: derivationRunId?: string | null;
+- 156: persistenceDerivationRowsCreated?: number;
+- 159: idempotency?: FindExistingCompletedCategoryDerivationRunResult | null;
+- 164: }): CategoryDerivationCompleteRouteIntegrationResult {
+- 165: return {
+- 171: derivationRunId: params.derivationRunId ?? null,
+- 174: persistenceDerivationRowsCreated:
+- 175: params.persistenceDerivationRowsCreated ?? 0,
+- 178: config: getCategoryDerivationRouteRunnerConfigSummary(params.config),
+- 180: ? summarizeExistingCompletedCategoryDerivationRunLookup(
+- 194: routeRunnerResult: RunCategoryDerivationRouteResult,
+- 195: ): CategoryDerivationCompleteRouteIntegrationReason {
+- 199: return "simulated_persistence_failure";
+- 202: return "route_runner_failed";
+- 206: config: CategoryDerivationRouteRunnerConfig;
+- 207: routeRunnerResult: RunCategoryDerivationRouteResult;
+- 208: idempotency: FindExistingCompletedCategoryDerivationRunResult | null;
+- 209: }): CategoryDerivationCompleteRouteIntegrationResult {
+- 215: ? "route_runner_completed"
+- 218: return baseResult({
+- 223: derivationRunId: params.routeRunnerResult.derivationRunId,
+- 226: persistenceDerivationRowsCreated: rowsCreated,
+- 239: export async function runCategoryDerivationForCompleteRoute(
+- 240: params: RunCategoryDerivationForCompleteRouteInput,
+- 241: ): Promise<CategoryDerivationCompleteRouteIntegrationResult> {
+- 242: const config = params.config ?? getCategoryDerivationRouteRunnerConfig();
+- 245: return baseResult({
+- 254: return baseResult({
+- 263: return baseResult({
+- 272: return baseResult({
+- 283: return baseResult({
+- 295: return baseResult({
+- 300: derivationRunId: null,
+- 307: return baseResult({
+- 312: derivationRunId: null,
+- 332: let idempotency: FindExistingCompletedCategoryDerivationRunResult | null =
+- 337: await findExistingCompletedCategoryDerivationRunForActivityEvent(
+- 363: return result;
+- 368: return baseResult({
+- 372: reason: "existing_completed_run_found",
+- 373: derivationRunId: idempotency.derivationRunId,
+- 384: const routeRunnerResult = await runCategoryDerivationRoute({
+- 421: config: getCategoryDerivationRouteRunnerConfigSummary(config),
+- 426: return mapRouteRunnerResult({
+
+8. Static inspection - config and lookup
+
+Config file:
+
+- .\lib\activity\categoryDerivation\config.ts
+
+Config findings:
+
+- config supports production_persist: true
+- config has failActivityComplete / FAILS_ACTIVITY_COMPLETE marker: true
+
+Relevant config lines:
+
+- 1: export const CATEGORY_DERIVATION_ROUTE_RUNNER_MODE_ENV =
+- 2: "CATEGORY_DERIVATION_ROUTE_RUNNER_MODE";
+- 7: export const CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE_ENV =
+- 8: "CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE";
+- 10: export const CATEGORY_DERIVATION_ROUTE_RUNNER_MODES = [
+- 16: "production_persist",
+- 20: (typeof CATEGORY_DERIVATION_ROUTE_RUNNER_MODES)[number];
+- 24: includeResponseDebug: string | undefined;
+- 25: failActivityComplete: string | undefined;
+- 30: includeResponseDebug: boolean;
+- 31: failActivityComplete: boolean;
+- 36: shouldPersist: boolean;
+- 37: shouldResolve: boolean;
+- 57: return CATEGORY_DERIVATION_ROUTE_RUNNER_MODES.includes(
+- 106: `${CATEGORY_DERIVATION_ROUTE_RUNNER_MODE_ENV} has unsupported value "${value}". Falling back to disabled.`,
+- 118: mode: env[CATEGORY_DERIVATION_ROUTE_RUNNER_MODE_ENV],
+- 119: includeResponseDebug:
+- 121: failActivityComplete:
+- 122: env[CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE_ENV],
+- 127: const includeResponseDebug = readBooleanEnv(
+- 128: raw.includeResponseDebug,
+- 134: const failActivityComplete = readBooleanEnv(
+- 135: raw.failActivityComplete,
+- 137: CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE_ENV,
+- 147: mode === "production_persist";
+- 149: const shouldPersist =
+- 150: mode === "shadow_persist" || mode === "production_persist";
+- 152: const shouldResolve = usesRouteRunnerInCompleteRoute;
+- 155: const isProductionPersistMode = mode === "production_persist";
+- 159: includeResponseDebug,
+- 160: failActivityComplete,
+- 165: shouldPersist,
+- 166: shouldResolve,
+- 179: includeResponseDebug: config.includeResponseDebug,
+- 180: failActivityComplete: config.failActivityComplete,
+- 186: shouldPersist: config.shouldPersist,
+- 187: shouldResolve: config.shouldResolve,
+
+runLookup file:
+
+- .\lib\activity\categoryDerivation\runLookup.ts
+
+runLookup findings:
+
+- runLookup has existing_completed_run_found: true
+
+Relevant runLookup lines:
+
+- 14: export const DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES = [
+- 15: "completed",
+- 16: "completed_with_warnings",
+- 19: export type CompletedCategoryDerivationRunStatus =
+- 20: (typeof DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES)[number];
+- 63: export interface FindExistingCompletedCategoryDerivationRunInput {
+- 72: export interface FindExistingCompletedCategoryDerivationRunQuery {
+- 81: export type FindExistingCompletedCategoryDerivationRunReason =
+- 82: | "existing_completed_run_found"
+- 83: | "no_existing_completed_run"
+- 87: export interface FindExistingCompletedCategoryDerivationRunResult {
+- 90: reason: FindExistingCompletedCategoryDerivationRunReason;
+- 93: query: FindExistingCompletedCategoryDerivationRunQuery | null;
+- 126: return [...DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES];
+- 134: return [...DEFAULT_COMPLETED_CATEGORY_DERIVATION_RUN_STATUSES];
+- 140: export function buildCompletedCategoryDerivationRunLookupQuery(
+- 141: input: FindExistingCompletedCategoryDerivationRunInput,
+- 142: ): FindExistingCompletedCategoryDerivationRunQuery | null {
+- 167: export async function findExistingCompletedCategoryDerivationRunForActivityEvent(
+- 169: input: FindExistingCompletedCategoryDerivationRunInput,
+- 170: ): Promise<FindExistingCompletedCategoryDerivationRunResult> {
+- 171: const query = buildCompletedCategoryDerivationRunLookupQuery(input);
+- 187: .from<CategoryDerivationRunRow>("category_derivation_runs")
+- 189: .eq("activity_event_id", query.activityEventId)
+- 217: reason: "no_existing_completed_run",
+- 229: reason: "existing_completed_run_found",
+- 238: export function summarizeExistingCompletedCategoryDerivationRunLookup(
+- 239: result: FindExistingCompletedCategoryDerivationRunResult,
+
+9. Interpretation
+
+The real complete route can complete proof-created events and has lifecycle idempotency.
+
+However, after F6-E-E-O, full Category Derivation production_persist remains inconclusive because the real complete route response did not visibly expose the Category Derivation adapter result.
+
+The create-free-text-start-event route appears to be a useful setup route, but its current metadata behavior is not proof-safe enough if it does not preserve caller-supplied proof metadata such as cleanupEligible, productionPersistProof, nonCanonicalBusinessEvent, proof, purpose, and the current P4 step.
+
+10. Main blockers before another real complete route proof
+
+Blocker 1:
+
+The proof-created event must preserve the proof metadata needed for cleanup, attribution, and safety review.
+
+Blocker 2:
+
+The real complete route must expose enough Category Derivation diagnostic data in proof/debug mode to confirm whether production_persist actually created or reused derivation rows.
+
+Blocker 3:
+
+A repeated complete route call returning already_completed is acceptable for lifecycle idempotency, but it may not prove Category Derivation idempotency unless category derivation result or DB verification is exposed.
+
+11. Inspection decision
+
+Decision:
+
+Do not run another /api/activity/complete proof yet.
+
+Reason:
+
+The current proof route response is not sufficient to prove Category Derivation production_persist through the real complete route.
+
+A patch strategy must be decided first.
+
+12. Recommended next step
+
+Recommended next step:
+
+P4.10.0-C8-E-F6-E-E-R - decide proof-safe patch strategy for real complete route Category Derivation proof
+
+Decision topics:
+
+- whether to patch create-free-text-start-event to preserve proof metadata
+- whether to patch /api/activity/complete to expose categoryDerivation diagnostic result only in proof/debug mode
+- whether to create a new controlled proof wrapper route instead
+- whether to add DB verification to a proof route instead of exposing data from /api/activity/complete
+- whether cleanup should wait until proof attribution is fixed
+- whether the previous incomplete proof event should remain as audit evidence
+
+13. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no cleanup command
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no additional /api/activity/complete runtime proof
+- no normal user activity used for proof
+- no failActivityComplete=true
+
+14. Exact verification markers
+
+- P4.10.0-C8-E-F6-E-E-Q
+- proof-safe event creation and complete route Category Derivation response exposure
+- 822d5b2 Document Category Derivation real complete route proof diagnosis
+- Category Derivation production_persist remains inconclusive
+- create-free-text-start-event metadata preservation
+- complete route response exposure
+- runCategoryDerivationForCompleteRoute
+- production_persist
+- existing_completed_run_found
+- eventId is required
+- already_completed
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+- No source code is changed here
+- P4.10.0-C8-E-F6-E-E-R
+- decide proof-safe patch strategy for real complete route Category Derivation proof
+
+15. Definition of Done
+
+This F6-E-E-Q inspection step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above 822d5b2
