@@ -1,0 +1,447 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-G-F
+Business/Sales deterministic proof PASS and next expansion decision
+
+Status: DOC-ONLY RESULT / PASS / EXPANSION DECISION
+Generated at: 2026-05-23 15:53:04 +02:00
+Baseline HEAD: f464a7b
+Previous block: P4.10.0-C8-G-E-RECOVERY1 — deterministic extractor-level proof after S2 fix
+Result: PASS
+Next planned block: P4.10.0-C8-H-A — postponed business/sales cases benchmark inventory
+
+Exact verifier markers intentionally present:
+- No SQL
+- No OpenAI
+- No runtime proof in this F step
+- /api/activity/complete was not used
+
+1. Purpose
+
+This document records the final PASS result for the first C8-G business/sales deterministic semantic coverage group and decides the next expansion direction.
+
+This F step does not patch source code.
+This F step does not run SQL.
+This F step does not call OpenAI.
+This F step does not run /api/activity/complete.
+This F step does not run a new runtime proof.
+
+2. Sources used
+
+Patched source:
+.\lib\activity\categoryDerivation\ruleExtractor.ts
+SHA256: BF8380B96858336F2FF34B76630622F609DD6032F7C7F6224F23CEC8C1272AA2
+
+D3 source patch document:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-d3-business-sales-semantic-candidate-patch.txt
+SHA256: E5C72963F89E136150B95FEF7183425B471BA52EDC1AD6C75E5FEA7C4B0BFD52
+
+D4 proof plan:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-d4-source-patch-validation-and-proof-plan.txt
+SHA256: 663411844D021333588CA42A341ECF7A4744B371DC295BF9723E013EA3E2C666
+
+E-FIXPLAN1 failure plan:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-e-fixplan1-s2-income-generation-secondary-missing.txt
+SHA256: BADBB2C64BC58DDA65D3E4738824332FBEF2F38C470A4CDFD8A6ABBD2F7A2CB9
+
+E-FIX1 source patch document:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-e-fix1-s2-income-generation-source-patch.txt
+SHA256: 472DF5C8B6FFACF43CDEEB9C551CA5E86FC821CAF09B4D2BA494567F979042F7
+
+Initial failed proof output:
+C:\Users\Admin\Downloads\P4_10_0_C8_G_E_deterministic_extractor_proof_output.txt
+SHA256: 0B1B06E938CAFD01DC5E1AF5743F879DB759F348447DB8F4DE228D92DA57949B
+SIZE_BYTES: 4681
+
+Recovery proof output:
+C:\Users\Admin\Downloads\P4_10_0_C8_G_E_RECOVERY1_deterministic_extractor_proof_output.txt
+SHA256: E320E87047A995D2701E6E5D333651724558D20B6828BF3C0CC9E98403543DB6
+SIZE_BYTES: 4926
+
+3. Source commits involved
+
+Source patch commit:
+59756c5 — Patch Business Sales Semantic Coverage candidates
+
+S2 fix commit:
+f464a7b — Patch S2 income-generation deterministic candidate
+
+Current HEAD:
+f464a7b
+
+4. Initial proof result
+
+Initial C8-G-E proof result:
+
+FAIL
+
+Reason:
+
+Only S2 missed one secondary/possible slug:
+
+- income-generation
+
+Everything else already passed:
+
+- all required S2 slugs passed
+- S2 forbidden slugs were absent
+- S1/S3/S4/S5/S8/S9/S10 passed
+- C8-F baseline preservation passed
+
+This was a narrow proof expectation failure, not an architecture failure.
+
+5. Fix applied
+
+C8-G-E-FIX1 / RECOVERY1 added exactly one secondary/possible candidate inside the S2 block:
+
+Block:
+business_sales_potential_client_proposal_semantics
+
+Candidate added:
+
+- slug: income-generation
+- title: Income generation
+- semanticLayer: purpose
+- categoryType: activity_meaning
+- confidence: 0.58
+- isRequired: false
+- isConfirmed: false
+- needsUserReview: true
+
+The fix did not add:
+
+- client to S2
+- existing-client
+- customer-responsibility to S2
+- closed-deal
+- contract-signed
+- payment-received
+- successful-sale
+- proposal-sent
+
+6. Recovery proof result
+
+C8-G-E-RECOVERY1 result:
+
+PASS
+
+The proof confirmed:
+
+- all required slugs are present
+- all secondary/possible slugs intentionally added by D3/FIX1 are present
+- all forbidden slugs are absent
+- C8-F baseline preservation passed
+- no SQL was executed
+- no OpenAI call was executed
+- no /api/activity/complete proof was executed
+- repository stayed clean
+- no commit was made by the proof step
+
+7. Cases proven in C8-G-E-RECOVERY1
+
+S1 — clear commercial proposal to client
+
+Input:
+писал коммерческое предложение клиенту 40 минут
+
+Proof status:
+PASS
+
+Confirmed slugs:
+- writing
+- commercial-proposal
+- client
+- b2b-sales
+- work-responsibility
+- customer-responsibility
+- sales-responsibility
+- income-generation
+- business-development
+- deal-preparation
+- relationship-management
+- duration-minutes
+
+S2 — proposal to potential client
+
+Input:
+prepared a proposal for a potential client
+
+Proof status:
+PASS after FIX1
+
+Confirmed slugs:
+- preparing
+- commercial-proposal
+- potential-client
+- b2b-sales
+- sales-responsibility
+- business-development
+- client-acquisition
+- deal-preparation
+- lead-nurturing
+- income-generation
+- duration-minutes
+
+Important:
+S2 did not return client.
+S2 did not return customer-responsibility.
+S2 did not return existing-client.
+
+S3 — follow-up after meeting
+
+Input:
+wysłałem follow-up do klienta po spotkaniu
+
+Proof status:
+PASS
+
+Confirmed slugs:
+- sending
+- follow-up-message
+- client
+- meeting-follow-up
+- b2b-sales
+- customer-responsibility
+- relationship-management
+- sales-responsibility
+- pipeline-management
+- duration-minutes
+
+S4 — objection handling / price
+
+Input:
+llamé a un cliente para aclarar objeciones sobre el precio
+
+Proof status:
+PASS
+
+Confirmed slugs:
+- calling
+- client
+- objection-handling
+- price-objection
+- negotiation
+- b2b-sales
+- customer-responsibility
+- sales-responsibility
+- duration-minutes
+
+S5 — CRM update after lead call
+
+Input:
+aktualizowałem CRM po rozmowie z leadem
+
+Proof status:
+PASS
+
+Confirmed slugs:
+- updating
+- crm-record
+- lead
+- post-call-documentation
+- sales-admin
+- pipeline-management
+- work-responsibility
+- sales-responsibility
+- duration-minutes
+
+Important:
+S5 did not return client.
+S5 did not return customer-responsibility.
+
+S8 — sales language training
+
+Input:
+учил немецкие фразы для B2B-продаж
+
+Proof status:
+PASS
+
+Confirmed slugs:
+- learning
+- german-language
+- b2b-sales
+- sales-training
+- professional-development
+- career-development
+- preparation
+- future-client-communication
+- income-generation
+- duration-minutes
+
+Important:
+S8 did not return real client-work markers.
+
+S9 — passive reading about sales
+
+Input:
+читал статью о продажах за кофе
+
+Proof status:
+PASS
+
+Confirmed slugs:
+- reading
+- sales-topic
+- self-education
+- passive-learning
+- professional-development
+- rest-context
+- duration-minutes
+
+Important:
+S9 did not return work/sales/customer responsibility or income-generation.
+
+S10 — informal conversation about sales
+
+Input:
+разговаривал с другом о продажах
+
+Proof status:
+PASS
+
+Confirmed slugs:
+- conversation
+- friend
+- sales-topic
+- informal-discussion
+- reflection
+- possible-sales-learning
+- possible-business-idea
+- duration-minutes
+
+Important:
+S10 did not return work/sales/customer responsibility, income-generation or business-development.
+
+C8-F-BASELINE — family childcare baseline preservation
+
+Input:
+учил математику с ребёнком 30 минут
+
+Proof status:
+PASS
+
+Confirmed slugs:
+- teaching
+- mathematics
+- child
+- learning
+- family
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+- duration-minutes
+
+Confirmed marker:
+- teach_math_with_child_care_semantics
+
+8. Business meaning of this proof
+
+The extractor now distinguishes several important business/sales meanings:
+
+- proposal writing to an existing client
+- proposal preparation for a potential client
+- client follow-up after meeting
+- price objection handling
+- CRM/pipeline work with a lead
+- sales-language training as preparation
+- passive sales reading as learning, not client work
+- informal sales conversation as informal discussion, not work responsibility
+
+This is the key result:
+the extractor can now separate active client/sales responsibility from preparation, passive learning, and informal conversation.
+
+9. What is still not proven
+
+The following postponed C8-G-A cases are not yet proven:
+
+S6 — outbound lead list
+Input:
+tworzyłem listę potencjalnych klientów dla kampanii outbound
+
+S7 — partnership negotiation
+Input:
+negocjowałem warunki współpracy z partnerem
+
+S11 — client discovery call
+Input:
+I had a discovery call with a new B2B lead
+
+S12 — customer support ambiguity
+Input:
+позвонил клиенту, чтобы помочь с проблемой после покупки
+
+These cases should not be assumed to work yet.
+
+10. Next expansion decision
+
+Decision:
+
+Do not immediately start resolver / bridge / persistence / SQL / OpenAI / UI work.
+
+Next work should be a new benchmark inventory for the postponed business/sales cases:
+
+- S6 outbound lead list
+- S7 partnership negotiation
+- S11 discovery call / lead qualification
+- S12 post-purchase support ambiguity
+
+Recommended next block:
+
+P4.10.0-C8-H-A — postponed business/sales cases benchmark inventory.
+
+Reason:
+
+C8-G proved the first business/sales extractor subset.
+Before touching deeper architecture, the next safest move is to extend semantic coverage with another controlled benchmark group, still extractor-first.
+
+11. Safety rules for next block
+
+Next block must remain controlled.
+
+Do not:
+
+- patch source immediately
+- create category seeds
+- run SQL
+- call OpenAI
+- call /api/activity/complete
+- touch resolver / bridge / persistence
+- start UI
+- convert this into taxonomy dump
+
+Do:
+
+- create a benchmark inventory first
+- define required slugs
+- define secondary/possible slugs
+- define forbidden overclaims
+- define ambiguity rules
+- keep lead/prospect/client/support/partner distinctions clear
+
+12. Definition of Done for C8-G-F
+
+C8-G-F is done when:
+
+- this document exists under docs/value-objects
+- it records C8-G-E initial FAIL
+- it records S2 income-generation fix
+- it records C8-G-E-RECOVERY1 PASS
+- it records proof output hashes
+- it records all passed cases
+- it records C8-F baseline preservation
+- it states that SQL/OpenAI//api/activity/complete were not used
+- it decides next expansion direction
+- no source-code files changed
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run in this F step
+- git diff contains only this document
+- document is committed and pushed
+- final git status is clean
+
+13. Commit message
+
+Document Business Sales Semantic Coverage proof PASS
