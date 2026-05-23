@@ -922,6 +922,20 @@ export function deriveCategoryCandidates(
       needsUserReview: true,
       metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["potential client may be lead"]),
     });
+
+    addCandidate(candidates, {
+      slug: "income-generation",
+      title: "Income generation",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.58,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_potential_client_proposal_semantics", [
+        "commercial proposal to potential client may support future income; no deal or payment confirmed",
+      ]),
+    });
   }
 
   const sentFollowUpAfterMeeting = includesAny(text, [

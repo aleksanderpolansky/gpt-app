@@ -1,0 +1,154 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-G-E-FIX1
+Minimal S2 income-generation source patch
+
+Status: SOURCE PATCH / MINIMAL FIX / RECOVERY1
+Generated at: 2026-05-23 15:46:37 +02:00
+Baseline HEAD: 9b8b422
+Previous block: P4.10.0-C8-G-E-FIXPLAN1 — S2 missing secondary income-generation fix plan
+Next planned block: P4.10.0-C8-G-E-RECOVERY1 — rerun deterministic extractor-level proof
+
+Exact verifier markers intentionally present:
+- No SQL
+- No OpenAI
+- No runtime proof
+- /api/activity/complete
+
+1. Purpose
+
+This step applies the minimal source fix planned in C8-G-E-FIXPLAN1.
+
+The previous C8-G-E deterministic proof failed only because S2 lacked the secondary/possible slug:
+
+- income-generation
+
+This patch adds exactly one secondary/possible candidate to the S2 block.
+
+2. Source file changed
+
+Only this source file is changed:
+
+- lib/activity/categoryDerivation/ruleExtractor.ts
+
+This documentation file is also added:
+
+- docs/value-objects/category-derivation-layer-v1-c8-g-e-fix1-s2-income-generation-source-patch.txt
+
+3. Source hashes
+
+ruleExtractor.ts after patch:
+.\lib\activity\categoryDerivation\ruleExtractor.ts
+SHA256: BF8380B96858336F2FF34B76630622F609DD6032F7C7F6224F23CEC8C1272AA2
+
+Fix plan:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-e-fixplan1-s2-income-generation-secondary-missing.txt
+SHA256: BADBB2C64BC58DDA65D3E4738824332FBEF2F38C470A4CDFD8A6ABBD2F7A2CB9
+
+Failed proof output:
+C:\Users\Admin\Downloads\P4_10_0_C8_G_E_deterministic_extractor_proof_output.txt
+SHA256: 0B1B06E938CAFD01DC5E1AF5743F879DB759F348447DB8F4DE228D92DA57949B
+
+4. Exact patch
+
+Inside the S2 block:
+
+- business_sales_potential_client_proposal_semantics
+
+The patch adds one candidate:
+
+- slug: income-generation
+- title: Income generation
+- semanticLayer: purpose
+- categoryType: activity_meaning
+- confidence: 0.58
+- isRequired: false
+- isConfirmed: false
+- needsUserReview: true
+
+Reason:
+A commercial proposal to a potential client may support future income, but the phrase does not confirm a deal, payment, contract or successful sale.
+
+5. What was not changed
+
+This patch does not change:
+
+- S1 behavior
+- S3 behavior
+- S4 behavior
+- S5 behavior
+- S8 behavior
+- S9 behavior
+- S10 behavior
+- C8-F family/childcare behavior
+- resolver
+- bridge
+- persistence
+- SQL
+- OpenAI
+- /api/activity/complete
+- UI
+
+6. Forbidden overclaim protection
+
+This patch does not add:
+
+- client to S2
+- existing-client
+- customer-responsibility to S2
+- closed-deal
+- contract-signed
+- payment-received
+- invoice-paid
+- successful-sale
+- discount-given
+- proposal-sent
+- client-acquired
+
+7. Validation performed in this recovery step
+
+This step performs:
+
+- verification that S2 income-generation exists exactly once
+- S2 forbidden client/customer-responsibility absence check
+- global marker preservation check
+- C8-F baseline marker preservation check
+- forbidden overclaim absence check
+- git diff --check
+- npx.cmd tsc --noEmit --pretty false
+- targeted ESLint for lib/activity/categoryDerivation/ruleExtractor.ts
+- cached diff check
+- commit and push
+
+8. Runtime proof
+
+This step does not run the deterministic proof.
+
+The next step must be:
+
+P4.10.0-C8-G-E-RECOVERY1
+
+Expected result:
+
+- S2 income-generation secondary/possible slug is present
+- all previous passing cases remain passing
+- C8-F baseline remains passing
+- repository stays clean after proof
+
+9. Definition of Done for C8-G-E-FIX1-RECOVERY1
+
+C8-G-E-FIX1-RECOVERY1 is done when:
+
+- ruleExtractor.ts contains exactly one S2 income-generation inside business_sales_potential_client_proposal_semantics
+- only ruleExtractor.ts and this FIX1 document are changed
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run
+- TypeScript validation passes
+- targeted ESLint passes
+- changes are committed and pushed
+- final git status is clean
+
+10. Commit message
+
+Patch S2 income-generation deterministic candidate
