@@ -1,0 +1,327 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-E-H
+Controlled production_persist runtime proof procedure plan
+Created: 2026-05-23
+
+1. Purpose
+
+This document defines the procedure for the first controlled production_persist runtime proof.
+
+This is a documentation-only step.
+
+No production_persist runtime proof is executed here.
+
+No SQL is executed here.
+
+No source code is changed here.
+
+2. Current baseline
+
+Current HEAD before this procedure plan:
+
+- ca68615 Plan Category Derivation controlled proof cleanup policy
+
+Relevant previous commits:
+
+- 8f1af0e Add Category Derivation controlled production persist proof route
+- c1c5253 Document Category Derivation controlled production persist proof route
+- 0cb1c06 Fix Category Derivation controlled proof route documentation marker
+- ca68615 Plan Category Derivation controlled proof cleanup policy
+
+3. Controlled route under test
+
+Controlled route:
+
+- /api/activity/debug/category-derivation-controlled-production-persist-proof
+
+Controlled route file:
+
+- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+
+The route must remain the only route used for the first production_persist proof.
+
+The real /api/activity/complete route must not be used for this proof.
+
+4. Runtime proof goal
+
+The goal of the runtime proof is to verify that production_persist can persist Category Derivation rows through the completeRouteIntegration adapter in a controlled, proof-marked, cleanup-eligible way.
+
+The proof must verify:
+
+- proof event is created
+- proof event has required metadata markers
+- first adapter call creates one derivation run
+- first adapter call persists derivation rows
+- second adapter call finds the existing completed run
+- second adapter call does not persist duplicate rows
+- same derivationRunId is returned by both calls
+- dbVerification.pass is true
+- safety object confirms no /api/activity/complete call
+- safety object confirms no SQL in PowerShell
+- safety object confirms no OpenAI call
+
+5. Required environment for runtime proof
+
+The dev server must be started explicitly with these environment settings:
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=false
+
+The route response must confirm:
+
+- config.mode is production_persist
+- config.isProductionPersistMode is true
+- config.shouldPersist is true
+- config.shouldResolve is true
+- config.failActivityComplete is false
+- config.includeResponseDebug is false
+
+6. PowerShell command to start dev server later
+
+The later runtime proof should start the dev server from the repo root with:
+
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_MODE="production_persist"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE="false"
+$env:CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG="false"
+npm run dev
+
+This command is documented here only.
+
+It must not be executed in this F6-E-E-H step.
+
+7. Browser route for later runtime proof
+
+The browser should be opened to:
+
+http://localhost:3000
+
+The user must be authenticated before running the browser-console fetch.
+
+8. Browser-console request for later runtime proof
+
+The later runtime proof should use this browser-console request:
+
+const endpoint = "/api/activity/debug/category-derivation-controlled-production-persist-proof";
+
+const payload = {
+  proof: "P4.10.0-C8-E-F6-E-controlled-production-persist-proof",
+  mode: "production_persist",
+  callTwice: true,
+  inputText: "walked to work for 10 minutes during controlled production persist proof",
+  title: "F6-E controlled production_persist proof",
+  durationMinutes: 10
+};
+
+const response = await fetch(endpoint, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify(payload)
+});
+
+const data = await response.json();
+
+console.log("HTTP status:", response.status);
+console.log("OK:", data.ok);
+console.log("status:", data.status);
+console.log("event id:", data.event && data.event.id);
+console.log("first derivationRunId:", data.proof && data.proof.firstDerivationRunId);
+console.log("second derivationRunId:", data.proof && data.proof.secondDerivationRunId);
+console.log("dbVerification:", data.dbVerification);
+console.log("safety:", data.safety);
+console.log("full response:", data);
+
+9. Expected successful top-level response
+
+Expected successful response markers:
+
+- HTTP status: 200
+- ok: true
+- status: controlled_production_persist_proof_pass
+- route: /api/activity/debug/category-derivation-controlled-production-persist-proof
+- p4Step: P4.10.0-C8-E-F6-E-E-controlled-production-persist-proof
+
+10. Expected proof object
+
+Expected proof object:
+
+- firstCallPass: true
+- secondCallPass: true
+- sameDerivationRunId: true
+- firstDerivationRunId is present
+- secondDerivationRunId equals firstDerivationRunId
+- secondCallDidNotPersist: true
+- productionPersistActuallyUsed: true
+- eventWasProofMarked: true
+
+11. Expected first call
+
+Expected firstCall:
+
+- ok: true
+- reason: route_runner_completed
+- derivationRunId is present
+- persistenceDerivationRowsCreated: 5
+- routeRunner.executed: true
+- routeRunner.persisted: true
+
+12. Expected second call
+
+Expected secondCall:
+
+- ok: true
+- reason: existing_completed_run_found
+- derivationRunId equals firstCall.derivationRunId
+- persistenceDerivationRowsCreated: 0
+- routeRunner.executed: false
+- routeRunner.persisted: false
+
+13. Expected DB verification object
+
+Expected dbVerification:
+
+- pass: true
+- proofEventExists: true
+- proofEventHasRequiredMarkers: true
+- routeRunnerSpecificRunsCount: 1
+- routeRunnerSpecificRunsPass: true
+- expectedDerivationRunExists: true
+- expectedDerivationRunActualCount: 1
+- activityCategoryDerivationsCount: 5
+- activityCategoryDerivationsPass: true
+- noDuplicateRuns: true
+- duplicateRouteRunnerCompletedRunsActualCount: 1
+
+14. Expected safety object
+
+Expected safety object:
+
+- completeRouteModified: false
+- completeRouteCalled: false
+- eventCompletedByThisRoute: false
+- productionPersistEnabled: true
+- productionPersistAllowedOnlyForThisDebugProof: true
+- failActivityComplete: false
+- openAiCalled: false
+- uiCreated: false
+- migrationCreated: false
+- schemaChanged: false
+- rlsChanged: false
+- permissionsChanged: false
+- sqlExecutedByPowerShell: false
+- cleanupEligible: true
+- debugOnly: true
+- nonCanonicalBusinessEvent: true
+
+15. Failure handling
+
+If the runtime proof fails, do not run cleanup immediately.
+
+First capture:
+
+- full browser console output
+- HTTP status
+- full JSON response
+- git status --short
+- current dev server environment variables
+- whether the user was authenticated
+- whether the route returned 401, 409, 500, or another status
+- firstCall object if present
+- secondCall object if present
+- dbVerification object if present
+- safety object if present
+
+Then document the failure before making changes.
+
+16. Cleanup handling after successful proof
+
+Even after a successful runtime proof, cleanup must not be executed automatically.
+
+First document the proof result.
+
+Then decide separately whether cleanup is needed.
+
+If cleanup is needed, create a separate reviewed cleanup SQL document.
+
+No SQL may be executed in PowerShell.
+
+17. What is still not approved in this step
+
+This step does not approve:
+
+- executing the runtime proof
+- starting dev server in production_persist mode
+- calling the controlled proof route
+- cleanup SQL execution
+- SQL verification from PowerShell
+- direct production_persist on /api/activity/complete
+- strict failActivityComplete=true
+- schema changes
+- migrations
+- RLS changes
+- permission changes
+- UI work
+- OpenAI calls
+- broad refactor
+
+18. Approved next step
+
+Approved next step:
+
+P4.10.0-C8-E-F6-E-E-I - execute controlled production_persist runtime proof
+
+Scope of next step:
+
+- start dev server with production_persist mode
+- run browser-console request against the controlled debug route
+- capture full output
+- do not run SQL
+- do not run cleanup
+- do not modify source code
+- do not modify /api/activity/complete
+- document result afterward in a separate step
+
+19. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no production_persist runtime execution in this F6-E-E-H step
+- no SQL execution
+- no SQL in PowerShell
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no cleanup command without separate review
+- no real /api/activity/complete production_persist proof yet
+
+20. Exact verification markers
+
+- P4.10.0-C8-E-F6-E-E-H
+- controlled production_persist runtime proof procedure
+- No production_persist runtime proof is executed here
+- No SQL is executed here
+- no SQL in PowerShell
+- production_persist
+- controlled_production_persist_proof
+- cleanupEligible
+- productionPersistProof
+- controlled_production_persist_proof_pass
+- existing_completed_run_found
+- route_runner_completed
+- P4.10.0-C8-E-F6-E-E-I
+- execute controlled production_persist runtime proof
+
+21. Definition of Done
+
+This F6-E-E-H procedure-planning step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above ca68615
