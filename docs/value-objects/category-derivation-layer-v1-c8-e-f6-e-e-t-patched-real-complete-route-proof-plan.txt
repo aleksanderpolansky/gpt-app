@@ -1,0 +1,302 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-E-T
+Plan: patched real complete route proof
+Created: 2026-05-23
+
+1. Purpose
+
+This document plans the next runtime proof after the proof-safe source patch.
+
+This is a documentation-only planning step.
+
+No runtime proof is executed here.
+
+No SQL is executed here.
+
+No cleanup is executed here.
+
+No source code is changed here.
+
+2. Current baseline
+
+Current HEAD before this plan:
+
+- d5882f4 Patch Category Derivation proof-safe complete route diagnostics
+
+Relevant previous commits:
+
+- e39f571 Inspect Category Derivation complete route proof response exposure
+- cb6a55d Decide Category Derivation proof-safe patch strategy
+- d5882f4 Patch Category Derivation proof-safe complete route diagnostics
+
+3. What S changed
+
+S patched exactly two source files:
+
+- src/app/api/activity/complete/route.ts
+- src/app/api/activity/debug/create-free-text-start-event/route.ts
+
+S did not run runtime proof.
+
+S did not execute SQL.
+
+S did not execute cleanup.
+
+S did not change schema, RLS, UI, or broad architecture.
+
+4. What S1 and S1A proved
+
+S1/S1A validation results:
+
+- TypeScript validation passed through npx.cmd tsc --noEmit --pretty false.
+- Targeted ESLint for the two patched files completed with 0 errors.
+- Targeted ESLint reported 1 warning in src/app/api/activity/complete/route.ts:
+  canTransitionActivityStatus is defined but never used.
+- This warning is known and pre-existing from the S0 source snapshot.
+- Global npm.cmd run lint still fails on old project-wide issues outside the two patched files.
+- Working tree remained clean.
+- No runtime proof was executed.
+- No SQL was executed.
+- No cleanup was executed.
+- No source code was changed during validation.
+
+5. Proof objective
+
+The next runtime proof must prove the following:
+
+1. create-free-text-start-event preserves proof metadata.
+2. /api/activity/complete accepts eventId.
+3. /api/activity/complete completes the proof-created event.
+4. /api/activity/complete exposes categoryDerivation diagnostic data in proof/debug mode.
+5. categoryDerivation diagnostic data includes enough information to prove production_persist:
+   - categoryDerivation.ok
+   - categoryDerivation.status
+   - categoryDerivation.mode
+   - categoryDerivation.reason
+   - categoryDerivation.derivationRunId
+   - categoryDerivation.persistenceDerivationRowsCreated
+   - categoryDerivation.activityCategoryDerivationsCount
+   - categoryDerivation.existingCompletedRunFound
+   - categoryDerivation.failedButCompletionContinued
+6. Repeated complete call for the same event is idempotent and returns already_completed.
+7. Repeated complete call should expose already-completed Category Derivation diagnostic data if proof/debug mode is active.
+
+6. Required dev server environment for next runtime proof
+
+The next runtime proof must use:
+
+- CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+- CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=true
+
+Reason:
+
+- production_persist is the mode under proof.
+- failActivityComplete must remain false to avoid breaking the normal lifecycle during first real proof.
+- includeResponseDebug is now allowed because S added controlled/sanitized diagnostic exposure.
+
+7. Runtime proof event policy
+
+The next runtime proof must create a new dedicated proof event.
+
+Do not reuse the old event:
+
+- 2d5654bd-bee5-47b6-b725-a2defaf8efc5
+
+Reason:
+
+The old event was created before S and does not preserve the new proof metadata.
+
+The new event must be created through:
+
+- /api/activity/debug/create-free-text-start-event
+
+The new event payload must include:
+
+- inputText
+- title
+- description
+- proof
+- p4Step
+- purpose
+- cleanupEligible
+- productionPersistProof
+- nonCanonicalBusinessEvent
+- metadata
+
+8. Required proof metadata
+
+The new proof event must preserve the following metadata in activity_events.metadata_json:
+
+- proof: P4.10.0-C8-E-F6-E-real-complete-route-production-persist-proof
+- p4Step: P4.10.0-C8-E-F6-E-E-U
+- purpose: patched_real_complete_route_production_persist_proof
+- cleanupEligible: true
+- productionPersistProof: true
+- nonCanonicalBusinessEvent: true
+- setupRouteP4Step: P4.10.0-C8-P3-B7-C2-C-A2
+- endpoint: /api/activity/debug/create-free-text-start-event
+- productionRouteUnderTest: /api/activity/complete
+- categoryDerivationExecutedHere: false
+
+9. Runtime proof sequence for U
+
+Step U must run in the browser console only after the dev server is restarted with the required environment.
+
+U sequence:
+
+1. Create a new proof event through /api/activity/debug/create-free-text-start-event.
+2. Verify create response:
+   - HTTP 200
+   - ok true
+   - status created_started_free_text_event
+   - event.id exists
+   - event.metadata contains proof metadata
+   - event.metadata.cleanupEligible true
+   - event.metadata.productionPersistProof true
+   - event.metadata.nonCanonicalBusinessEvent true
+   - event.metadata.setupRouteP4Step exists
+3. Complete the created event through /api/activity/complete using eventId.
+4. Verify complete response:
+   - HTTP 200
+   - ok true
+   - status completed
+   - event.status completed
+   - categoryDerivation exists
+   - categoryDerivation.mode production_persist
+   - categoryDerivation.derivationRunId is present or reason explains reuse/skip
+   - categoryDerivation.persistenceDerivationRowsCreated is visible
+   - categoryDerivation.activityCategoryDerivationsCount is visible
+5. Run one idempotency complete call for the same eventId.
+6. Verify idempotency response:
+   - HTTP 200
+   - ok true
+   - status already_completed
+   - event.status completed
+   - lifecycle.alreadyCompleted true
+   - categoryDerivation exists or explicit already_completed diagnostic exists
+   - no new event was created
+
+10. What U must not do
+
+U must not:
+
+- execute SQL
+- run cleanup
+- create multiple proof events
+- use normal user activity
+- set failActivityComplete=true
+- change source code
+- run OpenAI calls directly from browser
+- run schema/migration/RLS/UI changes
+
+11. Expected result classification
+
+U can be classified as PASS only if:
+
+- proof event metadata is preserved
+- real complete route completes the proof event
+- categoryDerivation diagnostic data is visible
+- production_persist mode is visible
+- derivation run or idempotency reason is visible
+- row count fields are visible
+- idempotency call returns already_completed without HTTP failure
+
+U must be classified as PARTIAL if:
+
+- completion works but categoryDerivation diagnostic is missing
+- proof metadata is not preserved
+- production_persist mode is not visible
+- row count fields are missing
+
+U must be classified as FAIL if:
+
+- create route fails
+- complete route fails
+- TypeScript/runtime route crash occurs
+- eventId payload no longer works
+- event does not reach completed state
+
+12. Output handling
+
+The browser console script for U must print:
+
+- create HTTP status
+- full create JSON
+- complete HTTP status
+- full complete JSON
+- idempotency HTTP status
+- full idempotency JSON
+- extracted summary
+- checks
+- final PASS/PARTIAL/FAIL candidate
+
+The model must review the output before declaring final PASS.
+
+13. Cleanup policy
+
+No cleanup is approved in U.
+
+Cleanup remains deferred until after the proof result is documented.
+
+The previous old proof event and the new patched proof event remain audit evidence until cleanup is explicitly planned.
+
+14. Next step after T
+
+After this T document is committed, the next step is:
+
+P4.10.0-C8-E-F6-E-E-U - patched real complete route production_persist runtime proof
+
+U is a runtime proof step.
+
+15. Safety gates preserved
+
+Until U is explicitly started:
+
+- no cleanup command
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no additional /api/activity/complete runtime proof before U
+- no normal user activity used for proof
+- no failActivityComplete=true
+
+16. Exact verification markers
+
+- P4.10.0-C8-E-F6-E-E-T
+- patched real complete route proof plan
+- d5882f4 Patch Category Derivation proof-safe complete route diagnostics
+- TypeScript validation passed
+- Targeted ESLint for patched files completed with 0 errors
+- canTransitionActivityStatus known pre-existing warning
+- CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+- CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=true
+- P4.10.0-C8-E-F6-E-E-U
+- patched real complete route production_persist runtime proof
+- proof metadata preserved
+- categoryDerivation diagnostic data visible
+- production_persist mode visible
+- derivationRunId visible
+- persistenceDerivationRowsCreated visible
+- activityCategoryDerivationsCount visible
+- existingCompletedRunFound visible
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+- No source code is changed here
+
+17. Definition of Done
+
+This T planning step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above d5882f4
