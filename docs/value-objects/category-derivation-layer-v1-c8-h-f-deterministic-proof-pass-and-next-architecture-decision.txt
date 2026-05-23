@@ -1,0 +1,460 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-H-F
+Postponed business/sales deterministic proof PASS and next architecture decision
+
+Status: DOC-ONLY RESULT / PASS / ARCHITECTURE DECISION
+Generated at: 2026-05-23 18:56:43 +02:00
+Baseline HEAD: b16f54f
+Previous block: P4.10.0-C8-H-E — deterministic extractor-level proof for postponed business/sales cases
+Result: PASS
+Next planned block: P4.10.0-C8-I-A — Category Derivation infrastructure gap inventory and state/context hooks readiness map
+
+Exact verifier markers intentionally present:
+- No SQL
+- No OpenAI
+- No runtime proof in this F step
+- /api/activity/complete was not used
+
+1. Purpose
+
+This document records the final PASS result for C8-H postponed business/sales semantic coverage and defines the next architecture decision.
+
+C8-H-F does not patch source code.
+C8-H-F does not run SQL.
+C8-H-F does not call OpenAI.
+C8-H-F does not run /api/activity/complete.
+C8-H-F does not run a new runtime proof.
+
+2. Sources used
+
+Current source:
+.\lib\activity\categoryDerivation\ruleExtractor.ts
+SHA256: FC209046D75D0ECA7B1AA3F130288999454D0C21DEDA6EB3E9240264291DDE21
+SIZE_BYTES: 75268
+LINE_COUNT: 2340
+
+C8-H-A benchmark inventory:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-a-postponed-business-sales-cases-benchmark-inventory.txt
+SHA256: 02001D6B9984520C260744980002CEFFA0FE579E8AE6702665AD235BC833CDD6
+
+C8-H-B static inspection:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-b-current-postponed-business-sales-support-inspection.txt
+SHA256: F023CC56EC02F85EEA2131DF7F1069B6BB3B60730256088E44BF8BEE32A37E23
+
+C8-H-C strategy:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-c-minimal-additive-postponed-business-sales-patch-strategy.txt
+SHA256: 90B6671C22CA1DEADC5697232DB7BCA630CB5EA791AEE734696B675C14F53B5E
+
+C8-H-D1 exact files decision:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-d1-exact-files-to-patch-decision.txt
+SHA256: 8971D4C746EBED5C79E0AB7DABDEA1FD730E8CA9A19987216DDE26E1CF1C4512
+
+C8-H-D3 source patch document:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-d3-postponed-business-sales-semantic-candidate-patch.txt
+SHA256: B1A51346A77DBE73CE7214EC99DDDEA23CFD4F3333367A42491B550A9811016F
+
+C8-H-D4 proof plan:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-d4-source-patch-validation-and-proof-plan.txt
+SHA256: E367F16A9466733B8D90E86606AF591A4869C87FC9F4386841589918F5FE4BA2
+
+C8-H-E proof output:
+C:\Users\Admin\Downloads\P4_10_0_C8_H_E_deterministic_extractor_proof_output.txt
+SHA256: 67814A054065753083A62D9B543C77A4268792501B0D29B5F5CBD22F5E1A1F76
+SIZE_BYTES: 4472
+
+C8-G-F proof PASS and expansion decision:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-f-deterministic-proof-pass-and-expansion-decision.txt
+SHA256: 729AC3E3E3A7005DD31AB1BA41EC4115736FB78E35AB596442ECAE4E2F39DA63
+
+C8-G-E-RECOVERY1 proof output:
+C:\Users\Admin\Downloads\P4_10_0_C8_G_E_RECOVERY1_deterministic_extractor_proof_output.txt
+SHA256: E320E87047A995D2701E6E5D333651724558D20B6828BF3C0CC9E98403543DB6
+SIZE_BYTES: 4926
+
+3. Source commits involved
+
+C8-H source patch commit:
+
+dfdc140 — Patch Postponed Business Sales Semantic Coverage candidates
+
+C8-H proof plan commit:
+
+b16f54f — Plan Postponed Business Sales deterministic proof
+
+Current HEAD:
+
+b16f54f
+
+4. C8-H-E proof result
+
+C8-H-E result:
+
+PASS
+
+The proof confirmed:
+
+- all required/core slugs are present
+- all secondary/possible slugs intentionally added by D3 are present
+- all forbidden slugs are absent
+- C8-G preservation case passed
+- C8-F baseline preservation passed
+- no SQL was executed
+- no OpenAI call was executed
+- no /api/activity/complete proof was executed
+- repository stayed clean
+- no commit was made by the proof step
+
+5. Cases proven in C8-H-E
+
+S6 — outbound lead list
+
+Input:
+tworzyłem listę potencjalnych klientów dla kampanii outbound
+
+Proof status:
+PASS
+
+Confirmed slugs:
+
+- creating
+- lead-list
+- potential-client
+- prospecting
+- outbound-sales
+- lead-generation
+- business-development
+- b2b-sales
+- sales-responsibility
+- client-acquisition
+- pipeline-management
+- income-generation
+- outbound-campaign
+- potential-client-list
+- no-confirmed-contact
+- no-confirmed-client
+- lead-not-client
+- potential-client-not-client
+- duration-minutes
+
+Important:
+S6 did not return client, existing-client, contacted-client, customer-responsibility, proposal-sent, meeting-held, discovery-call, closed-deal, successful-sale, contract-signed or payment-received.
+
+S7 — partnership negotiation
+
+Input:
+negocjowałem warunki współpracy z partnerem
+
+Proof status:
+PASS
+
+Confirmed slugs:
+
+- negotiating
+- business-partner
+- partnership
+- cooperation-terms
+- business-development
+- partner-responsibility
+- work-responsibility
+- strategic-partnership
+- relationship-management
+- income-generation
+- revenue-generation
+- b2b-sales
+- business-responsibility
+- partner-not-client
+- duration-minutes
+
+Important:
+S7 did not return client, potential-client, lead, prospect, customer-responsibility, sales-proposal, commercial-proposal, discovery-call, closed-deal, contract-signed, payment-received or successful-sale.
+
+S11 — discovery call with a new B2B lead
+
+Input:
+I had a discovery call with a new B2B lead
+
+Proof status:
+PASS
+
+Confirmed slugs:
+
+- discovery-call
+- calling
+- new-lead
+- lead
+- b2b-sales
+- client-acquisition
+- sales-process
+- business-development
+- sales-responsibility
+- lead-qualification
+- relationship-management
+- income-generation
+- deal-preparation
+- pipeline-management
+- possible-business-development
+- lead-not-client
+- duration-minutes
+
+Important:
+S11 did not return client, existing-client, customer-responsibility, commercial-proposal, proposal-sent, closed-deal, contract-signed, payment-received, successful-sale or client-acquired.
+
+S12 — post-purchase customer support ambiguity
+
+Input:
+позвонил клиенту, чтобы помочь с проблемой после покупки
+
+Proof status:
+PASS
+
+Confirmed slugs:
+
+- calling
+- client
+- post-purchase-support
+- customer-support
+- customer-responsibility
+- relationship-management
+- support-responsibility
+- retention
+- account-management
+- customer-success
+- business-responsibility
+- support-not-new-sale
+- duration-minutes
+
+Important:
+S12 did not return new-sale, lead-generation, prospecting, outbound-sales, client-acquisition, sales-responsibility, b2b-sales, discovery-call, commercial-proposal, proposal-sent, price-objection, closed-deal, contract-signed, payment-received or successful-sale.
+
+6. Preservation cases proven
+
+C8-G-PRESERVATION-S2 — proposal to potential client preservation
+
+Input:
+prepared a proposal for a potential client
+
+Proof status:
+PASS
+
+Confirmed slugs:
+
+- preparing
+- commercial-proposal
+- potential-client
+- b2b-sales
+- sales-responsibility
+- business-development
+- client-acquisition
+- deal-preparation
+- lead-nurturing
+- income-generation
+- duration-minutes
+
+Confirmed marker:
+
+- business_sales_potential_client_proposal_semantics
+
+Forbidden slugs absent:
+
+- existing-client
+- closed-deal
+- contract-signed
+- payment-received
+- client
+
+C8-F-BASELINE — family childcare baseline preservation
+
+Input:
+учил математику с ребёнком 30 минут
+
+Proof status:
+PASS
+
+Confirmed slugs:
+
+- teaching
+- mathematics
+- child
+- learning
+- family
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+- duration-minutes
+
+Confirmed marker:
+
+- teach_math_with_child_care_semantics
+
+7. Business meaning of C8-H PASS
+
+The extractor now separates these additional business/sales boundary conditions:
+
+- pre-contact outbound lead-list creation is not confirmed client contact
+- potential client / lead acquisition work is not existing-client work
+- partner negotiation is not client sales by default
+- discovery call with a new B2B lead is lead qualification, not closed deal
+- post-purchase support is customer responsibility, not new sales acquisition
+- support after purchase can imply retention/account-management, but not new sale
+- C8-G sales/proposal cases remain preserved
+- C8-F family/childcare baseline remains preserved
+
+8. Architecture decision after C8-H
+
+Decision:
+
+Do not start state engine implementation immediately.
+
+Do not start resolver / bridge / persistence changes inside C8-H-F.
+
+Do not start UI.
+
+Do not run SQL yet.
+
+The next block should be architectural inventory and readiness mapping:
+
+P4.10.0-C8-I-A — Category Derivation infrastructure gap inventory and state/context hooks readiness map
+
+Reason:
+
+C8-G and C8-H have now proven a strong deterministic extractor layer for family/childcare and business/sales semantics.
+
+However, before designing or coding full state layers, the project still needs to align the infrastructure from the 20 May plan:
+
+- schema audit
+- derivation run persistence
+- candidate status/governance
+- resolver hardening
+- working_draft / suggested / needs_review policy
+- bridge handoff rules
+- correction loop requirements
+- traceability from raw activity to candidates, resolved categories, VO links, aggregates/snapshots
+- state/context hooks inventory
+
+9. Why state layers are not started yet
+
+State layers should not be implemented directly on top of raw extractor output.
+
+A future state engine needs stable, persisted and reviewable semantic facts.
+
+Before state engine implementation, the system needs to know:
+
+- which candidates are deterministic
+- which candidates are AI-suggested
+- which candidates are resolved to controlled categories
+- which candidates are working drafts
+- which candidates require user review
+- which candidates are revoked or corrected
+- which candidate version created which downstream VO link or snapshot
+- whether a state signal is direct, inferred, possible or contraindicated
+
+Without this, state snapshots could overclaim fatigue, stress, focus, income-generation, customer responsibility, care load or next-best-action relevance.
+
+10. State/context hooks already touched by current work
+
+C8-F, C8-G and C8-H already created useful future hooks:
+
+Family / care hooks:
+
+- childcare
+- parental-care
+- caregiving
+- family-duty
+- helping-child-learn
+
+Business / sales hooks:
+
+- income-generation
+- business-development
+- sales-responsibility
+- customer-responsibility
+- partner-responsibility
+- support-responsibility
+- business-responsibility
+- lead-generation
+- lead-qualification
+- prospecting
+- client-acquisition
+- retention
+- account-management
+- customer-success
+
+Risk/ambiguity hooks:
+
+- lead-not-client
+- potential-client-not-client
+- partner-not-client
+- support-not-new-sale
+- no-confirmed-contact
+- no-confirmed-client
+
+These are not yet state layers.
+They are semantic inputs for future state/context layers.
+
+11. Recommended next block
+
+P4.10.0-C8-I-A — Category Derivation infrastructure gap inventory and state/context hooks readiness map
+
+C8-I-A should be doc-only.
+
+It should inspect and map:
+
+- what exists now in Category Derivation Layer
+- what parts of the 20 May plan are already covered
+- what is still missing before state layer design
+- which current slugs can serve as state/context hooks
+- which hooks must remain only possible/needs_review
+- what schema/governance/persistence pieces are required first
+- what should not be implemented yet
+
+12. What not to do next
+
+Do not:
+
+- start state engine tables immediately
+- start recommendation API immediately
+- start physiological state inference immediately
+- run SQL migrations without schema inventory
+- patch resolver/bridge before deciding the governance model
+- add UI before the correction loop and persistence policy are defined
+- use OpenAI classification before structured schema/governance is ready
+- assume extractor candidates are automatically confirmed state facts
+
+13. What to do next
+
+Do:
+
+- document C8-I-A infrastructure gap inventory
+- map current extractor outputs to future state/context hooks
+- identify minimum schema/governance prerequisites
+- define transition order from extractor proof to persistence/resolver/correction loop
+- preserve C8-F/C8-G/C8-H benchmark proofs as regression anchors
+
+14. Definition of Done for C8-H-F
+
+C8-H-F is done when:
+
+- this document exists under docs/value-objects
+- it records C8-H-E PASS
+- it records C8-H-E proof hash
+- it records all S6/S7/S11/S12 proof results
+- it records C8-G preservation PASS
+- it records C8-F baseline PASS
+- it states that SQL/OpenAI//api/activity/complete were not used
+- it decides not to start state engine implementation immediately
+- it decides the next block as C8-I-A
+- it defines C8-I-A as infrastructure gap inventory and state/context hooks readiness map
+- no source-code files changed
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run in this F step
+- git diff contains only this document
+- document is committed and pushed
+- final git status is clean
+
+15. Commit message
+
+Document Postponed Business Sales proof PASS
