@@ -1,0 +1,481 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-F-C
+Decision: minimal additive semantic coverage patch strategy
+Created: 2026-05-23
+
+1. Purpose
+
+This document decides the minimal additive semantic coverage patch strategy after:
+
+- P4.10.0-C8-F-A - Semantic Coverage Benchmark Inventory
+- P4.10.0-C8-F-B - Current semantic coverage support inspection
+
+This is a documentation-only decision step.
+
+No runtime proof is executed here.
+
+No SQL is executed here.
+
+No cleanup is executed here.
+
+No source code is changed here.
+
+2. Current baseline
+
+Current HEAD before this document:
+
+- ad1035b Inspect Category Derivation semantic coverage support
+
+Relevant previous commits:
+
+- 393a47e Create Category Derivation semantic coverage benchmark inventory
+- ad1035b Inspect Category Derivation semantic coverage support
+
+3. Decision summary
+
+Decision:
+
+Proceed with a minimal additive semantic coverage patch focused first on family/childcare role semantics.
+
+First implementation target:
+
+- B1 учил математику с ребёнком
+- B2 ребёнок учил математику рядом со мной
+- F1 I was with my child while they did homework
+
+Reason:
+
+These cases prove the most important semantic distinction that the user explicitly identified:
+
+- active teaching
+- passive supervision
+- family duty
+- childcare / parental care / caregiving
+- helping child learn
+- ambiguity preservation
+
+4. What must not happen
+
+The system must not flatten these activities into only:
+
+- math
+- child
+- learning
+- family
+
+This is technically insufficient.
+
+The required layer is:
+
+- role / duty / responsibility / care / purpose
+
+5. Minimal patch principle
+
+Use a minimal additive patch.
+
+Do not rewrite the whole Category Derivation pipeline.
+
+Do not change schema in this block.
+
+Do not change RLS.
+
+Do not change UI.
+
+Do not use OpenAI yet.
+
+Do not run cleanup.
+
+Do not run SQL from PowerShell.
+
+Do not run normal user activity as proof.
+
+6. Semantic representation decision
+
+Decision:
+
+Represent role/care/purpose initially as deterministic category candidates that can flow through the existing resolver and Value Object Bridge.
+
+Do not introduce a new database type or schema column yet.
+
+Required candidate slugs for the first patch family:
+
+- mathematics
+- child
+- learning
+- family
+- teaching
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+- child-supervision
+- homework
+- ambiguity-passive-supervision
+- ambiguity-active-help-unknown
+
+7. Candidate classification decision
+
+Decision:
+
+For the first patch, add semantic coverage through explicit candidate slugs and candidate metadata if the current types already allow metadata.
+
+Target semantic groups:
+
+- action
+- domain
+- participant
+- relationship_context
+- role
+- duty
+- care_function
+- purpose
+- ambiguity_marker
+
+If the current candidate type cannot represent the group/kind explicitly, preserve it in candidate slug naming and document this as a future model improvement.
+
+8. Benchmark case B1 decision
+
+Input:
+
+учил математику с ребёнком
+
+Expected deterministic candidate coverage:
+
+- mathematics
+- child
+- learning
+- teaching
+- family
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+
+Expected interpretation:
+
+The user is actively teaching/helping.
+
+The activity has a family/care responsibility layer.
+
+Required anti-regression rule:
+
+Do not classify it only as math + child + learning + family.
+
+9. Benchmark case B2 decision
+
+Input:
+
+ребёнок учил математику рядом со мной
+
+Expected deterministic candidate coverage:
+
+- mathematics
+- child
+- learning
+- family
+- child-supervision
+- ambiguity-passive-supervision
+- ambiguity-active-help-unknown
+
+Expected interpretation:
+
+The child is learning.
+
+The user may be supervising or merely present.
+
+The system must not overclaim active teaching.
+
+Required behavior:
+
+Preserve ambiguity.
+
+Do not automatically add teaching unless the input indicates the user taught/helped.
+
+10. Benchmark case F1 decision
+
+Input:
+
+I was with my child while they did homework
+
+Expected deterministic candidate coverage:
+
+- child
+- homework
+- family
+- child-supervision
+- childcare
+- parental-care
+- ambiguity-passive-supervision
+- ambiguity-active-help-unknown
+
+Expected interpretation:
+
+The user is with the child while homework is being done.
+
+The user may be supervising.
+
+The system must not overclaim active teaching/helping.
+
+11. Governance decision
+
+Decision:
+
+If a category slug is missing in the current seed/resolver support, the patch should not block the pipeline.
+
+Preferred behavior:
+
+- use existing suggested / needs_review / draft governance if available
+- otherwise add deterministic fallback in the benchmark route/report, without schema change
+- document missing seed as a seed gap for later patch
+
+Do not create broad automatic public categories without review.
+
+12. Resolver strategy decision
+
+Decision:
+
+Do not change resolver semantics broadly until the exact current resolver file is inspected.
+
+The next step must identify the exact files for patching.
+
+Likely patch surfaces:
+
+- deterministic rule extractor / category candidate extractor
+- candidate-to-category resolver
+- category seed/migration files
+- benchmark/debug test route
+- Value Object Bridge category link consumption only if needed
+
+13. Benchmark route decision
+
+Decision:
+
+Before patching production behavior, create or inspect a dedicated benchmark/debug route or script for deterministic semantic coverage.
+
+Purpose:
+
+- run B1/B2/F1 without OpenAI
+- show candidate slugs
+- show resolved/unresolved categories
+- show ambiguity markers
+- show whether Value Object Bridge can consume the resolved categories
+- avoid normal user activity pollution
+
+The benchmark route must not require SQL in PowerShell.
+
+14. OpenAI decision
+
+Decision:
+
+Do not use OpenAI for C8-F-D/E deterministic proof.
+
+Reason:
+
+The deterministic baseline must be stable before AI-assisted interpretation is added.
+
+OpenAI can later improve recall and natural-language nuance, but the platform must first have a deterministic semantic contract.
+
+15. Next step decision
+
+Recommended next step:
+
+P4.10.0-C8-F-D0 - export exact source snapshot for semantic coverage patch planning
+
+D0 should export the exact current source files needed for full-file replacement later.
+
+D0 should not change source code.
+
+D0 should not commit.
+
+D0 should not run runtime proof.
+
+D0 should not execute SQL.
+
+D0 should not cleanup proof events.
+
+16. Files to include in D0 snapshot
+
+D0 should include all files that exist among these likely targets:
+
+Category Derivation core:
+
+- lib/activity/categoryDerivation/ruleExtractor.ts
+- lib/activity/categoryDerivation/ruleExtractors.ts
+- lib/activity/categoryDerivation/candidateExtractor.ts
+- lib/activity/categoryDerivation/extractCandidates.ts
+- lib/activity/categoryDerivation/resolveCandidates.ts
+- lib/activity/categoryDerivation/resolver.ts
+- lib/activity/categoryDerivation/routeRunner.ts
+- lib/activity/categoryDerivation/completeRouteIntegration.ts
+- lib/activity/categoryDerivation/types.ts
+- lib/activity/categoryDerivation/config.ts
+
+Rubricator/category support:
+
+- lib/activity/rubricator/*
+- lib/rubricator/*
+- database/migrations/*category*
+- supabase/migrations/*category*
+- scripts/*category*
+- scripts/*rubricator*
+
+Value Object Bridge support:
+
+- lib/activity/valueObjectBridge/*
+- lib/valueObjectBridge/*
+- src/app/api/activity/debug/*category*
+- src/app/api/activity/debug/*value-object*
+
+17. Implementation sequence after C
+
+Recommended sequence:
+
+- C8-F-D0: export exact source snapshot for patch planning
+- C8-F-D1: decide exact files to patch based on snapshot
+- C8-F-D2: patch deterministic semantic coverage for B1/B2/F1
+- C8-F-D3: TypeScript and targeted validation
+- C8-F-E: deterministic runtime proof or debug-route proof for B1/B2/F1
+- C8-F-F: document results and decide expansion to business/multilingual benchmarks
+
+18. Non-goals for first patch
+
+Do not implement all 22 benchmark cases in one patch.
+
+Do not implement business/sales and multilingual separation in the same first patch.
+
+Do not add OpenAI.
+
+Do not add UI.
+
+Do not change schema unless a later decision proves it is unavoidable.
+
+Do not cleanup proof events.
+
+19. Risk notes
+
+Risk 1:
+
+If the current resolver only resolves pre-seeded slugs, new role/care/purpose candidates may remain unresolved.
+
+Mitigation:
+
+Treat unresolved candidates as expected output and document seed gap.
+
+Risk 2:
+
+If the Value Object Bridge only consumes resolved categories, unresolved care/purpose candidates may not influence VO links yet.
+
+Mitigation:
+
+Keep the first proof focused on candidate extraction and resolution visibility.
+
+Risk 3:
+
+If the deterministic extractor uses English-only patterns, Russian B1/B2 may require explicit Russian phrase handling.
+
+Mitigation:
+
+Add narrow Russian deterministic patterns only for B1/B2 first.
+
+Risk 4:
+
+If category governance is missing, do not invent broad governance in this patch.
+
+Mitigation:
+
+Record missing governance and plan a separate governance block.
+
+20. Success criteria for first semantic patch
+
+The first semantic patch can be considered successful only when:
+
+B1 returns at least:
+
+- mathematics
+- child
+- learning
+- teaching
+- helping-child-learn
+- childcare or parental-care
+- family-duty or caregiving
+
+B2 returns at least:
+
+- mathematics
+- child
+- learning
+- child-supervision
+- ambiguity-passive-supervision or ambiguity-active-help-unknown
+
+F1 returns at least:
+
+- child
+- homework
+- child-supervision
+- childcare or parental-care
+- ambiguity-passive-supervision or ambiguity-active-help-unknown
+
+And:
+
+- B2/F1 do not overclaim active teaching
+- no SQL is executed from PowerShell
+- no cleanup is executed
+- no OpenAI is used
+- no normal user activity is used for proof
+
+21. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no cleanup command
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no runtime proof in this step
+- no normal user activity used for proof
+- no failActivityComplete=true
+
+22. Exact verification markers
+
+- P4.10.0-C8-F-C
+- decide minimal additive semantic coverage patch strategy
+- ad1035b Inspect Category Derivation semantic coverage support
+- minimal additive semantic coverage patch
+- family/childcare role semantics
+- B1 учил математику с ребёнком
+- B2 ребёнок учил математику рядом со мной
+- F1 I was with my child while they did homework
+- role / duty / responsibility / care / purpose
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+- child-supervision
+- ambiguity-passive-supervision
+- ambiguity-active-help-unknown
+- Do not use OpenAI
+- Do not change schema
+- P4.10.0-C8-F-D0
+- export exact source snapshot for semantic coverage patch planning
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+- No source code is changed here
+
+23. Definition of Done
+
+This C8-F-C decision step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above ad1035b
