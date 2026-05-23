@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   CategoryCandidate,
   CategoryDerivationInput,
   CategoryDerivationResult,
@@ -260,7 +260,7 @@ export function deriveCategoryCandidates(
       confidence: 0.92,
       isRequired: true,
       isConfirmed: true,
-      metadata: makeMetadata("teach_math_with_child", ["teach math with child"]),
+      metadata: makeMetadata("teach_math_with_child_care_semantics", ["teach math with child"]),
     });
 
     addCandidate(candidates, {
@@ -271,7 +271,7 @@ export function deriveCategoryCandidates(
       confidence: 0.96,
       isRequired: true,
       isConfirmed: true,
-      metadata: makeMetadata("teach_math_with_child", ["mathematics"]),
+      metadata: makeMetadata("teach_math_with_child_care_semantics", ["mathematics"]),
     });
 
     addCandidate(candidates, {
@@ -282,7 +282,18 @@ export function deriveCategoryCandidates(
       confidence: 0.96,
       isRequired: true,
       isConfirmed: true,
-      metadata: makeMetadata("teach_math_with_child", ["child participant"]),
+      metadata: makeMetadata("teach_math_with_child_care_semantics", ["child participant"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "learning",
+      title: "Learning",
+      semanticLayer: "activity_meaning",
+      categoryType: "learning_process",
+      confidence: 0.9,
+      isRequired: true,
+      isConfirmed: true,
+      metadata: makeMetadata("teach_math_with_child_care_semantics", ["child learning"]),
     });
 
     addCandidate(candidates, {
@@ -290,10 +301,32 @@ export function deriveCategoryCandidates(
       title: "Family",
       semanticLayer: "relationship_context",
       categoryType: "social_context",
-      confidence: 0.82,
+      confidence: 0.86,
       isRequired: true,
       isConfirmed: true,
-      metadata: makeMetadata("teach_math_with_child", ["family context inferred from child"]),
+      metadata: makeMetadata("teach_math_with_child_care_semantics", ["family context inferred from child"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "helping-child-learn",
+      title: "Helping child learn",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.92,
+      isRequired: true,
+      isConfirmed: true,
+      metadata: makeMetadata("teach_math_with_child_care_semantics", ["teaching math with child"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "childcare",
+      title: "Childcare",
+      semanticLayer: "care_function",
+      categoryType: "care_function",
+      confidence: 0.9,
+      isRequired: true,
+      isConfirmed: true,
+      metadata: makeMetadata("teach_math_with_child_care_semantics", ["adult care responsibility while helping child learn"]),
     });
 
     addCandidate(candidates, {
@@ -301,21 +334,32 @@ export function deriveCategoryCandidates(
       title: "Parental care",
       semanticLayer: "care_function",
       categoryType: "care_function",
-      confidence: 0.88,
-      isRequired: true,
-      isConfirmed: true,
-      metadata: makeMetadata("teach_math_with_child", ["adult helps child learn"]),
-    });
-
-    addCandidate(candidates, {
-      slug: "helping-child-learn",
-      title: "Helping child learn",
-      semanticLayer: "activity_meaning",
-      categoryType: "activity_meaning",
       confidence: 0.9,
       isRequired: true,
       isConfirmed: true,
-      metadata: makeMetadata("teach_math_with_child", ["teaching math with child"]),
+      metadata: makeMetadata("teach_math_with_child_care_semantics", ["parental care while helping child learn"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "caregiving",
+      title: "Caregiving",
+      semanticLayer: "care_function",
+      categoryType: "care_function",
+      confidence: 0.84,
+      isRequired: true,
+      isConfirmed: true,
+      metadata: makeMetadata("teach_math_with_child_care_semantics", ["caregiving role in child learning support"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "family-duty",
+      title: "Family duty",
+      semanticLayer: "duty",
+      categoryType: "family_responsibility",
+      confidence: 0.84,
+      isRequired: true,
+      isConfirmed: true,
+      metadata: makeMetadata("teach_math_with_child_care_semantics", ["family responsibility"]),
     });
   }
 
@@ -328,7 +372,7 @@ export function deriveCategoryCandidates(
       confidence: 0.95,
       isRequired: true,
       isConfirmed: true,
-      metadata: makeMetadata("child_studied_math_nearby", ["child studied mathematics nearby"]),
+      metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["child studied mathematics nearby"]),
     });
 
     addCandidate(candidates, {
@@ -339,19 +383,175 @@ export function deriveCategoryCandidates(
       confidence: 0.95,
       isRequired: true,
       isConfirmed: true,
-      metadata: makeMetadata("child_studied_math_nearby", ["child"]),
+      metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["child"]),
     });
 
     addCandidate(candidates, {
-      slug: "supervision",
-      title: "Supervision",
-      semanticLayer: "care_function",
-      categoryType: "care_function",
-      confidence: 0.72,
+      slug: "learning",
+      title: "Learning",
+      semanticLayer: "activity_meaning",
+      categoryType: "learning_process",
+      confidence: 0.88,
+      isRequired: true,
+      isConfirmed: true,
+      metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["child learning"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "family",
+      title: "Family",
+      semanticLayer: "relationship_context",
+      categoryType: "social_context",
+      confidence: 0.76,
       isRequired: false,
       isConfirmed: false,
       needsUserReview: true,
-      metadata: makeMetadata("child_studied_math_nearby", ["nearby adult context"]),
+      metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["family context likely but not explicit"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "child-supervision",
+      title: "Child supervision",
+      semanticLayer: "care_function",
+      categoryType: "care_function",
+      confidence: 0.74,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["nearby adult context"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "ambiguity-passive-supervision",
+      title: "Ambiguity: passive supervision",
+      semanticLayer: "other",
+      categoryType: "ambiguity_marker",
+      confidence: 0.7,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["user may only be nearby"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "ambiguity-active-help-unknown",
+      title: "Ambiguity: active help unknown",
+      semanticLayer: "other",
+      categoryType: "ambiguity_marker",
+      confidence: 0.68,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["do not infer active teaching"]),
+    });
+  }
+
+  const childHomeworkNearby = includesAny(text, [
+    "i was with my child while they did homework",
+    "was with my child while they did homework",
+    "i stayed with my child while they did homework",
+    "stayed with my child while they did homework",
+    "i was with my daughter while she did homework",
+    "i was with my son while he did homework",
+    "я был с ребенком пока он делал домашнее задание",
+    "я был с ребёнком пока он делал домашнее задание",
+    "я была с ребенком пока он делал домашнее задание",
+    "я была с ребёнком пока он делал домашнее задание",
+  ]);
+
+  if (childHomeworkNearby) {
+    addCandidate(candidates, {
+      slug: "child",
+      title: "Child",
+      semanticLayer: "participant",
+      categoryType: "person_participant",
+      confidence: 0.95,
+      isRequired: true,
+      isConfirmed: true,
+      metadata: makeMetadata("child_homework_supervision_ambiguity", ["child"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "homework",
+      title: "Homework",
+      semanticLayer: "object",
+      categoryType: "education_task",
+      confidence: 0.94,
+      isRequired: true,
+      isConfirmed: true,
+      metadata: makeMetadata("child_homework_supervision_ambiguity", ["homework"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "family",
+      title: "Family",
+      semanticLayer: "relationship_context",
+      categoryType: "social_context",
+      confidence: 0.82,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("child_homework_supervision_ambiguity", ["family context inferred from my child"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "child-supervision",
+      title: "Child supervision",
+      semanticLayer: "care_function",
+      categoryType: "care_function",
+      confidence: 0.82,
+      isRequired: true,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("child_homework_supervision_ambiguity", ["adult present while child does homework"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "childcare",
+      title: "Childcare",
+      semanticLayer: "care_function",
+      categoryType: "care_function",
+      confidence: 0.78,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("child_homework_supervision_ambiguity", ["care responsibility possible"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "parental-care",
+      title: "Parental care",
+      semanticLayer: "care_function",
+      categoryType: "care_function",
+      confidence: 0.76,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("child_homework_supervision_ambiguity", ["my child indicates parental or caregiver context"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "ambiguity-passive-supervision",
+      title: "Ambiguity: passive supervision",
+      semanticLayer: "other",
+      categoryType: "ambiguity_marker",
+      confidence: 0.78,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("child_homework_supervision_ambiguity", ["with child does not prove active help"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "ambiguity-active-help-unknown",
+      title: "Ambiguity: active help unknown",
+      semanticLayer: "other",
+      categoryType: "ambiguity_marker",
+      confidence: 0.74,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("child_homework_supervision_ambiguity", ["do not infer active teaching"]),
     });
   }
 

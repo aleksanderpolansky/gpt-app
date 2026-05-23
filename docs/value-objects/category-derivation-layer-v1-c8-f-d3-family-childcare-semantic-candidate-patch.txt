@@ -1,0 +1,212 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-F-D3
+Patch: deterministic family/childcare semantic candidates for B1/B2/F1
+Created: 2026-05-23
+
+1. Purpose
+
+This document records the first minimal additive semantic coverage source patch after:
+
+- P4.10.0-C8-F-C - minimal additive semantic coverage patch strategy
+- P4.10.0-C8-F-D1 - exact files to patch decision
+- P4.10.0-C8-F-D2 - compact source pack for exact semantic patch files
+
+This step changes source code and documentation.
+
+No runtime proof is executed here.
+
+No SQL is executed here.
+
+No cleanup is executed here.
+
+2. Current baseline
+
+Current HEAD before this patch:
+
+- db1499c Decide Category Derivation semantic coverage patch files
+
+Primary source file patched:
+
+- lib/activity/categoryDerivation/ruleExtractor.ts
+
+Documentation file added:
+
+- docs/value-objects/category-derivation-layer-v1-c8-f-d3-family-childcare-semantic-candidate-patch.txt
+
+3. Patch scope
+
+This patch is intentionally narrow.
+
+It changes deterministic rule extraction for the first family/childcare benchmark set:
+
+B1:
+
+- учил математику с ребёнком
+- учил математику с ребенком
+
+B2:
+
+- ребёнок учил математику рядом со мной
+- ребенок учил математику рядом со мной
+
+F1:
+
+- I was with my child while they did homework
+
+4. B1 expected candidates
+
+For B1, the extractor should produce deterministic candidates including:
+
+- mathematics
+- child
+- learning
+- teaching
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+
+B1 is allowed to include teaching because the input means that the user actively helped/taught mathematics with the child.
+
+5. B2 expected candidates
+
+For B2, the extractor should produce deterministic candidates including:
+
+- mathematics
+- child
+- learning
+- family
+- child-supervision
+- ambiguity-passive-supervision
+- ambiguity-active-help-unknown
+
+B2 must preserve ambiguity.
+
+B2 must not overclaim active teaching.
+
+6. F1 expected candidates
+
+For F1, the extractor should produce deterministic candidates including:
+
+- child
+- homework
+- family
+- child-supervision
+- childcare
+- parental-care
+- ambiguity-passive-supervision
+- ambiguity-active-help-unknown
+
+F1 must preserve ambiguity.
+
+F1 must not overclaim active teaching.
+
+7. Semantic rules added
+
+The patch adds or strengthens these deterministic semantic rule markers:
+
+- teach_math_with_child_care_semantics
+- child_studied_math_nearby_supervision_ambiguity
+- child_homework_supervision_ambiguity
+
+8. Anti-regression rules
+
+The following anti-regression rules are now documented for later runtime proof:
+
+- B1 must not be reduced to only math + child + learning + family.
+- B1 must include care/responsibility semantics.
+- B2 must not be treated as active teaching.
+- F1 must not be treated as active teaching.
+- B2/F1 must preserve ambiguity markers.
+- no OpenAI is used for this deterministic patch.
+- no schema change is made.
+- no SQL is executed from PowerShell.
+- no cleanup is executed.
+
+9. Validation performed in this step
+
+This script performs:
+
+- source marker verification
+- git diff --check
+- TypeScript validation with npx.cmd tsc --noEmit --pretty false
+- targeted ESLint for lib/activity/categoryDerivation/ruleExtractor.ts
+- cached diff check
+- commit and push
+
+10. Recommended next step
+
+Recommended next step:
+
+P4.10.0-C8-F-D4 - document source patch validation and prepare deterministic proof plan
+
+Then:
+
+P4.10.0-C8-F-E - deterministic semantic coverage proof for B1/B2/F1
+
+E should verify runtime candidate output.
+
+E should not use OpenAI.
+
+E should not execute SQL from PowerShell.
+
+E should not use normal user activity.
+
+11. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no cleanup command
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no runtime proof in this step
+- no normal user activity used for proof
+- no failActivityComplete=true
+
+12. Exact verification markers
+
+- P4.10.0-C8-F-D3
+- patch deterministic family/childcare semantic candidates for B1/B2/F1
+- db1499c Decide Category Derivation semantic coverage patch files
+- lib/activity/categoryDerivation/ruleExtractor.ts
+- teach_math_with_child_care_semantics
+- child_studied_math_nearby_supervision_ambiguity
+- child_homework_supervision_ambiguity
+- B1 учил математику с ребёнком
+- B2 ребёнок учил математику рядом со мной
+- F1 I was with my child while they did homework
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+- child-supervision
+- homework
+- ambiguity-passive-supervision
+- ambiguity-active-help-unknown
+- P4.10.0-C8-F-D4
+- document source patch validation and prepare deterministic proof plan
+- P4.10.0-C8-F-E
+- deterministic semantic coverage proof for B1/B2/F1
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+
+13. Definition of Done
+
+This C8-F-D3 patch step is complete when:
+
+- ruleExtractor.ts contains the new deterministic semantic candidates
+- this document exists under docs/value-objects
+- only ruleExtractor.ts and this document are changed
+- TypeScript validation passes
+- targeted ESLint passes for ruleExtractor.ts
+- changes are committed and pushed
+- working tree is clean
