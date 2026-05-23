@@ -1,0 +1,309 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-E-X
+Closure and next block selection
+Created: 2026-05-23
+
+1. Purpose
+
+This document closes the F6-E-E patched production_persist proof block and selects the next Category Derivation Layer v1 implementation block.
+
+This is a documentation-only closure and selection step.
+
+No runtime proof is executed here.
+
+No SQL is executed here.
+
+No cleanup is executed here.
+
+No source code is changed here.
+
+2. Current baseline
+
+Current HEAD before this document:
+
+- 1b1fabd Decide Category Derivation post PASS transition
+
+Relevant previous commits:
+
+- d5882f4 Patch Category Derivation proof-safe complete route diagnostics
+- c15da6d Plan patched Category Derivation complete route proof
+- c85e2f5 Document Category Derivation patched complete route proof PASS
+- 1b1fabd Decide Category Derivation post PASS transition
+
+3. Final closure of F6-E-E
+
+Decision:
+
+Close F6-E-E as PASS.
+
+Closure state:
+
+- production_persist proof through real /api/activity/complete: PASS
+- proof metadata preservation: PASS
+- diagnostic response exposure: PASS
+- idempotency already_completed path: PASS
+- TypeScript validation: PASS
+- targeted ESLint for patched files: 0 errors
+- proof event cleanup: deferred
+- global lint cleanup: deferred
+- no additional runtime testing approved for this block
+
+4. What was proven
+
+F6-E-E proved:
+
+1. The debug setup route can create a proof-marked free-text started event.
+2. The setup route preserves proof metadata.
+3. The real /api/activity/complete route accepts eventId.
+4. The real complete route completes the proof event.
+5. Category Derivation route runner executes in production_persist mode.
+6. A derivationRunId is returned.
+7. persistenceDerivationRowsCreated is returned.
+8. activityCategoryDerivationsCount is returned.
+9. The repeated complete call returns already_completed.
+10. The already_completed path exposes a safe diagnostic block.
+11. Diagnostic exposure is sanitized.
+12. Raw rows are not exposed.
+13. Secrets are not exposed.
+
+5. What is not approved by this closure
+
+This closure does not approve:
+
+- broad production rollout of production_persist for normal users
+- failActivityComplete=true for normal users
+- cleanup of proof events
+- schema changes
+- RLS changes
+- UI work
+- OpenAI calls
+- global lint cleanup
+- broad refactor
+- repeating this proof without a new source change
+
+6. Master-plan alignment
+
+The master plan says the next meaningful Category Derivation direction is not more proof repetition.
+
+The next useful direction is semantic quality and AI Function Layer readiness:
+
+- user enters arbitrary activity
+- system creates and persists a full pool of category candidates
+- new/uncertain concepts become working drafts or suggested categories
+- moderation must not block the pipeline
+- resolved categories flow into the Value Object Bridge
+- semantic capital is preserved
+- role / duty / responsibility / care / purpose layers must be represented
+
+The important benchmark examples include:
+
+- walked to work
+- walked the dog
+- taught mathematics with a child
+- child studied mathematics near me
+- watched a film with a child
+- wrote a commercial proposal to a client
+- English/German/Polish/Spanish multilingual examples
+
+7. Selected next block
+
+Selected next block:
+
+P4.10.0-C8-F-A - Semantic Coverage Benchmark Inventory for Category Derivation Layer v1
+
+Purpose:
+
+Create an inventory and gap analysis for semantic coverage, especially:
+
+- role
+- duty
+- responsibility
+- care function
+- purpose
+- business responsibility
+- family responsibility
+- multilingual input handling
+- language-learning vs. language-of-input separation
+- low-confidence / ambiguous interpretation handling
+- working draft / suggested category governance
+
+8. Why C8-F-A is selected
+
+C8-F-A is selected because the production persistence pipeline is now proven.
+
+The remaining core risk is no longer whether the route can persist derivations.
+
+The remaining core risk is whether the semantic interpretation is useful enough.
+
+The platform must avoid technically correct but semantically weak outputs.
+
+Example:
+
+"учил математику с ребёнком"
+
+must not become only:
+
+- math
+- child
+- learning
+- family
+
+It must include the role/care/purpose layer, such as:
+
+- parental-care
+- childcare
+- caregiving
+- helping-child-learn
+- family duty / responsibility
+
+9. C8-F-A should be documentation and inspection first
+
+C8-F-A should not immediately patch code.
+
+C8-F-A should first inspect and document:
+
+- current ruleExtractor coverage
+- current resolver/governance support
+- current contextual_categories seed coverage
+- current benchmark cases
+- current category status model
+- current working_draft / suggested handling
+- current multilingual input behavior
+- current Value Object Bridge category consumption
+
+10. Expected C8-F-A outputs
+
+C8-F-A should produce:
+
+1. benchmark inventory document
+2. current semantic coverage matrix
+3. expected categories per benchmark input
+4. current code/data support mapping
+5. gap list
+6. risk list
+7. recommended next implementation block
+
+11. Likely next implementation after C8-F-A
+
+Likely next implementation after C8-F-A:
+
+P4.10.0-C8-F-B - inspect current ruleExtractor/resolver/category seed support for semantic coverage benchmarks
+
+Then possibly:
+
+P4.10.0-C8-F-C - decide minimal additive semantic coverage patch
+
+Then:
+
+P4.10.0-C8-F-D - patch rule/category coverage for role-care-purpose benchmarks
+
+Then:
+
+P4.10.0-C8-F-E - runtime proof of semantic coverage benchmarks without OpenAI
+
+12. Cleanup policy after closure
+
+Proof-event cleanup remains deferred.
+
+Known proof events:
+
+- old diagnostic event: 2d5654bd-bee5-47b6-b725-a2defaf8efc5
+- new PASS proof event: 2988e66b-c29d-4863-a6d8-f84b0bde5bd5
+
+Cleanup should become a separate future block only if it provides new information or is needed before production rollout.
+
+13. Diagnostic exposure policy after closure
+
+Keep diagnostic exposure gated.
+
+Do not expose raw rows.
+
+Do not expose secrets.
+
+Do not make diagnostic response exposure the default production user experience.
+
+The local proof server may use:
+
+- CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=true
+
+Normal deployments should keep this false unless explicitly approved.
+
+14. Global lint policy after closure
+
+Global lint cleanup remains outside this block.
+
+Reason:
+
+Global lint failures existed before this work and are spread across older scripts/pages.
+
+Targeted TypeScript and targeted ESLint for the two patched files were sufficient for this block.
+
+15. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no cleanup command
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no additional /api/activity/complete runtime proof
+- no normal user activity used for proof
+- no failActivityComplete=true
+
+16. Recommended immediate next step
+
+Recommended immediate next step:
+
+P4.10.0-C8-F-A - create Semantic Coverage Benchmark Inventory for Category Derivation Layer v1
+
+C8-F-A should be documentation-only.
+
+C8-F-A must not execute runtime proof.
+
+C8-F-A must not execute SQL.
+
+C8-F-A must not cleanup proof events.
+
+C8-F-A must not change source code.
+
+17. Exact verification markers
+
+- P4.10.0-C8-E-F6-E-E-X
+- close F6-E-E block and select next Category Derivation Layer v1 implementation block
+- 1b1fabd Decide Category Derivation post PASS transition
+- F6-E-E closed as PASS
+- production_persist proof through real /api/activity/complete: PASS
+- proof metadata preservation: PASS
+- diagnostic response exposure: PASS
+- idempotency already_completed path: PASS
+- selected next block: P4.10.0-C8-F-A
+- Semantic Coverage Benchmark Inventory for Category Derivation Layer v1
+- role / duty / responsibility / care / purpose layers
+- working draft / suggested category governance
+- multilingual input handling
+- language-learning vs. language-of-input separation
+- taught mathematics with a child
+- parental-care
+- childcare
+- caregiving
+- helping-child-learn
+- no cleanup command
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+- No source code is changed here
+
+18. Definition of Done
+
+This X closure and next-block selection step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above 1b1fabd
