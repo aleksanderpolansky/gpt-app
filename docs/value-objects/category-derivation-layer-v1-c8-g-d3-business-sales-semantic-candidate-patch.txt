@@ -1,0 +1,234 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-G-D3
+Patch: deterministic business/sales semantic candidates
+Created: 2026-05-23
+
+1. Purpose
+
+This patch adds deterministic business/sales semantic candidates for the first C8-G benchmark subset.
+
+This step changes only:
+
+- lib/activity/categoryDerivation/ruleExtractor.ts
+- docs/value-objects/category-derivation-layer-v1-c8-g-d3-business-sales-semantic-candidate-patch.txt
+
+No runtime proof is executed here.
+No SQL is executed here.
+No OpenAI call is executed here.
+No cleanup is executed here.
+No resolver / bridge / persistence / UI code is changed here.
+
+2. Current baseline
+
+Current HEAD before this patch:
+
+- 72b5ee1 Decide Business Sales Semantic Coverage patch files
+
+3. Patch scope
+
+The patch follows C8-G-D1 and changes only ruleExtractor.ts.
+
+Included benchmark cases:
+
+S1 — clear commercial proposal to client
+- писал коммерческое предложение клиенту 40 минут
+
+S2 — proposal to potential client
+- prepared a proposal for a potential client
+
+S3 — follow-up after meeting
+- wysłałem follow-up do klienta po spotkaniu
+
+S4 — objection handling / price
+- llamé a un cliente para aclarar objeciones sobre el precio
+
+S5 — CRM update after lead call
+- aktualizowałem CRM po rozmowie z leadem
+
+S8 — sales language training
+- учил немецкие фразы для B2B-продаж
+
+S9 — passive reading about sales
+- читал статью о продажах за кофе
+
+S10 — informal conversation about sales
+- разговаривал с другом о продажах
+
+Postponed cases remain postponed:
+
+S6 — outbound lead list
+S7 — partnership negotiation
+S11 — client discovery call
+S12 — customer support ambiguity
+
+4. Semantic rule markers added
+
+The patch adds deterministic rule markers:
+
+- business_sales_commercial_proposal_client_semantics
+- business_sales_potential_client_proposal_semantics
+- business_sales_follow_up_after_meeting_semantics
+- business_sales_price_objection_semantics
+- business_sales_crm_lead_update_semantics
+- business_sales_language_training_preparation_semantics
+- business_sales_passive_reading_ambiguity
+- business_sales_informal_conversation_ambiguity
+
+5. Expected positive coverage
+
+S1 should include:
+- writing
+- commercial-proposal
+- client
+- b2b-sales
+- work-responsibility
+- customer-responsibility
+- sales-responsibility
+- income-generation
+- duration-minutes
+
+S2 should include:
+- preparing
+- commercial-proposal
+- potential-client
+- b2b-sales
+- sales-responsibility
+- business-development
+- client-acquisition
+- deal-preparation
+
+S3 should include:
+- sending
+- follow-up-message
+- client
+- meeting-follow-up
+- b2b-sales
+- customer-responsibility
+- relationship-management
+- sales-responsibility
+
+S4 should include:
+- calling
+- client
+- objection-handling
+- price-objection
+- negotiation
+- b2b-sales
+- customer-responsibility
+- sales-responsibility
+
+S5 should include:
+- updating
+- crm-record
+- lead
+- post-call-documentation
+- sales-admin
+- pipeline-management
+- work-responsibility
+- sales-responsibility
+
+S8 should include:
+- learning
+- german-language
+- b2b-sales
+- sales-training
+- professional-development
+- career-development
+- preparation
+
+S9 should include:
+- reading
+- sales-topic
+- self-education
+- passive-learning
+
+S10 should include:
+- conversation
+- friend
+- sales-topic
+- informal-discussion
+
+6. Forbidden overclaim rules
+
+The patch must not add deterministic required/core candidates for:
+
+- closed-deal
+- contract-signed
+- payment-received
+- invoice-paid
+- successful-sale
+- discount-given
+- proposal-sent where only writing/preparing is stated
+- client-acquired
+- existing-client where input says potential client / lead
+- customer-responsibility where input says only lead/prospect
+- work-responsibility where input is only passive reading or informal friend conversation
+- income-generation as core meaning in learning/reading/friend-conversation cases
+
+7. C8-F baseline preservation
+
+The patch must preserve C8-F family/childcare markers:
+
+- teach_math_with_child_care_semantics
+- child_studied_math_nearby_supervision_ambiguity
+- child_homework_supervision_ambiguity
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+- child-supervision
+- homework
+- ambiguity-passive-supervision
+- ambiguity-active-help-unknown
+
+8. Validation performed in this step
+
+This script performs:
+
+- source marker verification
+- C8-F baseline marker verification
+- forbidden-overclaim marker absence check
+- git diff --check
+- TypeScript validation with npx.cmd tsc --noEmit --pretty false
+- targeted ESLint for lib/activity/categoryDerivation/ruleExtractor.ts
+- cached diff check
+- commit and push
+
+9. Recommended next step
+
+P4.10.0-C8-G-D4 — document source patch validation and prepare deterministic proof plan.
+
+D4 should be documentation-only.
+D4 should prepare the first deterministic proof target for C8-G-E.
+D4 should not run runtime proof.
+D4 should not run SQL.
+D4 should not call OpenAI.
+
+10. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call
+- no schema or migration change
+- no resolver/bridge/persistence change
+- no UI work
+- no broad refactor
+- no runtime proof in this step
+- no normal user activity used for proof
+- no /api/activity/complete proof
+
+11. Definition of Done
+
+This C8-G-D3 patch step is complete when:
+
+- ruleExtractor.ts contains the new deterministic business/sales semantic candidates
+- this document exists under docs/value-objects
+- only ruleExtractor.ts and this document are changed
+- TypeScript validation passes
+- targeted ESLint passes for ruleExtractor.ts
+- changes are committed and pushed
+- working tree is clean
