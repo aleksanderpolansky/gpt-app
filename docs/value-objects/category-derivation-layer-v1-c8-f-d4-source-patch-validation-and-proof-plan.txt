@@ -1,0 +1,320 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-F-D4
+Document source patch validation and prepare deterministic proof plan
+Created: 2026-05-23
+
+1. Purpose
+
+This document records the validation status of the D3 source patch and prepares the deterministic proof plan for the first family/childcare semantic benchmark group.
+
+This is a documentation-only planning step.
+
+No runtime proof is executed here.
+
+No SQL is executed here.
+
+No cleanup is executed here.
+
+No source code is changed here.
+
+2. Current baseline
+
+Current HEAD before this document:
+
+- 4e87366 Patch Category Derivation family childcare semantic candidates
+
+D3 patch commit:
+
+- 4e87366 Patch Category Derivation family childcare semantic candidates
+
+Files changed in D3:
+
+- lib/activity/categoryDerivation/ruleExtractor.ts
+- docs/value-objects/category-derivation-layer-v1-c8-f-d3-family-childcare-semantic-candidate-patch.txt
+
+3. D3 validation evidence
+
+D3 script completed with:
+
+- working tree clean before patch
+- source backup written to Downloads
+- ruleExtractor.ts replaced
+- D3 documentation written
+- patched source markers verified
+- D3 documentation markers verified
+- only expected files changed
+- git diff --check PASS
+- TypeScript validation PASS
+- targeted ESLint PASS for lib/activity/categoryDerivation/ruleExtractor.ts
+- cached diff check PASS
+- commit created
+- push completed
+- final working tree clean
+
+4. D3 source patch markers
+
+The patched source contains these rule markers:
+
+- teach_math_with_child_care_semantics
+- child_studied_math_nearby_supervision_ambiguity
+- child_homework_supervision_ambiguity
+
+5. First deterministic proof target
+
+The first deterministic proof target is:
+
+P4.10.0-C8-F-E - deterministic semantic coverage proof for B1/B2/F1
+
+Proof cases:
+
+B1:
+
+- учил математику с ребёнком
+- учил математику с ребенком
+
+B2:
+
+- ребёнок учил математику рядом со мной
+- ребенок учил математику рядом со мной
+
+F1:
+
+- I was with my child while they did homework
+
+6. Expected B1 candidate coverage
+
+For B1, proof should verify that deterministic extraction returns at least:
+
+- mathematics
+- child
+- learning
+- teaching
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+
+B1 may include other candidates, but these required slugs must be present.
+
+B1 may include teaching because the input describes active teaching/helping.
+
+7. Expected B2 candidate coverage
+
+For B2, proof should verify that deterministic extraction returns at least:
+
+- mathematics
+- child
+- learning
+- child-supervision
+- ambiguity-passive-supervision
+- ambiguity-active-help-unknown
+
+B2 may include family, but it must not overclaim active teaching.
+
+Required anti-regression rule:
+
+- B2 must not require teaching as a confirmed active-teaching candidate.
+
+8. Expected F1 candidate coverage
+
+For F1, proof should verify that deterministic extraction returns at least:
+
+- child
+- homework
+- child-supervision
+- childcare
+- parental-care
+- ambiguity-passive-supervision
+- ambiguity-active-help-unknown
+
+F1 may include family, but it must not overclaim active teaching.
+
+Required anti-regression rule:
+
+- F1 must not require teaching as a confirmed active-teaching candidate.
+
+9. Recommended proof method
+
+Preferred E proof method:
+
+Use a local deterministic TypeScript/PowerShell proof that imports or executes the deterministic rule extractor and checks candidate slugs directly.
+
+Reason:
+
+The D3 patch was in lib/activity/categoryDerivation/ruleExtractor.ts.
+
+The first proof should verify deterministic extraction before touching routeRunner, resolver, persistence or complete-route runtime.
+
+The E proof should not use the real /api/activity/complete route yet.
+
+10. Why not real runtime route in E
+
+Do not use /api/activity/complete for E.
+
+Reason:
+
+F6-E-E already proved production_persist integration.
+
+C8-F-D3 changed deterministic semantic extraction only.
+
+A focused extractor-level deterministic proof gives clearer signal and avoids creating unnecessary proof events.
+
+11. Why not OpenAI in E
+
+Do not use OpenAI in E.
+
+Reason:
+
+The goal is to establish a stable deterministic semantic contract before adding AI interpretation.
+
+OpenAI can be tested later after the deterministic baseline is reliable.
+
+12. Why not SQL in E
+
+Do not run SQL in E.
+
+Reason:
+
+B1/B2/F1 proof should first confirm candidate extraction.
+
+Resolver/seed gaps can be evaluated later.
+
+SQL execution would not add useful information for extraction-level proof.
+
+13. Proposed E proof output
+
+The E proof should output a clear result per case:
+
+For each case:
+
+- input label
+- input text
+- candidate count
+- candidate slugs
+- required slugs present / missing
+- forbidden overclaim checks
+- final case result PASS/FAIL
+
+Overall output:
+
+- B1 PASS/FAIL
+- B2 PASS/FAIL
+- F1 PASS/FAIL
+- final result PASS/FAIL
+- no runtime route used
+- no SQL used
+- no cleanup used
+- no source changes made
+
+14. Required forbidden-overclaim checks
+
+B2 forbidden check:
+
+- If teaching appears as isConfirmed=true and isRequired=true in B2, the case must fail.
+
+F1 forbidden check:
+
+- If teaching appears as isConfirmed=true and isRequired=true in F1, the case must fail.
+
+Acceptable:
+
+- ambiguity-active-help-unknown
+- ambiguity-passive-supervision
+- child-supervision
+
+15. E proof implementation preference
+
+Preferred approach:
+
+Create a temporary proof script under Downloads or execute an inline PowerShell block that:
+
+1. Creates a temporary TypeScript diagnostic runner file only if needed.
+2. Runs deterministic extraction for B1/B2/F1.
+3. Prints structured proof output.
+4. Deletes the temporary diagnostic runner if created.
+5. Leaves the git working tree clean.
+
+No commit should be created in E until proof output is reviewed.
+
+Alternative:
+
+Add a committed debug proof route only if direct extractor proof is blocked by project tooling.
+
+16. E proof safety gates
+
+E proof must preserve:
+
+- no cleanup command
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no real /api/activity/complete runtime proof
+- no normal user activity used for proof
+- no failActivityComplete=true
+
+17. After E
+
+If E passes:
+
+Recommended next step:
+
+P4.10.0-C8-F-F - document deterministic semantic coverage proof PASS and decide expansion target
+
+Likely next expansion target:
+
+- business/sales responsibility semantic cases
+
+Examples:
+
+- wrote a commercial proposal to a client
+- followed up with a German client after a B2B sales call
+- prepared objections handling script in Polish for a restaurant owner
+
+If E fails:
+
+Recommended next step:
+
+P4.10.0-C8-F-E-FIX1 - patch deterministic semantic coverage failure found in E
+
+18. Exact verification markers
+
+- P4.10.0-C8-F-D4
+- document source patch validation and prepare deterministic proof plan
+- 4e87366 Patch Category Derivation family childcare semantic candidates
+- teach_math_with_child_care_semantics
+- child_studied_math_nearby_supervision_ambiguity
+- child_homework_supervision_ambiguity
+- B1 учил математику с ребёнком
+- B2 ребёнок учил математику рядом со мной
+- F1 I was with my child while they did homework
+- expected B1 candidate coverage
+- expected B2 candidate coverage
+- expected F1 candidate coverage
+- forbidden-overclaim checks
+- no real /api/activity/complete runtime proof
+- no OpenAI call
+- no SQL execution
+- P4.10.0-C8-F-E
+- deterministic semantic coverage proof for B1/B2/F1
+- P4.10.0-C8-F-F
+- document deterministic semantic coverage proof PASS and decide expansion target
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+- No source code is changed here
+
+19. Definition of Done
+
+This C8-F-D4 planning step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above 4e87366
