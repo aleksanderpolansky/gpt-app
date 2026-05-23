@@ -1,0 +1,253 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-G-E-FIXPLAN1
+S2 missing secondary income-generation fix plan
+
+Status: DOC-ONLY FIX PLAN
+Generated at: 2026-05-23 15:35:25 +02:00
+Baseline HEAD: 278570b
+Previous block: P4.10.0-C8-G-E — deterministic extractor-level proof
+Proof result: FAIL
+Next planned block: P4.10.0-C8-G-E-FIX1 — minimal source patch for S2 secondary income-generation
+
+1. Purpose
+
+This document records the controlled C8-G-E proof failure and defines the minimal fix plan.
+
+This step does not patch source code.
+This step does not run SQL.
+This step does not call OpenAI.
+This step does not run /api/activity/complete.
+This step does not run a new runtime proof.
+
+2. Sources used
+
+Patched source:
+.\lib\activity\categoryDerivation\ruleExtractor.ts
+SHA256: 1F1F49063D7F7362AFC337F90D1B8FA0E314AF9CD0FB2EFAE2C147A8DEF01194
+
+D3 patch document:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-d3-business-sales-semantic-candidate-patch.txt
+SHA256: E5C72963F89E136150B95FEF7183425B471BA52EDC1AD6C75E5FEA7C4B0BFD52
+
+D4 deterministic proof plan:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-d4-source-patch-validation-and-proof-plan.txt
+SHA256: 663411844D021333588CA42A341ECF7A4744B371DC295BF9723E013EA3E2C666
+
+C8-G-E proof output:
+C:\Users\Admin\Downloads\P4_10_0_C8_G_E_deterministic_extractor_proof_output.txt
+SHA256: 0B1B06E938CAFD01DC5E1AF5743F879DB759F348447DB8F4DE228D92DA57949B
+SIZE_BYTES: 4681
+
+3. Proof result summary
+
+C8-G-E finished with FAIL.
+
+The repository stayed clean.
+No commit was made by C8-G-E.
+No SQL was executed.
+No OpenAI call was executed.
+No /api/activity/complete proof was executed.
+The temporary runner was removed.
+
+4. Exact failure
+
+Only one proof expectation failed:
+
+Case:
+S2 — proposal to potential client
+
+Input:
+prepared a proposal for a potential client
+
+Observed slugs:
+- preparing
+- commercial-proposal
+- potential-client
+- b2b-sales
+- sales-responsibility
+- business-development
+- client-acquisition
+- deal-preparation
+- lead-nurturing
+- duration-minutes
+
+Missing secondary/possible slug:
+- income-generation
+
+Proof output line:
+FAIL: missing secondary/possible slugs intentionally added by D3: income-generation
+
+5. What passed
+
+All required S2 slugs passed:
+
+- preparing
+- commercial-proposal
+- potential-client
+- b2b-sales
+- sales-responsibility
+- business-development
+- client-acquisition
+- deal-preparation
+
+S2 forbidden slugs were absent:
+
+- existing-client
+- closed-deal
+- contract-signed
+- payment-received
+- client
+
+All other C8-G proof cases passed:
+
+- S1
+- S3
+- S4
+- S5
+- S8
+- S9
+- S10
+
+C8-F baseline preservation also passed:
+
+- mathematics
+- child
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+- teach_math_with_child_care_semantics marker present
+
+6. Diagnosis
+
+This is not an architecture failure.
+
+The D3 patch added S2 deterministic support for:
+
+- preparing
+- commercial-proposal
+- potential-client
+- b2b-sales
+- sales-responsibility
+- business-development
+- client-acquisition
+- deal-preparation
+- lead-nurturing
+
+But S2 did not add the secondary/possible candidate:
+
+- income-generation
+
+D4 expected income-generation as a secondary/possible S2 slug because the earlier benchmark/strategy allowed income-generation as a possible meaning for a commercial proposal to a potential client.
+
+7. Fix decision
+
+A minimal source patch is needed.
+
+Patch only:
+
+- lib/activity/categoryDerivation/ruleExtractor.ts
+
+Patch only the S2 block marked:
+
+- business_sales_potential_client_proposal_semantics
+
+Add exactly one secondary/possible candidate:
+
+- slug: income-generation
+- title: Income generation
+- semanticLayer: purpose
+- categoryType: activity_meaning
+- confidence: low/medium
+- isRequired: false
+- isConfirmed: false
+- needsUserReview: true
+- metadata marker: business_sales_potential_client_proposal_semantics
+- evidence/reason: commercial proposal to potential client may support future income, but no deal/payment is confirmed
+
+8. What must not change
+
+The fix must not:
+
+- change S1/S3/S4/S5/S8/S9/S10 behavior
+- change C8-F family/childcare behavior
+- add client to S2
+- add existing-client to S2
+- add customer-responsibility to S2
+- add closed-deal
+- add contract-signed
+- add payment-received
+- add successful-sale
+- add proposal-sent
+- add SQL
+- call OpenAI
+- call /api/activity/complete
+- touch resolver / bridge / persistence / UI
+
+9. Expected next source patch
+
+Next block:
+
+P4.10.0-C8-G-E-FIX1 — minimal S2 income-generation patch.
+
+Expected code action:
+
+Inside the S2 block in ruleExtractor.ts:
+
+business_sales_potential_client_proposal_semantics
+
+Add one addCandidate call after lead-nurturing or near the S2 purpose candidates:
+
+slug: income-generation
+isRequired: false
+isConfirmed: false
+needsUserReview: true
+
+10. Validation after fix
+
+After the source patch, run:
+
+- marker verification
+- forbidden overclaim absence check
+- C8-F baseline marker preservation check
+- git diff --check
+- npx.cmd tsc --noEmit --pretty false
+- targeted ESLint for lib/activity/categoryDerivation/ruleExtractor.ts
+
+Then rerun deterministic proof:
+
+P4.10.0-C8-G-E-RECOVERY1
+
+Expected result:
+
+- S2 income-generation secondary/possible slug present
+- all previous passing cases remain passing
+- C8-F baseline remains passing
+- repository stays clean after proof
+
+11. Definition of Done for C8-G-E-FIXPLAN1
+
+C8-G-E-FIXPLAN1 is done when:
+
+- this document exists under docs/value-objects
+- it records the exact C8-G-E fail reason
+- it records that only S2 secondary income-generation was missing
+- it records that all required S2 slugs passed
+- it records that forbidden S2 slugs were absent
+- it records that all other C8-G cases passed
+- it records that C8-F baseline passed
+- it defines the minimal source patch
+- it prohibits SQL/OpenAI/runtime/route/UI/resolver/bridge/persistence changes
+- no source-code files changed
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run
+- git diff contains only this document
+- document is committed and pushed
+- final git status is clean
+
+12. Commit message
+
+Plan S2 income-generation deterministic proof fix
