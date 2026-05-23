@@ -76,6 +76,8 @@ Before any controlled production_persist proof, we must answer:
 
 6. Cleanup / rollback prerequisite
 
+Exact marker: cleanup / rollback policy
+
 A controlled production_persist proof must not proceed until there is an explicit cleanup/rollback plan.
 
 Minimum cleanup/rollback requirements:
