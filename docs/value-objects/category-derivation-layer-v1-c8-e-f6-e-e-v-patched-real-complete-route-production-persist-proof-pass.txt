@@ -1,0 +1,327 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-E-V
+Result: patched real complete route production_persist proof PASS
+Created: 2026-05-23
+
+1. Purpose
+
+This document records the reviewed result of:
+
+P4.10.0-C8-E-F6-E-E-U - patched real complete route production_persist runtime proof
+
+This is a documentation-only result record.
+
+No runtime proof is executed here.
+
+No SQL is executed here.
+
+No cleanup is executed here.
+
+No source code is changed here.
+
+2. Current baseline
+
+Current HEAD before this result document:
+
+- c15da6d Plan patched Category Derivation complete route proof
+
+Relevant previous commits:
+
+- d5882f4 Patch Category Derivation proof-safe complete route diagnostics
+- c15da6d Plan patched Category Derivation complete route proof
+
+3. Runtime proof environment
+
+The runtime proof U was executed after restarting the dev server with:
+
+- CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+- CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=true
+
+4. Runtime proof endpoints
+
+The browser proof used:
+
+- create endpoint: /api/activity/debug/create-free-text-start-event
+- complete endpoint: /api/activity/complete
+
+The proof did not execute SQL.
+
+The proof did not execute cleanup.
+
+The proof created one dedicated proof event.
+
+5. Proof event identity
+
+Proof event id:
+
+- 2988e66b-c29d-4863-a6d8-f84b0bde5bd5
+
+Proof marker:
+
+- P4.10.0-C8-E-F6-E-real-complete-route-production-persist-proof
+
+Step marker:
+
+- P4.10.0-C8-E-F6-E-E-U
+
+Purpose:
+
+- patched_real_complete_route_production_persist_proof
+
+6. Create route result
+
+Create route result:
+
+- HTTP status: 200
+- ok: true
+- status: created_started_free_text_event
+- event.status: started
+- event.processingStatus: pending
+- event.id: 2988e66b-c29d-4863-a6d8-f84b0bde5bd5
+
+Proof metadata preservation result:
+
+- proofMetadataPreserved: true
+- metadata.proof: P4.10.0-C8-E-F6-E-real-complete-route-production-persist-proof
+- metadata.p4Step: P4.10.0-C8-E-F6-E-E-U
+- metadata.purpose: patched_real_complete_route_production_persist_proof
+- metadata.cleanupEligible: true
+- metadata.productionPersistProof: true
+- metadata.nonCanonicalBusinessEvent: true
+- metadata.setupRouteP4Step: P4.10.0-C8-P3-B7-C2-C-A2
+- metadata.endpoint: /api/activity/debug/create-free-text-start-event
+- metadata.productionRouteUnderTest: /api/activity/complete
+- metadata.categoryDerivationExecutedHere: false
+
+Conclusion:
+
+The S patch fixed proof metadata preservation for create-free-text-start-event.
+
+7. Complete route result
+
+Complete route result:
+
+- HTTP status: 200
+- ok: true
+- status: completed
+- event.status: completed
+- event.processing_status: processed
+- event.duration_minutes: 1
+
+Category Derivation route runner result:
+
+- enabled: true
+- mode: production_persist
+- ok: true
+- skipped: false
+- reason: route_runner_completed
+- derivationRunId: ab8935d7-6e8a-4ede-bb8a-affa0715a46e
+- candidateCount: 5
+- resolvedCandidateCount: 5
+- persistenceDerivationRowsCreated: 5
+- warnings: []
+- errors: []
+
+Category Derivation diagnostic response result:
+
+- categoryDerivation.ok: true
+- categoryDerivation.status: completed
+- categoryDerivation.mode: production_persist
+- categoryDerivation.reason: route_runner_completed
+- categoryDerivation.derivationRunId: ab8935d7-6e8a-4ede-bb8a-affa0715a46e
+- categoryDerivation.persistenceDerivationRowsCreated: 5
+- categoryDerivation.activityCategoryDerivationsCount: 5
+- categoryDerivation.existingCompletedRunFound: false
+- categoryDerivation.routeRunnerReason: route_runner_completed
+- categoryDerivation.failedButCompletionContinued: false
+- categoryDerivation.routeRunner.executed: true
+- categoryDerivation.routeRunner.persisted: true
+- categoryDerivation.routeRunner.resolved: true
+
+Exposure result:
+
+- categoryDerivation.exposure.exposed: true
+- categoryDerivation.exposure.reason: include_response_debug
+- categoryDerivation.exposure.sanitized: true
+- categoryDerivation.exposure.rawRowsExposed: false
+- categoryDerivation.exposure.secretsExposed: false
+
+Conclusion:
+
+The real /api/activity/complete route in production_persist mode executed Category Derivation through the route runner and persisted 5 activity category derivation rows.
+
+8. Idempotency result
+
+Idempotency request used the same event id:
+
+- 2988e66b-c29d-4863-a6d8-f84b0bde5bd5
+
+Idempotency result:
+
+- HTTP status: 200
+- ok: true
+- status: already_completed
+- event.status: completed
+- lifecycle.alreadyCompleted: true
+
+Already-completed diagnostic response result:
+
+- categoryDerivation.ok: true
+- categoryDerivation.status: already_completed_not_executed
+- categoryDerivation.mode: production_persist
+- categoryDerivation.reason: already_completed
+- categoryDerivation.derivationRunId: null
+- categoryDerivation.persistenceDerivationRowsCreated: 0
+- categoryDerivation.activityCategoryDerivationsCount: 0
+- categoryDerivation.routeRunnerReason: already_completed
+- categoryDerivation.failedButCompletionContinued: false
+- categoryDerivation.enabled: true
+- categoryDerivation.skipped: true
+- categoryDerivation.routeRunner.executed: false
+- categoryDerivation.routeRunner.persisted: false
+- categoryDerivation.routeRunner.resolved: false
+- categoryDerivation.exposure.exposed: true
+- categoryDerivation.exposure.reason: include_response_debug
+- categoryDerivation.exposure.sanitized: true
+- categoryDerivation.exposure.rawRowsExposed: false
+- categoryDerivation.exposure.secretsExposed: false
+
+Conclusion:
+
+The repeated complete call is idempotent and exposes an explicit already_completed Category Derivation diagnostic block in proof/debug mode.
+
+9. Final reviewed checks
+
+All U checks passed:
+
+- createHttpOk: true
+- createOk: true
+- proofMetadataPreserved: true
+- completeHttpOk: true
+- completeOk: true
+- completeStatusCompleted: true
+- completeEventCompleted: true
+- completeHasCategoryDerivation: true
+- completeModeProductionPersist: true
+- completeDerivationRunVisible: true
+- completeRowsVisible: true
+- completeActivityRowsVisible: true
+- idempotencyHttpOk: true
+- idempotencyOk: true
+- idempotencyAlreadyCompleted: true
+- idempotencyEventCompleted: true
+- idempotencyLifecycleAlreadyCompleted: true
+- idempotencyHasCategoryDerivation: true
+
+10. Final classification
+
+Final classification:
+
+PASS
+
+Reason:
+
+The patched real complete route proof successfully demonstrated all required conditions:
+
+1. proof metadata is preserved by create-free-text-start-event
+2. /api/activity/complete accepts eventId
+3. /api/activity/complete completes the proof event
+4. categoryDerivation diagnostic data is visible
+5. production_persist mode is visible
+6. derivationRunId is visible
+7. persistenceDerivationRowsCreated is visible
+8. activityCategoryDerivationsCount is visible
+9. repeated call returns already_completed
+10. already-completed path exposes an explicit diagnostic block
+11. no SQL was executed
+12. no cleanup was executed
+
+11. Important observations
+
+Observation 1:
+
+The old proof event from before S should remain audit evidence until a cleanup step is explicitly planned.
+
+Observation 2:
+
+The new proof event is cleanup eligible but should not be cleaned up in this step.
+
+Observation 3:
+
+The next work should not repeat this proof unless a new source change affects the complete route, create route, Category Derivation route runner, persistence, idempotency, or response exposure.
+
+Observation 4:
+
+The global lint still has old project-wide errors, but targeted validation of the two patched files had 0 errors and TypeScript passed.
+
+12. Next recommended step
+
+Recommended next step:
+
+P4.10.0-C8-E-F6-E-E-W - decide post-PASS transition after patched production_persist proof
+
+Decision topics:
+
+- whether to close F6-E-E production_persist proof block
+- whether to document cleanup policy for proof events
+- whether to keep diagnostic response exposure gated by proof/debug mode as implemented
+- whether to transition to the next planned Category Derivation Layer v1 block
+- whether to address the known pre-existing unused import warning separately
+- whether to defer global lint cleanup because it is outside this block
+
+13. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no cleanup command
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no additional /api/activity/complete runtime proof
+- no normal user activity used for proof
+- no failActivityComplete=true
+
+14. Exact verification markers
+
+- P4.10.0-C8-E-F6-E-E-V
+- patched real complete route production_persist proof PASS
+- c15da6d Plan patched Category Derivation complete route proof
+- d5882f4 Patch Category Derivation proof-safe complete route diagnostics
+- P4.10.0-C8-E-F6-E-E-U
+- 2988e66b-c29d-4863-a6d8-f84b0bde5bd5
+- ab8935d7-6e8a-4ede-bb8a-affa0715a46e
+- proofMetadataPreserved: true
+- production_persist
+- route_runner_completed
+- persistenceDerivationRowsCreated: 5
+- activityCategoryDerivationsCount: 5
+- existingCompletedRunFound: false
+- already_completed
+- already_completed_not_executed
+- include_response_debug
+- sanitized: true
+- rawRowsExposed: false
+- secretsExposed: false
+- Final classification: PASS
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+- No source code is changed here
+- P4.10.0-C8-E-F6-E-E-W
+- decide post-PASS transition after patched production_persist proof
+
+15. Definition of Done
+
+This V result documentation step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above c15da6d
