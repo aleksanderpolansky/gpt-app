@@ -1,0 +1,597 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-H-C
+Minimal additive patch strategy for postponed business/sales cases
+
+Status: DOC-ONLY STRATEGY / FIX1
+Generated at: 2026-05-23 16:41:31 +02:00
+Baseline HEAD: 2552dcd
+Previous block: P4.10.0-C8-H-B — current postponed business/sales support static inspection
+Next planned block: P4.10.0-C8-H-D1 — exact files to patch decision for postponed business/sales cases
+
+Exact verifier markers intentionally present:
+- No SQL
+- No OpenAI
+- No runtime proof
+- /api/activity/complete was not used
+- lead-not-client
+- partner-not-client
+- support-not-new-sale
+
+1. Purpose
+
+This document decides the minimal additive patch strategy for the postponed C8-H business/sales benchmark cases.
+
+C8-H-A defined the postponed benchmark inventory.
+C8-H-B inspected current ruleExtractor.ts support.
+C8-H-C decides what should be patched later and what must not be touched yet.
+
+This document does not patch source code.
+
+2. Sources used
+
+Current source:
+.\lib\activity\categoryDerivation\ruleExtractor.ts
+SHA256: BF8380B96858336F2FF34B76630622F609DD6032F7C7F6224F23CEC8C1272AA2
+
+C8-H-A benchmark inventory:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-a-postponed-business-sales-cases-benchmark-inventory.txt
+SHA256: 02001D6B9984520C260744980002CEFFA0FE579E8AE6702665AD235BC833CDD6
+
+C8-H-B static inspection:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-b-current-postponed-business-sales-support-inspection.txt
+SHA256: F023CC56EC02F85EEA2131DF7F1069B6BB3B60730256088E44BF8BEE32A37E23
+
+C8-G-F proof PASS and expansion decision:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-f-deterministic-proof-pass-and-expansion-decision.txt
+SHA256: 729AC3E3E3A7005DD31AB1BA41EC4115736FB78E35AB596442ECAE4E2F39DA63
+
+C8-G-E-RECOVERY1 proof output:
+C:\Users\Admin\Downloads\P4_10_0_C8_G_E_RECOVERY1_deterministic_extractor_proof_output.txt
+SHA256: E320E87047A995D2701E6E5D333651724558D20B6828BF3C0CC9E98403543DB6
+SIZE_BYTES: 4926
+
+3. Process constraints
+
+C8-H-C does not:
+
+- change ruleExtractor.ts
+- change resolver
+- change bridge
+- change persistence
+- create or modify SQL
+- run SQL
+- call OpenAI
+- run /api/activity/complete
+- run runtime proof
+- create UI
+- create category seeds
+- create a manual taxonomy dump
+
+Only this strategy document is expected to be created and committed.
+
+4. Decision
+
+Minimal additive patch is needed.
+
+Reason:
+
+C8-H-A introduced four postponed benchmark cases that have not yet been deterministically proven:
+
+- S6 — outbound lead list
+- S7 — partnership negotiation
+- S11 — discovery call with a new B2B lead
+- S12 — post-purchase customer support ambiguity
+
+C8-H-B was only a static inspection. Existing slugs and broad words in ruleExtractor.ts do not prove exact behavior for S6/S7/S11/S12.
+
+Therefore the next source patch should add deterministic extractor-level support for these four cases, while preserving C8-G and C8-F behavior.
+
+5. Patch surface decision for the strategy
+
+Recommended patch surface:
+
+- lib/activity/categoryDerivation/ruleExtractor.ts only
+
+Do not patch in the first C8-H source patch:
+
+- resolver
+- bridge
+- persistence
+- SQL migrations
+- category seeds
+- OpenAI classifier
+- /api/activity/complete
+- UI
+- unrelated API routes
+
+Reason:
+
+C8-G proved that the safe sequence is:
+
+benchmark inventory -> static inspection -> strategy -> exact files decision -> extractor-only patch -> deterministic proof -> PASS/FAIL result document
+
+C8-H should follow the same pattern.
+
+6. Patch scope decision
+
+Recommended first C8-H patch scope:
+
+Patch all four postponed benchmark cases in one controlled source patch, unless exact file inspection in C8-H-D1/D2 shows that the patch becomes too large.
+
+Included cases:
+
+S6 — outbound lead list
+Input:
+tworzyłem listę potencjalnych klientów dla kampanii outbound
+
+S7 — partnership negotiation
+Input:
+negocjowałem warunki współpracy z partnerem
+
+S11 — discovery call with a new B2B lead
+Input:
+I had a discovery call with a new B2B lead
+
+S12 — post-purchase customer support ambiguity
+Input:
+позвонил клиенту, чтобы помочь с проблемой после покупки
+
+Reason:
+
+These four cases are a coherent set of business/sales boundary conditions:
+
+- pre-contact acquisition
+- partner negotiation
+- lead qualification
+- post-purchase support
+
+Together they test lead/client/partner/support distinctions without requiring resolver, bridge, persistence, SQL, OpenAI or UI.
+
+7. Expected deterministic markers
+
+The source patch may use deterministic rule markers similar to the C8-G style.
+
+Recommended marker names:
+
+- business_sales_outbound_lead_list_semantics
+- business_sales_partnership_negotiation_semantics
+- business_sales_discovery_call_new_lead_semantics
+- business_sales_post_purchase_support_ambiguity
+
+Exact marker names may be adjusted during the patch step to match current ruleExtractor.ts style.
+
+8. S6 strategy — outbound lead list
+
+Input:
+tworzyłem listę potencjalnych klientów dla kampanii outbound
+
+Required/core candidates:
+
+- creating
+- lead-list
+- potential-client
+- prospecting
+- outbound-sales
+- lead-generation
+- business-development
+- b2b-sales
+- sales-responsibility
+- client-acquisition
+
+Secondary/possible candidates:
+
+- pipeline-management
+- income-generation
+- outbound-campaign
+- potential-client-list
+- no-confirmed-contact
+- no-confirmed-client
+- lead-not-client
+- potential-client-not-client
+
+Forbidden overclaims:
+
+- client
+- existing-client
+- contacted-client
+- customer-responsibility
+- proposal-sent
+- meeting-held
+- discovery-call
+- closed-deal
+- successful-sale
+- contract-signed
+- payment-received
+
+Interpretation:
+S6 is pre-contact acquisition work. It must not pretend that contact, meeting, proposal, sale, payment or existing client relationship already happened.
+
+Risk-control marker:
+lead-not-client
+
+9. S7 strategy — partnership negotiation
+
+Input:
+negocjowałem warunki współpracy z partnerem
+
+Required/core candidates:
+
+- negotiating
+- business-partner
+- partnership
+- cooperation-terms
+- business-development
+- partner-responsibility
+- work-responsibility
+
+Secondary/possible candidates:
+
+- strategic-partnership
+- relationship-management
+- income-generation
+- revenue-generation
+- b2b-sales
+- business-responsibility
+- partner-not-client
+
+Forbidden overclaims:
+
+- client
+- potential-client
+- lead
+- prospect
+- customer-responsibility
+- sales-proposal
+- commercial-proposal
+- discovery-call
+- closed-deal
+- contract-signed
+- payment-received
+- successful-sale
+
+Interpretation:
+S7 is business/partner responsibility. It may be commercially meaningful, but it must not be collapsed into client sales or customer responsibility.
+
+Risk-control marker:
+partner-not-client
+
+10. S11 strategy — discovery call with new B2B lead
+
+Input:
+I had a discovery call with a new B2B lead
+
+Required/core candidates:
+
+- discovery-call
+- calling
+- new-lead
+- lead
+- b2b-sales
+- client-acquisition
+- sales-process
+- business-development
+- sales-responsibility
+- lead-qualification
+
+Secondary/possible candidates:
+
+- relationship-management
+- income-generation
+- deal-preparation
+- pipeline-management
+- possible-business-development
+- lead-not-client
+
+Forbidden overclaims:
+
+- client
+- existing-client
+- customer-responsibility
+- commercial-proposal
+- proposal-sent
+- closed-deal
+- contract-signed
+- payment-received
+- successful-sale
+- client-acquired
+
+Interpretation:
+S11 is a sales-process / qualification step. It must not infer proposal, contract, payment, closed deal or existing client.
+
+Risk-control marker:
+lead-not-client
+
+11. S12 strategy — post-purchase customer support ambiguity
+
+Input:
+позвонил клиенту, чтобы помочь с проблемой после покупки
+
+Required/core candidates:
+
+- calling
+- client
+- post-purchase-support
+- customer-support
+- customer-responsibility
+- relationship-management
+- support-responsibility
+
+Secondary/possible candidates:
+
+- retention
+- account-management
+- customer-success
+- business-responsibility
+- support-not-new-sale
+
+Forbidden overclaims:
+
+- new-sale
+- lead-generation
+- prospecting
+- outbound-sales
+- client-acquisition
+- sales-responsibility
+- b2b-sales
+- discovery-call
+- commercial-proposal
+- proposal-sent
+- price-objection
+- closed-deal
+- contract-signed
+- payment-received
+- successful-sale
+- income-generation as core
+
+Interpretation:
+S12 is support/customer responsibility after purchase, not new sales acquisition. It may support retention, but it must not be classified as new sale, lead-generation or active selling unless explicitly stated.
+
+Risk-control marker:
+support-not-new-sale
+
+12. Candidate construction policy
+
+Every deterministic candidate added in the later patch should follow the existing ruleExtractor.ts candidate style.
+
+Do not invent a new candidate object format.
+
+Each candidate should use the current file conventions for:
+
+- slug
+- title
+- semanticLayer
+- categoryType
+- confidence
+- isRequired
+- isConfirmed
+- needsUserReview when secondary/possible
+- metadata marker via makeMetadata or equivalent current helper
+
+13. Confidence policy
+
+High confidence / required:
+
+- explicit outbound + potential clients -> outbound-sales / lead-generation / potential-client
+- explicit partner + cooperation terms -> partnership / business-partner / partner-responsibility
+- explicit discovery call + new B2B lead -> discovery-call / new-lead / lead-qualification / b2b-sales
+- explicit client + problem after purchase -> post-purchase-support / customer-support / customer-responsibility
+
+Medium confidence / possible:
+
+- income-generation in outbound / partner / discovery cases
+- relationship-management in partner / discovery / support cases
+- retention / account-management in post-purchase support
+- pipeline-management in lead-generation / discovery cases
+- b2b-sales in partner negotiation only as possible, not required, unless context makes it explicit
+
+Low confidence / do not canonicalize:
+
+- client in lead-only cases
+- customer-responsibility in lead-only cases
+- sales-responsibility in support-only cases
+- b2b-sales in support-only cases
+- closed deal / contract / payment / successful sale without direct evidence
+
+14. Forbidden overclaim policy
+
+The later patch must explicitly avoid or test absence of:
+
+- closed-deal
+- successful-sale
+- contract-signed
+- payment-received
+- invoice-paid
+- discount-given
+- proposal-sent
+- client-acquired
+- existing-client
+- contacted-client
+- meeting-held unless input states meeting
+- new-sale
+- customer-responsibility in lead-only cases
+- sales-responsibility in support-only cases
+- b2b-sales as core in support-only cases
+- client in lead/potential-client-only cases
+- client in partner-only cases
+- lead in partner-only cases
+
+Explicit risk-control markers:
+
+- lead-not-client
+- partner-not-client
+- support-not-new-sale
+
+15. Preservation policy
+
+The later patch must preserve C8-G proven behavior.
+
+C8-G markers to preserve:
+
+- business_sales_commercial_proposal_client_semantics
+- business_sales_potential_client_proposal_semantics
+- business_sales_follow_up_after_meeting_semantics
+- business_sales_price_objection_semantics
+- business_sales_crm_lead_update_semantics
+- business_sales_language_training_preparation_semantics
+- business_sales_passive_reading_ambiguity
+- business_sales_informal_conversation_ambiguity
+
+The later patch must preserve C8-F family/childcare behavior.
+
+C8-F markers to preserve:
+
+- teach_math_with_child_care_semantics
+- child_studied_math_nearby_supervision_ambiguity
+- child_homework_supervision_ambiguity
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+
+16. Multilingual strategy
+
+C8-H first patch should support exactly the benchmark phrases first.
+
+Polish:
+
+- tworzyłem listę potencjalnych klientów dla kampanii outbound
+- negocjowałem warunki współpracy z partnerem
+
+English:
+
+- I had a discovery call with a new B2B lead
+
+Russian:
+
+- позвонил клиенту, чтобы помочь с проблемой после покупки
+
+Do not add broad automatic multilingual support beyond the benchmark phrases in the first patch.
+
+17. Validation strategy after patch
+
+After the future source patch, run:
+
+- marker verification
+- forbidden overclaim absence check
+- C8-G marker preservation check
+- C8-F baseline marker preservation check
+- git diff --check
+- npx.cmd tsc --noEmit --pretty false
+- targeted ESLint for lib/activity/categoryDerivation/ruleExtractor.ts
+
+Then run deterministic extractor-level proof.
+
+Do not run for the first proof:
+
+- SQL
+- OpenAI
+- /api/activity/complete
+- browser runtime route proof
+- resolver proof
+- bridge proof
+- persistence proof
+- UI proof
+
+18. Expected next steps
+
+C8-H-D1 — exact files to patch decision
+
+Expected decision:
+ruleExtractor.ts only.
+
+C8-H-D2 — compact patch source pack / exact patch authoring preparation
+
+Create local source pack if needed.
+No commit.
+No source changes.
+
+C8-H-D3 — source patch
+
+Patch deterministic candidates for S6/S7/S11/S12 in ruleExtractor.ts only.
+Add a D3 document.
+Run TypeScript and targeted ESLint.
+Commit and push.
+
+C8-H-D4 — proof plan
+
+Document patch validation and prepare deterministic proof plan.
+
+C8-H-E — deterministic proof
+
+Run local extractor-level proof for S6/S7/S11/S12 plus C8-G and C8-F preservation checks.
+No SQL.
+No OpenAI.
+No /api/activity/complete.
+
+C8-H-F — proof result document
+
+Document PASS/FAIL and next expansion decision.
+
+19. Risk controls
+
+Risk:
+The patch becomes a taxonomy dump.
+
+Control:
+Patch only benchmark-needed deterministic candidates.
+
+Risk:
+S6 overclaims contact or existing client.
+
+Control:
+S6 must include no-confirmed-contact, no-confirmed-client, lead-not-client and potential-client-not-client as secondary/ambiguity markers and must not return client/contacted-client/existing-client.
+
+Risk:
+S7 collapses partner into client.
+
+Control:
+S7 must use partner/business-partner/partner-responsibility and partner-not-client, and must not return client/lead/customer-responsibility.
+
+Risk:
+S11 turns discovery call into closed deal or client.
+
+Control:
+S11 must use new-lead/lead-qualification and lead-not-client, and must not return client/existing-client/proposal/deal/payment.
+
+Risk:
+S12 turns customer support into new sales.
+
+Control:
+S12 must use post-purchase-support/customer-support/customer-responsibility and support-not-new-sale, and must not return lead-generation/outbound-sales/sales-responsibility/b2b-sales as core.
+
+Risk:
+C8-G or C8-F regress.
+
+Control:
+Future proof must include C8-G proven case preservation and C8-F baseline preservation.
+
+20. Definition of Done for C8-H-C-FIX1
+
+C8-H-C-FIX1 is done when:
+
+- this document exists under docs/value-objects
+- it states that a minimal additive patch is needed
+- it recommends lib/activity/categoryDerivation/ruleExtractor.ts only as patch surface
+- it defines S6/S7/S11/S12 patch scope
+- it defines required/core slugs
+- it defines secondary/possible slugs
+- it defines forbidden overclaim policy
+- it explicitly includes lead-not-client
+- it explicitly includes partner-not-client
+- it explicitly includes support-not-new-sale
+- it defines preservation policy for C8-G and C8-F
+- it defines validation and proof strategy
+- it defines next steps C8-H-D1 through C8-H-F
+- no source-code files changed
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run
+- git diff contains only this document
+- document is committed and pushed
+- final git status is clean
+
+21. Commit message
+
+Decide Postponed Business Sales Semantic Coverage patch strategy
