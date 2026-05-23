@@ -1,0 +1,287 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-F-F
+Document deterministic semantic coverage proof PASS and select expansion target
+Created: 2026-05-23
+
+1. Purpose
+
+This document records the PASS result of the deterministic semantic coverage proof for B1/B2/F1 and selects the next expansion target.
+
+This is a documentation-only step.
+
+No runtime proof is executed here.
+
+No SQL is executed here.
+
+No cleanup is executed here.
+
+No source code is changed here.
+
+2. Current baseline
+
+Current HEAD before this document:
+
+- c91c6ab Plan Category Derivation semantic coverage proof
+
+Relevant previous commits:
+
+- 4e87366 Patch Category Derivation family childcare semantic candidates
+- c91c6ab Plan Category Derivation semantic coverage proof
+
+Proof output used:
+
+- C:\Users\Admin\Downloads\P4_10_0_C8_F_E_RECOVERY1_deterministic_semantic_coverage_proof_output.txt
+
+Proof result:
+
+- finalClassification: PASS
+- ok: True
+- proof step: P4.10.0-C8-F-E-RECOVERY1
+- proof method: deterministic semantic coverage proof for B1/B2/F1
+
+3. Proof method
+
+The proof was extractor-level only.
+
+It directly verified deterministic rule extraction after the D3 source patch.
+
+It did not use the real complete route.
+
+It did not use:
+
+- /api/activity/complete
+- SQL
+- cleanup
+- OpenAI
+- normal user activity
+- source-code changes
+- commit creation
+
+Safety flags from proof output:
+
+- noRuntimeRouteUsed: True
+- noApiActivityCompleteUsed: True
+- noSqlExecuted: True
+- noCleanupExecuted: True
+- noOpenAiCall: True
+- noSourceCodeChangedByRunner: True
+- noCommitCreated: True
+
+4. Proof cases summary
+
+- B1_ru_yo: ok=True; candidates=11; missingRequired=0; forbiddenOverclaimHits=0; slugs=caregiving, child, childcare, duration-minutes, family, family-duty, helping-child-learn, learning, mathematics, parental-care, teaching
+- B1_ru_e: ok=True; candidates=11; missingRequired=0; forbiddenOverclaimHits=0; slugs=caregiving, child, childcare, duration-minutes, family, family-duty, helping-child-learn, learning, mathematics, parental-care, teaching
+- B2_ru_yo: ok=True; candidates=8; missingRequired=0; forbiddenOverclaimHits=0; slugs=ambiguity-active-help-unknown, ambiguity-passive-supervision, child, child-supervision, duration-minutes, family, learning, mathematics
+- B2_ru_e: ok=True; candidates=8; missingRequired=0; forbiddenOverclaimHits=0; slugs=ambiguity-active-help-unknown, ambiguity-passive-supervision, child, child-supervision, duration-minutes, family, learning, mathematics
+- F1_en: ok=True; candidates=9; missingRequired=0; forbiddenOverclaimHits=0; slugs=ambiguity-active-help-unknown, ambiguity-passive-supervision, child, child-supervision, childcare, duration-minutes, family, homework, parental-care
+
+5. PASS conclusion
+
+The first family/childcare deterministic semantic coverage patch is accepted as PASS at extractor level.
+
+Confirmed:
+
+- B1 active teaching/helping case returns required learning/care/family-duty semantics.
+- B2 passive/nearby child study case preserves ambiguity and does not overclaim active teaching.
+- F1 homework-with-child case preserves ambiguity and does not overclaim active teaching.
+- Required candidates are present.
+- Forbidden active-teaching overclaim checks are clean.
+
+6. Important observation about encoding
+
+The PowerShell console output may display Russian texts as mojibake in JSON output.
+
+This does not invalidate the proof.
+
+Reason:
+
+The proof decision is based on deterministic candidate slugs, required/missing slug checks, and forbidden overclaim checks.
+
+All required slugs were present and all forbidden-overclaim hits were absent.
+
+7. What this proves
+
+This proves that the system can automatically derive additional semantic candidates from a user activity text without manually creating the activity categories each time.
+
+The proven mechanism is:
+
+user activity text
+->
+deterministic extractor
+->
+candidate slugs
+->
+semantic layers such as action, domain, participant, purpose, care_function, duty, ambiguity_marker
+
+This is not a final universal taxonomy.
+
+It is a small benchmark proving that the Category Derivation Layer can detect deeper role/care/purpose semantics.
+
+8. What this does not prove yet
+
+This does not yet prove:
+
+- resolver behavior for newly suggested categories
+- database persistence of these new semantic candidates
+- UI display
+- OpenAI semantic recall
+- multilingual free-form generalization beyond the tested phrases
+- automatic category suggestion governance for all unknown user phrases
+- production complete-route behavior after this exact D3 patch
+
+These are later steps.
+
+9. Expansion target decision
+
+Decision:
+
+The next expansion target should be business/sales responsibility semantics.
+
+Reason:
+
+The family/childcare benchmark proved the role / duty / care / purpose layer in a personal/family context.
+
+The next most valuable proof is the same semantic layer in the user's professional positioning:
+
+- B2B sales
+- client follow-up
+- commercial proposal
+- negotiation preparation
+- income generation
+- business responsibility
+- professional duty
+
+This matches the user's broader platform goal: user messages should be decomposed not just into objects/actions, but also into purpose, responsibility and value-creation context.
+
+10. Next benchmark group
+
+Next selected benchmark group:
+
+P4.10.0-C8-G-A - Business/Sales Semantic Coverage Benchmark Inventory
+
+Candidate examples:
+
+G1:
+
+- wrote a commercial proposal to a client
+
+Expected semantics:
+
+- writing
+- commercial-proposal
+- client
+- b2b-sales
+- business-development
+- income-generation
+- professional-duty
+- client-communication
+
+G2:
+
+- followed up with a German client after a B2B sales call
+
+Expected semantics:
+
+- follow-up
+- german-client
+- b2b-sales
+- sales-call
+- client-communication
+- relationship-management
+- professional-duty
+- income-generation
+
+G3:
+
+- prepared objections handling script in Polish for a restaurant owner
+
+Expected semantics:
+
+- preparation
+- objection-handling
+- sales-script
+- polish-language
+- restaurant-owner
+- b2b-sales
+- sales-enablement
+- professional-duty
+
+11. Why not expand family/childcare further now
+
+Do not continue adding many family-specific or childcare-specific categories immediately.
+
+Reason:
+
+The purpose of the first family benchmark was to prove the role/care/purpose layer.
+
+Now that this layer is proven at extractor level, the next test should verify that the same concept works in a different domain.
+
+12. Recommended next step
+
+Recommended next step:
+
+P4.10.0-C8-G-A - create Business/Sales Semantic Coverage Benchmark Inventory
+
+This should be doc-only.
+
+It should define:
+
+- benchmark cases
+- expected slugs
+- forbidden overclaim rules
+- ambiguity rules
+- language separation rules where needed
+- safety gates
+
+13. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no cleanup command
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call unless explicitly planned
+- no schema or migration change unless explicitly planned
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no normal user activity used for proof
+- no failActivityComplete=true
+
+14. Exact verification markers
+
+- P4.10.0-C8-F-F
+- document deterministic semantic coverage proof PASS and select expansion target
+- c91c6ab Plan Category Derivation semantic coverage proof
+- 4e87366 Patch Category Derivation family childcare semantic candidates
+- finalClassification: PASS
+- deterministic semantic coverage proof for B1/B2/F1
+- B1 active teaching/helping case returns required learning/care/family-duty semantics
+- B2 passive/nearby child study case preserves ambiguity
+- F1 homework-with-child case preserves ambiguity
+- forbidden active-teaching overclaim checks are clean
+- business/sales responsibility semantics
+- P4.10.0-C8-G-A
+- Business/Sales Semantic Coverage Benchmark Inventory
+- commercial-proposal
+- client-communication
+- b2b-sales
+- income-generation
+- professional-duty
+- relationship-management
+- sales-enablement
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+- No source code is changed here
+
+15. Definition of Done
+
+This C8-F-F documentation step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above c91c6ab
