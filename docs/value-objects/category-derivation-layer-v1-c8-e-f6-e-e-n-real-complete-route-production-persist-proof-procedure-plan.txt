@@ -1,0 +1,305 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-E-N
+Plan: real /api/activity/complete production_persist proof procedure
+Created: 2026-05-23
+
+1. Purpose
+
+This document defines the proof-safe procedure for a future real /api/activity/complete production_persist runtime proof.
+
+This is a documentation-only planning step.
+
+No runtime proof is executed here.
+
+No SQL is executed here.
+
+No cleanup is executed here.
+
+No source code is changed here.
+
+2. Current baseline
+
+Current HEAD before this procedure plan:
+
+- 1a33148 Decide Category Derivation real complete route proof strategy
+
+Relevant previous commits:
+
+- de9ca12 Document Category Derivation controlled production persist runtime proof
+- 76eafeb Decide Category Derivation after controlled production persist proof
+- 2304f76 Fix Category Derivation complete route readiness inspection
+- 1a33148 Decide Category Derivation real complete route proof strategy
+
+3. Inputs for this procedure
+
+Inputs reviewed:
+
+- F6-E-E-I controlled production_persist runtime proof PASS
+- F6-E-E-J controlled runtime proof result document
+- F6-E-E-L-FIX1 real complete route readiness inspection
+- F6-E-E-M real complete route proof strategy decision
+- src/app/api/activity/complete/route.ts
+- src/app/api/activity/debug/create-free-text-start-event/route.ts
+- lib/activity/categoryDerivation/completeRouteIntegration.ts
+- lib/activity/categoryDerivation/config.ts
+- lib/activity/categoryDerivation/runLookup.ts
+
+4. Static facts verified before planning
+
+Verified facts:
+
+- adapter call count in complete route: 2
+- complete route mentions runCategoryDerivationForCompleteRoute: True
+- complete route mentions POST: True
+- create-free-text-start-event route mentions inputText: True
+- create-free-text-start-event route mentions durationMinutes: True
+- integration mentions runCategoryDerivationForCompleteRoute: True
+- config supports production_persist: True
+- runLookup mentions existing_completed_run_found: True
+
+5. Strategic decision carried forward
+
+Direct production_persist runtime execution through /api/activity/complete remains blocked until the future F6-E-E-O execution step.
+
+This F6-E-E-N document does not execute the proof.
+
+This document only defines the planned procedure.
+
+6. Proof principle
+
+The real /api/activity/complete proof must be performed only on a proof-created activity event.
+
+The proof activity must be non-canonical and must not represent a real user business action.
+
+The proof must use a started event created specifically for this test.
+
+The proof must not use an existing normal user activity.
+
+7. Required environment for future F6-E-E-O
+
+The future execution step must start the dev server with:
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=false
+
+The command should use npm.cmd on Windows PowerShell:
+
+npm.cmd run dev
+
+Strict mode remains blocked:
+
+CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE must remain false.
+
+8. Future F6-E-E-O step 1 - create proof event
+
+The future execution step should first create a dedicated started proof event through the debug create route:
+
+/api/activity/debug/create-free-text-start-event
+
+Planned browser-console request:
+
+const createEndpoint = "/api/activity/debug/create-free-text-start-event";
+
+const createPayload = {
+  inputText: "walked to work for 11 minutes during real complete route production persist proof",
+  title: "F6-E real complete route production_persist proof",
+  durationMinutes: 11,
+  proof: "P4.10.0-C8-E-F6-E-real-complete-route-production-persist-proof",
+  p4Step: "P4.10.0-C8-E-F6-E-E-O",
+  purpose: "real_complete_route_production_persist_proof",
+  cleanupEligible: true,
+  productionPersistProof: true,
+  nonCanonicalBusinessEvent: true
+};
+
+const createResponse = await fetch(createEndpoint, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify(createPayload)
+});
+
+const createData = await createResponse.json();
+
+console.log("create HTTP status:", createResponse.status);
+console.log("create response:", createData);
+
+9. Required result after creating proof event
+
+The future execution step must capture:
+
+- create HTTP status
+- full create response
+- created event id
+- event status
+- event processingStatus
+- proof metadata if returned
+
+If the create route does not return an event id, the proof must stop.
+
+Do not call /api/activity/complete without a dedicated proof event id.
+
+10. Future F6-E-E-O step 2 - call real complete route
+
+After a proof event id is created, the future execution step may call the real complete route:
+
+/api/activity/complete
+
+Planned browser-console request shape:
+
+const completeEndpoint = "/api/activity/complete";
+
+const completePayload = {
+  activityEventId: createData.event?.id || createData.eventId || createData.id,
+  proof: "P4.10.0-C8-E-F6-E-real-complete-route-production-persist-proof",
+  p4Step: "P4.10.0-C8-E-F6-E-E-O",
+  purpose: "real_complete_route_production_persist_proof"
+};
+
+const completeResponse = await fetch(completeEndpoint, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify(completePayload)
+});
+
+const completeData = await completeResponse.json();
+
+console.log("complete HTTP status:", completeResponse.status);
+console.log("complete response:", completeData);
+
+11. Payload caution
+
+The exact id field accepted by /api/activity/complete must be verified during F6-E-E-O from the route response and route contract.
+
+Candidate id fields to inspect:
+
+- activityEventId
+- eventId
+- id
+
+If the first complete request returns a validation error, do not retry repeatedly.
+
+Capture the response and stop for diagnosis.
+
+12. Expected result after real complete route call
+
+Expected result:
+
+- HTTP status is 200
+- route completes the proof event
+- categoryDerivation or equivalent adapter result is present in the response, if exposed
+- runCategoryDerivationForCompleteRoute is reached
+- production_persist is active
+- failActivityComplete remains false
+- no OpenAI call is made
+- no SQL is run from PowerShell
+- no cleanup is run
+- no schema, migration, RLS, permission, or UI change is made
+
+13. Expected Category Derivation behavior
+
+Preferred expected behavior for a new proof event:
+
+- first real complete route call creates one completed derivation run
+- derivation rows are persisted
+- expected derivation row count should be 5 if the same derivation template behavior applies
+- a repeated call must not duplicate derivation rows
+- repeated call should find existing_completed_run_found or equivalent idempotency behavior
+
+14. Future F6-E-E-O optional idempotency call
+
+The future execution step may include a second complete call only if the first call succeeds and the event id is clearly proof-created.
+
+The second call must use the same completePayload.
+
+Expected second call:
+
+- no duplicate derivation run
+- no duplicate activity_category_derivations
+- existing completed derivation run is reused or safely detected
+- user-facing activity state is not corrupted
+
+15. Failure handling
+
+If any step fails:
+
+- do not run cleanup
+- do not run SQL
+- do not change source code immediately
+- capture full browser-console output
+- capture full dev-server terminal output
+- capture HTTP status
+- capture full JSON response
+- capture current git status
+- document the failure before making changes
+
+16. Cleanup handling
+
+Cleanup is not part of F6-E-E-O execution.
+
+Even after a successful proof, cleanup must be a separate reviewed action.
+
+Any cleanup must follow the F6-E-E-G cleanup and rollback policy.
+
+No SQL may be executed in PowerShell.
+
+17. Approval for future execution
+
+This F6-E-E-N procedure plan allows the next step to be:
+
+P4.10.0-C8-E-F6-E-E-O - execute real /api/activity/complete production_persist proof
+
+However, execution is approved only under the exact safety conditions in this document.
+
+18. Safety gates preserved
+
+Until F6-E-E-O is executed under this plan:
+
+- no cleanup command
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no arbitrary /api/activity/complete production_persist proof
+- no normal user activity used for proof
+- no failActivityComplete=true
+
+19. Exact verification markers
+
+- P4.10.0-C8-E-F6-E-E-N
+- plan real /api/activity/complete production_persist proof procedure
+- 1a33148 Decide Category Derivation real complete route proof strategy
+- P4.10.0-C8-E-F6-E-E-M
+- P4.10.0-C8-E-F6-E-E-L-FIX1
+- P4.10.0-C8-E-F6-E-E-I runtime proof PASS
+- runCategoryDerivationForCompleteRoute
+- production_persist
+- existing_completed_run_found
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE must remain false
+- /api/activity/debug/create-free-text-start-event
+- /api/activity/complete
+- real_complete_route_production_persist_proof
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+- No source code is changed here
+- P4.10.0-C8-E-F6-E-E-O
+- execute real /api/activity/complete production_persist proof
+
+20. Definition of Done
+
+This F6-E-E-N procedure-planning step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above 1a33148
