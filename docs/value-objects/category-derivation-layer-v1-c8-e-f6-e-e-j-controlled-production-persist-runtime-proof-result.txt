@@ -1,0 +1,252 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-E-J
+Controlled production_persist runtime proof result
+Created: 2026-05-23
+
+1. Purpose
+
+This document records the result of P4.10.0-C8-E-F6-E-E-I.
+
+The controlled production_persist runtime proof was executed through the dedicated debug route only.
+
+No SQL was executed.
+
+No cleanup was executed.
+
+No source code was changed.
+
+2. Current baseline
+
+Current HEAD before this result document:
+
+- bc1a116 Plan Category Derivation controlled production persist runtime proof
+
+Relevant previous commits:
+
+- 8f1af0e Add Category Derivation controlled production persist proof route
+- c1c5253 Document Category Derivation controlled production persist proof route
+- 0cb1c06 Fix Category Derivation controlled proof route documentation marker
+- ca68615 Plan Category Derivation controlled proof cleanup policy
+- bc1a116 Plan Category Derivation controlled production persist runtime proof
+
+3. Route tested
+
+Route:
+
+- /api/activity/debug/category-derivation-controlled-production-persist-proof
+
+Route file:
+
+- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+
+The real /api/activity/complete route was not used.
+
+4. Runtime environment
+
+The dev server was started with:
+
+- CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+- CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=false
+
+PowerShell npm.ps1 execution-policy issue was bypassed by using:
+
+- npm.cmd run dev
+
+5. Browser-console request
+
+The controlled debug route was called from the browser console with:
+
+- proof: P4.10.0-C8-E-F6-E-controlled-production-persist-proof
+- mode: production_persist
+- callTwice: true
+- inputText: walked to work for 10 minutes during controlled production persist proof
+- title: F6-E controlled production_persist proof
+- durationMinutes: 10
+
+6. Top-level result
+
+Runtime proof result:
+
+- HTTP status: 200
+- ok: true
+- status: controlled_production_persist_proof_pass
+- route: /api/activity/debug/category-derivation-controlled-production-persist-proof
+- p4Step: P4.10.0-C8-E-F6-E-E-controlled-production-persist-proof
+
+Conclusion:
+
+- P4.10.0-C8-E-F6-E-E-I runtime proof PASS
+
+7. Created proof event
+
+Created proof event:
+
+- event id: 2a303890-76ff-4f41-9dee-9b3436a1988f
+- event status: started
+- event processingStatus: pending
+
+The event metadata included proof markers for:
+
+- controlled_production_persist_proof
+- cleanupEligible
+- productionPersistProof
+- controlled_proof_route
+
+8. Derivation run result
+
+Derivation run id:
+
+- 10701d0b-2166-4715-afdc-f1bec9504b56
+
+First call result:
+
+- ok: true
+- reason: route_runner_completed
+- production_persist was used
+- derivationRunId was created
+- persistenceDerivationRowsCreated: 5
+
+Second call result:
+
+- ok: true
+- reason: existing_completed_run_found
+- same derivationRunId was returned
+- persistenceDerivationRowsCreated: 0
+- no duplicate persistence happened
+
+9. Proof object result
+
+Confirmed proof checks:
+
+- firstCallPass: true
+- secondCallPass: true
+- sameDerivationRunId: true
+- firstDerivationRunId exists
+- secondDerivationRunId equals firstDerivationRunId
+- secondCallDidNotPersist: true
+- productionPersistActuallyUsed: true
+- eventWasProofMarked: true
+
+10. DB verification result
+
+Confirmed DB verification:
+
+- dbVerification.pass: true
+- proofEventExists: true
+- proofEventHasRequiredMarkers: true
+- routeRunnerSpecificRunsCount: 1
+- expectedDerivationRunActualCount: 1
+- activityCategoryDerivationsCount: 5
+- noDuplicateRuns: true
+
+11. Safety result
+
+Confirmed safety checks:
+
+- completeRouteModified: false
+- completeRouteCalled: false
+- eventCompletedByThisRoute: false
+- productionPersistEnabled: true
+- failActivityComplete: false
+- openAiCalled: false
+- sqlExecutedByPowerShell: false
+- cleanupEligible: true
+- debugOnly: true
+- nonCanonicalBusinessEvent: true
+
+12. What was not done
+
+Not done in this runtime proof:
+
+- no SQL execution
+- no cleanup execution
+- no OpenAI call
+- no source-code change
+- no schema change
+- no migration
+- no RLS change
+- no permission change
+- no UI work
+- no /api/activity/complete runtime proof
+- no direct production_persist proof through the real complete route
+
+13. Meaning of this proof
+
+This proof confirms that controlled production_persist can persist Category Derivation rows through the completeRouteIntegration adapter when executed through the dedicated proof-marked debug route.
+
+This proof also confirms idempotency at the adapter/proof-route level:
+
+- first call persists
+- second call finds existing completed run
+- second call does not duplicate derivation rows
+
+14. Remaining limitation
+
+This proof does not yet prove production_persist on the real /api/activity/complete route.
+
+The real complete route remains outside the proof scope.
+
+15. Cleanup status
+
+Cleanup was not executed.
+
+The proof event and related proof derivation data remain in the database unless later cleanup is explicitly reviewed and approved.
+
+Any future cleanup must follow the F6-E-E-G cleanup and rollback policy.
+
+16. Recommended next step
+
+Recommended next step:
+
+P4.10.0-C8-E-F6-E-E-K - decide after controlled production_persist runtime proof
+
+Decision topic:
+
+- whether to document closure of the controlled debug proof block
+- whether to prepare cleanup SQL review
+- whether to plan the next transition toward the real /api/activity/complete production_persist proof
+- whether more static inspection is needed before touching /api/activity/complete
+
+17. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no cleanup command
+- no SQL in PowerShell
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no real /api/activity/complete production_persist proof yet
+
+18. Exact verification markers
+
+- P4.10.0-C8-E-F6-E-E-J
+- controlled production_persist runtime proof result
+- P4.10.0-C8-E-F6-E-E-I runtime proof PASS
+- controlled_production_persist_proof_pass
+- route_runner_completed
+- existing_completed_run_found
+- event id: 2a303890-76ff-4f41-9dee-9b3436a1988f
+- derivationRunId: 10701d0b-2166-4715-afdc-f1bec9504b56
+- activityCategoryDerivationsCount: 5
+- noDuplicateRuns: true
+- completeRouteCalled: false
+- openAiCalled: false
+- sqlExecutedByPowerShell: false
+- No SQL was executed
+- No cleanup was executed
+- P4.10.0-C8-E-F6-E-E-K
+
+19. Definition of Done
+
+This F6-E-E-J result-documentation step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above bc1a116
