@@ -1,0 +1,396 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-H-B
+Current postponed business/sales support static inspection
+
+Status: DOC-ONLY STATIC INSPECTION
+Generated at: 2026-05-23 16:02:32 +02:00
+Baseline HEAD: f4b476d
+Previous block: P4.10.0-C8-H-A — postponed business/sales cases benchmark inventory
+Next planned block: P4.10.0-C8-H-C — minimal additive patch strategy for postponed business/sales cases
+
+Exact verifier markers intentionally present:
+- No SQL
+- No OpenAI
+- No runtime proof
+- /api/activity/complete was not used
+
+1. Purpose
+
+This document records a static inspection of current ruleExtractor.ts support for the postponed C8-H business/sales benchmark cases.
+
+Cases inspected:
+
+- S6 — outbound lead list
+- S7 — partnership negotiation
+- S11 — discovery call with a new B2B lead
+- S12 — post-purchase customer support ambiguity
+
+This is not a runtime proof.
+This is not a source patch.
+This is not a SQL or persistence check.
+This is not an OpenAI classifier check.
+
+2. Sources used
+
+Current source:
+.\lib\activity\categoryDerivation\ruleExtractor.ts
+SHA256: BF8380B96858336F2FF34B76630622F609DD6032F7C7F6224F23CEC8C1272AA2
+
+C8-H-A benchmark inventory:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-a-postponed-business-sales-cases-benchmark-inventory.txt
+SHA256: 02001D6B9984520C260744980002CEFFA0FE579E8AE6702665AD235BC833CDD6
+
+C8-G-F proof PASS and expansion decision:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-f-deterministic-proof-pass-and-expansion-decision.txt
+SHA256: 729AC3E3E3A7005DD31AB1BA41EC4115736FB78E35AB596442ECAE4E2F39DA63
+
+C8-G-E-RECOVERY1 proof output:
+C:\Users\Admin\Downloads\P4_10_0_C8_G_E_RECOVERY1_deterministic_extractor_proof_output.txt
+SHA256: E320E87047A995D2701E6E5D333651724558D20B6828BF3C0CC9E98403543DB6
+SIZE_BYTES: 4926
+
+3. Process constraints
+
+C8-H-B does not:
+
+- change ruleExtractor.ts
+- change resolver
+- change bridge
+- change persistence
+- create or modify SQL
+- run SQL
+- call OpenAI
+- run /api/activity/complete
+- run runtime proof
+- create UI
+- create category seeds
+- create a manual taxonomy dump
+
+Only this static inspection document is expected to be created and committed.
+
+4. Static inspection limitation
+
+Static marker presence is not proof.
+
+A slug or broad word may exist in source because of C8-G or another earlier block, but that does not prove S6/S7/S11/S12 behavior.
+
+This inspection only answers:
+
+- which expected slugs/markers already exist somewhere in ruleExtractor.ts
+- which slugs/markers appear to be missing
+- where broad lexical hits occur
+- whether C8-G/C8-F preservation markers are still visible
+
+A deterministic proof still requires a later local extractor-level runner.
+
+5. Slug group inspection
+
+Group: C8-H business_sales_domain
+Present: b2b-sales, business-development, client-acquisition, pipeline-management
+Missing: sales-process, lead-generation, prospecting, outbound-sales, lead-qualification, partnership, strategic-partnership, customer-support, post-purchase-support, account-management, retention
+
+Group: C8-H actions
+Present: preparing, calling, helping
+Missing: creating, negotiating, supporting, qualifying, listing, researching
+
+Group: C8-H objects_artifacts
+Present: none
+Missing: lead-list, potential-client-list, outbound-campaign, cooperation-terms, discovery-call, support-problem, post-purchase-problem, partnership-terms
+
+Group: C8-H participants
+Present: potential-client, lead, client, customer
+Missing: new-lead, prospect, business-partner, partner
+
+Group: C8-H responsibilities
+Present: sales-responsibility, work-responsibility, customer-responsibility
+Missing: partner-responsibility, pipeline-responsibility, support-responsibility, business-responsibility
+
+Group: C8-H caution_ambiguity_markers
+Present: none
+Missing: no-confirmed-contact, no-confirmed-client, no-confirmed-sale, no-confirmed-contract, no-confirmed-payment, possible-income-generation, possible-business-development, support-not-new-sale, partner-not-client, lead-not-client, potential-client-not-client
+
+Group: C8-G proven markers to preserve
+Present: business_sales_commercial_proposal_client_semantics, business_sales_potential_client_proposal_semantics, business_sales_follow_up_after_meeting_semantics, business_sales_price_objection_semantics, business_sales_crm_lead_update_semantics, business_sales_language_training_preparation_semantics, business_sales_passive_reading_ambiguity, business_sales_informal_conversation_ambiguity
+Missing: none
+
+Group: C8-F baseline markers to preserve
+Present: teach_math_with_child_care_semantics, child_studied_math_nearby_supervision_ambiguity, child_homework_supervision_ambiguity, helping-child-learn, childcare, parental-care, caregiving, family-duty
+Missing: none
+
+
+6. Case-by-case inspection
+
+Case S6 — outbound lead list
+Input: tworzyłem listę potencjalnych klientów dla kampanii outbound
+Inspection question: Does ruleExtractor support pre-contact outbound lead-list creation without client/contact/sale overclaims?
+Broad lexical support detected: True
+Static support status: PARTIAL_STATIC_MARKERS
+Expected core present in source: potential-client, business-development, b2b-sales, sales-responsibility, client-acquisition
+Expected core missing in source: creating, lead-list, prospecting, outbound-sales, lead-generation
+Expected secondary present in source: pipeline-management, income-generation
+Expected secondary missing in source: outbound-campaign, potential-client-list, no-confirmed-contact, no-confirmed-client
+Forbidden slugs currently present somewhere in source: client, customer-responsibility
+Line hits for broad patterns:
+  - L687: "commercial proposal to client",
+  - L688: "wrote proposal to client",
+  - L689: "wrote commercial offer to client",
+  - L701: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["writing proposal"]),
+  - L712: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["commercial proposal"]),
+  - L716: slug: "client",
+  - L717: title: "Client",
+  - L723: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["client"]),
+  - L734: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["commercial proposal to client"]),
+  - L745: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["client proposal work"]),
+  - L756: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["responsibility to client"]),
+  - L767: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["sales proposal responsibility"]),
+
+Case S7 — partnership negotiation
+Input: negocjowałem warunki współpracy z partnerem
+Inspection question: Does ruleExtractor distinguish partner/cooperation negotiation from client sales?
+Broad lexical support detected: False
+Static support status: MISSING_OR_ONLY_GENERIC
+Expected core present in source: business-development, work-responsibility
+Expected core missing in source: negotiating, business-partner, partnership, cooperation-terms, partner-responsibility
+Expected secondary present in source: relationship-management, income-generation, b2b-sales
+Expected secondary missing in source: strategic-partnership, revenue-generation, business-responsibility
+Forbidden slugs currently present somewhere in source: client, potential-client, lead, customer-responsibility, commercial-proposal
+Line hits for broad patterns:
+  - none
+
+Case S11 — discovery call with new B2B lead
+Input: I had a discovery call with a new B2B lead
+Inspection question: Does ruleExtractor support discovery/qualification for a new B2B lead without existing-client/proposal/deal/payment overclaims?
+Broad lexical support detected: True
+Static support status: PARTIAL_STATIC_MARKERS
+Expected core present in source: calling, lead, b2b-sales, client-acquisition, business-development, sales-responsibility
+Expected core missing in source: discovery-call, new-lead, sales-process, lead-qualification
+Expected secondary present in source: relationship-management, income-generation, deal-preparation, pipeline-management
+Expected secondary missing in source: possible-business-development
+Forbidden slugs currently present somewhere in source: client, customer-responsibility, commercial-proposal
+Line hits for broad patterns:
+  - L727: slug: "b2b-sales",
+  - L728: title: "B2B sales",
+  - L860: slug: "b2b-sales",
+  - L861: title: "B2B sales",
+  - L915: slug: "lead-nurturing",
+  - L916: title: "Lead nurturing",
+  - L923: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["potential client may be lead"]),
+  - L996: slug: "b2b-sales",
+  - L997: title: "B2B sales",
+  - L1052: const priceObjectionCall = includesAny(text, [
+  - L1060: if (priceObjectionCall) {
+  - L1062: slug: "calling",
+
+Case S12 — post-purchase customer support ambiguity
+Input: позвонил клиенту, чтобы помочь с проблемой после покупки
+Inspection question: Does ruleExtractor distinguish post-purchase support/customer responsibility from new sales acquisition?
+Broad lexical support detected: True
+Static support status: PARTIAL_STATIC_MARKERS
+Expected core present in source: calling, client, customer-responsibility, relationship-management
+Expected core missing in source: post-purchase-support, customer-support, support-responsibility
+Expected secondary present in source: none
+Expected secondary missing in source: retention, account-management, customer-success, business-responsibility
+Forbidden slugs currently present somewhere in source: client-acquisition, sales-responsibility, b2b-sales, commercial-proposal, price-objection
+Line hits for broad patterns:
+  - L351: metadata: makeMetadata("teach_math_with_child_care_semantics", ["caregiving role in child learning support"]),
+  - L663: categoryType: "learning_support",
+  - L684: "писал коммерческое предложение клиенту",
+  - L685: "писал коммерческое предложение клиенту 40 минут",
+  - L686: "написал коммерческое предложение клиенту",
+  - L687: "commercial proposal to client",
+  - L688: "wrote proposal to client",
+  - L689: "wrote commercial offer to client",
+  - L701: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["writing proposal"]),
+  - L712: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["commercial proposal"]),
+  - L716: slug: "client",
+  - L717: title: "Client",
+
+
+7. Broad postponed business/sales line hits
+
+- L351: metadata: makeMetadata("teach_math_with_child_care_semantics", ["caregiving role in child learning support"]),
+- L663: categoryType: "learning_support",
+- L684: "писал коммерческое предложение клиенту",
+- L685: "писал коммерческое предложение клиенту 40 минут",
+- L686: "написал коммерческое предложение клиенту",
+- L818: const preparedPotentialClientProposal = includesAny(text, [
+- L819: "prepared a proposal for a potential client",
+- L820: "prepared proposal for potential client",
+- L821: "proposal for a potential client",
+- L822: "proposal for potential client",
+- L825: if (preparedPotentialClientProposal) {
+- L834: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["prepared"]),
+- L845: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["proposal"]),
+- L849: slug: "potential-client",
+- L850: title: "Potential client",
+- L856: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["potential client"]),
+- L867: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["proposal for potential client"]),
+- L878: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["sales preparation"]),
+- L889: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["potential client development"]),
+- L900: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["potential client acquisition"]),
+- L911: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["proposal prepares possible deal"]),
+- L915: slug: "lead-nurturing",
+- L916: title: "Lead nurturing",
+- L923: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["potential client may be lead"]),
+- L935: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", [
+- L936: "commercial proposal to potential client may support future income; no deal or payment confirmed",
+- L1150: const crmLeadUpdate = includesAny(text, [
+- L1151: "aktualizowałem crm po rozmowie z leadem",
+- L1152: "aktualizowalem crm po rozmowie z leadem",
+- L1153: "aktualizowałam crm po rozmowie z leadem",
+- L1154: "aktualizowalam crm po rozmowie z leadem",
+- L1155: "crm po rozmowie z leadem",
+- L1156: "crm after lead call",
+- L1159: if (crmLeadUpdate) {
+- L1168: metadata: makeMetadata("business_sales_crm_lead_update_semantics", ["aktualizowałem"]),
+- L1179: metadata: makeMetadata("business_sales_crm_lead_update_semantics", ["CRM"]),
+- L1183: slug: "lead",
+- L1184: title: "Lead",
+- L1190: metadata: makeMetadata("business_sales_crm_lead_update_semantics", ["leadem"]),
+- L1201: metadata: makeMetadata("business_sales_crm_lead_update_semantics", ["after lead conversation"]),
+- L1212: metadata: makeMetadata("business_sales_crm_lead_update_semantics", ["CRM update"]),
+- L1223: metadata: makeMetadata("business_sales_crm_lead_update_semantics", ["lead CRM update"]),
+- L1234: metadata: makeMetadata("business_sales_crm_lead_update_semantics", ["CRM work"]),
+- L1245: metadata: makeMetadata("business_sales_crm_lead_update_semantics", ["sales pipeline work"]),
+- L1421: metadata: makeMetadata("business_sales_passive_reading_ambiguity", ["sales article may support development"]),
+
+8. C8-G proven marker hits to preserve
+
+- L701: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["writing proposal"]),
+- L712: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["commercial proposal"]),
+- L723: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["client"]),
+- L734: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["commercial proposal to client"]),
+- L745: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["client proposal work"]),
+- L756: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["responsibility to client"]),
+- L767: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["sales proposal responsibility"]),
+- L778: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["commercial intent"]),
+- L790: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["business development possible"]),
+- L802: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["proposal prepares possible deal"]),
+- L814: metadata: makeMetadata("business_sales_commercial_proposal_client_semantics", ["client relationship possible"]),
+- L834: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["prepared"]),
+- L845: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["proposal"]),
+- L856: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["potential client"]),
+- L867: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["proposal for potential client"]),
+- L878: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["sales preparation"]),
+- L889: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["potential client development"]),
+- L900: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["potential client acquisition"]),
+- L911: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["proposal prepares possible deal"]),
+- L923: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", ["potential client may be lead"]),
+- L935: metadata: makeMetadata("business_sales_potential_client_proposal_semantics", [
+- L959: metadata: makeMetadata("business_sales_follow_up_after_meeting_semantics", ["wysłałem follow-up"]),
+- L970: metadata: makeMetadata("business_sales_follow_up_after_meeting_semantics", ["follow-up"]),
+- L981: metadata: makeMetadata("business_sales_follow_up_after_meeting_semantics", ["klienta"]),
+- L992: metadata: makeMetadata("business_sales_follow_up_after_meeting_semantics", ["po spotkaniu"]),
+- L1003: metadata: makeMetadata("business_sales_follow_up_after_meeting_semantics", ["client follow-up"]),
+- L1014: metadata: makeMetadata("business_sales_follow_up_after_meeting_semantics", ["follow-up to client"]),
+- L1025: metadata: makeMetadata("business_sales_follow_up_after_meeting_semantics", ["relationship follow-up"]),
+- L1036: metadata: makeMetadata("business_sales_follow_up_after_meeting_semantics", ["sales follow-up"]),
+- L1048: metadata: makeMetadata("business_sales_follow_up_after_meeting_semantics", ["follow-up may update pipeline"]),
+
+9. C8-F baseline marker hits to preserve
+
+- L263: metadata: makeMetadata("teach_math_with_child_care_semantics", ["teach math with child"]),
+- L274: metadata: makeMetadata("teach_math_with_child_care_semantics", ["mathematics"]),
+- L285: metadata: makeMetadata("teach_math_with_child_care_semantics", ["child participant"]),
+- L296: metadata: makeMetadata("teach_math_with_child_care_semantics", ["child learning"]),
+- L307: metadata: makeMetadata("teach_math_with_child_care_semantics", ["family context inferred from child"]),
+- L311: slug: "helping-child-learn",
+- L318: metadata: makeMetadata("teach_math_with_child_care_semantics", ["teaching math with child"]),
+- L322: slug: "childcare",
+- L323: title: "Childcare",
+- L329: metadata: makeMetadata("teach_math_with_child_care_semantics", ["adult care responsibility while helping child learn"]),
+- L333: slug: "parental-care",
+- L340: metadata: makeMetadata("teach_math_with_child_care_semantics", ["parental care while helping child learn"]),
+- L344: slug: "caregiving",
+- L345: title: "Caregiving",
+- L351: metadata: makeMetadata("teach_math_with_child_care_semantics", ["caregiving role in child learning support"]),
+- L355: slug: "family-duty",
+- L362: metadata: makeMetadata("teach_math_with_child_care_semantics", ["family responsibility"]),
+- L375: metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["child studied mathematics nearby"]),
+- L386: metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["child"]),
+- L397: metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["child learning"]),
+- L409: metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["family context likely but not explicit"]),
+- L421: metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["nearby adult context"]),
+- L433: metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["user may only be nearby"]),
+- L445: metadata: makeMetadata("child_studied_math_nearby_supervision_ambiguity", ["do not infer active teaching"]),
+- L471: metadata: makeMetadata("child_homework_supervision_ambiguity", ["child"]),
+- L482: metadata: makeMetadata("child_homework_supervision_ambiguity", ["homework"]),
+- L494: metadata: makeMetadata("child_homework_supervision_ambiguity", ["family context inferred from my child"]),
+- L506: metadata: makeMetadata("child_homework_supervision_ambiguity", ["adult present while child does homework"]),
+- L510: slug: "childcare",
+- L511: title: "Childcare",
+
+10. Preliminary interpretation
+
+Expected interpretation for C8-H-C:
+
+- If C8-H core slugs are missing or only partially present, a minimal additive patch strategy is needed.
+- Existing C8-G support must not be confused with full C8-H support.
+- Existing slugs such as client, lead, b2b-sales, income-generation or relationship-management may already exist, but S6/S7/S11/S12 need exact deterministic patterns and overclaim protection.
+- C8-H should still be extractor-first.
+- Do not touch resolver / bridge / persistence / SQL / OpenAI / UI before deterministic extractor proof.
+
+11. Key risk controls for the next strategy
+
+C8-H-C must protect these distinctions:
+
+S6:
+potential-client / outbound / lead-generation.
+No existing client.
+No contact confirmed.
+No meeting/proposal/sale.
+
+S7:
+partner / cooperation terms / partnership.
+No client.
+No lead.
+No customer responsibility.
+
+S11:
+new B2B lead / discovery call / qualification.
+No existing client.
+No proposal.
+No deal/payment.
+
+S12:
+client / post-purchase problem / support.
+Customer responsibility is core.
+New sales and lead-generation are not core.
+
+12. Recommended next block
+
+P4.10.0-C8-H-C — minimal additive patch strategy for postponed business/sales cases.
+
+C8-H-C should:
+
+- decide whether a patch is needed
+- decide whether to patch all S6/S7/S11/S12 or a smaller safe subset
+- define exact patch surface
+- keep expected default patch surface as ruleExtractor.ts only
+- define forbidden overclaim checks
+- define C8-G and C8-F preservation checks
+- remain doc-only unless a later D-step patches source
+
+13. Definition of Done for C8-H-B
+
+C8-H-B is done when:
+
+- this document exists under docs/value-objects
+- it records source and document hashes
+- it records slug-group inspection
+- it records case-by-case inspection for S6/S7/S11/S12
+- it records broad line hits
+- it records C8-G preservation markers
+- it records C8-F baseline markers
+- no source-code files changed
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run
+- git diff contains only this document
+- document is committed and pushed
+- final git status is clean
+
+14. Commit message
+
+Inspect Postponed Business Sales Semantic Coverage support
