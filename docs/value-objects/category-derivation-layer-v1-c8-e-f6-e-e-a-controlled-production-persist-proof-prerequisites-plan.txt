@@ -1,0 +1,254 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-E-A
+Controlled production_persist proof prerequisites plan
+Created: 2026-05-23
+
+1. Purpose
+
+This document starts the controlled production_persist proof prerequisites block.
+
+No runtime/source code changes are made in this step.
+
+This document does not approve production_persist.
+
+The goal is to define exactly what must be inspected, decided and prepared before any controlled production_persist runtime proof can be attempted.
+
+2. Current baseline
+
+Current HEAD before this plan:
+
+- 4e5fc1b — Decide Category Derivation after adapter idempotency proof
+
+Immediately relevant commits:
+
+- 2eb9058 — Prepare Category Derivation adapter idempotency proof
+- 26d5e41 — Document Category Derivation adapter idempotency proof
+- cbefd21 — Fix Category Derivation adapter idempotency proof marker
+- 4e5fc1b — Decide Category Derivation after adapter idempotency proof
+
+3. What is already proven
+
+F6-E-D-D / F6-E-D-E established:
+
+- adapter-level idempotency proof passed;
+- firstCall.reason=route_runner_completed;
+- firstCall.persistenceDerivationRowsCreated=5;
+- secondCall.reason=existing_completed_run_found;
+- secondCall.persistenceDerivationRowsCreated=0;
+- proof.sameDerivationRunId=true;
+- proof.secondCallDidNotPersist=true;
+- dbVerification.routeRunnerSpecificRunsCount=1;
+- dbVerification.activityCategoryDerivationsCount=5;
+- dbVerification.noDuplicateRuns=true;
+- safety.productionPersistEnabled=false;
+- safety.openAiCalled=false;
+- no OpenAI calls.
+
+F6-E-D-F decided:
+
+- adapter-level idempotency is sufficient for the current completeRouteIntegration path;
+- routeRunner-level idempotency is still absent but not an immediate blocker for the next planning step;
+- production_persist remains blocked until cleanup/rollback and controlled proof prerequisites are planned.
+
+4. Production_persist remains blocked
+
+This plan does not enable production_persist.
+
+This plan does not approve a production_persist runtime proof.
+
+This plan does not approve direct production_persist on /api/activity/complete.
+
+This plan does not approve strict failActivityComplete=true for normal users.
+
+5. Main prerequisite questions
+
+Before any controlled production_persist proof, we must answer:
+
+- What cleanup or rollback policy is required before any production_persist proof?
+- What metadata marker must identify proof/test activity events?
+- Should the first production_persist proof be debug-only, real complete-route, or staged through a proof marker?
+- Should failActivityComplete remain false for the first production_persist proof?
+- What exact DB rows are allowed to be created in the controlled proof?
+- What exact DB verification must prove no duplicates?
+- What rollback or cleanup command is allowed after the proof?
+- What must remain forbidden?
+
+6. Cleanup / rollback prerequisite
+
+A controlled production_persist proof must not proceed until there is an explicit cleanup/rollback plan.
+
+Minimum cleanup/rollback requirements:
+
+- proof/test activity events must be distinguishable by metadata marker;
+- category_derivation_runs created by the proof must be distinguishable by activity_event_id and version tuple;
+- activity_category_derivations created by the proof must be distinguishable by derivation_run_id and activity_event_id;
+- cleanup must not affect normal user data;
+- cleanup must be optional after proof, not automatically destructive;
+- cleanup commands must be reviewed separately before execution;
+- SQL must not be run in PowerShell;
+- any SQL cleanup must be run only in the approved SQL environment after a separate instruction step.
+
+7. Proof/test metadata marker prerequisite
+
+All proof/test rows must include enough metadata to identify the proof scenario.
+
+Required marker concept:
+
+- proof: P4.10.0-C8-E-F6-E-E-controlled-production-persist-proof
+- purpose: controlled_production_persist_proof
+- doNotUseAsCanonicalBusinessEvent: true
+- cleanupEligible: true
+- productionPersistProof: true
+- createdBy: debug_setup_route or controlled_proof_route
+
+The exact marker may be adjusted in a later implementation/proof plan.
+
+8. Allowed proof scope
+
+A first controlled production_persist proof may create only the rows required to prove the Category Derivation persistence path.
+
+Allowed rows in a controlled proof may include:
+
+- one started or completed activity_event created specifically for proof;
+- one category_derivation_run for that proof activity_event and version tuple;
+- expected activity_category_derivations rows for that derivation_run;
+- related processing/debug rows only if already part of the existing controlled route behavior.
+
+The proof must verify:
+
+- exactly one routeRunner-specific completed run for the proof event;
+- no duplicate completed runs;
+- expected number of activity_category_derivations;
+- second call does not duplicate rows if idempotency is part of the proof;
+- production_persist mode was intentionally enabled only for the controlled proof context;
+- OpenAI was not called;
+- UI was not created;
+- schema/RLS/permissions were not changed.
+
+9. Recommended first production_persist proof shape
+
+Recommended safest shape:
+
+Option C / controlled proof-marker route.
+
+The first production_persist proof should not be broad production_persist on /api/activity/complete for all normal events.
+
+Recommended proof shape:
+
+- use a debug/proof route or controlled proof setup route;
+- create or use a proof/test activity_event with explicit metadata markers;
+- enable production_persist only in a controlled dev-server environment;
+- keep failActivityComplete=false;
+- call the adapter through completeRouteIntegration, not directly through routeRunner;
+- verify idempotency behavior;
+- verify exact DB row counts;
+- do not touch UI;
+- do not call OpenAI;
+- do not change schema, migrations, RLS or permissions.
+
+10. failActivityComplete prerequisite
+
+Initial production_persist proof should keep:
+
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+
+Reason:
+
+The first production_persist proof should verify durable persistence behavior without risking activity completion failure for normal route behavior.
+
+Strict blocking mode may be considered only after non-blocking production_persist proof is proven safe.
+
+11. production_persist mode prerequisite
+
+A future proof may use:
+
+- CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+
+But only after:
+
+- cleanup/rollback policy is written;
+- metadata marker strategy is written;
+- proof route target is selected;
+- exact expected DB rows are defined;
+- idempotency verification is included;
+- safety checks are defined;
+- F6-E-E-B inspection confirms the existing routes/config support the controlled proof.
+
+12. Immediate next step
+
+Recommended next step:
+
+P4.10.0-C8-E-F6-E-E-B — inspect controlled production_persist proof route options
+
+This must be inspection-only.
+
+It should inspect:
+
+- lib/activity/categoryDerivation/config.ts
+- lib/activity/categoryDerivation/completeRouteIntegration.ts
+- lib/activity/categoryDerivation/routeRunner.ts
+- lib/activity/categoryDerivation/runLookup.ts
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts
+- src/app/api/activity/debug/create-free-text-start-event/route.ts
+- src/app/api/activity/complete/route.ts
+- existing proof documents from F6-D and F6-E-D
+
+13. F6-E-E-B inspection questions
+
+F6-E-E-B must answer:
+
+- Can the existing adapter idempotency debug route be reused for controlled production_persist proof?
+- Does the route explicitly reject or allow production_persist?
+- Does the route have enough safety markers?
+- Does the route create or complete the activity event?
+- Is a separate setup route needed?
+- Is /api/activity/complete needed for the first production_persist proof, or is debug-only safer?
+- What exact current behavior would be duplicate of already completed proofs?
+- What exact new information would production_persist proof add?
+- What files would need to change if a controlled proof route is missing necessary guards?
+
+14. Not approved
+
+Not approved in this step:
+
+- production_persist
+- runtime production_persist proof
+- direct production_persist on /api/activity/complete
+- strict failActivityComplete=true
+- routeRunner-level idempotency implementation
+- completeRouteIntegration changes
+- routeRunner changes
+- schema changes
+- migrations
+- RLS changes
+- permission changes
+- UI work
+- OpenAI calls
+- SQL execution
+- broad refactor
+
+15. Safety gates preserved
+
+Until later approved document changes them:
+
+- no production_persist
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no SQL in PowerShell
+- no runtime/source code changes in F6-E-E-A
+- no broad refactor
+- no production path bypassing completeRouteIntegration
+- no cleanup command without separate review
+
+16. Definition of Done
+
+This F6-E-E-A planning step is complete when:
+
+- this document exists under docs/value-objects;
+- only this document is changed;
+- document is committed and pushed;
+- working tree is clean;
+- recent git log shows this plan document above 4e5fc1b.
