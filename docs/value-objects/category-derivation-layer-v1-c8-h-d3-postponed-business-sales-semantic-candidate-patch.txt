@@ -1,0 +1,208 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-H-D3
+Postponed business/sales semantic candidate source patch
+
+Status: SOURCE PATCH / EXTRACTOR ONLY
+Generated at: 2026-05-23 17:14:49 +02:00
+Baseline HEAD: b357903
+Previous block: P4.10.0-C8-H-D2 — compact patch source pack / exact patch authoring preparation
+Next planned block: P4.10.0-C8-H-D4 — source patch validation summary and deterministic proof plan
+
+Exact verifier markers intentionally present:
+- No SQL
+- No OpenAI
+- No runtime proof
+- /api/activity/complete was not used
+
+1. Purpose
+
+This step applies the C8-H postponed business/sales semantic candidate source patch.
+
+The patch is extractor-only.
+
+2. Files changed
+
+Allowed source file changed:
+
+- lib/activity/categoryDerivation/ruleExtractor.ts
+
+Documentation file added:
+
+- docs/value-objects/category-derivation-layer-v1-c8-h-d3-postponed-business-sales-semantic-candidate-patch.txt
+
+No other files are intentionally changed.
+
+3. Sources used
+
+C8-H-A benchmark inventory:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-a-postponed-business-sales-cases-benchmark-inventory.txt
+SHA256: 02001D6B9984520C260744980002CEFFA0FE579E8AE6702665AD235BC833CDD6
+
+C8-H-B static inspection:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-b-current-postponed-business-sales-support-inspection.txt
+SHA256: F023CC56EC02F85EEA2131DF7F1069B6BB3B60730256088E44BF8BEE32A37E23
+
+C8-H-C strategy:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-c-minimal-additive-postponed-business-sales-patch-strategy.txt
+SHA256: 90B6671C22CA1DEADC5697232DB7BCA630CB5EA791AEE734696B675C14F53B5E
+
+C8-H-D1 exact files decision:
+.\docs\value-objects\category-derivation-layer-v1-c8-h-d1-exact-files-to-patch-decision.txt
+SHA256: 8971D4C746EBED5C79E0AB7DABDEA1FD730E8CA9A19987216DDE26E1CF1C4512
+
+C8-H-D2 local source pack:
+C:\Users\Admin\Downloads\P4_10_0_C8_H_D2_compact_postponed_business_sales_patch_source_pack.txt
+SHA256: 4642A6E58FA3E44058497EFE7A9BB0DEF7BC0ACEE0F725B51854A51878A2817B
+SIZE_BYTES: 91331
+
+ruleExtractor.ts before patch backup:
+C:\Users\Admin\Downloads\P4_10_0_C8_H_D3_ruleExtractor_before_patch.txt
+SHA256: BF8380B96858336F2FF34B76630622F609DD6032F7C7F6224F23CEC8C1272AA2
+
+ruleExtractor.ts after patch:
+.\lib\activity\categoryDerivation\ruleExtractor.ts
+SHA256: FC209046D75D0ECA7B1AA3F130288999454D0C21DEDA6EB3E9240264291DDE21
+
+4. New deterministic semantic markers
+
+The patch adds deterministic support for these C8-H markers:
+
+- business_sales_outbound_lead_list_semantics
+- business_sales_partnership_negotiation_semantics
+- business_sales_discovery_call_new_lead_semantics
+- business_sales_post_purchase_support_ambiguity
+
+5. Risk-control markers
+
+The patch adds risk-control / ambiguity markers:
+
+- lead-not-client
+- potential-client-not-client
+- partner-not-client
+- support-not-new-sale
+
+6. Cases patched
+
+S6 — outbound lead list
+
+Input:
+tworzyłem listę potencjalnych klientów dla kampanii outbound
+
+Core meaning:
+pre-contact acquisition work / lead list / outbound campaign / potential clients.
+
+Important:
+S6 must not claim contacted client, existing client, meeting, proposal, sale, contract or payment.
+
+S7 — partnership negotiation
+
+Input:
+negocjowałem warunki współpracy z partnerem
+
+Core meaning:
+business partner negotiation / cooperation terms / partner responsibility.
+
+Important:
+S7 must not collapse partner into client, lead or customer responsibility.
+
+S11 — discovery call with a new B2B lead
+
+Input:
+I had a discovery call with a new B2B lead
+
+Core meaning:
+sales process / new lead / lead qualification / B2B discovery call.
+
+Important:
+S11 must not claim existing client, proposal, contract, payment or closed deal.
+
+S12 — post-purchase customer support ambiguity
+
+Input:
+позвонил клиенту, чтобы помочь с проблемой после покупки
+
+Core meaning:
+client support after purchase / customer support / customer responsibility.
+
+Important:
+S12 must not turn post-purchase support into lead-generation, outbound sales, active new sale or B2B sales as core.
+
+7. Preservation expectations
+
+C8-G markers must remain present:
+
+- business_sales_commercial_proposal_client_semantics
+- business_sales_potential_client_proposal_semantics
+- business_sales_follow_up_after_meeting_semantics
+- business_sales_price_objection_semantics
+- business_sales_crm_lead_update_semantics
+- business_sales_language_training_preparation_semantics
+- business_sales_passive_reading_ambiguity
+- business_sales_informal_conversation_ambiguity
+
+C8-F markers must remain present:
+
+- teach_math_with_child_care_semantics
+- child_studied_math_nearby_supervision_ambiguity
+- child_homework_supervision_ambiguity
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+
+8. Validation performed in this step
+
+This step performs:
+
+- source marker verification
+- risk-control marker verification
+- C8-G marker preservation check
+- C8-F marker preservation check
+- forbidden outcome overclaim absence check
+- git diff --check
+- npx.cmd tsc --noEmit --pretty false
+- targeted ESLint for lib/activity/categoryDerivation/ruleExtractor.ts
+- cached diff check
+- commit and push
+
+9. What was not run
+
+This step does not run:
+
+- SQL
+- OpenAI
+- /api/activity/complete
+- browser runtime route proof
+- resolver proof
+- bridge proof
+- persistence proof
+- UI proof
+- deterministic extractor runtime proof
+
+10. Recommended next step
+
+P4.10.0-C8-H-D4 — source patch validation summary and deterministic proof plan.
+
+11. Definition of Done for C8-H-D3
+
+C8-H-D3 is done when:
+
+- ruleExtractor.ts contains all four C8-H deterministic markers
+- ruleExtractor.ts contains all four C8-H risk-control markers
+- C8-G markers are preserved
+- C8-F markers are preserved
+- no forbidden outcome slugs are added
+- only ruleExtractor.ts and this D3 document are changed
+- TypeScript validation passes
+- targeted ESLint passes
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run
+- changes are committed and pushed
+- final git status is clean
+
+12. Commit message
+
+Patch Postponed Business Sales Semantic Coverage candidates

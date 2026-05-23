@@ -1246,6 +1246,784 @@ export function deriveCategoryCandidates(
     });
   }
 
+
+  const createdOutboundLeadList = (
+    includesAny(text, [
+      "tworzyłem listę potencjalnych klientów dla kampanii outbound",
+      "tworzylem liste potencjalnych klientow dla kampanii outbound",
+    ]) ||
+    (
+      includesAny(text, ["outbound"]) &&
+      includesAny(text, [
+        "potencjalnych klientów",
+        "potencjalnych klientow",
+        "potential clients",
+      ]) &&
+      includesAny(text, ["listę", "liste", "lista", "list"])
+    )
+  );
+
+  if (createdOutboundLeadList) {
+    addCandidate(candidates, {
+      slug: "creating",
+      title: "Creating",
+      semanticLayer: "action",
+      categoryType: "action",
+      confidence: 0.9,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["created a list"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "lead-list",
+      title: "Lead list",
+      semanticLayer: "object",
+      categoryType: "business_artifact",
+      confidence: 0.9,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["list of potential clients"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "potential-client",
+      title: "Potential client",
+      semanticLayer: "participant",
+      categoryType: "participant",
+      confidence: 0.9,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["potencjalnych klientów"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "prospecting",
+      title: "Prospecting",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.86,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["pre-contact prospecting"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "outbound-sales",
+      title: "Outbound sales",
+      semanticLayer: "context",
+      categoryType: "business_process",
+      confidence: 0.86,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["outbound campaign"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "lead-generation",
+      title: "Lead generation",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.86,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["potential-client list creation"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "business-development",
+      title: "Business development",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.8,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["business acquisition preparation"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "b2b-sales",
+      title: "B2B sales",
+      semanticLayer: "context",
+      categoryType: "business_domain",
+      confidence: 0.76,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["potential clients for outbound campaign"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "sales-responsibility",
+      title: "Sales responsibility",
+      semanticLayer: "duty",
+      categoryType: "responsibility",
+      confidence: 0.78,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["sales acquisition work"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "client-acquisition",
+      title: "Client acquisition",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.82,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["potential-client acquisition"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "pipeline-management",
+      title: "Pipeline management",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.62,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["lead list may feed the sales pipeline"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "income-generation",
+      title: "Income generation",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.55,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["lead generation may support future income; no sale confirmed"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "outbound-campaign",
+      title: "Outbound campaign",
+      semanticLayer: "object",
+      categoryType: "business_artifact",
+      confidence: 0.7,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["kampanii outbound"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "potential-client-list",
+      title: "Potential client list",
+      semanticLayer: "object",
+      categoryType: "business_artifact",
+      confidence: 0.72,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["list of potential clients"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "no-confirmed-contact",
+      title: "No confirmed contact",
+      semanticLayer: "context",
+      categoryType: "ambiguity_marker",
+      confidence: 0.66,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["list creation does not confirm contact"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "no-confirmed-client",
+      title: "No confirmed client",
+      semanticLayer: "context",
+      categoryType: "ambiguity_marker",
+      confidence: 0.66,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["potential client is not existing client"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "lead-not-client",
+      title: "Lead is not client",
+      semanticLayer: "context",
+      categoryType: "ambiguity_marker",
+      confidence: 0.68,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["pre-contact lead/prospect must not be treated as client"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "potential-client-not-client",
+      title: "Potential client is not client",
+      semanticLayer: "context",
+      categoryType: "ambiguity_marker",
+      confidence: 0.68,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_outbound_lead_list_semantics", ["potential client does not imply existing client"]),
+    });
+  }
+
+  const negotiatedPartnershipTerms = (
+    includesAny(text, [
+      "negocjowałem warunki współpracy z partnerem",
+      "negocjowalem warunki wspolpracy z partnerem",
+    ]) ||
+    (
+      includesAny(text, ["negocjowałem", "negocjowalem", "negocjacje", "negotiated", "negotiating"]) &&
+      includesAny(text, ["partnerem", "partner", "business partner"]) &&
+      includesAny(text, ["warunki współpracy", "warunki wspolpracy", "cooperation terms", "partnership terms"])
+    )
+  );
+
+  if (negotiatedPartnershipTerms) {
+    addCandidate(candidates, {
+      slug: "negotiating",
+      title: "Negotiating",
+      semanticLayer: "action",
+      categoryType: "action",
+      confidence: 0.9,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_partnership_negotiation_semantics", ["negocjowałem"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "business-partner",
+      title: "Business partner",
+      semanticLayer: "participant",
+      categoryType: "participant",
+      confidence: 0.9,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_partnership_negotiation_semantics", ["partnerem"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "partnership",
+      title: "Partnership",
+      semanticLayer: "context",
+      categoryType: "business_context",
+      confidence: 0.88,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_partnership_negotiation_semantics", ["cooperation with partner"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "cooperation-terms",
+      title: "Cooperation terms",
+      semanticLayer: "object",
+      categoryType: "business_artifact",
+      confidence: 0.88,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_partnership_negotiation_semantics", ["warunki współpracy"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "business-development",
+      title: "Business development",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.78,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_partnership_negotiation_semantics", ["partner cooperation may develop business"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "partner-responsibility",
+      title: "Partner responsibility",
+      semanticLayer: "duty",
+      categoryType: "responsibility",
+      confidence: 0.82,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_partnership_negotiation_semantics", ["business partner responsibility"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "work-responsibility",
+      title: "Work responsibility",
+      semanticLayer: "duty",
+      categoryType: "responsibility",
+      confidence: 0.78,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_partnership_negotiation_semantics", ["work/business negotiation"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "strategic-partnership",
+      title: "Strategic partnership",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.58,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_partnership_negotiation_semantics", ["partnership may be strategic; not confirmed"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "relationship-management",
+      title: "Relationship management",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.62,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_partnership_negotiation_semantics", ["partner relationship negotiation"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "income-generation",
+      title: "Income generation",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.52,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_partnership_negotiation_semantics", ["partnership may support future income; no deal confirmed"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "revenue-generation",
+      title: "Revenue generation",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.5,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_partnership_negotiation_semantics", ["commercial relevance possible; no revenue confirmed"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "b2b-sales",
+      title: "B2B sales",
+      semanticLayer: "context",
+      categoryType: "business_domain",
+      confidence: 0.46,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_partnership_negotiation_semantics", ["partner negotiation may relate to B2B; not necessarily client sales"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "business-responsibility",
+      title: "Business responsibility",
+      semanticLayer: "duty",
+      categoryType: "responsibility",
+      confidence: 0.62,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_partnership_negotiation_semantics", ["business cooperation duty"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "partner-not-client",
+      title: "Partner is not client",
+      semanticLayer: "context",
+      categoryType: "ambiguity_marker",
+      confidence: 0.72,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_partnership_negotiation_semantics", ["partner must not be collapsed into client"]),
+    });
+  }
+
+  const hadDiscoveryCallWithNewB2BLead = (
+    includesAny(text, ["i had a discovery call with a new b2b lead"]) ||
+    (
+      includesAny(text, ["discovery call"]) &&
+      includesAny(text, ["new b2b lead", "new lead", "b2b lead"])
+    )
+  );
+
+  if (hadDiscoveryCallWithNewB2BLead) {
+    addCandidate(candidates, {
+      slug: "discovery-call",
+      title: "Discovery call",
+      semanticLayer: "object",
+      categoryType: "business_event",
+      confidence: 0.92,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["discovery call"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "calling",
+      title: "Calling",
+      semanticLayer: "action",
+      categoryType: "action",
+      confidence: 0.9,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["call"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "new-lead",
+      title: "New lead",
+      semanticLayer: "participant",
+      categoryType: "participant",
+      confidence: 0.9,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["new B2B lead"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "lead",
+      title: "Lead",
+      semanticLayer: "participant",
+      categoryType: "participant",
+      confidence: 0.88,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["lead"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "b2b-sales",
+      title: "B2B sales",
+      semanticLayer: "context",
+      categoryType: "business_domain",
+      confidence: 0.88,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["B2B lead"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "client-acquisition",
+      title: "Client acquisition",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.82,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["new lead qualification for acquisition"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "sales-process",
+      title: "Sales process",
+      semanticLayer: "context",
+      categoryType: "business_process",
+      confidence: 0.86,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["discovery call is a sales-process step"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "business-development",
+      title: "Business development",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.78,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["new lead may develop business"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "sales-responsibility",
+      title: "Sales responsibility",
+      semanticLayer: "duty",
+      categoryType: "responsibility",
+      confidence: 0.82,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["sales qualification responsibility"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "lead-qualification",
+      title: "Lead qualification",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.88,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["discovery call qualifies new lead"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "relationship-management",
+      title: "Relationship management",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.62,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["initial lead relationship"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "income-generation",
+      title: "Income generation",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.54,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["discovery call may support future income; no sale confirmed"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "deal-preparation",
+      title: "Deal preparation",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.58,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["qualification may prepare a future deal"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "pipeline-management",
+      title: "Pipeline management",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.62,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["new lead belongs to pipeline"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "possible-business-development",
+      title: "Possible business development",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.52,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["business development possible; outcome not confirmed"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "lead-not-client",
+      title: "Lead is not client",
+      semanticLayer: "context",
+      categoryType: "ambiguity_marker",
+      confidence: 0.7,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_discovery_call_new_lead_semantics", ["new lead must not be treated as existing client"]),
+    });
+  }
+
+  const calledClientForPostPurchaseProblem = (
+    includesAny(text, [
+      "позвонил клиенту, чтобы помочь с проблемой после покупки",
+      "позвонил клиенту чтобы помочь с проблемой после покупки",
+    ]) ||
+    (
+      includesAny(text, ["позвонил", "звонил", "позвон"]) &&
+      includesAny(text, ["клиенту", "клиент"]) &&
+      includesAny(text, ["помочь", "помог", "помощ"]) &&
+      includesAny(text, ["проблем"]) &&
+      includesAny(text, ["после покупки", "покуп"])
+    )
+  );
+
+  if (calledClientForPostPurchaseProblem) {
+    addCandidate(candidates, {
+      slug: "calling",
+      title: "Calling",
+      semanticLayer: "action",
+      categoryType: "action",
+      confidence: 0.9,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_post_purchase_support_ambiguity", ["позвонил"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "client",
+      title: "Client",
+      semanticLayer: "participant",
+      categoryType: "participant",
+      confidence: 0.9,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_post_purchase_support_ambiguity", ["клиенту"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "post-purchase-support",
+      title: "Post-purchase support",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.9,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_post_purchase_support_ambiguity", ["problem after purchase"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "customer-support",
+      title: "Customer support",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.88,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_post_purchase_support_ambiguity", ["help with problem"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "customer-responsibility",
+      title: "Customer responsibility",
+      semanticLayer: "duty",
+      categoryType: "responsibility",
+      confidence: 0.86,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_post_purchase_support_ambiguity", ["client support duty"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "relationship-management",
+      title: "Relationship management",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.76,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_post_purchase_support_ambiguity", ["supporting existing client relationship"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "support-responsibility",
+      title: "Support responsibility",
+      semanticLayer: "duty",
+      categoryType: "responsibility",
+      confidence: 0.84,
+      isRequired: true,
+      isConfirmed: true,
+      needsUserReview: false,
+      metadata: makeMetadata("business_sales_post_purchase_support_ambiguity", ["post-purchase problem support"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "retention",
+      title: "Retention",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.58,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_post_purchase_support_ambiguity", ["support may help retention; not a new sale"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "account-management",
+      title: "Account management",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.55,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_post_purchase_support_ambiguity", ["existing client support may be account management"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "customer-success",
+      title: "Customer success",
+      semanticLayer: "purpose",
+      categoryType: "activity_meaning",
+      confidence: 0.52,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_post_purchase_support_ambiguity", ["helping client solve a post-purchase problem"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "business-responsibility",
+      title: "Business responsibility",
+      semanticLayer: "duty",
+      categoryType: "responsibility",
+      confidence: 0.56,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_post_purchase_support_ambiguity", ["business duty to support client after purchase"]),
+    });
+
+    addCandidate(candidates, {
+      slug: "support-not-new-sale",
+      title: "Support is not new sale",
+      semanticLayer: "context",
+      categoryType: "ambiguity_marker",
+      confidence: 0.72,
+      isRequired: false,
+      isConfirmed: false,
+      needsUserReview: true,
+      metadata: makeMetadata("business_sales_post_purchase_support_ambiguity", ["post-purchase support must not be treated as new sale"]),
+    });
+  }
   const salesLanguageTraining = includesAny(text, [
     "учил немецкие фразы для b2b-продаж",
     "учил немецкие фразы для b2b продаж",
