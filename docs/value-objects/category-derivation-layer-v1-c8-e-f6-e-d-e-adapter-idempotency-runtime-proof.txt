@@ -234,6 +234,7 @@ This proof does not approve:
 - permission changes
 - UI work
 - OpenAI calls
+- no OpenAI calls
 - broad refactor
 
 This proof also does not prove routeRunner-level idempotency, because routeRunner itself still does not import or call runLookup.
