@@ -1,0 +1,267 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-G-D1 — Exact Files to Patch Decision
+
+Status: DOC-ONLY DECISION
+Generated at: 2026-05-23 14:39:59 +02:00
+Baseline HEAD: 7b1cac0
+Previous block: P4.10.0-C8-G-D0 — business/sales source snapshot for exact patch planning
+Next planned block: P4.10.0-C8-G-D2 — prepare compact patch source pack or direct patch authoring plan
+
+1. Purpose
+
+This document fixes the exact patch surface for the first C8-G business/sales semantic coverage source patch.
+
+C8-G-A created the benchmark inventory.
+C8-G-B inspected current support.
+C8-G-C decided that a minimal additive business/sales patch is needed.
+C8-G-D0 created a local source/document snapshot for exact patch planning.
+C8-G-D1 decides which files may be changed in the first source patch.
+
+This document does not patch source code.
+
+2. Sources used
+
+C8-G-A benchmark inventory:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-a-business-sales-semantic-coverage-benchmark-inventory.txt
+SHA256: FC1FB9DE002BA97B15944244866D6AF756C075975A467E67D7511925E46BCD30
+
+C8-G-B support inspection:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-b-current-business-sales-support-inspection.txt
+SHA256: 1E3814AC0E64042FC77C09B7FBC55ED394114AB939CC773698377E0671D6D553
+
+C8-G-C patch strategy:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-c-minimal-additive-business-sales-patch-strategy.txt
+SHA256: B76FD22E002178DF48BA39C9A5B17C32B18541EBCBA5DEF05BC87D7435259FE3
+
+C8-G-D0 local source snapshot:
+C:\Users\Admin\Downloads\P4_10_0_C8_G_D0_business_sales_source_snapshot.txt
+SHA256: 18568780DD6624ECA428A761528FA1EF0A1A9FBFE0494E1B72390868B5514BE9
+SIZE_BYTES: 162980
+
+Primary source file inspected:
+.\lib\activity\categoryDerivation\ruleExtractor.ts
+SHA256: 2154FAF9E60FDA11CAF52A516198FA746EC751FEF948FFC6EA2C29A8119B9CD9
+
+3. Process constraints
+
+C8-G-D1 does not:
+
+- change ruleExtractor.ts
+- change resolver
+- change bridge
+- change persistence
+- change SQL
+- run SQL
+- call OpenAI
+- run /api/activity/complete
+- run runtime proof
+- create UI
+- create category seeds
+- create a manual taxonomy dump
+
+Only this decision document is expected to be created and committed.
+
+4. Exact patch surface decision
+
+Decision:
+
+The first C8-G business/sales semantic coverage source patch may change only:
+
+- lib/activity/categoryDerivation/ruleExtractor.ts
+
+No other source-code files may be changed in the first C8-G patch.
+
+5. Files explicitly not allowed in the first patch
+
+The first C8-G source patch must not change:
+
+- resolver files
+- bridge files
+- persistence files
+- complete route files
+- debug route files
+- Supabase SQL migrations
+- category seed files
+- OpenAI client / classifier files
+- UI components
+- API routes unrelated to extractor-level deterministic proof
+
+Reason:
+
+C8-F already proved that semantic expansion can be introduced and tested first at deterministic extractor level.
+C8-G must follow the same safe pattern before touching resolver, persistence, bridge, SQL, OpenAI or UI.
+
+6. Why ruleExtractor.ts is enough for the first patch
+
+The C8-G target is extractor-level semantic coverage for business/sales responsibility semantics.
+
+The first proof should answer:
+
+- Can the deterministic extractor recognize a commercial proposal to a client as sales/work/customer responsibility?
+- Can it distinguish potential client / lead from existing client?
+- Can it classify follow-up / CRM / price objection work as sales process responsibilities?
+- Can it classify sales-language learning as preparation, not real client work?
+- Can it avoid overclassifying passive reading and informal friend conversation as work responsibility?
+
+These are extractor-level questions.
+They do not require database writes, resolver changes, bridge changes, SQL changes or OpenAI.
+
+7. First patch scope
+
+The first source patch should focus on the cases selected in C8-G-C:
+
+Included in first patch:
+
+S1 — clear commercial proposal to client
+Input:
+писал коммерческое предложение клиенту 40 минут
+
+S2 — proposal to potential client
+Input:
+prepared a proposal for a potential client
+
+S3 — follow-up after meeting
+Input:
+wysłałem follow-up do klienta po spotkaniu
+
+S4 — objection handling / price
+Input:
+llamé a un cliente para aclarar objeciones sobre el precio
+
+S5 — CRM update after lead call
+Input:
+aktualizowałem CRM po rozmowie z leadem
+
+S8 — sales language training
+Input:
+учил немецкие фразы для B2B-продаж
+
+S9 — passive reading about sales
+Input:
+читал статью о продажах за кофе
+
+S10 — informal conversation about sales
+Input:
+разговаривал с другом о продажах
+
+Postponed for later expansion unless the patch remains very small and safe:
+
+S6 — outbound lead list
+S7 — partnership negotiation
+S11 — client discovery call
+S12 — customer support ambiguity
+
+8. Patch style decision
+
+The patch must follow the existing style of lib/activity/categoryDerivation/ruleExtractor.ts.
+
+The patch must not introduce a new architecture or new candidate object format if the current file already has:
+
+- helper functions
+- deterministic pattern groups
+- candidate builders
+- benchmark markers
+- semantic evidence markers
+- confidence conventions
+
+The patch should be additive and localized.
+
+Recommended marker names for the first patch may include:
+
+- business_sales_commercial_proposal_client_semantics
+- business_sales_potential_client_proposal_semantics
+- business_sales_follow_up_after_meeting_semantics
+- business_sales_price_objection_semantics
+- business_sales_crm_lead_update_semantics
+- business_sales_language_training_preparation_semantics
+- business_sales_passive_reading_ambiguity
+- business_sales_informal_conversation_ambiguity
+
+Exact marker names may be adjusted during D2/D3 patch authoring to match the existing ruleExtractor style.
+
+9. Forbidden overclaim preservation
+
+The patch must avoid adding deterministic candidates that would imply outcomes not stated in the user input.
+
+Forbidden as required/core unless explicitly stated:
+
+- closed-deal
+- contract-signed
+- payment-received
+- invoice-paid
+- successful-sale
+- discount-given
+- proposal-sent where only writing/preparing is stated
+- client-acquired
+- existing-client where input says potential client / lead
+- customer-responsibility where input says only lead/prospect
+- work-responsibility where input is only passive reading or informal friend conversation
+- income-generation as core meaning in learning/reading/friend-conversation cases
+
+10. Baseline preservation
+
+The patch must preserve C8-F family/childcare behavior.
+
+The following C8-F markers must not be removed:
+
+- teach_math_with_child_care_semantics
+- child_studied_math_nearby_supervision_ambiguity
+- child_homework_supervision_ambiguity
+- helping-child-learn
+- parental-care
+- family-duty
+- childcare
+
+Future proof should include at least a lightweight baseline-preservation check to confirm C8-F behavior was not lost.
+
+11. Validation requirements for the later source patch
+
+After the later source patch, run at minimum:
+
+- npx.cmd tsc --noEmit --pretty false
+- targeted ESLint for the patched file if available in project scripts
+- deterministic extractor-level proof using tsc -> node runner pattern
+
+Do not use for the first proof:
+
+- /api/activity/complete
+- SQL
+- OpenAI
+- browser runtime route proof
+- resolver/bridge persistence proof
+
+12. Next block decision
+
+Next block:
+
+P4.10.0-C8-G-D2 — compact source pack / direct patch authoring preparation.
+
+D2 should prepare a compact source pack or exact patch-authoring view that includes:
+
+- ruleExtractor.ts with line numbers
+- relevant C8-F markers
+- C8-G-A/B/C/D1 documents
+- enough surrounding code to patch safely
+
+D2 should not yet commit a source patch unless it is explicitly renamed/advanced to the actual patch step.
+
+13. Definition of Done for C8-G-D1
+
+C8-G-D1 is done when:
+
+- this decision document exists under docs/value-objects
+- it states that only lib/activity/categoryDerivation/ruleExtractor.ts may be patched in the first C8-G source patch
+- it explicitly excludes resolver / bridge / persistence / SQL / OpenAI / UI
+- it lists included and postponed benchmark cases
+- it records D0 snapshot hash and ruleExtractor hash
+- no source-code files changed
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run
+- git diff contains only this document
+- document is committed and pushed
+- final git status is clean
+
+14. Commit message
+
+Decide Business Sales Semantic Coverage patch files
