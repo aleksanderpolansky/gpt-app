@@ -1,0 +1,571 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-H-A
+Postponed business/sales cases benchmark inventory
+
+Status: DOC-ONLY BENCHMARK INVENTORY
+Generated at: 2026-05-23 16:01:02 +02:00
+Baseline HEAD: 4500a2e
+Previous block: P4.10.0-C8-G-F — Business/Sales deterministic proof PASS and next expansion decision
+Next planned block: P4.10.0-C8-H-B — static inspection of current ruleExtractor support for postponed business/sales cases
+
+Exact verifier markers intentionally present:
+- No SQL
+- No OpenAI
+- No runtime proof
+- /api/activity/complete was not used
+
+1. Purpose
+
+This document defines the next controlled benchmark group for the postponed business/sales cases from C8-G-A and C8-G-F.
+
+C8-G proved the first business/sales extractor subset:
+
+- S1 — commercial proposal to existing client
+- S2 — proposal to potential client
+- S3 — follow-up after meeting
+- S4 — price objection handling
+- S5 — CRM update after lead call
+- S8 — sales language training
+- S9 — passive reading about sales
+- S10 — informal conversation about sales
+
+C8-H now defines the postponed cases:
+
+- S6 — outbound lead list
+- S7 — partnership negotiation
+- S11 — discovery call with a new B2B lead
+- S12 — post-purchase customer support ambiguity
+
+This document does not patch source code.
+
+2. Sources used
+
+Current source:
+.\lib\activity\categoryDerivation\ruleExtractor.ts
+SHA256: BF8380B96858336F2FF34B76630622F609DD6032F7C7F6224F23CEC8C1272AA2
+
+C8-G-A benchmark inventory:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-a-business-sales-semantic-coverage-benchmark-inventory.txt
+SHA256: FC1FB9DE002BA97B15944244866D6AF756C075975A467E67D7511925E46BCD30
+
+C8-G-F proof PASS and expansion decision:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-f-deterministic-proof-pass-and-expansion-decision.txt
+SHA256: 729AC3E3E3A7005DD31AB1BA41EC4115736FB78E35AB596442ECAE4E2F39DA63
+
+C8-G-E-RECOVERY1 proof output:
+C:\Users\Admin\Downloads\P4_10_0_C8_G_E_RECOVERY1_deterministic_extractor_proof_output.txt
+SHA256: E320E87047A995D2701E6E5D333651724558D20B6828BF3C0CC9E98403543DB6
+SIZE_BYTES: 4926
+
+3. Process constraints
+
+C8-H-A does not:
+
+- change ruleExtractor.ts
+- change resolver
+- change bridge
+- change persistence
+- create or modify SQL
+- run SQL
+- call OpenAI
+- run /api/activity/complete
+- run runtime proof
+- create UI
+- create category seeds
+- create a manual taxonomy dump
+
+Only this benchmark inventory document is expected to be created and committed.
+
+4. Why C8-H is needed
+
+C8-G proved that the extractor can separate:
+
+- active client/sales responsibility
+- preparation
+- passive learning
+- informal conversation
+- lead vs client in selected cases
+- C8-F family/childcare baseline preservation
+
+But C8-G intentionally did not prove four important business/sales ambiguity zones:
+
+- outbound lead-list creation before contact
+- partner negotiation that is business-related but not necessarily client sales
+- discovery call with a new lead
+- post-purchase support that is customer responsibility but not a new sale
+
+C8-H should extend semantic coverage without jumping to resolver / bridge / persistence / SQL / OpenAI / UI.
+
+5. Core semantic distinction goals
+
+C8-H must prove these distinctions:
+
+1. potential-client / lead / prospect are not the same as existing client
+2. partner is not the same as client
+3. support after purchase is not the same as new sale
+4. discovery call is sales-process work but not closed deal
+5. outbound lead-list creation is pre-contact acquisition work, not actual contacted-client work
+6. business development / income-generation may be possible, but deal/payment/contract outcomes must not be inferred
+7. customer-responsibility applies to actual client/support cases, not lead-only cases unless explicitly stated
+8. B2B sales can be core for lead/discovery/outbound cases, but not automatically core for support-only cases
+
+6. Controlled candidate slug pool
+
+Business/sales domain candidates:
+
+- b2b-sales
+- sales-process
+- business-development
+- client-acquisition
+- lead-generation
+- prospecting
+- outbound-sales
+- pipeline-management
+- lead-qualification
+- partnership
+- strategic-partnership
+- customer-support
+- post-purchase-support
+- account-management
+- retention
+
+Actions:
+
+- creating
+- preparing
+- calling
+- negotiating
+- helping
+- supporting
+- qualifying
+- listing
+- researching
+
+Objects / artifacts:
+
+- lead-list
+- potential-client-list
+- outbound-campaign
+- cooperation-terms
+- discovery-call
+- support-problem
+- post-purchase-problem
+- partnership-terms
+
+Participants:
+
+- potential-client
+- lead
+- new-lead
+- prospect
+- business-partner
+- partner
+- client
+- customer
+
+Responsibilities / duties:
+
+- sales-responsibility
+- partner-responsibility
+- work-responsibility
+- customer-responsibility
+- pipeline-responsibility
+- support-responsibility
+- business-responsibility
+
+Purposes / meanings:
+
+- client-acquisition
+- lead-generation
+- prospecting
+- deal-preparation
+- relationship-management
+- lead-qualification
+- business-development
+- income-generation
+- revenue-generation
+- retention
+- account-management
+- customer-success
+
+Ambiguity / caution markers:
+
+- no-confirmed-contact
+- no-confirmed-client
+- no-confirmed-sale
+- no-confirmed-contract
+- no-confirmed-payment
+- possible-income-generation
+- possible-business-development
+- support-not-new-sale
+- partner-not-client
+- lead-not-client
+- potential-client-not-client
+
+7. Benchmark case S6 — outbound lead list
+
+Input:
+tworzyłem listę potencjalnych klientów dla kampanii outbound
+
+Meaning:
+The user created a list of potential clients for an outbound campaign.
+
+Required/core candidates:
+
+- creating
+- lead-list
+- potential-client
+- prospecting
+- outbound-sales
+- lead-generation
+- business-development
+- b2b-sales
+- sales-responsibility
+- client-acquisition
+
+Secondary/possible candidates:
+
+- pipeline-management
+- income-generation
+- outbound-campaign
+- potential-client-list
+- no-confirmed-contact
+- no-confirmed-client
+
+Forbidden overclaims:
+
+- client
+- existing-client
+- contacted-client
+- customer-responsibility
+- proposal-sent
+- meeting-held
+- discovery-call
+- closed-deal
+- successful-sale
+- contract-signed
+- payment-received
+
+Important:
+S6 is pre-contact acquisition work. It must not pretend that contact, meeting, proposal, sale, payment or existing client relationship already happened.
+
+8. Benchmark case S7 — partnership negotiation
+
+Input:
+negocjowałem warunki współpracy z partnerem
+
+Meaning:
+The user negotiated cooperation terms with a partner.
+
+Required/core candidates:
+
+- negotiating
+- business-partner
+- partnership
+- cooperation-terms
+- business-development
+- partner-responsibility
+- work-responsibility
+
+Secondary/possible candidates:
+
+- strategic-partnership
+- relationship-management
+- income-generation
+- revenue-generation
+- b2b-sales
+- business-responsibility
+
+Forbidden overclaims:
+
+- client
+- potential-client
+- lead
+- prospect
+- customer-responsibility
+- sales-proposal
+- commercial-proposal
+- discovery-call
+- closed-deal
+- contract-signed
+- payment-received
+- successful-sale
+
+Important:
+S7 is business/partner responsibility. It may be commercially meaningful, but it must not be collapsed into client sales or customer responsibility.
+
+9. Benchmark case S11 — discovery call with a new B2B lead
+
+Input:
+I had a discovery call with a new B2B lead
+
+Meaning:
+The user held a discovery call with a new B2B lead.
+
+Required/core candidates:
+
+- discovery-call
+- calling
+- new-lead
+- lead
+- b2b-sales
+- client-acquisition
+- sales-process
+- business-development
+- sales-responsibility
+- lead-qualification
+
+Secondary/possible candidates:
+
+- relationship-management
+- income-generation
+- deal-preparation
+- pipeline-management
+- possible-business-development
+
+Forbidden overclaims:
+
+- client
+- existing-client
+- customer-responsibility
+- commercial-proposal
+- proposal-sent
+- closed-deal
+- contract-signed
+- payment-received
+- successful-sale
+- client-acquired
+
+Important:
+S11 is a sales-process / qualification step. It must not infer proposal, contract, payment, closed deal or existing client.
+
+10. Benchmark case S12 — post-purchase customer support ambiguity
+
+Input:
+позвонил клиенту, чтобы помочь с проблемой после покупки
+
+Meaning:
+The user called a client to help with a problem after purchase.
+
+Required/core candidates:
+
+- calling
+- client
+- post-purchase-support
+- customer-support
+- customer-responsibility
+- relationship-management
+- support-responsibility
+
+Secondary/possible candidates:
+
+- retention
+- account-management
+- customer-success
+- business-responsibility
+
+Forbidden overclaims:
+
+- new-sale
+- lead-generation
+- prospecting
+- outbound-sales
+- client-acquisition
+- sales-responsibility
+- b2b-sales
+- discovery-call
+- commercial-proposal
+- proposal-sent
+- price-objection
+- closed-deal
+- contract-signed
+- payment-received
+- successful-sale
+- income-generation as core
+
+Important:
+S12 is support/customer responsibility after purchase, not new sales acquisition. It may support retention, but it must not be classified as new sale, lead-generation or active selling unless the user explicitly says so.
+
+11. Cross-case distinction table
+
+S6:
+potential-client / outbound / lead-generation.
+No existing client.
+No contact confirmed.
+No meeting/proposal/sale.
+
+S7:
+partner / cooperation terms / partnership.
+No client.
+No lead.
+No customer responsibility.
+
+S11:
+new B2B lead / discovery call / qualification.
+No existing client.
+No proposal.
+No deal/payment.
+
+S12:
+client / post-purchase problem / support.
+Customer responsibility is core.
+New sales and lead-generation are not core.
+
+12. Minimum expected benchmark behavior
+
+The future C8-H proof can pass only if:
+
+- S6 returns lead-list / potential-client / outbound-sales / lead-generation without client/contact/sale overclaims
+- S7 returns partner/cooperation/partner-responsibility without client/customer/sales-proposal overclaims
+- S11 returns discovery-call / new-lead / lead-qualification without existing-client/proposal/deal/payment overclaims
+- S12 returns post-purchase-support / customer-support / customer-responsibility without lead-generation/new-sale overclaims
+- C8-G proven cases are not regressed
+- C8-F family/childcare baseline is not regressed
+
+13. Global forbidden overclaim list for C8-H
+
+Unless explicitly stated by the input, do not infer:
+
+- closed-deal
+- successful-sale
+- contract-signed
+- payment-received
+- invoice-paid
+- discount-given
+- proposal-sent
+- client-acquired
+- existing-client
+- contacted-client
+- meeting-held
+- new-sale
+- customer-responsibility in lead-only cases
+- sales-responsibility in support-only cases
+- b2b-sales as core in support-only cases
+- client in lead/potential-client-only cases
+- client in partner-only cases
+
+14. Confidence policy
+
+High confidence / required:
+
+- explicit outbound + potential clients -> outbound-sales / lead-generation / potential-client
+- explicit partner + cooperation terms -> partnership / business-partner / partner-responsibility
+- explicit discovery call + new B2B lead -> discovery-call / new-lead / lead-qualification / b2b-sales
+- explicit client + problem after purchase -> post-purchase-support / customer-support / customer-responsibility
+
+Medium confidence / possible:
+
+- income-generation in outbound / partner / discovery cases
+- relationship-management in partner / discovery / support cases
+- retention / account-management in post-purchase support
+- pipeline-management in lead-generation / discovery cases
+
+Low confidence / do not canonicalize:
+
+- client in lead-only cases
+- customer-responsibility in lead-only cases
+- sales-responsibility in support-only cases
+- b2b-sales in support-only cases
+- closed deal / contract / payment / successful sale without direct evidence
+
+15. Multilingual coverage
+
+C8-H benchmark languages:
+
+Polish:
+
+- tworzyłem listę potencjalnych klientów dla kampanii outbound
+- negocjowałem warunki współpracy z partnerem
+
+English:
+
+- I had a discovery call with a new B2B lead
+
+Russian:
+
+- позвонил клиенту, чтобы помочь с проблемой после покупки
+
+Future variants can add Spanish/German/Ukrainian equivalents, but C8-H-A only fixes the first benchmark inventory.
+
+16. Expected next steps
+
+C8-H-B — static inspection
+
+Inspect current ruleExtractor.ts support for S6/S7/S11/S12.
+No patch.
+No SQL.
+No OpenAI.
+No runtime proof.
+
+C8-H-C — minimal additive patch strategy
+
+Decide whether a patch is needed and which subset to include.
+Expected likely decision:
+a minimal additive patch is needed.
+
+C8-H-D1 — exact files to patch decision
+
+Expected likely decision:
+ruleExtractor.ts only.
+
+C8-H-D2/D3 — source patch
+
+Patch deterministic candidates for S6/S7/S11/S12 or a smaller safe subset.
+
+C8-H-E — deterministic proof
+
+Use local extractor-level proof only.
+No SQL.
+No OpenAI.
+No /api/activity/complete.
+
+C8-H-F — document PASS/FAIL
+
+Commit result document and decide next expansion.
+
+17. Safety rules
+
+C8-H must not become a taxonomy dump.
+
+Do not:
+
+- create all possible business categories manually
+- seed categories in SQL
+- patch resolver or bridge before extractor proof
+- use OpenAI for this deterministic proof
+- use /api/activity/complete for initial proof
+- start UI
+- assume postponed cases work without proof
+
+Do:
+
+- keep benchmark cases explicit
+- keep slugs minimal and meaningful
+- keep lead/client/partner/support distinctions strict
+- preserve C8-G pass cases
+- preserve C8-F baseline
+
+18. Definition of Done for C8-H-A
+
+C8-H-A is done when:
+
+- this document exists under docs/value-objects
+- it defines S6/S7/S11/S12 benchmark inventory
+- it defines required/core slugs
+- it defines secondary/possible slugs
+- it defines forbidden overclaims
+- it defines cross-case distinction rules
+- it defines confidence policy
+- it defines next steps C8-H-B through C8-H-F
+- no source-code files changed
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run
+- git diff contains only this document
+- document is committed and pushed
+- final git status is clean
+
+19. Commit message
+
+Create Postponed Business Sales Benchmark inventory
