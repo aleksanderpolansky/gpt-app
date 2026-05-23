@@ -1,0 +1,167 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-D-F
+Decision after adapter-level idempotency proof
+Created: 2026-05-23
+
+1. Purpose
+
+This document records the decision after the successful adapter-level idempotency runtime proof.
+
+No runtime/source code changes are made in this step.
+
+2. Current baseline
+
+Current HEAD before this decision:
+
+- cbefd21 — Fix Category Derivation adapter idempotency proof marker
+
+Immediately relevant commits:
+
+- 1fcfe76 — Decide Category Derivation idempotency ownership before production readiness
+- 2eb9058 — Prepare Category Derivation adapter idempotency proof
+- 26d5e41 — Document Category Derivation adapter idempotency proof
+- cbefd21 — Fix Category Derivation adapter idempotency proof marker
+
+3. Proof result being evaluated
+
+F6-E-D-D runtime proof and F6-E-D-E proof documentation established:
+
+- proofJson.status=idempotency_test_pass
+- firstCall.reason=route_runner_completed
+- firstCall.derivationRunId=23ceaf7c-885c-4c86-83d8-77a43ffdb69a
+- firstCall.persistenceDerivationRowsCreated=5
+- secondCall.reason=existing_completed_run_found
+- secondCall.derivationRunId=23ceaf7c-885c-4c86-83d8-77a43ffdb69a
+- secondCall.persistenceDerivationRowsCreated=0
+- proof.sameDerivationRunId=true
+- proof.secondCallDidNotPersist=true
+- dbVerification.routeRunnerSpecificRunsCount=1
+- dbVerification.activityCategoryDerivationsCount=5
+- dbVerification.noDuplicateRuns=true
+- dbVerification.pass=true
+- safety.productionPersistEnabled=false
+- safety.openAiCalled=false
+- no OpenAI calls
+
+4. Core decision
+
+Decision:
+
+Adapter-level idempotency is sufficient for the current completeRouteIntegration path.
+
+This means:
+
+- /api/activity/complete integration can rely on completeRouteIntegration adapter-level runLookup protection;
+- repeated adapter calls for the same event and version tuple do not create duplicate completed runs;
+- the second adapter call skips routeRunner and returns the existing derivationRunId;
+- routeRunner-level idempotency is still absent, but it is not required before the next narrow production-readiness planning step as long as production-facing callers do not bypass completeRouteIntegration.
+
+5. What remains blocked
+
+Still blocked:
+
+- broad production_persist
+- direct production_persist on /api/activity/complete for normal user activity
+- strict failActivityComplete=true for normal users
+- production_persist runtime proof without a cleanup/rollback plan
+- direct routeRunner production use without routeRunner-level idempotency
+- any production path that bypasses completeRouteIntegration adapter
+
+6. RouteRunner-level idempotency decision
+
+Decision:
+
+Do not implement routeRunner-level idempotency now.
+
+Reason:
+
+- adapter-level idempotency is proven for the current completeRouteIntegration path;
+- immediate routeRunner modification would be architectural churn without current necessity;
+- routeRunner should remain the lower-level derive/resolve/persist executor for now;
+- routeRunner-level idempotency should be reconsidered only if a real production caller bypasses completeRouteIntegration or if future design requires routeRunner as a public production API boundary.
+
+7. Production-readiness implication
+
+The adapter-level idempotency proof removes the previous hard blocker identified in F6-E-B for the completeRouteIntegration path.
+
+However, production_persist is still not approved because other production-readiness gates remain open:
+
+- cleanup / rollback policy for proof/test rows;
+- clear proof/test marker strategy;
+- decision whether first production_persist proof should use debug-only proof route or real /api/activity/complete;
+- decision whether failActivityComplete must remain false during first production_persist stage;
+- decision how to observe partial persistence failures;
+- decision how to distinguish controlled proof rows from normal business data.
+
+8. Approved next step
+
+Approved next step:
+
+P4.10.0-C8-E-F6-E-E-A — plan controlled production_persist proof prerequisites
+
+This next step must still be a document-only planning step.
+
+It should answer:
+
+- What cleanup or rollback policy is required before any production_persist proof?
+- What metadata marker must identify proof/test activity events?
+- Should the first production_persist proof be debug-only, real complete-route, or staged through a proof marker?
+- Should failActivityComplete remain false for the first production_persist proof?
+- What exact DB rows are allowed to be created in the controlled proof?
+- What exact DB verification must prove no duplicates?
+- What rollback or cleanup command is allowed after the proof?
+- What must remain forbidden?
+
+9. Not approved yet
+
+Not approved:
+
+- production_persist
+- controlled production_persist runtime proof
+- direct production_persist on /api/activity/complete
+- strict failActivityComplete=true for normal users
+- routeRunner-level idempotency implementation
+- completeRouteIntegration changes
+- routeRunner changes
+- schema changes
+- migrations
+- RLS changes
+- permission changes
+- UI work
+- OpenAI calls
+- broad refactor
+
+10. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no production_persist
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no SQL in PowerShell
+- no runtime/source code changes in F6-E-D-F
+- no broad refactor
+- no production path bypassing completeRouteIntegration
+
+11. Decision summary
+
+Summary:
+
+- adapter-level idempotency proof passed;
+- completeRouteIntegration idempotency is accepted for the current /api/activity/complete integration path;
+- routeRunner-level idempotency remains absent but is not an immediate blocker for the next planning step;
+- production_persist remains blocked until cleanup/rollback and controlled proof prerequisites are planned;
+- next work should move from idempotency blocker resolution to production_persist proof prerequisite planning.
+
+12. Definition of Done
+
+This F6-E-D-F decision step is complete when:
+
+- this document exists under docs/value-objects;
+- only this document is changed;
+- document is committed and pushed;
+- working tree is clean;
+- recent git log shows this decision document above cbefd21.
