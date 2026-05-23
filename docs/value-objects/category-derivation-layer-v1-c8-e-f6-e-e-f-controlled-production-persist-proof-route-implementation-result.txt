@@ -157,3 +157,10 @@ This F6-E-E-F documentation step is complete when:
 - document is committed and pushed
 - working tree is clean
 - recent git log shows this document above 8f1af0e
+
+11. Exact verification markers added by FIX1
+
+- No production_persist runtime proof was executed
+- P4.10.0-C8-E-F6-E-E-F-FIX1
+- helper ps1 removed from repo root
+- working tree must be clean after commit
