@@ -1,0 +1,245 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-E-W
+Decision: post-PASS transition after patched production_persist proof
+Created: 2026-05-23
+
+1. Purpose
+
+This document records the post-PASS transition decision after:
+
+P4.10.0-C8-E-F6-E-E-U - patched real complete route production_persist runtime proof
+
+and after:
+
+P4.10.0-C8-E-F6-E-E-V - result documentation of the PASS.
+
+This is a documentation-only decision step.
+
+No runtime proof is executed here.
+
+No SQL is executed here.
+
+No cleanup is executed here.
+
+No source code is changed here.
+
+2. Current baseline
+
+Current HEAD before this decision:
+
+- c85e2f5 Document Category Derivation patched complete route proof PASS
+
+Relevant previous commits:
+
+- d5882f4 Patch Category Derivation proof-safe complete route diagnostics
+- c15da6d Plan patched Category Derivation complete route proof
+- c85e2f5 Document Category Derivation patched complete route proof PASS
+
+3. Reviewed PASS result
+
+Reviewed V result:
+
+- Final classification: PASS
+- proof event id: 2988e66b-c29d-4863-a6d8-f84b0bde5bd5
+- derivationRunId: ab8935d7-6e8a-4ede-bb8a-affa0715a46e
+- proofMetadataPreserved: true
+- production_persist mode visible
+- route_runner_completed visible
+- persistenceDerivationRowsCreated: 5
+- activityCategoryDerivationsCount: 5
+- already_completed path verified
+- already_completed_not_executed diagnostic visible
+- include_response_debug exposure visible and sanitized
+- rawRowsExposed: false
+- secretsExposed: false
+
+4. Decision 1 - F6-E-E production_persist proof block is complete
+
+Decision:
+
+The F6-E-E production_persist proof block is complete and should not be repeated.
+
+Reason:
+
+The patched real /api/activity/complete route has now proven the intended behavior:
+
+1. create-free-text-start-event preserves proof metadata
+2. /api/activity/complete accepts eventId
+3. /api/activity/complete completes the proof event
+4. Category Derivation route runner executes in production_persist mode
+5. derivationRunId is visible
+6. persisted row count is visible
+7. 5 activity category derivation rows were created
+8. repeated complete call is idempotent and returns already_completed
+9. the already-completed path exposes a safe diagnostic block in proof/debug mode
+
+5. Decision 2 - keep diagnostic exposure gated
+
+Decision:
+
+Keep Category Derivation diagnostic response exposure gated as currently implemented.
+
+Approved gates:
+
+- request proof/debug marker for the F6-E-E proof family
+- p4Step proof marker
+- CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=true
+
+Reason:
+
+The U proof showed that the response exposure is useful for controlled verification and does not expose raw rows or secrets.
+
+Observed safety result:
+
+- categoryDerivation.exposure.sanitized: true
+- categoryDerivation.exposure.rawRowsExposed: false
+- categoryDerivation.exposure.secretsExposed: false
+
+6. Decision 3 - do not cleanup proof events yet
+
+Decision:
+
+Do not cleanup proof events in this W step.
+
+Reason:
+
+The old pre-S proof event and the new post-S proof event remain useful audit evidence.
+
+Proof events currently known:
+
+Old diagnostic event:
+
+- 2d5654bd-bee5-47b6-b725-a2defaf8efc5
+
+New PASS proof event:
+
+- 2988e66b-c29d-4863-a6d8-f84b0bde5bd5
+
+Cleanup remains a separate future decision and must be planned explicitly.
+
+7. Decision 4 - defer global lint cleanup
+
+Decision:
+
+Do not handle global lint cleanup inside this block.
+
+Reason:
+
+S1 showed global lint failures, but S1A proved that the two patched files have no targeted ESLint errors and TypeScript passes.
+
+The remaining global lint failures are old project-wide issues outside the proof block.
+
+8. Decision 5 - do not patch canTransitionActivityStatus now
+
+Decision:
+
+Do not patch the known unused import warning in this W step.
+
+Reason:
+
+The warning existed before S in the S0 source snapshot and is not a failure of the proof patch.
+
+It may be removed later as a small housekeeping task, but it is not required for closing F6-E-E.
+
+9. Decision 6 - stop runtime testing for this block
+
+Decision:
+
+Do not run more runtime proof calls for F6-E-E unless one of these files changes later:
+
+- src/app/api/activity/complete/route.ts
+- src/app/api/activity/debug/create-free-text-start-event/route.ts
+- lib/activity/categoryDerivation/completeRouteIntegration.ts
+- lib/activity/categoryDerivation/config.ts
+- lib/activity/categoryDerivation/routeRunner.ts
+- lib/activity/categoryDerivation/persistDerivations.ts
+- lib/activity/categoryDerivation/runLookup.ts
+
+Reason:
+
+The required runtime proof has already passed.
+
+Additional retries would only create extra proof events and noise.
+
+10. Operational state after W
+
+After W, the project state is:
+
+- production_persist proof through real /api/activity/complete: PASS
+- proof metadata preservation: PASS
+- diagnostic response exposure: PASS
+- idempotency already_completed path: PASS
+- SQL cleanup: not performed
+- proof event cleanup: deferred
+- global lint cleanup: deferred
+- source code changes after S: none
+- runtime proof after U: none
+
+11. Recommended next step
+
+Recommended next step:
+
+P4.10.0-C8-E-F6-E-E-X - close F6-E-E block and select next Category Derivation Layer v1 implementation block
+
+X should be documentation-only unless a concrete next implementation target is selected.
+
+X should decide:
+
+- the exact next block from the current master plan
+- whether proof-event cleanup becomes a separate future cleanup block
+- whether to leave include_response_debug enabled only for local proof and disabled by default elsewhere
+- whether to move from production_persist proof to category quality / semantic coverage improvements
+- whether to move to role/responsibility/care-purpose semantic layer work
+- whether to move to UI/analytics consumption of derived categories
+- whether to leave global lint cleanup outside this stream
+
+12. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no cleanup command
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no additional /api/activity/complete runtime proof
+- no normal user activity used for proof
+- no failActivityComplete=true
+
+13. Exact verification markers
+
+- P4.10.0-C8-E-F6-E-E-W
+- post-PASS transition after patched production_persist proof
+- c85e2f5 Document Category Derivation patched complete route proof PASS
+- F6-E-E production_persist proof block is complete
+- production_persist proof through real /api/activity/complete: PASS
+- proof metadata preservation: PASS
+- diagnostic response exposure: PASS
+- idempotency already_completed path: PASS
+- keep diagnostic exposure gated
+- do not cleanup proof events yet
+- old diagnostic event: 2d5654bd-bee5-47b6-b725-a2defaf8efc5
+- new PASS proof event: 2988e66b-c29d-4863-a6d8-f84b0bde5bd5
+- defer global lint cleanup
+- do not patch canTransitionActivityStatus now
+- stop runtime testing for this block
+- P4.10.0-C8-E-F6-E-E-X
+- close F6-E-E block and select next Category Derivation Layer v1 implementation block
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+- No source code is changed here
+
+14. Definition of Done
+
+This W post-PASS transition decision is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above c85e2f5
