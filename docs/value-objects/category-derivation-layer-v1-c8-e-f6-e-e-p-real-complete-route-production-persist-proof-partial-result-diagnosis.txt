@@ -1,0 +1,320 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-E-F6-E-E-P
+Real /api/activity/complete production_persist proof partial result and diagnosis
+Created: 2026-05-23
+
+1. Purpose
+
+This document records the result of the first real /api/activity/complete production_persist proof attempt.
+
+This is a documentation-only step.
+
+No runtime proof is executed here.
+
+No SQL is executed here.
+
+No cleanup is executed here.
+
+No source code is changed here.
+
+2. Current baseline
+
+Current HEAD before this diagnosis document:
+
+- 29b05dd Plan Category Derivation real complete route production persist proof
+
+Relevant previous commits:
+
+- 1a33148 Decide Category Derivation real complete route proof strategy
+- 29b05dd Plan Category Derivation real complete route production persist proof
+
+3. Procedure baseline
+
+The execution followed F6-E-E-N.
+
+The dev server was started with:
+
+- CATEGORY_DERIVATION_ROUTE_RUNNER_MODE=production_persist
+- CATEGORY_DERIVATION_ROUTE_RUNNER_FAILS_ACTIVITY_COMPLETE=false
+- CATEGORY_DERIVATION_ROUTE_RUNNER_INCLUDE_RESPONSE_DEBUG=false
+
+No SQL was executed.
+
+No cleanup was executed.
+
+No source code was changed.
+
+4. Proof event created
+
+A dedicated proof event was created through:
+
+- /api/activity/debug/create-free-text-start-event
+
+Create route result:
+
+- HTTP status: 200
+- ok: true
+- status: created_started_free_text_event
+- event id: 2d5654bd-bee5-47b6-b725-a2defaf8efc5
+
+5. First real complete route call
+
+The first real complete route call used:
+
+- /api/activity/complete
+- activityEventId: 2d5654bd-bee5-47b6-b725-a2defaf8efc5
+
+Result:
+
+- HTTP status: 400
+- ok: false
+- error: eventId is required.
+
+Diagnosis:
+
+The real /api/activity/complete route requires the payload field eventId.
+
+The field activityEventId is not accepted by the real complete route.
+
+This was a payload-shape issue, not a production_persist persistence proof result.
+
+6. Corrected real complete route call
+
+A corrected retry used:
+
+- /api/activity/complete
+- eventId: 2d5654bd-bee5-47b6-b725-a2defaf8efc5
+
+Result:
+
+- HTTP status: 200
+- ok: true
+- status: completed
+
+Conclusion:
+
+The real /api/activity/complete route accepted the eventId payload and completed the proof event.
+
+7. Cached review attempt
+
+A later REVIEW1 attempt tried to print cached browser variables.
+
+Result:
+
+- createData was not available
+- completeData was not available
+- foundCompleteKeys was not available
+
+Diagnosis:
+
+The previous pasted browser-console script used const variables inside a separate eval block, so they were not globally available.
+
+This review attempt did not make a new network request and did not modify the database.
+
+8. Idempotency call
+
+A second /api/activity/complete call was made for the same proof event id:
+
+- eventId: 2d5654bd-bee5-47b6-b725-a2defaf8efc5
+
+Result:
+
+- HTTP status: 200
+- ok: true
+- top-level status: already_completed
+- event.status: completed
+- event.processing_status: processed
+- lifecycle.alreadyCompleted: true
+
+Diagnosis:
+
+This is acceptable lifecycle idempotency behavior.
+
+The test check that expected top-level status completed was too strict.
+
+For a repeated complete call, already_completed is the correct idempotent route-level status, while event.status remains completed.
+
+9. Important idempotency response details
+
+The idempotency response included:
+
+- ok: true
+- status: already_completed
+- event.status: completed
+- impactProcessor.ok: true
+- impactProcessor.reason: No active impact rules found for this activity event.
+- lifecycle.alreadyCompleted: true
+
+No new event was created during the idempotency call.
+
+No SQL was executed from the browser script.
+
+No cleanup was executed.
+
+No source code was changed.
+
+10. What was proven
+
+This proof attempt proves:
+
+- the real /api/activity/complete route requires eventId, not activityEventId
+- a proof-created free-text event can be completed by the real /api/activity/complete route
+- the real /api/activity/complete route returned HTTP 200 after corrected eventId payload
+- the proof event reached event.status completed
+- a repeated call to /api/activity/complete with the same eventId returns HTTP 200 and top-level status already_completed
+- lifecycle idempotency of /api/activity/complete works for the already completed proof event
+
+11. What was not proven
+
+This proof attempt does not yet prove full Category Derivation production_persist execution through /api/activity/complete.
+
+Reason:
+
+The visible complete route responses did not expose:
+
+- categoryDerivation
+- categoryDerivationResult
+- derivationRunId
+- persistenceDerivationRowsCreated
+- activityCategoryDerivationsCount
+- routeRunner persistence result
+- existing_completed_run_found from Category Derivation on repeated complete route call
+
+Therefore, full Category Derivation persistence through the real complete route remains inconclusive.
+
+12. Metadata issue discovered
+
+The created event metadata did not preserve the intended F6-E-E-O proof markers.
+
+Observed metadata from the idempotency response included:
+
+- p4Step: P4.10.0-C8-P3-B7-C2-C-A2
+- endpoint: /api/activity/debug/create-free-text-start-event
+- createdBy: debug_setup_route
+- setupPurpose: Clean non-completed free-text activity_event for production /api/activity/complete test.
+- productionRouteUnderTest: /api/activity/complete
+- categoryDerivationExecutedHere: false
+
+The event metadata did not visibly include:
+
+- proof: P4.10.0-C8-E-F6-E-real-complete-route-production-persist-proof
+- p4Step: P4.10.0-C8-E-F6-E-E-O
+- purpose: real_complete_route_production_persist_proof
+- cleanupEligible: true
+- productionPersistProof: true
+- nonCanonicalBusinessEvent: true
+
+Diagnosis:
+
+The create-free-text-start-event route appears to create a suitable debug event for /api/activity/complete testing, but it does not preserve the new proof markers supplied in the request payload.
+
+This makes cleanup and proof attribution weaker than required.
+
+13. Overall result status
+
+Overall F6-E-E-O status:
+
+PARTIAL / DIAGNOSTIC RESULT
+
+Not full PASS.
+
+The route completion and lifecycle idempotency are proven.
+
+The Category Derivation production_persist persistence through the real /api/activity/complete route is not yet proven from the visible response.
+
+14. Safety decision
+
+Do not run cleanup now.
+
+Do not run more /api/activity/complete retries now.
+
+Do not create more proof events now.
+
+Do not change source code immediately.
+
+First, inspect the create route and complete route response contract to decide the safest next step.
+
+15. Recommended next step
+
+Recommended next step:
+
+P4.10.0-C8-E-F6-E-E-Q - inspect proof-safe event creation and complete route Category Derivation response exposure
+
+Scope:
+
+- static inspection only
+- inspect /api/activity/debug/create-free-text-start-event
+- inspect /api/activity/complete
+- inspect completeRouteIntegration response handling
+- inspect whether categoryDerivation result is returned or hidden
+- inspect whether create-free-text-start-event can preserve proof metadata
+- no runtime proof
+- no SQL
+- no cleanup
+- no source code change
+
+16. Later possible strategies
+
+Possible later strategy A:
+
+Patch create-free-text-start-event to preserve proof metadata and cleanup markers, then run a new proof event.
+
+Possible later strategy B:
+
+Patch /api/activity/complete response to expose categoryDerivation diagnostic result only in debug/proof mode.
+
+Possible later strategy C:
+
+Use a dedicated controlled proof route that calls the real complete route internals while preserving proof metadata and returning DB verification.
+
+No strategy is approved in this document.
+
+17. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no cleanup command
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no additional /api/activity/complete runtime proof
+- no normal user activity used for proof
+- no failActivityComplete=true
+
+18. Exact verification markers
+
+- P4.10.0-C8-E-F6-E-E-P
+- real complete route production_persist proof partial result and diagnosis
+- 29b05dd Plan Category Derivation real complete route production persist proof
+- event id: 2d5654bd-bee5-47b6-b725-a2defaf8efc5
+- eventId is required
+- eventId payload accepted
+- status: completed
+- status: already_completed
+- event.status: completed
+- lifecycle.alreadyCompleted: true
+- Category Derivation production_persist remains inconclusive
+- create-free-text-start-event does not preserve F6-E-E-O proof markers
+- Do not run cleanup now
+- Do not run more /api/activity/complete retries now
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+- No source code is changed here
+- P4.10.0-C8-E-F6-E-E-Q
+- inspect proof-safe event creation and complete route Category Derivation response exposure
+
+19. Definition of Done
+
+This F6-E-E-P diagnosis-documentation step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above 29b05dd
