@@ -1,0 +1,632 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-F-D1
+Decision: exact files to patch based on D0 semantic coverage source snapshot
+Created: 2026-05-23
+
+1. Purpose
+
+This document decides the exact first patch surfaces for the semantic coverage patch family after:
+
+- P4.10.0-C8-F-C - minimal additive semantic coverage patch strategy
+- P4.10.0-C8-F-D0 - source snapshot for semantic coverage patch planning
+
+This is a documentation-only decision step.
+
+No runtime proof is executed here.
+
+No SQL is executed here.
+
+No cleanup is executed here.
+
+No source code is changed here.
+
+2. Current baseline
+
+Current HEAD before this document:
+
+- de55d99 Decide Category Derivation semantic coverage patch strategy
+
+D0 source snapshot used:
+
+- C:\Users\Admin\Downloads\P4_10_0_C8_F_D0_semantic_coverage_source_snapshot.txt
+
+D0 snapshot size bytes:
+
+- 16547783
+
+Snapshot PATH entries parsed:
+
+- 330
+
+3. First semantic patch target
+
+The first patch target remains:
+
+- B1 учил математику с ребёнком
+- B2 ребёнок учил математику рядом со мной
+- F1 I was with my child while they did homework
+
+Required semantic coverage:
+
+- mathematics
+- child
+- learning
+- teaching
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+- child-supervision
+- homework
+- ambiguity-passive-supervision
+- ambiguity-active-help-unknown
+
+4. D0 signal summary
+
+Signals found in D0 snapshot:
+
+- contains B1 text: yes
+- contains B2 text: yes
+- contains F1 text: yes
+- contains childcare / parental-care / caregiving terms: yes
+- childcare / parental-care / caregiving term count: 88
+- contains helping-child-learn terms: yes
+- contains child-supervision / supervision terms: yes
+- supervision term count: 36
+- contains ambiguity/confidence terms: yes
+- ambiguity/confidence term count: 2708
+- contains suggested / needs_review / draft governance terms: yes
+- suggested/draft governance term count: 1480
+
+5. Category Derivation files found
+
+- docs/value-objects/category-derivation-bridge-additional-category-links-contract-c8-p3-b1.md
+- docs/value-objects/category-derivation-bridge-additional-category-links-helper-c8-p3-b2.md
+- docs/value-objects/category-derivation-bridge-additional-category-links-loop-call-c8-p3-b3.md
+- docs/value-objects/category-derivation-bridge-c8-p3-b1-transpile-result.json
+- docs/value-objects/category-derivation-bridge-c8-p3-b2-transpile-result.json
+- docs/value-objects/category-derivation-bridge-c8-p3-b3-fix1-transpile-result.json
+- docs/value-objects/category-derivation-bridge-c8-p3-b3-transpile-result.json
+- docs/value-objects/category-derivation-bridge-category-link-inventory-c8-p0.md
+- docs/value-objects/category-derivation-bridge-constraints-inspection-c8-p2-a.md
+- docs/value-objects/category-derivation-bridge-constraints-inspection-c8-p2-a1-fix.md
+- docs/value-objects/category-derivation-bridge-constraints-inspection-c8-p2-a2-fix.md
+- docs/value-objects/category-derivation-bridge-constraints-inspection-c8-p2-b-result.md
+- docs/value-objects/category-derivation-bridge-edit-map-c8-p3-b0.md
+- docs/value-objects/category-derivation-bridge-implementation-preflight-c8-p3-a.md
+- docs/value-objects/category-derivation-bridge-integration-contract-c8-p1.md
+- docs/value-objects/category-derivation-bridge-loop-call-scope-fix-c8-p3-b3-fix1.md
+- docs/value-objects/category-derivation-bridge-no-flag-regression-c8-p3-b4-a.md
+- docs/value-objects/category-derivation-bridge-no-flag-regression-c8-p3-b4-c-result.md
+- docs/value-objects/category-derivation-code-inventory-c8-j.md
+- docs/value-objects/category-derivation-contextual-categories-exact-schema-c8-p3-b6-c.md
+- docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md
+- docs/value-objects/category-derivation-final-browser-suite-pass-c8-p3-b6-h.md
+- docs/value-objects/category-derivation-implementation-plan-c8-i.md
+- docs/value-objects/category-derivation-inventory-c8-e.md
+- docs/value-objects/category-derivation-layer-v1.md
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-b-additive-implementation-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-c-schema-audit-result-summary.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql
+- docs/value-objects/category-derivation-layer-v1-c8-e-d2-reviewed-execution-migration.sql
+- docs/value-objects/category-derivation-layer-v1-c8-e-d4-migration-execution-verification.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-d-additive-migration-design.sql
+- docs/value-objects/category-derivation-layer-v1-c8-e-e1-persistence-source-inventory.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-e2-persistence-deep-inspect.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-e4-persistence-contract-verification.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f1-a-route-runner-signatures.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f1-c-route-runner-verification.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f2-b-debug-route-verification.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f2-d-runtime-smoke-test-verification.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-b-production-integration-design.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f4-d-fix1-corrected-support-verification.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f4-d-non-production-support-verification.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-b-exact-complete-route-patch-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-c-d-complete-route-disabled-adapter-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-d-a-shadow-no-persist-test-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-d-c-shadow-no-persist-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-e-a-shadow-persist-test-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-e-c-shadow-persist-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-b-direct-adapter-idempotency-proof-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-c-d-direct-adapter-idempotency-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-a-failure-behavior-test-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-c-d-adapter-validation-failure-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-d-b-wrong-mode-no-write-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-e-b-d-missing-actor-id-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-a-persistence-failure-simulation-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-g-simulated-persistence-failure-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-h-c-strict-simulated-persistence-failure-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-i-a-failure-behavior-closure-and-next-transition.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-a-transition-after-f5g-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-fix2-missing-debug-route-inspection-correction.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-c-transition-decision-after-f6b.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-a-complete-route-shadow-persist-proof-prep.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-c-complete-route-shadow-persist-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-d-complete-route-shadow-persist-proof-closure.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-a-route-runner-idempotency-gap-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-b-idempotency-design-decision.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-c-adapter-idempotency-runtime-proof-prep.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-e-adapter-idempotency-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-b-controlled-production-persist-proof-route-options-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-c-controlled-production-persist-proof-route-strategy-decision.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-d-controlled-production-persist-proof-route-implementation-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-f-controlled-production-persist-proof-route-implementation-result.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-g-cleanup-rollback-policy-before-controlled-production-persist-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-h-controlled-production-persist-runtime-proof-procedure-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-j-controlled-production-persist-runtime-proof-result.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-k-decision-after-controlled-production-persist-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-l-real-complete-route-production-persist-readiness-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-m-real-complete-route-production-persist-proof-strategy-decision.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-n-real-complete-route-production-persist-proof-procedure-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-p-real-complete-route-production-persist-proof-partial-result-diagnosis.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-q-proof-safe-event-creation-and-complete-response-exposure-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-r-proof-safe-patch-strategy-decision.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-t-patched-real-complete-route-proof-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-v-patched-real-complete-route-production-persist-proof-pass.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-w-post-pass-transition-decision.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-x-block-closure-and-next-block-selection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-f-a-semantic-coverage-benchmark-inventory.txt
+- docs/value-objects/category-derivation-layer-v1-c8-f-b-current-semantic-coverage-support-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-f-c-minimal-additive-semantic-coverage-patch-strategy.txt
+- docs/value-objects/category-derivation-lifecycle-additional-category-links-passthrough-c8-p3-b5-b2.md
+- docs/value-objects/category-derivation-lifecycle-additional-category-links-passthrough-c8-p3-b5-b2-fix1.md
+- docs/value-objects/category-derivation-lifecycle-c8-p3-b5-b2-transpile-result.json
+- docs/value-objects/category-derivation-lifecycle-passthrough-anchors-c8-p3-b5-b1.md
+- docs/value-objects/category-derivation-live-context-resolution-check-c8-p3-b6-d-a.md
+- docs/value-objects/category-derivation-live-context-resolution-result-c8-p3-b6-d-b.md
+- docs/value-objects/category-derivation-live-migration-result-c8-g3.md
+- docs/value-objects/category-derivation-persist-c8-n0-1-transpile.md
+- docs/value-objects/category-derivation-persist-c8-n0-1-transpile-result.json
+- docs/value-objects/category-derivation-persist-c8-n1-mock.md
+- docs/value-objects/category-derivation-persist-c8-n1-mock-result.json
+- docs/value-objects/category-derivation-persist-derivations-c8-n.md
+- docs/value-objects/category-derivation-production-complete-route-c1-a-dependency-map.txt
+- docs/value-objects/category-derivation-production-complete-route-c1-b-0-exact-patch-snippets.txt
+- docs/value-objects/category-derivation-production-complete-route-c1-b-1-exact-derivation-invocation.txt
+- docs/value-objects/category-derivation-production-complete-route-c1-b-route-backup.txt
+- docs/value-objects/category-derivation-production-complete-route-c1-b-smoke-check.txt
+- docs/value-objects/category-derivation-production-complete-route-c1-b-tsc.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-b-fix3-contract-inspection.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-b-fix3-focused-contract.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-b-result-and-next-plan.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-b-setup-route-contracts.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-c-a2-tsc.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-c-a-tsc.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-c-b2-result.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-a2-targeted-bridge-source-schema.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-a3-fixed-targeted-bridge-source-schema.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-a-bridge-persistence-inventory.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-b1-tsc.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-b2-after-fix1-result.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-b3-fix1-tsc.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-b3-tsc.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-d-c1-value-object-bridge-proof-contract.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-final-summary.txt
+- docs/value-objects/category-derivation-production-complete-route-map-c8-p3-b7-b.md
+- docs/value-objects/category-derivation-production-complete-route-patch-anchors-c8-p3-b7-c0.txt
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md
+- docs/value-objects/category-derivation-repo-safety-c8-h1.txt
+
+6. Existing specific patch candidates
+
+The following exact likely patch files exist in the snapshot:
+
+- lib/activity/categoryDerivation/types.ts
+- lib/activity/categoryDerivation/ruleExtractor.ts
+- lib/activity/categoryDerivation/resolver.ts
+- lib/activity/categoryDerivation/routeRunner.ts
+- lib/activity/categoryDerivation/completeRouteIntegration.ts
+- lib/activity/categoryDerivation/config.ts
+- lib/activity/categoryDerivation/persistDerivations.ts
+- lib/activity/categoryDerivation/runLookup.ts
+
+7. Extractor / candidate-related files
+
+- lib/activity/categoryDerivation/ruleExtractor.ts
+- lib/activity/knownTemplateRubricatorRules.ts
+
+8. Resolver / persistence / lookup files
+
+- docs/value-objects/category-derivation-contextual-categories-exact-schema-c8-p3-b6-c.md
+- docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md
+- lib/activity/categoryDerivation/persistDerivations.ts
+- lib/activity/categoryDerivation/persistence.ts
+- lib/activity/categoryDerivation/resolver.ts
+- lib/activity/categoryDerivation/runLookup.ts
+- lib/activity/rubricatorResolverLogMetadata.ts
+
+9. Type definition files
+
+- lib/activity/categoryDerivation/types.ts
+
+10. Route runner / complete route / debug route files
+
+- lib/activity/categoryDerivation/completeRouteIntegration.ts
+- lib/activity/categoryDerivation/routeRunner.ts
+- src/app/api/activity/complete/route.ts
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts
+- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+- src/app/api/activity/debug/category-derivation-route-runner-test/route.ts
+- src/app/api/activity/debug/free-text-value-object-test/route.ts
+- src/app/api/activity/debug/value-object-bridge-proof/route.ts
+- src/app/api/activity/debug-rubricator-value-object-bridge/route.ts
+
+11. Seed / migration / category support files
+
+- supabase/migrations/002_seed_object_action_rubricator.sql
+
+12. Value Object Bridge files
+
+- docs/value-objects/category-derivation-production-complete-route-c2-d-c1-value-object-bridge-proof-contract.txt
+- lib/activity/valueObjectBridge.ts
+- src/app/api/activity/debug/value-object-bridge-proof/route.ts
+- src/app/api/activity/debug-rubricator-value-object-bridge/route.ts
+
+13. Relevant docs included in snapshot
+
+- docs/value-objects/category-derivation-bridge-additional-category-links-contract-c8-p3-b1.md
+- docs/value-objects/category-derivation-bridge-additional-category-links-helper-c8-p3-b2.md
+- docs/value-objects/category-derivation-bridge-additional-category-links-loop-call-c8-p3-b3.md
+- docs/value-objects/category-derivation-bridge-c8-p3-b1-transpile-result.json
+- docs/value-objects/category-derivation-bridge-c8-p3-b2-transpile-result.json
+- docs/value-objects/category-derivation-bridge-c8-p3-b3-fix1-transpile-result.json
+- docs/value-objects/category-derivation-bridge-c8-p3-b3-transpile-result.json
+- docs/value-objects/category-derivation-bridge-category-link-inventory-c8-p0.md
+- docs/value-objects/category-derivation-bridge-constraints-inspection-c8-p2-a.md
+- docs/value-objects/category-derivation-bridge-constraints-inspection-c8-p2-a1-fix.md
+- docs/value-objects/category-derivation-bridge-constraints-inspection-c8-p2-a2-fix.md
+- docs/value-objects/category-derivation-bridge-constraints-inspection-c8-p2-b-result.md
+- docs/value-objects/category-derivation-bridge-edit-map-c8-p3-b0.md
+- docs/value-objects/category-derivation-bridge-implementation-preflight-c8-p3-a.md
+- docs/value-objects/category-derivation-bridge-integration-contract-c8-p1.md
+- docs/value-objects/category-derivation-bridge-loop-call-scope-fix-c8-p3-b3-fix1.md
+- docs/value-objects/category-derivation-bridge-no-flag-regression-c8-p3-b4-a.md
+- docs/value-objects/category-derivation-bridge-no-flag-regression-c8-p3-b4-c-result.md
+- docs/value-objects/category-derivation-code-inventory-c8-j.md
+- docs/value-objects/category-derivation-contextual-categories-exact-schema-c8-p3-b6-c.md
+- docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md
+- docs/value-objects/category-derivation-final-browser-suite-pass-c8-p3-b6-h.md
+- docs/value-objects/category-derivation-implementation-plan-c8-i.md
+- docs/value-objects/category-derivation-inventory-c8-e.md
+- docs/value-objects/category-derivation-layer-v1.md
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-b-additive-implementation-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-c-schema-audit-result-summary.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql
+- docs/value-objects/category-derivation-layer-v1-c8-e-d2-reviewed-execution-migration.sql
+- docs/value-objects/category-derivation-layer-v1-c8-e-d4-migration-execution-verification.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-d-additive-migration-design.sql
+- docs/value-objects/category-derivation-layer-v1-c8-e-e1-persistence-source-inventory.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-e2-persistence-deep-inspect.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-e4-persistence-contract-verification.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f1-a-route-runner-signatures.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f1-c-route-runner-verification.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f2-b-debug-route-verification.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f2-d-runtime-smoke-test-verification.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-b-production-integration-design.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f4-d-fix1-corrected-support-verification.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f4-d-non-production-support-verification.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-b-exact-complete-route-patch-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-c-d-complete-route-disabled-adapter-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-d-a-shadow-no-persist-test-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-d-c-shadow-no-persist-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-e-a-shadow-persist-test-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-e-c-shadow-persist-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-a-production-transition-and-legacy-consolidation-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-b-direct-adapter-idempotency-proof-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-f-c-d-direct-adapter-idempotency-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-a-failure-behavior-test-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-c-d-adapter-validation-failure-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-d-b-wrong-mode-no-write-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-e-b-d-missing-actor-id-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-a-persistence-failure-simulation-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-b-persistence-failure-injection-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-g-simulated-persistence-failure-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-f-h-c-strict-simulated-persistence-failure-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-g-i-a-failure-behavior-closure-and-next-transition.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-a-transition-after-f5g-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-fix2-missing-debug-route-inspection-correction.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-c-transition-decision-after-f6b.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-a-complete-route-shadow-persist-proof-prep.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-c-complete-route-shadow-persist-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-d-complete-route-shadow-persist-proof-closure.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-a-production-readiness-transition-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-b-production-readiness-gates-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-c-production-readiness-decision-after-gate-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-a-route-runner-idempotency-gap-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-b-idempotency-design-decision.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-c-adapter-idempotency-runtime-proof-prep.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-e-adapter-idempotency-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-d-f-decision-after-adapter-idempotency-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-a-controlled-production-persist-proof-prerequisites-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-b-controlled-production-persist-proof-route-options-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-c-controlled-production-persist-proof-route-strategy-decision.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-d-controlled-production-persist-proof-route-implementation-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-f-controlled-production-persist-proof-route-implementation-result.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-g-cleanup-rollback-policy-before-controlled-production-persist-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-h-controlled-production-persist-runtime-proof-procedure-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-j-controlled-production-persist-runtime-proof-result.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-k-decision-after-controlled-production-persist-runtime-proof.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-l-real-complete-route-production-persist-readiness-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-m-real-complete-route-production-persist-proof-strategy-decision.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-n-real-complete-route-production-persist-proof-procedure-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-p-real-complete-route-production-persist-proof-partial-result-diagnosis.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-q-proof-safe-event-creation-and-complete-response-exposure-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-r-proof-safe-patch-strategy-decision.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-t-patched-real-complete-route-proof-plan.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-v-patched-real-complete-route-production-persist-proof-pass.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-w-post-pass-transition-decision.txt
+- docs/value-objects/category-derivation-layer-v1-c8-e-f6-e-e-x-block-closure-and-next-block-selection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-f-a-semantic-coverage-benchmark-inventory.txt
+- docs/value-objects/category-derivation-layer-v1-c8-f-b-current-semantic-coverage-support-inspection.txt
+- docs/value-objects/category-derivation-layer-v1-c8-f-c-minimal-additive-semantic-coverage-patch-strategy.txt
+- docs/value-objects/category-derivation-lifecycle-additional-category-links-passthrough-c8-p3-b5-b2.md
+- docs/value-objects/category-derivation-lifecycle-additional-category-links-passthrough-c8-p3-b5-b2-fix1.md
+- docs/value-objects/category-derivation-lifecycle-c8-p3-b5-b2-transpile-result.json
+- docs/value-objects/category-derivation-lifecycle-passthrough-anchors-c8-p3-b5-b1.md
+- docs/value-objects/category-derivation-live-context-resolution-check-c8-p3-b6-d-a.md
+- docs/value-objects/category-derivation-live-context-resolution-result-c8-p3-b6-d-b.md
+- docs/value-objects/category-derivation-live-migration-result-c8-g3.md
+- docs/value-objects/category-derivation-persist-c8-n0-1-transpile.md
+- docs/value-objects/category-derivation-persist-c8-n0-1-transpile-result.json
+- docs/value-objects/category-derivation-persist-c8-n1-mock.md
+- docs/value-objects/category-derivation-persist-c8-n1-mock-result.json
+- docs/value-objects/category-derivation-persist-derivations-c8-n.md
+- docs/value-objects/category-derivation-production-complete-route-c1-a-dependency-map.txt
+- docs/value-objects/category-derivation-production-complete-route-c1-b-0-exact-patch-snippets.txt
+- docs/value-objects/category-derivation-production-complete-route-c1-b-1-exact-derivation-invocation.txt
+- docs/value-objects/category-derivation-production-complete-route-c1-b-route-backup.txt
+- docs/value-objects/category-derivation-production-complete-route-c1-b-smoke-check.txt
+- docs/value-objects/category-derivation-production-complete-route-c1-b-tsc.txt
+- docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt
+
+14. Exact patch-surface decision
+
+Decision:
+
+Do not patch broadly.
+
+The first patch should be limited to exact files needed for deterministic B1/B2/F1 candidate extraction and proof visibility.
+
+Patch surface priority:
+
+Priority 1 - deterministic candidate extraction:
+
+- whichever existing Category Derivation extractor file contains the deterministic candidate extraction logic, selected from:
+  - lib/activity/categoryDerivation/ruleExtractor.ts
+  - lib/activity/categoryDerivation/ruleExtractors.ts
+  - lib/activity/categoryDerivation/candidateExtractor.ts
+  - lib/activity/categoryDerivation/extractCandidates.ts
+  - any exact extractor file identified in section 7
+
+Priority 2 - candidate types only if required:
+
+- lib/activity/categoryDerivation/types.ts
+
+Use this only if current candidate type can safely accept semantic group metadata such as role, care_function, purpose, ambiguity_marker.
+
+If not required, avoid type changes.
+
+Priority 3 - resolver only if new deterministic slugs need existing category resolution behavior:
+
+- whichever resolver file exists from section 8, especially:
+  - lib/activity/categoryDerivation/resolveCandidates.ts
+  - lib/activity/categoryDerivation/resolver.ts
+
+Do not rewrite resolver behavior broadly.
+
+Priority 4 - seed support only if existing categories are required and safe:
+
+- exact seed/migration/script files from section 11
+
+Do not execute SQL in PowerShell.
+
+Do not add broad migrations before the extractor behavior is proven.
+
+Priority 5 - benchmark/debug proof route only after extraction patch is known:
+
+- existing debug route files from section 10
+- or a new narrow debug route in src/app/api/activity/debug only if there is no existing safe benchmark route
+
+15. Non-patch files for the first implementation
+
+Do not patch these unless D2 proves it is necessary:
+
+- src/app/api/activity/complete/route.ts
+- lib/activity/categoryDerivation/completeRouteIntegration.ts
+- lib/activity/categoryDerivation/persistDerivations.ts
+- Value Object Bridge files
+
+Reason:
+
+The real complete route production_persist path is already proven.
+
+The first semantic patch should focus on deterministic candidate extraction and benchmark visibility, not on lifecycle or persistence internals.
+
+16. D2 planning decision
+
+Recommended next step:
+
+P4.10.0-C8-F-D2 - create compact source pack for exact semantic patch files
+
+D2 should extract only the exact files needed for patch authoring into a compact snapshot.
+
+D2 should include:
+
+- selected extractor file(s)
+- selected type file(s)
+- selected resolver file(s)
+- selected debug route candidates
+- selected seed candidates only as read-only reference
+
+D2 should not patch source code yet.
+
+D2 should not run runtime proof.
+
+D2 should not execute SQL.
+
+D2 should not cleanup.
+
+D2 should not commit.
+
+17. D3 implementation direction
+
+After D2, the first actual patch should be:
+
+P4.10.0-C8-F-D3 - patch deterministic family/childcare semantic candidates for B1/B2/F1
+
+D3 should add deterministic handling for:
+
+B1:
+
+- учил математику с ребёнком
+- учил математику с ребенком
+
+Expected slugs:
+
+- mathematics
+- child
+- learning
+- teaching
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+
+B2:
+
+- ребёнок учил математику рядом со мной
+- ребенок учил математику рядом со мной
+
+Expected slugs:
+
+- mathematics
+- child
+- learning
+- child-supervision
+- ambiguity-passive-supervision
+- ambiguity-active-help-unknown
+
+F1:
+
+- I was with my child while they did homework
+
+Expected slugs:
+
+- child
+- homework
+- child-supervision
+- childcare
+- parental-care
+- ambiguity-passive-supervision
+- ambiguity-active-help-unknown
+
+18. D3 anti-regression rules
+
+D3 must preserve these rules:
+
+- B1 can include teaching.
+- B2 must not overclaim active teaching.
+- F1 must not overclaim active teaching.
+- B2/F1 must preserve ambiguity.
+- no OpenAI is used.
+- no schema change is made.
+- no SQL is executed from PowerShell.
+- no cleanup is executed.
+
+19. D3 validation direction
+
+D3 validation should include:
+
+- TypeScript validation
+- targeted lint for patched files if possible
+- static marker check for B1/B2/F1 terms
+- no runtime proof yet unless explicitly moved to C8-F-E
+
+20. E proof direction
+
+The runtime/debug proof step should be later:
+
+P4.10.0-C8-F-E - deterministic semantic coverage proof for B1/B2/F1
+
+E should prove candidates are produced and visible.
+
+E should not use OpenAI.
+
+E should not execute SQL from PowerShell.
+
+E should not use normal user activity.
+
+21. Safety gates preserved
+
+Until a later approved document changes them:
+
+- no cleanup command
+- no SQL in PowerShell
+- no SQL execution
+- no OpenAI call
+- no schema or migration change
+- no RLS or permission change
+- no UI work
+- no broad refactor
+- no runtime proof in this step
+- no normal user activity used for proof
+- no failActivityComplete=true
+
+22. Exact verification markers
+
+- P4.10.0-C8-F-D1
+- decide exact files to patch based on D0 semantic coverage source snapshot
+- de55d99 Decide Category Derivation semantic coverage patch strategy
+- B1 учил математику с ребёнком
+- B2 ребёнок учил математику рядом со мной
+- F1 I was with my child while they did homework
+- deterministic candidate extraction
+- exact patch-surface decision
+- selected extractor file
+- selected type file
+- selected resolver file
+- selected debug route candidates
+- P4.10.0-C8-F-D2
+- create compact source pack for exact semantic patch files
+- P4.10.0-C8-F-D3
+- patch deterministic family/childcare semantic candidates for B1/B2/F1
+- P4.10.0-C8-F-E
+- deterministic semantic coverage proof for B1/B2/F1
+- No runtime proof is executed here
+- No SQL is executed here
+- No cleanup is executed here
+- No source code is changed here
+
+23. Definition of Done
+
+This C8-F-D1 decision step is complete when:
+
+- this document exists under docs/value-objects
+- only this document is changed
+- document is committed and pushed
+- working tree is clean
+- recent git log shows this document above de55d99
