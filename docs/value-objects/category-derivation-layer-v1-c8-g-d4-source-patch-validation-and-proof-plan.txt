@@ -1,0 +1,454 @@
+GPT-APP / AI-NAVIGATOR
+Category Derivation Layer v1
+P4.10.0-C8-G-D4
+Source patch validation summary and deterministic proof plan
+
+Status: DOC-ONLY VALIDATION SUMMARY / PROOF PLAN / FIX1
+Generated at: 2026-05-23 15:29:50 +02:00
+Baseline HEAD: 59756c5
+Previous block: P4.10.0-C8-G-D3 — patch deterministic business/sales semantic candidates
+Next planned block: P4.10.0-C8-G-E — deterministic extractor-level proof
+
+1. Purpose
+
+This document records the validation result of the C8-G-D3 source patch and prepares the deterministic proof plan for C8-G-E.
+
+D4 does not run the proof.
+D4 does not change source code.
+D4 does not run SQL.
+D4 does not call OpenAI.
+D4 does not call /api/activity/complete.
+
+Exact verifier markers intentionally present:
+- No SQL
+- No OpenAI
+
+2. Sources used
+
+C8-G-A benchmark inventory:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-a-business-sales-semantic-coverage-benchmark-inventory.txt
+SHA256: FC1FB9DE002BA97B15944244866D6AF756C075975A467E67D7511925E46BCD30
+
+C8-G-B support inspection:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-b-current-business-sales-support-inspection.txt
+SHA256: 1E3814AC0E64042FC77C09B7FBC55ED394114AB939CC773698377E0671D6D553
+
+C8-G-C patch strategy:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-c-minimal-additive-business-sales-patch-strategy.txt
+SHA256: B76FD22E002178DF48BA39C9A5B17C32B18541EBCBA5DEF05BC87D7435259FE3
+
+C8-G-D1 exact files decision:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-d1-exact-files-to-patch-decision.txt
+SHA256: D94EF4D04FE5E0A0C7C7F13504ECBB2B391526BAE3B53C96BC55B799C12FE209
+
+C8-G-D3 source patch document:
+.\docs\value-objects\category-derivation-layer-v1-c8-g-d3-business-sales-semantic-candidate-patch.txt
+SHA256: E5C72963F89E136150B95FEF7183425B471BA52EDC1AD6C75E5FEA7C4B0BFD52
+
+Patched source:
+.\lib\activity\categoryDerivation\ruleExtractor.ts
+SHA256: 1F1F49063D7F7362AFC337F90D1B8FA0E314AF9CD0FB2EFAE2C147A8DEF01194
+
+3. D3 result recorded
+
+C8-G-D3 finished successfully.
+
+Commit:
+59756c5 — Patch Business Sales Semantic Coverage candidates
+
+D3 changed only:
+
+- lib/activity/categoryDerivation/ruleExtractor.ts
+- docs/value-objects/category-derivation-layer-v1-c8-g-d3-business-sales-semantic-candidate-patch.txt
+
+D3 validation recorded in the console output:
+
+- patched business/sales source markers verified
+- C8-F baseline markers preserved
+- forbidden overclaim markers absent
+- git diff --check PASS
+- TypeScript PASS
+- targeted ESLint PASS
+- commit and push completed
+- final working tree clean
+- no runtime proof executed
+- no SQL executed
+- no OpenAI call executed
+
+4. New deterministic business/sales markers added by D3
+
+The D3 patch added these deterministic rule markers:
+
+- business_sales_commercial_proposal_client_semantics
+- business_sales_potential_client_proposal_semantics
+- business_sales_follow_up_after_meeting_semantics
+- business_sales_price_objection_semantics
+- business_sales_crm_lead_update_semantics
+- business_sales_language_training_preparation_semantics
+- business_sales_passive_reading_ambiguity
+- business_sales_informal_conversation_ambiguity
+
+5. C8-F baseline markers that must remain preserved
+
+The following existing family/childcare markers must remain present during C8-G-E proof:
+
+- teach_math_with_child_care_semantics
+- child_studied_math_nearby_supervision_ambiguity
+- child_homework_supervision_ambiguity
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+- child-supervision
+- homework
+- ambiguity-passive-supervision
+- ambiguity-active-help-unknown
+
+6. C8-G-E proof type
+
+C8-G-E should be an extractor-level deterministic proof.
+
+It should not be:
+
+- /api/activity/complete proof
+- SQL proof
+- OpenAI proof
+- browser runtime proof
+- resolver proof
+- bridge proof
+- persistence proof
+- UI proof
+
+Reason:
+
+The D3 patch changed only ruleExtractor.ts.
+Therefore the next proof should prove that ruleExtractor deterministically produces the expected candidate slugs and avoids forbidden overclaims.
+
+7. C8-G-E proof method
+
+Recommended method:
+
+- create a temporary local runner outside committed source, or generate a temporary runner and remove it before commit
+- compile TypeScript using the same tsc -> node pattern used in C8-F-E-RECOVERY1
+- import or execute deriveCategoryCandidates from lib/activity/categoryDerivation/ruleExtractor.ts
+- run deterministic test cases S1/S2/S3/S4/S5/S8/S9/S10
+- verify required slugs are present
+- verify forbidden slugs are absent
+- verify C8-F baseline case still passes
+- write proof output to Downloads
+- do not commit temporary runner
+- document PASS/FAIL in C8-G-F after proof
+
+8. C8-G-E benchmark cases
+
+Case S1 — clear commercial proposal to client
+
+Input:
+писал коммерческое предложение клиенту 40 минут
+
+Expected required slugs:
+- writing
+- commercial-proposal
+- client
+- b2b-sales
+- work-responsibility
+- customer-responsibility
+- sales-responsibility
+- income-generation
+- duration-minutes
+
+Expected secondary/possible slugs:
+- business-development
+- deal-preparation
+- relationship-management
+
+Forbidden slugs:
+- closed-deal
+- payment-received
+- contract-signed
+- meeting-held
+- successful-sale
+
+Case S2 — proposal to potential client
+
+Input:
+prepared a proposal for a potential client
+
+Expected required slugs:
+- preparing
+- commercial-proposal
+- potential-client
+- b2b-sales
+- sales-responsibility
+- business-development
+- client-acquisition
+- deal-preparation
+
+Expected secondary/possible slugs:
+- income-generation
+- lead-nurturing
+
+Forbidden slugs:
+- existing-client
+- closed-deal
+- contract-signed
+- payment-received
+- client
+
+Important:
+S2 must not collapse potential-client into existing client.
+
+Case S3 — follow-up after meeting
+
+Input:
+wysłałem follow-up do klienta po spotkaniu
+
+Expected required slugs:
+- sending
+- follow-up-message
+- client
+- meeting-follow-up
+- b2b-sales
+- customer-responsibility
+- relationship-management
+- sales-responsibility
+
+Expected secondary/possible slugs:
+- pipeline-management
+
+Forbidden slugs:
+- closed-deal
+- contract-signed
+- payment-received
+- successful-sale
+- proposal-sent
+
+Case S4 — objection handling / price
+
+Input:
+llamé a un cliente para aclarar objeciones sobre el precio
+
+Expected required slugs:
+- calling
+- client
+- objection-handling
+- price-objection
+- negotiation
+- b2b-sales
+- customer-responsibility
+- sales-responsibility
+
+Forbidden slugs:
+- closed-deal
+- payment-received
+- discount-given
+- successful-sale
+
+Case S5 — CRM update after lead call
+
+Input:
+aktualizowałem CRM po rozmowie z leadem
+
+Expected required slugs:
+- updating
+- crm-record
+- lead
+- post-call-documentation
+- sales-admin
+- pipeline-management
+- work-responsibility
+- sales-responsibility
+
+Forbidden slugs:
+- client
+- customer-responsibility
+- closed-deal
+- proposal-written
+- payment-received
+
+Important:
+S5 must preserve lead as lead, not convert it into client/customer responsibility.
+
+Case S8 — sales language training
+
+Input:
+учил немецкие фразы для B2B-продаж
+
+Expected required slugs:
+- learning
+- german-language
+- b2b-sales
+- sales-training
+- professional-development
+- career-development
+- preparation
+
+Expected secondary/possible slugs:
+- future-client-communication
+- income-generation
+
+Forbidden slugs:
+- client
+- commercial-proposal
+- customer-responsibility
+- active-sales-call
+- work-responsibility
+
+Important:
+S8 is preparation/professional development, not real client work.
+
+Case S9 — passive reading about sales
+
+Input:
+читал статью о продажах за кофе
+
+Expected required slugs:
+- reading
+- sales-topic
+- self-education
+- passive-learning
+
+Expected secondary/possible slugs:
+- professional-development
+- rest-context
+
+Forbidden slugs:
+- client
+- b2b-sales
+- work-responsibility
+- sales-responsibility
+- customer-responsibility
+- income-generation
+
+Important:
+S9 must not turn passive reading into active work/sales responsibility.
+
+Case S10 — informal conversation about sales
+
+Input:
+разговаривал с другом о продажах
+
+Expected required slugs:
+- conversation
+- friend
+- sales-topic
+- informal-discussion
+
+Expected secondary/possible slugs:
+- reflection
+- possible-sales-learning
+- possible-business-idea
+
+Forbidden slugs:
+- client
+- lead
+- work-responsibility
+- sales-responsibility
+- customer-responsibility
+- income-generation
+- business-development
+
+Important:
+S10 must not turn informal sales-topic conversation into professional work.
+
+9. C8-F baseline preservation case for C8-G-E
+
+Include at least one C8-F baseline case:
+
+Input:
+учил математику с ребёнком 30 минут
+
+Expected slugs:
+- mathematics
+- child
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- family-duty
+
+Expected marker:
+- teach_math_with_child_care_semantics
+
+Forbidden baseline regression:
+- C8-G patch must not remove or weaken C8-F family/childcare semantics.
+
+10. Proof PASS criteria for C8-G-E
+
+C8-G-E can be marked PASS only if:
+
+- every included C8-G case returns all required slugs
+- forbidden slugs are absent for every included C8-G case
+- secondary/possible slugs are present where they were intentionally added by D3
+- S2 does not return client as a replacement for potential-client
+- S5 does not return customer-responsibility or client for lead-only CRM update
+- S8 does not return real client work markers
+- S9 does not return work/sales/customer responsibility or income-generation as core
+- S10 does not return work/sales/customer responsibility or income-generation as core
+- C8-F baseline preservation case still returns expected family/childcare slugs
+- TypeScript remains valid if temporary runner compilation requires it
+- final repository status is clean after proof
+
+11. Proof FAIL handling
+
+If C8-G-E fails:
+
+- do not commit anything
+- do not patch immediately inside the proof step
+- save the full proof output
+- identify failed case, missing slug or forbidden overclaim
+- create a separate fix plan step before source changes
+- preserve the D3 commit as the last completed source patch unless a controlled fix is planned
+
+12. What not to repeat now
+
+Do not repeat C8-G-A/B/C/D1/D2.
+Do not repeat D3 patch.
+Do not re-run SQL.
+Do not call OpenAI.
+Do not test /api/activity/complete.
+Do not start resolver/bridge/persistence work.
+Do not start UI work.
+Do not expand to S6/S7/S11/S12 until the first proof group is stable.
+
+13. Recommended next step
+
+P4.10.0-C8-G-E — deterministic extractor-level proof.
+
+C8-G-E should:
+
+- run the included benchmark cases
+- check expected and forbidden slugs
+- check C8-F baseline preservation
+- write proof output to Downloads
+- keep repository clean
+- make no commit unless the proof plan explicitly includes a result document step, which is not recommended for E
+
+After E:
+
+P4.10.0-C8-G-F should document PASS/FAIL and commit the result document.
+
+14. Definition of Done for C8-G-D4-FIX1
+
+C8-G-D4-FIX1 is done when:
+
+- this document exists under docs/value-objects
+- it includes exact verifier markers "No SQL" and "No OpenAI"
+- it records D3 validation status
+- it lists D3 source markers
+- it defines C8-G-E proof type and method
+- it defines S1/S2/S3/S4/S5/S8/S9/S10 expected and forbidden slugs
+- it defines C8-F baseline preservation check
+- it defines PASS/FAIL criteria
+- no source-code files changed
+- no SQL was run
+- no OpenAI was called
+- no runtime proof was run
+- git diff contains only this document
+- document is committed and pushed
+- final git status is clean
+
+15. Commit message
+
+Plan Business Sales Semantic Coverage deterministic proof
