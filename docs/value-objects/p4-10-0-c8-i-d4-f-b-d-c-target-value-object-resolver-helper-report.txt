@@ -1,0 +1,64 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-D-C — Target Value Object Resolver Helper Report
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-D-C
+Type: implementation step with target Value Object resolver helper only
+Status: TARGET VALUE OBJECT RESOLVER ONLY / NO ROUTE / NO STATE FACT WRITES / NO STATE FACTS CREATED
+
+Previous closed step:
+- P4.10.0-C8-I-D4-F-B-D-B — auth resolver helper
+  Commit: 47fee06
+
+Created files:
+- lib/activity/stateFacts/controlledPersistence/targetValueObject.ts
+
+Existing files used:
+- lib/activity/stateFacts/controlledPersistence/types.ts
+- lib/activity/stateFacts/controlledPersistence/auth.ts
+
+Helper created:
+- resolveStateFactTargetValueObject
+
+Read-only sources:
+- value_objects by id
+
+Access rule implemented in this step:
+- valueObjectId alone is not enough for persistence permission.
+- Target Value Object must be loaded server-side.
+- owner_actor_id must match authenticated actorId.
+- organization_id with matching owner_actor_id is classified as organization_actor.
+- otherwise access is denied.
+- public/catalog visibility is not write permission.
+
+Hard boundaries preserved:
+- No SQL migration created.
+- No API route created.
+- No state fact write path added.
+- No insert into value_object_state_facts.
+- No update of state_dimensions.
+- No Value Object creation or update.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+Safety checks:
+- Required target resolver markers: PASS
+- Forbidden write/action literals in targetValueObject.ts: PASS
+- Targeted ESLint: PASS
+- value_object_state_facts access: ABSENT
+- state_dimensions access: ABSENT
+- route exports: ABSENT
+
+Important notes:
+- This helper resolves target Value Object access only.
+- It does not resolve state dimensions.
+- It does not validate state fact candidates.
+- It does not build insert payloads.
+- It does not perform idempotency checks.
+- It does not persist state facts.
+- Broader organization role resolution remains a future extension.
+
+Recommended next step:
+P4.10.0-C8-I-D4-F-B-D-D — state dimension resolver helper with tests, no state fact writes.
+
+End of D4-F-B-D-C report.
