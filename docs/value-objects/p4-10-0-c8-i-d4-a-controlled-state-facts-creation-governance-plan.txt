@@ -1,0 +1,458 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-A — Controlled State Facts Creation Governance Plan
+
+Date: 2026-05-24
+
+Status:
+DRAFT GOVERNANCE PLAN / NO SQL / NO RUNTIME CHANGES
+
+Related phase:
+P4.10.0-C8-I — State Layers / Similarity / Relevance / NBA Readiness
+
+Previous completed step:
+P4.10.0-C8-I-D3-I — State Dimensions Seed Execution Smoke-Check Report
+
+Previous commits:
+- d3553fc docs: add C8-I-D3 seed execution smoke check report
+- e2cc497 db: add reviewed C8-I-D3 state dimensions seed migration
+- 8ebde4c docs: add C8-I-D3-C draft state dimensions seed SQL
+- 38ced40 docs: add C8-I-D3-B reviewed state dimensions seed list
+- 826c6b2 docs: add C8-I-D3 state dimensions seed governance plan
+
+Purpose:
+Define the safe governance model for creating state facts / state signals after the first conservative state_dimensions dictionary has been seeded.
+
+This document does not create SQL.
+This document does not modify database schema.
+This document does not create runtime code.
+This document does not create state facts.
+
+D4-A exists to prevent unsafe implementation of value_object_state_facts.
+
+Core architectural decision:
+State facts are controlled internal records.
+They are not direct public writes.
+They are not medical, hormonal, psychological, legal, financial, or confirmed business conclusions.
+They are planning signals, proxy signals, user-confirmed context flags, or system estimates.
+
+Confirmed D3 foundation:
+The first 12 state dimensions exist in public.state_dimensions:
+
+1. attention_load
+2. fatigue_signal
+3. recovery_need
+4. stress_load_estimate
+5. learning_progress_signal
+6. language_practice_balance
+7. physical_activity_load
+8. family_care_load_signal
+9. work_responsibility_load
+10. pipeline_building_effort
+11. financial_pressure_signal
+12. social_interaction_load
+
+D3 verified:
+- seed_rows_count = 12
+- proxy_only = 3
+- system_estimate = 8
+- user_confirmed = 1
+- sensitive false = 6
+- sensitive true = 6
+- default_privacy_level private = 12
+- excluded forbidden dimensions absent = 0 found
+- state_dimensions has RLS enabled
+- direct public access is denied
+
+D4-A safety boundary:
+D4 must not introduce:
+- public direct insert into value_object_state_facts
+- client-side direct writes to state facts
+- medical diagnosis
+- hormonal conclusions
+- psychological diagnosis
+- child development scoring
+- confirmed muscle growth / fat loss
+- confirmed income
+- confirmed client acquisition
+- confirmed deal closure
+- hidden financial inference
+
+D4 allowed output types:
+1. Safe estimate
+2. Proxy signal
+3. User-confirmed signal
+4. Rule-produced planning signal
+5. AI-assisted draft signal requiring governance
+6. Corrected / rollbackable signal
+
+D4 forbidden output types:
+1. Diagnosis
+2. Hormonal measurement without direct source
+3. Legal conclusion
+4. Employer evaluation
+5. Creditworthiness assessment
+6. Confirmed business outcome without explicit event source
+7. Child outcome score
+8. Body-composition confirmation
+9. Hidden inference about finances or health
+
+Terminology:
+Use "state fact" carefully.
+
+A state fact in this project means:
+A structured state-layer record created under controlled governance, linked to a value object, activity, source, or context, and used for planning and recommendation logic.
+
+It does not mean:
+An objective medical, psychological, financial, legal, or business truth.
+
+Preferred user-facing wording:
+- signal
+- estimate
+- planning signal
+- proxy signal
+- possible load
+- recent activity load
+- user-confirmed priority
+- may be useful
+- likely relevant for planning
+
+Avoid user-facing wording:
+- diagnosis
+- disorder
+- disease
+- hormone level
+- confirmed result
+- guaranteed progress
+- client acquired
+- deal closed
+- income earned
+- child improved
+- muscle growth confirmed
+
+Controlled creation pipeline:
+The future controlled state-facts creation mechanism should follow this sequence:
+
+1. Input event exists
+   Example sources:
+   - activity event
+   - manual activity record
+   - user correction
+   - user confirmation
+   - rule output
+   - AI-assisted derivation draft
+   - wearable/imported data later
+   - calendar/time-block context later
+
+2. Candidate state signal is proposed
+   The system proposes a candidate, not a final unsafe conclusion.
+
+3. Candidate references an existing state_dimension
+   The candidate must reference public.state_dimensions.dimension_key.
+
+4. Claim policy gate is checked
+   The candidate must comply with the state dimension claim_policy:
+   - system_estimate
+   - proxy_only
+   - user_confirmed
+   - direct_measurement
+   - blocked
+
+5. Source type gate is checked
+   The candidate source must be included in allowed_source_types for that dimension.
+
+6. Forbidden claims are checked
+   The candidate wording and internal claim must not match forbidden_claims.
+
+7. Safer wording is selected
+   The system must use safer_proxy_wording for summaries or recommendation explanations.
+
+8. Sensitivity and privacy are applied
+   default_privacy_level and is_sensitive must influence visibility and API behavior.
+
+9. Evidence is attached
+   A state fact should be traceable to activity/context/source evidence.
+
+10. Confidence is bounded
+   The system should store confidence as a planning confidence, not as truth certainty.
+
+11. Expiry/window logic is considered
+   Many state facts should be time-windowed and not permanent.
+
+12. User correction must be possible
+   User must be able to correct, reject, or override state signals later.
+
+Claim policy interpretation:
+
+1. system_estimate
+Allowed:
+- general planning estimates
+- workload estimates
+- recent activity distribution
+- practice balance
+- physical load estimate
+- pipeline effort estimate
+
+Not allowed:
+- confirmed result
+- diagnosis
+- hidden sensitive conclusion
+
+2. proxy_only
+Allowed:
+- weak proxy wording
+- possible tiredness
+- stress-load signal
+- care responsibility signal
+
+Not allowed:
+- direct medical/psychological/hormonal conclusion
+- diagnostic label
+- child outcome claim
+
+3. user_confirmed
+Allowed:
+- signal only if user explicitly entered or confirmed it
+- example: financial_pressure_signal
+
+Not allowed:
+- hidden inference from behavior
+- creditworthiness
+- bankruptcy risk
+- income confirmation without user input
+
+4. direct_measurement
+Allowed only when:
+- there is a real direct measurement source
+- the system has explicit source metadata
+- the measurement type is not over-interpreted
+
+For current D3 seed:
+No first-seed dimension uses direct_measurement.
+
+5. blocked
+Used when:
+- dimension exists only as a forbidden/blocked concept
+- no fact should be created
+- future governance needs to explicitly prevent a dangerous category
+
+For current D3 seed:
+No first-seed dimension uses blocked.
+
+Initial D4 dimensions by creation behavior:
+
+A. Can be system-estimated from activity/time context:
+- attention_load
+- recovery_need
+- learning_progress_signal
+- language_practice_balance
+- physical_activity_load
+- work_responsibility_load
+- pipeline_building_effort
+- social_interaction_load
+
+B. Must remain proxy-only:
+- fatigue_signal
+- stress_load_estimate
+- family_care_load_signal
+
+C. Requires user confirmation:
+- financial_pressure_signal
+
+Important per-dimension notes:
+
+attention_load:
+Can be estimated from deep work, language learning, planning, debugging, long uninterrupted sessions.
+Must not imply ADHD, cognitive impairment, or mental-health diagnosis.
+
+fatigue_signal:
+Can be a weak proxy from duration, sleep-related context, workload, low-efficiency patterns, or user input.
+Must not imply diagnosed fatigue, chronic fatigue, medical exhaustion, or burnout diagnosis.
+
+recovery_need:
+Can suggest lower load, stretching, food, hydration, sleep, walking, or passive learning.
+Must not imply medical recovery requirement, injury diagnosis, or illness diagnosis.
+
+stress_load_estimate:
+Can be a proxy for emotional load after conflict, interruption, workload, or user-confirmed stress.
+Must not imply cortisol level, anxiety disorder, panic disorder, psychiatric condition, or mental illness.
+
+learning_progress_signal:
+Can reflect practice momentum, repetitions, tests, corrections, and review frequency.
+Must not imply official certificate level or guaranteed exam readiness.
+
+language_practice_balance:
+Can detect under-practiced languages or over-concentration.
+Must not imply official fluency or certificate achievement.
+
+physical_activity_load:
+Can reflect duration, intensity, movement type, and training load.
+Must not imply muscle growth, fat loss, testosterone change, injury diagnosis, or medical improvement.
+
+family_care_load_signal:
+Can describe family/care responsibility load such as helping a child learn.
+Must not imply child development improvement, parenting quality score, family diagnosis, or child psychological state.
+
+work_responsibility_load:
+Can estimate work obligation load.
+Must not imply employer evaluation, legal conclusion, disciplinary risk, or job performance score.
+
+pipeline_building_effort:
+Can reflect preparation effort for sales, business development, job search, partnerships, outreach.
+Must not imply client acquired, deal closed, revenue earned, guaranteed lead, or confirmed sales result.
+
+financial_pressure_signal:
+Can exist only from explicit user confirmation or manual input.
+Must not infer financial distress, bankruptcy risk, creditworthiness, income, or debt without user input.
+
+social_interaction_load:
+Can estimate people-facing communication load.
+Must not imply social anxiety, personality disorder, relationship diagnosis, or psychological condition.
+
+Minimum future state fact fields:
+The future implementation should verify whether public.value_object_state_facts already has sufficient fields for:
+
+- id
+- owner / user / actor scope
+- value_object_id
+- state_dimension_id or dimension_key
+- source_type
+- source_id
+- signal_value / score / minutes / flag / json payload
+- confidence
+- claim_policy_applied
+- privacy_level
+- is_sensitive
+- evidence_json
+- safer_wording_snapshot
+- valid_from
+- valid_until
+- created_by_system / created_by_rule / created_by_ai / created_by_user
+- status
+- correction / rollback support
+- metadata_json
+- created_at
+- updated_at
+
+D4-B should audit the actual existing table before proposing changes.
+
+Runtime creation modes:
+
+1. Shadow candidate mode
+The system proposes candidate state signals but does not persist them.
+Useful for testing AI/rule logic safely.
+
+2. Draft persist mode
+The system persists draft state facts with low authority and clear status.
+These facts may require review, user confirmation, or automatic expiry.
+
+3. Confirmed persist mode
+The system persists confirmed facts only when:
+- user confirmed,
+- rule is safe,
+- source is allowed,
+- claim policy passed,
+- privacy is applied.
+
+4. Correction mode
+The user or system can invalidate, correct, or supersede a state fact.
+
+5. Rollback mode
+Used when activity correction or deletion changes state facts.
+
+Recommended D4 implementation order:
+
+D4-A:
+Create governance plan.
+No SQL.
+No runtime code.
+
+D4-B:
+Read-only audit of existing value_object_state_facts and related tables.
+Check:
+- columns
+- constraints
+- RLS
+- policies
+- indexes
+- foreign keys
+- existing rows
+- relationship to state_dimensions
+- relationship to value_objects
+- relationship to activity_events
+
+D4-C:
+Design state fact creation contract.
+Define:
+- input shape
+- candidate shape
+- validation gate
+- output shape
+- rejection reasons
+- safe wording
+- rollback requirements
+
+D4-D:
+Create non-executable draft design for internal function/API.
+No production write yet.
+
+D4-E:
+Create shadow-mode debug route or script.
+It should generate candidate state signals but not persist them.
+
+D4-F:
+Test shadow candidate generation with safe examples:
+- "worked on German for 30 minutes"
+- "walked to work for 20 minutes"
+- "helped child with math for 25 minutes"
+- "sent 5 sales emails"
+- "I feel financially pressured this week"
+
+D4-G:
+Only after shadow tests pass, design controlled draft persistence.
+
+D4-H:
+Only after governance and RLS review, create actual persistence path.
+
+Recommended D4-B read-only audit areas:
+
+1. public.value_object_state_facts
+2. public.state_dimensions
+3. public.value_objects
+4. public.activity_events
+5. public.impact_events
+6. public.impact_rules
+7. related RLS policies
+8. related indexes
+9. related constraints
+10. existing state snapshot/delta tables if present
+
+Strict non-goals for D4:
+- Do not create a universal state engine yet.
+- Do not calculate "best next action" yet.
+- Do not create hormonal/medical/psychological interpretation.
+- Do not create full baseline context engine yet.
+- Do not create multi-user public visibility.
+- Do not create state facts from frontend direct writes.
+- Do not change Value Object architecture.
+- Do not introduce Value Object subtypes.
+
+Architectural link to NBA v0:
+D4 state facts are needed later so the system can determine weak directions.
+
+NBA v0 target logic remains:
+1. Determine weakest directions.
+2. Show ordered list from weaker to stronger.
+3. Ask user which direction they want to work on.
+4. After user chooses a direction, propose possible activities / Value Objects.
+
+D4 does not implement NBA.
+D4 prepares the safe state signal layer required for later NBA.
+
+Completion criteria for D4-A:
+- Governance document exists.
+- It explicitly blocks unsafe facts.
+- It preserves unified Value Object architecture.
+- It defines safe creation pipeline.
+- It defines claim policy gates.
+- It defines next D4-B read-only audit.
+- It is committed to git.
