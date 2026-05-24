@@ -1,0 +1,150 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-E-B-CHECK4-FIX1 — Corrected Shadow Route Runtime Smoke Report
+
+Date: 2026-05-24
+Endpoint: /api/activity/debug/state-signal-candidate-shadow-test
+Step: P4.10.0-C8-I-D4-E-B-CHECK4-FIX1
+Result: PASS
+
+No-write guarantees checked in every POST scenario:
+- noWriteGuarantee = true
+- wouldPersist = false
+- debug.writesAttempted = false
+- debug.stateFactsCreated = 0
+- debug.stateDimensionsCreated = 0
+- debug.supabaseImported = false
+
+GET metadata:
+{
+    "ok":  true,
+    "endpoint":  "/api/activity/debug/state-signal-candidate-shadow-test",
+    "postEndpoint":  "POST /api/activity/debug/state-signal-candidate-shadow-test",
+    "p4Step":  "P4.10.0-C8-I-D4-E-B",
+    "contractVersion":  "state-fact-creation-contract-v1",
+    "mode":  "shadow_evaluation",
+    "noWriteGuarantee":  true,
+    "wouldPersist":  false,
+    "routeIsShadowOnly":  true,
+    "supportedDimensions":  [
+                                {
+                                    "dimensionKey":  "attention_load",
+                                    "title":  "Attention Load",
+                                    "claimPolicy":  "system_estimate",
+                                    "isSensitive":  false,
+                                    "defaultPrivacyLevel":  "private"
+                                },
+                                {
+                                    "dimensionKey":  "family_care_load_signal",
+                                    "title":  "Family Care Load Signal",
+                                    "claimPolicy":  "proxy_only",
+                                    "isSensitive":  true,
+                                    "defaultPrivacyLevel":  "private"
+                                },
+                                {
+                                    "dimensionKey":  "fatigue_signal",
+                                    "title":  "Fatigue Signal",
+                                    "claimPolicy":  "proxy_only",
+                                    "isSensitive":  true,
+                                    "defaultPrivacyLevel":  "private"
+                                },
+                                {
+                                    "dimensionKey":  "financial_pressure_signal",
+                                    "title":  "Financial Pressure Signal",
+                                    "claimPolicy":  "user_confirmed",
+                                    "isSensitive":  true,
+                                    "defaultPrivacyLevel":  "private"
+                                },
+                                {
+                                    "dimensionKey":  "language_practice_balance",
+                                    "title":  "Language Practice Balance",
+                                    "claimPolicy":  "system_estimate",
+                                    "isSensitive":  false,
+                                    "defaultPrivacyLevel":  "private"
+                                },
+                                {
+                                    "dimensionKey":  "learning_progress_signal",
+                                    "title":  "Learning Progress Signal",
+                                    "claimPolicy":  "system_estimate",
+                                    "isSensitive":  false,
+                                    "defaultPrivacyLevel":  "private"
+                                },
+                                {
+                                    "dimensionKey":  "physical_activity_load",
+                                    "title":  "Physical Activity Load",
+                                    "claimPolicy":  "system_estimate",
+                                    "isSensitive":  true,
+                                    "defaultPrivacyLevel":  "private"
+                                },
+                                {
+                                    "dimensionKey":  "pipeline_building_effort",
+                                    "title":  "Pipeline Building Effort",
+                                    "claimPolicy":  "system_estimate",
+                                    "isSensitive":  false,
+                                    "defaultPrivacyLevel":  "private"
+                                },
+                                {
+                                    "dimensionKey":  "recovery_need",
+                                    "title":  "Recovery Need",
+                                    "claimPolicy":  "system_estimate",
+                                    "isSensitive":  true,
+                                    "defaultPrivacyLevel":  "private"
+                                },
+                                {
+                                    "dimensionKey":  "social_interaction_load",
+                                    "title":  "Social Interaction Load",
+                                    "claimPolicy":  "system_estimate",
+                                    "isSensitive":  false,
+                                    "defaultPrivacyLevel":  "private"
+                                },
+                                {
+                                    "dimensionKey":  "stress_load_estimate",
+                                    "title":  "Stress Load Estimate",
+                                    "claimPolicy":  "proxy_only",
+                                    "isSensitive":  true,
+                                    "defaultPrivacyLevel":  "private"
+                                },
+                                {
+                                    "dimensionKey":  "work_responsibility_load",
+                                    "title":  "Work Responsibility Load",
+                                    "claimPolicy":  "system_estimate",
+                                    "isSensitive":  false,
+                                    "defaultPrivacyLevel":  "private"
+                                }
+                            ],
+    "supportedScenarios":  [
+                               "worked on German for 30 minutes",
+                               "walked to work for 20 minutes",
+                               "helped child with math for 25 minutes",
+                               "sent 5 sales emails",
+                               "I feel financially pressured this week",
+                               "I probably have high cortisol because I worked too much",
+                               "I sent 5 sales emails and closed 2 deals",
+                               "I studied German, so my German level improved"
+                           ]
+}
+
+POST scenario summary:
+
+Name                                          Pass Decision                          ExpectedDecision               
+----                                          ---- --------                          ----------------               
+German practice 30 minutes                    True accept_for_controlled_persistence accept_for_controlled_persis...
+Walked to work 20 minutes                     True accept_for_controlled_persistence accept_for_controlled_persis...
+Helped child with math 25 minutes             True accept_for_controlled_persistence accept_for_controlled_persis...
+Sent 5 sales emails                           True accept_for_controlled_persistence accept_for_controlled_persis...
+Financial pressure without confirmation       True shadow_only                       shadow_only                    
+Financial pressure with explicit confirmation True accept_for_controlled_persistence accept_for_controlled_persis...
+Forbidden cortisol overclaim                  True reject                            reject                         
+Sales emails with deal-closed overclaim       True reject                            reject                         
+AI-only German candidate                      True shadow_only                       shadow_only                    
+Unknown dimension                             True reject                            reject                         
+
+
+
+
+Important note:
+Global npm.cmd run lint is not clean because of pre-existing unrelated project lint errors.
+Targeted ESLint for the new route passed with exit code 0.
+npm.cmd run build passed with exit code 0 and included the new route in the Next.js route list.
+Previous CHECK4 had a test harness issue with null rejectionCode handling; this report supersedes it.
+
+End of corrected runtime smoke report.
