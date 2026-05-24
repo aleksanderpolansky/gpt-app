@@ -1,0 +1,75 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-D-E - State Fact Candidate Validator Helper Report
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-D-E
+Type: implementation step with state fact candidate validator helper only
+Status: STATE FACT CANDIDATE VALIDATOR ONLY / NO ROUTE / NO DATABASE READS / NO STATE FACT WRITES / NO STATE FACTS CREATED
+
+Previous closed step:
+- P4.10.0-C8-I-D4-F-B-D-D - state dimension resolver helper
+  Commit: 7908c75
+
+Created files:
+- lib/activity/stateFacts/controlledPersistence/validator.ts
+
+Existing files used:
+- lib/activity/stateFacts/controlledPersistence/types.ts
+- lib/activity/stateFacts/controlledPersistence/auth.ts
+- lib/activity/stateFacts/controlledPersistence/targetValueObject.ts
+- lib/activity/stateFacts/controlledPersistence/dimension.ts
+
+Helper created:
+- validateStateFactCandidateAgainstContract
+
+Validation gates implemented in this step:
+- candidate trace id gate
+- dimension active gate
+- source type gate
+- AI-only direct persistence block
+- proposed value gate
+- evidence gate
+- safe wording gate
+- forbidden overclaim gate
+- confidence gate
+- claim strength gate
+- privacy / sensitivity gate
+- claim policy compatibility gate
+- user confirmation gate
+- valid window gate
+- rollback trace gate
+
+Hard boundaries preserved:
+- No SQL migration created.
+- No API route created.
+- No database read added.
+- No state fact write path added.
+- No insert into value_object_state_facts.
+- No update of state_dimensions.
+- No Value Object creation or update.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+Safety checks:
+- Required validator markers: PASS
+- Forbidden database/route/action literals in validator.ts: PASS
+- Targeted ESLint: PASS
+- value_object_state_facts access: ABSENT
+- route exports: ABSENT
+- supabase/auth0 imports: ABSENT
+
+Important notes:
+- This helper validates candidate safety only.
+- It does not decide authentication.
+- It does not decide target Value Object access.
+- It does not resolve state dimensions.
+- It does not build insert payloads.
+- It does not perform idempotency checks.
+- It does not persist state facts.
+- A shadow candidate is not a state fact.
+- An insertDraft is not a state fact.
+
+Recommended next step:
+P4.10.0-C8-I-D4-F-B-D-F - state fact insert payload builder helper with tests, no state fact writes.
+
+End of D4-F-B-D-E report.
