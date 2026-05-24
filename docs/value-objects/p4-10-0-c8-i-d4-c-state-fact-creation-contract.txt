@@ -1,0 +1,1046 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-C — State Fact Creation Contract
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-C
+Type: contract / design document
+Status: DRAFT CONTRACT / NO SQL / NO RUNTIME CHANGES
+
+Purpose
+-------
+Define the controlled contract for converting candidate state signals into value_object_state_facts.
+
+This document does not create SQL.
+This document does not modify database schema.
+This document does not create runtime code.
+This document does not create state facts.
+This document does not implement state engine.
+This document does not implement Next Best Action.
+
+D4-C exists to prevent unsafe persistence of state facts.
+
+Current Foundation
+------------------
+Previous completed steps:
+
+- P4.10.0-C8-I-D4-A:
+  Controlled State Facts Creation Governance Plan.
+  Commit: 0ceafce
+
+- P4.10.0-C8-I-D4-B:
+  Read-only State Facts Audit Report.
+  Commit: 0da4722
+
+D4-B confirmed:
+
+- value_object_state_facts exists.
+- value_object_state_facts has 0 rows.
+- value_object_state_facts has RLS enabled.
+- direct public access is denied.
+- state_dimensions contains 12 seeded dimensions.
+- related state/relevance tables are RLS-protected.
+- value_objects supports unified Value Object architecture.
+- activity_events can serve as source/evidence.
+
+Core Principle
+--------------
+A state hook or candidate state signal is not a state fact.
+
+A candidate can become a state fact only after passing all gates:
+
+1. dimension lookup gate
+2. claim policy gate
+3. source type gate
+4. evidence gate
+5. forbidden overclaim gate
+6. safe wording gate
+7. confidence / claim strength gate
+8. privacy / sensitivity gate
+9. value window / expiry gate
+10. correction / rollback readiness gate
+
+If any required gate fails, the candidate must be rejected or kept as shadow-only.
+
+Definitions
+-----------
+1. category candidate
+A semantic candidate produced from free text or activity analysis.
+It describes meaning, role, object, participant, purpose, metric, or context.
+
+It must not be persisted as a state fact directly.
+
+2. state hook candidate
+A signal that an activity may affect or indicate a state dimension.
+Example:
+- "helped child with math" may create a family_care_load_signal hook.
+- "walked to work" may create a physical_activity_load hook.
+- "sent 5 sales emails" may create a pipeline_building_effort hook.
+
+It is not a state fact yet.
+
+3. state signal candidate
+A structured candidate ready for governance gates.
+It references:
+- user
+- value object
+- state dimension key
+- proposed value
+- source
+- evidence
+- confidence
+- claim strength
+- validity window
+- privacy level
+- wording
+
+It still must not be persisted until all gates pass.
+
+4. state fact
+A controlled internal record in value_object_state_facts.
+It is not an absolute medical, psychological, legal, financial, or business truth.
+It is a governed planning signal, proxy signal, system estimate, or user-confirmed context flag.
+
+Allowed State Fact Types
+------------------------
+D4-C allows only the following safe output types:
+
+1. system_estimate
+A conservative estimate derived from safe activity data or rule output.
+Example:
+- 30 minutes of German practice may increase language_practice_balance.
+
+2. proxy_only
+A proxy signal that must not be worded as direct fact.
+Example:
+- fatigue_signal
+- stress_load_estimate
+- family_care_load_signal
+
+3. user_confirmed
+A fact/signal that requires explicit user confirmation.
+Example:
+- financial_pressure_signal
+
+4. rule_produced_planning_signal
+A deterministic planning signal produced by an approved internal rule.
+Example:
+- 5 sales emails -> pipeline_building_effort.
+
+5. ai_assisted_shadow_candidate
+AI may propose a candidate, but it remains shadow-only until governed by rules or user confirmation.
+
+6. corrected_or_rollbackable_signal
+A fact that can be corrected, revoked, superseded, or recalculated after activity correction.
+
+Forbidden State Fact Types
+--------------------------
+The system must reject candidates that imply:
+
+- medical diagnosis
+- hormonal measurement without direct source
+- psychological diagnosis
+- legal conclusion
+- employer evaluation
+- creditworthiness assessment
+- hidden financial inference
+- hidden health inference
+- confirmed income without explicit source
+- confirmed client acquisition without explicit source
+- confirmed deal closure without explicit source
+- confirmed muscle growth or fat loss without direct measurement
+- child development scoring
+- social ranking
+- irreversible personal profile judgment
+
+Forbidden wording examples:
+
+- "high cortisol"
+- "low dopamine"
+- "depression"
+- "burnout diagnosis"
+- "client acquired"
+- "deal closed"
+- "income confirmed"
+- "child improved"
+- "muscle growth confirmed"
+- "financially unreliable"
+- "bad employee"
+- "poor parent"
+
+Safe wording examples:
+
+- "stress load estimate increased based on indirect activity signals"
+- "fatigue signal detected as proxy only"
+- "pipeline building effort recorded"
+- "language practice balance improved"
+- "financial pressure signal recorded because the user explicitly confirmed it"
+- "family care load signal increased due to caregiving-related activity"
+
+Seeded Dimensions and Required Claim Policies
+---------------------------------------------
+The current D3 seeded dimensions are:
+
+1. attention_load
+   claim_policy: system_estimate
+   sensitive: false
+
+2. family_care_load_signal
+   claim_policy: proxy_only
+   sensitive: true
+
+3. fatigue_signal
+   claim_policy: proxy_only
+   sensitive: true
+
+4. financial_pressure_signal
+   claim_policy: user_confirmed
+   sensitive: true
+
+5. language_practice_balance
+   claim_policy: system_estimate
+   sensitive: false
+
+6. learning_progress_signal
+   claim_policy: system_estimate
+   sensitive: false
+
+7. physical_activity_load
+   claim_policy: system_estimate
+   sensitive: true
+
+8. pipeline_building_effort
+   claim_policy: system_estimate
+   sensitive: false
+
+9. recovery_need
+   claim_policy: system_estimate
+   sensitive: true
+
+10. social_interaction_load
+    claim_policy: system_estimate
+    sensitive: false
+
+11. stress_load_estimate
+    claim_policy: proxy_only
+    sensitive: true
+
+12. work_responsibility_load
+    claim_policy: system_estimate
+    sensitive: false
+
+Required rule:
+The candidate.dimension_key must exist in public.state_dimensions.
+If dimension_key is missing or inactive, reject.
+If dimension_id can be resolved, use it.
+If dimension_id cannot be resolved, reject for now.
+
+No draft dimension creation is allowed in D4-C.
+
+Candidate Input Shape
+---------------------
+A state signal candidate must use this logical shape:
+
+{
+  "schemaVersion": "state-signal-candidate-v1",
+  "userId": "uuid",
+  "valueObjectId": "uuid",
+  "dimensionKey": "string",
+  "proposedValue": {
+    "kind": "score|count|duration|flag|enum|text|object",
+    "value": "number|string|boolean|object",
+    "unit": "optional string",
+    "direction": "increase|decrease|neutral|unknown",
+    "window": "current|event|last_3h|today|last_7d|baseline|custom"
+  },
+  "source": {
+    "sourceType": "manual|user_confirmed|rule|ai|system|import|correction",
+    "sourceId": "uuid|null",
+    "sourceTable": "activity_events|value_objects|manual_input|import_batch|system_rule|correction|null"
+  },
+  "evidence": {
+    "evidenceType": "activity_event|user_confirmation|rule_match|ai_explanation|imported_measurement|correction",
+    "activityEventId": "uuid|null",
+    "matchedText": "string|null",
+    "matchedCategories": [],
+    "metricCandidates": [],
+    "ruleId": "string|null",
+    "ruleVersion": "string|null",
+    "userConfirmationText": "string|null",
+    "explanation": "string|null"
+  },
+  "confidence": 0.0,
+  "claimStrength": 0,
+  "privacyLevel": "private",
+  "validFrom": "timestamp|null",
+  "validTo": "timestamp|null",
+  "safeWording": {
+    "shortLabel": "string",
+    "userVisibleExplanation": "string",
+    "internalExplanation": "string"
+  },
+  "metadata": {
+    "candidateOrigin": "category_derivation|rule_processor|manual|import|correction",
+    "notAStateFactYet": true,
+    "requiresUserConfirmation": false,
+    "requiresExpiry": true,
+    "rollbackable": true
+  }
+}
+
+Required Candidate Fields
+-------------------------
+A candidate must have:
+
+- userId
+- valueObjectId
+- dimensionKey
+- proposedValue as object
+- source.sourceType
+- evidence as object
+- confidence in range 0..1
+- claimStrength in range 0..5
+- privacyLevel
+- safeWording.shortLabel
+- safeWording.userVisibleExplanation
+- metadata.notAStateFactYet = true
+
+If any required field is missing, reject.
+
+Gate 1 — Dimension Lookup Gate
+------------------------------
+Input:
+- candidate.dimensionKey
+
+Process:
+1. Look up public.state_dimensions by dimension_key.
+2. Check is_active = true.
+3. Read:
+   - id
+   - claim_policy
+   - default_privacy_level
+   - is_sensitive
+   - domain
+   - title
+
+Accept if:
+- dimension exists
+- dimension is active
+
+Reject if:
+- dimension does not exist
+- dimension is inactive
+- dimension_key is blank
+- candidate tries to create a new dimension automatically
+
+Output:
+- resolved dimension_id
+- resolved claim_policy
+- resolved sensitivity
+- resolved default privacy
+
+D4-C rule:
+No automatic dimension creation.
+No AI-created active dimension.
+No uncontrolled state dimension expansion.
+
+Gate 2 — Claim Policy Gate
+--------------------------
+Claim policies:
+
+1. system_estimate
+Can be created from approved deterministic rules or safe system logic.
+AI-only candidates must remain shadow-only unless validated by rules.
+
+2. proxy_only
+Can be created only as proxy signal.
+Must not use direct diagnostic wording.
+Must not claim causality stronger than evidence allows.
+
+3. user_confirmed
+Can be persisted only if explicit user confirmation exists.
+No hidden inference from behaviour.
+
+Policy mapping:
+
+- attention_load:
+  allowed if source_type is rule or system.
+  AI-only stays shadow.
+
+- family_care_load_signal:
+  proxy only.
+  allowed as proxy from activity semantics.
+  no claim about family quality or child outcome.
+
+- fatigue_signal:
+  proxy only.
+  allowed only as indirect fatigue signal.
+  no medical conclusion.
+
+- financial_pressure_signal:
+  user_confirmed only.
+  allowed only with explicit user statement.
+  no inference from spending, job search, or behaviour.
+
+- stress_load_estimate:
+  proxy only.
+  no hormonal, psychiatric, or diagnostic wording.
+
+- pipeline_building_effort:
+  allowed as system_estimate from safe business activity.
+  no confirmed client/deal/income claim.
+
+Reject if:
+- candidate claim policy is stronger than dimension policy
+- user confirmation is missing for user_confirmed dimension
+- proxy_only dimension is worded as direct fact
+- system_estimate is created from unvalidated AI-only output
+
+Gate 3 — Source Type Gate
+-------------------------
+Allowed source_type values already supported by DB:
+
+- manual
+- user_confirmed
+- rule
+- ai
+- system
+- import
+- correction
+
+D4-C source rules:
+
+manual:
+- allowed only for user-provided direct input
+- must preserve evidence text
+- may require user confirmation for sensitive dimensions
+
+user_confirmed:
+- allowed for user-confirmed signals
+- required for financial_pressure_signal
+- must include userConfirmationText or equivalent evidence
+
+rule:
+- allowed for deterministic internal rules
+- must include ruleId and ruleVersion
+
+ai:
+- shadow-only by default
+- cannot directly persist sensitive or high-claim facts
+- can propose candidates for later review/rule validation
+
+system:
+- allowed for deterministic platform-generated planning signals
+- must include internal explanation
+
+import:
+- allowed only if source/evidence includes imported source metadata
+- no direct medical/financial interpretation unless import source is explicitly appropriate and future governance allows it
+
+correction:
+- allowed for corrected/revoked/superseded facts
+- must reference previous fact or corrected activity
+
+Reject if:
+- source_type is unknown
+- source_type is ai and candidate attempts direct persistence
+- source_type lacks required evidence
+- source_type is incompatible with dimension claim_policy
+
+Gate 4 — Evidence Gate
+----------------------
+Every persisted state fact must have evidence_json as a JSON object.
+
+Required evidence content by source:
+
+activity_event evidence:
+- activityEventId
+- userId
+- inputText or title
+- durationMinutes if used
+- activity status if relevant
+- category or rule evidence if derived
+
+user_confirmation evidence:
+- confirmation text or confirmation action
+- timestamp
+- dimensionKey confirmed
+- exact safe meaning confirmed
+
+rule evidence:
+- ruleId
+- ruleVersion
+- matched fields
+- deterministic explanation
+- source activity or object reference
+
+AI evidence:
+- prompt/output reference or explanation
+- must be shadow-only unless future governance approves
+- must include notAStateFactYet = true
+
+correction evidence:
+- previousFactId or sourceActivityEventId
+- correction reason
+- correction timestamp
+- correctedBy actor/system
+
+Reject if:
+- evidence_json is empty for non-manual internal facts
+- evidence cannot explain why the fact exists
+- evidence does not match the source_type
+- evidence attempts to hide sensitive inference
+
+Gate 5 — Forbidden Overclaim Gate
+---------------------------------
+Before persistence, the candidate wording and metadata must be scanned for forbidden claim patterns.
+
+Reject if candidate implies:
+
+- diagnosis
+- hormone measurement
+- mental health conclusion
+- legal conclusion
+- creditworthiness
+- employer performance evaluation
+- confirmed income
+- confirmed client acquisition
+- confirmed deal closure
+- body composition confirmation
+- child outcome score
+- hidden health inference
+- hidden financial inference
+
+Examples:
+
+Input activity:
+"sent 5 sales emails"
+
+Allowed:
+- pipeline_building_effort increased
+- business development activity recorded
+- outreach effort detected
+
+Forbidden:
+- client acquired
+- deal likely closed
+- income generated
+- revenue confirmed
+
+Input activity:
+"walked to work for 20 minutes"
+
+Allowed:
+- physical_activity_load increased
+- possible recovery-supporting activity signal
+
+Forbidden:
+- fat loss confirmed
+- muscle growth confirmed
+- cortisol reduced
+
+Input activity:
+"helped child with math for 25 minutes"
+
+Allowed:
+- family_care_load_signal
+- helping child learn activity meaning
+
+Forbidden:
+- child development improved
+- parenting quality score
+- family relationship improved
+
+Gate 6 — Safe Wording Gate
+--------------------------
+Every accepted fact must include safe wording.
+
+Safe wording must:
+
+- use "signal", "estimate", "proxy", or "user-confirmed" when appropriate
+- avoid diagnostic language
+- avoid hidden inference
+- avoid deterministic outcomes
+- avoid irreversible profile judgment
+- state the evidence source plainly
+
+Required wording fields:
+
+safeWording.shortLabel:
+- short UI-safe label
+
+safeWording.userVisibleExplanation:
+- explanation that can be shown to user
+
+safeWording.internalExplanation:
+- more technical internal explanation
+
+Examples:
+
+fatigue_signal:
+shortLabel:
+"Fatigue signal"
+
+userVisibleExplanation:
+"Indirect fatigue signal based on activity context. This is not a medical conclusion."
+
+stress_load_estimate:
+shortLabel:
+"Stress load estimate"
+
+userVisibleExplanation:
+"Estimated stress load based on indirect activity/context signals. This is not a hormonal or psychological diagnosis."
+
+financial_pressure_signal:
+shortLabel:
+"Financial pressure signal"
+
+userVisibleExplanation:
+"Financial pressure signal recorded from explicit user confirmation."
+
+pipeline_building_effort:
+shortLabel:
+"Pipeline building effort"
+
+userVisibleExplanation:
+"Business development effort detected from outreach-related activity."
+
+Gate 7 — Confidence and Claim Strength Gate
+-------------------------------------------
+confidence:
+- must be numeric
+- must be between 0 and 1
+- default should not be 1 unless direct user confirmation or deterministic rule is strong
+
+claimStrength:
+- must be integer
+- must be between 0 and 5
+
+Recommended claimStrength scale:
+
+0:
+shadow-only candidate, not persisted as fact
+
+1:
+weak proxy signal
+
+2:
+ordinary planning signal / conservative estimate
+
+3:
+strong user-confirmed or deterministic operational fact
+
+4:
+direct measurement from trusted source
+
+5:
+reserved for future direct verified source with strict governance
+
+D4-C rule:
+For now, do not use claimStrength 4 or 5 unless future direct-source governance is added.
+
+Recommended defaults:
+
+- ai shadow candidate:
+  confidence <= 0.70
+  claimStrength = 0
+
+- proxy_only signal:
+  confidence <= 0.75
+  claimStrength = 1
+
+- system_estimate from rule:
+  confidence <= 0.85
+  claimStrength = 2
+
+- user_confirmed:
+  confidence <= 0.95
+  claimStrength = 3
+
+Reject if:
+- confidence is outside 0..1
+- claimStrength is outside 0..5
+- claimStrength is too high for claim_policy
+- AI-only candidate asks for claimStrength > 0
+
+Gate 8 — Privacy / Sensitivity Gate
+-----------------------------------
+Default privacy:
+- private
+
+D4-C rule:
+All current seeded dimensions must default to private.
+
+Sensitive dimensions:
+- family_care_load_signal
+- fatigue_signal
+- financial_pressure_signal
+- physical_activity_load
+- recovery_need
+- stress_load_estimate
+
+Sensitive facts must not be public by default.
+
+Allowed D4-C privacy levels:
+- private
+
+Blocked for D4-C:
+- shared_with_org
+- public_masked
+- public
+
+Reason:
+Public/shared visibility requires a separate later governance phase.
+
+Reject if:
+- candidate tries to persist sensitive dimension as public
+- candidate tries to share health/finance/family proxy outside private scope
+- candidate overrides default privacy without approved future governance
+
+Gate 9 — Valid Window / Expiry Gate
+-----------------------------------
+Every state fact should define whether it is:
+
+1. event-scoped
+2. current/short-term
+3. daily
+4. weekly
+5. baseline/long-lived
+
+Recommended valid windows:
+
+event-scoped:
+- valid_from = activity started_at or created_at
+- valid_to = activity ended_at or null if not meaningful
+
+short-term proxy:
+- valid_from = now or event time
+- valid_to = bounded expiry
+- examples: fatigue_signal, stress_load_estimate
+
+daily planning signal:
+- valid_from = start of day or event time
+- valid_to = end of day or next recalculation
+
+weekly planning signal:
+- valid_from = week start
+- valid_to = week end or next recalculation
+
+baseline:
+- not used in D4-C without special future governance
+
+Reject if:
+- valid_to < valid_from
+- sensitive proxy is created as indefinite baseline without explicit future governance
+- expiry is missing for proxy-only signals unless explicitly event-scoped
+
+Gate 10 — Correction / Rollback Readiness Gate
+----------------------------------------------
+Every persisted fact must be correction-ready.
+
+Current DB supports correction_status:
+- active
+- corrected
+- revoked
+- superseded
+
+D4-C required metadata:
+
+metadata.rollbackable = true
+metadata.createdByContract = "state-fact-creation-contract-v1"
+metadata.sourceActivityEventId if derived from activity
+metadata.previousFactId if correction/supersession
+metadata.recalculationGroupId if later needed
+
+Required correction behaviours:
+
+1. User correction:
+If user says the state fact is wrong, it can be revoked or superseded.
+
+2. Activity correction:
+If source activity duration/time/status changes, dependent facts must be recalculated or revoked.
+
+3. Activity deletion:
+If source activity is deleted/revoked, dependent facts must be revoked or marked superseded.
+
+4. Rule update:
+If rule version changes, facts generated by old rule version must be traceable.
+
+Reject if:
+- candidate cannot be traced to source/evidence
+- candidate cannot be corrected/revoked
+- metadata does not allow future audit
+
+Accepted Output Shape
+---------------------
+If all gates pass, the contract may produce a persisted-state-fact draft object:
+
+{
+  "contractVersion": "state-fact-creation-contract-v1",
+  "decision": "accept_for_controlled_persistence",
+  "insertDraft": {
+    "user_id": "uuid",
+    "value_object_id": "uuid",
+    "dimension_id": "uuid",
+    "dimension_key": "string",
+    "value_json": {},
+    "source_type": "manual|user_confirmed|rule|system|import|correction",
+    "source_id": "uuid|null",
+    "confidence": 0.0,
+    "evidence_json": {},
+    "claim_strength": 1,
+    "privacy_level": "private",
+    "valid_from": "timestamp|null",
+    "valid_to": "timestamp|null",
+    "correction_status": "active",
+    "metadata_json": {}
+  },
+  "safeWording": {
+    "shortLabel": "string",
+    "userVisibleExplanation": "string",
+    "internalExplanation": "string"
+  },
+  "passedGates": []
+}
+
+Important:
+D4-C does not actually insert this object.
+It only defines the accepted output shape for a future controlled internal path.
+
+Rejected Output Shape
+---------------------
+If a candidate fails any gate, return:
+
+{
+  "contractVersion": "state-fact-creation-contract-v1",
+  "decision": "reject",
+  "rejectionCode": "string",
+  "rejectionReasons": [],
+  "failedGates": [],
+  "safeAlternative": "string|null",
+  "shadowCandidateAllowed": true
+}
+
+Recommended rejection codes:
+
+- DIMENSION_NOT_FOUND
+- DIMENSION_INACTIVE
+- CLAIM_POLICY_VIOLATION
+- SOURCE_TYPE_NOT_ALLOWED
+- SOURCE_EVIDENCE_MISSING
+- FORBIDDEN_OVERCLAIM
+- UNSAFE_WORDING
+- CONFIDENCE_OUT_OF_RANGE
+- CLAIM_STRENGTH_TOO_HIGH
+- PRIVACY_POLICY_VIOLATION
+- VALID_WINDOW_INVALID
+- ROLLBACK_NOT_TRACEABLE
+- AI_ONLY_DIRECT_PERSIST_BLOCKED
+- USER_CONFIRMATION_REQUIRED
+- SENSITIVE_INFERENCE_BLOCKED
+
+Shadow-Only Output Shape
+------------------------
+If a candidate is useful but not safe for persistence:
+
+{
+  "contractVersion": "state-fact-creation-contract-v1",
+  "decision": "shadow_only",
+  "candidate": {},
+  "reason": "string",
+  "requiredBeforePersistence": [],
+  "safeWording": {},
+  "notAStateFactYet": true
+}
+
+Shadow-only candidates may be used for:
+
+- debug output
+- explanation
+- future user confirmation
+- future rule design
+- future review queue
+
+They must not be inserted into value_object_state_facts.
+
+Example 1 — German Practice 30 Minutes
+--------------------------------------
+Input:
+"worked on German for 30 minutes"
+
+Possible candidate:
+- dimensionKey: language_practice_balance
+- claim_policy: system_estimate
+- source_type: rule or system
+- proposedValue.kind: duration
+- proposedValue.value: 30
+- unit: minutes
+- confidence: 0.80
+- claimStrength: 2
+- privacyLevel: private
+
+Allowed safe wording:
+"Language practice balance improved based on 30 minutes of German practice."
+
+Forbidden wording:
+"German skill improved significantly."
+
+Reason:
+Practice duration is observable, actual skill improvement requires separate assessment.
+
+Expected decision:
+accept_for_controlled_persistence if source/evidence and VO are valid.
+
+Example 2 — Walked To Work 20 Minutes
+-------------------------------------
+Input:
+"walked to work for 20 minutes"
+
+Possible candidate:
+- dimensionKey: physical_activity_load
+- claim_policy: system_estimate
+- source_type: rule/system
+- proposedValue.kind: duration
+- value: 20
+- unit: minutes
+
+Allowed safe wording:
+"Physical activity load increased based on 20 minutes of walking."
+
+Forbidden wording:
+"Fat loss occurred."
+"Stress hormones decreased."
+
+Expected decision:
+accept_for_controlled_persistence for physical_activity_load if evidence valid.
+Any stress or recovery candidate should be proxy/shadow unless rules are approved.
+
+Example 3 — Helped Child With Math 25 Minutes
+---------------------------------------------
+Input:
+"helped child with math for 25 minutes"
+
+Possible candidate:
+- dimensionKey: family_care_load_signal
+- claim_policy: proxy_only
+- source_type: rule/system
+- proposedValue.kind: duration
+- value: 25
+- unit: minutes
+- claimStrength: 1
+
+Allowed safe wording:
+"Family care load signal increased due to caregiving-related learning support activity."
+
+Forbidden wording:
+"Child development improved."
+"Parenting quality improved."
+
+Expected decision:
+accept_for_controlled_persistence only as proxy signal with safe wording.
+
+Example 4 — Sent 5 Sales Emails
+-------------------------------
+Input:
+"sent 5 sales emails"
+
+Possible candidate:
+- dimensionKey: pipeline_building_effort
+- claim_policy: system_estimate
+- source_type: rule/system
+- proposedValue.kind: count
+- value: 5
+- unit: emails
+- claimStrength: 2
+
+Allowed safe wording:
+"Pipeline building effort recorded from 5 sales emails."
+
+Forbidden wording:
+"5 clients contacted successfully."
+"Deal pipeline increased in value."
+"Income likely increased."
+
+Expected decision:
+accept_for_controlled_persistence if source/evidence valid.
+
+Example 5 — Financial Pressure This Week
+----------------------------------------
+Input:
+"I feel financially pressured this week"
+
+Possible candidate:
+- dimensionKey: financial_pressure_signal
+- claim_policy: user_confirmed
+- source_type: user_confirmed or manual requiring confirmation
+- proposedValue.kind: flag or score
+- valid window: this week
+- privacy: private
+
+Allowed safe wording:
+"Financial pressure signal recorded from explicit user confirmation."
+
+Forbidden wording:
+"User is financially unstable."
+"User has poor creditworthiness."
+"User is at financial risk."
+
+Expected decision:
+accept only if explicit user confirmation is present.
+Otherwise shadow_only with USER_CONFIRMATION_REQUIRED.
+
+D4-C Non-Goals
+--------------
+D4-C must not:
+
+- create SQL migrations
+- alter tables
+- insert value_object_state_facts
+- create runtime code
+- create API routes
+- create UI
+- implement state engine
+- implement NBA
+- add Value Object subtypes
+- create public/shared visibility rules
+- create AI-only direct persistence
+- create medical/hormonal/psychological/financial/business conclusions
+
+D4-C Completion Criteria
+------------------------
+D4-C is complete when this document:
+
+- defines state signal candidate shape
+- defines accepted output shape
+- defines rejected output shape
+- defines shadow-only output shape
+- defines all validation gates
+- defines source/evidence requirements
+- defines claim policy enforcement
+- defines forbidden overclaim rules
+- defines safe wording rules
+- defines confidence and claim strength rules
+- defines privacy/sensitivity rules
+- defines validity window rules
+- defines correction/rollback requirements
+- preserves unified Value Object architecture
+- explicitly blocks runtime persistence before D4-D/D4-E
+- is committed to git
+
+Next Step After D4-C
+--------------------
+P4.10.0-C8-I-D4-D — Non-executable internal function/API design.
+
+D4-D should design the future controlled internal creation path without production write.
+
+Recommended future flow:
+
+activity_event / manual input / rule output
+-> state signal candidate
+-> D4-C contract gates
+-> accepted/rejected/shadow-only decision
+-> D4-E shadow-mode debug route/script
+-> D4-F shadow tests
+-> D4-G draft persistence design
+-> D4-H controlled actual persistence
+
+End of contract.
