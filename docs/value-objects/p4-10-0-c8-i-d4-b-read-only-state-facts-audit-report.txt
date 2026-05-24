@@ -1,0 +1,405 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-B — Read-only State Facts Audit Report
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-B
+Type: read-only audit
+Status: PASS WITH CONTRACT GAPS
+
+Purpose
+-------
+Audit the existing value_object_state_facts table and related state/relevance tables
+before designing the controlled state fact creation contract.
+
+No SQL migrations were created.
+No write operations were executed.
+No runtime code was changed.
+No state facts were created.
+
+Input
+-----
+The audit was based on the Supabase SQL Editor result from D4_B_COMPACT_01...D4_B_COMPACT_13.
+
+Main Result
+-----------
+D4-B can be closed as a read-only schema audit.
+
+The state facts foundation exists and is protected by RLS/direct-deny policies, but the
+actual controlled state fact creation contract must be defined in D4-C before any runtime
+or persistence logic is implemented.
+
+Confirmed Existing Tables
+-------------------------
+The following related tables exist in public schema:
+
+- activity_events
+- impact_events
+- impact_rules
+- recommendation_feedback
+- state_dimensions
+- state_relevance_rules
+- value_object_relevance_edges
+- value_object_similarity_edges
+- value_object_state_deltas
+- value_object_state_facts
+- value_object_state_snapshots
+- value_objects
+
+value_object_state_facts Columns
+--------------------------------
+Confirmed columns:
+
+- id uuid not null default gen_random_uuid()
+- user_id uuid not null
+- value_object_id uuid not null
+- dimension_id uuid nullable
+- dimension_key text not null
+- value_json jsonb not null default '{}'
+- source_type text not null default 'manual'
+- source_id uuid nullable
+- confidence numeric not null default 1
+- evidence_json jsonb not null default '{}'
+- claim_strength integer not null default 2
+- privacy_level text not null default 'private'
+- valid_from timestamptz nullable
+- valid_to timestamptz nullable
+- correction_status text not null default 'active'
+- metadata_json jsonb not null default '{}'
+- created_at timestamptz not null default now()
+- updated_at timestamptz not null default now()
+
+Assessment:
+The table already has the necessary basic fields for controlled state facts:
+identity, user, value object, dimension, value, source, confidence, evidence,
+claim strength, privacy, validity window, correction status and metadata.
+
+value_object_state_facts Constraints
+------------------------------------
+Confirmed constraints include:
+
+- primary key on id
+- user_id FK to app_users(id) ON DELETE CASCADE
+- value_object_id FK to value_objects(id) ON DELETE CASCADE
+- dimension_id FK to state_dimensions(id) ON DELETE SET NULL
+- confidence range: 0..1
+- claim_strength range: 0..5
+- dimension_key not blank
+- value_json must be json object
+- evidence_json must be json object
+- metadata_json must be json object
+- privacy_level limited to:
+  private, shared_with_org, public_masked, public
+- source_type limited to:
+  manual, user_confirmed, rule, ai, system, import, correction
+- correction_status limited to:
+  active, corrected, revoked, superseded
+- valid time order check:
+  valid_to must be null or valid_from must be null or valid_to >= valid_from
+
+Assessment:
+DB constraints provide a good structural safety foundation, but semantic governance
+cannot be fully enforced by table constraints alone. Claim policy, source policy,
+forbidden overclaims and safe wording must be enforced by the future controlled
+internal creation path.
+
+RLS and Direct Access
+---------------------
+value_object_state_facts:
+- RLS enabled: true
+- RLS forced: false
+- policy: No direct public value object state facts access
+- roles: anon, authenticated
+- cmd: ALL
+- qual: false
+- with_check: false
+
+Assessment:
+Direct public/client access is denied. This matches D4-A governance:
+state facts must be controlled internal records, not public/client direct writes.
+
+Existing State Facts
+--------------------
+value_object_state_facts rows_count = 0
+
+Assessment:
+No uncontrolled state facts exist. This is the expected safe state before D4-C.
+
+state_dimensions Seed Summary
+-----------------------------
+Confirmed:
+
+- total_dimensions: 12
+- system_estimate_count: 8
+- proxy_only_count: 3
+- user_confirmed_count: 1
+- sensitive_count: 6
+- non_sensitive_count: 6
+- private_count: 12
+
+Confirmed state dimensions:
+
+1. attention_load
+   - domain: cognitive
+   - claim_policy: system_estimate
+   - sensitive: false
+   - privacy: private
+
+2. family_care_load_signal
+   - domain: family_care
+   - claim_policy: proxy_only
+   - sensitive: true
+   - privacy: private
+
+3. fatigue_signal
+   - domain: recovery
+   - claim_policy: proxy_only
+   - sensitive: true
+   - privacy: private
+
+4. financial_pressure_signal
+   - domain: financial_context
+   - claim_policy: user_confirmed
+   - sensitive: true
+   - privacy: private
+
+5. language_practice_balance
+   - domain: learning_languages
+   - claim_policy: system_estimate
+   - sensitive: false
+   - privacy: private
+
+6. learning_progress_signal
+   - domain: learning
+   - claim_policy: system_estimate
+   - sensitive: false
+   - privacy: private
+
+7. physical_activity_load
+   - domain: physical_activity
+   - claim_policy: system_estimate
+   - sensitive: true
+   - privacy: private
+
+8. pipeline_building_effort
+   - domain: business_development
+   - claim_policy: system_estimate
+   - sensitive: false
+   - privacy: private
+
+9. recovery_need
+   - domain: recovery
+   - claim_policy: system_estimate
+   - sensitive: true
+   - privacy: private
+
+10. social_interaction_load
+    - domain: social_context
+    - claim_policy: system_estimate
+    - sensitive: false
+    - privacy: private
+
+11. stress_load_estimate
+    - domain: emotional_regulation
+    - claim_policy: proxy_only
+    - sensitive: true
+    - privacy: private
+
+12. work_responsibility_load
+    - domain: work
+    - claim_policy: system_estimate
+    - sensitive: false
+    - privacy: private
+
+Assessment:
+D3 seed is present and matches the expected governance model.
+
+value_objects Readiness
+-----------------------
+Relevant value_objects columns confirmed:
+
+- id
+- owner_actor_id
+- value_type
+- title
+- description
+- unit_type
+- default_price
+- default_currency
+- default_duration_minutes
+- is_marketplace_sellable
+- is_free_possible
+- status
+- organization_id
+- commercial_usage
+- parent_value_object_id
+- entity_protocol_characteristics_json
+- needs_user_review
+- ui_visibility
+- category_origin_json
+- metadata_json
+- created_at
+- updated_at
+
+Assessment:
+value_objects is compatible with the unified Value Object approach.
+No Value Object subtype is needed for D4-C.
+
+Important:
+commercial_usage exists and can separate commercial scenario from the type/identity of VO.
+parent_value_object_id supports parent/child hierarchy.
+entity_protocol_characteristics_json supports the "characteristics of entity/protocol" concept.
+category_origin_json and metadata_json support semantic derivation provenance.
+
+activity_events Readiness
+-------------------------
+Relevant activity_events columns confirmed:
+
+- id
+- user_id
+- performed_by_actor_id
+- acting_as_actor_id
+- acting_for_actor_id
+- activity_type_id
+- template_id
+- activity_template_id
+- event_code
+- input_text
+- title
+- description
+- started_at
+- ended_at
+- duration_minutes
+- source
+- status
+- privacy_scope
+- processing_status
+- metadata_json
+- created_at
+- updated_at
+
+Assessment:
+activity_events can serve as source/evidence for future candidate state signals.
+D4-C must define how activity_event evidence is referenced from value_object_state_facts.
+
+Related State/Relevance Tables RLS
+----------------------------------
+RLS enabled for:
+
+- recommendation_feedback
+- state_dimensions
+- state_relevance_rules
+- value_object_relevance_edges
+- value_object_similarity_edges
+- value_object_state_facts
+
+Policies deny direct public access for anon/authenticated on:
+
+- recommendation_feedback
+- state_dimensions
+- state_relevance_rules
+- value_object_relevance_edges
+- value_object_similarity_edges
+- value_object_state_facts
+
+Assessment:
+The state/relevance layer is locked down from direct public access. This is safe for the
+current readiness stage.
+
+Index Summary
+-------------
+Confirmed index counts:
+
+- recommendation_feedback: 6
+- state_dimensions: 5
+- state_relevance_rules: 6
+- value_object_relevance_edges: 7
+- value_object_similarity_edges: 7
+- value_object_state_facts: 6
+
+Important indexes on value_object_state_facts:
+
+- correction_status
+- created_at desc
+- user_id + dimension_key
+- user_id + value_object_id
+- value_object_id + dimension_key
+- primary key id
+
+Assessment:
+Index foundation is sufficient for the next contract/design stage.
+
+D4-B Findings
+-------------
+PASS:
+- Required tables exist.
+- value_object_state_facts exists.
+- value_object_state_facts has the expected core columns.
+- value_object_state_facts has structural constraints.
+- value_object_state_facts has RLS enabled.
+- direct public access is denied.
+- value_object_state_facts has 0 rows.
+- state_dimensions seed is present and contains exactly 12 rows.
+- state_dimensions claim policy counts match expected D3 result.
+- related state/relevance tables have RLS and deny policies.
+- indexes exist for state/relevance/facts tables.
+
+WARN / CONTRACT GAPS:
+1. dimension_id is nullable while dimension_key is required.
+   D4-C must define a consistency rule:
+   - lookup state_dimensions by dimension_key;
+   - if found, store dimension_id;
+   - if missing, reject unless a future explicit draft-dimension mechanism is approved.
+
+2. source_id is generic uuid without direct FK.
+   D4-C must define source_type/source_id semantics and evidence requirements.
+
+3. claim_policy is not enforced by DB constraints.
+   D4-C must enforce dimension claim policy before insert.
+
+4. forbidden overclaims are not enforceable by DB constraints.
+   D4-C must define forbidden claim rejection before persistence.
+
+5. privacy/sensitivity inheritance from state_dimensions is not automatically enforced.
+   D4-C must require privacy_level to be compatible with state_dimensions.default_privacy_level
+   and is_sensitive.
+
+6. no runtime persistence path should be implemented yet.
+   D4-C must come first.
+
+Decision
+--------
+P4.10.0-C8-I-D4-B is closed as a read-only audit.
+
+Next Step
+---------
+P4.10.0-C8-I-D4-C — State Fact Creation Contract.
+
+D4-C must define:
+
+- input candidate shape
+- required source/evidence fields
+- dimension lookup and claim policy gate
+- source type gate
+- forbidden overclaim gate
+- safe wording rules
+- confidence and claim_strength rules
+- privacy/sensitivity rules
+- valid window rules
+- correction/rollback model
+- accepted output shape
+- rejected output shape
+- shadow-only candidate shape
+- no-write / shadow-mode route requirements for later D4-D/D4-E
+
+Do Not Do Next
+--------------
+- Do not create SQL migrations.
+- Do not write runtime insert logic.
+- Do not create actual state facts.
+- Do not start state engine.
+- Do not start Next Best Action runtime.
+- Do not create UI/control panel.
+- Do not introduce Value Object subtypes.
+- Do not persist category/state hooks directly as facts.
+
+End of report.
