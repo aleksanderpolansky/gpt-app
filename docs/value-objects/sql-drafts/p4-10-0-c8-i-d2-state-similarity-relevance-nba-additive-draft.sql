@@ -413,8 +413,31 @@ create index if not exists idx_recommendation_feedback_recommendation_id
 create index if not exists idx_recommendation_feedback_context_package_id
   on public.recommendation_feedback (context_package_id);
 
+
 -- ============================================================
--- 7. Explicit deny policies
+-- 7. updated_at triggers for mutable draft tables
+-- ============================================================
+
+drop trigger if exists trg_state_dimensions_updated_at on public.state_dimensions;
+create trigger trg_state_dimensions_updated_at
+before update on public.state_dimensions
+for each row
+execute function public.set_activity_recording_updated_at();
+
+drop trigger if exists trg_value_object_state_facts_updated_at on public.value_object_state_facts;
+create trigger trg_value_object_state_facts_updated_at
+before update on public.value_object_state_facts
+for each row
+execute function public.set_activity_recording_updated_at();
+
+drop trigger if exists trg_state_relevance_rules_updated_at on public.state_relevance_rules;
+create trigger trg_state_relevance_rules_updated_at
+before update on public.state_relevance_rules
+for each row
+execute function public.set_activity_recording_updated_at();
+
+-- ============================================================
+-- 8. Explicit deny policies
 -- ============================================================
 
 do $$
@@ -477,7 +500,7 @@ end $$;
 commit;
 
 -- ============================================================
--- 8. Smoke checks to run manually after review/execution
+-- 9. Smoke checks to run manually after review/execution
 -- ============================================================
 
 -- select table_name
@@ -529,3 +552,4 @@ commit;
 --     'recommendation_feedback'
 --   )
 -- order by tablename, policyname;
+
