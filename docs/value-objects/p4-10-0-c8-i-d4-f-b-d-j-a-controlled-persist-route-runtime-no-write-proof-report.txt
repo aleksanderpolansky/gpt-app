@@ -1,0 +1,59 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-D-J-A - Controlled Persist Route Runtime No-Write Proof Report
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-D-J-A
+Fix: D4-F-B-D-J-A-FIX1
+Type: runtime proof step for controlled persist route, no-write branch
+Status: RUNTIME NO-WRITE PROOF / ROUTE REACHABLE / NO STATE FACTS CREATED / NO WRITES ATTEMPTED
+
+Baseline:
+- HEAD before proof: f96b250
+- Route: POST /api/activity/state-facts/controlled-persist
+- Previous report: docs/value-objects/p4-10-0-c8-i-d4-f-b-d-i-controlled-persist-route-report.txt
+
+Runtime endpoint:
+- http://localhost:3000/api/activity/state-facts/controlled-persist
+
+Cases tested:
+- invalid_json: HTTP 400, decision=rejected, rejectionCode=SOURCE_EVIDENCE_MISSING, stateFactsCreated=0, writesAttempted=False, delegatedToControlledHelper=, routeDirectDatabaseAccess=
+- wrong_mode: HTTP 400, decision=rejected, rejectionCode=SOURCE_TYPE_NOT_ALLOWED, stateFactsCreated=0, writesAttempted=False, delegatedToControlledHelper=, routeDirectDatabaseAccess=
+- missing_confirmation: HTTP 400, decision=rejected, rejectionCode=USER_CONFIRMATION_REQUIRED, stateFactsCreated=0, writesAttempted=False, delegatedToControlledHelper=, routeDirectDatabaseAccess=
+- missing_request_envelope: HTTP 400, decision=rejected, rejectionCode=SOURCE_EVIDENCE_MISSING, stateFactsCreated=0, writesAttempted=False, delegatedToControlledHelper=, routeDirectDatabaseAccess=
+- valid_envelope_but_unauthenticated: HTTP 400, decision=rejected, rejectionCode=NOT_AUTHENTICATED, stateFactsCreated=0, writesAttempted=False, delegatedToControlledHelper=True, routeDirectDatabaseAccess=False
+
+Aggregate proof:
+- Total stateFactsCreated across cases: 0
+- Any writesAttempted across cases: False
+
+Hard boundaries preserved:
+- No SQL migration created.
+- No route code changed in this proof step.
+- No direct database access was added to route.
+- No direct insert/update/delete/upsert was added to route.
+- No state facts were created by no-write proof cases.
+- D4-E-B shadow route not modified.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+Safety checks:
+- Local server reachable: PASS
+- Route runtime calls completed: PASS
+- Invalid JSON rejection no-write proof: PASS
+- Wrong mode rejection no-write proof: PASS
+- Missing confirmation rejection no-write proof: PASS
+- Missing request envelope rejection no-write proof: PASS
+- Unauthenticated valid envelope rejection no-write proof: PASS
+- Total stateFactsCreated = 0: PASS
+- writesAttempted false for all cases: PASS
+
+Important notes:
+- This proof verifies the exposed route's no-write runtime branches.
+- It does not yet prove an authenticated successful controlled insert.
+- It does not yet prove idempotent duplicate prevention after a real insert.
+- A separate D4-J-B authenticated browser/session proof is still required before declaring the write path operationally verified.
+
+Recommended next step:
+P4.10.0-C8-I-D4-F-B-D-J-B - authenticated controlled insert and idempotency runtime proof, if a safe test Value Object and user session are available.
+
+End of D4-J-A report.
