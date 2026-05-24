@@ -1,0 +1,71 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-D-F - State Fact Insert Payload Builder Helper Report
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-D-F
+Type: implementation step with state fact insert payload builder helper only
+Status: STATE FACT INSERT PAYLOAD BUILDER ONLY / NO ROUTE / NO DATABASE READS / NO DATABASE WRITES / NO STATE FACTS CREATED
+
+Previous closed step:
+- P4.10.0-C8-I-D4-F-B-D-E - state fact candidate validator helper
+  Commit: df7e67a
+
+Created files:
+- lib/activity/stateFacts/controlledPersistence/payloadBuilder.ts
+
+Existing files used:
+- lib/activity/stateFacts/controlledPersistence/types.ts
+- lib/activity/stateFacts/controlledPersistence/auth.ts
+- lib/activity/stateFacts/controlledPersistence/targetValueObject.ts
+- lib/activity/stateFacts/controlledPersistence/dimension.ts
+- lib/activity/stateFacts/controlledPersistence/validator.ts
+
+Helper created:
+- buildValueObjectStateFactInsertPayload
+
+Payload fields mapped in this step:
+- user_id from authenticatedActor.appUserId
+- value_object_id from targetValueObject.valueObjectId
+- dimension_id and dimension_key from resolved dimension context
+- value_json from candidate.proposedValue
+- source_type and source_id from candidate source fields
+- confidence, evidence_json, claim_strength, privacy_level from candidate
+- valid_from and valid_to from candidate validityWindow
+- correction_status set to active
+- metadata_json with rollbackable, idempotency_key, contract_version, helper_version, source_route, candidate_trace_id, created_from_candidate, not_created_by_ai_directly, d4_gate_version
+
+Hard boundaries preserved:
+- No SQL migration created.
+- No API route created.
+- No database read added.
+- No database write added.
+- No state fact write path added.
+- No insert into value_object_state_facts.
+- No update of state_dimensions.
+- No Value Object creation or update.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+Safety checks:
+- Required payload builder markers: PASS
+- Forbidden database/route/action literals in payloadBuilder.ts: PASS
+- Targeted ESLint: PASS
+- value_object_state_facts access: ABSENT
+- route exports: ABSENT
+- supabase/auth0 imports: ABSENT
+
+Important notes:
+- This helper builds an insert payload only after validation accepted.
+- It does not decide authentication.
+- It does not decide target Value Object access.
+- It does not resolve state dimensions.
+- It does not validate candidates.
+- It does not perform idempotency checks.
+- It does not persist state facts.
+- A shadow candidate is not a state fact.
+- An insertDraft is not a state fact.
+
+Recommended next step:
+P4.10.0-C8-I-D4-F-B-D-G - state fact idempotency helper with tests, no state fact writes.
+
+End of D4-F-B-D-F report.
