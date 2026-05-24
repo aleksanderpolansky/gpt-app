@@ -1,0 +1,297 @@
+﻿# GPT-APP / AI-NAVIGATOR
+# P4.10.0-C8-I-D1 — Draft Additive SQL Migration Plan
+
+Date: 2026-05-24
+Status: PLAN ONLY — NO SQL EXECUTION
+Previous step: P4.10.0-C8-I-D
+Previous commit: ca50456
+
+## 1. Purpose
+
+This document prepares the first additive SQL migration plan for the State / Similarity / Relevance / NBA layers.
+
+This is not the SQL migration itself.
+
+## 2. First migration scope
+
+The first additive migration should create only missing additive tables:
+
+1. state_dimensions
+2. value_object_state_facts
+3. state_relevance_rules
+4. value_object_similarity_edges
+5. value_object_relevance_edges
+6. recommendation_feedback
+
+Do not create in the first migration:
+
+- activity_state_deltas
+- value_object_state_window_snapshots
+
+Reason:
+
+- value_object_state_deltas already exists and is linked to activity_events, value_objects, value_object_instances and impact_rules.
+- current/latest snapshot layers already exist through current_snapshots and value_object_state_snapshots.
+- daily aggregate layers already exist through daily_aggregates and value_object_daily_aggregates.
+
+## 3. Do-not-touch list
+
+The first additive SQL migration must not alter, drop, rename, or refactor:
+
+- value_objects
+- activity_events
+- raw_activity_signals
+- category_derivation_runs
+- activity_category_derivations
+- impact_rules
+- impact_events
+- value_object_state_deltas
+- value_object_state_snapshots
+- current_snapshots
+- daily_aggregates
+- value_object_daily_aggregates
+- value_object_usage_aggregates
+- activity_corrections
+- activity_processing_logs
+- commercial RPC functions
+- points / wallet / certificate / purchase-confirmation logic
+- possible duplicate indexes
+
+Cleanup of duplicate indexes is a later separate task.
+
+## 4. Required migration style
+
+The migration must be:
+
+- additive
+- idempotent where practical
+- RLS-safe
+- compatible with existing source-of-truth chain
+- no destructive changes
+- no data backfill in the first migration unless separately approved
+- no trigger-based recalculation in the first migration
+
+Preferred SQL style:
+
+- create table if not exists
+- create index if not exists
+- alter table enable row level security
+- explicit deny policies for sensitive tables
+- avoid changing existing tables unless absolutely necessary
+
+## 5. Table plan
+
+### 5.1 state_dimensions
+
+Purpose: dictionary of safe state dimensions and claim policies.
+
+Candidate fields:
+
+- id
+- dimension_key
+- title
+- domain
+- description
+- unit_type
+- default_privacy_level
+- claim_policy
+- allowed_source_types
+- forbidden_claims
+- safer_proxy_wording
+- is_sensitive
+- is_active
+- metadata_json
+- created_at
+- updated_at
+
+Security default: RLS enabled, explicit deny policy.
+
+### 5.2 value_object_state_facts
+
+Purpose: stable or semi-stable facts about a Value Object state.
+
+Candidate fields:
+
+- id
+- user_id
+- value_object_id
+- dimension_id
+- dimension_key
+- value_json
+- source_type
+- source_id
+- confidence
+- evidence_json
+- claim_strength
+- privacy_level
+- valid_from
+- valid_to
+- correction_status
+- metadata_json
+- created_at
+- updated_at
+
+Security default: RLS enabled, explicit deny policy.
+
+### 5.3 state_relevance_rules
+
+Purpose: rules explaining why a state makes a direction, category, Value Object, or action relevant.
+
+Important distinction:
+
+- impact_rules = what an activity changes
+- state_relevance_rules = why a current state makes a future action or direction relevant
+
+Candidate fields:
+
+- id
+- source_dimension_id
+- source_dimension_key
+- target_category_id
+- target_value_object_id
+- target_direction_key
+- relation
+- relevance_weight
+- explanation
+- safety_policy
+- is_active
+- metadata_json
+- created_at
+- updated_at
+
+Security default: RLS enabled, explicit deny policy.
+
+### 5.4 value_object_similarity_edges
+
+Purpose: precomputed semantic similarity between Value Objects.
+
+Candidate sources:
+
+- shared contextual categories
+- shared category roles
+- shared semantic layers
+- shared parent/child hierarchy
+- shared entity/protocol characteristics
+
+Candidate fields:
+
+- id
+- user_id
+- source_value_object_id
+- target_value_object_id
+- similarity_score
+- shared_category_ids
+- method
+- explanation
+- metadata_json
+- computed_at
+
+Security default: RLS enabled, explicit deny policy.
+
+### 5.5 value_object_relevance_edges
+
+Purpose: contextual relevance between Value Objects for a user.
+
+Relevance is not similarity.
+
+Candidate sources:
+
+- current state
+- state facts
+- recent activities
+- daily aggregates
+- usage aggregates
+- time blocks
+- feedback
+- chosen direction
+
+Candidate fields:
+
+- id
+- user_id
+- source_value_object_id
+- target_value_object_id
+- source_dimension_key
+- target_direction_key
+- relevance_score
+- relation_category
+- confidence
+- evidence_json
+- feedback_source
+- metadata_json
+- computed_at
+
+Security default: RLS enabled, explicit deny policy.
+
+### 5.6 recommendation_feedback
+
+Purpose: user feedback on Next Best Action suggestions.
+
+This table is not a technical log.
+
+Technical logs remain in activity_processing_logs.
+Corrections remain in activity_corrections.
+
+Candidate fields:
+
+- id
+- user_id
+- recommendation_id
+- context_package_id
+- selected_direction
+- candidate_action
+- feedback_type
+- reason
+- difficulty
+- helped
+- metadata_json
+- created_at
+
+Security default: RLS enabled, explicit deny policy.
+
+## 6. Optional later table
+
+value_object_state_window_snapshots should be postponed.
+
+Reason:
+
+- current/latest snapshot tables already exist
+- daily aggregate tables already exist
+- windowed snapshots need separate design
+
+## 7. Recommended migration order
+
+1. state_dimensions
+2. value_object_state_facts
+3. state_relevance_rules
+4. value_object_similarity_edges
+5. value_object_relevance_edges
+6. recommendation_feedback
+7. enable RLS
+8. create deny policies
+9. create indexes
+10. run smoke checks
+
+## 8. Open design questions before final SQL
+
+1. Should state_dimensions stay closed by default?
+2. Should value_object_similarity_edges.user_id allow NULL for global similarity?
+3. Should state_relevance_rules be global only in the first migration?
+4. Should recommendation_id and context_package_id remain UUID placeholders without FK?
+5. Should value_object_state_facts keep both dimension_id and dimension_key?
+6. Should value_object_state_window_snapshots be postponed to C8-I-D2?
+
+Recommended default answers:
+
+1. Yes, close state_dimensions by default.
+2. Yes, allow NULL user_id with partial unique indexes.
+3. Yes, keep state_relevance_rules global in first migration.
+4. Yes, keep placeholders without FK.
+5. Yes, retain both dimension_id and dimension_key.
+6. Yes, postpone window snapshots.
+
+## 9. Next step
+
+P4.10.0-C8-I-D2 — Draft additive SQL migration file.
+
+The SQL file should be created but not executed until reviewed.
