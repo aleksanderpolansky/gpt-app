@@ -1,0 +1,177 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D3-I — State Dimensions Seed Execution Smoke-Check Report
+
+Date: 2026-05-24
+
+Status:
+COMPLETED / VERIFIED
+
+Related phase:
+P4.10.0-C8-I — State Layers / Similarity / Relevance / NBA Readiness
+
+Related database migration:
+supabase/migrations/20260524_p4_10_0_c8_i_d3_state_dimensions_initial_seed.sql
+
+Related commits:
+- e2cc497 db: add reviewed C8-I-D3 state dimensions seed migration
+- 8ebde4c docs: add C8-I-D3-C draft state dimensions seed SQL
+- 38ced40 docs: add C8-I-D3-B reviewed state dimensions seed list
+- 826c6b2 docs: add C8-I-D3 state dimensions seed governance plan
+
+Purpose:
+This report records the manual execution and post-execution verification of the first conservative state_dimensions seed for the AI-NAVIGATOR / Next Best Action state layer.
+
+The seed inserts/upserts the first 12 state dimension dictionary entries into:
+public.state_dimensions
+
+The seed does not create user state facts.
+The seed does not create Value Object subtypes.
+The seed does not touch activity_events.
+The seed does not touch impact_rules or impact_events.
+The seed does not touch commerce, points, certificates, offers, bookings, wallets, or purchase confirmations.
+
+Execution result:
+Manual execution in Supabase SQL Editor returned:
+
+Success. No rows returned
+
+This is expected because the migration uses:
+insert into public.state_dimensions (...)
+values (...)
+on conflict (dimension_key) do update ...
+
+No RETURNING clause is used.
+
+Pre-execution checks:
+D3-F was completed before execution.
+
+Confirmed:
+- public.state_dimensions exists.
+- All 13 target columns exist.
+- existing seed rows before execution = 0.
+- UNIQUE constraint/index on dimension_key exists.
+- RLS is enabled.
+- deny policy exists:
+  No direct public state dimensions access
+- claim_policy check allows:
+  direct_measurement
+  proxy_only
+  user_confirmed
+  system_estimate
+  blocked
+- default_privacy_level check allows:
+  private
+  shared_with_org
+  public_masked
+  public
+- jsonb shape constraints exist:
+  allowed_source_types must be array
+  forbidden_claims must be array
+  safer_proxy_wording must be object
+  metadata_json must be object
+
+Seeded dimensions:
+1. attention_load
+2. fatigue_signal
+3. recovery_need
+4. stress_load_estimate
+5. learning_progress_signal
+6. language_practice_balance
+7. physical_activity_load
+8. family_care_load_signal
+9. work_responsibility_load
+10. pipeline_building_effort
+11. financial_pressure_signal
+12. social_interaction_load
+
+Post-execution smoke-check results:
+
+D3_H_01_seed_rows_after_execution:
+seed_rows_count = 12
+
+D3_H_02_seed_rows_details:
+All 12 expected rows exist.
+
+Rows:
+- attention_load / Attention Load / cognitive / system_estimate / private / is_sensitive=false / is_active=true
+- family_care_load_signal / Family Care Load Signal / family_care / proxy_only / private / is_sensitive=true / is_active=true
+- fatigue_signal / Fatigue Signal / recovery / proxy_only / private / is_sensitive=true / is_active=true
+- financial_pressure_signal / Financial Pressure Signal / financial_context / user_confirmed / private / is_sensitive=true / is_active=true
+- language_practice_balance / Language Practice Balance / learning_languages / system_estimate / private / is_sensitive=false / is_active=true
+- learning_progress_signal / Learning Progress Signal / learning / system_estimate / private / is_sensitive=false / is_active=true
+- physical_activity_load / Physical Activity Load / physical_activity / system_estimate / private / is_sensitive=true / is_active=true
+- pipeline_building_effort / Pipeline Building Effort / business_development / system_estimate / private / is_sensitive=false / is_active=true
+- recovery_need / Recovery Need / recovery / system_estimate / private / is_sensitive=true / is_active=true
+- social_interaction_load / Social Interaction Load / social_context / system_estimate / private / is_sensitive=false / is_active=true
+- stress_load_estimate / Stress Load Estimate / emotional_regulation / proxy_only / private / is_sensitive=true / is_active=true
+- work_responsibility_load / Work Responsibility Load / work / system_estimate / private / is_sensitive=false / is_active=true
+
+D3_H_03_claim_policy_counts:
+- proxy_only = 3
+- system_estimate = 8
+- user_confirmed = 1
+
+D3_H_04_sensitive_counts:
+- false = 6
+- true = 6
+
+D3_H_05_privacy_counts:
+- private = 12
+
+D3_H_06_jsonb_shape_check:
+For all 12 seeded dimensions:
+- allowed_source_types = array
+- forbidden_claims = array
+- safer_proxy_wording = object
+- metadata_json = object
+- metadata_json.seed_step = P4.10.0-C8-I-D3-C
+
+D3_H_07_excluded_dimensions_absent:
+excluded_dimensions_found = 0
+
+Excluded / forbidden dimensions confirmed absent:
+- cortisol_level
+- dopamine_level
+- testosterone_level
+- hormone_level_estimate
+- depression_risk
+- anxiety_disorder
+- mental_health_diagnosis
+- burnout_diagnosis
+- child_development_score
+- muscle_growth_confirmed
+- fat_loss_confirmed
+- income_confirmed
+- client_acquired
+- deal_closed
+- disease_risk_estimate
+
+Safety conclusion:
+The seed is conservative and compatible with the current state-layer architecture.
+
+It creates only dimension dictionary entries.
+It does not create user-specific facts.
+It does not infer medical, hormonal, psychological, legal, financial, or confirmed business outcomes.
+It preserves the architecture decision that Value Objects remain unified and are not split into mandatory subtypes.
+
+Architectural conclusion:
+D3 is complete.
+
+The platform now has the first safe state dimension dictionary needed for later:
+- state facts,
+- state relevance rules,
+- weak-direction detection,
+- similarity/relevance separation,
+- NBA v0 direction ranking.
+
+Next recommended step:
+Proceed to P4.10.0-C8-I-D4.
+
+Suggested D4 direction:
+Design the controlled internal mechanism for creating safe value_object_state_facts / state signals.
+
+Important D4 rule:
+Do not expose direct public writes to state facts.
+Do not create medical/hormonal/psychological conclusions.
+Do not create business outcome facts such as client_acquired, deal_closed, income_confirmed.
+Use only safe estimates, proxy signals, user confirmation, rule output, or AI-assisted draft signals with governance.
