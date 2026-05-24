@@ -1,0 +1,1367 @@
+﻿# GPT-APP / AI-NAVIGATOR
+# P4.10.0-C8-I-A3 — State Dimensions MVP
+
+Date: 2026-05-24
+Status: DOCUMENT-ONLY MVP DIMENSIONS
+Previous step: P4.10.0-C8-I-A2
+Previous commit: 5030100
+Runtime impact: NONE
+SQL impact: NONE
+UI impact: NONE
+
+## 1. Purpose
+
+This document defines the first stable MVP set of state dimensions for GPT-APP / AI-NAVIGATOR.
+
+The goal is to prepare the platform for:
+
+- state facts,
+- state deltas,
+- state snapshots,
+- weakest direction detection,
+- Next Best Action v0,
+- similarity/relevance resolver.
+
+This step does NOT implement state tables.
+
+This step only defines which dimensions are allowed in the first MVP scope and how they should be interpreted safely.
+
+## 2. Core principle
+
+State dimensions are not Value Object subtypes.
+
+A Value Object remains unified.
+
+State dimensions describe measurable, inferred or proxy aspects of a Value Object, actor, direction, context or baseline graph.
+
+Correct model:
+
+Unified Value Object
++ category signature
++ parent/child hierarchy
++ actor context
++ state dimensions
++ state facts/deltas/snapshots
++ similarity/relevance edges
+
+Incorrect model:
+
+Different Value Object subtype for every state domain.
+
+## 3. MVP dimension groups
+
+The first MVP state dimensions are grouped into seven domains:
+
+1. Energy / fatigue / recovery.
+2. Focus / cognitive load.
+3. Emotional / stress proxy.
+4. Physical load / mobility / pain signal.
+5. Family / care load.
+6. Finance / career pressure.
+7. Goal balance / overfocus / underattention.
+
+These groups are enough to support the first Next Best Action v0 logic:
+
+weakest direction
+-> user chooses direction
+-> action candidates
+-> feedback/correction
+
+## 4. Dimension status types
+
+Each dimension can have one of these implementation statuses:
+
+### MVP_READY
+
+Safe enough to include in first state dimension dictionary.
+
+### MVP_PROXY_ONLY
+
+Can be used only as proxy, not as direct fact.
+
+### MVP_REQUIRES_SOURCE
+
+Requires direct measurement, user input, calendar, wearable, transaction or another source.
+
+### LATER
+
+Useful but not needed in the first MVP.
+
+### BLOCKED_AS_DIRECT_CLAIM
+
+Cannot be used as direct factual dimension without strong source and claim policy.
+
+## 5. Unit types
+
+Allowed MVP unit types:
+
+- numeric_0_100
+- numeric_1_5
+- minutes
+- count
+- boolean
+- enum
+- qualitative_low_medium_high
+- json_value
+- score
+- ratio
+- currency
+- unknown
+
+A dimension must declare its unit type before it can be used in future SQL/schema design.
+
+## 6. Privacy levels
+
+Every dimension must have a default privacy level.
+
+Suggested levels:
+
+- public_safe
+- user_private
+- sensitive_personal
+- sensitive_health
+- sensitive_family
+- sensitive_financial
+- sensitive_work
+- sensitive_child_related
+
+Default rule:
+
+State dimensions are private unless explicitly designed otherwise.
+
+## 7. Claim policy types
+
+Each dimension must have a claim policy.
+
+Allowed policy types:
+
+- direct_fact_allowed
+- proxy_only
+- user_confirmation_required
+- source_required
+- sensitive_proxy_only
+- forbidden_without_medical_source
+- forbidden_without_transaction_source
+- forbidden_without_user_feedback
+
+## 8. MVP Dimensions — Energy / fatigue / recovery
+
+### 8.1 energy_level
+
+Purpose:
+
+Estimate how much usable energy the user or actor currently has for action.
+
+Status:
+
+MVP_PROXY_ONLY
+
+Unit type:
+
+numeric_0_100 or numeric_1_5
+
+Default privacy:
+
+sensitive_personal
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- sleep_quality_signal
+- recovery_need
+- nutrition_support_signal
+- hydration_signal
+- work_load
+- physical_load
+- cognitive_load
+- user self-report
+
+Allowed wording:
+
+- energy level estimate
+- user-reported energy
+- possible low/high energy
+
+Forbidden wording:
+
+- metabolic diagnosis
+- hormonal explanation
+- medical conclusion
+
+### 8.2 fatigue_level
+
+Purpose:
+
+Estimate tiredness or load accumulation.
+
+Status:
+
+MVP_PROXY_ONLY
+
+Unit type:
+
+numeric_0_100 or numeric_1_5
+
+Default privacy:
+
+sensitive_personal
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- long work session
+- poor sleep signal
+- repeated deep work
+- physical load
+- emotional tension
+- user self-report
+
+Allowed wording:
+
+- fatigue estimate
+- fatigue signal
+- possible accumulated tiredness
+
+Forbidden wording:
+
+- burnout diagnosis
+- disease state
+- hormonal exhaustion
+
+### 8.3 recovery_need
+
+Purpose:
+
+Estimate whether the next recommended action should include rest, movement, sleep, food, hydration or lower intensity.
+
+Status:
+
+MVP_PROXY_ONLY
+
+Unit type:
+
+numeric_0_100 or qualitative_low_medium_high
+
+Default privacy:
+
+sensitive_health
+
+Claim policy:
+
+sensitive_proxy_only
+
+Input hooks:
+
+- sleep duration
+- sleep quality
+- fatigue_level
+- physical_load
+- cognitive_load
+- stress_load_estimate
+- pain_signal
+- user self-report
+
+Allowed wording:
+
+- recovery need may be elevated
+- recovery-supporting action may fit now
+- low-intensity action recommended
+
+Forbidden wording:
+
+- medical recovery confirmed
+- illness
+- exact physiological state
+
+## 9. MVP Dimensions — Focus / cognitive load
+
+### 9.1 focus_readiness
+
+Purpose:
+
+Estimate whether user is ready for deep work, medium task, light task or rest.
+
+Status:
+
+MVP_PROXY_ONLY
+
+Unit type:
+
+numeric_0_100 or qualitative_low_medium_high
+
+Default privacy:
+
+sensitive_personal
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- sleep_quality_signal
+- cognitive_load
+- context_switching_load
+- interruptions
+- emotional_tension
+- caffeine-related alertness signal
+- user self-report
+
+Allowed wording:
+
+- focus readiness estimate
+- deep work may/may not fit now
+- light task may be safer
+
+Forbidden wording:
+
+- ADHD diagnosis
+- cognitive disorder
+- psychological deficit
+
+### 9.2 cognitive_load
+
+Purpose:
+
+Track mental load from coding, language learning, planning, negotiations, complex decisions and analysis.
+
+Status:
+
+MVP_READY
+
+Unit type:
+
+numeric_0_100 or qualitative_low_medium_high
+
+Default privacy:
+
+sensitive_personal
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- coding
+- architecture
+- language learning
+- writing strategy
+- negotiation
+- planning
+- multitopic switching
+- long analytical session
+
+Allowed wording:
+
+- cognitive load increased
+- this activity was cognitively demanding
+- deep work load signal
+
+Forbidden wording:
+
+- brain fatigue diagnosis
+- burnout
+- mental disorder
+
+### 9.3 context_switching_load
+
+Purpose:
+
+Estimate load caused by frequent switching between projects, languages, jobs, family tasks and interruptions.
+
+Status:
+
+MVP_PROXY_ONLY
+
+Unit type:
+
+numeric_0_100 or count
+
+Default privacy:
+
+sensitive_personal
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- many short activities
+- interruptions
+- switching languages
+- switching work/project/family context
+- fragmented time blocks
+
+Allowed wording:
+
+- context switching load
+- fragmented attention signal
+- switching pressure
+
+Forbidden wording:
+
+- attention disorder
+- productivity failure as judgement
+
+## 10. MVP Dimensions — Emotional / stress proxy
+
+### 10.1 stress_load_estimate
+
+Purpose:
+
+Proxy estimate of stress load from work pressure, conflict, deadlines, poor sleep, financial pressure or emotional language.
+
+Status:
+
+MVP_PROXY_ONLY
+
+Unit type:
+
+numeric_0_100 or qualitative_low_medium_high
+
+Default privacy:
+
+sensitive_personal
+
+Claim policy:
+
+sensitive_proxy_only
+
+Input hooks:
+
+- conflict
+- deadline pressure
+- financial pressure
+- sleep problems
+- emotional tension
+- workplace pressure
+- user self-report
+
+Allowed wording:
+
+- stress load estimate
+- possible stress signal
+- stress-related load may be elevated
+
+Forbidden wording:
+
+- cortisol high
+- anxiety disorder
+- depression
+- clinical stress diagnosis
+
+### 10.2 emotional_tension
+
+Purpose:
+
+Track user-reported or semantically detected emotional tension without diagnosing mental health.
+
+Status:
+
+MVP_PROXY_ONLY
+
+Unit type:
+
+numeric_0_100 or qualitative_low_medium_high
+
+Default privacy:
+
+sensitive_personal
+
+Claim policy:
+
+sensitive_proxy_only
+
+Input hooks:
+
+- anger
+- frustration
+- conflict
+- worry
+- pressure
+- user self-report
+- emotionally loaded activity text
+
+Allowed wording:
+
+- emotional tension signal
+- possible emotional load
+- communication risk may be higher
+
+Forbidden wording:
+
+- personality judgement
+- mental health diagnosis
+- dangerous state unless explicit evidence exists
+
+### 10.3 motivation_readiness
+
+Purpose:
+
+Estimate whether user is ready for active goal-oriented work or needs a lighter entry task.
+
+Status:
+
+MVP_PROXY_ONLY
+
+Unit type:
+
+numeric_0_100 or qualitative_low_medium_high
+
+Default privacy:
+
+sensitive_personal
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- task avoidance signal
+- fatigue
+- reward-seeking proxy
+- successful small tasks
+- user self-report
+- recent goal progress
+
+Allowed wording:
+
+- motivation readiness estimate
+- lighter start may fit
+- practical action may help regain momentum
+
+Forbidden wording:
+
+- laziness
+- weak will
+- dopamine deficit
+- psychological disorder
+
+## 11. MVP Dimensions — Physical load / mobility / pain signal
+
+### 11.1 physical_load
+
+Purpose:
+
+Track load from walking, work, exercise, microtraining, carrying, standing or physical jobs.
+
+Status:
+
+MVP_READY
+
+Unit type:
+
+numeric_0_100 or qualitative_low_medium_high
+
+Default privacy:
+
+sensitive_health
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- walking
+- microtraining
+- pull-ups
+- dips
+- stretching
+- physical work
+- commute
+- manual effort
+
+Allowed wording:
+
+- physical load
+- low/moderate/high physical activity signal
+- recovery need may increase after load
+
+Forbidden wording:
+
+- exact adaptation
+- muscle growth confirmed
+- testosterone change
+
+### 11.2 sitting_load
+
+Purpose:
+
+Track possible negative load from long sitting or immobility.
+
+Status:
+
+MVP_PROXY_ONLY
+
+Unit type:
+
+minutes or numeric_0_100
+
+Default privacy:
+
+sensitive_health
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- coding
+- office work
+- long computer use
+- passive rest
+- no movement
+- calendar/work blocks
+
+Allowed wording:
+
+- sitting load
+- movement break may fit
+- mobility support may be useful
+
+Forbidden wording:
+
+- medical condition
+- posture diagnosis
+- disease risk as fact
+
+### 11.3 mobility_need
+
+Purpose:
+
+Estimate whether walking, stretching or mobility exercise may be useful now.
+
+Status:
+
+MVP_PROXY_ONLY
+
+Unit type:
+
+numeric_0_100 or qualitative_low_medium_high
+
+Default privacy:
+
+sensitive_health
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- sitting_load
+- physical stiffness self-report
+- long work block
+- recovery_need
+- walking/movement deficit
+
+Allowed wording:
+
+- mobility need signal
+- movement break may fit
+- stretching candidate
+
+Forbidden wording:
+
+- clinical mobility limitation
+- orthopedic diagnosis
+
+### 11.4 pain_signal
+
+Purpose:
+
+Represent user-reported pain or discomfort as a sensitive signal.
+
+Status:
+
+MVP_REQUIRES_SOURCE
+
+Unit type:
+
+numeric_1_5 or numeric_0_100
+
+Default privacy:
+
+sensitive_health
+
+Claim policy:
+
+user_confirmation_required
+
+Input hooks:
+
+- direct user report
+- pain words in activity text
+- body area mention
+- medical/lab/document import if any
+
+Allowed wording:
+
+- user-reported pain signal
+- discomfort reported
+- pain-related caution
+
+Forbidden wording:
+
+- diagnosis
+- cause of pain
+- cancer/injury conclusion
+- treatment advice as certainty
+
+## 12. MVP Dimensions — Family / care load
+
+### 12.1 family_care_load
+
+Purpose:
+
+Track load and attention connected with family duties, childcare, caregiving and household responsibility.
+
+Status:
+
+MVP_READY
+
+Unit type:
+
+numeric_0_100 or minutes
+
+Default privacy:
+
+sensitive_family
+
+Claim policy:
+
+sensitive_proxy_only
+
+Input hooks:
+
+- childcare
+- parental care
+- helping child learn
+- caregiving
+- family duty
+- household task
+- shared household context
+
+Allowed wording:
+
+- family care load
+- care responsibility signal
+- family attention requirement
+
+Forbidden wording:
+
+- family quality judgement
+- child psychological state
+- parenting quality
+
+### 12.2 family_attention_balance
+
+Purpose:
+
+Estimate whether family direction is underattended or overloading the day.
+
+Status:
+
+MVP_PROXY_ONLY
+
+Unit type:
+
+score or qualitative_low_medium_high
+
+Default privacy:
+
+sensitive_family
+
+Claim policy:
+
+sensitive_proxy_only
+
+Input hooks:
+
+- time spent on family
+- family obligations
+- missed family tasks
+- childcare activity
+- user priorities
+- interruptions
+
+Allowed wording:
+
+- family attention balance
+- family direction may need attention
+- family duty may constrain deep work
+
+Forbidden wording:
+
+- bad parent
+- bad family
+- relationship quality improved/worsened as fact
+
+### 12.3 childcare_duty_active
+
+Purpose:
+
+Represent whether childcare/care duty is active in a current or near-current window.
+
+Status:
+
+MVP_READY
+
+Unit type:
+
+boolean or enum
+
+Default privacy:
+
+sensitive_child_related
+
+Claim policy:
+
+user_confirmation_required
+
+Input hooks:
+
+- child participant
+- family duty
+- calendar event
+- user manual input
+- activity text
+
+Allowed wording:
+
+- childcare duty active
+- child-related responsibility active
+- care obligation may limit deep work
+
+Forbidden wording:
+
+- child state
+- parenting quality
+- family judgement
+
+## 13. MVP Dimensions — Finance / career pressure
+
+### 13.1 financial_pressure
+
+Purpose:
+
+Estimate pressure related to income, expenses, job search, sales activity or strategic financial goals.
+
+Status:
+
+MVP_PROXY_ONLY
+
+Unit type:
+
+numeric_0_100 or qualitative_low_medium_high
+
+Default privacy:
+
+sensitive_financial
+
+Claim policy:
+
+user_confirmation_required
+
+Input hooks:
+
+- repeated income-generation activity
+- job search
+- sales/prospecting
+- unpaid obligations
+- user self-report
+- expenses/income if provided
+
+Allowed wording:
+
+- financial pressure proxy
+- finance direction needs attention
+- income-oriented action may fit
+
+Forbidden wording:
+
+- financial risk as fact without data
+- insolvency
+- employer/job probability
+- income improved
+
+### 13.2 income_action_attention
+
+Purpose:
+
+Track attention given to actions that may influence future income.
+
+Status:
+
+MVP_READY
+
+Unit type:
+
+minutes or score
+
+Default privacy:
+
+sensitive_financial
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- sales
+- lead generation
+- job applications
+- offer preparation
+- business development
+- client communication
+- certification for career
+
+Allowed wording:
+
+- income-oriented action
+- revenue-oriented effort
+- career/business practical activity
+
+Forbidden wording:
+
+- income received
+- client acquired
+- contract signed
+
+### 13.3 job_search_attention
+
+Purpose:
+
+Track attention given to job search, remote work preparation, certificates and employer targeting.
+
+Status:
+
+MVP_READY
+
+Unit type:
+
+minutes or score
+
+Default privacy:
+
+sensitive_work
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- job application
+- CV
+- cover letter
+- certification
+- German employer research
+- remote work preparation
+- interview practice
+
+Allowed wording:
+
+- job search attention
+- career preparation activity
+- employability-related effort
+
+Forbidden wording:
+
+- job probability
+- employer interest
+- guaranteed career improvement
+
+### 13.4 career_readiness
+
+Purpose:
+
+Estimate readiness for career opportunities based on language, certificates, portfolio, CV, interview practice and practical business skills.
+
+Status:
+
+MVP_PROXY_ONLY
+
+Unit type:
+
+numeric_0_100 or qualitative_low_medium_high
+
+Default privacy:
+
+sensitive_work
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- language learning
+- certification progress
+- portfolio work
+- job search
+- sales practice
+- interview preparation
+- project progress
+
+Allowed wording:
+
+- career readiness proxy
+- career preparation level
+- readiness signal
+
+Forbidden wording:
+
+- guaranteed employability
+- employer interest confirmed
+- market value as fact
+
+## 14. MVP Dimensions — Goal balance / weak direction detection
+
+### 14.1 goal_attention_score
+
+Purpose:
+
+Estimate how much attention a strategic direction receives compared with target norm.
+
+Status:
+
+MVP_READY
+
+Unit type:
+
+score or numeric_0_100
+
+Default privacy:
+
+user_private
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- activity duration by direction
+- user priorities
+- target norms
+- missed activities
+- recent history
+- feedback
+
+Allowed wording:
+
+- goal attention score
+- direction received little/much attention
+- possible underattention
+
+Forbidden wording:
+
+- user is lazy
+- wrong priorities as judgement
+
+### 14.2 overdue_direction_score
+
+Purpose:
+
+Track whether a direction has overdue obligations, stale tasks or neglected required actions.
+
+Status:
+
+MVP_READY
+
+Unit type:
+
+score or count
+
+Default privacy:
+
+user_private
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- deadlines
+- calendar events
+- planned activities
+- missed tasks
+- user-defined obligations
+- project milestones
+
+Allowed wording:
+
+- overdue direction pressure
+- this direction may require action
+- stale obligation signal
+
+Forbidden wording:
+
+- failure judgement
+- irresponsible behaviour as fact
+
+### 14.3 overfocus_score
+
+Purpose:
+
+Detect when too much attention goes into one direction at the expense of others.
+
+Status:
+
+MVP_PROXY_ONLY
+
+Unit type:
+
+score or numeric_0_100
+
+Default privacy:
+
+user_private
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- long repeated same-direction work
+- reduced family/recovery/health attention
+- user strategic balance
+- recent activity distribution
+
+Allowed wording:
+
+- overfocus signal
+- balance risk
+- this direction may be overloaded
+
+Forbidden wording:
+
+- obsession
+- workaholism as diagnosis
+- pathological behaviour
+
+### 14.4 underattention_score
+
+Purpose:
+
+Detect when a strategic direction receives less attention than its minimum norm or need.
+
+Status:
+
+MVP_READY
+
+Unit type:
+
+score or numeric_0_100
+
+Default privacy:
+
+user_private
+
+Claim policy:
+
+proxy_only
+
+Input hooks:
+
+- lack of recent activity
+- missed tasks
+- low duration
+- deterioration signals
+- user priority
+- target norms
+
+Allowed wording:
+
+- underattention signal
+- direction may be weak now
+- this area may need attention
+
+Forbidden wording:
+
+- neglect as moral judgement
+- failure label
+
+## 15. Dimensions for later, not MVP
+
+The following dimensions are useful but should not be part of first MVP implementation:
+
+- exact hormone levels;
+- dopamine state;
+- cortisol state;
+- testosterone trend;
+- mental health diagnosis;
+- clinical sleep disorder;
+- medical recovery state;
+- social class score;
+- relationship quality score;
+- child development score;
+- exact productivity quality score;
+- employer interest probability;
+- job offer probability.
+
+Reason:
+
+They require direct sources, professional validation, privacy design or strong evidence.
+
+## 16. Minimum required fields for future state_dimensions table
+
+Future SQL audit should check whether a table like `state_dimensions` can support:
+
+- id;
+- dimension_key;
+- title;
+- domain;
+- description;
+- unit_type;
+- default_privacy_level;
+- claim_policy;
+- mvp_status;
+- allowed_source_types;
+- forbidden_claims;
+- safer_proxy_wording;
+- is_sensitive;
+- is_active;
+- created_at;
+- updated_at.
+
+No SQL is created in this step.
+
+## 17. Minimum required fields for future state values
+
+Any future state fact, delta or snapshot must preserve:
+
+- dimension_id or dimension_key;
+- target value object or direction;
+- source;
+- confidence;
+- evidence_json;
+- window or valid time scope;
+- privacy level;
+- claim strength;
+- correction status;
+- derivation method;
+- whether it is direct or inferred;
+- whether it is proxy-only.
+
+## 18. Weakest direction MVP formula
+
+Weakest Direction v0 may use these state dimensions:
+
+- goal_attention_score;
+- underattention_score;
+- overdue_direction_score;
+- overfocus_score;
+- fatigue_level;
+- recovery_need;
+- focus_readiness;
+- family_care_load;
+- financial_pressure;
+- job_search_attention;
+- income_action_attention.
+
+Initial conceptual formula:
+
+direction_score =
+underattention_score
++ deterioration_score
++ overdue_direction_score
++ goal_priority_weight
++ financial_or_family_pressure_if_relevant
+- overfocus_score
++ availability_fit
+
+The output is an ordered list of directions from weakest to strongest.
+
+The system then asks the user:
+
+"Какое направление сейчас отрабатываем?"
+
+## 19. Direction examples for MVP
+
+Possible first directions:
+
+- health;
+- recovery;
+- family;
+- finance;
+- career;
+- languages;
+- gpt-app project;
+- current job;
+- business/sales;
+- rest;
+- social communication.
+
+Directions may be represented by top-level Value Objects or direction groups.
+
+This document does not decide final DB representation for directions.
+
+## 20. MVP snapshot windows
+
+First windows to support conceptually:
+
+- current;
+- last_3h;
+- today;
+- last_7d;
+- last_30d;
+- baseline.
+
+No snapshot table is created in this step.
+
+## 21. Anti-errors
+
+Do NOT:
+
+- add VO subtypes;
+- create SQL migrations;
+- create state tables now;
+- write runtime state engine;
+- treat proxy dimensions as facts;
+- treat AI output as state fact;
+- create medical/hormonal direct claims;
+- rank user socially;
+- infer family quality;
+- infer child development outcomes;
+- treat business effort as confirmed revenue;
+- merge similarity and relevance;
+- start UI before backend/data contracts.
+
+## 22. Definition of Done
+
+C8-I-A3 is complete when:
+
+- MVP state dimensions are documented;
+- each dimension has purpose;
+- each dimension has status;
+- each dimension has unit type;
+- each dimension has privacy level;
+- each dimension has claim policy;
+- forbidden dimensions are listed as later/not MVP;
+- weakest direction formula inputs are documented;
+- no runtime/code/SQL changes were made;
+- file is committed as doc-only MVP state dimensions document.
+
+## 23. Next step
+
+After C8-I-A3 commit, continue with:
+
+P4.10.0-C8-I-A4 — Similarity/Relevance Resolver Concept.
+
+A4 must define how the system selects relevant Value Objects and states for analysis without loading full user history.
