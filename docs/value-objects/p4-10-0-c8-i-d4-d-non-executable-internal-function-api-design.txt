@@ -1,0 +1,759 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-D — Non-executable Internal Function/API Design
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-D
+Type: non-executable design document
+Status: DESIGN ONLY / NO SQL / NO RUNTIME CHANGES / NO PRODUCTION WRITES
+
+Purpose
+-------
+Design the future controlled internal function/API shape for evaluating candidate state signals
+against the D4-C State Fact Creation Contract.
+
+This document does not create SQL.
+This document does not modify database schema.
+This document does not create runtime code.
+This document does not create an API route.
+This document does not insert value_object_state_facts.
+This document does not create state facts.
+This document does not implement state engine.
+This document does not implement Next Best Action.
+This document does not implement UI.
+
+D4-D exists to define how a future controlled internal path should look before any code is written.
+
+Previous Completed Steps
+------------------------
+P4.10.0-C8-I-D4-A:
+Controlled State Facts Creation Governance Plan.
+Commit: 0ceafce
+
+P4.10.0-C8-I-D4-B:
+Read-only State Facts Audit Report.
+Commit: 0da4722
+
+P4.10.0-C8-I-D4-C:
+State Fact Creation Contract.
+Commit: 502c26d
+
+Current Rule
+------------
+D4-D is non-executable.
+
+The output of D4-D is only a design document.
+No TypeScript file.
+No route.ts.
+No SQL migration.
+No Supabase write.
+No state fact persistence.
+No production behaviour change.
+
+Core Design Goal
+----------------
+Design a future internal evaluator that takes a state signal candidate and returns one of three decisions:
+
+1. accept_for_controlled_persistence
+2. reject
+3. shadow_only
+
+Important:
+Even accept_for_controlled_persistence does not mean immediate database insert in D4-D or D4-E.
+It means only that the candidate passed the contract and may later become an insert draft in a controlled internal persistence path.
+
+High-Level Future Flow
+----------------------
+Future conceptual flow:
+
+activity_event / manual input / rule output / AI suggestion
+-> candidate state signal
+-> internal D4-C contract evaluator
+-> dimension lookup
+-> claim policy gate
+-> source type gate
+-> evidence gate
+-> forbidden overclaim gate
+-> safe wording gate
+-> confidence and claim strength gate
+-> privacy and sensitivity gate
+-> valid window / expiry gate
+-> correction / rollback readiness gate
+-> decision:
+   - accept_for_controlled_persistence
+   - reject
+   - shadow_only
+
+D4-D does not implement this flow.
+D4-D only defines its design.
+
+Design Components
+-----------------
+
+1. Candidate Builder
+Name:
+buildStateSignalCandidate
+
+Purpose:
+Convert upstream semantic/rule/manual inputs into a normalized candidate shape.
+
+Inputs:
+- user id
+- value object id
+- source event or source object
+- candidate dimension key
+- proposed value
+- raw semantic evidence
+- rule evidence if available
+- safe wording draft
+- candidate metadata
+
+Output:
+- StateSignalCandidate object matching the D4-C candidate input shape.
+
+Non-goal:
+The candidate builder must not insert into value_object_state_facts.
+
+2. Contract Evaluator
+Name:
+evaluateStateSignalCandidateAgainstContract
+
+Purpose:
+Evaluate one normalized candidate against the D4-C gates.
+
+Inputs:
+- StateSignalCandidate
+- resolved state dimension metadata
+- optional source event metadata
+- optional value object metadata
+- contract version
+
+Output:
+- StateFactContractDecision
+
+Possible decisions:
+- accept_for_controlled_persistence
+- reject
+- shadow_only
+
+Non-goal:
+The contract evaluator must not write to Supabase.
+
+3. Dimension Resolver
+Name:
+resolveStateDimensionForCandidate
+
+Purpose:
+Find state_dimensions row by dimension_key and return governance metadata.
+
+Required lookup:
+- dimension_key
+- id
+- title
+- domain
+- claim_policy
+- default_privacy_level
+- is_sensitive
+- is_active
+
+Accepted result:
+- dimension exists
+- is_active = true
+
+Rejected result:
+- dimension missing
+- inactive dimension
+- blank dimension_key
+- attempt to create new dimension automatically
+
+Non-goal:
+No automatic dimension creation.
+No AI-created active dimensions.
+No draft dimension persistence.
+
+4. Source Resolver
+Name:
+resolveCandidateSource
+
+Purpose:
+Normalize and validate the candidate source.
+
+Allowed source types:
+- manual
+- user_confirmed
+- rule
+- ai
+- system
+- import
+- correction
+
+Source rules:
+manual:
+- allowed only for user-provided direct input
+- must preserve input/evidence text
+
+user_confirmed:
+- required for financial_pressure_signal
+- must include explicit confirmation evidence
+
+rule:
+- must include ruleId and ruleVersion
+- allowed for deterministic internal rules
+
+ai:
+- shadow-only by default
+- cannot directly persist sensitive or high-claim facts
+
+system:
+- allowed for deterministic platform-generated planning signals
+- must include internal explanation
+
+import:
+- future-limited
+- requires imported source metadata
+- no medical/financial interpretation without future governance
+
+correction:
+- must reference previous fact or corrected activity
+
+Non-goal:
+No direct persistence from source resolver.
+
+5. Evidence Validator
+Name:
+validateStateFactEvidence
+
+Purpose:
+Ensure evidence_json can explain why the state fact candidate exists.
+
+Required evidence by source:
+activity_event:
+- activityEventId
+- inputText or title
+- durationMinutes if used
+- source activity status if relevant
+- matched categories or rules if derived
+
+user_confirmation:
+- user confirmation text or action
+- timestamp
+- confirmed dimensionKey
+- exact safe meaning confirmed
+
+rule:
+- ruleId
+- ruleVersion
+- matched fields
+- deterministic explanation
+- source activity or object reference
+
+ai:
+- explanation or prompt/output reference
+- must remain shadow-only unless later governance changes this
+
+correction:
+- previousFactId or sourceActivityEventId
+- correction reason
+- correction timestamp
+
+Non-goal:
+Evidence validator must not hide sensitive inference.
+Evidence validator must not invent missing evidence.
+
+6. Overclaim Guard
+Name:
+checkForbiddenStateFactOverclaims
+
+Purpose:
+Reject candidates that imply unsafe conclusions.
+
+Forbidden conclusions:
+- medical diagnosis
+- hormonal measurement without direct source
+- psychological diagnosis
+- legal conclusion
+- employer evaluation
+- creditworthiness assessment
+- hidden financial inference
+- hidden health inference
+- confirmed income without explicit source
+- confirmed client acquisition without explicit source
+- confirmed deal closure without explicit source
+- confirmed muscle growth or fat loss without direct measurement
+- child development scoring
+- social ranking
+- irreversible personal profile judgment
+
+Examples of blocked wording:
+- high cortisol
+- low dopamine
+- depression
+- burnout diagnosis
+- client acquired
+- deal closed
+- income confirmed
+- child improved
+- muscle growth confirmed
+- financially unreliable
+- bad employee
+- poor parent
+
+Non-goal:
+The overclaim guard does not make medical, legal, financial, or psychological judgments.
+It only blocks unsafe claims.
+
+7. Safe Wording Normalizer
+Name:
+normalizeSafeStateFactWording
+
+Purpose:
+Produce safe wording for accepted or shadow candidates.
+
+Required fields:
+- shortLabel
+- userVisibleExplanation
+- internalExplanation
+
+Safe wording must use:
+- signal
+- estimate
+- proxy
+- user-confirmed
+- based on observed activity
+- based on explicit user confirmation
+- not a medical conclusion
+- not a diagnosis
+- not a confirmed business outcome
+
+Non-goal:
+No deterministic outcomes.
+No hidden inference.
+No irreversible profile judgment.
+
+8. Confidence and Claim Strength Evaluator
+Name:
+evaluateConfidenceAndClaimStrength
+
+Purpose:
+Ensure confidence and claimStrength are compatible with source and claim policy.
+
+Rules:
+- confidence must be between 0 and 1.
+- claimStrength must be between 0 and 5.
+- AI-only candidates must remain claimStrength 0.
+- proxy_only signals should normally use claimStrength 1.
+- system_estimate from rule should normally use claimStrength 2.
+- user_confirmed should normally use claimStrength up to 3.
+- claimStrength 4 and 5 are not used in D4 until future direct-source governance exists.
+
+Recommended defaults:
+ai shadow candidate:
+- confidence <= 0.70
+- claimStrength = 0
+
+proxy_only:
+- confidence <= 0.75
+- claimStrength = 1
+
+system_estimate from rule:
+- confidence <= 0.85
+- claimStrength = 2
+
+user_confirmed:
+- confidence <= 0.95
+- claimStrength = 3
+
+Non-goal:
+No automatic inflation of confidence to 1.
+
+9. Privacy and Sensitivity Evaluator
+Name:
+evaluateStateFactPrivacy
+
+Purpose:
+Ensure privacy level is compatible with dimension sensitivity.
+
+D4 rule:
+Only private facts are allowed.
+
+Allowed:
+- private
+
+Blocked in D4:
+- shared_with_org
+- public_masked
+- public
+
+Reason:
+Sharing and public visibility require a separate future governance phase.
+
+Sensitive dimensions:
+- family_care_load_signal
+- fatigue_signal
+- financial_pressure_signal
+- physical_activity_load
+- recovery_need
+- stress_load_estimate
+
+Non-goal:
+No public or shared state facts in D4.
+
+10. Valid Window Evaluator
+Name:
+evaluateStateFactValidityWindow
+
+Purpose:
+Ensure valid_from / valid_to are safe and meaningful.
+
+Window types:
+- event
+- current
+- last_3h
+- today
+- last_7d
+- baseline
+- custom
+
+D4 rule:
+Baseline/long-lived facts require future governance.
+Proxy-only sensitive facts must not become indefinite baseline facts.
+
+Reject if:
+- valid_to < valid_from
+- sensitive proxy has no expiry and is not event-scoped
+- baseline is requested without future governance
+
+Non-goal:
+No long-lived baseline context engine in D4.
+
+11. Correction and Rollback Readiness Evaluator
+Name:
+evaluateRollbackReadiness
+
+Purpose:
+Ensure future persistence can be corrected, revoked, superseded, or recalculated.
+
+Required metadata:
+- rollbackable = true
+- createdByContract = state-fact-creation-contract-v1
+- sourceActivityEventId if derived from activity
+- previousFactId if correction/supersession
+- ruleId and ruleVersion if rule-produced
+- recalculationGroupId if later needed
+
+Correction statuses supported by DB:
+- active
+- corrected
+- revoked
+- superseded
+
+Non-goal:
+No actual rollback implementation in D4-D.
+No update/delete of existing facts.
+
+Conceptual Internal Function Shape
+----------------------------------
+Future function name:
+evaluateStateSignalCandidate
+
+Conceptual TypeScript-like signature:
+
+evaluateStateSignalCandidate(input: StateSignalCandidateInput): StateFactContractDecision
+
+Important:
+This is not code.
+This is only a design signature.
+
+Conceptual input:
+
+{
+  "contractVersion": "state-fact-creation-contract-v1",
+  "mode": "shadow_evaluation",
+  "candidate": {
+    "schemaVersion": "state-signal-candidate-v1",
+    "userId": "uuid",
+    "valueObjectId": "uuid",
+    "dimensionKey": "string",
+    "proposedValue": {},
+    "source": {},
+    "evidence": {},
+    "confidence": 0.0,
+    "claimStrength": 0,
+    "privacyLevel": "private",
+    "validFrom": "timestamp|null",
+    "validTo": "timestamp|null",
+    "safeWording": {},
+    "metadata": {}
+  }
+}
+
+Conceptual output:
+
+{
+  "contractVersion": "state-fact-creation-contract-v1",
+  "mode": "shadow_evaluation",
+  "decision": "accept_for_controlled_persistence|reject|shadow_only",
+  "insertDraft": null,
+  "rejectionCode": "string|null",
+  "rejectionReasons": [],
+  "failedGates": [],
+  "passedGates": [],
+  "safeWording": {},
+  "debug": {
+    "dimensionResolved": true,
+    "sourceResolved": true,
+    "claimPolicy": "system_estimate|proxy_only|user_confirmed|null",
+    "wouldPersist": false,
+    "noWriteGuarantee": true
+  }
+}
+
+No-Write Guarantee
+------------------
+D4-D and future D4-E shadow-mode must guarantee:
+
+- no insert into value_object_state_facts
+- no update to value_object_state_facts
+- no delete from value_object_state_facts
+- no insert into state_dimensions
+- no update to state_dimensions
+- no creation of real state facts
+- no mutation of activity_events
+- no mutation of value_objects
+- no user-visible recommendations
+- no NBA execution
+
+In shadow mode, even accepted candidates return insertDraft only as a conceptual draft.
+
+D4-D Design Decision
+--------------------
+The future evaluator should produce an insertDraft only in response shape, not execute it.
+
+D4-D accepted candidate output should say:
+- decision = accept_for_controlled_persistence
+- wouldPersist = false
+- noWriteGuarantee = true
+- insertDraft = object
+
+D4-D rejected candidate output should say:
+- decision = reject
+- wouldPersist = false
+- noWriteGuarantee = true
+- insertDraft = null
+
+D4-D shadow-only candidate output should say:
+- decision = shadow_only
+- wouldPersist = false
+- noWriteGuarantee = true
+- insertDraft = null
+
+Future Internal API Design
+--------------------------
+Future internal endpoint candidate for D4-E:
+
+POST /api/activity/debug/state-signal-candidate-shadow-test
+
+Purpose:
+Evaluate sample state signal candidates in shadow mode.
+
+Important:
+D4-D does not create this route.
+D4-D only names a future debug endpoint for D4-E.
+
+D4-E route must:
+- be debug-only
+- be shadow-only
+- not persist facts
+- return JSON decisions
+- clearly display noWriteGuarantee = true
+- be tested with safe examples
+- be blocked from production persistence
+
+Future request shape:
+
+{
+  "mode": "shadow_evaluation",
+  "inputText": "worked on German for 30 minutes",
+  "durationMinutes": 30,
+  "candidateDimensionKey": "language_practice_balance",
+  "expectedDecision": "accept_for_controlled_persistence"
+}
+
+Future response shape:
+
+{
+  "ok": true,
+  "mode": "shadow_evaluation",
+  "noWriteGuarantee": true,
+  "decision": "accept_for_controlled_persistence",
+  "candidate": {},
+  "insertDraft": {},
+  "passedGates": [],
+  "failedGates": [],
+  "safeWording": {}
+}
+
+D4-D Safe Test Scenarios for D4-E
+---------------------------------
+
+Scenario 1:
+Input:
+worked on German for 30 minutes
+
+Expected:
+- dimensionKey: language_practice_balance
+- claim_policy: system_estimate
+- decision: accept_for_controlled_persistence
+- noWriteGuarantee: true
+- wording must not claim actual skill improvement
+
+Scenario 2:
+Input:
+walked to work for 20 minutes
+
+Expected:
+- dimensionKey: physical_activity_load
+- claim_policy: system_estimate
+- decision: accept_for_controlled_persistence
+- noWriteGuarantee: true
+- wording must not claim fat loss, muscle growth, hormone reduction, or medical effect
+
+Scenario 3:
+Input:
+helped child with math for 25 minutes
+
+Expected:
+- dimensionKey: family_care_load_signal
+- claim_policy: proxy_only
+- decision: accept_for_controlled_persistence only as proxy
+- noWriteGuarantee: true
+- wording must not claim child development improvement or parenting quality
+
+Scenario 4:
+Input:
+sent 5 sales emails
+
+Expected:
+- dimensionKey: pipeline_building_effort
+- claim_policy: system_estimate
+- decision: accept_for_controlled_persistence
+- noWriteGuarantee: true
+- wording must not claim client acquired, deal closed, or income generated
+
+Scenario 5:
+Input:
+I feel financially pressured this week
+
+Expected:
+- dimensionKey: financial_pressure_signal
+- claim_policy: user_confirmed
+- decision: accept_for_controlled_persistence only when explicit confirmation exists
+- noWriteGuarantee: true
+- wording must not claim creditworthiness, instability, or financial risk rating
+
+Scenario 6:
+Input:
+I probably have high cortisol because I worked too much
+
+Expected:
+- decision: reject or shadow_only
+- rejectionCode: FORBIDDEN_OVERCLAIM
+- noWriteGuarantee: true
+- safe alternative: stress_load_estimate proxy wording only
+- no hormonal conclusion
+
+Scenario 7:
+Input:
+I sent 5 sales emails and closed 2 deals
+
+Expected:
+- pipeline_building_effort can be accepted if evidence valid
+- deal closure must be rejected unless explicit business outcome source exists in future governance
+- no confirmed income claim
+
+Scenario 8:
+Input:
+I studied German, so my German level improved
+
+Expected:
+- language_practice_balance can be accepted
+- learning_progress_signal may be shadow_only unless assessment evidence exists
+- no actual skill improvement claim without evaluation
+
+Rejection Code Mapping
+----------------------
+Future evaluator should use the D4-C rejection codes:
+
+- DIMENSION_NOT_FOUND
+- DIMENSION_INACTIVE
+- CLAIM_POLICY_VIOLATION
+- SOURCE_TYPE_NOT_ALLOWED
+- SOURCE_EVIDENCE_MISSING
+- FORBIDDEN_OVERCLAIM
+- UNSAFE_WORDING
+- CONFIDENCE_OUT_OF_RANGE
+- CLAIM_STRENGTH_TOO_HIGH
+- PRIVACY_POLICY_VIOLATION
+- VALID_WINDOW_INVALID
+- ROLLBACK_NOT_TRACEABLE
+- AI_ONLY_DIRECT_PERSIST_BLOCKED
+- USER_CONFIRMATION_REQUIRED
+- SENSITIVE_INFERENCE_BLOCKED
+
+D4-D Readiness Checklist for D4-E
+---------------------------------
+D4-E may start only after D4-D is committed.
+
+Before D4-E:
+- D4-C contract must exist.
+- D4-D design must exist.
+- no runtime persistence is allowed.
+- future debug route must be shadow-only.
+- tests must verify no writes.
+- output must include noWriteGuarantee = true.
+- output must include decision and gates.
+- output must include safe wording.
+- output must include rejected unsafe claims.
+
+D4-D Non-Goals
+--------------
+D4-D must not:
+
+- create SQL migration
+- alter database schema
+- write TypeScript implementation
+- create API route
+- call Supabase write methods
+- insert value_object_state_facts
+- create state facts
+- create state engine
+- create NBA runtime
+- create UI
+- introduce Value Object subtypes
+- create public/shared visibility
+- create medical/hormonal/psychological interpretations
+- create financial/business outcome conclusions
+
+Completion Criteria
+-------------------
+D4-D is complete when this document:
+
+- defines future internal evaluator components
+- defines conceptual function shape
+- defines conceptual input/output
+- defines no-write guarantee
+- defines future debug endpoint candidate for D4-E
+- defines D4-E safe test scenarios
+- defines rejection code mapping
+- preserves D4-C contract gates
+- preserves unified Value Object architecture
+- explicitly blocks runtime/persistence implementation
+- is committed to git
+
+Next Step After D4-D
+--------------------
+P4.10.0-C8-I-D4-E — Shadow-mode debug route/script design or implementation planning.
+
+D4-E must not persist state facts.
+D4-E must prove no-write shadow evaluation.
+
+End of D4-D design.
