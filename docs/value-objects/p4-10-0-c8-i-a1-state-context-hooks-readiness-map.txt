@@ -1,0 +1,1169 @@
+﻿# GPT-APP / AI-NAVIGATOR
+# P4.10.0-C8-I-A1 — State/Context Hooks Readiness Map
+
+Date: 2026-05-24
+Status: DOCUMENT-ONLY READINESS MAP
+Previous step: P4.10.0-C8-I-A0
+Previous commit: bc87b49
+Runtime impact: NONE
+SQL impact: NONE
+UI impact: NONE
+
+## 1. Purpose
+
+This document maps existing semantic category bundles to future state/context hooks.
+
+The purpose is NOT to create state facts yet.
+
+The purpose is to answer:
+
+- which existing categories can already act as state/context hooks;
+- which hooks are ready enough for future contracts;
+- which hooks need more evidence, metrics, source data or user feedback;
+- which overclaims must remain forbidden;
+- which areas are missing prerequisites before SQL/state implementation.
+
+This step prepares C8-I-A2: State Fact vs Signal Contract.
+
+## 2. Core rule
+
+A category or category bundle can become a hook, signal, metric candidate, risk flag or relevance clue.
+
+But it must NOT automatically become a state fact.
+
+Correct chain:
+
+Activity Event
+-> Category Derivation Run
+-> categoryCandidates
+-> resolved contextual categories
+-> hook candidates
+-> fact/signal contract
+-> future state deltas/snapshots
+
+Incorrect chain:
+
+categoryCandidate
+-> automatic state fact
+
+## 3. Hook readiness statuses
+
+Use the following readiness statuses:
+
+### READY_AS_HOOK
+
+The category bundle is already semantically stable enough to be used as a hook candidate.
+
+It still does not write state facts directly.
+
+### PARTIAL
+
+The category bundle is useful, but requires more context, metrics or evidence before stable use.
+
+### NEEDS_CONTRACT
+
+The category bundle is important, but must wait for the A2 fact/signal contract.
+
+### NEEDS_SOURCE_DATA
+
+The category bundle cannot be interpreted reliably without external/direct data, for example wearable, lab result, calendar, user correction or manual measurement.
+
+### FORBIDDEN_AS_FACT
+
+The category bundle may only be used as a proxy or risk flag. Direct factual claim is forbidden.
+
+## 4. Hook types
+
+Use these hook types:
+
+- semantic_signal
+- metric_candidate
+- direct_measurement_candidate
+- inferred_state_candidate
+- risk_flag
+- forbidden_overclaim_guard
+- relevance_clue
+- availability_constraint
+- obligation_signal
+- baseline_modifier
+- feedback_required
+
+## 5. Readiness map — Family / care / childcare
+
+### Category bundle
+
+- family
+- child
+- learning
+- helping-child-learn
+- childcare
+- parental-care
+- caregiving
+- supervision
+- family-duty
+- care-responsibility
+
+### Hook candidates
+
+- family_care_load
+- family_attention_balance
+- childcare_duty_active
+- child_development_support_signal
+- possible_emotional_load
+- interruption_risk
+- shared_context_relevance
+
+### Readiness
+
+READY_AS_HOOK
+
+### Why ready
+
+The project has already fixed the rule that "учил математику с ребёнком" cannot be represented only as math + child + learning.
+
+It requires role / care / responsibility / purpose layers.
+
+### What is still missing
+
+- user feedback about emotional effect;
+- child-specific profile only if legally and ethically appropriate;
+- source/confidence/evidence contract;
+- privacy level;
+- correction mechanism.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- child development objectively improved;
+- family climate improved;
+- relationship quality improved;
+- parenting quality is good/bad;
+- psychological state of child or parent.
+
+Allowed proxy wording:
+
+- family care load signal;
+- parental care activity;
+- helping child learn;
+- possible emotional/cognitive load.
+
+## 6. Readiness map — Business / sales / lead generation
+
+### Category bundle
+
+- business
+- sales
+- lead-generation
+- potential-client
+- prospecting
+- outreach
+- negotiation
+- offer
+- proposal
+- follow-up
+- partner
+- pipeline-building
+- income-generation
+
+### Hook candidates
+
+- career_business_effort
+- pipeline_building_effort
+- income_action_attention
+- financial_direction_attention
+- sales_relationship_attention
+- potential_revenue_activity_signal
+- practical_work_direction_signal
+
+### Readiness
+
+READY_AS_HOOK
+
+### Why ready
+
+C8-G/C8-H business/sales deterministic semantic coverage was already proven.
+
+Postponed business/sales cases S6/S7/S11/S12 have forbidden overclaim protection.
+
+### What is still missing
+
+- CRM-like source data;
+- deal status;
+- contact confirmation;
+- contract/payment evidence;
+- revenue evidence;
+- user correction.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- client acquired;
+- deal closed;
+- income received;
+- confirmed contact;
+- confirmed buyer;
+- confirmed partner revenue;
+- new sale from post-purchase support.
+
+Allowed proxy wording:
+
+- pipeline-building effort;
+- potential client attention;
+- sales activity;
+- business development activity;
+- revenue-oriented activity;
+- financial direction attention.
+
+## 7. Readiness map — Post-purchase support / customer responsibility
+
+### Category bundle
+
+- post-purchase-support
+- customer-support
+- buyer-support
+- issue-resolution
+- retention
+- relationship-management
+- service-after-sale
+
+### Hook candidates
+
+- customer_responsibility_signal
+- retention_effort
+- relationship_management_effort
+- support_load
+- possible_reputation_protection
+- business_obligation_signal
+
+### Readiness
+
+READY_AS_HOOK
+
+### What is still missing
+
+- whether the customer is real or hypothetical;
+- support result;
+- satisfaction feedback;
+- time spent;
+- business impact evidence.
+
+### Forbidden overclaims
+
+Do NOT convert support automatically into:
+
+- new sale;
+- lead generation;
+- new revenue;
+- closed deal;
+- happy customer;
+- improved reputation.
+
+Allowed proxy wording:
+
+- post-purchase support activity;
+- customer responsibility signal;
+- retention-related effort.
+
+## 8. Readiness map — Language learning
+
+### Category bundle
+
+- language
+- German
+- Spanish
+- English
+- Polish
+- learning
+- vocabulary
+- grammar
+- communication
+- office-language
+- business-language
+- certification
+- career-readiness
+
+### Hook candidates
+
+- language_learning_attention
+- skill_development_effort
+- career_readiness_signal
+- cognitive_load
+- focus_use
+- multilingual_context_switching
+- certification_progress_attention
+
+### Readiness
+
+READY_AS_HOOK
+
+### What is still missing
+
+- level measurement;
+- exam/certificate target;
+- session duration;
+- active/passive mode;
+- understanding score;
+- user correction;
+- spaced repetition data.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- language level improved objectively;
+- certification readiness confirmed;
+- fluency improved;
+- professional communication is sufficient.
+
+Allowed proxy wording:
+
+- language learning activity;
+- skill practice signal;
+- career communication preparation;
+- cognitive load signal.
+
+## 9. Readiness map — Coding / deep work / architecture
+
+### Category bundle
+
+- coding
+- software-development
+- debugging
+- architecture
+- documentation
+- project-work
+- deep-work
+- system-design
+- refactoring
+- testing
+
+### Hook candidates
+
+- project_progress_attention
+- cognitive_load
+- deep_work_load
+- focus_demand
+- context_switching_risk
+- sitting_load
+- fatigue_risk
+- technical_debt_attention
+
+### Readiness
+
+READY_AS_HOOK
+
+### What is still missing
+
+- actual duration;
+- test result;
+- commit result;
+- complexity level;
+- interruption count;
+- user fatigue feedback.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- project success;
+- production safety;
+- burnout;
+- high-quality code;
+- security proof;
+- complete implementation.
+
+Allowed proxy wording:
+
+- cognitive load increased;
+- deep work effort;
+- project progress activity;
+- possible fatigue risk.
+
+## 10. Readiness map — Walking / commute / mobility
+
+### Category bundle
+
+- walking
+- commute-on-foot
+- physical-activity
+- mobility
+- low-intensity-exercise
+- transport
+- recovery
+- movement-break
+
+### Hook candidates
+
+- physical_activity_signal
+- mobility_need_reduction
+- sitting_load_reduction
+- possible_stress_reduction
+- recovery_support_signal
+- commute_activity
+- time_block_constraint
+
+### Readiness
+
+PARTIAL
+
+### Why partial
+
+Walking is a useful hook, but the real effect depends on duration, speed, terrain, physical condition, pain, weather, fatigue and context.
+
+### What is still missing
+
+- duration;
+- distance;
+- intensity;
+- heart rate or wearable data;
+- pain/fatigue feedback;
+- weather/context;
+- whether it was restful or stressful.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- muscle growth;
+- cardiovascular improvement;
+- fat burning amount;
+- stress reduction confirmed;
+- recovery confirmed.
+
+Allowed proxy wording:
+
+- low-intensity movement signal;
+- sitting load reduction signal;
+- mobility support activity.
+
+## 11. Readiness map — Exercise / microtraining
+
+### Category bundle
+
+- pull-ups
+- dips
+- stretching
+- strength-training
+- microtraining
+- muscle-load
+- hypertrophy
+- endurance
+- mobility
+- recovery
+
+### Hook candidates
+
+- physical_load
+- muscle_group_load
+- recovery_need
+- injury_risk_signal
+- mobility_support
+- strength_training_attention
+- overuse_risk
+
+### Readiness
+
+PARTIAL
+
+### What is still missing
+
+- sets/reps;
+- intensity;
+- pain signal;
+- recovery status;
+- muscle group mapping;
+- joint/tendon load;
+- age/recovery constraints;
+- wearable or manual exertion score.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- hypertrophy confirmed;
+- testosterone increased;
+- injury risk diagnosed;
+- exact muscle adaptation;
+- medical improvement.
+
+Allowed proxy wording:
+
+- strength-training load signal;
+- recovery need may increase;
+- possible tendon/joint load;
+- physical development attention.
+
+## 12. Readiness map — Coffee / caffeine / stimulant proxy
+
+### Category bundle
+
+- coffee
+- caffeine
+- stimulant
+- drink
+- alertness
+- sleep-risk
+- anxiety-proxy
+
+### Hook candidates
+
+- alertness_signal
+- sleep_risk_if_late
+- possible_anxiety_activation
+- reward_seeking_signal
+- focus_readiness_modifier
+- circadian_readiness_modifier
+
+### Readiness
+
+FORBIDDEN_AS_FACT
+
+### Why
+
+Coffee/caffeine can be a proxy signal, but cannot directly prove hormonal or neurological state.
+
+### What is still missing
+
+- time of consumption;
+- dose;
+- sleep history;
+- individual sensitivity;
+- user feedback;
+- heart rate;
+- medical constraints.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- cortisol is high;
+- dopamine increased;
+- anxiety disorder;
+- sleep will be bad;
+- focus definitely improved.
+
+Allowed proxy wording:
+
+- caffeine-related alertness signal;
+- possible sleep risk if consumed late;
+- possible activation signal.
+
+## 13. Readiness map — Sleep / recovery
+
+### Category bundle
+
+- sleep
+- nap
+- recovery
+- rest
+- fatigue
+- circadian
+- REM
+- deep-sleep
+- wearable-data
+
+### Hook candidates
+
+- recovery_need
+- fatigue_level
+- energy_level
+- circadian_readiness
+- focus_readiness
+- stress_load_estimate
+- sleep_quality_signal
+
+### Readiness
+
+NEEDS_SOURCE_DATA
+
+### Why
+
+Sleep can be manually recorded or imported from a wearable. Without direct data, it is only a weak inferred state.
+
+### What is still missing
+
+- sleep duration;
+- sleep quality;
+- wake periods;
+- subjective rest score;
+- wearable import;
+- consistency trend;
+- correction by user.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- exact hormonal state;
+- clinical insomnia;
+- sleep apnea;
+- depression;
+- medical diagnosis.
+
+Allowed proxy wording:
+
+- sleep quality signal;
+- recovery need;
+- fatigue proxy;
+- focus readiness modifier.
+
+## 14. Readiness map — Work / obligations / job load
+
+### Category bundle
+
+- work
+- shift
+- job
+- workplace
+- obligation
+- no-multitasking
+- commute
+- schedule
+- duty
+- deadline
+
+### Hook candidates
+
+- obligation_load
+- available_time_constraint
+- no_multitasking_constraint
+- energy_cost_signal
+- recovery_constraint
+- deadline_pressure
+- work_responsibility_signal
+
+### Readiness
+
+PARTIAL
+
+### What is still missing
+
+- calendar integration;
+- actual shift start/end;
+- subjective load;
+- interruption rate;
+- recovery after work;
+- whether activity was active/passive/no-multitasking.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- job performance;
+- employer satisfaction;
+- burnout;
+- legal/workplace violation without evidence.
+
+Allowed proxy wording:
+
+- work obligation active;
+- available time constrained;
+- recovery constraint;
+- deadline pressure signal.
+
+## 15. Readiness map — Finance / career / job search
+
+### Category bundle
+
+- finance
+- money
+- income
+- job-search
+- career
+- remote-work
+- B2B-sales
+- marketing
+- German-employer
+- Spain-relocation
+- certification
+- professional-development
+
+### Hook candidates
+
+- financial_pressure
+- income_action_attention
+- job_search_attention
+- career_readiness
+- certification_priority
+- revenue_oriented_activity_signal
+- strategic_goal_relevance
+
+### Readiness
+
+PARTIAL
+
+### What is still missing
+
+- current income data;
+- expenses;
+- job applications;
+- employer responses;
+- certificate status;
+- user priority;
+- deadline or target date.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- income improved;
+- job probability;
+- employer interest;
+- financial risk level as fact;
+- relocation readiness confirmed.
+
+Allowed proxy wording:
+
+- career direction attention;
+- income-oriented action;
+- job-search effort;
+- financial pressure proxy if user confirms.
+
+## 16. Readiness map — Environment / home / baseline context
+
+### Category bundle
+
+- home
+- household
+- noise
+- living-conditions
+- resource-access
+- city
+- country
+- family-origin
+- socioeconomic-origin
+- education-access
+- cultural-capital
+
+### Hook candidates
+
+- environment_load
+- noise_level_signal
+- sleep_disruption_risk
+- resource_access_modifier
+- baseline_context_modifier
+- social_capital_modifier
+- education_access_modifier
+
+### Readiness
+
+NEEDS_CONTRACT
+
+### Why
+
+These factors are important for Baseline Context, but sensitive. They must not become deterministic or socially ranking facts.
+
+### What is still missing
+
+- user-controlled privacy;
+- source/confidence;
+- correction/editing;
+- sensitivity labels;
+- non-deterministic language rules.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- bad family;
+- low social class as identity;
+- doomed career path;
+- poor genetics;
+- inferior background.
+
+Allowed proxy wording:
+
+- baseline modifier;
+- resource access factor;
+- environmental constraint;
+- historical context factor.
+
+## 17. Readiness map — Emotional / stress / conflict
+
+### Category bundle
+
+- stress
+- conflict
+- argument
+- pressure
+- frustration
+- anger
+- anxiety-signal
+- emotional-load
+- social-tension
+
+### Hook candidates
+
+- stress_load_estimate
+- emotional_tension
+- recovery_need
+- communication_risk
+- decision_quality_risk
+- conflict_load_signal
+
+### Readiness
+
+FORBIDDEN_AS_FACT
+
+### Why
+
+Emotional language can indicate a proxy signal, but not a psychological diagnosis.
+
+### What is still missing
+
+- self-report;
+- intensity scale;
+- duration;
+- trigger;
+- recovery after event;
+- repeated pattern;
+- user correction.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- depression;
+- anxiety disorder;
+- personality disorder;
+- trauma;
+- mental health diagnosis;
+- dangerous state without explicit evidence.
+
+Allowed proxy wording:
+
+- stress load estimate;
+- emotional tension signal;
+- possible conflict load;
+- communication risk if user confirms.
+
+## 18. Readiness map — Social / communication / relationships
+
+### Category bundle
+
+- meeting
+- call
+- message
+- negotiation
+- family-talk
+- client-talk
+- colleague
+- friend
+- social-contact
+- relationship-management
+
+### Hook candidates
+
+- social_interaction_load
+- communication_effort
+- relationship_attention
+- negotiation_load
+- social_recovery_need
+- possible_opportunity_signal
+
+### Readiness
+
+PARTIAL
+
+### What is still missing
+
+- who was involved;
+- purpose;
+- result;
+- emotional tone;
+- obligation level;
+- privacy level.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- relationship improved;
+- trust increased;
+- client convinced;
+- conflict solved;
+- social status improved.
+
+Allowed proxy wording:
+
+- communication effort;
+- social interaction load;
+- relationship attention signal.
+
+## 19. Readiness map — Passive rest / entertainment / distraction
+
+### Category bundle
+
+- rest
+- passive-rest
+- entertainment
+- scrolling
+- video
+- game
+- break
+- distraction
+- emotional-relief
+
+### Hook candidates
+
+- recovery_attempt
+- reward_seeking_signal
+- focus_break
+- possible_avoidance_signal
+- rest_quality_unknown
+- overfocus_compensation
+
+### Readiness
+
+PARTIAL
+
+### What is still missing
+
+- duration;
+- whether it restored energy;
+- whether it was planned;
+- user feeling after;
+- opportunity cost;
+- repeated pattern.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- laziness;
+- addiction;
+- wasted time;
+- dopamine deficit;
+- psychological avoidance as fact.
+
+Allowed proxy wording:
+
+- passive rest activity;
+- recovery attempt;
+- possible distraction signal;
+- reward-seeking proxy.
+
+## 20. Readiness map — Food / nutrition / hydration
+
+### Category bundle
+
+- food
+- meal
+- protein
+- carbohydrates
+- fat
+- water
+- hydration
+- supplement
+- creatine
+- caffeine
+- nutrition
+
+### Hook candidates
+
+- energy_support_signal
+- recovery_support_signal
+- hydration_signal
+- protein_intake_candidate
+- nutrition_context_modifier
+- sleep_risk_if_late_heavy_meal
+
+### Readiness
+
+PARTIAL
+
+### What is still missing
+
+- quantity;
+- macros;
+- timing;
+- hydration amount;
+- subjective effect;
+- medical constraints;
+- lab data if health claims are involved.
+
+### Forbidden overclaims
+
+Do NOT claim:
+
+- hormone improvement;
+- testosterone increase;
+- insulin problem;
+- deficiency diagnosis;
+- medical effect confirmed.
+
+Allowed proxy wording:
+
+- nutrition support signal;
+- hydration signal;
+- recovery support candidate;
+- energy availability proxy.
+
+## 21. Cross-domain hook groups for future state dimensions
+
+### Energy / fatigue
+
+Input hooks:
+
+- sleep quality signal;
+- work load;
+- coding/deep work load;
+- physical load;
+- caffeine activation;
+- passive rest quality;
+- nutrition support.
+
+Future dimensions:
+
+- energy_level;
+- fatigue_level;
+- recovery_need.
+
+### Focus / cognitive readiness
+
+Input hooks:
+
+- deep work load;
+- language learning;
+- context switching;
+- caffeine;
+- sleep;
+- interruptions;
+- emotional tension.
+
+Future dimensions:
+
+- focus_readiness;
+- cognitive_load;
+- context_switching_load.
+
+### Physical state
+
+Input hooks:
+
+- walking;
+- microtraining;
+- sitting load;
+- pain signal;
+- sleep/recovery;
+- nutrition.
+
+Future dimensions:
+
+- physical_load;
+- sitting_load;
+- mobility_need;
+- pain_signal;
+- recovery_need.
+
+### Family / care
+
+Input hooks:
+
+- childcare;
+- family duty;
+- shared household;
+- interruptions;
+- emotional load.
+
+Future dimensions:
+
+- family_care_load;
+- family_attention_balance;
+- childcare_duty_active.
+
+### Finance / career
+
+Input hooks:
+
+- sales;
+- lead generation;
+- job search;
+- certification;
+- business project;
+- language learning for career.
+
+Future dimensions:
+
+- financial_pressure;
+- income_action_attention;
+- job_search_attention;
+- career_readiness.
+
+### Goal balance
+
+Input hooks:
+
+- activity duration by direction;
+- overdue obligations;
+- underattention;
+- overfocus;
+- strategic priority;
+- user feedback.
+
+Future dimensions:
+
+- goal_attention_score;
+- overdue_direction_score;
+- overfocus_score.
+
+## 22. Missing prerequisites before implementation
+
+Before SQL/state implementation, the project still needs:
+
+1. C8-I-A2 — fact/signal contract.
+2. C8-I-A3 — stable MVP state dimension inventory.
+3. C8-I-A4 — similarity/relevance resolver concept.
+4. Schema/governance audit.
+5. SQL audit file for Supabase SQL Editor.
+6. Additive migration design.
+7. Proof route plan.
+8. User correction/feedback policy.
+9. Privacy and sensitivity policy for baseline and health-related data.
+
+## 23. Anti-errors
+
+Do NOT:
+
+- create state facts directly from AI output;
+- create active ontology entries automatically without governance;
+- treat state hooks as medical facts;
+- merge similarity and relevance;
+- replace parent/child hierarchy with influence edges;
+- introduce VO subtypes;
+- start UI before data contracts;
+- repeat C8-H proofs unless ruleExtractor.ts changes;
+- run /api/activity/complete for old canonical proof;
+- run OpenAI or Supabase SQL during this doc-only step.
+
+## 24. Definition of Done
+
+C8-I-A1 is complete when:
+
+- hook readiness map is documented;
+- family/care, business/sales, post-purchase support, language, coding, walking, exercise, coffee, sleep, work, finance, environment, emotional, social, rest and nutrition hooks are mapped;
+- each domain has readiness status;
+- each domain has forbidden overclaims;
+- missing prerequisites are listed;
+- no runtime/code/SQL changes were made;
+- file is committed as doc-only readiness map.
+
+## 25. Next step
+
+After C8-I-A1 commit, continue with:
+
+P4.10.0-C8-I-A2 — State Fact vs Signal Contract.
+
+A2 must define the formal difference between:
+
+- direct measurement,
+- semantic hook,
+- metric candidate,
+- inferred state,
+- risk flag,
+- forbidden overclaim,
+- state fact,
+- state delta,
+- state snapshot.
