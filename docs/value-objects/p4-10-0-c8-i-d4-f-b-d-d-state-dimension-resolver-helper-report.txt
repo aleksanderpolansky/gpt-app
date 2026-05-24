@@ -1,0 +1,63 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-D-D — State Dimension Resolver Helper Report
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-D-D
+Type: implementation step with state dimension resolver helper only
+Status: STATE DIMENSION RESOLVER ONLY / NO ROUTE / NO STATE FACT WRITES / NO STATE FACTS CREATED
+
+Previous closed step:
+- P4.10.0-C8-I-D4-F-B-D-C — target Value Object resolver helper
+  Commit: 5b8cc5e
+
+Created files:
+- lib/activity/stateFacts/controlledPersistence/dimension.ts
+
+Existing files used:
+- lib/activity/stateFacts/controlledPersistence/types.ts
+- lib/activity/stateFacts/controlledPersistence/auth.ts
+- lib/activity/stateFacts/controlledPersistence/targetValueObject.ts
+
+Helper created:
+- resolveStateFactDimension
+
+Read-only sources:
+- state_dimensions by dimension_key
+
+Dimension rule implemented in this step:
+- dimensionKey must be resolved server-side.
+- dimension row must exist.
+- dimension row must be active.
+- claim_policy must be one of allowed controlled persistence claim policies.
+- default_privacy_level must be one of allowed privacy levels.
+- is_sensitive must be a boolean.
+
+Hard boundaries preserved:
+- No SQL migration created.
+- No API route created.
+- No state fact write path added.
+- No insert into value_object_state_facts.
+- No update of state_dimensions.
+- No dimension creation or update.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+Safety checks:
+- Required dimension resolver markers: PASS
+- Forbidden write/action literals in dimension.ts: PASS
+- Targeted ESLint: PASS
+- value_object_state_facts access: ABSENT
+- route exports: ABSENT
+
+Important notes:
+- This helper resolves state dimension metadata only.
+- It does not decide Value Object access.
+- It does not validate full state fact candidates.
+- It does not build insert payloads.
+- It does not perform idempotency checks.
+- It does not persist state facts.
+
+Recommended next step:
+P4.10.0-C8-I-D4-F-B-D-E — state fact candidate validator helper with tests, no state fact writes.
+
+End of D4-F-B-D-D report.
