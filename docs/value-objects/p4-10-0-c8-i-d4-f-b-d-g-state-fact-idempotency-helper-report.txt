@@ -1,0 +1,73 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-D-G - State Fact Idempotency Helper Report
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-D-G
+Type: implementation step with state fact idempotency helper only
+Status: STATE FACT IDEMPOTENCY HELPER ONLY / READ-ONLY DATABASE LOOKUP / NO ROUTE / NO DATABASE WRITES / NO STATE FACTS CREATED
+
+Previous closed step:
+- P4.10.0-C8-I-D4-F-B-D-F - state fact insert payload builder helper
+  Commit: 1db4df7
+
+Created files:
+- lib/activity/stateFacts/controlledPersistence/idempotency.ts
+
+Existing files used:
+- lib/activity/stateFacts/controlledPersistence/types.ts
+- lib/activity/stateFacts/controlledPersistence/auth.ts
+- lib/activity/stateFacts/controlledPersistence/targetValueObject.ts
+- lib/activity/stateFacts/controlledPersistence/dimension.ts
+- lib/activity/stateFacts/controlledPersistence/validator.ts
+- lib/activity/stateFacts/controlledPersistence/payloadBuilder.ts
+
+Helper created:
+- checkStateFactIdempotency
+
+Read-only lookup implemented in this step:
+- value_object_state_facts by user_id
+- value_object_state_facts by value_object_id
+- value_object_state_facts by dimension_key
+- value_object_state_facts by correction_status = active
+- value_object_state_facts by metadata_json.idempotency_key
+
+Idempotency decisions returned:
+- status new when no active duplicate exists
+- status already_exists when duplicate active state fact exists
+- stateFactsCreated always 0
+- writesAttempted always false
+
+Hard boundaries preserved:
+- No SQL migration created.
+- No API route created.
+- No database write added.
+- No state fact insert added.
+- No update of value_object_state_facts.
+- No update of state_dimensions.
+- No Value Object creation or update.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+Safety checks:
+- Required idempotency helper markers: PASS
+- Forbidden write/route/action literals in idempotency.ts: PASS
+- Targeted ESLint: PASS
+- value_object_state_facts read-only lookup: PRESENT BY DESIGN
+- route exports: ABSENT
+- auth0 import: ABSENT
+- write operations: ABSENT
+
+Important notes:
+- This helper checks duplicate prevention only.
+- It does not decide authentication.
+- It does not decide target Value Object access.
+- It does not resolve state dimensions.
+- It does not validate candidates.
+- It does not build insert payloads.
+- It does not persist state facts.
+- Idempotency lookup is not persistence.
+
+Recommended next step:
+P4.10.0-C8-I-D4-F-B-D-H - controlled persist helper behind strict tests.
+
+End of D4-F-B-D-G report.
