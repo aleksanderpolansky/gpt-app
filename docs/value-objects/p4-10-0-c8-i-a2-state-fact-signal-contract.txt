@@ -1,0 +1,972 @@
+﻿# GPT-APP / AI-NAVIGATOR
+# P4.10.0-C8-I-A2 — State Fact vs Signal Contract
+
+Date: 2026-05-24
+Status: DOCUMENT-ONLY CONTRACT
+Previous step: P4.10.0-C8-I-A1
+Previous commit: f26f2ed
+Runtime impact: NONE
+SQL impact: NONE
+UI impact: NONE
+
+## 1. Purpose
+
+This document defines the formal contract between:
+
+- category candidates,
+- semantic hooks,
+- metric candidates,
+- direct measurements,
+- inferred states,
+- risk flags,
+- forbidden overclaims,
+- state facts,
+- state deltas,
+- state snapshots.
+
+The purpose is to prevent the platform from turning AI output, category labels or weak signals into false facts.
+
+This step prepares:
+
+- P4.10.0-C8-I-A3 — State Dimensions MVP;
+- P4.10.0-C8-I-A4 — Similarity/Relevance Resolver concept;
+- later SQL audit and additive migration design.
+
+## 2. Core principle
+
+AI output is never a state fact by itself.
+
+Category derivation may produce:
+
+- categories,
+- semantic hooks,
+- metric candidates,
+- inferred state candidates,
+- risk flags,
+- forbidden overclaim guards.
+
+But state facts, deltas and snapshots require a separate contract with:
+
+- source,
+- confidence,
+- evidence,
+- time window,
+- privacy level,
+- correction possibility,
+- claim policy.
+
+Correct chain:
+
+Activity Event
+-> Category Derivation Run
+-> categoryCandidates
+-> semantic hooks / metric candidates / risk flags
+-> contract validation
+-> future state facts / deltas / snapshots
+
+Incorrect chain:
+
+AI category
+-> direct state fact
+
+## 3. Contract object types
+
+The platform must distinguish these object types.
+
+### 3.1 direct_measurement
+
+A value observed directly from a trusted or user-confirmed source.
+
+Examples:
+
+- sleep duration from wearable;
+- heart rate from wearable;
+- manually entered weight;
+- manually entered pain level 1-10;
+- lab result entered by user;
+- exact activity duration;
+- confirmed purchase amount;
+- confirmed calendar event time.
+
+Requirements:
+
+- source is known;
+- value is explicit;
+- time is known or reasonably bounded;
+- confidence can be high if source is reliable;
+- user can correct it.
+
+Allowed to become:
+
+- state fact;
+- state delta;
+- state snapshot input;
+- metric value.
+
+Cannot become:
+
+- medical diagnosis unless explicitly supported by appropriate source and policy.
+
+### 3.2 semantic_hook
+
+A semantic signal derived from activity meaning, categories or context.
+
+Examples:
+
+- "учил математику с ребёнком" -> family_care_load hook;
+- "sent offer to potential client" -> pipeline_building_effort hook;
+- "walked to work" -> physical_activity_signal hook;
+- "worked on architecture for 90 minutes" -> cognitive_load hook.
+
+Requirements:
+
+- linked to category derivation run;
+- has evidence from text or event metadata;
+- has confidence;
+- has hook type;
+- cannot write state facts directly.
+
+Allowed to become:
+
+- input for inferred state;
+- relevance clue;
+- state delta candidate after contract validation.
+
+Cannot become directly:
+
+- state fact;
+- medical fact;
+- psychological diagnosis;
+- confirmed business result.
+
+### 3.3 metric_candidate
+
+A possible numeric or structured value extracted from text or event metadata.
+
+Examples:
+
+- duration_minutes = 30;
+- distance_km = 1.5;
+- purchase_amount = 100;
+- repetitions = 10;
+- sets = 3;
+- language_session_minutes = 45.
+
+Requirements:
+
+- value;
+- unit;
+- extraction source;
+- confidence;
+- whether value was explicit or inferred;
+- correction possibility.
+
+Allowed to become:
+
+- metric value;
+- state delta input;
+- state snapshot input;
+- state fact if stable and confirmed.
+
+Cannot become:
+
+- final state interpretation without contract.
+
+Example:
+
+"walked 20 minutes" may produce duration_minutes = 20.
+
+It does not automatically prove:
+
+- fat burned;
+- cardiovascular improvement;
+- recovery completed.
+
+### 3.4 inferred_state_candidate
+
+A possible state derived from multiple signals.
+
+Examples:
+
+- possible fatigue increase after long deep work;
+- possible recovery need after poor sleep;
+- possible family care load after childcare activity;
+- possible financial pressure if repeated income-related actions and user confirms pressure.
+
+Requirements:
+
+- at least one signal;
+- ideally multiple signals;
+- confidence;
+- explanation;
+- clear proxy wording;
+- forbidden overclaim check.
+
+Allowed to become:
+
+- state delta candidate;
+- low-confidence state fact only after validation rules;
+- snapshot input.
+
+Cannot become:
+
+- deterministic claim;
+- medical diagnosis;
+- psychological diagnosis;
+- social ranking.
+
+### 3.5 risk_flag
+
+A warning that interpretation must be limited or handled carefully.
+
+Examples:
+
+- do_not_overclaim_medical_state;
+- do_not_claim_client_acquired;
+- do_not_claim_income_received;
+- do_not_claim_family_climate_improved;
+- sensitive_baseline_context;
+- user_confirmation_required.
+
+Requirements:
+
+- flag key;
+- reason;
+- related category/state;
+- action required or blocked claim.
+
+Allowed to become:
+
+- guardrail for resolver;
+- explanation note;
+- UI warning later;
+- contract blocker.
+
+Cannot become:
+
+- state fact.
+
+### 3.6 forbidden_overclaim
+
+A claim that the system must not make based on available data.
+
+Examples:
+
+- high cortisol;
+- low dopamine;
+- depression;
+- burnout;
+- client acquired;
+- deal closed;
+- income received;
+- muscle growth confirmed;
+- poor genetics;
+- bad family climate.
+
+Requirements:
+
+- explicit forbidden claim;
+- safer replacement phrase;
+- reason.
+
+Allowed to become:
+
+- guardrail;
+- validation error;
+- proof checklist item.
+
+Cannot become:
+
+- user-facing factual output;
+- database state fact;
+- analytics result.
+
+### 3.7 state_fact
+
+A relatively stable value about a Value Object, actor, environment or baseline context.
+
+Examples:
+
+- user has manually confirmed German learning as strategic goal;
+- organization country is Poland;
+- activity duration was 30 minutes;
+- user confirmed pain level 3/10 at a specific time;
+- home noise level self-reported as high;
+- target weekly language learning minimum is 300 minutes.
+
+Requirements:
+
+- dimension;
+- value;
+- value type;
+- source;
+- confidence;
+- evidence;
+- valid_from / valid_to or time scope;
+- privacy level;
+- correction possibility;
+- claim policy.
+
+State fact can be:
+
+- directly measured;
+- user-confirmed;
+- system-derived with clear confidence;
+- imported from trusted source.
+
+State fact cannot be:
+
+- raw AI guess;
+- category alone;
+- social/medical conclusion without evidence.
+
+### 3.8 state_delta
+
+A change caused or likely caused by an activity.
+
+Examples:
+
+- coding 90 minutes -> cognitive_load increase candidate;
+- walking 20 minutes -> sitting_load decrease candidate;
+- family duty 40 minutes -> family_care_load increase candidate;
+- sleep 7 hours -> recovery_need decrease candidate;
+- job application sent -> job_search_attention increase candidate.
+
+Requirements:
+
+- source activity;
+- target Value Object or direction;
+- dimension;
+- direction;
+- magnitude or qualitative change;
+- confidence;
+- evidence;
+- derivation method;
+- forbidden overclaim check.
+
+State delta can be:
+
+- deterministic if based on direct measurement;
+- probabilistic if inferred from semantic hook;
+- low-confidence if missing context.
+
+State delta cannot claim:
+
+- final long-term improvement;
+- medical effect;
+- business result unless confirmed.
+
+### 3.9 state_snapshot
+
+A summarized state value over a window.
+
+Examples:
+
+- current fatigue level;
+- last_3h cognitive load;
+- today language attention;
+- last_7d recovery trend;
+- last_30d finance/career underattention;
+- baseline family care load pattern.
+
+Requirements:
+
+- window_type;
+- window_start;
+- window_end;
+- dimension;
+- aggregation method;
+- input facts/deltas;
+- confidence;
+- freshness;
+- correction/override possibility.
+
+Snapshot windows may include:
+
+- current;
+- last_3h;
+- today;
+- last_7d;
+- last_30d;
+- baseline.
+
+Snapshot cannot be treated as absolute truth if based on weak/incomplete signals.
+
+## 4. Claim strength levels
+
+Every state-related output must have a claim strength.
+
+### LEVEL 0 — forbidden
+
+The claim must not be made.
+
+Example:
+
+"Your cortisol is high."
+
+### LEVEL 1 — weak signal
+
+A possible signal exists, but not enough for a state.
+
+Example:
+
+"This activity may be a stress-load signal."
+
+### LEVEL 2 — inferred proxy
+
+Multiple signals suggest a proxy state.
+
+Example:
+
+"Based on poor sleep and long deep work, recovery need may be elevated."
+
+### LEVEL 3 — user-confirmed or source-confirmed state
+
+The user or trusted source confirms the state.
+
+Example:
+
+"You rated fatigue as 4/5."
+
+### LEVEL 4 — measured state
+
+A direct measurement exists.
+
+Example:
+
+"Wearable recorded 5h 10m sleep."
+
+### LEVEL 5 — validated pattern
+
+Repeated data supports a pattern.
+
+Example:
+
+"During the last 14 days, late caffeine was often followed by lower sleep quality."
+
+Even LEVEL 5 does not allow medical diagnosis unless the source and policy allow it.
+
+## 5. Source types
+
+Allowed source types:
+
+- user_manual_input;
+- activity_text;
+- activity_metadata;
+- calendar_event;
+- wearable_import;
+- lab_result_user_entered;
+- purchase_confirmation;
+- booking_event;
+- system_rule;
+- ai_derivation;
+- user_correction;
+- imported_document;
+- external_api;
+- admin_seed_data.
+
+Source trust levels:
+
+- direct_user_confirmed;
+- direct_device_measurement;
+- transactional_confirmed;
+- calendar_confirmed;
+- semantic_inferred;
+- ai_suggested;
+- unknown.
+
+AI-suggested source has low trust by default.
+
+## 6. Evidence contract
+
+Every hook, inferred state, fact, delta and snapshot should be able to store evidence.
+
+Evidence examples:
+
+- matched words;
+- source activity id;
+- source activity text;
+- source category ids;
+- derivation run id;
+- metric extraction;
+- direct value;
+- user confirmation;
+- device record id;
+- calculation method;
+- aggregation window;
+- related Value Object ids.
+
+Evidence must be enough to explain:
+
+- why this signal exists;
+- where it came from;
+- how confident the system is;
+- what must not be overclaimed.
+
+## 7. Confidence contract
+
+Use confidence as a number from 0.0 to 1.0.
+
+Recommended interpretation:
+
+- 0.00-0.39 = weak;
+- 0.40-0.69 = medium;
+- 0.70-0.89 = strong;
+- 0.90-1.00 = very strong.
+
+But confidence does not override claim policy.
+
+Example:
+
+Even if confidence is high that user drank coffee, confidence is not proof of cortisol level.
+
+## 8. Privacy and sensitivity contract
+
+Every state-related object must be classifiable by privacy level.
+
+Suggested privacy levels:
+
+- public_safe;
+- user_private;
+- sensitive_personal;
+- sensitive_health;
+- sensitive_family;
+- sensitive_financial;
+- sensitive_work;
+- sensitive_child_related.
+
+Sensitive data requires:
+
+- stricter default privacy;
+- user correction;
+- non-deterministic wording;
+- no public exposure without explicit design;
+- no social/medical ranking.
+
+## 9. Medical and hormonal claim policy
+
+The platform may track health-related activities and proxy states.
+
+Allowed proxy states:
+
+- fatigue_level;
+- recovery_need;
+- stress_load_estimate;
+- physical_load;
+- sitting_load;
+- mobility_need;
+- pain_signal;
+- sleep_quality_signal;
+- circadian_readiness;
+- alertness_signal.
+
+Forbidden without direct medical data:
+
+- cortisol level;
+- dopamine level;
+- testosterone improvement;
+- depression;
+- anxiety disorder;
+- insomnia diagnosis;
+- sleep apnea diagnosis;
+- injury diagnosis;
+- disease diagnosis.
+
+Even with lab data, the system should not replace a doctor. It may only help organize and explain user-provided information.
+
+## 10. Business claim policy
+
+The platform may track business/sales efforts.
+
+Allowed proxy states:
+
+- pipeline_building_effort;
+- income_action_attention;
+- sales_relationship_attention;
+- practical_work_direction_signal;
+- business_obligation_signal;
+- revenue_oriented_activity_signal.
+
+Forbidden without confirmation:
+
+- deal closed;
+- client acquired;
+- income received;
+- buyer confirmed;
+- partner generated revenue;
+- employer interested;
+- job probability.
+
+Confirmed business states require:
+
+- purchase confirmation;
+- user confirmation;
+- CRM-like status;
+- contract/payment evidence;
+- explicit activity result.
+
+## 11. Family / child / relationship claim policy
+
+The platform may track family/care duties and attention.
+
+Allowed proxy states:
+
+- family_care_load;
+- family_attention_balance;
+- childcare_duty_active;
+- helping_child_learn;
+- possible_emotional_load;
+- interruption_risk.
+
+Forbidden without confirmation:
+
+- child development improved;
+- family climate improved;
+- relationship quality improved;
+- parenting quality;
+- child psychological state;
+- family dysfunction.
+
+Child-related data must be treated as sensitive.
+
+## 12. Baseline context claim policy
+
+Baseline Context may include long-term modifiers.
+
+Allowed:
+
+- historical context factor;
+- baseline modifier;
+- resource access factor;
+- environment constraint;
+- education access factor;
+- social capital modifier if user-controlled and non-ranking.
+
+Forbidden:
+
+- social score;
+- fatalistic prediction;
+- inferior background;
+- poor genetics;
+- deterministic career outcome;
+- value judgement about family origin.
+
+Baseline Context must stay editable and evidence-aware.
+
+## 13. Promotion rules
+
+### 13.1 Category candidate -> semantic hook
+
+Allowed if:
+
+- category confidence is sufficient;
+- category has semantic layer;
+- evidence exists;
+- no forbidden overclaim is triggered.
+
+### 13.2 Semantic hook -> inferred state candidate
+
+Allowed if:
+
+- hook maps to a state dimension;
+- rule exists;
+- source and confidence are preserved;
+- wording remains proxy-based.
+
+### 13.3 Metric candidate -> state delta
+
+Allowed if:
+
+- metric value has unit;
+- metric is relevant to dimension;
+- time window is known;
+- claim policy allows interpretation.
+
+### 13.4 Direct measurement -> state fact
+
+Allowed if:
+
+- source is trusted or user-confirmed;
+- value and unit are clear;
+- privacy level is set;
+- correction is possible.
+
+### 13.5 Inferred state candidate -> state fact
+
+Allowed only if:
+
+- evidence is strong enough;
+- confidence is acceptable;
+- no sensitive overclaim is made;
+- user can correct it;
+- contract marks it as inferred/proxy, not direct fact.
+
+### 13.6 State deltas -> state snapshot
+
+Allowed if:
+
+- aggregation window is defined;
+- input deltas/facts are traceable;
+- aggregation method is documented;
+- confidence is calculated or inherited.
+
+## 14. Blocking rules
+
+The system must block promotion to state fact if:
+
+- source is only AI guess;
+- evidence is missing;
+- claim is medical/hormonal/social and direct data is absent;
+- user correction contradicts it;
+- category is too broad;
+- time window is unknown and matters;
+- value lacks unit;
+- privacy level is undefined for sensitive data;
+- forbidden overclaim guard is active.
+
+## 15. Minimal JSON contract draft
+
+Future AI/state-ready output may follow this shape:
+
+{
+  "schemaVersion": "state-fact-signal-contract-v1",
+  "sourceActivityId": "uuid-or-null",
+  "derivationRunId": "uuid-or-null",
+  "signals": [
+    {
+      "signalType": "semantic_hook",
+      "hookKey": "family_care_load",
+      "source": "activity_text",
+      "confidence": 0.86,
+      "evidence": {
+        "matchedWords": ["учил", "ребёнком"],
+        "categoryCandidates": ["childcare", "helping-child-learn"]
+      },
+      "claimStrength": 1,
+      "notAStateFactYet": true
+    }
+  ],
+  "metricCandidates": [
+    {
+      "metricKey": "duration_minutes",
+      "value": 30,
+      "unit": "minutes",
+      "source": "activity_metadata",
+      "confidence": 0.98,
+      "explicit": true
+    }
+  ],
+  "inferredStateCandidates": [
+    {
+      "dimensionKey": "family_care_load",
+      "direction": "increase",
+      "magnitude": "unknown",
+      "confidence": 0.62,
+      "claimStrength": 2,
+      "proxyOnly": true
+    }
+  ],
+  "riskFlags": [
+    {
+      "flagKey": "do_not_claim_child_development_improved",
+      "reason": "No outcome feedback or direct child progress evidence."
+    }
+  ],
+  "forbiddenOverclaims": [
+    "child_development_improved",
+    "family_climate_improved"
+  ]
+}
+
+## 16. Examples
+
+### Example 1 — taught math with child
+
+Input:
+
+"Учил математику с ребёнком 30 минут."
+
+Allowed:
+
+- category: math;
+- category: child;
+- category: learning;
+- category: childcare;
+- category: helping-child-learn;
+- metric candidate: duration_minutes = 30;
+- semantic hook: family_care_load;
+- semantic hook: child_development_support_signal;
+- inferred proxy: family care load may increase.
+
+Forbidden:
+
+- child development improved;
+- family climate improved;
+- parenting quality good/bad.
+
+### Example 2 — coffee
+
+Input:
+
+"Выпил кофе вечером."
+
+Allowed:
+
+- category: coffee;
+- category: caffeine;
+- hook: alertness_signal;
+- hook: sleep_risk_if_late;
+- inferred proxy: possible activation signal.
+
+Forbidden:
+
+- cortisol high;
+- dopamine increased;
+- sleep will be bad;
+- anxiety disorder.
+
+### Example 3 — sales outreach
+
+Input:
+
+"Написал потенциальному клиенту."
+
+Allowed:
+
+- category: sales;
+- category: potential-client;
+- hook: pipeline_building_effort;
+- hook: income_action_attention;
+- business effort signal.
+
+Forbidden:
+
+- client acquired;
+- deal closed;
+- income received;
+- confirmed contact unless explicitly confirmed.
+
+### Example 4 — walking to work
+
+Input:
+
+"Шёл на работу пешком 20 минут."
+
+Allowed:
+
+- category: walking;
+- category: commute;
+- metric candidate: duration_minutes = 20;
+- hook: physical_activity_signal;
+- hook: sitting_load_reduction;
+- hook: commute_activity.
+
+Forbidden:
+
+- fat burned exact amount;
+- cardiovascular improvement confirmed;
+- stress reduced confirmed;
+- muscle growth.
+
+## 17. State fact eligibility checklist
+
+Before writing a future state fact, check:
+
+1. Is there a dimension?
+2. Is there a value?
+3. Is there a source?
+4. Is there evidence?
+5. Is there confidence?
+6. Is there a valid time scope?
+7. Is there a privacy level?
+8. Is this sensitive?
+9. Is correction possible?
+10. Is this a direct fact or inferred proxy?
+11. Is any forbidden overclaim triggered?
+12. Does claim strength allow this wording?
+
+If any answer is missing, do not write a state fact.
+
+## 18. State delta eligibility checklist
+
+Before writing a future state delta, check:
+
+1. Which activity caused the delta?
+2. Which Value Object or direction is affected?
+3. Which dimension changes?
+4. What is the direction?
+5. What is the magnitude?
+6. Is magnitude numeric, ordinal or qualitative?
+7. What is the source?
+8. What is the confidence?
+9. What evidence supports it?
+10. Is the delta direct, rule-based or inferred?
+11. Is there an overclaim risk?
+12. Can the user correct it?
+
+## 19. State snapshot eligibility checklist
+
+Before writing a future snapshot, check:
+
+1. What is the window?
+2. What facts and deltas are included?
+3. What aggregation method is used?
+4. What is the final value?
+5. What is the confidence?
+6. How fresh is the snapshot?
+7. Does it include sensitive data?
+8. Can it be explained to the user?
+9. Can it be recalculated?
+10. Can it be corrected or overridden?
+
+## 20. What this step explicitly does NOT do
+
+This step does NOT:
+
+- create SQL migrations;
+- modify runtime code;
+- modify ruleExtractor.ts;
+- run OpenAI;
+- run Supabase SQL;
+- create UI;
+- create state engine;
+- create active categories from AI output;
+- write state facts;
+- write state deltas;
+- write state snapshots.
+
+## 21. Definition of Done
+
+C8-I-A2 is complete when:
+
+- direct measurement is defined;
+- semantic hook is defined;
+- metric candidate is defined;
+- inferred state candidate is defined;
+- risk flag is defined;
+- forbidden overclaim is defined;
+- state fact is defined;
+- state delta is defined;
+- state snapshot is defined;
+- promotion rules are documented;
+- blocking rules are documented;
+- claim strength levels are documented;
+- sensitive claim policies are documented;
+- no runtime/code/SQL changes were made;
+- file is committed as doc-only contract.
+
+## 22. Next step
+
+After C8-I-A2 commit, continue with:
+
+P4.10.0-C8-I-A3 — State Dimensions MVP.
+
+A3 must define the first stable state dimensions for MVP:
+
+- energy / fatigue / recovery;
+- focus / cognitive load;
+- emotional / stress proxy;
+- physical load / mobility / pain signal;
+- family / care load;
+- finance / career pressure;
+- goal balance / overfocus / underattention.
