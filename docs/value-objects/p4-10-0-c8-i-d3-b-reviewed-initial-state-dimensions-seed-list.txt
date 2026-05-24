@@ -1,0 +1,831 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D3-B — Reviewed Initial State Dimensions Seed List
+
+Date: 2026-05-24
+Status: REVIEWED SEED LIST DOCUMENT — NO SQL EXECUTION
+
+Previous step:
+P4.10.0-C8-I-D3-A — State Dimensions Seed Governance Plan
+
+Previous commit:
+826c6b2 docs: add C8-I-D3 state dimensions seed governance plan
+
+Purpose:
+This document converts the D3-A governance plan into a reviewed initial seed list for public.state_dimensions.
+
+No SQL is executed in this step.
+No structural database change is made in this step.
+This document is preparation for a later D3-C draft seed SQL file.
+
+============================================================
+1. Target table
+============================================================
+
+Target table:
+
+public.state_dimensions
+
+Relevant columns from D2 migration:
+
+- dimension_key
+- title
+- domain
+- description
+- unit_type
+- default_privacy_level
+- claim_policy
+- allowed_source_types
+- forbidden_claims
+- safer_proxy_wording
+- is_sensitive
+- is_active
+- metadata_json
+
+============================================================
+2. Seed list rules
+============================================================
+
+This seed list must follow the D3-A governance rules:
+
+1. Do not create medical facts.
+2. Do not create hormonal conclusions.
+3. Do not create psychological diagnoses.
+4. Do not create confirmed business outcomes.
+5. Do not create user state facts.
+6. Do not create Value Object subtypes.
+7. Do not modify the unified Value Object model.
+8. Use safe proxy wording.
+9. Mark sensitive dimensions clearly.
+10. Keep default_privacy_level = private for all initial seed dimensions.
+11. Prefer proxy_only, system_estimate, or user_confirmed.
+12. Avoid direct_measurement unless the source is actually measurable.
+13. Use blocked only for future forbidden dimensions, not in the first active seed.
+
+============================================================
+3. Reviewed initial seed dimensions
+============================================================
+
+Total initial active seed dimensions:
+
+12
+
+Included dimensions:
+
+1. attention_load
+2. fatigue_signal
+3. recovery_need
+4. stress_load_estimate
+5. learning_progress_signal
+6. language_practice_balance
+7. physical_activity_load
+8. family_care_load_signal
+9. work_responsibility_load
+10. pipeline_building_effort
+11. financial_pressure_signal
+12. social_interaction_load
+
+============================================================
+4. Detailed seed rows
+============================================================
+
+------------------------------------------------------------
+4.1 attention_load
+------------------------------------------------------------
+
+dimension_key:
+attention_load
+
+title:
+Attention Load
+
+domain:
+cognitive
+
+description:
+A non-medical estimate of how much attention or cognitive capacity has been required by recent activities.
+
+unit_type:
+score_or_minutes
+
+default_privacy_level:
+private
+
+claim_policy:
+system_estimate
+
+allowed_source_types:
+["manual", "rule", "ai", "system", "correction"]
+
+forbidden_claims:
+[
+  "attention disorder",
+  "ADHD",
+  "cognitive impairment",
+  "mental health diagnosis"
+]
+
+safer_proxy_wording:
+{
+  "default": "attention load",
+  "low": "low attention load",
+  "medium": "moderate attention load",
+  "high": "high attention demand",
+  "disclaimer": "This is a planning signal, not a medical or psychological conclusion."
+}
+
+is_sensitive:
+false
+
+is_active:
+true
+
+metadata_json:
+{
+  "nba_use": "Can help decide whether the next action should be deep work, light work, recovery, language repetition, or a physical micro-break.",
+  "first_seed": true,
+  "safe_mvp": true
+}
+
+------------------------------------------------------------
+4.2 fatigue_signal
+------------------------------------------------------------
+
+dimension_key:
+fatigue_signal
+
+title:
+Fatigue Signal
+
+domain:
+recovery
+
+description:
+A weak proxy signal that the user may be tired based on workload, duration, sleep-related context, manual input, or repeated low-efficiency patterns.
+
+unit_type:
+score
+
+default_privacy_level:
+private
+
+claim_policy:
+proxy_only
+
+allowed_source_types:
+["manual", "user_confirmed", "rule", "ai", "system", "correction"]
+
+forbidden_claims:
+[
+  "diagnosed fatigue",
+  "chronic fatigue",
+  "medical exhaustion",
+  "burnout diagnosis"
+]
+
+safer_proxy_wording:
+{
+  "default": "fatigue signal",
+  "low": "low fatigue signal",
+  "medium": "possible tiredness",
+  "high": "stronger fatigue signal",
+  "disclaimer": "This is a proxy signal, not a diagnosis."
+}
+
+is_sensitive:
+true
+
+is_active:
+true
+
+metadata_json:
+{
+  "nba_use": "Can reduce recommendation intensity and suggest recovery, passive learning, stretching, hydration, or low-cognitive-load tasks.",
+  "first_seed": true,
+  "safe_mvp": true
+}
+
+------------------------------------------------------------
+4.3 recovery_need
+------------------------------------------------------------
+
+dimension_key:
+recovery_need
+
+title:
+Recovery Need
+
+domain:
+recovery
+
+description:
+A safe estimate that the user may benefit from a recovery-oriented activity or lower-load next action.
+
+unit_type:
+score
+
+default_privacy_level:
+private
+
+claim_policy:
+system_estimate
+
+allowed_source_types:
+["manual", "user_confirmed", "rule", "ai", "system", "correction"]
+
+forbidden_claims:
+[
+  "medical recovery required",
+  "clinical rest requirement",
+  "injury diagnosis",
+  "illness diagnosis"
+]
+
+safer_proxy_wording:
+{
+  "default": "recovery need",
+  "low": "low recovery need",
+  "medium": "some recovery may be useful",
+  "high": "recovery-oriented activity may be useful",
+  "disclaimer": "This is a planning estimate, not medical advice."
+}
+
+is_sensitive:
+true
+
+is_active:
+true
+
+metadata_json:
+{
+  "nba_use": "Can rank rest, sleep, stretching, food, hydration, walking, or low-load tasks higher when appropriate.",
+  "first_seed": true,
+  "safe_mvp": true
+}
+
+------------------------------------------------------------
+4.4 stress_load_estimate
+------------------------------------------------------------
+
+dimension_key:
+stress_load_estimate
+
+title:
+Stress Load Estimate
+
+domain:
+emotional_regulation
+
+description:
+A proxy estimate of stress load based on activity context, conflicts, workload, interruptions, or user-confirmed stress.
+
+unit_type:
+score
+
+default_privacy_level:
+private
+
+claim_policy:
+proxy_only
+
+allowed_source_types:
+["manual", "user_confirmed", "rule", "ai", "system", "correction"]
+
+forbidden_claims:
+[
+  "high cortisol",
+  "anxiety disorder",
+  "panic disorder",
+  "mental illness",
+  "psychiatric condition"
+]
+
+safer_proxy_wording:
+{
+  "default": "stress load estimate",
+  "low": "low stress-load signal",
+  "medium": "possible stress pressure",
+  "high": "higher emotional load signal",
+  "disclaimer": "This is a proxy estimate, not a medical or psychological conclusion."
+}
+
+is_sensitive:
+true
+
+is_active:
+true
+
+metadata_json:
+{
+  "nba_use": "Can suggest decompression, conflict-free tasks, breathing, walking, lower-stakes work, or postponing hard negotiation.",
+  "first_seed": true,
+  "safe_mvp": true
+}
+
+------------------------------------------------------------
+4.5 learning_progress_signal
+------------------------------------------------------------
+
+dimension_key:
+learning_progress_signal
+
+title:
+Learning Progress Signal
+
+domain:
+learning
+
+description:
+A non-certifying estimate of learning progress based on completed learning activities, repetitions, tests, corrections, and review frequency.
+
+unit_type:
+score
+
+default_privacy_level:
+private
+
+claim_policy:
+system_estimate
+
+allowed_source_types:
+["manual", "rule", "ai", "system", "import", "correction"]
+
+forbidden_claims:
+[
+  "certified level achieved",
+  "official proficiency confirmed",
+  "guaranteed exam readiness"
+]
+
+safer_proxy_wording:
+{
+  "default": "learning progress signal",
+  "low": "low recent learning momentum",
+  "medium": "some learning momentum",
+  "high": "stronger practice momentum",
+  "disclaimer": "This is not an official certificate or proficiency confirmation."
+}
+
+is_sensitive:
+false
+
+is_active:
+true
+
+metadata_json:
+{
+  "nba_use": "Can detect weak learning directions and suggest next exercises.",
+  "first_seed": true,
+  "safe_mvp": true
+}
+
+------------------------------------------------------------
+4.6 language_practice_balance
+------------------------------------------------------------
+
+dimension_key:
+language_practice_balance
+
+title:
+Language Practice Balance
+
+domain:
+learning_languages
+
+description:
+A balance estimate across language-practice directions such as English, German, Spanish, and Polish.
+
+unit_type:
+score_or_distribution
+
+default_privacy_level:
+private
+
+claim_policy:
+system_estimate
+
+allowed_source_types:
+["manual", "rule", "ai", "system", "import", "correction"]
+
+forbidden_claims:
+[
+  "language mastered",
+  "official fluency confirmed",
+  "certificate level achieved"
+]
+
+safer_proxy_wording:
+{
+  "default": "language practice balance",
+  "low": "undertrained language direction",
+  "medium": "moderate language-practice balance",
+  "high": "stronger attention to this language",
+  "disclaimer": "This is a practice-balance signal, not an official language-level assessment."
+}
+
+is_sensitive:
+false
+
+is_active:
+true
+
+metadata_json:
+{
+  "nba_use": "Can identify which language is under-practiced and should be proposed next.",
+  "first_seed": true,
+  "safe_mvp": true
+}
+
+------------------------------------------------------------
+4.7 physical_activity_load
+------------------------------------------------------------
+
+dimension_key:
+physical_activity_load
+
+title:
+Physical Activity Load
+
+domain:
+physical_activity
+
+description:
+A non-medical estimate of physical load based on activity records, duration, intensity, movement type, or user input.
+
+unit_type:
+score_or_minutes
+
+default_privacy_level:
+private
+
+claim_policy:
+system_estimate
+
+allowed_source_types:
+["manual", "user_confirmed", "rule", "ai", "system", "import", "correction"]
+
+forbidden_claims:
+[
+  "muscle growth confirmed",
+  "injury diagnosed",
+  "testosterone increased",
+  "fat loss confirmed",
+  "medical improvement"
+]
+
+safer_proxy_wording:
+{
+  "default": "physical activity load",
+  "low": "low movement load",
+  "medium": "moderate physical load",
+  "high": "higher body-load signal",
+  "disclaimer": "This is a training/planning signal, not a medical or body-composition conclusion."
+}
+
+is_sensitive:
+true
+
+is_active:
+true
+
+metadata_json:
+{
+  "nba_use": "Can prevent excessive load and recommend recovery, stretching, or light movement.",
+  "first_seed": true,
+  "safe_mvp": true
+}
+
+------------------------------------------------------------
+4.8 family_care_load_signal
+------------------------------------------------------------
+
+dimension_key:
+family_care_load_signal
+
+title:
+Family Care Load Signal
+
+domain:
+family_care
+
+description:
+A proxy signal that the user performed family or care responsibility, such as helping a child learn, supervision, caregiving, or family duty.
+
+unit_type:
+score_or_minutes
+
+default_privacy_level:
+private
+
+claim_policy:
+proxy_only
+
+allowed_source_types:
+["manual", "user_confirmed", "rule", "ai", "system", "correction"]
+
+forbidden_claims:
+[
+  "child development improved",
+  "parenting quality score",
+  "family relationship diagnosis",
+  "child psychological state"
+]
+
+safer_proxy_wording:
+{
+  "default": "family care load",
+  "low": "low family-care load",
+  "medium": "care responsibility signal",
+  "high": "higher childcare-related effort",
+  "disclaimer": "This describes activity meaning and load, not child outcomes or family diagnosis."
+}
+
+is_sensitive:
+true
+
+is_active:
+true
+
+metadata_json:
+{
+  "nba_use": "Can recognize family obligations and help balance recovery, work, learning, and delayed tasks.",
+  "first_seed": true,
+  "safe_mvp": true
+}
+
+------------------------------------------------------------
+4.9 work_responsibility_load
+------------------------------------------------------------
+
+dimension_key:
+work_responsibility_load
+
+title:
+Work Responsibility Load
+
+domain:
+work
+
+description:
+A non-sensitive estimate of work responsibility load based on job-related tasks, obligations, time blocks, or role-based actions.
+
+unit_type:
+score_or_minutes
+
+default_privacy_level:
+private
+
+claim_policy:
+system_estimate
+
+allowed_source_types:
+["manual", "rule", "ai", "system", "import", "correction"]
+
+forbidden_claims:
+[
+  "job performance score",
+  "employer evaluation",
+  "disciplinary risk",
+  "legal conclusion"
+]
+
+safer_proxy_wording:
+{
+  "default": "work responsibility load",
+  "low": "low work-duty load",
+  "medium": "moderate work obligation load",
+  "high": "higher job-related effort",
+  "disclaimer": "This is a workload/planning signal, not an employer evaluation or legal conclusion."
+}
+
+is_sensitive:
+false
+
+is_active:
+true
+
+metadata_json:
+{
+  "nba_use": "Can detect when work obligations are high and additional business or learning tasks should be lighter.",
+  "first_seed": true,
+  "safe_mvp": true
+}
+
+------------------------------------------------------------
+4.10 pipeline_building_effort
+------------------------------------------------------------
+
+dimension_key:
+pipeline_building_effort
+
+title:
+Pipeline Building Effort
+
+domain:
+business_development
+
+description:
+A safe estimate that the user performed activities that may build future business, sales, job-search, or partnership opportunities.
+
+unit_type:
+score_or_minutes
+
+default_privacy_level:
+private
+
+claim_policy:
+system_estimate
+
+allowed_source_types:
+["manual", "rule", "ai", "system", "correction"]
+
+forbidden_claims:
+[
+  "client acquired",
+  "deal closed",
+  "revenue earned",
+  "guaranteed lead",
+  "confirmed sales result"
+]
+
+safer_proxy_wording:
+{
+  "default": "pipeline-building effort",
+  "low": "low commercial outreach effort",
+  "medium": "some sales opportunity preparation",
+  "high": "stronger business-development effort",
+  "disclaimer": "This is preparation effort, not confirmed revenue or a closed deal."
+}
+
+is_sensitive:
+false
+
+is_active:
+true
+
+metadata_json:
+{
+  "nba_use": "Can rank business-development actions without claiming actual sales outcomes.",
+  "first_seed": true,
+  "safe_mvp": true
+}
+
+------------------------------------------------------------
+4.11 financial_pressure_signal
+------------------------------------------------------------
+
+dimension_key:
+financial_pressure_signal
+
+title:
+Financial Pressure Signal
+
+domain:
+financial_context
+
+description:
+A user-confirmed or explicitly entered signal that financial pressure is relevant to current planning.
+
+unit_type:
+score_or_flag
+
+default_privacy_level:
+private
+
+claim_policy:
+user_confirmed
+
+allowed_source_types:
+["manual", "user_confirmed", "correction"]
+
+forbidden_claims:
+[
+  "financial distress diagnosis",
+  "bankruptcy risk",
+  "creditworthiness",
+  "income confirmed",
+  "debt confirmed without user input"
+]
+
+safer_proxy_wording:
+{
+  "default": "financial pressure signal",
+  "low": "low money-related planning pressure",
+  "medium": "some financial priority signal",
+  "high": "stronger income-related motivation signal",
+  "disclaimer": "This should be based on user confirmation, not hidden financial inference."
+}
+
+is_sensitive:
+true
+
+is_active:
+true
+
+metadata_json:
+{
+  "nba_use": "Can prioritize income-generating, job-search, sales, or certification activities when user-confirmed.",
+  "first_seed": true,
+  "safe_mvp": true
+}
+
+------------------------------------------------------------
+4.12 social_interaction_load
+------------------------------------------------------------
+
+dimension_key:
+social_interaction_load
+
+title:
+Social Interaction Load
+
+domain:
+social_context
+
+description:
+A non-diagnostic estimate of the amount of social interaction or communication load.
+
+unit_type:
+score_or_minutes
+
+default_privacy_level:
+private
+
+claim_policy:
+system_estimate
+
+allowed_source_types:
+["manual", "rule", "ai", "system", "correction"]
+
+forbidden_claims:
+[
+  "social anxiety",
+  "personality disorder",
+  "relationship diagnosis",
+  "psychological condition"
+]
+
+safer_proxy_wording:
+{
+  "default": "social interaction load",
+  "low": "low people-facing effort",
+  "medium": "moderate communication load",
+  "high": "higher interaction intensity",
+  "disclaimer": "This is an interaction-load signal, not a psychological conclusion."
+}
+
+is_sensitive:
+false
+
+is_active:
+true
+
+metadata_json:
+{
+  "nba_use": "Can suggest whether the next action should be people-facing or solitary.",
+  "first_seed": true,
+  "safe_mvp": true
+}
+
+============================================================
+5. Excluded dimensions
+============================================================
+
+The following dimensions are intentionally excluded from the first active seed:
+
+- cortisol_level
+- dopamine_level
+- testosterone_level
+- hormone_level_estimate
+- depression_risk
+- anxiety_disorder
+- mental_health_diagnosis
+- burnout_diagnosis
+- child_development_score
+- muscle_growth_confirmed
+- fat_loss_confirmed
+- income_confirmed
+- client_acquired
+- deal_closed
+- disease_risk_estimate
+
+Reason:
+
+They require medical, psychological, legal, financial, or outcome-confirmation logic that is outside the safe MVP state-dimensions seed.
+
+============================================================
+6. D3-B review conclusion
+============================================================
+
+This list is suitable for the next step:
+
+P4.10.0-C8-I-D3-C — Create draft seed SQL outside supabase/migrations.
+
+The D3-C SQL must only seed public.state_dimensions.
+The D3-C SQL must not create user facts.
+The D3-C SQL must not change Value Object structure.
+The D3-C SQL must not touch commerce, points, certificates, offers, bookings, or existing activity processing tables.
+
+Final D3-B status:
+
+REVIEWED SEED LIST — READY FOR DRAFT SQL PREPARATION.
+
