@@ -1,0 +1,1976 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-C-A — Targeted Source Inspection Report
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-C-A
+Type: documentation-only targeted source inspection
+Status: READ-ONLY SOURCE INSPECTION / NO SQL / NO ROUTE / NO DB WRITES / NO STATE FACTS CREATED
+
+Context:
+- D4-F-B-A is closed and pushed at commit c26c086.
+- D4-F-B-B is closed and pushed at commit 24aeada.
+- D4-F-B-B recommended targeted source inspection before coding.
+- This report inspects exact existing source files before any controlled persistence implementation.
+
+Hard boundaries:
+- No SQL migration created.
+- No API route created.
+- No helper implemented.
+- No Supabase write path added.
+- No insert into value_object_state_facts.
+- No update of state_dimensions.
+- No state engine created.
+- No Next Best Action runtime created.
+- No Value Object subtype created.
+
+Git status before inspection:
+clean
+
+Current HEAD log:
+24aeada docs: add C8-I-D4-F-B-B persistence helper contract
+c26c086 docs: add C8-I-D4-F-B-A helper audit report
+940bae9 docs: add C8-I-D4-F-A controlled persistence gate design
+a8881d2 feat: add C8-I-D4-E-B shadow state signal route
+d6ee4f7 docs: add C8-I-D4-D internal state signal evaluator design
+502c26d docs: add C8-I-D4-C state fact creation contract
+0da4722 docs: add C8-I-D4-B state facts read-only audit report
+0ceafce docs: add C8-I-D4-A controlled state facts governance plan
+d3553fc docs: add C8-I-D3 seed execution smoke check report
+e2cc497 db: add reviewed C8-I-D3 state dimensions seed migration
+
+
+Target files:
+
+Path                                                                                        Exists LineCount
+----                                                                                        ------ ---------
+lib/auth0.ts                                                                                  True         3
+lib/supabase.ts                                                                               True        14
+lib/activity/activityUserContext.ts                                                           True       111
+src/app/api/me/route.ts                                                                       True        10
+src/app/api/sync-user/route.ts                                                                True       294
+src/app/api/value-objects/route.ts                                                            True       354
+src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts   True       822
+src/app/api/activity/debug/state-signal-candidate-shadow-test/route.ts                        True       984
+
+
+
+
+============================================================
+A. Auth user resolution inspection
+============================================================
+
+Files primarily relevant:
+- lib/auth0.ts
+- lib/activity/activityUserContext.ts
+- src/app/api/me/route.ts
+- src/app/api/sync-user/route.ts
+
+Inspection purpose:
+- identify existing getSession usage
+- identify how Auth0 identity is mapped to app_users
+- identify whether activityUserContext can be reused later
+- identify whether placeholder UUID prevention must be added later
+
+============================================================
+B. Supabase import/use inspection
+============================================================
+
+Files primarily relevant:
+- lib/supabase.ts
+- src/app/api/sync-user/route.ts
+- src/app/api/value-objects/route.ts
+- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+
+Inspection purpose:
+- identify repository Supabase import convention
+- identify common .from/.select/.insert/.eq style
+- identify whether debug persist proof is only a reference and not a direct template
+
+============================================================
+C. Value object access inspection
+============================================================
+
+Files primarily relevant:
+- src/app/api/value-objects/route.ts
+- src/app/api/value-objects/debug/cloud-profile/route.ts
+
+Inspection purpose:
+- identify how value_objects are created/read
+- identify whether owner_actor_id / organization_id are used
+- identify what access checks must be designed before future state fact persistence
+
+============================================================
+D. Reference-only debug route warning
+============================================================
+
+Important warning:
+- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts may contain production-like persistence proof logic.
+- It can be inspected as a reference for style and test proof only.
+- It must not be copied blindly for state facts.
+- D4-E-B shadow route must not become a write route.
+- Any future write route must be separate and controlled.
+
+============================================================
+SOURCE FILE: lib/auth0.ts
+============================================================
+
+Line count: 3
+
+First 140 numbered lines:
+    1: import { Auth0Client } from "@auth0/nextjs-auth0/server";
+    2: 
+    3: export const auth0 = new Auth0Client();
+
+Focused pattern matches:
+
+Pattern: getSession
+No matches.
+
+Pattern: auth0
+Line 1: import { Auth0Client } from "@auth0/nextjs-auth0/server";
+Line 3: export const auth0 = new Auth0Client();
+
+Pattern: Auth0
+Line 1: import { Auth0Client } from "@auth0/nextjs-auth0/server";
+Line 3: export const auth0 = new Auth0Client();
+
+Pattern: session
+No matches.
+
+Pattern: user.sub
+No matches.
+
+Pattern: session.user
+No matches.
+
+Pattern: app_users
+No matches.
+
+Pattern: user_id
+No matches.
+
+Pattern: email
+No matches.
+
+Pattern: supabase
+No matches.
+
+Pattern: from(
+No matches.
+
+Pattern: .select(
+No matches.
+
+Pattern: .insert(
+No matches.
+
+Pattern: .update(
+No matches.
+
+Pattern: .delete(
+No matches.
+
+Pattern: .eq(
+No matches.
+
+Pattern: .single(
+No matches.
+
+Pattern: .maybeSingle(
+No matches.
+
+Pattern: value_objects
+No matches.
+
+Pattern: valueObjectId
+No matches.
+
+Pattern: value_object_id
+No matches.
+
+Pattern: owner_actor_id
+No matches.
+
+Pattern: organization_id
+No matches.
+
+Pattern: actor
+No matches.
+
+Pattern: actor_space_roles
+No matches.
+
+Pattern: value_object_state_facts
+No matches.
+
+Pattern: state_dimensions
+No matches.
+
+Pattern: dimension_key
+No matches.
+
+Pattern: NextResponse.json
+No matches.
+
+Pattern: export async function GET
+No matches.
+
+Pattern: export async function POST
+No matches.
+
+Pattern: dynamic = "force-dynamic"
+No matches.
+
+============================================================
+SOURCE FILE: lib/supabase.ts
+============================================================
+
+Line count: 14
+
+First 140 numbered lines:
+    1: import { createClient } from "@supabase/supabase-js";
+    2: 
+    3: const supabaseUrl = process.env.SUPABASE_URL;
+    4: const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    5: 
+    6: if (!supabaseUrl) {
+    7:   throw new Error("Missing SUPABASE_URL");
+    8: }
+    9: 
+   10: if (!supabaseServiceRoleKey) {
+   11:   throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+   12: }
+   13: 
+   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+Focused pattern matches:
+
+Pattern: getSession
+No matches.
+
+Pattern: auth0
+No matches.
+
+Pattern: Auth0
+No matches.
+
+Pattern: session
+No matches.
+
+Pattern: user.sub
+No matches.
+
+Pattern: session.user
+No matches.
+
+Pattern: app_users
+No matches.
+
+Pattern: user_id
+No matches.
+
+Pattern: email
+No matches.
+
+Pattern: supabase
+Line 1: import { createClient } from "@supabase/supabase-js";
+Line 3: const supabaseUrl = process.env.SUPABASE_URL;
+Line 4: const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+Line 6: if (!supabaseUrl) {
+Line 7: throw new Error("Missing SUPABASE_URL");
+Line 10: if (!supabaseServiceRoleKey) {
+Line 11: throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+Line 14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+Pattern: from(
+No matches.
+
+Pattern: .select(
+No matches.
+
+Pattern: .insert(
+No matches.
+
+Pattern: .update(
+No matches.
+
+Pattern: .delete(
+No matches.
+
+Pattern: .eq(
+No matches.
+
+Pattern: .single(
+No matches.
+
+Pattern: .maybeSingle(
+No matches.
+
+Pattern: value_objects
+No matches.
+
+Pattern: valueObjectId
+No matches.
+
+Pattern: value_object_id
+No matches.
+
+Pattern: owner_actor_id
+No matches.
+
+Pattern: organization_id
+No matches.
+
+Pattern: actor
+No matches.
+
+Pattern: actor_space_roles
+No matches.
+
+Pattern: value_object_state_facts
+No matches.
+
+Pattern: state_dimensions
+No matches.
+
+Pattern: dimension_key
+No matches.
+
+Pattern: NextResponse.json
+No matches.
+
+Pattern: export async function GET
+No matches.
+
+Pattern: export async function POST
+No matches.
+
+Pattern: dynamic = "force-dynamic"
+No matches.
+
+============================================================
+SOURCE FILE: lib/activity/activityUserContext.ts
+============================================================
+
+Line count: 111
+
+First 140 numbered lines:
+    1: import { NextResponse } from "next/server";
+    2: import { auth0 } from "../auth0";
+    3: import { supabase } from "../supabase";
+    4: 
+    5: export type ActivityAppUser = {
+    6:   id: string;
+    7:   auth0_sub?: string | null;
+    8:   [key: string]: unknown;
+    9: };
+   10: 
+   11: export type ActivityPerson = {
+   12:   id: string;
+   13:   user_id: string;
+   14:   [key: string]: unknown;
+   15: };
+   16: 
+   17: export type ActivityActor = {
+   18:   id: string;
+   19:   person_id?: string | null;
+   20:   actor_type?: string | null;
+   21:   [key: string]: unknown;
+   22: };
+   23: 
+   24: export type ActivityUserContext = {
+   25:   appUser: ActivityAppUser | null;
+   26:   person: ActivityPerson | null;
+   27:   personActor: ActivityActor | null;
+   28:   errorResponse: NextResponse | null;
+   29: };
+   30: 
+   31: export async function getActivityUserContext(): Promise<ActivityUserContext> {
+   32:   const session = await auth0.getSession();
+   33: 
+   34:   if (!session?.user) {
+   35:     return {
+   36:       appUser: null,
+   37:       person: null,
+   38:       personActor: null,
+   39:       errorResponse: NextResponse.json(
+   40:         { error: "Not authenticated" },
+   41:         { status: 401 }
+   42:       ),
+   43:     };
+   44:   }
+   45: 
+   46:   const { data: appUser, error: appUserError } = await supabase
+   47:     .from("app_users")
+   48:     .select("*")
+   49:     .eq("auth0_sub", session.user.sub)
+   50:     .single();
+   51: 
+   52:   if (appUserError || !appUser) {
+   53:     return {
+   54:       appUser: null,
+   55:       person: null,
+   56:       personActor: null,
+   57:       errorResponse: NextResponse.json(
+   58:         { error: appUserError?.message ?? "App user not found" },
+   59:         { status: 500 }
+   60:       ),
+   61:     };
+   62:   }
+   63: 
+   64:   const typedAppUser = appUser as ActivityAppUser;
+   65: 
+   66:   const { data: person, error: personError } = await supabase
+   67:     .from("persons")
+   68:     .select("*")
+   69:     .eq("user_id", typedAppUser.id)
+   70:     .single();
+   71: 
+   72:   if (personError || !person) {
+   73:     return {
+   74:       appUser: null,
+   75:       person: null,
+   76:       personActor: null,
+   77:       errorResponse: NextResponse.json(
+   78:         { error: personError?.message ?? "Person not found" },
+   79:         { status: 500 }
+   80:       ),
+   81:     };
+   82:   }
+   83: 
+   84:   const typedPerson = person as ActivityPerson;
+   85: 
+   86:   const { data: personActor, error: personActorError } = await supabase
+   87:     .from("actors")
+   88:     .select("*")
+   89:     .eq("person_id", typedPerson.id)
+   90:     .eq("actor_type", "person")
+   91:     .single();
+   92: 
+   93:   if (personActorError || !personActor) {
+   94:     return {
+   95:       appUser: null,
+   96:       person: null,
+   97:       personActor: null,
+   98:       errorResponse: NextResponse.json(
+   99:         { error: personActorError?.message ?? "Person actor not found" },
+  100:         { status: 500 }
+  101:       ),
+  102:     };
+  103:   }
+  104: 
+  105:   return {
+  106:     appUser: typedAppUser,
+  107:     person: typedPerson,
+  108:     personActor: personActor as ActivityActor,
+  109:     errorResponse: null,
+  110:   };
+  111: }
+
+Focused pattern matches:
+
+Pattern: getSession
+Line 32: const session = await auth0.getSession();
+
+Pattern: auth0
+Line 2: import { auth0 } from "../auth0";
+Line 7: auth0_sub?: string | null;
+Line 32: const session = await auth0.getSession();
+Line 49: .eq("auth0_sub", session.user.sub)
+
+Pattern: Auth0
+Line 2: import { auth0 } from "../auth0";
+Line 7: auth0_sub?: string | null;
+Line 32: const session = await auth0.getSession();
+Line 49: .eq("auth0_sub", session.user.sub)
+
+Pattern: session
+Line 32: const session = await auth0.getSession();
+Line 34: if (!session?.user) {
+Line 49: .eq("auth0_sub", session.user.sub)
+
+Pattern: user.sub
+Line 49: .eq("auth0_sub", session.user.sub)
+
+Pattern: session.user
+Line 49: .eq("auth0_sub", session.user.sub)
+
+Pattern: app_users
+Line 47: .from("app_users")
+
+Pattern: user_id
+Line 13: user_id: string;
+Line 69: .eq("user_id", typedAppUser.id)
+
+Pattern: email
+No matches.
+
+Pattern: supabase
+Line 3: import { supabase } from "../supabase";
+Line 46: const { data: appUser, error: appUserError } = await supabase
+Line 66: const { data: person, error: personError } = await supabase
+Line 86: const { data: personActor, error: personActorError } = await supabase
+
+Pattern: from(
+Line 47: .from("app_users")
+Line 67: .from("persons")
+Line 87: .from("actors")
+
+Pattern: .select(
+Line 48: .select("*")
+Line 68: .select("*")
+Line 88: .select("*")
+
+Pattern: .insert(
+No matches.
+
+Pattern: .update(
+No matches.
+
+Pattern: .delete(
+No matches.
+
+Pattern: .eq(
+Line 49: .eq("auth0_sub", session.user.sub)
+Line 69: .eq("user_id", typedAppUser.id)
+Line 89: .eq("person_id", typedPerson.id)
+Line 90: .eq("actor_type", "person")
+
+Pattern: .single(
+Line 50: .single();
+Line 70: .single();
+Line 91: .single();
+
+Pattern: .maybeSingle(
+No matches.
+
+Pattern: value_objects
+No matches.
+
+Pattern: valueObjectId
+No matches.
+
+Pattern: value_object_id
+No matches.
+
+Pattern: owner_actor_id
+No matches.
+
+Pattern: organization_id
+No matches.
+
+Pattern: actor
+Line 17: export type ActivityActor = {
+Line 20: actor_type?: string | null;
+Line 27: personActor: ActivityActor | null;
+Line 38: personActor: null,
+Line 56: personActor: null,
+Line 76: personActor: null,
+Line 86: const { data: personActor, error: personActorError } = await supabase
+Line 87: .from("actors")
+Line 90: .eq("actor_type", "person")
+Line 93: if (personActorError || !personActor) {
+Line 97: personActor: null,
+Line 99: { error: personActorError?.message ?? "Person actor not found" },
+Line 108: personActor: personActor as ActivityActor,
+
+Pattern: actor_space_roles
+No matches.
+
+Pattern: value_object_state_facts
+No matches.
+
+Pattern: state_dimensions
+No matches.
+
+Pattern: dimension_key
+No matches.
+
+Pattern: NextResponse.json
+Line 39: errorResponse: NextResponse.json(
+Line 57: errorResponse: NextResponse.json(
+Line 77: errorResponse: NextResponse.json(
+Line 98: errorResponse: NextResponse.json(
+
+Pattern: export async function GET
+Line 31: export async function getActivityUserContext(): Promise<ActivityUserContext> {
+
+Pattern: export async function POST
+No matches.
+
+Pattern: dynamic = "force-dynamic"
+No matches.
+
+============================================================
+SOURCE FILE: src/app/api/me/route.ts
+============================================================
+
+Line count: 10
+
+First 140 numbered lines:
+    1: import { auth0 } from "../../../../lib/auth0";
+    2: 
+    3: export async function GET() {
+    4:   const session = await auth0.getSession();
+    5: 
+    6:   return Response.json({
+    7:     isAuthenticated: Boolean(session?.user),
+    8:     user: session?.user ?? null,
+    9:   });
+   10: }
+
+Focused pattern matches:
+
+Pattern: getSession
+Line 4: const session = await auth0.getSession();
+
+Pattern: auth0
+Line 1: import { auth0 } from "../../../../lib/auth0";
+Line 4: const session = await auth0.getSession();
+
+Pattern: Auth0
+Line 1: import { auth0 } from "../../../../lib/auth0";
+Line 4: const session = await auth0.getSession();
+
+Pattern: session
+Line 4: const session = await auth0.getSession();
+Line 7: isAuthenticated: Boolean(session?.user),
+Line 8: user: session?.user ?? null,
+
+Pattern: user.sub
+No matches.
+
+Pattern: session.user
+No matches.
+
+Pattern: app_users
+No matches.
+
+Pattern: user_id
+No matches.
+
+Pattern: email
+No matches.
+
+Pattern: supabase
+No matches.
+
+Pattern: from(
+No matches.
+
+Pattern: .select(
+No matches.
+
+Pattern: .insert(
+No matches.
+
+Pattern: .update(
+No matches.
+
+Pattern: .delete(
+No matches.
+
+Pattern: .eq(
+No matches.
+
+Pattern: .single(
+No matches.
+
+Pattern: .maybeSingle(
+No matches.
+
+Pattern: value_objects
+No matches.
+
+Pattern: valueObjectId
+No matches.
+
+Pattern: value_object_id
+No matches.
+
+Pattern: owner_actor_id
+No matches.
+
+Pattern: organization_id
+No matches.
+
+Pattern: actor
+No matches.
+
+Pattern: actor_space_roles
+No matches.
+
+Pattern: value_object_state_facts
+No matches.
+
+Pattern: state_dimensions
+No matches.
+
+Pattern: dimension_key
+No matches.
+
+Pattern: NextResponse.json
+No matches.
+
+Pattern: export async function GET
+Line 3: export async function GET() {
+
+Pattern: export async function POST
+No matches.
+
+Pattern: dynamic = "force-dynamic"
+No matches.
+
+============================================================
+SOURCE FILE: src/app/api/sync-user/route.ts
+============================================================
+
+Line count: 294
+
+First 140 numbered lines:
+    1: import { NextResponse } from "next/server";
+    2: import { auth0 } from "../../../../lib/auth0";
+    3: import { supabase } from "../../../../lib/supabase";
+    4: 
+    5: export async function POST() {
+    6:   const session = await auth0.getSession();
+    7: 
+    8:   if (!session?.user) {
+    9:     return NextResponse.json(
+   10:       { error: "Not authenticated" },
+   11:       { status: 401 }
+   12:     );
+   13:   }
+   14: 
+   15:   const user = session.user;
+   16: 
+   17:   const { data: appUser, error: appUserError } = await supabase
+   18:     .from("app_users")
+   19:     .upsert(
+   20:       {
+   21:         auth0_sub: user.sub,
+   22:         email: user.email,
+   23:         name: user.name,
+   24:         picture: user.picture,
+   25:         updated_at: new Date().toISOString(),
+   26:       },
+   27:       {
+   28:         onConflict: "auth0_sub",
+   29:       }
+   30:     )
+   31:     .select()
+   32:     .single();
+   33: 
+   34:   if (appUserError) {
+   35:     return NextResponse.json(
+   36:       { error: appUserError.message },
+   37:       { status: 500 }
+   38:     );
+   39:   }
+   40: 
+   41:   const { data: existingPerson, error: existingPersonError } = await supabase
+   42:     .from("persons")
+   43:     .select("*")
+   44:     .eq("user_id", appUser.id)
+   45:     .maybeSingle();
+   46: 
+   47:   if (existingPersonError) {
+   48:     return NextResponse.json(
+   49:       { error: existingPersonError.message },
+   50:       { status: 500 }
+   51:     );
+   52:   }
+   53: 
+   54:   let person = existingPerson;
+   55: 
+   56:   if (!person) {
+   57:     const { data: createdPerson, error: createdPersonError } = await supabase
+   58:       .from("persons")
+   59:       .insert({
+   60:         user_id: appUser.id,
+   61:         full_name: user.name ?? appUser.email ?? "Unnamed user",
+   62:         short_name: user.name ?? appUser.email ?? "User",
+   63:         status: "active",
+   64:       })
+   65:       .select()
+   66:       .single();
+   67: 
+   68:     if (createdPersonError) {
+   69:       return NextResponse.json(
+   70:         { error: createdPersonError.message },
+   71:         { status: 500 }
+   72:       );
+   73:     }
+   74: 
+   75:     person = createdPerson;
+   76:   }
+   77: 
+   78:   const { data: existingActor, error: existingActorError } = await supabase
+   79:     .from("actors")
+   80:     .select("*")
+   81:     .eq("person_id", person.id)
+   82:     .eq("actor_type", "person")
+   83:     .maybeSingle();
+   84: 
+   85:   if (existingActorError) {
+   86:     return NextResponse.json(
+   87:       { error: existingActorError.message },
+   88:       { status: 500 }
+   89:     );
+   90:   }
+   91: 
+   92:   let actor = existingActor;
+   93: 
+   94:   if (!actor) {
+   95:     const { data: createdActor, error: createdActorError } = await supabase
+   96:       .from("actors")
+   97:       .insert({
+   98:         actor_type: "person",
+   99:         person_id: person.id,
+  100:         display_name: person.full_name ?? person.short_name ?? appUser.email ?? "User",
+  101:         status: "active",
+  102:       })
+  103:       .select()
+  104:       .single();
+  105: 
+  106:     if (createdActorError) {
+  107:       return NextResponse.json(
+  108:         { error: createdActorError.message },
+  109:         { status: 500 }
+  110:       );
+  111:     }
+  112: 
+  113:     actor = createdActor;
+  114:   }
+  115: 
+  116:   const { data: existingPersonalSpace, error: existingPersonalSpaceError } = await supabase
+  117:     .from("spaces")
+  118:     .select("*")
+  119:     .eq("owner_user_id", appUser.id)
+  120:     .eq("space_type", "personal")
+  121:     .maybeSingle();
+  122: 
+  123:   if (existingPersonalSpaceError) {
+  124:     return NextResponse.json(
+  125:       { error: existingPersonalSpaceError.message },
+  126:       { status: 500 }
+  127:     );
+  128:   }
+  129: 
+  130:   let personalSpace = existingPersonalSpace;
+  131: 
+  132:   if (!personalSpace) {
+  133:     const { data: createdPersonalSpace, error: createdPersonalSpaceError } = await supabase
+  134:       .from("spaces")
+  135:       .insert({
+  136:         owner_user_id: appUser.id,
+  137:         space_type: "personal",
+  138:         title: "Personal Space",
+  139:         description: "Default personal space",
+  140:         status: "active",
+
+Focused pattern matches:
+
+Pattern: getSession
+Line 6: const session = await auth0.getSession();
+
+Pattern: auth0
+Line 2: import { auth0 } from "../../../../lib/auth0";
+Line 6: const session = await auth0.getSession();
+Line 21: auth0_sub: user.sub,
+Line 28: onConflict: "auth0_sub",
+
+Pattern: Auth0
+Line 2: import { auth0 } from "../../../../lib/auth0";
+Line 6: const session = await auth0.getSession();
+Line 21: auth0_sub: user.sub,
+Line 28: onConflict: "auth0_sub",
+
+Pattern: session
+Line 6: const session = await auth0.getSession();
+Line 8: if (!session?.user) {
+Line 15: const user = session.user;
+
+Pattern: user.sub
+Line 21: auth0_sub: user.sub,
+
+Pattern: session.user
+Line 15: const user = session.user;
+
+Pattern: app_users
+Line 18: .from("app_users")
+
+Pattern: user_id
+Line 44: .eq("user_id", appUser.id)
+Line 60: user_id: appUser.id,
+Line 119: .eq("owner_user_id", appUser.id)
+Line 136: owner_user_id: appUser.id,
+Line 158: .eq("owner_user_id", appUser.id)
+Line 175: owner_user_id: appUser.id,
+
+Pattern: email
+Line 22: email: user.email,
+Line 61: full_name: user.name ?? appUser.email ?? "Unnamed user",
+Line 62: short_name: user.name ?? appUser.email ?? "User",
+Line 100: display_name: person.full_name ?? person.short_name ?? appUser.email ?? "User",
+
+Pattern: supabase
+Line 3: import { supabase } from "../../../../lib/supabase";
+Line 17: const { data: appUser, error: appUserError } = await supabase
+Line 41: const { data: existingPerson, error: existingPersonError } = await supabase
+Line 57: const { data: createdPerson, error: createdPersonError } = await supabase
+Line 78: const { data: existingActor, error: existingActorError } = await supabase
+Line 95: const { data: createdActor, error: createdActorError } = await supabase
+Line 116: const { data: existingPersonalSpace, error: existingPersonalSpaceError } = await supabase
+Line 133: const { data: createdPersonalSpace, error: createdPersonalSpaceError } = await supabase
+Line 155: const { data: existingMarketplaceSpace, error: existingMarketplaceSpaceError } = await supabase
+Line 172: const { data: createdMarketplaceSpace, error: createdMarketplaceSpaceError } = await supabase
+Line 194: const { data: existingSelfRole, error: existingSelfRoleError } = await supabase
+Line 213: const { data: createdSelfRole, error: createdSelfRoleError } = await supabase
+Line 237: const { data: existingBuyerRole, error: existingBuyerRoleError } = await supabase
+Line 256: const { data: createdBuyerRole, error: createdBuyerRoleError } = await supabase
+
+Pattern: from(
+Line 18: .from("app_users")
+Line 42: .from("persons")
+Line 58: .from("persons")
+Line 79: .from("actors")
+Line 96: .from("actors")
+Line 117: .from("spaces")
+Line 134: .from("spaces")
+Line 156: .from("spaces")
+Line 173: .from("spaces")
+Line 195: .from("actor_space_roles")
+Line 214: .from("actor_space_roles")
+Line 238: .from("actor_space_roles")
+Line 257: .from("actor_space_roles")
+
+Pattern: .select(
+Line 31: .select()
+Line 43: .select("*")
+Line 65: .select()
+Line 80: .select("*")
+Line 103: .select()
+Line 118: .select("*")
+Line 142: .select()
+Line 157: .select("*")
+Line 181: .select()
+Line 196: .select("*")
+Line 224: .select()
+Line 239: .select("*")
+Line 267: .select()
+
+Pattern: .insert(
+Line 59: .insert({
+Line 97: .insert({
+Line 135: .insert({
+Line 174: .insert({
+Line 215: .insert({
+Line 258: .insert({
+
+Pattern: .update(
+No matches.
+
+Pattern: .delete(
+No matches.
+
+Pattern: .eq(
+Line 44: .eq("user_id", appUser.id)
+Line 81: .eq("person_id", person.id)
+Line 82: .eq("actor_type", "person")
+Line 119: .eq("owner_user_id", appUser.id)
+Line 120: .eq("space_type", "personal")
+Line 158: .eq("owner_user_id", appUser.id)
+Line 159: .eq("space_type", "marketplace")
+Line 197: .eq("actor_id", actor.id)
+Line 198: .eq("space_id", personalSpace.id)
+Line 199: .eq("function_type", "self")
+Line 200: .eq("is_active", true)
+Line 240: .eq("actor_id", actor.id)
+Line 241: .eq("space_id", marketplaceSpace.id)
+Line 242: .eq("function_type", "buyer")
+Line 243: .eq("is_active", true)
+
+Pattern: .single(
+Line 32: .single();
+Line 66: .single();
+Line 104: .single();
+Line 143: .single();
+Line 182: .single();
+Line 225: .single();
+Line 268: .single();
+
+Pattern: .maybeSingle(
+Line 45: .maybeSingle();
+Line 83: .maybeSingle();
+Line 121: .maybeSingle();
+Line 160: .maybeSingle();
+Line 201: .maybeSingle();
+Line 244: .maybeSingle();
+
+Pattern: value_objects
+No matches.
+
+Pattern: valueObjectId
+No matches.
+
+Pattern: value_object_id
+No matches.
+
+Pattern: owner_actor_id
+No matches.
+
+Pattern: organization_id
+No matches.
+
+Pattern: actor
+Line 78: const { data: existingActor, error: existingActorError } = await supabase
+Line 79: .from("actors")
+Line 82: .eq("actor_type", "person")
+Line 85: if (existingActorError) {
+Line 87: { error: existingActorError.message },
+Line 92: let actor = existingActor;
+Line 94: if (!actor) {
+Line 95: const { data: createdActor, error: createdActorError } = await supabase
+Line 96: .from("actors")
+Line 98: actor_type: "person",
+Line 106: if (createdActorError) {
+Line 108: { error: createdActorError.message },
+Line 113: actor = createdActor;
+Line 195: .from("actor_space_roles")
+Line 197: .eq("actor_id", actor.id)
+Line 214: .from("actor_space_roles")
+Line 216: actor_id: actor.id,
+Line 238: .from("actor_space_roles")
+Line 240: .eq("actor_id", actor.id)
+Line 257: .from("actor_space_roles")
+Line 259: actor_id: actor.id,
+Line 284: actor,
+
+Pattern: actor_space_roles
+Line 195: .from("actor_space_roles")
+Line 214: .from("actor_space_roles")
+Line 238: .from("actor_space_roles")
+Line 257: .from("actor_space_roles")
+
+Pattern: value_object_state_facts
+No matches.
+
+Pattern: state_dimensions
+No matches.
+
+Pattern: dimension_key
+No matches.
+
+Pattern: NextResponse.json
+Line 9: return NextResponse.json(
+Line 35: return NextResponse.json(
+Line 48: return NextResponse.json(
+Line 69: return NextResponse.json(
+Line 86: return NextResponse.json(
+Line 107: return NextResponse.json(
+Line 124: return NextResponse.json(
+Line 146: return NextResponse.json(
+Line 163: return NextResponse.json(
+Line 185: return NextResponse.json(
+Line 204: return NextResponse.json(
+Line 228: return NextResponse.json(
+Line 247: return NextResponse.json(
+Line 271: return NextResponse.json(
+Line 280: return NextResponse.json({
+
+Pattern: export async function GET
+No matches.
+
+Pattern: export async function POST
+Line 5: export async function POST() {
+
+Pattern: dynamic = "force-dynamic"
+No matches.
+
+============================================================
+SOURCE FILE: src/app/api/value-objects/route.ts
+============================================================
+
+Line count: 354
+
+First 140 numbered lines:
+    1: import { NextResponse } from "next/server";
+    2: import { auth0 } from "../../../../lib/auth0";
+    3: import { supabase } from "../../../../lib/supabase";
+    4: 
+    5: export const dynamic = "force-dynamic";
+    6: 
+    7: type AppUserRow = {
+    8:   id: string;
+    9:   auth0_sub?: string | null;
+   10: };
+   11: 
+   12: type PersonRow = {
+   13:   id: string;
+   14:   user_id?: string | null;
+   15: };
+   16: 
+   17: type ActorRow = {
+   18:   id: string;
+   19:   person_id?: string | null;
+   20:   actor_type?: string | null;
+   21: };
+   22: 
+   23: type OrganizationRow = {
+   24:   id: string;
+   25:   organization_name: string | null;
+   26:   organization_type: string | null;
+   27:   status: string | null;
+   28:   created_by_user_id: string | null;
+   29: };
+   30: 
+   31: type CurrentUserContext =
+   32:   | {
+   33:       appUser: AppUserRow;
+   34:       person: PersonRow;
+   35:       personActor: ActorRow;
+   36:       errorResponse: null;
+   37:     }
+   38:   | {
+   39:       appUser: null;
+   40:       person: null;
+   41:       personActor: null;
+   42:       errorResponse: NextResponse;
+   43:     };
+   44: 
+   45: type OrganizationAccessResult =
+   46:   | {
+   47:       organization: OrganizationRow;
+   48:       errorResponse: null;
+   49:     }
+   50:   | {
+   51:       organization: null;
+   52:       errorResponse: NextResponse;
+   53:     };
+   54: 
+   55: type ValueObjectRequestBody = {
+   56:   organizationId?: unknown;
+   57:   valueType?: unknown;
+   58:   title?: unknown;
+   59:   description?: unknown;
+   60:   unitType?: unknown;
+   61:   defaultPrice?: unknown;
+   62:   defaultCurrency?: unknown;
+   63:   defaultDurationMinutes?: unknown;
+   64:   isMarketplaceSellable?: unknown;
+   65:   isFreePossible?: unknown;
+   66: };
+   67: 
+   68: function normalizeRequiredString(value: unknown): string | null {
+   69:   if (typeof value !== "string") {
+   70:     return null;
+   71:   }
+   72: 
+   73:   const trimmed = value.trim();
+   74: 
+   75:   if (!trimmed) {
+   76:     return null;
+   77:   }
+   78: 
+   79:   return trimmed;
+   80: }
+   81: 
+   82: function normalizeOptionalString(value: unknown): string | null {
+   83:   if (value === null || value === undefined || value === "") {
+   84:     return null;
+   85:   }
+   86: 
+   87:   if (typeof value !== "string") {
+   88:     return null;
+   89:   }
+   90: 
+   91:   const trimmed = value.trim();
+   92: 
+   93:   if (!trimmed) {
+   94:     return null;
+   95:   }
+   96: 
+   97:   return trimmed;
+   98: }
+   99: 
+  100: function normalizeOptionalNumber(value: unknown): number | null {
+  101:   if (value === null || value === undefined || value === "") {
+  102:     return null;
+  103:   }
+  104: 
+  105:   if (typeof value === "number") {
+  106:     return Number.isFinite(value) ? value : null;
+  107:   }
+  108: 
+  109:   if (typeof value === "string") {
+  110:     const trimmed = value.trim();
+  111: 
+  112:     if (!trimmed) {
+  113:       return null;
+  114:     }
+  115: 
+  116:     const parsed = Number(trimmed);
+  117: 
+  118:     return Number.isFinite(parsed) ? parsed : null;
+  119:   }
+  120: 
+  121:   return null;
+  122: }
+  123: 
+  124: function normalizeBoolean(value: unknown): boolean {
+  125:   return value === true;
+  126: }
+  127: 
+  128: async function getCurrentUserContext(): Promise<CurrentUserContext> {
+  129:   const session = await auth0.getSession();
+  130: 
+  131:   if (!session?.user?.sub) {
+  132:     return {
+  133:       appUser: null,
+  134:       person: null,
+  135:       personActor: null,
+  136:       errorResponse: NextResponse.json(
+  137:         { error: "Not authenticated" },
+  138:         { status: 401 }
+  139:       ),
+  140:     };
+
+Focused pattern matches:
+
+Pattern: getSession
+Line 129: const session = await auth0.getSession();
+
+Pattern: auth0
+Line 2: import { auth0 } from "../../../../lib/auth0";
+Line 9: auth0_sub?: string | null;
+Line 129: const session = await auth0.getSession();
+Line 145: .select("id, auth0_sub")
+Line 146: .eq("auth0_sub", session.user.sub)
+
+Pattern: Auth0
+Line 2: import { auth0 } from "../../../../lib/auth0";
+Line 9: auth0_sub?: string | null;
+Line 129: const session = await auth0.getSession();
+Line 145: .select("id, auth0_sub")
+Line 146: .eq("auth0_sub", session.user.sub)
+
+Pattern: session
+Line 129: const session = await auth0.getSession();
+Line 131: if (!session?.user?.sub) {
+Line 146: .eq("auth0_sub", session.user.sub)
+
+Pattern: user.sub
+Line 146: .eq("auth0_sub", session.user.sub)
+
+Pattern: session.user
+Line 146: .eq("auth0_sub", session.user.sub)
+
+Pattern: app_users
+Line 144: .from("app_users")
+
+Pattern: user_id
+Line 14: user_id?: string | null;
+Line 28: created_by_user_id: string | null;
+Line 163: .select("id, user_id")
+Line 164: .eq("user_id", appUser.id)
+Line 212: .select("id, organization_name, organization_type, status, created_by_user_id")
+Line 214: .eq("created_by_user_id", appUserId)
+
+Pattern: email
+No matches.
+
+Pattern: supabase
+Line 3: import { supabase } from "../../../../lib/supabase";
+Line 143: const { data: appUser, error: appUserError } = await supabase
+Line 161: const { data: person, error: personError } = await supabase
+Line 179: const { data: personActor, error: personActorError } = await supabase
+Line 210: const { data: organization, error: organizationError } = await supabase
+Line 240: const { data: valueObjects, error: valueObjectsError } = await supabase
+Line 314: const { data: valueObject, error: valueObjectError } = await supabase
+
+Pattern: from(
+Line 144: .from("app_users")
+Line 162: .from("persons")
+Line 180: .from("actors")
+Line 211: .from("organizations")
+Line 241: .from("value_objects")
+Line 315: .from("value_objects")
+
+Pattern: .select(
+Line 145: .select("id, auth0_sub")
+Line 163: .select("id, user_id")
+Line 181: .select("id, person_id, actor_type")
+Line 212: .select("id, organization_name, organization_type, status, created_by_user_id")
+Line 242: .select(
+Line 330: .select(
+
+Pattern: .insert(
+Line 316: .insert({
+
+Pattern: .update(
+No matches.
+
+Pattern: .delete(
+No matches.
+
+Pattern: .eq(
+Line 146: .eq("auth0_sub", session.user.sub)
+Line 164: .eq("user_id", appUser.id)
+Line 182: .eq("person_id", person.id)
+Line 183: .eq("actor_type", "person")
+Line 213: .eq("id", organizationId)
+Line 214: .eq("created_by_user_id", appUserId)
+Line 253: .eq("owner_actor_id", personActor.id)
+
+Pattern: .single(
+Line 147: .single();
+Line 165: .single();
+Line 184: .single();
+Line 215: .single();
+Line 341: .single();
+
+Pattern: .maybeSingle(
+No matches.
+
+Pattern: value_objects
+Line 241: .from("value_objects")
+Line 315: .from("value_objects")
+
+Pattern: valueObjectId
+No matches.
+
+Pattern: value_object_id
+No matches.
+
+Pattern: owner_actor_id
+Line 253: .eq("owner_actor_id", personActor.id)
+Line 317: owner_actor_id: personActor.id,
+
+Pattern: organization_id
+Line 318: organization_id: organization.id,
+
+Pattern: actor
+Line 17: type ActorRow = {
+Line 20: actor_type?: string | null;
+Line 35: personActor: ActorRow;
+Line 41: personActor: null;
+Line 135: personActor: null,
+Line 153: personActor: null,
+Line 171: personActor: null,
+Line 179: const { data: personActor, error: personActorError } = await supabase
+Line 180: .from("actors")
+Line 181: .select("id, person_id, actor_type")
+Line 183: .eq("actor_type", "person")
+Line 186: if (personActorError || !personActor) {
+Line 190: personActor: null,
+Line 192: { error: personActorError?.message ?? "Person actor not found" },
+Line 201: personActor,
+Line 234: const { personActor, errorResponse } = await getCurrentUserContext();
+Line 253: .eq("owner_actor_id", personActor.id)
+Line 270: const { appUser, personActor, errorResponse } = await getCurrentUserContext();
+Line 317: owner_actor_id: personActor.id,
+
+Pattern: actor_space_roles
+No matches.
+
+Pattern: value_object_state_facts
+No matches.
+
+Pattern: state_dimensions
+No matches.
+
+Pattern: dimension_key
+No matches.
+
+Pattern: NextResponse.json
+Line 136: errorResponse: NextResponse.json(
+Line 154: errorResponse: NextResponse.json(
+Line 172: errorResponse: NextResponse.json(
+Line 191: errorResponse: NextResponse.json(
+Line 220: errorResponse: NextResponse.json(
+Line 257: return NextResponse.json(
+Line 263: return NextResponse.json({
+Line 281: return NextResponse.json(
+Line 301: return NextResponse.json(
+Line 344: return NextResponse.json(
+Line 350: return NextResponse.json({
+
+Pattern: export async function GET
+Line 233: export async function GET() {
+
+Pattern: export async function POST
+Line 269: export async function POST(request: Request) {
+
+Pattern: dynamic = "force-dynamic"
+Line 5: export const dynamic = "force-dynamic";
+
+============================================================
+SOURCE FILE: src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+============================================================
+
+Line count: 822
+
+First 140 numbered lines:
+    1: import { NextResponse } from "next/server";
+    2: 
+    3: import {
+    4:   ACTIVITY_RECORDING_DISABLED_MESSAGE,
+    5:   ACTIVITY_RECORDING_ENABLED,
+    6: } from "../../../../../../lib/activity/activityRecordingConfig";
+    7: import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
+    8: import {
+    9:   getCategoryDerivationRouteRunnerConfig,
+   10:   getCategoryDerivationRouteRunnerConfigSummary,
+   11: } from "../../../../../../lib/activity/categoryDerivation/config";
+   12: import {
+   13:   runCategoryDerivationForCompleteRoute,
+   14:   type CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+   15: } from "../../../../../../lib/activity/categoryDerivation/completeRouteIntegration";
+   16: import { supabase } from "../../../../../../lib/supabase";
+   17: 
+   18: export const dynamic = "force-dynamic";
+   19: 
+   20: const ENDPOINT =
+   21:   "/api/activity/debug/category-derivation-controlled-production-persist-proof";
+   22: 
+   23: const P4_STEP =
+   24:   "P4.10.0-C8-E-F6-E-E-controlled-production-persist-proof";
+   25: 
+   26: const PROOF_MARKER =
+   27:   "P4.10.0-C8-E-F6-E-controlled-production-persist-proof";
+   28: 
+   29: const PROOF_PURPOSE = "controlled_production_persist_proof";
+   30: const EXPECTED_MODE = "production_persist";
+   31: const EXPECTED_DERIVATION_ROWS = 5;
+   32: 
+   33: const ROUTE_RUNNER_SCHEMA_VERSION = "category_derivation_complete_route_v1";
+   34: const ROUTE_RUNNER_POLICY_VERSION = "c8-e-f4";
+   35: const ROUTE_RUNNER_PROCESSOR_VERSION = "category_derivation_v1";
+   36: const ROUTE_RUNNER_RULE_VERSION = "rules_v1";
+   37: 
+   38: const COMPLETED_RUN_STATUSES = ["completed", "completed_with_warnings"];
+   39: 
+   40: const DEFAULT_INPUT_TEXT =
+   41:   "walked to work for 10 minutes during controlled production persist proof";
+   42: 
+   43: const DEFAULT_TITLE = "F6-E controlled production_persist proof";
+   44: const DEFAULT_DESCRIPTION =
+   45:   "Controlled debug-only proof event for Category Derivation production_persist persistence and adapter-level idempotency.";
+   46: 
+   47: type JsonRecord = Record<string, unknown>;
+   48: 
+   49: function isRecord(value: unknown): value is JsonRecord {
+   50:   return typeof value === "object" && value !== null && !Array.isArray(value);
+   51: }
+   52: 
+   53: function asRecord(value: unknown): JsonRecord | null {
+   54:   return isRecord(value) ? value : null;
+   55: }
+   56: 
+   57: function asNonEmptyString(value: unknown): string | null {
+   58:   if (typeof value !== "string") {
+   59:     return null;
+   60:   }
+   61: 
+   62:   const trimmed = value.trim();
+   63:   return trimmed.length > 0 ? trimmed : null;
+   64: }
+   65: 
+   66: function asBoolean(value: unknown): boolean | null {
+   67:   if (typeof value === "boolean") {
+   68:     return value;
+   69:   }
+   70: 
+   71:   if (typeof value === "string") {
+   72:     const normalized = value.trim().toLowerCase();
+   73: 
+   74:     if (["true", "1", "yes", "y", "on"].includes(normalized)) {
+   75:       return true;
+   76:     }
+   77: 
+   78:     if (["false", "0", "no", "n", "off"].includes(normalized)) {
+   79:       return false;
+   80:     }
+   81:   }
+   82: 
+   83:   return null;
+   84: }
+   85: 
+   86: function resolveDurationMinutes(value: unknown): number | null {
+   87:   if (typeof value === "undefined" || value === null || value === "") {
+   88:     return 10;
+   89:   }
+   90: 
+   91:   const numericValue =
+   92:     typeof value === "number"
+   93:       ? value
+   94:       : typeof value === "string"
+   95:         ? Number(value)
+   96:         : Number.NaN;
+   97: 
+   98:   if (
+   99:     !Number.isFinite(numericValue) ||
+  100:     numericValue <= 0 ||
+  101:     numericValue > 24 * 60
+  102:   ) {
+  103:     return null;
+  104:   }
+  105: 
+  106:   return Math.round(numericValue);
+  107: }
+  108: 
+  109: function errorMessage(error: unknown): string | null {
+  110:   if (!error) {
+  111:     return null;
+  112:   }
+  113: 
+  114:   if (typeof error === "string") {
+  115:     return error;
+  116:   }
+  117: 
+  118:   if (isRecord(error) && typeof error.message === "string") {
+  119:     return error.message;
+  120:   }
+  121: 
+  122:   return "Unknown error";
+  123: }
+  124: 
+  125: function compactAdapterResult(result: any) {
+  126:   return {
+  127:     enabled: result.enabled,
+  128:     mode: result.mode,
+  129:     ok: result.ok,
+  130:     skipped: result.skipped,
+  131:     reason: result.reason,
+  132:     derivationRunId: result.derivationRunId,
+  133:     candidateCount: result.candidateCount,
+  134:     resolvedCandidateCount: result.resolvedCandidateCount,
+  135:     persistenceDerivationRowsCreated: result.persistenceDerivationRowsCreated,
+  136:     warnings: result.warnings,
+  137:     errors: result.errors,
+  138:     idempotency: result.idempotency,
+  139:     routeRunner: result.routeRunner,
+  140:     config: result.config,
+
+Focused pattern matches:
+
+Pattern: getSession
+No matches.
+
+Pattern: auth0
+No matches.
+
+Pattern: Auth0
+No matches.
+
+Pattern: session
+No matches.
+
+Pattern: user.sub
+No matches.
+
+Pattern: session.user
+No matches.
+
+Pattern: app_users
+No matches.
+
+Pattern: user_id
+Line 147: userId: event.user_id,
+Line 210: user_id: params.userId,
+Line 256: .eq("user_id", userId)
+
+Pattern: email
+No matches.
+
+Pattern: supabase
+Line 14: type CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+Line 16: import { supabase } from "../../../../../../lib/supabase";
+Line 205: const supabaseAny = supabase as any;
+Line 207: return await supabaseAny
+Line 250: const supabaseAny = supabase as any;
+Line 252: return await supabaseAny
+Line 261: const supabaseAny = supabase as any;
+Line 263: return await supabaseAny
+Line 283: const supabaseAny = supabase as any;
+Line 285: return await supabaseAny
+Line 591: supabase:
+Line 592: supabase as unknown as CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+
+Pattern: from(
+Line 208: .from("activity_events")
+Line 253: .from("activity_events")
+Line 264: .from("category_derivation_runs")
+Line 286: .from("activity_category_derivations")
+
+Pattern: .select(
+Line 245: .select("*")
+Line 254: .select("*")
+Line 265: .select("*")
+Line 287: .select("*")
+
+Pattern: .insert(
+Line 209: .insert({
+
+Pattern: .update(
+No matches.
+
+Pattern: .delete(
+No matches.
+
+Pattern: .eq(
+Line 255: .eq("id", eventId)
+Line 256: .eq("user_id", userId)
+Line 266: .eq("activity_event_id", eventId)
+Line 267: .eq("schema_version", ROUTE_RUNNER_SCHEMA_VERSION)
+Line 268: .eq("policy_version", ROUTE_RUNNER_POLICY_VERSION)
+Line 269: .eq("processor_version", ROUTE_RUNNER_PROCESSOR_VERSION)
+Line 270: .eq("rule_version", ROUTE_RUNNER_RULE_VERSION)
+
+Pattern: .single(
+Line 246: .single();
+
+Pattern: .maybeSingle(
+Line 257: .maybeSingle();
+
+Pattern: value_objects
+No matches.
+
+Pattern: valueObjectId
+No matches.
+
+Pattern: value_object_id
+No matches.
+
+Pattern: owner_actor_id
+No matches.
+
+Pattern: organization_id
+No matches.
+
+Pattern: actor
+Line 148: performedByActorId: event.performed_by_actor_id,
+Line 149: actingAsActorId: event.acting_as_actor_id,
+Line 150: actingForActorId: event.acting_for_actor_id,
+Line 195: actorId: string;
+Line 211: performed_by_actor_id: params.actorId,
+Line 212: acting_as_actor_id: params.actorId,
+Line 213: acting_for_actor_id: params.actorId,
+Line 479: const { appUser, personActor, errorResponse } = await getActivityUserContext();
+Line 485: if (!appUser || !personActor) {
+Line 491: error: "Authenticated app user and person actor context are required.",
+Line 550: actorId: personActor.id,
+Line 602: actorId: personActor.id,
+
+Pattern: actor_space_roles
+No matches.
+
+Pattern: value_object_state_facts
+No matches.
+
+Pattern: state_dimensions
+No matches.
+
+Pattern: dimension_key
+No matches.
+
+Pattern: NextResponse.json
+Line 336: return NextResponse.json({
+Line 365: return NextResponse.json(
+Line 382: return NextResponse.json(
+Line 395: return NextResponse.json(
+Line 415: return NextResponse.json(
+Line 430: return NextResponse.json(
+Line 444: return NextResponse.json(
+Line 456: return NextResponse.json(
+Line 468: return NextResponse.json(
+Line 486: return NextResponse.json(
+Line 501: return NextResponse.json(
+Line 521: return NextResponse.json(
+Line 535: return NextResponse.json(
+Line 558: return NextResponse.json(
+Line 577: return NextResponse.json(
+Line 642: return NextResponse.json(
+Line 662: return NextResponse.json(
+Line 683: return NextResponse.json(
+Line 770: return NextResponse.json({
+
+Pattern: export async function GET
+Line 333: export async function GET() {
+
+Pattern: export async function POST
+Line 363: export async function POST(request: Request) {
+
+Pattern: dynamic = "force-dynamic"
+Line 18: export const dynamic = "force-dynamic";
+
+============================================================
+SOURCE FILE: src/app/api/activity/debug/state-signal-candidate-shadow-test/route.ts
+============================================================
+
+Line count: 984
+
+First 140 numbered lines:
+    1: import { NextResponse } from "next/server";
+    2: 
+    3: export const dynamic = "force-dynamic";
+    4: 
+    5: const ENDPOINT = "/api/activity/debug/state-signal-candidate-shadow-test";
+    6: const POST_ENDPOINT = "POST /api/activity/debug/state-signal-candidate-shadow-test";
+    7: const P4_STEP = "P4.10.0-C8-I-D4-E-B";
+    8: const CONTRACT_VERSION = "state-fact-creation-contract-v1";
+    9: const CANDIDATE_SCHEMA_VERSION = "state-signal-candidate-v1";
+   10: const MODE = "shadow_evaluation";
+   11: 
+   12: type Decision =
+   13:   | "accept_for_controlled_persistence"
+   14:   | "reject"
+   15:   | "shadow_only";
+   16: 
+   17: type ClaimPolicy = "system_estimate" | "proxy_only" | "user_confirmed";
+   18: 
+   19: type SourceType =
+   20:   | "manual"
+   21:   | "user_confirmed"
+   22:   | "rule"
+   23:   | "ai"
+   24:   | "system"
+   25:   | "import"
+   26:   | "correction";
+   27: 
+   28: type ProposedValueKind =
+   29:   | "score"
+   30:   | "count"
+   31:   | "duration"
+   32:   | "flag"
+   33:   | "enum"
+   34:   | "text"
+   35:   | "object";
+   36: 
+   37: type ProposedValueDirection =
+   38:   | "increase"
+   39:   | "decrease"
+   40:   | "neutral"
+   41:   | "unknown";
+   42: 
+   43: type CandidateWindow =
+   44:   | "current"
+   45:   | "event"
+   46:   | "last_3h"
+   47:   | "today"
+   48:   | "last_7d"
+   49:   | "baseline"
+   50:   | "custom";
+   51: 
+   52: type RequestBody = {
+   53:   inputText?: unknown;
+   54:   durationMinutes?: unknown;
+   55:   count?: unknown;
+   56:   candidateDimensionKey?: unknown;
+   57:   dimensionKey?: unknown;
+   58:   sourceType?: unknown;
+   59:   userConfirmed?: unknown;
+   60:   expectedDecision?: unknown;
+   61:   scenario?: unknown;
+   62: };
+   63: 
+   64: type DimensionDefinition = {
+   65:   dimensionKey: string;
+   66:   title: string;
+   67:   domain: string;
+   68:   claimPolicy: ClaimPolicy;
+   69:   isSensitive: boolean;
+   70:   defaultPrivacyLevel: "private";
+   71: };
+   72: 
+   73: type StateSignalCandidate = {
+   74:   schemaVersion: typeof CANDIDATE_SCHEMA_VERSION;
+   75:   userId: string;
+   76:   valueObjectId: string;
+   77:   dimensionKey: string;
+   78:   proposedValue: {
+   79:     kind: ProposedValueKind;
+   80:     value: number | string | boolean | Record<string, unknown>;
+   81:     unit: string | null;
+   82:     direction: ProposedValueDirection;
+   83:     window: CandidateWindow;
+   84:   };
+   85:   source: {
+   86:     sourceType: SourceType;
+   87:     sourceId: string | null;
+   88:     sourceTable:
+   89:       | "activity_events"
+   90:       | "value_objects"
+   91:       | "manual_input"
+   92:       | "import_batch"
+   93:       | "system_rule"
+   94:       | "correction"
+   95:       | null;
+   96:   };
+   97:   evidence: {
+   98:     evidenceType:
+   99:       | "activity_event"
+  100:       | "user_confirmation"
+  101:       | "rule_match"
+  102:       | "ai_explanation"
+  103:       | "imported_measurement"
+  104:       | "correction";
+  105:     activityEventId: string | null;
+  106:     matchedText: string | null;
+  107:     matchedCategories: string[];
+  108:     metricCandidates: Array<Record<string, unknown>>;
+  109:     ruleId: string | null;
+  110:     ruleVersion: string | null;
+  111:     userConfirmationText: string | null;
+  112:     explanation: string | null;
+  113:   };
+  114:   confidence: number;
+  115:   claimStrength: number;
+  116:   privacyLevel: "private";
+  117:   validFrom: string | null;
+  118:   validTo: string | null;
+  119:   safeWording: {
+  120:     shortLabel: string;
+  121:     userVisibleExplanation: string;
+  122:     internalExplanation: string;
+  123:   };
+  124:   metadata: {
+  125:     candidateOrigin:
+  126:       | "category_derivation"
+  127:       | "rule_processor"
+  128:       | "manual"
+  129:       | "import"
+  130:       | "correction"
+  131:       | "debug_shadow_route";
+  132:     notAStateFactYet: true;
+  133:     requiresUserConfirmation: boolean;
+  134:     requiresExpiry: boolean;
+  135:     rollbackable: boolean;
+  136:     createdByContract: typeof CONTRACT_VERSION;
+  137:     p4Step: typeof P4_STEP;
+  138:   };
+  139: };
+  140: 
+
+Focused pattern matches:
+
+Pattern: getSession
+No matches.
+
+Pattern: auth0
+No matches.
+
+Pattern: Auth0
+No matches.
+
+Pattern: session
+No matches.
+
+Pattern: user.sub
+No matches.
+
+Pattern: session.user
+No matches.
+
+Pattern: app_users
+No matches.
+
+Pattern: user_id
+Line 817: user_id: candidate.userId,
+
+Pattern: email
+Line 362: inputText.includes("sales email") ||
+Line 363: inputText.includes("sales emails") ||
+Line 977: "sent 5 sales emails",
+Line 980: "I sent 5 sales emails and closed 2 deals",
+
+Pattern: supabase
+Line 164: supabaseImported: false;
+Line 689: supabaseImported: false,
+
+Pattern: from(
+No matches.
+
+Pattern: .select(
+No matches.
+
+Pattern: .insert(
+No matches.
+
+Pattern: .update(
+No matches.
+
+Pattern: .delete(
+No matches.
+
+Pattern: .eq(
+No matches.
+
+Pattern: .single(
+No matches.
+
+Pattern: .maybeSingle(
+No matches.
+
+Pattern: value_objects
+Line 90: | "value_objects"
+
+Pattern: valueObjectId
+Line 76: valueObjectId: string;
+Line 596: valueObjectId: "00000000-0000-0000-0000-000000000000",
+Line 818: value_object_id: candidate.valueObjectId,
+Line 852: valueObjectId: "00000000-0000-0000-0000-000000000000",
+
+Pattern: value_object_id
+Line 818: value_object_id: candidate.valueObjectId,
+
+Pattern: owner_actor_id
+No matches.
+
+Pattern: organization_id
+No matches.
+
+Pattern: actor
+No matches.
+
+Pattern: actor_space_roles
+No matches.
+
+Pattern: value_object_state_facts
+No matches.
+
+Pattern: state_dimensions
+No matches.
+
+Pattern: dimension_key
+Line 820: dimension_key: candidate.dimensionKey,
+
+Pattern: NextResponse.json
+Line 924: return NextResponse.json(
+Line 944: return NextResponse.json(
+Line 956: return NextResponse.json({
+
+Pattern: export async function GET
+Line 955: export async function GET() {
+
+Pattern: export async function POST
+Line 901: export async function POST(request: Request) {
+
+Pattern: dynamic = "force-dynamic"
+Line 3: export const dynamic = "force-dynamic";
+
+============================================================
+Preliminary conclusions
+============================================================
+
+1. The next implementation must reuse existing auth/session conventions, but exact reusable helper choice still needs interpretation.
+2. The next implementation must reuse existing Supabase conventions, but must not copy debug persist proof blindly.
+3. Value object access cannot be assumed from value_object_id alone.
+4. A future controlled persist helper must combine user resolution, value object access, dimension validation, candidate validation, idempotency, and a guarded insert.
+5. D4-F-B-C-A remains read-only and does not implement any persistence.
+
+Recommended next step:
+P4.10.0-C8-I-D4-F-B-C-B — source inspection interpretation memo.
+
+End of D4-F-B-C-A report.
