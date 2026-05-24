@@ -1,0 +1,838 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D3-A — State Dimensions Seed Governance Plan
+
+Date: 2026-05-24
+Status: DRAFT GOVERNANCE DOCUMENT — NO SQL EXECUTION
+
+Previous completed block:
+P4.10.0-C8-I-D2 — executed and verified additive state/similarity/relevance/NBA migration.
+
+Previous report:
+docs/value-objects/p4-10-0-c8-i-d2-execution-and-smoke-check-report.txt
+
+============================================================
+1. Purpose of D3
+============================================================
+
+D3 prepares the first controlled seed set for public.state_dimensions.
+
+The goal is not to create "medical facts", "hormonal conclusions", "psychological diagnoses", or "confirmed business results".
+
+The goal is to define safe state dimensions that can later support:
+
+- Next Best Action ranking
+- weakest direction detection
+- safe proxy-based state reasoning
+- user-confirmed state facts
+- similarity/relevance scoring
+- recommendation feedback loops
+
+D3 is a governance step before seed SQL.
+
+No SQL should be executed in this step.
+
+============================================================
+2. Locked architectural rules
+============================================================
+
+The unified Value Object model remains unchanged.
+
+Do not create mandatory Value Object subtypes such as:
+
+- biological_value_object
+- context_value_object
+- state_value_object
+- baseline_value_object
+- commercial_value_object
+- personal_value_object
+
+State must be represented through state layers and state dimensions, not by changing the ontology of Value Objects.
+
+Category candidates are not state facts.
+
+Activity category derivation may produce signals, but state facts require one of the following:
+
+- direct measurement
+- user confirmation
+- safe proxy estimate
+- system calculation based on explicit non-sensitive data
+- correction/audit trail
+
+Similarity and relevance remain separate:
+
+- similarity = semantic/category overlap
+- relevance = state/context/rule/obligation/current-user-fit
+
+============================================================
+3. Safety principles
+============================================================
+
+The system must avoid unsafe claims.
+
+Forbidden direct claims include, but are not limited to:
+
+- "high cortisol"
+- "low dopamine"
+- "depression"
+- "anxiety disorder"
+- "testosterone increased"
+- "hormonal imbalance"
+- "medical condition"
+- "child development improved"
+- "client acquired"
+- "deal closed"
+- "income received"
+- "muscle growth confirmed"
+- "fat loss confirmed"
+- "disease risk changed"
+
+Allowed safer formulations:
+
+- "stress load estimate"
+- "fatigue signal"
+- "recovery need"
+- "attention load"
+- "physical activity load"
+- "learning progress signal"
+- "pipeline building effort"
+- "financial pressure signal"
+- "family care load signal"
+- "work responsibility load"
+- "social interaction load"
+- "language practice balance"
+
+The system may say:
+
+- "This activity may indicate increased recovery need."
+- "This is a proxy signal, not a medical conclusion."
+- "The system should ask the user to confirm this state."
+- "The activity may contribute to pipeline-building effort."
+- "The activity may reflect family care load."
+
+The system must not say:
+
+- "Your cortisol is high."
+- "You are depressed."
+- "Your testosterone improved."
+- "You earned money from this activity."
+- "You gained muscle."
+- "Your child improved because of this activity."
+
+============================================================
+4. Claim policy meanings
+============================================================
+
+The state_dimensions.claim_policy field uses the following allowed values:
+
+1. direct_measurement
+
+Use only when the state dimension can be based on a direct source:
+- wearable measurement
+- manually entered numeric value
+- imported measurement
+- explicit structured source
+
+Examples:
+- sleep_duration_minutes
+- heart_rate_average
+- steps_count
+
+2. proxy_only
+
+Use when the system may only infer a weak/soft signal from activity context.
+
+Examples:
+- fatigue_signal
+- stress_load_estimate
+- family_care_load_signal
+
+3. user_confirmed
+
+Use when the system should ask the user before treating the signal as a fact.
+
+Examples:
+- subjective_energy_level
+- perceived_stress_level
+- mood_signal
+
+4. system_estimate
+
+Use when the system calculates a non-sensitive estimate from explicit activity data.
+
+Examples:
+- language_practice_balance
+- physical_activity_load
+- work_responsibility_load
+
+5. blocked
+
+Use for dimensions that should not be inferred or stored without future legal/medical/privacy design.
+
+Examples:
+- hormone_level_estimate
+- mental_health_diagnosis
+- disease_risk_estimate
+
+============================================================
+5. Privacy level meanings
+============================================================
+
+The state_dimensions.default_privacy_level field uses:
+
+1. private
+
+Default for almost all personal state dimensions.
+
+2. shared_with_org
+
+Only for future enterprise/workflow contexts where the user explicitly shares limited data.
+
+Not used in D3 seed unless absolutely necessary.
+
+3. public_masked
+
+Only for future aggregated or anonymized public reporting.
+
+Not used in D3 seed.
+
+4. public
+
+Not used for sensitive or personal state dimensions.
+
+D3 default:
+
+- private
+
+============================================================
+6. Initial D3 seed candidates
+============================================================
+
+The following dimensions are candidates for the first seed.
+
+They are intentionally conservative.
+
+------------------------------------------------------------
+6.1 attention_load
+------------------------------------------------------------
+
+domain:
+cognitive
+
+title:
+Attention Load
+
+claim_policy:
+system_estimate
+
+default_privacy_level:
+private
+
+is_sensitive:
+false
+
+meaning:
+A non-medical estimate of how much attention/cognitive capacity has been used or required.
+
+allowed sources:
+- manual
+- rule
+- ai
+- system
+- correction
+
+forbidden claims:
+- "attention disorder"
+- "ADHD"
+- "cognitive impairment"
+- "mental health diagnosis"
+
+safer proxy wording:
+- "attention load"
+- "cognitive load"
+- "focus demand"
+- "attention demand"
+
+NBA use:
+Can help detect when the user should switch from deep analytical work to lighter activity, recovery, language repetition, or physical micro-break.
+
+------------------------------------------------------------
+6.2 fatigue_signal
+------------------------------------------------------------
+
+domain:
+recovery
+
+title:
+Fatigue Signal
+
+claim_policy:
+proxy_only
+
+default_privacy_level:
+private
+
+is_sensitive:
+true
+
+meaning:
+A weak proxy signal that the user may be tired based on activity duration, sleep, workload, manual input, or repeated low-efficiency patterns.
+
+allowed sources:
+- manual
+- user_confirmed
+- rule
+- ai
+- system
+- correction
+
+forbidden claims:
+- "diagnosed fatigue"
+- "chronic fatigue"
+- "medical exhaustion"
+- "burnout diagnosis"
+
+safer proxy wording:
+- "fatigue signal"
+- "possible tiredness"
+- "reduced energy signal"
+- "may indicate need for rest"
+
+NBA use:
+Can help reduce recommendation intensity and suggest recovery, passive learning, stretching, hydration, or lower-cognitive-load tasks.
+
+------------------------------------------------------------
+6.3 recovery_need
+------------------------------------------------------------
+
+domain:
+recovery
+
+title:
+Recovery Need
+
+claim_policy:
+system_estimate
+
+default_privacy_level:
+private
+
+is_sensitive:
+true
+
+meaning:
+A safe estimate that the user may benefit from recovery activity.
+
+allowed sources:
+- manual
+- user_confirmed
+- rule
+- ai
+- system
+- correction
+
+forbidden claims:
+- "medical recovery required"
+- "clinical rest requirement"
+- "injury diagnosis"
+- "illness diagnosis"
+
+safer proxy wording:
+- "recovery need"
+- "need for lower load"
+- "rest may be useful"
+- "recovery-oriented activity"
+
+NBA use:
+Can help rank rest, sleep, stretching, food, hydration, walking, or low-load tasks.
+
+------------------------------------------------------------
+6.4 stress_load_estimate
+------------------------------------------------------------
+
+domain:
+emotional_regulation
+
+title:
+Stress Load Estimate
+
+claim_policy:
+proxy_only
+
+default_privacy_level:
+private
+
+is_sensitive:
+true
+
+meaning:
+A proxy estimate of stress load based on activity context, conflicts, workload, interruptions, or user-confirmed stress.
+
+allowed sources:
+- manual
+- user_confirmed
+- rule
+- ai
+- system
+- correction
+
+forbidden claims:
+- "high cortisol"
+- "anxiety disorder"
+- "panic disorder"
+- "mental illness"
+- "psychiatric condition"
+
+safer proxy wording:
+- "stress load estimate"
+- "possible stress pressure"
+- "emotional load signal"
+- "tension signal"
+
+NBA use:
+Can help recommend decompression, conflict-free tasks, breathing, walking, lower-stakes work, or postponing hard negotiation.
+
+------------------------------------------------------------
+6.5 learning_progress_signal
+------------------------------------------------------------
+
+domain:
+learning
+
+title:
+Learning Progress Signal
+
+claim_policy:
+system_estimate
+
+default_privacy_level:
+private
+
+is_sensitive:
+false
+
+meaning:
+A non-certifying estimate of progress based on completed learning activities, repetitions, tests, corrections, and review frequency.
+
+allowed sources:
+- manual
+- rule
+- ai
+- system
+- import
+- correction
+
+forbidden claims:
+- "certified level achieved"
+- "official proficiency confirmed"
+- "guaranteed exam readiness"
+
+safer proxy wording:
+- "learning progress signal"
+- "practice progress"
+- "review momentum"
+- "learning consistency"
+
+NBA use:
+Can help detect weak learning directions and suggest next exercises.
+
+------------------------------------------------------------
+6.6 language_practice_balance
+------------------------------------------------------------
+
+domain:
+learning_languages
+
+title:
+Language Practice Balance
+
+claim_policy:
+system_estimate
+
+default_privacy_level:
+private
+
+is_sensitive:
+false
+
+meaning:
+A balance estimate across language practice directions, such as English, German, Spanish, and Polish.
+
+allowed sources:
+- manual
+- rule
+- ai
+- system
+- import
+- correction
+
+forbidden claims:
+- "language mastered"
+- "official fluency confirmed"
+- "certificate level achieved"
+
+safer proxy wording:
+- "language practice balance"
+- "language attention balance"
+- "practice distribution"
+- "undertrained language direction"
+
+NBA use:
+Can help identify which language is currently weakest or under-practiced.
+
+------------------------------------------------------------
+6.7 physical_activity_load
+------------------------------------------------------------
+
+domain:
+physical_activity
+
+title:
+Physical Activity Load
+
+claim_policy:
+system_estimate
+
+default_privacy_level:
+private
+
+is_sensitive:
+true
+
+meaning:
+A non-medical estimate of physical load based on activity records, duration, intensity, movement type, or user input.
+
+allowed sources:
+- manual
+- user_confirmed
+- rule
+- ai
+- system
+- import
+- correction
+
+forbidden claims:
+- "muscle growth confirmed"
+- "injury diagnosed"
+- "testosterone increased"
+- "fat loss confirmed"
+- "medical improvement"
+
+safer proxy wording:
+- "physical activity load"
+- "training load"
+- "movement load"
+- "body load signal"
+
+NBA use:
+Can help prevent excessive load and recommend recovery, stretching, or light movement.
+
+------------------------------------------------------------
+6.8 family_care_load_signal
+------------------------------------------------------------
+
+domain:
+family_care
+
+title:
+Family Care Load Signal
+
+claim_policy:
+proxy_only
+
+default_privacy_level:
+private
+
+is_sensitive:
+true
+
+meaning:
+A proxy signal that the user performed family/care responsibility, such as helping a child learn, supervision, caregiving, or family duty.
+
+allowed sources:
+- manual
+- user_confirmed
+- rule
+- ai
+- system
+- correction
+
+forbidden claims:
+- "child development improved"
+- "parenting quality score"
+- "family relationship diagnosis"
+- "child psychological state"
+
+safer proxy wording:
+- "family care load"
+- "care responsibility signal"
+- "parental care activity"
+- "childcare-related effort"
+
+NBA use:
+Can help recognize that the user has already spent effort on family obligations and may need balance/recovery or delayed work tasks.
+
+------------------------------------------------------------
+6.9 work_responsibility_load
+------------------------------------------------------------
+
+domain:
+work
+
+title:
+Work Responsibility Load
+
+claim_policy:
+system_estimate
+
+default_privacy_level:
+private
+
+is_sensitive:
+false
+
+meaning:
+A non-sensitive estimate of work responsibility load based on job-related tasks, obligations, time blocks, or role-based actions.
+
+allowed sources:
+- manual
+- rule
+- ai
+- system
+- import
+- correction
+
+forbidden claims:
+- "job performance score"
+- "employer evaluation"
+- "disciplinary risk"
+- "legal conclusion"
+
+safer proxy wording:
+- "work responsibility load"
+- "work obligation load"
+- "job-related effort"
+- "work duty pressure"
+
+NBA use:
+Can help determine whether work obligations are already high and whether additional business/learning tasks should be lighter.
+
+------------------------------------------------------------
+6.10 pipeline_building_effort
+------------------------------------------------------------
+
+domain:
+business_development
+
+title:
+Pipeline Building Effort
+
+claim_policy:
+system_estimate
+
+default_privacy_level:
+private
+
+is_sensitive:
+false
+
+meaning:
+A safe estimate that the user performed activities that may build future business or sales opportunities.
+
+allowed sources:
+- manual
+- rule
+- ai
+- system
+- correction
+
+forbidden claims:
+- "client acquired"
+- "deal closed"
+- "revenue earned"
+- "guaranteed lead"
+- "confirmed sales result"
+
+safer proxy wording:
+- "pipeline-building effort"
+- "business development effort"
+- "sales opportunity preparation"
+- "commercial outreach effort"
+
+NBA use:
+Can help rank business development actions without claiming actual sales outcomes.
+
+------------------------------------------------------------
+6.11 financial_pressure_signal
+------------------------------------------------------------
+
+domain:
+financial_context
+
+title:
+Financial Pressure Signal
+
+claim_policy:
+user_confirmed
+
+default_privacy_level:
+private
+
+is_sensitive:
+true
+
+meaning:
+A user-confirmed or explicitly entered signal that financial pressure is relevant to current planning.
+
+allowed sources:
+- manual
+- user_confirmed
+- correction
+
+forbidden claims:
+- "financial distress diagnosis"
+- "bankruptcy risk"
+- "creditworthiness"
+- "income confirmed"
+- "debt confirmed without user input"
+
+safer proxy wording:
+- "financial pressure signal"
+- "money-related planning pressure"
+- "financial priority signal"
+- "income-related motivation signal"
+
+NBA use:
+Can help the system prioritize income-generating, job-search, sales, or certification activities when the user confirms this context.
+
+------------------------------------------------------------
+6.12 social_interaction_load
+------------------------------------------------------------
+
+domain:
+social_context
+
+title:
+Social Interaction Load
+
+claim_policy:
+system_estimate
+
+default_privacy_level:
+private
+
+is_sensitive:
+false
+
+meaning:
+A non-diagnostic estimate of the amount of social interaction or communication load.
+
+allowed sources:
+- manual
+- rule
+- ai
+- system
+- correction
+
+forbidden claims:
+- "social anxiety"
+- "personality disorder"
+- "relationship diagnosis"
+- "psychological condition"
+
+safer proxy wording:
+- "social interaction load"
+- "communication load"
+- "people-facing effort"
+- "interaction intensity"
+
+NBA use:
+Can help suggest whether the next action should be people-facing or solitary.
+
+============================================================
+7. Dimensions intentionally not included in first seed
+============================================================
+
+The following should not be included in D3 seed:
+
+- cortisol_level
+- dopamine_level
+- testosterone_level
+- depression_risk
+- anxiety_disorder
+- child_development_score
+- muscle_growth_confirmed
+- income_confirmed
+- client_acquired
+- deal_closed
+- burnout_diagnosis
+
+Reason:
+
+These require medical, psychological, financial, legal, or outcome confirmation logic that is outside the safe MVP state-dimensions seed.
+
+They may be represented later only as:
+
+- user-confirmed context
+- imported verified measurement
+- professional/medical integration
+- explicit non-sensitive proxy
+- aggregated non-identifying analytics
+
+============================================================
+8. D3 seed SQL preparation rules
+============================================================
+
+When D3 seed SQL is prepared later:
+
+1. It must use insert ... on conflict (dimension_key) do update or do nothing.
+2. It must not modify existing non-D3 tables.
+3. It must not create new structural tables.
+4. It must not create new Value Object types.
+5. It must not create state facts for users.
+6. It must only seed the state_dimensions dictionary.
+7. It must keep default_privacy_level mostly private.
+8. It must mark sensitive dimensions clearly.
+9. It must include forbidden_claims.
+10. It must include safer_proxy_wording.
+11. It must be reviewed as a draft outside supabase/migrations first.
+12. Only after review should a final executable seed migration be placed in supabase/migrations.
+
+============================================================
+9. Expected D3 workflow
+============================================================
+
+D3-A:
+Create this governance plan.
+
+D3-B:
+Create reviewed initial seed list as documentation/table-like text.
+
+D3-C:
+Create draft seed SQL outside supabase/migrations.
+
+D3-D:
+Review draft seed SQL locally.
+
+D3-E:
+Create executable reviewed seed migration in supabase/migrations.
+
+D3-F:
+Run pre-execution Supabase read-only checks.
+
+D3-G:
+Execute seed migration manually.
+
+D3-H:
+Run post-execution smoke checks.
+
+D3-I:
+Create execution report.
+
+============================================================
+10. Final D3-A status
+============================================================
+
+This document defines the governance layer for initial state_dimensions seed preparation.
+
+D3-A does not execute SQL.
+
