@@ -1,0 +1,64 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-D-B — Auth Resolver Helper Report
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-D-B
+Fix: D4-F-B-D-B-FIX1
+Type: implementation step with auth resolver helper only
+Status: AUTH RESOLVER ONLY / NO ROUTE / NO STATE FACT WRITES / NO STATE FACTS CREATED
+
+FIX1 note:
+- Previous attempt failed because auth.ts contained a marker that matched the forbidden value_object_state_facts literal.
+- The auth helper was rewritten to avoid the exact forbidden table literal inside runtime source.
+- The helper remains read-only and does not access the state fact storage table.
+
+Previous closed step:
+- P4.10.0-C8-I-D4-F-B-D-A — types-only foundation
+  Commit: 93fcece
+
+Created files:
+- lib/activity/stateFacts/controlledPersistence/auth.ts
+
+Existing files used:
+- lib/activity/stateFacts/controlledPersistence/types.ts
+
+Helper created:
+- resolveAuthenticatedStateFactActor
+
+Read-only sources:
+- Auth0 session through auth0.getSession()
+- app_users by auth0_sub
+- persons by user_id
+- actors by person_id and actor_type = person
+
+Hard boundaries preserved:
+- No SQL migration created.
+- No API route created.
+- No state fact write path added.
+- No insert into value_object_state_facts.
+- No update of state_dimensions.
+- No user/person/actor creation.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+Safety checks:
+- Required auth resolver markers: PASS
+- Forbidden write/action literals in auth.ts: PASS
+- Targeted ESLint: PASS
+- value_object_state_facts access: ABSENT
+- state_dimensions access: ABSENT
+- route exports: ABSENT
+
+Important notes:
+- This helper resolves authenticated identity only.
+- It does not decide Value Object access.
+- It does not resolve state dimensions.
+- It does not validate state fact candidates.
+- It does not build insert payloads.
+- It does not perform idempotency checks.
+- It does not persist state facts.
+
+Recommended next step:
+P4.10.0-C8-I-D4-F-B-D-C — target value object resolver helper with tests, no state fact writes.
+
+End of D4-F-B-D-B report.
