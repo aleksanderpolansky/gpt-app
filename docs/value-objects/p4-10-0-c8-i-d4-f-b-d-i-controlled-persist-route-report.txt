@@ -1,0 +1,70 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-D-I - Controlled Persist Route Report
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-D-I
+Fix: D4-F-B-D-I-FIX1
+Type: implementation step with controlled persist API route only
+Status: CONTROLLED PERSIST ROUTE ONLY / ROUTE DELEGATES TO HELPER / NO DIRECT ROUTE DB ACCESS / BUILD PASSED
+
+Previous closed step:
+- P4.10.0-C8-I-D4-F-B-D-H - controlled persist helper
+  Commit: 2d31646
+
+Created files:
+- src/app/api/activity/state-facts/controlled-persist/route.ts
+
+Existing helper files used:
+- lib/activity/stateFacts/controlledPersistence/persist.ts
+- lib/activity/stateFacts/controlledPersistence/types.ts
+- lib/activity/stateFacts/controlledPersistence/auth.ts
+- lib/activity/stateFacts/controlledPersistence/targetValueObject.ts
+- lib/activity/stateFacts/controlledPersistence/dimension.ts
+- lib/activity/stateFacts/controlledPersistence/validator.ts
+- lib/activity/stateFacts/controlledPersistence/payloadBuilder.ts
+- lib/activity/stateFacts/controlledPersistence/idempotency.ts
+
+Route created:
+- POST /api/activity/state-facts/controlled-persist
+
+Route behavior:
+- requires mode = controlled_persist
+- requires confirmControlledPersistence = true
+- requires request envelope
+- delegates to persistStateFactControlled
+- does not call the database client directly
+- does not perform direct route insert/update/delete/upsert
+
+FIX1 note:
+- The first attempt failed because the route comment contained a forbidden route-only literal.
+- FIX1 rewrote route wording while preserving behavior.
+
+Hard boundaries preserved:
+- No SQL migration created.
+- No direct database access in route.
+- No direct insert in route.
+- No GET route created.
+- D4-E-B shadow route not modified.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+- Runtime write-count proof is not created yet.
+
+Safety checks:
+- Required route markers: PASS
+- Direct database/write literals in route.ts: ABSENT
+- Exactly one POST route export: PASS
+- GET route export: ABSENT
+- Targeted ESLint: PASS
+- Build check: PASS
+
+Important notes:
+- This is the first exposed controlled persist route.
+- The route itself performs only envelope checks and delegates controlled persistence to the helper.
+- D4-J must perform runtime write-count proof before treating this route as operationally verified.
+- Shadow-only candidates must still remain not persisted.
+- AI-only direct persistence remains blocked by the helper.
+
+Recommended next step:
+P4.10.0-C8-I-D4-F-B-D-J - controlled persist route runtime write-count proof.
+
+End of D4-F-B-D-I report.
