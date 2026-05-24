@@ -1,0 +1,856 @@
+﻿# GPT-APP / AI-NAVIGATOR
+# P4.10.0-C8-I-A4 — Similarity/Relevance Resolver Concept
+
+Date: 2026-05-24
+Status: DOCUMENT-ONLY RESOLVER CONCEPT
+Previous step: P4.10.0-C8-I-A3
+Previous commit: b94ac66
+Runtime impact: NONE
+SQL impact: NONE
+UI impact: NONE
+
+## 1. Purpose
+
+This document defines the first concept of the Similarity/Relevance Resolver.
+
+The resolver must help the platform select the right Value Objects, state dimensions, state snapshots, obligations and context for analytics and Next Best Action v0.
+
+The resolver must NOT load the full user history by default.
+
+The resolver must return a compact context package.
+
+This step prepares:
+
+- C8-I-B — Governance / schema plan;
+- C8-I-C — Supabase SQL audit file;
+- C8-I-D — additive migration design;
+- later state/recommendation proof routes.
+
+## 2. Core architectural rule
+
+Similarity and relevance are different mechanisms.
+
+They must not be merged.
+
+Similarity answers:
+
+"Which Value Objects are semantically similar to the target?"
+
+Relevance answers:
+
+"Which Value Objects, states or constraints matter for analysis of the target?"
+
+Example:
+
+- German learning and Spanish learning are similar.
+- Sleep and German learning are not similar, but sleep is relevant for German learning.
+- Family care load and deep work are not similar, but family care load is relevant for whether deep work is realistic now.
+- Financial pressure and job search are relevant even if they are not the same object.
+
+## 3. What the resolver must prevent
+
+The resolver must prevent:
+
+- loading full user history for every recommendation;
+- treating similarity as enough for recommendation;
+- ignoring highly relevant but dissimilar states;
+- mixing parent/child hierarchy with relevance edges;
+- treating AI output as fact;
+- using medical/hormonal/social claims without source;
+- recommending actions without current constraints;
+- selecting action candidates without weakest-direction context.
+
+## 4. Resolver inputs
+
+The resolver may receive:
+
+- target Value Object id;
+- target direction key;
+- user-selected direction;
+- current Activity Event;
+- current time window;
+- request type;
+- current state frame;
+- available time;
+- user correction/feedback context;
+- active obligations;
+- privacy/sensitivity policy.
+
+Request type examples:
+
+- analyze_value_object;
+- detect_weakest_direction;
+- generate_action_candidates;
+- explain_recent_state;
+- compare_directions;
+- prepare_next_best_action;
+- build_baseline_context_package.
+
+## 5. Resolver output
+
+The resolver should return a compact context package.
+
+The output is NOT a final recommendation.
+
+The output is a prepared context for analytics, recommendation or explanation.
+
+Minimal output:
+
+- target;
+- own categories;
+- own state snapshots;
+- parent/child context;
+- similar Value Objects;
+- relevant influencing Value Objects;
+- active obligations;
+- current state frame;
+- baseline modifiers;
+- blocked claims;
+- missing data;
+- confidence notes;
+- candidate dimensions;
+- compact explanation.
+
+## 6. Value Object similarity
+
+Similarity means semantic closeness.
+
+Similarity is mainly calculated by weighted category overlap.
+
+Possible category weights:
+
+- purpose / activity_meaning: 5
+- responsibility / role / care function: 5
+- domain: 4
+- goal: 4
+- skill: 4
+- participant: 3
+- context: 3
+- action: 2
+- object: 2
+- metric: 1
+- location: 1
+- language: 3
+- commercial intent: 4
+- family/care layer: 5
+- business/sales layer: 4
+
+Example:
+
+German language learning and Spanish language learning:
+
+Shared categories:
+
+- language
+- learning
+- communication
+- career-readiness
+- vocabulary/grammar if present
+
+High similarity.
+
+Example:
+
+German language learning and pull-ups:
+
+Few shared categories.
+
+Low similarity.
+
+## 7. Similarity scoring concept
+
+Conceptual formula:
+
+similarity_score =
+sum(shared_category_weight)
+/
+sum(max_possible_relevant_category_weight)
+
+Then adjust by:
+
+- same parent direction bonus;
+- same actor/context bonus;
+- same goal bonus;
+- recent co-occurrence bonus;
+- user correction bonus;
+- obsolete/archived penalty.
+
+The score must remain explainable.
+
+Example output explanation:
+
+"German learning is similar to Spanish learning because both share language, learning, communication and career-readiness categories."
+
+## 8. Relevance
+
+Relevance means analytical importance.
+
+A Value Object can be relevant even if it is not similar.
+
+Relevance sources:
+
+- parent/child hierarchy;
+- state relevance rules;
+- current state dimensions;
+- active obligations;
+- baseline context modifiers;
+- actor relationships;
+- repeated temporal patterns;
+- user priorities;
+- deadlines;
+- environmental constraints;
+- available time;
+- privacy/sensitivity constraints.
+
+Example:
+
+Sleep -> German learning:
+
+Not similar, but relevant through:
+
+- fatigue_level;
+- recovery_need;
+- focus_readiness;
+- cognitive_load tolerance.
+
+Example:
+
+Family care load -> deep work:
+
+Not similar, but relevant through:
+
+- interruptions;
+- available time;
+- responsibility;
+- emotional load;
+- obligation constraint.
+
+Example:
+
+Financial pressure -> job search:
+
+Relevant through:
+
+- income_action_attention;
+- job_search_attention;
+- career priority;
+- practical action urgency.
+
+## 9. Relevance scoring concept
+
+Conceptual formula:
+
+relevance_score =
+rule_weight
++ state_impact_weight
++ obligation_weight
++ goal_priority_weight
++ current_window_weight
++ baseline_modifier_weight
++ user_feedback_weight
+- privacy_block_penalty
+- stale_data_penalty
+- overclaim_risk_penalty
+
+Relevance must be explainable.
+
+Example explanation:
+
+"Sleep is relevant to German learning because current fatigue and recovery need affect focus readiness."
+
+## 10. Hierarchy relevance
+
+Parent/child hierarchy is always checked first.
+
+For target Value Object, resolver should load:
+
+- target VO;
+- direct parent;
+- direct children;
+- possibly siblings if they share parent;
+- top-level direction if available.
+
+But hierarchy must not be confused with influence.
+
+Example:
+
+Quadriceps is child of leg.
+
+Sleep is not child of German learning.
+
+Sleep may still be relevant through influence/relevance rule.
+
+## 11. State relevance rules
+
+State relevance rules define which dimensions matter for which target.
+
+Examples:
+
+### German learning
+
+Relevant dimensions:
+
+- focus_readiness;
+- cognitive_load;
+- fatigue_level;
+- recovery_need;
+- goal_attention_score;
+- underattention_score;
+- career_readiness.
+
+Relevant influencing VOs:
+
+- sleep;
+- work load;
+- language practice history;
+- certification goal;
+- job search;
+- current interruptions.
+
+### Deep work / coding
+
+Relevant dimensions:
+
+- focus_readiness;
+- cognitive_load;
+- context_switching_load;
+- fatigue_level;
+- sitting_load;
+- recovery_need;
+- project_progress_attention.
+
+Relevant influencing VOs:
+
+- sleep;
+- recent coding blocks;
+- family care obligations;
+- current job schedule;
+- physical movement breaks.
+
+### Family / childcare
+
+Relevant dimensions:
+
+- family_care_load;
+- family_attention_balance;
+- childcare_duty_active;
+- emotional_tension;
+- available time;
+- recovery_need.
+
+Relevant influencing VOs:
+
+- child-related activities;
+- household context;
+- work schedule;
+- stress load;
+- communication load.
+
+### Finance / career
+
+Relevant dimensions:
+
+- financial_pressure;
+- income_action_attention;
+- job_search_attention;
+- career_readiness;
+- language learning attention;
+- certification priority;
+- overdue_direction_score.
+
+Relevant influencing VOs:
+
+- B2B sales;
+- marketing learning;
+- German language;
+- portfolio/project work;
+- current job obligations.
+
+## 12. Current state frames
+
+The resolver must support these conceptual windows:
+
+- current;
+- last_3h;
+- today;
+- last_7d;
+- last_30d;
+- baseline.
+
+Use cases:
+
+### current
+
+For immediate action filtering.
+
+Question:
+
+"What can the user realistically do now?"
+
+### last_3h
+
+For acute load.
+
+Question:
+
+"Is user overloaded or under-stimulated in the recent window?"
+
+### today
+
+For daily balance.
+
+Question:
+
+"Which directions were ignored or overloaded today?"
+
+### last_7d
+
+For weekly trend.
+
+Question:
+
+"Which strategic directions are weak this week?"
+
+### last_30d
+
+For medium-term pattern.
+
+Question:
+
+"What is systematically underdeveloped?"
+
+### baseline
+
+For long-term modifier.
+
+Question:
+
+"What stable context changes interpretation?"
+
+## 13. Baseline context in resolver
+
+Baseline Context is not loaded as a full profile dump.
+
+Resolver should load only baseline fragments relevant to the target.
+
+Examples:
+
+For language learning:
+
+- current language priorities;
+- exam/certificate goals;
+- career target;
+- user learning mode preference;
+- known fatigue pattern;
+- relevant language exposure history.
+
+For physical activity:
+
+- age/recovery constraint if user provided;
+- injury/pain signals if user reported;
+- training preference;
+- microtraining style;
+- recovery pattern.
+
+For finance/career:
+
+- strategic goal: remote work for German employer;
+- certification priorities;
+- current job constraints;
+- B2B/sales/marketing background;
+- relocation goal if relevant.
+
+Baseline fragments must remain:
+
+- private;
+- source-aware;
+- confidence-aware;
+- editable;
+- non-deterministic.
+
+## 14. Active obligations and constraints
+
+Resolver must include constraints before action candidates are generated.
+
+Constraint examples:
+
+- available time;
+- current job shift;
+- no-multitasking block;
+- family duty active;
+- childcare duty active;
+- fatigue high;
+- focus low;
+- recovery need high;
+- pain signal active;
+- deadline pressure;
+- environment noise;
+- travel/commute;
+- internet/computer availability.
+
+Constraint types:
+
+- hard_block;
+- soft_warning;
+- intensity_modifier;
+- privacy_block;
+- timing_constraint;
+- energy_constraint;
+- focus_constraint;
+- social_constraint.
+
+## 15. Action candidate filtering
+
+After weakest direction and user-selected direction, resolver must help filter action candidates.
+
+Candidate properties:
+
+- direction;
+- target Value Object;
+- required focus;
+- required energy;
+- duration;
+- intensity;
+- context;
+- expected state delta;
+- risk flags;
+- fallback variant.
+
+Candidate levels:
+
+- playful/light;
+- restorative;
+- practical;
+- medium analytical;
+- deep analytical;
+- revenue-oriented;
+- communication-oriented;
+- family/care-oriented.
+
+Example:
+
+If selected direction = career and focus_readiness is low:
+
+Prefer:
+
+- 5 minutes of vacancy scan;
+- 10 phrases for interview;
+- update one CV bullet;
+- send one simple follow-up.
+
+Avoid:
+
+- 90-minute strategic career architecture;
+- complex cover letter;
+- difficult negotiation.
+
+## 16. Weakest Direction Resolver relationship
+
+Similarity/Relevance Resolver supports Weakest Direction Resolver, but does not replace it.
+
+Weakest Direction Resolver answers:
+
+"Which direction is currently weak?"
+
+Similarity/Relevance Resolver answers:
+
+"What context is needed to understand this direction and generate realistic action candidates?"
+
+Flow:
+
+1. State snapshots estimate direction weakness.
+2. User chooses direction.
+3. Resolver builds compact context package for that direction.
+4. Recommendation layer proposes action candidates.
+5. User chooses or corrects.
+6. Feedback updates future relevance.
+
+## 17. Compact context package draft
+
+Future package shape:
+
+{
+  "schemaVersion": "similarity-relevance-context-package-v0",
+  "requestType": "generate_action_candidates",
+  "target": {
+    "targetType": "direction",
+    "targetKey": "career",
+    "targetValueObjectId": null
+  },
+  "ownContext": {
+    "categories": ["career", "job-search", "remote-work"],
+    "stateSnapshots": [
+      {
+        "dimensionKey": "job_search_attention",
+        "windowType": "last_7d",
+        "value": "low",
+        "confidence": 0.72
+      }
+    ]
+  },
+  "hierarchyContext": {
+    "parents": [],
+    "children": []
+  },
+  "similarValueObjects": [
+    {
+      "valueObjectId": "uuid",
+      "title": "German language learning",
+      "similarityScore": 0.64,
+      "reason": "Shares career-readiness and communication categories."
+    }
+  ],
+  "relevantInfluencers": [
+    {
+      "sourceKey": "sleep",
+      "relevanceScore": 0.82,
+      "reason": "Fatigue affects focus readiness for career tasks."
+    }
+  ],
+  "currentConstraints": [
+    {
+      "constraintKey": "focus_readiness_low",
+      "severity": "medium",
+      "effect": "Prefer light/practical actions."
+    }
+  ],
+  "blockedClaims": [
+    "employer_interest_confirmed",
+    "job_probability"
+  ],
+  "missingData": [
+    "current available time",
+    "user energy self-report"
+  ]
+}
+
+## 18. Loading order
+
+Recommended loading order:
+
+1. Identify target.
+2. Load target own categories.
+3. Load target own recent state snapshots.
+4. Load parent/child hierarchy.
+5. Load top semantic similar VOs.
+6. Load relevance rules for target.
+7. Load relevant influencing VOs and state dimensions.
+8. Load current state frame.
+9. Load obligations and constraints.
+10. Load baseline modifiers only if relevant.
+11. Apply privacy and claim policy filters.
+12. Return compact context package.
+
+## 19. Limits
+
+The resolver must have limits.
+
+Initial conceptual limits:
+
+- max similar Value Objects: 10
+- max relevant influencing Value Objects: 15
+- max state dimensions per target: 20
+- max baseline fragments: 10
+- max current constraints: 20
+- default windows: current, last_3h, today, last_7d
+- load last_30d and baseline only when needed
+
+Reason:
+
+The resolver must stay cheap, fast and explainable.
+
+## 20. Privacy and safety filters
+
+Before returning context package, resolver must remove or mask:
+
+- sensitive child data not needed for request;
+- health data not relevant to target;
+- family details not needed;
+- financial details not needed;
+- work-sensitive details not needed;
+- medical/hormonal claims without source;
+- social ranking or background judgement;
+- business result claims without confirmation.
+
+Privacy rule:
+
+Load minimum necessary context.
+
+## 21. Missing data handling
+
+Resolver must not invent missing data.
+
+If required data is missing, it should return missingData.
+
+Examples:
+
+- current energy unknown;
+- available time unknown;
+- sleep data unavailable;
+- pain signal unconfirmed;
+- financial pressure not user-confirmed;
+- deadline not known;
+- no state snapshot yet.
+
+Recommendation layer can then ask or propose safe low-risk defaults.
+
+## 22. Feedback loop
+
+User feedback should influence future relevance.
+
+Feedback examples:
+
+- "this recommendation helped";
+- "too difficult now";
+- "too easy";
+- "not relevant";
+- "I was too tired";
+- "I had no time";
+- "this direction is not important today";
+- "this was exactly what I needed."
+
+Feedback may update:
+
+- relevance edge weight;
+- user preference;
+- candidate difficulty;
+- baseline modifier;
+- availability pattern;
+- action success likelihood.
+
+But feedback should not automatically create medical/social facts.
+
+## 23. Proof scenarios for later implementation
+
+When implementation begins later, resolver proof should include at least:
+
+### Scenario 1 — Language after poor sleep
+
+Target:
+
+German learning.
+
+Expected relevant influencers:
+
+- sleep;
+- fatigue_level;
+- recovery_need;
+- focus_readiness.
+
+Expected:
+
+Light or restorative language tasks preferred.
+
+### Scenario 2 — Career with low focus
+
+Target:
+
+career / job search.
+
+Expected relevant influencers:
+
+- focus_readiness;
+- financial_pressure if confirmed;
+- job_search_attention;
+- German language learning.
+
+Expected:
+
+Short practical action candidates.
+
+### Scenario 3 — Deep work with childcare active
+
+Target:
+
+gpt-app project.
+
+Expected relevant influencers:
+
+- childcare_duty_active;
+- family_care_load;
+- interruption risk;
+- available time.
+
+Expected:
+
+Avoid long deep work if care duty active.
+
+### Scenario 4 — Physical recovery after heavy load
+
+Target:
+
+health / physical.
+
+Expected relevant influencers:
+
+- physical_load;
+- recovery_need;
+- pain_signal if reported;
+- sleep_quality_signal.
+
+Expected:
+
+Restorative or mobility actions, not intense strength.
+
+### Scenario 5 — Business sales without overclaim
+
+Target:
+
+business/sales.
+
+Expected relevant influencers:
+
+- pipeline_building_effort;
+- income_action_attention;
+- financial direction;
+- no confirmed revenue unless evidence exists.
+
+Expected:
+
+No claim of client acquired, deal closed or income received.
+
+## 24. Anti-errors
+
+Do NOT:
+
+- merge similarity and relevance;
+- treat similar as automatically important;
+- ignore relevant but dissimilar states;
+- load full user history by default;
+- expose sensitive baseline context unnecessarily;
+- turn AI output into state fact;
+- use medical/hormonal direct claims;
+- infer child/family outcomes;
+- infer business results without confirmation;
+- replace parent/child hierarchy with relevance edges;
+- create SQL migrations in this step;
+- modify runtime code;
+- run OpenAI;
+- run Supabase SQL;
+- create UI.
+
+## 25. Definition of Done
+
+C8-I-A4 is complete when:
+
+- similarity is defined separately from relevance;
+- similarity scoring concept is documented;
+- relevance scoring concept is documented;
+- loading order is documented;
+- compact context package is documented;
+- current state frames are documented;
+- baseline context loading rule is documented;
+- privacy/safety filters are documented;
+- missing data handling is documented;
+- feedback loop is documented;
+- proof scenarios are listed for later implementation;
+- no runtime/code/SQL changes were made;
+- file is committed as doc-only resolver concept.
+
+## 26. Next step
+
+After C8-I-A4 commit, continue with:
+
+P4.10.0-C8-I-B — Governance / Schema Plan.
+
+C8-I-B must inspect what existing structures need to support future state layers before any SQL migration is designed.
