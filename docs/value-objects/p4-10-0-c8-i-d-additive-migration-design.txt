@@ -1,0 +1,896 @@
+﻿# GPT-APP / AI-NAVIGATOR
+# P4.10.0-C8-I-D — Additive Migration Design for State / Similarity / Relevance / NBA Layers
+
+Date: 2026-05-24
+Status: DESIGN ONLY — NO SQL MIGRATION YET
+Previous step: P4.10.0-C8-I-C
+Previous commit: 56f7cce
+
+---
+
+## 1. Purpose
+
+This document converts the C8-I-C read-only Supabase audit into an additive migration design.
+
+The goal is not to redesign the existing schema.
+
+The goal is to define what can be safely added later for:
+
+- state dimensions,
+- state facts,
+- state/relevance rules,
+- similarity edges,
+- relevance edges,
+- recommendation feedback,
+- possible windowed state snapshots,
+- Next Best Action v0 support.
+
+No SQL migration is created in this step.
+
+---
+
+## 2. Non-negotiable architecture decisions
+
+### 2.1 Unified Value Object remains unchanged
+
+Do not split `value_objects` into mandatory subtypes such as:
+
+- biological_value_object,
+- context_value_object,
+- state_value_object,
+- baseline_value_object,
+- personal_value_object,
+- enterprise_value_object.
+
+The existing `value_objects` table already supports the current architecture through:
+
+- `owner_actor_id`,
+- `organization_id`,
+- `commercial_usage`,
+- `parent_value_object_id`,
+- `entity_protocol_characteristics_json`,
+- `category_origin_json`,
+- `metadata_json`,
+- `needs_user_review`,
+- `ui_visibility`.
+
+### 2.2 State is not a Value Object subtype
+
+State must be represented through state/metric/fact/snapshot/delta tables.
+
+State must not be encoded as a new hard subtype of Value Object.
+
+### 2.3 Activity Event remains source of truth
+
+The activity source-of-truth chain remains:
+
+- `raw_activity_signals`
+- `activity_events`
+- `category_derivation_runs`
+- `activity_category_derivations`
+- `activity_event_value_object_links`
+- `activity_event_value_object_instance_links`
+- `impact_events`
+- `value_object_state_deltas`
+- `value_object_state_snapshots`
+- `value_object_daily_aggregates`
+
+### 2.4 Impact rules are not state relevance rules
+
+Existing:
+
+- `impact_rules`
+- `impact_events`
+
+must not be duplicated.
+
+Meaning:
+
+- `impact_rules` = what an activity changes.
+- future `state_relevance_rules` = why a current state makes a direction/action relevant.
+
+Example:
+
+- impact rule: walking increases mobility / physical activity metric.
+- relevance rule: high mobility_need makes walking/stretching/light training relevant.
+
+### 2.5 Existing current/daily layers must not be recreated
+
+The database already has:
+
+Generic layer:
+
+- `current_snapshots`
+- `daily_aggregates`
+
+Value Object layer:
+
+- `value_object_state_snapshots`
+- `value_object_daily_aggregates`
+
+Do not recreate generic current/daily snapshot systems.
+
+### 2.6 RLS/security model must be preserved
+
+Most personal/analytic tables are protected by:
+
+- RLS enabled + explicit deny policy,
+- or RLS enabled + no policy = default deny.
+
+New state/NBA tables must follow this model.
+
+---
+
+## 3. C8-I-C audit findings
+
+### 3.1 Existing state-related tables
+
+Already exists:
+
+- `value_object_state_deltas`
+- `value_object_state_snapshots`
+- `current_snapshots`
+- `daily_aggregates`
+- `value_object_daily_aggregates`
+- `value_object_usage_aggregates`
+- `impact_rules`
+- `impact_events`
+- `activity_corrections`
+- `activity_processing_logs`
+
+Missing from the expected future list:
+
+- `state_dimensions`
+- `value_object_state_facts`
+- `activity_state_deltas`
+- `state_relevance_rules`
+- `value_object_similarity_edges`
+- `value_object_relevance_edges`
+- `recommendation_feedback`
+
+But `activity_state_deltas` should not be created automatically, because `value_object_state_deltas` already partially performs that role.
+
+---
+
+## 4. Existing state delta layer
+
+### 4.1 Existing table
+
+`value_object_state_deltas`
+
+Important columns:
+
+- `user_id`
+- `event_id`
+- `value_object_instance_id`
+- `value_object_id`
+- `rule_id`
+- `metric_key`
+- `delta_value_numeric`
+- `delta_value_text`
+- `metric_unit`
+- `delta_direction`
+- `source`
+- `confidence`
+- `metadata_json`
+- `created_at`
+
+Foreign keys:
+
+- `event_id` → `activity_events.id`
+- `user_id` → `app_users.id`
+- `value_object_id` → `value_objects.id`
+- `value_object_instance_id` → `value_object_instances.id`
+- `rule_id` → `impact_rules.id`
+
+Decision:
+
+Do not create `activity_state_deltas` in the first additive migration.
+
+Use `value_object_state_deltas` as the existing state-delta base.
+
+Possible future additive fields, only if needed:
+
+- `claim_strength`
+- `evidence_json`
+- `proxy_only`
+- `state_dimension_key`
+- `privacy_level`
+- `derivation_run_id`
+- `processing_log_id`
+
+But do not add these automatically before checking application code usage.
+
+---
+
+## 5. Existing current/latest state snapshot layer
+
+### 5.1 Existing specialized table
+
+`value_object_state_snapshots`
+
+Current model:
+
+- one current/latest snapshot per `user_id + value_object_id + metric_key`.
+
+Important columns:
+
+- `user_id`
+- `value_object_id`
+- `metric_key`
+- `metric_value_numeric`
+- `metric_value_text`
+- `metric_unit`
+- `last_event_id`
+- `last_state_delta_id`
+- `source`
+- `metadata_json`
+- `created_at`
+- `updated_at`
+
+Decision:
+
+Do not turn this table into a historical/windowed snapshot table.
+
+Reason:
+
+It has unique logic:
+
+- `user_id + value_object_id + metric_key`
+
+This means it is designed as current/latest state.
+
+### 5.2 Existing generic table
+
+`current_snapshots`
+
+Current model:
+
+- one current/latest snapshot per `user_id + snapshot_entity_type + snapshot_entity_key + metric_key`.
+
+Decision:
+
+Keep as generic current/latest snapshot layer.
+
+### 5.3 Possible duplicate indexes
+
+Audit detected possible duplicate unique indexes:
+
+- `current_snapshots_user_entity_metric_uidx`
+- `current_snapshots_user_entity_metric_unique`
+
+Do not remove in C8-I-D.
+
+Mark as cleanup candidate for later.
+
+---
+
+## 6. Existing daily aggregate layer
+
+### 6.1 Existing generic daily layer
+
+`daily_aggregates`
+
+Unique logic:
+
+- `user_id + aggregate_date + aggregate_type + aggregate_key + metric_key`
+
+Used by function:
+
+- `increment_daily_aggregate(...)`
+
+### 6.2 Existing Value Object daily layer
+
+`value_object_daily_aggregates`
+
+Unique logic:
+
+- `user_id + value_object_id + aggregate_date + aggregate_type + aggregate_key + metric_key`
+
+Decision:
+
+Do not recreate daily aggregate logic.
+
+Use these tables for weakest-direction and attention-balance calculations where possible.
+
+### 6.3 Possible duplicate indexes
+
+Audit detected possible duplicate unique indexes:
+
+- `daily_aggregates_user_date_metric_unique`
+- `daily_aggregates_user_date_type_key_metric_uidx`
+
+Do not remove in C8-I-D.
+
+Mark as cleanup candidate for later.
+
+---
+
+## 7. Existing impact/rule layer
+
+Existing tables:
+
+- `impact_rules`
+- `impact_events`
+- `activity_template_known_registry_rules`
+
+Meaning:
+
+- `impact_rules` describes how an activity/template affects a metric.
+- `impact_events` records applied impact for a specific activity event.
+- `activity_template_known_registry_rules` bridges templates, object/action/context, contextual categories, Value Objects and metrics.
+
+Decision:
+
+Do not duplicate `impact_rules`.
+
+Future `state_relevance_rules`, if created, must have a different purpose:
+
+- not “what activity changes”,
+- but “why state X makes direction/action Y relevant”.
+
+---
+
+## 8. Existing Value Object / category / activity link base
+
+Existing tables:
+
+- `value_objects`
+- `value_object_instances`
+- `value_object_category_links`
+- `activity_event_value_object_links`
+- `activity_event_value_object_instance_links`
+- `value_object_usage_aggregates`
+- `value_object_daily_aggregates`
+
+Decision:
+
+Use these tables as the base for similarity/relevance logic.
+
+Similarity can be calculated from:
+
+- `value_object_category_links`
+- `category_role`
+- `category_table`
+- `category_id`
+- `confidence`
+- `source`
+- `status`
+
+Relevance can be calculated from:
+
+- state snapshots,
+- state deltas,
+- usage aggregates,
+- daily aggregates,
+- recent activity links,
+- time blocks,
+- feedback.
+
+---
+
+## 9. Existing Activity / Category Derivation base
+
+Existing tables:
+
+- `activity_events`
+- `raw_activity_signals`
+- `activity_category_derivations`
+- `category_derivation_runs`
+- `contextual_categories`
+- `contextual_category_events`
+- `object_action_contextual_categories`
+- `activity_templates`
+- `activity_types`
+
+Important conclusions:
+
+- `activity_events` already has actor role fields:
+  - `performed_by_actor_id`
+  - `acting_as_actor_id`
+  - `acting_for_actor_id`
+- `activity_category_derivations` already has:
+  - `semantic_layer`
+  - `category_type`
+  - `confidence`
+  - `evidence_json`
+  - `status`
+  - `needs_user_review`
+  - `is_core_meaning`
+- `category_derivation_runs` already has:
+  - model/prompt/policy/schema versions,
+  - token/cost JSON,
+  - input/output/error JSON.
+
+Decision:
+
+Do not create parallel category derivation or AI audit tables.
+
+Use existing structures.
+
+---
+
+## 10. Existing Actor / Organization / Time Context base
+
+Existing tables:
+
+- `actors`
+- `actor_space_roles`
+- `calendar_events`
+- `time_blocks`
+- `organizations`
+- `organization_locations`
+- `availability_rules`
+
+Important conclusions:
+
+- `actor_space_roles` supports function/responsibility context.
+- `time_blocks` supports availability, energy expectation, attention requirement and multitasking.
+- `calendar_events` supports time/busy/planned context.
+- `organizations` and `organization_locations` support directory/commercial/geo context.
+
+Decision:
+
+State/NBA layer must read these tables as context.
+
+Do not duplicate them.
+
+Important caution:
+
+`activity_participants` is linked to old `activities.id`, not directly to `activity_events.id`.
+
+Therefore do not use `activity_participants` as the main participant layer for the current state/NBA chain without a separate bridge audit.
+
+---
+
+## 11. Existing Correction / Processing / Audit base
+
+Existing tables:
+
+- `activity_corrections`
+- `activity_processing_logs`
+- `organization_directory_audit_events`
+
+Important conclusions:
+
+`activity_corrections` already stores:
+
+- previous event JSON,
+- new event JSON,
+- previous impact events,
+- previous daily aggregates,
+- previous current snapshots,
+- recalculation result.
+
+`activity_processing_logs` already supports stages:
+
+- ingest,
+- parse,
+- normalize,
+- validate,
+- deduplicate,
+- create_event,
+- complete_event,
+- link_event,
+- process_impacts,
+- aggregate,
+- snapshot,
+- correction,
+- rollback,
+- timeline_check,
+- timeline_adjustment,
+- finalize,
+- error,
+- debug.
+
+Decision:
+
+Do not create a new generic processing log.
+
+Use `activity_processing_logs` for future state/NBA processing steps.
+
+`recommendation_feedback` remains a missing table and should be designed as user feedback on recommendations, not as a replacement for technical logs.
+
+---
+
+## 12. Existing functions / RPCs
+
+Relevant existing functions:
+
+- `increment_daily_aggregate(...)`
+- `upsert_current_snapshot(...)`
+- `resolve_contextual_category(...)`
+- `set_activity_recording_updated_at()`
+
+Commercial/points/certificate functions exist and must not be affected:
+
+- `add_points_to_wallet`
+- `spend_points_from_wallet`
+- `request_certificate_from_offer`
+- `buyer_cancel_certificate`
+- `seller_redeem_certificate`
+- `expire_certificate`
+- `confirm_purchase_and_award_points`
+- `submit_purchase_confirmation`
+- `reject_purchase_confirmation`
+
+Decision:
+
+C8-I-D migration design must avoid touching commercial RPCs.
+
+---
+
+## 13. Existing triggers
+
+Relevant triggers found:
+
+- `activity_events` → `set_activity_recording_updated_at()`
+- `activity_processing_logs` → `set_activity_recording_updated_at()`
+- `current_snapshots` → `set_activity_recording_updated_at()`
+- `daily_aggregates` → `set_activity_recording_updated_at()`
+- `impact_rules` → `set_activity_recording_updated_at()`
+- `raw_activity_signals` → `set_activity_recording_updated_at()`
+- `contextual_categories` → `set_universal_rubricator_updated_at()`
+- `organization_locations` → `set_business_directory_updated_at()`
+
+Conclusion:
+
+No hidden trigger-based state recalculation pipeline was found in the audited relevant tables.
+
+---
+
+## 14. Recommended additive objects for future migration
+
+### 14.1 Create `state_dimensions`
+
+Purpose:
+
+Dictionary of safe state dimensions and claim policies.
+
+Candidate columns:
+
+- `id`
+- `dimension_key`
+- `title`
+- `domain`
+- `description`
+- `unit_type`
+- `default_privacy_level`
+- `claim_policy`
+- `allowed_source_types`
+- `forbidden_claims`
+- `safer_proxy_wording`
+- `is_sensitive`
+- `is_active`
+- `created_at`
+- `updated_at`
+
+Important:
+
+This table should be a dictionary, not personal user data.
+
+It may be publicly readable only if it contains no sensitive personal data.
+
+### 14.2 Create `value_object_state_facts`
+
+Purpose:
+
+Stable or semi-stable facts about a Value Object state.
+
+Examples:
+
+- baseline preference,
+- known limitation,
+- durable context fact,
+- user-confirmed state fact.
+
+Candidate columns:
+
+- `id`
+- `user_id`
+- `value_object_id`
+- `dimension_key` or `dimension_id`
+- `value_json`
+- `source_type`
+- `source_id`
+- `confidence`
+- `evidence_json`
+- `claim_strength`
+- `privacy_level`
+- `valid_from`
+- `valid_to`
+- `correction_status`
+- `created_at`
+- `updated_at`
+
+Security:
+
+RLS on.
+No direct public access.
+
+### 14.3 Do not create `activity_state_deltas` yet
+
+Reason:
+
+`value_object_state_deltas` already exists and is linked to:
+
+- `activity_events`
+- `value_objects`
+- `value_object_instances`
+- `impact_rules`
+
+Decision:
+
+Use existing `value_object_state_deltas` as the delta layer for now.
+
+### 14.4 Create `state_relevance_rules` only if kept distinct from `impact_rules`
+
+Purpose:
+
+Rules for NBA relevance.
+
+Not:
+
+- activity impact calculation.
+
+Example:
+
+- high `recovery_need` increases relevance of rest / walk / light stretching.
+- high `financial_pressure` increases relevance of sales/job-search actions.
+- high `family_care_load` increases relevance of family/care balancing actions.
+
+Candidate columns:
+
+- `id`
+- `source_dimension_key` or `source_dimension_id`
+- `target_category_id`
+- `target_value_object_id`
+- `target_direction_key`
+- `relation`
+- `relevance_weight`
+- `explanation`
+- `safety_policy`
+- `is_active`
+- `created_at`
+- `updated_at`
+
+### 14.5 Create `value_object_similarity_edges`
+
+Purpose:
+
+Precomputed semantic similarity between Value Objects.
+
+Candidate sources:
+
+- shared contextual categories,
+- shared category roles,
+- shared semantic layers,
+- shared parent/child hierarchy,
+- entity_protocol_characteristics_json.
+
+Candidate columns:
+
+- `id`
+- `user_id`
+- `source_value_object_id`
+- `target_value_object_id`
+- `similarity_score`
+- `shared_category_ids`
+- `method`
+- `explanation`
+- `computed_at`
+- `metadata_json`
+
+Security:
+
+RLS on.
+No direct public access.
+
+### 14.6 Create `value_object_relevance_edges`
+
+Purpose:
+
+Contextual relevance between Value Objects for a user.
+
+Not the same as similarity.
+
+Candidate sources:
+
+- state snapshots,
+- state facts,
+- recent activity,
+- daily aggregates,
+- usage aggregates,
+- time blocks,
+- feedback.
+
+Candidate columns:
+
+- `id`
+- `user_id`
+- `source_value_object_id`
+- `target_value_object_id`
+- `relevance_score`
+- `relation_category`
+- `confidence`
+- `evidence_json`
+- `feedback_source`
+- `computed_at`
+- `metadata_json`
+
+Security:
+
+RLS on.
+No direct public access.
+
+### 14.7 Create `recommendation_feedback`
+
+Purpose:
+
+User feedback on NBA suggestions.
+
+Candidate columns:
+
+- `id`
+- `user_id`
+- `recommendation_id`
+- `context_package_id`
+- `selected_direction`
+- `candidate_action`
+- `feedback_type`
+- `reason`
+- `difficulty`
+- `helped`
+- `created_at`
+- `metadata_json`
+
+Important:
+
+This table should not replace `activity_processing_logs`.
+
+It records user evaluation of recommendations.
+
+---
+
+## 15. Windowed snapshots decision
+
+The audit shows that current/latest snapshots already exist.
+
+If windowed snapshots are needed for:
+
+- current,
+- last_3h,
+- today,
+- last_7d,
+- last_30d,
+- baseline,
+
+then do not overload `value_object_state_snapshots` unless the unique constraint is intentionally redesigned.
+
+Preferred future option:
+
+Create a separate additive table:
+
+- `value_object_state_window_snapshots`
+
+Possible columns:
+
+- `id`
+- `user_id`
+- `value_object_id`
+- `metric_key`
+- `window_type`
+- `window_start`
+- `window_end`
+- `metric_value_numeric`
+- `metric_value_text`
+- `metric_unit`
+- `aggregation_method`
+- `confidence`
+- `freshness`
+- `source`
+- `last_event_id`
+- `last_state_delta_id`
+- `metadata_json`
+- `created_at`
+- `updated_at`
+
+Unique candidate:
+
+- `user_id + value_object_id + metric_key + window_type + window_start + window_end`
+
+But do not create this until C8-I-D migration SQL is separately reviewed.
+
+---
+
+## 16. Next Best Action v0 dependency map
+
+NBA v0 should use:
+
+Weakest direction:
+
+- `value_object_daily_aggregates`
+- `daily_aggregates`
+- `value_object_usage_aggregates`
+- `value_object_state_snapshots`
+- `current_snapshots`
+- `value_object_state_deltas`
+
+Availability/context:
+
+- `time_blocks`
+- `calendar_events`
+- `actor_space_roles`
+
+Semantic candidate generation:
+
+- `value_object_category_links`
+- `contextual_categories`
+- `activity_templates`
+- `activity_template_known_registry_rules`
+
+Safety/review:
+
+- `activity_category_derivations`
+- `category_derivation_runs`
+- `activity_processing_logs`
+- future `recommendation_feedback`
+
+NBA v0 flow:
+
+1. Calculate weakest directions.
+2. Show ordered direction list to the user.
+3. Ask which direction the user wants to work on now.
+4. Only after user selection, propose possible actions / Value Objects / templates.
+5. Filter proposals by time_blocks, availability, energy, attention, multitasking and safety policy.
+
+---
+
+## 17. Do-not-touch list for the first migration
+
+Do not touch:
+
+- `value_objects`
+- `activity_events`
+- `impact_rules`
+- `impact_events`
+- `current_snapshots`
+- `daily_aggregates`
+- `value_object_state_deltas`
+- `value_object_state_snapshots`
+- `value_object_daily_aggregates`
+- `value_object_usage_aggregates`
+- `activity_corrections`
+- `activity_processing_logs`
+- commercial RPCs
+- points / wallet / certificate / purchase-confirmation logic
+
+Do not delete possible duplicate indexes in C8-I-D.
+
+Cleanup is a later separate step.
+
+---
+
+## 18. Proposed next step
+
+Next step after this design document:
+
+P4.10.0-C8-I-D1 — Draft additive SQL migration plan.
+
+The first SQL migration should probably create only missing additive tables:
+
+- `state_dimensions`
+- `value_object_state_facts`
+- `state_relevance_rules`
+- `value_object_similarity_edges`
+- `value_object_relevance_edges`
+- `recommendation_feedback`
+
+Optional later:
+
+- `value_object_state_window_snapshots`
+
+Do not create `activity_state_deltas` yet.
+
+Do not alter existing state/aggregate/snapshot tables in the first migration unless absolutely necessary.
+
