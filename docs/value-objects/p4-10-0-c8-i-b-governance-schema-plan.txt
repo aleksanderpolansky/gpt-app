@@ -1,0 +1,669 @@
+﻿# GPT-APP / AI-NAVIGATOR
+# P4.10.0-C8-I-B — Governance / Schema Plan before State SQL Audit
+
+Date: 2026-05-24
+Status: DOCUMENT-ONLY GOVERNANCE / SCHEMA PLAN
+Previous step: P4.10.0-C8-I-A4
+Previous commit: a64be5c
+Runtime impact: NONE
+SQL impact: NONE
+UI impact: NONE
+
+## 1. Purpose
+
+This document defines what must be inspected before designing SQL for state layers.
+
+This is NOT a migration.
+This is NOT the Supabase SQL audit file.
+This is a governance and schema readiness plan.
+
+The goal is to prepare C8-I-C:
+
+P4.10.0-C8-I-C — Supabase SQL Audit File.
+
+## 2. Completed readiness blocks
+
+The following blocks are already completed and committed:
+
+- C8-I-A0 — State Layers Architecture Decisions.
+- C8-I-A1 — State/Context Hooks Readiness Map.
+- C8-I-A2 — State Fact vs Signal Contract.
+- C8-I-A3 — State Dimensions MVP.
+- C8-I-A4 — Similarity/Relevance Resolver Concept.
+
+These blocks established:
+
+- unified Value Object;
+- no mandatory VO subtypes;
+- state through separate state tables;
+- category is not state fact;
+- Baseline Context as graph;
+- similarity and relevance as separate mechanisms;
+- weakest-direction Next Best Action v0;
+- proxy-only medical/hormonal/emotional handling;
+- compact context package principle.
+
+## 3. Main rule for C8-I-B
+
+Do not create SQL yet.
+Do not create migrations yet.
+Do not modify runtime code.
+Do not modify ruleExtractor.ts.
+Do not run OpenAI.
+Do not run Supabase SQL.
+
+C8-I-B only defines what must be checked in existing schema and governance rules before SQL audit.
+
+## 4. Why this block is needed
+
+State layers will touch many existing concepts:
+
+- activities;
+- category derivation runs;
+- category candidates;
+- contextual categories;
+- Value Objects;
+- Value Object category links;
+- Value Object exposure links;
+- actors;
+- organizations;
+- purchase confirmations;
+- bookings;
+- calendar/time blocks;
+- user corrections;
+- privacy and sensitivity;
+- proof routes.
+
+Before adding tables like:
+
+- state_dimensions;
+- value_object_state_facts;
+- activity_state_deltas;
+- value_object_state_snapshots;
+- state_relevance_rules;
+- value_object_similarity_edges;
+- value_object_relevance_edges;
+
+the project must know what already exists and what should remain untouched.
+
+## 5. Governance principles
+
+### 5.1 Additive only
+
+All future migrations must be additive.
+
+Allowed:
+
+- CREATE TABLE;
+- CREATE INDEX;
+- ALTER TABLE ADD COLUMN;
+- CREATE VIEW if safe;
+- CREATE FUNCTION if required and reviewed;
+- CREATE POLICY if RLS is clear;
+- COMMENT ON for documentation.
+
+Not allowed without separate explicit decision:
+
+- DROP TABLE;
+- DROP COLUMN;
+- destructive rename;
+- changing existing semantics;
+- weakening RLS;
+- replacing existing source-of-truth logic.
+
+### 5.2 Activity Event remains source of truth
+
+Activity Event remains the source of truth for recorded actions.
+
+State deltas and snapshots are derived layers.
+
+They must be recalculable or auditable.
+
+### 5.3 AI output remains candidate, not truth
+
+AI/category derivation output may produce:
+
+- category candidates;
+- semantic hooks;
+- metric candidates;
+- inferred state candidates;
+- risk flags.
+
+It must not write state facts directly.
+
+### 5.4 Value Object remains unified
+
+Do not add mandatory VO subtype.
+
+Do not classify VO by `value_object_kind` as primary architecture.
+
+Role is derived from:
+
+- category bundle;
+- actor;
+- hierarchy;
+- source activity;
+- state dimensions;
+- relevance/similarity edges;
+- current analytical context.
+
+### 5.5 Privacy by default
+
+State and baseline data must be private by default.
+
+Sensitive domains:
+
+- health;
+- family;
+- child-related data;
+- finance;
+- work;
+- baseline/social origin;
+- emotional/stress proxy;
+- medical documents or lab data.
+
+### 5.6 Explainability
+
+Every future state fact, delta or snapshot must be explainable through:
+
+- source;
+- evidence;
+- confidence;
+- window;
+- derivation method;
+- claim strength;
+- correction status.
+
+## 6. Existing structure groups to inspect
+
+C8-I-C SQL audit must inspect the following groups.
+
+### 6.1 Activity layer
+
+Inspect whether existing activity tables support:
+
+- activity id;
+- user / actor ownership;
+- title / text;
+- timestamps;
+- duration;
+- status;
+- source;
+- correction/audit logic;
+- links to participants;
+- links to external objects;
+- metadata JSON if available.
+
+Questions:
+
+- Is activity event source-of-truth clear?
+- Are corrected activities auditable?
+- Is duration reliable?
+- Can one activity link to multiple Value Objects?
+- Is there a clean place to attach future state deltas?
+
+### 6.2 Category derivation layer
+
+Inspect whether existing derivation structures support:
+
+- derivation run id;
+- source activity id;
+- category candidates;
+- semantic layer;
+- confidence;
+- evidence;
+- forbidden overclaims;
+- risk flags;
+- normalized activity;
+- detected language;
+- rule vs AI source;
+- correction status.
+
+Questions:
+
+- Are category candidates stored or only returned at runtime?
+- Is confidence preserved?
+- Is evidence preserved?
+- Are forbidden overclaims preserved?
+- Is there a stable derivation_run_id for audit?
+- Can state hooks later reference derivation runs?
+
+### 6.3 Contextual categories / taxonomy layer
+
+Inspect whether category structures support:
+
+- category id;
+- slug/key;
+- title;
+- semantic layer;
+- category type;
+- parent category if any;
+- global vs user-created status;
+- approval / governance status;
+- source;
+- created_by;
+- active/inactive state.
+
+Questions:
+
+- Can new categories be suggested without becoming active ontology automatically?
+- Is governance status available?
+- Can user-created categories become globally available later?
+- Can category links preserve semantic layer?
+
+### 6.4 Value Objects
+
+Inspect whether `value_objects` support:
+
+- id;
+- owner / actor / organization / user context;
+- title;
+- description;
+- parent/child relation;
+- visibility/privacy;
+- source activity or creation context;
+- category signature through links;
+- status;
+- created_at / updated_at.
+
+Questions:
+
+- Is parent/child hierarchy represented clearly?
+- Can personal and enterprise VOs coexist without subtype?
+- Can state tables reference VO id safely?
+- Are public/commercial VOs separated by visibility/context rather than subtype?
+- Is there any existing field that risks becoming a hidden subtype?
+
+### 6.5 Value Object category links
+
+Inspect whether there are links between VO and categories.
+
+Required future properties:
+
+- value_object_id;
+- category_id or category_key;
+- semantic layer;
+- confidence;
+- source;
+- evidence;
+- created_at;
+- is_primary / is_required if available.
+
+Questions:
+
+- Can similarity scoring use category links?
+- Can category weights be derived?
+- Can category links distinguish action/domain/purpose/role/responsibility?
+- Can family/care/business layers be represented?
+
+### 6.6 Value Object exposure / activity-to-VO links
+
+Inspect whether activities link to Value Objects.
+
+Questions:
+
+- Is there an activity-to-VO link table?
+- Can one activity expose multiple VOs?
+- Can one activity create/update multiple VOs?
+- Is duration stored once at activity level?
+- Can analytical time attribution exceed 24h conceptually without duplicating source time?
+- Can future deltas reference both activity and VO?
+
+### 6.7 Actor / organization / participant model
+
+Inspect whether schema supports:
+
+- user actor;
+- organization actor;
+- activity participants;
+- participant roles;
+- buyer/seller/provider/receiver/self/teacher/student/family roles;
+- future actor relationships.
+
+Questions:
+
+- Can actor be user or organization?
+- Can household/family/external person be represented later?
+- Are participant roles flexible enough?
+- Are actor relationships separate from VO hierarchy?
+
+### 6.8 Commercial core
+
+Inspect whether commercial tables remain compatible:
+
+- organizations;
+- offers;
+- purchase_confirmations;
+- certificates;
+- bookings;
+- point transactions if present;
+- organization-derived currency logic.
+
+Questions:
+
+- Does purchase confirmation remain external-purchase confirmation, not cart/order items?
+- Are points burned when spent?
+- Is seller not receiving spent points?
+- Is currency derived from organization country?
+- Can purchase confirmation amount later produce direct measurement / transactional confirmed fact?
+- Are business claims blocked without confirmation?
+
+### 6.9 Calendar / time / availability layer
+
+Inspect whether existing structures support:
+
+- calendar events;
+- time blocks;
+- availability rules;
+- work shifts;
+- no-multitasking blocks;
+- family obligations;
+- commute/travel;
+- current/today/last_7d windows.
+
+Questions:
+
+- Can available time be calculated?
+- Can work/no-multitasking constraints be represented?
+- Can current state frame use calendar/time data?
+- Can deadlines and obligations be audited?
+
+### 6.10 Correction / feedback layer
+
+Inspect whether existing correction structures support:
+
+- user correction;
+- activity correction;
+- category correction;
+- VO correction;
+- recommendation feedback later;
+- audit trail;
+- before/after value.
+
+Questions:
+
+- Can user override inferred state?
+- Can rejected recommendations update future relevance?
+- Can state facts/deltas/snapshots be corrected or invalidated?
+- Is there an audit trail pattern already used?
+
+### 6.11 Privacy / RLS / ownership
+
+Inspect whether future state tables can follow current RLS patterns.
+
+Questions:
+
+- How is user ownership enforced?
+- How is organization ownership enforced?
+- Are public directory fields separated from private fields?
+- Can sensitive state data remain private?
+- Will child/family/health/finance/work states need stricter policies?
+- Are service role/admin paths separated from user paths?
+
+## 7. Future table readiness targets
+
+C8-I-C SQL audit should check readiness for these future tables.
+
+### 7.1 state_dimensions
+
+Purpose:
+
+Dictionary of state dimensions.
+
+Needs:
+
+- dimension_key;
+- title;
+- domain;
+- unit_type;
+- default_privacy_level;
+- claim_policy;
+- mvp_status;
+- allowed_source_types;
+- forbidden_claims;
+- safer_proxy_wording;
+- is_sensitive;
+- is_active.
+
+### 7.2 value_object_state_facts
+
+Purpose:
+
+Stable or semi-stable facts about VO / actor / context.
+
+Needs:
+
+- value_object_id;
+- dimension_id;
+- value_json;
+- source_type;
+- source_id;
+- confidence;
+- evidence_json;
+- claim_strength;
+- privacy_level;
+- valid_from;
+- valid_to;
+- correction_status.
+
+### 7.3 activity_state_deltas
+
+Purpose:
+
+State changes caused or likely caused by activity.
+
+Needs:
+
+- activity_event_id;
+- value_object_id or direction_key;
+- dimension_id;
+- direction;
+- magnitude;
+- value_json;
+- derivation_run_id;
+- confidence;
+- evidence_json;
+- claim_strength;
+- proxy_only flag.
+
+### 7.4 value_object_state_snapshots
+
+Purpose:
+
+Aggregated state values by window.
+
+Needs:
+
+- value_object_id or direction_key;
+- dimension_id;
+- window_type;
+- window_start;
+- window_end;
+- value_json;
+- aggregation_method;
+- confidence;
+- freshness;
+- recalculation source.
+
+### 7.5 state_relevance_rules
+
+Purpose:
+
+Rules defining which states influence which targets.
+
+Needs:
+
+- target category / target VO / direction;
+- source dimension;
+- relation;
+- relevance_weight;
+- explanation;
+- safety policy.
+
+### 7.6 value_object_similarity_edges
+
+Purpose:
+
+Precomputed semantic similarity.
+
+Needs:
+
+- source_vo;
+- target_vo;
+- similarity_score;
+- shared_category_ids;
+- method;
+- computed_at;
+- explanation.
+
+### 7.7 value_object_relevance_edges
+
+Purpose:
+
+Precomputed or user-adjusted relevance.
+
+Needs:
+
+- source_vo;
+- target_vo;
+- relevance_score;
+- relation_category;
+- confidence;
+- evidence;
+- feedback source.
+
+### 7.8 recommendation_feedback
+
+Purpose:
+
+Feedback for future recommendation quality.
+
+Needs:
+
+- recommendation id or context package id;
+- user id;
+- selected direction;
+- candidate action;
+- feedback type;
+- reason;
+- difficulty;
+- helped / not helped;
+- created_at.
+
+## 8. Required audit outputs from C8-I-C
+
+The SQL audit must output:
+
+1. Existing relevant tables.
+2. Existing relevant columns.
+3. Missing tables.
+4. Missing columns.
+5. Existing indexes that can be reused.
+6. Existing RLS policies that matter.
+7. Existing functions/RPCs that matter.
+8. Existing triggers that matter.
+9. Migration risk notes.
+10. Additive migration recommendations.
+11. Do-not-touch list.
+12. Open questions for manual decision.
+
+## 9. Do-not-touch list until explicit decision
+
+Do not change:
+
+- existing activity source-of-truth semantics;
+- existing Value Object unified model;
+- purchase confirmation external-purchase model;
+- organization-derived currency concept;
+- points burning logic;
+- parent/child VO hierarchy;
+- category governance assumptions;
+- C8-H extractor proof files unless ruleExtractor.ts changes;
+- Auth/RLS/security-sensitive code without separate full/security check.
+
+## 10. Local repository inventory before SQL audit
+
+Before writing C8-I-C SQL audit file, it is useful to inspect local repository files.
+
+Recommended local inventory commands for manual review:
+
+POWERSHELL SAMPLE START
+
+Write-Host "Git tracked files related to schema / supabase / value objects / activities:" -ForegroundColor Cyan
+git ls-files | Select-String -Pattern "supabase|migration|schema|value-object|value_objects|activity|activities|category|categories|purchase|booking|certificate|points|calendar|time_blocks|organization|rls|policy|rpc|sql"
+
+Write-Host ""
+Write-Host "Search for state-like existing terms:" -ForegroundColor Cyan
+git grep -n "state_dimensions\|state_snapshot\|state_delta\|value_object_state\|similarity\|relevance\|activity_state\|recommendation_feedback" -- . 2>$null
+
+Write-Host ""
+Write-Host "Search for category derivation structures:" -ForegroundColor Cyan
+git grep -n "categoryCandidates\|derivationRun\|derivation_run\|forbiddenOverclaims\|riskFlags\|semanticLayer\|confidence\|evidence" -- . 2>$null
+
+Write-Host ""
+Write-Host "Search for Value Object tables/fields:" -ForegroundColor Cyan
+git grep -n "value_objects\|value_object_id\|parent_value_object\|parent_id\|owner_id\|organization_id" -- . 2>$null
+
+POWERSHELL SAMPLE END
+
+The output should be reviewed before C8-I-C final SQL audit is written.
+
+## 11. C8-I-C preparation logic
+
+C8-I-C should be a SQL audit file for Supabase SQL Editor only.
+
+It should not modify data.
+
+It should only query:
+
+- information_schema.tables;
+- information_schema.columns;
+- pg_indexes;
+- pg_policies;
+- pg_proc;
+- pg_trigger;
+- enum/type information if needed.
+
+The audit must be read-only.
+
+No CREATE / ALTER / DROP in C8-I-C.
+
+## 12. Anti-errors
+
+Do NOT:
+
+- create migrations in C8-I-B;
+- create SQL audit file in C8-I-B;
+- run Supabase SQL in C8-I-B;
+- modify runtime code;
+- modify extractor;
+- modify UI;
+- add VO subtype;
+- treat category hooks as state facts;
+- merge similarity and relevance;
+- ignore RLS/privacy;
+- design recommendation engine before schema audit;
+- run old proofs unnecessarily.
+
+## 13. Definition of Done
+
+C8-I-B is complete when:
+
+- governance principles are documented;
+- schema groups to inspect are documented;
+- future state table readiness targets are documented;
+- required audit outputs are documented;
+- do-not-touch list is documented;
+- C8-I-C read-only SQL audit scope is documented;
+- no runtime/code/SQL changes were made;
+- file is committed as doc-only governance/schema plan.
+
+## 14. Next step
+
+After C8-I-B commit, continue with:
+
+P4.10.0-C8-I-C — Supabase SQL Audit File.
+
+C8-I-C must create a read-only SQL audit file for Supabase SQL Editor.
+
+It must inspect existing tables, columns, indexes, policies, functions and triggers relevant to future state layers.
