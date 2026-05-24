@@ -1,0 +1,302 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D2 — Execution and Smoke-Check Report
+
+Date: 2026-05-24
+Status: EXECUTED AND VERIFIED IN SUPABASE
+
+============================================================
+1. Migration file
+============================================================
+
+Executable migration file:
+
+supabase/migrations/20260524_p4_10_0_c8_i_d2_state_similarity_relevance_nba_additive.sql
+
+Related draft file:
+
+docs/value-objects/sql-drafts/p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql
+
+Important process note:
+
+The first draft was intentionally moved out of supabase/migrations before execution safety review.
+Only the reviewed executable migration was later recreated in supabase/migrations.
+
+============================================================
+2. Git commits
+============================================================
+
+Relevant commits:
+
+8fb7b82 db: add reviewed C8-I-D2 additive state NBA migration
+2be02a5 docs: add updated_at triggers to C8-I-D2 SQL draft
+d1debc6 chore: move C8-I-D2 draft SQL out of migrations folder
+6f04487 db: add C8-I-D2 draft additive state NBA migration
+5c02f70 docs: add C8-I-D1 additive SQL migration plan
+ca50456 docs: add C8-I-D additive migration design
+56f7cce docs: add C8-I-C state layers read-only SQL audit
+d7a5db4 docs: add C8-I-B governance schema plan
+a64be5c docs: add C8-I-A4 similarity relevance resolver concept
+b94ac66 docs: add C8-I-A3 state dimensions MVP
+5030100 docs: add C8-I-A2 state fact signal contract
+f26f2ed docs: add C8-I-A1 state context hooks readiness map
+bc87b49 docs: lock C8-I-A0 state layers architecture decisions
+
+============================================================
+3. Pre-execution checklist
+============================================================
+
+D2_R6_01_target_tables_existence:
+Result: no rows returned.
+Meaning: target tables did not exist before migration execution.
+
+D2_R6_02_required_reference_tables:
+Result:
+- public.app_users
+- public.contextual_categories
+- public.value_objects
+
+Meaning:
+All required reference tables existed before execution.
+
+D2_R6_03_required_functions:
+Result:
+- public.set_activity_recording_updated_at
+
+Meaning:
+The function required by updated_at triggers existed before execution.
+
+D2_R6_04_existing_policies_with_same_names:
+Result: no rows returned.
+Meaning:
+No conflicting policies existed before execution.
+
+============================================================
+4. Execution result
+============================================================
+
+The reviewed executable migration was manually executed in Supabase SQL Editor.
+
+Supabase result:
+
+Success. No rows returned
+
+Meaning:
+DDL migration executed successfully.
+
+============================================================
+5. Created tables
+============================================================
+
+D2_R8_01_created_tables confirmed 6 created tables:
+
+- recommendation_feedback
+- state_dimensions
+- state_relevance_rules
+- value_object_relevance_edges
+- value_object_similarity_edges
+- value_object_state_facts
+
+============================================================
+6. RLS status
+============================================================
+
+D2_R8_02_rls_enabled confirmed RLS enabled for all 6 tables:
+
+- recommendation_feedback: rls_enabled = true, rls_forced = false
+- state_dimensions: rls_enabled = true, rls_forced = false
+- state_relevance_rules: rls_enabled = true, rls_forced = false
+- value_object_relevance_edges: rls_enabled = true, rls_forced = false
+- value_object_similarity_edges: rls_enabled = true, rls_forced = false
+- value_object_state_facts: rls_enabled = true, rls_forced = false
+
+============================================================
+7. Policies
+============================================================
+
+D2_R8_03_policies confirmed 6 explicit deny policies:
+
+- recommendation_feedback:
+  No direct public recommendation feedback access
+
+- state_dimensions:
+  No direct public state dimensions access
+
+- state_relevance_rules:
+  No direct public state relevance rules access
+
+- value_object_relevance_edges:
+  No direct public value object relevance edges access
+
+- value_object_similarity_edges:
+  No direct public value object similarity edges access
+
+- value_object_state_facts:
+  No direct public value object state facts access
+
+All policies:
+cmd = ALL
+qual = false
+with_check = false
+
+Meaning:
+Direct anon/authenticated access is blocked by default.
+
+============================================================
+8. updated_at triggers
+============================================================
+
+D2_R8_04_updated_at_triggers confirmed 3 triggers:
+
+- state_dimensions:
+  trg_state_dimensions_updated_at
+  BEFORE UPDATE
+  EXECUTE FUNCTION set_activity_recording_updated_at()
+
+- state_relevance_rules:
+  trg_state_relevance_rules_updated_at
+  BEFORE UPDATE
+  EXECUTE FUNCTION set_activity_recording_updated_at()
+
+- value_object_state_facts:
+  trg_value_object_state_facts_updated_at
+  BEFORE UPDATE
+  EXECUTE FUNCTION set_activity_recording_updated_at()
+
+============================================================
+9. Indexes
+============================================================
+
+D2_R8_05_indexes confirmed indexes for all 6 tables.
+
+Confirmed index groups:
+
+recommendation_feedback:
+- idx_recommendation_feedback_context_package_id
+- idx_recommendation_feedback_feedback_type
+- idx_recommendation_feedback_recommendation_id
+- idx_recommendation_feedback_selected_direction
+- idx_recommendation_feedback_user_created_at
+- recommendation_feedback_pkey
+
+state_dimensions:
+- idx_state_dimensions_domain
+- idx_state_dimensions_is_active
+- idx_state_dimensions_is_sensitive
+- state_dimensions_dimension_key_key
+- state_dimensions_pkey
+
+state_relevance_rules:
+- idx_state_relevance_rules_is_active
+- idx_state_relevance_rules_source_dimension_key
+- idx_state_relevance_rules_target_category_id
+- idx_state_relevance_rules_target_direction_key
+- idx_state_relevance_rules_target_value_object_id
+- state_relevance_rules_pkey
+
+value_object_relevance_edges:
+- idx_value_object_relevance_edges_computed_at
+- idx_value_object_relevance_edges_source_value_object
+- idx_value_object_relevance_edges_target_value_object
+- idx_value_object_relevance_edges_user_score
+- idx_value_object_relevance_edges_user_source_dimension
+- idx_value_object_relevance_edges_user_target_direction
+- value_object_relevance_edges_pkey
+
+value_object_similarity_edges:
+- idx_value_object_similarity_edges_score
+- idx_value_object_similarity_edges_source
+- idx_value_object_similarity_edges_target
+- idx_value_object_similarity_edges_user
+- value_object_similarity_edges_global_pair_method_unique
+- value_object_similarity_edges_pkey
+- value_object_similarity_edges_user_pair_method_unique
+
+value_object_state_facts:
+- idx_value_object_state_facts_correction_status
+- idx_value_object_state_facts_created_at
+- idx_value_object_state_facts_user_dimension_key
+- idx_value_object_state_facts_user_value_object
+- idx_value_object_state_facts_value_object_dimension_key
+- value_object_state_facts_pkey
+
+============================================================
+10. What this migration adds conceptually
+============================================================
+
+This migration adds the first additive database foundation for:
+
+- state dimensions
+- user/value-object state facts
+- state relevance rules
+- value-object similarity edges
+- value-object relevance edges
+- recommendation feedback
+
+It does not change the unified Value Object model.
+It does not introduce Value Object subtypes.
+It does not modify commercial core.
+It does not touch points, certificates, wallets, purchase confirmations, offers, bookings, or commercial RPCs.
+It does not create activity_state_deltas.
+It does not create value_object_state_window_snapshots.
+
+============================================================
+11. Checks that do not need to be repeated immediately
+============================================================
+
+The following checks were already completed and do not need to be repeated in the next step unless the migration is edited:
+
+- target tables pre-existence check
+- reference tables check
+- required function check
+- policy name conflict check
+- created tables smoke check
+- RLS smoke check
+- deny policies smoke check
+- updated_at triggers smoke check
+- indexes smoke check
+
+============================================================
+12. Next recommended block
+============================================================
+
+Next block should not create another structural migration immediately.
+
+Recommended next step:
+
+P4.10.0-C8-I-D3 — Seed / governance preparation for state dimensions and safe proxy wording.
+
+Purpose of D3:
+
+- define initial safe state dimensions
+- define claim policies
+- define forbidden claims
+- define safer proxy wording
+- prepare inserts for state_dimensions
+- do not infer medical/hormonal facts directly
+- keep all sensitive state reasoning as proxy/estimate/user-confirmed layers
+
+Possible initial dimensions:
+
+- attention_load
+- fatigue_signal
+- recovery_need
+- stress_load_estimate
+- learning_progress_signal
+- language_practice_balance
+- physical_activity_load
+- family_care_load_signal
+- work_responsibility_load
+- pipeline_building_effort
+- financial_pressure_signal
+- social_interaction_load
+
+D3 should be prepared as a documentation/governance step first, then as a reviewed seed SQL draft.
+
+============================================================
+13. Final D2 status
+============================================================
+
+P4.10.0-C8-I-D2 status:
+
+EXECUTED AND VERIFIED.
+
