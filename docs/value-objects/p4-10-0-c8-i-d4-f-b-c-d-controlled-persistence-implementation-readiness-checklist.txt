@@ -1,0 +1,378 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-C-D — Controlled Persistence Implementation Readiness Checklist
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-C-D
+Type: documentation-only implementation readiness checklist
+Status: DESIGN ONLY / NO SQL / NO ROUTE / NO HELPER IMPLEMENTATION / NO DB WRITES / NO STATE FACTS CREATED
+
+Previous closed steps:
+- P4.10.0-C8-I-D4-F-B-A — read-only helper availability audit report
+  Commit: c26c086
+- P4.10.0-C8-I-D4-F-B-B — controlled persistence helper contract
+  Commit: 24aeada
+- P4.10.0-C8-I-D4-F-B-C-A — targeted source inspection report
+  Commit: 6ccce0d
+- P4.10.0-C8-I-D4-F-B-C-B — source inspection interpretation memo
+  Commit: ccaf900
+- P4.10.0-C8-I-D4-F-B-C-C — controlled persistence source-to-helper mapping plan
+  Commit: 7718d70
+
+Source document:
+- docs/value-objects/p4-10-0-c8-i-d4-f-b-c-c-controlled-persistence-source-to-helper-mapping-plan.txt
+
+Hard boundaries:
+- No SQL migration is created.
+- No API route is created.
+- No helper is implemented.
+- No Supabase write path is added.
+- No insert into value_object_state_facts is performed.
+- No update of state_dimensions is performed.
+- No state snapshot is created.
+- No state engine is created.
+- No Next Best Action runtime is created.
+- No Value Object subtype is created.
+- No RLS policy is changed.
+- No production write path is introduced.
+
+Core preserved principles:
+- A shadow candidate is not a state fact.
+- An insertDraft is not a state fact.
+- AI-only direct persistence remains blocked.
+- value_object_id alone is not enough for persistence permission.
+- D4-E-B shadow route remains shadow-only.
+- The future write path must be separate from D4-E-B.
+- The debug persist-proof route is reference-only for proof style, not a state facts template.
+- Controlled persistence must re-run gates server-side.
+- No placeholder UUID may ever be persisted.
+
+1. Purpose of this readiness checklist
+
+This checklist decides whether the project is ready to move from design-only planning into carefully staged helper implementation.
+
+Decision scope:
+- It does not authorize a route yet.
+- It does not authorize writes yet.
+- It only authorizes the next safe implementation step: types-only foundation.
+
+Recommended next implementation step:
+P4.10.0-C8-I-D4-F-B-D-A — create controlledPersistence/types.ts only, no runtime writes.
+
+2. Readiness summary
+
+Current readiness decision:
+READY FOR TYPES-ONLY IMPLEMENTATION.
+
+Not ready for:
+- controlled persist route;
+- actual value_object_state_facts insert;
+- runtime write-count proof;
+- production UI;
+- Next Best Action runtime;
+- state engine runtime.
+
+Reason:
+The design layer is clear enough to define TypeScript types, but not yet clear enough to implement persistence or route behavior.
+
+3. Conditions already satisfied
+
+3.1 Governance documents exist
+
+Satisfied:
+- D4-C state fact creation contract exists.
+- D4-D non-executable internal evaluator design exists.
+- D4-E-B shadow route exists and remains no-write.
+- D4-F-A persistence gate design exists.
+- D4-F-B-A helper availability audit exists.
+- D4-F-B-B helper contract exists.
+- D4-F-B-C-A source inspection exists.
+- D4-F-B-C-B interpretation memo exists.
+- D4-F-B-C-C source-to-helper mapping plan exists.
+
+Meaning:
+The conceptual contract is sufficiently documented before any implementation.
+
+3.2 Source conventions identified
+
+Satisfied:
+- Auth0/session convention identified.
+- Supabase shared client convention identified.
+- activityUserContext candidate identified.
+- sync-user mapping reference identified.
+- value_objects route reference identified.
+- debug persist-proof route limited to reference-only role.
+- D4-E-B shadow route limited to no-write candidate/reference role.
+
+Meaning:
+Future implementation must reuse project conventions rather than inventing new styles.
+
+3.3 Safety boundaries defined
+
+Satisfied:
+- No client-provided user_id may become persisted user_id.
+- value_object_id alone is insufficient for write permission.
+- AI-only direct persistence remains blocked.
+- D4-E-B must not become a write route.
+- Debug route must not be copied as state facts route.
+- All persistence must re-run server-side gates.
+- Rejected and shadow-only cases must create zero state facts.
+
+Meaning:
+The implementation can start only with non-writing scaffolding.
+
+4. Conditions still not satisfied
+
+4.1 Exact idempotency behavior is not final
+
+Open:
+- source_type + source_id + dimension_key + value_object_id
+- activity_event_id + dimension_key + value_object_id
+- metadata_json.idempotency_key
+- correction/supersession chain
+
+Decision:
+Do not implement persistStateFactControlled yet.
+
+4.2 Exact access resolver behavior is not final
+
+Open:
+- personal_owner resolution details
+- organization_actor resolution details
+- actor_space_roles permission requirements
+- public/catalog visibility rejection shape
+
+Decision:
+Do not implement target value object write authorization yet.
+
+4.3 Exact runtime route behavior is not final
+
+Open:
+- final route payload parser
+- final response status codes
+- final error code taxonomy
+- sensitive evidence redaction rules
+- production vs debug proof route split
+
+Decision:
+Do not create controlled-persist route yet.
+
+4.4 Exact write-count proof design is not final
+
+Open:
+- accepted test fixture
+- rejected test fixture
+- duplicate test fixture
+- before/after count method
+- rollback/correction test method
+
+Decision:
+Do not perform any runtime insert yet.
+
+5. Approved next implementation scope
+
+Approved next step:
+P4.10.0-C8-I-D4-F-B-D-A — create types-only foundation.
+
+Allowed in D4-F-B-D-A:
+- create directory:
+  lib/activity/stateFacts/controlledPersistence/
+- create file:
+  lib/activity/stateFacts/controlledPersistence/types.ts
+- define TypeScript types only;
+- export types only;
+- add no runtime logic;
+- add no Supabase import;
+- add no Auth0 import;
+- add no route;
+- add no SQL;
+- add no DB write;
+- add no state fact insert.
+
+Not allowed in D4-F-B-D-A:
+- auth resolver implementation;
+- value object resolver implementation;
+- dimension resolver implementation;
+- candidate validator implementation;
+- payload builder implementation;
+- idempotency implementation;
+- persist helper implementation;
+- API route implementation;
+- runtime tests that insert state facts.
+
+6. Required D4-F-B-D-A type definitions
+
+D4-F-B-D-A should define the following type groups.
+
+6.1 Primitive controlled persistence types
+
+Required:
+- StateFactAccessMode
+- StateFactSourceType
+- StateFactClaimPolicy
+- StateFactPrivacyLevel
+- StateFactCorrectionStatus
+- StateFactPersistenceDecision
+- StateFactPersistenceErrorCode
+
+6.2 Request/input types
+
+Required:
+- StateFactPersistenceRequest
+- StateFactCandidateInput
+- StateFactUserConfirmationInput
+- StateFactValidityWindowInput
+
+Rules:
+- StateFactPersistenceRequest must not include persisted user_id as trusted input.
+- If any userId-like field is present for tracing, it must be clearly marked untrustedClientUserId and must not be used as persisted user_id.
+
+6.3 Resolved context types
+
+Required:
+- AuthenticatedStateFactActor
+- StateFactTargetValueObject
+- StateFactDimensionContext
+- StateFactResolvedContext
+
+Rules:
+- AuthenticatedStateFactActor must include appUserId.
+- AuthenticatedStateFactActor may include auth0Sub, email, personId, actorId.
+- StateFactTargetValueObject must include valueObjectId and accessMode.
+- StateFactDimensionContext must include dimensionKey and claimPolicy.
+
+6.4 Validation/result types
+
+Required:
+- StateFactContractDecision
+- StateFactValidationResult
+- StateFactIdempotencyDecision
+- StateFactPersistenceResult
+
+Rules:
+- rejected/shadow_only decisions must carry stateFactsCreated = 0.
+- persisted decision must carry stateFactsCreated = 1.
+- duplicate/already_exists decision must carry stateFactsCreated = 0.
+
+6.5 Insert payload type
+
+Required:
+- ValueObjectStateFactInsertPayload
+
+Required fields:
+- user_id
+- value_object_id
+- dimension_id
+- dimension_key
+- value_json
+- source_type
+- source_id
+- confidence
+- evidence_json
+- claim_strength
+- privacy_level
+- valid_from
+- valid_to
+- correction_status
+- metadata_json
+
+Rules:
+- correction_status must support active/corrected/revoked/superseded.
+- metadata_json must support rollbackable, idempotency_key, contract_version, helper_version, source_route, candidate_trace_id, created_from_candidate, not_created_by_ai_directly.
+
+7. D4-F-B-D-A type-only safety checks
+
+Before committing D4-F-B-D-A, run checks proving:
+
+7.1 File existence
+- lib/activity/stateFacts/controlledPersistence/types.ts exists.
+
+7.2 Forbidden imports
+types.ts must not contain:
+- from "@supabase
+- from "../../../../lib/supabase"
+- from "../../../../../lib/supabase"
+- supabase
+- from "@auth0
+- auth0
+- NextResponse
+- NextRequest
+
+7.3 Forbidden runtime actions
+types.ts must not contain:
+- .from(
+- .insert(
+- .update(
+- .delete(
+- fetch(
+- process.env
+- createClient
+- getSession
+
+7.4 Required type names
+types.ts must contain:
+- StateFactAccessMode
+- StateFactSourceType
+- StateFactClaimPolicy
+- StateFactPrivacyLevel
+- StateFactCorrectionStatus
+- StateFactPersistenceDecision
+- StateFactPersistenceErrorCode
+- StateFactPersistenceRequest
+- StateFactCandidateInput
+- StateFactUserConfirmationInput
+- StateFactValidityWindowInput
+- AuthenticatedStateFactActor
+- StateFactTargetValueObject
+- StateFactDimensionContext
+- StateFactResolvedContext
+- StateFactContractDecision
+- StateFactValidationResult
+- StateFactIdempotencyDecision
+- ValueObjectStateFactInsertPayload
+- StateFactPersistenceResult
+
+7.5 Build/lint policy
+For D4-F-B-D-A:
+- targeted TypeScript/import check is required;
+- full build may be useful but not mandatory if no runtime import path uses the file;
+- no runtime endpoint test is needed because no route exists;
+- no DB count test is needed because no write path exists.
+
+8. Explicit transition rule
+
+Allowed transition:
+D4-F-B-C-D -> D4-F-B-D-A
+
+Not allowed transition:
+D4-F-B-C-D -> route implementation
+D4-F-B-C-D -> persist helper implementation
+D4-F-B-C-D -> DB insert test
+D4-F-B-C-D -> state engine
+D4-F-B-C-D -> Next Best Action runtime
+
+9. Future sequence after D4-F-B-D-A
+
+After types-only foundation:
+
+1. D4-F-B-D-B — auth resolver helper with tests, no state fact writes.
+2. D4-F-B-D-C — target value object resolver helper with tests, no state fact writes.
+3. D4-F-B-D-D — dimension resolver helper with tests, no state fact writes.
+4. D4-F-B-D-E — candidate validator helper with tests, no state fact writes.
+5. D4-F-B-D-F — payload builder helper with tests, no state fact writes.
+6. D4-F-B-D-G — idempotency helper with tests, no state fact writes.
+7. D4-F-B-D-H — controlled persist helper behind strict tests.
+8. D4-F-B-D-I — controlled persist route only after helpers pass.
+9. D4-F-B-D-J — runtime write-count proof.
+
+10. Final decision
+
+Decision:
+Proceed to P4.10.0-C8-I-D4-F-B-D-A.
+
+Approved scope:
+Create TypeScript type definitions only.
+
+Not approved:
+Any runtime persistence, route, Supabase write path, DB insert, state engine, or Next Best Action runtime.
+
+End of D4-F-B-C-D readiness checklist.
