@@ -1,0 +1,600 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-C-C — Controlled Persistence Source-to-Helper Mapping Plan
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-C-C
+Type: documentation-only mapping plan
+Status: DESIGN ONLY / NO SQL / NO ROUTE / NO HELPER IMPLEMENTATION / NO DB WRITES / NO STATE FACTS CREATED
+
+Previous closed steps:
+- P4.10.0-C8-I-D4-F-B-A — read-only helper availability audit report
+  Commit: c26c086
+- P4.10.0-C8-I-D4-F-B-B — controlled persistence helper contract
+  Commit: 24aeada
+- P4.10.0-C8-I-D4-F-B-C-A — targeted source inspection report
+  Commit: 6ccce0d
+- P4.10.0-C8-I-D4-F-B-C-B — source inspection interpretation memo
+  Commit: ccaf900
+
+Source documents:
+- docs/value-objects/p4-10-0-c8-i-d4-f-b-c-a-targeted-source-inspection-report.txt
+- docs/value-objects/p4-10-0-c8-i-d4-f-b-c-b-source-inspection-interpretation-memo.txt
+
+Hard boundaries:
+- No SQL migration is created.
+- No API route is created.
+- No helper is implemented.
+- No Supabase write path is added.
+- No insert into value_object_state_facts is performed.
+- No update of state_dimensions is performed.
+- No state snapshot is created.
+- No state engine is created.
+- No Next Best Action runtime is created.
+- No Value Object subtype is created.
+
+Core preserved principles:
+- A shadow candidate is not a state fact.
+- An insertDraft is not a state fact.
+- AI-only direct persistence remains blocked.
+- value_object_id alone is not enough for persistence permission.
+- D4-E-B shadow route remains shadow-only.
+- The future write path must be separate from D4-E-B.
+- The debug persist-proof route is reference-only for proof style, not a state facts template.
+- Controlled persistence must re-run gates server-side.
+- No placeholder UUID may ever be persisted.
+
+1. Purpose of this mapping plan
+
+This document maps the inspected source conventions to a future controlled persistence helper structure.
+
+The goal is not to implement persistence now.
+
+The goal is to define:
+- exact future helper file paths;
+- exact future route path;
+- exact helper responsibilities;
+- exact accepted/rejected payload shapes;
+- exact test matrix;
+- exact no-write and write-count proof requirements;
+- exact dependency boundaries;
+- exact rule that D4-E-B remains shadow-only.
+
+2. Existing source conventions to reuse
+
+2.1 Auth0/session convention
+
+Source files:
+- lib/auth0.ts
+- lib/activity/activityUserContext.ts
+- src/app/api/me/route.ts
+- src/app/api/sync-user/route.ts
+
+Observed reusable convention:
+- Auth0 session is obtained through auth0.getSession().
+- App user is resolved through app_users.auth0_sub = session.user.sub.
+- sync-user is the authoritative reference for mapping Auth0 identity to app_users, persons, actors, and personal/marketplace spaces.
+- activityUserContext is a candidate for reuse or extraction because it already resolves session, app_user, person, and person actor.
+
+Future decision:
+- Do not accept client-provided user_id for state fact persistence.
+- Future helper must resolve user identity server-side.
+- Future helper must reject missing session, missing app user, placeholder UUID, and ambiguous identity.
+
+2.2 Supabase convention
+
+Source files:
+- lib/supabase.ts
+- src/app/api/sync-user/route.ts
+- src/app/api/value-objects/route.ts
+- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+
+Observed reusable convention:
+- Shared Supabase service client is exported from lib/supabase.ts.
+- Routes import and use that shared supabase object.
+- Existing routes use .from(), .select(), .insert(), .update(), .eq(), .single(), .maybeSingle() patterns.
+
+Future decision:
+- Do not invent a new Supabase client style.
+- Do not create direct client-side writes to value_object_state_facts.
+- Future write helper must be server-only.
+
+2.3 Value Object access convention
+
+Source files:
+- src/app/api/value-objects/route.ts
+- src/app/api/value-objects/debug/cloud-profile/route.ts
+
+Observed reusable convention:
+- value_objects are a central table and are already used by existing routes.
+- owner_actor_id / organization_id / user-related fields may inform access checks.
+- Current information is enough to require a dedicated resolver, but not enough to assume write permission from value_object_id alone.
+
+Future decision:
+- Future helper must load value_object server-side.
+- Future helper must decide access mode explicitly:
+  - personal_owner
+  - organization_actor
+  - denied
+- Public/catalog visibility must not imply state-fact write permission.
+
+2.4 Debug persist-proof convention
+
+Source file:
+- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+
+Observed reusable convention:
+- It may show useful style for proof discipline and before/after count checks.
+
+Future decision:
+- It is reference-only.
+- It must not be copied as a state facts route.
+- It must not weaken D4-C / D4-F-A gates.
+- It must not define state facts domain assumptions.
+
+2.5 D4-E-B shadow route convention
+
+Source file:
+- src/app/api/activity/debug/state-signal-candidate-shadow-test/route.ts
+
+Observed reusable convention:
+- It evaluates state signal candidates in shadow/no-write mode.
+- It exposes no-write markers such as noWriteGuarantee, wouldPersist, writesAttempted.
+- It can be used as a candidate shape/reference.
+
+Future decision:
+- D4-E-B remains shadow-only.
+- The future write route must be separate.
+- Future persistence must not trust insertDraft blindly.
+- Future persistence must re-run validation server-side.
+
+3. Exact future helper file map
+
+Future helper root:
+
+lib/activity/stateFacts/controlledPersistence/
+
+Planned future files:
+
+3.1 lib/activity/stateFacts/controlledPersistence/types.ts
+
+Responsibility:
+- define shared TypeScript types for the controlled persistence layer.
+
+Should define:
+- StateFactPersistenceRequest
+- AuthenticatedStateFactActor
+- StateFactTargetValueObject
+- StateFactDimensionContext
+- StateFactContractDecision
+- StateFactInsertPayload
+- StateFactPersistenceResult
+- StateFactPersistenceErrorCode
+- StateFactIdempotencyDecision
+- StateFactAccessMode
+
+Must not:
+- import Supabase directly;
+- perform writes;
+- perform route parsing.
+
+3.2 lib/activity/stateFacts/controlledPersistence/auth.ts
+
+Main future function:
+- resolveAuthenticatedStateFactActor()
+
+Source references:
+- lib/auth0.ts
+- lib/activity/activityUserContext.ts
+- src/app/api/sync-user/route.ts
+
+Responsibility:
+- obtain session server-side;
+- resolve app_user through auth0_sub;
+- optionally resolve person and actor if needed;
+- reject no session;
+- reject no app user;
+- reject placeholder UUID;
+- reject ambiguous identity.
+
+Must not:
+- trust user_id from request body;
+- create users silently unless explicitly designed later;
+- return sensitive Auth0 internals unnecessarily.
+
+3.3 lib/activity/stateFacts/controlledPersistence/targetValueObject.ts
+
+Main future function:
+- resolveStateFactTargetValueObject()
+
+Source references:
+- src/app/api/value-objects/route.ts
+- src/app/api/value-objects/debug/cloud-profile/route.ts
+
+Responsibility:
+- load value_object by value_object_id;
+- check ownership/access;
+- determine access mode:
+  - personal_owner
+  - organization_actor
+  - denied
+- reject missing/non-existing value_object;
+- reject access denied.
+
+Must not:
+- treat public/catalog visibility as write permission;
+- accept value_object_id alone as permission proof;
+- create Value Object subtypes.
+
+3.4 lib/activity/stateFacts/controlledPersistence/dimension.ts
+
+Main future function:
+- resolveStateFactDimension()
+
+Source references:
+- D4-B read-only state facts audit
+- D4-C state fact creation contract
+- D4-F-A controlled persistence gate design
+
+Responsibility:
+- load active state_dimensions row by dimension_key;
+- return dimension_id, dimension_key, claim_policy, is_sensitive, default_privacy_level, is_active;
+- reject unknown dimension;
+- reject inactive dimension;
+- reject unsupported claim_policy.
+
+Must not:
+- create state_dimensions;
+- update state_dimensions;
+- infer a dimension silently if dimension_key is unsafe.
+
+3.5 lib/activity/stateFacts/controlledPersistence/candidateValidation.ts
+
+Main future function:
+- validateStateFactCandidateAgainstContract()
+
+Source references:
+- D4-C state fact creation contract
+- D4-F-A persistence gate design
+- D4-E-B shadow route
+
+Responsibility:
+- re-run all contract gates before persistence;
+- block AI-only direct persistence;
+- block forbidden overclaims;
+- require safe wording;
+- require evidence_json;
+- enforce claim_policy;
+- enforce source_type;
+- enforce confidence / claim_strength ranges;
+- enforce privacy/sensitivity rules;
+- enforce validity window rules;
+- enforce correction/rollback readiness.
+
+Must not:
+- trust D4-E-B insertDraft as already safe;
+- convert shadow_only into persistence without revalidation;
+- permit sensitive overclaims.
+
+3.6 lib/activity/stateFacts/controlledPersistence/payloadBuilder.ts
+
+Main future function:
+- buildValueObjectStateFactInsertPayload()
+
+Source references:
+- D4-B value_object_state_facts column/constraint audit
+- D4-F-A persistence gate design
+
+Responsibility:
+- build insert payload matching value_object_state_facts constraints.
+
+Required payload fields:
+- user_id
+- value_object_id
+- dimension_id
+- dimension_key
+- value_json
+- source_type
+- source_id
+- confidence
+- evidence_json
+- claim_strength
+- privacy_level
+- valid_from
+- valid_to
+- correction_status
+- metadata_json
+
+Required metadata_json:
+- contract_version
+- helper_version
+- source_route
+- candidate_trace_id
+- idempotency_key
+- rollbackable = true
+- created_from_candidate = true
+- not_created_by_ai_directly = true
+- d4_gate_version
+
+Must not:
+- create payload without rollback metadata;
+- create payload with placeholder user_id;
+- create payload with missing evidence_json.
+
+3.7 lib/activity/stateFacts/controlledPersistence/idempotency.ts
+
+Main future function:
+- checkStateFactIdempotency()
+
+Responsibility:
+- prevent duplicate uncontrolled state facts.
+
+Candidate future keys:
+- source_type + source_id + dimension_key + value_object_id
+- activity_event_id + dimension_key + value_object_id
+- metadata_json.idempotency_key
+- future correction/supersession chain
+
+Decision for now:
+- final idempotency strategy remains open until implementation-readiness step.
+- no persistence should be implemented until the test matrix defines expected duplicate behavior.
+
+3.8 lib/activity/stateFacts/controlledPersistence/persist.ts
+
+Main future function:
+- persistStateFactControlled()
+
+Responsibility:
+- perform insert only after all previous helpers pass;
+- use server-side Supabase convention;
+- insert exactly one value_object_state_facts row only in accepted cases;
+- return persisted row id and audit metadata.
+
+Must not:
+- accept AI-only direct persistence;
+- bypass auth/access/dimension/candidate/idempotency gates;
+- run from D4-E-B shadow route;
+- insert in rejected/shadow_only cases.
+
+3.9 lib/activity/stateFacts/controlledPersistence/index.ts
+
+Responsibility:
+- export public helper functions for future route;
+- keep route import clean;
+- avoid route-local duplication.
+
+4. Exact future route map
+
+Future route path candidate:
+
+src/app/api/activity/state-facts/controlled-persist/route.ts
+
+Future HTTP method:
+- POST
+
+Future route status:
+- not created in D4-F-B-C-C.
+
+Future route responsibility:
+- parse request;
+- call resolveAuthenticatedStateFactActor;
+- call resolveStateFactTargetValueObject;
+- call resolveStateFactDimension;
+- call validateStateFactCandidateAgainstContract;
+- call buildValueObjectStateFactInsertPayload;
+- call checkStateFactIdempotency;
+- call persistStateFactControlled only after all previous gates pass;
+- return safe JSON response.
+
+Must not:
+- live under debug;
+- reuse D4-E-B route path;
+- allow GET writes;
+- expose raw sensitive evidence;
+- accept client-provided user_id as persisted user_id.
+
+5. Future request payload shape
+
+Candidate future request:
+
+{
+  "candidateTraceId": "string",
+  "valueObjectId": "uuid",
+  "dimensionKey": "string",
+  "candidate": {
+    "sourceType": "manual | user_confirmed | rule | system | import | correction",
+    "sourceId": "string | null",
+    "proposedValue": {},
+    "safeWording": "string",
+    "evidenceJson": {},
+    "confidence": 0.0,
+    "claimStrength": 0,
+    "privacyLevel": "private",
+    "validFrom": "ISO datetime",
+    "validTo": "ISO datetime | null",
+    "metadataJson": {}
+  },
+  "userConfirmation": {
+    "isExplicitlyConfirmed": false,
+    "confirmedAt": "ISO datetime | null",
+    "confirmationText": "string | null"
+  },
+  "idempotencyKey": "string"
+}
+
+Hard request rules:
+- user_id must not be accepted from client as persisted user_id.
+- valueObjectId must be checked server-side.
+- dimensionKey must be resolved server-side.
+- sourceType = ai must remain blocked for direct persistence.
+- candidate must be revalidated even if it came from D4-E-B.
+
+6. Future response payload shapes
+
+6.1 Accepted and persisted
+
+{
+  "ok": true,
+  "decision": "persisted",
+  "stateFactId": "uuid",
+  "idempotencyStatus": "created",
+  "stateFactsCreated": 1,
+  "writesAttempted": true,
+  "contractVersion": "D4-C/D4-F-A",
+  "sourceRoute": "/api/activity/state-facts/controlled-persist"
+}
+
+6.2 Rejected before write
+
+{
+  "ok": false,
+  "decision": "rejected",
+  "rejectionCode": "string",
+  "stateFactsCreated": 0,
+  "writesAttempted": false,
+  "safeMessage": "string"
+}
+
+6.3 Idempotent duplicate
+
+{
+  "ok": true,
+  "decision": "already_exists",
+  "stateFactId": "uuid",
+  "idempotencyStatus": "duplicate_prevented",
+  "stateFactsCreated": 0,
+  "writesAttempted": false
+}
+
+6.4 Shadow-only input rejected for persistence
+
+{
+  "ok": false,
+  "decision": "shadow_only_not_persisted",
+  "rejectionCode": "SHADOW_ONLY_NOT_PERSISTABLE",
+  "stateFactsCreated": 0,
+  "writesAttempted": false
+}
+
+7. Future test matrix
+
+7.1 No-write tests before implementation
+
+Before any route/helper implementation:
+- confirm D4-E-B still has no Supabase import;
+- confirm D4-E-B still has no .from("value_object_state_facts");
+- confirm no controlled-persist route exists yet;
+- confirm no new state fact is created.
+
+7.2 Auth tests
+
+Required future tests:
+- no session -> reject 401;
+- session exists but no app_user -> reject;
+- placeholder UUID -> reject;
+- client sends user_id -> ignored/rejected, never persisted.
+
+7.3 Value Object access tests
+
+Required future tests:
+- missing valueObjectId -> reject;
+- non-existing valueObjectId -> reject;
+- valueObjectId belongs to another user/actor -> reject;
+- public value object without write permission -> reject;
+- own personal value object -> eligible for next gates;
+- organization value object with valid actor role -> eligible for next gates.
+
+7.4 Dimension tests
+
+Required future tests:
+- unknown dimension -> reject;
+- inactive dimension -> reject;
+- active system_estimate dimension -> eligible for next gates;
+- user_confirmed dimension without confirmation -> reject;
+- proxy_only dimension with unsafe wording -> reject.
+
+7.5 Contract validation tests
+
+Required future tests:
+- AI-only sourceType -> reject or shadow_only, no insert;
+- high cortisol / medical overclaim -> reject;
+- deal closed / income overclaim without business evidence -> reject;
+- safe language practice duration -> eligible;
+- safe walking duration -> eligible;
+- safe sales email count -> eligible;
+- financial pressure only with explicit confirmation -> eligible.
+
+7.6 Persistence proof tests
+
+Required future tests:
+- accepted case increases value_object_state_facts count by exactly 1;
+- rejected case increases count by 0;
+- shadow_only case increases count by 0;
+- duplicate case increases count by 0;
+- inserted row has correction_status = active;
+- inserted row has metadata_json.rollbackable = true;
+- inserted row has metadata_json.idempotency_key;
+- inserted row has evidence_json as object.
+
+7.7 Regression tests
+
+Required future tests:
+- D4-E-B route remains no-write;
+- D4-E-B response still reports noWriteGuarantee true;
+- D4-E-B response still reports wouldPersist false;
+- D4-E-B response still reports writesAttempted false;
+- D4-E-B route still does not import Supabase.
+
+8. Implementation order recommendation
+
+D4-F-B-C-C does not implement code.
+
+Recommended future order:
+
+1. D4-F-B-C-D — implementation readiness checklist.
+2. D4-F-B-D-A — create types.ts only, no runtime writes.
+3. D4-F-B-D-B — create auth resolver helper with tests, no state fact writes.
+4. D4-F-B-D-C — create target value object resolver helper with tests, no state fact writes.
+5. D4-F-B-D-D — create dimension resolver helper with tests, no state fact writes.
+6. D4-F-B-D-E — create contract validator helper with tests, no state fact writes.
+7. D4-F-B-D-F — create payload builder helper with tests, no state fact writes.
+8. D4-F-B-D-G — create idempotency helper with tests, no state fact writes.
+9. D4-F-B-D-H — only then create controlled persist helper behind strict tests.
+10. D4-F-B-D-I — create route only after helper tests pass.
+11. D4-F-B-D-J — runtime write-count proof with one safe accepted case and multiple rejected cases.
+
+9. Explicit non-goals
+
+This mapping plan does not:
+- create SQL;
+- modify schema;
+- create migration;
+- create route;
+- create helper files;
+- import Supabase into a new runtime path;
+- insert state facts;
+- create state snapshots;
+- create state engine;
+- create Next Best Action runtime;
+- create UI;
+- create Value Object subtypes;
+- change RLS;
+- weaken D4-C / D4-F-A contract.
+
+10. Final readiness decision
+
+Decision:
+Proceed to implementation readiness checklist, not implementation.
+
+Rationale:
+The source-to-helper mapping is now clear enough to define implementation readiness, but direct runtime write implementation still needs:
+- final helper path confirmation;
+- exact payload validation rules;
+- exact idempotency behavior;
+- exact test scripts;
+- exact before/after write-count proof design;
+- confirmation that D4-E-B remains shadow-only.
+
+Recommended next step:
+P4.10.0-C8-I-D4-F-B-C-D — controlled persistence implementation readiness checklist.
+
+End of D4-F-B-C-C mapping plan.
