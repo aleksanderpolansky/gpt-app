@@ -1,0 +1,1617 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-C-B — Source Inspection Interpretation Memo
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-C-B
+Type: documentation-only interpretation memo
+Status: DESIGN ONLY / NO SQL / NO ROUTE / NO HELPER IMPLEMENTATION / NO DB WRITES / NO STATE FACTS CREATED
+
+FIX1 note:
+- Previous generation attempt produced an empty Source-derived observations section because Add-BooleanObservation rejected an empty collection.
+- This FIX1 rewrites the memo and requires at least 9 source-derived observations before passing marker check.
+
+Previous closed steps:
+- P4.10.0-C8-I-D4-F-B-A — read-only helper audit report
+  Commit: c26c086
+- P4.10.0-C8-I-D4-F-B-B — persistence helper contract
+  Commit: 24aeada
+- P4.10.0-C8-I-D4-F-B-C-A — targeted source inspection report
+  Commit: 6ccce0d
+
+Source report:
+- docs/value-objects/p4-10-0-c8-i-d4-f-b-c-a-targeted-source-inspection-report.txt
+
+Hard boundaries:
+- No SQL migration is created.
+- No API route is created.
+- No helper is implemented.
+- No Supabase write path is added.
+- No insert into value_object_state_facts is performed.
+- No update of state_dimensions is performed.
+- No state engine is created.
+- No Next Best Action runtime is created.
+- No Value Object subtype is created.
+
+Core preserved principles:
+- A shadow candidate is not a state fact.
+- An insertDraft is not a state fact.
+- AI-only direct persistence remains blocked.
+- D4-E-B shadow route must not be reused as a write route.
+- category-derivation-controlled-production-persist-proof is reference-only for proof style.
+- value_object_id alone is not enough for persistence permission.
+
+Git status before memo creation:
+?? docs/value-objects/p4-10-0-c8-i-d4-f-b-c-b-source-inspection-interpretation-memo.txt
+
+
+Current HEAD log:
+6ccce0d docs: add C8-I-D4-F-B-C-A source inspection report
+24aeada docs: add C8-I-D4-F-B-B persistence helper contract
+c26c086 docs: add C8-I-D4-F-B-A helper audit report
+940bae9 docs: add C8-I-D4-F-A controlled persistence gate design
+a8881d2 feat: add C8-I-D4-E-B shadow state signal route
+d6ee4f7 docs: add C8-I-D4-D internal state signal evaluator design
+502c26d docs: add C8-I-D4-C state fact creation contract
+0da4722 docs: add C8-I-D4-B state facts read-only audit report
+0ceafce docs: add C8-I-D4-A controlled state facts governance plan
+d3553fc docs: add C8-I-D3 seed execution smoke check report
+
+
+Target files interpreted:
+
+Path                                                                                        Exists LineCount
+----                                                                                        ------ ---------
+lib/auth0.ts                                                                                  True         3
+lib/supabase.ts                                                                               True        14
+lib/activity/activityUserContext.ts                                                           True       111
+src/app/api/me/route.ts                                                                       True        10
+src/app/api/sync-user/route.ts                                                                True       294
+src/app/api/value-objects/route.ts                                                            True       354
+src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts   True       822
+src/app/api/activity/debug/state-signal-candidate-shadow-test/route.ts                        True       984
+
+
+
+
+============================================================
+1. Source-derived observations
+============================================================
+
+- OK: Auth0 client convention — lib/auth0.ts defines the Auth0 client convention to reuse.
+- OK: Supabase shared client convention — lib/supabase.ts defines a shared Supabase convention to inspect/reuse.
+- OK: Activity user context helper candidate — lib/activity/activityUserContext.ts contains auth/user-context logic and is a candidate for reuse or extraction.
+- OK: Sync-user mapping reference — src/app/api/sync-user/route.ts is a key reference for Auth0 identity to app_users mapping.
+- OK: Value object route uses value_objects — src/app/api/value-objects/route.ts is a required reference for target value object access.
+- OK: Value object route has ownership/access fields — value-objects route includes fields that can inform access design.
+- OK: Persist-proof debug route contains insert/proof style — controlled-production-persist-proof route can be used only as a reference for proof/test style.
+- OK: Shadow state signal route remains no-write — D4-E-B shadow route contains no-write markers and must remain separate from future write path.
+- OK: State facts not directly present in shadow route as persistence table target — shadow route does not appear to target value_object_state_facts via Supabase .from().
+
+============================================================
+2. Interpretation: auth/user resolution
+============================================================
+
+The future controlled state fact persistence path must start from existing Auth0/session conventions, not from a manually supplied user_id.
+
+Interpretation decision:
+- A future helper should be designed around resolveAuthenticatedStateFactActor.
+- It must derive the authenticated user from session context.
+- It must map Auth0 identity to app_users using existing project conventions.
+- It must reject missing session, missing app user, placeholder UUID, and ambiguous identity.
+- It must not allow client-provided user_id to become the persisted user_id.
+
+Relevant evidence snippets:
+
+lib/auth0.ts:
+
+Pattern: Auth0Client
+Match line: 1
+Context:
+    1: import { Auth0Client } from "@auth0/nextjs-auth0/server";
+    2: 
+    3: export const auth0 = new Auth0Client();
+
+Pattern: Auth0Client
+Match line: 3
+Context:
+    2: 
+    3: export const auth0 = new Auth0Client();
+
+lib/activity/activityUserContext.ts:
+
+Pattern: getSession
+Match line: 32
+Context:
+   27:   personActor: ActivityActor | null;
+   28:   errorResponse: NextResponse | null;
+   29: };
+   30: 
+   31: export async function getActivityUserContext(): Promise<ActivityUserContext> {
+   32:   const session = await auth0.getSession();
+   33: 
+   34:   if (!session?.user) {
+   35:     return {
+   36:       appUser: null,
+   37:       person: null,
+   38:       personActor: null,
+   39:       errorResponse: NextResponse.json(
+   40:         { error: "Not authenticated" },
+   41:         { status: 401 }
+   42:       ),
+   43:     };
+   44:   }
+
+Pattern: app_users
+Match line: 47
+Context:
+   42:       ),
+   43:     };
+   44:   }
+   45: 
+   46:   const { data: appUser, error: appUserError } = await supabase
+   47:     .from("app_users")
+   48:     .select("*")
+   49:     .eq("auth0_sub", session.user.sub)
+   50:     .single();
+   51: 
+   52:   if (appUserError || !appUser) {
+   53:     return {
+   54:       appUser: null,
+   55:       person: null,
+   56:       personActor: null,
+   57:       errorResponse: NextResponse.json(
+   58:         { error: appUserError?.message ?? "App user not found" },
+   59:         { status: 500 }
+
+Pattern: user_id
+Match line: 13
+Context:
+    8:   [key: string]: unknown;
+    9: };
+   10: 
+   11: export type ActivityPerson = {
+   12:   id: string;
+   13:   user_id: string;
+   14:   [key: string]: unknown;
+   15: };
+   16: 
+   17: export type ActivityActor = {
+   18:   id: string;
+   19:   person_id?: string | null;
+   20:   actor_type?: string | null;
+   21:   [key: string]: unknown;
+   22: };
+   23: 
+   24: export type ActivityUserContext = {
+   25:   appUser: ActivityAppUser | null;
+
+Pattern: user_id
+Match line: 69
+Context:
+   64:   const typedAppUser = appUser as ActivityAppUser;
+   65: 
+   66:   const { data: person, error: personError } = await supabase
+   67:     .from("persons")
+   68:     .select("*")
+   69:     .eq("user_id", typedAppUser.id)
+   70:     .single();
+   71: 
+   72:   if (personError || !person) {
+   73:     return {
+   74:       appUser: null,
+   75:       person: null,
+   76:       personActor: null,
+   77:       errorResponse: NextResponse.json(
+   78:         { error: personError?.message ?? "Person not found" },
+   79:         { status: 500 }
+   80:       ),
+   81:     };
+
+src/app/api/me/route.ts:
+
+Pattern: getSession
+Match line: 4
+Context:
+    1: import { auth0 } from "../../../../lib/auth0";
+    2: 
+    3: export async function GET() {
+    4:   const session = await auth0.getSession();
+    5: 
+    6:   return Response.json({
+    7:     isAuthenticated: Boolean(session?.user),
+    8:     user: session?.user ?? null,
+    9:   });
+   10: }
+
+src/app/api/sync-user/route.ts:
+
+Pattern: app_users
+Match line: 18
+Context:
+   12:     );
+   13:   }
+   14: 
+   15:   const user = session.user;
+   16: 
+   17:   const { data: appUser, error: appUserError } = await supabase
+   18:     .from("app_users")
+   19:     .upsert(
+   20:       {
+   21:         auth0_sub: user.sub,
+   22:         email: user.email,
+   23:         name: user.name,
+   24:         picture: user.picture,
+   25:         updated_at: new Date().toISOString(),
+   26:       },
+   27:       {
+   28:         onConflict: "auth0_sub",
+   29:       }
+   30:     )
+   31:     .select()
+   32:     .single();
+
+Pattern: user.sub
+Match line: 21
+Context:
+   15:   const user = session.user;
+   16: 
+   17:   const { data: appUser, error: appUserError } = await supabase
+   18:     .from("app_users")
+   19:     .upsert(
+   20:       {
+   21:         auth0_sub: user.sub,
+   22:         email: user.email,
+   23:         name: user.name,
+   24:         picture: user.picture,
+   25:         updated_at: new Date().toISOString(),
+   26:       },
+   27:       {
+   28:         onConflict: "auth0_sub",
+   29:       }
+   30:     )
+   31:     .select()
+   32:     .single();
+   33: 
+   34:   if (appUserError) {
+   35:     return NextResponse.json(
+
+Pattern: email
+Match line: 22
+Context:
+   18:     .from("app_users")
+   19:     .upsert(
+   20:       {
+   21:         auth0_sub: user.sub,
+   22:         email: user.email,
+   23:         name: user.name,
+   24:         picture: user.picture,
+   25:         updated_at: new Date().toISOString(),
+   26:       },
+   27:       {
+   28:         onConflict: "auth0_sub",
+   29:       }
+   30:     )
+
+Pattern: email
+Match line: 61
+Context:
+   57:     const { data: createdPerson, error: createdPersonError } = await supabase
+   58:       .from("persons")
+   59:       .insert({
+   60:         user_id: appUser.id,
+   61:         full_name: user.name ?? appUser.email ?? "Unnamed user",
+   62:         short_name: user.name ?? appUser.email ?? "User",
+   63:         status: "active",
+   64:       })
+   65:       .select()
+   66:       .single();
+   67: 
+   68:     if (createdPersonError) {
+   69:       return NextResponse.json(
+
+Pattern: email
+Match line: 62
+Context:
+   58:       .from("persons")
+   59:       .insert({
+   60:         user_id: appUser.id,
+   61:         full_name: user.name ?? appUser.email ?? "Unnamed user",
+   62:         short_name: user.name ?? appUser.email ?? "User",
+   63:         status: "active",
+   64:       })
+   65:       .select()
+   66:       .single();
+   67: 
+   68:     if (createdPersonError) {
+   69:       return NextResponse.json(
+   70:         { error: createdPersonError.message },
+
+Pattern: email
+Match line: 100
+Context:
+   96:       .from("actors")
+   97:       .insert({
+   98:         actor_type: "person",
+   99:         person_id: person.id,
+  100:         display_name: person.full_name ?? person.short_name ?? appUser.email ?? "User",
+  101:         status: "active",
+  102:       })
+  103:       .select()
+  104:       .single();
+  105: 
+  106:     if (createdActorError) {
+  107:       return NextResponse.json(
+  108:         { error: createdActorError.message },
+
+============================================================
+3. Interpretation: Supabase convention
+============================================================
+
+The future controlled persistence route should use the repository's existing Supabase convention.
+
+Interpretation decision:
+- Do not invent a new Supabase client style.
+- Inspect lib/supabase.ts as the source of the shared client convention.
+- Reuse route patterns already present in existing API routes.
+- Do not introduce direct client-side writes to value_object_state_facts.
+
+Relevant evidence snippets:
+
+lib/supabase.ts:
+
+Pattern: createClient
+Match line: 1
+Context:
+    1: import { createClient } from "@supabase/supabase-js";
+    2: 
+    3: const supabaseUrl = process.env.SUPABASE_URL;
+    4: const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    5: 
+    6: if (!supabaseUrl) {
+    7:   throw new Error("Missing SUPABASE_URL");
+    8: }
+    9: 
+
+Pattern: createClient
+Match line: 14
+Context:
+   10: if (!supabaseServiceRoleKey) {
+   11:   throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+   12: }
+   13: 
+   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+Pattern: supabase
+Match line: 1
+Context:
+    1: import { createClient } from "@supabase/supabase-js";
+    2: 
+    3: const supabaseUrl = process.env.SUPABASE_URL;
+    4: const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    5: 
+    6: if (!supabaseUrl) {
+    7:   throw new Error("Missing SUPABASE_URL");
+    8: }
+    9: 
+
+Pattern: supabase
+Match line: 3
+Context:
+    1: import { createClient } from "@supabase/supabase-js";
+    2: 
+    3: const supabaseUrl = process.env.SUPABASE_URL;
+    4: const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    5: 
+    6: if (!supabaseUrl) {
+    7:   throw new Error("Missing SUPABASE_URL");
+    8: }
+    9: 
+   10: if (!supabaseServiceRoleKey) {
+   11:   throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+
+Pattern: supabase
+Match line: 4
+Context:
+    1: import { createClient } from "@supabase/supabase-js";
+    2: 
+    3: const supabaseUrl = process.env.SUPABASE_URL;
+    4: const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    5: 
+    6: if (!supabaseUrl) {
+    7:   throw new Error("Missing SUPABASE_URL");
+    8: }
+    9: 
+   10: if (!supabaseServiceRoleKey) {
+   11:   throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+   12: }
+
+Pattern: supabase
+Match line: 6
+Context:
+    2: 
+    3: const supabaseUrl = process.env.SUPABASE_URL;
+    4: const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    5: 
+    6: if (!supabaseUrl) {
+    7:   throw new Error("Missing SUPABASE_URL");
+    8: }
+    9: 
+   10: if (!supabaseServiceRoleKey) {
+   11:   throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+   12: }
+   13: 
+   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+Pattern: supabase
+Match line: 7
+Context:
+    3: const supabaseUrl = process.env.SUPABASE_URL;
+    4: const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    5: 
+    6: if (!supabaseUrl) {
+    7:   throw new Error("Missing SUPABASE_URL");
+    8: }
+    9: 
+   10: if (!supabaseServiceRoleKey) {
+   11:   throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+   12: }
+   13: 
+   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+src/app/api/sync-user/route.ts:
+
+Pattern: supabase
+Match line: 3
+Context:
+    1: import { NextResponse } from "next/server";
+    2: import { auth0 } from "../../../../lib/auth0";
+    3: import { supabase } from "../../../../lib/supabase";
+    4: 
+    5: export async function POST() {
+    6:   const session = await auth0.getSession();
+    7: 
+    8:   if (!session?.user) {
+    9:     return NextResponse.json(
+   10:       { error: "Not authenticated" },
+   11:       { status: 401 }
+
+Pattern: supabase
+Match line: 17
+Context:
+   14: 
+   15:   const user = session.user;
+   16: 
+   17:   const { data: appUser, error: appUserError } = await supabase
+   18:     .from("app_users")
+   19:     .upsert(
+   20:       {
+   21:         auth0_sub: user.sub,
+   22:         email: user.email,
+   23:         name: user.name,
+   24:         picture: user.picture,
+   25:         updated_at: new Date().toISOString(),
+
+Pattern: supabase
+Match line: 41
+Context:
+   38:     );
+   39:   }
+   40: 
+   41:   const { data: existingPerson, error: existingPersonError } = await supabase
+   42:     .from("persons")
+   43:     .select("*")
+   44:     .eq("user_id", appUser.id)
+   45:     .maybeSingle();
+   46: 
+   47:   if (existingPersonError) {
+   48:     return NextResponse.json(
+   49:       { error: existingPersonError.message },
+
+Pattern: supabase
+Match line: 57
+Context:
+   54:   let person = existingPerson;
+   55: 
+   56:   if (!person) {
+   57:     const { data: createdPerson, error: createdPersonError } = await supabase
+   58:       .from("persons")
+   59:       .insert({
+   60:         user_id: appUser.id,
+   61:         full_name: user.name ?? appUser.email ?? "Unnamed user",
+   62:         short_name: user.name ?? appUser.email ?? "User",
+   63:         status: "active",
+   64:       })
+   65:       .select()
+
+Pattern: supabase
+Match line: 78
+Context:
+   75:     person = createdPerson;
+   76:   }
+   77: 
+   78:   const { data: existingActor, error: existingActorError } = await supabase
+   79:     .from("actors")
+   80:     .select("*")
+   81:     .eq("person_id", person.id)
+   82:     .eq("actor_type", "person")
+   83:     .maybeSingle();
+   84: 
+   85:   if (existingActorError) {
+   86:     return NextResponse.json(
+
+Pattern: supabase
+Match line: 95
+Context:
+   92:   let actor = existingActor;
+   93: 
+   94:   if (!actor) {
+   95:     const { data: createdActor, error: createdActorError } = await supabase
+   96:       .from("actors")
+   97:       .insert({
+   98:         actor_type: "person",
+   99:         person_id: person.id,
+  100:         display_name: person.full_name ?? person.short_name ?? appUser.email ?? "User",
+  101:         status: "active",
+  102:       })
+  103:       .select()
+
+Pattern: supabase
+Match line: 116
+Context:
+  113:     actor = createdActor;
+  114:   }
+  115: 
+  116:   const { data: existingPersonalSpace, error: existingPersonalSpaceError } = await supabase
+  117:     .from("spaces")
+  118:     .select("*")
+  119:     .eq("owner_user_id", appUser.id)
+  120:     .eq("space_type", "personal")
+  121:     .maybeSingle();
+  122: 
+  123:   if (existingPersonalSpaceError) {
+  124:     return NextResponse.json(
+
+Pattern: supabase
+Match line: 133
+Context:
+  130:   let personalSpace = existingPersonalSpace;
+  131: 
+  132:   if (!personalSpace) {
+  133:     const { data: createdPersonalSpace, error: createdPersonalSpaceError } = await supabase
+  134:       .from("spaces")
+  135:       .insert({
+  136:         owner_user_id: appUser.id,
+  137:         space_type: "personal",
+  138:         title: "Personal Space",
+  139:         description: "Default personal space",
+  140:         status: "active",
+  141:       })
+
+Pattern: .from(
+Match line: 18
+Context:
+   15:   const user = session.user;
+   16: 
+   17:   const { data: appUser, error: appUserError } = await supabase
+   18:     .from("app_users")
+   19:     .upsert(
+   20:       {
+   21:         auth0_sub: user.sub,
+   22:         email: user.email,
+   23:         name: user.name,
+   24:         picture: user.picture,
+   25:         updated_at: new Date().toISOString(),
+   26:       },
+
+Pattern: .from(
+Match line: 42
+Context:
+   39:   }
+   40: 
+   41:   const { data: existingPerson, error: existingPersonError } = await supabase
+   42:     .from("persons")
+   43:     .select("*")
+   44:     .eq("user_id", appUser.id)
+   45:     .maybeSingle();
+   46: 
+   47:   if (existingPersonError) {
+   48:     return NextResponse.json(
+   49:       { error: existingPersonError.message },
+   50:       { status: 500 }
+
+Pattern: .from(
+Match line: 58
+Context:
+   55: 
+   56:   if (!person) {
+   57:     const { data: createdPerson, error: createdPersonError } = await supabase
+   58:       .from("persons")
+   59:       .insert({
+   60:         user_id: appUser.id,
+   61:         full_name: user.name ?? appUser.email ?? "Unnamed user",
+   62:         short_name: user.name ?? appUser.email ?? "User",
+   63:         status: "active",
+   64:       })
+   65:       .select()
+   66:       .single();
+
+Pattern: .from(
+Match line: 79
+Context:
+   76:   }
+   77: 
+   78:   const { data: existingActor, error: existingActorError } = await supabase
+   79:     .from("actors")
+   80:     .select("*")
+   81:     .eq("person_id", person.id)
+   82:     .eq("actor_type", "person")
+   83:     .maybeSingle();
+   84: 
+   85:   if (existingActorError) {
+   86:     return NextResponse.json(
+   87:       { error: existingActorError.message },
+
+Pattern: .from(
+Match line: 96
+Context:
+   93: 
+   94:   if (!actor) {
+   95:     const { data: createdActor, error: createdActorError } = await supabase
+   96:       .from("actors")
+   97:       .insert({
+   98:         actor_type: "person",
+   99:         person_id: person.id,
+  100:         display_name: person.full_name ?? person.short_name ?? appUser.email ?? "User",
+  101:         status: "active",
+  102:       })
+  103:       .select()
+  104:       .single();
+
+Pattern: .from(
+Match line: 117
+Context:
+  114:   }
+  115: 
+  116:   const { data: existingPersonalSpace, error: existingPersonalSpaceError } = await supabase
+  117:     .from("spaces")
+  118:     .select("*")
+  119:     .eq("owner_user_id", appUser.id)
+  120:     .eq("space_type", "personal")
+  121:     .maybeSingle();
+  122: 
+  123:   if (existingPersonalSpaceError) {
+  124:     return NextResponse.json(
+  125:       { error: existingPersonalSpaceError.message },
+
+Pattern: .from(
+Match line: 134
+Context:
+  131: 
+  132:   if (!personalSpace) {
+  133:     const { data: createdPersonalSpace, error: createdPersonalSpaceError } = await supabase
+  134:       .from("spaces")
+  135:       .insert({
+  136:         owner_user_id: appUser.id,
+  137:         space_type: "personal",
+  138:         title: "Personal Space",
+  139:         description: "Default personal space",
+  140:         status: "active",
+  141:       })
+  142:       .select()
+
+Pattern: .from(
+Match line: 156
+Context:
+  153:   }
+  154: 
+  155:   const { data: existingMarketplaceSpace, error: existingMarketplaceSpaceError } = await supabase
+  156:     .from("spaces")
+  157:     .select("*")
+  158:     .eq("owner_user_id", appUser.id)
+  159:     .eq("space_type", "marketplace")
+  160:     .maybeSingle();
+  161: 
+  162:   if (existingMarketplaceSpaceError) {
+  163:     return NextResponse.json(
+  164:       { error: existingMarketplaceSpaceError.message },
+
+============================================================
+4. Interpretation: Value Object access
+============================================================
+
+The future controlled persistence path must not treat value_object_id as sufficient authorization.
+
+Interpretation decision:
+- A dedicated resolver resolveStateFactTargetValueObject is required.
+- It must load the target value object server-side.
+- It must check whether the authenticated actor/user may attach a state fact to that value object.
+- Personal Value Objects should only allow the owner/user context.
+- Enterprise/organization Value Objects need organization/actor permission logic.
+- Public/catalog visibility must not imply state-fact write permission.
+
+Relevant evidence snippets:
+
+src/app/api/value-objects/route.ts:
+
+Pattern: value_objects
+Match line: 241
+Context:
+  236:   if (errorResponse) {
+  237:     return errorResponse;
+  238:   }
+  239: 
+  240:   const { data: valueObjects, error: valueObjectsError } = await supabase
+  241:     .from("value_objects")
+  242:     .select(
+  243:       `
+  244:       *,
+  245:       organizations (
+  246:         id,
+  247:         organization_name,
+  248:         organization_type,
+  249:         status
+  250:       )
+  251:     `
+  252:     )
+  253:     .eq("owner_actor_id", personActor.id)
+
+Pattern: value_objects
+Match line: 315
+Context:
+  310:   if (organizationAccessErrorResponse) {
+  311:     return organizationAccessErrorResponse;
+  312:   }
+  313: 
+  314:   const { data: valueObject, error: valueObjectError } = await supabase
+  315:     .from("value_objects")
+  316:     .insert({
+  317:       owner_actor_id: personActor.id,
+  318:       organization_id: organization.id,
+  319:       value_type: valueType,
+  320:       title,
+  321:       description,
+  322:       unit_type: unitType,
+  323:       default_price: defaultPrice,
+  324:       default_currency: defaultCurrency,
+  325:       default_duration_minutes: defaultDurationMinutes,
+  326:       is_marketplace_sellable: isMarketplaceSellable,
+  327:       is_free_possible: isFreePossible,
+
+Pattern: owner_actor_id
+Match line: 253
+Context:
+  248:         organization_type,
+  249:         status
+  250:       )
+  251:     `
+  252:     )
+  253:     .eq("owner_actor_id", personActor.id)
+  254:     .order("created_at", { ascending: false });
+  255: 
+  256:   if (valueObjectsError) {
+  257:     return NextResponse.json(
+  258:       { error: valueObjectsError.message },
+  259:       { status: 500 }
+  260:     );
+  261:   }
+  262: 
+  263:   return NextResponse.json({
+  264:     ok: true,
+  265:     valueObjects,
+
+Pattern: owner_actor_id
+Match line: 317
+Context:
+  312:   }
+  313: 
+  314:   const { data: valueObject, error: valueObjectError } = await supabase
+  315:     .from("value_objects")
+  316:     .insert({
+  317:       owner_actor_id: personActor.id,
+  318:       organization_id: organization.id,
+  319:       value_type: valueType,
+  320:       title,
+  321:       description,
+  322:       unit_type: unitType,
+  323:       default_price: defaultPrice,
+  324:       default_currency: defaultCurrency,
+  325:       default_duration_minutes: defaultDurationMinutes,
+  326:       is_marketplace_sellable: isMarketplaceSellable,
+  327:       is_free_possible: isFreePossible,
+  328:       status: "active",
+  329:     })
+
+Pattern: organization_id
+Match line: 318
+Context:
+  313: 
+  314:   const { data: valueObject, error: valueObjectError } = await supabase
+  315:     .from("value_objects")
+  316:     .insert({
+  317:       owner_actor_id: personActor.id,
+  318:       organization_id: organization.id,
+  319:       value_type: valueType,
+  320:       title,
+  321:       description,
+  322:       unit_type: unitType,
+  323:       default_price: defaultPrice,
+  324:       default_currency: defaultCurrency,
+  325:       default_duration_minutes: defaultDurationMinutes,
+  326:       is_marketplace_sellable: isMarketplaceSellable,
+  327:       is_free_possible: isFreePossible,
+  328:       status: "active",
+  329:     })
+  330:     .select(
+
+Pattern: user_id
+Match line: 14
+Context:
+    9:   auth0_sub?: string | null;
+   10: };
+   11: 
+   12: type PersonRow = {
+   13:   id: string;
+   14:   user_id?: string | null;
+   15: };
+   16: 
+   17: type ActorRow = {
+   18:   id: string;
+   19:   person_id?: string | null;
+   20:   actor_type?: string | null;
+   21: };
+   22: 
+   23: type OrganizationRow = {
+   24:   id: string;
+   25:   organization_name: string | null;
+   26:   organization_type: string | null;
+
+Pattern: user_id
+Match line: 28
+Context:
+   23: type OrganizationRow = {
+   24:   id: string;
+   25:   organization_name: string | null;
+   26:   organization_type: string | null;
+   27:   status: string | null;
+   28:   created_by_user_id: string | null;
+   29: };
+   30: 
+   31: type CurrentUserContext =
+   32:   | {
+   33:       appUser: AppUserRow;
+   34:       person: PersonRow;
+   35:       personActor: ActorRow;
+   36:       errorResponse: null;
+   37:     }
+   38:   | {
+   39:       appUser: null;
+   40:       person: null;
+
+Pattern: user_id
+Match line: 163
+Context:
+  158:     };
+  159:   }
+  160: 
+  161:   const { data: person, error: personError } = await supabase
+  162:     .from("persons")
+  163:     .select("id, user_id")
+  164:     .eq("user_id", appUser.id)
+  165:     .single();
+  166: 
+  167:   if (personError || !person) {
+  168:     return {
+  169:       appUser: null,
+  170:       person: null,
+  171:       personActor: null,
+  172:       errorResponse: NextResponse.json(
+  173:         { error: personError?.message ?? "Person not found" },
+  174:         { status: 500 }
+  175:       ),
+
+Pattern: user_id
+Match line: 164
+Context:
+  159:   }
+  160: 
+  161:   const { data: person, error: personError } = await supabase
+  162:     .from("persons")
+  163:     .select("id, user_id")
+  164:     .eq("user_id", appUser.id)
+  165:     .single();
+  166: 
+  167:   if (personError || !person) {
+  168:     return {
+  169:       appUser: null,
+  170:       person: null,
+  171:       personActor: null,
+  172:       errorResponse: NextResponse.json(
+  173:         { error: personError?.message ?? "Person not found" },
+  174:         { status: 500 }
+  175:       ),
+  176:     };
+
+Pattern: user_id
+Match line: 212
+Context:
+  207:   appUserId: string,
+  208:   organizationId: string
+  209: ): Promise<OrganizationAccessResult> {
+  210:   const { data: organization, error: organizationError } = await supabase
+  211:     .from("organizations")
+  212:     .select("id, organization_name, organization_type, status, created_by_user_id")
+  213:     .eq("id", organizationId)
+  214:     .eq("created_by_user_id", appUserId)
+  215:     .single();
+  216: 
+  217:   if (organizationError || !organization) {
+  218:     return {
+  219:       organization: null,
+  220:       errorResponse: NextResponse.json(
+  221:         { error: "Organization not found or access denied" },
+  222:         { status: 403 }
+  223:       ),
+  224:     };
+
+Pattern: user_id
+Match line: 214
+Context:
+  209: ): Promise<OrganizationAccessResult> {
+  210:   const { data: organization, error: organizationError } = await supabase
+  211:     .from("organizations")
+  212:     .select("id, organization_name, organization_type, status, created_by_user_id")
+  213:     .eq("id", organizationId)
+  214:     .eq("created_by_user_id", appUserId)
+  215:     .single();
+  216: 
+  217:   if (organizationError || !organization) {
+  218:     return {
+  219:       organization: null,
+  220:       errorResponse: NextResponse.json(
+  221:         { error: "Organization not found or access denied" },
+  222:         { status: 403 }
+  223:       ),
+  224:     };
+  225:   }
+  226: 
+
+============================================================
+5. Interpretation: debug persist proof route
+============================================================
+
+The category derivation controlled production persist proof route may be useful as a style/proof reference, but it must not be copied as the state facts persistence route.
+
+Interpretation decision:
+- Use it only for route/test style, before/after count proof, and controlled proof discipline.
+- Do not reuse its domain assumptions for value_object_state_facts.
+- Do not weaken D4-C / D4-F-A gates to fit the old route.
+- Do not write state facts through an activity/category debug path.
+
+Relevant evidence snippets:
+
+src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts:
+
+Pattern: debug
+Match line: 21
+Context:
+   17: 
+   18: export const dynamic = "force-dynamic";
+   19: 
+   20: const ENDPOINT =
+   21:   "/api/activity/debug/category-derivation-controlled-production-persist-proof";
+   22: 
+   23: const P4_STEP =
+   24:   "P4.10.0-C8-E-F6-E-E-controlled-production-persist-proof";
+   25: 
+   26: const PROOF_MARKER =
+   27:   "P4.10.0-C8-E-F6-E-controlled-production-persist-proof";
+   28: 
+   29: const PROOF_PURPOSE = "controlled_production_persist_proof";
+
+Pattern: debug
+Match line: 45
+Context:
+   41:   "walked to work for 10 minutes during controlled production persist proof";
+   42: 
+   43: const DEFAULT_TITLE = "F6-E controlled production_persist proof";
+   44: const DEFAULT_DESCRIPTION =
+   45:   "Controlled debug-only proof event for Category Derivation production_persist persistence and adapter-level idempotency.";
+   46: 
+   47: type JsonRecord = Record<string, unknown>;
+   48: 
+   49: function isRecord(value: unknown): value is JsonRecord {
+   50:   return typeof value === "object" && value !== null && !Array.isArray(value);
+   51: }
+   52: 
+   53: function asRecord(value: unknown): JsonRecord | null {
+
+Pattern: debug
+Match line: 344
+Context:
+  340:     enabled: ACTIVITY_RECORDING_ENABLED,
+  341:     expectedMode: EXPECTED_MODE,
+  342:     currentConfig: getCategoryDerivationRouteRunnerConfigSummary(config),
+  343:     purpose:
+  344:       "Debug-only controlled production_persist proof route. GET only describes the route; it does not execute the proof.",
+  345:     safety: {
+  346:       debugOnly: true,
+  347:       modifiesCompleteRoute: false,
+  348:       callsCompleteRoute: false,
+  349:       callsRouteRunnerDirectly: false,
+  350:       callsOpenAi: false,
+  351:       createsUi: false,
+  352:       createsMigration: false,
+
+Pattern: debug
+Match line: 346
+Context:
+  342:     currentConfig: getCategoryDerivationRouteRunnerConfigSummary(config),
+  343:     purpose:
+  344:       "Debug-only controlled production_persist proof route. GET only describes the route; it does not execute the proof.",
+  345:     safety: {
+  346:       debugOnly: true,
+  347:       modifiesCompleteRoute: false,
+  348:       callsCompleteRoute: false,
+  349:       callsRouteRunnerDirectly: false,
+  350:       callsOpenAi: false,
+  351:       createsUi: false,
+  352:       createsMigration: false,
+  353:       changesSchema: false,
+  354:       changesRls: false,
+
+Pattern: debug
+Match line: 747
+Context:
+  743:     completeRouteModified: false,
+  744:     completeRouteCalled: false,
+  745:     eventCompletedByThisRoute: false,
+  746:     productionPersistEnabled: config.isProductionPersistMode,
+  747:     productionPersistAllowedOnlyForThisDebugProof: true,
+  748:     failActivityComplete: config.failActivityComplete,
+  749:     openAiCalled: false,
+  750:     uiCreated: false,
+  751:     migrationCreated: false,
+  752:     schemaChanged: false,
+  753:     rlsChanged: false,
+  754:     permissionsChanged: false,
+  755:     sqlExecutedByPowerShell: false,
+
+Pattern: debug
+Match line: 757
+Context:
+  753:     rlsChanged: false,
+  754:     permissionsChanged: false,
+  755:     sqlExecutedByPowerShell: false,
+  756:     cleanupEligible: true,
+  757:     debugOnly: true,
+  758:     nonCanonicalBusinessEvent: true,
+  759:   };
+  760: 
+  761:   const fullPass =
+  762:     firstCallPass &&
+  763:     secondCallPass &&
+  764:     sameDerivationRunId &&
+  765:     proofObject.secondCallDidNotPersist &&
+
+Pattern: debug
+Match line: 785
+Context:
+  781:       isProductionPersistMode: config.isProductionPersistMode,
+  782:       shouldPersist: config.shouldPersist,
+  783:       shouldResolve: config.shouldResolve,
+  784:       failActivityComplete: config.failActivityComplete,
+  785:       includeResponseDebug: config.includeResponseDebug,
+  786:       summary: configSummary,
+  787:     },
+  788:     firstCall: compactAdapterResult(firstCall),
+  789:     secondCall: compactAdapterResult(secondCall),
+  790:     proof: proofObject,
+  791:     dbVerification,
+  792:     rows: {
+  793:       routeRunnerRuns: routeRunnerRuns.map((row) => ({
+
+Pattern: .insert(
+Match line: 209
+Context:
+  204: 
+  205:   const supabaseAny = supabase as any;
+  206: 
+  207:   return await supabaseAny
+  208:     .from("activity_events")
+  209:     .insert({
+  210:       user_id: params.userId,
+  211:       performed_by_actor_id: params.actorId,
+  212:       acting_as_actor_id: params.actorId,
+  213:       acting_for_actor_id: params.actorId,
+  214:       activity_type_id: null,
+  215:       activity_template_id: null,
+  216:       template_id: null,
+  217:       event_code: null,
+  218:       input_text: params.inputText,
+  219:       title: params.title,
+  220:       description: params.description,
+  221:       started_at: startedAt,
+
+Pattern: count
+Match line: 133
+Context:
+  128:     mode: result.mode,
+  129:     ok: result.ok,
+  130:     skipped: result.skipped,
+  131:     reason: result.reason,
+  132:     derivationRunId: result.derivationRunId,
+  133:     candidateCount: result.candidateCount,
+  134:     resolvedCandidateCount: result.resolvedCandidateCount,
+  135:     persistenceDerivationRowsCreated: result.persistenceDerivationRowsCreated,
+  136:     warnings: result.warnings,
+  137:     errors: result.errors,
+  138:     idempotency: result.idempotency,
+  139:     routeRunner: result.routeRunner,
+  140:     config: result.config,
+  141:   };
+  142: }
+  143: 
+  144: function mapActivityEvent(event: any) {
+  145:   return {
+
+Pattern: count
+Match line: 134
+Context:
+  129:     ok: result.ok,
+  130:     skipped: result.skipped,
+  131:     reason: result.reason,
+  132:     derivationRunId: result.derivationRunId,
+  133:     candidateCount: result.candidateCount,
+  134:     resolvedCandidateCount: result.resolvedCandidateCount,
+  135:     persistenceDerivationRowsCreated: result.persistenceDerivationRowsCreated,
+  136:     warnings: result.warnings,
+  137:     errors: result.errors,
+  138:     idempotency: result.idempotency,
+  139:     routeRunner: result.routeRunner,
+  140:     config: result.config,
+  141:   };
+  142: }
+  143: 
+  144: function mapActivityEvent(event: any) {
+  145:   return {
+  146:     id: event.id,
+
+Pattern: count
+Match line: 300
+Context:
+  295:   runs: JsonRecord[];
+  296:   derivations: JsonRecord[];
+  297: }) {
+  298:   const { proofEvent, expectedRunId, runs, derivations } = params;
+  299: 
+  300:   const matchingExpectedRunCount = expectedRunId
+  301:     ? runs.filter((run) => run.id === expectedRunId).length
+  302:     : 0;
+  303: 
+  304:   const routeRunnerSpecificRunsCount = runs.length;
+  305:   const activityCategoryDerivationsCount = derivations.length;
+  306:   const noDuplicateRuns = routeRunnerSpecificRunsCount <= 1;
+  307:   const proofEventHasMarkers = proofEventHasRequiredMarkers(proofEvent);
+  308: 
+  309:   return {
+  310:     pass:
+  311:       Boolean(proofEvent?.id) &&
+  312:       proofEventHasMarkers &&
+
+Pattern: count
+Match line: 304
+Context:
+  299: 
+  300:   const matchingExpectedRunCount = expectedRunId
+  301:     ? runs.filter((run) => run.id === expectedRunId).length
+  302:     : 0;
+  303: 
+  304:   const routeRunnerSpecificRunsCount = runs.length;
+  305:   const activityCategoryDerivationsCount = derivations.length;
+  306:   const noDuplicateRuns = routeRunnerSpecificRunsCount <= 1;
+  307:   const proofEventHasMarkers = proofEventHasRequiredMarkers(proofEvent);
+  308: 
+  309:   return {
+  310:     pass:
+  311:       Boolean(proofEvent?.id) &&
+  312:       proofEventHasMarkers &&
+  313:       routeRunnerSpecificRunsCount === 1 &&
+  314:       matchingExpectedRunCount === 1 &&
+  315:       activityCategoryDerivationsCount === EXPECTED_DERIVATION_ROWS &&
+  316:       noDuplicateRuns,
+
+Pattern: count
+Match line: 305
+Context:
+  300:   const matchingExpectedRunCount = expectedRunId
+  301:     ? runs.filter((run) => run.id === expectedRunId).length
+  302:     : 0;
+  303: 
+  304:   const routeRunnerSpecificRunsCount = runs.length;
+  305:   const activityCategoryDerivationsCount = derivations.length;
+  306:   const noDuplicateRuns = routeRunnerSpecificRunsCount <= 1;
+  307:   const proofEventHasMarkers = proofEventHasRequiredMarkers(proofEvent);
+  308: 
+  309:   return {
+  310:     pass:
+  311:       Boolean(proofEvent?.id) &&
+  312:       proofEventHasMarkers &&
+  313:       routeRunnerSpecificRunsCount === 1 &&
+  314:       matchingExpectedRunCount === 1 &&
+  315:       activityCategoryDerivationsCount === EXPECTED_DERIVATION_ROWS &&
+  316:       noDuplicateRuns,
+  317:     proofEventExists: Boolean(proofEvent?.id),
+
+Pattern: count
+Match line: 306
+Context:
+  301:     ? runs.filter((run) => run.id === expectedRunId).length
+  302:     : 0;
+  303: 
+  304:   const routeRunnerSpecificRunsCount = runs.length;
+  305:   const activityCategoryDerivationsCount = derivations.length;
+  306:   const noDuplicateRuns = routeRunnerSpecificRunsCount <= 1;
+  307:   const proofEventHasMarkers = proofEventHasRequiredMarkers(proofEvent);
+  308: 
+  309:   return {
+  310:     pass:
+  311:       Boolean(proofEvent?.id) &&
+  312:       proofEventHasMarkers &&
+  313:       routeRunnerSpecificRunsCount === 1 &&
+  314:       matchingExpectedRunCount === 1 &&
+  315:       activityCategoryDerivationsCount === EXPECTED_DERIVATION_ROWS &&
+  316:       noDuplicateRuns,
+  317:     proofEventExists: Boolean(proofEvent?.id),
+  318:     proofEventHasRequiredMarkers: proofEventHasMarkers,
+
+Pattern: count
+Match line: 313
+Context:
+  308: 
+  309:   return {
+  310:     pass:
+  311:       Boolean(proofEvent?.id) &&
+  312:       proofEventHasMarkers &&
+  313:       routeRunnerSpecificRunsCount === 1 &&
+  314:       matchingExpectedRunCount === 1 &&
+  315:       activityCategoryDerivationsCount === EXPECTED_DERIVATION_ROWS &&
+  316:       noDuplicateRuns,
+  317:     proofEventExists: Boolean(proofEvent?.id),
+  318:     proofEventHasRequiredMarkers: proofEventHasMarkers,
+  319:     routeRunnerSpecificRunsCount,
+  320:     routeRunnerSpecificRunsPass: routeRunnerSpecificRunsCount === 1,
+  321:     expectedDerivationRunId: expectedRunId,
+  322:     expectedDerivationRunExists: matchingExpectedRunCount === 1,
+  323:     expectedDerivationRunActualCount: matchingExpectedRunCount,
+  324:     expectedActivityCategoryDerivationsCount: EXPECTED_DERIVATION_ROWS,
+  325:     activityCategoryDerivationsCount,
+
+Pattern: count
+Match line: 314
+Context:
+  309:   return {
+  310:     pass:
+  311:       Boolean(proofEvent?.id) &&
+  312:       proofEventHasMarkers &&
+  313:       routeRunnerSpecificRunsCount === 1 &&
+  314:       matchingExpectedRunCount === 1 &&
+  315:       activityCategoryDerivationsCount === EXPECTED_DERIVATION_ROWS &&
+  316:       noDuplicateRuns,
+  317:     proofEventExists: Boolean(proofEvent?.id),
+  318:     proofEventHasRequiredMarkers: proofEventHasMarkers,
+  319:     routeRunnerSpecificRunsCount,
+  320:     routeRunnerSpecificRunsPass: routeRunnerSpecificRunsCount === 1,
+  321:     expectedDerivationRunId: expectedRunId,
+  322:     expectedDerivationRunExists: matchingExpectedRunCount === 1,
+  323:     expectedDerivationRunActualCount: matchingExpectedRunCount,
+  324:     expectedActivityCategoryDerivationsCount: EXPECTED_DERIVATION_ROWS,
+  325:     activityCategoryDerivationsCount,
+  326:     activityCategoryDerivationsPass:
+
+============================================================
+6. Interpretation: D4-E-B shadow route
+============================================================
+
+The D4-E-B shadow route remains a contract-evaluation/debug route and must not become a write route.
+
+Interpretation decision:
+- Keep D4-E-B as shadow/no-write.
+- A future controlled write route must be separate.
+- A future controlled write route must re-run validation and must not trust insertDraft blindly.
+- The shadow route may be used as candidate input reference, not as persistence code.
+
+Relevant evidence snippets:
+
+src/app/api/activity/debug/state-signal-candidate-shadow-test/route.ts:
+
+Pattern: noWriteGuarantee
+Match line: 148
+Context:
+  143:   endpoint: typeof ENDPOINT;
+  144:   postEndpoint: typeof POST_ENDPOINT;
+  145:   p4Step: typeof P4_STEP;
+  146:   contractVersion: typeof CONTRACT_VERSION;
+  147:   mode: typeof MODE;
+  148:   noWriteGuarantee: true;
+  149:   wouldPersist: false;
+  150:   decision: Decision;
+  151:   rejectionCode: string | null;
+  152:   rejectionReasons: string[];
+  153:   failedGates: string[];
+  154:   passedGates: string[];
+  155:   safeAlternative: string | null;
+  156:   candidate: StateSignalCandidate | null;
+  157:   insertDraft: Record<string, unknown> | null;
+  158:   safeWording: StateSignalCandidate["safeWording"] | null;
+
+Pattern: noWriteGuarantee
+Match line: 673
+Context:
+  668:     endpoint: ENDPOINT,
+  669:     postEndpoint: POST_ENDPOINT,
+  670:     p4Step: P4_STEP,
+  671:     contractVersion: CONTRACT_VERSION,
+  672:     mode: MODE,
+  673:     noWriteGuarantee: true,
+  674:     wouldPersist: false,
+  675:     decision: params.decision,
+  676:     rejectionCode: params.rejectionCode,
+  677:     rejectionReasons: params.rejectionReasons,
+  678:     failedGates: params.failedGates,
+  679:     passedGates: params.passedGates,
+  680:     safeAlternative: params.safeAlternative,
+  681:     candidate: params.candidate,
+  682:     insertDraft: params.insertDraft,
+  683:     safeWording: params.safeWording,
+
+Pattern: noWriteGuarantee
+Match line: 835
+Context:
+  830:       correction_status: "active",
+  831:       metadata_json: {
+  832:         ...candidate.metadata,
+  833:         shadowOnlyInsertDraft: true,
+  834:         wouldPersist: false,
+  835:         noWriteGuarantee: true,
+  836:       },
+  837:     },
+  838:     safeWording: candidate.safeWording,
+  839:     dimensionResolved: true,
+  840:     claimPolicy: dimension.claimPolicy,
+  841:   });
+  842: }
+  843: 
+  844: function buildUnknownDimensionCandidate(params: {
+  845:   dimensionKey: string;
+
+Pattern: noWriteGuarantee
+Match line: 963
+Context:
+  958:     endpoint: ENDPOINT,
+  959:     postEndpoint: POST_ENDPOINT,
+  960:     p4Step: P4_STEP,
+  961:     contractVersion: CONTRACT_VERSION,
+  962:     mode: MODE,
+  963:     noWriteGuarantee: true,
+  964:     wouldPersist: false,
+  965:     routeIsShadowOnly: true,
+  966:     supportedDimensions: SEEDED_DIMENSIONS.map((dimension) => ({
+  967:       dimensionKey: dimension.dimensionKey,
+  968:       title: dimension.title,
+  969:       claimPolicy: dimension.claimPolicy,
+  970:       isSensitive: dimension.isSensitive,
+  971:       defaultPrivacyLevel: dimension.defaultPrivacyLevel,
+  972:     })),
+  973:     supportedScenarios: [
+
+Pattern: wouldPersist
+Match line: 149
+Context:
+  144:   postEndpoint: typeof POST_ENDPOINT;
+  145:   p4Step: typeof P4_STEP;
+  146:   contractVersion: typeof CONTRACT_VERSION;
+  147:   mode: typeof MODE;
+  148:   noWriteGuarantee: true;
+  149:   wouldPersist: false;
+  150:   decision: Decision;
+  151:   rejectionCode: string | null;
+  152:   rejectionReasons: string[];
+  153:   failedGates: string[];
+  154:   passedGates: string[];
+  155:   safeAlternative: string | null;
+  156:   candidate: StateSignalCandidate | null;
+  157:   insertDraft: Record<string, unknown> | null;
+  158:   safeWording: StateSignalCandidate["safeWording"] | null;
+  159:   debug: {
+
+Pattern: wouldPersist
+Match line: 674
+Context:
+  669:     postEndpoint: POST_ENDPOINT,
+  670:     p4Step: P4_STEP,
+  671:     contractVersion: CONTRACT_VERSION,
+  672:     mode: MODE,
+  673:     noWriteGuarantee: true,
+  674:     wouldPersist: false,
+  675:     decision: params.decision,
+  676:     rejectionCode: params.rejectionCode,
+  677:     rejectionReasons: params.rejectionReasons,
+  678:     failedGates: params.failedGates,
+  679:     passedGates: params.passedGates,
+  680:     safeAlternative: params.safeAlternative,
+  681:     candidate: params.candidate,
+  682:     insertDraft: params.insertDraft,
+  683:     safeWording: params.safeWording,
+  684:     debug: {
+
+Pattern: wouldPersist
+Match line: 834
+Context:
+  829:       valid_to: candidate.validTo,
+  830:       correction_status: "active",
+  831:       metadata_json: {
+  832:         ...candidate.metadata,
+  833:         shadowOnlyInsertDraft: true,
+  834:         wouldPersist: false,
+  835:         noWriteGuarantee: true,
+  836:       },
+  837:     },
+  838:     safeWording: candidate.safeWording,
+  839:     dimensionResolved: true,
+  840:     claimPolicy: dimension.claimPolicy,
+  841:   });
+  842: }
+  843: 
+  844: function buildUnknownDimensionCandidate(params: {
+
+Pattern: wouldPersist
+Match line: 964
+Context:
+  959:     postEndpoint: POST_ENDPOINT,
+  960:     p4Step: P4_STEP,
+  961:     contractVersion: CONTRACT_VERSION,
+  962:     mode: MODE,
+  963:     noWriteGuarantee: true,
+  964:     wouldPersist: false,
+  965:     routeIsShadowOnly: true,
+  966:     supportedDimensions: SEEDED_DIMENSIONS.map((dimension) => ({
+  967:       dimensionKey: dimension.dimensionKey,
+  968:       title: dimension.title,
+  969:       claimPolicy: dimension.claimPolicy,
+  970:       isSensitive: dimension.isSensitive,
+  971:       defaultPrivacyLevel: dimension.defaultPrivacyLevel,
+  972:     })),
+  973:     supportedScenarios: [
+  974:       "worked on German for 30 minutes",
+
+Pattern: writesAttempted
+Match line: 165
+Context:
+  160:     dimensionResolved: boolean;
+  161:     sourceResolved: boolean;
+  162:     claimPolicy: ClaimPolicy | null;
+  163:     routeIsShadowOnly: true;
+  164:     supabaseImported: false;
+  165:     writesAttempted: false;
+  166:     stateFactsCreated: 0;
+  167:     stateDimensionsCreated: 0;
+  168:   };
+  169: };
+  170: 
+  171: const SEEDED_DIMENSIONS: DimensionDefinition[] = [
+  172:   {
+  173:     dimensionKey: "attention_load",
+  174:     title: "Attention Load",
+  175:     domain: "cognitive",
+
+Pattern: writesAttempted
+Match line: 690
+Context:
+  685:       dimensionResolved: params.dimensionResolved,
+  686:       sourceResolved: true,
+  687:       claimPolicy: params.claimPolicy,
+  688:       routeIsShadowOnly: true,
+  689:       supabaseImported: false,
+  690:       writesAttempted: false,
+  691:       stateFactsCreated: 0,
+  692:       stateDimensionsCreated: 0,
+  693:     },
+  694:   };
+  695: }
+  696: 
+  697: function evaluateCandidate(params: {
+  698:   candidate: StateSignalCandidate;
+  699:   dimension: DimensionDefinition | undefined;
+  700:   inputText: string;
+
+Pattern: AI_ONLY_DIRECT_PERSIST_BLOCKED
+Match line: 762
+Context:
+  757:       "AI-only candidate is shadow-only by default and cannot directly persist.",
+  758:     );
+  759: 
+  760:     return buildResultBase({
+  761:       decision: "shadow_only",
+  762:       rejectionCode: "AI_ONLY_DIRECT_PERSIST_BLOCKED",
+  763:       rejectionReasons,
+  764:       failedGates,
+  765:       passedGates,
+  766:       safeAlternative:
+  767:         "Use rule/system validation or user confirmation before persistence.",
+  768:       candidate,
+  769:       insertDraft: null,
+  770:       safeWording: candidate.safeWording,
+  771:       dimensionResolved: true,
+  772:       claimPolicy: dimension.claimPolicy,
+
+============================================================
+7. Recommended helper reuse / new helper map
+============================================================
+
+Future helper contract should be split as follows:
+
+7.1 resolveAuthenticatedStateFactActor
+- Reuse Auth0/session conventions.
+- Reuse or extract logic from activityUserContext and sync-user mapping.
+- Must reject placeholder UUIDs.
+- Must not trust client-provided user_id.
+
+7.2 resolveStateFactTargetValueObject
+- New dedicated resolver is required.
+- It should inspect value_objects ownership/access fields.
+- It should not treat public visibility as write permission.
+
+7.3 resolveStateFactDimension
+- New dedicated resolver is required.
+- It should load state_dimensions server-side.
+- It should reject unknown/inactive dimensions.
+
+7.4 validateStateFactCandidateAgainstContract
+- New dedicated validator is required.
+- It should re-run D4-C / D4-F-A gates.
+- It should block AI-only direct persistence.
+- It should block forbidden overclaims.
+
+7.5 buildValueObjectStateFactInsertPayload
+- New dedicated payload builder is required.
+- It should match existing value_object_state_facts constraints from D4-B.
+- It should always include rollback/correction metadata.
+
+7.6 checkStateFactIdempotency
+- New dedicated idempotency check is required before insert.
+- Final strategy remains to be chosen in a later step.
+
+7.7 persistStateFactControlled
+- Final insert helper should exist only after the above gates are implemented.
+- It must be server-only.
+- It must be covered by before/after count proof tests.
+
+============================================================
+8. Readiness decision
+============================================================
+
+Decision:
+The project is ready for a controlled persistence implementation plan, but not yet for direct runtime write implementation.
+
+Reason:
+- Auth/session conventions exist.
+- Supabase conventions exist.
+- Value Object route references exist.
+- Shadow candidate contract exists.
+- But a safe state fact persistence path still needs exact helper placement, payload shape, idempotency strategy, and tests before code.
+
+============================================================
+9. Recommended next step
+============================================================
+
+P4.10.0-C8-I-D4-F-B-C-C — controlled persistence source-to-helper mapping plan.
+
+That step should remain design-only and define:
+- exact helper file path
+- exact route path for future implementation
+- exact test matrix
+- exact accepted/rejected payload shapes
+- exact no-write / write-count proof requirements
+- exact rule that D4-E-B remains shadow-only
+
+End of D4-F-B-C-B memo.
