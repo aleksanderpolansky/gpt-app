@@ -1,0 +1,380 @@
+﻿# GPT-APP / AI-NAVIGATOR
+# P4.10.0-C8-I-A0 — State Layers Architecture Decisions
+
+Date: 2026-05-24
+Status: DOCUMENT-ONLY DECISION
+Runtime impact: NONE
+SQL impact: NONE
+UI impact: NONE
+
+## 1. Purpose
+
+This document locks the architecture decisions required before implementing state layers, baseline context, similarity/relevance resolver and Next Best Action v0.
+
+This step must be completed before:
+- SQL audit for state tables,
+- additive migrations,
+- state engine implementation,
+- UI/control panel work,
+- recommendation runtime code.
+
+## 2. Current confirmed starting point
+
+The project has already passed the previous semantic proof stages:
+
+- C2 production complete proof PASS.
+- C8-G/C8-H business/sales deterministic semantic coverage PASS.
+- Family/childcare semantic coverage is preserved.
+- The case "учил математику с ребёнком" requires role/care/purpose layers, not only math + child + learning.
+- Business/sales postponed cases S6/S7/S11/S12 are protected by forbidden overclaim logic.
+- C8-H was extractor/doc/proof-only.
+- No Supabase SQL and no OpenAI runtime execution is required for repeating C8-H proof unless ruleExtractor.ts changes.
+
+## 3. Core decision D1 — Unified Value Object
+
+All Value Objects remain one unified entity.
+
+The platform must NOT introduce mandatory Value Object subtypes such as:
+
+- context_value_object,
+- biological_value_object,
+- baseline_value_object,
+- process_value_object,
+- commercial_value_object,
+- medical_value_object,
+- state_value_object.
+
+Reason:
+
+One object can simultaneously act as:
+- context,
+- process,
+- goal,
+- commercial object,
+- personal analytics object,
+- baseline factor,
+- state carrier,
+- influence source.
+
+Introducing mandatory subtypes would create sorting/filtering conflicts and future migration problems.
+
+## 4. Core decision D2 — No value_object_kind as required architecture axis
+
+Do NOT add `value_object_kind` as a required field or primary classification axis.
+
+If a later UI needs labels or views, they must be derived from:
+
+- semantic category signature,
+- actor ownership,
+- parent/child hierarchy,
+- source activity,
+- state dimensions,
+- similarity edges,
+- relevance edges,
+- current analytical context.
+
+Value Object identity is not defined by enum subtype.
+
+Working formula:
+
+Value Object identity =
+owner / actor
++ semantic signature
++ parent/child position
++ activity exposure history
++ state facts / snapshots
++ similarity / relevance graph
++ user corrections
+
+## 5. Core decision D3 — State through state tables, not object types
+
+State must be represented outside the core Value Object row.
+
+Planned universal state layer:
+
+- state_dimensions
+- value_object_state_facts
+- activity_state_deltas
+- value_object_state_snapshots
+- state_relevance_rules
+- value_object_similarity_edges
+- value_object_relevance_edges
+
+State tables must support:
+
+- value,
+- window,
+- source,
+- confidence,
+- evidence,
+- validity period,
+- correction status,
+- privacy level,
+- medical/social claim restrictions where relevant.
+
+## 6. Core decision D4 — Category is not state fact
+
+A category candidate may become:
+
+- semantic category,
+- state hook,
+- signal,
+- metric candidate,
+- risk flag,
+- relevance clue.
+
+But a category candidate is NOT automatically a state fact.
+
+Example:
+
+"coffee" may create hooks:
+- alertness signal,
+- sleep risk if late,
+- possible anxiety/stress proxy.
+
+But it must NOT directly create claims like:
+- high cortisol,
+- dopamine increase,
+- exact hormonal state.
+
+Example:
+
+"учил математику с ребёнком" may create hooks:
+- family_care_load,
+- parental_care,
+- helping_child_learn,
+- family_attention_balance.
+
+But it must NOT automatically claim:
+- family climate improved,
+- child development objectively improved,
+- emotional relationship improved.
+
+## 7. Core decision D5 — Baseline Context as graph
+
+Baseline Context is not one questionnaire, not one profile row and not one Value Object.
+
+Baseline Context is a graph of:
+
+- actors,
+- actor relationships,
+- activity history,
+- Value Objects,
+- state facts,
+- state snapshots,
+- environment factors,
+- education/career/family/social factors,
+- source/confidence/evidence,
+- influence/relevance links.
+
+Baseline Context modifies interpretation of state and recommendations.
+
+It must remain:
+- private by default,
+- editable by the user,
+- evidence-based,
+- confidence-aware,
+- non-deterministic.
+
+The system must not turn Baseline Context into a social score or fatalistic profile.
+
+## 8. Core decision D6 — Actor compatibility
+
+Actor can be:
+
+- user,
+- organization,
+- family,
+- household,
+- external person,
+- institution,
+- group.
+
+An actor can perform activities that create or modify Value Objects.
+
+A Value Object can later influence another actor or shared context.
+
+Actor relationships are a future layer and must not replace the basic Value Object parent/child hierarchy.
+
+Important separation:
+
+- parent/child hierarchy = structural tree of Value Objects;
+- actor relationships = who is connected with whom;
+- relevance/influence edges = what affects what analytically;
+- similarity edges = what is semantically similar.
+
+## 9. Core decision D7 — Similarity and relevance are separate
+
+Similarity and relevance must not be merged.
+
+Similarity:
+
+- means objects are semantically similar;
+- calculated mainly through weighted category overlap;
+- example: German learning and Spanish learning are similar.
+
+Relevance:
+
+- means one object/state matters for analysis of another;
+- can exist without similarity;
+- example: sleep is relevant for German learning, but not semantically similar to German learning.
+
+Resolver v0 should load:
+
+1. target Value Object own category signature,
+2. target own states,
+3. parents and children,
+4. top semantic similar Value Objects,
+5. relevant influencing Value Objects,
+6. current state frames,
+7. obligations and constraints,
+8. user-selected direction,
+9. compact context package.
+
+It must not load full user history by default.
+
+## 10. Core decision D8 — Next Best Action v0
+
+Next Best Action v0 must NOT begin as one automatic prescription.
+
+Correct flow:
+
+1. Detect weakest directions.
+2. Sort directions from weakest to strongest.
+3. Ask the user which direction they want to work on now.
+4. After user selection, generate action candidates.
+5. Filter candidates through current state, baseline context, available time, obligations, environment and risk flags.
+6. Offer several variants with explanation.
+7. Record feedback/correction after execution or refusal.
+
+Direction examples:
+
+- health,
+- recovery,
+- family,
+- finance,
+- career,
+- languages,
+- project,
+- work,
+- social,
+- rest,
+- user-defined top-level Value Objects.
+
+Weakest direction score may include:
+
+- underattention_score,
+- deterioration_score,
+- deadline_pressure,
+- goal_priority_weight,
+- overfocus_penalty,
+- availability_fit.
+
+## 11. Action candidate levels
+
+After user chooses direction, the system may offer action candidates of different depth:
+
+- playful / light,
+- restorative,
+- practical,
+- medium analytical,
+- deep analytical,
+- revenue-oriented,
+- communication-oriented,
+- family/care-oriented.
+
+Example for language/career direction:
+
+- 5 minutes of flashcards,
+- 10 office phrases,
+- 15 minutes of vacancy response,
+- 30 minutes of structured cover letter,
+- deep analysis of job strategy.
+
+Choice depends on:
+
+- fatigue,
+- focus,
+- stress,
+- available time,
+- interruptions,
+- family care load,
+- financial pressure,
+- current obligations.
+
+## 12. Safety and overclaim protection
+
+The platform must not make medical, hormonal, psychological or social deterministic claims without direct data.
+
+Forbidden examples:
+
+- "high cortisol",
+- "low dopamine",
+- "depression",
+- "bad genetics",
+- "poor family climate",
+- "client acquired",
+- "deal closed",
+- "income received",
+- "muscle growth confirmed".
+
+Allowed proxy language:
+
+- "stress_load_estimate",
+- "recovery_need",
+- "fatigue_level",
+- "focus_readiness",
+- "possible emotional load",
+- "financial direction attention",
+- "pipeline-building effort",
+- "family care load signal".
+
+Any sensitive state must include:
+
+- source,
+- confidence,
+- evidence,
+- privacy level,
+- correction possibility.
+
+## 13. What this step explicitly does NOT do
+
+This step does NOT:
+
+- create SQL migrations,
+- modify runtime code,
+- modify ruleExtractor.ts,
+- run OpenAI,
+- run Supabase SQL,
+- create UI,
+- create state engine,
+- create active categories from AI output,
+- create state facts from category candidates.
+
+## 14. Next steps after C8-I-A0
+
+After this document is committed, continue with:
+
+- P4.10.0-C8-I-A1 — State/context hooks readiness map.
+- P4.10.0-C8-I-A2 — State fact vs signal contract.
+- P4.10.0-C8-I-A3 — State dimensions MVP.
+- P4.10.0-C8-I-A4 — Similarity/Relevance Resolver concept.
+- P4.10.0-C8-I-B — Governance/schema plan.
+- P4.10.0-C8-I-C — Supabase SQL audit file.
+- P4.10.0-C8-I-D — Additive migration design.
+
+Implementation begins only after these readiness blocks.
+
+## 15. Definition of Done
+
+C8-I-A0 is complete when:
+
+- unified Value Object decision is documented;
+- no mandatory VO subtype decision is documented;
+- state-through-tables decision is documented;
+- Baseline Context graph decision is documented;
+- similarity/relevance separation is documented;
+- weakest-direction NBA v0 decision is documented;
+- forbidden overclaim protection is documented;
+- no runtime/code/SQL changes were made;
+- the file is committed as a doc-only architecture decision.
