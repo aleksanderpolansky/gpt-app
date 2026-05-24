@@ -1,0 +1,70 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-D-H - Controlled Persist Helper Report
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-D-H
+Type: implementation step with controlled persist helper only
+Status: CONTROLLED PERSIST HELPER ONLY / NO ROUTE / ONE GUARDED INSERT PATH / NO RUNTIME ROUTE PROOF YET
+
+Previous closed step:
+- P4.10.0-C8-I-D4-F-B-D-G - state fact idempotency helper
+  Commit: 1f70177
+
+Created files:
+- lib/activity/stateFacts/controlledPersistence/persist.ts
+
+Existing helper files used:
+- lib/activity/stateFacts/controlledPersistence/types.ts
+- lib/activity/stateFacts/controlledPersistence/auth.ts
+- lib/activity/stateFacts/controlledPersistence/targetValueObject.ts
+- lib/activity/stateFacts/controlledPersistence/dimension.ts
+- lib/activity/stateFacts/controlledPersistence/validator.ts
+- lib/activity/stateFacts/controlledPersistence/payloadBuilder.ts
+- lib/activity/stateFacts/controlledPersistence/idempotency.ts
+
+Helper created:
+- persistStateFactControlled
+
+Controlled gate sequence implemented:
+- authenticated actor resolver
+- target Value Object access resolver
+- state dimension resolver
+- candidate validator
+- insert payload builder
+- idempotency lookup
+- one guarded insert into value_object_state_facts
+
+Hard boundaries preserved:
+- No SQL migration created.
+- No API route created.
+- No Next.js route export created.
+- No update/delete/upsert added.
+- D4-E-B shadow route not modified.
+- No Value Object creation or update.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+- No runtime write-count proof created yet.
+
+Safety checks:
+- Required controlled persist helper markers: PASS
+- Exactly one controlled insert call: PASS
+- Forbidden unsafe write/route/action literals in persist.ts: PASS
+- Targeted ESLint: PASS
+- value_object_state_facts insert path: PRESENT BY DESIGN
+- route exports: ABSENT
+- update/delete/upsert operations: ABSENT
+
+Important notes:
+- This helper introduces the first controlled insert helper path.
+- It is not exposed by an API route in this step.
+- It re-runs all server-side gates before insert.
+- It rejects shadow-only candidates before payload building.
+- It checks idempotency before the guarded insert.
+- It never persists client-provided user_id.
+- D4-I must create the route only after this helper is committed and pushed.
+- D4-J must perform runtime write-count proof after the route exists.
+
+Recommended next step:
+P4.10.0-C8-I-D4-F-B-D-I - controlled persist route using persistStateFactControlled, followed by runtime proof planning.
+
+End of D4-F-B-D-H report.
