@@ -1,0 +1,406 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-B — Audit Interpretation and Controlled Persistence Helper Contract
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-B
+Type: non-executable design / interpretation document
+Status: DESIGN ONLY / NO SQL / NO ROUTE / NO DB WRITES / NO STATE FACTS CREATED
+
+Previous closed steps:
+- P4.10.0-C8-I-D4-E-B — shadow-mode state signal candidate debug route
+  Commit: a8881d2
+- P4.10.0-C8-I-D4-F-A — controlled state fact persistence gate design
+  Commit: 940bae9
+- P4.10.0-C8-I-D4-F-B-A — read-only helper availability audit report
+  Commit: c26c086
+
+Source document:
+- docs/value-objects/p4-10-0-c8-i-d4-f-b-a-read-only-helper-audit-report.txt
+
+IMPORTANT:
+This document does not implement persistence.
+This document does not create SQL.
+This document does not create a migration.
+This document does not create an API route.
+This document does not import Supabase into a new runtime path.
+This document does not insert into value_object_state_facts.
+This document does not update state_dimensions.
+This document does not create state snapshots.
+This document does not create a state engine.
+This document does not create Next Best Action runtime.
+This document does not create Value Object subtypes.
+
+Core preserved principles:
+- A shadow candidate is not a state fact.
+- An insertDraft is not a state fact.
+- AI-only direct persistence remains blocked.
+- D4-E-B debug route must not be reused as a write route.
+- Persistence must pass a controlled server-side gate.
+- No placeholder UUID may ever be persisted.
+- No public/client-side direct access to state facts may be introduced.
+
+1. What D4-F-B-A audit established
+
+The audit established that the project already has the basic conventions and helper areas needed for a future controlled persistence design:
+
+1.1 Key files exist
+
+The audit confirmed the existence of these relevant files:
+- lib/auth0.ts
+- lib/supabase.ts
+- src/app/api/me/route.ts
+- src/app/api/sync-user/route.ts
+- src/app/api/value-objects/route.ts
+- src/app/api/value-objects/debug/cloud-profile/route.ts
+- src/app/api/activity/debug/state-signal-candidate-shadow-test/route.ts
+- docs/value-objects/p4-10-0-c8-i-d4-f-a-controlled-state-fact-persistence-gate-design.txt
+
+Interpretation:
+The future controlled persistence route should not invent a new authentication or database style from scratch.
+It should inspect and reuse existing project conventions.
+
+1.2 Auth pattern exists
+
+The audit found repeated getSession usage across API routes and also found lib/activity/activityUserContext.ts.
+
+Interpretation:
+The future state fact persistence path should start with the same authenticated-user pattern already used in the project.
+Before implementation, the exact user resolution flow must be inspected in:
+- lib/auth0.ts
+- lib/activity/activityUserContext.ts
+- src/app/api/me/route.ts
+- src/app/api/sync-user/route.ts
+
+1.3 Supabase route conventions exist
+
+The audit found many existing route files using:
+- supabase
+- .from(
+- .select(
+- .insert(
+- .eq(
+
+The audit did not find route-level createClient or getSupabase patterns in the route convention search.
+
+Interpretation:
+The future persistence route should follow the already-existing Supabase client convention in this repository, most likely through lib/supabase.ts or existing imported supabase object patterns.
+This must be verified by targeted source inspection before coding.
+
+1.4 Value Object route and debug cloud profile route exist
+
+The audit confirmed:
+- src/app/api/value-objects/route.ts
+- src/app/api/value-objects/debug/cloud-profile/route.ts
+
+Interpretation:
+Before any state fact write, the system must resolve whether the current authenticated user/actor can attach a state fact to the target value_object_id.
+The future helper contract must not assume that value_object_id alone is sufficient.
+
+1.5 State fact / state dimension audit already exists
+
+Earlier D4-B established that value_object_state_facts and state_dimensions exist and that value_object_state_facts currently has strict constraints and RLS protection.
+
+Interpretation:
+D4-F should not weaken RLS.
+D4-F should not modify schema yet.
+D4-F should prepare a controlled insert payload contract that respects existing columns and constraints.
+
+1.6 Route conventions are available
+
+The audit found broad use of:
+- export async function GET
+- export async function POST
+- NextResponse.json
+- dynamic = "force-dynamic"
+
+Interpretation:
+A future controlled persistence route can follow the existing Next.js route.ts structure.
+However, D4-F-B-B still does not create the route.
+
+2. Main architectural conclusion
+
+The project is ready for a controlled persistence plan, but not ready for blind implementation.
+
+Reason:
+A real persistence route must combine four things safely:
+1. authenticated user resolution;
+2. value object access/ownership resolution;
+3. state dimension and claim policy validation;
+4. guarded insert into value_object_state_facts.
+
+The current D4-E-B route intentionally avoids all of that and remains shadow-only.
+
+3. Proposed helper contract for future implementation
+
+The future implementation should be organized as a small controlled helper layer rather than a large route body.
+
+Proposed future helper names:
+
+3.1 resolveAuthenticatedStateFactActor
+
+Purpose:
+Resolve the current authenticated app user and related actor context.
+
+Input:
+- Next.js request/session context
+
+Output:
+- appUserId
+- auth0Sub or equivalent identity key
+- email if available
+- actorId if already supported by the project
+- organization/space role context if needed later
+
+Must reject:
+- no session
+- no app user
+- placeholder UUID
+- ambiguous user identity
+
+3.2 resolveStateFactTargetValueObject
+
+Purpose:
+Resolve and authorize the target value_object_id.
+
+Input:
+- appUserId / actor context
+- valueObjectId
+
+Output:
+- valueObject row
+- ownership/access decision
+- organization_id if relevant
+- owner_actor_id if relevant
+- access mode: personal_owner / organization_actor / denied
+
+Must reject:
+- missing value_object_id
+- non-existing value_object_id
+- user has no permission
+- public/catalog visibility alone without write permission
+
+3.3 resolveStateFactDimension
+
+Purpose:
+Resolve dimension_key to an active state_dimensions row.
+
+Input:
+- dimensionKey
+
+Output:
+- dimension_id
+- dimension_key
+- claim_policy
+- is_sensitive
+- default_privacy_level
+- is_active
+
+Must reject:
+- unknown dimension
+- inactive dimension
+- missing claim_policy
+- unsafe or unsupported policy
+
+3.4 validateStateFactCandidateAgainstContract
+
+Purpose:
+Re-run D4-C / D4-F-A validation before persistence.
+
+Input:
+- candidate or insertDraft
+- authenticated user context
+- value object context
+- dimension context
+
+Output:
+- accepted controlled insert payload
+- or rejection decision
+
+Must reject:
+- AI-only direct persistence
+- forbidden overclaims
+- missing evidence_json
+- unsafe wording
+- invalid confidence
+- invalid claim_strength
+- invalid privacy_level
+- missing user confirmation for user_confirmed dimensions
+- proxy-only claims without safe proxy wording
+- no rollback/correction metadata
+- no validity handling when required
+
+3.5 buildValueObjectStateFactInsertPayload
+
+Purpose:
+Build a payload matching value_object_state_facts constraints.
+
+Output fields should include:
+- user_id
+- value_object_id
+- dimension_id when available
+- dimension_key
+- value_json
+- source_type
+- source_id when available
+- confidence
+- evidence_json
+- claim_strength
+- privacy_level
+- valid_from
+- valid_to
+- correction_status = active
+- metadata_json
+
+Must include metadata:
+- contract version
+- processor/helper version
+- source route name
+- idempotency key or deduplication basis
+- rollbackable = true
+- created_from_candidate = true
+- not_created_by_ai_directly = true
+
+3.6 checkStateFactIdempotency
+
+Purpose:
+Prevent uncontrolled duplicate facts.
+
+Possible future strategies:
+- source_type + source_id + dimension_key + value_object_id
+- activity_event_id + dimension_key + value_object_id
+- metadata_json.idempotency_key
+- supersede/correction instead of repeated blind insert
+
+D4-F-B-B does not choose the final strategy yet.
+
+3.7 persistStateFactControlled
+
+Purpose:
+Perform the actual insert only after all gates pass.
+
+Must:
+- be server-only
+- use existing Supabase convention
+- never run from debug route
+- verify before/after counts in tests
+- return persisted row id
+- return audit metadata
+
+Must not:
+- accept AI-only direct persistence
+- accept placeholder user IDs
+- bypass RLS/security assumptions
+- weaken state facts policies
+- create public state facts
+
+4. Future route contract
+
+Possible future route:
+
+POST /api/activity/state-facts/controlled-persist
+
+This route should not be created in D4-F-B-B.
+
+Future route responsibilities:
+- parse request
+- authenticate user
+- resolve app user / actor
+- resolve target value object and access
+- resolve dimension
+- validate candidate
+- build controlled insert payload
+- check idempotency
+- insert exactly one row only in accepted cases
+- return safe response
+- never expose sensitive internals publicly
+
+5. Required future test cases
+
+Before any persistence route is committed, the following tests must exist:
+
+5.1 Auth rejection
+- no session -> reject
+- missing app user -> reject
+- placeholder UUID -> reject
+
+5.2 Value object access rejection
+- missing valueObjectId -> reject
+- non-existing valueObjectId -> reject
+- valueObjectId not owned/accessible by current actor -> reject
+
+5.3 Dimension rejection
+- unknown dimension -> reject
+- inactive dimension -> reject
+
+5.4 AI-only block
+- sourceType = ai -> reject or shadow_only
+- no insert
+
+5.5 User-confirmed policy
+- financial_pressure_signal without user confirmation -> reject
+- financial_pressure_signal with explicit user confirmation -> accept only if all other gates pass
+
+5.6 Proxy-only policy
+- stress_load_estimate with safe proxy wording -> possible accept only with low claim strength and validity handling
+- high cortisol wording -> reject
+
+5.7 System-estimate policy
+- language practice duration -> possible accept
+- physical activity load duration -> possible accept
+- pipeline building effort count -> possible accept
+- no skill improvement / medical / income/deal claims
+
+5.8 Write-count proof
+- accepted case increases value_object_state_facts count by exactly 1
+- rejected/shadow_only cases increase count by 0
+
+5.9 Rollback readiness proof
+- inserted row has correction_status = active
+- metadata_json contains helper/contract/idempotency info
+- evidence_json is traceable
+
+6. What must happen before coding
+
+Before implementation, do a targeted source inspection of:
+
+- lib/auth0.ts
+- lib/supabase.ts
+- lib/activity/activityUserContext.ts
+- src/app/api/me/route.ts
+- src/app/api/sync-user/route.ts
+- src/app/api/value-objects/route.ts
+- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+- src/app/api/activity/debug/state-signal-candidate-shadow-test/route.ts
+
+Reason:
+The audit report shows where patterns exist, but D4-F-B-B still needs exact source-level interpretation before writing code.
+
+7. Recommended next step
+
+P4.10.0-C8-I-D4-F-B-C — targeted source inspection for controlled persistence design.
+
+That step should:
+- read the exact files listed above
+- document auth user resolution style
+- document Supabase import/use style
+- document value object access assumptions
+- document whether existing helper activityUserContext can be reused
+- document why category-derivation-controlled-production-persist-proof can only be a reference, not a direct template
+- produce a short implementation-readiness memo
+
+8. Non-goals of D4-F-B-B
+
+D4-F-B-B does not:
+- create SQL
+- modify schema
+- create migration
+- create route
+- import Supabase into a new runtime path
+- insert state facts
+- create state snapshots
+- create state engine
+- create Next Best Action runtime
+- create UI
+- create Value Object subtypes
+
+End of D4-F-B-B.
