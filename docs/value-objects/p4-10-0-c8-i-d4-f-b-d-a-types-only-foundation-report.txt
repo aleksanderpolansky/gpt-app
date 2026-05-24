@@ -1,0 +1,54 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-D-A — Types-only Foundation Report
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-D-A
+Type: implementation step with types only
+Status: TYPES ONLY / NO ROUTE / NO HELPER IMPLEMENTATION / NO DB WRITES / NO STATE FACTS CREATED
+
+Previous closed step:
+- P4.10.0-C8-I-D4-F-B-C-D — implementation readiness checklist
+  Commit: 2f38c8a
+
+Created files:
+- lib/activity/stateFacts/controlledPersistence/types.ts
+
+Hard boundaries preserved:
+- No SQL migration created.
+- No API route created.
+- No runtime helper implemented.
+- No database write path added.
+- No insert into value_object_state_facts.
+- No update of state_dimensions.
+- No state engine created.
+- No Next Best Action runtime created.
+- No Value Object subtype created.
+
+Safety checks:
+- Required type names: PASS
+- Forbidden import/action literals: PASS
+- Supabase import: ABSENT
+- Auth0 import: ABSENT
+- Next route/request/response imports: ABSENT
+- Runtime database actions: ABSENT
+
+Defined type groups:
+- primitive controlled persistence types
+- request/input types
+- resolved context types
+- validation/result types
+- idempotency decision type
+- value_object_state_facts insert payload type
+- persistence result union type
+
+Important notes:
+- The file is intentionally not imported by a route.
+- The file contains only type exports.
+- D4-E-B remains shadow-only.
+- AI-only direct persistence remains blocked by design.
+- valueObjectId alone remains insufficient for persistence permission.
+
+Recommended next step:
+P4.10.0-C8-I-D4-F-B-D-B — auth resolver helper with tests, no state fact writes.
+
+End of D4-F-B-D-A report.
