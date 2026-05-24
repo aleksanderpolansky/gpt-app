@@ -1,0 +1,271 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-A — Controlled State Fact Persistence Gate Design
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-A
+Type: non-executable design document
+Status: DESIGN ONLY / NO SQL / NO ROUTE / NO DB WRITES / NO STATE FACTS CREATED
+
+Previous closed steps:
+- P4.10.0-C8-I-D4-A — controlled state facts governance plan
+- P4.10.0-C8-I-D4-B — read-only state facts audit
+- P4.10.0-C8-I-D4-C — state fact creation contract
+- P4.10.0-C8-I-D4-D — non-executable internal function/API design
+- P4.10.0-C8-I-D4-E-B — shadow-mode state signal candidate debug route
+  Commit: a8881d2
+  Endpoint: /api/activity/debug/state-signal-candidate-shadow-test
+  Runtime smoke: CHECK4-FIX1 PASS
+
+IMPORTANT:
+This document does not implement persistence.
+This document does not create SQL.
+This document does not create a migration.
+This document does not create a route.
+This document does not insert into value_object_state_facts.
+This document does not update state_dimensions.
+This document does not create a state engine.
+This document does not create Next Best Action runtime.
+This document does not create Value Object subtypes.
+
+Core principle:
+A shadow candidate is not a state fact.
+An insertDraft is not a state fact.
+An accepted shadow decision only means: "this candidate could theoretically be persisted later if all controlled persistence gates pass."
+
+1. Purpose
+
+The purpose of D4-F-A is to define the future controlled gate between:
+
+A) shadow-only contract evaluation
+and
+B) real state fact persistence into value_object_state_facts.
+
+The current D4-E-B route may return:
+- decision = accept_for_controlled_persistence
+- insertDraft = shadow object
+- noWriteGuarantee = true
+- wouldPersist = false
+
+D4-F-A defines what must happen before any future system may change wouldPersist from false to true.
+
+2. Required controlled persistence gates
+
+A future persistence path must pass all of these gates:
+
+2.1 Authenticated User Gate
+The request must be connected to a real authenticated app user.
+No placeholder user_id may be persisted.
+The debug zero UUID user must never be persisted.
+
+2.2 Value Object Ownership / Access Gate
+The target value_object_id must exist.
+The current actor/user must have permission to link a state fact to that value object.
+Personal value objects remain private.
+Enterprise value objects require organization/actor permission.
+
+2.3 Dimension Resolution Gate
+dimension_key must resolve to an existing state_dimensions row.
+dimension_id should be stored when available.
+Unknown dimensions must be rejected or kept as shadow-only.
+
+2.4 Claim Policy Gate
+The dimension claim_policy controls persistence:
+- system_estimate: may be persisted only from governed rule/system source or explicit accepted processor output.
+- proxy_only: may be persisted only with safe proxy wording, low claim strength, expiry/validity handling, and no diagnostic claim.
+- user_confirmed: may be persisted only with explicit user confirmation evidence.
+
+2.5 Source Type Gate
+Allowed persistence source types:
+- manual
+- user_confirmed
+- rule
+- system
+- import
+- correction
+
+AI-only direct persistence remains blocked.
+AI may only produce candidates.
+AI-only candidate must remain shadow_only unless another governed source validates it.
+
+2.6 Evidence Gate
+evidence_json must be a JSON object.
+It must include enough traceable evidence for future audit:
+- source input text or event reference
+- rule id/version when rule-based
+- user confirmation text when user_confirmed
+- metric candidates when numeric/duration/count based
+- safe explanation of what is and is not claimed
+
+2.7 Forbidden Overclaim Gate
+The future persistence path must block:
+- medical diagnosis
+- hormone measurement claims
+- psychological diagnosis
+- legal conclusion
+- creditworthiness or employer evaluation
+- confirmed income/client/deal without governed business evidence
+- body composition claims
+- child development or parenting quality claims
+- hidden health/financial inference
+
+2.8 Safe Wording Gate
+Persisted facts must use safe wording.
+For example:
+- "language practice balance signal" is allowed.
+- "German level improved" is not allowed without assessment evidence.
+- "stress load estimate" may be allowed as proxy-only.
+- "high cortisol" must not be persisted.
+
+2.9 Confidence / Claim Strength Gate
+confidence must be between 0 and 1.
+claim_strength must remain within the DB constraint 0..5.
+Default safe mapping:
+- AI-only shadow: claim_strength 0, no persistence.
+- proxy_only: low claim_strength, usually 1.
+- system_estimate: moderate claim_strength, usually 2.
+- user_confirmed: higher but still bounded, usually 3.
+
+2.10 Privacy / Sensitivity Gate
+Default privacy level must remain private.
+Sensitive dimensions must never become public by default.
+No public_masked/public output should be designed in this D4-F phase.
+
+2.11 Validity Window / Expiry Gate
+Temporary/proxy/contextual facts must have validity handling.
+Proxy-only facts should usually have valid_from/valid_to or metadata explaining review/expiry.
+Long-term baseline facts require stronger evidence and review.
+
+2.12 Correction / Rollback Gate
+Every persisted fact must be rollbackable:
+- correction_status starts as active
+- future correction can mark corrected/revoked/superseded
+- metadata_json must include processor/contract version
+- source and evidence must support audit
+
+2.13 No Duplicate / Idempotency Gate
+Future persistence should prevent uncontrolled duplicate facts.
+Potential strategies:
+- idempotency key in metadata_json
+- source_type + source_id + dimension_key + value_object_id
+- event-based deduplication for activity_events
+- correction/supersede instead of repeated blind insert
+
+2.14 RLS / Server-only Gate
+Persistence must happen only server-side.
+Direct public client access remains blocked by RLS.
+The existing deny-all style direct public policy must not be weakened during D4-F.
+
+3. Future controlled persistence shape
+
+A future persistence function may conceptually look like:
+
+controlledPersistStateFact(input):
+- receives accepted candidate / insertDraft
+- re-runs all D4-C gates
+- re-resolves user, value object, dimension
+- validates source/evidence/privacy/claim strength
+- verifies no forbidden overclaim
+- verifies no duplicate uncontrolled insert
+- writes only if all gates pass
+- returns persisted fact id and audit metadata
+
+But D4-F-A does not implement this function.
+
+4. Future route shape
+
+A future route, if created later, should not reuse the D4-E-B debug route for writes.
+
+Possible future route:
+POST /api/activity/state-facts/controlled-persist
+
+But this is NOT created in D4-F-A.
+
+Required future runtime behavior:
+- authenticated only
+- no placeholder UUIDs
+- no debug mode writes
+- no AI-only direct persistence
+- before/after count proof in tests
+- rollback/correction test path
+- RLS-safe server-side operation
+
+5. Required test classes before any future persistence commit
+
+Before a write route is accepted, these tests must exist:
+
+5.1 Reject placeholder user id
+Input with 00000000-0000-0000-0000-000000000000 must reject.
+
+5.2 Reject unknown dimension
+candidateDimensionKey = non_existing_dimension must reject.
+
+5.3 Reject AI-only direct persistence
+sourceType = ai must remain shadow_only / blocked.
+
+5.4 Accept governed system_estimate
+Example:
+German practice 30 minutes -> language_practice_balance
+Only if user/value_object/source are real and authorized.
+
+5.5 Accept user_confirmed sensitive signal
+Example:
+financial_pressure_signal
+Only with explicit user confirmation.
+
+5.6 Reject missing user confirmation
+financial_pressure_signal without confirmation must not persist.
+
+5.7 Reject forbidden overclaim
+high cortisol, diagnosis, closed deals, level improved without evidence.
+
+5.8 Verify actual DB write count
+Before/after value_object_state_facts count must increase by exactly 1 only in accepted cases.
+
+5.9 Verify no write in rejected cases
+Rejected/shadow_only cases must not change DB counts.
+
+5.10 Verify rollback/correction readiness
+Persisted row must have correction_status=active and metadata sufficient for future correction.
+
+6. Non-goals of D4-F-A
+
+D4-F-A does not:
+- create SQL
+- modify schema
+- create migration
+- create API route
+- import Supabase
+- persist facts
+- run DB writes
+- weaken RLS
+- create state snapshots
+- create state engine
+- create Next Best Action runtime
+- create UI
+- create Value Object subtypes
+
+7. Completion criteria for D4-F-A
+
+D4-F-A is complete when:
+- this design document exists
+- it clearly defines persistence gates
+- it preserves D4-C contract boundaries
+- it confirms AI-only direct persistence remains blocked
+- it confirms shadow candidate is not a fact
+- it defines required future tests
+- it is committed as documentation only
+
+8. Next step after D4-F-A
+
+Next step should be one of:
+
+Option A:
+P4.10.0-C8-I-D4-F-B — read-only audit of current auth/value_object/state_fact helper availability before designing actual persistence route.
+
+Option B:
+P4.10.0-C8-I-D4-F-B — controlled persistence route implementation plan, still design-only.
+
+Recommended next step:
+Start with read-only audit, not implementation, because persistence depends on real user/value_object ownership and existing Supabase helper conventions.
+
+End of D4-F-A design.
