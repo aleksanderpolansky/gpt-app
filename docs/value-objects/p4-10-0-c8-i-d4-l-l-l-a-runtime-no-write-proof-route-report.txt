@@ -1,0 +1,88 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-L-A - Create Runtime No-Write Failure Proof Route
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-L-A
+Script: FIX2
+Type: debug proof route creation
+Status: RUNTIME NO-WRITE FAILURE PROOF ROUTE CREATED / TYPESCRIPT PASS / ROUTE NOT EXECUTED YET / NO SUCCESSFUL ROLLBACK EXECUTED / NO PRODUCTION ROLLBACK ROUTE CREATED
+
+FIX notes:
+- The first D4-L-L-L-A script created the route but TypeScript failed because @/lib/... did not resolve in this project.
+- FIX1 still failed because it used one too many "../" segments.
+- FIX2 uses the correct six-level project-root relative imports:
+  - ../../../../../../lib/activity/stateFacts/controlledPersistence/rollback
+  - ../../../../../../lib/supabase
+- No commit was created by the failed first/FIX1 attempts.
+
+Baseline:
+- Previous pushed commit: 89d0134
+- Previous completed step: P4.10.0-C8-I-D4-L-L-K
+- D4-L-L-K statically verified rollback.ts.
+- D4-L-L-L-A creates a debug route for runtime no-write/failure proof.
+
+Created files:
+- src/app/api/activity/debug/state-fact-rollback-no-write-proof/route.ts
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-l-a-runtime-no-write-proof-route-report.txt
+
+Created debug route:
+- /api/activity/debug/state-fact-rollback-no-write-proof
+
+This route is not:
+- a production rollback endpoint;
+- src/app/api/activity/state-facts/controlled-rollback;
+- a successful rollback proof;
+- a user-facing rollback API.
+
+Route behavior:
+- Reads state fact/audit counts before proof cases.
+- Calls rollbackStateFactControlled with intentionally invalid/failing inputs.
+- Reads state fact/audit counts after proof cases.
+- Returns ok=true only if:
+  - failure cases are rejected;
+  - counts before and after are unchanged;
+  - no write is observed.
+
+Proof cases prepared:
+1. missingAll:
+   - empty input.
+   - expected result: rejected before RPC write.
+2. missingReason:
+   - required reason is empty.
+   - expected result: rejected before RPC write.
+3. wrongValueObjectPair:
+   - known existing stateFactId with deliberately wrong valueObjectId.
+   - expected result: rejected before successful rollback write.
+
+Verification performed in this step:
+- TypeScript check passed.
+- No production controlled rollback route exists.
+- Proof route contains no direct .insert().
+- Proof route contains no direct .update().
+- Proof route contains no direct .delete().
+- Proof route contains no direct .upsert().
+- Proof route does not export POST.
+- Proof route no longer uses @/lib imports.
+- Proof route uses correct six-level project-root relative imports.
+
+What was not done:
+- The debug route was not executed in this step.
+- rollbackStateFactControlled was not called by this script.
+- public.rollback_value_object_state_fact_controlled was not called by this script.
+- No database write was performed by this script.
+- No successful rollback was executed.
+- No audit event was inserted by runtime behavior in this step.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-L-B - Execute Runtime No-Write Failure Proof.
+
+D4-L-L-L-B should:
+1. Open or fetch /api/activity/debug/state-fact-rollback-no-write-proof.
+2. Confirm JSON ok=true.
+3. Confirm noWriteObserved=true.
+4. Confirm before/after counts are identical.
+5. Confirm missingAll/missingReason/wrongValueObjectPair are rejected.
+6. Commit a runtime proof report.
+7. Still not execute successful rollback.
+
+End of D4-L-L-L-A report.
