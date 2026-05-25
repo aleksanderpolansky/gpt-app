@@ -1,0 +1,358 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-B - Read-Only Source Audit for Update/Correction/Audit Conventions
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-L-B
+Type: read-only source and database table audit
+Status: READ-ONLY AUDIT COMPLETED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED
+
+Baseline:
+- Previous pushed commit: d7575e0
+- Previous completed step: P4.10.0-C8-I-D4-L-A
+- L-A report: docs/value-objects/p4-10-0-c8-i-d4-l-a-controlled-state-fact-correction-rollback-design.txt
+- K-B report: docs/value-objects/p4-10-0-c8-i-d4-k-b-operational-guardrails-decision.txt
+- K-A report: docs/value-objects/p4-10-0-c8-i-d4-k-a-controlled-state-fact-read-only-verification-report.txt
+
+Audit scope:
+1. Search source files for update/delete/upsert/insert patterns.
+2. Search source files for state fact, correction, rollback, expiry, audit, and cancel conventions.
+3. Probe likely database tables through read-only select limit(1) calls.
+4. Decide whether existing conventions are enough to implement rollback safely without further design.
+
+Database read-only probe:
+- Checked table count: 28
+- Existing tables detected: value_object_state_facts, value_object_state_snapshots, value_object_state_deltas, state_dimensions, state_relevance_rules, value_object_similarity_edges, value_object_relevance_edges, activity_events, impact_events, impact_rules, recommendation_feedback, activity_links, calendar_events, time_blocks, purchase_confirmations, certificates
+- Event-like tables detected: activity_events, impact_events, recommendation_feedback, calendar_events
+- Dedicated state-fact audit/correction/rollback tables detected: (none detected)
+- noWriteOperationPerformed: True
+
+Important source audit counters:
+- state_fact_table_references count: 84
+- correction_status_references count: 22
+- rollback_terms count: 103
+- correction_terms count: 394
+- expiry_terms count: 49
+- update_operations count: 21
+- delete_operations count: 3
+- upsert_operations count: 8
+- insert_operations count: 63
+- audit_terms count: 457
+- cancel_terms count: 171
+
+Interpretation:
+- Existing event-like tables can support general project event history, but they are not automatically a safe audit model for state fact rollback.
+- No permanent state fact read endpoint was created in D4-K, and this remains correct.
+- A rollback/correction runtime should not be implemented until we either:
+  1. confirm an existing dedicated audit/event table is appropriate for state facts; or
+  2. design a small dedicated audit/correction table or event row convention.
+- Controlled rollback should not update value_object_state_facts without an audit strategy.
+- The D4-J-B-B proof artifact should remain active until a controlled rollback proof is deliberately implemented.
+
+Decision:
+Do NOT implement rollback runtime yet.
+Next step should be D4-L-C: correction/rollback audit model decision.
+
+D4-L-C should decide one of these:
+Option A: Use an existing event table for state fact rollback audit.
+Option B: Add a dedicated state fact audit/correction table through migration.
+Option C: Keep rollback implementation deferred and move to broader state snapshots/read models.
+
+Hard boundaries preserved in this step:
+- No API route created.
+- No helper code changed.
+- No SQL migration created.
+- No database insert/update/delete/upsert performed.
+- Temporary DB probe files were removed.
+- D4-E-B shadow route remains untouched.
+- Controlled persist route remains unchanged.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+Detailed source grep audit:
+
+Pattern group: state_fact_table_references
+- Regex: value_object_state_facts
+- Total matches: 84
+- Sample:
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:109: ('value_object_state_facts', 'Stable or semi-stable state facts'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:152: ('value_object_state_facts', 'id'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:153: ('value_object_state_facts', 'value_object_id'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:154: ('value_object_state_facts', 'dimension_id'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:155: ('value_object_state_facts', 'value_json'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:156: ('value_object_state_facts', 'source_type'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:157: ('value_object_state_facts', 'source_id'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:158: ('value_object_state_facts', 'confidence'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:159: ('value_object_state_facts', 'evidence_json'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:160: ('value_object_state_facts', 'claim_strength'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:161: ('value_object_state_facts', 'privacy_level'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:162: ('value_object_state_facts', 'valid_from'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:163: ('value_object_state_facts', 'valid_to'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:164: ('value_object_state_facts', 'correction_status'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:165: ('value_object_state_facts', 'created_at'),
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:166: ('value_object_state_facts', 'updated_at'),
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:89: -- 2. value_object_state_facts
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:92: create table if not exists public.value_object_state_facts (
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:121: constraint value_object_state_facts_dimension_key_not_blank
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:124: constraint value_object_state_facts_confidence_range
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:127: constraint value_object_state_facts_claim_strength_range
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:130: constraint value_object_state_facts_privacy_level_check
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:133: constraint value_object_state_facts_correction_status_check
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:136: constraint value_object_state_facts_source_type_check
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:139: constraint value_object_state_facts_value_json_is_object
+
+Pattern group: correction_status_references
+- Regex: correction_status
+- Total matches: 22
+- Sample:
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:164: ('value_object_state_facts', 'correction_status'),
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:114: correction_status text not null default 'active',
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:133: constraint value_object_state_facts_correction_status_check
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:134: check (correction_status in ('active', 'corrected', 'revoked', 'superseded')),
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:163: create index if not exists idx_value_object_state_facts_correction_status
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:164: on public.value_object_state_facts (correction_status);
+  .\lib\activity\stateFacts\controlledPersistence\idempotency.ts:133: * - reads value_object_state_facts by user_id, value_object_id, dimension_key, correction_status, and metadata_json.idempotency_key;
+  .\lib\activity\stateFacts\controlledPersistence\idempotency.ts:159: .eq("correction_status", "active")
+  .\lib\activity\stateFacts\controlledPersistence\payloadBuilder.ts:226: correction_status: "active",
+  .\lib\activity\stateFacts\controlledPersistence\types.ts:223: correction_status: StateFactCorrectionStatus;
+  .\src\app\api\activity\debug\state-signal-candidate-shadow-test\route.ts:830: correction_status: "active",
+  .\src\app\api\activity\debug-trace\route.ts:856: "correction_status",
+  .\src\app\api\activity\debug-trace\route.ts:861: "correction_status",
+  .\supabase\migrations\017_activity_corrections.sql:8: correction_status text not null default 'applied',
+  .\supabase\migrations\017_activity_corrections.sql:34: on public.activity_corrections (correction_status);
+  .\supabase\migrations\017_activity_corrections.sql:58: add constraint activity_corrections_correction_status_check
+  .\supabase\migrations\017_activity_corrections.sql:60: correction_status in (
+  .\supabase\migrations\20260524_p4_10_0_c8_i_d2_state_similarity_relevance_nba_additive.sql:114: correction_status text not null default 'active',
+  .\supabase\migrations\20260524_p4_10_0_c8_i_d2_state_similarity_relevance_nba_additive.sql:133: constraint value_object_state_facts_correction_status_check
+  .\supabase\migrations\20260524_p4_10_0_c8_i_d2_state_similarity_relevance_nba_additive.sql:134: check (correction_status in ('active', 'corrected', 'revoked', 'superseded')),
+  .\supabase\migrations\20260524_p4_10_0_c8_i_d2_state_similarity_relevance_nba_additive.sql:163: create index if not exists idx_value_object_state_facts_correction_status
+  .\supabase\migrations\20260524_p4_10_0_c8_i_d2_state_similarity_relevance_nba_additive.sql:164: on public.value_object_state_facts (correction_status);
+
+Pattern group: rollback_terms
+- Regex: rollback|rolled_back
+- Total matches: 103
+- Sample:
+  .\docs\sql\P4.9.13-A1_controlled_hierarchy_candidate_audit.sql:303: 'rollback SQL',
+  .\docs\sql\P4.9.14-A1_value_object_identity_display_readiness_audit.sql:381: 'rollback SQL',
+  .\docs\sql\P4.9.15-A1_controlled_first_hierarchy_write_strategy_audit.sql:226: 'requiresRollbackSql', true,
+  .\docs\sql\P4.9.15-A1_controlled_first_hierarchy_write_strategy_audit.sql:296: 'rollback', jsonb_build_object(
+  .\docs\sql\P4.9.15-A1_controlled_first_hierarchy_write_strategy_audit.sql:297: 'operation', 'ROLLBACK_UPDATE_CHILD_PARENT_TO_NULL',
+  .\docs\sql\P4.9.15-A1_controlled_first_hierarchy_write_strategy_audit.sql:384: 'nextRequiredDecision', 'Choose one strategy row and generate exact preview/write/rollback SQL in the next step.',
+  .\docs\sql\P4.9.15-A1_controlled_first_hierarchy_write_strategy_audit.sql:389: 'prepare rollback SQL',
+  .\docs\sql\P4.9.15-A4_exact_preview_learning_business_german_hierarchy_write.sql:17: - preview the exact insert/update/rollback plan;
+  .\docs\sql\P4.9.15-A4_exact_preview_learning_business_german_hierarchy_write.sql:151: 'rollback', jsonb_build_object(
+  .\docs\sql\P4.9.15-A4_exact_preview_learning_business_german_hierarchy_write.sql:152: 'operation', 'ROLLBACK_SET_CHILD_PARENT_TO_NULL_AND_DELETE_SEEDED_PARENT',
+  .\docs\sql\P4.9.15-A4_exact_preview_learning_business_german_hierarchy_write.sql:215: future_rollback_sql_text AS (
+  .\docs\sql\P4.9.15-A4_exact_preview_learning_business_german_hierarchy_write.sql:217: $rollback_sql$
+  .\docs\sql\P4.9.15-A4_exact_preview_learning_business_german_hierarchy_write.sql:218: -- P4.9.15-A5 FUTURE ROLLBACK SQL PREVIEW ONLY
+  .\docs\sql\P4.9.15-A4_exact_preview_learning_business_german_hierarchy_write.sql:220: -- Replace [LEARNING_PARENT_ID] after actual write if rollback is needed.
+  .\docs\sql\P4.9.15-A4_exact_preview_learning_business_german_hierarchy_write.sql:234: $rollback_sql$::text AS sql_text
+  .\docs\sql\P4.9.15-A4_exact_preview_learning_business_german_hierarchy_write.sql:287: '07_future_rollback_sql_text_preview' AS section,
+  .\docs\sql\P4.9.15-A4_exact_preview_learning_business_german_hierarchy_write.sql:288: COALESCE(jsonb_agg(to_jsonb(future_rollback_sql_text)), '[]'::jsonb) AS data
+  .\docs\sql\P4.9.15-A4_exact_preview_learning_business_german_hierarchy_write.sql:289: FROM future_rollback_sql_text
+  .\docs\sql\P4.9.15-A5-D1_after_failed_guarded_write_diagnostic.sql:9: - decide whether rollback is needed or whether we can safely rewrite A5.
+  .\docs\sql\P4.9.15-A5-D1_after_failed_guarded_write_diagnostic.sql:148: THEN 'PARENT_ONLY_PERSISTED_ROLLBACK_NEEDED'
+  .\docs\sql\P4.9.15-A5-D1_after_failed_guarded_write_diagnostic.sql:209: 'ifStatusParentOnlyPersisted', 'Run rollback template before retrying.',
+  .\docs\sql\P4.9.15-A5_guarded_write_learning_business_german_hierarchy.sql:15: - return rollback SQL with the actual inserted parent id.
+  .\docs\sql\P4.9.15-A5_guarded_write_learning_business_german_hierarchy.sql:43: v_rollback_sql text;
+  .\docs\sql\P4.9.15-A5_guarded_write_learning_business_german_hierarchy.sql:184: v_rollback_sql := format(
+  .\docs\sql\P4.9.15-A5_guarded_write_learning_business_german_hierarchy.sql:185: $rollback$
+
+Pattern group: correction_terms
+- Regex: correction|corrected|superseded
+- Total matches: 394
+- Sample:
+  .\docs\sql\P4.8.0-A2_live_schema_inventory.sql:10: ('activity_event_corrections'),
+  .\docs\sql\P4.8.0-A2_live_schema_inventory.sql:81: ('activity_event_corrections'),
+  .\docs\sql\P4.8.0-A2_live_schema_inventory.sql:149: ('activity_event_corrections'),
+  .\docs\sql\P4.8.0-A2_live_schema_inventory.sql:218: ('activity_event_corrections'),
+  .\docs\sql\P4.8.0-A2_live_schema_inventory.sql:282: ('activity_event_corrections'),
+  .\docs\sql\P4.8.0-A2_live_schema_inventory.sql:350: ('activity_event_corrections'),
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql:27: ('activity_category_corrections', 80),
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql:126: -- activity_category_corrections target contract
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql:127: ('activity_category_corrections', 'id', 'required'),
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql:128: ('activity_category_corrections', 'activity_event_id', 'required'),
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql:129: ('activity_category_corrections', 'category_id', 'required'),
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql:130: ('activity_category_corrections', 'action', 'required'),
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql:131: ('activity_category_corrections', 'previous_status', 'recommended'),
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql:132: ('activity_category_corrections', 'new_status', 'recommended'),
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql:133: ('activity_category_corrections', 'reason', 'optional'),
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql:134: ('activity_category_corrections', 'actor_id', 'recommended'),
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql:135: ('activity_category_corrections', 'created_at', 'recommended'),
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-d-additive-migration-design.sql:31: -- 4. Defer activity_semantic_interpretations, activity_category_corrections, category_moderation_items.
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-d-additive-migration-design.sql:206: -- - public.activity_category_corrections
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-d-additive-migration-design.sql:215: -- Full semantic snapshots, user correction endpoints, and moderation queue
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-d2-reviewed-execution-migration.sql:31: -- 4. Defer activity_semantic_interpretations, activity_category_corrections, category_moderation_items.
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-d2-reviewed-execution-migration.sql:206: -- - public.activity_category_corrections
+  .\docs\value-objects\category-derivation-layer-v1-c8-e-d2-reviewed-execution-migration.sql:215: -- Full semantic snapshots, user correction endpoints, and moderation queue
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:52: or table_name ~* 'correction'
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:94: or table_name ~* 'correction'
+
+Pattern group: expiry_terms
+- Regex: expire|expired|valid_to
+- Total matches: 49
+- Sample:
+  .\docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:163: ('value_object_state_facts', 'valid_to'),
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:112: valid_to timestamp with time zone,
+  .\docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:149: check (valid_to is null or valid_from is null or valid_to >= valid_from)
+  .\lib\activity\stateFacts\controlledPersistence\payloadBuilder.ts:225: valid_to: input.candidate.validityWindow.validTo,
+  .\lib\activity\stateFacts\controlledPersistence\types.ts:222: valid_to: IsoDateTimeString | null;
+  .\src\app\api\activity\debug\state-signal-candidate-shadow-test\route.ts:829: valid_to: candidate.validTo,
+  .\src\app\api\certificates\expire-due\route.ts:6: type ExpiredCertificateResult = {
+  .\src\app\api\certificates\expire-due\route.ts:44: async function expireDueCertificates() {
+  .\src\app\api\certificates\expire-due\route.ts:45: const { data: expiredCertificates, error: expireError } = await supabase.rpc(
+  .\src\app\api\certificates\expire-due\route.ts:46: "expire_due_certificates"
+  .\src\app\api\certificates\expire-due\route.ts:49: if (expireError) {
+  .\src\app\api\certificates\expire-due\route.ts:53: error: expireError.message,
+  .\src\app\api\certificates\expire-due\route.ts:60: (expiredCertificates as ExpiredCertificateResult[] | null) ?? [];
+  .\src\app\api\certificates\expire-due\route.ts:64: expiredCount: results.length,
+  .\src\app\api\certificates\expire-due\route.ts:65: expiredCertificates: results,
+  .\src\app\api\certificates\expire-due\route.ts:80: return expireDueCertificates();
+  .\src\app\api\certificates\expire-due\route.ts:94: return expireDueCertificates();
+  .\src\app\certificates\redeem\page.tsx:75: expired_at: string | null;
+  .\src\app\certificates\redeem\page.tsx:146: if (status === "expired") {
+  .\src\app\certificates\redeem\page.tsx:147: return "Expired";
+  .\src\app\certificates\redeem\page.tsx:190: if (status === "cancelled" || status === "rejected" || status === "expired") {
+  .\src\app\certificates\redeem\page.tsx:292: expired_at,
+  .\src\app\my-certificates\page.tsx:75: expired_at: string | null;
+  .\src\app\my-certificates\page.tsx:176: if (status === "expired") {
+  .\src\app\my-certificates\page.tsx:177: return "Expired";
+
+Pattern group: update_operations
+- Regex: \.update\s*\(
+- Total matches: 21
+- Sample:
+  .\lib\activity\rawActivitySignals.ts:187: .update({
+  .\lib\activity\rawActivitySignals.ts:220: .update({
+  .\lib\activity\categoryDerivation\persistence.ts:349: .update(payload)
+  .\lib\activity\categoryDerivation\persistence.ts:402: .update(payload)
+  .\src\app\api\activity\complete\route.ts:1148: .update({
+  .\src\app\api\activity\complete\route.ts:1700: .update({
+  .\src\app\api\activity\record\route.ts:1092: .update({ processing_status: "failed" })
+  .\src\app\api\activity\record\route.ts:1450: .update({ processing_status: "failed" })
+  .\src\app\api\activity\start\route.ts:796: .update({ processing_status: "failed" })
+  .\src\app\api\object-action\categories\route.ts:229: .update(stableJsonStringify(value))
+  .\src\app\api\object-action\categories\route.ts:725: .update(mutationPatch)
+  .\src\app\api\object-action\categories\audit-verify\route.ts:103: return createHash("sha256").update(stableStringify(value)).digest("hex");
+  .\src\app\api\object-action\suggestions\route.ts:525: return createHash("sha256").update(stableStringify(value)).digest("hex");
+  .\src\app\api\object-action\suggestions\route.ts:1230: .update({
+  .\src\app\api\object-action\suggestions\route.ts:1535: .update(classificationValues)
+  .\src\app\api\object-action\suggestions\route.ts:1567: .update({
+  .\src\app\api\object-action\suggestions\route.ts:1655: .update({
+  .\src\app\api\object-action\suggestions\route.ts:1884: .update({
+  .\src\app\api\object-action\suggestions\route.ts:1901: .update({
+  .\src\app\api\object-action\suggestions\route.ts:2162: .update({
+  .\src\app\api\object-action\suggestions\audit-verify\route.ts:104: return createHash("sha256").update(stableStringify(value)).digest("hex");
+
+Pattern group: delete_operations
+- Regex: \.delete\s*\(
+- Total matches: 3
+- Sample:
+  .\lib\activity\activityImpactProcessor.ts:278: .delete({ count: "exact" })
+  .\lib\activity\activityImpactProcessor.ts:296: .delete({ count: "exact" })
+  .\src\app\api\offers\route.ts:786: await supabase.from("offers").delete().eq("id", offer.id);
+
+Pattern group: upsert_operations
+- Regex: \.upsert\s*\(
+- Total matches: 8
+- Sample:
+  .\lib\activity\valueObjectBridge.ts:776: .upsert(
+  .\lib\activity\valueObjectBridge.ts:849: .upsert(
+  .\lib\activity\valueObjectBridge.ts:961: .upsert(
+  .\lib\activity\valueObjectBridge.ts:1134: .upsert(
+  .\lib\activity\valueObjectBridge.ts:1535: .upsert(
+  .\lib\activity\valueObjectBridge.ts:1592: .upsert(
+  .\src\app\api\sync-user\route.ts:19: .upsert(
+  .\src\app\api\test\route.ts:36: .upsert(
+
+Pattern group: insert_operations
+- Regex: \.insert\s*\(
+- Total matches: 63
+- Sample:
+  .\lib\activity\activityImpactProcessor.ts:808: ? await supabase.from("impact_events").insert(impactRows).select()
+  .\lib\activity\activityProcessingLogs.ts:159: .insert({
+  .\lib\activity\activityRubricatorClassificationLifecycle.ts:549: .insert({
+  .\lib\activity\rawActivitySignals.ts:145: .insert({
+  .\lib\activity\rubricatorValueObjectMapper.ts:627: .insert({
+  .\lib\activity\valueObjectBridge.ts:1316: .insert({
+  .\lib\activity\valueObjectBridge.ts:1357: .insert({
+  .\lib\activity\valueObjectBridge.ts:1479: .insert({
+  .\lib\activity\categoryDerivation\persistDerivations.ts:213: .insert(payload as unknown as Record<string, unknown>)
+  .\lib\activity\categoryDerivation\persistDerivations.ts:232: .insert(payload as unknown as Record<string, unknown>)
+  .\lib\activity\categoryDerivation\persistence.ts:307: .insert(payload)
+  .\lib\activity\categoryDerivation\persistence.ts:533: .insert(candidatePayload(input, candidate))
+  .\lib\activity\categoryDerivation\resolver.ts:246: .insert(payload)
+  .\lib\activity\stateFacts\controlledPersistence\persist.ts:261: .insert(payloadResult.insertPayload)
+  .\scripts\diagnostics\P4.7.9-R-A8d2_create_confirm_fixture.ts:154: .insert(row)
+  .\scripts\diagnostics\P4.9.3-A2_create_knee_confirm_fixture.ts:154: .insert(row)
+  .\src\app\api\activities\route.ts:199: .insert({
+  .\src\app\api\activities\route.ts:248: .insert(participantRows)
+  .\src\app\api\activities\route.ts:265: .insert({
+  .\src\app\api\activities\route.ts:295: .insert({
+  .\src\app\api\activity\debug\category-derivation-controlled-production-persist-proof\route.ts:209: .insert({
+  .\src\app\api\activity\debug\category-derivation-route-runner-test\route.ts:226: .insert({
+  .\src\app\api\activity\debug\create-free-text-start-event\route.ts:326: .insert(insertRow)
+  .\src\app\api\activity\debug\free-text-value-object-test\route.ts:762: .insert({
+  .\src\app\api\activity\record\route.ts:614: .insert({
+
+Pattern group: audit_terms
+- Regex: audit|event_log|history
+- Total matches: 457
+- Sample:
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:2: -- Known-template Activity -> Rubricator -> Value Object chain audit
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:9: -- 1) Replace the UUID in target_event with the event id you want to audit.
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:143: audit_summary AS (
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:175: 'auditName', 'P4.7.8-R-K1 known-template chain audit',
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:176: 'eventId', (SELECT event_id FROM audit_summary),
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:179: 'activityEventCount', (SELECT activity_event_count FROM audit_summary),
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:180: 'classificationCount', (SELECT classification_count FROM audit_summary),
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:181: 'approvedClassificationCount', (SELECT approved_classification_count FROM audit_summary),
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:182: 'systemSeedClassificationCount', (SELECT system_seed_classification_count FROM audit_summary),
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:183: 'impactEventCount', (SELECT impact_event_count FROM audit_summary),
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:184: 'valueObjectCount', (SELECT value_object_count FROM audit_summary),
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:185: 'voiCount', (SELECT voi_count FROM audit_summary),
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:186: 'voiLinkCount', (SELECT voi_link_count FROM audit_summary),
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:187: 'stateDeltaCount', (SELECT state_delta_count FROM audit_summary),
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:188: 'dailyAggregateCount', (SELECT daily_aggregate_count FROM audit_summary),
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:189: 'snapshotCount', (SELECT snapshot_count FROM audit_summary),
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:190: 'processingLogCount', (SELECT processing_log_count FROM audit_summary)
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:194: 'hasActivityEvent', (SELECT activity_event_count FROM audit_summary) = 1,
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:195: 'hasApprovedClassification', (SELECT approved_classification_count FROM audit_summary) > 0,
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:196: 'hasSystemSeedClassification', (SELECT system_seed_classification_count FROM audit_summary) > 0,
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:198: (SELECT voi_count FROM audit_summary) > 0
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:199: OR (SELECT voi_link_count FROM audit_summary) > 0
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:201: 'hasStateDelta', (SELECT state_delta_count FROM audit_summary) > 0,
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:202: 'hasDailyAggregate', (SELECT daily_aggregate_count FROM audit_summary) > 0,
+  .\docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:203: 'hasSnapshot', (SELECT snapshot_count FROM audit_summary) > 0,
+
+Pattern group: cancel_terms
+- Regex: cancel|cancelled|canceled
+- Total matches: 171
+- Sample:
+  .\lib\booking-conflicts.ts:46: .neq("booking_status", "cancelled")
+  .\lib\activity\activityLifecycle.ts:8: "cancelled",
+  .\lib\activity\activityLifecycle.ts:23: export const ACTIVITY_STATUS_CANCELLED: ActivityStatus = "cancelled";
+  .\lib\activity\activityLifecycle.ts:55: "cancelled",
+  .\lib\activity\activityLifecycle.ts:63: "cancelled",
+  .\lib\activity\activityLifecycle.ts:70: "cancelled",
+  .\lib\activity\activityLifecycle.ts:136: "cancelled",
+  .\lib\activity\activityLifecycle.ts:144: "cancelled",
+  .\lib\activity\activityLifecycle.ts:153: "cancelled",
+  .\lib\activity\activityLifecycle.ts:161: "cancelled",
+  .\lib\activity\activityLifecycle.ts:169: "cancelled",
+  .\lib\activity\activityLifecycle.ts:176: "cancelled",
+  .\lib\activity\activityLifecycle.ts:181: cancelled: [
+  .\lib\activity\activityLifecycle.ts:198: "cancelled",
+  .\lib\activity\activityProcessingLogs.ts:32: | "cancelled";
+  .\lib\activity\valueObjectBridge.ts:36: | "cancelled"
+  .\src\app\activities\new\page.tsx:177: <option value="cancelled">Cancelled</option>
+  .\src\app\activity-today\page.tsx:9: "cancelled",
+  .\src\app\activity-today\page.tsx:85: cancelledEvents?: number;
+  .\src\app\activity-today\page.tsx:95: cancelledDurationMinutes?: number;
+  .\src\app\activity-today\page.tsx:143: type CorrectionMode = "duration_comment" | "advanced_timing" | "cancelled";
+  .\src\app\activity-today\page.tsx:774: <p>Cancelled: {eventSummary.cancelledEvents ?? 0}</p>
+  .\src\app\activity-today\page.tsx:1518: Duration/comment corrections recalculate impacts. Cancelled status
+  .\src\app\activity-today\page.tsx:1613: onClick={() => onSubmit("cancelled")}
+  .\src\app\activity-today\page.tsx:1616: {isLoading ? "Rolling back..." : "Mark cancelled + rollback"}
+
+
+End of D4-L-B audit report.
