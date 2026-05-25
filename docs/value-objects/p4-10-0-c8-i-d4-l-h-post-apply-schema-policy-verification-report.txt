@@ -1,0 +1,112 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-H - Post-Apply Migration Schema/Policy Verification
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-H
+Type: post-apply schema/policy verification report
+Status: POST-APPLY VERIFICATION PASSED / TABLE SHAPE VERIFIED / RLS VERIFIED / DENY-ALL POLICY VERIFIED / ZERO AUDIT ROWS / NO ROUTE CREATED / NO RUNTIME ROLLBACK IMPLEMENTED
+
+Baseline:
+- Previous pushed commit: fcac40d
+- Previous completed step: P4.10.0-C8-I-D4-L-G-MANUAL
+- Migration file:
+  supabase/migrations/20260524000000_c8_i_d4_l_e_value_object_state_fact_audit_events.sql
+- Manual apply report:
+  docs/value-objects/p4-10-0-c8-i-d4-l-g-manual-apply-state-fact-audit-table-migration-report.txt
+
+Verification source:
+Supabase SQL Editor post-apply verification query.
+
+Verification result:
+
+table_regclass,expected_column_count,matched_column_count,missing_columns,matched_constraint_count,matched_index_count,deny_all_policy_count,rls_enabled,audit_rows_count
+value_object_state_fact_audit_events,22,22,null,7,5,1,true,0
+
+Interpretation:
+- public.value_object_state_fact_audit_events exists: yes.
+- Expected columns: 22.
+- Matched columns: 22.
+- Missing columns: none.
+- Matched constraints: 7.
+- Matched indexes: 5.
+- Deny-all policy count: 1.
+- RLS enabled: true.
+- Audit rows count: 0.
+
+Verified table contract:
+- id
+- user_id
+- actor_id
+- value_object_id
+- state_fact_id
+- related_state_fact_id
+- dimension_key
+- action_type
+- previous_correction_status
+- new_correction_status
+- reason
+- request_trace_id
+- idempotency_key
+- source_route
+- helper_version
+- contract_version
+- d4_gate_version
+- previous_valid_to
+- new_valid_to
+- evidence_json
+- metadata_json
+- created_at
+
+Verified constraints:
+- value_object_state_fact_audit_events_reason_not_empty
+- value_object_state_fact_audit_events_trace_not_empty
+- value_object_state_fact_audit_events_idempotency_not_empty
+- value_object_state_fact_audit_events_action_type_check
+- value_object_state_fact_audit_events_state_fact_fk
+- value_object_state_fact_audit_events_related_state_fact_fk
+- value_object_state_fact_audit_events_value_object_fk
+
+Verified indexes:
+- value_object_state_fact_audit_events_idempotency_uq
+- value_object_state_fact_audit_events_user_created_idx
+- value_object_state_fact_audit_events_state_fact_created_idx
+- value_object_state_fact_audit_events_value_object_created_idx
+- value_object_state_fact_audit_events_dimension_created_idx
+
+Verified security:
+- RLS enabled: true.
+- Deny-all public policy exists: yes.
+- Direct public read/write remains blocked.
+
+Important:
+- This step verifies schema/security after manual migration apply.
+- No audit rows were inserted by this step.
+- No value_object_state_facts rows were inserted, updated, or deleted by this step.
+- No rollback route was created.
+- No correction route was created.
+- No helper runtime was created.
+- Controlled persist route was not changed.
+- D4-E-B shadow route was not changed.
+
+Next step:
+P4.10.0-C8-I-D4-L-I - Controlled Rollback Helper Design.
+
+D4-L-I should:
+1. Design rollback helper contract only.
+2. Not implement runtime rollback yet.
+3. Define ownership checks.
+4. Define state_fact_id + user_id + value_object ownership requirements.
+5. Define audit event creation requirements.
+6. Define allowed update scope.
+7. Keep update-by-state_fact_id-alone forbidden.
+8. Keep rollback of another user's state fact forbidden.
+
+Hard boundaries preserved:
+- No API route created.
+- No helper runtime implemented.
+- No database data insert/update/delete performed.
+- No rollback runtime implemented.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-H report.
