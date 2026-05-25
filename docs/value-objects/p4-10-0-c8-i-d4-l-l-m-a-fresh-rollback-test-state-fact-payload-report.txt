@@ -1,0 +1,66 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-M-A - Prepare Fresh Rollback Test State Fact Browser Payload
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-M-A
+Type: preparation step / browser-console payload generation
+Status: FRESH ROLLBACK TEST STATE FACT PAYLOAD PREPARED / PAYLOAD COPIED TO CLIPBOARD / TYPESCRIPT PASS / PAYLOAD NOT EXECUTED / NO DATABASE WRITE PERFORMED BY THIS SCRIPT / NO ROLLBACK EXECUTED
+
+Baseline:
+- Previous pushed commit: 74efb25
+- Previous completed step: P4.10.0-C8-I-D4-L-L-L-B
+- D4-L-L-L-B proved no-write failure cases.
+- D4-L-L-M-A prepares a fresh controlled state fact payload for later successful rollback proof.
+
+Historical proof state fact preserved:
+- Historical proof state fact id: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+- This historical proof fact must not be rolled back directly.
+- A fresh rollback proof state fact must be created instead.
+
+Fresh test state fact target:
+- valueObjectId: 9177fea8-de25-446b-b418-b55a766d53db
+- valueObjectTitle: Business German writing practice
+- dimensionKey: language_practice_balance
+- sourceType: system
+- fresh sourceId: f30b0ea7-40bd-406b-95e4-ef93e985ee95
+- fresh candidateTraceId: d4-l-l-m-a-fresh-rollback-test-f30b0ea7-40bd-406b-95e4-ef93e985ee95
+- fresh idempotencyKey: d4-l-l-m-a-fresh-rollback-test-f30b0ea7-40bd-406b-95e4-ef93e985ee95
+
+Created files:
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-m-a-fresh-rollback-test-state-fact-browser-console.js
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-m-a-fresh-rollback-test-state-fact-payload-report.txt
+
+Browser payload:
+- copied to clipboard;
+- must be pasted into browser console while authenticated in the local app;
+- calls POST /api/activity/state-facts/controlled-persist;
+- uses controlled_persist mode;
+- requires confirmControlledPersistence = true;
+- creates a fresh state fact if accepted;
+- does not call rollback.
+
+What this step did not do:
+- did not execute browser payload;
+- did not create a state fact;
+- did not call rollbackStateFactControlled;
+- did not call rollback_value_object_state_fact_controlled;
+- did not create a production rollback route;
+- did not write to Supabase from this PowerShell script.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-M-B - Execute Fresh Rollback Test State Fact Creation.
+
+D4-L-L-M-B should:
+1. Open local app in browser at http://localhost:3000 while authenticated.
+2. Open browser DevTools Console.
+3. Paste the browser payload copied by this script.
+4. Confirm response:
+   - ok: true
+   - decision: persisted
+   - stateFactsCreated: 1
+   - stateFactId is present and is NOT 116d4866-0f89-4bb3-aae4-37e7e8860e85
+5. Send the console result back to the assistant.
+6. Create a runtime creation proof report.
+7. Do not execute rollback yet.
+
+End of D4-L-L-M-A report.
