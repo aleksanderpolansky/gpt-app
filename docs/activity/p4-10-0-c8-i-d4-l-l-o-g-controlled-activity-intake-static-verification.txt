@@ -1,0 +1,128 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-G — Controlled Activity Intake Static Verification
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+STATIC VERIFICATION PASSED / NO RUNTIME ROUTE / NO PERSIST HELPER / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-F
+- O-F commit: 07d716f
+- O-F commit message: feat: add C8-I-D4-L-L-O-F controlled intake static helpers
+
+Verified files
+- lib/activity/controlledIntake/types.ts
+- lib/activity/controlledIntake/validator.ts
+- lib/activity/controlledIntake/payloadBuilder.ts
+
+Forbidden files checked absent
+- lib/activity/controlledIntake/persist.ts
+- src/app/api/activity/controlled-intake/route.ts
+
+Verified types.ts
+- CONTROLLED_ACTIVITY_INTAKE_SCHEMA_VERSION exists.
+- CONTROLLED_ACTIVITY_INTAKE_HELPER_LAYER exists.
+- ControlledActivityIntakeSource exists.
+- ControlledActivityIntakeValidationIssue exists.
+- ControlledActivityIntakeInput exists.
+- ControlledActivityIntakeValidatedInput exists.
+- ControlledActivityIntakeValidationResult exists.
+- ControlledActivityIntakeSemanticReadinessFlags exists.
+- ControlledActivityIntakeGuardrails exists.
+- ControlledActivityEventDraft exists.
+- ControlledActivityIntakePayload exists.
+
+Verified semantic readiness flags
+- semanticProcessingNotStartedYet: true
+- categoryCandidatesCreated: false
+- metricCandidatesCreated: false
+- stateHookCandidatesCreated: false
+- valueObjectsCreated: false
+- stateFactsCreated: false
+- deltasCreated: false
+- snapshotsCreated: false
+
+Verified guardrails
+- activityEventIsSourceOfTruth: true
+- aiOutputIsCandidateOnly: true
+- noPersistencePerformed: true
+- noSupabaseWritePerformed: true
+- noAiCallPerformed: true
+- noRouteHandlerCreatedInThisBlock: true
+
+Verified validator behavior markers
+- Rejects non-object input.
+- Requires inputText.
+- Requires title.
+- Rejects client ownership fields such as userId, user_id, ownerId, owner_id, actorId, actor_id, organizationId, organization_id.
+- Rejects client-provided activityEventId/activity_event_id.
+- Rejects client-provided semantic output fields such as categoryCandidates, metricCandidates, stateHookCandidates, valueObjects, stateFacts, stateDeltas, stateSnapshots.
+- Validates durationMinutes.
+- Validates startedAt, endedAt, occurredAt parseability.
+- Rejects endedAt <= startedAt.
+- Validates context and metadata object shape.
+
+Verified payloadBuilder behavior markers
+- Builds only an in-memory Activity Event draft.
+- Sets status to raw_intake_pending_semantic_processing.
+- Sets semanticProcessingNotStartedYet true.
+- Keeps all semantic creation flags false.
+- Keeps no persistence / no Supabase write / no AI call / no route handler guardrails true.
+
+Forbidden runtime/write/AI/DB patterns checked absent in helper files
+- createClient
+- supabase
+- OpenAI
+- chat.completions
+- fetch(
+- INSERT INTO
+- UPDATE
+- DELETE
+- .insert(
+- .update(
+- .delete(
+- from(
+- NextRequest
+- NextResponse
+
+TypeScript verification
+- Temporary type-level verification file was created under tmp/.
+- npx tsc --noEmit passed with the temporary verification file.
+- Temporary verification file was removed.
+- npx tsc --noEmit passed again after cleanup.
+
+Conclusion
+O-G confirms that the O-F helper layer is static-only and safe for the next design step.
+No runtime route was created.
+No persist helper was created.
+No database write happened.
+No SQL was executed.
+No AI call happened.
+No activity row was created.
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-H — Controlled Activity Intake Idempotency / Persist Design
+
+Allowed in O-H
+- Design idempotency.ts and persist.ts responsibilities.
+- Decide idempotency key strategy.
+- Decide metadata trace vs dedicated trace field.
+- Decide activity_events insert mapping.
+- Create design report.
+- TypeScript check if needed.
+
+Forbidden in O-H
+- Do not create persist.ts yet unless O-H explicitly remains design-only and the next gate approves implementation.
+- Do not create src/app/api/activity/controlled-intake/route.ts.
+- Do not write to Supabase.
+- Do not execute SQL.
+- Do not create activity_event rows.
+- Do not call AI.
+- Do not persist categoryCandidates.
+- Do not create Value Objects.
+- Do not write value_object_state_facts.
+- Do not write activity_state_deltas.
+- Do not write snapshots.
+
+Anti-retest
+Do not repeat old C8-H extractor proofs, /api/activity/complete canonical proof, or deleted rollback browser payload unless the relevant runtime files change.
