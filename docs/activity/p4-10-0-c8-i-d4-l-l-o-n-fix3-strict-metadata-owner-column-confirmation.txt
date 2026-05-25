@@ -1,0 +1,83 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-N-FIX3 — Strict Metadata/Owner Column Confirmation
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+STRICT CONFIRMATION CREATED / DOC ONLY / NO PERSIST HELPER / NO RUNTIME ROUTE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-N-FIX2
+- Previous commit: d523c6d
+- Previous message: docs: add C8-I-D4-L-L-O-N-FIX2 parser correction safe gate
+
+Reason for FIX3
+O-N-FIX2 invalidated the false O-N-FIX1 pass.
+O-N-FIX3 does not parse the old O-N contract lines.
+It directly inspects local schema/type evidence around activity_events.
+
+Files intentionally not created in O-N-FIX3
+- lib/activity/controlledIntake/persist.ts
+- src/app/api/activity/controlled-intake/route.ts
+
+Confirmed columns
+confirmedMetadataColumn: 
+confirmedOwnerColumn: 
+confirmedStatusColumn: 
+
+Blocking gaps
+metadata/json column not confirmed from schema/type evidence
+trusted owner column not confirmed from schema/type evidence
+
+Runtime-only gaps
+status column not confirmed; runtime DB write remains blocked
+
+Gate decision
+BLOCK_STATIC_INSERT_ROW_BUILDER_PENDING_MANUAL_SCHEMA_CONFIRMATION
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-N-FIX4 - Manual Metadata/Owner Schema Confirmation
+
+Meaning of gate if passed
+A pass only allows a static insert row builder helper.
+It does not allow a real Supabase insert.
+It does not allow route creation.
+It does not allow DB writes.
+
+Meaning of gate if blocked
+Do not create persist.ts.
+Do a manual schema confirmation block or paste exact activity_events schema/type section.
+
+Strict schema/type files containing activity_events
+(none)
+
+Metadata evidence
+(none)
+
+Owner evidence
+(none)
+
+Status evidence
+(none)
+
+All useful column evidence
+(none)
+
+Evidence windows
+(none)
+
+Verification performed in O-N-FIX3
+- Required previous files exist.
+- O-N-FIX2 blocked gate was read.
+- activity_events schema/type evidence was inspected directly.
+- persist.ts is absent.
+- controlled-intake route.ts is absent.
+- No SQL was executed.
+- No Supabase write happened.
+- No AI call happened.
+- No activity row was created.
+- Helper files remain free from runtime/write/AI patterns.
+- npx tsc --noEmit is run after report creation.
+
+Conclusion
+O-N-FIX3 provides the corrected strict metadata/owner confirmation.
+Continue only from the gate decision above.
