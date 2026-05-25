@@ -1,0 +1,83 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-C - Rollback Idempotency Helper
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-C
+Type: read-only helper code step
+Status: ROLLBACK IDEMPOTENCY HELPER CREATED / TYPESCRIPT PASS / NO ROLLBACK HELPER IMPLEMENTED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED / NO RUNTIME ROLLBACK IMPLEMENTED
+
+Baseline:
+- Previous pushed commit: 18b0ae6
+- Previous completed step: P4.10.0-C8-I-D4-L-L-B
+- D4-L-L-B created rollbackPayloadBuilder.ts.
+- D4-L-L-C was required to create a read-only rollback idempotency helper.
+
+Changed files:
+- lib/activity/stateFacts/controlledPersistence/rollbackIdempotency.ts
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-c-rollback-idempotency-helper-report.txt
+
+Code change:
+Created read-only helper:
+lib/activity/stateFacts/controlledPersistence/rollbackIdempotency.ts
+
+Helper created:
+- checkRollbackIdempotency
+
+Read-only lookup implemented:
+- value_object_state_fact_audit_events by user_id
+- value_object_state_fact_audit_events by state_fact_id
+- value_object_state_fact_audit_events by action_type
+- value_object_state_fact_audit_events by idempotency_key
+- select id only
+- maybeSingle()
+
+Idempotency decisions returned:
+- status not_found when no rollback audit event exists.
+- status found when a matching rollback audit event exists.
+- status error when validation or lookup fails.
+
+Verification:
+- TypeScript check passed.
+- No insert/update/delete/upsert calls added.
+- No value_object_state_facts access added.
+- No rollbackStateFactControlled runtime function added.
+- No route created.
+- No NextRequest/NextResponse used.
+- No state fact update executed.
+- No audit event insert executed.
+
+Forbidden patterns checked in rollbackIdempotency.ts:
+- no .insert(
+- no .update(
+- no .delete(
+- no .upsert(
+- no rollbackStateFactControlled runtime.
+- no Next.js route exports.
+- no value_object_state_facts table access.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-D - Rollback Target Resolver.
+
+D4-L-L-D should:
+1. Create rollbackTarget.ts.
+2. Read value_object_state_facts by:
+   - stateFactId
+   - valueObjectId
+3. Return normalized RollbackTargetStateFact.
+4. Reject missing fact.
+5. Reject valueObjectId mismatch by never authorizing from stateFactId alone.
+6. Not update/delete/upsert.
+7. Not create rollback.ts.
+8. Not create route.
+9. Run TypeScript check.
+10. Commit only target resolver + report.
+
+Hard boundaries preserved:
+- No API route created.
+- No rollback runtime implemented.
+- No database data insert/update/delete performed.
+- No correction runtime implemented.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-L-C report.
