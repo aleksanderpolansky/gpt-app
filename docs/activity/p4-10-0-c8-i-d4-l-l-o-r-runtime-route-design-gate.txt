@@ -1,0 +1,942 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-R — Controlled Activity Intake Runtime Route Design Gate
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+RUNTIME ROUTE DESIGN GATE CREATED / DOC ONLY / NO ROUTE CREATED / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-Q
+- Previous commit: fa3ab38
+- Previous message: docs: verify C8-I-D4-L-L-O-Q static row builder
+
+Prerequisites verified
+- O-P static insert row builder exists.
+- O-Q verified static row builder behavior.
+- lib/activity/controlledIntake/persist.ts exists.
+- src/app/api/activity/controlled-intake/route.ts is still absent.
+- Helper files remain free from runtime write and AI patterns.
+
+Gate decision
+PASS_RUNTIME_ROUTE_SCAFFOLD_DESIGN_ONLY_NO_DB_WRITE
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-S - Controlled Activity Intake Runtime Route Scaffold No-Write
+
+Future route path
+- src/app/api/activity/controlled-intake/route.ts
+
+Important boundary
+O-R does not create the runtime route.
+O-R only defines the future route boundary.
+A later O-S route scaffold may be created only as no-write scaffold.
+
+Future O-S route scaffold boundary
+Allowed in O-S:
+- Create src/app/api/activity/controlled-intake/route.ts.
+- Use NextRequest and NextResponse.
+- Parse request JSON.
+- Call validateControlledActivityIntake.
+- Call buildControlledActivityIntakePayload.
+- Build trusted context only from server/auth context or temporary explicit no-write development guard.
+- Call buildControlledActivityIntakeIdempotency.
+- Call buildControlledActivityIntakeActivityEventsStaticRow.
+- Return a JSON preview of validation/payload/idempotency/static row.
+- Keep dbWriteExecuted false.
+- Keep route in no-write preview/shadow mode only.
+- Run TypeScript checks.
+- Create report.
+- Commit/push.
+
+Forbidden in O-S:
+- Do not import Supabase client.
+- Do not call createClient.
+- Do not call .from().
+- Do not call .insert().
+- Do not execute SQL.
+- Do not create an activity_events row.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+- Do not trust client-provided ownership fields.
+
+Future route sequence
+1. POST request arrives.
+2. Route parses JSON body.
+3. Validator rejects forbidden client ownership fields.
+4. Validator rejects semantic output fields from client payload.
+5. Payload builder creates raw controlled intake payload.
+6. Trusted context is created only server-side.
+7. Idempotency helper creates deterministic key/material.
+8. Static row builder creates activity_events row object.
+9. Route returns preview JSON only in O-S.
+10. No database write is executed.
+
+Trusted context rule
+- The client must not provide user_id, owner_id, actor_id, organization_id, space_id, or activity_event_id.
+- The validator already treats ownership fields as forbidden client fields.
+- Future route must derive appUserId from authenticated server context.
+- If authenticated user cannot be resolved, route must return 401/403 and must not build a DB row.
+- O-S may use a no-write development guard only if clearly marked as temporary and not persisted.
+
+Idempotency rule
+- idempotencyKey remains a deterministic helper output.
+- In O-S, idempotency is only returned in preview metadata.
+- No DB lookup or uniqueness check should happen in O-S.
+- DB-level idempotency belongs to a later dedicated proof gate.
+
+Runtime write rule
+- No DB write is allowed after O-R.
+- No DB write is allowed in O-S.
+- First real Supabase insert must be separated into a later proof gate after route scaffold verification.
+
+Semantic boundary
+- controlled intake captures one raw Activity Event candidate/row object only.
+- No categoryCandidates are persisted.
+- No metricCandidates are persisted.
+- No stateHookCandidates are persisted.
+- No Value Objects are created.
+- No state facts/deltas/snapshots are written.
+
+Local route/auth evidence collected for later design
+
+Existing POST route evidence:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319:- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:351:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:444:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:572:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:351 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1262:   319: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1394:   319: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:99:| 737 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:178:| 498 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:226:| 84 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:254:| 76 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:282:| 76 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:298:| 69 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:463:| 189 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:94:| 737 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:201:| 269 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:278:| 498 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:354:| 84 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:371:| 76 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:388:| 76 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:404:| 69 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:519:| 189 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:571:| 89 | export async function POST(request: Request, context: RouteContext) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:613:| 89 | export async function POST(request: Request, context: RouteContext) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:655:| 89 | export async function POST(request: Request, context: RouteContext) { |
+docs/commercial/P4.8.0-A4_relationship_gap_analysis.md:136:| 269 | export async function POST(request: Request) { |
+docs/commercial/P4.8.0-A4_relationship_gap_analysis.md:168:| 498 | export async function POST(request: Request) { |
+docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:3251:  328: export async function POST(request: Request, context: RouteContext) {
+docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:3974:  241: export async function POST(request: Request) {
+docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:5350:  677: export async function POST(request: Request) {
+docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:6309:  157: export async function POST(request: NextRequest) {
+docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:6718:  269: export async function POST(request: Request) {
+docs/value-objects/P4.9.1-A5_function_surface_map.md:360:| 328 | export async function POST(request: Request, context: RouteContext) { |
+docs/value-objects/P4.9.1-A5_function_surface_map.md:384:| 328 | export\s+(async\s+)?function\s+ | export async function POST(request: Request, context: RouteContext) { |
+docs/value-objects/P4.9.1-A5_function_surface_map.md:414:| 241 | export async function POST(request: Request) { |
+docs/value-objects/P4.9.1-A5_function_surface_map.md:432:| 241 | export\s+(async\s+)?function\s+ | export async function POST(request: Request) { |
+docs/value-objects/P4.9.1-A5_function_surface_map.md:476:| 677 | export async function POST(request: Request) { |
+docs/value-objects/P4.9.1-A5_function_surface_map.md:525:| 677 | export\s+(async\s+)?function\s+ | export async function POST(request: Request) { |
+docs/value-objects/P4.9.1-A5_function_surface_map.md:555:| 157 | export async function POST(request: NextRequest) { |
+docs/value-objects/P4.9.1-A5_function_surface_map.md:570:| 157 | export\s+(async\s+)?function\s+ | export async function POST(request: NextRequest) { |
+docs/value-objects/P4.9.1-A5_function_surface_map.md:588:| 269 | export async function POST(request: Request) { |
+docs/value-objects/P4.9.1-A5_function_surface_map.md:616:| 269 | export\s+(async\s+)?function\s+ | export async function POST(request: Request) { |
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:5740:  160: export async function POST(
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:6685:   69: export async function POST(request: Request) {
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10543:    5: export async function POST() {
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10556:    5: export async function POST() {
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10917:   12: export async function POST(request: Request) {
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10926:   12: export async function POST(request: Request) {
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:222:  241: export async function POST(request: Request) {
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:2273:  328: export async function POST(request: Request, context: RouteContext) {
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:3321:  274: export async function POST(request: Request) {
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:3470:  160: export async function POST(
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:3757:  455: export async function POST(request: Request, context: RouteContext) {
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:4400:  677: export async function POST(request: Request) {
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:4637:  445: export async function POST(request: Request) {
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:6508:  198: export async function POST(request: Request) {
+docs/value-objects/P4.9.7-A2_focused_api_files_extraction.md:326:  269: export async function POST(request: Request) {
+docs/value-objects/P4.9.7-A2_focused_api_files_extraction.md:2112:  157: export async function POST(request: NextRequest) {
+docs/value-objects/category-derivation-code-inventory-c8-j.md:2908:  151: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:7981:export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:7999:export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-e1-persistence-source-inventory.txt:306:  line 734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-e1-persistence-source-inventory.txt:354:  line 678: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-e1-persistence-source-inventory.txt:509:line 734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-e1-persistence-source-inventory.txt:528:line 678: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-e2-persistence-deep-inspect.txt:2125:export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:940:line 734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:954:line 163: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:992:Pattern: export async function POST
+docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:1034:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:306:line 734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:8153:Pattern: export async function POST
+docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:8197:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:8561:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:8741:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:8928:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:9117:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:9308:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:235:line 734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:9106:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:9366:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:9633:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:9902:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:10173:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:10439:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:10712:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:10968:  734: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:189:    739: export async function POST(request: Request) {
+docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-a-complete-route-shadow-persist-proof-prep.txt:168:    739: export async function POST(request: Request) {
+docs/value-objects/category-derivation-production-complete-route-c1-a-dependency-map.txt:1799:  241: export async function POST(request: Request) {
+docs/value-objects/category-derivation-production-complete-route-c1-a-dependency-map.txt:1916:  241: export async function POST(request: Request) {
+docs/value-objects/category-derivation-production-complete-route-c1-a-dependency-map.txt:2040:  241: export async function POST(request: Request) {
+docs/value-objects/category-derivation-production-complete-route-c1-a-dependency-map.txt:4417:  678: export async function POST(request: Request) {
+docs/value-objects/category-derivation-production-complete-route-c1-b-0-exact-patch-snippets.txt:891:  678: export async function POST(request: Request) {
+docs/value-objects/category-derivation-production-complete-route-c1-b-1-exact-derivation-invocation.txt:1657:  241: export async function POST(request: Request) {
+docs/value-objects/category-derivation-production-complete-route-c1-b-route-backup.txt:241:export async function POST(request: Request) {
+docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:1890:    export async function POST(request: Request) {
+docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:2177:    export async function POST(request: Request) {
+docs/value-objects/category-derivation-production-complete-route-c2-b-fix3-contract-inspection.txt:101:PATTERN: export async function POST
+docs/value-objects/category-derivation-production-complete-route-c2-b-fix3-contract-inspection.txt:411:PATTERN: export async function POST
+docs/value-objects/category-derivation-production-complete-route-c2-b-fix3-contract-inspection.txt:414:LINE 445: export async function POST(request: Request) {
+
+NextRequest evidence:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-g-controlled-activity-intake-static-verification.txt:85:- NextRequest
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:71:- NextRequest
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:537:| 1029 | export async function GET(request: NextRequest) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:715:| 1029 | export async function GET(request: NextRequest) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:738:| 450 | export async function GET(_request: NextRequest, { params }: RouteProps) { |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:756:| 119 | export async function GET(request: NextRequest, { params }: RouteProps) { |
+docs/commercial/P4.8.0-D3_route_adoption_targets_inventory.md:197:| 1 | import { NextRequest, NextResponse } from "next/server"; |
+docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:6153:    1: import { NextResponse, type NextRequest } from "next/server";
+docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:6309:  157: export async function POST(request: NextRequest) {
+docs/value-objects/P4.9.1-A5_function_surface_map.md:555:| 157 | export async function POST(request: NextRequest) { |
+docs/value-objects/P4.9.1-A5_function_surface_map.md:570:| 157 | export\s+(async\s+)?function\s+ | export async function POST(request: NextRequest) { |
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:6924:    1: import { NextRequest, NextResponse } from "next/server";
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:6946:    1: import { NextRequest, NextResponse } from "next/server";
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:7189:    1: import { NextRequest, NextResponse } from "next/server";
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:7823:    2: import { NextRequest, NextResponse } from "next/server";
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:8190:    2: import { NextRequest, NextResponse } from "next/server";
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:8557:    2: import { NextRequest, NextResponse } from "next/server";
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:866:    1: import { NextResponse, type NextRequest } from "next/server";
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:876:    1: import { NextResponse, type NextRequest } from "next/server";
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:888:    1: import { NextResponse, type NextRequest } from "next/server";
+docs/value-objects/P4.9.7-A2_focused_api_files_extraction.md:1956:    1: import { NextResponse, type NextRequest } from "next/server";
+docs/value-objects/P4.9.7-A2_focused_api_files_extraction.md:2112:  157: export async function POST(request: NextRequest) {
+docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:9620:      | 1029 | export async function GET(request: NextRequest) { |
+docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:9647:      | 1029 | export async function GET(request: NextRequest) { |
+docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:9683:      | 1029 | export async function GET(request: NextRequest) { |
+docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:9710:      | 1029 | export async function GET(request: NextRequest) { |
+docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:9734:      | 450 | export async function GET(_request: NextRequest, { params }: RouteProps) { |
+docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:9760:      | 450 | export async function GET(_request: NextRequest, { params }: RouteProps) { |
+docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:398:src/app/api/activity/debug-rubricator-value-object-bridge/route.ts:157:export async function POST(request: NextRequest) {
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-d-controlled-persistence-implementation-readiness-checklist.txt:298:- NextRequest
+docs/value-objects/p4-10-0-c8-i-d4-l-l-b-rollback-payload-builder-report.txt:63:- No NextRequest/NextResponse used.
+docs/value-objects/p4-10-0-c8-i-d4-l-l-c-rollback-idempotency-helper-report.txt:45:- No NextRequest/NextResponse used.
+docs/value-objects/p4-10-0-c8-i-d4-l-l-d-rollback-target-resolver-report.txt:59:- No NextRequest/NextResponse used.
+docs/value-objects/p4-10-0-c8-i-d4-l-l-k-runtime-helper-static-verification-report.txt:43:- No NextRequest.
+src/app/api/activity/debug-rubricator-value-object-bridge/route.ts:1:﻿import { NextResponse, type NextRequest } from "next/server";
+src/app/api/activity/debug-rubricator-value-object-bridge/route.ts:157:export async function POST(request: NextRequest) {
+src/app/api/activity/state-facts/controlled-persist/route.ts:22:import { NextRequest, NextResponse } from "next/server";
+src/app/api/activity/state-facts/controlled-persist/route.ts:78:export async function POST(incomingRequest: NextRequest): Promise<NextResponse> {
+src/app/api/directory/organizations/[slug]/offers/route.ts:1:import { NextRequest, NextResponse } from "next/server";
+src/app/api/directory/organizations/[slug]/offers/route.ts:119:export async function GET(request: NextRequest, { params }: RouteProps) {
+src/app/api/directory/organizations/[slug]/route.ts:1:﻿import { NextRequest, NextResponse } from "next/server";
+src/app/api/directory/organizations/[slug]/route.ts:450:export async function GET(_request: NextRequest, { params }: RouteProps) {
+src/app/api/directory/organizations/route.ts:1:﻿import { NextRequest, NextResponse } from "next/server";
+src/app/api/directory/organizations/route.ts:1029:export async function GET(request: NextRequest) {
+src/app/api/object-action/categories/audit-verify/route.ts:2:import { NextRequest, NextResponse } from "next/server";
+src/app/api/object-action/categories/audit-verify/route.ts:455:export async function GET(request: NextRequest) {
+src/app/api/object-action/categories/route.ts:2:import { NextRequest, NextResponse } from "next/server";
+src/app/api/object-action/categories/route.ts:616:export async function PATCH(request: NextRequest) {
+src/app/api/object-action/suggestions/audit-verify/route.ts:2:import { NextRequest, NextResponse } from "next/server";
+src/app/api/object-action/suggestions/audit-verify/route.ts:468:export async function GET(request: NextRequest) {
+src/app/api/object-action/suggestions/route.ts:2:import { NextRequest, NextResponse } from "next/server";
+src/app/api/object-action/suggestions/route.ts:1991:export async function GET(request: NextRequest) {
+src/app/api/object-action/suggestions/route.ts:2051:export async function PATCH(request: NextRequest) {
+src/app/api/object-action/suggestions/route.ts:2226:export async function POST(request: NextRequest) {
+src/middleware.ts:1:import type { NextRequest } from "next/server";
+src/middleware.ts:4:export async function middleware(request: NextRequest) {
+
+NextResponse evidence:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:282:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:699 :: src\app\api\activities\route.ts line 21: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:283:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:700 :: src\app\api\activities\route.ts line 39: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:284:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:701 :: src\app\api\activities\route.ts line 57: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:285:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:702 :: src\app\api\activities\route.ts line 76: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:286:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:703 :: src\app\api\activities\route.ts line 120: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:287:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:704 :: src\app\api\activities\route.ts line 139: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:288:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:705 :: src\app\api\activities\route.ts line 145: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:289:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:706 :: src\app\api\activities\route.ts line 159: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:290:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:707 :: src\app\api\activities\route.ts line 182: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:291:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:708 :: src\app\api\activities\route.ts line 191: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:292:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:709 :: src\app\api\activities\route.ts line 219: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:293:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:710 :: src\app\api\activities\route.ts line 252: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:294:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:711 :: src\app\api\activities\route.ts line 284: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:295:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:712 :: src\app\api\activities\route.ts line 305: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:296:- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:713 :: src\app\api\activities\route.ts line 314: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:315:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:282 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:699 :: src\app\api\activities\route.ts line 21: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:316:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:283 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:700 :: src\app\api\activities\route.ts line 39: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:317:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:284 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:701 :: src\app\api\activities\route.ts line 57: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:318:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:285 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:702 :: src\app\api\activities\route.ts line 76: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:319:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:286 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:703 :: src\app\api\activities\route.ts line 120: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:320:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:287 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:704 :: src\app\api\activities\route.ts line 139: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:321:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:288 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:705 :: src\app\api\activities\route.ts line 145: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:322:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:289 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:706 :: src\app\api\activities\route.ts line 159: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:323:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:290 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:707 :: src\app\api\activities\route.ts line 182: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:324:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:291 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:708 :: src\app\api\activities\route.ts line 191: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:325:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:292 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:709 :: src\app\api\activities\route.ts line 219: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:326:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:293 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:710 :: src\app\api\activities\route.ts line 252: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:327:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:294 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:711 :: src\app\api\activities\route.ts line 284: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:328:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:295 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:712 :: src\app\api\activities\route.ts line 305: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:329:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:296 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:713 :: src\app\api\activities\route.ts line 314: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:408:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:282 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:699 :: src\app\api\activities\route.ts line 21: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:409:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:283 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:700 :: src\app\api\activities\route.ts line 39: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:410:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:284 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:701 :: src\app\api\activities\route.ts line 57: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:411:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:285 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:702 :: src\app\api\activities\route.ts line 76: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:412:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:286 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:703 :: src\app\api\activities\route.ts line 120: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:413:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:287 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:704 :: src\app\api\activities\route.ts line 139: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:414:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:288 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:705 :: src\app\api\activities\route.ts line 145: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:415:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:289 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:706 :: src\app\api\activities\route.ts line 159: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:416:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:290 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:707 :: src\app\api\activities\route.ts line 182: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:417:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:291 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:708 :: src\app\api\activities\route.ts line 191: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:418:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:292 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:709 :: src\app\api\activities\route.ts line 219: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:419:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:293 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:710 :: src\app\api\activities\route.ts line 252: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:420:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:294 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:711 :: src\app\api\activities\route.ts line 284: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:421:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:295 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:712 :: src\app\api\activities\route.ts line 305: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:422:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:296 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:713 :: src\app\api\activities\route.ts line 314: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:536:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:315 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:282 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:699 :: src\app\api\activities\route.ts line 21: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:537:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:316 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:283 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:700 :: src\app\api\activities\route.ts line 39: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:538:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:317 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:284 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:701 :: src\app\api\activities\route.ts line 57: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:539:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:318 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:285 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:702 :: src\app\api\activities\route.ts line 76: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:540:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:319 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:286 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:703 :: src\app\api\activities\route.ts line 120: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:541:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:320 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:287 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:704 :: src\app\api\activities\route.ts line 139: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:542:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:321 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:288 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:705 :: src\app\api\activities\route.ts line 145: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:543:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:322 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:289 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:706 :: src\app\api\activities\route.ts line 159: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:544:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:323 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:290 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:707 :: src\app\api\activities\route.ts line 182: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:545:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:324 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:291 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:708 :: src\app\api\activities\route.ts line 191: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:546:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:325 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:292 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:709 :: src\app\api\activities\route.ts line 219: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:547:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:326 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:293 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:710 :: src\app\api\activities\route.ts line 252: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:548:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:327 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:294 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:711 :: src\app\api\activities\route.ts line 284: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:549:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:328 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:295 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:712 :: src\app\api\activities\route.ts line 305: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:550:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:329 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:296 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:713 :: src\app\api\activities\route.ts line 314: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-g-controlled-activity-intake-static-verification.txt:86:- NextResponse
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:72:- NextResponse
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:657:   408: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:282 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:699 :: src\app\api\activities\route.ts line 21: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:658:   409: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:283 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:700 :: src\app\api\activities\route.ts line 39: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:659:   410: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:284 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:701 :: src\app\api\activities\route.ts line 57: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:660:   411: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:285 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:702 :: src\app\api\activities\route.ts line 76: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:661:   412: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:286 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:703 :: src\app\api\activities\route.ts line 120: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:662:   413: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:287 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:704 :: src\app\api\activities\route.ts line 139: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:663:   414: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:288 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:705 :: src\app\api\activities\route.ts line 145: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:664:   415: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:289 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:706 :: src\app\api\activities\route.ts line 159: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:665:   416: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:290 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:707 :: src\app\api\activities\route.ts line 182: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:666:   417: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:291 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:708 :: src\app\api\activities\route.ts line 191: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:667:   418: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:292 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:709 :: src\app\api\activities\route.ts line 219: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:668:   419: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:293 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:710 :: src\app\api\activities\route.ts line 252: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:669:   420: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:294 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:711 :: src\app\api\activities\route.ts line 284: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:670:   421: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:295 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:712 :: src\app\api\activities\route.ts line 305: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:671:   422: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:296 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:713 :: src\app\api\activities\route.ts line 314: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1107:   282: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:699 :: src\app\api\activities\route.ts line 21: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1108:   283: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:700 :: src\app\api\activities\route.ts line 39: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1109:   284: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:701 :: src\app\api\activities\route.ts line 57: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1110:   285: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:702 :: src\app\api\activities\route.ts line 76: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1111:   286: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:703 :: src\app\api\activities\route.ts line 120: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1112:   287: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:704 :: src\app\api\activities\route.ts line 139: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1113:   288: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:705 :: src\app\api\activities\route.ts line 145: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1114:   289: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:706 :: src\app\api\activities\route.ts line 159: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1115:   290: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:707 :: src\app\api\activities\route.ts line 182: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1116:   291: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:708 :: src\app\api\activities\route.ts line 191: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1117:   292: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:709 :: src\app\api\activities\route.ts line 219: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1118:   293: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:710 :: src\app\api\activities\route.ts line 252: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1119:   294: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:711 :: src\app\api\activities\route.ts line 284: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1120:   295: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:712 :: src\app\api\activities\route.ts line 305: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1121:   296: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:713 :: src\app\api\activities\route.ts line 314: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1225:   282: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:699 :: src\app\api\activities\route.ts line 21: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1226:   283: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:700 :: src\app\api\activities\route.ts line 39: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1227:   284: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:701 :: src\app\api\activities\route.ts line 57: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1228:   285: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:702 :: src\app\api\activities\route.ts line 76: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1229:   286: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:703 :: src\app\api\activities\route.ts line 120: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1230:   287: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:704 :: src\app\api\activities\route.ts line 139: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1231:   288: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:705 :: src\app\api\activities\route.ts line 145: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1232:   289: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:706 :: src\app\api\activities\route.ts line 159: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1233:   290: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:707 :: src\app\api\activities\route.ts line 182: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1234:   291: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:708 :: src\app\api\activities\route.ts line 191: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1235:   292: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:709 :: src\app\api\activities\route.ts line 219: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1236:   293: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:710 :: src\app\api\activities\route.ts line 252: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1237:   294: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:711 :: src\app\api\activities\route.ts line 284: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1238:   295: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:712 :: src\app\api\activities\route.ts line 305: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1239:   296: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:713 :: src\app\api\activities\route.ts line 314: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1357:   282: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:699 :: src\app\api\activities\route.ts line 21: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1358:   283: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:700 :: src\app\api\activities\route.ts line 39: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1359:   284: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:701 :: src\app\api\activities\route.ts line 57: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1360:   285: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:702 :: src\app\api\activities\route.ts line 76: errorResponse: NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1361:   286: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:703 :: src\app\api\activities\route.ts line 120: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1362:   287: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:704 :: src\app\api\activities\route.ts line 139: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1363:   288: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:705 :: src\app\api\activities\route.ts line 145: return NextResponse.json({
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1364:   289: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:706 :: src\app\api\activities\route.ts line 159: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1365:   290: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:707 :: src\app\api\activities\route.ts line 182: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1366:   291: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:708 :: src\app\api\activities\route.ts line 191: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1367:   292: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:709 :: src\app\api\activities\route.ts line 219: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1368:   293: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:710 :: src\app\api\activities\route.ts line 252: return NextResponse.json(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1369:   294: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:711 :: src\app\api\activities\route.ts line 284: return NextResponse.json(
+
+Auth0 evidence:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:518:- lib/activity/activityUserContext.ts:2 :: import { auth0 } from "../auth0";
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:519:- lib/activity/activityUserContext.ts:7 :: auth0_sub?: string | null;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:521:- lib/activity/activityUserContext.ts:32 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:522:- lib/activity/activityUserContext.ts:49 :: .eq("auth0_sub", session.user.sub)
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:524:- lib/activity/activityUserContext.ts:2 :: import { auth0 } from "../auth0";
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:525:- lib/activity/activityUserContext.ts:7 :: auth0_sub?: string | null;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:527:- lib/activity/activityUserContext.ts:32 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:528:- lib/activity/activityUserContext.ts:49 :: .eq("auth0_sub", session.user.sub)
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:585:- lib/activity/stateFacts/controlledPersistence/auth.ts:21 :: import { auth0 } from "../../../auth0";
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:586:- lib/activity/stateFacts/controlledPersistence/auth.ts:38 :: auth0_sub?: unknown;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:589:- lib/activity/stateFacts/controlledPersistence/auth.ts:123 :: * - reads app_users by auth0_sub;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:590:- lib/activity/stateFacts/controlledPersistence/auth.ts:129 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:591:- lib/activity/stateFacts/controlledPersistence/auth.ts:150 :: .select("id, auth0_sub, email")
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:592:- lib/activity/stateFacts/controlledPersistence/auth.ts:151 :: .eq("auth0_sub", authSubject)
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:593:- lib/activity/stateFacts/controlledPersistence/auth.ts:171 :: const appUserAuthSubject = toNullableString(appUser.auth0_sub);
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:597:- lib/activity/stateFacts/controlledPersistence/auth.ts:21 :: import { auth0 } from "../../../auth0";
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:598:- lib/activity/stateFacts/controlledPersistence/auth.ts:38 :: auth0_sub?: unknown;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:601:- lib/activity/stateFacts/controlledPersistence/auth.ts:123 :: * - reads app_users by auth0_sub;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:602:- lib/activity/stateFacts/controlledPersistence/auth.ts:129 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:603:- lib/activity/stateFacts/controlledPersistence/auth.ts:150 :: .select("id, auth0_sub, email")
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:604:- lib/activity/stateFacts/controlledPersistence/auth.ts:151 :: .eq("auth0_sub", authSubject)
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:605:- lib/activity/stateFacts/controlledPersistence/auth.ts:171 :: const appUserAuthSubject = toNullableString(appUser.auth0_sub);
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:712:- lib/activity/activityUserContext.ts:2 :: import { auth0 } from "../auth0";
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:713:- lib/activity/activityUserContext.ts:7 :: auth0_sub?: string | null;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:715:- lib/activity/activityUserContext.ts:32 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:716:- lib/activity/activityUserContext.ts:49 :: .eq("auth0_sub", session.user.sub)
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:718:- lib/activity/activityUserContext.ts:2 :: import { auth0 } from "../auth0";
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:719:- lib/activity/activityUserContext.ts:7 :: auth0_sub?: string | null;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:721:- lib/activity/activityUserContext.ts:32 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:722:- lib/activity/activityUserContext.ts:49 :: .eq("auth0_sub", session.user.sub)
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:779:- lib/activity/stateFacts/controlledPersistence/auth.ts:21 :: import { auth0 } from "../../../auth0";
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:781:- lib/activity/stateFacts/controlledPersistence/auth.ts:38 :: auth0_sub?: unknown;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:784:- lib/activity/stateFacts/controlledPersistence/auth.ts:123 :: * - reads app_users by auth0_sub;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:785:- lib/activity/stateFacts/controlledPersistence/auth.ts:129 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:790:- lib/activity/stateFacts/controlledPersistence/auth.ts:150 :: .select("id, auth0_sub, email")
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:791:- lib/activity/stateFacts/controlledPersistence/auth.ts:151 :: .eq("auth0_sub", authSubject)
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:792:- lib/activity/stateFacts/controlledPersistence/auth.ts:171 :: const appUserAuthSubject = toNullableString(appUser.auth0_sub);
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:798:- lib/activity/stateFacts/controlledPersistence/auth.ts:21 :: import { auth0 } from "../../../auth0";
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:800:- lib/activity/stateFacts/controlledPersistence/auth.ts:38 :: auth0_sub?: unknown;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:803:- lib/activity/stateFacts/controlledPersistence/auth.ts:123 :: * - reads app_users by auth0_sub;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:804:- lib/activity/stateFacts/controlledPersistence/auth.ts:129 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:809:- lib/activity/stateFacts/controlledPersistence/auth.ts:150 :: .select("id, auth0_sub, email")
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:810:- lib/activity/stateFacts/controlledPersistence/auth.ts:151 :: .eq("auth0_sub", authSubject)
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:811:- lib/activity/stateFacts/controlledPersistence/auth.ts:171 :: const appUserAuthSubject = toNullableString(appUser.auth0_sub);
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:855:- lib/activity/stateFacts/controlledPersistence/types.ts:299 :: auth0UserId?: string | null;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:861:- lib/activity/stateFacts/controlledPersistence/types.ts:299 :: auth0UserId?: string | null;
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:41:| 60 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:47:| 75 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:131:| 24 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:138:| 41 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:215:| 23 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:221:| 38 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:243:| 21 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:249:| 36 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:271:| 21 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:277:| 36 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:308:| 6 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:314:| 21 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:365:| 6 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:371:| 21 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:396:| 6 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:402:| 24 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:427:| 7 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:434:| 24 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:69:| 60 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:73:| 75 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:134:| 60 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:137:| 77 | .select("id, auth0_sub") |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:138:| 78 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:173:| 129 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:177:| 145 | .select("id, auth0_sub") |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:178:| 146 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:232:| 24 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:237:| 41 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:309:| 45 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:314:| 62 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:349:| 23 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:353:| 38 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:366:| 21 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:370:| 36 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:383:| 21 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:387:| 36 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:415:| 6 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:419:| 21 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:455:| 6 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:459:| 21 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:471:| 6 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:475:| 24 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:491:| 7 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:496:| 24 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:551:| 12 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:556:| 29 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:593:| 12 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:598:| 29 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:635:| 12 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:640:| 29 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A4_relationship_gap_analysis.md:122:| 145 | .select("id, auth0_sub") |
+docs/commercial/P4.8.0-A4_relationship_gap_analysis.md:123:| 146 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A4_relationship_gap_analysis.md:148:| 41 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A4_relationship_gap_analysis.md:191:| 38 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A4_relationship_gap_analysis.md:204:| 36 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A4_relationship_gap_analysis.md:214:| 21 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A4_relationship_gap_analysis.md:229:| 21 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A4_relationship_gap_analysis.md:244:| 24 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-A4_relationship_gap_analysis.md:265:| 24 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-B1.1_runtime_api_ui_conclusion.md:50:| 145 | .select("id, auth0_sub") |
+docs/commercial/P4.8.0-B1_runtime_api_ui_assumptions_inventory.md:58:| 145 | .select("id, auth0_sub") |
+docs/commercial/P4.8.0-C1_organization_country_currency_source_inventory.md:57:| 75 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-C1_organization_country_currency_source_inventory.md:198:| 77 | .select("id, auth0_sub") |
+docs/commercial/P4.8.0-C1_organization_country_currency_source_inventory.md:199:| 78 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-C1_organization_country_currency_source_inventory.md:286:| 21 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-C1_organization_country_currency_source_inventory.md:319:| 179 | .select("id, auth0_sub") |
+docs/commercial/P4.8.0-C1_organization_country_currency_source_inventory.md:320:| 180 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-C1_organization_country_currency_source_inventory.md:378:| 148 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-C1_organization_country_currency_source_inventory.md:450:| 21 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-C1_organization_country_currency_source_inventory.md:466:| 41 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-C1_organization_country_currency_source_inventory.md:525:| 38 | .eq("auth0_sub", session.user.sub) |
+docs/commercial/P4.8.0-D2.1_helper_path_and_typecheck_inspection.md:85:    "@auth0/nextjs-auth0": "^4.19.0",
+docs/commercial/P4.8.0-D3_route_adoption_targets_inventory.md:125:| 3 | import { auth0 } from "../../../../lib/auth0"; |
+docs/commercial/P4.8.0-D3_route_adoption_targets_inventory.md:162:| 2 | import { auth0 } from "../../../../../../lib/auth0"; |
+
+getSession evidence:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:521:- lib/activity/activityUserContext.ts:32 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:527:- lib/activity/activityUserContext.ts:32 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:590:- lib/activity/stateFacts/controlledPersistence/auth.ts:129 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:602:- lib/activity/stateFacts/controlledPersistence/auth.ts:129 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:715:- lib/activity/activityUserContext.ts:32 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:721:- lib/activity/activityUserContext.ts:32 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:785:- lib/activity/stateFacts/controlledPersistence/auth.ts:129 :: const session = await auth0.getSession();
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:804:- lib/activity/stateFacts/controlledPersistence/auth.ts:129 :: const session = await auth0.getSession();
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:41:| 60 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:131:| 24 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:215:| 23 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:243:| 21 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:271:| 21 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:308:| 6 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:365:| 6 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:396:| 6 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:427:| 7 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:69:| 60 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:134:| 60 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:173:| 129 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:232:| 24 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:309:| 45 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:349:| 23 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:366:| 21 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:383:| 21 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:415:| 6 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:455:| 6 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:471:| 6 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:491:| 7 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:551:| 12 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:593:| 12 | const session = await auth0.getSession(); |
+docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:635:| 12 | const session = await auth0.getSession(); |
+docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:6207:   55:   const session = await auth0.getSession();
+docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:6578:  129:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:400:   32:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:2702:  501:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:2714:  501:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:2985:  362:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:2997:  362:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:3352:   69:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:3364:   69:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:3771:  572:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:3783:  572:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:4453:   69:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:4465:   69:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:4708:   14:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:4719:   14:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:4934:   55:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:6031:    6:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:6106:   12:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:6198:   12:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:6290:   12:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:6382:    7:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:6491:    6:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:6566:   21:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:6757:   21:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:6832:   23:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:7402:  171:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:7476:  133:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:7551:    6:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:7624:    4:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:7643:    5:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:7656:    5:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:7672:    5:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:7752:    6:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:7946:  227:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:7958:  227:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:8449:  250:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:8461:  250:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:8680:  239:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:8692:  239:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:9295:   45:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:9370:   24:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:9496:   61:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:9588:   61:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:9935:    6:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10010:    6:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10165:   12:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10257:   67:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10360:   12:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10452:   39:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10544:    6:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10557:    6:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10573:    6:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10919:   14:     const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10928:   14:     const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10941:   14:     const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10957:   14:     const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:11037:    6:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:11145:  143:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:11304:  129:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:11435:  209:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:11447:  209:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:11820:  401:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:11832:  401:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:11894:   52:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:11906:   52:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:12026:  501:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:12038:  501:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:12546:  213:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:12558:  213:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:12756:   61:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:12768:   61:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:12853:  410:   const session = await auth0.getSession();
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:12865:  410:   const session = await auth0.getSession();
+docs/value-objects/P4.9.16-A2_current_debug_api_route_full.ts.txt:144:  const session = await auth0.getSession();
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:947:   55:   const session = await auth0.getSession();
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:960:   55:   const session = await auth0.getSession();
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:971:   55:   const session = await auth0.getSession();
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:5041:   61:   const session = await auth0.getSession();
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:5053:   61:   const session = await auth0.getSession();
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:5297:   61:   const session = await auth0.getSession();
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:5307:   61:   const session = await auth0.getSession();
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:5539:   12:   const session = await auth0.getSession();
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:5876:   67:   const session = await auth0.getSession();
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:5888:   67:   const session = await auth0.getSession();
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:6069:   12:   const session = await auth0.getSession();
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:6334:   39:   const session = await auth0.getSession();
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:6669:  129:   const session = await auth0.getSession();
+docs/value-objects/P4.9.7-A2_focused_api_files_extraction.md:186:  129:   const session = await auth0.getSession();
+
+Supabase createClient evidence:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-g-controlled-activity-intake-static-verification.txt:73:- createClient
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:60:- createClient
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix1-exact-column-gap-fix.txt:95:- No createClient.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-q-static-row-builder-verification.txt:30:- persist.ts contains no createClient.
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:1821:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:1835:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:1848:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:1859:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:1869:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:1876:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:61:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:71:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:83:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:108:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:121:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:131:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:140:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:146:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/P4.9.7-A2_focused_api_files_extraction.md:37:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/P4.9.7-A2_focused_api_files_extraction.md:50:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/P4.9.9-A1_object_cloud_security_read_exposure_inspection.md:785:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/P4.9.9-A1_object_cloud_security_read_exposure_inspection.md:798:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/P4.9.9-A1_object_cloud_security_read_exposure_inspection.md:808:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/category-derivation-code-inventory-c8-j.md:3111:----- match pattern: createClient | lines 1-5 -----
+docs/value-objects/category-derivation-code-inventory-c8-j.md:3112:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/category-derivation-code-inventory-c8-j.md:3119:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/category-derivation-code-inventory-c8-j.md:3128:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/category-derivation-code-inventory-c8-j.md:3168:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/category-derivation-code-inventory-c8-j.md:3178:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/category-derivation-code-inventory-c8-j.md:3180:----- match pattern: createClient | lines 10-14 -----
+docs/value-objects/category-derivation-code-inventory-c8-j.md:3185:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/category-derivation-layer-v1-c8-e-e1-persistence-source-inventory.txt:543:DB MARKER SEARCH: createClient
+docs/value-objects/category-derivation-layer-v1-c8-e-e1-persistence-source-inventory.txt:544:  lib\supabase.ts line 1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/category-derivation-layer-v1-c8-e-e1-persistence-source-inventory.txt:545:  lib\supabase.ts line 14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/category-derivation-layer-v1-c8-e-e2-persistence-deep-inspect.txt:1427:import { createClient } from "@supabase/supabase-js";
+docs/value-objects/category-derivation-layer-v1-c8-e-e2-persistence-deep-inspect.txt:1440:export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/category-derivation-layer-v1-c8-e-f1-a-route-runner-signatures.txt:635:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/category-derivation-layer-v1-c8-e-f1-a-route-runner-signatures.txt:691:line 1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/category-derivation-layer-v1-c8-e-f1-a-route-runner-signatures.txt:692:line 14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/p4-10-0-c8-i-d4-f-b-a-read-only-helper-audit-report.txt:3223:Pattern: createClient
+docs/value-objects/p4-10-0-c8-i-d4-f-b-b-audit-interpretation-and-helper-contract.txt:83:The audit did not find route-level createClient or getSupabase patterns in the route convention search.
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-a-targeted-source-inspection-report.txt:231:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-a-targeted-source-inspection-report.txt:244:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-a-targeted-source-inspection-report.txt:276:Line 1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-a-targeted-source-inspection-report.txt:283:Line 14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-b-source-inspection-interpretation-memo.txt:362:Pattern: createClient
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-b-source-inspection-interpretation-memo.txt:365:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-b-source-inspection-interpretation-memo.txt:375:Pattern: createClient
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-b-source-inspection-interpretation-memo.txt:382:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-b-source-inspection-interpretation-memo.txt:387:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-b-source-inspection-interpretation-memo.txt:400:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-b-source-inspection-interpretation-memo.txt:415:    1: import { createClient } from "@supabase/supabase-js";
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-b-source-inspection-interpretation-memo.txt:443:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-b-source-inspection-interpretation-memo.txt:459:   14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+docs/value-objects/p4-10-0-c8-i-d4-f-b-c-d-controlled-persistence-implementation-readiness-checklist.txt:308:- createClient
+docs/value-objects/p4-10-0-c8-i-d4-l-l-b-rollback-payload-builder-report.txt:69:- no createClient.
+lib/supabase.ts:1:import { createClient } from "@supabase/supabase-js";
+lib/supabase.ts:14:export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+Activity route evidence:
+docs/activity-intake-lifecycle-p4-2.md:34:- GET /api/activity/intake
+docs/activity-intake-lifecycle-p4-2.md:35:- POST /api/activity/intake
+docs/activity-intake-lifecycle-p4-2.md:53:- GET /api/activity/intake/signals
+docs/activity-intake-lifecycle-p4-2.md:68:- POST /api/activity/intake/signals/[id]/promote
+docs/activity-intake-lifecycle-p4-2.md:90:- POST /api/activity/intake/events/[id]/confirm
+docs/activity-intake-lifecycle-p4-2.md:113:- GET /api/activity/intake/events
+docs/activity-intake-lifecycle-p4-2.md:130:- GET /api/activity/intake/events/[id]
+docs/activity-intake-lifecycle-p4-2.md:153:- POST /api/activity/intake/signals/[id]/ignore
+docs/activity-intake-lifecycle-p4-2.md:172:- POST /api/activity/intake/events/[id]/reject
+docs/activity-intake-lifecycle-p4-2.md:191:- PATCH /api/activity/intake/events/[id]
+docs/activity-intake-lifecycle-p4-2.md:239:- GET /api/activity/debug-trace?eventId=<event_id>&mode=summary
+docs/activity-intake-lifecycle-p4-2.md:272:- GET  /api/activity/intake
+docs/activity-intake-lifecycle-p4-2.md:273:- POST /api/activity/intake
+docs/activity-intake-lifecycle-p4-2.md:274:- GET  /api/activity/intake/signals
+docs/activity-intake-lifecycle-p4-2.md:275:- POST /api/activity/intake/signals/[id]/promote
+docs/activity-intake-lifecycle-p4-2.md:276:- POST /api/activity/intake/signals/[id]/ignore
+docs/activity-intake-lifecycle-p4-2.md:277:- GET   /api/activity/intake/events
+docs/activity-intake-lifecycle-p4-2.md:278:- GET   /api/activity/intake/events/[id]
+docs/activity-intake-lifecycle-p4-2.md:279:- PATCH /api/activity/intake/events/[id]
+docs/activity-intake-lifecycle-p4-2.md:280:- POST  /api/activity/intake/events/[id]/confirm
+docs/activity-intake-lifecycle-p4-2.md:281:- POST  /api/activity/intake/events/[id]/reject
+docs/activity-intake-lifecycle-p4-2.md:282:- GET   /api/activity/debug-trace
+docs/activity-template-mapping-p4-4.md:66:- src/app/api/activity/intake/signals/[id]/promote/route.ts
+docs/activity-template-mapping-p4-4.md:135:- src/app/api/activity/intake/events/[id]/route.ts
+docs/activity-template-mapping-p4-4.md:136:- src/app/api/activity/intake/events/route.ts
+docs/activity-template-mapping-p4-4.md:137:- src/app/api/activity/debug-trace/route.ts
+docs/activity-template-mapping-p4-4.md:188:- src/app/api/activity/debug-trace/route.ts
+docs/activity-template-mapping-p4-4.md:232:- POST /api/activity/intake/signals/[id]/promote
+docs/activity-template-mapping-p4-4.md:239:- POST /api/activity/intake/events/[id]/confirm
+docs/activity-template-mapping-p4-4.md:246:- GET /api/activity/debug-trace?eventId=<eventId>&mode=summary
+docs/activity-template-mapping-p4-4.md:353:- src/app/api/activity/intake/events/[id]/reject/route.ts
+docs/activity-template-mapping-p4-4.md:361:- POST /api/activity/intake/events/[id]/reject on already archived event returns:
+docs/activity-template-mapping-p4-4.md:420:- PATCH `/api/activity/intake/events/[id]` now creates an `activity_corrections` audit row when an `imported_pending` event is edited before confirm/reject.
+docs/activity-template-mapping-p4-4.md:470:- `GET /api/activity/debug-trace?eventId=...&mode=summary` now exposes correction status in compact correction summary.
+docs/activity/P4.7.8-R_cross_route_verification.md:19:K3.2 /api/activity/record — VERIFIED  
+docs/activity/P4.7.8-R_cross_route_verification.md:20:K3.3 /api/activity/complete — VERIFIED  
+docs/activity/P4.7.8-R_cross_route_verification.md:21:K3.4 /api/activity/intake/events/[id]/confirm — VERIFIED
+docs/activity/P4.7.8-R_cross_route_verification.md:26:route: POST /api/activity/record  
+docs/activity/P4.7.8-R_cross_route_verification.md:35:route: POST /api/activity/complete  
+docs/activity/P4.7.8-R_cross_route_verification.md:45:route: POST /api/activity/intake/events/[id]/confirm  
+docs/activity/P4.7.8-R_cross_route_verification.md:65:src/app/api/activity/record/route.ts  
+docs/activity/P4.7.8-R_cross_route_verification.md:66:src/app/api/activity/complete/route.ts  
+docs/activity/P4.7.8-R_cross_route_verification.md:67:src/app/api/activity/intake/events/[id]/confirm/route.ts  
+docs/activity/P4.7.8-R_cross_route_verification.md:104:- route: POST /api/activity/record
+docs/activity/P4.7.8-R_cross_route_verification.md:117:- route: POST /api/activity/complete
+docs/activity/P4.7.8-R_cross_route_verification.md:130:- /api/activity/record response processingLogs: VERIFIED
+docs/activity/P4.7.8-R_cross_route_verification.md:131:- /api/activity/complete response processingLogs: VERIFIED
+docs/activity/P4.7.8-R_cross_route_verification.md:204:- route: POST /api/activity/record
+docs/activity/P4.7.8-R_cross_route_verification.md:241:- Known-template registry extraction did not break /api/activity/record.
+docs/activity/P4.7.8-R_cross_route_verification.md:299:- route: POST /api/activity/record
+docs/activity/P4.7.8-R_cross_route_verification.md:409:- Verify the second known-template not only through /api/activity/record, but also through lifecycle and imported-pending routes.
+docs/activity/P4.7.8-R_cross_route_verification.md:429:- route: POST /api/activity/complete
+docs/activity/P4.7.8-R_cross_route_verification.md:465:- route: POST /api/activity/intake/events/[id]/confirm
+docs/activity/P4.7.8-R_cross_route_verification.md:570:- /api/activity/complete
+docs/activity/P4.7.8-R_cross_route_verification.md:571:- /api/activity/intake/events/[id]/confirm
+docs/activity/P4.7.8-R_cross_route_verification.md:607:- /api/activity/record
+docs/activity/P4.7.8-R_cross_route_verification.md:608:- /api/activity/complete
+docs/activity/P4.7.8-R_cross_route_verification.md:609:- /api/activity/intake/events/[id]/confirm
+docs/activity/P4.7.8-R_cross_route_verification.md:686:- /api/activity/record
+docs/activity/P4.7.8-R_cross_route_verification.md:687:- /api/activity/complete
+docs/activity/P4.7.8-R_cross_route_verification.md:688:- /api/activity/intake/events/[id]/confirm
+docs/activity/P4.7.8-R_cross_route_verification.md:720:- src/app/api/activity/record/route.ts
+docs/activity/P4.7.8-R_cross_route_verification.md:721:- src/app/api/activity/complete/route.ts
+docs/activity/P4.7.8-R_cross_route_verification.md:722:- src/app/api/activity/intake/events/[id]/confirm/route.ts
+docs/activity/P4.7.9-R-A14_runtime_source_order_decision.md:22:- src/app/api/activity/debug-known-template-registry/route.ts
+docs/activity/P4.7.9-R-A14_runtime_source_order_decision.md:122:- src/app/api/activity/debug-trace/route.ts
+docs/activity/P4.7.9-R_registry_scaling.md:268:- src/app/api/activity/record/route.ts
+docs/activity/P4.7.9-R_registry_scaling.md:269:- src/app/api/activity/complete/route.ts
+docs/activity/P4.7.9-R_registry_scaling.md:270:- src/app/api/activity/intake/events/[id]/confirm/route.ts
+docs/activity/P4.7.9-R_registry_scaling.md:411:- src/app/api/activity/record/route.ts
+docs/activity/P4.7.9-R_registry_scaling.md:412:- src/app/api/activity/complete/route.ts
+docs/activity/P4.7.9-R_registry_scaling.md:413:- src/app/api/activity/intake/events/[id]/confirm/route.ts
+docs/activity/P4.7.9-R_registry_scaling.md:424:POST /api/activity/record -> 401 Unauthorized
+docs/activity/P4.7.9-R_registry_scaling.md:503:- src/app/api/activity/complete/route.ts
+docs/activity/P4.7.9-R_registry_scaling.md:605:- POST /api/activity/intake/events/[id]/confirm
+docs/activity/P4.7.9-R_registry_scaling.md:606:- src/app/api/activity/intake/events/[id]/confirm/route.ts
+docs/activity/P4.7.9-R_registry_scaling.md:655:POST /api/activity/intake/events/13502589-b478-4c49-93c4-e793058e4b79/confirm
+docs/activity/P4.7.9-R_registry_scaling.md:747:- A8b — /api/activity/record;
+docs/activity/P4.7.9-R_registry_scaling.md:748:- A8c — /api/activity/complete;
+docs/activity/P4.7.9-R_registry_scaling.md:749:- A8d — /api/activity/intake/events/[id]/confirm.
+docs/activity/P4.7.9-R_registry_scaling.md:869:- src/app/api/activity/record/route.ts;
+docs/activity/P4.7.9-R_registry_scaling.md:870:- src/app/api/activity/complete/route.ts;
+docs/activity/P4.7.9-R_registry_scaling.md:871:- src/app/api/activity/intake/events/[id]/confirm/route.ts.
+docs/activity/P4.7.9-R_registry_scaling.md:881:- src/app/api/activity/debug-trace/route.ts;
+docs/activity/P4.7.9-R_registry_scaling.md:958:- route: POST /api/activity/record;
+docs/activity/P4.7.9-R_registry_scaling.md:1295:- src/app/api/activity/debug-trace/route.ts
+docs/activity/P4.7.9-R_registry_scaling.md:1402:- /api/activity/debug-known-template-registry
+docs/activity/P4.7.9-R_registry_scaling.md:1406:- src/app/api/activity/debug-known-template-registry/route.ts
+docs/activity/P4.7.9-R_registry_scaling.md:1433:- endpoint: /api/activity/debug-known-template-registry
+docs/activity/P4.7.9-R_registry_scaling.md:1465:- existing /api/activity/debug-trace route was not changed
+docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:72:- no use of old canonical /api/activity/complete proof for new production-like tests
+docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:154:- src/app/api/activity/**
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:38:- src/app/api/activity/complete/route.ts | methods: GET, POST | markers: debug, contains activity complete reference, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:39:- src/app/api/activity/day-summary/route.ts | methods: GET | markers: supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:40:- src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts | methods: GET, POST | markers: debug, controlled, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:41:- src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts | methods: GET, POST | markers: debug, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:42:- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts | methods: GET, POST | markers: debug, controlled, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:43:- src/app/api/activity/debug/category-derivation-route-runner-test/route.ts | methods: GET, POST | markers: debug, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:44:- src/app/api/activity/debug/create-free-text-start-event/route.ts | methods: POST | markers: debug, contains activity complete reference, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:45:- src/app/api/activity/debug/free-text-value-object-test/route.ts | methods: GET, POST | markers: debug, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:46:- src/app/api/activity/debug/state-fact-rollback-no-write-proof/route.ts | methods: GET | markers: debug, controlled, state fact, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:47:- src/app/api/activity/debug/state-signal-candidate-shadow-test/route.ts | methods: GET, POST | markers: debug, controlled, state fact, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:48:- src/app/api/activity/debug/value-object-bridge-proof/route.ts | methods: GET | markers: debug, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:49:- src/app/api/activity/debug-known-template-registry/route.ts | methods: GET | markers: debug, supabase access
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:50:- src/app/api/activity/debug-rubricator-value-object-bridge/route.ts | methods: POST | markers: debug, controlled, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:51:- src/app/api/activity/debug-trace/route.ts | methods: GET | markers: debug, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:52:- src/app/api/activity/events/[id]/corrections/route.ts | methods: GET | markers: supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:53:- src/app/api/activity/events/[id]/route.ts | methods: GET, PATCH | markers: supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:54:- src/app/api/activity/events/route.ts | methods: GET | markers: supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:55:- src/app/api/activity/intake/events/[id]/confirm/route.ts | methods: GET, POST | markers: supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:56:- src/app/api/activity/intake/events/[id]/reject/route.ts | methods: GET, POST | markers: supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:57:- src/app/api/activity/intake/events/[id]/route.ts | methods: GET, PATCH | markers: debug, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:58:- src/app/api/activity/intake/events/route.ts | methods: GET | markers: debug, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:59:- src/app/api/activity/intake/route.ts | methods: GET, POST | markers: controlled, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:60:- src/app/api/activity/intake/signals/[id]/ignore/route.ts | methods: GET, POST | markers: debug, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:61:- src/app/api/activity/intake/signals/[id]/promote/route.ts | methods: GET, POST | markers: supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:62:- src/app/api/activity/intake/signals/route.ts | methods: GET | markers: debug, supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:63:- src/app/api/activity/record/route.ts | methods: GET, POST | markers: supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:64:- src/app/api/activity/start/route.ts | methods: GET, POST | markers: supabase access, auth/user marker
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:65:- src/app/api/activity/state-facts/controlled-persist/route.ts | methods: POST | markers: controlled, state fact
+
+Controlled intake evidence:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:842:  lib/activity/controlledIntake/
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:844:  lib/activity/controlledIntake/types.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:845:  lib/activity/controlledIntake/payloadBuilder.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:846:  lib/activity/controlledIntake/validator.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:847:  lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:848:  lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:45:   lib/activity/controlledIntake/
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:1022:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:847 :: lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:47:- helperNamespaceReservedForLater: lib/activity/controlledIntake/
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:66:1. lib/activity/controlledIntake/types.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:82:2. lib/activity/controlledIntake/validator.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:100:3. lib/activity/controlledIntake/payloadBuilder.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:108:4. lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:114:5. lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:65:   - next block may create static helper files under lib/activity/controlledIntake/.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:78:- lib/activity/controlledIntake/
+docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:81:- lib/activity/controlledIntake/types.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:82:- lib/activity/controlledIntake/validator.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:83:- lib/activity/controlledIntake/payloadBuilder.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:84:- lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:85:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-f-controlled-activity-intake-helper-types-validator-payload-builder.txt:10:- lib/activity/controlledIntake/types.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-f-controlled-activity-intake-helper-types-validator-payload-builder.txt:11:- lib/activity/controlledIntake/validator.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-f-controlled-activity-intake-helper-types-validator-payload-builder.txt:12:- lib/activity/controlledIntake/payloadBuilder.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-f-controlled-activity-intake-helper-types-validator-payload-builder.txt:15:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-g-controlled-activity-intake-static-verification.txt:14:- lib/activity/controlledIntake/types.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-g-controlled-activity-intake-static-verification.txt:15:- lib/activity/controlledIntake/validator.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-g-controlled-activity-intake-static-verification.txt:16:- lib/activity/controlledIntake/payloadBuilder.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-g-controlled-activity-intake-static-verification.txt:19:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:14:- lib/activity/controlledIntake/types.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:15:- lib/activity/controlledIntake/validator.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:16:- lib/activity/controlledIntake/payloadBuilder.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:19:- lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:20:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:34:- lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:84:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:123:- controlledIntakeSchemaVersion
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:124:- controlledIntakeHelperLayer
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:186:- Create lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:208:- No lib/activity/controlledIntake/idempotency.ts creation.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:209:- No lib/activity/controlledIntake/persist.ts creation.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-i-controlled-activity-intake-idempotency-helper-implementation.txt:14:- lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-i-controlled-activity-intake-idempotency-helper-implementation.txt:17:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:14:- lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:17:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-fix1-idempotency-canonical-value-typing.txt:14:lib/activity/controlledIntake/idempotency.ts:119:5 - error TS2322:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-fix1-idempotency-canonical-value-typing.txt:21:- lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-fix1-idempotency-canonical-value-typing.txt:24:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-k-controlled-activity-intake-persist-helper-design-gate.txt:14:- lib/activity/controlledIntake/types.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-k-controlled-activity-intake-persist-helper-design-gate.txt:15:- lib/activity/controlledIntake/validator.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-k-controlled-activity-intake-persist-helper-design-gate.txt:16:- lib/activity/controlledIntake/payloadBuilder.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-k-controlled-activity-intake-persist-helper-design-gate.txt:17:- lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-k-controlled-activity-intake-persist-helper-design-gate.txt:20:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-k-controlled-activity-intake-persist-helper-design-gate.txt:36:Can lib/activity/controlledIntake/persist.ts be implemented immediately in the next block?
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:14:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:2866:docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:845:  lib/activity/controlledIntake/payloadBuilder.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:2922:lib/activity/controlledIntake/validator.ts:26:  "app_user_id",
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:2927:lib/activity/controlledIntake/validator.ts:28:  "owner_id",
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:2954:lib/activity/controlledIntake/validator.ts:38:  "profile_id",
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:2968:lib/activity/controlledIntake/validator.ts:36:  "workspace_id",
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3040:TERM: controlledIntake
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3042:docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:842:  lib/activity/controlledIntake/
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3043:docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:844:  lib/activity/controlledIntake/types.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3044:docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:845:  lib/activity/controlledIntake/payloadBuilder.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3045:docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:846:  lib/activity/controlledIntake/validator.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3046:docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:847:  lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3047:docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:848:  lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3048:docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:45:   lib/activity/controlledIntake/
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3049:docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:1022:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:847 :: lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3050:docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:47:- helperNamespaceReservedForLater: lib/activity/controlledIntake/
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3051:docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:66:1. lib/activity/controlledIntake/types.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3052:docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:82:2. lib/activity/controlledIntake/validator.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3053:docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:100:3. lib/activity/controlledIntake/payloadBuilder.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3054:docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:108:4. lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3055:docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:114:5. lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3056:docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:65:   - next block may create static helper files under lib/activity/controlledIntake/.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3057:docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:78:- lib/activity/controlledIntake/
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3058:docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:81:- lib/activity/controlledIntake/types.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3059:docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:82:- lib/activity/controlledIntake/validator.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3060:docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:83:- lib/activity/controlledIntake/payloadBuilder.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3061:docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:84:- lib/activity/controlledIntake/idempotency.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:17:Therefore O-M does not create lib/activity/controlledIntake/persist.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:21:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:31:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:1844:docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:2922:lib/activity/controlledIntake/validator.ts:26:  "app_user_id",
+docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:1845:lib/activity/controlledIntake/validator.ts:26:  "app_user_id",
+docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:1867:docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:2927:lib/activity/controlledIntake/validator.ts:28:  "owner_id",
+docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:1869:lib/activity/controlledIntake/validator.ts:28:  "owner_id",
+docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:1889:docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:2968:lib/activity/controlledIntake/validator.ts:36:  "workspace_id",
+docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:1890:lib/activity/controlledIntake/validator.ts:36:  "workspace_id",
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:14:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:58:- Create lib/activity/controlledIntake/persist.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1857:lib/activity/controlledIntake/payloadBuilder.ts:26:      status: "raw_intake_pending_semantic_processing",
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1858:lib/activity/controlledIntake/types.ts:100:  status: "raw_intake_pending_semantic_processing";
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix1-exact-column-gap-fix.txt:22:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix1-exact-column-gap-fix.txt:82:- Create lib/activity/controlledIntake/persist.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix1-exact-column-gap-fix.txt:115:- controlledIntake activity draft, idempotency trace, semantic guardrail flags and unconfirmed fields go into metadata.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix2-parser-correction-safe-gate.txt:82:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix3-strict-metadata-owner-column-confirmation.txt:19:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix4-manual-metadata-owner-schema-confirmation.txt:21:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix5-targeted-activity-events-schema-evidence-dump.txt:22:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-p-static-insert-row-builder.txt:22:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-p-static-insert-row-builder.txt:85:- metadata contains controlledIntake payload.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-q-static-row-builder-verification.txt:14:- lib/activity/controlledIntake/persist.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-q-static-row-builder-verification.txt:41:- row.metadata.controlledIntake exists.
+lib/activity/controlledIntake/idempotency.ts:49:  controlledIntakeSchemaVersion: typeof CONTROLLED_ACTIVITY_INTAKE_SCHEMA_VERSION;
+lib/activity/controlledIntake/idempotency.ts:50:  controlledIntakeHelperLayer: typeof CONTROLLED_ACTIVITY_INTAKE_HELPER_LAYER;
+lib/activity/controlledIntake/idempotency.ts:219:      controlledIntakeSchemaVersion: CONTROLLED_ACTIVITY_INTAKE_SCHEMA_VERSION,
+lib/activity/controlledIntake/idempotency.ts:220:      controlledIntakeHelperLayer: CONTROLLED_ACTIVITY_INTAKE_HELPER_LAYER,
+lib/activity/controlledIntake/payloadBuilder.ts:35:        controlledIntakeHelperLayer: CONTROLLED_ACTIVITY_INTAKE_HELPER_LAYER,
+lib/activity/controlledIntake/persist.ts:188:    controlledIntake: compactObject({
+
+Verification performed in O-R
+- Clean pushed O-Q baseline verified.
+- Required helper/report files exist.
+- controlled-intake route remains absent.
+- O-P and O-Q reports were read.
+- Helper files were checked for forbidden runtime/write/AI patterns.
+- Local route/auth evidence was collected.
+- npx tsc --noEmit is run.
+- Only this O-R report is created.
+
+Still forbidden after O-R
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not call AI.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
