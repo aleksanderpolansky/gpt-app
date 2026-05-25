@@ -1,0 +1,213 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-F - Atomic Rollback RPC Design
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-F
+Type: doc-only RPC design
+Status: ATOMIC ROLLBACK RPC DESIGN RECORDED / NO MIGRATION CREATED / NO ROLLBACK HELPER IMPLEMENTED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED / NO RUNTIME ROLLBACK IMPLEMENTED
+
+Baseline:
+- Previous pushed commit: ad2d31d
+- Previous completed step: P4.10.0-C8-I-D4-L-L-E
+- D4-L-L-E selected the atomic RPC strategy before runtime rollback.
+- D4-L-L-F defines the exact RPC design before a migration file is created.
+
+Design gate inherited decision:
+- ATOMIC_RPC_REQUIRED_BEFORE_RUNTIME_ROLLBACK
+- Do not implement rollbackStateFactControlled as a non-atomic Supabase JS update + insert sequence.
+
+Current helper stack verified:
+- rollback types present: True
+- payload builder present: True
+- idempotency helper present: True
+- target resolver present: True
+- target resolver uses stateFactId + valueObjectId: True
+- idempotency helper reads audit table: True
+- rollback.ts absent: True
+- controlled rollback route absent: True
+
+RPC design:
+Function name:
+- public.rollback_value_object_state_fact_controlled
+
+Security decision:
+- SECURITY_INVOKER_SERVICE_ROLE_ONLY
+
+Security rationale:
+- The RPC should not be callable by browser/client roles.
+- The backend should call it through the server-side Supabase service role client.
+- Use SECURITY INVOKER, not SECURITY DEFINER, because the service role already has the necessary database privileges and avoids unnecessary privilege escalation.
+- Revoke EXECUTE from PUBLIC, anon, and authenticated.
+- Grant EXECUTE only to service_role.
+- Set a strict search_path inside the function body if a function-level SET search_path is used in the migration.
+- Keep the function narrow and single-purpose.
+
+Required function signature:
+public.rollback_value_object_state_fact_controlled(
+  p_user_id uuid,
+  p_actor_id uuid,
+  p_value_object_id uuid,
+  p_state_fact_id uuid,
+  p_reason text,
+  p_request_trace_id text,
+  p_idempotency_key text,
+  p_source_route text,
+  p_helper_version text,
+  p_contract_version text,
+  p_d4_gate_version text,
+  p_rollback_at timestamptz,
+  p_evidence_json jsonb default '{}'::jsonb,
+  p_metadata_json jsonb default '{}'::jsonb
+)
+returns jsonb
+
+Required input validation:
+- p_user_id is required.
+- p_value_object_id is required.
+- p_state_fact_id is required.
+- p_reason must be non-empty.
+- p_request_trace_id must be non-empty.
+- p_idempotency_key must be non-empty.
+- p_source_route must be non-empty.
+- p_helper_version must be non-empty.
+- p_contract_version must be non-empty.
+- p_d4_gate_version must be non-empty.
+- p_rollback_at is required.
+
+Required target lookup:
+- Select exactly one row from public.value_object_state_facts.
+- Match by:
+  - id = p_state_fact_id
+  - value_object_id = p_value_object_id
+  - user_id = p_user_id
+- Do not authorize by state_fact_id alone.
+- Do not rely on public/catalog visibility.
+- Do not accept a mismatched value_object_id.
+- Lock the selected row with FOR UPDATE.
+
+Required state checks:
+- If no matching row exists, return rejected_fact_not_found.
+- If correction_status is already rolled_back, return already_rolled_back.
+- If correction_status is another terminal or incompatible state in future rules, return rejected_invalid_state.
+- If valid_to is already set and the row is already closed, return rejected_invalid_state unless the existing audit event confirms idempotent rollback.
+
+Required idempotency behavior:
+- Check public.value_object_state_fact_audit_events for:
+  - user_id = p_user_id
+  - state_fact_id = p_state_fact_id
+  - action_type = 'rolled_back'
+  - idempotency_key = p_idempotency_key
+- If matching audit event exists, return:
+  - ok = true
+  - status = 'already_rolled_back'
+  - state_fact_id
+  - value_object_id
+  - audit_event_id
+  - state_facts_updated = 0
+  - audit_events_created = 0
+- The unique constraint value_object_state_fact_audit_events_idempotency_uq must remain a hard backstop.
+
+Required atomic write behavior:
+Inside one Postgres transaction/function execution:
+1. Update public.value_object_state_facts only with:
+   - correction_status = 'rolled_back'
+   - valid_to = p_rollback_at
+   - updated_at = p_rollback_at
+   - metadata_json = existing metadata_json merged with rollback metadata
+2. Insert one row into public.value_object_state_fact_audit_events with:
+   - user_id = p_user_id
+   - actor_id = p_actor_id
+   - value_object_id = p_value_object_id
+   - state_fact_id = p_state_fact_id
+   - related_state_fact_id = null
+   - dimension_key = target dimension_key
+   - action_type = 'rolled_back'
+   - previous_correction_status = target previous correction_status
+   - new_correction_status = 'rolled_back'
+   - reason = p_reason
+   - request_trace_id = p_request_trace_id
+   - idempotency_key = p_idempotency_key
+   - source_route = p_source_route
+   - helper_version = p_helper_version
+   - contract_version = p_contract_version
+   - d4_gate_version = p_d4_gate_version
+   - previous_valid_to = target previous valid_to
+   - new_valid_to = p_rollback_at
+   - evidence_json = p_evidence_json
+   - metadata_json = p_metadata_json merged/extended with rollback metadata
+3. Return structured jsonb result.
+
+Required return shape:
+{
+  "ok": true | false,
+  "status": "rolled_back" | "already_rolled_back" | "rejected_fact_not_found" | "rejected_invalid_state" | "rejected_idempotency_conflict" | "error",
+  "stateFactId": "...",
+  "valueObjectId": "...",
+  "auditEventId": "...",
+  "stateFactsUpdated": 0 | 1,
+  "auditEventsCreated": 0 | 1,
+  "reason": "..."
+}
+
+Required success status:
+- rolled_back
+
+Required idempotent status:
+- already_rolled_back
+
+Required rejection statuses:
+- rejected_fact_not_found
+- rejected_invalid_state
+- rejected_idempotency_conflict
+- error
+
+Hard prohibitions:
+- No DELETE from value_object_state_facts.
+- No DELETE from value_object_state_fact_audit_events.
+- No UPDATE by state_fact_id alone.
+- No rollback of another user's state fact.
+- No generic update endpoint.
+- No route in this step.
+- No runtime rollback in this step.
+
+Migration design notes for the next step:
+- The next step should create a SQL migration file only.
+- It should not apply the migration automatically unless a later step explicitly says to apply it.
+- It should include static safety checks:
+  - no DROP TABLE
+  - no DROP COLUMN
+  - no TRUNCATE
+  - no DELETE
+  - no broad UPDATE without id + value_object_id + user_id
+  - no GRANT EXECUTE to PUBLIC, anon, or authenticated
+- It should include:
+  - CREATE OR REPLACE FUNCTION public.rollback_value_object_state_fact_controlled(...)
+  - SECURITY INVOKER
+  - REVOKE ALL ON FUNCTION ... FROM PUBLIC
+  - REVOKE ALL ON FUNCTION ... FROM anon
+  - REVOKE ALL ON FUNCTION ... FROM authenticated
+  - GRANT EXECUTE ON FUNCTION ... TO service_role
+
+What was not done:
+- No migration created.
+- No migration applied.
+- No rollback.ts created.
+- No route created.
+- No Supabase data write performed.
+- No state fact update performed.
+- No audit event insert performed.
+- No runtime rollback implemented.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-G - Atomic Rollback RPC Migration File
+
+D4-L-L-G should:
+1. Create the SQL migration file for public.rollback_value_object_state_fact_controlled.
+2. Create a report.
+3. Run static safety checks on the SQL.
+4. Not apply the migration yet.
+5. Not create rollback.ts.
+6. Not create route.
+7. Not write to database.
+
+End of D4-L-L-F report.
