@@ -1,0 +1,86 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-I - Apply Atomic Rollback RPC Migration
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-I
+Type: manual Supabase SQL Editor apply report
+Status: ATOMIC ROLLBACK RPC MIGRATION APPLIED MANUALLY / POST-APPLY VERIFICATION PASSED / NO ROLLBACK HELPER IMPLEMENTED / NO ROUTE CREATED / NO RUNTIME ROLLBACK IMPLEMENTED
+
+Baseline:
+- Previous pushed commit: 5206d63
+- Previous completed step: P4.10.0-C8-I-D4-L-L-H
+- D4-L-L-H statically verified the SQL migration file.
+- D4-L-L-I records manual migration apply and post-apply verification.
+
+Applied migration:
+- supabase/migrations/20260525001000_c8_i_d4_l_l_g_atomic_rollback_rpc.sql
+
+RPC applied:
+- public.rollback_value_object_state_fact_controlled
+
+Manual apply result:
+- Supabase SQL Editor returned success.
+- CREATE OR REPLACE FUNCTION / REVOKE / GRANT returned no data rows, which is expected.
+
+Post-apply function shape verification:
+- function_count: 1
+- any_security_definer: false
+- has_security_invoker: true
+
+Post-apply execute privilege verification:
+- public_can_execute: false
+- anon_can_execute: false
+- authenticated_can_execute: false
+- service_role_can_execute: true
+
+Post-apply data-count verification without calling rollback RPC:
+- state_fact_rows: 1
+- rolled_back_state_fact_rows: 0
+- audit_event_rows: 0
+- rollback_audit_event_rows: 0
+
+Interpretation:
+- The function exists exactly once.
+- The function is SECURITY INVOKER, not SECURITY DEFINER.
+- Public/browser roles cannot execute the function.
+- Only service_role can execute the function.
+- Applying the migration did not call rollback.
+- Applying the migration did not update existing state facts.
+- Applying the migration did not create audit events.
+- Existing data was not modified by migration application.
+
+What was not done:
+- rollback_value_object_state_fact_controlled was not called.
+- No runtime rollback proof was executed.
+- No rollback.ts was created.
+- No controlled rollback route was created.
+- No application code was changed.
+- No state fact was rolled back.
+- No audit event was inserted by runtime behavior.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-J - Create rollbackStateFactControlled Runtime Helper.
+
+D4-L-L-J should:
+1. Create lib/activity/stateFacts/controlledPersistence/rollback.ts.
+2. Use existing helpers:
+   - auth resolver
+   - target Value Object resolver
+   - rollback target resolver
+   - rollback idempotency helper
+   - rollback payload builder
+3. Call the atomic RPC public.rollback_value_object_state_fact_controlled through the server-side service role client.
+4. Not create a route yet unless a later step explicitly asks for it.
+5. Run TypeScript check.
+6. Commit helper + report only.
+7. Not execute rollback proof yet.
+
+Hard boundaries preserved:
+- No API route created.
+- No runtime rollback proof executed.
+- No generic update endpoint created.
+- No direct non-atomic update + insert implementation created.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-L-I report.
