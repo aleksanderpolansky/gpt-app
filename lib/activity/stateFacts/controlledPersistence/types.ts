@@ -269,3 +269,139 @@ export type StateFactPersistenceResult =
       stateFactsCreated: 0;
       writesAttempted: false;
     };
+
+// P4.10.0-C8-I-D4-L-L-A rollback types extension - BEGIN
+
+export type RollbackStateFactControlledStatus =
+  | "rolled_back"
+  | "already_rolled_back"
+  | "already_processed"
+  | "rejected_not_authenticated"
+  | "rejected_invalid_input"
+  | "rejected_not_owner"
+  | "rejected_fact_not_found"
+  | "rejected_value_object_mismatch"
+  | "rejected_already_superseded"
+  | "rejected_invalid_state"
+  | "rejected_idempotency_conflict"
+  | "error";
+
+export type RollbackStateFactControlledInput = {
+  requestTraceId: string;
+  idempotencyKey: string;
+
+  stateFactId: string;
+  valueObjectId: string;
+
+  reason: string;
+
+  requestedBy?: {
+    auth0UserId?: string | null;
+    appUserId?: string | null;
+    actorId?: string | null;
+  };
+
+  sourceRoute: string;
+  helperVersion: string;
+  contractVersion: string;
+  d4GateVersion: string;
+
+  rollbackAt?: string | null;
+};
+
+export type RollbackStateFactControlledResult = {
+  ok: boolean;
+  status: RollbackStateFactControlledStatus;
+
+  stateFactId?: string;
+  valueObjectId?: string;
+  auditEventId?: string;
+
+  writesAttempted: boolean;
+  stateFactsUpdated: number;
+  auditEventsCreated: number;
+
+  reason?: string;
+  error?: string;
+};
+
+export type RollbackTargetStateFact = {
+  id: string;
+  userId: string;
+  valueObjectId: string;
+  dimensionId: string | null;
+  dimensionKey: string;
+  correctionStatus: string | null;
+  validFrom: string | null;
+  validTo: string | null;
+  metadataJson: Record<string, unknown>;
+  evidenceJson: Record<string, unknown>;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type RollbackStateFactUpdatePayload = {
+  correction_status: "rolled_back";
+  valid_to: string;
+  metadata_json: Record<string, unknown>;
+  updated_at: string;
+};
+
+export type RollbackAuditEventPayload = {
+  user_id: string;
+  actor_id: string | null;
+  value_object_id: string;
+  state_fact_id: string;
+  related_state_fact_id: string | null;
+  dimension_key: string;
+  action_type: "rolled_back" | "rejected_rollback";
+  previous_correction_status: string | null;
+  new_correction_status: string | null;
+  reason: string;
+  request_trace_id: string;
+  idempotency_key: string;
+  source_route: string;
+  helper_version: string;
+  contract_version: string;
+  d4_gate_version: string;
+  previous_valid_to: string | null;
+  new_valid_to: string | null;
+  evidence_json: Record<string, unknown>;
+  metadata_json: Record<string, unknown>;
+};
+
+export type RollbackIdempotencyLookupInput = {
+  userId: string;
+  stateFactId: string;
+  actionType: "rolled_back";
+  idempotencyKey: string;
+};
+
+export type RollbackIdempotencyLookupResult = {
+  found: boolean;
+  auditEventId?: string;
+  status: "not_found" | "found" | "error";
+  error?: string;
+};
+
+export type RollbackTargetLookupInput = {
+  stateFactId: string;
+  valueObjectId: string;
+};
+
+export type RollbackTargetLookupResult =
+  | {
+      ok: true;
+      stateFact: RollbackTargetStateFact;
+    }
+  | {
+      ok: false;
+      status:
+        | "rejected_fact_not_found"
+        | "rejected_value_object_mismatch"
+        | "error";
+      reason: string;
+    };
+
+// P4.10.0-C8-I-D4-L-L-A rollback types extension - END
+

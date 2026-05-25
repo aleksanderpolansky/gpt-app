@@ -1,0 +1,79 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-A - Rollback Types Extension
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-A
+Type: types-only code step
+Status: TYPES EXTENDED / TYPESCRIPT PASS / NO HELPER IMPLEMENTED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED / NO RUNTIME ROLLBACK IMPLEMENTED
+
+Baseline:
+- Previous pushed commit: c52ce6d
+- Previous completed step: P4.10.0-C8-I-D4-L-K
+- D4-L-K recorded the rollback implementation plan.
+- D4-L-K required D4-L-L-A to update only types.ts.
+
+Changed files:
+- lib/activity/stateFacts/controlledPersistence/types.ts
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-a-rollback-types-extension-report.txt
+
+Code change:
+Added rollback-related type contracts to:
+lib/activity/stateFacts/controlledPersistence/types.ts
+
+Added types:
+- RollbackStateFactControlledStatus
+- RollbackStateFactControlledInput
+- RollbackStateFactControlledResult
+- RollbackTargetStateFact
+- RollbackStateFactUpdatePayload
+- RollbackAuditEventPayload
+- RollbackIdempotencyLookupInput
+- RollbackIdempotencyLookupResult
+- RollbackTargetLookupInput
+- RollbackTargetLookupResult
+
+Verification:
+- TypeScript check passed.
+- No rollback helper implemented.
+- No rollback route created.
+- No Supabase client call added.
+- No database insert/update/delete/upsert performed.
+- No value_object_state_facts update code added.
+- No value_object_state_fact_audit_events insert code added.
+- No rollbackStateFactControlled runtime function added.
+
+Forbidden patterns checked in types.ts:
+- no rollbackStateFactControlled function assignment/declaration.
+- no .update(
+- no .delete(
+- no .upsert(
+- no audit table insert.
+- no state facts update.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-B - Rollback Payload Builder.
+
+D4-L-L-B should:
+1. Create rollbackPayloadBuilder.ts.
+2. Keep it pure: no Supabase import, no DB calls.
+3. Build allowed state fact update payload only for:
+   - correction_status
+   - valid_to
+   - metadata_json
+   - updated_at
+4. Build audit event payload.
+5. Not create rollback.ts.
+6. Not create route.
+7. Run TypeScript check.
+8. Commit only payload builder + report.
+
+Hard boundaries preserved:
+- No API route created.
+- No helper runtime implemented.
+- No database data insert/update/delete performed.
+- No rollback runtime implemented.
+- No correction runtime implemented.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-L-A report.
