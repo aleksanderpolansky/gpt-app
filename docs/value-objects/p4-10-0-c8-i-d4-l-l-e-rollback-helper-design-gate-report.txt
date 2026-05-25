@@ -1,0 +1,127 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-E - rollbackStateFactControlled Helper Design Gate
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-E
+Type: doc-only design gate
+Status: DESIGN GATE RECORDED / ATOMIC RPC STRATEGY SELECTED / NO ROLLBACK HELPER IMPLEMENTED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED / NO RUNTIME ROLLBACK IMPLEMENTED
+
+Baseline:
+- Previous pushed commit: 7efaf3e
+- Previous completed step: P4.10.0-C8-I-D4-L-L-D
+- D4-L-L-D created rollbackTarget.ts.
+- D4-L-L-E is the required strategy gate before any rollback runtime implementation.
+
+Current helper stack verified:
+- rollback types exist in lib/activity/stateFacts/controlledPersistence/types.ts.
+- rollback payload builder exists in lib/activity/stateFacts/controlledPersistence/rollbackPayloadBuilder.ts.
+- rollback idempotency helper exists in lib/activity/stateFacts/controlledPersistence/rollbackIdempotency.ts.
+- rollback target resolver exists in lib/activity/stateFacts/controlledPersistence/rollbackTarget.ts.
+- rollback.ts does not exist.
+- controlled rollback route does not exist.
+
+Capability audit:
+- hasRollbackTypes: True
+- hasRollbackPayloadBuilder: True
+- hasRollbackIdempotencyHelper: True
+- hasRollbackTargetResolver: True
+- targetResolverUsesStateFactIdFilter: True
+- targetResolverUsesValueObjectIdFilter: True
+- idempotencyReadsAuditTable: True
+- payloadBuilderHasNoSupabaseImport: True
+- runtimeRollbackFileExists: False
+- controlledRollbackRouteExists: False
+
+Transaction strategy decision:
+ATOMIC_RPC_REQUIRED_BEFORE_RUNTIME_ROLLBACK
+
+Decision:
+Do not implement rollbackStateFactControlled as a non-atomic Supabase JS two-step sequence.
+
+Reason:
+Rollback must update value_object_state_facts and insert value_object_state_fact_audit_events as one atomic unit. A non-atomic Supabase JS two-step update + insert can leave the system inconsistent if the first write succeeds and the second fails.
+
+Rejected strategy:
+1. Update value_object_state_facts with Supabase JS.
+2. Insert value_object_state_fact_audit_events with Supabase JS.
+3. Treat both as one logical rollback.
+
+Why rejected:
+- The two writes would not be guaranteed atomic at the application helper level.
+- If the state fact update succeeds and the audit insert fails, rollback becomes under-audited.
+- If the audit insert succeeds and the state fact update fails, rollback becomes falsely audited.
+- Idempotency cannot fully repair partial-write ambiguity without a transaction boundary.
+- The whole C8-I/D4 governance line requires auditable and controlled persistence.
+
+Selected strategy:
+Design a narrow Postgres RPC/stored function before runtime rollback.
+
+Required future RPC characteristics:
+- Narrow scope: rollback exactly one state fact.
+- Inputs must include at minimum:
+  - p_user_id
+  - p_value_object_id
+  - p_state_fact_id
+  - p_reason
+  - p_request_trace_id
+  - p_idempotency_key
+  - p_source_route
+  - p_helper_version
+  - p_contract_version
+  - p_d4_gate_version
+  - p_rollback_at
+  - p_actor_id, nullable
+  - p_evidence_json, nullable/default
+  - p_metadata_json, nullable/default
+- Must update value_object_state_facts only with:
+  - correction_status = 'rolled_back'
+  - valid_to = rollback timestamp
+  - metadata_json merged/extended with rollback metadata
+  - updated_at = rollback timestamp
+- Must insert value_object_state_fact_audit_events in the same transaction.
+- Must enforce idempotency using value_object_state_fact_audit_events_idempotency_uq.
+- Must never delete a state fact.
+- Must never authorize by state_fact_id alone.
+- Must include value_object_id in target matching.
+- Must return a small structured result.
+
+Future runtime orchestration order:
+1. Validate input shape.
+2. Resolve authenticated app user and actor using existing auth helper.
+3. Resolve target Value Object with existing targetValueObject helper.
+4. Resolve rollback target state fact using rollbackTarget.ts by stateFactId + valueObjectId.
+5. Check rollback idempotency using rollbackIdempotency.ts.
+6. Build rollback payloads using rollbackPayloadBuilder.ts.
+7. Call the narrow atomic RPC.
+8. Return rolled_back / already_rolled_back / rejected / error result.
+
+What was not done:
+- No rollback.ts created.
+- No route created.
+- No RPC migration created.
+- No Supabase data write performed.
+- No state fact update performed.
+- No audit event insert performed.
+- No runtime rollback implemented.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-F - Atomic Rollback RPC Design.
+
+D4-L-L-F should:
+1. Create an RPC design report only.
+2. Define exact function name, parameters, transaction behavior, idempotency behavior, return shape, and safety checks.
+3. Decide whether the RPC will be SECURITY DEFINER or service-role-only callable.
+4. Not create/apply migration yet unless separately approved.
+5. Not create rollback.ts.
+6. Not create route.
+7. Not write to database.
+
+Hard boundaries preserved:
+- No API route created.
+- No rollback runtime implemented.
+- No database data insert/update/delete performed.
+- No correction runtime implemented.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-L-E report.
