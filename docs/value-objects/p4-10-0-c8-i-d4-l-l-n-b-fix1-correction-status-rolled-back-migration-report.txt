@@ -1,0 +1,62 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-N-B-FIX1 - correction_status rolled_back migration
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-N-B-FIX1
+Type: failed runtime proof analysis + schema/type alignment migration
+Status: FAILED-SAFE ROLLBACK PROOF RECORDED / TYPES UPDATED / MIGRATION FILE CREATED / MIGRATION NOT APPLIED / NO ROLLBACK EXECUTED / NO DATABASE WRITE PERFORMED BY THIS SCRIPT
+
+Failure being addressed:
+- D4-L-L-N-B returned httpStatus 500.
+- ok was false.
+- status was successful_rollback_proof_failed.
+- successfulRollbackExecuted was false.
+- fresh state fact stayed active.
+- historical proof fact stayed unchanged.
+
+Fresh rollback target:
+- freshStateFactId: f0a41488-17e1-4b5d-89f4-9512adeb788d
+- valueObjectId: 9177fea8-de25-446b-b418-b55a766d53db
+- dimensionKey: language_practice_balance
+
+Historical proof state fact:
+- historicalProofStateFactId: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+- remains unchanged
+- must not be rollback target
+
+Root cause analysis:
+- D4-B schema audit confirmed correction_status allowed only: active, corrected, revoked, superseded.
+- D4-L-L-G atomic rollback RPC updates correction_status to rolled_back.
+- D4-L-L-N-A debug route expects fresh correction_status to change from active to rolled_back.
+- Therefore the schema constraint is not aligned with rollback runtime.
+
+Created/updated files:
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-n-b-failed-safe-rollback-proof-report.txt
+- supabase/migrations/20260525133000_c8_i_d4_l_l_n_b_fix_state_fact_correction_status_rolled_back.sql
+- lib/activity/stateFacts/controlledPersistence/types.ts
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-n-b-fix1-correction-status-rolled-back-migration-report.txt
+
+Type update:
+- StateFactCorrectionStatus now includes rolled_back.
+
+Migration purpose:
+- Replace value_object_state_facts correction_status CHECK constraint.
+- Preserve active/corrected/revoked/superseded.
+- Add rolled_back.
+- Do not weaken RLS.
+- Do not create production rollback route.
+
+What this step did not do:
+- did not apply the migration;
+- did not rerun the failed rollback proof;
+- did not execute rollback;
+- did not create production controlled rollback route;
+- did not write to Supabase from this PowerShell script.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-N-B-FIX2 - Apply correction_status rolled_back migration manually in Supabase SQL Editor and verify the constraint.
+
+After FIX2:
+- rerun the debug-only successful rollback proof once for freshStateFactId f0a41488-17e1-4b5d-89f4-9512adeb788d.
+
+End of FIX1 report.

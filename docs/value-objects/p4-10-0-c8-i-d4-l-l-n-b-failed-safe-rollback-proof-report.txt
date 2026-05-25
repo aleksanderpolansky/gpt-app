@@ -1,0 +1,64 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-N-B - Execute Successful Rollback Proof for Fresh Test State Fact
+Failed-safe runtime report
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-N-B
+Type: runtime rollback proof attempt
+Status: FAILED SAFELY / HTTP 500 / OK FALSE / NO ROLLBACK EXECUTED / FRESH FACT REMAINED ACTIVE / HISTORICAL FACT UNCHANGED / PRODUCTION ROUTE NOT CREATED
+
+Baseline:
+- Previous pushed commit: efb1e6d
+- Previous completed step: P4.10.0-C8-I-D4-L-L-N-A
+- N-A created a debug-only successful rollback proof route and browser payload.
+
+Browser-console result summary:
+- httpStatus: 500
+- ok: false
+- status: successful_rollback_proof_failed
+- freshStateFactId: f0a41488-17e1-4b5d-89f4-9512adeb788d
+- historicalProofStateFactId: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+- successfulRollbackExecuted: false
+- productionControlledRollbackRouteCreated: false
+
+Fresh target before/after:
+- before correction_status: active
+- before valid_to: null
+- after correction_status: active
+- after valid_to: null
+- precheck: FRESH_STATE_FACT_READY
+- freshStatusChangedToRolledBack: false
+- freshValidToSet: false
+
+Historical proof fact:
+- historicalProofStateFactId: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+- before correction_status: active
+- before valid_to: null
+- after correction_status: active
+- after valid_to: null
+- unchanged: true
+
+Important interpretation:
+- The rollback proof route did reach the fresh target and verified that it was ready.
+- No successful rollback was executed.
+- The fresh state fact is still active and can be reused after the schema fix.
+- The historical proof fact was not changed.
+- Do not rerun N-B again before the correction_status constraint is fixed.
+
+Likely root cause:
+- Earlier D4-B read-only schema audit confirmed value_object_state_facts.correction_status allowed only:
+  active, corrected, revoked, superseded.
+- The atomic rollback RPC and N-A route intentionally set correction_status = rolled_back.
+- Therefore the database correction_status CHECK constraint must be extended to include rolled_back before runtime rollback can pass.
+
+Required fix:
+- Add and apply a migration that extends value_object_state_facts.correction_status CHECK to include rolled_back.
+- Keep existing statuses active, corrected, revoked, superseded.
+- Do not weaken RLS.
+- Do not create production rollback route.
+- After applying the migration, rerun the debug-only successful rollback proof once.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-N-B-FIX1 - Add correction_status rolled_back migration.
+
+End of failed-safe N-B report.
