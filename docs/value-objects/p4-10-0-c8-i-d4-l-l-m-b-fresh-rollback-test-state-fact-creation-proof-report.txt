@@ -1,0 +1,71 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-M-B - Execute Fresh Rollback Test State Fact Creation
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-M-B
+Type: runtime creation proof report
+Status: FRESH ROLLBACK TEST STATE FACT CREATED / CONTROLLED PERSIST ROUTE RETURNED 201 / DECISION PERSISTED / ONE STATE FACT CREATED / NO ROLLBACK EXECUTED / NO PRODUCTION ROLLBACK ROUTE CREATED
+
+Baseline:
+- Previous pushed commit: 89ed132
+- Previous completed step: P4.10.0-C8-I-D4-L-L-M-A
+- D4-L-L-M-A prepared the browser-console payload and copied it to clipboard.
+
+Browser-console execution result:
+- httpStatus: 201
+- ok: true
+- decision: persisted
+- stateFactId: f0a41488-17e1-4b5d-89f4-9512adeb788d
+- stateFactsCreated: 1
+- writesAttempted: true
+- idempotencyStatus: created
+- sourceId: f30b0ea7-40bd-406b-95e4-ef93e985ee95
+- candidateTraceId: d4-l-l-m-a-fresh-rollback-test-f30b0ea7-40bd-406b-95e4-ef93e985ee95
+- idempotencyKey: d4-l-l-m-a-fresh-rollback-test-f30b0ea7-40bd-406b-95e4-ef93e985ee95
+- valueObjectId: 9177fea8-de25-446b-b418-b55a766d53db
+- dimensionKey: language_practice_balance
+- route: /api/activity/state-facts/controlled-persist
+- sourceRoute: /api/activity/state-facts/controlled-persist
+- routeDirectDatabaseAccess: false
+- delegatedToControlledHelper: true
+
+Historical proof state fact:
+- historicalProofStateFactId: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+- preserved: true
+- wasRollbackTarget: false
+
+Fresh rollback test state fact:
+- freshStateFactId: f0a41488-17e1-4b5d-89f4-9512adeb788d
+- isFresh: true
+- differsFromHistoricalProofFact: true
+- intendedForSuccessfulRollbackProof: true
+
+What happened:
+- A fresh controlled state fact was created through the controlled-persist route.
+- The route returned HTTP 201.
+- The decision was persisted.
+- Exactly one state fact was created.
+- The write path remained delegated to the controlled helper.
+- The route did not perform direct database access.
+
+What was not done:
+- No rollback was executed in this step.
+- No production controlled rollback route was created.
+- The historical proof state fact 116d4866-0f89-4bb3-aae4-37e7e8860e85 was not rolled back.
+- This PowerShell script did not write to Supabase.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-N-A - Prepare Successful Rollback Proof Payload for Fresh Test State Fact.
+
+D4-L-L-N-A should:
+1. Use freshStateFactId: f0a41488-17e1-4b5d-89f4-9512adeb788d.
+2. Use valueObjectId: 9177fea8-de25-446b-b418-b55a766d53db.
+3. Use the authenticated browser/session or a dedicated debug route only if still needed.
+4. Execute rollback only against the fresh test state fact.
+5. Confirm after rollback:
+   - correction_status = rolled_back
+   - one rollback audit event exists
+   - old historical proof fact remains unchanged
+6. Commit a successful rollback proof report.
+
+End of D4-L-L-M-B report.
