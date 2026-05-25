@@ -1,0 +1,86 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-N-C - Successful rollback proof after correction_status migration
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-N-C
+Type: runtime successful rollback proof report
+Status: SUCCESSFUL ROLLBACK PROOF PASSED / HTTP 200 / OK TRUE / FRESH FACT ROLLED BACK / VALID_TO SET / HISTORICAL FACT PRESERVED BY ROUTE PASS CONDITION / PRODUCTION ROUTE NOT CREATED
+
+Baseline:
+- Previous pushed commit: 874e5c1
+- Previous completed step: P4.10.0-C8-I-D4-L-L-N-B-FIX2
+- FIX2 confirmed that correction_status now allows rolled_back.
+
+Browser-console result:
+- httpStatus: 200
+- ok: true
+- status: successful_rollback_proof_passed
+- freshStateFactId: f0a41488-17e1-4b5d-89f4-9512adeb788d
+- historicalProofStateFactId: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+- successfulRollbackExecuted: true
+- productionControlledRollbackRouteCreated: false
+
+Fresh target state transition:
+- before correction_status: active
+- before valid_to: null
+- after correction_status: rolled_back
+- after valid_to: 2026-05-25T13:52:49.15+00:00
+- freshStatusChangedToRolledBack: true
+- freshValidToSet: true
+
+Fresh target identity:
+- id: f0a41488-17e1-4b5d-89f4-9512adeb788d
+- valueObjectId: 9177fea8-de25-446b-b418-b55a766d53db
+- dimensionKey: language_practice_balance
+
+Historical proof fact:
+- id: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+- was not the rollback target
+- route returned ok: true and status: successful_rollback_proof_passed
+- by N-A route pass condition, historicalProofFactUnchanged had to be true
+
+Counts and audit interpretation:
+- N-A route returns ok: true only when countsChangedAsExpected is true.
+- Therefore the successful route status confirms:
+  - stateFactRows did not change;
+  - rolledBackStateFactRows increased by 1;
+  - auditEventRows increased by 1;
+  - rollbackAuditEventRows increased by 1;
+  - freshRollbackAuditRows increased by 1.
+
+Rollback metadata observed:
+- rollback reason: D4-L-L-N successful rollback proof for fresh test state fact only.
+- rollback sourceRoute: /api/activity/debug/state-fact-rollback-success-proof
+- rollback idempotencyKey: d4-l-l-n-successful-rollback-proof-f0a41488-17e1-4b5d-89f4-9512adeb788d
+- rollback requestTraceId: d4-l-l-n-successful-rollback-proof-f0a41488-17e1-4b5d-89f4-9512adeb788d
+- rollback helperVersion: P4.10.0-C8-I-D4-L-L-N-A
+- rollback contractVersion: P4.10.0-C8-I-D4-L-L-N-A
+- rollback d4GateVersion: P4.10.0-C8-I-D4-L-L-N-A
+
+What was proven:
+- The schema fix was sufficient for rollback.
+- The fresh test state fact could be rolled back through the controlled rollback helper and atomic RPC path.
+- The rollback did not require a production user-facing rollback route.
+- The historical proof fact was protected by using a fresh rollback target.
+- The controlled persistence audit/correction model is now runtime-proven for a successful rollback path.
+
+What this step did not do:
+- did not create production controlled rollback route;
+- did not create user-facing rollback UI;
+- did not create generic update/delete endpoint;
+- did not delete any state fact;
+- did not rerun the payload after success.
+
+Do not repeat:
+- Do not rerun the N-A/N-C browser payload for the same freshStateFactId.
+- The freshStateFactId f0a41488-17e1-4b5d-89f4-9512adeb788d is now rolled_back and must not be treated as an active proof target.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-N-D - Post-success cleanup / summary decision.
+
+Candidate next actions:
+1. Create a compact D4-L-L runtime proof summary report.
+2. Decide whether to keep or remove the debug success proof route.
+3. Do not create production rollback route until the user-facing correction/rollback policy is finalized.
+
+End of N-C successful rollback proof report.
