@@ -1,0 +1,166 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-A - Controlled Activity Intake Contract
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-O-A
+Type: architecture / contract / doc-only
+Status: CONTRACT CREATED / DOC ONLY / NO RUNTIME CHANGE / NO DATABASE WRITE / NO AI CALL / NO ACTIVITY CREATED
+
+Purpose:
+Define the safe first boundary for the next major phase:
+"user adds an activity" -> controlled activity_event intake -> future semantic derivation pipeline.
+
+This step starts the transition from isolated controlled state-fact proof to full activity semantic pipeline:
+activity input -> activity_event -> derivation_run -> categoryCandidates -> contextual categories -> VO bridge -> stateHookCandidates -> controlled facts/deltas/snapshots where allowed.
+
+Baseline:
+- Previous pushed commit: 39b00e7
+- Previous block completed: P4.10.0-C8-I-D4-L-L-N-D
+- N-D removed the proof-only successful rollback route and browser payload.
+- No production controlled rollback route exists.
+
+Core rule:
+Activity Event is the source of truth for user-entered activity.
+AI output, category candidates, state hooks, and resolver suggestions must never replace the activity_event source record.
+
+Controlled activity intake means:
+1. A user submits a natural-language activity input.
+2. The system normalizes only safe structural fields.
+3. The system creates or prepares a controlled activity_event record.
+4. The record belongs to the authenticated user/actor.
+5. The record carries source/provenance and timing fields.
+6. The system does not yet derive categories, VOs, hooks, facts, deltas, or snapshots in this first contract step.
+7. Later semantic layers attach to this activity_event through controlled, auditable links.
+
+Allowed input fields for first controlled intake:
+- inputText: string
+- title: optional string
+- startedAt: optional ISO datetime
+- endedAt: optional ISO datetime
+- durationMinutes: optional number
+- timezone: optional IANA timezone or inferred application timezone
+- source: manual | chat_ai_assisted | import | calendar | system_test
+- status: draft | planned | completed | confirmed
+- privacyLevel: private by default
+- clientTraceId: optional idempotency/correlation key
+- metadata: optional bounded json
+
+Derived safe structural fields:
+- normalizedTitle
+- normalizedInputText
+- durationMinutes if exactly derivable from startedAt and endedAt
+- startedAt/endedAt if derivable from explicit user input and current timezone rules
+- sourceRoute
+- createdByUserId / actorId from authenticated session only
+- intakeContractVersion
+
+Forbidden at O-A:
+- no categoryCandidates persistence
+- no contextual_categories resolution
+- no Value Object creation
+- no Value Object linking
+- no stateHookCandidates persistence
+- no value_object_state_facts writes
+- no activity_state_deltas writes
+- no snapshots writes
+- no AI direct persistence
+- no uncontrolled active categories from AI
+- no medical/hormonal/financial overclaims
+- no automatic "closed deal", "income received", "high cortisol", "burnout", or similar fact claims
+- no production rollback route
+- no generic update/delete endpoint
+- no use of old canonical /api/activity/complete proof for new production-like tests
+
+Minimum activity_event payload contract:
+{
+  "inputText": "Ð£Ñ‡Ð¸Ð»ÑÑ Ð½ÐµÐ¼ÐµÑ†ÐºÐ¾Ð¼Ñƒ 25 Ð¼Ð¸Ð½ÑƒÑ‚ Ð¸ Ð¿Ð¸ÑÐ°Ð» B2B-Ð¿Ð¸ÑÑŒÐ¼Ð¾",
+  "title": "ÐÐµÐ¼ÐµÑ†ÐºÐ¸Ð¹ + B2B Ð¿Ð¸ÑÑŒÐ¼Ð¾",
+  "startedAt": null,
+  "endedAt": null,
+  "durationMinutes": 25,
+  "timezone": "Europe/Warsaw",
+  "source": "manual",
+  "status": "completed",
+  "privacyLevel": "private",
+  "clientTraceId": "o-a-controlled-activity-intake-test-...",
+  "metadata": {
+    "contractVersion": "P4.10.0-C8-I-D4-L-L-O-A",
+    "semanticProcessingNotStartedYet": true,
+    "notAStateFact": true
+  }
+}
+
+Minimum activity_event stored/audited fields:
+- id
+- user_id / actor_id
+- input_text
+- normalized_title
+- started_at
+- ended_at
+- duration_minutes
+- timezone
+- source
+- status
+- privacy_level
+- client_trace_id / idempotency key
+- metadata_json
+- created_at
+- updated_at
+
+Idempotency rule:
+The first controlled intake route must accept a clientTraceId/idempotencyKey.
+Repeated same request with same authenticated user and same key must not create duplicates.
+
+Ownership rule:
+The authenticated user/actor is always resolved server-side.
+The client must not be trusted to choose user_id directly.
+
+Timing rule:
+If only duration is provided, store duration.
+If start and end are provided, calculate duration.
+If only a natural phrase is provided, keep unknown timing fields null unless confidently derivable.
+Do not invent exact timestamps from vague language.
+
+Semantic boundary rule:
+O-A/O-B creates or prepares only the activity_event source record.
+Semantic derivation starts later in O-C/O-D.
+State hooks and state facts start later after derivation and resolver contracts.
+
+Review boundary:
+The first end-to-end UI may show:
+- source input
+- normalized title
+- detected duration if safe
+- status
+- privacy
+But it must not yet show categories/VO/state hooks as confirmed facts.
+
+Initial proof scenarios for later O-B/O-C:
+1. Language:
+   "Ð£Ñ‡Ð¸Ð»ÑÑ Ð½ÐµÐ¼ÐµÑ†ÐºÐ¾Ð¼Ñƒ 25 Ð¼Ð¸Ð½ÑƒÑ‚ Ð¸ Ð½Ð°Ð¿Ð¸ÑÐ°Ð» 5 Ñ„Ñ€Ð°Ð· Ð´Ð»Ñ B2B-Ð¿Ð¸ÑÑŒÐ¼Ð°."
+2. Family/care:
+   "ÐŸÐ¾Ð¼Ð¾Ð³Ð°Ð» Ñ€ÐµÐ±Ñ‘Ð½ÐºÑƒ Ñ Ð¼Ð°Ñ‚ÐµÐ¼Ð°Ñ‚Ð¸ÐºÐ¾Ð¹ 30 Ð¼Ð¸Ð½ÑƒÑ‚."
+3. Physical:
+   "Ð¨Ñ‘Ð» Ð¿ÐµÑˆÐºÐ¾Ð¼ Ð½Ð° Ñ€Ð°Ð±Ð¾Ñ‚Ñƒ 18 Ð¼Ð¸Ð½ÑƒÑ‚."
+4. Business/sales:
+   "ÐÐ°Ð¿Ð¸ÑÐ°Ð» 3 ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ñ Ð¿Ð¾Ñ‚ÐµÐ½Ñ†Ð¸Ð°Ð»ÑŒÐ½Ñ‹Ð¼ ÐºÐ»Ð¸ÐµÐ½Ñ‚Ð°Ð¼."
+5. Coding/deep work:
+   "Ð Ð°Ð±Ð¾Ñ‚Ð°Ð» Ð½Ð°Ð´ Ð°Ñ€Ñ…Ð¸Ñ‚ÐµÐºÑ‚ÑƒÑ€Ð¾Ð¹ Ð¿Ñ€Ð¾ÐµÐºÑ‚Ð° 45 Ð¼Ð¸Ð½ÑƒÑ‚."
+
+Expected O-B next step:
+P4.10.0-C8-I-D4-L-L-O-B - Activity Intake Schema/Route Audit.
+
+O-B should inspect existing activity-related routes/tables/libs before any implementation:
+- src/app/api/activity/**
+- lib/activity/**
+- existing Supabase tables for activity_events / activities / activity logs
+- current auth/session helpers
+- existing test/proof routes that must not be reused as production-like intake
+
+O-B output should be:
+- audit report only
+- no runtime change
+- no database write
+- recommendation for the exact controlled intake route and helper names for O-C/O-D
+
+End of O-A contract.
