@@ -1,0 +1,55 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-F — Controlled Activity Intake Helper Types Validator Payload Builder
+Created: 25 May 2026, Europe/Warsaw
+
+Purpose
+Create the first static helper layer for Controlled Activity Intake.
+
+Scope
+Created:
+- lib/activity/controlledIntake/types.ts
+- lib/activity/controlledIntake/validator.ts
+- lib/activity/controlledIntake/payloadBuilder.ts
+
+Not created:
+- lib/activity/controlledIntake/persist.ts
+- src/app/api/activity/controlled-intake/route.ts
+
+Guardrails
+- Activity Event remains the source of truth.
+- AI/category/state outputs remain candidates/signals, not facts.
+- No DB write.
+- No Supabase client.
+- No SQL execution.
+- No AI call.
+- No activity row creation.
+- No route handler.
+
+Validator responsibilities
+- Require inputText.
+- Require title.
+- Reject client ownership/server-controlled fields.
+- Reject semantic-output fields from client payload.
+- Validate durationMinutes.
+- Validate startedAt/endedAt/occurredAt.
+- Validate context and metadata object shape.
+
+Payload builder responsibilities
+- Build only an in-memory Activity Event draft.
+- Mark semanticProcessingNotStartedYet = true.
+- Mark categoryCandidatesCreated = false.
+- Mark metricCandidatesCreated = false.
+- Mark stateHookCandidatesCreated = false.
+- Mark valueObjectsCreated = false.
+- Mark stateFactsCreated = false.
+- Mark deltasCreated = false.
+- Mark snapshotsCreated = false.
+- Mark noPersistencePerformed = true.
+- Mark noSupabaseWritePerformed = true.
+- Mark noAiCallPerformed = true.
+
+Next step
+P4.10.0-C8-I-D4-L-L-O-G — static verification of helper exports, validator behavior, payload flags, and forbidden route/persist absence.
+
+Anti-retest
+Do not repeat old C8-H extractor proofs, /api/activity/complete canonical proof, or deleted rollback browser payload unless the relevant runtime files change.
