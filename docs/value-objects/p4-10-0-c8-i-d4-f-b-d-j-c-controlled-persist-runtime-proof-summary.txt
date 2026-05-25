@@ -1,0 +1,89 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-D-J-C - Controlled Persist Runtime Proof Summary
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-D-J-C
+Type: final documentation summary for controlled persist route runtime proof
+Status: D4-J RUNTIME PROOF COMPLETE / NO-WRITE BRANCH VERIFIED / AUTHENTICATED INSERT VERIFIED / IDEMPOTENCY VERIFIED
+
+Baseline:
+- Current pushed commit before this summary: 48cd6d4
+- Route: POST /api/activity/state-facts/controlled-persist
+- Route file: src/app/api/activity/state-facts/controlled-persist/route.ts
+
+Source reports:
+1. D4-F-B-D-I route creation report
+   - docs/value-objects/p4-10-0-c8-i-d4-f-b-d-i-controlled-persist-route-report.txt
+2. D4-J-A runtime no-write proof report
+   - docs/value-objects/p4-10-0-c8-i-d4-f-b-d-j-a-controlled-persist-route-runtime-no-write-proof-report.txt
+3. D4-J-B-B authenticated insert/idempotency proof report
+   - docs/value-objects/p4-10-0-c8-i-d4-f-b-d-j-b-b-authenticated-controlled-insert-idempotency-proof-report.txt
+
+D4-J-A no-write branch result:
+- Invalid JSON rejection: PASS
+- Wrong mode rejection: PASS
+- Missing confirmation rejection: PASS
+- Missing request envelope rejection: PASS
+- Unauthenticated valid envelope rejection: PASS
+- Total stateFactsCreated across no-write cases: 0
+- writesAttempted false across no-write cases: PASS
+
+D4-J-B authenticated write/idempotency result:
+- Browser session authenticated: PASS
+- Controlled insert first call: PASS
+- First call HTTP status: 201
+- First call decision: persisted
+- First call stateFactsCreated: 1
+- First call writesAttempted: true
+- First call routeDirectDatabaseAccess: false
+- First call delegatedToControlledHelper: true
+- Created stateFactId: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+- Second call with same idempotency key: PASS
+- Second call HTTP status: 200
+- Second call decision: already_exists
+- Second call stateFactsCreated: 0
+- Second call writesAttempted: false
+- Same stateFactId returned: true
+- Duplicate prevention: PASS
+- Total stateFactsCreated across authenticated idempotency proof: 1
+
+Important runtime findings:
+- sourceType=user_confirmed was rejected safely with SOURCE_TYPE_NOT_ALLOWED.
+- sourceType=manual was rejected safely with SOURCE_TYPE_NOT_ALLOWED.
+- sourceType=system with a non-UUID sourceId reached insert but failed safely with UNKNOWN_ERROR and no state fact created.
+- sourceType=system with a clean UUID sourceId succeeded.
+- Therefore, for the current controlled persistence path, sourceId should be UUID-compatible when sourceType requires sourceId.
+
+Controlled route boundaries confirmed:
+- Route requires controlled_persist mode.
+- Route requires confirmControlledPersistence=true.
+- Route rejects missing request envelope.
+- Route delegates to persistStateFactControlled.
+- Route returns routeDirectDatabaseAccess=false.
+- Route returns delegatedToControlledHelper=true.
+- Route contains no direct database write path.
+- D4-E-B shadow route remains untouched.
+- No update/delete/upsert route exists for this flow.
+- No Value Object subtype was created.
+- No Next Best Action runtime was created.
+
+D4-J conclusion:
+- Controlled persist route is operationally verified for:
+  1. runtime no-write rejection branches,
+  2. authenticated controlled insert,
+  3. idempotency duplicate prevention.
+- D4-J is complete.
+
+Known remaining limitation:
+- The created state fact remains as a proof artifact in value_object_state_facts:
+  116d4866-0f89-4bb3-aae4-37e7e8860e85
+- Rollback/correction cleanup is not implemented in D4-J.
+- Do not delete or manually modify the proof artifact unless a deliberate rollback/correction proof step is planned.
+
+Recommended next step:
+P4.10.0-C8-I-D4-K - controlled persistence read-model / operational guardrails decision:
+Option A: add a read-only state fact verification endpoint/report for controlled facts.
+Option B: design correction/rollback proof for controlled state facts.
+Option C: close D4 and return to the broader C8-I sequence for state snapshots/read models.
+
+End of D4-J-C summary.
