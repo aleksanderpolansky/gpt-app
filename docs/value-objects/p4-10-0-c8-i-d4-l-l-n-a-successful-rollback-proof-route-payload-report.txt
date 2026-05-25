@@ -1,0 +1,79 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-N-A - Prepare Successful Rollback Proof Route and Browser Payload
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-N-A
+Type: debug route + browser-console payload preparation
+Status: SUCCESSFUL ROLLBACK PROOF ROUTE AND PAYLOAD PREPARED / TYPESCRIPT PASS / ROUTE NOT EXECUTED / ROLLBACK NOT EXECUTED BY THIS SCRIPT / NO PRODUCTION ROLLBACK ROUTE CREATED
+
+Baseline:
+- Previous pushed commit: 21aab65
+- Previous completed step: P4.10.0-C8-I-D4-L-L-M-B
+- Fresh rollback test state fact exists and is recorded.
+
+Fresh rollback target:
+- freshStateFactId: f0a41488-17e1-4b5d-89f4-9512adeb788d
+- valueObjectId: 9177fea8-de25-446b-b418-b55a766d53db
+- dimensionKey: language_practice_balance
+
+Historical proof state fact:
+- historicalProofStateFactId: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+- must remain unchanged
+- must not be rollback target
+
+Created files:
+- src/app/api/activity/debug/state-fact-rollback-success-proof/route.ts
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-n-a-successful-rollback-proof-browser-console.js
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-n-a-successful-rollback-proof-route-payload-report.txt
+
+Debug route:
+- POST /api/activity/debug/state-fact-rollback-success-proof
+- debug-only
+- not production controlled rollback route
+- reads target facts and counters through Supabase
+- delegates rollback execution to rollbackStateFactControlled
+- rollback helper calls the atomic RPC
+- does not contain direct .insert()
+- does not contain direct .update()
+- does not contain direct .delete()
+- does not contain direct .upsert()
+
+Browser payload:
+- copied to clipboard
+- calls the debug route through POST
+- does not directly call Supabase
+- does not directly call rollbackStateFactControlled
+- does not directly call the rollback RPC
+
+Expected runtime result for next step:
+- httpStatus: 200
+- ok: true
+- status: successful_rollback_proof_passed
+- freshStateFactId: f0a41488-17e1-4b5d-89f4-9512adeb788d
+- fresh state fact correction_status changes from active to rolled_back
+- fresh state fact valid_to becomes non-null
+- rollback audit event count increases by 1
+- historical proof state fact remains unchanged
+- productionControlledRollbackRouteCreated: false
+
+What this step did not do:
+- did not execute the debug route
+- did not execute rollback
+- did not create a production controlled rollback route
+- did not create user-facing rollback API
+- did not write to Supabase from this PowerShell script
+
+Next step:
+P4.10.0-C8-I-D4-L-L-N-B - Execute Successful Rollback Proof for Fresh Test State Fact.
+
+D4-L-L-N-B should:
+1. Open authenticated browser session at http://localhost:3000.
+2. Open DevTools Console.
+3. Paste the browser payload copied by this script.
+4. Execute the payload once.
+5. Verify the JSON result.
+6. Send the JSON result back to the assistant.
+7. Commit a runtime successful rollback proof report.
+8. Do not repeat execution if it succeeds.
+
+End of D4-L-L-N-A report.
