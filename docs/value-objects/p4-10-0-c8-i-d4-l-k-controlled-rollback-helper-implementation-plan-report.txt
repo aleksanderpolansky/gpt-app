@@ -1,0 +1,251 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-K - Controlled Rollback Helper Implementation Plan
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-K
+Type: implementation plan / contract-to-code transition plan
+Status: IMPLEMENTATION PLAN RECORDED / NO HELPER IMPLEMENTED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED / NO RUNTIME ROLLBACK IMPLEMENTED
+
+Baseline:
+- Previous pushed commit: 6cab8dd
+- Previous completed step: P4.10.0-C8-I-D4-L-J
+- D4-L-J result:
+  - runtime rollback ready without additional migration: true.
+  - value_object_state_facts has valid_to: true.
+  - value_object_state_facts has metadata_json: true.
+  - value_object_state_facts has updated_at: true.
+  - value_object_state_facts has correction_status: true.
+  - value_object_state_fact_audit_events row count: 0.
+  - rollbackStateFactControlled exists: false.
+
+Purpose:
+Record the exact implementation plan for rollbackStateFactControlled before any code is added.
+
+Important:
+This step does not implement rollback runtime.
+This step only defines the next coding sequence, allowed files, allowed updates, proof cases, and forbidden patterns.
+
+Current helper/static audit:
+{
+    "helperFileCount":  8,
+    "hasPersistStateFactControlled":  true,
+    "hasRollbackStateFactControlled":  false,
+    "hasUpdatePatternInControlledPersistenceHelpers":  false,
+    "hasDeletePatternInControlledPersistenceHelpers":  false,
+    "hasUpsertPatternInControlledPersistenceHelpers":  false,
+    "hasInsertPatternInControlledPersistenceHelpers":  true,
+    "hasAuditEventsTablePatternInControlledPersistenceHelpers":  false
+}
+
+Controlled persistence helper files:
+- lib\activity\stateFacts\controlledPersistence\auth.ts
+- lib\activity\stateFacts\controlledPersistence\dimension.ts
+- lib\activity\stateFacts\controlledPersistence\idempotency.ts
+- lib\activity\stateFacts\controlledPersistence\payloadBuilder.ts
+- lib\activity\stateFacts\controlledPersistence\persist.ts
+- lib\activity\stateFacts\controlledPersistence\targetValueObject.ts
+- lib\activity\stateFacts\controlledPersistence\types.ts
+- lib\activity\stateFacts\controlledPersistence\validator.ts
+
+Planned implementation sequence:
+
+D4-L-L-A - Rollback Types Extension
+- Update only:
+  lib/activity/stateFacts/controlledPersistence/types.ts
+- Add types for:
+  - RollbackStateFactControlledInput
+  - RollbackStateFactControlledResult
+  - RollbackStateFactControlledStatus
+  - RollbackAuditEventPayload
+- No DB write.
+- No helper runtime.
+- No route.
+- TypeScript check required.
+
+D4-L-L-B - Rollback Payload Builder
+- Create:
+  lib/activity/stateFacts/controlledPersistence/rollbackPayloadBuilder.ts
+- Pure helper only.
+- Builds:
+  - allowed state fact update payload;
+  - audit event insert payload.
+- No Supabase import.
+- No DB write.
+- No route.
+- Unit/static proof required.
+
+D4-L-L-C - Rollback Idempotency Helper
+- Create:
+  lib/activity/stateFacts/controlledPersistence/rollbackIdempotency.ts
+- Read-only helper.
+- Checks value_object_state_fact_audit_events by:
+  user_id + state_fact_id + action_type + idempotency_key.
+- No update/delete/upsert.
+- No route.
+- TypeScript check required.
+
+D4-L-L-D - Rollback Target Resolver
+- Create:
+  lib/activity/stateFacts/controlledPersistence/rollbackTarget.ts
+- Read-only helper.
+- Must load state fact by:
+  stateFactId + valueObjectId
+- Must not authorize by stateFactId alone.
+- Must expose dimension_key, current correction_status, valid_to, metadata_json.
+- Must reject mismatch.
+
+D4-L-L-E - rollbackStateFactControlled Helper
+- Create:
+  lib/activity/stateFacts/controlledPersistence/rollback.ts
+- Server-side helper only.
+- No public route in this step.
+- Uses existing:
+  - auth resolver;
+  - target value object resolver;
+  - rollback target resolver;
+  - rollback payload builder;
+  - rollback idempotency helper.
+- Writes allowed:
+  1. One tightly scoped update to public.value_object_state_facts.
+  2. One insert into public.value_object_state_fact_audit_events.
+- Must not delete.
+- Must not upsert.
+- Must not perform generic update.
+- Must not update value_json, source_type, source_id, confidence, claim_strength, evidence_json, dimension fields, or value_object_id.
+- TypeScript check required.
+
+D4-L-L-F - Runtime No-Route Static Safety Proof
+- Verify no route was created.
+- Verify no delete/upsert patterns.
+- Verify update payload is tightly scoped.
+- Verify update by stateFactId alone is absent.
+- Verify audit table insert is present only in rollback helper.
+- No browser runtime yet.
+
+D4-L-L-G - Controlled Internal/Debug Proof Route Decision
+- Decide whether to create a temporary authenticated proof route.
+- If created, it must be debug-only and authenticated.
+- It must not become a generic public rollback API.
+- It must be used only for proof cases and then documented.
+
+Allowed future state fact update fields:
+- correction_status
+- valid_to
+- metadata_json
+- updated_at
+
+Allowed future audit event insert fields:
+- user_id
+- actor_id
+- value_object_id
+- state_fact_id
+- related_state_fact_id
+- dimension_key
+- action_type
+- previous_correction_status
+- new_correction_status
+- reason
+- request_trace_id
+- idempotency_key
+- source_route
+- helper_version
+- contract_version
+- d4_gate_version
+- previous_valid_to
+- new_valid_to
+- evidence_json
+- metadata_json
+
+Planned rollback transition:
+- previous correction_status should be read from value_object_state_facts.
+- new correction_status should be a controlled rollback value, for example:
+  rolled_back
+- valid_to should be closed to current server timestamp or explicit validated timestamp.
+- metadata_json should preserve previous metadata and append rollback metadata.
+- audit action_type should be:
+  rolled_back
+- rejected attempts may later use:
+  rejected_rollback
+  but rejected-attempt logging is not required in first implementation unless explicitly designed.
+
+Required ownership/permission sequence:
+1. Resolve authenticated user.
+2. Resolve app user/person/actor context.
+3. Resolve target Value Object by valueObjectId.
+4. Verify actor/owner permission.
+5. Load target state fact by stateFactId + valueObjectId.
+6. Reject if state fact does not belong to target VO.
+7. Reject if state fact already has correction_status = rolled_back/superseded/corrected/invalid if those statuses are defined.
+8. Check rollback idempotency.
+9. Build update payload.
+10. Build audit payload.
+11. Execute state fact update + audit insert in safe server-side sequence.
+12. Return deterministic result.
+
+Required proof cases:
+1. Missing auth -> rejected_not_authenticated.
+2. Placeholder UUID -> rejected_invalid_input.
+3. Missing reason -> rejected_invalid_input.
+4. Wrong valueObjectId -> rejected_value_object_mismatch.
+5. Wrong user / non-owner actor -> rejected_not_owner.
+6. Already rolled back -> already_rolled_back or deterministic idempotent result.
+7. Same idempotency key repeated -> no duplicate audit events.
+8. Successful rollback -> state fact correction_status changes; valid_to set; audit event inserted.
+9. Audit event references same value_object_id, state_fact_id, dimension_key.
+10. State fact value_json/evidence/source/dimension fields unchanged.
+11. No delete/upsert.
+12. No generic state_fact_id-alone update.
+
+Required runtime transaction decision:
+A true single SQL transaction is preferred.
+If current Supabase JS helper cannot provide a multi-statement transaction safely, one of these must be chosen before implementation:
+- create a narrowly scoped RPC later; or
+- accept a controlled two-step server-side write only after proving failure behavior; or
+- postpone runtime rollback until a transaction-safe RPC is designed.
+This decision must be explicit before production rollback.
+
+Preferred first implementation rule:
+Do not expose rollback to user UI yet.
+First implement server-side helper + static proofs.
+Only after that, add a temporary authenticated debug/proof route if needed.
+
+Hard prohibitions:
+- No update by state_fact_id alone.
+- No delete from value_object_state_facts.
+- No delete from value_object_state_fact_audit_events.
+- No upsert.
+- No public client direct write.
+- No generic update endpoint.
+- No AI-only rollback.
+- No rollback of another user's state fact.
+- No rollback based on public/catalog visibility.
+- No broad metadata overwrite.
+- No mutation of value_json/source/evidence/dimension fields.
+
+Relationship to correction:
+Rollback closes/invalidates an existing fact.
+Correction supersedes one fact and creates/links another corrected fact.
+Correction helper must be designed after rollback proof, not merged into rollback.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-A - Rollback Types Extension.
+
+D4-L-L-A should:
+1. Update only types.ts.
+2. Add rollback input/result/status/audit payload types.
+3. Run TypeScript check.
+4. Not create rollback.ts yet.
+5. Not create route.
+6. Not write to Supabase.
+7. Not implement runtime rollback.
+
+Hard boundaries preserved:
+- No API route created.
+- No helper runtime implemented.
+- No database data insert/update/delete performed.
+- No rollback runtime implemented.
+- No correction runtime implemented.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-K report.
