@@ -1,0 +1,168 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-C - Correction/Rollback Audit Model Decision
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-L-C
+Type: documentation-only architecture decision
+Status: AUDIT MODEL DECISION RECORDED / DEDICATED AUDIT TABLE REQUIRED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED
+
+Baseline:
+- Previous pushed commit: 360fc37
+- Previous completed step: P4.10.0-C8-I-D4-L-B
+- L-B report: docs/value-objects/p4-10-0-c8-i-d4-l-b-read-only-correction-update-audit-conventions-report.txt
+- L-A report: docs/value-objects/p4-10-0-c8-i-d4-l-a-controlled-state-fact-correction-rollback-design.txt
+- K-B report: docs/value-objects/p4-10-0-c8-i-d4-k-b-operational-guardrails-decision.txt
+- K-A report: docs/value-objects/p4-10-0-c8-i-d4-k-a-controlled-state-fact-read-only-verification-report.txt
+
+Input from D4-L-B:
+- Existing state layer tables were detected.
+- Existing event-like tables were detected:
+  activity_events, impact_events, recommendation_feedback, calendar_events.
+- Dedicated state fact audit/correction/rollback tables were not detected.
+- Missing examples included:
+  audit_events,
+  state_fact_audit_events,
+  value_object_state_fact_audit_events,
+  state_fact_corrections,
+  value_object_state_fact_corrections,
+  correction_events,
+  rollback_events.
+- D4-L-B concluded: Do NOT implement rollback runtime yet.
+
+Decision:
+Use a dedicated state fact audit/correction table for future controlled rollback/correction.
+Do not reuse generic activity_events, impact_events, recommendation_feedback, or calendar_events as the primary audit model for state fact rollback.
+
+Chosen model:
+Dedicated table name for the future migration:
+value_object_state_fact_audit_events
+
+Reason:
+1. State facts are private, user-state-related records.
+2. Rollback/correction modifies the validity of a fact, not a normal user activity.
+3. Existing activity/event tables have different semantics.
+4. A generic event table could blur domain boundaries and make future privacy/security review harder.
+5. A dedicated audit table allows strict constraints, RLS policy design, and narrow helper behavior.
+6. A dedicated table prevents rollback logic from becoming a generic update/event mechanism.
+
+Do NOT implement runtime rollback yet:
+- No rollback route in D4-L-C.
+- No correction route in D4-L-C.
+- No SQL migration in D4-L-C.
+- No update helper in D4-L-C.
+- No database write in D4-L-C.
+
+Future table purpose:
+value_object_state_fact_audit_events should record controlled lifecycle events for rows in value_object_state_facts.
+
+Future event types:
+- created
+- rollback_requested
+- rolled_back
+- correction_requested
+- corrected
+- superseded
+- expired
+- rejected_rollback
+- rejected_correction
+
+Minimum future table fields:
+- id uuid primary key
+- user_id uuid not null
+- actor_id uuid nullable or not null depending on actor model
+- value_object_id uuid not null
+- state_fact_id uuid not null
+- related_state_fact_id uuid nullable
+- dimension_key text not null
+- action_type text not null
+- previous_correction_status text nullable
+- new_correction_status text nullable
+- reason text not null
+- request_trace_id text not null
+- idempotency_key text not null
+- source_route text not null
+- helper_version text not null
+- contract_version text nullable
+- d4_gate_version text nullable
+- previous_valid_to timestamptz nullable
+- new_valid_to timestamptz nullable
+- evidence_json jsonb not null default '{}'
+- metadata_json jsonb not null default '{}'
+- created_at timestamptz not null default now()
+
+Recommended future constraints:
+- id primary key.
+- foreign key state_fact_id -> value_object_state_facts(id).
+- foreign key value_object_id -> value_objects(id).
+- unique(user_id, state_fact_id, action_type, idempotency_key).
+- action_type limited to a known enum/check constraint.
+- request_trace_id required.
+- reason required and non-empty.
+- metadata_json required.
+- evidence_json required.
+
+RLS and access direction:
+- RLS must be enabled.
+- Direct public/client access should be denied initially.
+- Writes should go only through controlled server-side helpers.
+- Read access should not be exposed through generic endpoints.
+- Future owner-scoped read model may expose summarized audit status, not raw evidence by default.
+
+Future rollback transaction shape:
+1. Resolve authenticated actor.
+2. Resolve target state fact.
+3. Confirm owner/user/value-object permission.
+4. Confirm correction_status is active.
+5. Confirm rollbackable metadata.
+6. Validate reason and request trace.
+7. Insert audit event: rollback_requested.
+8. Update value_object_state_facts through a narrow whitelist:
+   - correction_status
+   - valid_to
+   - metadata_json rollback sub-object
+   - updated_at
+9. Insert audit event: rolled_back.
+10. Return a narrow response.
+11. If transaction fails, do not partially update the fact.
+
+Future correction transaction shape:
+1. Resolve authenticated actor.
+2. Resolve state fact to correct.
+3. Validate corrected candidate through D4-C/D4-F gates.
+4. Insert audit event: correction_requested.
+5. Mark old fact as corrected/superseded through narrow whitelist.
+6. Create new corrected fact through controlled persistence logic or shared internal function.
+7. Insert audit event: corrected.
+8. Link old and new facts by metadata_json.
+9. Return a narrow response.
+10. If transaction fails, do not leave half-corrected state.
+
+Proof artifact policy:
+- Keep the D4-J-B-B proof fact active for now.
+- Do not manually delete it.
+- Do not manually update it.
+- If rollback is tested later, it must go through a controlled route/helper and dedicated audit table.
+
+Next step:
+P4.10.0-C8-I-D4-L-D - Dedicated State Fact Audit Table Migration Design.
+
+D4-L-D should:
+1. Design SQL migration for value_object_state_fact_audit_events.
+2. Include RLS enabled.
+3. Include deny-by-default policy or no public write policy.
+4. Include required indexes.
+5. Include constraints/checks.
+6. Not implement rollback route yet.
+7. Stay migration-design only unless explicitly moved to implementation.
+
+Hard boundaries preserved in this step:
+- No API route created.
+- No helper code changed.
+- No SQL migration created.
+- No database insert/update/delete/upsert performed.
+- D4-E-B shadow route remains untouched.
+- Controlled persist route remains unchanged.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-C decision.
