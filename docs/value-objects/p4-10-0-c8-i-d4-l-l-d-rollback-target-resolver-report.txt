@@ -1,0 +1,95 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-D - Rollback Target Resolver
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-D
+Type: read-only helper code step
+Status: ROLLBACK TARGET RESOLVER CREATED / TYPESCRIPT PASS / NO ROLLBACK HELPER IMPLEMENTED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED / NO RUNTIME ROLLBACK IMPLEMENTED
+
+Baseline:
+- Previous pushed commit: 393d481
+- Previous completed step: P4.10.0-C8-I-D4-L-L-C
+- D4-L-L-C created rollbackIdempotency.ts.
+- D4-L-L-D was required to create a read-only rollback target resolver.
+
+Changed files:
+- lib/activity/stateFacts/controlledPersistence/rollbackTarget.ts
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-d-rollback-target-resolver-report.txt
+
+Code change:
+Created read-only helper:
+lib/activity/stateFacts/controlledPersistence/rollbackTarget.ts
+
+Helper created:
+- resolveRollbackTargetStateFact
+
+Read-only lookup implemented:
+- value_object_state_facts by id = stateFactId
+- value_object_state_facts by value_object_id = valueObjectId
+- select only target fields needed for rollback planning
+- maybeSingle()
+
+Authorization boundary:
+- The resolver does not authorize by stateFactId alone.
+- The resolver loads a target only by stateFactId + valueObjectId together.
+- If the pair is not found, the helper returns rejected_fact_not_found.
+- If a mismatch is detected, the helper returns rejected_value_object_mismatch.
+- Owner/user permission remains the responsibility of the future rollbackStateFactControlled orchestration helper using existing auth and target Value Object resolvers.
+
+Normalized fields returned:
+- id
+- userId
+- valueObjectId
+- dimensionId
+- dimensionKey
+- correctionStatus
+- validFrom
+- validTo
+- metadataJson
+- evidenceJson
+- createdAt
+- updatedAt
+
+Verification:
+- TypeScript check passed.
+- No insert/update/delete/upsert calls added.
+- No audit event table access added.
+- No rollbackStateFactControlled runtime function added.
+- No route created.
+- No NextRequest/NextResponse used.
+- No state fact update executed.
+- No audit event insert executed.
+
+Forbidden patterns checked in rollbackTarget.ts:
+- no .insert(
+- no .update(
+- no .delete(
+- no .upsert(
+- no rollbackStateFactControlled runtime.
+- no Next.js route exports.
+- no value_object_state_fact_audit_events table access.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-E - rollbackStateFactControlled Helper Design Gate.
+
+D4-L-L-E should:
+1. Decide the implementation transaction strategy before writing rollback.ts.
+2. Re-check whether Supabase JS two-step update+insert is acceptable for debug/internal proof, or whether a narrow RPC should be designed first.
+3. Define exact rollback orchestration order using:
+   - auth resolver
+   - target Value Object resolver
+   - rollback target resolver
+   - rollback idempotency helper
+   - rollback payload builder
+4. Still not create a route.
+5. Either produce a design-gate report or implement rollback.ts only if the transaction strategy is explicitly accepted.
+
+Hard boundaries preserved:
+- No API route created.
+- No rollback runtime implemented.
+- No database data insert/update/delete performed.
+- No correction runtime implemented.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-L-D report.
