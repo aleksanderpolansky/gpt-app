@@ -1,0 +1,231 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-H — Controlled Activity Intake Idempotency / Persist Design
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+DESIGN ONLY / NO IMPLEMENTATION FILES / NO RUNTIME ROUTE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-G
+- O-G commit: 9c0ebd2
+- O-G commit message: docs: add C8-I-D4-L-L-O-G controlled intake static verification
+
+Current helper files already created and verified in O-F/O-G
+- lib/activity/controlledIntake/types.ts
+- lib/activity/controlledIntake/validator.ts
+- lib/activity/controlledIntake/payloadBuilder.ts
+
+Files intentionally NOT created in O-H
+- lib/activity/controlledIntake/idempotency.ts
+- lib/activity/controlledIntake/persist.ts
+- src/app/api/activity/controlled-intake/route.ts
+
+Main architectural rule
+Activity Event remains the source of truth.
+Controlled intake may create only a raw Activity Event later, after persist helper and proof route are explicitly approved.
+AI/category/state outputs remain candidates/signals and must not be persisted in the controlled intake persist helper.
+
+O-H purpose
+Design the next implementation boundary for idempotency and persistence before writing any runtime or DB code.
+
+1. Idempotency design decision
+
+Future file
+- lib/activity/controlledIntake/idempotency.ts
+
+Future responsibilities
+- Build deterministic idempotency material from validated input and authenticated server context.
+- Normalize only safe user-provided fields.
+- Include server-side authenticated app user id / actor id only when available from trusted backend context.
+- Never trust client-provided userId, actorId, ownerId, organizationId, tenantId, workspaceId or activityEventId.
+- Return a stable idempotency key suitable for preventing duplicate raw intake creation.
+- Return trace metadata that can be stored later in activity_events metadata/json field if schema allows.
+
+Recommended idempotency material v1
+- schemaVersion
+- helperLayer
+- inputText normalized and trimmed
+- title normalized and trimmed
+- source
+- durationMinutes if present
+- startedAt if present
+- endedAt if present
+- occurredAt if present
+- timezone if present
+- trusted server actor/app user identifier when available
+- optional organization/space identifier only from server-side trusted context
+
+Do not include
+- categoryCandidates
+- metricCandidates
+- stateHookCandidates
+- valueObjects
+- stateFacts
+- stateDeltas
+- stateSnapshots
+- client-provided ownership fields
+- non-deterministic generatedAt
+- AI output
+- raw metadata fields that can change without changing the activity meaning
+
+Recommended idempotency key method
+- Create canonical JSON from deterministic idempotency material.
+- Sort object keys recursively.
+- Hash canonical JSON with SHA-256.
+- Prefix with controlled-intake-v1.
+- Example shape: controlled-intake-v1:<sha256>
+
+Reason
+This avoids accidental duplicate activity_events while keeping semantic processing separate and later.
+
+2. Persist design decision
+
+Future file
+- lib/activity/controlledIntake/persist.ts
+
+Future responsibilities
+- Accept only:
+  1. ControlledActivityIntakePayload produced by payloadBuilder.
+  2. Trusted server-side context produced by route/auth layer.
+  3. Supabase/server DB client provided by route layer, not created inside validator/payloadBuilder.
+- Insert only one raw row into activity_events.
+- Return inserted activity_event id and safe trace data.
+- Not call AI.
+- Not call Category Derivation.
+- Not create Value Objects.
+- Not persist categoryCandidates.
+- Not persist metricCandidates.
+- Not persist stateHookCandidates.
+- Not write value_object_state_facts.
+- Not write activity_state_deltas.
+- Not write snapshots.
+
+Persist helper boundary
+The persist helper may later write to activity_events only.
+It must not become a semantic processor.
+It must not become a router.
+It must not own authentication.
+It must not create Supabase client implicitly if project architecture prefers injected server client.
+
+3. Metadata trace vs dedicated trace field decision
+
+Decision for current stage
+Use metadata/json trace first if activity_events already has a suitable metadata/details/raw_json column.
+Do not add a dedicated trace column in O-H.
+Do not run SQL in O-H.
+A future schema audit/gate must confirm the exact target column before implementation.
+
+Reason
+The O-E gate selected existing activity_events mapping as sufficient for static helper work.
+Dedicated trace fields may be useful later, but adding them now would violate additive-safe, proof-first discipline.
+
+Future trace metadata should include
+- controlledIntakeSchemaVersion
+- controlledIntakeHelperLayer
+- idempotencyKey
+- idempotencyMaterialVersion
+- semanticProcessingNotStartedYet: true
+- categoryCandidatesCreated: false
+- valueObjectsCreated: false
+- stateFactsCreated: false
+- deltasCreated: false
+- snapshotsCreated: false
+- source: controlled_activity_intake
+- createdByRoute: src/app/api/activity/controlled-intake/route.ts only after route is approved
+
+4. activity_events insert mapping — provisional design
+
+Target table
+- activity_events
+
+Allowed future write
+- one insert into activity_events only
+
+Provisional mapping from ControlledActivityIntakePayload.activityEventDraft
+- title -> activity_events title/name field, exact column to be confirmed by schema audit before implementation
+- inputText -> activity_events description/raw_input/original_text field, exact column to be confirmed by schema audit before implementation
+- source -> activity_events source field if present, otherwise metadata trace
+- status -> raw_intake_pending_semantic_processing or nearest existing safe status, exact allowed enum to be confirmed before implementation
+- durationMinutes -> duration_minutes field if present
+- startedAt -> started_at field if present
+- endedAt -> ended_at field if present
+- occurredAt -> occurred_at field if present
+- timezone -> timezone field if present
+- context -> metadata/details/json field if present
+- metadata -> metadata/details/json field if present
+- trusted app user / actor context -> server-owned ownership fields only, never from client payload
+
+Not mapped in controlled intake persist
+- category candidates
+- metric candidates
+- state hook candidates
+- value object links
+- state facts
+- deltas
+- snapshots
+- semantic run ids
+
+5. Duplicate handling strategy
+
+Preferred future behavior
+- Build idempotencyKey before insert.
+- Search for an existing activity_event created by same trusted actor/context with same idempotency key if schema allows storing/querying it.
+- If duplicate exists, return existing event with duplicateDetected: true.
+- If no duplicate exists, insert new raw activity_event with duplicateDetected: false.
+
+If no indexed idempotency storage exists yet
+- Store idempotency key in metadata trace temporarily.
+- Avoid adding SQL until a separate schema audit/gate confirms whether a dedicated index is needed.
+
+6. Required future implementation order
+
+Next block after O-H
+P4.10.0-C8-I-D4-L-L-O-I — Controlled Activity Intake Idempotency Helper Implementation
+
+O-I allowed
+- Create lib/activity/controlledIntake/idempotency.ts
+- Add deterministic canonicalization/hash helper
+- Add type-level checks
+- Create report
+- Run TypeScript
+- Commit/push
+
+O-I forbidden
+- Do not create persist.ts
+- Do not create route.ts
+- Do not write to Supabase
+- Do not execute SQL
+- Do not create activity_event rows
+- Do not call AI
+
+Next block after O-I/O-J
+- O-J should statically verify idempotency helper.
+- Only after that should persist design/implementation gate be considered.
+
+7. Hard forbidden list remains active
+
+Controlled intake must not do the following in O-H
+- No lib/activity/controlledIntake/idempotency.ts creation.
+- No lib/activity/controlledIntake/persist.ts creation.
+- No src/app/api/activity/controlled-intake/route.ts creation.
+- No Supabase write.
+- No SQL execution.
+- No AI call.
+- No activity_event row creation.
+- No categoryCandidates persistence.
+- No Value Object creation.
+- No value_object_state_facts writes.
+- No activity_state_deltas writes.
+- No snapshots writes.
+
+8. Anti-retest rule
+
+Do not repeat old C8-H extractor proofs.
+Do not run /api/activity/complete canonical completed event proof.
+Do not run deleted successful rollback browser payload.
+Do not create or test runtime controlled-intake route yet.
+
+Conclusion
+O-H defines the boundary for future idempotency and persist work.
+The next safe step is O-I idempotency helper implementation only.
+Persist helper and runtime route remain blocked until separate later gates.
