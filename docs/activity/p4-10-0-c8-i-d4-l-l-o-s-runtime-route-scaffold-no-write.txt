@@ -1,0 +1,103 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-S — Controlled Activity Intake Runtime Route Scaffold No-Write
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+NO-WRITE ROUTE SCAFFOLD CREATED / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-R
+- Previous commit: 493857f
+- Previous message: docs: add C8-I-D4-L-L-O-R runtime route design gate
+
+Gate used
+PASS_RUNTIME_ROUTE_SCAFFOLD_DESIGN_ONLY_NO_DB_WRITE
+
+Created file
+- src/app/api/activity/controlled-intake/route.ts
+
+Route mode
+- no_write_preview only
+- requires x-controlled-intake-no-write-preview: true
+- requires x-controlled-intake-preview-app-user-id header
+- does not trust client-provided ownership fields
+- validator still rejects ownership fields in body
+
+Route sequence implemented
+1. POST request arrives.
+2. Route requires explicit no-write preview header.
+3. Route derives temporary preview trustedContext from request headers.
+4. Route parses JSON body.
+5. Route calls validateControlledActivityIntake.
+6. Route calls buildControlledActivityIntakePayload.
+7. Route calls buildControlledActivityIntakeIdempotency.
+8. Route calls buildControlledActivityIntakeActivityEventsStaticRow.
+9. Route returns validation/payload/idempotency/staticRow preview JSON.
+10. Route does not execute any DB write.
+
+Important limitation
+This is not final production auth.
+O-S uses an explicit no-write preview header contract only because the route is still prohibited from writing to the database.
+A later auth integration gate must replace preview trusted context with real authenticated server context before any write gate.
+
+Verified route guardrails
+- routeScaffoldOnly: true
+- noWritePreview: true
+- dbWriteExecuted: false
+- sqlExecuted: false
+- aiCallExecuted: false
+- semanticCandidatesPersisted: false
+- valueObjectsCreated: false
+- stateFactsCreated: false
+- stateDeltasCreated: false
+- stateSnapshotsCreated: false
+
+Forbidden patterns verified absent from route.ts
+- createClient
+- OpenAI
+- chat.completions
+- fetch(
+- INSERT INTO
+- UPDATE
+- DELETE
+- .insert(
+- .delete(
+- .rpc(
+- .from(
+- categoryCandidates:
+- metricCandidates:
+- stateHookCandidates:
+- value_object_state_facts
+- activity_state_deltas
+
+Verification performed
+- O-R gate report was read.
+- route.ts was created.
+- route markers were verified.
+- route forbidden write/SQL/AI patterns were checked.
+- helper files remained safe.
+- temporary static route compile check imported POST.
+- npx tsc --noEmit passed with temporary route check.
+- temporary route check was removed.
+- npx tsc --noEmit passed after cleanup.
+
+Still forbidden after O-S
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not call AI.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-T — Controlled Activity Intake Runtime Route No-Write Verification
+
+O-T should verify:
+- route exists;
+- route exports POST;
+- route uses no-write preview guard;
+- route rejects missing preview trusted context;
+- route rejects invalid body through validator;
+- route returns static row preview for valid body;
+- no Supabase/write/AI/semantic persistence patterns exist;
+- no DB write is executed.
