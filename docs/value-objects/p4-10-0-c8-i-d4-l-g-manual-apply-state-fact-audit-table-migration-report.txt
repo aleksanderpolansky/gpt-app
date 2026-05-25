@@ -1,0 +1,74 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-G-MANUAL - Manual Apply Dedicated State Fact Audit Table Migration
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-G-MANUAL
+Type: manual Supabase SQL Editor migration apply report
+Status: MIGRATION APPLIED MANUALLY / AUDIT TABLE EXISTS / ZERO AUDIT ROWS / RLS ENABLED / DENY-ALL POLICY CONFIRMED / NO ROUTE CREATED / NO RUNTIME ROLLBACK IMPLEMENTED
+
+Baseline:
+- Previous pushed commit: c9bc36b
+- Previous completed step: P4.10.0-C8-I-D4-L-F
+- Migration file already committed:
+  supabase/migrations/20260524000000_c8_i_d4_l_e_value_object_state_fact_audit_events.sql
+- D4-L-F report:
+  docs/value-objects/p4-10-0-c8-i-d4-l-f-dedicated-state-fact-audit-table-migration-static-verification-report.txt
+
+Reason for manual apply:
+- The first D4-L-G script stopped safely because Supabase CLI was not available in PATH.
+- The migration was therefore applied manually through Supabase Dashboard SQL Editor.
+- No PowerShell/CLI migration apply was used.
+
+Manual SQL verification result supplied after applying migration:
+
+table_regclass,audit_rows_count,rls_enabled,deny_all_policy_count
+value_object_state_fact_audit_events,0,true,1
+
+Interpretation:
+- public.value_object_state_fact_audit_events exists: yes.
+- public.value_object_state_fact_audit_events row count is zero: yes.
+- Row Level Security is enabled: yes.
+- Deny-all public policy exists: yes.
+- Deny-all policy count is 1: yes.
+
+Confirmed policy details from Supabase SQL Editor:
+- schemaname: public
+- tablename: value_object_state_fact_audit_events
+- policyname: value_object_state_fact_audit_events_deny_all_public_access
+- permissive: PERMISSIVE
+- roles: {public}
+- cmd: ALL
+- qual: false
+- with_check: false
+
+Important:
+- The schema migration was applied manually.
+- The audit table now exists in Supabase.
+- No audit rows were inserted by this step.
+- No value_object_state_facts rows were inserted, updated, or deleted by this step.
+- No rollback route was created.
+- No correction route was created.
+- No helper runtime was created.
+- Controlled persist route was not changed.
+- D4-E-B shadow route was not changed.
+
+Next step:
+P4.10.0-C8-I-D4-L-H - Post-Apply Migration Schema/Policy Verification.
+
+D4-L-H should:
+1. Verify the applied table shape against the migration contract.
+2. Verify required columns.
+3. Verify RLS and deny-all policy.
+4. Verify zero rows remain.
+5. Not implement rollback route.
+6. Not implement correction helper runtime.
+
+Hard boundaries preserved:
+- No API route created.
+- No helper code changed.
+- No database data insert/update/delete performed.
+- No rollback runtime implemented.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-G-MANUAL report.
