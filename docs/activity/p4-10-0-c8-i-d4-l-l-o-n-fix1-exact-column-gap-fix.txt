@@ -1,0 +1,137 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-N-FIX1 — Exact Column Gap Fix / Metadata-First Persist Contract
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+GAP FIX CREATED / METADATA-FIRST CONTRACT DEFINED / DOC ONLY / NO PERSIST HELPER / NO RUNTIME ROUTE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-N
+- Previous commit: 8e39d05
+- Previous message: docs: add C8-I-D4-L-L-O-N exact persist column contract
+
+Reason for FIX1
+O-N blocked persist helper creation because it treated titleColumn, inputTextColumn, statusColumn and other direct columns as hard requirements.
+That was too strict for the current controlled intake layer.
+For the static insert row builder, the safe rule is:
+- direct table column if confirmed;
+- otherwise store the controlled intake field inside metadata;
+- keep runtime DB write blocked until later route/proof gates confirm DB constraints and status behavior.
+
+Files intentionally not created in O-N-FIX1
+- lib/activity/controlledIntake/persist.ts
+- src/app/api/activity/controlled-intake/route.ts
+
+Original O-N extracted contract
+titleColumn: inputTextColumn:
+inputTextColumn: sourceColumn:
+sourceColumn: statusColumn:
+statusColumn: safeStatusDecision: USE_PAYLOAD_RAW_STATUS_VALUE_WITH_STATIC_HELPER_ONLY
+safeStatusDecision: USE_PAYLOAD_RAW_STATUS_VALUE_WITH_STATIC_HELPER_ONLY
+durationColumn: startedAtColumn:
+startedAtColumn: endedAtColumn:
+endedAtColumn: occurredAtColumn:
+occurredAtColumn: timezoneColumn:
+timezoneColumn: metadataColumn:
+metadataColumn: userColumn:
+userColumn: actorColumn:
+actorColumn: organizationColumn:
+organizationColumn: spaceColumn:
+spaceColumn: idempotencyColumn:
+idempotencyColumn: Interpretation
+
+Corrected metadata-first contract
+Direct table column mappings:
+title -> inputTextColumn:
+inputText -> sourceColumn:
+source -> statusColumn:
+status -> safeStatusDecision: USE_PAYLOAD_RAW_STATUS_VALUE_WITH_STATIC_HELPER_ONLY
+durationMinutes -> startedAtColumn:
+startedAt -> endedAtColumn:
+endedAt -> occurredAtColumn:
+occurredAt -> timezoneColumn:
+timezone -> metadataColumn:
+idempotencyKey -> Interpretation
+trustedContext.appUserId -> actorColumn:
+trustedContext.actorId -> organizationColumn:
+trustedContext.organizationId -> spaceColumn:
+trustedContext.spaceId -> idempotencyColumn:
+
+Metadata fallback mappings:
+(none)
+
+Blocking gaps:
+(none)
+
+Runtime-only gaps:
+(none)
+
+Gate decision
+PASS_METADATA_FIRST_CONTRACT_FOR_STATIC_INSERT_ROW_BUILDER_ONLY
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-P - Controlled Activity Intake Static Insert Row Builder
+
+Important distinction
+PASS_METADATA_FIRST_CONTRACT_FOR_STATIC_INSERT_ROW_BUILDER_ONLY does not approve a runtime DB write.
+It only approves creating a static helper that builds an activity_events insert row object.
+A real Supabase insert remains blocked until later route/proof gates.
+
+Static insert row builder boundary if gate passes
+Allowed in next block:
+- Create lib/activity/controlledIntake/persist.ts.
+- Export a function that builds a typed activity_events insert row object.
+- Use metadataColumn for all unconfirmed direct fields.
+- Require trusted server context separately from client payload.
+- Do not import Supabase client.
+- Do not call .insert().
+- Do not call .from().
+- Do not execute a DB write.
+- Do not create route.ts.
+
+Forbidden in next block:
+- No src/app/api/activity/controlled-intake/route.ts.
+- No Supabase import.
+- No createClient.
+- No .from().
+- No .insert().
+- No SQL execution.
+- No AI call.
+- No Category Derivation.
+- No categoryCandidates persistence.
+- No Value Object creation.
+- No state facts, deltas, or snapshots.
+
+Ownership rule
+- Client-provided ownership fields remain forbidden.
+- trustedContext.appUserId may map only to confirmed userColumn.
+- trustedContext.actorId may map only to confirmed actorColumn.
+- trustedContext.organizationId may map only to confirmed organizationColumn.
+- trustedContext.spaceId may map only to confirmed spaceColumn.
+- If neither userColumn nor actorColumn is confirmed, static insert row builder remains blocked.
+
+Metadata rule
+- metadataColumn is required for fallback-based static insert row builder.
+- controlledIntake activity draft, idempotency trace, semantic guardrail flags and unconfirmed fields go into metadata.
+- Dedicated idempotency column is optional; if absent, idempotencyKey goes into metadata.
+
+Status rule
+- If statusColumn is absent or raw status value is not confirmed, status is stored only in metadata.
+- Runtime DB write remains blocked until DB status/default/check/enum behavior is verified in a later proof gate.
+- The static builder must not force an unconfirmed DB status value into a status column.
+
+Verification performed in O-N-FIX1
+- Required previous files exist.
+- O-N block/gap markers were read.
+- persist.ts is absent.
+- controlled-intake route.ts is absent.
+- No SQL was executed.
+- No Supabase write happened.
+- No AI call happened.
+- No activity row was created.
+- Helper files remain free from runtime/write/AI patterns.
+- npx tsc --noEmit is run after report creation.
+
+Conclusion
+O-N-FIX1 replaces the too-strict direct-column requirement with a metadata-first contract.
+Implementation remains limited by gateDecision.
