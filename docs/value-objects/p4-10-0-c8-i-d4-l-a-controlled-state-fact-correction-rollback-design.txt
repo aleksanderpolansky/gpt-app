@@ -1,0 +1,179 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-A - Controlled State Fact Correction/Rollback Design
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-L-A
+Type: documentation-only design
+Status: CORRECTION/ROLLBACK DESIGN RECORDED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED
+
+Baseline:
+- Previous pushed commit: a713fd3
+- Previous completed step: P4.10.0-C8-I-D4-K-B
+- K-B report: docs/value-objects/p4-10-0-c8-i-d4-k-b-operational-guardrails-decision.txt
+- K-A report: docs/value-objects/p4-10-0-c8-i-d4-k-a-controlled-state-fact-read-only-verification-report.txt
+- Controlled persist route: src/app/api/activity/state-facts/controlled-persist/route.ts
+
+Context:
+D4-J created and verified one proof state fact:
+- state_fact_id: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+- dimension_key: language_practice_balance
+- value_object_id: 9177fea8-de25-446b-b418-b55a766d53db
+- source_type: system
+- source_id: d7635f3e-f956-47ba-9241-e81377d2d4a1
+- correction_status: active
+- metadata_json.rollbackable: true
+
+Purpose of this design:
+Define how controlled state facts may be corrected, expired, or rolled back in the future without creating a dangerous update/delete path now.
+
+Core decision:
+Do NOT implement runtime rollback/correction in this step.
+First, define strict rules and gates. Runtime route/helper implementation may be a later step only after this design is accepted.
+
+Terminology:
+1. Rollback:
+   The user/system cancels the effect of a previously created state fact.
+   The original row must not be deleted.
+   The row may later be marked as rolled_back/expired through a controlled update path.
+2. Correction:
+   The original fact was incomplete or wrong.
+   The old row should be marked corrected/superseded/expired.
+   A new corrected fact may be created through the same controlled persistence contract.
+3. Expiry:
+   A fact naturally stops being valid after valid_to.
+   Expiry does not necessarily mean the fact was wrong.
+4. Audit:
+   Every correction/rollback must be explainable after the fact.
+   No silent update is allowed.
+
+Hard rollback/correction rules:
+1. No delete.
+2. No generic update endpoint.
+3. No client-side direct update to value_object_state_facts.
+4. No update by state_fact_id alone.
+5. No service-role-backed rollback route without authenticated actor resolution.
+6. No rollback of another user's state fact.
+7. No rollback if the target Value Object does not belong to the authenticated actor or allowed organization context.
+8. No rollback if metadata_json.rollbackable is not true, unless an admin-only emergency path is separately designed.
+9. No rollback if correction_status is already rolled_back/corrected/superseded/expired.
+10. No rollback without reason.
+11. No correction without linking old fact and new fact.
+12. No raw evidence deletion.
+13. No proof artifact manual deletion.
+14. No AI-only rollback.
+15. No hidden production debug rollback.
+
+Minimum future rollback request envelope:
+- mode: controlled_rollback
+- confirmControlledRollback: true
+- stateFactId
+- reason
+- requestedAt
+- clientTraceId
+- expectedCurrentCorrectionStatus: active
+- expectedRollbackable: true
+
+Minimum future correction request envelope:
+- mode: controlled_correction
+- confirmControlledCorrection: true
+- stateFactIdToCorrect
+- reason
+- correctedCandidate
+- requestedAt
+- clientTraceId
+- expectedCurrentCorrectionStatus: active
+- expectedRollbackable: true
+
+Required future rollback gates:
+1. Request envelope validation.
+2. Authenticated actor resolution.
+3. Target state fact lookup.
+4. State fact ownership check by user_id and/or actor/Value Object ownership.
+5. Target Value Object access check.
+6. Dimension lookup.
+7. Current correction_status check.
+8. rollbackable metadata check.
+9. Reason/evidence validation.
+10. Idempotency key check for rollback request.
+11. Controlled update only:
+    - correction_status set to rolled_back or expired;
+    - valid_to set to rollback timestamp;
+    - metadata_json updated with rollback metadata.
+12. Audit/event recording before or inside the same transaction if an audit table exists.
+13. Response must disclose writesAttempted=true only if the controlled update was attempted.
+14. Response must never expose unrelated private state facts.
+
+Required future correction gates:
+1. All rollback gates for the old fact.
+2. Corrected candidate must pass D4-C/D4-F validation.
+3. Corrected candidate must use the same or explicitly compatible dimension.
+4. Corrected candidate must link to old fact through metadata_json.corrects_state_fact_id.
+5. Old fact must link to new fact through metadata_json.corrected_by_state_fact_id if possible.
+6. New fact creation must use existing controlled persistence helper pattern, not a separate bypass.
+7. No correction may weaken privacy.
+8. No correction may raise claim_strength beyond allowed policy.
+9. Evidence must explain why the correction is being made.
+10. Correction must be idempotent.
+
+Recommended future database behavior:
+- Prefer transactional controlled update for rollback/correction.
+- Avoid delete.
+- Avoid upsert.
+- Avoid generic partial update payloads.
+- Only allow a whitelisted update set:
+  - correction_status
+  - valid_to
+  - metadata_json rollback/correction sub-object
+  - updated_at
+- If audit table is introduced later, record:
+  - actor_id/user_id
+  - state_fact_id
+  - action_type: rollback/correction/expiry
+  - previous correction_status
+  - new correction_status
+  - reason
+  - request_trace_id
+  - timestamp
+  - route/helper versions
+
+Suggested future helper names:
+- resolveControlledStateFactForCorrection
+- validateStateFactRollbackRequest
+- buildStateFactRollbackUpdatePayload
+- checkStateFactRollbackIdempotency
+- persistStateFactRollbackControlled
+- validateStateFactCorrectionRequest
+- persistStateFactCorrectionControlled
+
+Suggested future route:
+- POST /api/activity/state-facts/controlled-rollback
+or
+- POST /api/activity/state-facts/controlled-correction
+
+But do not create either route until:
+1. ownership checks are re-used from controlled persist;
+2. rollback idempotency is designed;
+3. audit strategy is decided;
+4. runtime tests for no-write rejection branches are prepared.
+
+Proof artifact policy:
+The D4-J-B-B proof artifact should remain active for now.
+Do not manually delete or manually update it.
+If it is rolled back later, it should be rolled back only through the controlled rollback proof route/helper after D4-L implementation steps are planned.
+
+Current sequence decision:
+- D4-L-A is design-only.
+- The next possible step is D4-L-B: read-only source audit for update/correction conventions and existing audit/event tables.
+- After D4-L-B, decide whether rollback can be implemented with current tables or whether a small audit table/migration is needed first.
+
+Hard boundaries preserved in this step:
+- No API route created.
+- No helper code changed.
+- No SQL migration created.
+- No database insert/update/delete/upsert performed.
+- D4-E-B shadow route remains untouched.
+- Controlled persist route remains unchanged.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-A design.
