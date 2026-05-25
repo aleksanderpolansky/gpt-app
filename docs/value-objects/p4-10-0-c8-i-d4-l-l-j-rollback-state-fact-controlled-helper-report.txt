@@ -1,0 +1,62 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-J - Create rollbackStateFactControlled Runtime Helper
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-J
+Type: runtime helper code step
+Status: ROLLBACK HELPER CREATED / TYPESCRIPT PASS / NO ROUTE CREATED / NO RUNTIME PROOF EXECUTED / NO NON-ATOMIC UPDATE INSERT IMPLEMENTED
+
+Baseline:
+- Previous pushed commit: 2777eeb
+- Previous completed step: P4.10.0-C8-I-D4-L-L-I
+- D4-L-L-I applied and verified the atomic rollback RPC.
+- D4-L-L-J creates the runtime helper only.
+
+Created files:
+- lib/activity/stateFacts/controlledPersistence/rollback.ts
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-j-rollback-state-fact-controlled-helper-report.txt
+
+Runtime helper created:
+- rollbackStateFactControlled
+
+RPC used:
+- public.rollback_value_object_state_fact_controlled
+
+Helper behavior:
+- Normalizes and validates input.
+- Resolves target state fact by stateFactId + valueObjectId through rollbackTarget.ts.
+- Rejects userId mismatch.
+- Checks rollback idempotency through rollbackIdempotency.ts.
+- Verifies rollbackPayloadBuilder.ts is available.
+- Calls the atomic RPC through server-side Supabase service role client.
+- Normalizes RPC jsonb response.
+
+Important implementation boundary:
+- The helper does not perform direct Supabase JS update + insert.
+- The helper does not call .insert().
+- The helper does not call .update().
+- The helper does not call .delete().
+- The helper does not call .upsert().
+- The helper does not create a Next.js route.
+- The helper does not execute rollback proof in this step.
+
+Verification:
+- TypeScript check passed.
+- No route created.
+- No non-atomic update + insert implementation.
+- No direct state fact update.
+- No direct audit event insert.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-K - Runtime Helper Static Verification.
+
+D4-L-L-K should:
+1. Re-read rollback.ts.
+2. Verify RPC-only write path.
+3. Verify no direct update/insert/delete/upsert.
+4. Verify no route.
+5. Verify TypeScript again.
+6. Commit a static verification report.
+7. Still not execute rollback proof.
+
+End of D4-L-L-J report.
