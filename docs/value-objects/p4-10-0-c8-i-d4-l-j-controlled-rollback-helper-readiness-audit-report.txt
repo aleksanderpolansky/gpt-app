@@ -1,0 +1,246 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-J - Controlled Rollback Helper Readiness Audit
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-J
+Type: read-only schema/helper readiness audit
+Status: READINESS AUDIT PASSED FOR IMPLEMENTATION PLANNING / LIFECYCLE FIELD FOUND / NO RUNTIME IMPLEMENTED
+
+Baseline:
+- Previous pushed commit: ad7778e
+- Previous completed step: P4.10.0-C8-I-D4-L-I
+- D4-L-I recorded rollback helper design only.
+- No runtime rollback existed before this audit.
+
+Purpose:
+Audit whether the project is ready to implement rollbackStateFactControlled without first adding lifecycle fields or adjusting the state fact table contract.
+
+Important:
+- This step is read-only/doc-only.
+- No helper file was created.
+- No helper file was changed.
+- No API route was created.
+- No Supabase write was performed.
+- No state fact was updated.
+- No audit event was inserted.
+
+Read-only DB probe summary:
+{
+  "step": "P4.10.0-C8-I-D4-L-J",
+  "mode": "read_only_rollback_readiness_schema_probe",
+  "startedAt": "2026-05-25T09:10:35.900Z",
+  "finishedAt": "2026-05-25T09:10:41.090Z",
+  "noWriteOperationPerformedByProbe": true,
+  "stateFactsRowCount": {
+    "tableName": "value_object_state_facts",
+    "ok": true,
+    "count": 1,
+    "errorCode": null,
+    "errorMessage": null
+  },
+  "auditRowCount": {
+    "tableName": "value_object_state_fact_audit_events",
+    "ok": true,
+    "count": 0,
+    "errorCode": null,
+    "errorMessage": null
+  },
+  "stateFactExistingColumns": [
+    "id",
+    "user_id",
+    "value_object_id",
+    "dimension_id",
+    "dimension_key",
+    "value_json",
+    "source_type",
+    "source_id",
+    "confidence",
+    "claim_strength",
+    "evidence_json",
+    "metadata_json",
+    "valid_from",
+    "valid_to",
+    "created_at",
+    "updated_at",
+    "correction_status"
+  ],
+  "stateFactMissingColumns": [
+    {
+      "columnName": "actor_id",
+      "errorCode": "42703",
+      "errorMessage": "column value_object_state_facts.actor_id does not exist"
+    },
+    {
+      "columnName": "value",
+      "errorCode": "42703",
+      "errorMessage": "column value_object_state_facts.value does not exist"
+    },
+    {
+      "columnName": "source",
+      "errorCode": "42703",
+      "errorMessage": "column value_object_state_facts.source does not exist"
+    },
+    {
+      "columnName": "confidence_score",
+      "errorCode": "42703",
+      "errorMessage": "column value_object_state_facts.confidence_score does not exist"
+    },
+    {
+      "columnName": "lifecycle_status",
+      "errorCode": "42703",
+      "errorMessage": "column value_object_state_facts.lifecycle_status does not exist"
+    },
+    {
+      "columnName": "is_rolled_back",
+      "errorCode": "42703",
+      "errorMessage": "column value_object_state_facts.is_rolled_back does not exist"
+    },
+    {
+      "columnName": "rolled_back_at",
+      "errorCode": "42703",
+      "errorMessage": "column value_object_state_facts.rolled_back_at does not exist"
+    },
+    {
+      "columnName": "superseded_by_state_fact_id",
+      "errorCode": "42703",
+      "errorMessage": "column value_object_state_facts.superseded_by_state_fact_id does not exist"
+    },
+    {
+      "columnName": "rollback_reason",
+      "errorCode": "42703",
+      "errorMessage": "column value_object_state_facts.rollback_reason does not exist"
+    }
+  ],
+  "auditExistingColumns": [
+    "id",
+    "user_id",
+    "actor_id",
+    "value_object_id",
+    "state_fact_id",
+    "related_state_fact_id",
+    "dimension_key",
+    "action_type",
+    "previous_correction_status",
+    "new_correction_status",
+    "reason",
+    "request_trace_id",
+    "idempotency_key",
+    "source_route",
+    "helper_version",
+    "contract_version",
+    "d4_gate_version",
+    "previous_valid_to",
+    "new_valid_to",
+    "evidence_json",
+    "metadata_json",
+    "created_at"
+  ],
+  "auditMissingColumns": [],
+  "rollbackReadinessSignals": {
+    "hasValidTo": true,
+    "hasMetadataJson": true,
+    "hasUpdatedAt": true,
+    "hasCorrectionStatus": true,
+    "hasLifecycleStatus": false,
+    "hasIsRolledBack": false,
+    "hasRolledBackAt": false,
+    "hasSupersededByStateFactId": false,
+    "hasAnyLifecycleField": true,
+    "minimalRollbackTargetFieldsAvailable": true,
+    "runtimeRollbackReadyWithoutAdditionalMigration": true
+  },
+  "recommendation": "Runtime rollback implementation can proceed to implementation planning after human review."
+}
+
+Local helper/pattern audit:
+{
+    "helperDir":  "lib/activity/stateFacts/controlledPersistence",
+    "helperFileCount":  8,
+    "routeFile":  "src/app/api/activity/state-facts/controlled-persist/route.ts",
+    "routeExists":  true,
+    "hasPersistStateFactControlled":  true,
+    "hasRollbackStateFactControlled":  false,
+    "hasUpdatePatternInControlledPersistenceHelpers":  false,
+    "hasDeletePatternInControlledPersistenceHelpers":  false,
+    "hasUpsertPatternInControlledPersistenceHelpers":  false,
+    "hasInsertPatternInControlledPersistenceHelpers":  true,
+    "hasValueObjectStateFactsTablePattern":  true,
+    "hasAuditEventsTablePattern":  false
+}
+
+Controlled persistence helper files found:
+- lib\activity\stateFacts\controlledPersistence\auth.ts
+- lib\activity\stateFacts\controlledPersistence\dimension.ts
+- lib\activity\stateFacts\controlledPersistence\idempotency.ts
+- lib\activity\stateFacts\controlledPersistence\payloadBuilder.ts
+- lib\activity\stateFacts\controlledPersistence\persist.ts
+- lib\activity\stateFacts\controlledPersistence\targetValueObject.ts
+- lib\activity\stateFacts\controlledPersistence\types.ts
+- lib\activity\stateFacts\controlledPersistence\validator.ts
+
+Readiness interpretation:
+- value_object_state_facts has valid_to: True
+- value_object_state_facts has metadata_json: True
+- value_object_state_facts has updated_at: True
+- value_object_state_facts has correction_status: True
+- value_object_state_facts has lifecycle_status: False
+- value_object_state_facts has is_rolled_back: False
+- value_object_state_facts has rolled_back_at: False
+- value_object_state_facts has superseded_by_state_fact_id: False
+- minimal rollback target fields available: True
+- any explicit lifecycle field available: True
+- runtime rollback ready without additional migration: True
+
+Conclusion:
+Runtime rollback implementation can proceed to implementation planning after human review.
+
+Decision:
+Do not implement runtime rollback in this step.
+Do not create a generic update endpoint.
+Do not update value_object_state_facts by state_fact_id alone.
+Do not rollback another user's state fact.
+Do not write to value_object_state_fact_audit_events from public/client-side code.
+
+Required before runtime rollback if lifecycle fields are missing:
+1. Decide explicit lifecycle/correction status fields for value_object_state_facts.
+2. Decide whether rollback closes a fact through valid_to, correction_status, or both.
+3. Decide exact allowed update columns.
+4. Add additive SQL migration if needed.
+5. Verify migration with read-only schema/policy checks.
+6. Only then implement rollbackStateFactControlled.
+
+Required if implementation proceeds later:
+1. Create rollback.ts in lib/activity/stateFacts/controlledPersistence.
+2. Use existing auth resolver.
+3. Use existing target Value Object ownership resolver.
+4. Load target state fact by stateFactId + valueObjectId, not by stateFactId alone.
+5. Update only allowed lifecycle fields.
+6. Insert audit event into value_object_state_fact_audit_events in the same transaction.
+7. Ensure idempotency via user_id + state_fact_id + action_type + idempotency_key.
+8. Prove wrong-user rejection.
+9. Prove valueObjectId mismatch rejection.
+10. Prove repeated rollback does not duplicate audit events.
+
+Relationship to existing helpers:
+- persistStateFactControlled exists: True
+- rollbackStateFactControlled exists: False
+- update pattern already present in controlled persistence helpers: False
+- delete pattern already present in controlled persistence helpers: False
+- upsert pattern already present in controlled persistence helpers: False
+- insert pattern already present in controlled persistence helpers: True
+- value_object_state_facts table pattern present: True
+- value_object_state_fact_audit_events table pattern present: False
+
+Next step:
+P4.10.0-C8-I-D4-L-K - Controlled Rollback Helper Implementation Plan
+
+Hard boundaries preserved:
+- No API route created.
+- No helper runtime implemented.
+- No database data insert/update/delete performed.
+- No rollback runtime implemented.
+- No correction runtime implemented.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-J report.
