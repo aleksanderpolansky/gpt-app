@@ -1,0 +1,209 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-D - Dedicated State Fact Audit Table Migration Design
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-L-D
+Type: documentation-only SQL migration design
+Status: MIGRATION DESIGN RECORDED / NO SQL MIGRATION FILE CREATED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED
+
+Baseline:
+- Previous pushed commit: 0cee745
+- Previous completed step: P4.10.0-C8-I-D4-L-C
+- L-C report: docs/value-objects/p4-10-0-c8-i-d4-l-c-correction-rollback-audit-model-decision.txt
+- L-B report: docs/value-objects/p4-10-0-c8-i-d4-l-b-read-only-correction-update-audit-conventions-report.txt
+- L-A report: docs/value-objects/p4-10-0-c8-i-d4-l-a-controlled-state-fact-correction-rollback-design.txt
+
+Context:
+D4-L-C decided that future controlled rollback/correction must use a dedicated audit table:
+value_object_state_fact_audit_events
+
+This step is design-only.
+No actual migration file is created in this step.
+No SQL is executed in this step.
+
+Future table:
+value_object_state_fact_audit_events
+
+Purpose:
+Record controlled lifecycle events for rows in value_object_state_facts, especially:
+- rollback requests;
+- successful rollbacks;
+- correction requests;
+- successful corrections;
+- superseding old facts;
+- expiry;
+- rejected rollback/correction attempts.
+
+Why a dedicated table:
+1. State facts are private user-state records.
+2. Correction/rollback is a lifecycle operation on facts, not a normal activity.
+3. Generic activity_events or impact_events should not become a hidden state-fact audit layer.
+4. A dedicated table supports strict RLS, narrow constraints, and future forensic review.
+5. A dedicated table keeps rollback/correction logic from becoming a generic update route.
+
+Proposed future SQL migration draft:
+
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS public.value_object_state_fact_audit_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  user_id uuid NOT NULL,
+  actor_id uuid NULL,
+  value_object_id uuid NOT NULL,
+  state_fact_id uuid NOT NULL,
+  related_state_fact_id uuid NULL,
+
+  dimension_key text NOT NULL,
+  action_type text NOT NULL,
+
+  previous_correction_status text NULL,
+  new_correction_status text NULL,
+
+  reason text NOT NULL,
+  request_trace_id text NOT NULL,
+  idempotency_key text NOT NULL,
+
+  source_route text NOT NULL,
+  helper_version text NOT NULL,
+  contract_version text NULL,
+  d4_gate_version text NULL,
+
+  previous_valid_to timestamptz NULL,
+  new_valid_to timestamptz NULL,
+
+  evidence_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+  metadata_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+
+  created_at timestamptz NOT NULL DEFAULT now(),
+
+  CONSTRAINT value_object_state_fact_audit_events_reason_not_empty
+    CHECK (length(trim(reason)) > 0),
+
+  CONSTRAINT value_object_state_fact_audit_events_trace_not_empty
+    CHECK (length(trim(request_trace_id)) > 0),
+
+  CONSTRAINT value_object_state_fact_audit_events_idempotency_not_empty
+    CHECK (length(trim(idempotency_key)) > 0),
+
+  CONSTRAINT value_object_state_fact_audit_events_action_type_check
+    CHECK (
+      action_type IN (
+        'created',
+        'rollback_requested',
+        'rolled_back',
+        'correction_requested',
+        'corrected',
+        'superseded',
+        'expired',
+        'rejected_rollback',
+        'rejected_correction'
+      )
+    ),
+
+  CONSTRAINT value_object_state_fact_audit_events_state_fact_fk
+    FOREIGN KEY (state_fact_id)
+    REFERENCES public.value_object_state_facts(id)
+    ON DELETE RESTRICT,
+
+  CONSTRAINT value_object_state_fact_audit_events_related_state_fact_fk
+    FOREIGN KEY (related_state_fact_id)
+    REFERENCES public.value_object_state_facts(id)
+    ON DELETE RESTRICT,
+
+  CONSTRAINT value_object_state_fact_audit_events_value_object_fk
+    FOREIGN KEY (value_object_id)
+    REFERENCES public.value_objects(id)
+    ON DELETE RESTRICT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS value_object_state_fact_audit_events_idempotency_uq
+  ON public.value_object_state_fact_audit_events (
+    user_id,
+    state_fact_id,
+    action_type,
+    idempotency_key
+  );
+
+CREATE INDEX IF NOT EXISTS value_object_state_fact_audit_events_user_created_idx
+  ON public.value_object_state_fact_audit_events (user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS value_object_state_fact_audit_events_state_fact_created_idx
+  ON public.value_object_state_fact_audit_events (state_fact_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS value_object_state_fact_audit_events_value_object_created_idx
+  ON public.value_object_state_fact_audit_events (value_object_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS value_object_state_fact_audit_events_dimension_created_idx
+  ON public.value_object_state_fact_audit_events (dimension_key, created_at DESC);
+
+ALTER TABLE public.value_object_state_fact_audit_events ENABLE ROW LEVEL SECURITY;
+
+-- Initial deny-by-default policy.
+-- Server-side controlled helpers may use service role.
+-- Public/client direct access must remain blocked until an owner-scoped read model is designed.
+
+CREATE POLICY value_object_state_fact_audit_events_deny_all_public_access
+  ON public.value_object_state_fact_audit_events
+  FOR ALL
+  TO public
+  USING (false)
+  WITH CHECK (false);
+
+COMMIT;
+
+Design notes:
+1. The migration should be applied only after a separate implementation step.
+2. The table uses ON DELETE RESTRICT to preserve audit history.
+3. The table does not expose public access by default.
+4. The table supports idempotency for rollback/correction audit events.
+5. The table supports linking old and new facts through related_state_fact_id.
+6. The action_type list is intentionally narrow.
+7. The table includes source_route/helper_version/contract_version/d4_gate_version for forensic traceability.
+8. The table does not replace value_object_state_facts.
+9. The table does not create rollback by itself.
+10. The table only makes future rollback/correction safe to audit.
+
+Potential future helper dependency:
+Before implementing rollback runtime, create helpers:
+- resolveControlledStateFactForCorrection
+- validateStateFactRollbackRequest
+- buildStateFactRollbackAuditEventPayload
+- buildStateFactRollbackUpdatePayload
+- checkStateFactRollbackIdempotency
+- persistStateFactRollbackControlled
+
+Potential future route:
+POST /api/activity/state-facts/controlled-rollback
+
+But the route must not be created until:
+1. migration is applied and verified;
+2. audit insert path is implemented;
+3. rollback update payload is narrowly whitelisted;
+4. no-write rejection tests exist;
+5. authenticated browser/session proof exists;
+6. duplicate/idempotency proof exists.
+
+Recommended next step:
+P4.10.0-C8-I-D4-L-E - Dedicated State Fact Audit Table Migration File Creation.
+
+D4-L-E should:
+1. Create a real migration SQL file from this design.
+2. Not apply it automatically unless explicitly planned.
+3. Add migration file to git.
+4. Run static SQL checks only if possible.
+5. Not create rollback route.
+6. Not modify controlled persist route.
+7. Not write to database.
+
+Hard boundaries preserved in this step:
+- No API route created.
+- No helper code changed.
+- No actual SQL migration file created.
+- No database insert/update/delete/upsert performed.
+- D4-E-B shadow route remains untouched.
+- Controlled persist route remains unchanged.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-D migration design.
