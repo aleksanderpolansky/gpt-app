@@ -1,0 +1,79 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-E - Dedicated State Fact Audit Table Migration File Creation
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-L-E
+Type: SQL migration file creation / static safety check
+Status: MIGRATION FILE CREATED / NOT APPLIED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED
+
+Baseline:
+- Previous pushed commit: 42156c3
+- Previous completed step: P4.10.0-C8-I-D4-L-D
+- L-D report: docs/value-objects/p4-10-0-c8-i-d4-l-d-dedicated-state-fact-audit-table-migration-design.txt
+- L-C report: docs/value-objects/p4-10-0-c8-i-d4-l-c-correction-rollback-audit-model-decision.txt
+- L-B report: docs/value-objects/p4-10-0-c8-i-d4-l-b-read-only-correction-update-audit-conventions-report.txt
+
+Created migration file:
+supabase/migrations/20260524000000_c8_i_d4_l_e_value_object_state_fact_audit_events.sql
+
+Migration purpose:
+Create public.value_object_state_fact_audit_events as a dedicated audit table for future controlled state fact rollback/correction lifecycle events.
+
+What was created:
+- Table: public.value_object_state_fact_audit_events
+- Primary key id uuid default gen_random_uuid()
+- Required user_id, value_object_id, state_fact_id, dimension_key, action_type, reason, request_trace_id, idempotency_key, source_route, helper_version.
+- Optional actor_id and related_state_fact_id.
+- JSON evidence_json and metadata_json.
+- created_at timestamp.
+- Check constraints for non-empty reason, request_trace_id, idempotency_key.
+- Check constraint for narrow action_type list.
+- Foreign keys to public.value_object_state_facts and public.value_objects.
+- Unique idempotency index.
+- Query-support indexes.
+- RLS enabled.
+- Deny-all public policy.
+
+Static safety checks:
+- Required migration markers found.
+- No DROP TABLE.
+- No DROP COLUMN.
+- No TRUNCATE.
+- No DELETE FROM.
+- No UPDATE public.value_object_state_facts.
+- No INSERT INTO public.value_object_state_facts.
+- No destructive ALTER on public.value_object_state_facts.
+- No CREATE OR REPLACE FUNCTION.
+- No SECURITY DEFINER.
+
+Important:
+- The migration file was created but not applied.
+- No Supabase DB write was performed.
+- No rollback route was created.
+- No correction route was created.
+- No helper runtime was created.
+- Controlled persist route was not changed.
+- D4-E-B shadow route was not changed.
+
+Next step:
+P4.10.0-C8-I-D4-L-F - Dedicated State Fact Audit Table Migration Static/Local Verification.
+
+D4-L-F should:
+1. Verify migration file path and contents.
+2. Verify no route/helper code changed.
+3. Verify migration is not applied yet.
+4. Optionally run local static SQL parse/check if available.
+5. Not apply the migration to Supabase.
+6. Not create rollback runtime.
+
+Hard boundaries preserved in this step:
+- No API route created.
+- No helper code changed.
+- SQL migration file created but not applied.
+- No database insert/update/delete/upsert performed.
+- D4-E-B shadow route remains untouched.
+- Controlled persist route remains unchanged.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-E report.
