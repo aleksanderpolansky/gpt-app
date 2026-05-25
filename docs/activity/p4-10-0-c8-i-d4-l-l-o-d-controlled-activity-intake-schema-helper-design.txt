@@ -1,0 +1,674 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-D - Controlled Activity Intake Schema/Helper Design
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-O-D
+Type: schema / helper design
+Script: P4.10.0-C8-I-D4-L-L-O-D-FIX2
+Compatibility fix:
+- PowerShell variable interpolation with a colon now uses : to avoid InvalidVariableReferenceWithDrive.
+Status: SCHEMA HELPER DESIGN CREATED / DOC ONLY / NO RUNTIME CHANGE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline:
+- Previous pushed commit: 15131ab
+- Previous block completed: P4.10.0-C8-I-D4-L-L-O-C
+- O-A created controlled activity intake contract.
+- O-B created activity intake schema/route audit.
+- O-C made persistence design decision.
+- O-D designs the schema/helper boundary before implementation.
+
+Hard boundary:
+- Activity Event is the source of truth.
+- AI output, category candidates, state hooks, and resolver suggestions must never replace the activity_event source record.
+- O-D is doc-only.
+- O-D does not create a route.
+- O-D does not create helper source files.
+- O-D does not execute SQL.
+- O-D does not write to Supabase.
+- O-D does not create an activity.
+
+Safety confirmations:
+- No production controlled rollback route exists.
+- No controlled intake runtime route exists yet.
+- No controlled intake helper directory exists yet.
+- Removed rollback success debug route remains absent.
+- Removed rollback success browser payload remains absent.
+- No categoryCandidates persistence.
+- No Value Object creation.
+- No value_object_state_facts writes.
+- No activity_state_deltas writes.
+- No snapshots writes.
+
+Design decisions:
+- selectedTable: activity_events
+- existingTableUseDecision: USE_EXISTING_ACTIVITY_EVENTS_PROVISIONALLY_AFTER_O-E_STATIC_MAPPING
+- nextStepDecision: O-E_CREATE_HELPER_TYPES_VALIDATOR_PAYLOAD_BUILDER_DOC_OR_STATIC_CODE
+- routeNameReservedForLater: src/app/api/activity/controlled-intake/route.ts
+- helperNamespaceReservedForLater: lib/activity/controlledIntake/
+
+Column signal summary:
+- id: signal found
+- user_id: signal found
+- actor_id: signal found
+- input_text: signal found
+- normalized_title/title: signal found
+- started_at: signal found
+- ended_at: signal found
+- duration_minutes: signal found
+- timezone: signal found
+- source: signal found
+- status: signal found
+- privacy_level: signal found
+- client_trace_id/idempotency: signal found
+- metadata_json/metadata: signal found
+
+Controlled intake helper layer design:
+1. lib/activity/controlledIntake/types.ts
+   Purpose:
+   - define request/response types;
+   - define normalized internal payload;
+   - define safe status/source/privacy enums.
+
+   Proposed exported types:
+   - ControlledActivityIntakeRequest
+   - ControlledActivityIntakeValidatedPayload
+   - ControlledActivityIntakePersistInput
+   - ControlledActivityIntakePersistResult
+   - ControlledActivityIntakeResponse
+   - ControlledActivityIntakeSource
+   - ControlledActivityIntakeStatus
+   - ControlledActivityPrivacyLevel
+
+2. lib/activity/controlledIntake/validator.ts
+   Purpose:
+   - validate raw request body;
+   - trim inputText/title;
+   - validate durationMinutes as positive finite number;
+   - validate startedAt/endedAt ISO strings if present;
+   - validate timezone string as non-empty string;
+   - validate source/status/privacyLevel allowlists;
+   - enforce "at least inputText or title";
+   - enforce no client-provided user_id/actor_id.
+
+   Forbidden in validator:
+   - no AI call;
+   - no category derivation;
+   - no Value Object creation;
+   - no state fact write;
+   - no semantic classification.
+
+3. lib/activity/controlledIntake/payloadBuilder.ts
+   Purpose:
+   - build internal persistence payload from validated input and authenticated user context;
+   - calculate duration only when explicitly safe;
+   - set semanticProcessingNotStartedYet = true in metadata;
+   - set notAStateFact = true in metadata;
+   - set contractVersion = P4.10.0-C8-I-D4-L-L-O-D or later runtime version.
+
+4. lib/activity/controlledIntake/idempotency.ts
+   Purpose:
+   - define idempotency key selection;
+   - use clientTraceId/client_trace_id if table supports it;
+   - otherwise block runtime implementation until additive migration exists.
+
+5. lib/activity/controlledIntake/persist.ts
+   Purpose:
+   - insert source activity record only;
+   - never insert category candidates;
+   - never insert value objects;
+   - never insert state facts/deltas/snapshots;
+   - return created/existing source record based on idempotency.
+
+6. src/app/api/activity/controlled-intake/route.ts
+   Purpose for later implementation only:
+   - browser-authenticated POST route;
+   - resolve user server-side;
+   - call validator -> payloadBuilder -> idempotency -> persist;
+   - return proof flags showing semantic layer did not run.
+
+First proof response invariants for later route:
+{
+  "ok": true,
+  "activityRecordCreated": true,
+  "semanticProcessingNotStartedYet": true,
+  "categoryCandidatesCreated": false,
+  "valueObjectsCreated": false,
+  "stateFactsCreated": false,
+  "deltasCreated": false,
+  "snapshotsCreated": false,
+  "productionNextBestActionCreated": false
+}
+
+Initial proof payload:
+{
+  "inputText": "Ð£Ñ‡Ð¸Ð»ÑÑ Ð½ÐµÐ¼ÐµÑ†ÐºÐ¾Ð¼Ñƒ 25 Ð¼Ð¸Ð½ÑƒÑ‚ Ð¸ Ð½Ð°Ð¿Ð¸ÑÐ°Ð» 5 Ñ„Ñ€Ð°Ð· Ð´Ð»Ñ B2B-Ð¿Ð¸ÑÑŒÐ¼Ð°.",
+  "title": "ÐÐµÐ¼ÐµÑ†ÐºÐ¸Ð¹ + B2B Ð¿Ð¸ÑÑŒÐ¼Ð¾",
+  "durationMinutes": 25,
+  "timezone": "Europe/Warsaw",
+  "source": "manual",
+  "status": "completed",
+  "privacyLevel": "private",
+  "clientTraceId": "o-runtime-controlled-activity-intake-proof-001"
+}
+
+No-go decisions:
+- Do not reuse /api/activity/complete as controlled intake.
+- Do not mix controlled intake with category derivation.
+- Do not create or update Value Objects in first intake route.
+- Do not create state hooks as facts.
+- Do not create value_object_state_facts in first intake route.
+- Do not create activity_state_deltas in first intake route.
+- Do not create snapshots in first intake route.
+- Do not create a generic update/delete route.
+- Do not add destructive migrations.
+- Do not trust client user_id/actor_id.
+
+Schema design direction:
+If existing table is usable:
+- Use selected table only with explicit column mapping.
+- Runtime implementation remains narrow.
+- Add no migration unless idempotency/privacy/metadata are missing.
+
+If existing table is not usable:
+- Additive migration should create or extend activity_events for source record intake.
+- Migration must be additive only.
+- No DROP TABLE.
+- No DROP COLUMN.
+- No TRUNCATE.
+- No DELETE.
+- No disabling RLS.
+- No SECURITY DEFINER unless separately reviewed.
+
+Focused schema/code findings - activity_events:
+- docs/activity/P4.7.9-R_registry_scaling.md:55 :: - activity_events
+- docs/activity/P4.7.9-R_registry_scaling.md:611 :: - confirm route works with imported_pending activity_events;
+- docs/activity/P4.7.9-R_registry_scaling.md:627 :: new row for relation activity_events violates check constraint activity_events_processing_status_check
+- docs/activity/P4.7.9-R_registry_scaling.md:632 :: - record/complete/start route logs may use processing as processing log status, but activity_events.processing_status does not accept processing.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:140 :: - docs/activity/P4.7.9-R_registry_scaling.md:55 :: - activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:142 :: - docs/activity/P4.7.9-R_registry_scaling.md:611 :: - confirm route works with imported_pending activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:143 :: - docs/activity/P4.7.9-R_registry_scaling.md:627 :: new row for relation activity_events violates check constraint activity_events_processing_status_check
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:144 :: - docs/activity/P4.7.9-R_registry_scaling.md:632 :: - record/complete/start route logs may use processing as processing log status, but activity_events.processing_status does not accept processing.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:153 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:157 :: - docs/activity-template-mapping-p4-4.md:13 :: Imported raw signals can now be promoted into imported_pending activity_events with attached semantic identifiers:
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:158 :: - docs/activity-template-mapping-p4-4.md:36 :: - promote route calls the helper before inserting activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:159 :: - docs/activity-template-mapping-p4-4.md:131 :: - real activity_events column is template_id
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:163 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:65 :: | activity_events | 42 | 19 | 19 | supabase\migrations\012_activity_recording_backbone.sql:7<br>supabase\migrations\012_activity_recording_backbone.sql:82<br>supabase\migrations\012_activity_recording_backbone.sql:118 |
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:170 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:114 :: ### activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:171 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:117 :: supabase\migrations\012_activity_recording_backbone.sql:82: create table if not exists public.activity_events (
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:172 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:118 :: supabase\migrations\012_activity_recording_backbone.sql:127: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:173 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:119 :: supabase\migrations\012_activity_recording_backbone.sql:188: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:174 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:120 :: supabase\migrations\012_activity_recording_backbone.sql:219: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:175 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:121 :: supabase\migrations\012_activity_recording_backbone.sql:245: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:176 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:122 :: supabase\migrations\014_activity_events_v2_template_link.sql:14: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:177 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:123 :: supabase\migrations\014_activity_events_v2_template_link.sql:29: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:178 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:124 :: supabase\migrations\014_activity_events_v2_template_link.sql:32: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:179 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:125 :: supabase\migrations\014_activity_events_v2_template_link.sql:60: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:180 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:126 :: supabase\migrations\014_activity_events_v2_template_link.sql:63: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:181 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:127 :: supabase\migrations\019_activity_security_foundation.sql:12: alter table public.activity_events enable row level security;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:182 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:128 :: supabase\migrations\019_activity_security_foundation.sql:26: revoke all on table public.activity_events from anon, authenticated;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:183 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:129 :: supabase\migrations\020_activity_raw_signals.sql:31: output_event_id uuid references public.activity_events(id) on delete set null,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:184 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:130 :: supabase\migrations\021_activity_processing_logs.sql:16: activity_event_id uuid references public.activity_events(id) on delete set null,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:185 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:131 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:26: source_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:186 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:132 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:137: event_id uuid not null references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:187 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:133 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:227: event_id uuid not null references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:188 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:134 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:323: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:189 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:135 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:399: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:196 :: - docs/commercial/P4.8.0-A4b_offer_items_semantic_check.md:177 :: | supabase/migrations/012_activity_recording_backbone.sql | 82 | create table if not exists public.activity_events ( |
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:204 :: - docs/p4-7-schema-inventory-raw.md:435 :: ## Table or term: activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:206 :: - docs/p4-7-schema-inventory-raw.md:459 :: -- one user action is recorded once in activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:207 :: - docs/p4-7-schema-inventory-raw.md:464 :: create table if not exists public.activity_events (
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:214 :: - docs/p4-7-schema-inventory-raw.md:499 :: drop trigger if exists trg_activity_events_updated_at on public.activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:216 :: - docs/p4-7-schema-inventory-raw.md:509 :: before update on public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:217 :: - docs/p4-7-schema-inventory-raw.md:514 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:218 :: - docs/p4-7-schema-inventory-raw.md:519 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:219 :: - docs/p4-7-schema-inventory-raw.md:524 :: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:220 :: - docs/p4-7-schema-inventory-raw.md:529 :: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:222 :: - docs/p4-7-schema-inventory-raw.md:539 :: on public.activity_events(user_id, created_at desc);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:224 :: - docs/p4-7-schema-inventory-raw.md:549 :: on public.activity_events(user_id, started_at desc);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:226 :: - docs/p4-7-schema-inventory-raw.md:559 :: on public.activity_events(event_code);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:228 :: - docs/p4-7-schema-inventory-raw.md:569 :: on public.activity_events(template_id);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:229 :: - docs/p4-7-schema-inventory-raw.md:574 :: comment on table public.activity_events is
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:230 :: - docs/p4-7-schema-inventory-raw.md:579 :: 'Universal links from activity_events to value objects, contexts, observed objects, actors or other entities.';
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:231 :: - docs/p4-7-schema-inventory-raw.md:584 :: 'Concrete calculated impacts created from activity_events, usually by applying impact_rules.';
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:232 :: - docs/p4-7-schema-inventory-raw.md:589 :: 'Per-user daily aggregate metrics derived from activity_events and impact_events.';
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:236 :: - docs/p4-7-schema-inventory-raw.md:599 :: -- activity_events.template_id from migration 012 points to legacy activity_code_templates.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:238 :: - docs/p4-7-schema-inventory-raw.md:604 :: -- Therefore we add activity_events.activity_template_id instead of overloading template_id.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:240 :: - docs/p4-7-schema-inventory-raw.md:609 :: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:244 :: - docs/p4-7-schema-inventory-raw.md:619 :: on public.activity_events(activity_template_id);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:246 :: - docs/p4-7-schema-inventory-raw.md:624 :: drop trigger if exists trg_activity_events_updated_at on public.activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:250 :: - docs/p4-7-schema-inventory-raw.md:634 :: before update on public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:252 :: - docs/p4-7-schema-inventory-raw.md:639 :: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:256 :: - docs/p4-7-schema-inventory-raw.md:649 :: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:259 :: - docs/p4-7-schema-inventory-raw.md:660 :: - .\supabase\migrations\012_activity_recording_backbone.sql:7 - -- one user action is recorded once in activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:262 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:872 :: - activity_events, activities, or existing equivalent.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:129 :: Schema/code findings - activity_events:
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:130 :: - docs/activity/P4.7.9-R_registry_scaling.md:55 :: - activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:131 :: - docs/activity/P4.7.9-R_registry_scaling.md:611 :: - confirm route works with imported_pending activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:132 :: - docs/activity/P4.7.9-R_registry_scaling.md:627 :: new row for relation activity_events violates check constraint activity_events_processing_status_check
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:133 :: - docs/activity/P4.7.9-R_registry_scaling.md:632 :: - record/complete/start route logs may use processing as processing log status, but activity_events.processing_status does not accept processing.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:134 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:135 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:140 :: - docs/activity/P4.7.9-R_registry_scaling.md:55 :: - activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:136 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:142 :: - docs/activity/P4.7.9-R_registry_scaling.md:611 :: - confirm route works with imported_pending activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:137 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:143 :: - docs/activity/P4.7.9-R_registry_scaling.md:627 :: new row for relation activity_events violates check constraint activity_events_processing_status_check
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:138 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:144 :: - docs/activity/P4.7.9-R_registry_scaling.md:632 :: - record/complete/start route logs may use processing as processing log status, but activity_events.processing_status does not accept processing.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:139 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:153 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:140 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:157 :: - docs/activity-template-mapping-p4-4.md:13 :: Imported raw signals can now be promoted into imported_pending activity_events with attached semantic identifiers:
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:141 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:158 :: - docs/activity-template-mapping-p4-4.md:36 :: - promote route calls the helper before inserting activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:142 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:159 :: - docs/activity-template-mapping-p4-4.md:131 :: - real activity_events column is template_id
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:143 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:163 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:65 :: | activity_events | 42 | 19 | 19 | supabase\migrations\012_activity_recording_backbone.sql:7<br>supabase\migrations\012_activity_recording_backbone.sql:82<br>supabase\migrations\012_activity_recording_backbone.sql:118 |
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:144 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:170 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:114 :: ### activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:145 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:171 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:117 :: supabase\migrations\012_activity_recording_backbone.sql:82: create table if not exists public.activity_events (
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:146 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:172 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:118 :: supabase\migrations\012_activity_recording_backbone.sql:127: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:147 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:173 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:119 :: supabase\migrations\012_activity_recording_backbone.sql:188: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:148 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:174 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:120 :: supabase\migrations\012_activity_recording_backbone.sql:219: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:149 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:175 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:121 :: supabase\migrations\012_activity_recording_backbone.sql:245: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:150 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:176 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:122 :: supabase\migrations\014_activity_events_v2_template_link.sql:14: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:151 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:177 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:123 :: supabase\migrations\014_activity_events_v2_template_link.sql:29: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:152 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:178 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:124 :: supabase\migrations\014_activity_events_v2_template_link.sql:32: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:153 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:179 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:125 :: supabase\migrations\014_activity_events_v2_template_link.sql:60: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:154 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:180 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:126 :: supabase\migrations\014_activity_events_v2_template_link.sql:63: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:155 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:181 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:127 :: supabase\migrations\019_activity_security_foundation.sql:12: alter table public.activity_events enable row level security;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:156 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:182 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:128 :: supabase\migrations\019_activity_security_foundation.sql:26: revoke all on table public.activity_events from anon, authenticated;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:157 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:183 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:129 :: supabase\migrations\020_activity_raw_signals.sql:31: output_event_id uuid references public.activity_events(id) on delete set null,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:158 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:184 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:130 :: supabase\migrations\021_activity_processing_logs.sql:16: activity_event_id uuid references public.activity_events(id) on delete set null,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:159 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:185 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:131 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:26: source_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:160 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:186 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:132 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:137: event_id uuid not null references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:161 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:187 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:133 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:227: event_id uuid not null references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:162 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:188 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:134 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:323: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:163 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:189 :: - docs/commercial/P4.8.0-A2_schema_inventory_raw.md:135 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:399: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:164 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:196 :: - docs/commercial/P4.8.0-A4b_offer_items_semantic_check.md:177 :: | supabase/migrations/012_activity_recording_backbone.sql | 82 | create table if not exists public.activity_events ( |
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:165 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:204 :: - docs/p4-7-schema-inventory-raw.md:435 :: ## Table or term: activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:166 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:206 :: - docs/p4-7-schema-inventory-raw.md:459 :: -- one user action is recorded once in activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:167 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:207 :: - docs/p4-7-schema-inventory-raw.md:464 :: create table if not exists public.activity_events (
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:168 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:214 :: - docs/p4-7-schema-inventory-raw.md:499 :: drop trigger if exists trg_activity_events_updated_at on public.activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:169 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:216 :: - docs/p4-7-schema-inventory-raw.md:509 :: before update on public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:170 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:217 :: - docs/p4-7-schema-inventory-raw.md:514 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:171 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:218 :: - docs/p4-7-schema-inventory-raw.md:519 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:172 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:219 :: - docs/p4-7-schema-inventory-raw.md:524 :: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:173 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:220 :: - docs/p4-7-schema-inventory-raw.md:529 :: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:174 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:222 :: - docs/p4-7-schema-inventory-raw.md:539 :: on public.activity_events(user_id, created_at desc);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:175 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:224 :: - docs/p4-7-schema-inventory-raw.md:549 :: on public.activity_events(user_id, started_at desc);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:176 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:226 :: - docs/p4-7-schema-inventory-raw.md:559 :: on public.activity_events(event_code);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:177 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:228 :: - docs/p4-7-schema-inventory-raw.md:569 :: on public.activity_events(template_id);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:178 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:229 :: - docs/p4-7-schema-inventory-raw.md:574 :: comment on table public.activity_events is
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:179 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:230 :: - docs/p4-7-schema-inventory-raw.md:579 :: 'Universal links from activity_events to value objects, contexts, observed objects, actors or other entities.';
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:180 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:231 :: - docs/p4-7-schema-inventory-raw.md:584 :: 'Concrete calculated impacts created from activity_events, usually by applying impact_rules.';
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:181 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:232 :: - docs/p4-7-schema-inventory-raw.md:589 :: 'Per-user daily aggregate metrics derived from activity_events and impact_events.';
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:182 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:236 :: - docs/p4-7-schema-inventory-raw.md:599 :: -- activity_events.template_id from migration 012 points to legacy activity_code_templates.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:183 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:238 :: - docs/p4-7-schema-inventory-raw.md:604 :: -- Therefore we add activity_events.activity_template_id instead of overloading template_id.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:184 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:240 :: - docs/p4-7-schema-inventory-raw.md:609 :: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:185 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:244 :: - docs/p4-7-schema-inventory-raw.md:619 :: on public.activity_events(activity_template_id);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:186 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:246 :: - docs/p4-7-schema-inventory-raw.md:624 :: drop trigger if exists trg_activity_events_updated_at on public.activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:187 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:250 :: - docs/p4-7-schema-inventory-raw.md:634 :: before update on public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:188 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:252 :: - docs/p4-7-schema-inventory-raw.md:639 :: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:189 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:256 :: - docs/p4-7-schema-inventory-raw.md:649 :: alter table public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:190 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:259 :: - docs/p4-7-schema-inventory-raw.md:660 :: - .\supabase\migrations\012_activity_recording_backbone.sql:7 - -- one user action is recorded once in activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:191 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:262 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:192 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:872 :: - activity_events, activities, or existing equivalent.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:193 :: - lib/activity/rubricatorValueObjectMapper.ts:318 :: (entityType === "activity_event" || entityType === "activity_events") &&
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:194 :: - lib/activity/rubricatorValueObjectMapper.ts:331 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:195 :: - lib/activity/valueObjectBridge.ts:454 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:196 :: - src/app/api/activity/complete/route.ts:936 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:197 :: - src/app/api/activity/complete/route.ts:1147 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:198 :: - src/app/api/activity/complete/route.ts:1699 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:199 :: - src/app/api/activity/day-summary/route.ts:503 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:200 :: - src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts:199 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:201 :: - src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts:208 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:202 :: - src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts:253 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:203 :: - src/app/api/activity/debug/category-derivation-route-runner-test/route.ts:225 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:204 :: - src/app/api/activity/debug/create-free-text-start-event/route.ts:325 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:205 :: - src/app/api/activity/debug/free-text-value-object-test/route.ts:761 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:206 :: - src/app/api/activity/debug/state-signal-candidate-shadow-test/route.ts:89 :: | "activity_events"
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:207 :: - src/app/api/activity/debug/value-object-bridge-proof/route.ts:445 :: const eventResult = await selectById("event", "activity_events", eventId, appUser.id);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:208 :: - src/app/api/activity/debug-rubricator-value-object-bridge/route.ts:118 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:209 :: - src/app/api/activity/debug-trace/route.ts:400 :: table: "activity_events",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:210 :: - src/app/api/activity/debug-trace/route.ts:556 :: table: "activity_events",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:211 :: - src/app/api/activity/debug-trace/route.ts:1188 :: sourceTable: "activity_events",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:212 :: - src/app/api/activity/events/[id]/corrections/route.ts:166 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:213 :: - src/app/api/activity/events/[id]/route.ts:509 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:214 :: - src/app/api/activity/events/[id]/route.ts:805 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:215 :: - src/app/api/activity/events/[id]/route.ts:941 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:216 :: - src/app/api/activity/events/[id]/route.ts:1269 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:217 :: - src/app/api/activity/events/[id]/route.ts:1428 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:218 :: - src/app/api/activity/events/[id]/route.ts:1865 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:219 :: - src/app/api/activity/events/[id]/route.ts:2042 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:220 :: - src/app/api/activity/events/route.ts:294 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:221 :: - src/app/api/activity/intake/events/[id]/confirm/route.ts:286 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:222 :: - src/app/api/activity/intake/events/[id]/confirm/route.ts:504 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:223 :: - src/app/api/activity/intake/events/[id]/confirm/route.ts:570 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:224 :: - src/app/api/activity/intake/events/[id]/confirm/route.ts:774 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:225 :: - src/app/api/activity/intake/events/[id]/reject/route.ts:247 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:226 :: - src/app/api/activity/intake/events/[id]/reject/route.ts:329 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:227 :: - src/app/api/activity/intake/events/[id]/route.ts:1099 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:228 :: - src/app/api/activity/intake/events/[id]/route.ts:1217 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:229 :: - src/app/api/activity/intake/events/[id]/route.ts:1331 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:230 :: - src/app/api/activity/intake/events/route.ts:457 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:231 :: - src/app/api/activity/intake/signals/[id]/ignore/route.ts:146 :: ? "Ignore a raw activity signal before it is promoted. This endpoint does not create or update activity_events."
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:232 :: - src/app/api/activity/intake/signals/[id]/promote/route.ts:410 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:233 :: - src/app/api/activity/intake/signals/[id]/promote/route.ts:647 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:234 :: - src/app/api/activity/record/route.ts:613 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:235 :: - src/app/api/activity/record/route.ts:934 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:236 :: - src/app/api/activity/record/route.ts:1091 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:237 :: - src/app/api/activity/record/route.ts:1449 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:238 :: - src/app/api/activity/start/route.ts:629 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:239 :: - src/app/api/activity/start/route.ts:795 :: .from("activity_events")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:240 :: - supabase/migrations/012_activity_recording_backbone.sql:7 :: -- one user action is recorded once in activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:241 :: - supabase/migrations/012_activity_recording_backbone.sql:82 :: create table if not exists public.activity_events (
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:242 :: - supabase/migrations/012_activity_recording_backbone.sql:118 :: drop trigger if exists trg_activity_events_updated_at on public.activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:243 :: - supabase/migrations/012_activity_recording_backbone.sql:121 :: before update on public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:244 :: - supabase/migrations/012_activity_recording_backbone.sql:127 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:245 :: - supabase/migrations/012_activity_recording_backbone.sql:188 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:246 :: - supabase/migrations/012_activity_recording_backbone.sql:219 :: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:247 :: - supabase/migrations/012_activity_recording_backbone.sql:245 :: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:248 :: - supabase/migrations/012_activity_recording_backbone.sql:266 :: on public.activity_events(user_id, created_at desc);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:249 :: - supabase/migrations/012_activity_recording_backbone.sql:269 :: on public.activity_events(user_id, started_at desc);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:250 :: - supabase/migrations/012_activity_recording_backbone.sql:272 :: on public.activity_events(event_code);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:251 :: - supabase/migrations/012_activity_recording_backbone.sql:275 :: on public.activity_events(template_id);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:252 :: - supabase/migrations/012_activity_recording_backbone.sql:757 :: comment on table public.activity_events is
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:253 :: - supabase/migrations/012_activity_recording_backbone.sql:761 :: 'Universal links from activity_events to value objects, contexts, observed objects, actors or other entities.';
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:254 :: - supabase/migrations/012_activity_recording_backbone.sql:767 :: 'Concrete calculated impacts created from activity_events, usually by applying impact_rules.';
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:255 :: - supabase/migrations/012_activity_recording_backbone.sql:773 :: 'Per-user daily aggregate metrics derived from activity_events and impact_events.';
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:256 :: - supabase/migrations/012_activity_recording_backbone.sql:7 :: -- one user action is recorded once in activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:257 :: - supabase/migrations/012_activity_recording_backbone.sql:82 :: create table if not exists public.activity_events (
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:258 :: - supabase/migrations/012_activity_recording_backbone.sql:118 :: drop trigger if exists trg_activity_events_updated_at on public.activity_events;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:259 :: - supabase/migrations/012_activity_recording_backbone.sql:121 :: before update on public.activity_events
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:260 :: - supabase/migrations/012_activity_recording_backbone.sql:127 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:261 :: - supabase/migrations/012_activity_recording_backbone.sql:188 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:262 :: - supabase/migrations/012_activity_recording_backbone.sql:219 :: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:263 :: - supabase/migrations/012_activity_recording_backbone.sql:245 :: last_event_id uuid references public.activity_events(id),
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:264 :: - supabase/migrations/012_activity_recording_backbone.sql:266 :: on public.activity_events(user_id, created_at desc);
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:265 :: - supabase/migrations/012_activity_recording_backbone.sql:269 :: on public.activity_events(user_id, started_at desc);
+
+Focused schema/code findings - activities:
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:153 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:261 :: 5. activities keyword findings
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:262 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:263 :: - docs/activity-intake-lifecycle-p4-2.md:342 :: - Do not turn external/API/calendar/wearable signals directly into completed activities.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:264 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:61 :: - src/app/activities/new/page.tsx
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:265 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:62 :: - src/app/activities/page.tsx
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:266 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:70 :: - src/app/api/activities/route.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:267 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:438 :: | src/app/activities/new/page.tsx | 2 | yes |  |
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:268 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:490 :: **src/app/activities/new/page.tsx**
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:269 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:574 :: | src/app/activities/new/page.tsx | 2 | yes |  |
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:270 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:612 :: **src/app/activities/new/page.tsx**
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:271 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:696 :: | src/app/activities/new/page.tsx | 2 | yes |  |
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:272 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:753 :: **src/app/activities/new/page.tsx**
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:273 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:913 :: - L9: -- This migration is additive and does not modify legacy activities, bookings,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:274 :: - docs/p4-7-schema-inventory-raw.md:1655 :: - .\src\app\api\activity\intake\route.ts:270 - "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:275 :: - docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:7566 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:276 :: - docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:7569 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\page.tsx
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:277 :: - docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:7655 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:278 :: - docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:8609 :: ('family', 'Family', 'Family-related activities, scheduling, support and responsibilities.', 130)
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:279 :: - docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:13553 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:280 :: - docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:13556 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\page.tsx
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:281 :: - docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:24339 :: -- This migration is additive and does not modify legacy activities, bookings,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:282 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:699 :: src\app\api\activities\route.ts line 21: errorResponse: NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:283 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:700 :: src\app\api\activities\route.ts line 39: errorResponse: NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:284 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:701 :: src\app\api\activities\route.ts line 57: errorResponse: NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:285 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:702 :: src\app\api\activities\route.ts line 76: errorResponse: NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:286 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:703 :: src\app\api\activities\route.ts line 120: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:287 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:704 :: src\app\api\activities\route.ts line 139: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:288 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:705 :: src\app\api\activities\route.ts line 145: return NextResponse.json({
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:289 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:706 :: src\app\api\activities\route.ts line 159: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:290 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:707 :: src\app\api\activities\route.ts line 182: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:291 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:708 :: src\app\api\activities\route.ts line 191: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:292 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:709 :: src\app\api\activities\route.ts line 219: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:293 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:710 :: src\app\api\activities\route.ts line 252: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:294 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:711 :: src\app\api\activities\route.ts line 284: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:295 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:712 :: src\app\api\activities\route.ts line 305: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:296 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:713 :: src\app\api\activities\route.ts line 314: return NextResponse.json({
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:297 :: - docs/value-objects/category-derivation-layer-v1-c8-f-c-minimal-additive-semantic-coverage-patch-strategy.txt:60 :: The system must not flatten these activities into only:
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:298 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:22 :: - FILE: src/app/api/activities/route.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:299 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:23 :: ROUTE: /api/activities
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:300 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:152 :: CANDIDATE FILE: src/app/api/activities/route.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:301 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:153 :: ROUTE: /api/activities
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:302 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:160 :: .from("activities")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:303 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:198 :: .from("activities")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:304 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:268 :: const { data: activities, error: activitiesError } = await supabase
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:305 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:269 :: .from("activities")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:307 :: - docs/value-objects/category-derivation-production-complete-route-c2-b-setup-route-contracts.txt:4832 :: LINE 270: "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:308 :: - docs/value-objects/category-derivation-production-complete-route-c2-b-setup-route-contracts.txt:4836 :: >       "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:309 :: - docs/value-objects/category-derivation-production-complete-route-c2-b-setup-route-contracts.txt:4860 :: LINE 451: "P4.2.7 stores the raw signal only. Imported/external signals are not completed activities until a later review or adapter flow creates or confirms an activity event.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:310 :: - docs/value-objects/category-derivation-production-complete-route-c2-b-setup-route-contracts.txt:4864 :: >       "P4.2.7 stores the raw signal only. Imported/external signals are not completed activities until a later review or adapter flow creates or confirms an activity event.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:311 :: - docs/value-objects/category-derivation-production-complete-route-c2-d-a3-fixed-targeted-bridge-source-schema.txt:15745 :: -- Additive backbone only. Does not modify existing activities, activity_participants,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:312 :: - docs/value-objects/category-derivation-production-complete-route-c2-d-a3-fixed-targeted-bridge-source-schema.txt:16089 :: -- This migration is additive and does not modify legacy activities, bookings,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:313 :: - docs/value-objects/category-derivation-production-complete-route-c2-d-c1-value-object-bridge-proof-contract.txt:284 :: Especially use it for free-text activities where:
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:314 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:369 :: src/app/api/activities/route.ts-146-    ok: true,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:315 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:370 :: src/app/api/activities/route.ts-147-    activities,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:316 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:371 :: src/app/api/activities/route.ts-148-  });
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:317 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:372 :: src/app/api/activities/route.ts-149-}
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:318 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:373 :: src/app/api/activities/route.ts-150-
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:320 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:375 :: src/app/api/activities/route.ts-152-  const { appUser, personActor, errorResponse } = await getCurrentUserContext();
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:321 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:376 :: src/app/api/activities/route.ts-153-
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:322 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:377 :: src/app/api/activities/route.ts-154-  if (errorResponse) {
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:323 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:378 :: src/app/api/activities/route.ts-155-    return errorResponse;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:324 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:379 :: src/app/api/activities/route.ts-156-  }
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:325 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:442 :: src/app/api/activity/intake/route.ts-270-      "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:326 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1466 :: src/app/activities/page.tsx-25-  title: string;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:327 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1467 :: src/app/activities/page.tsx-26-  description: string | null;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:328 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1468 :: src/app/activities/page.tsx-27-  raw_input: string | null;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:329 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1469 :: src/app/activities/page.tsx-28-  start_time: string | null;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:330 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1470 :: src/app/activities/page.tsx-29-  end_time: string | null;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:331 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1471 :: src/app/activities/page.tsx:30:  duration_minutes: number | null;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:332 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1472 :: src/app/activities/page.tsx-31-  status: string;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:333 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1473 :: src/app/activities/page.tsx-32-  source: string;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:334 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1474 :: src/app/activities/page.tsx-33-  ai_confidence: number | null;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:335 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1475 :: src/app/activities/page.tsx-34-  created_at: string;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:336 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1476 :: src/app/activities/page.tsx-35-  activity_participants: ActivityParticipant[];
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:337 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1478 :: src/app/activities/page.tsx-115-                  : "Not specified"}
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:338 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1479 :: src/app/activities/page.tsx-116-              </p>
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:339 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1480 :: src/app/activities/page.tsx-117-
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:340 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1481 :: src/app/activities/page.tsx-118-              <p>
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:341 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1482 :: src/app/activities/page.tsx-119-                <strong>Duration:</strong>{" "}
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:342 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1483 :: src/app/activities/page.tsx:120:                {activity.duration_minutes ?? "Not calculated"} minutes
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:343 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1484 :: src/app/activities/page.tsx-121-              </p>
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:344 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1485 :: src/app/activities/page.tsx-122-
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:345 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1486 :: src/app/activities/page.tsx-123-              <p>
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:346 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1487 :: src/app/activities/page.tsx-124-                <strong>Status:</strong> {activity.status}
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:347 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1488 :: src/app/activities/page.tsx-125-              </p>
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:348 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1490 :: src/app/api/activities/route.ts-204-      title,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:349 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1491 :: src/app/api/activities/route.ts-205-      description,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:350 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1492 :: src/app/api/activities/route.ts-206-      raw_input: rawInput,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:351 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1493 :: src/app/api/activities/route.ts-207-      start_time: startTime,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:352 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1494 :: src/app/api/activities/route.ts-208-      end_time: endTime,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:353 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1495 :: src/app/api/activities/route.ts:209:      duration_minutes: durationMinutes,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:354 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1496 :: src/app/api/activities/route.ts-210-      location_id: locationId,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:355 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:2154 :: - Should Category Derivation be enabled by default only for manual_chat completed activities?
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:356 :: - docs/value-objects/P4.10.0-A2_repo_activity_processing_reference_inventory.txt:443 :: C:\Users\Admin\Documents\projects\gpt-app\docs\value-objects\P4.9.0-A3_local_code_routes_inventory.md:333: | src/app/api/activity/intake/route.ts | 270 | "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.", |
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:357 :: - docs/value-objects/P4.10.0-A2_repo_activity_processing_reference_inventory.txt:1542 :: C:\Users\Admin\Documents\projects\gpt-app\docs\p4-7-schema-inventory-raw.md:1655: - .\src\app\api\activity\intake\route.ts:270 - "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:358 :: - docs/value-objects/P4.10.0-A2_repo_activity_processing_reference_inventory.txt:1918 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\route.ts:270: "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:359 :: - docs/value-objects/P4.10.0-C1_activity_route_file_inventory.txt:1 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:360 :: - docs/value-objects/P4.10.0-C1_activity_route_file_inventory.txt:2 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\page.tsx
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:361 :: - docs/value-objects/P4.10.0-C1_activity_route_file_inventory.txt:5 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:362 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:516 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx:12: const [status, setStatus] = useState("completed");
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:363 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:517 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx:13: const [source, setSource] = useState("manual");
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:364 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:518 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx:63: setStatus("completed");
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:365 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:519 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx:64: setSource("manual");
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:366 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:520 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx:175: <option value="confirmed">Confirmed</option>
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:367 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:521 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx:176: <option value="completed">Completed</option>
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:368 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:522 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx:191: <option value="manual">Manual</option>
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:369 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:523 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\page.tsx:65: This page shows the central Activity Core records with participants and
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:370 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:667 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-today\page.tsx:2209: useful completed work, productive time, open activities and
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:371 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:669 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-today\page.tsx:2300: label="Completed activities"
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:372 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:671 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-today\page.tsx:2302: hint="Useful completed activities counted for this day"
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:373 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:797 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts:175: const status = body.status ?? "completed";
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:374 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:798 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts:176: const source = body.source ?? "manual";
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:375 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:1595 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\route.ts:270: "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:376 :: - docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:1601 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\route.ts:451: "P4.2.7 stores the raw signal only. Imported/external signals are not completed activities until a later review or adapter flow creates or confirms an activity event.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:377 :: - docs/value-objects/P4.10.0-C1_value_object_write_reference_inventory.txt:63 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts:199: .insert({
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:378 :: - docs/value-objects/P4.10.0-C1_value_object_write_reference_inventory.txt:64 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts:248: .insert(participantRows)
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:379 :: - docs/value-objects/P4.10.0-C1_value_object_write_reference_inventory.txt:65 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts:265: .insert({
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:380 :: - docs/value-objects/P4.10.0-C1_value_object_write_reference_inventory.txt:66 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts:295: .insert({
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:381 :: - docs/value-objects/P4.10.0-C2_route_callers_evidence.txt:292 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\route.ts:270: "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:872 :: - activity_events, activities, or existing equivalent.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:134 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:139 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:153 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:191 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:262 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:192 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:872 :: - activity_events, activities, or existing equivalent.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:291 :: Schema/code findings - activities:
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:292 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:293 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:153 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:294 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:261 :: 5. activities keyword findings
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:295 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:262 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:296 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:263 :: - docs/activity-intake-lifecycle-p4-2.md:342 :: - Do not turn external/API/calendar/wearable signals directly into completed activities.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:297 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:264 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:61 :: - src/app/activities/new/page.tsx
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:298 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:265 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:62 :: - src/app/activities/page.tsx
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:299 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:266 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:70 :: - src/app/api/activities/route.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:300 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:267 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:438 :: | src/app/activities/new/page.tsx | 2 | yes |  |
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:301 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:268 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:490 :: **src/app/activities/new/page.tsx**
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:302 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:269 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:574 :: | src/app/activities/new/page.tsx | 2 | yes |  |
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:303 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:270 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:612 :: **src/app/activities/new/page.tsx**
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:304 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:271 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:696 :: | src/app/activities/new/page.tsx | 2 | yes |  |
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:305 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:272 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:753 :: **src/app/activities/new/page.tsx**
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:306 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:273 :: - docs/commercial/P4.8.0-A3_code_routes_inventory.md:913 :: - L9: -- This migration is additive and does not modify legacy activities, bookings,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:307 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:274 :: - docs/p4-7-schema-inventory-raw.md:1655 :: - .\src\app\api\activity\intake\route.ts:270 - "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:308 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:275 :: - docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:7566 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:309 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:276 :: - docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:7569 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\page.tsx
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:310 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:277 :: - docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:7655 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:311 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:278 :: - docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:8609 :: ('family', 'Family', 'Family-related activities, scheduling, support and responsibilities.', 130)
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:312 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:279 :: - docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:13553 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:313 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:280 :: - docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:13556 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\page.tsx
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:314 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:281 :: - docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:24339 :: -- This migration is additive and does not modify legacy activities, bookings,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:315 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:282 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:699 :: src\app\api\activities\route.ts line 21: errorResponse: NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:316 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:283 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:700 :: src\app\api\activities\route.ts line 39: errorResponse: NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:317 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:284 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:701 :: src\app\api\activities\route.ts line 57: errorResponse: NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:318 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:285 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:702 :: src\app\api\activities\route.ts line 76: errorResponse: NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:319 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:286 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:703 :: src\app\api\activities\route.ts line 120: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:320 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:287 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:704 :: src\app\api\activities\route.ts line 139: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:321 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:288 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:705 :: src\app\api\activities\route.ts line 145: return NextResponse.json({
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:322 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:289 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:706 :: src\app\api\activities\route.ts line 159: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:323 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:290 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:707 :: src\app\api\activities\route.ts line 182: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:324 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:291 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:708 :: src\app\api\activities\route.ts line 191: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:325 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:292 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:709 :: src\app\api\activities\route.ts line 219: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:326 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:293 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:710 :: src\app\api\activities\route.ts line 252: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:327 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:294 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:711 :: src\app\api\activities\route.ts line 284: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:328 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:295 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:712 :: src\app\api\activities\route.ts line 305: return NextResponse.json(
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:329 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:296 :: - docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:713 :: src\app\api\activities\route.ts line 314: return NextResponse.json({
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:330 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:297 :: - docs/value-objects/category-derivation-layer-v1-c8-f-c-minimal-additive-semantic-coverage-patch-strategy.txt:60 :: The system must not flatten these activities into only:
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:331 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:298 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:22 :: - FILE: src/app/api/activities/route.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:332 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:299 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:23 :: ROUTE: /api/activities
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:333 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:300 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:152 :: CANDIDATE FILE: src/app/api/activities/route.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:334 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:301 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:153 :: ROUTE: /api/activities
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:335 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:302 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:160 :: .from("activities")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:336 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:303 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:198 :: .from("activities")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:337 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:304 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:268 :: const { data: activities, error: activitiesError } = await supabase
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:338 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:305 :: - docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:269 :: .from("activities")
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:339 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:307 :: - docs/value-objects/category-derivation-production-complete-route-c2-b-setup-route-contracts.txt:4832 :: LINE 270: "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:340 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:308 :: - docs/value-objects/category-derivation-production-complete-route-c2-b-setup-route-contracts.txt:4836 :: >       "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:341 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:309 :: - docs/value-objects/category-derivation-production-complete-route-c2-b-setup-route-contracts.txt:4860 :: LINE 451: "P4.2.7 stores the raw signal only. Imported/external signals are not completed activities until a later review or adapter flow creates or confirms an activity event.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:342 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:310 :: - docs/value-objects/category-derivation-production-complete-route-c2-b-setup-route-contracts.txt:4864 :: >       "P4.2.7 stores the raw signal only. Imported/external signals are not completed activities until a later review or adapter flow creates or confirms an activity event.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:343 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:311 :: - docs/value-objects/category-derivation-production-complete-route-c2-d-a3-fixed-targeted-bridge-source-schema.txt:15745 :: -- Additive backbone only. Does not modify existing activities, activity_participants,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:344 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:312 :: - docs/value-objects/category-derivation-production-complete-route-c2-d-a3-fixed-targeted-bridge-source-schema.txt:16089 :: -- This migration is additive and does not modify legacy activities, bookings,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:345 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:313 :: - docs/value-objects/category-derivation-production-complete-route-c2-d-c1-value-object-bridge-proof-contract.txt:284 :: Especially use it for free-text activities where:
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:346 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:314 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:369 :: src/app/api/activities/route.ts-146-    ok: true,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:347 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:315 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:370 :: src/app/api/activities/route.ts-147-    activities,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:348 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:316 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:371 :: src/app/api/activities/route.ts-148-  });
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:349 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:317 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:372 :: src/app/api/activities/route.ts-149-}
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:350 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:318 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:373 :: src/app/api/activities/route.ts-150-
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:351 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:352 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:320 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:375 :: src/app/api/activities/route.ts-152-  const { appUser, personActor, errorResponse } = await getCurrentUserContext();
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:353 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:321 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:376 :: src/app/api/activities/route.ts-153-
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:354 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:322 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:377 :: src/app/api/activities/route.ts-154-  if (errorResponse) {
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:355 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:323 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:378 :: src/app/api/activities/route.ts-155-    return errorResponse;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:356 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:324 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:379 :: src/app/api/activities/route.ts-156-  }
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:357 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:325 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:442 :: src/app/api/activity/intake/route.ts-270-      "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:358 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:326 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1466 :: src/app/activities/page.tsx-25-  title: string;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:359 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:327 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1467 :: src/app/activities/page.tsx-26-  description: string | null;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:360 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:328 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1468 :: src/app/activities/page.tsx-27-  raw_input: string | null;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:361 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:329 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1469 :: src/app/activities/page.tsx-28-  start_time: string | null;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:362 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:330 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1470 :: src/app/activities/page.tsx-29-  end_time: string | null;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:363 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:331 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1471 :: src/app/activities/page.tsx:30:  duration_minutes: number | null;
+
+Focused schema/code findings - create table:
+- supabase/migrations/012_activity_recording_backbone.sql:23 :: create table if not exists public.activity_types (
+- supabase/migrations/012_activity_recording_backbone.sql:44 :: create table if not exists public.activity_code_templates (
+- supabase/migrations/012_activity_recording_backbone.sql:82 :: create table if not exists public.activity_events (
+- supabase/migrations/012_activity_recording_backbone.sql:23 :: create table if not exists public.activity_types (
+- supabase/migrations/012_activity_recording_backbone.sql:44 :: create table if not exists public.activity_code_templates (
+- supabase/migrations/012_activity_recording_backbone.sql:82 :: create table if not exists public.activity_events (
+- supabase/migrations/013_activity_templates_v2.sql:29 :: create table if not exists public.activity_templates (
+- supabase/migrations/013_activity_templates_v2.sql:214 :: create table if not exists public.activity_template_links (
+- supabase/migrations/013_activity_templates_v2.sql:282 :: create table if not exists public.user_activity_shortcuts (
+- supabase/migrations/013_activity_templates_v2.sql:29 :: create table if not exists public.activity_templates (
+- supabase/migrations/013_activity_templates_v2.sql:214 :: create table if not exists public.activity_template_links (
+- supabase/migrations/013_activity_templates_v2.sql:282 :: create table if not exists public.user_activity_shortcuts (
+- supabase/migrations/017_activity_corrections.sql:1 :: create table if not exists public.activity_corrections (
+- supabase/migrations/017_activity_corrections.sql:1 :: create table if not exists public.activity_corrections (
+- supabase/migrations/020_activity_raw_signals.sql:10 :: create table if not exists public.raw_activity_signals (
+- supabase/migrations/020_activity_raw_signals.sql:10 :: create table if not exists public.raw_activity_signals (
+- supabase/migrations/021_activity_processing_logs.sql:10 :: create table if not exists public.activity_processing_logs (
+- supabase/migrations/021_activity_processing_logs.sql:10 :: create table if not exists public.activity_processing_logs (
+- supabase/migrations/023_value_object_state_foundation_p4_7.sql:133 :: create table if not exists public.activity_event_value_object_instance_links (
+- supabase/migrations/023_value_object_state_foundation_p4_7.sql:133 :: create table if not exists public.activity_event_value_object_instance_links (
+- supabase/migrations/024_activity_template_known_registry_rules.sql:15 :: create table if not exists public.activity_template_known_registry_rules (
+- supabase/migrations/024_activity_template_known_registry_rules.sql:15 :: create table if not exists public.activity_template_known_registry_rules (
+
+Focused schema/code findings - alter table:
+- supabase/migrations/014_activity_events_v2_template_link.sql:14 :: alter table public.activity_events
+- supabase/migrations/014_activity_events_v2_template_link.sql:29 :: alter table public.activity_events
+- supabase/migrations/014_activity_events_v2_template_link.sql:32 :: alter table public.activity_events
+- supabase/migrations/014_activity_events_v2_template_link.sql:60 :: alter table public.activity_events
+- supabase/migrations/014_activity_events_v2_template_link.sql:63 :: alter table public.activity_events
+- supabase/migrations/014_activity_events_v2_template_link.sql:14 :: alter table public.activity_events
+- supabase/migrations/014_activity_events_v2_template_link.sql:29 :: alter table public.activity_events
+- supabase/migrations/014_activity_events_v2_template_link.sql:32 :: alter table public.activity_events
+- supabase/migrations/014_activity_events_v2_template_link.sql:60 :: alter table public.activity_events
+- supabase/migrations/014_activity_events_v2_template_link.sql:63 :: alter table public.activity_events
+- supabase/migrations/017_activity_corrections.sql:38 :: alter table public.activity_corrections
+- supabase/migrations/017_activity_corrections.sql:57 :: alter table public.activity_corrections
+- supabase/migrations/017_activity_corrections.sql:73 :: alter table public.activity_corrections
+- supabase/migrations/017_activity_corrections.sql:38 :: alter table public.activity_corrections
+- supabase/migrations/017_activity_corrections.sql:57 :: alter table public.activity_corrections
+- supabase/migrations/017_activity_corrections.sql:73 :: alter table public.activity_corrections
+- supabase/migrations/018_activity_corrections_status_rollback.sql:1 :: alter table public.activity_corrections
+- supabase/migrations/018_activity_corrections_status_rollback.sql:4 :: alter table public.activity_corrections
+- supabase/migrations/018_activity_corrections_status_rollback.sql:1 :: alter table public.activity_corrections
+- supabase/migrations/018_activity_corrections_status_rollback.sql:4 :: alter table public.activity_corrections
+- supabase/migrations/019_activity_security_foundation.sql:10 :: alter table public.activity_types enable row level security;
+- supabase/migrations/019_activity_security_foundation.sql:11 :: alter table public.activity_code_templates enable row level security;
+- supabase/migrations/019_activity_security_foundation.sql:12 :: alter table public.activity_events enable row level security;
+- supabase/migrations/019_activity_security_foundation.sql:18 :: alter table public.activity_templates enable row level security;
+- supabase/migrations/019_activity_security_foundation.sql:19 :: alter table public.activity_template_links enable row level security;
+- supabase/migrations/019_activity_security_foundation.sql:20 :: alter table public.user_activity_shortcuts enable row level security;
+- supabase/migrations/019_activity_security_foundation.sql:21 :: alter table public.activity_corrections enable row level security;
+- supabase/migrations/019_activity_security_foundation.sql:10 :: alter table public.activity_types enable row level security;
+- supabase/migrations/019_activity_security_foundation.sql:11 :: alter table public.activity_code_templates enable row level security;
+- supabase/migrations/019_activity_security_foundation.sql:12 :: alter table public.activity_events enable row level security;
+- supabase/migrations/019_activity_security_foundation.sql:18 :: alter table public.activity_templates enable row level security;
+- supabase/migrations/019_activity_security_foundation.sql:19 :: alter table public.activity_template_links enable row level security;
+- supabase/migrations/019_activity_security_foundation.sql:20 :: alter table public.user_activity_shortcuts enable row level security;
+- supabase/migrations/019_activity_security_foundation.sql:21 :: alter table public.activity_corrections enable row level security;
+- supabase/migrations/020_activity_raw_signals.sql:130 :: alter table public.raw_activity_signals enable row level security;
+- supabase/migrations/020_activity_raw_signals.sql:130 :: alter table public.raw_activity_signals enable row level security;
+- supabase/migrations/021_activity_processing_logs.sql:146 :: alter table public.activity_processing_logs enable row level security;
+- supabase/migrations/021_activity_processing_logs.sql:146 :: alter table public.activity_processing_logs enable row level security;
+- supabase/migrations/022_activity_processing_logs_complete_event_stage.sql:7 :: alter table public.activity_processing_logs
+- supabase/migrations/022_activity_processing_logs_complete_event_stage.sql:10 :: alter table public.activity_processing_logs
+- supabase/migrations/022_activity_processing_logs_complete_event_stage.sql:7 :: alter table public.activity_processing_logs
+- supabase/migrations/022_activity_processing_logs_complete_event_stage.sql:10 :: alter table public.activity_processing_logs
+- supabase/migrations/023_value_object_state_foundation_p4_7.sql:210 :: alter table public.activity_event_value_object_instance_links enable row level security;
+- supabase/migrations/023_value_object_state_foundation_p4_7.sql:210 :: alter table public.activity_event_value_object_instance_links enable row level security;
+- supabase/migrations/024_activity_template_known_registry_rules.sql:117 :: alter table public.activity_template_known_registry_rules
+- supabase/migrations/024_activity_template_known_registry_rules.sql:117 :: alter table public.activity_template_known_registry_rules
+- supabase/migrations/20260524_p4_10_0_c8_i_d3_state_dimensions_initial_seed.sql:456 :: --    - alter table public.activity_events
+- supabase/migrations/20260524_p4_10_0_c8_i_d3_state_dimensions_initial_seed.sql:456 :: --    - alter table public.activity_events
+
+Recommended next block:
+P4.10.0-C8-I-D4-L-L-O-E - Controlled Activity Intake Schema Decision Gate.
+
+O-E should be one of:
+A. Static mapping gate if selectedTable has enough confirmed columns:
+   - create mapping report;
+   - no runtime route yet;
+   - no DB write.
+
+B. Additive migration design if column gaps remain:
+   - create migration design report and migration file if needed;
+   - no SQL apply unless explicitly separated;
+   - no runtime route yet.
+
+End of O-D design.
