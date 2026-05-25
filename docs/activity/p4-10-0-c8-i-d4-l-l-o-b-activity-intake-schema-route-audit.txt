@@ -1,0 +1,903 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-B - Activity Intake Schema/Route Audit
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-O-B
+Script: P4.10.0-C8-I-D4-L-L-O-B-FIX2
+Type: schema / route / helper audit
+Status: AUDIT REPORT CREATED / DOC ONLY / NO RUNTIME CHANGE / NO DATABASE WRITE / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline:
+- Previous pushed commit: 8b8146e
+- Previous block completed: P4.10.0-C8-I-D4-L-L-O-A
+- O-A created the controlled activity intake contract.
+- N-D cleanup already removed the one-time rollback success route and browser payload.
+
+Safety boundary:
+- No production controlled rollback route exists.
+- Removed debug rollback success route remains absent.
+- Removed rollback success browser payload remains absent.
+- This audit did not create or modify runtime code.
+- This audit did not execute SQL and did not write to Supabase.
+
+Compatibility note:
+- FIX1 avoided Get-Content -Raw because the local PowerShell version rejected the -Raw parameter.
+- FIX2 also treats literal bracket folders such as [id] as literal paths, not wildcard patterns.
+
+O-A contract reminders:
+- Activity Event is the source of truth.
+- AI output, category candidates, state hooks, and resolver suggestions must never replace the activity_event source record.
+- O-B is audit-only.
+- No categoryCandidates persistence at O-B.
+- No Value Object creation at O-B.
+- No value_object_state_facts writes at O-B.
+- No activity_state_deltas writes at O-B.
+- No snapshots writes at O-B.
+
+1. API activity route inventory
+- src/app/api/activity/complete/route.ts | methods: GET, POST | markers: debug, contains activity complete reference, supabase access, auth/user marker
+- src/app/api/activity/day-summary/route.ts | methods: GET | markers: supabase access, auth/user marker
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts | methods: GET, POST | markers: debug, controlled, supabase access, auth/user marker
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts | methods: GET, POST | markers: debug, supabase access, auth/user marker
+- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts | methods: GET, POST | markers: debug, controlled, supabase access, auth/user marker
+- src/app/api/activity/debug/category-derivation-route-runner-test/route.ts | methods: GET, POST | markers: debug, supabase access, auth/user marker
+- src/app/api/activity/debug/create-free-text-start-event/route.ts | methods: POST | markers: debug, contains activity complete reference, supabase access, auth/user marker
+- src/app/api/activity/debug/free-text-value-object-test/route.ts | methods: GET, POST | markers: debug, supabase access, auth/user marker
+- src/app/api/activity/debug/state-fact-rollback-no-write-proof/route.ts | methods: GET | markers: debug, controlled, state fact, supabase access, auth/user marker
+- src/app/api/activity/debug/state-signal-candidate-shadow-test/route.ts | methods: GET, POST | markers: debug, controlled, state fact, supabase access, auth/user marker
+- src/app/api/activity/debug/value-object-bridge-proof/route.ts | methods: GET | markers: debug, supabase access, auth/user marker
+- src/app/api/activity/debug-known-template-registry/route.ts | methods: GET | markers: debug, supabase access
+- src/app/api/activity/debug-rubricator-value-object-bridge/route.ts | methods: POST | markers: debug, controlled, supabase access, auth/user marker
+- src/app/api/activity/debug-trace/route.ts | methods: GET | markers: debug, supabase access, auth/user marker
+- src/app/api/activity/events/[id]/corrections/route.ts | methods: GET | markers: supabase access, auth/user marker
+- src/app/api/activity/events/[id]/route.ts | methods: GET, PATCH | markers: supabase access, auth/user marker
+- src/app/api/activity/events/route.ts | methods: GET | markers: supabase access, auth/user marker
+- src/app/api/activity/intake/events/[id]/confirm/route.ts | methods: GET, POST | markers: supabase access, auth/user marker
+- src/app/api/activity/intake/events/[id]/reject/route.ts | methods: GET, POST | markers: supabase access, auth/user marker
+- src/app/api/activity/intake/events/[id]/route.ts | methods: GET, PATCH | markers: debug, supabase access, auth/user marker
+- src/app/api/activity/intake/events/route.ts | methods: GET | markers: debug, supabase access, auth/user marker
+- src/app/api/activity/intake/route.ts | methods: GET, POST | markers: controlled, supabase access, auth/user marker
+- src/app/api/activity/intake/signals/[id]/ignore/route.ts | methods: GET, POST | markers: debug, supabase access, auth/user marker
+- src/app/api/activity/intake/signals/[id]/promote/route.ts | methods: GET, POST | markers: supabase access, auth/user marker
+- src/app/api/activity/intake/signals/route.ts | methods: GET | markers: debug, supabase access, auth/user marker
+- src/app/api/activity/record/route.ts | methods: GET, POST | markers: supabase access, auth/user marker
+- src/app/api/activity/start/route.ts | methods: GET, POST | markers: supabase access, auth/user marker
+- src/app/api/activity/state-facts/controlled-persist/route.ts | methods: POST | markers: controlled, state fact
+- src/app/api/activity/templates/route.ts | methods: GET | markers: supabase access, auth/user marker
+
+2. API activity file inventory
+- src/app/api/activity/complete/route.ts
+- src/app/api/activity/day-summary/route.ts
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts
+- src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts
+- src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+- src/app/api/activity/debug/category-derivation-route-runner-test/route.ts
+- src/app/api/activity/debug/create-free-text-start-event/route.ts
+- src/app/api/activity/debug/free-text-value-object-test/route.ts
+- src/app/api/activity/debug/state-fact-rollback-no-write-proof/route.ts
+- src/app/api/activity/debug/state-signal-candidate-shadow-test/route.ts
+- src/app/api/activity/debug/value-object-bridge-proof/route.ts
+- src/app/api/activity/debug-known-template-registry/route.ts
+- src/app/api/activity/debug-rubricator-value-object-bridge/route.ts
+- src/app/api/activity/debug-trace/route.ts
+- src/app/api/activity/events/[id]/corrections/route.ts
+- src/app/api/activity/events/[id]/route.ts
+- src/app/api/activity/events/route.ts
+- src/app/api/activity/intake/events/[id]/confirm/route.ts
+- src/app/api/activity/intake/events/[id]/reject/route.ts
+- src/app/api/activity/intake/events/[id]/route.ts
+- src/app/api/activity/intake/events/route.ts
+- src/app/api/activity/intake/route.ts
+- src/app/api/activity/intake/signals/[id]/ignore/route.ts
+- src/app/api/activity/intake/signals/[id]/promote/route.ts
+- src/app/api/activity/intake/signals/route.ts
+- src/app/api/activity/record/route.ts
+- src/app/api/activity/start/route.ts
+- src/app/api/activity/state-facts/controlled-persist/route.ts
+- src/app/api/activity/templates/route.ts
+
+3. lib/activity file inventory
+- lib/activity/activityImpactProcessor.ts
+- lib/activity/activityLifecycle.ts
+- lib/activity/activityProcessingLogs.ts
+- lib/activity/activityRecordingConfig.ts
+- lib/activity/activityRubricatorClassificationLifecycle.ts
+- lib/activity/activitySourceIntake.ts
+- lib/activity/activityUserContext.ts
+- lib/activity/activityValueObjectLifecycle.ts
+- lib/activity/categoryDerivation/completeRouteIntegration.ts
+- lib/activity/categoryDerivation/config.ts
+- lib/activity/categoryDerivation/persistDerivations.ts
+- lib/activity/categoryDerivation/persistence.ts
+- lib/activity/categoryDerivation/resolver.ts
+- lib/activity/categoryDerivation/routeRunner.ts
+- lib/activity/categoryDerivation/ruleExtractor.ts
+- lib/activity/categoryDerivation/runLookup.ts
+- lib/activity/categoryDerivation/types.ts
+- lib/activity/importedActivityTemplateMapping.ts
+- lib/activity/knownTemplateRegistryMetadata.ts
+- lib/activity/knownTemplateRegistryRuleResolver.ts
+- lib/activity/knownTemplateRegistryTable.ts
+- lib/activity/knownTemplateRubricatorRules.ts
+- lib/activity/rawActivitySignals.ts
+- lib/activity/rubricatorResolverLogMetadata.ts
+- lib/activity/rubricatorValueObjectMapper.ts
+- lib/activity/stateFacts/controlledPersistence/auth.ts
+- lib/activity/stateFacts/controlledPersistence/dimension.ts
+- lib/activity/stateFacts/controlledPersistence/idempotency.ts
+- lib/activity/stateFacts/controlledPersistence/payloadBuilder.ts
+- lib/activity/stateFacts/controlledPersistence/persist.ts
+- lib/activity/stateFacts/controlledPersistence/rollback.ts
+- lib/activity/stateFacts/controlledPersistence/rollbackIdempotency.ts
+- lib/activity/stateFacts/controlledPersistence/rollbackPayloadBuilder.ts
+- lib/activity/stateFacts/controlledPersistence/rollbackTarget.ts
+- lib/activity/stateFacts/controlledPersistence/targetValueObject.ts
+- lib/activity/stateFacts/controlledPersistence/types.ts
+- lib/activity/stateFacts/controlledPersistence/validator.ts
+- lib/activity/valueObjectBridge.ts
+
+4. activity_event keyword findings
+- docs/activity/P4.7.9-R_registry_scaling.md:55 :: - activity_events
+- docs/activity/P4.7.9-R_registry_scaling.md:507 :: - complete route updates the activity_event to completed;
+- docs/activity/P4.7.9-R_registry_scaling.md:611 :: - confirm route works with imported_pending activity_events;
+- docs/activity/P4.7.9-R_registry_scaling.md:627 :: new row for relation activity_events violates check constraint activity_events_processing_status_check
+- docs/activity/P4.7.9-R_registry_scaling.md:632 :: - record/complete/start route logs may use processing as processing log status, but activity_events.processing_status does not accept processing.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:11 :: "user adds an activity" -> controlled activity_event intake -> future semantic derivation pipeline.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:14 :: activity input -> activity_event -> derivation_run -> categoryCandidates -> contextual categories -> VO bridge -> stateHookCandidates -> controlled facts/deltas/snapshots where allowed.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:24 :: AI output, category candidates, state hooks, and resolver suggestions must never replace the activity_event source record.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:29 :: 3. The system creates or prepares a controlled activity_event record.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:33 :: 7. Later semantic layers attach to this activity_event through controlled, auditable links.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:74 :: Minimum activity_event payload contract:
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:93 :: Minimum activity_event stored/audited fields:
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:125 :: O-A/O-B creates or prepares only the activity_event source record.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity-intake-lifecycle-p4-2.md:17 :: -> activity_event(status: imported_pending)
+- docs/activity-intake-lifecycle-p4-2.md:71 :: - raw_signal -> imported_pending activity_event
+- docs/activity-intake-lifecycle-p4-2.md:159 :: - activity_event is not created
+- docs/activity-template-mapping-p4-4.md:13 :: Imported raw signals can now be promoted into imported_pending activity_events with attached semantic identifiers:
+- docs/activity-template-mapping-p4-4.md:36 :: - promote route calls the helper before inserting activity_events
+- docs/activity-template-mapping-p4-4.md:131 :: - real activity_events column is template_id
+- docs/activity-template-mapping-p4-4.md:505 :: -> activity_event(status: imported_pending)
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:35 :: | value_objects | 6 | 4 | 16 | supabase\migrations\012_activity_recording_backbone.sql:4<br>supabase\migrations\014_activity_events_v2_template_link.sql:10<br>supabase\migrations\023_value_object_state_foundation_p4_7.sql:24 |
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:52 :: | bookings | 1 | 0 | 21 | supabase\migrations\014_activity_events_v2_template_link.sql:9 |
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:65 :: | activity_events | 42 | 19 | 19 | supabase\migrations\012_activity_recording_backbone.sql:7<br>supabase\migrations\012_activity_recording_backbone.sql:82<br>supabase\migrations\012_activity_recording_backbone.sql:118 |
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:67 :: | activity_event_value_object_instance_links | 8 | 2 | 1 | supabase\migrations\023_value_object_state_foundation_p4_7.sql:16<br>supabase\migrations\023_value_object_state_foundation_p4_7.sql:133<br>supabase\migrations\023_value_object_state_foundation_p4_7.sql:202 |
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:73 :: | activity_event_corrections | 0 | 0 | 0 | - |
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:103 :: ### activity_event_corrections
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:107 :: ### activity_event_value_object_instance_links
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:110 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:133: create table if not exists public.activity_event_value_object_instance_links (
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:111 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:210: alter table public.activity_event_value_object_instance_links enable row level security;
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:114 :: ### activity_events
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:117 :: supabase\migrations\012_activity_recording_backbone.sql:82: create table if not exists public.activity_events (
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:118 :: supabase\migrations\012_activity_recording_backbone.sql:127: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:119 :: supabase\migrations\012_activity_recording_backbone.sql:188: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:120 :: supabase\migrations\012_activity_recording_backbone.sql:219: last_event_id uuid references public.activity_events(id),
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:121 :: supabase\migrations\012_activity_recording_backbone.sql:245: last_event_id uuid references public.activity_events(id),
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:122 :: supabase\migrations\014_activity_events_v2_template_link.sql:14: alter table public.activity_events
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:123 :: supabase\migrations\014_activity_events_v2_template_link.sql:29: alter table public.activity_events
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:124 :: supabase\migrations\014_activity_events_v2_template_link.sql:32: alter table public.activity_events
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:125 :: supabase\migrations\014_activity_events_v2_template_link.sql:60: alter table public.activity_events
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:126 :: supabase\migrations\014_activity_events_v2_template_link.sql:63: alter table public.activity_events
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:127 :: supabase\migrations\019_activity_security_foundation.sql:12: alter table public.activity_events enable row level security;
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:128 :: supabase\migrations\019_activity_security_foundation.sql:26: revoke all on table public.activity_events from anon, authenticated;
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:129 :: supabase\migrations\020_activity_raw_signals.sql:31: output_event_id uuid references public.activity_events(id) on delete set null,
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:130 :: supabase\migrations\021_activity_processing_logs.sql:16: activity_event_id uuid references public.activity_events(id) on delete set null,
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:131 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:26: source_event_id uuid references public.activity_events(id),
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:132 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:137: event_id uuid not null references public.activity_events(id),
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:133 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:227: event_id uuid not null references public.activity_events(id),
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:134 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:323: last_event_id uuid references public.activity_events(id),
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:135 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:399: last_event_id uuid references public.activity_events(id),
+- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:161 :: supabase\migrations\014_activity_events_v2_template_link.sql:16: references public.activity_templates(id)
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:325 :: | supabase/migrations/014_activity_events_v2_template_link.sql | 1 |  |  |
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:430 :: **supabase/migrations/014_activity_events_v2_template_link.sql**
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:748 :: | supabase/migrations/014_activity_events_v2_template_link.sql | 1 |  | seller confirm/reject or purchase trust flow |
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:871 :: | supabase/migrations/014_activity_events_v2_template_link.sql | 1 |  |  |
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:911 :: **supabase/migrations/014_activity_events_v2_template_link.sql**
+- docs/commercial/P4.8.0-A4b_offer_items_semantic_check.md:177 :: | supabase/migrations/012_activity_recording_backbone.sql | 82 | create table if not exists public.activity_events ( |
+- docs/commercial/P4.8.0-A4b_offer_items_semantic_check.md:193 :: | supabase/migrations/023_value_object_state_foundation_p4_7.sql | 133 | create table if not exists public.activity_event_value_object_instance_links ( |
+- docs/p4-7-rubricator-mapping-decision.md:11 :: - activity_event_value_object_instance_links
+- docs/p4-7-rubricator-mapping-decision.md:181 :: - create activity_event_value_object_instance_links;
+- docs/p4-7-schema-inventory-raw.md:37 :: - .\supabase\migrations\014_activity_events_v2_template_link.sql (1 matches)
+- docs/p4-7-schema-inventory-raw.md:51 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:59 :: - .\supabase\migrations\014_activity_events_v2_template_link.sql:10 - -- activity_participants, activity_links, time_blocks, value_objects or commercial core.
+- docs/p4-7-schema-inventory-raw.md:83 :: ## Table or term: activity_event_value_object_instance_links
+- docs/p4-7-schema-inventory-raw.md:435 :: ## Table or term: activity_events
+- docs/p4-7-schema-inventory-raw.md:439 :: - .\supabase\migrations\014_activity_events_v2_template_link.sql (20 matches)
+- docs/p4-7-schema-inventory-raw.md:459 :: -- one user action is recorded once in activity_events;
+- docs/p4-7-schema-inventory-raw.md:464 :: create table if not exists public.activity_events (
+- docs/p4-7-schema-inventory-raw.md:469 :: constraint activity_events_duration_check
+- docs/p4-7-schema-inventory-raw.md:474 :: constraint activity_events_time_order_check
+- docs/p4-7-schema-inventory-raw.md:479 :: constraint activity_events_source_check
+- docs/p4-7-schema-inventory-raw.md:484 :: constraint activity_events_status_check
+- docs/p4-7-schema-inventory-raw.md:489 :: constraint activity_events_privacy_scope_check
+- docs/p4-7-schema-inventory-raw.md:494 :: constraint activity_events_processing_status_check
+- docs/p4-7-schema-inventory-raw.md:499 :: drop trigger if exists trg_activity_events_updated_at on public.activity_events;
+- docs/p4-7-schema-inventory-raw.md:504 :: create trigger trg_activity_events_updated_at
+- docs/p4-7-schema-inventory-raw.md:509 :: before update on public.activity_events
+- docs/p4-7-schema-inventory-raw.md:514 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/p4-7-schema-inventory-raw.md:519 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+- docs/p4-7-schema-inventory-raw.md:524 :: last_event_id uuid references public.activity_events(id),
+- docs/p4-7-schema-inventory-raw.md:529 :: last_event_id uuid references public.activity_events(id),
+- docs/p4-7-schema-inventory-raw.md:534 :: create index if not exists idx_activity_events_user_created_at
+- docs/p4-7-schema-inventory-raw.md:539 :: on public.activity_events(user_id, created_at desc);
+- docs/p4-7-schema-inventory-raw.md:544 :: create index if not exists idx_activity_events_user_started_at
+- docs/p4-7-schema-inventory-raw.md:549 :: on public.activity_events(user_id, started_at desc);
+- docs/p4-7-schema-inventory-raw.md:554 :: create index if not exists idx_activity_events_code
+- docs/p4-7-schema-inventory-raw.md:559 :: on public.activity_events(event_code);
+- docs/p4-7-schema-inventory-raw.md:564 :: create index if not exists idx_activity_events_template_id
+- docs/p4-7-schema-inventory-raw.md:569 :: on public.activity_events(template_id);
+- docs/p4-7-schema-inventory-raw.md:574 :: comment on table public.activity_events is
+- docs/p4-7-schema-inventory-raw.md:579 :: 'Universal links from activity_events to value objects, contexts, observed objects, actors or other entities.';
+- docs/p4-7-schema-inventory-raw.md:584 :: 'Concrete calculated impacts created from activity_events, usually by applying impact_rules.';
+- docs/p4-7-schema-inventory-raw.md:589 :: 'Per-user daily aggregate metrics derived from activity_events and impact_events.';
+- docs/p4-7-schema-inventory-raw.md:591 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:594 :: -- 014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:596 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:599 :: -- activity_events.template_id from migration 012 points to legacy activity_code_templates.
+- docs/p4-7-schema-inventory-raw.md:601 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:604 :: -- Therefore we add activity_events.activity_template_id instead of overloading template_id.
+- docs/p4-7-schema-inventory-raw.md:606 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:609 :: alter table public.activity_events
+- docs/p4-7-schema-inventory-raw.md:611 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:614 :: create index if not exists idx_activity_events_activity_template_id
+- docs/p4-7-schema-inventory-raw.md:616 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:619 :: on public.activity_events(activity_template_id);
+- docs/p4-7-schema-inventory-raw.md:621 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:624 :: drop trigger if exists trg_activity_events_updated_at on public.activity_events;
+- docs/p4-7-schema-inventory-raw.md:626 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:629 :: create trigger trg_activity_events_updated_at
+- docs/p4-7-schema-inventory-raw.md:631 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:634 :: before update on public.activity_events
+- docs/p4-7-schema-inventory-raw.md:636 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:639 :: alter table public.activity_events
+- docs/p4-7-schema-inventory-raw.md:641 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:644 :: drop constraint if exists activity_events_source_check;
+- docs/p4-7-schema-inventory-raw.md:646 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:649 :: alter table public.activity_events
+- docs/p4-7-schema-inventory-raw.md:651 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+- docs/p4-7-schema-inventory-raw.md:654 :: add constraint activity_events_source_check
+- docs/p4-7-schema-inventory-raw.md:660 :: - .\supabase\migrations\012_activity_recording_backbone.sql:7 - -- one user action is recorded once in activity_events;
+
+5. activities keyword findings
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+- docs/activity-intake-lifecycle-p4-2.md:342 :: - Do not turn external/API/calendar/wearable signals directly into completed activities.
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:61 :: - src/app/activities/new/page.tsx
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:62 :: - src/app/activities/page.tsx
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:70 :: - src/app/api/activities/route.ts
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:438 :: | src/app/activities/new/page.tsx | 2 | yes |  |
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:490 :: **src/app/activities/new/page.tsx**
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:574 :: | src/app/activities/new/page.tsx | 2 | yes |  |
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:612 :: **src/app/activities/new/page.tsx**
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:696 :: | src/app/activities/new/page.tsx | 2 | yes |  |
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:753 :: **src/app/activities/new/page.tsx**
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:913 :: - L9: -- This migration is additive and does not modify legacy activities, bookings,
+- docs/p4-7-schema-inventory-raw.md:1655 :: - .\src\app\api\activity\intake\route.ts:270 - "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:7566 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx
+- docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:7569 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\page.tsx
+- docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:7655 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts
+- docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:8609 :: ('family', 'Family', 'Family-related activities, scheduling, support and responsibilities.', 130)
+- docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:13553 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx
+- docs/value-objects/category-derivation-contextual-categories-schema-map-c8-p3-b6-b.md:13556 :: FILE: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\page.tsx
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:24339 :: -- This migration is additive and does not modify legacy activities, bookings,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:699 :: src\app\api\activities\route.ts line 21: errorResponse: NextResponse.json(
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:700 :: src\app\api\activities\route.ts line 39: errorResponse: NextResponse.json(
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:701 :: src\app\api\activities\route.ts line 57: errorResponse: NextResponse.json(
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:702 :: src\app\api\activities\route.ts line 76: errorResponse: NextResponse.json(
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:703 :: src\app\api\activities\route.ts line 120: return NextResponse.json(
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:704 :: src\app\api\activities\route.ts line 139: return NextResponse.json(
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:705 :: src\app\api\activities\route.ts line 145: return NextResponse.json({
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:706 :: src\app\api\activities\route.ts line 159: return NextResponse.json(
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:707 :: src\app\api\activities\route.ts line 182: return NextResponse.json(
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:708 :: src\app\api\activities\route.ts line 191: return NextResponse.json(
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:709 :: src\app\api\activities\route.ts line 219: return NextResponse.json(
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:710 :: src\app\api\activities\route.ts line 252: return NextResponse.json(
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:711 :: src\app\api\activities\route.ts line 284: return NextResponse.json(
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:712 :: src\app\api\activities\route.ts line 305: return NextResponse.json(
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:713 :: src\app\api\activities\route.ts line 314: return NextResponse.json({
+- docs/value-objects/category-derivation-layer-v1-c8-f-c-minimal-additive-semantic-coverage-patch-strategy.txt:60 :: The system must not flatten these activities into only:
+- docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:22 :: - FILE: src/app/api/activities/route.ts
+- docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:23 :: ROUTE: /api/activities
+- docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:152 :: CANDIDATE FILE: src/app/api/activities/route.ts
+- docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:153 :: ROUTE: /api/activities
+- docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:160 :: .from("activities")
+- docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:198 :: .from("activities")
+- docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:268 :: const { data: activities, error: activitiesError } = await supabase
+- docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:269 :: .from("activities")
+- docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:272 :: { error: activitiesError.message },
+- docs/value-objects/category-derivation-production-complete-route-c2-b-setup-route-contracts.txt:4832 :: LINE 270: "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/value-objects/category-derivation-production-complete-route-c2-b-setup-route-contracts.txt:4836 :: >       "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/value-objects/category-derivation-production-complete-route-c2-b-setup-route-contracts.txt:4860 :: LINE 451: "P4.2.7 stores the raw signal only. Imported/external signals are not completed activities until a later review or adapter flow creates or confirms an activity event.",
+- docs/value-objects/category-derivation-production-complete-route-c2-b-setup-route-contracts.txt:4864 :: >       "P4.2.7 stores the raw signal only. Imported/external signals are not completed activities until a later review or adapter flow creates or confirms an activity event.",
+- docs/value-objects/category-derivation-production-complete-route-c2-d-a3-fixed-targeted-bridge-source-schema.txt:15745 :: -- Additive backbone only. Does not modify existing activities, activity_participants,
+- docs/value-objects/category-derivation-production-complete-route-c2-d-a3-fixed-targeted-bridge-source-schema.txt:16089 :: -- This migration is additive and does not modify legacy activities, bookings,
+- docs/value-objects/category-derivation-production-complete-route-c2-d-c1-value-object-bridge-proof-contract.txt:284 :: Especially use it for free-text activities where:
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:369 :: src/app/api/activities/route.ts-146-    ok: true,
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:370 :: src/app/api/activities/route.ts-147-    activities,
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:371 :: src/app/api/activities/route.ts-148-  });
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:372 :: src/app/api/activities/route.ts-149-}
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:373 :: src/app/api/activities/route.ts-150-
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:375 :: src/app/api/activities/route.ts-152-  const { appUser, personActor, errorResponse } = await getCurrentUserContext();
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:376 :: src/app/api/activities/route.ts-153-
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:377 :: src/app/api/activities/route.ts-154-  if (errorResponse) {
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:378 :: src/app/api/activities/route.ts-155-    return errorResponse;
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:379 :: src/app/api/activities/route.ts-156-  }
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:442 :: src/app/api/activity/intake/route.ts-270-      "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1466 :: src/app/activities/page.tsx-25-  title: string;
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1467 :: src/app/activities/page.tsx-26-  description: string | null;
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1468 :: src/app/activities/page.tsx-27-  raw_input: string | null;
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1469 :: src/app/activities/page.tsx-28-  start_time: string | null;
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1470 :: src/app/activities/page.tsx-29-  end_time: string | null;
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1471 :: src/app/activities/page.tsx:30:  duration_minutes: number | null;
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1472 :: src/app/activities/page.tsx-31-  status: string;
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1473 :: src/app/activities/page.tsx-32-  source: string;
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1474 :: src/app/activities/page.tsx-33-  ai_confidence: number | null;
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1475 :: src/app/activities/page.tsx-34-  created_at: string;
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1476 :: src/app/activities/page.tsx-35-  activity_participants: ActivityParticipant[];
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1478 :: src/app/activities/page.tsx-115-                  : "Not specified"}
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1479 :: src/app/activities/page.tsx-116-              </p>
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1480 :: src/app/activities/page.tsx-117-
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1481 :: src/app/activities/page.tsx-118-              <p>
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1482 :: src/app/activities/page.tsx-119-                <strong>Duration:</strong>{" "}
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1483 :: src/app/activities/page.tsx:120:                {activity.duration_minutes ?? "Not calculated"} minutes
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1484 :: src/app/activities/page.tsx-121-              </p>
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1485 :: src/app/activities/page.tsx-122-
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1486 :: src/app/activities/page.tsx-123-              <p>
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1487 :: src/app/activities/page.tsx-124-                <strong>Status:</strong> {activity.status}
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1488 :: src/app/activities/page.tsx-125-              </p>
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1490 :: src/app/api/activities/route.ts-204-      title,
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1491 :: src/app/api/activities/route.ts-205-      description,
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1492 :: src/app/api/activities/route.ts-206-      raw_input: rawInput,
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1493 :: src/app/api/activities/route.ts-207-      start_time: startTime,
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1494 :: src/app/api/activities/route.ts-208-      end_time: endTime,
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1495 :: src/app/api/activities/route.ts:209:      duration_minutes: durationMinutes,
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:1496 :: src/app/api/activities/route.ts-210-      location_id: locationId,
+- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:2154 :: - Should Category Derivation be enabled by default only for manual_chat completed activities?
+- docs/value-objects/P4.10.0-A2_repo_activity_processing_reference_inventory.txt:443 :: C:\Users\Admin\Documents\projects\gpt-app\docs\value-objects\P4.9.0-A3_local_code_routes_inventory.md:333: | src/app/api/activity/intake/route.ts | 270 | "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.", |
+- docs/value-objects/P4.10.0-A2_repo_activity_processing_reference_inventory.txt:1542 :: C:\Users\Admin\Documents\projects\gpt-app\docs\p4-7-schema-inventory-raw.md:1655: - .\src\app\api\activity\intake\route.ts:270 - "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/value-objects/P4.10.0-A2_repo_activity_processing_reference_inventory.txt:1918 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\route.ts:270: "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/value-objects/P4.10.0-C1_activity_route_file_inventory.txt:1 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx
+- docs/value-objects/P4.10.0-C1_activity_route_file_inventory.txt:2 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\page.tsx
+- docs/value-objects/P4.10.0-C1_activity_route_file_inventory.txt:5 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:516 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx:12: const [status, setStatus] = useState("completed");
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:517 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx:13: const [source, setSource] = useState("manual");
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:518 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx:63: setStatus("completed");
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:519 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx:64: setSource("manual");
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:520 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx:175: <option value="confirmed">Confirmed</option>
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:521 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx:176: <option value="completed">Completed</option>
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:522 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx:191: <option value="manual">Manual</option>
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:523 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\page.tsx:65: This page shows the central Activity Core records with participants and
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:667 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-today\page.tsx:2209: useful completed work, productive time, open activities and
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:669 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-today\page.tsx:2300: label="Completed activities"
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:671 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-today\page.tsx:2302: hint="Useful completed activities counted for this day"
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:797 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts:175: const status = body.status ?? "completed";
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:798 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts:176: const source = body.source ?? "manual";
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:1595 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\route.ts:270: "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+- docs/value-objects/P4.10.0-C1_free_text_unknown_handling_inventory.txt:1601 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\route.ts:451: "P4.2.7 stores the raw signal only. Imported/external signals are not completed activities until a later review or adapter flow creates or confirms an activity event.",
+- docs/value-objects/P4.10.0-C1_value_object_write_reference_inventory.txt:63 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts:199: .insert({
+- docs/value-objects/P4.10.0-C1_value_object_write_reference_inventory.txt:64 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts:248: .insert(participantRows)
+- docs/value-objects/P4.10.0-C1_value_object_write_reference_inventory.txt:65 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts:265: .insert({
+- docs/value-objects/P4.10.0-C1_value_object_write_reference_inventory.txt:66 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts:295: .insert({
+- docs/value-objects/P4.10.0-C2_route_callers_evidence.txt:292 :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\route.ts:270: "P4.2.7 stores raw_activity_signals only. Imported or external signals should be reviewed before becoming completed activities.",
+
+6. duration/timing keyword findings
+- docs/activity/P4.7.8-R_cross_route_verification.md:276 :: - mapper ruleKey: knee_training_health_practice_duration
+- docs/activity/P4.7.8-R_cross_route_verification.md:279 :: - metricKey: duration_minutes
+- docs/activity/P4.7.8-R_cross_route_verification.md:426 :: - duration after completion: 25
+- docs/activity/P4.7.8-R_cross_route_verification.md:461 :: - duration: 25
+- docs/activity/P4.7.9-R_registry_scaling.md:558 :: - durationMinutes = 7;
+- docs/activity/P4.7.9-R_registry_scaling.md:651 :: - durationMinutes at fixture creation: 8.
+- docs/activity/P4.7.9-R_registry_scaling.md:692 :: - durationMinutes = 10;
+- docs/activity/P4.7.9-R_registry_scaling.md:1041 :: - metricKey = duration_minutes;
+- docs/activity/P4.7.9-R_registry_scaling.md:1060 :: - metricKey = duration_minutes;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:40 :: - durationMinutes: optional number
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:51 :: - durationMinutes if exactly derivable from startedAt and endedAt
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:80 :: "durationMinutes": 25,
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:100 :: - duration_minutes
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:119 :: If only duration is provided, store duration.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:120 :: If start and end are provided, calculate duration.
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:133 :: - detected duration if safe
+- lib/activity/activityImpactProcessor.ts:68 :: durationMinutes?: number | null;
+- lib/activity/activityImpactProcessor.ts:93 :: durationMinutes?: number | null;
+- lib/activity/activityImpactProcessor.ts:348 :: durationMinutes: number | null;
+- lib/activity/activityImpactProcessor.ts:350 :: const { rule, durationMinutes } = params;
+- lib/activity/activityImpactProcessor.ts:352 :: if (rule.impact_value_mode === "duration_minutes") {
+- lib/activity/activityImpactProcessor.ts:354 :: impactValueNumeric: durationMinutes,
+- lib/activity/activityImpactProcessor.ts:371 :: durationMinutes === null ? null : durationMinutes * multiplier,
+- lib/activity/activityImpactProcessor.ts:385 :: durationMinutes: number | null;
+- lib/activity/activityImpactProcessor.ts:388 :: const { eventId, impactRules, durationMinutes, aggregateTimezone } = params;
+- lib/activity/activityImpactProcessor.ts:393 :: durationMinutes,
+- lib/activity/activityImpactProcessor.ts:752 :: durationMinutes = null,
+- lib/activity/activityImpactProcessor.ts:802 :: durationMinutes,
+- lib/activity/activityImpactProcessor.ts:853 :: durationMinutes = null,
+- lib/activity/activityImpactProcessor.ts:879 :: durationMinutes,
+- lib/activity/activityProcessingLogs.ts:61 :: duration_ms: number | null;
+- lib/activity/activityProcessingLogs.ts:84 :: durationMs?: number | null;
+- lib/activity/activityProcessingLogs.ts:177 :: duration_ms: input.durationMs ?? null,
+- lib/activity/activityProcessingLogs.ts:197 :: export function getDurationMs(
+- lib/activity/activityProcessingLogs.ts:209 :: const duration = finished.getTime() - started.getTime();
+- lib/activity/activityProcessingLogs.ts:211 :: return Number.isFinite(duration) && duration >= 0 ? duration : 0;
+- lib/activity/activityRubricatorClassificationLifecycle.ts:544 :: expected_mapper_rule: "german_business_writing_practice_duration",
+- lib/activity/categoryDerivation/completeRouteIntegration.ts:31 :: duration_minutes?: number | null;
+- lib/activity/categoryDerivation/completeRouteIntegration.ts:392 :: durationMinutes: normalizeNumber(params.activityEvent.duration_minutes),
+- lib/activity/categoryDerivation/persistDerivations.ts:143 :: durationMinutes: params.input.durationMinutes ?? null,
+- lib/activity/categoryDerivation/persistence.ts:244 :: durationMinutes: nullableNumber(input.durationMinutes),
+- lib/activity/categoryDerivation/persistence.ts:262 :: durationMinutes: params.input.durationMinutes ?? null,
+- lib/activity/categoryDerivation/ruleExtractor.ts:79 :: function addDurationMetricCandidate(
+- lib/activity/categoryDerivation/ruleExtractor.ts:84 :: const hasDuration =
+- lib/activity/categoryDerivation/ruleExtractor.ts:85 :: typeof input.durationMinutes === "number" ||
+- lib/activity/categoryDerivation/ruleExtractor.ts:89 :: if (!hasDuration) {
+- lib/activity/categoryDerivation/ruleExtractor.ts:94 :: slug: "duration-minutes",
+- lib/activity/categoryDerivation/ruleExtractor.ts:95 :: title: "Duration in minutes",
+- lib/activity/categoryDerivation/ruleExtractor.ts:101 :: metadata: makeMetadata("duration_minutes_metric", ["durationMinutes or minute expression"]),
+- lib/activity/categoryDerivation/ruleExtractor.ts:154 :: metadata: makeMetadata("walking_to_work_duration", ["walked to work"]),
+- lib/activity/categoryDerivation/ruleExtractor.ts:165 :: metadata: makeMetadata("walking_to_work_duration", ["work destination"]),
+- lib/activity/categoryDerivation/ruleExtractor.ts:176 :: metadata: makeMetadata("walking_to_work_duration", ["walked to work"]),
+- lib/activity/categoryDerivation/ruleExtractor.ts:187 :: metadata: makeMetadata("walking_to_work_duration", ["walking plus work destination"]),
+- lib/activity/categoryDerivation/ruleExtractor.ts:2303 :: addDurationMetricCandidate(candidates, input, text);
+- lib/activity/categoryDerivation/types.ts:68 :: durationMinutes?: number | null;
+- lib/activity/importedActivityTemplateMapping.ts:60 :: default_duration_minutes: number | null;
+- lib/activity/importedActivityTemplateMapping.ts:405 :: "id, slug, title, short_title, description, template_group, template_scope, source_type, status, is_active, owner_user_id, default_activity_type_id, legacy_activity_code_template_id, default_duration_minutes, default_status, default_source_type, default_privacy_scope, default_metadata_json, sort_order"
+- lib/activity/importedActivityTemplateMapping.ts:420 :: "id, slug, title, short_title, description, template_group, template_scope, source_type, status, is_active, owner_user_id, default_activity_type_id, legacy_activity_code_template_id, default_duration_minutes, default_status, default_source_type, default_privacy_scope, default_metadata_json, sort_order"
+- lib/activity/knownTemplateRegistryMetadata.ts:11 :: export type KnownTemplateMetricKey = "duration_minutes";
+- lib/activity/knownTemplateRegistryMetadata.ts:317 :: "duration_minutes",
+- lib/activity/rubricatorValueObjectMapper.ts:15 :: duration_minutes: number | null;
+- lib/activity/rubricatorValueObjectMapper.ts:75 :: defaultDurationMinutes: number | null;
+- lib/activity/rubricatorValueObjectMapper.ts:90 :: ruleKey: "german_business_writing_practice_duration",
+- lib/activity/rubricatorValueObjectMapper.ts:96 :: defaultDurationMinutes: 25,
+- lib/activity/rubricatorValueObjectMapper.ts:102 :: metricKey: "duration_minutes",
+- lib/activity/rubricatorValueObjectMapper.ts:139 :: ruleKey: "knee_training_health_practice_duration",
+- lib/activity/rubricatorValueObjectMapper.ts:145 :: defaultDurationMinutes: 10,
+- lib/activity/rubricatorValueObjectMapper.ts:151 :: metricKey: "duration_minutes",
+- lib/activity/rubricatorValueObjectMapper.ts:174 :: ruleKey: "walking_to_work_duration",
+- lib/activity/rubricatorValueObjectMapper.ts:180 :: defaultDurationMinutes: 15,
+- lib/activity/rubricatorValueObjectMapper.ts:186 :: metricKey: "duration_minutes",
+- lib/activity/rubricatorValueObjectMapper.ts:341 :: "duration_minutes",
+- lib/activity/rubricatorValueObjectMapper.ts:636 :: default_duration_minutes:
+- lib/activity/rubricatorValueObjectMapper.ts:637 :: rule.defaultDurationMinutes ?? event.duration_minutes,
+- lib/activity/rubricatorValueObjectMapper.ts:710 :: if (event.duration_minutes === null) {
+- lib/activity/rubricatorValueObjectMapper.ts:729 :: deltaValueNumeric: event.duration_minutes,
+- lib/activity/rubricatorValueObjectMapper.ts:857 :: result.skipReason = "event_duration_missing_for_controlled_mapping";
+- lib/activity/valueObjectBridge.ts:45 :: duration_minutes: number | null;
+- lib/activity/valueObjectBridge.ts:349 :: function normalizeExposureMinutes(durationMinutes: number | null | undefined): number {
+- lib/activity/valueObjectBridge.ts:350 :: if (typeof durationMinutes !== "number" || Number.isNaN(durationMinutes)) {
+- lib/activity/valueObjectBridge.ts:354 :: if (durationMinutes < 0) {
+- lib/activity/valueObjectBridge.ts:358 :: return durationMinutes;
+- lib/activity/valueObjectBridge.ts:462 :: "duration_minutes",
+- lib/activity/valueObjectBridge.ts:756 :: const exposureMinutes = normalizeExposureMinutes(event.duration_minutes);
+- lib/activity/valueObjectBridge.ts:1329 :: duration_minutes: event.duration_minutes,
+- src/app/api/activity/complete/route.ts:14 :: getDurationMs,
+- src/app/api/activity/complete/route.ts:55 :: durationMinutes?: unknown;
+- src/app/api/activity/complete/route.ts:77 :: duration_minutes: number | null;
+- src/app/api/activity/complete/route.ts:92 :: durationMinutes: number;
+- src/app/api/activity/complete/route.ts:602 :: durationMinutes: event.duration_minutes ?? 0,
+- src/app/api/activity/complete/route.ts:776 :: const explicitDurationMinutes = asNumber(body.durationMinutes);
+- src/app/api/activity/complete/route.ts:778 :: if (explicitDurationMinutes !== null && explicitDurationMinutes < 0) {
+- src/app/api/activity/complete/route.ts:781 :: error: "durationMinutes must be greater than or equal to 0.",
+- src/app/api/activity/complete/route.ts:806 :: durationMinutes: Math.round(
+- src/app/api/activity/complete/route.ts:812 :: if (explicitDurationMinutes !== null) {
+- src/app/api/activity/complete/route.ts:814 :: startedDate.getTime() + explicitDurationMinutes * 60000
+- src/app/api/activity/complete/route.ts:821 :: durationMinutes: explicitDurationMinutes,
+- src/app/api/activity/complete/route.ts:838 :: durationMinutes: Math.round(
+- src/app/api/activity/complete/route.ts:876 :: durationMinutes: 5,
+- src/app/api/activity/complete/route.ts:877 :: comment: "Completed lifecycle smoke test with fixed duration",
+- src/app/api/activity/complete/route.ts:976 :: durationMinutes: event.duration_minutes,
+- src/app/api/activity/complete/route.ts:1070 :: idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- src/app/api/activity/complete/route.ts:1085 :: durationMinutes: timing.durationMinutes,
+- src/app/api/activity/complete/route.ts:1125 :: durationMinutes: timing.durationMinutes,
+- src/app/api/activity/complete/route.ts:1143 :: durationMs: getDurationMs(processingStartedAt),
+- src/app/api/activity/complete/route.ts:1150 :: duration_minutes: timing.durationMinutes,
+- src/app/api/activity/complete/route.ts:1160 :: completion_duration_source:
+- src/app/api/activity/complete/route.ts:1161 :: asNumber(body.durationMinutes) !== null
+- src/app/api/activity/complete/route.ts:1162 :: ? "explicit_duration"
+- src/app/api/activity/complete/route.ts:1197 :: durationMinutes: timing.durationMinutes,
+- src/app/api/activity/complete/route.ts:1208 :: durationMs: getDurationMs(processingStartedAt),
+- src/app/api/activity/complete/route.ts:1236 :: durationMinutes: timing.durationMinutes,
+- src/app/api/activity/complete/route.ts:1249 :: durationMs: getDurationMs(processingStartedAt),
+- src/app/api/activity/complete/route.ts:1258 :: durationMinutes: updatedEvent.duration_minutes,
+- src/app/api/activity/complete/route.ts:1273 :: durationMinutes: timing.durationMinutes,
+- src/app/api/activity/complete/route.ts:1304 :: durationMs: getDurationMs(processingStartedAt),
+- src/app/api/activity/complete/route.ts:1321 :: durationMinutes: updatedEvent.duration_minutes,
+- src/app/api/activity/complete/route.ts:1336 :: durationMs: getDurationMs(processingStartedAt),
+- src/app/api/activity/complete/route.ts:1390 :: durationMs: getDurationMs(processingStartedAt),
+- src/app/api/activity/complete/route.ts:1413 :: duration_minutes: updatedEvent.duration_minutes,
+
+7. auth/user/actor keyword findings
+- lib/activity/activityImpactProcessor.ts:297 :: .eq("user_id", userId)
+- lib/activity/activityImpactProcessor.ts:536 :: p_user_id: userId,
+- lib/activity/activityImpactProcessor.ts:577 :: p_user_id: userId,
+- lib/activity/activityImpactProcessor.ts:297 :: .eq("user_id", userId)
+- lib/activity/activityImpactProcessor.ts:536 :: p_user_id: userId,
+- lib/activity/activityImpactProcessor.ts:577 :: p_user_id: userId,
+- lib/activity/activityProcessingLogs.ts:44 :: user_id: string;
+- lib/activity/activityProcessingLogs.ts:160 :: user_id: input.userId,
+- lib/activity/activityProcessingLogs.ts:44 :: user_id: string;
+- lib/activity/activityProcessingLogs.ts:160 :: user_id: input.userId,
+- lib/activity/activityRubricatorClassificationLifecycle.ts:561 :: classified_by_user_id: input.userId,
+- lib/activity/activityRubricatorClassificationLifecycle.ts:561 :: classified_by_user_id: input.userId,
+- lib/activity/activityUserContext.ts:2 :: import { auth0 } from "../auth0";
+- lib/activity/activityUserContext.ts:7 :: auth0_sub?: string | null;
+- lib/activity/activityUserContext.ts:13 :: user_id: string;
+- lib/activity/activityUserContext.ts:32 :: const session = await auth0.getSession();
+- lib/activity/activityUserContext.ts:49 :: .eq("auth0_sub", session.user.sub)
+- lib/activity/activityUserContext.ts:69 :: .eq("user_id", typedAppUser.id)
+- lib/activity/activityUserContext.ts:2 :: import { auth0 } from "../auth0";
+- lib/activity/activityUserContext.ts:7 :: auth0_sub?: string | null;
+- lib/activity/activityUserContext.ts:13 :: user_id: string;
+- lib/activity/activityUserContext.ts:32 :: const session = await auth0.getSession();
+- lib/activity/activityUserContext.ts:49 :: .eq("auth0_sub", session.user.sub)
+- lib/activity/activityUserContext.ts:69 :: .eq("user_id", typedAppUser.id)
+- lib/activity/categoryDerivation/completeRouteIntegration.ts:56 :: | "missing_actor_id"
+- lib/activity/categoryDerivation/completeRouteIntegration.ts:311 :: reason: "missing_actor_id",
+- lib/activity/categoryDerivation/completeRouteIntegration.ts:56 :: | "missing_actor_id"
+- lib/activity/categoryDerivation/completeRouteIntegration.ts:311 :: reason: "missing_actor_id",
+- lib/activity/categoryDerivation/persistDerivations.ts:126 :: actor_id: params.actorId ?? params.input.actorId ?? null,
+- lib/activity/categoryDerivation/persistDerivations.ts:126 :: actor_id: params.actorId ?? params.input.actorId ?? null,
+- lib/activity/categoryDerivation/persistence.ts:55 :: actor_id?: string | null;
+- lib/activity/categoryDerivation/persistence.ts:283 :: actor_id: params.input.actorId ?? null,
+- lib/activity/categoryDerivation/persistence.ts:55 :: actor_id?: string | null;
+- lib/activity/categoryDerivation/persistence.ts:283 :: actor_id: params.input.actorId ?? null,
+- lib/activity/categoryDerivation/types.ts:101 :: actor_id?: string | null;
+- lib/activity/categoryDerivation/types.ts:101 :: actor_id?: string | null;
+- lib/activity/importedActivityTemplateMapping.ts:57 :: owner_user_id: string | null;
+- lib/activity/importedActivityTemplateMapping.ts:405 :: "id, slug, title, short_title, description, template_group, template_scope, source_type, status, is_active, owner_user_id, default_activity_type_id, legacy_activity_code_template_id, default_duration_minutes, default_status, default_source_type, default_privacy_scope, default_metadata_json, sort_order"
+- lib/activity/importedActivityTemplateMapping.ts:420 :: "id, slug, title, short_title, description, template_group, template_scope, source_type, status, is_active, owner_user_id, default_activity_type_id, legacy_activity_code_template_id, default_duration_minutes, default_status, default_source_type, default_privacy_scope, default_metadata_json, sort_order"
+- lib/activity/importedActivityTemplateMapping.ts:423 :: .eq("owner_user_id", userId)
+- lib/activity/importedActivityTemplateMapping.ts:57 :: owner_user_id: string | null;
+- lib/activity/importedActivityTemplateMapping.ts:405 :: "id, slug, title, short_title, description, template_group, template_scope, source_type, status, is_active, owner_user_id, default_activity_type_id, legacy_activity_code_template_id, default_duration_minutes, default_status, default_source_type, default_privacy_scope, default_metadata_json, sort_order"
+- lib/activity/importedActivityTemplateMapping.ts:420 :: "id, slug, title, short_title, description, template_group, template_scope, source_type, status, is_active, owner_user_id, default_activity_type_id, legacy_activity_code_template_id, default_duration_minutes, default_status, default_source_type, default_privacy_scope, default_metadata_json, sort_order"
+- lib/activity/importedActivityTemplateMapping.ts:423 :: .eq("owner_user_id", userId)
+- lib/activity/rawActivitySignals.ts:53 :: user_id: string;
+- lib/activity/rawActivitySignals.ts:146 :: user_id: input.userId,
+- lib/activity/rawActivitySignals.ts:194 :: .eq("user_id", params.userId)
+- lib/activity/rawActivitySignals.ts:225 :: .eq("user_id", params.userId)
+- lib/activity/rawActivitySignals.ts:53 :: user_id: string;
+- lib/activity/rawActivitySignals.ts:146 :: user_id: input.userId,
+- lib/activity/rawActivitySignals.ts:194 :: .eq("user_id", params.userId)
+- lib/activity/rawActivitySignals.ts:225 :: .eq("user_id", params.userId)
+- lib/activity/rubricatorValueObjectMapper.ts:9 :: user_id: string;
+- lib/activity/rubricatorValueObjectMapper.ts:21 :: performed_by_actor_id: string | null;
+- lib/activity/rubricatorValueObjectMapper.ts:22 :: acting_as_actor_id: string | null;
+- lib/activity/rubricatorValueObjectMapper.ts:23 :: acting_for_actor_id: string | null;
+- lib/activity/rubricatorValueObjectMapper.ts:335 :: "user_id",
+- lib/activity/rubricatorValueObjectMapper.ts:347 :: "performed_by_actor_id",
+- lib/activity/rubricatorValueObjectMapper.ts:348 :: "acting_as_actor_id",
+- lib/activity/rubricatorValueObjectMapper.ts:349 :: "acting_for_actor_id",
+- lib/activity/rubricatorValueObjectMapper.ts:582 :: event.acting_as_actor_id ?? event.performed_by_actor_id ?? null;
+- lib/activity/rubricatorValueObjectMapper.ts:594 :: query = query.eq("owner_actor_id", ownerActorId);
+- lib/activity/rubricatorValueObjectMapper.ts:596 :: query = query.is("owner_actor_id", null);
+- lib/activity/rubricatorValueObjectMapper.ts:623 :: event.acting_as_actor_id ?? event.performed_by_actor_id ?? null;
+- lib/activity/rubricatorValueObjectMapper.ts:628 :: owner_actor_id: ownerActorId,
+- lib/activity/rubricatorValueObjectMapper.ts:9 :: user_id: string;
+- lib/activity/rubricatorValueObjectMapper.ts:21 :: performed_by_actor_id: string | null;
+- lib/activity/rubricatorValueObjectMapper.ts:22 :: acting_as_actor_id: string | null;
+- lib/activity/rubricatorValueObjectMapper.ts:23 :: acting_for_actor_id: string | null;
+- lib/activity/rubricatorValueObjectMapper.ts:335 :: "user_id",
+- lib/activity/rubricatorValueObjectMapper.ts:347 :: "performed_by_actor_id",
+- lib/activity/rubricatorValueObjectMapper.ts:348 :: "acting_as_actor_id",
+- lib/activity/rubricatorValueObjectMapper.ts:349 :: "acting_for_actor_id",
+- lib/activity/rubricatorValueObjectMapper.ts:582 :: event.acting_as_actor_id ?? event.performed_by_actor_id ?? null;
+- lib/activity/rubricatorValueObjectMapper.ts:594 :: query = query.eq("owner_actor_id", ownerActorId);
+- lib/activity/rubricatorValueObjectMapper.ts:596 :: query = query.is("owner_actor_id", null);
+- lib/activity/rubricatorValueObjectMapper.ts:623 :: event.acting_as_actor_id ?? event.performed_by_actor_id ?? null;
+- lib/activity/rubricatorValueObjectMapper.ts:628 :: owner_actor_id: ownerActorId,
+- lib/activity/stateFacts/controlledPersistence/auth.ts:15 :: * - client-provided user_id must never become persisted user_id.
+- lib/activity/stateFacts/controlledPersistence/auth.ts:21 :: import { auth0 } from "../../../auth0";
+- lib/activity/stateFacts/controlledPersistence/auth.ts:38 :: auth0_sub?: unknown;
+- lib/activity/stateFacts/controlledPersistence/auth.ts:45 :: user_id?: unknown;
+- lib/activity/stateFacts/controlledPersistence/auth.ts:122 :: * - reads Auth0 session;
+- lib/activity/stateFacts/controlledPersistence/auth.ts:123 :: * - reads app_users by auth0_sub;
+- lib/activity/stateFacts/controlledPersistence/auth.ts:129 :: const session = await auth0.getSession();
+- lib/activity/stateFacts/controlledPersistence/auth.ts:150 :: .select("id, auth0_sub, email")
+- lib/activity/stateFacts/controlledPersistence/auth.ts:151 :: .eq("auth0_sub", authSubject)
+- lib/activity/stateFacts/controlledPersistence/auth.ts:171 :: const appUserAuthSubject = toNullableString(appUser.auth0_sub);
+- lib/activity/stateFacts/controlledPersistence/auth.ts:189 :: .select("id, user_id")
+- lib/activity/stateFacts/controlledPersistence/auth.ts:190 :: .eq("user_id", appUserId)
+- lib/activity/stateFacts/controlledPersistence/auth.ts:15 :: * - client-provided user_id must never become persisted user_id.
+- lib/activity/stateFacts/controlledPersistence/auth.ts:21 :: import { auth0 } from "../../../auth0";
+- lib/activity/stateFacts/controlledPersistence/auth.ts:38 :: auth0_sub?: unknown;
+- lib/activity/stateFacts/controlledPersistence/auth.ts:45 :: user_id?: unknown;
+- lib/activity/stateFacts/controlledPersistence/auth.ts:122 :: * - reads Auth0 session;
+- lib/activity/stateFacts/controlledPersistence/auth.ts:123 :: * - reads app_users by auth0_sub;
+- lib/activity/stateFacts/controlledPersistence/auth.ts:129 :: const session = await auth0.getSession();
+- lib/activity/stateFacts/controlledPersistence/auth.ts:150 :: .select("id, auth0_sub, email")
+- lib/activity/stateFacts/controlledPersistence/auth.ts:151 :: .eq("auth0_sub", authSubject)
+- lib/activity/stateFacts/controlledPersistence/auth.ts:171 :: const appUserAuthSubject = toNullableString(appUser.auth0_sub);
+- lib/activity/stateFacts/controlledPersistence/auth.ts:189 :: .select("id, user_id")
+- lib/activity/stateFacts/controlledPersistence/auth.ts:190 :: .eq("user_id", appUserId)
+- lib/activity/stateFacts/controlledPersistence/idempotency.ts:133 :: * - reads value_object_state_facts by user_id, value_object_id, dimension_key, correction_status, and metadata_json.idempotency_key;
+- lib/activity/stateFacts/controlledPersistence/idempotency.ts:156 :: .eq("user_id", insertPayload.user_id)
+- lib/activity/stateFacts/controlledPersistence/idempotency.ts:133 :: * - reads value_object_state_facts by user_id, value_object_id, dimension_key, correction_status, and metadata_json.idempotency_key;
+- lib/activity/stateFacts/controlledPersistence/idempotency.ts:156 :: .eq("user_id", insertPayload.user_id)
+- lib/activity/stateFacts/controlledPersistence/payloadBuilder.ts:213 :: user_id: authenticatedActor.appUserId,
+- lib/activity/stateFacts/controlledPersistence/payloadBuilder.ts:213 :: user_id: authenticatedActor.appUserId,
+- lib/activity/stateFacts/controlledPersistence/persist.ts:18 :: * - client-provided user_id must never become persisted user_id.
+- lib/activity/stateFacts/controlledPersistence/persist.ts:18 :: * - client-provided user_id must never become persisted user_id.
+- lib/activity/stateFacts/controlledPersistence/rollback.ts:286 :: p_user_id: input.userId,
+- lib/activity/stateFacts/controlledPersistence/rollback.ts:287 :: p_actor_id: input.actorId,
+- lib/activity/stateFacts/controlledPersistence/rollback.ts:286 :: p_user_id: input.userId,
+- lib/activity/stateFacts/controlledPersistence/rollback.ts:287 :: p_actor_id: input.actorId,
+- lib/activity/stateFacts/controlledPersistence/rollbackIdempotency.ts:94 :: * user_id + state_fact_id + action_type + idempotency_key.
+- lib/activity/stateFacts/controlledPersistence/rollbackIdempotency.ts:111 :: .eq("user_id", input.userId)
+- lib/activity/stateFacts/controlledPersistence/rollbackIdempotency.ts:94 :: * user_id + state_fact_id + action_type + idempotency_key.
+- lib/activity/stateFacts/controlledPersistence/rollbackIdempotency.ts:111 :: .eq("user_id", input.userId)
+- lib/activity/stateFacts/controlledPersistence/rollbackPayloadBuilder.ts:92 :: user_id: requireNonEmptyString(userId, "userId"),
+- lib/activity/stateFacts/controlledPersistence/rollbackPayloadBuilder.ts:93 :: actor_id: actorId,
+
+8. idempotency/trace keyword findings
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:45 :: - clientTraceId: optional idempotency/correlation key
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:85 :: "clientTraceId": "o-a-controlled-activity-intake-test-...",
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:105 :: - client_trace_id / idempotency key
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:110 :: Idempotency rule:
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:111 :: The first controlled intake route must accept a clientTraceId/idempotencyKey.
+- docs/activity-intake-lifecycle-p4-2.md:42 :: - duplicate matching works by idempotency_key or source_event_id
+- docs/activity-intake-lifecycle-p4-2.md:81 :: - rawSignalIdempotencyKey
+- docs/activity-intake-lifecycle-p4-2.md:244 :: - rawSignal.idempotencyKey
+- docs/activity-intake-lifecycle-p4-2.md:260 :: - has idempotencyKey: true
+- docs/p4-7-schema-inventory-raw.md:1588 :: create unique index if not exists idx_raw_activity_signals_user_idempotency_key_unique
+- docs/p4-7-schema-inventory-raw.md:1593 :: on public.raw_activity_signals(user_id, source_type, idempotency_key)
+- docs/p4-7-schema-inventory-raw.md:1643 :: - .\supabase\migrations\020_activity_raw_signals.sql:126 - create unique index if not exists idx_raw_activity_signals_user_idempotency_key_unique
+- docs/p4-7-schema-inventory-raw.md:1644 :: - .\supabase\migrations\020_activity_raw_signals.sql:127 - on public.raw_activity_signals(user_id, source_type, idempotency_key)
+- docs/value-objects/category-derivation-inventory-c8-e.md:2540 :: 1593:    on public.raw_activity_signals(user_id, source_type, idempotency_key)
+- docs/value-objects/category-derivation-inventory-c8-e.md:2545 :: 1644:- .\supabase\migrations\020_activity_raw_signals.sql:127 - on public.raw_activity_signals(user_id, source_type, idempotency_key)
+- docs/value-objects/category-derivation-inventory-c8-e.md:2586 :: 1502:C:\Users\Admin\Documents\projects\gpt-app\docs\p4-7-schema-inventory-raw.md:1593: on public.raw_activity_signals(user_id, source_type, idempotency_key)
+- docs/value-objects/category-derivation-inventory-c8-e.md:2591 :: 1531:C:\Users\Admin\Documents\projects\gpt-app\docs\p4-7-schema-inventory-raw.md:1644: - .\supabase\migrations\020_activity_raw_signals.sql:127 - on public.raw_activity_signals(user_id, source_type, idempotency_key)
+- docs/value-objects/category-derivation-inventory-c8-e.md:2599 :: 2202:C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\020_activity_raw_signals.sql:127: on public.raw_activity_signals(user_id, source_type, idempotency_key)
+- docs/value-objects/category-derivation-inventory-c8-e.md:2936 :: 127:on public.raw_activity_signals(user_id, source_type, idempotency_key)
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:6749 :: idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:6775 :: idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:8681 :: rawSignalIdempotencyKey: getRecordString(
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:8683 :: "rawSignalIdempotencyKey"
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:8707 :: rawSignalIdempotencyKey: getRecordString(
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:8709 :: "rawSignalIdempotencyKey"
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:8732 :: rawSignalIdempotencyKey: getRecordString(
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:8734 :: "rawSignalIdempotencyKey"
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:8751 :: "rawSignalIdempotencyKey"
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:8794 :: idempotencyKey: getRecordString(originalIntake, "idempotencyKey"),
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:8817 :: idempotencyKey: getRecordString(originalIntake, "idempotencyKey"),
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:8843 :: idempotencyKey: getRecordString(originalIntake, "idempotencyKey"),
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:8868 :: idempotencyKey: getRecordString(originalIntake, "idempotencyKey"),
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:8893 :: idempotencyKey: getRecordString(originalIntake, "idempotencyKey"),
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:8949 :: idempotencyKey: getStringField(row, "idempotency_key"),
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:8975 :: idempotencyKey: getStringField(row, "idempotency_key"),
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:9001 :: idempotencyKey: getStringField(row, "idempotency_key"),
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:9256 :: idempotencyKey: getStringField(
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:9258 :: "idempotency_key"
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:9275 :: idempotencyKey: getStringField(
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:9277 :: "idempotency_key"
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:9301 :: idempotencyKey: getStringField(
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:9303 :: "idempotency_key"
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:9326 :: idempotencyKey: getStringField(
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:9328 :: "idempotency_key"
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:9648 :: ? "Summary mode includes rawImportedLinkage, sourceEventId, idempotencyKey and lifecycle metadata keys without exposing rawPayload, audit snapshots or recalculation JSON."
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:25064 :: idempotency_key text,
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:25083 :: create unique index if not exists idx_raw_activity_signals_user_idempotency_key_unique
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:25084 :: on public.raw_activity_signals(user_id, source_type, idempotency_key)
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:25085 :: where idempotency_key is not null;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt:128 :: 5. We need idempotency / duplication policy.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:459 :: src\app\api\activity\debug-trace\route.ts line 1510: ? "Summary mode includes rawImportedLinkage, sourceEventId, idempotencyKey and lifecycle metadata keys without exposing rawPayload, audit snapshots or recalculation JSON."
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:8366 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:9286 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:9477 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:9663 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:9856 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:10032 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:10214 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:10403 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:10590 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:11206 :: 7. What idempotency guard is needed before any production persist mode?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-b-production-integration-design.txt:207 :: IDEMPOTENCY POLICY
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-b-production-integration-design.txt:211 :: Recommended idempotency rule:
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-b-production-integration-design.txt:272 :: idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-b-production-integration-design.txt:345 :: Create read-only idempotency helper in persistence.ts or separate file:
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-b-production-integration-design.txt:361 :: - apply idempotency check;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-b-production-integration-design.txt:391 :: - verify idempotency on repeated request.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-b-production-integration-design.txt:411 :: 2. idempotency helper,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f4-d-non-production-support-verification.txt:65 :: Read-only idempotency helper for looking up already completed category_derivation_runs.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f4-d-non-production-support-verification.txt:118 :: - checks idempotency before persistent modes;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f4-d-non-production-support-verification.txt:148 :: 4. Idempotency support exists before production patch.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f4-d-non-production-support-verification.txt:187 :: Read-only idempotency / run lookup helper created.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:9535 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:9802 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:10071 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:10342 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:10608 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:10881 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:11137 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:11399 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:11668 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:11935 :: 903:     idempotencyKey: `${event.id}:complete:${timing.endedAt}:${timing.durationMinutes}`,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13136 :: 158:   idempotency?: FindExistingCompletedCategoryDerivationRunResult | null;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13156 :: 178:     idempotency: params.idempotency
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13158 :: 180:           params.idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13173 :: 195:   idempotency: FindExistingCompletedCategoryDerivationRunResult | null;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13190 :: 212:     idempotency: params.idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13293 :: 315:   let idempotency: FindExistingCompletedCategoryDerivationRunResult | null =
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13297 :: 319:     idempotency =
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13309 :: 331:     if (!idempotency.ok) {
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13315 :: 337:         warnings: idempotency.warnings,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13316 :: 338:         errors: idempotency.errors,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13317 :: 339:         idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13319 :: 341:           idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13328 :: 350:     if (idempotency.found) {
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13334 :: 356:         derivationRunId: idempotency.derivationRunId,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13335 :: 357:         warnings: idempotency.warnings,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13336 :: 358:         errors: idempotency.errors,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13337 :: 359:         idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13339 :: 361:           idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13390 :: 412:     idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13405 :: 178:     idempotency: params.idempotency
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13407 :: 180:           params.idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13422 :: 195:   idempotency: FindExistingCompletedCategoryDerivationRunResult | null;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13439 :: 212:     idempotency: params.idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13542 :: 315:   let idempotency: FindExistingCompletedCategoryDerivationRunResult | null =
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13546 :: 319:     idempotency =
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13558 :: 331:     if (!idempotency.ok) {
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13564 :: 337:         warnings: idempotency.warnings,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13565 :: 338:         errors: idempotency.errors,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13566 :: 339:         idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13568 :: 341:           idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13577 :: 350:     if (idempotency.found) {
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13583 :: 356:         derivationRunId: idempotency.derivationRunId,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13584 :: 357:         warnings: idempotency.warnings,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13585 :: 358:         errors: idempotency.errors,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13586 :: 359:         idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13588 :: 361:           idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13639 :: 412:     idempotency,
+- docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:13727 :: 315:   let idempotency: FindExistingCompletedCategoryDerivationRunResult | null =
+
+9. old activity complete / canonical proof references
+- docs/activity/P4.7.8-R_cross_route_verification.md:20 :: K3.3 /api/activity/complete — VERIFIED
+- docs/activity/P4.7.8-R_cross_route_verification.md:35 :: route: POST /api/activity/complete
+- docs/activity/P4.7.8-R_cross_route_verification.md:66 :: src/app/api/activity/complete/route.ts
+- docs/activity/P4.7.8-R_cross_route_verification.md:117 :: - route: POST /api/activity/complete
+- docs/activity/P4.7.8-R_cross_route_verification.md:131 :: - /api/activity/complete response processingLogs: VERIFIED
+- docs/activity/P4.7.8-R_cross_route_verification.md:429 :: - route: POST /api/activity/complete
+- docs/activity/P4.7.8-R_cross_route_verification.md:570 :: - /api/activity/complete
+- docs/activity/P4.7.8-R_cross_route_verification.md:608 :: - /api/activity/complete
+- docs/activity/P4.7.8-R_cross_route_verification.md:687 :: - /api/activity/complete
+- docs/activity/P4.7.8-R_cross_route_verification.md:721 :: - src/app/api/activity/complete/route.ts
+- docs/activity/P4.7.9-R_registry_scaling.md:269 :: - src/app/api/activity/complete/route.ts
+- docs/activity/P4.7.9-R_registry_scaling.md:412 :: - src/app/api/activity/complete/route.ts
+- docs/activity/P4.7.9-R_registry_scaling.md:503 :: - src/app/api/activity/complete/route.ts
+- docs/activity/P4.7.9-R_registry_scaling.md:748 :: - A8c — /api/activity/complete;
+- docs/activity/P4.7.9-R_registry_scaling.md:870 :: - src/app/api/activity/complete/route.ts;
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:72 :: - no use of old canonical /api/activity/complete proof for new production-like tests
+- docs/commercial/P4.8.0-A3_code_routes_inventory.md:71 :: - src/app/api/activity/complete/route.ts
+- docs/sql/P4.7.8-R-L6_second_known_template_cross_route_audit.sql:9 :: --   1) /api/activity/complete
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:28 :: No /api/activity/complete rerun is performed.
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:65 :: src/app/api/activity/complete/route.ts
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:5655 :: CORE FILE: src/app/api/activity/complete/route.ts
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:6498 :: endpoint: "/api/activity/complete",
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:6751 :: endpoint: "/api/activity/complete",
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:6777 :: endpoint: "/api/activity/complete",
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:6870 :: endpoint: "/api/activity/complete",
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:6879 :: endpoint: "/api/activity/complete",
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:26052 :: -- Used by /api/activity/complete when an existing started/paused activity_event
+- docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:26081 :: -- Used by /api/activity/complete when an existing started/paused activity_event
+- docs/value-objects/category-derivation-layer-v1-c8-e-b-additive-implementation-plan.txt:10 :: No /api/activity/complete rerun is allowed for the canonical event.
+- docs/value-objects/category-derivation-layer-v1-c8-e-b-additive-implementation-plan.txt:24 :: - Do not rerun /api/activity/complete for canonical completed event.
+- docs/value-objects/category-derivation-layer-v1-c8-e-b-additive-implementation-plan.txt:72 :: - src/app/api/activity/complete/route.ts
+- docs/value-objects/category-derivation-layer-v1-c8-e-b-additive-implementation-plan.txt:324 :: Do not rerun canonical completed event.
+- docs/value-objects/category-derivation-layer-v1-c8-e-d4-migration-execution-verification.txt:145 :: - Do not rerun canonical /api/activity/complete proof event.
+- docs/value-objects/category-derivation-layer-v1-c8-e-e2-persistence-deep-inspect.txt:3234 :: - Do not patch /api/activity/complete yet.
+- docs/value-objects/category-derivation-layer-v1-c8-e-e4-persistence-contract-verification.txt:25 :: No /api/activity/complete changes.
+- docs/value-objects/category-derivation-layer-v1-c8-e-e4-persistence-contract-verification.txt:114 :: Canonical /api/activity/complete production proof remains closed and must not be disturbed.
+- docs/value-objects/category-derivation-layer-v1-c8-e-e4-persistence-contract-verification.txt:128 :: - do not patch /api/activity/complete yet;
+- docs/value-objects/category-derivation-layer-v1-c8-e-e4-persistence-contract-verification.txt:135 :: - Do not modify /api/activity/complete.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f1-a-route-runner-signatures.txt:19 :: - Do not modify /api/activity/complete.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f1-c-route-runner-verification.txt:24 :: No /api/activity/complete changes.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f1-c-route-runner-verification.txt:110 :: No /api/activity/complete rerun happened.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f1-c-route-runner-verification.txt:127 :: - do not patch /api/activity/complete;
+- docs/value-objects/category-derivation-layer-v1-c8-e-f1-c-route-runner-verification.txt:138 :: - Do not modify /api/activity/complete.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f2-b-debug-route-verification.txt:57 :: - confirms no /api/activity/complete patch
+- docs/value-objects/category-derivation-layer-v1-c8-e-f2-b-debug-route-verification.txt:74 :: 1. /api/activity/complete was not modified.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f2-b-debug-route-verification.txt:131 :: - Do not modify /api/activity/complete.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f2-d-runtime-smoke-test-verification.txt:15 :: /api/activity/complete was not patched.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f2-d-runtime-smoke-test-verification.txt:284 :: 3. Prepare feature-flagged integration plan for /api/activity/complete, but do not patch it yet.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f2-d-runtime-smoke-test-verification.txt:288 :: P4.10.0-C8-E-F3-A — create integration decision note before touching /api/activity/complete.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f2-d-runtime-smoke-test-verification.txt:292 :: - Do not modify /api/activity/complete without a separate integration decision note.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt:10 :: No /api/activity/complete patch.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt:102 :: Should routeRunner now be integrated into the production /api/activity/complete route?
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt:110 :: WHY NOT PATCH /api/activity/complete IMMEDIATELY
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt:112 :: 1. /api/activity/complete is the canonical production route.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt:150 :: Design production integration behavior for /api/activity/complete:
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt:183 :: Patch /api/activity/complete only behind feature flag.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt:189 :: Run local test where /api/activity/complete response includes routeRunner shadow metadata, but does not write rows.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt:205 :: If category derivation fails, /api/activity/complete must still complete its existing work unless the failure is explicitly configured as fatal.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt:265 :: - /api/activity/complete current structure
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt:270 :: Do not patch /api/activity/complete yet.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-a-integration-decision-note.txt:282 :: However, integration into /api/activity/complete must proceed through a feature-flagged, idempotent, non-breaking design path.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:10 :: No /api/activity/complete patch.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:15 :: Before adding Category Derivation production feature flags, inspect existing config patterns, environment variable usage, activity recording config, debug route config style, and /api/activity/complete structure.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:575 :: src\app\api\activity\debug\create-free-text-start-event\route.ts line 226: "Clean non-completed free-text activity_event for production /api/activity/complete test.",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:576 :: src\app\api\activity\debug\create-free-text-start-event\route.ts line 230: productionRouteUnderTest: "/api/activity/complete",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:577 :: src\app\api\activity\debug\create-free-text-start-event\route.ts line 264: productionRouteUnderTest: "/api/activity/complete",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:1015 :: 715:     endpoint: "/api/activity/complete",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:1381 :: 3. /api/activity/complete must not be patched in this inventory step.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:1411 :: Proceed to P4.10.0-C8-E-F3-C — design production integration behavior for /api/activity/complete.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:1414 :: - Do not patch /api/activity/complete yet.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:10 :: No /api/activity/complete patch.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:15 :: F3-B inventory showed that /api/activity/complete already contains category-derivation-related blocks.
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:19 :: src/app/api/activity/complete/route.ts
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:827 :: 1216:         endpoint: "/api/activity/complete",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:888 :: 1277:           endpoint: "/api/activity/complete",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:941 :: 1330:         endpoint: "/api/activity/complete",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:1014 :: 1216:         endpoint: "/api/activity/complete",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:1075 :: 1277:           endpoint: "/api/activity/complete",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:1128 :: 1330:         endpoint: "/api/activity/complete",
+- docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:1197 :: 1216:         endpoint: "/api/activity/complete",
+
+Audit interpretation:
+- Existing activity-related code must be treated as historical/proof code until explicitly promoted.
+- Any route named or behaving like /api/activity/complete must not be reused as the first production-like controlled intake route unless a separate targeted audit proves it is safe.
+- Bracket route folders such as [id] exist and must be handled as literal paths in tooling.
+- The new controlled intake path should be built as a narrow route with explicit idempotency, ownership, timing, privacy, and source/provenance boundaries.
+- Semantic derivation must remain a later step; O-C/O-D must not mix activity intake with category derivation, VO creation, or state writes.
+
+Recommended next route/helper names:
+- Route candidate for later implementation:
+  src/app/api/activity/controlled-intake/route.ts
+- Helper directory candidate:
+  lib/activity/controlledIntake/
+- Helper candidates:
+  lib/activity/controlledIntake/types.ts
+  lib/activity/controlledIntake/payloadBuilder.ts
+  lib/activity/controlledIntake/validator.ts
+  lib/activity/controlledIntake/idempotency.ts
+  lib/activity/controlledIntake/persist.ts
+- Report/proof directory:
+  docs/activity/
+
+Recommended controlled intake payload:
+{
+  "inputText": "Ð£Ñ‡Ð¸Ð»ÑÑ Ð½ÐµÐ¼ÐµÑ†ÐºÐ¾Ð¼Ñƒ 25 Ð¼Ð¸Ð½ÑƒÑ‚ Ð¸ Ð½Ð°Ð¿Ð¸ÑÐ°Ð» 5 Ñ„Ñ€Ð°Ð· Ð´Ð»Ñ B2B-Ð¿Ð¸ÑÑŒÐ¼Ð°.",
+  "title": "ÐÐµÐ¼ÐµÑ†ÐºÐ¸Ð¹ + B2B Ð¿Ð¸ÑÑŒÐ¼Ð¾",
+  "durationMinutes": 25,
+  "timezone": "Europe/Warsaw",
+  "source": "manual",
+  "status": "completed",
+  "privacyLevel": "private",
+  "clientTraceId": "o-c-controlled-activity-intake-proof-..."
+}
+
+Recommended first runtime target for O-C/O-D:
+- O-C should be design/static only if existing schema is not yet clear enough.
+- O-D should create only the minimum controlled helper/types if schema is confirmed.
+- O-E should create a debug/proof-only controlled intake route.
+- O-F should run browser-authenticated runtime proof once.
+
+Required before runtime implementation:
+1. Confirm actual table name for activity source records:
+   - activity_events, activities, or existing equivalent.
+2. Confirm required columns:
+   - user_id / actor_id
+   - input_text or title/description equivalent
+   - started_at
+   - ended_at
+   - duration_minutes
+   - timezone
+   - source
+   - status
+   - privacy_level
+   - metadata_json
+   - created_at / updated_at
+3. Confirm idempotency strategy:
+   - dedicated column, metadata key, or separate idempotency table.
+4. Confirm authenticated ownership helper:
+   - user resolved server-side only.
+5. Confirm route is not using AI direct persistence.
+6. Confirm no category/VO/state writes in the first intake route.
+
+Recommended next block:
+P4.10.0-C8-I-D4-L-L-O-C - Activity Intake Persistence Design Decision.
+
+O-C should be doc/design only unless the audit already proves all table/column names and auth/idempotency boundaries are unambiguous.
+O-C should decide:
+- exact table to use;
+- exact insert payload shape;
+- exact helper file names;
+- whether a migration is needed before runtime route;
+- exact proof scenario for first controlled activity intake.
+
+End of O-B audit.
