@@ -1,0 +1,229 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-I - Controlled Rollback Helper Design
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-I
+Type: helper design / contract only
+Status: DESIGN RECORDED / NO HELPER IMPLEMENTED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED / NO RUNTIME ROLLBACK IMPLEMENTED
+
+Baseline:
+- Previous pushed commit: cc3b6e9
+- Previous completed step: P4.10.0-C8-I-D4-L-H
+- D4-L-H verified:
+  - public.value_object_state_fact_audit_events exists.
+  - 22 expected columns matched.
+  - 7 constraints matched.
+  - 5 indexes matched.
+  - deny-all policy count is 1.
+  - RLS enabled is true.
+  - audit rows count is 0.
+
+Purpose:
+Design the future controlled rollback helper contract for value_object_state_facts without implementing runtime rollback yet.
+
+Core principle:
+Rollback is not a delete.
+Rollback is not an update-by-state_fact_id-alone operation.
+Rollback is a controlled state transition that must:
+1. prove the authenticated user context;
+2. prove ownership/permission through actor/value_object relationships;
+3. prove the target state fact belongs to the same value_object and user context;
+4. apply only an allowed correction_status/valid_to style change in a future implementation;
+5. create an audit event in value_object_state_fact_audit_events;
+6. remain idempotent.
+
+Hard prohibitions:
+- Do not delete value_object_state_facts.
+- Do not update a state fact by state_fact_id alone.
+- Do not rollback another user's state fact.
+- Do not rollback through public/client-side direct table access.
+- Do not create a generic update endpoint.
+- Do not expose a read/write audit API to public clients.
+- Do not treat a public/catalog Value Object as write permission.
+- Do not allow AI-only rollback.
+- Do not allow placeholder UUIDs.
+- Do not bypass the actor/value_object ownership resolver.
+- Do not treat rollback as correction; correction is a separate lifecycle.
+
+Future helper name:
+rollbackStateFactControlled
+
+Suggested future file:
+lib/activity/stateFacts/controlledPersistence/rollback.ts
+
+Future helper input contract:
+type RollbackStateFactControlledInput = {
+  requestTraceId: string;
+  idempotencyKey: string;
+
+  stateFactId: string;
+  valueObjectId: string;
+
+  reason: string;
+
+  requestedBy: {
+    auth0UserId?: string;
+    appUserId?: string;
+    actorId?: string;
+  };
+
+  sourceRoute: string;
+  helperVersion: string;
+  contractVersion: string;
+  d4GateVersion: string;
+};
+
+Future helper output contract:
+type RollbackStateFactControlledResult = {
+  ok: boolean;
+  status:
+    | "rolled_back"
+    | "already_rolled_back"
+    | "rejected_not_authenticated"
+    | "rejected_invalid_input"
+    | "rejected_not_owner"
+    | "rejected_fact_not_found"
+    | "rejected_value_object_mismatch"
+    | "rejected_already_superseded"
+    | "rejected_invalid_state"
+    | "error";
+
+  stateFactId?: string;
+  valueObjectId?: string;
+  auditEventId?: string;
+
+  writesAttempted: boolean;
+  stateFactsUpdated: number;
+  auditEventsCreated: number;
+
+  reason?: string;
+};
+
+Required validation gates:
+1. Request shape gate:
+   - stateFactId must be valid UUID.
+   - valueObjectId must be valid UUID.
+   - requestTraceId must be non-empty.
+   - idempotencyKey must be non-empty.
+   - reason must be non-empty.
+   - sourceRoute/helperVersion/contractVersion/d4GateVersion must be non-empty.
+
+2. Auth gate:
+   - Resolve authenticated app user.
+   - Resolve actor/person context if required by existing auth resolver.
+   - Reject if authenticated context is missing.
+   - Reject placeholder UUIDs.
+
+3. Target Value Object ownership gate:
+   - Load value_object by valueObjectId.
+   - Verify write permission through owner_actor_id / allowed actor relation.
+   - Public/catalog visibility is not write permission.
+   - Reject if requester is not allowed to modify facts for that Value Object.
+
+4. State fact target gate:
+   - Load value_object_state_facts by stateFactId and valueObjectId together.
+   - Do not load by stateFactId alone for authorization decision.
+   - Verify the state fact belongs to the same valueObjectId.
+   - Verify the state fact is not already rolled_back/superseded/invalid in a future status field.
+   - Verify source and confidence are not used as permissions.
+
+5. Allowed update scope gate:
+   Future runtime implementation may update only tightly scoped rollback fields, for example:
+   - correction_status
+   - valid_to
+   - metadata_json rollback subobject
+   - updated_at if such column exists
+   No other value_json/source/evidence/dimension/value_object fields may be changed by rollback.
+
+6. Audit event gate:
+   - Insert one value_object_state_fact_audit_events row.
+   - action_type should be "rolled_back" for successful rollback.
+   - action_type should be "rejected_rollback" for rejected rollback attempts if policy later decides to log rejected attempts.
+   - audit event must include:
+     - user_id
+     - actor_id when available
+     - value_object_id
+     - state_fact_id
+     - dimension_key
+     - reason
+     - request_trace_id
+     - idempotency_key
+     - source_route
+     - helper_version
+     - contract_version
+     - d4_gate_version
+     - previous_valid_to
+     - new_valid_to
+     - evidence_json
+     - metadata_json
+   - The audit event must be inserted in the same transaction as the future state fact update.
+
+7. Idempotency gate:
+   - The unique audit index is:
+     user_id + state_fact_id + action_type + idempotency_key
+   - Repeated rollback request with the same idempotency key must not create duplicate audit events.
+   - Repeated rollback request must return "already_rolled_back" or an idempotent success response, not perform another update.
+
+Required future transaction behavior:
+- Future rollback runtime must be transactional.
+- State fact update and audit event insert must succeed together or fail together.
+- No partial rollback is allowed.
+
+Minimum future implementation steps after this design:
+1. Add a correction_status / lifecycle status design if not already sufficient in value_object_state_facts.
+2. Audit current value_object_state_facts columns for rollback update targets.
+3. Implement rollbackStateFactControlled helper with no public route first.
+4. Add internal proof route only if needed for browser-authenticated testing.
+5. Prove wrong-user rejection.
+6. Prove valueObjectId mismatch rejection.
+7. Prove already-rolled-back idempotency.
+8. Prove audit row creation.
+9. Prove no update-by-state_fact_id-alone pattern exists.
+
+Relationship to correction:
+- Rollback invalidates or closes a state fact.
+- Correction supersedes a state fact and creates/references a corrected fact.
+- Correction needs a separate helper design after rollback helper design/proof.
+- Do not mix rollback and correction into one generic mutation endpoint.
+
+Relationship to Next Best Action:
+- Next Best Action must ignore rolled-back/invalid state facts.
+- Until rollback runtime exists, NBA must use only valid, non-superseded facts and conservative signals.
+- Audit history is not itself a recommendation signal unless later explicitly modelled.
+
+Security boundary:
+- value_object_state_fact_audit_events has RLS enabled and deny-all public policy.
+- Audit writes must go through trusted server-side helper logic only.
+- No public client direct insert into audit table.
+- No public direct update of value_object_state_facts.
+
+What this step does NOT do:
+- Does not create rollback helper file.
+- Does not update value_object_state_facts.
+- Does not insert audit events.
+- Does not create route.
+- Does not create UI.
+- Does not run Supabase SQL.
+- Does not alter RLS.
+- Does not implement correction.
+- Does not implement Next Best Action.
+
+Next step:
+P4.10.0-C8-I-D4-L-J - Controlled Rollback Helper Readiness Audit.
+
+D4-L-J should:
+1. Inspect current value_object_state_facts columns.
+2. Decide whether existing correction_status/valid_to/metadata fields are sufficient.
+3. Inspect current helper patterns in lib/activity/stateFacts/controlledPersistence.
+4. Identify exact future rollback helper file and allowed imports.
+5. Still not implement rollback runtime unless the audit says the target columns and helper dependencies are clear.
+
+Hard boundaries preserved:
+- No API route created.
+- No helper runtime implemented.
+- No database data insert/update/delete performed.
+- No rollback runtime implemented.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-I report.
