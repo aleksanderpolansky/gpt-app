@@ -1,0 +1,83 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-T — Controlled Activity Intake Runtime Route No-Write Verification
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+RUNTIME ROUTE NO-WRITE VERIFIED / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-S
+- Previous commit: b967c6f
+- Previous message: feat: add C8-I-D4-L-L-O-S controlled intake no-write route scaffold
+
+Verified file
+- src/app/api/activity/controlled-intake/route.ts
+
+Static route verification
+- route exports POST.
+- route imports NextRequest and NextResponse.
+- route calls validateControlledActivityIntake.
+- route calls buildControlledActivityIntakePayload.
+- route calls buildControlledActivityIntakeIdempotency.
+- route calls buildControlledActivityIntakeActivityEventsStaticRow.
+- route requires x-controlled-intake-no-write-preview.
+- route requires x-controlled-intake-preview-app-user-id.
+- route returns no_write_preview mode.
+- route contains no createClient.
+- route contains no .from().
+- route contains no .insert().
+- route contains no SQL pattern.
+- route contains no AI pattern.
+- route contains no semantic persistence pattern.
+
+Runtime verification
+- Missing no-write preview header returns 403 / CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED.
+- Missing preview app user id returns 401 / CONTROLLED_INTAKE_TRUSTED_CONTEXT_REQUIRED.
+- Invalid JSON returns 400 / CONTROLLED_INTAKE_INVALID_JSON.
+- Invalid body returns 400 / CONTROLLED_INTAKE_VALIDATION_FAILED.
+- Client-provided user_id is rejected through validation failure.
+- Valid no-write preview request returns 200 / ok=true.
+- Valid response mode is no_write_preview.
+- Valid response includes payload.
+- Valid response includes idempotency.
+- Valid response includes staticRowPreview.
+- staticRowPreview.table is activity_events.
+- staticRowPreview.row.user_id comes from preview trusted context header.
+- staticRowPreview.row.status is raw_intake_pending_semantic_processing.
+- route guardrails keep dbWriteExecuted=false.
+- route guardrails keep sqlExecuted=false.
+- route guardrails keep aiCallExecuted=false.
+- route guardrails keep semanticCandidatesPersisted=false.
+- route guardrails keep valueObjectsCreated=false.
+- route guardrails keep stateFactsCreated=false.
+- static row guardrails keep dbWriteExecuted=false.
+- static row guardrails keep sqlExecuted=false.
+- static row guardrails keep aiCallExecuted=false.
+
+Checks executed
+- npx tsc --noEmit with temporary runtime route check.
+- isolated TypeScript compile with noEmitOnError true.
+- node runtime execution of compiled route check.
+- temporary check cleanup.
+- npx tsc --noEmit after cleanup.
+
+Important limitation
+O-T verifies only the no-write preview route scaffold.
+It does not approve a production write route.
+It does not approve Supabase insert.
+It does not approve real auth integration.
+It does not approve AI or semantic persistence.
+
+Still forbidden after O-T
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not call AI.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-U — Controlled Activity Intake Auth Context Design Gate
+
+O-U should be design/gate only.
+It should decide how to replace preview app user header with real authenticated server context before any write route exists.
