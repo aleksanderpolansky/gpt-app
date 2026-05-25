@@ -1,0 +1,80 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-K-A - Controlled State Fact Read-Only Verification Report
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-K-A
+Type: read-only operational verification after D4-J runtime proof
+Status: READ-ONLY VERIFICATION PASSED / PROOF STATE FACT FOUND / NO DATABASE WRITE PERFORMED
+
+Baseline:
+- Previous pushed commit: 765667d
+- Prior completed block: P4.10.0-C8-I-D4-F-B-D-J
+- Prior final summary report: docs/value-objects/p4-10-0-c8-i-d4-f-b-d-j-c-controlled-persist-runtime-proof-summary.txt
+
+Verification target:
+- Table: value_object_state_facts
+- State fact id: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+- Value Object id: 9177fea8-de25-446b-b418-b55a766d53db
+- Dimension key: language_practice_balance
+- Source type: system
+- Source id: d7635f3e-f956-47ba-9241-e81377d2d4a1
+- Idempotency key: d4-j-b-b-fix4-controlled-insert-d7635f3e-f956-47ba-9241-e81377d2d4a1
+- Runtime proof marker: P4.10.0-C8-I-D4-F-B-D-J-B-B-FIX4
+
+Read-only query result:
+- State fact found: True
+- Row id: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+- user_id: ef87b038-64d4-4ded-8dcd-67ca56093e61
+- value_object_id: 9177fea8-de25-446b-b418-b55a766d53db
+- dimension_id: 3066060c-2c47-48d5-8d85-8aefd710ec2d
+- dimension_key: language_practice_balance
+- source_type: system
+- source_id: d7635f3e-f956-47ba-9241-e81377d2d4a1
+- confidence: 0.85
+- claim_strength: 1
+- privacy_level: private
+- valid_from: 2026-05-25T05:03:36.473+00:00
+- valid_to: 
+- correction_status: active
+- created_at: 2026-05-25T05:03:36.641866+00:00
+- updated_at: 2026-05-25T05:03:36.641866+00:00
+
+Critical checks:
+- found: True
+- idMatches: True
+- valueObjectMatches: True
+- dimensionKeyMatches: True
+- sourceTypeMatches: True
+- sourceIdMatches: True
+- idempotencyKeyMatches: True
+- runtimeProofMatches: True
+- proofStepMatches: True
+- evidenceProofMentionsFix4: True
+- claimStrengthIsOne: True
+- privacyLevelPrivate: True
+- correctionStatusPresent: True
+- noUpdateDeleteUpsertPerformed: True
+- allCriticalChecksPass: True
+
+Hard boundaries preserved:
+- No API route created in this step.
+- No route/helper code changed in this step.
+- No SQL migration created in this step.
+- No insert/update/delete/upsert was performed by this step.
+- D4-E-B shadow route remains untouched.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+Interpretation:
+- D4-J proof artifact is present and readable through a controlled server-side read-only verification.
+- The row matches the D4-J-B-B-FIX4 authenticated insert proof.
+- The UUID-compatible source_id finding remains confirmed.
+- D4-J runtime proof is now supported by both write/idempotency proof and read-only artifact verification.
+
+Recommended next step:
+P4.10.0-C8-I-D4-K-B - operational guardrails decision:
+Option A: design a read-only state fact verification endpoint for internal/admin/debug use.
+Option B: design correction/rollback proof for controlled state facts.
+Option C: close D4-K as documentation-only and return to the broader C8-I sequence for state snapshots/read models.
+
+End of D4-K-A report.
