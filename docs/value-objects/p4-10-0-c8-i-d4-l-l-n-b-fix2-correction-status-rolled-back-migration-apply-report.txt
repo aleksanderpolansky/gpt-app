@@ -1,0 +1,71 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-N-B-FIX2 - correction_status rolled_back migration manual apply report
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-N-B-FIX2
+Type: manual Supabase SQL migration apply verification report
+Status: MIGRATION APPLIED MANUALLY IN SUPABASE / CONSTRAINT VERIFIED / rolled_back ALLOWED / TYPESCRIPT PASS / ROLLBACK NOT RERUN YET / NO PRODUCTION ROLLBACK ROUTE CREATED
+
+Baseline:
+- Previous pushed commit: 3e684e3
+- Previous completed step: P4.10.0-C8-I-D4-L-L-N-B-FIX1
+- FIX1 created the migration and reports after the failed-safe rollback proof.
+
+Migration file:
+- supabase/migrations/20260525133000_c8_i_d4_l_l_n_b_fix_state_fact_correction_status_rolled_back.sql
+
+Manual apply result:
+- Supabase SQL Editor execution: successful.
+- The user provided the constraint verification result after applying the migration.
+
+Verification query result:
+- conname: value_object_state_facts_correction_status_check
+- constraint_definition: CHECK ((correction_status = ANY (ARRAY['active'::text, 'corrected'::text, 'revoked'::text, 'superseded'::text, 'rolled_back'::text])))
+
+Allowed correction_status values now verified:
+- active
+- corrected
+- revoked
+- superseded
+- rolled_back
+
+Why this matters:
+- D4-L-L-N-B failed safely because the fresh state fact stayed active and rollback did not execute.
+- The rollback RPC sets correction_status = rolled_back.
+- The schema now allows rolled_back, so the debug-only successful rollback proof may be rerun once.
+
+Fresh rollback target for rerun:
+- freshStateFactId: f0a41488-17e1-4b5d-89f4-9512adeb788d
+
+Historical proof state fact:
+- historicalProofStateFactId: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+- must remain unchanged
+- must not be rollback target
+
+What this step did not do:
+- did not execute rollback;
+- did not rerun the browser payload;
+- did not create production controlled rollback route;
+- did not write to Supabase from this PowerShell script.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-N-C - Rerun Successful Rollback Proof for Fresh Test State Fact after correction_status migration.
+
+N-C should:
+1. Copy docs/value-objects/p4-10-0-c8-i-d4-l-l-n-a-successful-rollback-proof-browser-console.js to clipboard.
+2. Open authenticated local app at http://localhost:3000.
+3. Open DevTools Console.
+4. Execute the payload once.
+5. Expect:
+   - httpStatus: 200
+   - ok: true
+   - status: successful_rollback_proof_passed
+   - successfulRollbackExecuted: true
+   - fresh state fact correction_status changes from active to rolled_back
+   - fresh state fact valid_to becomes non-null
+   - rollback audit event count increases by 1
+   - historical proof state fact remains unchanged
+   - productionControlledRollbackRouteCreated: false
+6. Do not execute payload a second time if it passes.
+
+End of FIX2 report.
