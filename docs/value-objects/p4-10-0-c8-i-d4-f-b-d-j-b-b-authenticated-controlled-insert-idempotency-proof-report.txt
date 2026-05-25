@@ -1,0 +1,94 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-F-B-D-J-B-B - Authenticated Controlled Insert and Idempotency Runtime Proof Report
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-F-B-D-J-B-B
+Successful proof variant: D4-J-B-B-FIX4
+Type: runtime proof step for controlled persist route, authenticated insert and duplicate prevention
+Status: RUNTIME WRITE PROOF PASSED / EXACTLY ONE STATE FACT CREATED / IDEMPOTENCY DUPLICATE PREVENTION PASSED
+
+Baseline:
+- Previous pushed commit before report: 36703f4
+- Route: POST /api/activity/state-facts/controlled-persist
+- Previous no-write proof report: docs/value-objects/p4-10-0-c8-i-d4-f-b-d-j-a-controlled-persist-route-runtime-no-write-proof-report.txt
+- Previous route report: docs/value-objects/p4-10-0-c8-i-d4-f-b-d-i-controlled-persist-route-report.txt
+
+Runtime endpoint:
+- http://localhost:3000/api/activity/state-facts/controlled-persist
+
+Proof context:
+- Browser session authenticated: PASS
+- Value Object title: Business German writing practice
+- Value Object id: 9177fea8-de25-446b-b418-b55a766d53db
+- Dimension key: language_practice_balance
+- Source type: system
+- Source id UUID: d7635f3e-f956-47ba-9241-e81377d2d4a1
+- Idempotency key: d4-j-b-b-fix4-controlled-insert-d7635f3e-f956-47ba-9241-e81377d2d4a1
+
+First controlled persist call:
+- HTTP status: 201
+- ok: true
+- decision: persisted
+- idempotencyStatus: created
+- stateFactsCreated: 1
+- writesAttempted: true
+- delegatedToControlledHelper: true
+- routeDirectDatabaseAccess: false
+- stateFactId: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+
+Second controlled persist call with the same idempotency key:
+- HTTP status: 200
+- ok: true
+- decision: already_exists
+- idempotencyStatus: duplicate_prevented
+- stateFactsCreated: 0
+- writesAttempted: false
+- delegatedToControlledHelper: true
+- routeDirectDatabaseAccess: false
+- stateFactId: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+
+Aggregate proof:
+- totalStateFactsCreated: 1
+- duplicatePrevented: true
+- sameStateFactIdReturned: true
+- proofPassed: true
+
+Important diagnostic notes:
+- Earlier D4-J-B-B attempt with sourceType=user_confirmed failed safely with SOURCE_TYPE_NOT_ALLOWED.
+- Earlier D4-J-B-B-FIX2 attempt with sourceType=manual failed safely with SOURCE_TYPE_NOT_ALLOWED.
+- Earlier D4-J-B-B-FIX3 attempt with sourceType=system but non-UUID sourceId failed safely with UNKNOWN_ERROR and no state fact created.
+- D4-J-B-B-FIX4 succeeded after using sourceType=system and a clean UUID sourceId.
+- This strongly indicates that source_id must be UUID-compatible for this table/path.
+
+Hard boundaries preserved:
+- No SQL migration created in this report step.
+- No route code changed in this report step.
+- No helper code changed in this report step.
+- Route direct database access remains false.
+- Route delegates to controlled helper.
+- No update/delete/upsert path was introduced.
+- D4-E-B shadow route not modified.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+Safety checks:
+- Authenticated browser session check: PASS
+- First controlled insert returned persisted: PASS
+- First call created exactly one state fact: PASS
+- Second call returned already_exists: PASS
+- Second call created zero state facts: PASS
+- Second call returned the same stateFactId: PASS
+- Total stateFactsCreated = 1: PASS
+- Duplicate prevention: PASS
+- routeDirectDatabaseAccess false: PASS
+- delegatedToControlledHelper true: PASS
+
+Result:
+- D4-J-B-B-FIX4 PASSED.
+- Controlled persist route is runtime-verified for authenticated insert and idempotency duplicate prevention.
+- Created state fact remains in value_object_state_facts as proof artifact unless later rollback/correction cleanup is deliberately implemented.
+
+Recommended next step:
+P4.10.0-C8-I-D4-F-B-D-J-C - create a final D4-J runtime proof summary and decide whether to add a read-only verification report or rollback/correction proof.
+
+End of D4-J-B-B report.
