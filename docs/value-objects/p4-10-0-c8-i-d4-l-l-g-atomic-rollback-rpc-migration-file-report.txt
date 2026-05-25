@@ -1,0 +1,77 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-G - Atomic Rollback RPC Migration File
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-G
+Type: SQL migration file step
+Status: ATOMIC ROLLBACK RPC MIGRATION FILE CREATED / STATIC SAFETY PASSED / MIGRATION NOT APPLIED / NO ROLLBACK HELPER IMPLEMENTED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED / NO RUNTIME ROLLBACK IMPLEMENTED
+
+Baseline:
+- Previous pushed commit: 2765c78
+- Previous completed step: P4.10.0-C8-I-D4-L-L-F
+- D4-L-L-F recorded the atomic rollback RPC design.
+- D4-L-L-G creates the migration file only.
+
+Created files:
+- supabase/migrations/20260525001000_c8_i_d4_l_l_g_atomic_rollback_rpc.sql
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-g-atomic-rollback-rpc-migration-file-report.txt
+
+RPC:
+- public.rollback_value_object_state_fact_controlled
+
+Security:
+- SECURITY INVOKER
+- search_path = public
+- EXECUTE revoked from public
+- EXECUTE revoked from anon
+- EXECUTE revoked from authenticated
+- EXECUTE granted to service_role only
+
+Atomic behavior designed in SQL:
+- Finds target by state_fact_id + value_object_id + user_id.
+- Locks target row with FOR UPDATE.
+- Checks existing rollback audit event before and after target lock.
+- Updates value_object_state_facts only with:
+  - correction_status = 'rolled_back'
+  - valid_to = p_rollback_at
+  - metadata_json merged/extended with rollback metadata
+  - updated_at = p_rollback_at
+- Inserts exactly one value_object_state_fact_audit_events row.
+- Uses unique_violation handling as idempotency backstop.
+- Returns structured jsonb.
+
+Static safety checks passed:
+- Required RPC markers present.
+- Required target lookup markers present.
+- Required narrow update markers present.
+- Required audit insert markers present.
+- Required revoke/grant markers present.
+- No DROP TABLE.
+- No DROP COLUMN.
+- No TRUNCATE.
+- No DELETE FROM.
+- No SECURITY DEFINER.
+- No GRANT EXECUTE to public.
+- No GRANT EXECUTE to anon.
+- No GRANT EXECUTE to authenticated.
+
+Important:
+- Migration was NOT applied in this step.
+- No database write was performed.
+- No Supabase command was executed.
+- No runtime rollback helper was created.
+- No route was created.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-H - Atomic Rollback RPC Migration Static Verification.
+
+D4-L-L-H should:
+1. Re-read the migration file.
+2. Verify SQL shape and safety again.
+3. Verify git diff only contains migration + report.
+4. Still not apply the migration.
+5. Still not create rollback.ts.
+6. Still not create route.
+7. Commit a static verification report.
+
+End of D4-L-L-G report.
