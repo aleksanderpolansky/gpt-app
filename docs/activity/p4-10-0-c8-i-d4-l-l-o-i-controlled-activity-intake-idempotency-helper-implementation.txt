@@ -1,0 +1,94 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-I — Controlled Activity Intake Idempotency Helper Implementation
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+IDEMPOTENCY HELPER IMPLEMENTED / NO PERSIST HELPER / NO RUNTIME ROUTE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-H
+- O-H commit: edf7ae1
+- O-H commit message: docs: add C8-I-D4-L-L-O-H controlled intake idempotency persist design
+
+Created
+- lib/activity/controlledIntake/idempotency.ts
+
+Not created
+- lib/activity/controlledIntake/persist.ts
+- src/app/api/activity/controlled-intake/route.ts
+
+Implemented responsibilities
+- Deterministic idempotency material builder.
+- Canonical JSON serialization with recursively sorted object keys.
+- SHA-256 hash generation.
+- controlled-intake-v1:<sha256> idempotency key generation.
+- Trusted server context input shape.
+- Trace metadata shape for future activity_events metadata/json storage.
+
+Implemented exports
+- CONTROLLED_ACTIVITY_INTAKE_IDEMPOTENCY_KEY_PREFIX
+- CONTROLLED_ACTIVITY_INTAKE_IDEMPOTENCY_MATERIAL_VERSION
+- ControlledActivityIntakeIdempotencyKey
+- ControlledActivityIntakeTrustedContext
+- ControlledActivityIntakeIdempotencyMaterial
+- ControlledActivityIntakeIdempotencyTrace
+- ControlledActivityIntakeIdempotencyResult
+- toControlledActivityIntakeCanonicalJson
+- hashControlledActivityIntakeCanonicalJson
+- buildControlledActivityIntakeIdempotencyMaterial
+- buildControlledActivityIntakeIdempotency
+
+Guardrails preserved
+- Activity Event remains the source of truth.
+- No persistence was implemented.
+- No Supabase write was implemented.
+- No SQL was executed.
+- No AI call was added.
+- No route handler was created.
+- No activity_event row was created.
+- No categoryCandidates persistence was added.
+- No Value Object creation was added.
+- No value_object_state_facts writes were added.
+- No activity_state_deltas writes were added.
+- No snapshots writes were added.
+
+Design details
+- generatedAt is intentionally excluded from idempotency material.
+- Client ownership fields remain blocked by validator and are not accepted by idempotency helper.
+- Trusted identifiers can only come from server-side context passed into the helper later.
+- Metadata trace is prepared for future storage, but no storage happens in O-I.
+
+TypeScript verification
+- Temporary O-I type-level verification file was created under tmp/.
+- npx tsc --noEmit passed with the temporary verification file.
+- Temporary verification file was removed.
+- npx tsc --noEmit passed again after cleanup.
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-J — Controlled Activity Intake Idempotency Helper Static Verification
+
+O-J allowed
+- Verify idempotency.ts exports.
+- Verify canonicalization markers.
+- Verify deterministic key behavior via temporary check file.
+- Verify forbidden persist/route/DB/AI patterns.
+- Create report.
+- Run TypeScript.
+- Commit/push.
+
+O-J forbidden
+- Do not create persist.ts.
+- Do not create src/app/api/activity/controlled-intake/route.ts.
+- Do not write to Supabase.
+- Do not execute SQL.
+- Do not create activity_event rows.
+- Do not call AI.
+- Do not persist categoryCandidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Anti-retest
+Do not repeat old C8-H extractor proofs.
+Do not run /api/activity/complete canonical completed event proof.
+Do not run deleted rollback browser payload.
+Do not create or test runtime controlled-intake route yet.
