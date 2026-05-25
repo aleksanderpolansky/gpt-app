@@ -1,0 +1,122 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-N-FIX2 — Parser Correction / Safe Gate Restore
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+CORRECTION CREATED / O-N-FIX1 PASS INVALIDATED / DOC ONLY / NO PERSIST HELPER / NO RUNTIME ROUTE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-N-FIX1
+- Previous commit: 2e37820
+- Previous message: docs: add C8-I-D4-L-L-O-N-FIX1 exact column gap fix
+
+Reason for correction
+O-N-FIX1 produced:
+PASS_METADATA_FIRST_CONTRACT_FOR_STATIC_INSERT_ROW_BUILDER_ONLY
+
+But terminal output showed that the parser incorrectly read empty column values as the next field labels.
+Examples from the observed output:
+- titleColumn became inputTextColumn:
+- metadataColumn became userColumn:
+- userColumn became actorColumn:
+- idempotencyColumn became Interpretation
+
+This means the O-N-FIX1 pass was not reliable.
+
+Invalidated decision
+PASS_METADATA_FIRST_CONTRACT_FOR_STATIC_INSERT_ROW_BUILDER_ONLY
+
+Parser corruption markers detected in O-N-FIX1 report
+titleColumn: inputTextColumn:
+inputTextColumn: sourceColumn:
+sourceColumn: statusColumn:
+statusColumn: safeStatusDecision:
+durationColumn: startedAtColumn:
+startedAtColumn: endedAtColumn:
+endedAtColumn: occurredAtColumn:
+occurredAtColumn: timezoneColumn:
+timezoneColumn: metadataColumn:
+metadataColumn: userColumn:
+userColumn: actorColumn:
+actorColumn: organizationColumn:
+organizationColumn: spaceColumn:
+spaceColumn: idempotencyColumn:
+idempotencyColumn: Interpretation
+
+Strict parser rule used in FIX2
+Use [^\r\n]* for the value part and do not use trailing \s*$ because \s can consume newlines.
+
+Strict O-N contract extraction
+titleColumn: 
+inputTextColumn: 
+sourceColumn: 
+statusColumn: 
+safeStatusDecision: 
+durationColumn: 
+startedAtColumn: 
+endedAtColumn: 
+occurredAtColumn: 
+timezoneColumn: 
+metadataColumn: 
+userColumn: 
+actorColumn: 
+organizationColumn: 
+spaceColumn: 
+idempotencyColumn: 
+
+Strict blocking gaps
+metadataColumn not confirmed by strict parser
+trusted owner column not confirmed by strict parser: userColumn or actorColumn
+
+Strict runtime-only gaps
+statusColumn not confirmed; runtime DB write stays blocked
+safe raw status value not confirmed; runtime DB write stays blocked
+
+Corrected gate decision
+BLOCK_STATIC_INSERT_ROW_BUILDER_PENDING_STRICT_METADATA_OR_OWNER_COLUMN_CONFIRMATION
+
+Corrected next step decision
+P4.10.0-C8-I-D4-L-L-O-N-FIX3 - Strict Metadata/Owner Column Confirmation
+
+Files intentionally not created in O-N-FIX2
+- lib/activity/controlledIntake/persist.ts
+- src/app/api/activity/controlled-intake/route.ts
+
+Important rule restored
+Do not create persist.ts while metadataColumn and at least one trusted owner column are not confirmed by strict parsing.
+
+What a later FIX3 must do if gate is blocked
+- Confirm exact metadata/json column from schema/type evidence.
+- Confirm exact trusted owner column, usually user_id or actor_id, from schema/type evidence.
+- Use strict single-line parsing or direct schema/type parsing, not the broken regex.
+- Keep route and DB writes blocked.
+- Create only a report unless the strict gate passes.
+
+Forbidden until a strict pass
+- No persist.ts.
+- No runtime route.
+- No Supabase write.
+- No SQL execution.
+- No activity row.
+- No AI call.
+- No semantic candidate persistence.
+- No Value Object creation.
+- No state facts, deltas, or snapshots.
+
+Verification performed in O-N-FIX2
+- Required previous files exist.
+- O-N and O-N-FIX1 reports were read.
+- O-N-FIX1 pass was invalidated.
+- Strict parser was used.
+- persist.ts is absent.
+- controlled-intake route.ts is absent.
+- No SQL was executed.
+- No Supabase write happened.
+- No AI call happened.
+- No activity row was created.
+- Helper files remain free from runtime/write/AI patterns.
+- npx tsc --noEmit is run after report creation.
+
+Conclusion
+O-N-FIX2 corrects the false pass from O-N-FIX1.
+Work must continue from the corrected gate decision above.
