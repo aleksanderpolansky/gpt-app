@@ -1,0 +1,87 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-K-B - Controlled Persistence Operational Guardrails Decision
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-K-B
+Type: documentation-only operational decision
+Status: GUARDRAILS DECISION RECORDED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED
+
+Baseline:
+- Previous pushed commit: 504ce9f
+- Previous completed step: P4.10.0-C8-I-D4-K-A
+- K-A report: docs/value-objects/p4-10-0-c8-i-d4-k-a-controlled-state-fact-read-only-verification-report.txt
+- Controlled persist route: src/app/api/activity/state-facts/controlled-persist/route.ts
+
+Confirmed state before this decision:
+- D4-J runtime proof is complete.
+- D4-K-A read-only verification found the proof state fact.
+- D4-K-A confirmed all critical checks.
+- D4-K-A performed no insert/update/delete/upsert.
+- Current proof state fact remains active:
+  116d4866-0f89-4bb3-aae4-37e7e8860e85
+
+Decision:
+Do NOT create a permanent read-only API endpoint for state facts yet.
+
+Reason:
+A read-only state-fact endpoint would be a new data exposure surface for private user state facts. Even if it is read-only, it still creates privacy, ownership, and production-safety risks. The D4-K-A local/server-side verification is enough for the current proof stage.
+
+Operational guardrails for future state fact read models:
+1. No public state-fact read endpoint.
+2. No endpoint that reads arbitrary state facts only by id without owner verification.
+3. No endpoint that exposes another user's value_object_state_facts.
+4. No direct client access to value_object_state_facts.
+5. No service-role-backed read endpoint without strict authenticated actor resolution.
+6. No list-all-state-facts endpoint.
+7. No production debug endpoint that returns raw private state facts.
+8. No metadata leakage beyond what is needed for the immediate UI/read-model purpose.
+9. Read models must be purpose-specific, not generic table mirrors.
+10. State facts remain private by default unless an explicit future publication/privacy model is designed.
+
+Allowed future read-model directions:
+1. Owner-scoped read model:
+   - authenticated user only;
+   - actor ownership checked;
+   - value_object_id must belong to the authenticated actor or allowed organization context;
+   - returns only minimal fields needed for UI/analytics.
+2. Internal diagnostic verification:
+   - local script or admin-only process;
+   - never public;
+   - never generic all-user listing.
+3. Aggregated state snapshot read model:
+   - reads from future snapshots/aggregates instead of exposing raw state facts;
+   - safer for dashboards and Next Best Action.
+4. Purpose-specific read path for a single Value Object:
+   - only after ownership and privacy checks are stable;
+   - no raw evidence dump by default.
+
+Decision for current sequence:
+- D4-K remains documentation/proof stage only.
+- D4-K will not add a new route.
+- D4-K will not add a production read endpoint.
+- D4-K will not add rollback/correction runtime yet.
+- Next implementation-level work should move either to:
+  A. D4-L - correction/rollback design for controlled state facts; or
+  B. C8-I next block - read model / state snapshots / state aggregates for future Next Best Action.
+
+Recommended next step:
+P4.10.0-C8-I-D4-L-A - Controlled State Fact Correction/Rollback Design.
+
+Why D4-L-A next:
+- D4-J created a proof state fact.
+- D4-K-A verified that the proof state fact exists and is active.
+- The row contains metadata_json.rollbackable = true.
+- Before adding any UI/read endpoint, the system should define how a controlled fact can be corrected, expired, or rolled back safely.
+- Correction/rollback design should be documentation-first before any update route exists.
+
+Hard boundaries preserved in this step:
+- No API route created.
+- No helper code changed.
+- No SQL migration created.
+- No database insert/update/delete/upsert performed.
+- D4-E-B shadow route remains untouched.
+- Controlled persist route remains unchanged.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-K-B decision.
