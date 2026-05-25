@@ -1,0 +1,124 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-J — Controlled Activity Intake Idempotency Helper Static Verification
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+IDEMPOTENCY HELPER STATIC/RUNTIME VERIFICATION PASSED / NO PERSIST HELPER / NO RUNTIME ROUTE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-I
+- O-I commit: 1a88695
+- O-I commit message: feat: add C8-I-D4-L-L-O-I controlled intake idempotency helper
+
+Verified file
+- lib/activity/controlledIntake/idempotency.ts
+
+Forbidden files checked absent
+- lib/activity/controlledIntake/persist.ts
+- src/app/api/activity/controlled-intake/route.ts
+
+Verified exports and markers
+- CONTROLLED_ACTIVITY_INTAKE_IDEMPOTENCY_KEY_PREFIX
+- controlled-intake-v1
+- CONTROLLED_ACTIVITY_INTAKE_IDEMPOTENCY_MATERIAL_VERSION
+- controlled-intake-idempotency-v1
+- ControlledActivityIntakeIdempotencyKey
+- ControlledActivityIntakeTrustedContext
+- ControlledActivityIntakeIdempotencyMaterial
+- ControlledActivityIntakeIdempotencyTrace
+- ControlledActivityIntakeIdempotencyResult
+- toControlledActivityIntakeCanonicalJson
+- hashControlledActivityIntakeCanonicalJson
+- buildControlledActivityIntakeIdempotencyMaterial
+- buildControlledActivityIntakeIdempotency
+
+Verified deterministic behavior
+- Canonical JSON uses recursively sorted object keys.
+- Whitespace normalization is applied to inputText/title.
+- generatedAt does not affect idempotency key.
+- SHA-256 hash has 64 hex characters.
+- idempotency key has controlled-intake-v1:<sha256> shape.
+- Trusted server context participates in idempotency material.
+
+Verified semantic guardrails
+- semanticProcessingNotStartedYet remains true.
+- categoryCandidatesCreated remains false.
+- valueObjectsCreated remains false.
+- stateFactsCreated remains false.
+- deltasCreated remains false.
+- snapshotsCreated remains false.
+- trace source remains controlled_activity_intake.
+
+Refined false-positive note
+O-I script detected generic .update( as a forbidden marker.
+That was a false positive because idempotency.ts intentionally uses Node crypto:
+createHash("sha256").update(canonicalJson, "utf8").digest("hex")
+O-J refined forbidden checks to avoid mistaking crypto hash update for Supabase/DB update.
+
+Forbidden runtime/write/AI/DB patterns checked absent
+- supabase
+- createClient
+- OpenAI
+- chat.completions
+- fetch(
+- INSERT INTO
+- UPDATE
+- DELETE
+- .insert(
+- .delete(
+- .rpc(
+- .from(
+- NextRequest
+- NextResponse
+- activity_events
+- categoryCandidates:
+- metricCandidates:
+- stateHookCandidates:
+- value_object_state_facts
+- activity_state_deltas
+
+TypeScript/runtime verification
+- Temporary TypeScript runtime check was created under tmp/.
+- npx tsc --noEmit passed.
+- Temporary runtime check was compiled to isolated JS.
+- Node executed the compiled check successfully.
+- Temporary files were removed.
+- npx tsc --noEmit passed again after cleanup.
+
+Conclusion
+O-J confirms idempotency.ts is safe and deterministic.
+No persist helper was created.
+No runtime route was created.
+No database write happened.
+No SQL was executed.
+No AI call happened.
+No activity_event row was created.
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-K — Controlled Activity Intake Persist Helper Design Gate
+
+O-K recommended scope
+- Design/gate exact persist helper implementation boundary.
+- Inspect existing activity_events schema mapping from already documented audit/gate, without SQL execution unless explicitly separated.
+- Decide whether persist.ts can be implemented in next block.
+- Confirm exact activity_events target columns before code writes.
+- Create report.
+- TypeScript check.
+- Commit/push.
+
+O-K forbidden unless explicitly separated into a later implementation/proof block
+- Do not create persist.ts yet.
+- Do not create src/app/api/activity/controlled-intake/route.ts.
+- Do not write to Supabase.
+- Do not execute SQL.
+- Do not create activity_event rows.
+- Do not call AI.
+- Do not persist categoryCandidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Anti-retest
+Do not repeat old C8-H extractor proofs.
+Do not run /api/activity/complete canonical completed event proof.
+Do not run deleted rollback browser payload.
+Do not create or test runtime controlled-intake route yet.
