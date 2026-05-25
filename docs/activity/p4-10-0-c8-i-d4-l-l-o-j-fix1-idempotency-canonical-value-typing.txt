@@ -1,0 +1,63 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-J-FIX1 — Idempotency Canonical Value Typing Fix
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+FIX PASSED / STRICT ISOLATED COMPILE PASSED / RUNTIME CHECK PASSED / NO PERSIST HELPER / NO RUNTIME ROUTE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous commit: bed5dae
+- Previous message: docs: add C8-I-D4-L-L-O-J idempotency helper verification
+
+Reason for fix
+O-J created and committed a report after the isolated compile step emitted a TypeScript error:
+lib/activity/controlledIntake/idempotency.ts:119:5 - error TS2322:
+Type unknown is not assignable to type CanonicalJsonValue.
+
+Runtime JS was emitted and passed, but the report statement "compiled successfully" was not fully trustworthy.
+Therefore O-J-FIX1 corrects the source typing and repeats strict verification.
+
+Changed
+- lib/activity/controlledIntake/idempotency.ts
+
+Not created
+- lib/activity/controlledIntake/persist.ts
+- src/app/api/activity/controlled-intake/route.ts
+
+Fix details
+- canonicalizeValue now narrows unknown explicitly:
+  - null
+  - string
+  - finite number
+  - boolean
+  - array
+  - object
+- CanonicalJsonObject type was added.
+- Non-finite numbers are converted to null.
+- Object output is typed as CanonicalJsonObject.
+- This removes the isolated compile error without weakening idempotency behavior.
+
+Verified
+- npx tsc --noEmit passed.
+- Strict isolated compile passed with --noEmitOnError true.
+- Runtime verification passed.
+- Temporary files were removed.
+- npx tsc --noEmit passed again after cleanup.
+
+Guardrails preserved
+- No persist helper was created.
+- No runtime route was created.
+- No database write happened.
+- No SQL was executed.
+- No AI call happened.
+- No activity_event row was created.
+- No categoryCandidates persistence was added.
+- No Value Object creation was added.
+- No state facts, deltas, or snapshots writes were added.
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-K — Controlled Activity Intake Persist Helper Design Gate
+
+Important
+Proceed to O-K only after this FIX1 commit is pushed.
+Do not treat the previous O-J compile error as unresolved after this fix.

@@ -68,19 +68,23 @@ export interface ControlledActivityIntakeIdempotencyResult {
   trace: ControlledActivityIntakeIdempotencyTrace;
 }
 
+type CanonicalJsonObject = { [key: string]: CanonicalJsonValue };
+
 type CanonicalJsonValue =
   | string
   | number
   | boolean
   | null
   | CanonicalJsonValue[]
-  | { [key: string]: CanonicalJsonValue };
+  | CanonicalJsonObject;
 
 function normalizeText(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
 
-function normalizeOptionalText(value: string | null | undefined): string | undefined {
+function normalizeOptionalText(
+  value: string | null | undefined,
+): string | undefined {
   if (typeof value !== "string") {
     return undefined;
   }
@@ -89,7 +93,9 @@ function normalizeOptionalText(value: string | null | undefined): string | undef
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function normalizeOptionalNumber(value: number | null | undefined): number | undefined {
+function normalizeOptionalNumber(
+  value: number | null | undefined,
+): number | undefined {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return undefined;
   }
@@ -97,7 +103,9 @@ function normalizeOptionalNumber(value: number | null | undefined): number | und
   return value;
 }
 
-function removeUndefinedValues<T extends Record<string, unknown>>(input: T): Record<string, unknown> {
+function removeUndefinedValues<T extends Record<string, unknown>>(
+  input: T,
+): Record<string, unknown> {
   const output: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(input)) {
@@ -110,12 +118,19 @@ function removeUndefinedValues<T extends Record<string, unknown>>(input: T): Rec
 }
 
 function canonicalizeValue(value: unknown): CanonicalJsonValue {
-  if (
-    value === null ||
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "boolean") {
     return value;
   }
 
@@ -123,9 +138,9 @@ function canonicalizeValue(value: unknown): CanonicalJsonValue {
     return value.map((item) => canonicalizeValue(item));
   }
 
-  if (typeof value === "object" && value !== null) {
+  if (typeof value === "object") {
     const input = value as Record<string, unknown>;
-    const output: Record<string, CanonicalJsonValue> = {};
+    const output: CanonicalJsonObject = {};
 
     for (const key of Object.keys(input).sort()) {
       const childValue = input[key];
@@ -145,7 +160,9 @@ export function toControlledActivityIntakeCanonicalJson(value: unknown): string 
   return JSON.stringify(canonicalizeValue(value));
 }
 
-export function hashControlledActivityIntakeCanonicalJson(canonicalJson: string): string {
+export function hashControlledActivityIntakeCanonicalJson(
+  canonicalJson: string,
+): string {
   return createHash("sha256").update(canonicalJson, "utf8").digest("hex");
 }
 
