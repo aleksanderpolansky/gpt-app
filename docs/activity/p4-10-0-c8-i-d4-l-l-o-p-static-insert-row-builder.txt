@@ -1,0 +1,94 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-P — Controlled Activity Intake Static Insert Row Builder
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+STATIC INSERT ROW BUILDER CREATED / NO RUNTIME ROUTE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-N-FIX5
+- Previous commit: 47c84f3
+- Previous message: docs: add C8-I-D4-L-L-O-N-FIX5 schema evidence dump
+
+Gate used
+PASS_RAW_EVIDENCE_METADATA_OWNER_COLUMNS_FOR_STATIC_INSERT_ROW_BUILDER_ONLY
+
+Confirmed raw evidence terms from O-N-FIX5
+- metadata
+- user_id
+- status
+
+Created file
+- lib/activity/controlledIntake/persist.ts
+
+Intentionally not created
+- src/app/api/activity/controlled-intake/route.ts
+
+What persist.ts does
+- Defines a static activity_events row builder.
+- Uses user_id from trustedContext.appUserId.
+- Uses status = raw_intake_pending_semantic_processing.
+- Stores controlled intake payload, idempotency trace, trusted context, activity draft, and guardrail flags inside metadata.
+- Returns table name activity_events and row object.
+- Throws if trustedContext.appUserId is missing.
+
+What persist.ts does not do
+- Does not create a route.
+- Does not import any DB client.
+- Does not call a DB table method.
+- Does not execute SQL.
+- Does not create an activity row.
+- Does not call AI.
+- Does not run Category Derivation.
+- Does not persist categoryCandidates.
+- Does not create Value Objects.
+- Does not write state facts, deltas, or snapshots.
+
+Exports
+- CONTROLLED_ACTIVITY_INTAKE_PERSIST_LAYER
+- CONTROLLED_ACTIVITY_INTAKE_ACTIVITY_EVENTS_TABLE
+- CONTROLLED_ACTIVITY_INTAKE_METADATA_COLUMN
+- CONTROLLED_ACTIVITY_INTAKE_OWNER_COLUMN
+- CONTROLLED_ACTIVITY_INTAKE_STATUS_COLUMN
+- CONTROLLED_ACTIVITY_INTAKE_STATIC_STATUS
+- ControlledActivityIntakePersistJsonPrimitive
+- ControlledActivityIntakePersistJsonValue
+- ControlledActivityIntakePersistJsonObject
+- ControlledActivityIntakePersistJsonArray
+- ControlledActivityIntakeActivityEventsStaticRow
+- ControlledActivityIntakeStaticRowBuilderInput
+- ControlledActivityIntakeStaticRowBuilderResult
+- buildControlledActivityIntakeMetadata
+- buildControlledActivityIntakeActivityEventsStaticRow
+
+Verification performed
+- O-N-FIX5 pass gate was read.
+- persist.ts was created.
+- controlled-intake route.ts remains absent.
+- persist.ts exports and guardrail markers were verified.
+- persist.ts was checked for forbidden runtime/write/AI patterns.
+- Temporary TypeScript check imported and exercised the row builder.
+- npx tsc --noEmit passed with temporary check.
+- Temporary check was removed.
+- npx tsc --noEmit passed after cleanup.
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-Q — Controlled Activity Intake Static Row Builder Verification
+
+O-Q should verify:
+- persist.ts exports.
+- row builder behavior.
+- appUserId required.
+- row.table is activity_events.
+- row.user_id comes only from trustedContext.appUserId.
+- row.status is raw_intake_pending_semantic_processing.
+- metadata contains controlledIntake payload.
+- route remains absent.
+- no DB write patterns exist.
+- no AI/semantic/state patterns exist.
+
+Still forbidden after O-P
+- Do not create runtime route yet.
+- Do not execute DB writes yet.
+- Do not execute SQL.
+- Do not call AI.
