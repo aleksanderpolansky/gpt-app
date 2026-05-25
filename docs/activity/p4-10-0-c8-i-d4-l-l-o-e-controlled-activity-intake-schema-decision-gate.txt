@@ -1,0 +1,405 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-E - Controlled Activity Intake Schema Decision Gate
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-O-E
+Type: schema decision gate / static mapping
+Status: SCHEMA DECISION GATE CREATED / DOC ONLY / NO RUNTIME CHANGE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline:
+- Previous pushed commit: 99f452a
+- Previous block completed: P4.10.0-C8-I-D4-L-L-O-D
+- O-A created controlled activity intake contract.
+- O-B created schema/route audit.
+- O-C created persistence decision.
+- O-D created schema/helper design.
+- O-E decides whether the existing schema is ready for helper implementation or whether an additive migration design is required.
+
+Hard boundary:
+- Activity Event is the source of truth.
+- AI output, category candidates, state hooks, and resolver suggestions must never replace the activity_event source record.
+- O-E is doc-only.
+- O-E does not create a route.
+- O-E does not create helper source files.
+- O-E does not execute SQL.
+- O-E does not write to Supabase.
+- O-E does not create an activity.
+
+Safety confirmations:
+- No production controlled rollback route exists.
+- No controlled intake runtime route exists yet.
+- No controlled intake helper directory exists yet.
+- Removed rollback success debug route remains absent.
+- Removed rollback success browser payload remains absent.
+- No categoryCandidates persistence.
+- No Value Object creation.
+- No value_object_state_facts writes.
+- No activity_state_deltas writes.
+- No snapshots writes.
+
+Gate decision:
+- gateDecision: PASS_STATIC_MAPPING_TO_HELPER_TYPES_VALIDATOR_PAYLOAD_BUILDER
+- nextStepDecision: P4.10.0-C8-I-D4-L-L-O-F - Controlled Activity Intake Helper Types Validator Payload Builder
+- selectedTable: activity_events
+
+Static mapping:
+- selectedTable: activity_events
+- ownershipColumn: user_id
+- textColumn: input_text
+- titleColumn: title
+- startedAtColumn: started_at
+- endedAtColumn: ended_at
+- durationColumn: duration_minutes
+- timezoneColumn: METADATA_REQUIRED
+- sourceColumn: source
+- statusColumn: status
+- privacyColumn: METADATA_OR_DEFAULT_PRIVATE
+- traceColumn: idempotency_key
+- metadataColumn: metadata_json
+
+Missing or weak requirements:
+- none
+
+Decision interpretation:
+1. If gateDecision is PASS_STATIC_MAPPING_TO_HELPER_TYPES_VALIDATOR_PAYLOAD_BUILDER:
+   - next block may create static helper files under lib/activity/controlledIntake/.
+   - the helper must still avoid any runtime route and DB write until a later proof route step.
+   - if idempotency uses metadata instead of a dedicated client_trace_id column, runtime helper must treat it as a provisional proof strategy.
+
+2. If gateDecision is BLOCK_RUNTIME_AND_DESIGN_ADDITIVE_MIGRATION:
+   - next block must design an additive migration before helper/runtime work.
+   - no destructive migration is allowed.
+   - no runtime route should be created before the schema gap is closed.
+
+Approved route name for later runtime:
+- src/app/api/activity/controlled-intake/route.ts
+
+Approved helper namespace for next implementation/design:
+- lib/activity/controlledIntake/
+
+Approved helper files for next implementation/design:
+- lib/activity/controlledIntake/types.ts
+- lib/activity/controlledIntake/validator.ts
+- lib/activity/controlledIntake/payloadBuilder.ts
+- lib/activity/controlledIntake/idempotency.ts
+- lib/activity/controlledIntake/persist.ts
+
+Required response invariants for later runtime proof:
+{
+  "ok": true,
+  "activityRecordCreated": true,
+  "semanticProcessingNotStartedYet": true,
+  "categoryCandidatesCreated": false,
+  "valueObjectsCreated": false,
+  "stateFactsCreated": false,
+  "deltasCreated": false,
+  "snapshotsCreated": false,
+  "productionNextBestActionCreated": false
+}
+
+Approved first proof payload for later runtime:
+{
+  "inputText": "Ð£Ñ‡Ð¸Ð»ÑÑ Ð½ÐµÐ¼ÐµÑ†ÐºÐ¾Ð¼Ñƒ 25 Ð¼Ð¸Ð½ÑƒÑ‚ Ð¸ Ð½Ð°Ð¿Ð¸ÑÐ°Ð» 5 Ñ„Ñ€Ð°Ð· Ð´Ð»Ñ B2B-Ð¿Ð¸ÑÑŒÐ¼Ð°.",
+  "title": "ÐÐµÐ¼ÐµÑ†ÐºÐ¸Ð¹ + B2B Ð¿Ð¸ÑÑŒÐ¼Ð¾",
+  "durationMinutes": 25,
+  "timezone": "Europe/Warsaw",
+  "source": "manual",
+  "status": "completed",
+  "privacyLevel": "private",
+  "clientTraceId": "o-runtime-controlled-activity-intake-proof-001"
+}
+
+No-go decisions:
+- Do not reuse /api/activity/complete as controlled intake.
+- Do not mix controlled intake with category derivation.
+- Do not create or update Value Objects in first intake route.
+- Do not create state hooks as facts.
+- Do not create value_object_state_facts in first intake route.
+- Do not create activity_state_deltas in first intake route.
+- Do not create snapshots in first intake route.
+- Do not create a generic update/delete route.
+- Do not add destructive migrations.
+- Do not trust client user_id/actor_id.
+
+activity_events schema files:
+- supabase/migrations/012_activity_recording_backbone.sql
+- supabase/migrations/012_activity_recording_backbone.sql
+- supabase/migrations/014_activity_events_v2_template_link.sql
+- supabase/migrations/014_activity_events_v2_template_link.sql
+- supabase/migrations/019_activity_security_foundation.sql
+- supabase/migrations/019_activity_security_foundation.sql
+- supabase/migrations/020_activity_raw_signals.sql
+- supabase/migrations/020_activity_raw_signals.sql
+- supabase/migrations/021_activity_processing_logs.sql
+- supabase/migrations/021_activity_processing_logs.sql
+- supabase/migrations/023_value_object_state_foundation_p4_7.sql
+- supabase/migrations/023_value_object_state_foundation_p4_7.sql
+- supabase/migrations/20260524_p4_10_0_c8_i_d3_state_dimensions_initial_seed.sql
+- supabase/migrations/20260524_p4_10_0_c8_i_d3_state_dimensions_initial_seed.sql
+
+activity_events static findings:
+- supabase/migrations/012_activity_recording_backbone.sql:7 :: -- one user action is recorded once in activity_events;
+- supabase/migrations/012_activity_recording_backbone.sql:18 :: new.updated_at = now();
+- supabase/migrations/012_activity_recording_backbone.sql:23 :: create table if not exists public.activity_types (
+- supabase/migrations/012_activity_recording_backbone.sql:26 :: title text not null,
+- supabase/migrations/012_activity_recording_backbone.sql:27 :: description text,
+- supabase/migrations/012_activity_recording_backbone.sql:28 :: status text not null default 'active',
+- supabase/migrations/012_activity_recording_backbone.sql:30 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:31 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:32 :: updated_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:34 :: check (status in ('active', 'inactive', 'archived'))
+- supabase/migrations/012_activity_recording_backbone.sql:44 :: create table if not exists public.activity_code_templates (
+- supabase/migrations/012_activity_recording_backbone.sql:47 :: title text not null,
+- supabase/migrations/012_activity_recording_backbone.sql:48 :: description text,
+- supabase/migrations/012_activity_recording_backbone.sql:62 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:63 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:64 :: updated_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:82 :: create table if not exists public.activity_events (
+- supabase/migrations/012_activity_recording_backbone.sql:84 :: user_id uuid not null references public.app_users(id),
+- supabase/migrations/012_activity_recording_backbone.sql:91 :: input_text text,
+- supabase/migrations/012_activity_recording_backbone.sql:92 :: title text,
+- supabase/migrations/012_activity_recording_backbone.sql:93 :: description text,
+- supabase/migrations/012_activity_recording_backbone.sql:94 :: started_at timestamptz,
+- supabase/migrations/012_activity_recording_backbone.sql:95 :: ended_at timestamptz,
+- supabase/migrations/012_activity_recording_backbone.sql:96 :: duration_minutes integer,
+- supabase/migrations/012_activity_recording_backbone.sql:97 :: source text not null default 'manual',
+- supabase/migrations/012_activity_recording_backbone.sql:98 :: status text not null default 'completed',
+- supabase/migrations/012_activity_recording_backbone.sql:101 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:102 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:103 :: updated_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:105 :: check (duration_minutes is null or duration_minutes >= 0),
+- supabase/migrations/012_activity_recording_backbone.sql:107 :: check (started_at is null or ended_at is null or ended_at >= started_at),
+- supabase/migrations/012_activity_recording_backbone.sql:109 :: check (source in ('manual', 'chat_ai', 'calendar', 'booking', 'rule', 'import', 'system')),
+- supabase/migrations/012_activity_recording_backbone.sql:111 :: check (status in ('draft', 'planned', 'confirmed', 'completed', 'cancelled', 'missed', 'corrected')),
+- supabase/migrations/012_activity_recording_backbone.sql:118 :: drop trigger if exists trg_activity_events_updated_at on public.activity_events;
+- supabase/migrations/012_activity_recording_backbone.sql:121 :: before update on public.activity_events
+- supabase/migrations/012_activity_recording_backbone.sql:125 :: create table if not exists public.event_links (
+- supabase/migrations/012_activity_recording_backbone.sql:127 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+- supabase/migrations/012_activity_recording_backbone.sql:135 :: source text not null default 'rule',
+- supabase/migrations/012_activity_recording_backbone.sql:136 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:137 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:143 :: check (source in ('manual', 'template', 'rule', 'ai', 'system', 'import'))
+- supabase/migrations/012_activity_recording_backbone.sql:146 :: create table if not exists public.impact_rules (
+- supabase/migrations/012_activity_recording_backbone.sql:151 :: title text not null,
+- supabase/migrations/012_activity_recording_backbone.sql:152 :: description text,
+- supabase/migrations/012_activity_recording_backbone.sql:157 :: impact_value_mode text not null default 'duration_minutes',
+- supabase/migrations/012_activity_recording_backbone.sql:164 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:165 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:166 :: updated_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:168 :: check (impact_value_mode in ('duration_minutes', 'fixed', 'multiplier', 'qualitative')),
+- supabase/migrations/012_activity_recording_backbone.sql:186 :: create table if not exists public.impact_events (
+- supabase/migrations/012_activity_recording_backbone.sql:188 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+- supabase/migrations/012_activity_recording_backbone.sql:198 :: source text not null default 'rule',
+- supabase/migrations/012_activity_recording_backbone.sql:200 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:201 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:205 :: check (source in ('rule', 'manual', 'ai', 'system', 'import')),
+- supabase/migrations/012_activity_recording_backbone.sql:210 :: create table if not exists public.current_snapshots (
+- supabase/migrations/012_activity_recording_backbone.sql:212 :: user_id uuid not null references public.app_users(id),
+- supabase/migrations/012_activity_recording_backbone.sql:219 :: last_event_id uuid references public.activity_events(id),
+- supabase/migrations/012_activity_recording_backbone.sql:220 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:221 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:222 :: updated_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:224 :: unique (user_id, snapshot_entity_type, snapshot_entity_key, metric_key)
+- supabase/migrations/012_activity_recording_backbone.sql:234 :: create table if not exists public.daily_aggregates (
+- supabase/migrations/012_activity_recording_backbone.sql:236 :: user_id uuid not null references public.app_users(id),
+- supabase/migrations/012_activity_recording_backbone.sql:244 :: source text not null default 'rule',
+- supabase/migrations/012_activity_recording_backbone.sql:245 :: last_event_id uuid references public.activity_events(id),
+- supabase/migrations/012_activity_recording_backbone.sql:246 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:247 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:248 :: updated_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:250 :: check (source in ('rule', 'manual', 'ai', 'system', 'import')),
+- supabase/migrations/012_activity_recording_backbone.sql:252 :: unique (user_id, aggregate_date, aggregate_type, aggregate_key, metric_key)
+- supabase/migrations/012_activity_recording_backbone.sql:266 :: on public.activity_events(user_id, created_at desc);
+- supabase/migrations/012_activity_recording_backbone.sql:269 :: on public.activity_events(user_id, started_at desc);
+- supabase/migrations/012_activity_recording_backbone.sql:272 :: on public.activity_events(event_code);
+- supabase/migrations/012_activity_recording_backbone.sql:275 :: on public.activity_events(template_id);
+- supabase/migrations/012_activity_recording_backbone.sql:293 :: on public.current_snapshots(user_id, snapshot_entity_type, snapshot_entity_key);
+- supabase/migrations/012_activity_recording_backbone.sql:296 :: on public.daily_aggregates(user_id, aggregate_date desc);
+- supabase/migrations/012_activity_recording_backbone.sql:299 :: on public.daily_aggregates(user_id, aggregate_type, aggregate_date desc);
+- supabase/migrations/012_activity_recording_backbone.sql:303 :: title,
+- supabase/migrations/012_activity_recording_backbone.sql:304 :: description,
+- supabase/migrations/012_activity_recording_backbone.sql:305 :: status,
+- supabase/migrations/012_activity_recording_backbone.sql:367 :: title = excluded.title,
+- supabase/migrations/012_activity_recording_backbone.sql:368 :: description = excluded.description,
+- supabase/migrations/012_activity_recording_backbone.sql:369 :: status = excluded.status,
+- supabase/migrations/012_activity_recording_backbone.sql:371 :: updated_at = now();
+- supabase/migrations/012_activity_recording_backbone.sql:375 :: title,
+- supabase/migrations/012_activity_recording_backbone.sql:376 :: description,
+- supabase/migrations/012_activity_recording_backbone.sql:390 :: metadata_json
+- supabase/migrations/012_activity_recording_backbone.sql:424 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:433 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:442 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:451 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:460 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:469 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:478 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:487 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:496 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:505 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:515 :: "impact_value_mode": "duration_minutes",
+- supabase/migrations/012_activity_recording_backbone.sql:527 :: "impact_value_mode": "duration_minutes",
+- supabase/migrations/012_activity_recording_backbone.sql:539 :: "impact_value_mode": "duration_minutes",
+- supabase/migrations/012_activity_recording_backbone.sql:551 :: "impact_value_mode": "duration_minutes",
+- supabase/migrations/012_activity_recording_backbone.sql:583 :: title = excluded.title,
+- supabase/migrations/012_activity_recording_backbone.sql:584 :: description = excluded.description,
+- supabase/migrations/012_activity_recording_backbone.sql:598 :: metadata_json = excluded.metadata_json,
+- supabase/migrations/012_activity_recording_backbone.sql:599 :: updated_at = now();
+- supabase/migrations/012_activity_recording_backbone.sql:605 :: title,
+- supabase/migrations/012_activity_recording_backbone.sql:606 :: description,
+- supabase/migrations/012_activity_recording_backbone.sql:618 :: metadata_json
+- supabase/migrations/012_activity_recording_backbone.sql:624 :: seed.title,
+- supabase/migrations/012_activity_recording_backbone.sql:625 :: seed.description,
+- supabase/migrations/012_activity_recording_backbone.sql:637 :: seed.metadata_json
+- supabase/migrations/012_activity_recording_backbone.sql:644 :: 'Adds duration minutes to German writing practice.',
+- supabase/migrations/012_activity_recording_backbone.sql:649 :: 'duration_minutes',
+- supabase/migrations/012_activity_recording_backbone.sql:659 :: 'Adds duration minutes to marketing learning or exposure.',
+- supabase/migrations/012_activity_recording_backbone.sql:664 :: 'duration_minutes',
+- supabase/migrations/012_activity_recording_backbone.sql:674 :: 'Adds duration minutes to right hand load.',
+- supabase/migrations/012_activity_recording_backbone.sql:679 :: 'duration_minutes',
+- supabase/migrations/012_activity_recording_backbone.sql:689 :: 'Adds duration minutes to wrist load.',
+- supabase/migrations/012_activity_recording_backbone.sql:694 :: 'duration_minutes',
+- supabase/migrations/012_activity_recording_backbone.sql:718 :: title,
+- supabase/migrations/012_activity_recording_backbone.sql:719 :: description,
+- supabase/migrations/012_activity_recording_backbone.sql:729 :: metadata_json
+- supabase/migrations/012_activity_recording_backbone.sql:735 :: title = excluded.title,
+- supabase/migrations/012_activity_recording_backbone.sql:736 :: description = excluded.description,
+- supabase/migrations/012_activity_recording_backbone.sql:748 :: metadata_json = excluded.metadata_json,
+- supabase/migrations/012_activity_recording_backbone.sql:749 :: updated_at = now();
+- supabase/migrations/012_activity_recording_backbone.sql:757 :: comment on table public.activity_events is
+- supabase/migrations/012_activity_recording_backbone.sql:761 :: 'Universal links from activity_events to value objects, contexts, observed objects, actors or other entities.';
+- supabase/migrations/012_activity_recording_backbone.sql:767 :: 'Concrete calculated impacts created from activity_events, usually by applying impact_rules.';
+- supabase/migrations/012_activity_recording_backbone.sql:773 :: 'Per-user daily aggregate metrics derived from activity_events and impact_events.';
+- supabase/migrations/012_activity_recording_backbone.sql:7 :: -- one user action is recorded once in activity_events;
+- supabase/migrations/012_activity_recording_backbone.sql:18 :: new.updated_at = now();
+- supabase/migrations/012_activity_recording_backbone.sql:23 :: create table if not exists public.activity_types (
+- supabase/migrations/012_activity_recording_backbone.sql:26 :: title text not null,
+- supabase/migrations/012_activity_recording_backbone.sql:27 :: description text,
+- supabase/migrations/012_activity_recording_backbone.sql:28 :: status text not null default 'active',
+- supabase/migrations/012_activity_recording_backbone.sql:30 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:31 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:32 :: updated_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:34 :: check (status in ('active', 'inactive', 'archived'))
+- supabase/migrations/012_activity_recording_backbone.sql:44 :: create table if not exists public.activity_code_templates (
+- supabase/migrations/012_activity_recording_backbone.sql:47 :: title text not null,
+- supabase/migrations/012_activity_recording_backbone.sql:48 :: description text,
+- supabase/migrations/012_activity_recording_backbone.sql:62 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:63 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:64 :: updated_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:82 :: create table if not exists public.activity_events (
+- supabase/migrations/012_activity_recording_backbone.sql:84 :: user_id uuid not null references public.app_users(id),
+- supabase/migrations/012_activity_recording_backbone.sql:91 :: input_text text,
+- supabase/migrations/012_activity_recording_backbone.sql:92 :: title text,
+- supabase/migrations/012_activity_recording_backbone.sql:93 :: description text,
+- supabase/migrations/012_activity_recording_backbone.sql:94 :: started_at timestamptz,
+- supabase/migrations/012_activity_recording_backbone.sql:95 :: ended_at timestamptz,
+- supabase/migrations/012_activity_recording_backbone.sql:96 :: duration_minutes integer,
+- supabase/migrations/012_activity_recording_backbone.sql:97 :: source text not null default 'manual',
+- supabase/migrations/012_activity_recording_backbone.sql:98 :: status text not null default 'completed',
+- supabase/migrations/012_activity_recording_backbone.sql:101 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:102 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:103 :: updated_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:105 :: check (duration_minutes is null or duration_minutes >= 0),
+- supabase/migrations/012_activity_recording_backbone.sql:107 :: check (started_at is null or ended_at is null or ended_at >= started_at),
+- supabase/migrations/012_activity_recording_backbone.sql:109 :: check (source in ('manual', 'chat_ai', 'calendar', 'booking', 'rule', 'import', 'system')),
+- supabase/migrations/012_activity_recording_backbone.sql:111 :: check (status in ('draft', 'planned', 'confirmed', 'completed', 'cancelled', 'missed', 'corrected')),
+- supabase/migrations/012_activity_recording_backbone.sql:118 :: drop trigger if exists trg_activity_events_updated_at on public.activity_events;
+- supabase/migrations/012_activity_recording_backbone.sql:121 :: before update on public.activity_events
+- supabase/migrations/012_activity_recording_backbone.sql:125 :: create table if not exists public.event_links (
+- supabase/migrations/012_activity_recording_backbone.sql:127 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+- supabase/migrations/012_activity_recording_backbone.sql:135 :: source text not null default 'rule',
+- supabase/migrations/012_activity_recording_backbone.sql:136 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:137 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:143 :: check (source in ('manual', 'template', 'rule', 'ai', 'system', 'import'))
+- supabase/migrations/012_activity_recording_backbone.sql:146 :: create table if not exists public.impact_rules (
+- supabase/migrations/012_activity_recording_backbone.sql:151 :: title text not null,
+- supabase/migrations/012_activity_recording_backbone.sql:152 :: description text,
+- supabase/migrations/012_activity_recording_backbone.sql:157 :: impact_value_mode text not null default 'duration_minutes',
+- supabase/migrations/012_activity_recording_backbone.sql:164 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:165 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:166 :: updated_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:168 :: check (impact_value_mode in ('duration_minutes', 'fixed', 'multiplier', 'qualitative')),
+- supabase/migrations/012_activity_recording_backbone.sql:186 :: create table if not exists public.impact_events (
+- supabase/migrations/012_activity_recording_backbone.sql:188 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+- supabase/migrations/012_activity_recording_backbone.sql:198 :: source text not null default 'rule',
+- supabase/migrations/012_activity_recording_backbone.sql:200 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:201 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:205 :: check (source in ('rule', 'manual', 'ai', 'system', 'import')),
+- supabase/migrations/012_activity_recording_backbone.sql:210 :: create table if not exists public.current_snapshots (
+- supabase/migrations/012_activity_recording_backbone.sql:212 :: user_id uuid not null references public.app_users(id),
+- supabase/migrations/012_activity_recording_backbone.sql:219 :: last_event_id uuid references public.activity_events(id),
+- supabase/migrations/012_activity_recording_backbone.sql:220 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:221 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:222 :: updated_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:224 :: unique (user_id, snapshot_entity_type, snapshot_entity_key, metric_key)
+- supabase/migrations/012_activity_recording_backbone.sql:234 :: create table if not exists public.daily_aggregates (
+- supabase/migrations/012_activity_recording_backbone.sql:236 :: user_id uuid not null references public.app_users(id),
+- supabase/migrations/012_activity_recording_backbone.sql:244 :: source text not null default 'rule',
+- supabase/migrations/012_activity_recording_backbone.sql:245 :: last_event_id uuid references public.activity_events(id),
+- supabase/migrations/012_activity_recording_backbone.sql:246 :: metadata_json jsonb not null default '{}'::jsonb,
+- supabase/migrations/012_activity_recording_backbone.sql:247 :: created_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:248 :: updated_at timestamptz not null default now(),
+- supabase/migrations/012_activity_recording_backbone.sql:250 :: check (source in ('rule', 'manual', 'ai', 'system', 'import')),
+- supabase/migrations/012_activity_recording_backbone.sql:252 :: unique (user_id, aggregate_date, aggregate_type, aggregate_key, metric_key)
+- supabase/migrations/012_activity_recording_backbone.sql:266 :: on public.activity_events(user_id, created_at desc);
+- supabase/migrations/012_activity_recording_backbone.sql:269 :: on public.activity_events(user_id, started_at desc);
+- supabase/migrations/012_activity_recording_backbone.sql:272 :: on public.activity_events(event_code);
+- supabase/migrations/012_activity_recording_backbone.sql:275 :: on public.activity_events(template_id);
+- supabase/migrations/012_activity_recording_backbone.sql:293 :: on public.current_snapshots(user_id, snapshot_entity_type, snapshot_entity_key);
+- supabase/migrations/012_activity_recording_backbone.sql:296 :: on public.daily_aggregates(user_id, aggregate_date desc);
+- supabase/migrations/012_activity_recording_backbone.sql:299 :: on public.daily_aggregates(user_id, aggregate_type, aggregate_date desc);
+- supabase/migrations/012_activity_recording_backbone.sql:303 :: title,
+- supabase/migrations/012_activity_recording_backbone.sql:304 :: description,
+- supabase/migrations/012_activity_recording_backbone.sql:305 :: status,
+- supabase/migrations/012_activity_recording_backbone.sql:367 :: title = excluded.title,
+- supabase/migrations/012_activity_recording_backbone.sql:368 :: description = excluded.description,
+- supabase/migrations/012_activity_recording_backbone.sql:369 :: status = excluded.status,
+- supabase/migrations/012_activity_recording_backbone.sql:371 :: updated_at = now();
+- supabase/migrations/012_activity_recording_backbone.sql:375 :: title,
+- supabase/migrations/012_activity_recording_backbone.sql:376 :: description,
+- supabase/migrations/012_activity_recording_backbone.sql:390 :: metadata_json
+- supabase/migrations/012_activity_recording_backbone.sql:424 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:433 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:442 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:451 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:460 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:469 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:478 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:487 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:496 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:505 :: "source": "template"
+- supabase/migrations/012_activity_recording_backbone.sql:515 :: "impact_value_mode": "duration_minutes",
+- supabase/migrations/012_activity_recording_backbone.sql:527 :: "impact_value_mode": "duration_minutes",
+- supabase/migrations/012_activity_recording_backbone.sql:539 :: "impact_value_mode": "duration_minutes",
+- supabase/migrations/012_activity_recording_backbone.sql:551 :: "impact_value_mode": "duration_minutes",
+- supabase/migrations/012_activity_recording_backbone.sql:583 :: title = excluded.title,
+- supabase/migrations/012_activity_recording_backbone.sql:584 :: description = excluded.description,
+- supabase/migrations/012_activity_recording_backbone.sql:598 :: metadata_json = excluded.metadata_json,
+- supabase/migrations/012_activity_recording_backbone.sql:599 :: updated_at = now();
+- supabase/migrations/012_activity_recording_backbone.sql:605 :: title,
+- supabase/migrations/012_activity_recording_backbone.sql:606 :: description,
+- supabase/migrations/012_activity_recording_backbone.sql:618 :: metadata_json
+- supabase/migrations/012_activity_recording_backbone.sql:624 :: seed.title,
+- supabase/migrations/012_activity_recording_backbone.sql:625 :: seed.description,
+- supabase/migrations/012_activity_recording_backbone.sql:637 :: seed.metadata_json
+- supabase/migrations/012_activity_recording_backbone.sql:644 :: 'Adds duration minutes to German writing practice.',
+- supabase/migrations/012_activity_recording_backbone.sql:649 :: 'duration_minutes',
+- supabase/migrations/012_activity_recording_backbone.sql:659 :: 'Adds duration minutes to marketing learning or exposure.',
+- supabase/migrations/012_activity_recording_backbone.sql:664 :: 'duration_minutes',
+- supabase/migrations/012_activity_recording_backbone.sql:674 :: 'Adds duration minutes to right hand load.',
+- supabase/migrations/012_activity_recording_backbone.sql:679 :: 'duration_minutes',
+- supabase/migrations/012_activity_recording_backbone.sql:689 :: 'Adds duration minutes to wrist load.',
+- supabase/migrations/012_activity_recording_backbone.sql:694 :: 'duration_minutes',
+- supabase/migrations/012_activity_recording_backbone.sql:718 :: title,
+- supabase/migrations/012_activity_recording_backbone.sql:719 :: description,
+- supabase/migrations/012_activity_recording_backbone.sql:729 :: metadata_json
+- supabase/migrations/012_activity_recording_backbone.sql:735 :: title = excluded.title,
+- supabase/migrations/012_activity_recording_backbone.sql:736 :: description = excluded.description,
+- supabase/migrations/012_activity_recording_backbone.sql:748 :: metadata_json = excluded.metadata_json,
+- supabase/migrations/012_activity_recording_backbone.sql:749 :: updated_at = now();
+- supabase/migrations/012_activity_recording_backbone.sql:757 :: comment on table public.activity_events is
+- supabase/migrations/012_activity_recording_backbone.sql:761 :: 'Universal links from activity_events to value objects, contexts, observed objects, actors or other entities.';
+
+Recommended next block:
+P4.10.0-C8-I-D4-L-L-O-F - Controlled Activity Intake Helper Types Validator Payload Builder
+
+End of O-E gate.
