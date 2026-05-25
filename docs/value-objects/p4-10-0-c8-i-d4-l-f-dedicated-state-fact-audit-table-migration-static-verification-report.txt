@@ -1,0 +1,69 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-F - Dedicated State Fact Audit Table Migration Static/Local Verification
+
+Date: 2026-05-24
+Step: P4.10.0-C8-I-D4-L-F
+Type: static migration verification / read-only not-applied DB probe
+Status: MIGRATION STATIC VERIFICATION PASSED / MIGRATION NOT APPLIED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED
+
+Baseline:
+- Previous pushed commit: 2ba8ef7
+- Previous completed step: P4.10.0-C8-I-D4-L-E
+- Migration file: supabase/migrations/20260524000000_c8_i_d4_l_e_value_object_state_fact_audit_events.sql
+- L-E report: docs/value-objects/p4-10-0-c8-i-d4-l-e-dedicated-state-fact-audit-table-migration-file-report.txt
+- L-D report: docs/value-objects/p4-10-0-c8-i-d4-l-d-dedicated-state-fact-audit-table-migration-design.txt
+
+Verification results:
+- Git baseline clean and pushed before verification: yes.
+- D4-L-E touched only the migration file and D4-L-E report: yes.
+- Migration file exists: yes.
+- Required SQL markers exist: yes.
+- RLS deny-all policy exists: yes.
+- Required indexes and constraints exist: yes.
+- Forbidden destructive SQL patterns absent: yes.
+- Temporary DB probe was removed: yes.
+- Migration was not applied to Supabase: yes.
+- Read-only DB probe returned:
+  - tableName: value_object_state_fact_audit_events
+  - tableExists: False
+  - notAppliedAsExpected: True
+  - errorCode: PGRST205
+  - noWriteOperationPerformed: True
+
+Interpretation:
+The SQL migration file is present in the repository and passes static verification.
+The target table public.value_object_state_fact_audit_events is not present in the connected Supabase database yet.
+This is the expected state for D4-L-F because D4-L-E created the migration file but did not apply it.
+
+Important:
+- No migration was applied.
+- No Supabase DB write was performed.
+- No rollback route was created.
+- No correction route was created.
+- No helper runtime was created.
+- Controlled persist route was not changed.
+- D4-E-B shadow route was not changed.
+
+Next step:
+P4.10.0-C8-I-D4-L-G - Apply Dedicated State Fact Audit Table Migration.
+
+D4-L-G should:
+1. Apply the SQL migration to the database in a controlled step.
+2. Verify that public.value_object_state_fact_audit_events exists.
+3. Verify RLS is enabled if possible.
+4. Verify deny-all direct public policy if possible.
+5. Verify no rows were inserted by the migration.
+6. Not create rollback route.
+7. Not implement rollback helper runtime.
+
+Hard boundaries preserved in this step:
+- No API route created.
+- No helper code changed.
+- SQL migration file verified but not applied.
+- No database insert/update/delete/upsert performed.
+- D4-E-B shadow route remains untouched.
+- Controlled persist route remains unchanged.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-F report.
