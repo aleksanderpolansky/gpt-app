@@ -1,0 +1,105 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-B - Rollback Payload Builder
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-B
+Type: pure-helper code step
+Status: PAYLOAD BUILDER CREATED / TYPESCRIPT PASS / NO ROLLBACK HELPER IMPLEMENTED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED / NO RUNTIME ROLLBACK IMPLEMENTED
+
+Baseline:
+- Previous pushed commit: 808152c
+- Previous completed step: P4.10.0-C8-I-D4-L-L-A
+- D4-L-L-A added rollback type contracts to types.ts.
+- D4-L-L-B was required to create a pure rollback payload builder.
+
+Changed files:
+- lib/activity/stateFacts/controlledPersistence/rollbackPayloadBuilder.ts
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-b-rollback-payload-builder-report.txt
+
+Code change:
+Created pure helper:
+lib/activity/stateFacts/controlledPersistence/rollbackPayloadBuilder.ts
+
+Added exported helpers:
+- buildRollbackStateFactUpdatePayload
+- buildRollbackAuditEventPayload
+- buildRollbackPayloads
+
+State fact update payload scope:
+- correction_status
+- valid_to
+- metadata_json
+- updated_at
+
+Audit event payload scope:
+- user_id
+- actor_id
+- value_object_id
+- state_fact_id
+- related_state_fact_id
+- dimension_key
+- action_type
+- previous_correction_status
+- new_correction_status
+- reason
+- request_trace_id
+- idempotency_key
+- source_route
+- helper_version
+- contract_version
+- d4_gate_version
+- previous_valid_to
+- new_valid_to
+- evidence_json
+- metadata_json
+
+Verification:
+- TypeScript check passed.
+- No Supabase import added.
+- No Supabase client created.
+- No DB select/insert/update/delete/upsert calls added.
+- No rollbackStateFactControlled runtime function added.
+- No route created.
+- No NextRequest/NextResponse used.
+- No value_object_state_facts mutation executed.
+- No value_object_state_fact_audit_events insert executed.
+
+Forbidden patterns checked in rollbackPayloadBuilder.ts:
+- no @supabase.
+- no createClient.
+- no SUPABASE env reference.
+- no .from(
+- no .select(
+- no .insert(
+- no .update(
+- no .delete(
+- no .upsert(
+- no rollbackStateFactControlled runtime.
+- no Next.js route exports.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-C - Rollback Idempotency Helper.
+
+D4-L-L-C should:
+1. Create rollbackIdempotency.ts.
+2. Read value_object_state_fact_audit_events by:
+   - user_id
+   - state_fact_id
+   - action_type
+   - idempotency_key
+3. Return found/not_found/error.
+4. Not update/delete/upsert.
+5. Not create rollback.ts.
+6. Not create route.
+7. Run TypeScript check.
+8. Commit only idempotency helper + report.
+
+Hard boundaries preserved:
+- No API route created.
+- No rollback runtime implemented.
+- No database data insert/update/delete performed.
+- No correction runtime implemented.
+- No Value Object subtype created.
+- No Next Best Action runtime created.
+
+End of D4-L-L-B report.
