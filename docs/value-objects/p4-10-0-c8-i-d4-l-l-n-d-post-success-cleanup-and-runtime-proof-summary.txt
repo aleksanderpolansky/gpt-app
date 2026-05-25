@@ -1,0 +1,73 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-N-D - post-success cleanup and runtime proof summary
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-N-D
+Type: cleanup + runtime proof summary
+Status: DEBUG SUCCESS ROUTE REMOVED / SUCCESS PAYLOAD REMOVED / SUCCESSFUL ROLLBACK PROOF SUMMARIZED / NO PRODUCTION ROLLBACK ROUTE CREATED / NO DB WRITE PERFORMED BY THIS SCRIPT
+
+Baseline:
+- Previous pushed commit: 72d1a85
+- Previous completed step: P4.10.0-C8-I-D4-L-L-N-C
+- N-C proved successful controlled rollback runtime path.
+
+Removed proof-only files:
+- src/app/api/activity/debug/state-fact-rollback-success-proof/route.ts
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-n-a-successful-rollback-proof-browser-console.js
+
+Preserved historical proof reports:
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-n-a-successful-rollback-proof-route-payload-report.txt
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-n-b-failed-safe-rollback-proof-report.txt
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-n-b-fix1-correction-status-rolled-back-migration-report.txt
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-n-b-fix2-correction-status-rolled-back-migration-apply-report.txt
+- docs/value-objects/p4-10-0-c8-i-d4-l-l-n-c-successful-rollback-proof-report.txt
+
+Runtime proof chain summary:
+1. D4-L-L-M-A prepared a fresh controlled-persist browser payload.
+2. D4-L-L-M-B created fresh state fact:
+   - freshStateFactId: f0a41488-17e1-4b5d-89f4-9512adeb788d
+   - valueObjectId: 9177fea8-de25-446b-b418-b55a766d53db
+   - dimensionKey: language_practice_balance
+3. D4-L-L-N-A created a debug-only successful rollback proof route.
+4. Initial N-B rollback attempt failed safely:
+   - fresh fact remained active;
+   - historical proof fact remained unchanged;
+   - rollback was not executed.
+5. N-B-FIX1 created correction_status migration for rolled_back.
+6. N-B-FIX2 confirmed migration applied manually in Supabase.
+7. N-C reran proof once and succeeded:
+   - httpStatus: 200
+   - ok: true
+   - status: successful_rollback_proof_passed
+   - successfulRollbackExecuted: true
+   - fresh correction_status changed from active to rolled_back
+   - fresh valid_to set to 2026-05-25T13:52:49.15+00:00
+   - productionControlledRollbackRouteCreated: false
+
+Historical proof fact:
+- historicalProofStateFactId: 116d4866-0f89-4bb3-aae4-37e7e8860e85
+- was not the rollback target
+- was protected by the fresh test target strategy
+
+Final safety position:
+- No production controlled rollback route exists.
+- No user-facing rollback API exists.
+- No generic update/delete endpoint exists.
+- Debug success route was removed after proof.
+- Browser success payload was removed after proof.
+- Reports remain as historical proof artifacts.
+
+What remains available:
+- Atomic rollback RPC migration remains in source history.
+- Controlled rollback helper remains available as internal helper.
+- Audit table and correction_status rolled_back support remain available.
+- Proof reports document successful runtime behavior.
+
+Next recommended block:
+P4.10.0-C8-I-D4-L-L-O-A - Controlled Activity Intake Contract.
+
+Purpose of next block:
+Move from isolated state-fact proof to the full semantic activity pipeline:
+activity input -> activity_event -> derivation_run -> category candidates -> contextual categories -> VO bridge -> state hook candidates -> controlled facts/deltas/snapshots where allowed.
+
+End of N-D summary.
