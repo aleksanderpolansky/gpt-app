@@ -1,0 +1,88 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-H - Atomic Rollback RPC Migration Static Verification
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-H
+Script: FIX1
+Type: doc-only static verification
+Status: ATOMIC ROLLBACK RPC MIGRATION STATIC VERIFICATION PASSED / MIGRATION NOT APPLIED / NO ROLLBACK HELPER IMPLEMENTED / NO ROUTE CREATED / NO DATABASE WRITE PERFORMED / NO RUNTIME ROLLBACK IMPLEMENTED
+
+FIX1 note:
+- The first D4-L-L-H script stopped on a false-positive self-check.
+- It matched a literal guard pattern inside the verification script itself.
+- FIX1 repeats the SQL verification without that self-referential trap.
+- No project file was committed by the failed first attempt.
+
+Baseline:
+- Previous pushed commit: 9c4f145
+- Previous completed step: P4.10.0-C8-I-D4-L-L-G
+- D4-L-L-G created the migration file only.
+- D4-L-L-H re-read and statically verified the SQL migration file.
+
+Verified migration file:
+- supabase/migrations/20260525001000_c8_i_d4_l_l_g_atomic_rollback_rpc.sql
+
+Verified RPC:
+- public.rollback_value_object_state_fact_controlled
+
+Positive checks passed:
+- CREATE OR REPLACE FUNCTION marker present.
+- returns jsonb marker present.
+- language plpgsql marker present.
+- SECURITY INVOKER marker present.
+- search_path = public marker present.
+- Required input parameters present.
+- Audit idempotency lookup present.
+- Target lookup uses state_fact_id + value_object_id + user_id.
+- Target row lock uses FOR UPDATE.
+- State fact update exists.
+- State fact update is guarded by id + value_object_id + user_id.
+- Audit event insert exists.
+- unique_violation backstop exists.
+- EXECUTE is revoked from public.
+- EXECUTE is revoked from anon.
+- EXECUTE is revoked from authenticated.
+- EXECUTE is granted to service_role.
+
+Negative safety checks passed:
+- No DROP TABLE.
+- No DROP COLUMN.
+- No TRUNCATE.
+- No DELETE FROM.
+- No SECURITY DEFINER.
+- No GRANT EXECUTE to public.
+- No GRANT EXECUTE to anon.
+- No GRANT EXECUTE to authenticated.
+
+Narrow write shape:
+- Exactly one UPDATE public.value_object_state_facts statement.
+- Exactly one INSERT INTO public.value_object_state_fact_audit_events statement.
+- The UPDATE is constrained by:
+  - id = p_state_fact_id
+  - value_object_id = p_value_object_id
+  - user_id = p_user_id
+
+What was not done:
+- Migration was NOT applied.
+- No database write was performed.
+- No rollback.ts was created.
+- No controlled rollback route was created.
+- No runtime rollback was implemented.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-I - Apply Atomic Rollback RPC Migration.
+
+D4-L-L-I should:
+1. Apply the migration manually through Supabase SQL Editor or through an explicitly controlled apply step.
+2. Verify that the function exists.
+3. Verify function privileges:
+   - no execute for public
+   - no execute for anon
+   - no execute for authenticated
+   - execute for service_role
+4. Verify no data row was updated/inserted during migration application.
+5. Commit an apply report.
+6. Still not create rollback.ts.
+7. Still not create route.
+
+End of D4-L-L-H report.
