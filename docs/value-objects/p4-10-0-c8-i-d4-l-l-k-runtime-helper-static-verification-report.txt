@@ -1,0 +1,69 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-K - Runtime Helper Static Verification
+
+Date: 2026-05-25
+Step: P4.10.0-C8-I-D4-L-L-K
+Type: runtime helper static verification
+Status: ROLLBACK RUNTIME HELPER STATIC VERIFICATION PASSED / TYPESCRIPT PASS / NO ROUTE CREATED / NO RUNTIME PROOF EXECUTED / NO DATABASE WRITE PERFORMED
+
+Baseline:
+- Previous pushed commit: d9d20e9
+- Previous completed step: P4.10.0-C8-I-D4-L-L-J
+- D4-L-L-J created rollback.ts.
+- D4-L-L-K re-read rollback.ts and verified the helper statically.
+
+Verified helper:
+- lib/activity/stateFacts/controlledPersistence/rollback.ts
+
+Verified function:
+- rollbackStateFactControlled
+
+Verified RPC:
+- public.rollback_value_object_state_fact_controlled
+
+Positive checks passed:
+- rollbackStateFactControlled exists.
+- ROLLBACK_RPC_NAME points to rollback_value_object_state_fact_controlled.
+- resolveRollbackTargetStateFact is used.
+- checkRollbackIdempotency is used.
+- rollbackPayloadBuilder availability is checked.
+- RPC arguments are built through buildRpcArgs.
+- RPC result is normalized through normalizeRpcResult.
+- Exactly one .rpc( call exists.
+- TypeScript check passed.
+- No controlled rollback route exists.
+
+Negative checks passed:
+- No direct .insert().
+- No direct .update().
+- No direct .delete().
+- No direct .upsert().
+- No direct value_object_state_facts update path.
+- No direct value_object_state_fact_audit_events insert path.
+- No NextRequest.
+- No NextResponse.
+- No POST route export.
+- No GET route export.
+
+What was not done:
+- rollbackStateFactControlled was not called.
+- public.rollback_value_object_state_fact_controlled was not called.
+- No rollback proof was executed.
+- No database write was performed.
+- No route was created.
+- No state fact was rolled back.
+- No audit event was inserted by runtime behavior.
+
+Next step:
+P4.10.0-C8-I-D4-L-L-L - Runtime No-Write / Failure Proof.
+
+D4-L-L-L should:
+1. Add a temporary/debug proof route or script only if necessary.
+2. Prove invalid input does not call RPC.
+3. Prove missing required fields return error without write.
+4. Prove wrong target/valueObject pair returns rejected result without write.
+5. Prove unauthenticated/browser access cannot call the RPC directly.
+6. Still avoid successful rollback until a dedicated authenticated proof step.
+7. Commit proof report only or helper route + report if route is needed.
+
+End of D4-L-L-K report.
