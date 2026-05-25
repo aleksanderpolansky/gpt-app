@@ -1,0 +1,319 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-N-FIX4 — Manual Metadata/Owner Schema Confirmation with Fixed Scanner
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+FIXED SCANNER CONFIRMATION CREATED / DOC ONLY / NO PERSIST HELPER / NO RUNTIME ROUTE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-N-FIX3
+- Previous commit: 8ef35cd
+- Previous message: docs: add C8-I-D4-L-L-O-N-FIX3 metadata owner confirmation
+
+Reason for FIX4
+O-N-FIX3 had a PowerShell parser error in the evidence builder:
+Variable reference is not valid. ':' was not followed by a valid variable name character.
+The error came from an interpolated string shaped like variable-colon-lineNumber.
+O-N-FIX4 fixes that by using the format operator:
+'{0}:{1}: {2}' -f relativeFile, lineNumber, trimmedLine
+
+Files intentionally not created in O-N-FIX4
+- lib/activity/controlledIntake/persist.ts
+- src/app/api/activity/controlled-intake/route.ts
+
+Confirmed columns from fixed scanner
+confirmedMetadataColumn: 
+confirmedOwnerColumn: 
+confirmedStatusColumn: 
+
+Blocking gaps
+metadata/json column not confirmed from fixed scanner evidence
+trusted owner column not confirmed from fixed scanner evidence
+
+Runtime-only gaps
+status column not confirmed; runtime DB write remains blocked
+
+Gate decision
+BLOCK_STATIC_INSERT_ROW_BUILDER_PENDING_MANUAL_SCHEMA_PASTE_OR_TARGETED_SCHEMA_FILE
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-N-FIX5 - Paste Exact activity_events Schema Section
+
+Meaning of gate if passed
+A pass only allows creating a static insert row builder helper.
+It does not allow a real Supabase insert.
+It does not allow route creation.
+It does not allow DB writes.
+
+Meaning of gate if blocked
+Do not create persist.ts.
+Paste the exact activity_events schema/type section or identify the exact schema/type file manually.
+
+activity_events files scanned
+docs/activity-template-mapping-p4-4.md
+
+Metadata evidence
+(none)
+
+Owner evidence
+(none)
+
+Status evidence
+(none)
+
+All useful column evidence
+(none)
+
+Evidence windows
+FILE: docs/activity-template-mapping-p4-4.md
+     1: # Activity Template Mapping P4.4 Documentation
+     2: 
+     3: Date: 2026-05-15
+     4: Project: gpt-app / Activity Recording Layer
+     5: Scope: imported activity template mapping after P4.2 raw/imported lifecycle
+     6: 
+     7: ## 1. Confirmed state
+     8: 
+     9: P4.4.1-P4.4.5 are completed, smoke-tested, committed and pushed.
+    10: 
+    11: Main result:
+    12: 
+    13: Imported raw signals can now be promoted into imported_pending activity_events with attached semantic identifiers:
+    14: 
+    15: - activity_template_id
+    16: - activity_type_id
+    17: - template_id / legacyTemplateId
+    18: 
+    19: This means confirmed imported events can now reach processActivityImpacts with real template/type context.
+    20: 
+    21: ## 2. P4.4.1 - Discovery
+    22: 
+    23: Discovery confirmed:
+    24: 
+    25: - activity_templates table exists
+    26: - activity_types table exists
+    27: - impact_rules are queried by activity_template_id and activity_type_id
+    28: - promote route previously inserted null values for activity_template_id, activity_type_id and template_id
+    29: - activitySourceIntake.ts should not be used for semantic template mapping
+    30: 
+    31: Architectural decision:
+    32: 
+    33: - activitySourceIntake.ts remains responsible only for source/trust/status decisions
+    34: - activityImpactProcessor.ts remains unchanged
+    35: - imported template mapping is implemented as a separate helper
+    36: - promote route calls the helper before inserting activity_events
+    37: 
+    38: ## 3. P4.4.2 - Imported activity template mapping helper
+    39: 
+    40: New helper:
+    41: 
+    42: - lib/activity/importedActivityTemplateMapping.ts
+    43: 
+    44: Function:
+    45: 
+    46: - mapImportedActivityToTemplate(input)
+    47: 
+    48: Mapping strategy:
+    49: 
+    50: 1. explicit activityTemplateId / activity_template_id
+    51: 2. explicit legacyTemplateId / legacy_template_id
+    52: 3. explicit activityTypeId / activity_type_id
+    53: 4. high-confidence deterministic text match
+    54: 5. no match if confidence is too low
+    55: 
+    56: Important rule:
+    57: 
+    58: - mapping does not complete the activity
+    59: - mapping does not create impacts
+    60: - mapping only prepares imported_pending event for later review/confirm
+    61: 
+    62: ## 4. P4.4.2 - Promote route integration
+    63: 
+    64: Updated file:
+    65: 
+    66: - src/app/api/activity/intake/signals/[id]/promote/route.ts
+    67: 
+    68: Promote now writes:
+    69: 
+    70: - activity_type_id: templateMapping.activityTypeId
+    71: - activity_template_id: templateMapping.activityTemplateId
+    72: - template_id: templateMapping.legacyTemplateId
+    73: - metadata_json.importedTemplateMapping
+    74: - metadata_json.templateMappingFlow: P4.4.2
+    75: 
+    76: Promote response now includes:
+    77: 
+    78: - templateMapping
+    79: - activityEvent.activityTemplateId
+    80: - activityEvent.activityTypeId
+    81: - activityEvent.templateId
+    82: 
+    83: Lifecycle remains unchanged:
+    84: 
+    85: - raw signal -> imported_pending event
+    86: - no completed activity on promote
+    87: - no impacts on promote
+    88: - no daily aggregates on promote
+    89: - no current snapshots on promote
+    90: 
+    91: ## 5. P4.4.2-C Smoke test
+    92: 
+    93: Test used active template:
+    94: 
+    95: - templateId: 8eef44f7-9e29-461d-8af0-3db4af1d3c92
+    96: - title: German marketing handwriting practice
+    97: - activityTypeId: 80e43db3-46c4-4fd2-8c2a-de050cbaca7f
+    98: - legacyTemplateId: 0bd61bda-3dea-45a4-a8e0-ca336219df9d
+    99: 
+   100: Created test raw signal:
+   101: 
+   102: - rawSignalId: 2c24c552-9d25-40a5-ac6d-f5bbf41ed620
+   103: 
+   104: Created imported_pending event:
+   105: 
+   106: - eventId: ca5ebc30-8b6b-4bc9-ac52-497ecea774fb
+   107: 
+   108: Assertions passed:
+   109: 
+   110: - ok: true
+   111: - status promoted: true
+   112: - event imported_pending: true
+   113: - mapping matched: true
+   114: - mapping explicit template: true
+   115: - activityTemplateId attached: true
+   116: - activityTypeId attached or template has none: true
+   117: - detail activityTemplateId attached: true
+   118: - still reviewable before confirm: true
+   119: - no impacts on promote: true
+   120: 
+   121: ## 6. P4.4.3 - Legacy template id display fix
+   122: 
+   123: Problem found:
+   124: 
+   125: - PROMOTE.activityEvent.templateId was correctly populated
+   126: - DETAIL.event.legacyTemplateId was null
+   127: 
+   128: Cause:
+   129: 
+   130: - some summaries read legacy_template_id
+   131: - real activity_events column is template_id
+   132: 
+   133: Fixed files:
+   134: 
+   135: - src/app/api/activity/intake/events/[id]/route.ts
+   136: - src/app/api/activity/intake/events/route.ts
+   137: - src/app/api/activity/debug-trace/route.ts
+   138: 
+   139: Smoke test passed:
+   140: 
+   141: - detail legacyTemplateId fixed: true
+   142: - queue legacyTemplateId fixed: true
+   143: - debug-trace legacyTemplateId fixed: true
+   144: 
+   145: ## 7. P4.4.4 - Confirm mapped imported event
+   146: 
+   147: Confirmed mapped event:
+   148: 
+   149: - eventId: ca5ebc30-8b6b-4bc9-ac52-497ecea774fb
+   150: 
+   151: Before confirm:
+   152: 
+   153: - status: imported_pending
+   154: - activityTemplateId: 8eef44f7-9e29-461d-8af0-3db4af1d3c92
+   155: - activityTypeId: 80e43db3-46c4-4fd2-8c2a-de050cbaca7f
+   156: - legacyTemplateId: 0bd61bda-3dea-45a4-a8e0-ca336219df9d
+   157: 
+   158: After confirm:
+   159: 
+   160: - status: completed
+   161: - processingStatus: processed
+   162: - event is no longer reviewable
+   163: - template/type identifiers are preserved
+   164: 
+   165: Impact processor result:
+   166: 
+   167: - impactRules: 5
+   168: - impactEvents: 5
+   169: - dailyAggregates: 5
+   170: - currentSnapshots: 5
+   171: 
+   172: This confirms that template mapping really reaches processActivityImpacts.
+   173: 
+   174: ## 8. P4.4.5 - Debug trace impact summary aliases
+   175: 
+   176: Problem found:
+   177: 
+   178: - debug-trace saw 5 impact events
+   179: - but impactSummary fields were null
+   180: 
+   181: Cause:
+   182: 
+   183: - debug-trace used old field names such as target_type and metric
+   184: - real impact_events fields are impact_target_type, impact_metric, impact_unit, etc.
+   185: 
+   186: Fixed file:
+   187: 
+   188: - src/app/api/activity/debug-trace/route.ts
+   189: 
+   190: Fixed aliases:
+   191: 
+   192: - impact_target_type / target_type
+   193: - impact_target_key / target_key
+   194: - impact_metric / metric
+   195: - impact_direction / direction
+   196: - impact_unit / unit
+   197: - impact_value_numeric / value_numeric
+   198: 
+   199: Smoke test passed:
+   200: 
+   201: - targetType filled: true
+   202: - targetKey filled: true
+   203: - metric filled: true
+   204: - direction filled: true
+   205: - unit filled: true
+   206: - has german writing minutes: true
+   207: - has marketing exposure minutes: true
+   208: - health impactsFound: true
+   209: 
+   210: Confirmed impact summary:
+   211: 
+   212: - german_skill / writing_practice_minutes / 9 minutes
+   213: - marketing_skill / exposure_minutes / 9 minutes
+   214: - right_hand / load_minutes / 9 minutes
+   215: - attention / cognitive_load / qualitative
+   216: - wrist / load_minutes / 9 minutes
+   217: 
+   218: ## 9. Tests not to repeat without reason
+   219: 
+   220: Do not repeat these unless code changes, something breaks, or auth/RLS/security-sensitive logic changes:
+   221: 
+   222: - P4.4.1 discovery
+   223: - P4.4.2 explicit template mapping smoke test
+   224: - P4.4.3 legacyTemplateId display smoke test
+   225: - P4.4.4 confirm mapped imported event smoke test
+   226: - P4.4.5 debug-trace impactSummary alias smoke test
+   227: 
+   228: ## 10. Current endpoint behavior after P4.4
+   229: 
+   230: Promote imported signal:
+   231: 
+   232: - POST /api/activity/intake/signals/[id]/promote
+   233: - creates imported_pending event
+
+Verification performed in O-N-FIX4
+- Required previous files exist.
+- O-N-FIX3 blocked gate was read.
+- Fixed scanner executed without the variable-colon parser bug.
+- activity_events schema/type evidence was inspected directly.
+- persist.ts is absent.
+- controlled-intake route.ts is absent.
+- No SQL was executed.
+- No Supabase write happened.
+- No AI call happened.
+- No activity row was created.
+- Helper files remain free from runtime/write/AI patterns.
+- npx tsc --noEmit is run after report creation.
+
+Conclusion
+O-N-FIX4 provides fixed-scanner confirmation.
+Continue only from the gate decision above.
