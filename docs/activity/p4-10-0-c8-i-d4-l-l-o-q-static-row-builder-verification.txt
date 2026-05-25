@@ -1,0 +1,83 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-Q — Controlled Activity Intake Static Row Builder Verification
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+STATIC ROW BUILDER VERIFIED / NO RUNTIME ROUTE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-P
+- Previous commit: 5fd5b46
+- Previous message: feat: add C8-I-D4-L-L-O-P controlled intake static row builder
+
+Verified file
+- lib/activity/controlledIntake/persist.ts
+
+Verified exports and constants
+- CONTROLLED_ACTIVITY_INTAKE_PERSIST_LAYER
+- CONTROLLED_ACTIVITY_INTAKE_ACTIVITY_EVENTS_TABLE = activity_events
+- CONTROLLED_ACTIVITY_INTAKE_METADATA_COLUMN = metadata
+- CONTROLLED_ACTIVITY_INTAKE_OWNER_COLUMN = user_id
+- CONTROLLED_ACTIVITY_INTAKE_STATUS_COLUMN = status
+- CONTROLLED_ACTIVITY_INTAKE_STATIC_STATUS = raw_intake_pending_semantic_processing
+- buildControlledActivityIntakeMetadata
+- buildControlledActivityIntakeActivityEventsStaticRow
+
+Static verification
+- persist.ts contains required static row builder markers.
+- persist.ts contains required guardrail flags.
+- persist.ts contains no Supabase import.
+- persist.ts contains no createClient.
+- persist.ts contains no .from().
+- persist.ts contains no .insert().
+- persist.ts contains no SQL execution pattern.
+- persist.ts contains no OpenAI/AI call pattern.
+- controlled-intake runtime route remains absent.
+
+Runtime verification
+- row.table is activity_events.
+- row.user_id comes from trustedContext.appUserId.
+- row.status is raw_intake_pending_semantic_processing.
+- row.metadata.controlledIntake exists.
+- metadata contains activity/idempotency/trustedContext/guardrails sections.
+- missing trustedContext.appUserId throws.
+- runtime guardrails remain false for route/db/sql/ai effects.
+
+Checks executed
+- npx tsc --noEmit with temporary runtime check.
+- isolated TypeScript compile with noEmitOnError true.
+- node runtime execution of compiled check.
+- temporary check cleanup.
+- npx tsc --noEmit after cleanup.
+
+Still not done
+- No runtime route exists yet.
+- No Supabase client is imported by controlled intake persist helper.
+- No DB write has been executed.
+- No activity row has been created.
+- No SQL has been executed.
+- No AI call has been made.
+- No semantic candidate / Value Object / state layer persistence exists.
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-R — Controlled Activity Intake Runtime Route Design Gate
+
+O-R should be design/gate only unless explicitly approved otherwise.
+It should define the route boundary:
+- auth/trusted context source;
+- validator call;
+- payload builder call;
+- idempotency builder call;
+- static row builder call;
+- future Supabase insert boundary;
+- no AI;
+- no semantic writes;
+- no route implementation if the gate decides another verification is needed.
+
+Forbidden after O-Q
+- Do not execute DB writes yet.
+- Do not execute SQL.
+- Do not call AI.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
