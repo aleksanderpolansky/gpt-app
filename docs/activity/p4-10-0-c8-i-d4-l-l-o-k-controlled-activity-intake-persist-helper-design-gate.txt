@@ -1,0 +1,244 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-K — Controlled Activity Intake Persist Helper Design Gate
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+DESIGN GATE CREATED / DOC ONLY / NO PERSIST HELPER / NO RUNTIME ROUTE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-J-FIX1
+- Previous commit: 7d4995a
+- Previous message: fix: tighten C8-I-D4-L-L-O-J idempotency canonical typing
+
+Existing implemented helper layer
+- lib/activity/controlledIntake/types.ts
+- lib/activity/controlledIntake/validator.ts
+- lib/activity/controlledIntake/payloadBuilder.ts
+- lib/activity/controlledIntake/idempotency.ts
+
+Files intentionally not created in O-K
+- lib/activity/controlledIntake/persist.ts
+- src/app/api/activity/controlled-intake/route.ts
+
+Main architectural rule
+Activity Event remains the source of truth.
+Controlled intake may later write only one raw activity_events row.
+Controlled intake must not persist semantic candidates, Value Objects, state facts, deltas, or snapshots.
+
+Prior decisions confirmed
+- O-A contract: Activity Event is the source of truth.
+- O-B/O-C/O-E selected activity_events as target table/boundary.
+- O-E gate allowed static helper layer, not runtime write.
+- O-H designed idempotency/persist boundary and metadata/json trace-first approach.
+- O-J-FIX1 confirmed idempotency helper with strict compile/runtime checks.
+
+Gate question
+Can lib/activity/controlledIntake/persist.ts be implemented immediately in the next block?
+
+Gate decision
+BLOCK_DIRECT_PERSIST_IMPLEMENTATION_UNTIL_TARGETED_ACTIVITY_EVENTS_COLUMN_MAPPING_AUDIT
+
+Reason
+O-H defined provisional mapping only:
+- title -> activity_events title/name field
+- inputText -> description/raw_input/original_text field
+- source -> source field or metadata trace
+- status -> raw_intake_pending_semantic_processing or nearest existing safe status
+- durationMinutes -> duration_minutes if present
+- startedAt -> started_at if present
+- endedAt -> ended_at if present
+- occurredAt -> occurred_at if present
+- timezone -> timezone if present
+- context/metadata -> metadata/details/json field if present
+- trusted server actor/app user context -> server-owned fields only
+
+But exact target columns and allowed status values must be confirmed before any persist helper writes code against activity_events.
+
+Persist helper implementation remains blocked until exact mapping is confirmed.
+
+Recommended next block
+P4.10.0-C8-I-D4-L-L-O-L — Controlled Activity Intake activity_events Column Mapping Audit
+
+O-L allowed
+- Inspect local schema files, migrations, generated DB types, existing activity routes/libs, and prior docs.
+- Confirm exact insert target columns for activity_events.
+- Confirm whether metadata/json/details/raw_json column exists.
+- Confirm whether source/status/duration/start/end/timezone columns exist.
+- Confirm server-owned ownership fields to use later.
+- Confirm whether idempotencyKey can be stored in metadata first or needs later additive migration.
+- Create audit report.
+- Run TypeScript check.
+- Commit/push.
+
+O-L forbidden
+- Do not create persist.ts.
+- Do not create src/app/api/activity/controlled-intake/route.ts.
+- Do not write to Supabase.
+- Do not execute SQL unless explicitly separated into a later SQL-only block.
+- Do not create activity_event rows.
+- Do not call AI.
+- Do not persist categoryCandidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Future persist.ts responsibilities after mapping audit passes
+- Accept ControlledActivityIntakePayload only from payloadBuilder.
+- Accept idempotency result only from idempotency helper.
+- Accept trusted server context only from route/auth layer.
+- Accept injected DB/Supabase client from route layer.
+- Insert at most one raw activity_events row.
+- Store controlled intake trace/idempotency metadata in confirmed metadata/json column.
+- Return inserted/existing event id and duplicateDetected flag.
+- Never create semantic candidates, VOs, facts, deltas, snapshots, or run AI.
+
+Future persist.ts forbidden responsibilities
+- No auth ownership decision by client payload.
+- No Supabase client creation inside validator/payloadBuilder/idempotency.
+- No AI calls.
+- No Category Derivation run.
+- No Value Object bridge.
+- No state layer writes.
+- No route handler logic.
+
+Local activity_events reference inventory
+Search roots:
+docs, lib, src, supabase
+
+activity_events matches count:
+2121
+
+activity_events matches sample:
+docs/activity-template-mapping-p4-4.md:13:Imported raw signals can now be promoted into imported_pending activity_events with attached semantic identifiers:
+docs/activity-template-mapping-p4-4.md:36:- promote route calls the helper before inserting activity_events
+docs/activity-template-mapping-p4-4.md:131:- real activity_events column is template_id
+docs/activity/P4.7.9-R_registry_scaling.md:55:- activity_events
+docs/activity/P4.7.9-R_registry_scaling.md:611:- confirm route works with imported_pending activity_events;
+docs/activity/P4.7.9-R_registry_scaling.md:627:new row for relation activity_events violates check constraint activity_events_processing_status_check
+docs/activity/P4.7.9-R_registry_scaling.md:632:- record/complete/start route logs may use processing as processing log status, but activity_events.processing_status does not accept processing.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156:- existing Supabase tables for activity_events / activities / activity logs
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:140:- docs/activity/P4.7.9-R_registry_scaling.md:55 :: - activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:142:- docs/activity/P4.7.9-R_registry_scaling.md:611 :: - confirm route works with imported_pending activity_events;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:143:- docs/activity/P4.7.9-R_registry_scaling.md:627 :: new row for relation activity_events violates check constraint activity_events_processing_status_check
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:144:- docs/activity/P4.7.9-R_registry_scaling.md:632 :: - record/complete/start route logs may use processing as processing log status, but activity_events.processing_status does not accept processing.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:153:- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:157:- docs/activity-template-mapping-p4-4.md:13 :: Imported raw signals can now be promoted into imported_pending activity_events with attached semantic identifiers:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:158:- docs/activity-template-mapping-p4-4.md:36 :: - promote route calls the helper before inserting activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:159:- docs/activity-template-mapping-p4-4.md:131 :: - real activity_events column is template_id
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:161:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:35 :: | value_objects | 6 | 4 | 16 | supabase\migrations\012_activity_recording_backbone.sql:4<br>supabase\migrations\014_activity_events_v2_template_link.sql:10<br>supabase\migrations\023_value_object_state_foundation_p4_7.sql:24 |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:162:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:52 :: | bookings | 1 | 0 | 21 | supabase\migrations\014_activity_events_v2_template_link.sql:9 |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:163:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:65 :: | activity_events | 42 | 19 | 19 | supabase\migrations\012_activity_recording_backbone.sql:7<br>supabase\migrations\012_activity_recording_backbone.sql:82<br>supabase\migrations\012_activity_recording_backbone.sql:118 |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:170:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:114 :: ### activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:171:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:117 :: supabase\migrations\012_activity_recording_backbone.sql:82: create table if not exists public.activity_events (
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:172:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:118 :: supabase\migrations\012_activity_recording_backbone.sql:127: event_id uuid not null references public.activity_events(id) on delete cascade,
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:173:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:119 :: supabase\migrations\012_activity_recording_backbone.sql:188: event_id uuid not null references public.activity_events(id) on delete cascade,
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:174:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:120 :: supabase\migrations\012_activity_recording_backbone.sql:219: last_event_id uuid references public.activity_events(id),
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:175:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:121 :: supabase\migrations\012_activity_recording_backbone.sql:245: last_event_id uuid references public.activity_events(id),
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:176:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:122 :: supabase\migrations\014_activity_events_v2_template_link.sql:14: alter table public.activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:177:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:123 :: supabase\migrations\014_activity_events_v2_template_link.sql:29: alter table public.activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:178:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:124 :: supabase\migrations\014_activity_events_v2_template_link.sql:32: alter table public.activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:179:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:125 :: supabase\migrations\014_activity_events_v2_template_link.sql:60: alter table public.activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:180:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:126 :: supabase\migrations\014_activity_events_v2_template_link.sql:63: alter table public.activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:181:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:127 :: supabase\migrations\019_activity_security_foundation.sql:12: alter table public.activity_events enable row level security;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:182:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:128 :: supabase\migrations\019_activity_security_foundation.sql:26: revoke all on table public.activity_events from anon, authenticated;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:183:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:129 :: supabase\migrations\020_activity_raw_signals.sql:31: output_event_id uuid references public.activity_events(id) on delete set null,
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:184:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:130 :: supabase\migrations\021_activity_processing_logs.sql:16: activity_event_id uuid references public.activity_events(id) on delete set null,
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:185:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:131 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:26: source_event_id uuid references public.activity_events(id),
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:186:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:132 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:137: event_id uuid not null references public.activity_events(id),
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:187:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:133 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:227: event_id uuid not null references public.activity_events(id),
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:188:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:134 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:323: last_event_id uuid references public.activity_events(id),
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:189:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:135 :: supabase\migrations\023_value_object_state_foundation_p4_7.sql:399: last_event_id uuid references public.activity_events(id),
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:190:- docs/commercial/P4.8.0-A2_schema_inventory_raw.md:161 :: supabase\migrations\014_activity_events_v2_template_link.sql:16: references public.activity_templates(id)
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:191:- docs/commercial/P4.8.0-A3_code_routes_inventory.md:325 :: | supabase/migrations/014_activity_events_v2_template_link.sql | 1 |  |  |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:192:- docs/commercial/P4.8.0-A3_code_routes_inventory.md:430 :: **supabase/migrations/014_activity_events_v2_template_link.sql**
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:193:- docs/commercial/P4.8.0-A3_code_routes_inventory.md:748 :: | supabase/migrations/014_activity_events_v2_template_link.sql | 1 |  | seller confirm/reject or purchase trust flow |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:194:- docs/commercial/P4.8.0-A3_code_routes_inventory.md:871 :: | supabase/migrations/014_activity_events_v2_template_link.sql | 1 |  |  |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:195:- docs/commercial/P4.8.0-A3_code_routes_inventory.md:911 :: **supabase/migrations/014_activity_events_v2_template_link.sql**
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:196:- docs/commercial/P4.8.0-A4b_offer_items_semantic_check.md:177 :: | supabase/migrations/012_activity_recording_backbone.sql | 82 | create table if not exists public.activity_events ( |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:200:- docs/p4-7-schema-inventory-raw.md:37 :: - .\supabase\migrations\014_activity_events_v2_template_link.sql (1 matches)
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:201:- docs/p4-7-schema-inventory-raw.md:51 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:202:- docs/p4-7-schema-inventory-raw.md:59 :: - .\supabase\migrations\014_activity_events_v2_template_link.sql:10 - -- activity_participants, activity_links, time_blocks, value_objects or commercial core.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:204:- docs/p4-7-schema-inventory-raw.md:435 :: ## Table or term: activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:205:- docs/p4-7-schema-inventory-raw.md:439 :: - .\supabase\migrations\014_activity_events_v2_template_link.sql (20 matches)
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:206:- docs/p4-7-schema-inventory-raw.md:459 :: -- one user action is recorded once in activity_events;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:207:- docs/p4-7-schema-inventory-raw.md:464 :: create table if not exists public.activity_events (
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:208:- docs/p4-7-schema-inventory-raw.md:469 :: constraint activity_events_duration_check
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:209:- docs/p4-7-schema-inventory-raw.md:474 :: constraint activity_events_time_order_check
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:210:- docs/p4-7-schema-inventory-raw.md:479 :: constraint activity_events_source_check
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:211:- docs/p4-7-schema-inventory-raw.md:484 :: constraint activity_events_status_check
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:212:- docs/p4-7-schema-inventory-raw.md:489 :: constraint activity_events_privacy_scope_check
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:213:- docs/p4-7-schema-inventory-raw.md:494 :: constraint activity_events_processing_status_check
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:214:- docs/p4-7-schema-inventory-raw.md:499 :: drop trigger if exists trg_activity_events_updated_at on public.activity_events;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:215:- docs/p4-7-schema-inventory-raw.md:504 :: create trigger trg_activity_events_updated_at
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:216:- docs/p4-7-schema-inventory-raw.md:509 :: before update on public.activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:217:- docs/p4-7-schema-inventory-raw.md:514 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:218:- docs/p4-7-schema-inventory-raw.md:519 :: event_id uuid not null references public.activity_events(id) on delete cascade,
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:219:- docs/p4-7-schema-inventory-raw.md:524 :: last_event_id uuid references public.activity_events(id),
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:220:- docs/p4-7-schema-inventory-raw.md:529 :: last_event_id uuid references public.activity_events(id),
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:221:- docs/p4-7-schema-inventory-raw.md:534 :: create index if not exists idx_activity_events_user_created_at
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:222:- docs/p4-7-schema-inventory-raw.md:539 :: on public.activity_events(user_id, created_at desc);
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:223:- docs/p4-7-schema-inventory-raw.md:544 :: create index if not exists idx_activity_events_user_started_at
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:224:- docs/p4-7-schema-inventory-raw.md:549 :: on public.activity_events(user_id, started_at desc);
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:225:- docs/p4-7-schema-inventory-raw.md:554 :: create index if not exists idx_activity_events_code
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:226:- docs/p4-7-schema-inventory-raw.md:559 :: on public.activity_events(event_code);
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:227:- docs/p4-7-schema-inventory-raw.md:564 :: create index if not exists idx_activity_events_template_id
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:228:- docs/p4-7-schema-inventory-raw.md:569 :: on public.activity_events(template_id);
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:229:- docs/p4-7-schema-inventory-raw.md:574 :: comment on table public.activity_events is
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:230:- docs/p4-7-schema-inventory-raw.md:579 :: 'Universal links from activity_events to value objects, contexts, observed objects, actors or other entities.';
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:231:- docs/p4-7-schema-inventory-raw.md:584 :: 'Concrete calculated impacts created from activity_events, usually by applying impact_rules.';
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:232:- docs/p4-7-schema-inventory-raw.md:589 :: 'Per-user daily aggregate metrics derived from activity_events and impact_events.';
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:233:- docs/p4-7-schema-inventory-raw.md:591 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:234:- docs/p4-7-schema-inventory-raw.md:594 :: -- 014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:235:- docs/p4-7-schema-inventory-raw.md:596 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:236:- docs/p4-7-schema-inventory-raw.md:599 :: -- activity_events.template_id from migration 012 points to legacy activity_code_templates.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:237:- docs/p4-7-schema-inventory-raw.md:601 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:238:- docs/p4-7-schema-inventory-raw.md:604 :: -- Therefore we add activity_events.activity_template_id instead of overloading template_id.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:239:- docs/p4-7-schema-inventory-raw.md:606 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:240:- docs/p4-7-schema-inventory-raw.md:609 :: alter table public.activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:241:- docs/p4-7-schema-inventory-raw.md:611 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:242:- docs/p4-7-schema-inventory-raw.md:614 :: create index if not exists idx_activity_events_activity_template_id
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:243:- docs/p4-7-schema-inventory-raw.md:616 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:244:- docs/p4-7-schema-inventory-raw.md:619 :: on public.activity_events(activity_template_id);
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:245:- docs/p4-7-schema-inventory-raw.md:621 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:246:- docs/p4-7-schema-inventory-raw.md:624 :: drop trigger if exists trg_activity_events_updated_at on public.activity_events;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:247:- docs/p4-7-schema-inventory-raw.md:626 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:248:- docs/p4-7-schema-inventory-raw.md:629 :: create trigger trg_activity_events_updated_at
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:249:- docs/p4-7-schema-inventory-raw.md:631 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:250:- docs/p4-7-schema-inventory-raw.md:634 :: before update on public.activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:251:- docs/p4-7-schema-inventory-raw.md:636 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:252:- docs/p4-7-schema-inventory-raw.md:639 :: alter table public.activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:253:- docs/p4-7-schema-inventory-raw.md:641 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:254:- docs/p4-7-schema-inventory-raw.md:644 :: drop constraint if exists activity_events_source_check;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:255:- docs/p4-7-schema-inventory-raw.md:646 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:256:- docs/p4-7-schema-inventory-raw.md:649 :: alter table public.activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:257:- docs/p4-7-schema-inventory-raw.md:651 :: File: .\supabase\migrations\014_activity_events_v2_template_link.sql
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:258:- docs/p4-7-schema-inventory-raw.md:654 :: add constraint activity_events_source_check
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:259:- docs/p4-7-schema-inventory-raw.md:660 :: - .\supabase\migrations\012_activity_recording_backbone.sql:7 - -- one user action is recorded once in activity_events;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:262:- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:872:   - activity_events, activities, or existing equivalent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:129:Schema/code findings - activity_events:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:130:- docs/activity/P4.7.9-R_registry_scaling.md:55 :: - activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:131:- docs/activity/P4.7.9-R_registry_scaling.md:611 :: - confirm route works with imported_pending activity_events;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:132:- docs/activity/P4.7.9-R_registry_scaling.md:627 :: new row for relation activity_events violates check constraint activity_events_processing_status_check
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:133:- docs/activity/P4.7.9-R_registry_scaling.md:632 :: - record/complete/start route logs may use processing as processing log status, but activity_events.processing_status does not accept processing.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:134:- docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:135:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:140 :: - docs/activity/P4.7.9-R_registry_scaling.md:55 :: - activity_events
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:136:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:142 :: - docs/activity/P4.7.9-R_registry_scaling.md:611 :: - confirm route works with imported_pending activity_events;
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:137:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:143 :: - docs/activity/P4.7.9-R_registry_scaling.md:627 :: new row for relation activity_events violates check constraint activity_events_processing_status_check
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:138:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:144 :: - docs/activity/P4.7.9-R_registry_scaling.md:632 :: - record/complete/start route logs may use processing as processing log status, but activity_events.processing_status does not accept processing.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:139:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:153 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-a-controlled-activity-intake-contract.txt:156 :: - existing Supabase tables for activity_events / activities / activity logs
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:140:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:157 :: - docs/activity-template-mapping-p4-4.md:13 :: Imported raw signals can now be promoted into imported_pending activity_events with attached semantic identifiers:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:141:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:158 :: - docs/activity-template-mapping-p4-4.md:36 :: - promote route calls the helper before inserting activity_events
+... trimmed. Total matches: 2121
+
+Verification performed in O-K
+- Required prior reports exist.
+- Required helper files exist.
+- persist.ts is absent.
+- controlled-intake route.ts is absent.
+- Helper files remain free from runtime/write/AI patterns.
+- npx tsc --noEmit is run after report creation.
+
+Conclusion
+O-K does not approve immediate persist.ts implementation.
+The next safe step is O-L targeted activity_events column mapping audit.
+After O-L confirms exact columns, a later implementation gate may allow persist.ts creation.
