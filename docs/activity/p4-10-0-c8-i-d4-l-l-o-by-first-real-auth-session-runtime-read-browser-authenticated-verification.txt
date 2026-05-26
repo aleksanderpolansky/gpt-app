@@ -1,0 +1,133 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-BY
+First real Auth0 session runtime read — browser-authenticated verification report
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before report: 63abaef
+- Expected origin/main before report: 63abaef
+- Baseline commit:
+  63abaef feat: enable C8-I-D4-L-L-O-BX first real auth session diagnostic read
+
+Block purpose
+This block records the already observed browser runtime verification result for the diagnostic-only endpoint:
+
+/api/activity/debug/real-auth-session-runtime-read-test
+
+This block is doc-only.
+No code files are changed in this block.
+No controlled-intake route integration is performed in this block.
+No DB write is allowed in this block.
+No SQL is allowed in this block.
+No AI call is allowed in this block.
+
+Endpoint status
+The endpoint remains a debug-only diagnostic endpoint for the first real Auth0/session runtime read.
+The real Auth0 session read is protected by a required diagnostic header.
+The diagnostic header check must happen before auth0.getSession.
+The endpoint must not expose raw session, raw profile, tokens, or unsafe identity payload.
+
+Browser verification origin
+- Browser origin: http://localhost:3000
+- Runtime mode: real browser authenticated session
+- Verification type: browser fetch with credentials
+
+Observed browser verification results
+
+O-BY-1 — missing diagnostic header
+- Request: no diagnostic approval header
+- Expected HTTP status: 403
+- Observed HTTP status: 403
+- Expected error: CONTROLLED_INTAKE_FIRST_REAL_SESSION_DEBUG_HEADER_REQUIRED
+- Result: PASS
+
+O-BY-2 — wrong diagnostic header
+- Request: wrong diagnostic approval header
+- Expected HTTP status: 403
+- Observed HTTP status: 403
+- Expected error: CONTROLLED_INTAKE_FIRST_REAL_SESSION_DEBUG_HEADER_REQUIRED
+- Result: PASS
+
+O-BY-3 — valid diagnostic header with browser credentials
+- Request: valid diagnostic approval header
+- Credentials: include
+- Expected HTTP status: 200
+- Observed HTTP status: 200
+- ok: true
+- sessionPresent: true
+- provider: auth0
+- authSubject: present
+- Result: PASS_AUTHENTICATED_REAL_READ
+
+Final browser console result
+FINAL_O_BY_VERIFICATION_RESULT=PASS_AUTHENTICATED_REAL_READ
+
+Guardrail verification
+The successful authenticated diagnostic read preserved the no-write/no-AI/no-SQL guardrails.
+
+Observed guardrail fields:
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- activityEventsInserted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+Important clarification
+semanticCandidatesPersisted=false is an allowed guardrail field and must not be confused with a forbidden persisted semantic payload.
+The first O-BY browser JS check produced a false failure because it used an overly broad forbidden-key check.
+The corrected browser verification used exact forbidden keys and passed.
+
+Files intentionally not changed
+- src/app/api/activity/controlled-intake/route.ts
+- lib/auth0.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntimeBridge.ts
+- any SQL migration file
+- any activity_events persistence code
+- any AI/category/state runtime file
+
+Architectural conclusion
+The project has now proven that a real Auth0 browser-authenticated session can be read safely in a diagnostic-only endpoint under a strict diagnostic-header corridor.
+
+This does NOT mean that controlled-intake route is authorized to use real auth yet.
+This does NOT mean that activity_events can be inserted yet.
+This does NOT mean that semantic candidates, Value Objects, or state facts can be persisted yet.
+
+Next step decision
+Proceed to the server-side app user mapping read-only corridor.
+
+Recommended next corridor:
+1. Server-side app user mapping design gate.
+2. Read-only mapping contract:
+   - authenticated Auth0 subject maps to internal app user
+   - missing user
+   - duplicate user
+   - inactive user
+   - provider mismatch
+   - sanitized failure response
+3. Read-only implementation.
+4. Browser/server verification.
+5. Only after that: controlled-intake authenticated no-write preview.
+
+Anti-retest notes
+Do not repeat O-BT/O-BU/O-BV/O-BW static/doc checks unless their reports or commits changed.
+Do not repeat O-BX initial script; it is known broken because of @/lib alias and readonly assignment issues.
+Do not repeat O-BX-FIX1; it is known overly strict during cleanup.
+Do not use the first O-BY JS checker; it had a false-positive forbidden-key check.
+Do not run C8-H extractor proofs unless ruleExtractor.ts changes.
+Do not run /api/activity/complete canonical proof unless the relevant runtime file changes.
+
+Definition of Done for O-BY-REPORT
+- This report exists under docs/activity.
+- No code files are changed.
+- TypeScript check passes.
+- Report is committed and pushed.
+- Next step is server-side app user mapping read-only design gate.
