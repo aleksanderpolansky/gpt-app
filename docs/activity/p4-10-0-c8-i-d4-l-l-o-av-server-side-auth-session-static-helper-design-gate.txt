@@ -1,0 +1,252 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-AV â€” Controlled Activity Intake Server-Side Auth Session Static Helper Design Gate
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+SERVER-SIDE AUTH SESSION STATIC HELPER DESIGN GATE CREATED / DOC ONLY / NO ROUTE CHANGE / NO HELPER CREATION / NO AUTH0 SESSION RUNTIME READ / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-AU
+- Previous commit: 9bc3f3a
+- Previous message: docs: verify C8-I-D4-L-L-O-AU server-side auth session contract
+
+Gate decision
+PASS_SERVER_SIDE_AUTH_SESSION_STATIC_HELPER_DESIGN_ONLY
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-AW - Controlled Activity Intake Server-Side Auth Session Static Helper
+
+Reason for O-AV
+O-AT created the no-I/O contract for server-side auth session identity.
+O-AU independently verified that contract.
+O-AV decides whether O-AW may create serverSideAuthSession.ts as a pure static/no-I/O helper.
+O-AV does not authorize real Auth0/session runtime reads.
+O-AV does not authorize Supabase reads.
+O-AV does not authorize route integration.
+O-AV does not authorize production write mode.
+O-AV does not authorize activity_events insert.
+
+Allowed in O-AW
+O-AW may create only:
+- lib/activity/controlledIntake/serverSideAuthSession.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-aw-server-side-auth-session-static-helper.txt
+
+O-AW may not modify:
+- src/app/api/activity/controlled-intake/route.ts
+- lib/activity/controlledIntake/authContext.ts
+- lib/activity/controlledIntake/productionAuthMapping.ts
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts
+- lib/activity/controlledIntake/persist.ts
+- database schema
+- migrations
+
+O-AW helper type
+The helper must be static/no-I/O.
+It may accept only injected session read-model inputs.
+It must not perform real Auth0/session runtime reads yet.
+
+O-AW helper must not:
+- import Auth0 SDK
+- call getSession
+- call getAccessToken
+- read cookies directly
+- read headers directly
+- import NextRequest
+- import NextResponse
+- import Supabase
+- call createClient
+- call .from()
+- call .insert()
+- call .rpc()
+- execute SQL
+- call AI
+- inspect request body ownership fields
+- create users
+- create activity_events rows
+
+Required O-AW exports
+- CONTROLLED_ACTIVITY_INTAKE_SERVER_SIDE_AUTH_SESSION_LAYER
+- ControlledActivityIntakeServerSideAuthProvider
+- ControlledActivityIntakeServerSideAuthSessionSource
+- ControlledActivityIntakeServerSideAuthSessionInput
+- ControlledActivityIntakeServerSideAuthSessionReadModel
+- ControlledActivityIntakeServerSideAuthSessionIdentity
+- ControlledActivityIntakeServerSideAuthSessionGuardrails
+- ControlledActivityIntakeServerSideAuthSessionEvidence
+- ControlledActivityIntakeServerSideAuthSessionFailureCode
+- ControlledActivityIntakeServerSideAuthSessionSuccess
+- ControlledActivityIntakeServerSideAuthSessionFailure
+- ControlledActivityIntakeServerSideAuthSessionResult
+- buildControlledActivityIntakeServerSideAuthSessionIdentity
+- assertControlledActivityIntakeServerSideAuthSessionIdentity
+- isControlledActivityIntakeServerSideAuthSessionFailure
+
+Required O-AW failure codes
+- CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SESSION_INVALID
+- CONTROLLED_INTAKE_AUTH_PROVIDER_UNSUPPORTED
+- CONTROLLED_INTAKE_AUTH_SESSION_READ_FAILED
+
+Required O-AW success shape
+Success must return:
+- ok=true
+- layer
+- source
+- identity
+- evidence
+- guardrails
+
+identity must include:
+- authSubject
+- provider
+- requestSource
+
+identity may include:
+- email
+- sessionId
+
+identity must not include:
+- raw session object
+- access token
+- refresh token
+- ID token
+- cookie values
+- full profile payload
+- name
+- picture
+
+Required O-AW guardrails
+- staticHelperOnly=true
+- serverSideSessionReadOnly=true
+- auth0RuntimeReadExecuted=false
+- serverSideContextRequired=true
+- clientOwnershipAccepted=false
+- previewHeaderAcceptedForProductionWrite=false
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+Required O-AW fail-closed runtime checks
+- missing sessionReadModel fails with CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED
+- null sessionReadModel fails with CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED
+- missing authSubject fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- blank authSubject fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- email-only identity fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- provider=unknown fails with CONTROLLED_INTAKE_AUTH_PROVIDER_UNSUPPORTED
+- blank provider fails with CONTROLLED_INTAKE_AUTH_PROVIDER_UNSUPPORTED
+- unsupported provider fails with CONTROLLED_INTAKE_AUTH_PROVIDER_UNSUPPORTED
+- rawSessionAvailable=false with missing authSubject fails safely
+- malformed expiresAt/issuedAt metadata does not create identity certainty
+- explicit read error input fails with CONTROLLED_INTAKE_AUTH_SESSION_READ_FAILED
+
+Required O-AW success runtime checks
+- provider=auth0 with authSubject succeeds
+- authSubject is trimmed
+- provider is normalized/trimmed
+- email is optional and trimmed
+- sessionId is optional and trimmed
+- requestSource defaults if missing
+- explicit requestSource is preferred
+- evidence.identityEvidence=server_session
+- guardrails show no Auth0 runtime read
+- guardrails show no DB read/write
+- guardrails show no SQL/AI
+- assert helper returns identity on success
+- assert helper throws on failure
+
+Recommended O-AW implementation decisions
+- Treat only provider=auth0 as supported in the first helper.
+- Keep unknown provider unsupported.
+- Do not infer authSubject from email.
+- Do not infer provider from email.
+- Do not expose raw session fields.
+- Keep helper usable in isolated TypeScript runtime check.
+- Keep helper independent from Next.js request/response types.
+
+Forbidden patterns in O-AW helper
+- @auth0
+- getSession
+- getAccessToken
+- cookies(
+- headers(
+- NextRequest
+- NextResponse
+- createClient
+- OpenAI
+- chat.completions
+- fetch(
+- INSERT INTO
+- UPDATE
+- DELETE
+- .insert(
+- .delete(
+- .rpc(
+- .from(
+- categoryCandidates:
+- metricCandidates:
+- stateHookCandidates:
+- value_object_state_facts
+- activity_state_deltas
+
+Required O-AW verification
+- npx tsc --noEmit must pass.
+- isolated runtime helper check must pass.
+- forbidden patterns must be absent from serverSideAuthSession.ts.
+- route.ts must not change.
+- serverSideAppUserMapping.ts must not change.
+- authContext.ts must not change.
+- productionAuthMapping.ts must not change.
+- persist.ts must not change.
+- only serverSideAuthSession.ts and O-AW report may change.
+
+Important limitation after O-AV
+O-AV approves only a design for a static/no-I/O helper.
+It does not approve real Auth0/session runtime reads.
+It does not approve Supabase reads.
+It does not approve route integration.
+It does not approve production write mode.
+It does not approve activity_events insert.
+
+Future corridor after O-AW/O-AX
+After static helper and independent verification:
+- real Auth0/session runtime read design gate
+- real Auth0/session helper implementation
+- app-user Supabase read resolver design gate
+- app-user Supabase read resolver helper
+- route integration design gate
+- only later: controlled production write gate
+
+Still forbidden after O-AV
+- Do not execute Auth0/session runtime reads.
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Checks executed in O-AV
+- Clean pushed O-AU baseline verified.
+- O-AT report was read.
+- O-AU report was read.
+- serverSideAuthSession.ts absence was verified.
+- route.ts safety markers were checked.
+- serverSideAppUserMapping.ts safety markers were checked.
+- authContext.ts safety markers were checked.
+- productionAuthMapping.ts safety markers were checked.
+- persist.ts marker was checked.
+- forbidden DB/SQL/AI/Auth0-runtime patterns were checked in controlled-intake route/helper files.
+- npx tsc --noEmit is run.
+- only this O-AV report is created.
