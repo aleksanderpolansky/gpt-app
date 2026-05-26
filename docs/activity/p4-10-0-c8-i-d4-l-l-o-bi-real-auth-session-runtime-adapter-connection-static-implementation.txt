@@ -1,0 +1,164 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-BI â€” Controlled Activity Intake Real Auth Session Runtime Adapter Connection Static Implementation
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+REAL AUTH SESSION RUNTIME ADAPTER CONNECTION STATIC IMPLEMENTATION CREATED / NO ROUTE CHANGE / NO REAL AUTH0 SESSION RUNTIME READ / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-BH
+- Previous commit: 5924da3
+- Previous message: docs: add C8-I-D4-L-L-O-BH real auth session connection implementation gate
+
+Gate used
+PASS_REAL_AUTH_SESSION_RUNTIME_CONNECTION_STATIC_IMPLEMENTATION_DESIGN_ONLY
+
+Implementation decision
+REAL_AUTH_SESSION_RUNTIME_CONNECTION_STATIC_IMPLEMENTATION_CREATED_NO_IO
+
+Implemented file
+- lib/activity/controlledIntake/serverSideAuthSessionRuntimeConnection.ts
+
+Unchanged files
+- src/app/api/activity/controlled-intake/route.ts
+- lib/activity/controlledIntake/serverSideAuthSession.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntime.ts
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts
+- lib/activity/controlledIntake/authContext.ts
+- lib/activity/controlledIntake/productionAuthMapping.ts
+- lib/activity/controlledIntake/persist.ts
+
+Implementation behavior
+- Creates a static/no-I/O connection helper.
+- Requires connectionApproved=true.
+- Requires authBoundary=project_auth0_server_session.
+- Uses injectedProjectAuthSession and injectedProjectAuthError for static tests only.
+- Does not import Auth0 SDK.
+- Does not call getSession/getAccessToken.
+- Does not execute real Auth0/session runtime read.
+- Does not read cookies.
+- Does not read headers.
+- Does not import NextRequest or NextResponse.
+- Does not read Supabase.
+- Does not write Supabase.
+- Does not execute SQL.
+- Does not call AI.
+- Does not modify route.ts.
+- Does not create activity_events rows.
+
+Runtime verification
+- connectionApproved missing fails with CONTROLLED_INTAKE_AUTH_CONNECTION_NOT_APPROVED.
+- connectionApproved=false fails with CONTROLLED_INTAKE_AUTH_CONNECTION_NOT_APPROVED.
+- missing auth boundary fails with CONTROLLED_INTAKE_AUTH_CONNECTION_UNAVAILABLE.
+- unsupported auth boundary fails with CONTROLLED_INTAKE_AUTH_CONNECTION_UNAVAILABLE.
+- injected project auth error fails with CONTROLLED_INTAKE_AUTH_CONNECTION_READ_FAILED.
+- missing injected project auth session fails with CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED.
+- unsafe provider payload fails with CONTROLLED_INTAKE_AUTH_CONNECTION_RETURNED_UNSAFE_PAYLOAD.
+- malformed session fails with CONTROLLED_INTAKE_AUTH_SESSION_INVALID.
+- expired session fails with CONTROLLED_INTAKE_AUTH_SESSION_EXPIRED.
+- missing subject fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- blank subject fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- unsupported provider fails with CONTROLLED_INTAKE_AUTH_PROVIDER_UNSUPPORTED.
+- injected sanitized Auth0-like project auth session succeeds.
+- output is accepted by serverSideAuthSessionRuntime.ts.
+- output is accepted by serverSideAuthSession.ts.
+- authSubject is trimmed.
+- provider is auth0.
+- email is trimmed.
+- sessionId is trimmed.
+- no unsafe token/raw-session/profile fields are exposed.
+- guardrails show realAuth0SessionReadExecuted=false in O-BI tests.
+- guardrails show auth0RuntimeReadExecuted=false.
+- guardrails show dbReadExecuted=false.
+- guardrails show dbWriteExecuted=false.
+- guardrails show sqlExecuted=false.
+- guardrails show aiCallExecuted=false.
+
+Guardrails verified
+- connectionHelperOnly=true
+- staticConnectionHelperOnly=true
+- realAuth0SessionReadExecuted=false
+- auth0RuntimeReadExecuted=false
+- serverSideSessionReadOnly=true
+- serverSideContextRequired=true
+- clientOwnershipAccepted=false
+- previewHeaderAcceptedForProductionWrite=false
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+Forbidden patterns verified absent from serverSideAuthSessionRuntimeConnection.ts
+- @auth0
+- getSession
+- getAccessToken
+- cookies(
+- headers(
+- NextRequest
+- NextResponse
+- createClient
+- OpenAI
+- chat.completions
+- fetch(
+- INSERT INTO
+- UPDATE
+- DELETE
+- .insert(
+- .delete(
+- .rpc(
+- .from(
+- categoryCandidates:
+- metricCandidates:
+- stateHookCandidates:
+- value_object_state_facts
+- activity_state_deltas
+- token leakage markers
+- raw provider payload leakage markers
+
+Checks executed
+- Clean pushed O-BH baseline verified.
+- O-BG report was read.
+- O-BH report was read.
+- route.ts was verified safe and unchanged.
+- existing helpers were verified safe and unchanged.
+- serverSideAuthSessionRuntimeConnection.ts was created.
+- connection helper markers were verified.
+- forbidden connection helper patterns were checked.
+- npx tsc --noEmit passed with O-BI temporary connection check.
+- isolated TypeScript compile passed.
+- node connection helper check passed.
+- temporary files were removed.
+- npx tsc --noEmit passed after cleanup.
+
+Important limitation
+O-BI creates only a static/no-I/O connection helper.
+It does not execute a real Auth0/session runtime read.
+It does not integrate the connection helper into serverSideAuthSessionRuntime.ts.
+It does not integrate anything into route.ts.
+It does not read Supabase.
+It does not approve production write mode.
+It does not approve activity_events insert.
+It does not approve AI or semantic persistence.
+
+Still forbidden after O-BI
+- Do not integrate runtime adapter into route.ts.
+- Do not execute real Auth0/session runtime reads from route.ts.
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Next step
+P4.10.0-C8-I-D4-L-L-O-BJ â€” Controlled Activity Intake Real Auth Session Runtime Adapter Connection Static Verification
