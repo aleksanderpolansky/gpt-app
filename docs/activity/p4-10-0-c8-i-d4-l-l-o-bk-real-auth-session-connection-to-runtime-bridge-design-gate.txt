@@ -1,0 +1,325 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-BK â€” Controlled Activity Intake Real Auth Session Connection-to-Runtime Bridge Design Gate
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+REAL AUTH SESSION CONNECTION-TO-RUNTIME BRIDGE DESIGN GATE CREATED / DOC ONLY / NO ROUTE CHANGE / NO HELPER CREATION / NO BRIDGE IMPLEMENTATION / NO REAL AUTH0 SESSION RUNTIME READ / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-BJ
+- Previous commit: d01bf68
+- Previous message: docs: verify C8-I-D4-L-L-O-BJ real auth session connection helper
+
+Gate decision
+PASS_REAL_AUTH_SESSION_CONNECTION_TO_RUNTIME_BRIDGE_DESIGN_ONLY
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-BL - Controlled Activity Intake Real Auth Session Connection-to-Runtime Bridge Static Implementation
+
+Reason for O-BK
+O-BI created serverSideAuthSessionRuntimeConnection.ts as a static/no-I-O connection helper.
+O-BJ verified the connection helper and confirmed it can produce a sanitized sessionReadModel accepted by serverSideAuthSessionRuntime.ts and serverSideAuthSession.ts.
+O-BK defines the next bridge step between connection and runtime, without touching route.ts and without executing real Auth0/session runtime reads.
+
+Current verified state
+- serverSideAuthSession.ts exists and remains static/no-I-O.
+- serverSideAuthSessionRuntime.ts exists and remains static/no-I-O.
+- serverSideAuthSessionRuntimeConnection.ts exists and remains static/no-I-O.
+- serverSideAuthSessionRuntimeBridge.ts does not exist yet.
+- route.ts does not call the runtime adapter.
+- route.ts does not call the connection helper.
+- route.ts remains no-write preview only.
+- productionWriteEnabled=false remains in route.ts.
+- no Supabase app-user mapping read is approved.
+- no production activity_events insert is approved.
+
+Allowed in O-BL
+O-BL may create only:
+- lib/activity/controlledIntake/serverSideAuthSessionRuntimeBridge.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-bl-real-auth-session-connection-to-runtime-bridge-static-implementation.txt
+
+O-BL may not modify:
+- src/app/api/activity/controlled-intake/route.ts
+- lib/activity/controlledIntake/serverSideAuthSession.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntime.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntimeConnection.ts
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts
+- lib/activity/controlledIntake/authContext.ts
+- lib/activity/controlledIntake/productionAuthMapping.ts
+- lib/activity/controlledIntake/persist.ts
+- database schema
+- migrations
+
+O-BL bridge role
+The future bridge helper should orchestrate a static/no-I-O flow:
+1. call readControlledActivityIntakeServerSideAuthSessionRuntimeConnection with injected/static project auth session input;
+2. if connection fails, return controlled bridge failure;
+3. pass connection.sessionReadModel into readControlledActivityIntakeServerSideAuthSessionRuntime;
+4. if runtime adapter fails, return controlled bridge failure;
+5. return staticAuthSessionResult identity from serverSideAuthSession.ts through a safe bridge result.
+
+Required O-BL design choice
+O-BL must remain static/no-I-O.
+O-BL must not call Auth0 SDK.
+O-BL must not call getSession/getAccessToken.
+O-BL must not read cookies or headers.
+O-BL must not import NextRequest or NextResponse.
+O-BL must not connect to Supabase.
+O-BL must not call AI.
+O-BL must not integrate into route.ts.
+O-BL may use injectedProjectAuthSession and injectedProjectAuthError for static tests only.
+
+Required O-BL imports
+O-BL may import only from:
+- lib/activity/controlledIntake/serverSideAuthSessionRuntimeConnection.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntime.ts
+
+O-BL should not import:
+- route.ts
+- Supabase clients
+- OpenAI clients
+- DB helpers
+- semantic/category/value/state helpers
+- Auth0 SDK
+- NextRequest
+- NextResponse
+- cookies
+- headers
+
+Required O-BL exports
+- CONTROLLED_ACTIVITY_INTAKE_SERVER_SIDE_AUTH_SESSION_RUNTIME_BRIDGE_LAYER
+- ControlledActivityIntakeServerSideAuthSessionRuntimeBridgeSource
+- ControlledActivityIntakeServerSideAuthSessionRuntimeBridgeInput
+- ControlledActivityIntakeServerSideAuthSessionRuntimeBridgeGuardrails
+- ControlledActivityIntakeServerSideAuthSessionRuntimeBridgeFailureCode
+- ControlledActivityIntakeServerSideAuthSessionRuntimeBridgeSuccess
+- ControlledActivityIntakeServerSideAuthSessionRuntimeBridgeFailure
+- ControlledActivityIntakeServerSideAuthSessionRuntimeBridgeResult
+- buildControlledActivityIntakeServerSideAuthSessionRuntimeBridge
+- isControlledActivityIntakeServerSideAuthSessionRuntimeBridgeFailure
+
+Required O-BL failure codes
+- CONTROLLED_INTAKE_AUTH_BRIDGE_CONNECTION_FAILED
+- CONTROLLED_INTAKE_AUTH_BRIDGE_RUNTIME_FAILED
+- CONTROLLED_INTAKE_AUTH_BRIDGE_IDENTITY_FAILED
+- CONTROLLED_INTAKE_AUTH_BRIDGE_UNSAFE_RESULT
+- CONTROLLED_INTAKE_AUTH_CONNECTION_NOT_APPROVED
+- CONTROLLED_INTAKE_AUTH_CONNECTION_UNAVAILABLE
+- CONTROLLED_INTAKE_AUTH_CONNECTION_READ_FAILED
+- CONTROLLED_INTAKE_AUTH_CONNECTION_RETURNED_UNSAFE_PAYLOAD
+- CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SESSION_EXPIRED
+- CONTROLLED_INTAKE_AUTH_SESSION_INVALID
+- CONTROLLED_INTAKE_AUTH_PROVIDER_UNSUPPORTED
+- CONTROLLED_INTAKE_AUTH_RUNTIME_NOT_APPROVED
+- CONTROLLED_INTAKE_AUTH_SESSION_RUNTIME_UNAVAILABLE
+- CONTROLLED_INTAKE_AUTH_SESSION_READ_FAILED
+
+Required O-BL input contract
+- source?: "test_injected_project_auth_session_bridge"
+- requestSource?: string
+- connectionApproved?: boolean
+- runtimeReadApproved?: boolean
+- authBoundary?: "project_auth0_server_session"
+- debugMode?: boolean
+- injectedProjectAuthSession?: unknown
+- injectedProjectAuthError?: string
+
+The bridge must not accept:
+- appUserId
+- user_id
+- actorId
+- organizationId
+- spaceId
+- client-provided app ownership fields
+- request body ownership fields
+
+Required O-BL success output contract
+A successful bridge should return:
+- ok: true
+- layer: CONTROLLED_ACTIVITY_INTAKE_SERVER_SIDE_AUTH_SESSION_RUNTIME_BRIDGE_LAYER
+- source: "test_injected_project_auth_session_bridge"
+- identity from serverSideAuthSession.ts static helper
+- connectionResult
+- runtimeResult
+- guardrails with:
+  - bridgeHelperOnly=true
+  - staticBridgeOnly=true
+  - realAuth0SessionReadExecuted=false
+  - auth0RuntimeReadExecuted=false
+  - serverSideSessionReadOnly=true
+  - serverSideContextRequired=true
+  - clientOwnershipAccepted=false
+  - previewHeaderAcceptedForProductionWrite=false
+  - dbReadExecuted=false
+  - dbWriteExecuted=false
+  - sqlExecuted=false
+  - aiCallExecuted=false
+  - semanticCandidatesPersisted=false
+  - valueObjectsCreated=false
+  - stateFactsCreated=false
+  - stateDeltasCreated=false
+  - stateSnapshotsCreated=false
+
+Required O-BL failure output contract
+A bridge failure should return:
+- ok: false
+- layer: CONTROLLED_ACTIVITY_INTAKE_SERVER_SIDE_AUTH_SESSION_RUNTIME_BRIDGE_LAYER
+- source: "test_injected_project_auth_session_bridge"
+- code
+- message: sanitized message
+- connectionResult if available
+- runtimeResult if available
+- guardrails with no DB/SQL/AI/write activity
+
+Required O-BL fail-closed behavior
+- connection not approved -> bridge failure, no runtime call
+- connection boundary missing -> bridge failure, no runtime call
+- connection helper error -> bridge failure, no runtime call
+- missing session -> bridge failure, no runtime call
+- unsafe connection payload -> bridge failure, no runtime call
+- missing subject -> bridge failure, no runtime identity
+- unsupported provider -> bridge failure, no runtime identity
+- runtimeReadApproved missing/false -> bridge failure after successful connection
+- runtime adapter failure -> bridge failure
+- static auth session helper failure -> bridge failure
+- unsafe token/raw-session fields in any output -> bridge failure
+- any uncertainty about identity anchor -> bridge failure
+
+Required O-BL success checks without real Auth0 runtime
+For O-BL tests, success may be verified only with a strictly injected sanitized Auth0-like project auth session object.
+The test should confirm:
+- connection helper succeeds
+- runtime adapter succeeds
+- static auth session helper succeeds
+- final identity.authSubject matches injected sub
+- final identity.provider is auth0
+- requestSource is trimmed
+- no tokens are exposed
+- no raw session/profile fields are exposed
+- all guardrails remain no-I-O
+
+Required O-BL guardrails
+- bridgeHelperOnly=true
+- staticBridgeOnly=true
+- realAuth0SessionReadExecuted=false
+- auth0RuntimeReadExecuted=false
+- serverSideSessionReadOnly=true
+- serverSideContextRequired=true
+- clientOwnershipAccepted=false
+- previewHeaderAcceptedForProductionWrite=false
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+Forbidden O-BL behavior
+- route.ts integration
+- production write mode
+- activity_events insert
+- Supabase read
+- Supabase write
+- SQL execution
+- AI call
+- semantic/category derivation
+- value object creation
+- state facts/deltas/snapshots
+- trusting client-provided appUserId/user_id/actorId/organizationId/spaceId
+- leaking tokens or raw session
+- returning full Auth0 profile or full provider payload
+
+Forbidden O-BL patterns in serverSideAuthSessionRuntimeBridge.ts
+- @auth0
+- getSession
+- getAccessToken
+- cookies(
+- headers(
+- NextRequest
+- NextResponse
+- createClient
+- OpenAI
+- chat.completions
+- fetch(
+- INSERT INTO
+- UPDATE
+- DELETE
+- .insert(
+- .delete(
+- .rpc(
+- .from(
+- access_token
+- refresh_token
+- id_token
+- raw cookie
+- raw session
+- raw profile
+- full Auth0 user object
+- full provider payload
+
+Required O-BL verification
+- npx tsc --noEmit must pass.
+- isolated bridge helper runtime check must pass.
+- route.ts must not change.
+- serverSideAuthSession.ts must not change.
+- serverSideAuthSessionRuntime.ts must not change.
+- serverSideAuthSessionRuntimeConnection.ts must not change.
+- serverSideAppUserMapping.ts must not change.
+- authContext.ts must not change.
+- productionAuthMapping.ts must not change.
+- persist.ts must not change.
+- only serverSideAuthSessionRuntimeBridge.ts and O-BL report may change.
+- real Auth0/session runtime read must not be executed during O-BL.
+
+Important limitation after O-BK
+O-BK approves only the static bridge implementation design.
+It does not create serverSideAuthSessionRuntimeBridge.ts.
+It does not execute a real Auth0/session runtime read.
+It does not integrate anything into route.ts.
+It does not read Supabase.
+It does not approve production write mode.
+It does not approve activity_events insert.
+It does not approve AI or semantic persistence.
+
+Future corridor after O-BL
+After O-BL implementation and O-BM verification:
+- decide whether to design a first no-write real Auth0/session runtime read test
+- keep route integration separate
+- keep Supabase app-user mapping read separate
+- keep production write separate
+
+Still forbidden after O-BK
+- Do not integrate runtime adapter into route.ts.
+- Do not execute real Auth0/session runtime reads from route.ts.
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Checks executed in O-BK
+- Clean pushed O-BJ baseline verified.
+- O-BI report was read.
+- O-BJ report was read.
+- route.ts safety markers were checked.
+- serverSideAuthSession.ts safety markers were checked.
+- serverSideAuthSessionRuntime.ts safety markers were checked.
+- serverSideAuthSessionRuntimeConnection.ts safety markers were checked.
+- serverSideAppUserMapping.ts safety markers were checked.
+- authContext.ts safety markers were checked.
+- productionAuthMapping.ts safety markers were checked.
+- persist.ts marker was checked.
+- serverSideAuthSessionRuntimeBridge.ts absence was verified.
+- npx tsc --noEmit is run.
+- only this O-BK report is created.
