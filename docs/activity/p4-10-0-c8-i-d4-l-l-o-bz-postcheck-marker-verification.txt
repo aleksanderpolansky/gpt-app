@@ -1,0 +1,95 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-BZ-POSTCHECK
+Postcheck marker verification for O-BZ server-side app user mapping read-only design gate
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before this postcheck: 8f8301e
+- Expected origin/main before this postcheck: 8f8301e
+- Baseline commit:
+  8f8301e docs: add C8-I O-BZ app user mapping design gate
+
+Purpose
+This postcheck closes a tooling gap in the O-BZ design gate block.
+
+During the O-BZ inline execution, the helper function Require-Marker failed to parse because the PowerShell string used:
+
+"STOP: Missing marker in $Label: $Marker"
+
+PowerShell interpreted the colon after $Label as part of an invalid variable reference.
+As a result, Require-Marker was not defined, subsequent marker checks did not actually run, and several "OK" messages were printed without real marker verification.
+
+This postcheck re-runs the O-BZ marker verification using the corrected safe syntax:
+
+"STOP: Missing marker in $($Label): $($Marker)"
+
+Result
+PASS_O_BZ_REPORT_MARKERS_VERIFIED_AFTER_REQUIRE_MARKER_PARSER_FIX
+
+Verified O-BZ report
+docs/activity/p4-10-0-c8-i-d4-l-l-o-bz-server-side-app-user-mapping-read-only-design-gate.txt
+
+Verified required content
+The O-BZ report contains:
+- P4.10.0-C8-I-D4-L-L-O-BZ
+- Server-side app user mapping read-only design gate
+- design/report-only scope
+- no DB read
+- no DB write
+- no SQL
+- no AI
+- no controlled-intake route integration
+- no activity_events insert
+- no semantic candidates / Value Objects / state facts / state deltas / state snapshots persisted
+- server-only mapping principle
+- trusted server-side auth session -> provider -> authSubject -> internal app user -> trusted controlled-intake auth context
+- forbidden client-supplied appUserId/user_id/actorId/organizationId/spaceId
+- required future read-only mapping cases:
+  mapped_user_found
+  session_missing
+  auth_subject_missing
+  provider_unsupported
+  app_user_not_found
+  app_user_duplicate
+  app_user_inactive
+  provider_mismatch
+  mapping_read_failed
+  unsafe_payload_detected
+- no silent schema invention rule
+- no controlled-intake integration before read-only mapping contract and proof
+- no activity_events insert before mapping proof, authenticated no-write preview, write contract, idempotency/RLS/rollback design
+- next step: O-CA server-side app user mapping read-only contract
+- PASS_SERVER_SIDE_APP_USER_MAPPING_READ_ONLY_DESIGN_GATE_CREATED_NO_DB_NO_WRITE_NO_SQL_NO_AI
+
+TypeScript verification
+Command used:
+npx.cmd tsc --noEmit
+
+Result:
+PASS_TYPESCRIPT_CHECKED_THROUGH_NPX_CMD_AFTER_O_BZ_REPORT
+
+Scope
+This block is verification/report-only.
+No code files are changed.
+No controlled-intake route integration is performed.
+No Auth0/session runtime code is changed.
+No DB read is executed.
+No DB write is executed.
+No SQL is executed.
+No AI call is executed.
+No activity_events insert is performed.
+No semantic candidates, Value Objects, state facts, state deltas, or state snapshots are persisted.
+
+Current decision
+O-BZ is now considered proof-corrected and closed.
+
+Next step decision
+Proceed to O-CA:
+Server-side app user mapping read-only contract.
+
+O-CA must remain doc-only/contract-only first.
+O-CA should define exact response statuses, status codes, forbidden output fields, failure shapes, proof commands and the next controlled read-only implementation boundary.
