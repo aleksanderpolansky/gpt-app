@@ -1,0 +1,192 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-BP â€” Controlled Activity Intake First Real Auth Session Runtime Read Contract Verification
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+FIRST REAL AUTH SESSION RUNTIME READ CONTRACT VERIFIED / NO ROUTE CHANGE / NO HELPER CHANGE / NO ENDPOINT IMPLEMENTATION / NO REAL AUTH0 SESSION RUNTIME READ / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-BO
+- Previous commit: 9d11e7a
+- Previous message: docs: add C8-I-D4-L-L-O-BO first real auth session read contract
+
+Verified reports
+- O-BN first real auth session runtime read design gate
+- O-BO first real auth session runtime read contract
+
+Verification decision
+FIRST_REAL_AUTH_SESSION_RUNTIME_READ_CONTRACT_VERIFIED_NO_IO
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-BQ - Controlled Activity Intake First Real Auth Session Runtime Read Diagnostic Endpoint Implementation Design Gate
+
+Contract verification summary
+O-BP verified that O-BO contains a complete no-I-O contract for the future first real Auth0/session runtime read diagnostic endpoint.
+The contract includes:
+- contract layer name
+- future diagnostic endpoint path
+- required diagnostic header
+- explicit runtime-read approval requirement
+- future Auth0/session boundary
+- bridge path through serverSideAuthSessionRuntimeBridge.ts
+- allowed success response shape
+- allowed failure response shape
+- forbidden response fields
+- HTTP status policy
+- failure codes
+- fail-closed behavior
+- guardrails
+- no-write/no-DB/no-AI implementation checks
+- first real runtime verification requirements
+- separation from app-user mapping and production writes
+- staged next corridor
+
+Verified diagnostic endpoint path
+- src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts
+
+Verified required header
+- x-controlled-intake-first-real-session-read-test: true
+
+Verified contract decision
+- FIRST_REAL_AUTH_SESSION_RUNTIME_READ_CONTRACT_CREATED_NO_IO
+
+Verified required future failure codes
+- CONTROLLED_INTAKE_FIRST_REAL_SESSION_READ_NOT_APPROVED
+- CONTROLLED_INTAKE_FIRST_REAL_SESSION_DEBUG_HEADER_REQUIRED
+- CONTROLLED_INTAKE_FIRST_REAL_SESSION_BOUNDARY_UNAVAILABLE
+- CONTROLLED_INTAKE_FIRST_REAL_SESSION_READ_FAILED
+- CONTROLLED_INTAKE_FIRST_REAL_SESSION_UNSAFE_PAYLOAD
+- CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SESSION_EXPIRED
+- CONTROLLED_INTAKE_AUTH_SESSION_INVALID
+- CONTROLLED_INTAKE_AUTH_PROVIDER_UNSUPPORTED
+- CONTROLLED_INTAKE_AUTH_BRIDGE_RUNTIME_FAILED
+- CONTROLLED_INTAKE_AUTH_BRIDGE_IDENTITY_FAILED
+- CONTROLLED_INTAKE_AUTH_BRIDGE_UNSAFE_RESULT
+
+Verified fail-closed behavior
+- missing diagnostic header fails before session helper call.
+- diagnostic header not exactly true fails before session helper call.
+- missing internal runtime-read approval fails before session helper call.
+- missing project Auth0/session helper fails.
+- helper throw fails.
+- missing session fails.
+- expired session fails.
+- missing sub/authSubject fails.
+- blank sub/authSubject fails.
+- email-only identity fails.
+- unsupported provider fails.
+- unsafe token/raw-session payload fails.
+- bridge failure fails.
+- any uncertainty about identity anchor fails.
+
+Verified forbidden response fields
+- access_token
+- refresh_token
+- id_token
+- token
+- raw cookie
+- raw session
+- raw profile
+- full Auth0 user object
+- full provider payload
+- roles
+- permissions
+- app metadata
+- user metadata
+- appUserId
+- user_id
+- actorId
+- organizationId
+- spaceId
+- membership rows
+- Supabase rows
+- activity_events rows
+- semantic candidates
+- value objects
+- state facts/deltas/snapshots
+
+Verified no-write/no-DB/no-AI boundaries
+- controlled-intake route.ts unchanged.
+- productionWriteEnabled=false preserved.
+- no Supabase client import allowed in future endpoint.
+- no createClient allowed in future endpoint.
+- no .from( allowed in future endpoint.
+- no .insert( allowed in future endpoint.
+- no .update( allowed in future endpoint.
+- no .delete( allowed in future endpoint.
+- no .rpc( allowed in future endpoint.
+- no SQL text allowed in future endpoint.
+- no OpenAI import allowed in future endpoint.
+- no chat.completions allowed in future endpoint.
+- no activity_events insert allowed.
+- no app_users/users/actors/orgs/spaces/memberships read allowed.
+
+Verified current project state
+- future diagnostic endpoint is still absent.
+- controlled-intake route.ts still supports server_side_static_preview.
+- controlled-intake route.ts still supports production_static_preview.
+- controlled-intake route.ts still supports no_write_preview.
+- controlled-intake route.ts still has productionWriteEnabled=false.
+- controlled-intake route.ts still has dbReadExecuted=false.
+- controlled-intake route.ts still has dbWriteExecuted=false.
+- controlled-intake route.ts still has sqlExecuted=false.
+- controlled-intake route.ts still has aiCallExecuted=false.
+- existing static auth/session helpers are unchanged.
+- no code files changed during O-BP.
+
+Checks executed in O-BP
+- Clean pushed O-BO baseline verified.
+- O-BN report was read.
+- O-BO report was read.
+- O-BO contract completeness markers were verified.
+- forbidden contract contradiction markers were checked.
+- controlled-intake route.ts safety markers were checked.
+- serverSideAuthSession.ts safety markers were checked.
+- serverSideAuthSessionRuntime.ts safety markers were checked.
+- serverSideAuthSessionRuntimeConnection.ts safety markers were checked.
+- serverSideAuthSessionRuntimeBridge.ts safety markers were checked.
+- serverSideAppUserMapping.ts safety markers were checked.
+- authContext.ts safety markers were checked.
+- productionAuthMapping.ts safety markers were checked.
+- persist.ts marker was checked.
+- future diagnostic endpoint absence was verified.
+- no uncommitted code changes were verified.
+- npx tsc --noEmit passed.
+- only this O-BP report is created.
+
+Important limitation
+O-BP verifies only the no-I-O contract.
+It does not implement the diagnostic endpoint.
+It does not execute a real Auth0/session runtime read.
+It does not integrate anything into controlled-intake route.ts.
+It does not read Supabase.
+It does not approve production write mode.
+It does not approve activity_events insert.
+It does not approve AI or semantic persistence.
+
+Recommended next step
+O-BQ should be an implementation design gate for the diagnostic endpoint:
+- src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts
+
+O-BQ should not implement the endpoint.
+O-BQ should not execute a real Auth0/session runtime read.
+O-BQ should not read Supabase.
+O-BQ should not modify controlled-intake route.ts.
+O-BQ should keep productionWriteEnabled=false.
+
+Still forbidden after O-BP
+- Do not integrate runtime adapter into controlled-intake route.ts.
+- Do not execute real Auth0/session runtime reads from controlled-intake route.ts.
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
