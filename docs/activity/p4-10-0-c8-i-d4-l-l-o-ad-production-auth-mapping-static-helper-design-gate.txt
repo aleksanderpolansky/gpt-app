@@ -1,0 +1,199 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-AD — Controlled Activity Intake Production Auth Mapping Static Helper Design Gate
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+PRODUCTION AUTH MAPPING STATIC HELPER DESIGN GATE CREATED / DOC ONLY / NO ROUTE CHANGE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-AC
+- Previous commit: aa2d7c4
+- Previous message: docs: verify C8-I-D4-L-L-O-AC production auth mapping contract
+
+Gate decision
+PASS_PRODUCTION_AUTH_MAPPING_STATIC_HELPER_DESIGN_ONLY
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-AE - Controlled Activity Intake Production Auth Mapping Static Helper
+
+Reason for O-AD
+O-AB designed the production auth mapping contract.
+O-AC verified that contract.
+O-AD decides whether the next step may create a static helper file for production auth mapping.
+
+Important boundary
+O-AD does not implement productionAuthMapping.ts.
+O-AD does not modify route.ts.
+O-AD does not modify authContext.ts.
+O-AD does not import Auth0.
+O-AD does not import Supabase.
+O-AD does not execute database reads.
+O-AD does not execute database writes.
+O-AD does not call AI.
+
+Allowed in O-AE
+O-AE may create:
+- lib/activity/controlledIntake/productionAuthMapping.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-ae-production-auth-mapping-static-helper.txt
+
+O-AE may implement only a static/pure helper.
+The helper must accept already server-side-provided identity and mapping inputs.
+The helper must not read Auth0/session directly.
+The helper must not read Supabase directly.
+The helper must not call createClient.
+The helper must not call .from().
+The helper must not call .insert().
+The helper must not execute SQL.
+The helper must not call AI.
+The helper must not touch route.ts.
+
+Required O-AE helper purpose
+The helper should represent a production auth mapping boundary, but without I/O.
+It should convert a server-side identity + server-side mapping object into a trusted context result.
+It should fail closed on missing identity, missing subject, or missing appUserId mapping.
+
+Recommended O-AE file
+- lib/activity/controlledIntake/productionAuthMapping.ts
+
+Required O-AE exports
+- CONTROLLED_ACTIVITY_INTAKE_PRODUCTION_AUTH_MAPPING_LAYER
+- ControlledActivityIntakeProductionAuthMappingSource
+- ControlledActivityIntakeProductionAuthIdentity
+- ControlledActivityIntakeProductionAppUserMapping
+- ControlledActivityIntakeProductionAuthMappingGuardrails
+- ControlledActivityIntakeProductionAuthMappingInput
+- ControlledActivityIntakeProductionAuthMappingSuccess
+- ControlledActivityIntakeProductionAuthMappingFailure
+- ControlledActivityIntakeProductionAuthMappingResult
+- buildControlledActivityIntakeProductionTrustedContext
+- assertControlledActivityIntakeProductionTrustedContext
+
+Required O-AE success shape
+- ok: true
+- layer: CONTROLLED_ACTIVITY_INTAKE_PRODUCTION_AUTH_MAPPING_LAYER
+- source: "production_auth_session"
+- authSubject
+- trustedContext
+- guardrails
+
+Required O-AE failure shape
+- ok: false
+- layer: CONTROLLED_ACTIVITY_INTAKE_PRODUCTION_AUTH_MAPPING_LAYER
+- source
+- code
+- message
+- guardrails
+
+Required O-AE failure codes
+- CONTROLLED_INTAKE_AUTH_IDENTITY_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED
+
+Allowed future-only failure codes, documented but not required in O-AE runtime
+- CONTROLLED_INTAKE_CONTEXT_NOT_VERIFIED
+- CONTROLLED_INTAKE_ACTOR_NOT_ALLOWED
+- CONTROLLED_INTAKE_ORGANIZATION_NOT_ALLOWED
+- CONTROLLED_INTAKE_SPACE_NOT_ALLOWED
+
+Required O-AE guardrails
+- productionAuthMappingOnly: true
+- serverSideContextRequired: true
+- clientOwnershipAccepted: false
+- previewHeaderAcceptedForProductionWrite: false
+- dbReadExecuted: false
+- dbWriteExecuted: false
+- sqlExecuted: false
+- aiCallExecuted: false
+- semanticCandidatesPersisted: false
+- valueObjectsCreated: false
+- stateFactsCreated: false
+- stateDeltasCreated: false
+- stateSnapshotsCreated: false
+
+Recommended O-AE relationship with authContext.ts
+O-AE may reuse existing ControlledActivityIntakeTrustedContext type.
+O-AE may reuse the same conceptual failure code names.
+O-AE should not duplicate route logic.
+O-AE should not import NextRequest or NextResponse.
+O-AE should not import controlled-intake route.ts.
+O-AE should not call buildControlledActivityIntakeNoWritePreviewTrustedContext.
+O-AE should keep preview and production mapping separate.
+
+Required O-AE runtime checks
+- Missing identity fails.
+- Blank subject fails.
+- Missing mapping fails.
+- Missing appUserId/userId fails.
+- appUserId is preferred over userId.
+- userId fallback works if appUserId is absent.
+- actorId/organizationId/spaceId pass through only from server-side mapping input.
+- guardrails remain no-read/no-write/no-SQL/no-AI.
+- assert helper returns trusted context on success.
+- assert helper throws on failure.
+
+Forbidden in O-AE
+- Do not modify route.ts.
+- Do not modify authContext.ts unless a compile error proves it is necessary.
+- Do not import Auth0.
+- Do not import Supabase.
+- Do not call createClient.
+- Do not call .from().
+- Do not call .insert().
+- Do not execute database reads.
+- Do not execute database writes.
+- Do not execute SQL.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+- Do not create a production write route.
+
+Route state verified in O-AD
+- route.ts was not changed.
+- route remains no_write_preview only.
+- route still uses buildControlledActivityIntakeNoWritePreviewTrustedContext.
+- route still requires x-controlled-intake-no-write-preview.
+- route still has dbWriteExecuted=false.
+- route still has sqlExecuted=false.
+- route still has aiCallExecuted=false.
+- route contains no createClient.
+- route contains no .from().
+- route contains no .insert().
+- route contains no AI pattern.
+- route contains no semantic persistence pattern.
+
+authContext state verified in O-AD
+- authContext.ts was not changed.
+- authContext remains static/no-write.
+- authContext keeps serverSideContextRequired=true.
+- authContext keeps clientOwnershipAccepted=false.
+- authContext keeps previewHeaderAcceptedForProductionWrite=false.
+- authContext keeps dbWriteExecuted=false.
+- authContext keeps sqlExecuted=false.
+- authContext keeps aiCallExecuted=false.
+- authContext contains no NextRequest/NextResponse.
+- authContext contains no Supabase client.
+- authContext contains no AI pattern.
+
+Checks executed in O-AD
+- Clean pushed O-AC baseline verified.
+- O-AB report was read.
+- O-AC report was read.
+- route.ts was checked for no-write/no-SQL/no-AI boundaries.
+- authContext.ts was checked for static/no-write/no-SQL/no-AI boundaries.
+- npx tsc --noEmit is run.
+- only this O-AD report is created.
+
+Still forbidden after O-AD
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
