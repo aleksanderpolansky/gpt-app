@@ -1,0 +1,103 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-AF — Controlled Activity Intake Production Auth Mapping Static Helper Verification
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+PRODUCTION AUTH MAPPING STATIC HELPER VERIFIED / NO ROUTE CHANGE / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-AE
+- Previous commit: 2cc4de0
+- Previous message: feat: add C8-I-D4-L-L-O-AE production auth mapping helper
+
+Verified file
+- lib/activity/controlledIntake/productionAuthMapping.ts
+
+Reports read
+- O-AD production auth mapping static helper design gate
+- O-AE production auth mapping static helper report
+
+Verification result
+PRODUCTION_AUTH_MAPPING_STATIC_HELPER_VERIFIED_NO_IO
+
+Static verification
+- productionAuthMapping.ts exports the required layer constant.
+- productionAuthMapping.ts exports required identity/mapping/result/guardrail types.
+- productionAuthMapping.ts exports buildControlledActivityIntakeProductionTrustedContext.
+- productionAuthMapping.ts exports assertControlledActivityIntakeProductionTrustedContext.
+- productionAuthMapping.ts exports isControlledActivityIntakeProductionAuthMappingFailure.
+- productionAuthMapping.ts includes required failure codes.
+- productionAuthMapping.ts includes future-only context failure codes.
+- productionAuthMapping.ts includes no-read/no-write/no-SQL/no-AI guardrails.
+- productionAuthMapping.ts does not import Auth0.
+- productionAuthMapping.ts does not import Supabase.
+- productionAuthMapping.ts does not import NextRequest or NextResponse.
+- productionAuthMapping.ts does not call createClient.
+- productionAuthMapping.ts does not call .from().
+- productionAuthMapping.ts does not call .insert().
+- productionAuthMapping.ts does not call AI.
+- productionAuthMapping.ts does not call preview helper.
+
+Runtime verification
+- Missing identity fails with CONTROLLED_INTAKE_AUTH_IDENTITY_REQUIRED.
+- Missing subject fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- Blank subject fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- Missing mapping fails with CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED.
+- Blank appUserId/userId fails with CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED.
+- userId fallback succeeds when appUserId is absent.
+- appUserId is preferred over userId.
+- authSubject is trimmed.
+- appUserId/userId is trimmed.
+- actorId/organizationId/spaceId are trimmed and passed through only from mapping input.
+- requestSource is trimmed.
+- default requestSource is controlled-intake-production-auth-mapping.
+- success guardrails remain dbReadExecuted=false.
+- success guardrails remain dbWriteExecuted=false.
+- success guardrails remain sqlExecuted=false.
+- success guardrails remain aiCallExecuted=false.
+- assert helper returns trusted context on success.
+- assert helper throws on failure.
+
+Unchanged files
+- src/app/api/activity/controlled-intake/route.ts
+- lib/activity/controlledIntake/authContext.ts
+
+Checks executed
+- Clean pushed O-AE baseline verified.
+- O-AD report was read.
+- O-AE report was read.
+- productionAuthMapping.ts static markers were verified.
+- forbidden helper patterns were checked.
+- route.ts and authContext.ts were verified unchanged/safe.
+- npx tsc --noEmit passed with O-AF temporary runtime check.
+- isolated TypeScript compile passed.
+- node runtime check passed.
+- temporary files were removed.
+- npx tsc --noEmit passed after cleanup.
+- only this O-AF report is created.
+
+Important limitation
+O-AF verifies only the pure static production auth mapping helper.
+It does not integrate production auth into route.ts.
+It does not read Auth0/session.
+It does not read Supabase.
+It does not perform Supabase writes.
+It does not approve activity_events insert.
+It does not approve production write mode.
+It does not approve AI or semantic persistence.
+
+Still forbidden after O-AF
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Next step
+P4.10.0-C8-I-D4-L-L-O-AG - Controlled Activity Intake Production Auth Mapping Route Integration Design Gate
