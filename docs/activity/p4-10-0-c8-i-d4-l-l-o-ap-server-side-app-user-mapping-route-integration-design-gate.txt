@@ -1,0 +1,213 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-AP — Controlled Activity Intake Server-Side App User Mapping Route Integration Design Gate
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+SERVER-SIDE APP USER MAPPING ROUTE INTEGRATION DESIGN GATE CREATED / DOC ONLY / NO ROUTE CHANGE / NO HELPER CHANGE / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-AO
+- Previous commit: f5aebaf
+- Previous message: docs: verify C8-I-D4-L-L-O-AO server-side app user mapping helper
+
+Gate decision
+PASS_SERVER_SIDE_APP_USER_MAPPING_ROUTE_INTEGRATION_DESIGN_ONLY
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-AQ - Controlled Activity Intake Server-Side App User Mapping Route Integration No-Write Refactor
+
+Reason for O-AP
+O-AN created lib/activity/controlledIntake/serverSideAppUserMapping.ts as a pure static/no-I/O helper.
+O-AO independently verified that helper.
+O-AP decides whether O-AQ may integrate that helper into controlled-intake route as an explicit no-write preview/debug path.
+O-AP does not authorize any Supabase read.
+O-AP does not authorize any route production write.
+O-AP does not authorize activity_events insert.
+
+Current verified state
+- serverSideAppUserMapping.ts exists.
+- serverSideAppUserMapping.ts is static/no-I/O.
+- route.ts does not import serverSideAppUserMapping.ts yet.
+- route.ts still supports legacy no_write_preview.
+- route.ts still supports production_static_preview.
+- route.ts still requires x-controlled-intake-no-write-preview.
+- route.ts still has productionWriteEnabled=false.
+- route.ts still has dbReadExecuted=false.
+- route.ts still has dbWriteExecuted=false.
+- route.ts still has sqlExecuted=false.
+- route.ts still has aiCallExecuted=false.
+
+Allowed in O-AQ
+O-AQ may modify only:
+- src/app/api/activity/controlled-intake/route.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-aq-server-side-app-user-mapping-route-integration-no-write-refactor.txt
+
+O-AQ may import from:
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts
+
+O-AQ must preserve existing modes:
+- no_write_preview
+- production_static_preview
+
+O-AQ may add a new explicit no-write mode:
+- server_side_static_preview
+
+O-AQ must require:
+- x-controlled-intake-no-write-preview: true
+- x-controlled-intake-auth-mapping-mode: server_side_static_preview
+
+O-AQ may use headers only as injected no-I/O test inputs, not as production ownership proof.
+
+Recommended O-AQ headers for injected server identity
+- x-controlled-intake-preview-server-auth-subject
+- x-controlled-intake-preview-server-provider
+- x-controlled-intake-preview-server-email
+- x-controlled-intake-preview-server-session-id
+- x-controlled-intake-preview-request-source
+
+Recommended O-AQ headers for injected app user read model
+- x-controlled-intake-preview-app-user-read-model-app-user-id
+- x-controlled-intake-preview-app-user-read-model-internal-user-id
+- x-controlled-intake-preview-app-user-read-model-auth-subject
+- x-controlled-intake-preview-app-user-read-model-source
+- x-controlled-intake-preview-app-user-read-model-status
+- x-controlled-intake-preview-app-user-read-model-email
+
+Recommended O-AQ headers for injected requested context
+- x-controlled-intake-preview-requested-actor-id
+- x-controlled-intake-preview-requested-organization-id
+- x-controlled-intake-preview-requested-space-id
+
+Recommended O-AQ headers for injected membership read model
+- x-controlled-intake-preview-membership-actor-id
+- x-controlled-intake-preview-membership-organization-id
+- x-controlled-intake-preview-membership-space-id
+- x-controlled-intake-preview-membership-actor-status
+- x-controlled-intake-preview-membership-organization-status
+- x-controlled-intake-preview-membership-space-status
+- x-controlled-intake-preview-membership-role
+- x-controlled-intake-preview-membership-source
+
+Required O-AQ route behavior
+- Missing no-write preview header fails with CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED.
+- server_side_static_preview with missing identity fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED or mapped helper equivalent.
+- server_side_static_preview with missing app user mapping fails with CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED.
+- server_side_static_preview with ambiguous mapping fails with CONTROLLED_INTAKE_APP_USER_MAPPING_AMBIGUOUS.
+- server_side_static_preview with blocked mapping fails with CONTROLLED_INTAKE_APP_USER_MAPPING_BLOCKED.
+- server_side_static_preview with auth subject mismatch fails with CONTROLLED_INTAKE_AUTH_SUBJECT_MISMATCH.
+- server_side_static_preview with unverified actor fails with CONTROLLED_INTAKE_ACTOR_NOT_ALLOWED.
+- server_side_static_preview with unverified organization fails with CONTROLLED_INTAKE_ORGANIZATION_NOT_ALLOWED.
+- server_side_static_preview with unverified space fails with CONTROLLED_INTAKE_SPACE_NOT_ALLOWED.
+- Invalid JSON fails with CONTROLLED_INTAKE_INVALID_JSON.
+- Client ownership fields in body still fail validation.
+- Valid server_side_static_preview request returns ok=true.
+- Returned mode is server_side_static_preview.
+- Returned trustedContextPreview comes from serverSideAppUserMapping helper.
+- staticRowPreview remains preview only and does not write to DB.
+- Existing no_write_preview mode still works.
+- Existing production_static_preview mode still works.
+
+Required O-AQ guardrails
+- routeServerSideAppUserMappingIntegrated=true
+- routeScaffoldOnly=true
+- noWritePreview=true
+- productionWriteEnabled=false
+- previewHeaderAcceptedForProductionWrite=false
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+Forbidden in O-AQ
+- Do not import Auth0.
+- Do not read session directly.
+- Do not import Supabase.
+- Do not call createClient.
+- Do not call .from().
+- Do not call .insert().
+- Do not call .rpc().
+- Do not execute SQL.
+- Do not call AI.
+- Do not add production write route.
+- Do not trust request body ownership fields.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts/deltas/snapshots.
+- Do not remove no_write_preview mode.
+- Do not remove production_static_preview mode.
+
+Required O-AQ verification
+- npx tsc --noEmit must pass.
+- isolated route runtime check must pass.
+- route.ts forbidden patterns must remain absent:
+  - createClient
+  - OpenAI
+  - chat.completions
+  - fetch(
+  - INSERT INTO
+  - UPDATE
+  - DELETE
+  - .insert(
+  - .delete(
+  - .rpc(
+  - .from(
+  - categoryCandidates:
+  - metricCandidates:
+  - stateHookCandidates:
+  - value_object_state_facts
+  - activity_state_deltas
+- serverSideAppUserMapping.ts must not change.
+- authContext.ts must not change.
+- productionAuthMapping.ts must not change.
+- persist.ts must not change.
+- only route.ts and O-AQ report may change.
+
+Important limitation after O-AP
+O-AP approves only a design for no-write route integration.
+It does not approve real server-side Auth0/session read.
+It does not approve Supabase read.
+It does not approve Supabase write.
+It does not approve production write mode.
+It does not approve activity_events insert.
+
+Future after O-AQ/O-AR
+After no-write route integration is implemented and verified, the next corridor should be:
+- server-side Auth0/session read design gate
+- app user mapping Supabase read design gate
+- read resolver contract
+- read resolver helper
+- read resolver verification
+- only later, controlled activity_events write gate
+
+Still forbidden after O-AP
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Checks executed in O-AP
+- Clean pushed O-AO baseline verified.
+- O-AN report was read.
+- O-AO report was read.
+- serverSideAppUserMapping.ts safety markers were checked.
+- forbidden helper patterns were checked.
+- route.ts safety markers were checked.
+- route.ts was confirmed not yet integrated with serverSideAppUserMapping.ts.
+- authContext.ts safety markers were checked.
+- productionAuthMapping.ts safety markers were checked.
+- persist.ts marker was checked.
+- forbidden DB/SQL/AI patterns were checked in controlled-intake route/helper files.
+- npx tsc --noEmit is run.
+- only this O-AP report is created.
