@@ -1,0 +1,236 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-BZ
+Server-side app user mapping read-only design gate
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-BZ: 1212d4c
+- Expected origin/main before O-BZ: 1212d4c
+- Baseline commit:
+  1212d4c docs: verify C8-I O-BY TypeScript postcheck
+
+Purpose
+This block defines the design gate for the next corridor:
+server-side mapping from a real Auth0 browser-authenticated session to an internal application user.
+
+This block is design/report-only.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not integrate real auth into src/app/api/activity/controlled-intake/route.ts.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+
+Previous proof state
+O-BX proved that the diagnostic endpoint can perform the first guarded real Auth0 session read.
+O-BY proved in browser runtime:
+- missing diagnostic header -> HTTP 403 PASS
+- wrong diagnostic header -> HTTP 403 PASS
+- valid diagnostic header with browser credentials -> HTTP 200 PASS_AUTHENTICATED_REAL_READ
+- provider auth0
+- authSubject present
+- no-write/no-AI/no-SQL guardrails preserved
+
+O-BY-POSTCHECK corrected the Windows PowerShell npx.ps1 problem by running:
+npx.cmd tsc --noEmit
+
+Result:
+PASS_TYPESCRIPT_CHECKED_THROUGH_NPX_CMD_AFTER_O_BY_REPORT
+
+Design target
+The next implementation corridor must map:
+
+trusted server-side auth session
+-> provider
+-> authSubject
+-> internal app user
+-> trusted controlled-intake auth context
+
+The browser/client must not be allowed to provide:
+- appUserId
+- actorId
+- organizationId
+- spaceId
+- ownership fields
+- productionWriteEnabled
+- DB write flags
+- semantic persistence flags
+- state fact/delta/snapshot fields
+
+Server-side mapping principle
+Only the server may derive the internal app user from the authenticated session.
+
+Allowed input into the mapping corridor:
+- provider, expected value: auth0
+- authSubject / subject from sanitized session
+- optional email only for diagnostics and error context
+- optional sessionId only for sanitized diagnostics if already available
+- no raw session
+- no raw profile
+- no token
+- no cookie dump
+- no full provider payload
+
+Forbidden input into the mapping corridor:
+- client-supplied appUserId
+- client-supplied user_id
+- client-supplied actorId
+- client-supplied organizationId
+- client-supplied spaceId
+- client-supplied ownership information
+- client-supplied RLS bypass indicator
+- access_token
+- refresh_token
+- id_token
+- raw session
+- raw profile
+- full Auth0 user object
+- full provider payload
+
+Read-only mapping contract to design next
+The next block must define a read-only contract with at least these cases:
+
+1. mapped_user_found
+   Auth0 provider + authSubject maps to exactly one active internal app user.
+
+2. session_missing
+   No authenticated server-side session is present.
+
+3. auth_subject_missing
+   Auth session exists but sanitized auth subject is missing.
+
+4. provider_unsupported
+   Provider is not auth0 or provider is missing.
+
+5. app_user_not_found
+   No internal app user exists for provider + authSubject.
+
+6. app_user_duplicate
+   More than one internal app user candidate exists for provider + authSubject.
+
+7. app_user_inactive
+   Internal app user exists but is inactive/disabled/blocked, if such field exists.
+
+8. provider_mismatch
+   Internal user record exists but provider does not match the authenticated provider.
+
+9. mapping_read_failed
+   DB read failed in the future read-only corridor.
+
+10. unsafe_payload_detected
+   Mapping output or error output attempts to expose raw session/token/provider payload.
+
+Important table decision
+This O-BZ block does not select or query a database table.
+The next O-CA/O-CB contract must inspect the actual repository and schema evidence before choosing the exact mapping source.
+
+Candidate mapping sources to inspect next:
+- existing app user table
+- existing Auth0/provider subject fields
+- existing profile/user identity table
+- existing actor/user linking table
+- existing helper buildControlledActivityIntakeServerSideAppUserMapping
+- existing helper buildControlledActivityIntakeProductionTrustedContext
+
+The mapping implementation must not invent new schema silently.
+If the existing schema is insufficient, the next block must stop at design/contract and request a separate SQL audit/migration gate.
+
+Static evidence collected in this O-BZ gate
+These are repository grep counts only. They do not imply DB execution.
+
+- app_users occurrences: 895
+- auth0 occurrences: 15700
+- authSubject occurrences: 411
+- provider occurrences: 260
+- user_id occurrences: 4363
+- buildControlledActivityIntakeServerSideAppUserMapping occurrences: 5
+- buildControlledActivityIntakeTrustedContextFromAuth occurrences: 46
+- buildControlledActivityIntakeProductionTrustedContext occurrences: 7
+
+Files verified in this O-BZ gate
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-by-first-real-auth-session-runtime-read-browser-authenticated-verification.txt
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-by-post-commit-typescript-baseline-verification.txt
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-bx-first-real-auth-session-runtime-read-diagnostic-endpoint-real-read-implementation.txt
+- src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts
+- src/app/api/activity/controlled-intake/route.ts
+- lib/auth0.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntimeBridge.ts
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts
+- lib/activity/controlledIntake/authContext.ts
+- lib/activity/controlledIntake/productionAuthMapping.ts
+
+Verified current boundary
+The diagnostic endpoint has real Auth0 session read only inside the diagnostic corridor.
+The controlled-intake route still has:
+- productionWriteEnabled: false
+- dbReadExecuted: false
+- dbWriteExecuted: false
+- sqlExecuted: false
+- aiCallExecuted: false
+
+Therefore, controlled-intake is still not authorized to:
+- read DB
+- write DB
+- insert activity_events
+- call AI
+- persist semantic candidates
+- create Value Objects
+- create state facts/deltas/snapshots
+
+Mapping output design
+The future successful read-only mapping output should be sanitized and minimal.
+
+Allowed future success shape:
+{
+  ok: true,
+  mappingStatus: "mapped_user_found",
+  provider: "auth0",
+  authSubjectPresent: true,
+  appUserMapped: true,
+  appUserIdPresent: true,
+  dbReadExecuted: true,
+  dbWriteExecuted: false,
+  sqlExecuted: false,
+  aiCallExecuted: false,
+  activityEventsInserted: false
+}
+
+Forbidden future success shape:
+{
+  rawSession: "...",
+  rawProfile: "...",
+  access_token: "...",
+  refresh_token: "...",
+  id_token: "...",
+  fullProviderPayload: "...",
+  clientSuppliedAppUserIdAccepted: true,
+  dbWriteExecuted: true,
+  activityEventsInserted: true
+}
+
+Controlled-intake integration rule
+Do not integrate mapping into src/app/api/activity/controlled-intake/route.ts until the read-only mapping contract and read-only mapping verification have passed.
+
+Activity Event write rule
+Do not insert activity_events until:
+1. server-side app user mapping read-only proof passes;
+2. controlled-intake authenticated no-write preview passes;
+3. activity_events insert gate/contract is created;
+4. idempotency, RLS, trusted server context and rollback/error behavior are specified.
+
+Next step decision
+Proceed to O-CA:
+Server-side app user mapping read-only contract.
+
+O-CA must remain no-write.
+O-CA may be doc-only/contract-only first.
+O-CA should define exact request/response cases, forbidden fields, status codes, error shapes and proof commands.
+Only after O-CA is committed should a controlled read-only implementation be considered.
+
+PASS marker
+PASS_SERVER_SIDE_APP_USER_MAPPING_READ_ONLY_DESIGN_GATE_CREATED_NO_DB_NO_WRITE_NO_SQL_NO_AI
