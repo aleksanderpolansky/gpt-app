@@ -1,0 +1,137 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-BM â€” Controlled Activity Intake Real Auth Session Connection-to-Runtime Bridge Static Verification
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+REAL AUTH SESSION CONNECTION-TO-RUNTIME BRIDGE STATIC VERIFIED / NO ROUTE CHANGE / NO HELPER CHANGE / NO REAL AUTH0 SESSION RUNTIME READ / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-BL
+- Previous commit: 1623bf4
+- Previous message: feat: add C8-I-D4-L-L-O-BL real auth session bridge helper
+
+Verified files
+- lib/activity/controlledIntake/serverSideAuthSessionRuntimeBridge.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntimeConnection.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntime.ts
+- lib/activity/controlledIntake/serverSideAuthSession.ts
+- src/app/api/activity/controlled-intake/route.ts
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts
+- lib/activity/controlledIntake/authContext.ts
+- lib/activity/controlledIntake/productionAuthMapping.ts
+- lib/activity/controlledIntake/persist.ts
+
+Reports read
+- O-BK real auth session connection-to-runtime bridge design gate
+- O-BL real auth session connection-to-runtime bridge static implementation report
+
+Verification decision
+REAL_AUTH_SESSION_CONNECTION_TO_RUNTIME_BRIDGE_STATIC_VERIFIED_NO_IO
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-BN - Controlled Activity Intake First Real Auth Session Runtime Read Design Gate
+
+Static verification
+- serverSideAuthSessionRuntimeBridge.ts exists.
+- bridge helper exports expected layer constant.
+- bridge helper exports expected types.
+- bridge helper exports buildControlledActivityIntakeServerSideAuthSessionRuntimeBridge.
+- bridge helper exports isControlledActivityIntakeServerSideAuthSessionRuntimeBridgeFailure.
+- bridge helper imports only the static connection helper and static runtime adapter.
+- bridge helper contains unsafe result detection.
+- bridge helper contains no Auth0 SDK import.
+- bridge helper contains no getSession/getAccessToken call.
+- bridge helper contains no cookies/headers direct read.
+- bridge helper contains no NextRequest/NextResponse dependency.
+- bridge helper contains no Supabase client.
+- bridge helper contains no DB/SQL/AI markers.
+- route.ts was not changed.
+- existing helpers were not changed.
+
+Runtime verification
+- connection approval missing fails with CONTROLLED_INTAKE_AUTH_CONNECTION_NOT_APPROVED.
+- connection approval false fails with CONTROLLED_INTAKE_AUTH_CONNECTION_NOT_APPROVED.
+- unsupported boundary fails with CONTROLLED_INTAKE_AUTH_CONNECTION_UNAVAILABLE.
+- connection helper error fails with CONTROLLED_INTAKE_AUTH_CONNECTION_READ_FAILED.
+- missing session fails with CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED.
+- unsafe nested provider payload fails with CONTROLLED_INTAKE_AUTH_CONNECTION_RETURNED_UNSAFE_PAYLOAD.
+- email-only identity fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- runtime approval missing fails with CONTROLLED_INTAKE_AUTH_RUNTIME_NOT_APPROVED.
+- valid injected nested Auth0-like session succeeds when connectionApproved=true and runtimeReadApproved=true.
+- connection helper succeeds.
+- runtime adapter succeeds.
+- static auth session helper succeeds.
+- final identity.authSubject matches injected subject.
+- final identity.provider is auth0.
+- final identity.requestSource is trimmed.
+- connection sessionReadModel is sanitized.
+- runtime sessionReadModel is sanitized.
+- no token fields are exposed.
+- no raw session/profile fields are exposed.
+
+Guardrails verified
+- bridgeHelperOnly=true
+- staticBridgeOnly=true
+- realAuth0SessionReadExecuted=false
+- auth0RuntimeReadExecuted=false
+- serverSideSessionReadOnly=true
+- serverSideContextRequired=true
+- clientOwnershipAccepted=false
+- previewHeaderAcceptedForProductionWrite=false
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+Checks executed in O-BM
+- Clean pushed O-BL baseline verified.
+- O-BK report was read.
+- O-BL report was read.
+- serverSideAuthSessionRuntimeBridge.ts markers were verified.
+- forbidden bridge helper patterns were checked.
+- route.ts safety markers were checked.
+- existing helper safety markers were checked.
+- no uncommitted code changes were verified.
+- npx tsc --noEmit passed with O-BM temporary bridge check.
+- isolated TypeScript compile passed.
+- node bridge helper check passed.
+- temporary files were removed.
+- npx tsc --noEmit passed after cleanup.
+- only this O-BM report is created.
+
+Important limitation
+O-BM verifies only the static/no-I-O bridge helper.
+It does not execute a real Auth0/session runtime read.
+It does not integrate anything into route.ts.
+It does not read Supabase.
+It does not approve production write mode.
+It does not approve activity_events insert.
+It does not approve AI or semantic persistence.
+
+Recommended next step
+O-BN should be a design gate for the first real Auth0/session runtime read.
+O-BN should not integrate anything into route.ts.
+O-BN should not read Supabase.
+O-BN should not write activity_events.
+O-BN should decide whether the first real session read happens through a standalone no-write debug endpoint, a local server-only helper test, or another safer boundary.
+O-BN must keep productionWriteEnabled=false.
+
+Still forbidden after O-BM
+- Do not integrate runtime adapter into route.ts.
+- Do not execute real Auth0/session runtime reads from route.ts.
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
