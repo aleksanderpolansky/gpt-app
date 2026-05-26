@@ -1,0 +1,122 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-AH-FIX1 — Controlled Activity Intake Production Auth Mapping Route Integration No-Write Refactor
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+PRODUCTION AUTH MAPPING ROUTE INTEGRATION COMPLETED / FIXED PAYLOAD RESULT TYPE GUARD / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous successful block: P4.10.0-C8-I-D4-L-L-O-AG
+- Previous commit: 22f3eff
+- Previous message: docs: add C8-I-D4-L-L-O-AG production auth mapping route gate
+
+Why FIX1 was needed
+Initial O-AH failed during isolated TypeScript compile because payloadResult.response was not narrowed from the union result.
+O-AH-FIX1 adds explicit ControlledActivityIntakeValidatedPayloadResult types and isControlledActivityIntakeValidatedPayloadFailure type guard.
+
+Gate used
+PASS_PRODUCTION_AUTH_MAPPING_ROUTE_INTEGRATION_DESIGN_ONLY
+
+Modified file
+- src/app/api/activity/controlled-intake/route.ts
+
+Unchanged files
+- lib/activity/controlledIntake/productionAuthMapping.ts
+- lib/activity/controlledIntake/authContext.ts
+
+Route integration status
+PRODUCTION_AUTH_MAPPING_ROUTE_INTEGRATED_NO_WRITE
+
+Implemented route mode
+- production_static_preview
+
+Runtime verification
+- Missing no-write preview header fails with CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED.
+- Missing identity subject fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- Blank identity subject fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- Missing appUserId/userId mapping fails with CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED.
+- Invalid JSON fails with CONTROLLED_INTAKE_INVALID_JSON.
+- Client ownership field is rejected with CONTROLLED_INTAKE_VALIDATION_FAILED.
+- Valid production_static_preview request returns ok=true.
+- trustedContextPreview.appUserId comes from production auth mapping input.
+- appUserId is preferred over userId.
+- userId fallback works if appUserId is absent.
+- actorId/organizationId/spaceId pass through only from mapping input.
+- staticRowPreview remains preview only and does not write to DB.
+- Existing legacy no_write_preview mode still works.
+- Legacy no_write_preview still uses x-controlled-intake-preview-app-user-id.
+
+Guardrails verified
+- routeProductionAuthMappingIntegrated=true
+- routeScaffoldOnly=true
+- noWritePreview=true
+- productionWriteEnabled=false
+- previewHeaderAcceptedForProductionWrite=false
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+Forbidden patterns verified absent from route.ts
+- createClient
+- OpenAI
+- chat.completions
+- fetch(
+- INSERT INTO
+- UPDATE
+- DELETE
+- .insert(
+- .delete(
+- .rpc(
+- .from(
+- categoryCandidates:
+- metricCandidates:
+- stateHookCandidates:
+- value_object_state_facts
+- activity_state_deltas
+
+Checks executed
+- O-AG baseline verified.
+- Failed O-AH temporary files were cleaned.
+- O-AG design gate report was read.
+- route.ts was overwritten with explicit payload result type guard.
+- route.ts markers were verified.
+- forbidden route patterns were checked.
+- productionAuthMapping.ts was verified unchanged.
+- authContext.ts was verified unchanged.
+- npx tsc --noEmit passed with O-AH-FIX1 temporary runtime check.
+- isolated TypeScript compile passed.
+- node runtime check passed.
+- temporary files were removed.
+- npx tsc --noEmit passed after cleanup.
+
+Important limitation
+O-AH-FIX1 integrates productionAuthMapping.ts into route.ts only as explicit no-write production_static_preview mode.
+It does not read Auth0/session.
+It does not read Supabase.
+It does not execute database reads.
+It does not execute database writes.
+It does not approve activity_events insert.
+It does not approve production write mode.
+It does not approve AI or semantic persistence.
+
+Still forbidden after O-AH-FIX1
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Next step
+P4.10.0-C8-I-D4-L-L-O-AI — Controlled Activity Intake Production Auth Mapping Route Integration Verification
