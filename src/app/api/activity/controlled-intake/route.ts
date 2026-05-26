@@ -12,6 +12,10 @@ import {
   buildControlledActivityIntakeProductionTrustedContext,
   isControlledActivityIntakeProductionAuthMappingFailure,
 } from "../../../../../lib/activity/controlledIntake/productionAuthMapping";
+import {
+  buildControlledActivityIntakeServerSideAppUserMapping,
+  isControlledActivityIntakeServerSideAppUserMappingFailure,
+} from "../../../../../lib/activity/controlledIntake/serverSideAppUserMapping";
 import { validateControlledActivityIntake } from "../../../../../lib/activity/controlledIntake/validator";
 
 export const dynamic = "force-dynamic";
@@ -44,9 +48,56 @@ const PREVIEW_MAPPED_ORGANIZATION_ID_HEADER =
 const PREVIEW_MAPPED_SPACE_ID_HEADER =
   "x-controlled-intake-preview-mapped-space-id";
 
+const PREVIEW_SERVER_AUTH_SUBJECT_HEADER =
+  "x-controlled-intake-preview-server-auth-subject";
+const PREVIEW_SERVER_PROVIDER_HEADER =
+  "x-controlled-intake-preview-server-provider";
+const PREVIEW_SERVER_EMAIL_HEADER =
+  "x-controlled-intake-preview-server-email";
+const PREVIEW_SERVER_SESSION_ID_HEADER =
+  "x-controlled-intake-preview-server-session-id";
+
+const PREVIEW_APP_USER_READ_MODEL_APP_USER_ID_HEADER =
+  "x-controlled-intake-preview-app-user-read-model-app-user-id";
+const PREVIEW_APP_USER_READ_MODEL_INTERNAL_USER_ID_HEADER =
+  "x-controlled-intake-preview-app-user-read-model-internal-user-id";
+const PREVIEW_APP_USER_READ_MODEL_AUTH_SUBJECT_HEADER =
+  "x-controlled-intake-preview-app-user-read-model-auth-subject";
+const PREVIEW_APP_USER_READ_MODEL_SOURCE_HEADER =
+  "x-controlled-intake-preview-app-user-read-model-source";
+const PREVIEW_APP_USER_READ_MODEL_STATUS_HEADER =
+  "x-controlled-intake-preview-app-user-read-model-status";
+const PREVIEW_APP_USER_READ_MODEL_EMAIL_HEADER =
+  "x-controlled-intake-preview-app-user-read-model-email";
+
+const PREVIEW_REQUESTED_ACTOR_ID_HEADER =
+  "x-controlled-intake-preview-requested-actor-id";
+const PREVIEW_REQUESTED_ORGANIZATION_ID_HEADER =
+  "x-controlled-intake-preview-requested-organization-id";
+const PREVIEW_REQUESTED_SPACE_ID_HEADER =
+  "x-controlled-intake-preview-requested-space-id";
+
+const PREVIEW_MEMBERSHIP_ACTOR_ID_HEADER =
+  "x-controlled-intake-preview-membership-actor-id";
+const PREVIEW_MEMBERSHIP_ORGANIZATION_ID_HEADER =
+  "x-controlled-intake-preview-membership-organization-id";
+const PREVIEW_MEMBERSHIP_SPACE_ID_HEADER =
+  "x-controlled-intake-preview-membership-space-id";
+const PREVIEW_MEMBERSHIP_ACTOR_STATUS_HEADER =
+  "x-controlled-intake-preview-membership-actor-status";
+const PREVIEW_MEMBERSHIP_ORGANIZATION_STATUS_HEADER =
+  "x-controlled-intake-preview-membership-organization-status";
+const PREVIEW_MEMBERSHIP_SPACE_STATUS_HEADER =
+  "x-controlled-intake-preview-membership-space-status";
+const PREVIEW_MEMBERSHIP_ROLE_HEADER =
+  "x-controlled-intake-preview-membership-role";
+const PREVIEW_MEMBERSHIP_SOURCE_HEADER =
+  "x-controlled-intake-preview-membership-source";
+
 type ControlledActivityIntakeRouteMode =
   | "no_write_preview"
-  | "production_static_preview";
+  | "production_static_preview"
+  | "server_side_static_preview";
 
 type ControlledActivityIntakeRouteErrorCode =
   | "CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED"
@@ -54,8 +105,12 @@ type ControlledActivityIntakeRouteErrorCode =
   | "CONTROLLED_INTAKE_VALIDATION_FAILED"
   | "CONTROLLED_INTAKE_TRUSTED_CONTEXT_APP_USER_REQUIRED"
   | "CONTROLLED_INTAKE_AUTH_IDENTITY_REQUIRED"
+  | "CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED"
   | "CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED"
   | "CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED"
+  | "CONTROLLED_INTAKE_APP_USER_MAPPING_AMBIGUOUS"
+  | "CONTROLLED_INTAKE_APP_USER_MAPPING_BLOCKED"
+  | "CONTROLLED_INTAKE_AUTH_SUBJECT_MISMATCH"
   | "CONTROLLED_INTAKE_CONTEXT_NOT_VERIFIED"
   | "CONTROLLED_INTAKE_ACTOR_NOT_ALLOWED"
   | "CONTROLLED_INTAKE_ORGANIZATION_NOT_ALLOWED"
@@ -64,6 +119,7 @@ type ControlledActivityIntakeRouteErrorCode =
 type ControlledActivityIntakeRouteGuardrails = {
   readonly routeAuthIntegrated: true;
   readonly routeProductionAuthMappingIntegrated: true;
+  readonly routeServerSideAppUserMappingIntegrated: true;
   readonly routeScaffoldOnly: true;
   readonly noWritePreview: true;
   readonly productionWriteEnabled: false;
@@ -99,6 +155,7 @@ type RouteSuccessResponse = {
   readonly idempotency?: unknown;
   readonly staticRowPreview?: unknown;
   readonly productionAuthMapping?: unknown;
+  readonly serverSideAppUserMapping?: unknown;
   readonly trustedContextPreview?: unknown;
   readonly guardrails: ControlledActivityIntakeRouteGuardrails;
 };
@@ -133,6 +190,7 @@ function buildRouteGuardrails(): ControlledActivityIntakeRouteGuardrails {
   return {
     routeAuthIntegrated: true,
     routeProductionAuthMappingIntegrated: true,
+    routeServerSideAppUserMappingIntegrated: true,
     routeScaffoldOnly: true,
     noWritePreview: true,
     productionWriteEnabled: false,
@@ -180,6 +238,37 @@ function buildErrorResponse(
     },
     { status },
   );
+}
+
+function buildServerSideMappingFailureStatus(
+  code: ControlledActivityIntakeRouteErrorCode,
+): number {
+  if (
+    code === "CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED" ||
+    code === "CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED" ||
+    code === "CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED"
+  ) {
+    return 401;
+  }
+
+  if (
+    code === "CONTROLLED_INTAKE_APP_USER_MAPPING_AMBIGUOUS" ||
+    code === "CONTROLLED_INTAKE_AUTH_SUBJECT_MISMATCH"
+  ) {
+    return 409;
+  }
+
+  if (
+    code === "CONTROLLED_INTAKE_APP_USER_MAPPING_BLOCKED" ||
+    code === "CONTROLLED_INTAKE_CONTEXT_NOT_VERIFIED" ||
+    code === "CONTROLLED_INTAKE_ACTOR_NOT_ALLOWED" ||
+    code === "CONTROLLED_INTAKE_ORGANIZATION_NOT_ALLOWED" ||
+    code === "CONTROLLED_INTAKE_SPACE_NOT_ALLOWED"
+  ) {
+    return 403;
+  }
+
+  return 400;
 }
 
 async function readJsonBody(request: NextRequest): Promise<unknown> {
@@ -361,6 +450,140 @@ async function handleProductionStaticPreview(
   );
 }
 
+async function handleServerSideStaticPreview(
+  request: NextRequest,
+): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+  const serverSideAppUserMapping =
+    buildControlledActivityIntakeServerSideAppUserMapping({
+      source: "test_static_helper",
+      identity: {
+        authSubject: readHeaderString(
+          request,
+          PREVIEW_SERVER_AUTH_SUBJECT_HEADER,
+        ),
+        provider: readHeaderString(request, PREVIEW_SERVER_PROVIDER_HEADER),
+        email: readHeaderString(request, PREVIEW_SERVER_EMAIL_HEADER),
+        sessionId: readHeaderString(request, PREVIEW_SERVER_SESSION_ID_HEADER),
+        requestSource: readHeaderString(request, PREVIEW_REQUEST_SOURCE_HEADER),
+      },
+      appUserReadModel: {
+        appUserId: readHeaderString(
+          request,
+          PREVIEW_APP_USER_READ_MODEL_APP_USER_ID_HEADER,
+        ),
+        internalUserId: readHeaderString(
+          request,
+          PREVIEW_APP_USER_READ_MODEL_INTERNAL_USER_ID_HEADER,
+        ),
+        authSubject: readHeaderString(
+          request,
+          PREVIEW_APP_USER_READ_MODEL_AUTH_SUBJECT_HEADER,
+        ),
+        mappingSource:
+          readHeaderString(
+            request,
+            PREVIEW_APP_USER_READ_MODEL_SOURCE_HEADER,
+          ) ?? "test_injected_read_model",
+        mappingStatus:
+          readHeaderString(
+            request,
+            PREVIEW_APP_USER_READ_MODEL_STATUS_HEADER,
+          ) ?? "missing",
+        email: readHeaderString(
+          request,
+          PREVIEW_APP_USER_READ_MODEL_EMAIL_HEADER,
+        ),
+      },
+      requestedContext: {
+        actorId: readHeaderString(request, PREVIEW_REQUESTED_ACTOR_ID_HEADER),
+        organizationId: readHeaderString(
+          request,
+          PREVIEW_REQUESTED_ORGANIZATION_ID_HEADER,
+        ),
+        spaceId: readHeaderString(request, PREVIEW_REQUESTED_SPACE_ID_HEADER),
+      },
+      membershipReadModel: {
+        actorId: readHeaderString(request, PREVIEW_MEMBERSHIP_ACTOR_ID_HEADER),
+        organizationId: readHeaderString(
+          request,
+          PREVIEW_MEMBERSHIP_ORGANIZATION_ID_HEADER,
+        ),
+        spaceId: readHeaderString(request, PREVIEW_MEMBERSHIP_SPACE_ID_HEADER),
+        actorStatus: readHeaderString(
+          request,
+          PREVIEW_MEMBERSHIP_ACTOR_STATUS_HEADER,
+        ),
+        organizationMembershipStatus: readHeaderString(
+          request,
+          PREVIEW_MEMBERSHIP_ORGANIZATION_STATUS_HEADER,
+        ),
+        spaceMembershipStatus: readHeaderString(
+          request,
+          PREVIEW_MEMBERSHIP_SPACE_STATUS_HEADER,
+        ),
+        role: readHeaderString(request, PREVIEW_MEMBERSHIP_ROLE_HEADER),
+        membershipSource:
+          readHeaderString(request, PREVIEW_MEMBERSHIP_SOURCE_HEADER) ??
+          "test_injected_read_model",
+      },
+      requestSource:
+        readHeaderString(request, PREVIEW_REQUEST_SOURCE_HEADER) ??
+        "controlled-intake-route-server-side-static-preview",
+    });
+
+  if (
+    isControlledActivityIntakeServerSideAppUserMappingFailure(
+      serverSideAppUserMapping,
+    )
+  ) {
+    return buildErrorResponse(
+      serverSideAppUserMapping.code,
+      serverSideAppUserMapping.message,
+      buildServerSideMappingFailureStatus(serverSideAppUserMapping.code),
+      {
+        source: serverSideAppUserMapping.source,
+        layer: serverSideAppUserMapping.layer,
+      },
+    );
+  }
+
+  const payloadResult = await buildValidatedPayloadFromRequest(request);
+
+  if (isControlledActivityIntakeValidatedPayloadFailure(payloadResult)) {
+    return payloadResult.response;
+  }
+
+  const trustedContext = serverSideAppUserMapping.trustedContext;
+  const payload = payloadResult.payload;
+  const idempotency = buildControlledActivityIntakeIdempotency(
+    payload,
+    trustedContext,
+  );
+  const staticRowPreview = buildControlledActivityIntakeActivityEventsStaticRow({
+    payload,
+    idempotency,
+    trustedContext,
+  });
+
+  return NextResponse.json(
+    {
+      ok: true,
+      routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
+      mode: "server_side_static_preview",
+      validation: {
+        ok: true,
+      },
+      serverSideAppUserMapping,
+      trustedContextPreview: trustedContext,
+      payload,
+      idempotency,
+      staticRowPreview,
+      guardrails: buildRouteGuardrails(),
+    },
+    { status: 200 },
+  );
+}
+
 export async function POST(
   request: NextRequest,
 ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
@@ -375,6 +598,10 @@ export async function POST(
   }
 
   const authMappingMode = readHeaderString(request, AUTH_MAPPING_MODE_HEADER);
+
+  if (authMappingMode === "server_side_static_preview") {
+    return await handleServerSideStaticPreview(request);
+  }
 
   if (authMappingMode === "production_static_preview") {
     return await handleProductionStaticPreview(request);

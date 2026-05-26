@@ -1,0 +1,133 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-AQ — Controlled Activity Intake Server-Side App User Mapping Route Integration No-Write Refactor
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+SERVER-SIDE APP USER MAPPING ROUTE INTEGRATION COMPLETED / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-AP
+- Previous commit: f1aa369
+- Previous message: docs: add C8-I-D4-L-L-O-AP server-side app user mapping route gate
+
+Gate used
+PASS_SERVER_SIDE_APP_USER_MAPPING_ROUTE_INTEGRATION_DESIGN_ONLY
+
+Modified file
+- src/app/api/activity/controlled-intake/route.ts
+
+Unchanged files
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts
+- lib/activity/controlledIntake/authContext.ts
+- lib/activity/controlledIntake/productionAuthMapping.ts
+- lib/activity/controlledIntake/persist.ts
+
+Implementation decision
+SERVER_SIDE_APP_USER_MAPPING_ROUTE_INTEGRATED_NO_WRITE
+
+Implemented route mode
+- server_side_static_preview
+
+Preserved route modes
+- no_write_preview
+- production_static_preview
+
+Runtime verification
+- Missing no-write preview header fails with CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED.
+- server_side_static_preview with missing auth subject fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- server_side_static_preview with missing app user mapping fails with CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED.
+- server_side_static_preview with ambiguous mapping fails with CONTROLLED_INTAKE_APP_USER_MAPPING_AMBIGUOUS.
+- server_side_static_preview with blocked mapping fails with CONTROLLED_INTAKE_APP_USER_MAPPING_BLOCKED.
+- server_side_static_preview with auth subject mismatch fails with CONTROLLED_INTAKE_AUTH_SUBJECT_MISMATCH.
+- server_side_static_preview with unverified actor fails with CONTROLLED_INTAKE_ACTOR_NOT_ALLOWED.
+- server_side_static_preview with unverified organization fails with CONTROLLED_INTAKE_ORGANIZATION_NOT_ALLOWED.
+- server_side_static_preview with unverified space fails with CONTROLLED_INTAKE_SPACE_NOT_ALLOWED.
+- Invalid JSON fails with CONTROLLED_INTAKE_INVALID_JSON.
+- Client appUserId ownership field is rejected with CONTROLLED_INTAKE_VALIDATION_FAILED.
+- Client user_id ownership field is rejected with CONTROLLED_INTAKE_VALIDATION_FAILED.
+- Valid server_side_static_preview request returns ok=true.
+- Returned mode is server_side_static_preview.
+- serverSideAppUserMapping returns ok=true.
+- trustedContextPreview comes from serverSideAppUserMapping helper.
+- staticRowPreview remains preview only and does not write to DB.
+- staticRowPreview.row.user_id comes from server-side mapping trusted context.
+- Existing production_static_preview mode still works.
+- Existing no_write_preview mode still works.
+
+Guardrails verified
+- routeServerSideAppUserMappingIntegrated=true
+- routeProductionAuthMappingIntegrated=true
+- routeScaffoldOnly=true
+- noWritePreview=true
+- productionWriteEnabled=false
+- previewHeaderAcceptedForProductionWrite=false
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+Forbidden patterns verified absent from route.ts
+- createClient
+- OpenAI
+- chat.completions
+- fetch(
+- INSERT INTO
+- UPDATE
+- DELETE
+- .insert(
+- .delete(
+- .rpc(
+- .from(
+- categoryCandidates:
+- metricCandidates:
+- stateHookCandidates:
+- value_object_state_facts
+- activity_state_deltas
+
+Checks executed
+- Clean pushed O-AP baseline verified.
+- O-AO report was read.
+- O-AP report was read.
+- route.ts was overwritten with server_side_static_preview no-write integration.
+- route.ts markers were verified.
+- forbidden route patterns were checked.
+- serverSideAppUserMapping.ts was verified unchanged.
+- authContext.ts was verified unchanged.
+- productionAuthMapping.ts was verified unchanged.
+- persist.ts was verified unchanged.
+- npx tsc --noEmit passed with O-AQ temporary runtime check.
+- isolated TypeScript compile passed.
+- node runtime check passed.
+- temporary files were removed.
+- npx tsc --noEmit passed after cleanup.
+
+Important limitation
+O-AQ integrates serverSideAppUserMapping.ts into route.ts only as explicit no-write server_side_static_preview mode.
+It does not read Auth0/session.
+It does not read Supabase.
+It does not execute database reads.
+It does not execute database writes.
+It does not approve activity_events insert.
+It does not approve production write mode.
+It does not approve AI or semantic persistence.
+
+Still forbidden after O-AQ
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Next step
+P4.10.0-C8-I-D4-L-L-O-AR — Controlled Activity Intake Server-Side App User Mapping Route Integration Verification
