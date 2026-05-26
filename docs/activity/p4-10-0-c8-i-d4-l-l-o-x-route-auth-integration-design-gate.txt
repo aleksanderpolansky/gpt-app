@@ -1,0 +1,430 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-X — Controlled Activity Intake Route/Auth Integration Design Gate
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+ROUTE/AUTH INTEGRATION DESIGN GATE CREATED / DOC ONLY / NO ROUTE CHANGE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-W-FIX1
+- Previous commit: f1bc921
+- Previous message: docs: verify C8-I-D4-L-L-O-W-FIX1 auth context helper
+
+Gate decision
+PASS_ROUTE_AUTH_INTEGRATION_NO_WRITE_DESIGN_ONLY
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-Y - Controlled Activity Intake Route/Auth Integration No-Write Refactor
+
+Reason for O-X
+O-S created a no-write route scaffold with local preview trusted context logic.
+O-T-FIX1 verified the no-write route scaffold.
+O-V-FIX1 created/fixed authContext.ts.
+O-W-FIX1 verified authContext.ts.
+O-X decides how route.ts will use authContext.ts while remaining no-write.
+
+Current route state
+- src/app/api/activity/controlled-intake/route.ts exists.
+- Route remains no_write_preview only.
+- Route still requires x-controlled-intake-no-write-preview: true.
+- Route still requires x-controlled-intake-preview-app-user-id.
+- Route still has a local buildNoWriteTrustedContext function.
+- Route still does not import authContext.ts.
+- Route still does not import Supabase.
+- Route still does not call createClient.
+- Route still does not call .from().
+- Route still does not call .insert().
+- Route still does not call AI.
+- Route still does not persist semantic candidates, Value Objects, state facts, deltas, or snapshots.
+
+Current authContext.ts state
+- lib/activity/controlledIntake/authContext.ts exists.
+- Static helper is verified by O-W-FIX1.
+- It provides buildControlledActivityIntakeTrustedContextFromAuth.
+- It provides buildControlledActivityIntakeNoWritePreviewTrustedContext.
+- It provides assertControlledActivityIntakeTrustedContext.
+- It keeps serverSideContextRequired=true.
+- It keeps clientOwnershipAccepted=false.
+- It keeps previewHeaderAcceptedForProductionWrite=false.
+- It does not execute DB writes.
+- It does not execute SQL.
+- It does not call AI.
+
+Allowed in O-Y
+- Modify src/app/api/activity/controlled-intake/route.ts.
+- Import buildControlledActivityIntakeNoWritePreviewTrustedContext from authContext.ts.
+- Remove or bypass local buildNoWriteTrustedContext in route.ts.
+- Keep no_write_preview mode only.
+- Keep x-controlled-intake-no-write-preview requirement.
+- Keep x-controlled-intake-preview-app-user-id requirement for preview mode only.
+- Convert preview header values into authContext.ts no-write preview input.
+- Reject authContext failure results with 401/403 as appropriate.
+- Continue calling validator, payload builder, idempotency builder, and static row builder.
+- Return preview JSON only.
+- Add report.
+- Run TypeScript checks.
+- Add runtime no-write verification if needed.
+- Commit/push.
+
+Forbidden in O-Y
+- Do not import Auth0 directly in route.ts.
+- Do not import Supabase client.
+- Do not call createClient.
+- Do not call .from().
+- Do not call .insert().
+- Do not execute SQL.
+- Do not create activity_events row.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+- Do not treat preview headers as production authorization.
+- Do not remove no-write preview guard.
+
+O-Y expected route behavior
+1. POST request arrives.
+2. Route requires x-controlled-intake-no-write-preview: true.
+3. Route reads preview app user / actor / organization / space / request source headers.
+4. Route calls buildControlledActivityIntakeNoWritePreviewTrustedContext.
+5. If auth context helper fails, route returns error and no row preview.
+6. Route validates JSON body.
+7. Route builds payload.
+8. Route builds idempotency.
+9. Route builds static activity_events row preview.
+10. Route returns no_write_preview response with guardrails.
+11. No DB write happens.
+
+Production auth boundary after O-Y
+O-Y must still not implement production auth.
+A later dedicated gate must decide how real Auth0/session identity maps to appUserId.
+The no-write preview path may continue to exist for tests, but it must remain explicitly marked as preview-only and not production-write.
+
+Local evidence collected
+
+Controlled intake evidence:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:840:  src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:42:   src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:46:- routeNameReservedForLater: src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:122:6. src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:75:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-f-controlled-activity-intake-helper-types-validator-payload-builder.txt:16:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-g-controlled-activity-intake-static-verification.txt:20:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-g-controlled-activity-intake-static-verification.txt:116:- Do not create src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:21:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:75:- Prefix with controlled-intake-v1.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:76:- Example shape: controlled-intake-v1:<sha256>
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:134:- createdByRoute: src/app/api/activity/controlled-intake/route.ts only after route is approved
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:210:- No src/app/api/activity/controlled-intake/route.ts creation.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:226:Do not create or test runtime controlled-intake route yet.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-i-controlled-activity-intake-idempotency-helper-implementation.txt:18:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-i-controlled-activity-intake-idempotency-helper-implementation.txt:24:- controlled-intake-v1:<sha256> idempotency key generation.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-i-controlled-activity-intake-idempotency-helper-implementation.txt:81:- Do not create src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-i-controlled-activity-intake-idempotency-helper-implementation.txt:94:Do not create or test runtime controlled-intake route yet.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:18:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:22:- controlled-intake-v1
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:24:- controlled-intake-idempotency-v1
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:40:- idempotency key has controlled-intake-v1:<sha256> shape.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:111:- Do not create src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:124:Do not create or test runtime controlled-intake route yet.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-fix1-idempotency-canonical-value-typing.txt:25:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-k-controlled-activity-intake-persist-helper-design-gate.txt:21:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-k-controlled-activity-intake-persist-helper-design-gate.txt:75:- Do not create src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-k-controlled-activity-intake-persist-helper-design-gate.txt:237:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:15:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3569:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:22:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:90:- Do not create src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:1896:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:15:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:69:- Do not create src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:702:   237: - controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:983:  3569: - controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:2026:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix1-exact-column-gap-fix.txt:23:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix1-exact-column-gap-fix.txt:93:- No src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix1-exact-column-gap-fix.txt:127:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix2-parser-correction-safe-gate.txt:83:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix2-parser-correction-safe-gate.txt:112:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix3-strict-metadata-owner-column-confirmation.txt:20:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix3-strict-metadata-owner-column-confirmation.txt:73:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix4-manual-metadata-owner-schema-confirmation.txt:22:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix4-manual-metadata-owner-schema-confirmation.txt:309:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix5-targeted-activity-events-schema-evidence-dump.txt:23:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix5-targeted-activity-events-schema-evidence-dump.txt:2073:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-p-static-insert-row-builder.txt:25:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-p-static-insert-row-builder.txt:67:- controlled-intake route.ts remains absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-q-static-row-builder-verification.txt:35:- controlled-intake runtime route remains absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:17:- src/app/api/activity/controlled-intake/route.ts is still absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:27:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:36:- Create src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:929:- controlled-intake route remains absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-s-runtime-route-scaffold-no-write.txt:17:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-s-runtime-route-scaffold-no-write.txt:21:- requires x-controlled-intake-no-write-preview: true
+docs/activity/p4-10-0-c8-i-d4-l-l-o-s-runtime-route-scaffold-no-write.txt:22:- requires x-controlled-intake-preview-app-user-id header
+docs/activity/p4-10-0-c8-i-d4-l-l-o-t-fix1-runtime-route-no-write-verification.txt:29:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-t-fix1-runtime-route-no-write-verification.txt:38:- route requires x-controlled-intake-no-write-preview.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-t-fix1-runtime-route-no-write-verification.txt:39:- route requires x-controlled-intake-preview-app-user-id.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-t-runtime-route-no-write-verification.txt:14:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-t-runtime-route-no-write-verification.txt:23:- route requires x-controlled-intake-no-write-preview.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-t-runtime-route-no-write-verification.txt:24:- route requires x-controlled-intake-preview-app-user-id.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:14:O-S created a no-write preview route that temporarily accepts x-controlled-intake-preview-app-user-id.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:25:- src/app/api/activity/controlled-intake/route.ts exists.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:27:- Route still requires x-controlled-intake-no-write-preview: true.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:28:- Route still requires x-controlled-intake-preview-app-user-id.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1520:docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:840:  src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1521:docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:42:   src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1522:docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:46:- routeNameReservedForLater: src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1523:docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:122:6. src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1524:docs/activity/p4-10-0-c8-i-d4-l-l-o-e-controlled-activity-intake-schema-decision-gate.txt:75:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1525:docs/activity/p4-10-0-c8-i-d4-l-l-o-f-controlled-activity-intake-helper-types-validator-payload-builder.txt:16:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1526:docs/activity/p4-10-0-c8-i-d4-l-l-o-g-controlled-activity-intake-static-verification.txt:20:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1527:docs/activity/p4-10-0-c8-i-d4-l-l-o-g-controlled-activity-intake-static-verification.txt:116:- Do not create src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1528:docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:21:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1529:docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:75:- Prefix with controlled-intake-v1.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1530:docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:76:- Example shape: controlled-intake-v1:<sha256>
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1531:docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:134:- createdByRoute: src/app/api/activity/controlled-intake/route.ts only after route is approved
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1532:docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:210:- No src/app/api/activity/controlled-intake/route.ts creation.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1533:docs/activity/p4-10-0-c8-i-d4-l-l-o-h-controlled-activity-intake-idempotency-persist-design.txt:226:Do not create or test runtime controlled-intake route yet.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1534:docs/activity/p4-10-0-c8-i-d4-l-l-o-i-controlled-activity-intake-idempotency-helper-implementation.txt:18:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1535:docs/activity/p4-10-0-c8-i-d4-l-l-o-i-controlled-activity-intake-idempotency-helper-implementation.txt:24:- controlled-intake-v1:<sha256> idempotency key generation.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1536:docs/activity/p4-10-0-c8-i-d4-l-l-o-i-controlled-activity-intake-idempotency-helper-implementation.txt:81:- Do not create src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1537:docs/activity/p4-10-0-c8-i-d4-l-l-o-i-controlled-activity-intake-idempotency-helper-implementation.txt:94:Do not create or test runtime controlled-intake route yet.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1538:docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:18:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1539:docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:22:- controlled-intake-v1
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1540:docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:24:- controlled-intake-idempotency-v1
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1541:docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:40:- idempotency key has controlled-intake-v1:<sha256> shape.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1542:docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:111:- Do not create src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1543:docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:124:Do not create or test runtime controlled-intake route yet.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1544:docs/activity/p4-10-0-c8-i-d4-l-l-o-j-fix1-idempotency-canonical-value-typing.txt:25:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1545:docs/activity/p4-10-0-c8-i-d4-l-l-o-k-controlled-activity-intake-persist-helper-design-gate.txt:21:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1546:docs/activity/p4-10-0-c8-i-d4-l-l-o-k-controlled-activity-intake-persist-helper-design-gate.txt:75:- Do not create src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1547:docs/activity/p4-10-0-c8-i-d4-l-l-o-k-controlled-activity-intake-persist-helper-design-gate.txt:237:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1548:docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:15:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1549:docs/activity/p4-10-0-c8-i-d4-l-l-o-l-activity-events-column-mapping-audit.txt:3569:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1550:docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:22:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1551:docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:90:- Do not create src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1552:docs/activity/p4-10-0-c8-i-d4-l-l-o-m-persist-helper-implementation-draft-gate.txt:1896:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1553:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:15:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1554:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:69:- Do not create src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1555:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:702:   237: - controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1556:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:983:  3569: - controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1557:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:2026:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1558:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix1-exact-column-gap-fix.txt:23:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1559:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix1-exact-column-gap-fix.txt:93:- No src/app/api/activity/controlled-intake/route.ts.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1560:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix1-exact-column-gap-fix.txt:127:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1561:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix2-parser-correction-safe-gate.txt:83:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1562:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix2-parser-correction-safe-gate.txt:112:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1563:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix3-strict-metadata-owner-column-confirmation.txt:20:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1564:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix3-strict-metadata-owner-column-confirmation.txt:73:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1565:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix4-manual-metadata-owner-schema-confirmation.txt:22:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1566:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix4-manual-metadata-owner-schema-confirmation.txt:309:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1567:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix5-targeted-activity-events-schema-evidence-dump.txt:23:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1568:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-fix5-targeted-activity-events-schema-evidence-dump.txt:2073:- controlled-intake route.ts is absent.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1569:docs/activity/p4-10-0-c8-i-d4-l-l-o-p-static-insert-row-builder.txt:25:- src/app/api/activity/controlled-intake/route.ts
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1570:docs/activity/p4-10-0-c8-i-d4-l-l-o-p-static-insert-row-builder.txt:67:- controlled-intake route.ts remains absent.
+
+authContext helper evidence:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:64:- buildControlledActivityIntakeNoWritePreviewTrustedContext
+docs/activity/p4-10-0-c8-i-d4-l-l-o-v-auth-context-resolver-static-helper.txt:60:- buildControlledActivityIntakeNoWritePreviewTrustedContext
+docs/activity/p4-10-0-c8-i-d4-l-l-o-v-fix1-auth-context-resolver-static-helper.txt:74:- buildControlledActivityIntakeNoWritePreviewTrustedContext
+docs/activity/p4-10-0-c8-i-d4-l-l-o-w-fix1-auth-context-static-helper-verification.txt:30:- authContext.ts exports buildControlledActivityIntakeNoWritePreviewTrustedContext.
+lib/activity/controlledIntake/authContext.ts:203:export function buildControlledActivityIntakeNoWritePreviewTrustedContext(
+
+Trusted context evidence:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-i-controlled-activity-intake-idempotency-helper-implementation.txt:32:- ControlledActivityIntakeTrustedContext
+docs/activity/p4-10-0-c8-i-d4-l-l-o-j-controlled-activity-intake-idempotency-helper-static-verification.txt:26:- ControlledActivityIntakeTrustedContext
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:63:- buildControlledActivityIntakeTrustedContextFromAuth
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:65:- assertControlledActivityIntakeTrustedContext
+docs/activity/p4-10-0-c8-i-d4-l-l-o-v-auth-context-resolver-static-helper.txt:32:- Provides assertControlledActivityIntakeTrustedContext.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-v-auth-context-resolver-static-helper.txt:59:- buildControlledActivityIntakeTrustedContextFromAuth
+docs/activity/p4-10-0-c8-i-d4-l-l-o-v-auth-context-resolver-static-helper.txt:61:- assertControlledActivityIntakeTrustedContext
+docs/activity/p4-10-0-c8-i-d4-l-l-o-v-fix1-auth-context-resolver-static-helper.txt:15:The isolated compile failed because assertControlledActivityIntakeTrustedContext tried to read result.message from the union type ControlledActivityIntakeAuthContextResult.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-v-fix1-auth-context-resolver-static-helper.txt:23:- assertControlledActivityIntakeTrustedContext now reads message only after narrowing to ControlledActivityIntakeAuthContextFailure.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-v-fix1-auth-context-resolver-static-helper.txt:46:- Provides assertControlledActivityIntakeTrustedContext.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-v-fix1-auth-context-resolver-static-helper.txt:73:- buildControlledActivityIntakeTrustedContextFromAuth
+docs/activity/p4-10-0-c8-i-d4-l-l-o-v-fix1-auth-context-resolver-static-helper.txt:75:- assertControlledActivityIntakeTrustedContext
+docs/activity/p4-10-0-c8-i-d4-l-l-o-w-fix1-auth-context-static-helper-verification.txt:29:- authContext.ts exports buildControlledActivityIntakeTrustedContextFromAuth.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-w-fix1-auth-context-static-helper-verification.txt:31:- authContext.ts exports assertControlledActivityIntakeTrustedContext.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-w-fix1-auth-context-static-helper-verification.txt:53:- assertControlledActivityIntakeTrustedContext returns trusted context for success.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-w-fix1-auth-context-static-helper-verification.txt:54:- assertControlledActivityIntakeTrustedContext throws for failure.
+lib/activity/controlledIntake/authContext.ts:1:import type { ControlledActivityIntakeTrustedContext } from "./idempotency";
+lib/activity/controlledIntake/authContext.ts:62:  readonly trustedContext: ControlledActivityIntakeTrustedContext;
+lib/activity/controlledIntake/authContext.ts:138:}): ControlledActivityIntakeTrustedContext {
+lib/activity/controlledIntake/authContext.ts:148:export function buildControlledActivityIntakeTrustedContextFromAuth(
+lib/activity/controlledIntake/authContext.ts:233:export function assertControlledActivityIntakeTrustedContext(
+lib/activity/controlledIntake/authContext.ts:235:): ControlledActivityIntakeTrustedContext {
+lib/activity/controlledIntake/idempotency.ts:17:export interface ControlledActivityIntakeTrustedContext {
+lib/activity/controlledIntake/idempotency.ts:171:  trustedContext: ControlledActivityIntakeTrustedContext = {},
+lib/activity/controlledIntake/idempotency.ts:201:  trustedContext: ControlledActivityIntakeTrustedContext = {},
+lib/activity/controlledIntake/persist.ts:4:  ControlledActivityIntakeTrustedContext,
+lib/activity/controlledIntake/persist.ts:47:  readonly trustedContext: ControlledActivityIntakeTrustedContext;
+src/app/api/activity/controlled-intake/route.ts:4:import type { ControlledActivityIntakeTrustedContext } from "../../../../../lib/activity/controlledIntake/idempotency";
+src/app/api/activity/controlled-intake/route.ts:113:): ControlledActivityIntakeTrustedContext | null {
+
+No-write header evidence:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-s-runtime-route-scaffold-no-write.txt:21:- requires x-controlled-intake-no-write-preview: true
+docs/activity/p4-10-0-c8-i-d4-l-l-o-t-fix1-runtime-route-no-write-verification.txt:38:- route requires x-controlled-intake-no-write-preview.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-t-runtime-route-no-write-verification.txt:23:- route requires x-controlled-intake-no-write-preview.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:27:- Route still requires x-controlled-intake-no-write-preview: true.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1577:docs/activity/p4-10-0-c8-i-d4-l-l-o-s-runtime-route-scaffold-no-write.txt:21:- requires x-controlled-intake-no-write-preview: true
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1580:docs/activity/p4-10-0-c8-i-d4-l-l-o-t-fix1-runtime-route-no-write-verification.txt:38:- route requires x-controlled-intake-no-write-preview.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1583:docs/activity/p4-10-0-c8-i-d4-l-l-o-t-runtime-route-no-write-verification.txt:23:- route requires x-controlled-intake-no-write-preview.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1587:src/app/api/activity/controlled-intake/route.ts:14:const NO_WRITE_PREVIEW_HEADER = "x-controlled-intake-no-write-preview";
+docs/activity/p4-10-0-c8-i-d4-l-l-o-w-fix1-auth-context-static-helper-verification.txt:59:- route still requires x-controlled-intake-no-write-preview.
+src/app/api/activity/controlled-intake/route.ts:14:const NO_WRITE_PREVIEW_HEADER = "x-controlled-intake-no-write-preview";
+
+Preview app user header evidence:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-s-runtime-route-scaffold-no-write.txt:22:- requires x-controlled-intake-preview-app-user-id header
+docs/activity/p4-10-0-c8-i-d4-l-l-o-t-fix1-runtime-route-no-write-verification.txt:39:- route requires x-controlled-intake-preview-app-user-id.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-t-runtime-route-no-write-verification.txt:24:- route requires x-controlled-intake-preview-app-user-id.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:14:O-S created a no-write preview route that temporarily accepts x-controlled-intake-preview-app-user-id.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:28:- Route still requires x-controlled-intake-preview-app-user-id.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1578:docs/activity/p4-10-0-c8-i-d4-l-l-o-s-runtime-route-scaffold-no-write.txt:22:- requires x-controlled-intake-preview-app-user-id header
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1581:docs/activity/p4-10-0-c8-i-d4-l-l-o-t-fix1-runtime-route-no-write-verification.txt:39:- route requires x-controlled-intake-preview-app-user-id.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1584:docs/activity/p4-10-0-c8-i-d4-l-l-o-t-runtime-route-no-write-verification.txt:24:- route requires x-controlled-intake-preview-app-user-id.
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1588:src/app/api/activity/controlled-intake/route.ts:16:  "x-controlled-intake-preview-app-user-id";
+docs/activity/p4-10-0-c8-i-d4-l-l-o-w-fix1-auth-context-static-helper-verification.txt:60:- route still requires x-controlled-intake-preview-app-user-id.
+src/app/api/activity/controlled-intake/route.ts:16:  "x-controlled-intake-preview-app-user-id";
+
+POST route evidence:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319:- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:351:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:444:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:572:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:351 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1262:   319: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1394:   319: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:106:docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319:- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:107:docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:351:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:108:docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:444:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:109:docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:572:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:351 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:110:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1262:   319: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:111:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1394:   319: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:112:docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:99:| 737 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:113:docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:178:| 498 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:114:docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:226:| 84 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:115:docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:254:| 76 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:116:docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:282:| 76 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:117:docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:298:| 69 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:118:docs/commercial/P4.8.0-A3_focused_critical_routes_review.md:463:| 189 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:119:docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:94:| 737 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:120:docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:201:| 269 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:121:docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:278:| 498 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:122:docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:354:| 84 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:123:docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:371:| 76 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:124:docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:388:| 76 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:125:docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:404:| 69 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:126:docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:519:| 189 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:127:docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:571:| 89 | export async function POST(request: Request, context: RouteContext) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:128:docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:613:| 89 | export async function POST(request: Request, context: RouteContext) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:129:docs/commercial/P4.8.0-A3_focused_critical_routes_review_v2.md:655:| 89 | export async function POST(request: Request, context: RouteContext) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:130:docs/commercial/P4.8.0-A4_relationship_gap_analysis.md:136:| 269 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:131:docs/commercial/P4.8.0-A4_relationship_gap_analysis.md:168:| 498 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:132:docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:3251:  328: export async function POST(request: Request, context: RouteContext) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:133:docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:3974:  241: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:134:docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:5350:  677: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:135:docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:6309:  157: export async function POST(request: NextRequest) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:136:docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:6718:  269: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:137:docs/value-objects/P4.9.1-A5_function_surface_map.md:360:| 328 | export async function POST(request: Request, context: RouteContext) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:138:docs/value-objects/P4.9.1-A5_function_surface_map.md:384:| 328 | export\s+(async\s+)?function\s+ | export async function POST(request: Request, context: RouteContext) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:139:docs/value-objects/P4.9.1-A5_function_surface_map.md:414:| 241 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:140:docs/value-objects/P4.9.1-A5_function_surface_map.md:432:| 241 | export\s+(async\s+)?function\s+ | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:141:docs/value-objects/P4.9.1-A5_function_surface_map.md:476:| 677 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:142:docs/value-objects/P4.9.1-A5_function_surface_map.md:525:| 677 | export\s+(async\s+)?function\s+ | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:143:docs/value-objects/P4.9.1-A5_function_surface_map.md:555:| 157 | export async function POST(request: NextRequest) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:144:docs/value-objects/P4.9.1-A5_function_surface_map.md:570:| 157 | export\s+(async\s+)?function\s+ | export async function POST(request: NextRequest) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:145:docs/value-objects/P4.9.1-A5_function_surface_map.md:588:| 269 | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:146:docs/value-objects/P4.9.1-A5_function_surface_map.md:616:| 269 | export\s+(async\s+)?function\s+ | export async function POST(request: Request) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:147:docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:5740:  160: export async function POST(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:148:docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:6685:   69: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:149:docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10543:    5: export async function POST() {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:150:docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10556:    5: export async function POST() {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:151:docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10917:   12: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:152:docs/value-objects/P4.9.10-A1_debug_admin_guard_conventions_inspection.md:10926:   12: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:153:docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:222:  241: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:154:docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:2273:  328: export async function POST(request: Request, context: RouteContext) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:155:docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:3321:  274: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:156:docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:3470:  160: export async function POST(
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:157:docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:3757:  455: export async function POST(request: Request, context: RouteContext) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:158:docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:4400:  677: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:159:docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:4637:  445: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:160:docs/value-objects/P4.9.7-A1_api_route_conventions_inspection.md:6508:  198: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:161:docs/value-objects/P4.9.7-A2_focused_api_files_extraction.md:326:  269: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:162:docs/value-objects/P4.9.7-A2_focused_api_files_extraction.md:2112:  157: export async function POST(request: NextRequest) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:163:docs/value-objects/category-derivation-code-inventory-c8-j.md:2908:  151: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:164:docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:7981:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:165:docs/value-objects/category-derivation-layer-v1-c8-e-a-schema-source-inventory.txt:7999:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:166:docs/value-objects/category-derivation-layer-v1-c8-e-e1-persistence-source-inventory.txt:306:  line 734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:167:docs/value-objects/category-derivation-layer-v1-c8-e-e1-persistence-source-inventory.txt:354:  line 678: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:168:docs/value-objects/category-derivation-layer-v1-c8-e-e1-persistence-source-inventory.txt:509:line 734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:169:docs/value-objects/category-derivation-layer-v1-c8-e-e1-persistence-source-inventory.txt:528:line 678: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:170:docs/value-objects/category-derivation-layer-v1-c8-e-e2-persistence-deep-inspect.txt:2125:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:171:docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:940:line 734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:172:docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:954:line 163: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:173:docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:992:Pattern: export async function POST
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:174:docs/value-objects/category-derivation-layer-v1-c8-e-f3-b-config-feature-flag-inventory.txt:1034:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:175:docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:306:line 734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:176:docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:8153:Pattern: export async function POST
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:177:docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:8197:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:178:docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:8561:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:179:docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:8741:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:180:docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:8928:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:181:docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:9117:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:182:docs/value-objects/category-derivation-layer-v1-c8-e-f3-c-a-complete-route-category-derivation-inspect.txt:9308:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:183:docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:235:line 734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:184:docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:9106:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:185:docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:9366:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:186:docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:9633:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:187:docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:9902:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:188:docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:10173:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:189:docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:10439:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:190:docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:10712:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:191:docs/value-objects/category-derivation-layer-v1-c8-e-f5-a-pre-patch-complete-route-inventory.txt:10968:  734: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:192:docs/value-objects/category-derivation-layer-v1-c8-e-f6-b-current-transition-state-inspection.txt:189:    739: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:193:docs/value-objects/category-derivation-layer-v1-c8-e-f6-d-a-complete-route-shadow-persist-proof-prep.txt:168:    739: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:194:docs/value-objects/category-derivation-production-complete-route-c1-a-dependency-map.txt:1799:  241: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:195:docs/value-objects/category-derivation-production-complete-route-c1-a-dependency-map.txt:1916:  241: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:196:docs/value-objects/category-derivation-production-complete-route-c1-a-dependency-map.txt:2040:  241: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:197:docs/value-objects/category-derivation-production-complete-route-c1-a-dependency-map.txt:4417:  678: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:198:docs/value-objects/category-derivation-production-complete-route-c1-b-0-exact-patch-snippets.txt:891:  678: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:199:docs/value-objects/category-derivation-production-complete-route-c1-b-1-exact-derivation-invocation.txt:1657:  241: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:200:docs/value-objects/category-derivation-production-complete-route-c1-b-route-backup.txt:241:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:201:docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:1890:    export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:202:docs/value-objects/category-derivation-production-complete-route-c2-a-test-setup-inventory.txt:2177:    export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:203:docs/value-objects/category-derivation-production-complete-route-c2-b-fix3-contract-inspection.txt:101:PATTERN: export async function POST
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:204:docs/value-objects/category-derivation-production-complete-route-c2-b-fix3-contract-inspection.txt:411:PATTERN: export async function POST
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:205:docs/value-objects/category-derivation-production-complete-route-c2-b-fix3-contract-inspection.txt:414:LINE 445: export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:216:docs/value-objects/P4.9.1-A4_full_key_file_extraction.md:6309:  157: export async function POST(request: NextRequest) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:217:docs/value-objects/P4.9.1-A5_function_surface_map.md:555:| 157 | export async function POST(request: NextRequest) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:218:docs/value-objects/P4.9.1-A5_function_surface_map.md:570:| 157 | export\s+(async\s+)?function\s+ | export async function POST(request: NextRequest) { |
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:229:docs/value-objects/P4.9.7-A2_focused_api_files_extraction.md:2112:  157: export async function POST(request: NextRequest) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:236:docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:398:src/app/api/activity/debug-rubricator-value-object-bridge/route.ts:157:export async function POST(request: NextRequest) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:243:src/app/api/activity/debug-rubricator-value-object-bridge/route.ts:157:export async function POST(request: NextRequest) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:245:src/app/api/activity/state-facts/controlled-persist/route.ts:78:export async function POST(incomingRequest: NextRequest): Promise<NextResponse> {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-r-runtime-route-design-gate.txt:261:src/app/api/object-action/suggestions/route.ts:2226:export async function POST(request: NextRequest) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1596:docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319:- docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1597:docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:351:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1598:docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:444:- docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1599:docs/activity/p4-10-0-c8-i-d4-l-l-o-d-controlled-activity-intake-schema-helper-design.txt:572:- docs/activity/p4-10-0-c8-i-d4-l-l-o-c-activity-intake-persistence-design-decision.txt:351 :: - docs/activity/p4-10-0-c8-i-d4-l-l-o-b-activity-intake-schema-route-audit.txt:319 :: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1600:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1262:   319: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+docs/activity/p4-10-0-c8-i-d4-l-l-o-u-auth-context-design-gate.txt:1601:docs/activity/p4-10-0-c8-i-d4-l-l-o-n-exact-persist-column-contract.txt:1394:   319: - docs/value-objects/category-derivation-production-ingestion-inventory-c8-p3-b7-a.md:374 :: src/app/api/activities/route.ts:151:export async function POST(request: Request) {
+
+Verification performed in O-X
+- Clean pushed O-W-FIX1 baseline verified.
+- Required files exist.
+- O-V-FIX1 and O-W-FIX1 reports were read.
+- route.ts was verified unchanged and no-write.
+- authContext.ts was verified static/no-write/no-route/no-AI.
+- other controlled intake helpers were checked for forbidden patterns.
+- local integration evidence was collected.
+- npx tsc --noEmit is run.
+- only this O-X report is created.
+
+Still forbidden after O-X
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not call AI.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+- Do not convert preview header route into production write route.
