@@ -1,0 +1,102 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CD-POSTCHECK2
+Literal marker verification for O-CD-POSTCHECK focused schema grep repair report
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CD-POSTCHECK2: fb23ca0
+- Expected origin/main before O-CD-POSTCHECK2: fb23ca0
+- Baseline commit:
+  fb23ca0 docs: verify C8-I O-CD focused schema evidence
+
+Purpose
+This postcheck closes the marker verification gap in O-CD-POSTCHECK.
+
+During O-CD-POSTCHECK, the report marker verification used PowerShell -notlike.
+One marker contained the literal text:
+
+fatal: command line, 'create table[^': Invalid regular expression
+
+The [^ sequence is unsafe inside a wildcard pattern and caused:
+The specified wildcard character pattern is not valid.
+
+Therefore, O-CD-POSTCHECK report creation, TypeScript check, commit and push remain valid, but its marker verification line is not fully trusted.
+This O-CD-POSTCHECK2 verifies the same report using literal string .Contains() checks instead of wildcard matching.
+
+Verification method
+- Loaded docs/activity/p4-10-0-c8-i-d4-l-l-o-cd-postcheck-focused-schema-grep-repair.txt.
+- Verified required markers using .Contains().
+- No wildcard matching was used.
+- No regex matching was used for marker verification.
+- Ran npx.cmd tsc --noEmit.
+
+Verified important O-CD-POSTCHECK conclusions
+- future marker non-doc matches: 0
+- futureMarkerDecision: DOC_ONLY_FALSE_POSITIVE_CONFIRMED_BY_FIXED_STRING_POSTCHECK
+- regexRepairDecision: PREVIOUS_INVALID_REGEX_FAILURE_REPAIRED_WITH_FIXED_STRING_GREP
+- schemaSufficiency: INSUFFICIENT_SCHEMA_DEFINITION_EVIDENCE_AFTER_REPAIR
+- implementationAuthorization: NOT_AUTHORIZED_UNTIL_EXACT_TABLE_FIELD_DECISION
+- sqlAuditRequired: LIKELY_REQUIRED_BEFORE_IMPLEMENTATION
+- nextStepDecision: Proceed to SQL/schema audit design gate before implementation.
+
+Verified evidence counts from O-CD-POSTCHECK
+- app_users definition evidence count: 300
+- app_users schema-like definition evidence count: 0
+- app_users non-doc evidence count: 0
+- identity/profile/accounts definition evidence count: 300
+- identity/profile/accounts schema-like definition evidence count: 0
+- provider non-doc evidence count: 96
+- subject/auth subject non-doc evidence count: 70
+- app user id non-doc evidence count: 34
+- status non-doc evidence count: 0
+- RLS ownership non-doc evidence count: 28
+- Supabase read pattern non-doc evidence count: 2
+
+TypeScript verification
+Command used:
+npx.cmd tsc --noEmit
+
+Result:
+PASS_TYPESCRIPT_CHECKED_THROUGH_NPX_CMD_AFTER_O_CD_POSTCHECK2_LITERAL_MARKER_VERIFICATION
+
+Scope
+This block is verification/report-only.
+No code files are changed.
+No controlled-intake route integration is performed.
+No future mapping diagnostic endpoint is created.
+No DB read is executed.
+No DB write is executed.
+No SQL is executed.
+No AI call is executed.
+No activity_events insert is performed.
+No semantic candidates, Value Objects, state facts, state deltas, or state snapshots are persisted.
+
+Current decision
+O-CD-POSTCHECK is now considered marker-verified through literal .Contains() checks.
+O-CD-POSTCHECK2 closes the marker verification gap.
+
+Next step decision
+Proceed to O-CE:
+SQL/schema audit design gate before read-only implementation.
+
+Reason:
+The repaired evidence says schemaSufficiency is INSUFFICIENT_SCHEMA_DEFINITION_EVIDENCE_AFTER_REPAIR and sqlAuditRequired is LIKELY_REQUIRED_BEFORE_IMPLEMENTATION.
+
+O-CE should not implement the read-only endpoint.
+O-CE should define a SQL/schema audit design gate that identifies the exact table and fields needed for future server-side app user mapping:
+- app user table name
+- Auth0 provider field
+- Auth0 subject field
+- internal app user id field
+- active/status field if present
+- RLS/server-side access expectations
+- whether migration is required
+
+O-CE must remain no-DB-read, no-DB-write, no-SQL, no-AI unless the user explicitly switches to an SQL audit execution gate.
+
+PASS marker
+PASS_O_CD_POSTCHECK2_LITERAL_MARKER_VERIFICATION_NO_DB_NO_WRITE_NO_SQL_NO_AI
