@@ -1,0 +1,128 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CE
+SQL/schema audit design gate before read-only implementation
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CE: ab9b28d
+- Expected origin/main before O-CE: ab9b28d
+- Baseline commit: ab9b28d docs: verify C8-I O-CD literal marker postcheck
+
+Purpose
+This block defines the SQL/schema audit design gate required before any read-only implementation of server-side app user mapping.
+
+This block is design/report-only.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not create the future mapping diagnostic endpoint.
+It does not modify src/app/api/activity/controlled-intake/route.ts.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+
+Reason for O-CE
+O-CD-POSTCHECK2 verified:
+- schemaSufficiency: INSUFFICIENT_SCHEMA_DEFINITION_EVIDENCE_AFTER_REPAIR
+- sqlAuditRequired: LIKELY_REQUIRED_BEFORE_IMPLEMENTATION
+- implementationAuthorization: NOT_AUTHORIZED_UNTIL_EXACT_TABLE_FIELD_DECISION
+- future marker non-doc matches: 0
+- futureMarkerDecision: DOC_ONLY_FALSE_POSITIVE_CONFIRMED_BY_FIXED_STRING_POSTCHECK
+
+Therefore, implementation is still not authorized.
+A SQL/schema audit design gate is required before read-only diagnostic implementation can be planned.
+
+Important boundary
+O-CE only designs the audit.
+O-CE does not run SQL.
+O-CE does not connect to Supabase.
+O-CE does not use Supabase SQL Editor.
+O-CE does not use psql.
+O-CE does not modify migrations.
+O-CE does not create or change schema.
+O-CE does not read production data.
+O-CE does not read user rows.
+O-CE does not inspect actual database content.
+O-CE does not expose user identity data.
+
+Audit goal
+The future SQL/schema audit must identify the exact source for mapping:
+trusted server-side Auth0 session -> provider -> authSubject -> internal app user -> trusted controlled-intake auth context.
+
+Required audit outputs
+1. Exact app user table.
+2. Exact internal app user id field.
+3. Exact Auth0 provider field.
+4. Exact Auth0 subject field.
+5. Exact active/status field if present.
+6. Duplicate prevention and unique constraints.
+7. RLS and server-side access expectations.
+8. Safe response boundary.
+9. Migration decision.
+
+Future audit execution gate
+The next block should be O-CF: SQL/schema audit execution gate.
+O-CF may use Supabase SQL Editor manual audit or a confirmed current local schema dump.
+O-CF must inspect metadata only.
+O-CF must not inspect production data rows.
+O-CF must not run INSERT, UPDATE, DELETE, ALTER, CREATE, DROP, TRUNCATE, GRANT, REVOKE or migration SQL.
+O-CF must be read-only metadata audit only.
+
+Planned SQL audit query set for future O-CF
+Query 1 — candidate tables.
+Query 2 — columns for candidate user/identity tables.
+Query 3 — columns matching provider / subject / user id / status semantics.
+Query 4 — indexes on candidate tables.
+Query 5 — constraints on candidate tables.
+Query 6 — RLS enabled status.
+Query 7 — RLS policies.
+Query 8 — auth.users metadata only.
+
+Forbidden SQL in O-CF
+insert, update, delete, alter, create, drop, truncate, grant, revoke, migration SQL.
+Also forbidden: select * from public.app_users and select * from auth.users.
+The audit should not select actual row data.
+Only schema metadata is needed.
+
+O-CF expected pasted result format
+The user should paste the full output of Query 1 through Query 8.
+The concrete SQL query bundle will be provided in the chat during O-CF, not embedded as a huge here-string in O-CE.
+
+O-CF decision criteria
+After O-CF, implementation may still be blocked unless the audit proves:
+1. There is an exact internal app user table.
+2. There is an exact internal app user id field.
+3. There is a reliable Auth0 provider field or provider can be derived safely.
+4. There is a reliable Auth0 subject field or subject can be derived safely.
+5. Duplicate behavior is understood.
+6. Active/status behavior is understood or explicitly marked unsupported.
+7. RLS/server-only access expectations are understood.
+8. Future response remains sanitized.
+9. No raw session, token, profile or DB rows are exposed.
+10. No controlled-intake route integration is attempted before read-only mapping proof.
+
+Future read-only mapping implementation is not authorized by O-CE.
+The earliest possible implementation planning block after audit would be O-CG or later, depending on O-CF results.
+
+Current decision
+O-CE creates the SQL/schema audit design gate.
+It confirms that the next safe step is O-CF SQL/schema audit execution or equivalent current schema dump inspection.
+
+Next step decision
+Proceed to O-CF: SQL/schema audit execution gate.
+O-CF should be performed as a manual read-only metadata audit.
+O-CF must not inspect user row data.
+O-CF must not write anything.
+O-CF must not modify code.
+O-CF must not create migrations.
+O-CF must not implement the read-only endpoint.
+O-CF must not modify controlled-intake route.
+O-CF must not insert activity_events.
+O-CF must not call AI.
+
+PASS marker
+PASS_SQL_SCHEMA_AUDIT_DESIGN_GATE_CREATED_NO_DB_NO_WRITE_NO_SQL_EXECUTED_NO_AI
