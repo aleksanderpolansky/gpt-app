@@ -1,0 +1,132 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-AO — Controlled Activity Intake Server-Side App User Mapping Static Helper Verification
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+SERVER-SIDE APP USER MAPPING STATIC HELPER VERIFIED / NO ROUTE CHANGE / NO HELPER CHANGE / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-AN
+- Previous commit: ecb759f
+- Previous message: feat: add C8-I-D4-L-L-O-AN server-side app user mapping helper
+
+Verified files
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts
+- src/app/api/activity/controlled-intake/route.ts
+- lib/activity/controlledIntake/authContext.ts
+- lib/activity/controlledIntake/productionAuthMapping.ts
+- lib/activity/controlledIntake/persist.ts
+
+Reports read
+- O-AM server-side app user mapping static helper design gate
+- O-AN server-side app user mapping static helper report
+
+Verification decision
+SERVER_SIDE_APP_USER_MAPPING_STATIC_HELPER_VERIFIED_NO_IO
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-AP - Controlled Activity Intake Server-Side App User Mapping Route Integration Design Gate
+
+Static verification
+- serverSideAppUserMapping.ts exists.
+- required exports exist.
+- required failure codes exist.
+- required success/failure/result types exist.
+- required guardrails exist.
+- helper contains no Supabase client.
+- helper contains no Auth0/session runtime read.
+- helper contains no DB read.
+- helper contains no DB write.
+- helper contains no SQL execution.
+- helper contains no AI call.
+- helper contains no NextRequest/NextResponse.
+- helper contains no semantic persistence markers.
+- route.ts was not changed.
+- authContext.ts was not changed.
+- productionAuthMapping.ts was not changed.
+- persist.ts was not changed.
+
+Runtime verification
+- missing identity fails with CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED.
+- missing authSubject fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- blank authSubject fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- missing app user read model fails with CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED.
+- blank appUserId fails with CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED.
+- missing mapped authSubject fails with CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED.
+- mappingStatus=missing fails with CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED.
+- mappingStatus=ambiguous fails with CONTROLLED_INTAKE_APP_USER_MAPPING_AMBIGUOUS.
+- mappingStatus=blocked fails with CONTROLLED_INTAKE_APP_USER_MAPPING_BLOCKED.
+- authSubject mismatch fails with CONTROLLED_INTAKE_AUTH_SUBJECT_MISMATCH.
+- requested actor context without verified membership fails with CONTROLLED_INTAKE_ACTOR_NOT_ALLOWED.
+- requested actor context without active status fails with CONTROLLED_INTAKE_ACTOR_NOT_ALLOWED.
+- requested organization context with not_allowed status fails with CONTROLLED_INTAKE_ORGANIZATION_NOT_ALLOWED.
+- requested space context with blocked status fails with CONTROLLED_INTAKE_SPACE_NOT_ALLOWED.
+- minimal active app user mapping succeeds.
+- default requestSource works.
+- identity requestSource fallback works.
+- explicit requestSource is preferred.
+- authSubject is trimmed.
+- appUserId is trimmed.
+- internalUserId is optional and trimmed.
+- verified actorId passes to trustedContext.
+- verified organizationId passes to trustedContext.
+- verified spaceId passes to trustedContext.
+- evidence is returned.
+- assert helper returns trustedContext on success.
+- assert helper throws with failure code on failure.
+
+Guardrails verified
+- staticHelperOnly=true
+- serverSideMappingOnly=true
+- serverSideContextRequired=true
+- clientOwnershipAccepted=false
+- previewHeaderAcceptedForProductionWrite=false
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+Checks executed
+- Clean pushed O-AN baseline verified.
+- O-AM report was read.
+- O-AN report was read.
+- serverSideAppUserMapping.ts static markers were verified.
+- forbidden helper patterns were checked.
+- route.ts safety markers were checked.
+- authContext.ts safety markers were checked.
+- productionAuthMapping.ts safety markers were checked.
+- persist.ts marker was checked.
+- no uncommitted code changes were verified.
+- npx tsc --noEmit passed with O-AO temporary runtime check.
+- isolated TypeScript compile passed.
+- node runtime check passed.
+- temporary files were removed.
+- npx tsc --noEmit passed after cleanup.
+- only this O-AO report is created.
+
+Important limitation
+O-AO verifies only the static/no-I/O helper.
+It does not integrate serverSideAppUserMapping.ts into route.ts.
+It does not read Auth0/session.
+It does not read Supabase.
+It does not approve production write mode.
+It does not approve activity_events insert.
+It does not approve AI or semantic persistence.
+
+Still forbidden after O-AO
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
