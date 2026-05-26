@@ -80,7 +80,9 @@ export type ControlledActivityIntakeAuthContextResult =
   | ControlledActivityIntakeAuthContextSuccess
   | ControlledActivityIntakeAuthContextFailure;
 
-function normalizeOptionalString(value: string | null | undefined): string | undefined {
+function normalizeOptionalString(
+  value: string | null | undefined,
+): string | undefined {
   if (typeof value !== "string") {
     return undefined;
   }
@@ -119,6 +121,12 @@ function failure(
     message,
     guardrails: buildGuardrails(),
   };
+}
+
+function isControlledActivityIntakeAuthContextFailure(
+  result: ControlledActivityIntakeAuthContextResult,
+): result is ControlledActivityIntakeAuthContextFailure {
+  return result.ok === false;
 }
 
 function buildTrustedContext(input: {
@@ -225,7 +233,7 @@ export function buildControlledActivityIntakeNoWritePreviewTrustedContext(
 export function assertControlledActivityIntakeTrustedContext(
   result: ControlledActivityIntakeAuthContextResult,
 ): ControlledActivityIntakeTrustedContext {
-  if (!result.ok) {
+  if (isControlledActivityIntakeAuthContextFailure(result)) {
     throw new Error(result.message);
   }
 

@@ -1,0 +1,120 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-V-FIX1 — Controlled Activity Intake Auth Context Resolver Static Helper
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+AUTH CONTEXT STATIC HELPER FIXED / FALSE O-V RUNTIME PASS CORRECTED / TYPE NARROWING FIXED / NO ROUTE CHANGE / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-V
+- Previous commit: 68e4096
+- Previous message: feat: add C8-I-D4-L-L-O-V auth context static helper
+
+Reason for FIX1
+The original O-V commit contains the intended authContext.ts helper, but its isolated runtime verification was invalid.
+The isolated compile failed because assertControlledActivityIntakeTrustedContext tried to read result.message from the union type ControlledActivityIntakeAuthContextResult.
+After the failed compile, Node was accidentally launched with an empty compiled script path, so the terminal entered Node REPL and the script later recorded a false runtime pass.
+O-V-FIX1 corrects that false pass.
+
+Fix applied
+- authContext.ts was overwritten with full fixed text.
+- A dedicated failure type guard was added:
+  isControlledActivityIntakeAuthContextFailure.
+- assertControlledActivityIntakeTrustedContext now reads message only after narrowing to ControlledActivityIntakeAuthContextFailure.
+- Route was not changed.
+- No DB write was executed.
+
+Gate used
+PASS_AUTH_CONTEXT_RESOLVER_STATIC_HELPER_DESIGN_ONLY
+
+Fixed file
+- lib/activity/controlledIntake/authContext.ts
+
+Route status
+- src/app/api/activity/controlled-intake/route.ts was not changed.
+- Route remains no_write_preview only.
+- Route still has no Supabase insert.
+- Route still has no AI call.
+- Route still has no semantic persistence.
+
+What authContext.ts does
+- Defines a static auth context helper boundary.
+- Builds trusted context from server-side auth identity plus server-side app user mapping.
+- Builds no-write preview trusted context separately.
+- Requires authenticated identity subject for production auth context.
+- Requires server-side app user mapping.
+- Provides assertControlledActivityIntakeTrustedContext.
+- Keeps guardrails that DB/SQL/AI/semantic persistence did not happen.
+
+What authContext.ts does not do
+- Does not import Auth0.
+- Does not import Supabase.
+- Does not call createClient.
+- Does not call .from().
+- Does not call .insert().
+- Does not execute SQL.
+- Does not call AI.
+- Does not persist category candidates.
+- Does not create Value Objects.
+- Does not write state facts, deltas, or snapshots.
+- Does not change route.ts.
+
+Exports
+- CONTROLLED_ACTIVITY_INTAKE_AUTH_CONTEXT_LAYER
+- ControlledActivityIntakeAuthContextSource
+- ControlledActivityIntakeAuthIdentity
+- ControlledActivityIntakeAppUserMapping
+- ControlledActivityIntakeAuthContextGuardrails
+- ControlledActivityIntakeAuthContextInput
+- ControlledActivityIntakeNoWritePreviewContextInput
+- ControlledActivityIntakeAuthContextSuccess
+- ControlledActivityIntakeAuthContextFailure
+- ControlledActivityIntakeAuthContextResult
+- buildControlledActivityIntakeTrustedContextFromAuth
+- buildControlledActivityIntakeNoWritePreviewTrustedContext
+- assertControlledActivityIntakeTrustedContext
+
+Verification performed
+- O-U pass gate was read.
+- O-V false runtime pass was invalidated.
+- failed O-V temp files were cleaned.
+- authContext.ts was overwritten with fixed full text.
+- authContext.ts markers were verified.
+- authContext.ts forbidden runtime/write/AI patterns were checked.
+- route.ts was verified unchanged.
+- temporary runtime check verified auth failures and success cases.
+- temporary runtime check verified no-write preview helper behavior.
+- temporary runtime check verified assert helper throws on failure.
+- npx tsc --noEmit passed with temp check.
+- isolated TypeScript compile passed.
+- node runtime check passed.
+- temporary files were removed.
+- npx tsc --noEmit passed after cleanup.
+
+Important limitation
+O-V-FIX1 creates/fixes only a static helper.
+It does not integrate the helper into the route.
+It does not approve a production write route.
+It does not approve a Supabase insert.
+It does not approve AI or semantic persistence.
+
+Still forbidden after O-V-FIX1
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not call AI.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+- Do not convert preview header route into production write route yet.
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-W — Controlled Activity Intake Auth Context Static Helper Verification
+
+O-W should independently verify:
+- authContext.ts exports.
+- auth result failures for missing identity/subject/mapping.
+- auth result success with appUserId from server-side mapping.
+- no-write preview result success/failure.
+- assert helper success/failure.
+- guardrails remain no-write/no-AI.
+- route remains unchanged.
