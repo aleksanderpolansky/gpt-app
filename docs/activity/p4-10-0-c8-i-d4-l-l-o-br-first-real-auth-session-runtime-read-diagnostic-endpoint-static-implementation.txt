@@ -1,0 +1,175 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-BR â€” Controlled Activity Intake First Real Auth Session Runtime Read Diagnostic Endpoint Static Implementation
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+FIRST REAL AUTH SESSION RUNTIME READ DIAGNOSTIC ENDPOINT STATIC IMPLEMENTATION CREATED / NO CONTROLLED-INTAKE ROUTE CHANGE / NO HELPER CHANGE / NO REAL AUTH0 SESSION RUNTIME READ / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-BQ
+- Previous commit: e2a7e60
+- Previous message: docs: add C8-I-D4-L-L-O-BQ first real auth session endpoint gate
+
+Gate used
+PASS_FIRST_REAL_AUTH_SESSION_RUNTIME_READ_DIAGNOSTIC_ENDPOINT_IMPLEMENTATION_DESIGN_ONLY
+
+Implementation decision
+FIRST_REAL_AUTH_SESSION_RUNTIME_READ_DIAGNOSTIC_ENDPOINT_STATIC_IMPLEMENTATION_CREATED_NO_IO
+
+FIX1 note
+The first O-BR script failed only in the temporary TypeScript verification file because TypeScript did not narrow guardrails after the generic assert() call.
+No commit was created by the failed run.
+O-BR-FIX1 cleans the stale untracked failed artifacts and recreates the same static endpoint scaffold with a corrected temporary verification file.
+The endpoint design and runtime guardrails are unchanged.
+
+Implemented file
+- src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts
+
+Unchanged files
+- src/app/api/activity/controlled-intake/route.ts
+- lib/activity/controlledIntake/serverSideAuthSession.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntime.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntimeConnection.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntimeBridge.ts
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts
+- lib/activity/controlledIntake/authContext.ts
+- lib/activity/controlledIntake/productionAuthMapping.ts
+- lib/activity/controlledIntake/persist.ts
+
+Endpoint behavior
+- GET endpoint only.
+- App Router route handler.
+- dynamic=force-dynamic.
+- Requires x-controlled-intake-first-real-session-read-test: true.
+- Missing diagnostic header returns HTTP 403.
+- Valid diagnostic header returns HTTP 403 because FIRST_REAL_AUTH_SESSION_RUNTIME_READ_APPROVED=false.
+- Endpoint is static/fail-closed scaffold only.
+- Endpoint does not import Auth0 SDK.
+- Endpoint does not call getSession/getAccessToken.
+- Endpoint does not call cookies().
+- Endpoint does not call headers().
+- Endpoint does not read Supabase.
+- Endpoint does not write Supabase.
+- Endpoint does not execute SQL.
+- Endpoint does not call AI.
+- Endpoint does not call bridge yet.
+- Endpoint does not insert activity_events.
+
+Runtime verification
+- missing header endpoint test returns 403 and CONTROLLED_INTAKE_FIRST_REAL_SESSION_DEBUG_HEADER_REQUIRED.
+- valid header endpoint test returns 403 and CONTROLLED_INTAKE_FIRST_REAL_SESSION_READ_NOT_APPROVED.
+- both tests prove realAuth0SessionReadAllowed=false.
+- both tests prove realAuth0SessionReadExecuted=false.
+- both tests prove auth0RuntimeReadExecuted=false.
+- both tests prove dbReadExecuted=false.
+- both tests prove dbWriteExecuted=false.
+- both tests prove sqlExecuted=false.
+- both tests prove aiCallExecuted=false.
+- both tests prove activityEventsInserted=false.
+- both tests prove no unsafe token/session/profile/ownership fields are returned.
+
+Guardrails verified
+- debugEndpointOnly=true
+- diagnosticReadOnly=true
+- staticDiagnosticEndpointOnly=true
+- controlledIntakeRouteChanged=false
+- realAuth0SessionReadAllowed=false
+- realAuth0SessionReadExecuted=false
+- auth0RuntimeReadExecuted=false
+- serverSideSessionReadOnly=true
+- serverSideContextRequired=true
+- clientOwnershipAccepted=false
+- previewHeaderAcceptedForProductionWrite=false
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- activityEventsInserted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+Forbidden patterns verified absent from diagnostic endpoint
+- @auth0
+- getSession
+- getAccessToken
+- Auth0Client
+- handleAuth
+- cookies(
+- headers(
+- createClient
+- OpenAI
+- chat.completions
+- fetch(
+- INSERT INTO
+- UPDATE
+- DELETE
+- .insert(
+- .delete(
+- .rpc(
+- .from(
+- categoryCandidates:
+- metricCandidates:
+- stateHookCandidates:
+- value_object_state_facts
+- activity_state_deltas
+- access_token
+- refresh_token
+- id_token
+- raw cookie
+- raw session
+- raw profile
+- full Auth0 user object
+- full provider payload
+- productionWriteEnabled: true
+- dbReadExecuted: true
+- dbWriteExecuted: true
+- sqlExecuted: true
+- aiCallExecuted: true
+
+Checks executed
+- Clean pushed O-BQ baseline verified.
+- Stale failed O-BR untracked artifacts were cleaned.
+- O-BP report was read.
+- O-BQ report was read.
+- controlled-intake route.ts was verified safe and unchanged.
+- existing helpers were verified safe and unchanged.
+- diagnostic endpoint was created.
+- endpoint markers were verified.
+- forbidden endpoint patterns were checked.
+- npx tsc --noEmit passed with O-BR-FIX1 temporary endpoint check.
+- isolated TypeScript compile passed.
+- node endpoint check passed.
+- temporary files were removed.
+- npx tsc --noEmit passed after cleanup.
+
+Important limitation
+O-BR creates only a static/fail-closed diagnostic endpoint scaffold.
+It does not execute a real Auth0/session runtime read.
+It does not import Auth0 SDK.
+It does not call the bridge yet.
+It does not integrate anything into controlled-intake route.ts.
+It does not read Supabase.
+It does not approve production write mode.
+It does not approve activity_events insert.
+It does not approve AI or semantic persistence.
+
+Still forbidden after O-BR
+- Do not integrate runtime adapter into controlled-intake route.ts.
+- Do not execute real Auth0/session runtime reads from controlled-intake route.ts.
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Next step
+P4.10.0-C8-I-D4-L-L-O-BS - Controlled Activity Intake First Real Auth Session Runtime Read Diagnostic Endpoint Static Verification
