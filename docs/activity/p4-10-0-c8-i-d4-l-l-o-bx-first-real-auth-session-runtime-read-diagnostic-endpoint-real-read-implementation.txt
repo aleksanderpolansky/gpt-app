@@ -1,0 +1,122 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-BX â€” Controlled Activity Intake First Real Auth Session Runtime Read Diagnostic Endpoint Real-Read Implementation
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+FIRST REAL AUTH SESSION RUNTIME READ DIAGNOSTIC ENDPOINT REAL-READ IMPLEMENTATION CREATED / NO CONTROLLED-INTAKE ROUTE CHANGE / NO HELPER CHANGE / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED / NO BROWSER EXECUTION BY THIS SCRIPT
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-BW
+- Previous commit: cb54bab
+- Previous message: docs: add C8-I-D4-L-L-O-BW first real auth session real-read gate
+
+Gate used
+PASS_FIRST_REAL_AUTH_SESSION_RUNTIME_READ_DIAGNOSTIC_ENDPOINT_REAL_READ_IMPLEMENTATION_DESIGN_ONLY
+
+Implementation decision
+FIRST_REAL_AUTH_SESSION_RUNTIME_READ_DIAGNOSTIC_ENDPOINT_REAL_READ_IMPLEMENTATION_CREATED_NO_DB_NO_WRITE
+
+FIX notes
+The first O-BX script failed at TypeScript check only:
+- path alias "@/lib/..." was not resolvable from this diagnostic route;
+- assigning email/sid to a readonly typed user object caused TS2540.
+
+O-BX-FIX1 also stopped during cleanup because git restore left the diagnostic endpoint route marked modified.
+O-BX-FIX2 tolerates this specific stale route state, rewrites the endpoint with corrected relative imports, constructs sanitized optional fields through object spreads, and verifies TypeScript.
+
+Implemented file
+- src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts
+
+Unchanged files
+- src/app/api/activity/controlled-intake/route.ts
+- lib/auth0.ts
+- lib/activity/controlledIntake/serverSideAuthSession.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntime.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntimeConnection.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntimeBridge.ts
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts
+- lib/activity/controlledIntake/authContext.ts
+- lib/activity/controlledIntake/productionAuthMapping.ts
+- lib/activity/controlledIntake/persist.ts
+
+Endpoint behavior after O-BX
+- GET endpoint only.
+- dynamic=force-dynamic.
+- Requires x-controlled-intake-first-real-session-read-test:true.
+- Missing/wrong diagnostic header returns HTTP 403 before any Auth0/session helper call.
+- FIRST_REAL_AUTH_SESSION_RUNTIME_READ_APPROVED=true is now set inside the diagnostic endpoint.
+- The endpoint calls the existing project helper auth0.getSession() only after header and approval checks.
+- The endpoint extracts only provider/authSubject/email/sessionId from the session.
+- The endpoint passes only sanitized session data into buildControlledActivityIntakeServerSideAuthSessionRuntimeBridge.
+- The endpoint returns sanitized JSON only.
+- The endpoint does not read Supabase.
+- The endpoint does not write Supabase.
+- The endpoint does not execute SQL.
+- The endpoint does not call AI.
+- The endpoint does not insert activity_events.
+- The endpoint does not modify or call controlled-intake production route.
+
+Approved project Auth0 helper used
+- import { auth0 } from "../../../../../../lib/auth0";
+- await auth0.getSession();
+
+Bridge used
+- buildControlledActivityIntakeServerSideAuthSessionRuntimeBridge
+- connectionApproved=true
+- runtimeReadApproved=true
+- authBoundary=project_auth0_server_session
+- injectedProjectAuthSession is sanitized only
+
+Static checks executed
+- O-BV report was read.
+- O-BW report was read.
+- lib/auth0.ts was verified to export auth0 and use Auth0Client.
+- failed O-BX stale endpoint diff was tolerated and overwritten with corrected implementation.
+- controlled-intake route.ts safety markers were checked.
+- diagnostic endpoint implementation markers were checked.
+- forbidden DB/SQL/AI/write patterns were checked in diagnostic endpoint.
+- forbidden response field strings were checked in diagnostic endpoint.
+- controlled-intake route.ts was verified unchanged.
+- lib/auth0.ts was verified unchanged.
+- existing controlledIntake helpers were verified unchanged.
+- npx tsc --noEmit passed.
+- only diagnostic endpoint and this report are changed.
+
+Important limitation
+O-BX does not run the browser verification.
+O-BX does not itself execute a real Auth0/session runtime read.
+A real read will execute only when the diagnostic endpoint is called from the browser or an authenticated request.
+O-BX does not approve controlled-intake route integration.
+O-BX does not approve Supabase reads.
+O-BX does not approve production write mode.
+O-BX does not approve activity_events insert.
+O-BX does not approve AI or semantic persistence.
+
+Expected next browser verification
+O-BY should run the browser-authenticated diagnostic endpoint verification:
+- call endpoint without header and expect 403.
+- call endpoint with wrong header and expect 403.
+- call endpoint with valid header and credentials include.
+- authenticated browser should return HTTP 200 with sanitized Auth0 subject.
+- unauthenticated browser should return HTTP 401 controlled failure.
+- forbidden response fields must be absent.
+- DB/SQL/AI/write guardrails must remain false.
+- controlledIntakeRouteChanged must remain false.
+
+Still forbidden after O-BX
+- Do not integrate runtime adapter into controlled-intake route.ts.
+- Do not execute real Auth0/session runtime reads from controlled-intake route.ts.
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Next step
+P4.10.0-C8-I-D4-L-L-O-BY - Controlled Activity Intake First Real Auth Session Runtime Read Browser-Authenticated Verification
