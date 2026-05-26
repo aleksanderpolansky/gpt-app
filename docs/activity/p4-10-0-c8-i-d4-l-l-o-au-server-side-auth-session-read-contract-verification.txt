@@ -1,0 +1,136 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-AU â€” Controlled Activity Intake Server-Side Auth Session Read Contract Verification
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+SERVER-SIDE AUTH SESSION READ CONTRACT VERIFIED / NO ROUTE CHANGE / NO HELPER CREATION / NO AUTH0 SESSION RUNTIME READ / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-AT
+- Previous commit: 43a890b
+- Previous message: docs: add C8-I-D4-L-L-O-AT server-side auth session contract
+
+Verified reports
+- O-AS server-side auth session read design gate
+- O-AT server-side auth session read contract
+
+Verification decision
+SERVER_SIDE_AUTH_SESSION_READ_CONTRACT_VERIFIED_NO_IO
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-AV - Controlled Activity Intake Server-Side Auth Session Static Helper Design Gate
+
+Contract verification summary
+O-AU verified that O-AT contains a complete no-I/O server-side auth session read contract.
+The contract includes:
+- contract layer name
+- future helper file name
+- future export list
+- contract purpose
+- server-side auth session input shape
+- session read model shape
+- success result shape
+- failure result shape
+- required failure codes
+- required fail-closed behavior
+- allowed provider assumptions
+- forbidden identity sources
+- Auth0/session runtime boundary
+- read/write boundary
+- route boundary
+- security/logging boundary
+- no-output-leak boundary
+- no-write guardrails
+- recommended next O-AU/O-AV scope
+
+Verified required failure codes
+- CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SESSION_INVALID
+- CONTROLLED_INTAKE_AUTH_PROVIDER_UNSUPPORTED
+- CONTROLLED_INTAKE_AUTH_SESSION_READ_FAILED
+
+Verified fail-closed behavior
+- Missing session read model fails.
+- Missing authSubject fails.
+- Blank authSubject fails.
+- Unsupported provider fails.
+- Malformed session fails.
+- Session read exception fails safely.
+- Email-only identity fails.
+- Ambiguous identity fails rather than guessing.
+- Any uncertainty about identity anchor must fail.
+
+Verified boundaries
+- O-AT does not authorize actual Auth0/session runtime reads.
+- O-AT does not authorize Supabase reads.
+- O-AT does not authorize database writes.
+- O-AT does not authorize SQL execution.
+- O-AT does not authorize AI calls.
+- O-AT does not authorize production write mode.
+- O-AT does not authorize activity_events insert.
+- serverSideAuthSession.ts was not created.
+- route.ts was not changed.
+- helper files were not changed.
+
+Verified current route/helper state
+- route.ts still supports server_side_static_preview.
+- route.ts still supports production_static_preview.
+- route.ts still supports no_write_preview.
+- route.ts still has productionWriteEnabled=false.
+- route.ts still has dbReadExecuted=false.
+- route.ts still has dbWriteExecuted=false.
+- route.ts still has sqlExecuted=false.
+- route.ts still has aiCallExecuted=false.
+- serverSideAppUserMapping.ts remains static/no-I/O.
+- authContext.ts remains safe.
+- productionAuthMapping.ts remains safe.
+- persist.ts remains safe.
+
+Checks executed in O-AU
+- Clean pushed O-AT baseline verified.
+- O-AS report was read.
+- O-AT report was read.
+- O-AT contract completeness markers were verified.
+- forbidden contract contradiction markers were checked.
+- route.ts safety markers were checked.
+- serverSideAppUserMapping.ts safety markers were checked.
+- authContext.ts safety markers were checked.
+- productionAuthMapping.ts safety markers were checked.
+- persist.ts marker was checked.
+- forbidden DB/SQL/AI patterns were checked in controlled-intake route/helper files.
+- serverSideAuthSession.ts absence was verified.
+- no uncommitted code changes were verified.
+- npx tsc --noEmit passed.
+- only this O-AU report is created.
+
+Important limitation
+O-AU verifies only the no-I/O contract.
+It does not create serverSideAuthSession.ts.
+It does not implement Auth0/session runtime reads.
+It does not integrate real server session into route.ts.
+It does not read Supabase.
+It does not approve production write mode.
+It does not approve activity_events insert.
+It does not approve AI or semantic persistence.
+
+Recommended next step
+O-AV should be a design gate for a static/no-I/O serverSideAuthSession helper.
+O-AV should not read Auth0/session at runtime.
+O-AV should not read Supabase.
+O-AV should not modify route.ts.
+O-AV should decide whether O-AW may create serverSideAuthSession.ts as a pure helper that accepts injected session read-model inputs.
+
+Still forbidden after O-AU
+- Do not execute Auth0/session runtime reads.
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
