@@ -1,0 +1,152 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-BC â€” Controlled Activity Intake Real Auth Session Runtime Adapter Static Implementation
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+REAL AUTH SESSION RUNTIME ADAPTER STATIC IMPLEMENTATION CREATED / NO ROUTE CHANGE / NO REAL AUTH0 SESSION RUNTIME READ / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-BB
+- Previous commit: 875786a
+- Previous message: docs: add C8-I-D4-L-L-O-BB real auth session runtime adapter gate
+
+Gate used
+PASS_REAL_AUTH_SESSION_RUNTIME_ADAPTER_IMPLEMENTATION_DESIGN_ONLY
+
+Implementation decision
+REAL_AUTH_SESSION_RUNTIME_ADAPTER_STATIC_IMPLEMENTATION_CREATED_NO_IO
+
+Implemented file
+- lib/activity/controlledIntake/serverSideAuthSessionRuntime.ts
+
+Unchanged files
+- src/app/api/activity/controlled-intake/route.ts
+- lib/activity/controlledIntake/serverSideAuthSession.ts
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts
+- lib/activity/controlledIntake/authContext.ts
+- lib/activity/controlledIntake/productionAuthMapping.ts
+- lib/activity/controlledIntake/persist.ts
+
+Implementation behavior
+- Creates a static runtime adapter boundary.
+- Requires allowRuntimeRead=true before any runtime adapter path can proceed.
+- Requires authBoundary=project_auth0_server_session.
+- Does not import Auth0 SDK.
+- Does not execute real Auth0/session runtime read.
+- Does not read cookies.
+- Does not read headers.
+- Does not import NextRequest or NextResponse.
+- Does not read Supabase.
+- Does not write Supabase.
+- Does not execute SQL.
+- Does not call AI.
+- Does not modify route.ts.
+- Does not create activity_events rows.
+
+Runtime verification
+- allowRuntimeRead missing fails with CONTROLLED_INTAKE_AUTH_RUNTIME_NOT_APPROVED.
+- allowRuntimeRead=false fails with CONTROLLED_INTAKE_AUTH_RUNTIME_NOT_APPROVED.
+- missing auth boundary fails with CONTROLLED_INTAKE_AUTH_SESSION_RUNTIME_UNAVAILABLE.
+- unsupported auth boundary fails with CONTROLLED_INTAKE_AUTH_SESSION_RUNTIME_UNAVAILABLE.
+- injected runtime read error fails with CONTROLLED_INTAKE_AUTH_SESSION_READ_FAILED.
+- missing session model fails with CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED.
+- raw session unavailable fails with CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED.
+- expired session fails with CONTROLLED_INTAKE_AUTH_SESSION_EXPIRED.
+- malformed session fails with CONTROLLED_INTAKE_AUTH_SESSION_INVALID.
+- missing subject fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- unsupported provider fails with CONTROLLED_INTAKE_AUTH_PROVIDER_UNSUPPORTED.
+- injected sanitized auth0 runtime read model succeeds.
+- output is accepted by serverSideAuthSession.ts.
+- authSubject is trimmed.
+- requestSource is trimmed.
+- no token fields are exposed.
+- guardrails show auth0RuntimeReadExecuted=false in O-BC tests.
+- guardrails show dbReadExecuted=false.
+- guardrails show dbWriteExecuted=false.
+- guardrails show sqlExecuted=false.
+- guardrails show aiCallExecuted=false.
+
+Guardrails verified
+- runtimeHelperOnly=true
+- staticRuntimeAdapterOnly=true
+- auth0RuntimeReadExecuted=false
+- serverSideSessionReadOnly=true
+- serverSideContextRequired=true
+- clientOwnershipAccepted=false
+- previewHeaderAcceptedForProductionWrite=false
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+Forbidden patterns verified absent from serverSideAuthSessionRuntime.ts
+- @auth0
+- getSession
+- getAccessToken
+- cookies(
+- headers(
+- NextRequest
+- NextResponse
+- createClient
+- OpenAI
+- chat.completions
+- fetch(
+- INSERT INTO
+- UPDATE
+- DELETE
+- .insert(
+- .delete(
+- .rpc(
+- .from(
+- categoryCandidates:
+- metricCandidates:
+- stateHookCandidates:
+- value_object_state_facts
+- activity_state_deltas
+- token field markers
+
+Checks executed
+- Clean pushed O-BB baseline verified.
+- O-BA report was read.
+- O-BB report was read.
+- route.ts was verified safe and unchanged.
+- existing helpers were verified safe and unchanged.
+- serverSideAuthSessionRuntime.ts was created.
+- runtime adapter markers were verified.
+- forbidden runtime adapter patterns were checked.
+- npx tsc --noEmit passed with O-BC temporary runtime check.
+- isolated TypeScript compile passed.
+- node runtime adapter check passed.
+- temporary files were removed.
+- npx tsc --noEmit passed after cleanup.
+
+Important limitation
+O-BC creates only a static runtime adapter boundary.
+It does not execute a real Auth0/session runtime read.
+It does not integrate the adapter into route.ts.
+It does not read Supabase.
+It does not approve production write mode.
+It does not approve activity_events insert.
+It does not approve AI or semantic persistence.
+
+Still forbidden after O-BC
+- Do not integrate runtime adapter into route.ts.
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Next step
+P4.10.0-C8-I-D4-L-L-O-BD â€” Controlled Activity Intake Real Auth Session Runtime Adapter Static Verification
