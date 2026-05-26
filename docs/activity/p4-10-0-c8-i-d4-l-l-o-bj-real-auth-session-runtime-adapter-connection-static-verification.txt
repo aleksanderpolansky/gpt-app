@@ -1,0 +1,138 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-BJ â€” Controlled Activity Intake Real Auth Session Runtime Adapter Connection Static Verification
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+REAL AUTH SESSION RUNTIME CONNECTION STATIC VERIFIED / NO ROUTE CHANGE / NO HELPER CHANGE / NO REAL AUTH0 SESSION RUNTIME READ / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-BI
+- Previous commit: 79521f6
+- Previous message: feat: add C8-I-D4-L-L-O-BI real auth session connection helper
+
+Verified files
+- lib/activity/controlledIntake/serverSideAuthSessionRuntimeConnection.ts
+- lib/activity/controlledIntake/serverSideAuthSessionRuntime.ts
+- lib/activity/controlledIntake/serverSideAuthSession.ts
+- src/app/api/activity/controlled-intake/route.ts
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts
+- lib/activity/controlledIntake/authContext.ts
+- lib/activity/controlledIntake/productionAuthMapping.ts
+- lib/activity/controlledIntake/persist.ts
+
+Reports read
+- O-BH real auth session runtime adapter connection static implementation design gate
+- O-BI real auth session runtime adapter connection static implementation report
+
+Verification decision
+REAL_AUTH_SESSION_RUNTIME_CONNECTION_STATIC_VERIFIED_NO_IO
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-BK - Controlled Activity Intake Real Auth Session Connection-to-Runtime Bridge Design Gate
+
+Static verification
+- serverSideAuthSessionRuntimeConnection.ts exists.
+- connection helper exports expected layer constant.
+- connection helper exports expected types.
+- connection helper exports readControlledActivityIntakeServerSideAuthSessionRuntimeConnection.
+- connection helper exports isControlledActivityIntakeServerSideAuthSessionRuntimeConnectionFailure.
+- connection helper contains required failure codes.
+- connection helper contains unsafe payload detection.
+- connection helper maps injected Auth0-like project session into sessionReadModel.
+- connection helper contains no Auth0 SDK import.
+- connection helper contains no getSession/getAccessToken call.
+- connection helper contains no cookies/headers direct read.
+- connection helper contains no NextRequest/NextResponse dependency.
+- connection helper contains no Supabase client.
+- connection helper contains no DB/SQL/AI markers.
+- route.ts was not changed.
+- existing helpers were not changed.
+
+Runtime verification
+- approval missing fails with CONTROLLED_INTAKE_AUTH_CONNECTION_NOT_APPROVED.
+- approval false fails with CONTROLLED_INTAKE_AUTH_CONNECTION_NOT_APPROVED.
+- boundary missing fails with CONTROLLED_INTAKE_AUTH_CONNECTION_UNAVAILABLE.
+- boundary unsupported fails with CONTROLLED_INTAKE_AUTH_CONNECTION_UNAVAILABLE.
+- helper error fails with CONTROLLED_INTAKE_AUTH_CONNECTION_READ_FAILED.
+- missing session fails with CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED.
+- unsafe nested payload fails with CONTROLLED_INTAKE_AUTH_CONNECTION_RETURNED_UNSAFE_PAYLOAD.
+- malformed session fails with CONTROLLED_INTAKE_AUTH_SESSION_INVALID.
+- expired session fails with CONTROLLED_INTAKE_AUTH_SESSION_EXPIRED.
+- email-only identity fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- unsupported provider fails with CONTROLLED_INTAKE_AUTH_PROVIDER_UNSUPPORTED.
+- valid injected nested Auth0-like session succeeds.
+- connection helper output is accepted by serverSideAuthSessionRuntime.ts.
+- runtime adapter output is accepted by serverSideAuthSession.ts.
+- authSubject is trimmed.
+- provider is auth0.
+- email is trimmed.
+- sessionId is trimmed.
+- requestSource is trimmed by downstream helper.
+- no token fields are exposed.
+- no raw session/profile fields are exposed.
+
+Guardrails verified
+- connectionHelperOnly=true
+- staticConnectionHelperOnly=true
+- realAuth0SessionReadExecuted=false
+- auth0RuntimeReadExecuted=false
+- serverSideSessionReadOnly=true
+- serverSideContextRequired=true
+- clientOwnershipAccepted=false
+- previewHeaderAcceptedForProductionWrite=false
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+Checks executed
+- Clean pushed O-BI baseline verified.
+- O-BH report was read.
+- O-BI report was read.
+- serverSideAuthSessionRuntimeConnection.ts markers were verified.
+- forbidden connection helper patterns were checked.
+- route.ts safety markers were checked.
+- existing helper safety markers were checked.
+- no uncommitted code changes were verified.
+- npx tsc --noEmit passed with O-BJ temporary connection check.
+- isolated TypeScript compile passed.
+- node connection helper check passed.
+- temporary files were removed.
+- npx tsc --noEmit passed after cleanup.
+- only this O-BJ report is created.
+
+Important limitation
+O-BJ verifies only the static/no-I-O connection helper.
+It does not execute a real Auth0/session runtime read.
+It does not integrate the connection helper into serverSideAuthSessionRuntime.ts.
+It does not integrate anything into route.ts.
+It does not read Supabase.
+It does not approve production write mode.
+It does not approve activity_events insert.
+It does not approve AI or semantic persistence.
+
+Recommended next step
+O-BK should be a design gate for bridging serverSideAuthSessionRuntimeConnection.ts and serverSideAuthSessionRuntime.ts in a controlled static/no-I-O way.
+O-BK should not integrate anything into route.ts.
+O-BK should not execute real Auth0/session runtime reads.
+O-BK should not read Supabase.
+
+Still forbidden after O-BJ
+- Do not integrate runtime adapter into route.ts.
+- Do not execute real Auth0/session runtime reads from route.ts.
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
