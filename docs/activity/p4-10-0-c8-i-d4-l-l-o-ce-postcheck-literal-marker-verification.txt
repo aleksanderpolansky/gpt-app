@@ -1,0 +1,81 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CE-POSTCHECK
+Literal marker verification for O-CE SQL/schema audit design gate
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CE-POSTCHECK: 56a2c05
+- Expected origin/main before O-CE-POSTCHECK: 56a2c05
+- Baseline commit: 56a2c05 docs: add C8-I O-CE SQL schema audit design gate
+
+Purpose
+This postcheck closes the marker verification gap in O-CE.
+
+During O-CE, the compact rescue report was created, TypeScript passed, and the report was committed and pushed.
+However, marker verification failed on a Query 1 marker, likely because of exact dash/Unicode marker mismatch.
+This postcheck verifies the already committed O-CE report using robust literal markers without relying on the exact dash character.
+
+Verified O-CE conclusions
+- O-CE is design/report-only.
+- O-CE did not execute SQL.
+- O-CE did not connect to Supabase.
+- O-CE did not modify code.
+- O-CE did not implement the read-only endpoint.
+- O-CE did not modify controlled-intake route.
+- O-CE did not insert activity_events.
+- O-CE created the SQL/schema audit design gate.
+- O-CE confirms that the next step is O-CF SQL/schema audit execution gate.
+
+Verified reason for O-CF
+- schemaSufficiency: INSUFFICIENT_SCHEMA_DEFINITION_EVIDENCE_AFTER_REPAIR
+- sqlAuditRequired: LIKELY_REQUIRED_BEFORE_IMPLEMENTATION
+- implementationAuthorization: NOT_AUTHORIZED_UNTIL_EXACT_TABLE_FIELD_DECISION
+- future marker non-doc matches: 0
+- futureMarkerDecision: DOC_ONLY_FALSE_POSITIVE_CONFIRMED_BY_FIXED_STRING_POSTCHECK
+
+Verified planned O-CF audit structure
+- Query 1: candidate tables.
+- Query 2: columns for candidate user/identity tables.
+- Query 3: provider / subject / user id / status semantics.
+- Query 4: indexes on candidate tables.
+- Query 5: constraints on candidate tables.
+- Query 6: RLS enabled status.
+- Query 7: RLS policies.
+- Query 8: auth.users metadata only.
+
+Forbidden O-CF actions
+- No production data row inspection.
+- No user row inspection.
+- No INSERT, UPDATE, DELETE, ALTER, CREATE, DROP, TRUNCATE, GRANT, REVOKE or migration SQL.
+- No select * from public.app_users.
+- No select * from auth.users.
+- No code changes.
+- No endpoint implementation.
+- No controlled-intake route changes.
+- No activity_events insert.
+- No AI call.
+
+TypeScript verification
+Command used:
+npx.cmd tsc --noEmit
+
+Result:
+PASS_TYPESCRIPT_CHECKED_THROUGH_NPX_CMD_AFTER_O_CE_POSTCHECK
+
+Current decision
+O-CE is now considered marker-verified after O-CE-POSTCHECK.
+The next safe step is O-CF SQL/schema audit execution gate.
+
+Next step decision
+Proceed to O-CF.
+O-CF should provide a manual read-only metadata SQL bundle for Supabase SQL Editor.
+O-CF should ask the user to paste the results back.
+O-CF must not inspect actual row data.
+O-CF must not write anything.
+
+PASS marker
+PASS_O_CE_POSTCHECK_LITERAL_MARKER_VERIFICATION_NO_DB_NO_WRITE_NO_SQL_EXECUTED_NO_AI
