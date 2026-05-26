@@ -1,0 +1,314 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-AT â€” Controlled Activity Intake Server-Side Auth Session Read Contract
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+SERVER-SIDE AUTH SESSION READ CONTRACT CREATED / DOC ONLY / NO ROUTE CHANGE / NO HELPER CREATION / NO AUTH0 SESSION RUNTIME READ / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-AS
+- Previous commit: 19c92de
+- Previous message: docs: add C8-I-D4-L-L-O-AS server-side auth session gate
+
+Gate used
+PASS_SERVER_SIDE_AUTH_SESSION_READ_DESIGN_ONLY
+
+Contract decision
+SERVER_SIDE_AUTH_SESSION_READ_CONTRACT_CREATED_NO_IO
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-AU - Controlled Activity Intake Server-Side Auth Session Read Contract Verification
+
+Reason for O-AT
+O-AS created the design gate for reading real server-side Auth0/session identity.
+O-AT defines the exact no-I/O contract for the future server-side auth session read helper.
+This contract is required before creating serverSideAuthSession.ts or integrating real session access into route.ts.
+
+Important boundary
+O-AT does not modify route.ts.
+O-AT does not modify authContext.ts.
+O-AT does not modify productionAuthMapping.ts.
+O-AT does not modify serverSideAppUserMapping.ts.
+O-AT does not create serverSideAuthSession.ts.
+O-AT does not import Auth0.
+O-AT does not execute Auth0/session runtime reads.
+O-AT does not execute Supabase reads.
+O-AT does not execute database writes.
+O-AT does not execute SQL.
+O-AT does not call AI.
+
+Contract layer name
+controlled-activity-intake-server-side-auth-session-read-contract-v1
+
+Future helper file, not created in O-AT
+- lib/activity/controlledIntake/serverSideAuthSession.ts
+
+Future exports, not created in O-AT
+- CONTROLLED_ACTIVITY_INTAKE_SERVER_SIDE_AUTH_SESSION_LAYER
+- ControlledActivityIntakeServerSideAuthProvider
+- ControlledActivityIntakeServerSideAuthSessionInput
+- ControlledActivityIntakeServerSideAuthSessionReadModel
+- ControlledActivityIntakeServerSideAuthSessionIdentity
+- ControlledActivityIntakeServerSideAuthSessionGuardrails
+- ControlledActivityIntakeServerSideAuthSessionSuccess
+- ControlledActivityIntakeServerSideAuthSessionFailure
+- ControlledActivityIntakeServerSideAuthSessionResult
+- buildControlledActivityIntakeServerSideAuthSessionIdentity
+- assertControlledActivityIntakeServerSideAuthSessionIdentity
+- isControlledActivityIntakeServerSideAuthSessionFailure
+
+Contract purpose
+The future auth session read layer must convert a verified server-side auth/session result into a minimal controlled-intake server identity.
+That identity is then passed into serverSideAppUserMapping.ts.
+The auth session layer must not perform app-user Supabase mapping reads.
+The auth session layer must not create or update users.
+The auth session layer must not write activity_events.
+
+Input shape: server-side auth session read input
+The helper should receive an injected server-side session read model in its first static version.
+Actual Auth0 SDK/session runtime call must be introduced only after a separate implementation gate.
+
+Recommended input fields:
+- source?: "auth0_server_session" | "test_injected_session_read_model"
+- sessionReadModel?: ControlledActivityIntakeServerSideAuthSessionReadModel | null
+- requestSource?: string | null
+
+Input shape: session read model
+Recommended fields:
+- provider?: "auth0" | "unknown" | string | null
+- authSubject?: string | null
+- email?: string | null
+- sessionId?: string | null
+- userId?: string | null
+- name?: string | null
+- picture?: string | null
+- expiresAt?: string | number | null
+- issuedAt?: string | number | null
+- rawSessionAvailable?: boolean
+- readSource?: "auth0_server_session" | "test_injected_session_read_model" | string
+
+Rules:
+- authSubject must be the stable identity anchor.
+- email must not be used as primary identity.
+- userId may be kept only as non-primary metadata.
+- name and picture must not be returned to route response by default.
+- raw session object must not be returned.
+- tokens must never be returned.
+
+Output shape: success
+A successful result should be:
+
+{
+  ok: true,
+  layer: CONTROLLED_ACTIVITY_INTAKE_SERVER_SIDE_AUTH_SESSION_LAYER,
+  source: "auth0_server_session" | "test_injected_session_read_model",
+  identity: {
+    authSubject: string,
+    provider: string,
+    email?: string,
+    sessionId?: string,
+    requestSource: string
+  },
+  evidence: {
+    identityEvidence: "server_session",
+    providerEvidence: string,
+    readSource: string
+  },
+  guardrails: {
+    staticHelperOnly: true,
+    serverSideSessionReadOnly: true,
+    auth0RuntimeReadExecuted: false,
+    serverSideContextRequired: true,
+    clientOwnershipAccepted: false,
+    previewHeaderAcceptedForProductionWrite: false,
+    dbReadExecuted: false,
+    dbWriteExecuted: false,
+    sqlExecuted: false,
+    aiCallExecuted: false,
+    semanticCandidatesPersisted: false,
+    valueObjectsCreated: false,
+    stateFactsCreated: false,
+    stateDeltasCreated: false,
+    stateSnapshotsCreated: false
+  }
+}
+
+Output shape: failure
+A failure result should be:
+
+{
+  ok: false,
+  layer: CONTROLLED_ACTIVITY_INTAKE_SERVER_SIDE_AUTH_SESSION_LAYER,
+  source: "auth0_server_session" | "test_injected_session_read_model",
+  code: string,
+  message: string,
+  guardrails: same guardrails
+}
+
+Required failure codes
+- CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SESSION_INVALID
+- CONTROLLED_INTAKE_AUTH_PROVIDER_UNSUPPORTED
+- CONTROLLED_INTAKE_AUTH_SESSION_READ_FAILED
+
+Required fail-closed behavior
+- Missing session read model -> fail with CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED.
+- Missing authSubject -> fail with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- Blank authSubject -> fail with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- Unsupported provider -> fail with CONTROLLED_INTAKE_AUTH_PROVIDER_UNSUPPORTED.
+- Malformed session -> fail with CONTROLLED_INTAKE_AUTH_SESSION_INVALID.
+- Session read exception -> fail with CONTROLLED_INTAKE_AUTH_SESSION_READ_FAILED.
+- Email-only identity -> fail with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- Ambiguous identity -> fail rather than guess.
+- Any uncertainty about the identity anchor must fail.
+
+Allowed future provider assumptions
+- auth0 is allowed as the first explicit provider.
+- unknown provider must fail until explicitly supported.
+- provider may be inferred only from trusted server session.
+- provider must not be inferred from request body.
+
+Forbidden identity sources
+- request body identity
+- query string identity
+- client local storage
+- preview headers in production write mode
+- AI-inferred identity
+- email-only identity without authSubject
+- unverified frontend user object
+- raw user-provided user_id
+- raw user-provided appUserId
+
+Auth0/session runtime boundary
+O-AT does not authorize actual Auth0/session runtime reads.
+A later helper implementation gate must decide:
+- which Auth0 SDK/helper is used
+- whether session read runs in Next.js app router
+- whether route runtime is nodejs or edge-compatible
+- whether cookies/headers are required
+- how missing session is represented
+- how expired session is represented
+- how exceptions are handled
+- what minimal fields are extracted
+- what fields are never returned
+
+Read/write boundary
+The auth session read helper must not:
+- read Supabase
+- write Supabase
+- execute SQL
+- create user rows
+- update user rows
+- create profile rows
+- update profile rows
+- create actor rows
+- update actor rows
+- create activity_events rows
+
+Route boundary
+Until separate route integration is approved:
+- route.ts must not call the future auth session helper.
+- route.ts must keep productionWriteEnabled=false.
+- route.ts must keep dbReadExecuted=false.
+- route.ts must keep dbWriteExecuted=false.
+- route.ts must keep noWritePreview=true.
+- real server-side auth session read must not replace preview headers until a separate route integration gate.
+- activity_events insert requires a separate explicit write gate.
+
+Security/logging boundary
+Future auth session helper may log:
+- failure code
+- provider
+- whether session existed
+- whether authSubject existed
+- requestSource
+
+Future auth session helper must not log:
+- raw access tokens
+- refresh tokens
+- ID tokens
+- session secrets
+- raw cookie values
+- full raw session object
+- full profile payload
+- unnecessary PII
+- name/picture unless explicitly needed later
+
+No-output-leak boundary
+Route/debug output must not expose:
+- raw session
+- tokens
+- cookies
+- full profile
+- private identity provider payload
+
+Route/debug output may expose in no-write debug mode:
+- authSubject only if already needed for verification
+- provider
+- requestSource
+- sanitized email only if needed for debugging and explicitly approved
+
+No-write guardrails required
+- staticHelperOnly=true in static helper phase
+- serverSideSessionReadOnly=true
+- auth0RuntimeReadExecuted=false in first static helper phase
+- serverSideContextRequired=true
+- clientOwnershipAccepted=false
+- previewHeaderAcceptedForProductionWrite=false
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+Recommended next O-AU scope
+O-AU should verify this contract only.
+O-AU should not create serverSideAuthSession.ts.
+O-AU should not modify route.ts.
+O-AU should not execute Auth0/session runtime reads.
+O-AU should not execute DB reads.
+O-AU should confirm:
+- exact contract layer exists
+- future helper file is named
+- future exports are listed
+- input shape is defined
+- success/failure shapes are defined
+- failure codes are complete
+- fail-closed behavior is complete
+- forbidden identity sources are explicit
+- auth0/session runtime read remains gated
+- Supabase read remains forbidden
+- production write remains forbidden
+
+Still forbidden after O-AT
+- Do not execute Auth0/session runtime reads.
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Checks executed in O-AT
+- Clean pushed O-AS baseline verified.
+- O-AR report was read.
+- O-AS report was read.
+- route.ts safety markers were checked.
+- serverSideAppUserMapping.ts safety markers were checked.
+- authContext.ts safety markers were checked.
+- productionAuthMapping.ts safety markers were checked.
+- persist.ts marker was checked.
+- forbidden DB/SQL/AI patterns were checked in controlled-intake route/helper files.
+- serverSideAuthSession.ts absence was verified.
+- npx tsc --noEmit is run.
+- only this O-AT report is created.
