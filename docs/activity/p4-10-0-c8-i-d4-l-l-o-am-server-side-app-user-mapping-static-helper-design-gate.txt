@@ -1,0 +1,199 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-AM — Controlled Activity Intake Server-Side App User Mapping Static Helper Design Gate
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+SERVER-SIDE APP USER MAPPING STATIC HELPER DESIGN GATE CREATED / DOC ONLY / NO ROUTE CHANGE / NO HELPER CREATION / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-AL
+- Previous commit: 0b4baa2
+- Previous message: docs: verify C8-I-D4-L-L-O-AL server-side app user mapping contract
+
+Gate decision
+PASS_SERVER_SIDE_APP_USER_MAPPING_STATIC_HELPER_DESIGN_ONLY
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-AN - Controlled Activity Intake Server-Side App User Mapping Static Helper
+
+Reason for O-AM
+O-AK created a no-I/O contract for server-side app user mapping.
+O-AL independently verified that contract.
+O-AM decides whether O-AN may create a pure static helper that accepts injected server identity and injected read-model inputs.
+O-AM does not authorize any Supabase read.
+O-AM does not authorize any route integration.
+O-AM does not authorize activity_events insert.
+
+Allowed in O-AN
+O-AN may create only:
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-an-server-side-app-user-mapping-static-helper.txt
+
+O-AN may not modify:
+- src/app/api/activity/controlled-intake/route.ts
+- lib/activity/controlledIntake/authContext.ts
+- lib/activity/controlledIntake/productionAuthMapping.ts
+- lib/activity/controlledIntake/persist.ts
+- database schema
+- migrations
+
+O-AN helper type
+The helper must be static/no-I/O.
+It may accept:
+- injected server identity
+- injected app user read model
+- injected optional membership/context read model
+
+It must not:
+- import Auth0
+- read session directly
+- import Supabase
+- call createClient
+- call .from()
+- call .insert()
+- call .rpc()
+- execute SQL
+- call AI
+- inspect request body ownership fields
+- create users
+- create activity_events rows
+
+Required O-AN exports
+- CONTROLLED_ACTIVITY_INTAKE_SERVER_SIDE_APP_USER_MAPPING_LAYER
+- ControlledActivityIntakeServerSideMappingSource
+- ControlledActivityIntakeServerSideIdentity
+- ControlledActivityIntakeServerSideAppUserReadModel
+- ControlledActivityIntakeServerSideMembershipReadModel
+- ControlledActivityIntakeServerSideAppUserMappingGuardrails
+- ControlledActivityIntakeServerSideAppUserMappingInput
+- ControlledActivityIntakeServerSideAppUserMappingSuccess
+- ControlledActivityIntakeServerSideAppUserMappingFailure
+- ControlledActivityIntakeServerSideAppUserMappingResult
+- buildControlledActivityIntakeServerSideAppUserMapping
+- assertControlledActivityIntakeServerSideAppUserMapping
+- isControlledActivityIntakeServerSideAppUserMappingFailure
+
+Required O-AN failure codes
+- CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED
+- CONTROLLED_INTAKE_APP_USER_MAPPING_AMBIGUOUS
+- CONTROLLED_INTAKE_APP_USER_MAPPING_BLOCKED
+- CONTROLLED_INTAKE_AUTH_SUBJECT_MISMATCH
+- CONTROLLED_INTAKE_CONTEXT_NOT_VERIFIED
+- CONTROLLED_INTAKE_ACTOR_NOT_ALLOWED
+- CONTROLLED_INTAKE_ORGANIZATION_NOT_ALLOWED
+- CONTROLLED_INTAKE_SPACE_NOT_ALLOWED
+
+Required O-AN success shape
+Success must return:
+- ok=true
+- layer
+- source
+- authSubject
+- appUserId
+- trustedContext
+- evidence
+- guardrails
+
+trustedContext must include:
+- appUserId
+- optional actorId
+- optional organizationId
+- optional spaceId
+- requestSource
+
+Required O-AN guardrails
+- staticHelperOnly=true
+- serverSideMappingOnly=true
+- serverSideContextRequired=true
+- clientOwnershipAccepted=false
+- previewHeaderAcceptedForProductionWrite=false
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+Required O-AN fail-closed runtime checks
+- missing identity fails with CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED
+- missing authSubject fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- blank authSubject fails with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- missing app user read model fails with CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED
+- missing appUserId fails with CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED
+- mappingStatus=missing fails with CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED
+- mappingStatus=ambiguous fails with CONTROLLED_INTAKE_APP_USER_MAPPING_AMBIGUOUS
+- mappingStatus=blocked fails with CONTROLLED_INTAKE_APP_USER_MAPPING_BLOCKED
+- authSubject mismatch fails with CONTROLLED_INTAKE_AUTH_SUBJECT_MISMATCH
+- requested actor context not verified fails with CONTROLLED_INTAKE_ACTOR_NOT_ALLOWED
+- requested organization context not verified fails with CONTROLLED_INTAKE_ORGANIZATION_NOT_ALLOWED
+- requested space context not verified fails with CONTROLLED_INTAKE_SPACE_NOT_ALLOWED
+
+Required O-AN success runtime checks
+- active app user mapping succeeds
+- authSubject is trimmed
+- appUserId is trimmed
+- internalUserId is optional
+- requestSource defaults if missing
+- actorId passes only from verified membership read model
+- organizationId passes only from verified membership read model
+- spaceId passes only from verified membership read model
+- no DB read guardrail remains false
+- no DB write guardrail remains false
+- no SQL guardrail remains false
+- no AI guardrail remains false
+- assert helper returns trusted context on success
+- assert helper throws on failure
+
+O-AN verification requirements
+- npx tsc --noEmit must pass.
+- isolated runtime helper check must pass.
+- forbidden patterns must be absent from serverSideAppUserMapping.ts:
+  - createClient
+  - OpenAI
+  - chat.completions
+  - fetch(
+  - INSERT INTO
+  - UPDATE
+  - DELETE
+  - .insert(
+  - .delete(
+  - .rpc(
+  - .from(
+  - NextRequest
+  - NextResponse
+  - categoryCandidates:
+  - metricCandidates:
+  - stateHookCandidates:
+  - value_object_state_facts
+  - activity_state_deltas
+- only serverSideAppUserMapping.ts and O-AN report may change.
+
+Still forbidden after O-AM
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Checks executed in O-AM
+- Clean pushed O-AL baseline verified.
+- O-AK report was read.
+- O-AL report was read.
+- route.ts safety markers were checked.
+- productionAuthMapping.ts safety markers were checked.
+- authContext.ts safety markers were checked.
+- forbidden DB/SQL/AI patterns were checked in controlled-intake route/helper files.
+- serverSideAppUserMapping.ts absence was verified.
+- npx tsc --noEmit is run.
+- only this O-AM report is created.
