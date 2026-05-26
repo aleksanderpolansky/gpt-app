@@ -1,0 +1,148 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-BA-FIX1 â€” Controlled Activity Intake Real Auth Session Runtime Read Contract Verification
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+REAL AUTH SESSION RUNTIME READ CONTRACT VERIFIED AFTER FIX1 / NO ROUTE CHANGE / NO HELPER CREATION / NO AUTH0 SESSION RUNTIME READ / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-AZ
+- Failed attempt fixed: initial O-BA script stopped before execution because PowerShell parser rejected backslash-escaped double quotes in contract marker strings.
+- Previous commit: d6430fc
+- Previous message: docs: add C8-I-D4-L-L-O-AZ real auth session runtime contract
+
+Verified reports
+- O-AY real auth session runtime read design gate
+- O-AZ real auth session runtime read contract
+
+Verification decision
+REAL_AUTH_SESSION_RUNTIME_READ_CONTRACT_VERIFIED_NO_IO
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-BB - Controlled Activity Intake Real Auth Session Runtime Adapter Implementation Design Gate
+
+Contract verification summary
+O-BA verified that O-AZ contains a complete no-I/O contract for future real Auth0/session runtime read.
+The contract includes:
+- contract layer name
+- future runtime helper file name
+- future export list
+- runtime helper role
+- approved architectural boundary
+- runtime input contract
+- forbidden runtime inputs
+- success output shape
+- failure output shape
+- required future failure codes
+- fail-closed behavior
+- session field extraction rules
+- forbidden token/raw-session output rules
+- Auth0/project helper decision boundary
+- Next.js runtime assumptions
+- boundary to existing static helper
+- boundary to Supabase app-user mapping
+- boundary to route integration
+- security/logging contract
+- no-output-leak contract
+- required future implementation tests
+- recommended O-BA scope
+
+Verified required future failure codes
+- CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SESSION_INVALID
+- CONTROLLED_INTAKE_AUTH_PROVIDER_UNSUPPORTED
+- CONTROLLED_INTAKE_AUTH_SESSION_READ_FAILED
+- CONTROLLED_INTAKE_AUTH_SESSION_EXPIRED
+- CONTROLLED_INTAKE_AUTH_SESSION_RUNTIME_UNAVAILABLE
+- CONTROLLED_INTAKE_AUTH_RUNTIME_NOT_APPROVED
+
+Verified fail-closed behavior
+- Runtime helper called without explicit implementation approval fails.
+- Missing Auth0/project auth helper fails.
+- Missing session fails.
+- Expired session fails.
+- Missing subject/sub fails.
+- Blank subject/sub fails.
+- Unsupported provider fails.
+- Malformed session payload fails.
+- Runtime exception fails.
+- Email-only identity fails.
+- Any uncertainty about identity anchor fails.
+
+Verified boundaries
+- O-AZ does not authorize actual Auth0/session runtime reads.
+- O-AZ does not authorize Supabase reads.
+- O-AZ does not authorize database writes.
+- O-AZ does not authorize SQL execution.
+- O-AZ does not authorize AI calls.
+- O-AZ does not authorize route integration.
+- O-AZ does not authorize production write mode.
+- O-AZ does not authorize activity_events insert.
+- serverSideAuthSessionRuntime.ts was not created.
+- route.ts was not changed.
+- current helpers were not changed.
+
+Verified current route/helper state
+- route.ts still supports server_side_static_preview.
+- route.ts still supports production_static_preview.
+- route.ts still supports no_write_preview.
+- route.ts still has productionWriteEnabled=false.
+- route.ts still has dbReadExecuted=false.
+- route.ts still has dbWriteExecuted=false.
+- route.ts still has sqlExecuted=false.
+- route.ts still has aiCallExecuted=false.
+- serverSideAuthSession.ts remains static/no-I/O.
+- serverSideAppUserMapping.ts remains safe.
+- authContext.ts remains safe.
+- productionAuthMapping.ts remains safe.
+- persist.ts remains safe.
+
+Checks executed in O-BA
+- Clean pushed O-AZ baseline verified.
+- O-AY report was read.
+- O-AZ report was read.
+- O-AZ contract completeness markers were verified.
+- forbidden contract contradiction markers were checked.
+- route.ts safety markers were checked.
+- serverSideAuthSession.ts safety markers were checked.
+- serverSideAppUserMapping.ts safety markers were checked.
+- authContext.ts safety markers were checked.
+- productionAuthMapping.ts safety markers were checked.
+- persist.ts marker was checked.
+- forbidden DB/SQL/AI/runtime patterns were checked in controlled-intake route/helper files.
+- serverSideAuthSessionRuntime.ts absence was verified.
+- no uncommitted code changes were verified.
+- npx tsc --noEmit passed.
+- only this O-BA report is created.
+
+Important limitation
+O-BA verifies only the no-I/O runtime-read contract.
+It does not create serverSideAuthSessionRuntime.ts.
+It does not implement Auth0/session runtime reads.
+It does not integrate anything into route.ts.
+It does not read Supabase.
+It does not approve production write mode.
+It does not approve activity_events insert.
+It does not approve AI or semantic persistence.
+
+Recommended next step
+O-BB should be an implementation design gate for the real auth session runtime adapter.
+O-BB should inspect the current project Auth0 integration and decide the exact safe implementation boundary.
+O-BB should not implement runtime read yet.
+O-BB should not modify route.ts.
+O-BB should not read Supabase.
+
+Still forbidden after O-BA
+- Do not execute Auth0/session runtime reads.
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
