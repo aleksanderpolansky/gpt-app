@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  buildControlledActivityIntakeNoWritePreviewTrustedContext,
+  type ControlledActivityIntakeAuthContextFailure,
+  type ControlledActivityIntakeAuthContextResult,
+} from "../../../../../lib/activity/controlledIntake/authContext";
 import { buildControlledActivityIntakeIdempotency } from "../../../../../lib/activity/controlledIntake/idempotency";
-import type { ControlledActivityIntakeTrustedContext } from "../../../../../lib/activity/controlledIntake/idempotency";
 import { buildControlledActivityIntakePayload } from "../../../../../lib/activity/controlledIntake/payloadBuilder";
 import { buildControlledActivityIntakeActivityEventsStaticRow } from "../../../../../lib/activity/controlledIntake/persist";
 import { validateControlledActivityIntake } from "../../../../../lib/activity/controlledIntake/validator";
@@ -9,7 +13,7 @@ import { validateControlledActivityIntake } from "../../../../../lib/activity/co
 export const dynamic = "force-dynamic";
 
 const CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER =
-  "controlled-activity-intake-runtime-route-scaffold-no-write-v1" as const;
+  "controlled-activity-intake-route-auth-integration-no-write-v1" as const;
 
 const NO_WRITE_PREVIEW_HEADER = "x-controlled-intake-no-write-preview";
 const PREVIEW_APP_USER_ID_HEADER =
@@ -21,14 +25,33 @@ const PREVIEW_SPACE_ID_HEADER = "x-controlled-intake-preview-space-id";
 const PREVIEW_REQUEST_SOURCE_HEADER =
   "x-controlled-intake-preview-request-source";
 
+type ControlledActivityIntakeRouteErrorCode =
+  | "CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED"
+  | "CONTROLLED_INTAKE_INVALID_JSON"
+  | "CONTROLLED_INTAKE_VALIDATION_FAILED"
+  | "CONTROLLED_INTAKE_TRUSTED_CONTEXT_APP_USER_REQUIRED"
+  | "CONTROLLED_INTAKE_AUTH_IDENTITY_REQUIRED"
+  | "CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED"
+  | "CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED";
+
+type ControlledActivityIntakeRouteGuardrails = {
+  readonly routeAuthIntegrated: true;
+  readonly routeScaffoldOnly: true;
+  readonly noWritePreview: true;
+  readonly dbWriteExecuted: false;
+  readonly sqlExecuted: false;
+  readonly aiCallExecuted: false;
+  readonly semanticCandidatesPersisted: false;
+  readonly valueObjectsCreated: false;
+  readonly stateFactsCreated: false;
+  readonly stateDeltasCreated: false;
+  readonly stateSnapshotsCreated: false;
+};
+
 type RouteErrorResponse = {
   readonly ok: false;
   readonly routeLayer: typeof CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER;
-  readonly code:
-    | "CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED"
-    | "CONTROLLED_INTAKE_INVALID_JSON"
-    | "CONTROLLED_INTAKE_VALIDATION_FAILED"
-    | "CONTROLLED_INTAKE_TRUSTED_CONTEXT_REQUIRED";
+  readonly code: ControlledActivityIntakeRouteErrorCode;
   readonly message: string;
   readonly issues?: unknown;
   readonly guardrails: ControlledActivityIntakeRouteGuardrails;
@@ -47,21 +70,15 @@ type RouteSuccessResponse = {
   readonly guardrails: ControlledActivityIntakeRouteGuardrails;
 };
 
-type ControlledActivityIntakeRouteGuardrails = {
-  readonly routeScaffoldOnly: true;
-  readonly noWritePreview: true;
-  readonly dbWriteExecuted: false;
-  readonly sqlExecuted: false;
-  readonly aiCallExecuted: false;
-  readonly semanticCandidatesPersisted: false;
-  readonly valueObjectsCreated: false;
-  readonly stateFactsCreated: false;
-  readonly stateDeltasCreated: false;
-  readonly stateSnapshotsCreated: false;
-};
+function isControlledActivityIntakeRouteAuthContextFailure(
+  result: ControlledActivityIntakeAuthContextResult,
+): result is ControlledActivityIntakeAuthContextFailure {
+  return result.ok === false;
+}
 
 function buildRouteGuardrails(): ControlledActivityIntakeRouteGuardrails {
   return {
+    routeAuthIntegrated: true,
     routeScaffoldOnly: true,
     noWritePreview: true,
     dbWriteExecuted: false,
@@ -90,7 +107,7 @@ function readHeaderString(
 }
 
 function buildErrorResponse(
-  code: RouteErrorResponse["code"],
+  code: ControlledActivityIntakeRouteErrorCode,
   message: string,
   status: number,
   issues?: unknown,
@@ -108,26 +125,6 @@ function buildErrorResponse(
   );
 }
 
-function buildNoWriteTrustedContext(
-  request: NextRequest,
-): ControlledActivityIntakeTrustedContext | null {
-  const appUserId = readHeaderString(request, PREVIEW_APP_USER_ID_HEADER);
-
-  if (!appUserId) {
-    return null;
-  }
-
-  return {
-    appUserId,
-    actorId: readHeaderString(request, PREVIEW_ACTOR_ID_HEADER),
-    organizationId: readHeaderString(request, PREVIEW_ORGANIZATION_ID_HEADER),
-    spaceId: readHeaderString(request, PREVIEW_SPACE_ID_HEADER),
-    requestSource:
-      readHeaderString(request, PREVIEW_REQUEST_SOURCE_HEADER) ??
-      "controlled-intake-no-write-preview",
-  };
-}
-
 async function readJsonBody(request: NextRequest): Promise<unknown> {
   return await request.json();
 }
@@ -140,20 +137,31 @@ export async function POST(
   if (noWritePreview !== "true") {
     return buildErrorResponse(
       "CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED",
-      "Controlled intake route scaffold requires explicit no-write preview header.",
+      "Controlled intake route requires explicit no-write preview header.",
       403,
     );
   }
 
-  const trustedContext = buildNoWriteTrustedContext(request);
+  const authContext = buildControlledActivityIntakeNoWritePreviewTrustedContext({
+    appUserId: readHeaderString(request, PREVIEW_APP_USER_ID_HEADER),
+    actorId: readHeaderString(request, PREVIEW_ACTOR_ID_HEADER),
+    organizationId: readHeaderString(request, PREVIEW_ORGANIZATION_ID_HEADER),
+    spaceId: readHeaderString(request, PREVIEW_SPACE_ID_HEADER),
+    requestSource: readHeaderString(request, PREVIEW_REQUEST_SOURCE_HEADER),
+  });
 
-  if (!trustedContext) {
+  if (isControlledActivityIntakeRouteAuthContextFailure(authContext)) {
     return buildErrorResponse(
-      "CONTROLLED_INTAKE_TRUSTED_CONTEXT_REQUIRED",
-      "Controlled intake route scaffold requires a server-side preview app user id.",
+      authContext.code,
+      authContext.message,
       401,
+      {
+        source: authContext.source,
+      },
     );
   }
+
+  const trustedContext = authContext.trustedContext;
 
   let body: unknown;
 

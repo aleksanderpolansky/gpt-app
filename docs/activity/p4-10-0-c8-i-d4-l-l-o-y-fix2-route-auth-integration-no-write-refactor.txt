@@ -1,0 +1,114 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-Y-FIX2 — Controlled Activity Intake Route/Auth Integration No-Write Refactor
+Created: 25 May 2026, Europe/Warsaw
+
+Status
+ROUTE/AUTH INTEGRATION NO-WRITE REFACTOR COMPLETED / AUTH CONTEXT FAILURE TYPE GUARD FIXED / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-X
+- Previous commit: 9a700a9
+- Previous message: docs: add C8-I-D4-L-L-O-X route auth integration gate
+
+Reason for FIX2
+O-Y-FIX1 expanded the route error-code union, but isolated compilation still failed because route.ts accessed authContext.code and authContext.message without an explicit failure type guard.
+O-Y-FIX2 adds isControlledActivityIntakeRouteAuthContextFailure and imports the exported auth context result/failure types.
+This makes isolated compilation understand the failure branch.
+
+Gate used
+PASS_ROUTE_AUTH_INTEGRATION_NO_WRITE_DESIGN_ONLY
+
+Modified file
+- src/app/api/activity/controlled-intake/route.ts
+
+Route integration completed
+- route.ts imports buildControlledActivityIntakeNoWritePreviewTrustedContext from authContext.ts.
+- route.ts imports ControlledActivityIntakeAuthContextFailure and ControlledActivityIntakeAuthContextResult as types.
+- route.ts uses isControlledActivityIntakeRouteAuthContextFailure before reading authContext.code and authContext.message.
+- route.ts no longer contains local function buildNoWriteTrustedContext.
+- route.ts converts preview headers into authContext no-write preview input.
+- route.ts rejects authContext failure before body validation/payload/idempotency/static row preview.
+- route.ts remains no_write_preview only.
+- route.ts still requires x-controlled-intake-no-write-preview: true.
+- route.ts still requires preview app user id for no-write preview mode.
+- route.ts returns preview JSON only.
+- route.ts does not execute DB writes.
+
+Runtime verification
+- Missing no-write preview header returns 403 / CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED.
+- Missing preview app user id returns 401 / CONTROLLED_INTAKE_TRUSTED_CONTEXT_APP_USER_REQUIRED.
+- Invalid JSON returns 400 / CONTROLLED_INTAKE_INVALID_JSON.
+- Invalid body returns 400 / CONTROLLED_INTAKE_VALIDATION_FAILED.
+- Client-provided user_id is rejected through validation failure.
+- Valid no-write preview request returns 200 / ok=true.
+- Valid response mode is no_write_preview.
+- Valid response includes payload.
+- Valid response includes idempotency.
+- Valid response includes staticRowPreview.
+- staticRowPreview.table is activity_events.
+- staticRowPreview.row.user_id comes from authContext preview app user input.
+- routeAuthIntegrated guardrail is true.
+- dbWriteExecuted remains false.
+- sqlExecuted remains false.
+- aiCallExecuted remains false.
+- semanticCandidatesPersisted remains false.
+- valueObjectsCreated remains false.
+- stateFactsCreated remains false.
+
+Forbidden patterns verified absent from route.ts
+- createClient
+- OpenAI
+- chat.completions
+- fetch(
+- INSERT INTO
+- UPDATE
+- DELETE
+- .insert(
+- .delete(
+- .rpc(
+- .from(
+- categoryCandidates:
+- metricCandidates:
+- stateHookCandidates:
+- value_object_state_facts
+- activity_state_deltas
+
+Checks executed
+- O-X gate report was read.
+- failed O-Y/O-Y-FIX1 temp files were cleaned.
+- route.ts was overwritten with fixed authContext no-write integration.
+- route markers were verified.
+- forbidden route patterns were checked.
+- helper files were checked for forbidden patterns.
+- npx tsc --noEmit passed with O-Y-FIX2 temporary runtime check.
+- isolated TypeScript compile passed.
+- node runtime check passed.
+- temporary files were removed.
+- npx tsc --noEmit passed after cleanup.
+
+Important limitation
+O-Y-FIX2 is still no-write preview only.
+It does not implement production Auth0/session integration.
+It does not approve Supabase insert.
+It does not approve a production write route.
+It does not approve AI or semantic persistence.
+
+Still forbidden after O-Y-FIX2
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not call AI.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+- Do not convert preview header route into production write route yet.
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-Z — Controlled Activity Intake Route/Auth Integration Verification
+
+O-Z should independently verify:
+- route imports authContext helper.
+- local buildNoWriteTrustedContext is removed.
+- no-write route still rejects missing preview guard.
+- no-write route still rejects missing preview app user through authContext result.
+- valid no-write preview still returns staticRowPreview.
+- route and helpers remain no-write/no-SQL/no-AI.
