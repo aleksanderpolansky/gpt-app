@@ -1,0 +1,358 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-AK — Controlled Activity Intake Server-Side App User Mapping Contract
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+SERVER-SIDE APP USER MAPPING CONTRACT CREATED / DOC ONLY / NO ROUTE CHANGE / NO HELPER CREATION / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-AJ
+- Previous commit: ab1a413
+- Previous message: docs: add C8-I-D4-L-L-O-AJ server-side app user mapping gate
+
+Gate used
+PASS_SERVER_SIDE_APP_USER_MAPPING_DESIGN_ONLY
+
+Contract decision
+SERVER_SIDE_APP_USER_MAPPING_CONTRACT_CREATED_NO_IO
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-AL - Controlled Activity Intake Server-Side App User Mapping Contract Verification
+
+Reason for O-AK
+O-AJ created the design gate for replacing explicit preview mapping headers with real server-side app user mapping in later steps.
+O-AK defines the exact no-I/O contract for that server-side mapping layer.
+This contract is required before creating any helper or performing any Supabase read.
+
+Important boundary
+O-AK does not modify route.ts.
+O-AK does not modify authContext.ts.
+O-AK does not modify productionAuthMapping.ts.
+O-AK does not create serverSideAppUserMapping.ts.
+O-AK does not import Auth0.
+O-AK does not import Supabase.
+O-AK does not execute database reads.
+O-AK does not execute database writes.
+O-AK does not execute SQL.
+O-AK does not call AI.
+
+Current verified state
+- route.ts contains production_static_preview mode.
+- route.ts keeps legacy no_write_preview mode.
+- route.ts rejects client ownership fields through validation.
+- route.ts is still no-write.
+- productionAuthMapping.ts is a pure static helper.
+- authContext.ts is static/no-write.
+- DB reads are still forbidden.
+- DB writes are still forbidden.
+
+Contract purpose
+Server-side app user mapping must convert trusted server identity into controlled activity trusted context:
+- authenticated server identity -> app user mapping -> trusted activity context
+
+This mapping must be fail-closed.
+It must never trust request body ownership fields.
+It must never use production preview headers in production write mode.
+It must not create or update users during controlled intake.
+
+Contract layer name
+controlled-activity-intake-server-side-app-user-mapping-contract-v1
+
+Future helper file, not created in O-AK
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts
+
+Future exports, not created in O-AK
+- CONTROLLED_ACTIVITY_INTAKE_SERVER_SIDE_APP_USER_MAPPING_LAYER
+- ControlledActivityIntakeServerSideIdentity
+- ControlledActivityIntakeServerSideAppUserReadModel
+- ControlledActivityIntakeServerSideMembershipReadModel
+- ControlledActivityIntakeServerSideAppUserMappingInput
+- ControlledActivityIntakeServerSideAppUserMappingSuccess
+- ControlledActivityIntakeServerSideAppUserMappingFailure
+- ControlledActivityIntakeServerSideAppUserMappingResult
+- buildControlledActivityIntakeServerSideAppUserMapping
+- assertControlledActivityIntakeServerSideAppUserMapping
+- isControlledActivityIntakeServerSideAppUserMappingFailure
+
+Input shape: server identity
+The mapping layer may receive only server-side identity input.
+
+Required fields:
+- authSubject: string
+- provider?: string
+- email?: string
+- sessionId?: string
+- requestSource?: string
+
+Rules:
+- authSubject must be non-empty after trimming.
+- authSubject must come from server-side session/Auth0 middleware/verified server context.
+- authSubject must not come from request body.
+- email is not sufficient as primary identity.
+- sessionId may be included for audit/debug, but must not replace authSubject.
+- requestSource may describe route/context, but must not grant permissions.
+
+Input shape: app user read model
+This read model is the future output of a server-side read resolver.
+O-AK does not perform this read.
+
+Required fields:
+- appUserId: string
+- internalUserId?: string
+- authSubject: string
+- mappingSource: "user_profile" | "auth_user_sync" | "manual_verified_mapping" | "test_injected_read_model"
+- mappingStatus: "active" | "blocked" | "missing" | "ambiguous"
+- email?: string
+- createdAt?: string
+- updatedAt?: string
+
+Rules:
+- appUserId must be non-empty.
+- authSubject in read model must match server identity authSubject.
+- mappingStatus must be active for success.
+- blocked mapping must fail.
+- missing mapping must fail.
+- ambiguous mapping must fail.
+- email mismatch alone must not override authSubject.
+- mapping must be treated as server-side evidence only.
+
+Input shape: optional membership/context read model
+This read model is for future actor/organization/space context.
+O-AK does not perform this read.
+
+Optional fields:
+- actorId?: string
+- organizationId?: string
+- spaceId?: string
+- actorStatus?: "active" | "blocked" | "missing" | "not_allowed"
+- organizationMembershipStatus?: "active" | "blocked" | "missing" | "not_allowed"
+- spaceMembershipStatus?: "active" | "blocked" | "missing" | "not_allowed"
+- role?: string
+- membershipSource?: "organization_membership" | "space_membership" | "actor_space_role" | "test_injected_read_model"
+
+Rules:
+- actorId/organizationId/spaceId are optional.
+- If supplied, they must be server-verified.
+- If a context id is requested but not verified, fail.
+- blocked/not_allowed context must fail.
+- missing optional context may be omitted from trusted context.
+- request body must never provide ownership context.
+
+Future success result shape
+A successful mapping result should be:
+
+{
+  ok: true,
+  layer: CONTROLLED_ACTIVITY_INTAKE_SERVER_SIDE_APP_USER_MAPPING_LAYER,
+  source: "server_side_app_user_mapping",
+  authSubject: string,
+  appUserId: string,
+  trustedContext: {
+    appUserId: string,
+    actorId?: string,
+    organizationId?: string,
+    spaceId?: string,
+    requestSource: string
+  },
+  evidence: {
+    identityEvidence: "server_session",
+    appUserMappingEvidence: string,
+    membershipEvidence?: string
+  },
+  guardrails: {
+    serverSideMappingOnly: true,
+    serverSideContextRequired: true,
+    clientOwnershipAccepted: false,
+    previewHeaderAcceptedForProductionWrite: false,
+    dbReadExecuted: false,
+    dbWriteExecuted: false,
+    sqlExecuted: false,
+    aiCallExecuted: false,
+    semanticCandidatesPersisted: false,
+    valueObjectsCreated: false,
+    stateFactsCreated: false,
+    stateDeltasCreated: false,
+    stateSnapshotsCreated: false
+  }
+}
+
+Future failure result shape
+A failure mapping result should be:
+
+{
+  ok: false,
+  layer: CONTROLLED_ACTIVITY_INTAKE_SERVER_SIDE_APP_USER_MAPPING_LAYER,
+  source: "server_side_app_user_mapping",
+  code: string,
+  message: string,
+  guardrails: same guardrails
+}
+
+Required failure codes
+- CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED
+- CONTROLLED_INTAKE_APP_USER_MAPPING_AMBIGUOUS
+- CONTROLLED_INTAKE_APP_USER_MAPPING_BLOCKED
+- CONTROLLED_INTAKE_AUTH_SUBJECT_MISMATCH
+- CONTROLLED_INTAKE_CONTEXT_NOT_VERIFIED
+- CONTROLLED_INTAKE_ACTOR_NOT_ALLOWED
+- CONTROLLED_INTAKE_ORGANIZATION_NOT_ALLOWED
+- CONTROLLED_INTAKE_SPACE_NOT_ALLOWED
+
+Required fail-closed behavior
+- Missing server session -> fail.
+- Missing auth subject -> fail.
+- Blank auth subject -> fail.
+- Missing app user read model -> fail.
+- Missing appUserId -> fail.
+- Ambiguous app user mapping -> fail.
+- Blocked app user mapping -> fail.
+- Auth subject mismatch -> fail.
+- Requested actor context not verified -> fail.
+- Requested organization context not verified -> fail.
+- Requested space context not verified -> fail.
+- Any client-provided ownership field remains rejected before mapping.
+- Any uncertainty about owner/context must fail rather than guess.
+
+Forbidden mapping sources
+- request body user_id
+- request body appUserId
+- request body actorId
+- request body organizationId
+- request body spaceId
+- query string ownership fields
+- client-side local storage
+- production preview headers in production write mode
+- AI-inferred owner
+- email-only match without authSubject match
+
+Allowed future mapping sources
+Only after explicit read gate:
+- server-side session/Auth0 identity
+- server-side Supabase read by authSubject
+- existing user sync/profile mapping
+- server-verified actor/organization membership
+- server-verified space membership
+- injected static read model for no-I/O tests
+
+Read boundary
+O-AK does not authorize a read.
+A later read gate must explicitly approve:
+- which Supabase client is used
+- which table/view is read
+- which columns are selected
+- which filters are used
+- how RLS is enforced
+- how zero/one/many rows are handled
+- how mapping ambiguity is detected
+- how errors are logged without leaking secrets
+
+Write boundary
+Server-side app user mapping must not write.
+It must not:
+- create user rows
+- update user rows
+- create profile rows
+- update profile rows
+- create actor rows
+- update actor rows
+- create organization membership rows
+- create activity_events rows
+
+Route boundary
+Until production write is separately approved:
+- route.ts must keep productionWriteEnabled=false.
+- route.ts must keep dbWriteExecuted=false.
+- route.ts must keep noWritePreview=true.
+- production_static_preview may remain only as no-write verification mode.
+- real server-side mapping may later replace preview mapping headers only after read gate and route integration gate.
+- activity_events insert requires a separate explicit write gate.
+
+Security/RLS assumptions to verify later
+- The server-side read resolver must not bypass ownership accidentally.
+- If service role is used, it must be explicitly justified and tightly scoped.
+- If user-scoped Supabase client is used, RLS policies must be verified.
+- Reads must be limited to mapping data needed for controlled intake.
+- No sensitive profile fields should be returned to route output.
+- Route responses must not leak full user profile.
+- Route responses may expose only minimal trustedContextPreview in no-write debug modes.
+
+Logging/audit boundary
+Future mapping may log:
+- failure code
+- requestSource
+- mappingSource
+- whether mapping existed
+- whether mapping was ambiguous
+- whether context was verified
+
+Future mapping must not log:
+- raw access tokens
+- refresh tokens
+- session secrets
+- full profile payload
+- unnecessary PII
+- private organization membership details beyond status/code
+
+No-write guardrails required
+- serverSideMappingOnly=true
+- serverSideContextRequired=true
+- clientOwnershipAccepted=false
+- previewHeaderAcceptedForProductionWrite=false
+- dbReadExecuted=false in static/no-I/O helper
+- dbWriteExecuted=false always
+- sqlExecuted=false
+- aiCallExecuted=false
+- semanticCandidatesPersisted=false
+- valueObjectsCreated=false
+- stateFactsCreated=false
+- stateDeltasCreated=false
+- stateSnapshotsCreated=false
+
+O-AK implementation boundary
+O-AK creates only this contract report.
+O-AK does not create serverSideAppUserMapping.ts.
+O-AK does not modify route.ts.
+O-AK does not modify helper files.
+O-AK does not perform Supabase reads.
+O-AK does not perform Supabase writes.
+O-AK does not call AI.
+
+Recommended next O-AL scope
+O-AL should verify this contract only.
+O-AL should not create helper code.
+O-AL should not perform DB reads.
+O-AL should not perform DB writes.
+O-AL should confirm:
+- exact server identity contract exists
+- exact read model contract exists
+- exact success/failure shapes exist
+- fail-closed behavior is complete
+- forbidden mapping sources are complete
+- read gate is still required
+- write gate is still required
+
+Still forbidden after O-AK
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+
+Checks executed in O-AK
+- Clean pushed O-AJ baseline verified.
+- O-AI report was read.
+- O-AJ report was read.
+- route.ts safety markers were checked.
+- productionAuthMapping.ts safety markers were checked.
+- authContext.ts safety markers were checked.
+- forbidden DB/SQL/AI patterns were checked in controlled-intake route/helper files.
+- npx tsc --noEmit is run.
+- only this O-AK report is created.
