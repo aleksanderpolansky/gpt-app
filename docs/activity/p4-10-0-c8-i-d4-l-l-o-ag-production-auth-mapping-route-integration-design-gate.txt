@@ -1,0 +1,182 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-AG — Controlled Activity Intake Production Auth Mapping Route Integration Design Gate
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+PRODUCTION AUTH MAPPING ROUTE INTEGRATION DESIGN GATE CREATED / DOC ONLY / NO ROUTE CHANGE / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-AF
+- Previous commit: 1d026ea
+- Previous message: docs: verify C8-I-D4-L-L-O-AF production auth mapping helper
+
+Gate decision
+PASS_PRODUCTION_AUTH_MAPPING_ROUTE_INTEGRATION_DESIGN_ONLY
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-AH - Controlled Activity Intake Production Auth Mapping Route Integration No-Write Refactor
+
+Reason for O-AG
+O-AE created a pure static production auth mapping helper.
+O-AF independently verified that helper.
+O-AG decides whether the route may be refactored in the next step to import and expose production auth mapping as a no-write preview/debug path.
+
+Important boundary
+O-AG does not modify route.ts.
+O-AG does not modify authContext.ts.
+O-AG does not modify productionAuthMapping.ts.
+O-AG does not import Auth0.
+O-AG does not import Supabase.
+O-AG does not execute database reads.
+O-AG does not execute database writes.
+O-AG does not call AI.
+
+Allowed in O-AH
+O-AH may modify only:
+- src/app/api/activity/controlled-intake/route.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-ah-production-auth-mapping-route-integration-no-write-refactor.txt
+
+O-AH may import from:
+- lib/activity/controlledIntake/productionAuthMapping.ts
+
+O-AH must remain no-write.
+O-AH must not create a production write route.
+O-AH must not read Auth0/session directly.
+O-AH must not read Supabase directly.
+O-AH must not call createClient.
+O-AH must not call .from().
+O-AH must not call .insert().
+O-AH must not execute SQL.
+O-AH must not call AI.
+O-AH must not create activity_events rows in database.
+
+Recommended O-AH route behavior
+The route may support an additional explicit no-write verification mode for production auth mapping, for example:
+- x-controlled-intake-auth-mapping-mode: production_static_preview
+
+This mode must be clearly no-write.
+It may read server-side-like preview headers only for static testing, not for production write:
+- x-controlled-intake-preview-auth-subject
+- x-controlled-intake-preview-mapped-app-user-id
+- x-controlled-intake-preview-mapped-user-id
+- x-controlled-intake-preview-mapped-actor-id
+- x-controlled-intake-preview-mapped-organization-id
+- x-controlled-intake-preview-mapped-space-id
+
+Those headers must be accepted only together with:
+- x-controlled-intake-no-write-preview: true
+
+Required O-AH route guardrails
+- routeProductionAuthMappingIntegrated: true
+- routeScaffoldOnly: true
+- noWritePreview: true
+- productionWriteEnabled: false
+- previewHeaderAcceptedForProductionWrite: false
+- dbReadExecuted: false
+- dbWriteExecuted: false
+- sqlExecuted: false
+- aiCallExecuted: false
+- semanticCandidatesPersisted: false
+- valueObjectsCreated: false
+- stateFactsCreated: false
+- stateDeltasCreated: false
+- stateSnapshotsCreated: false
+
+Required O-AH route output
+For production_static_preview mode, the route should return:
+- ok
+- routeLayer
+- mode
+- productionAuthMapping
+- trustedContextPreview
+- guardrails
+
+Required O-AH failure checks
+- Missing no-write preview header must fail.
+- Missing identity must fail with CONTROLLED_INTAKE_AUTH_IDENTITY_REQUIRED.
+- Missing subject must fail with CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED.
+- Missing appUserId/userId mapping must fail with CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED.
+- Client body ownership fields must still be rejected by validation.
+- Production write must remain disabled.
+
+Required O-AH success checks
+- Valid production_static_preview request returns ok=true.
+- trustedContextPreview.appUserId comes from mapping input.
+- appUserId is preferred over userId.
+- userId fallback works if appUserId is absent.
+- actorId/organizationId/spaceId pass through only from mapping input.
+- route guardrails show dbReadExecuted=false.
+- route guardrails show dbWriteExecuted=false.
+- route guardrails show sqlExecuted=false.
+- route guardrails show aiCallExecuted=false.
+
+Forbidden in O-AH
+- Do not add DB reads.
+- Do not add DB writes.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust request body ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
+- Do not remove existing no_write_preview route behavior.
+- Do not break existing no-write preview activity static row behavior.
+
+Route state verified in O-AG
+- route.ts was not changed.
+- route remains no_write_preview only.
+- route still uses buildControlledActivityIntakeNoWritePreviewTrustedContext.
+- route still requires x-controlled-intake-no-write-preview.
+- route still has dbWriteExecuted=false.
+- route still has sqlExecuted=false.
+- route still has aiCallExecuted=false.
+- route contains no createClient.
+- route contains no .from().
+- route contains no .insert().
+- route contains no AI pattern.
+- route contains no semantic persistence pattern.
+
+productionAuthMapping state verified in O-AG
+- productionAuthMapping.ts exists.
+- productionAuthMapping.ts is pure static helper only.
+- productionAuthMapping.ts has required failure codes.
+- productionAuthMapping.ts has no-read/no-write/no-SQL/no-AI guardrails.
+- productionAuthMapping.ts contains no NextRequest/NextResponse.
+- productionAuthMapping.ts contains no Supabase client.
+- productionAuthMapping.ts contains no AI pattern.
+- productionAuthMapping.ts does not call preview helper.
+
+authContext state verified in O-AG
+- authContext.ts was not changed.
+- authContext remains static/no-write.
+- authContext keeps serverSideContextRequired=true.
+- authContext keeps clientOwnershipAccepted=false.
+- authContext keeps previewHeaderAcceptedForProductionWrite=false.
+- authContext keeps dbWriteExecuted=false.
+- authContext keeps sqlExecuted=false.
+- authContext keeps aiCallExecuted=false.
+
+Checks executed in O-AG
+- Clean pushed O-AF baseline verified.
+- O-AE report was read.
+- O-AF report was read.
+- productionAuthMapping.ts was checked for static/no-I/O boundaries.
+- route.ts was checked for no-write/no-SQL/no-AI boundaries.
+- authContext.ts was checked for static/no-write/no-SQL/no-AI boundaries.
+- npx tsc --noEmit is run.
+- only this O-AG report is created.
+
+Still forbidden after O-AG
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
