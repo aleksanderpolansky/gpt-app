@@ -1,0 +1,210 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-BV â€” Controlled Activity Intake First Real Auth Session Runtime Read Browser Verification Contract Verification
+Created: 26 May 2026, Europe/Warsaw
+
+Status
+FIRST REAL AUTH SESSION RUNTIME READ BROWSER VERIFICATION CONTRACT VERIFIED / NO CONTROLLED-INTAKE ROUTE CHANGE / NO ENDPOINT CHANGE / NO HELPER CHANGE / NO REAL AUTH0 SESSION RUNTIME READ / NO DATABASE READ / NO DATABASE WRITE / NO SQL EXECUTION / NO AI CALL / NO ACTIVITY CREATED
+
+Baseline
+- Previous block: P4.10.0-C8-I-D4-L-L-O-BU
+- Previous commit: 5ce51a3
+- Previous message: docs: add C8-I-D4-L-L-O-BU first real auth session browser contract
+
+Verified reports
+- O-BT first real auth session runtime read browser verification design gate
+- O-BU first real auth session runtime read browser verification contract
+
+Verification decision
+FIRST_REAL_AUTH_SESSION_RUNTIME_READ_BROWSER_VERIFICATION_CONTRACT_VERIFIED_NO_IO
+
+Next step decision
+P4.10.0-C8-I-D4-L-L-O-BW - Controlled Activity Intake First Real Auth Session Runtime Read Diagnostic Endpoint Real-Read Implementation Design Gate
+
+Contract verification summary
+O-BV verified that O-BU contains a complete browser verification contract for the future no-write real Auth0/session runtime-read diagnostic test.
+The contract includes:
+- contract layer name
+- diagnostic endpoint URL and GET method
+- required diagnostic header
+- credentials include requirement
+- Auth0/session helper contract
+- session extraction contract
+- sanitization contract
+- bridge contract
+- authenticated success contract
+- unauthenticated failure contract
+- missing-header contract
+- unsafe-payload contract
+- failure codes
+- forbidden response fields
+- browser console verification script behavior
+- forbidden-field list
+- static verification requirements
+- route immutability proof
+- no-write proof
+- separation from app-user mapping and production writes
+- staged next corridor
+
+Verified contract layer
+- controlled-activity-intake-first-real-auth-session-browser-verification-contract-v1
+
+Verified future endpoint
+- /api/activity/debug/real-auth-session-runtime-read-test
+- GET only
+- x-controlled-intake-first-real-session-read-test: true
+- credentials include
+
+Verified future success contract
+- HTTP 200
+- ok=true
+- sessionPresent=true
+- provider=auth0
+- authSubject present and non-empty
+- connectionBridgeStatus.connectionOk=true
+- connectionBridgeStatus.runtimeOk=true
+- connectionBridgeStatus.staticIdentityOk=true
+- realAuth0SessionReadAllowed=true
+- realAuth0SessionReadExecuted=true
+- auth0RuntimeReadExecuted=true
+- dbReadExecuted=false
+- dbWriteExecuted=false
+- sqlExecuted=false
+- aiCallExecuted=false
+- activityEventsInserted=false
+
+Verified future unauthenticated contract
+- HTTP 401
+- ok=false
+- code=CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED
+- sessionPresent=false
+- no tokens
+- no raw session
+- no DB/SQL/AI/write activity
+
+Verified missing-header contract
+- HTTP 403
+- ok=false
+- code=CONTROLLED_INTAKE_FIRST_REAL_SESSION_DEBUG_HEADER_REQUIRED
+- no Auth0/session helper call
+- no DB/SQL/AI/write activity
+
+Verified unsafe-payload contract
+- unsafe helper payload must fail closed.
+- returned failure must be sanitized.
+- no raw exception.
+- no raw session.
+- no tokens.
+- no provider payload.
+
+Verified future failure codes
+- CONTROLLED_INTAKE_FIRST_REAL_SESSION_READ_NOT_APPROVED
+- CONTROLLED_INTAKE_FIRST_REAL_SESSION_DEBUG_HEADER_REQUIRED
+- CONTROLLED_INTAKE_FIRST_REAL_SESSION_BOUNDARY_UNAVAILABLE
+- CONTROLLED_INTAKE_FIRST_REAL_SESSION_READ_FAILED
+- CONTROLLED_INTAKE_FIRST_REAL_SESSION_UNSAFE_PAYLOAD
+- CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SESSION_EXPIRED
+- CONTROLLED_INTAKE_AUTH_SESSION_INVALID
+- CONTROLLED_INTAKE_AUTH_PROVIDER_UNSUPPORTED
+- CONTROLLED_INTAKE_AUTH_BRIDGE_RUNTIME_FAILED
+- CONTROLLED_INTAKE_AUTH_BRIDGE_IDENTITY_FAILED
+- CONTROLLED_INTAKE_AUTH_BRIDGE_UNSAFE_RESULT
+
+Verified forbidden response fields
+- access_token
+- refresh_token
+- id_token
+- token
+- raw cookie
+- raw session
+- raw profile
+- full Auth0 user object
+- full provider payload
+- roles
+- permissions
+- app metadata
+- user metadata
+- appUserId
+- user_id
+- actorId
+- organizationId
+- spaceId
+- membership rows
+- Supabase rows
+- activity_events rows
+- semantic candidates
+- value objects
+- state facts/deltas/snapshots
+
+Verified browser console script contract
+The future browser console script must:
+- call the endpoint without header and expect HTTP 403.
+- call the endpoint with wrong header and expect HTTP 403.
+- call the endpoint with the diagnostic header and credentials included.
+- accept authenticated HTTP 200 sanitized identity.
+- accept unauthenticated HTTP 401 controlled failure.
+- fail if any forbidden field appears in raw JSON text.
+- fail if DB/SQL/AI/write guardrails are not false.
+- fail if controlledIntakeRouteChanged is not false.
+- print status/content-type/json/guardrail checks/forbidden-field checks/final PASS or FAIL.
+
+Verified current project state
+- diagnostic endpoint remains static/fail-closed.
+- FIRST_REAL_AUTH_SESSION_RUNTIME_READ_APPROVED=false remains in diagnostic endpoint.
+- diagnostic endpoint does not import Auth0 SDK.
+- diagnostic endpoint does not call getSession/getAccessToken.
+- diagnostic endpoint does not call cookies()/headers().
+- diagnostic endpoint does not call the bridge.
+- controlled-intake route.ts remains unchanged.
+- productionWriteEnabled=false remains in controlled-intake route.ts.
+- existing auth/session helpers remain unchanged.
+- no code files changed during O-BV.
+
+Checks executed in O-BV
+- Clean pushed O-BU baseline verified.
+- O-BT report was read.
+- O-BU report was read.
+- O-BU contract completeness markers were verified.
+- forbidden contract contradiction markers were checked.
+- diagnostic endpoint safety markers were checked.
+- forbidden diagnostic endpoint patterns were checked.
+- controlled-intake route.ts safety markers were checked.
+- existing helper safety markers were checked.
+- no uncommitted code changes were verified.
+- npx tsc --noEmit passed.
+- only this O-BV report is created.
+
+Important limitation
+O-BV verifies only the browser verification contract.
+It does not modify the diagnostic endpoint.
+It does not execute a real Auth0/session runtime read.
+It does not import Auth0 SDK.
+It does not call the bridge.
+It does not integrate anything into controlled-intake route.ts.
+It does not read Supabase.
+It does not approve production write mode.
+It does not approve activity_events insert.
+It does not approve AI or semantic persistence.
+
+Recommended next step
+O-BW should be the implementation design gate for enabling the first real Auth0/session runtime read in the diagnostic endpoint.
+O-BW should not implement the real read yet.
+O-BW should identify the exact project Auth0/session helper and define the minimal endpoint code changes.
+O-BW should keep DB/SQL/AI/write forbidden.
+O-BW should keep controlled-intake route.ts unchanged.
+
+Still forbidden after O-BV
+- Do not integrate runtime adapter into controlled-intake route.ts.
+- Do not execute real Auth0/session runtime reads from controlled-intake route.ts.
+- Do not execute DB reads.
+- Do not execute DB writes.
+- Do not execute SQL.
+- Do not add Supabase insert.
+- Do not add production write route.
+- Do not trust client-provided ownership fields.
+- Do not call AI.
+- Do not run Category Derivation.
+- Do not persist category candidates.
+- Do not create Value Objects.
+- Do not write state facts, deltas, or snapshots.
