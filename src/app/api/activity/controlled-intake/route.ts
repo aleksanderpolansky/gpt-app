@@ -140,6 +140,7 @@ type ControlledActivityIntakeRouteGuardrails = {
   readonly dbWriteExecuted: false;
   readonly sqlExecuted: false;
   readonly aiCallExecuted: false;
+  readonly activityEventsInserted: false;
   readonly semanticCandidatesPersisted: false;
   readonly valueObjectsCreated: false;
   readonly stateFactsCreated: false;
@@ -228,6 +229,7 @@ function buildRouteGuardrails(input?: {
     dbWriteExecuted: false,
     sqlExecuted: false,
     aiCallExecuted: false,
+    activityEventsInserted: false,
     semanticCandidatesPersisted: false,
     valueObjectsCreated: false,
     stateFactsCreated: false,

@@ -1,0 +1,80 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CS-REPAIR
+Controlled-intake activityEventsInserted guardrail repair proof
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CS-REPAIR: 0d49bc3
+- Expected origin/main before O-CS-REPAIR: 0d49bc3
+- Baseline commit: 0d49bc3 feat: integrate C8-I O-CS controlled-intake app user mapping
+
+Problem repaired
+O-CS implementation was committed and pushed successfully.
+TypeScript passed and the route integration was added.
+However, the O-CS marker check reported that activityEventsInserted was missing from route.ts.
+The missing marker meant the response guardrails did not explicitly expose activityEventsInserted: false.
+
+Repair scope
+- Modified src/app/api/activity/controlled-intake/route.ts.
+- Added activityEventsInserted: false to ControlledActivityIntakeRouteGuardrails.
+- Added activityEventsInserted: false to buildRouteGuardrails return object.
+- Created this repair proof report.
+
+Boundaries preserved during O-CS-REPAIR script execution
+- No runtime controlled-intake endpoint call was executed by this script.
+- No runtime DB read was executed by this script.
+- No DB write was executed.
+- No SQL was executed.
+- No AI call was executed.
+- No activity_events insert was added.
+- No semantic candidate persistence was added.
+- No Value Object creation was added.
+- No state facts, state deltas or state snapshots were added.
+- productionWriteEnabled remains false.
+
+Repaired route markers
+- auth0.getSession.
+- mapServerSideAppUserReadOnly.
+- server_side_read_only_mapping_preview.
+- serverSideAppUserMappingExecuted.
+- serverSideAppUserMappingStatus.
+- serverSideAppUserMapped.
+- serverSideAppUserMappingDbReadExecuted.
+- serverSideAppUserMappingFailClosed.
+- serverSideAppUserMappingSelectedColumns.
+- serverSideAppUserMappingTableName.
+- appUserInactiveSupported.
+- appUserInactiveCheckExecuted.
+- productionWriteEnabled: false.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+- semanticCandidatesPersisted: false.
+- valueObjectsCreated: false.
+- stateFactsCreated: false.
+- stateDeltasCreated: false.
+- stateSnapshotsCreated: false.
+
+TypeScript verification
+Command used:
+npx.cmd tsc --noEmit
+
+Result:
+PASS_TYPESCRIPT_CHECKED_THROUGH_NPX_CMD_AFTER_O_CS_REPAIR
+
+Current decision
+O-CS is accepted after O-CS-REPAIR.
+The controlled-intake route now has explicit activityEventsInserted: false guardrail.
+
+Next step decision
+Proceed to O-CT controlled-intake runtime verification contract.
+O-CT may execute a runtime DB read only through the controlled-intake route valid authenticated server_side_read_only_mapping_preview test.
+O-CT must verify no DB write, no SQL, no AI, no activity_events insert and no appUserId exposure in the new mode response.
+
+PASS marker
+PASS_O_CS_REPAIR_ACTIVITY_EVENTS_INSERTED_GUARDRAIL_ADDED_NO_SCRIPT_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
