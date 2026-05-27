@@ -1,0 +1,160 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CP
+Browser/runtime verification contract for server-side app user mapping read-only diagnostic endpoint
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CP: d1eafdd
+- Expected origin/main before O-CP: d1eafdd
+- Baseline commit: d1eafdd docs: verify C8-I O-CO endpoint tracked file state
+
+Purpose
+This block defines the browser/runtime verification contract for the diagnostic endpoint implemented in O-CO.
+
+This block is contract/report-only.
+It does not call the diagnostic endpoint.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not modify src/app/api/activity/controlled-intake/route.ts.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+
+Endpoint under test
+/api/activity/debug/server-side-app-user-mapping-read-only-test
+
+Required diagnostic header
+- Header name: x-controlled-intake-server-side-app-user-mapping-read-only-test.
+- Accepted value: enabled.
+
+Verification environment
+- Use browser console while authenticated in the app.
+- Use same origin fetch.
+- Do not use PowerShell for the runtime endpoint call.
+- Do not use Supabase SQL Editor.
+- Do not modify code during runtime verification.
+
+Required runtime test cases
+1. Missing diagnostic header.
+2. Wrong diagnostic header.
+3. Valid diagnostic header with current browser/Auth0 session.
+
+Expected missing-header behavior
+- HTTP status: 403.
+- diagnosticHeaderAccepted: false.
+- authSessionReadExecuted: false.
+- authSessionFound: false.
+- dbReadExecuted: false.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+- controlledIntakeRouteChanged: false.
+- diagnosticErrorCode: CONTROLLED_INTAKE_SERVER_SIDE_APP_USER_MAPPING_READ_ONLY_TEST_HEADER_REQUIRED.
+
+Expected wrong-header behavior
+- HTTP status: 403.
+- diagnosticHeaderAccepted: false.
+- authSessionReadExecuted: false.
+- authSessionFound: false.
+- dbReadExecuted: false.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+- controlledIntakeRouteChanged: false.
+- diagnosticErrorCode: CONTROLLED_INTAKE_SERVER_SIDE_APP_USER_MAPPING_READ_ONLY_TEST_HEADER_REQUIRED.
+
+Expected valid-header authenticated behavior
+- diagnosticHeaderAccepted: true.
+- authSessionReadExecuted: true.
+- If Auth0 session is present, authSessionFound should be true.
+- trustedProvider should be auth0 when trusted Auth0 subject is present.
+- trustedAuthSubjectPresent should be true when Auth0 subject exists.
+- mappingStatus must be one of: mapped_user_found, app_user_not_found, app_user_duplicate, app_user_lookup_error.
+- mapped_user_found is the desired success state if public.app_users contains a matching auth0_sub row.
+- app_user_not_found is acceptable if user sync is missing or auth0_sub does not match public.app_users yet.
+- app_user_duplicate must fail closed.
+- app_user_lookup_error must fail closed.
+- dbReadExecuted may be true only in the valid-header runtime test.
+- dbWriteExecuted must remain false.
+- sqlExecuted must remain false.
+- aiCallExecuted must remain false.
+- activityEventsInserted must remain false.
+- controlledIntakeRouteChanged must remain false.
+
+Sanitized response boundary checks
+The browser/runtime response must not contain:
+- appUserId.
+- access_token.
+- refresh_token.
+- id_token.
+- cookies.
+- raw Auth0 session.
+- raw Auth0 profile.
+- raw Supabase error object.
+- raw DB row.
+- service-role key.
+- environment variable values.
+
+Allowed response fields
+- ok.
+- routeName.
+- diagnosticHeaderAccepted.
+- authSessionReadExecuted.
+- authSessionFound.
+- trustedProvider.
+- trustedAuthSubjectPresent.
+- mappingStatus.
+- mappedUserFound.
+- dbReadExecuted.
+- failClosed.
+- appUserInactiveSupported.
+- appUserInactiveCheckExecuted.
+- selectedColumns.
+- tableName.
+- controlledIntakeRouteChanged.
+- dbWriteExecuted.
+- sqlExecuted.
+- aiCallExecuted.
+- activityEventsInserted.
+- semanticCandidatesPersisted.
+- valueObjectsCreated.
+- stateFactsWritten.
+- stateDeltasWritten.
+- stateSnapshotsWritten.
+- diagnosticErrorCode.
+
+Important interpretation rule
+O-CP does not require mapped_user_found.
+If the runtime response is app_user_not_found, this can still be a valid endpoint proof if all boundaries are correct.
+A later user-sync or app_users data audit may be required if mapped_user_found is expected but not returned.
+
+Future runtime verification gate
+O-CP does not execute the browser/runtime verification.
+O-CP authorizes only the next browser/runtime verification gate if the user explicitly proceeds.
+The next gate should be O-CQ.
+
+O-CQ expected scope
+- Run browser console verification script against /api/activity/debug/server-side-app-user-mapping-read-only-test.
+- Verify missing-header case.
+- Verify wrong-header case.
+- Verify valid-header authenticated case.
+- Verify sanitized response boundary.
+- Do not modify controlled-intake route.
+- Do not write DB.
+- Do not execute SQL.
+- Do not call AI.
+- Record results in a report.
+
+Next step decision
+Proceed to O-CQ browser/runtime verification execution gate.
+O-CQ may execute a runtime DB read only through the diagnostic endpoint valid-header test.
+
+PASS marker
+PASS_BROWSER_RUNTIME_VERIFICATION_CONTRACT_CREATED_NO_ENDPOINT_CALL_NO_DB_WRITE_NO_SQL_NO_AI
