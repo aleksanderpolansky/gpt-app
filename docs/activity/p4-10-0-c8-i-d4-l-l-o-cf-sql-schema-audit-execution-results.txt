@@ -1,0 +1,118 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CF
+SQL/schema audit execution result report
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CF report: 0323f58
+- Expected origin/main before O-CF report: 0323f58
+- Baseline commit: 0323f58 docs: verify C8-I O-CE SQL schema audit design gate
+
+Purpose
+This block records the manually executed Supabase SQL metadata audit results for future server-side app user mapping.
+
+This block is report-only.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL from PowerShell.
+It does not call AI.
+It does not create the future mapping diagnostic endpoint.
+It does not modify src/app/api/activity/controlled-intake/route.ts.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+
+Audit execution source
+The SQL metadata audit was executed manually in Supabase SQL Editor by the user.
+The result was pasted into the chat as O-CF audit output.
+The accidental PowerShell parser errors are ignored because they came from SQL text being pasted into PowerShell, not from the database audit itself.
+
+Existing candidate tables found
+- auth.identities
+- auth.users
+- public.app_users
+
+Exact mapping source decision
+- Exact app user table: public.app_users.
+- Exact internal app user id field: public.app_users.id.
+- Exact Auth0 subject field: public.app_users.auth0_sub.
+- Exact email field: public.app_users.email.
+- Optional profile fields: public.app_users.name and public.app_users.picture.
+- Timestamp fields: public.app_users.created_at and public.app_users.updated_at.
+
+public.app_users columns
+- id uuid not null default gen_random_uuid().
+- auth0_sub text not null.
+- email text nullable.
+- name text nullable.
+- picture text nullable.
+- created_at timestamp with time zone not null default now().
+- updated_at timestamp with time zone not null default now().
+
+Provider handling decision
+public.app_users does not contain a separate provider or auth_provider field.
+The future mapping corridor must accept only provider auth0 from the trusted server-side Auth0 session.
+Non-auth0 provider must fail closed before DB lookup.
+The lookup predicate for this corridor is auth0_sub equals trusted authSubject.
+
+Duplicate prevention decision
+public.app_users has PRIMARY KEY (id).
+public.app_users has UNIQUE (auth0_sub).
+public.app_users has unique index app_users_auth0_sub_key on auth0_sub.
+Therefore duplicate app user mapping by auth0_sub should be prevented by schema.
+Future code should still fail closed if a defensive lookup unexpectedly returns more than one row.
+
+Active/status decision
+public.app_users has no active, status, disabled, blocked, deleted_at or archived_at field.
+Therefore app_user_inactive is not supported by current public.app_users schema.
+The future read-only mapping response should not claim an inactive check was executed.
+Recommended future response flags:
+- appUserInactiveSupported: false.
+- appUserInactiveCheckExecuted: false.
+Adding active/status support requires a separate migration/status gate.
+
+RLS and server-side access decision
+RLS is enabled for public.app_users.
+No RLS policies were returned for public.app_users in the metadata audit.
+A normal client-side or user-scoped Supabase client must not be assumed to read public.app_users.
+The future read-only mapping diagnostic endpoint should use server-only access.
+Recommended implementation path: server-only Supabase service-role/admin client, never exposed to the browser.
+
+auth schema notes
+auth.identities exists and contains provider_id, user_id, identity_data, provider, email and id.
+auth.identities has UNIQUE (provider_id, provider).
+auth.identities user_id references auth.users(id) on delete cascade.
+auth.users exists and contains id, email, banned_until, deleted_at and other auth metadata.
+The current mapping corridor should not rely on auth.users row data unless a later explicit audit/contract authorizes it.
+
+Safe response boundary
+The future mapping route must not return raw DB rows.
+The future mapping route must not return raw Auth0 session.
+The future mapping route must not return tokens, cookies, full provider payload, full user record or full DB row.
+The response should expose only contract status booleans and sanitized proof fields.
+
+Implementation authorization
+O-CF does not implement anything.
+O-CF does not modify code.
+O-CF authorizes only the next planning/static code inventory step.
+
+Decision
+Schema evidence is now sufficient to plan a read-only diagnostic implementation corridor.
+Exact source is public.app_users.
+Exact lookup field is auth0_sub.
+Exact internal id field is id.
+Provider is enforced from trusted Auth0 session, not from public.app_users.
+Status/inactive support is not available in current public.app_users schema.
+Server-only access is required because RLS is enabled and no policies were returned.
+
+Next step decision
+Proceed to O-CG.
+O-CG should be a server-only Supabase admin/service-role client inventory and read-only mapping implementation plan.
+O-CG should remain no DB read, no DB write, no SQL, no AI and no controlled-intake route integration.
+O-CG should inspect existing Supabase server helper files and decide whether a safe server-only admin client already exists or must be added in a later implementation block.
+
+PASS marker
+PASS_SQL_SCHEMA_AUDIT_EXECUTION_RESULTS_RECORDED_NO_CODE_NO_DB_WRITE_NO_SQL_EXECUTED_BY_SCRIPT_NO_AI
