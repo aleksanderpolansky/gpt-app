@@ -1,0 +1,61 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R10B - targeted ownership mapping-status passthrough patch
+Date = 2026-05-27 18:16:36 +02:00
+Status = TARGETED_CODE_PATCH_APPLIED
+
+1. Baseline
+Starting HEAD = 4709f6f
+Required baseline 04dabb6 is in current HEAD history = true
+Working tree before patch = clean
+
+2. Patch target
+- Patched file = src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts
+- Helper file unchanged = lib/activity/controlledIntake/serverSideAppUserMappingReadOnly.ts
+
+3. Root cause fixed
+Before patch, ownership route read appUserMapping.status.
+Helper returns appUserMapping.mappingStatus.
+Therefore mapped_user_found from helper was collapsed to app_user_lookup_error fallback.
+
+4. Patch applied
+Ownership route now reads mappingStatus first, then keeps legacy status fallback:
+readStringProperty(appUserMapping, 'mappingStatus') ??
+readStringProperty(appUserMapping, 'status') ??
+'app_user_lookup_error'
+
+5. Hashes
+ownershipHashBefore = 1af0699566f5a5882af07e770b4489ea001bce3bcf56446f9f796a4a6c48b6de
+ownershipHashAfter = 4cfcd7b9d14a5afb1d59715ba5881f2dd4f725d5bc961d9d76dd2a2b7813e35e
+helperHashBefore = 39b3023c5d039a951665caea41f9437ade51885706e4911ce332ce1076f2f281
+helperHashAfter = 39b3023c5d039a951665caea41f9437ade51885706e4911ce332ce1076f2f281
+helperHashUnchanged = true
+
+6. Safety / guardrails
+- No endpoint call was executed by O-DJ-R10B PowerShell.
+- No browser runtime was executed by O-DJ-R10B PowerShell.
+- No runtime DB read was triggered by O-DJ-R10B PowerShell.
+- No DB write.
+- No SQL.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+- productionWriteEnabled remains false.
+- dbWriteExecuted remains false.
+- sqlExecuted remains false.
+- aiCallExecuted remains false.
+- activityEventsInserted remains false.
+- semanticCandidatesPersisted remains false.
+- valueObjectsCreated remains false.
+- stateFactsCreated remains false.
+- stateDeltasCreated remains false.
+- stateSnapshotsCreated remains false.
+- TypeScript passed: npx.cmd tsc --noEmit.
+
+7. Decision
+PASS_O_DJ_R10B_TARGETED_MAPPING_STATUS_PASSTHROUGH_PATCH_APPLIED_TSC_PASS_HELPER_UNCHANGED_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+
+8. Next step
+O-DJ-R10C static postcheck.
+Then O-DJ-R11 browser runtime re-run for ownership/context diagnostic.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.

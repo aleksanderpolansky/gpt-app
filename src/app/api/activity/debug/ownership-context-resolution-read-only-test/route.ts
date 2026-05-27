@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 
 import { auth0 } from '../../../../../../lib/auth0';
 import { mapServerSideAppUserReadOnly } from '../../../../../../lib/activity/controlledIntake/serverSideAppUserMappingReadOnly';
@@ -224,7 +224,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<Diagnostic
     );
   }
 
-  const appUserMappingStatus = readStringProperty(appUserMapping, 'status') ?? 'app_user_lookup_error';
+  const appUserMappingStatus =
+    readStringProperty(appUserMapping, 'mappingStatus') ??
+    readStringProperty(appUserMapping, 'status') ??
+    'app_user_lookup_error';
   const appUserMappingDbReadExecuted = readBooleanProperty(appUserMapping, 'dbReadExecuted');
   const mappedAppUserId = readStringProperty(appUserMapping, 'appUserId');
   const appUserMapped = appUserMappingStatus === 'mapped_user_found' && Boolean(mappedAppUserId);
