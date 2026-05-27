@@ -1,0 +1,96 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CV
+Postcheck controlled-intake runtime verification evidence
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CV: 48eec14
+- Expected origin/main before O-CV: 48eec14
+- Baseline commit: 48eec14 docs: record C8-I O-CU controlled-intake runtime verification
+
+Purpose
+This postcheck verifies the recorded O-CU runtime evidence, the current controlled-intake route boundaries, and TypeScript after recording the runtime result.
+
+This block is postcheck/report-only.
+It does not call the controlled-intake endpoint.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+It does not enable production writes.
+
+Verified O-CU evidence
+- O-CU report exists.
+- O-CU overallPass: true.
+- O-CU finalDecision: PASS_O_CU_COMPACT_CONTROLLED_INTAKE_RUNTIME_VERIFICATION_MAPPED_USER_FOUND_NO_DB_WRITE_NO_SQL_NO_AI.
+- Case 1 missing_no_write_preview_header returned HTTP 403.
+- Case 2 fallback_without_mapping_mode returned HTTP 401.
+- Case 3 valid_server_side_read_only_mapping_preview_authenticated returned HTTP 200.
+- Case 3 mappingStatus: mapped_user_found.
+- Case 3 serverSideAppUserMapped: true.
+- Case 3 serverSideAppUserMappingDbReadExecuted: true.
+- Case 3 guardrails.dbReadExecuted: true.
+- All cases kept dbWriteExecuted: false.
+- All cases kept sqlExecuted: false.
+- All cases kept aiCallExecuted: false.
+- All cases kept activityEventsInserted: false.
+- All cases kept forbiddenTextFound: false.
+
+Verified current route markers
+- server_side_read_only_mapping_preview.
+- auth0.getSession.
+- mapServerSideAppUserReadOnly.
+- serverSideAppUserMappingExecuted.
+- serverSideAppUserMappingStatus.
+- serverSideAppUserMapped.
+- serverSideAppUserMappingDbReadExecuted.
+- serverSideAppUserMappingSelectedColumns.
+- serverSideAppUserMappingTableName.
+- productionWriteEnabled: false.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+
+Verified route forbidden pattern scan
+- activity_events not found.
+- INSERT INTO not found.
+- UPDATE not found.
+- DELETE not found.
+- .insert not found.
+- .update not found.
+- .delete not found.
+- .upsert not found.
+- .rpc not found.
+- OpenAI not found.
+- chat.completions not found.
+- token/secret/service-role markers not found.
+
+TypeScript verification
+Command used:
+npx.cmd tsc --noEmit
+
+Result:
+PASS_TYPESCRIPT_CHECKED_THROUGH_NPX_CMD_AFTER_O_CV_POSTCHECK
+
+Current decision
+O-CU is accepted after O-CV postcheck.
+The controlled-intake route has verified no-write runtime mapping from trusted Auth0 session to internal app user.
+The only runtime DB read verified in this corridor is the read-only app_users mapping lookup in the valid authenticated server_side_read_only_mapping_preview case.
+
+Next step decision
+Proceed to O-CW planning/decision gate.
+O-CW should decide the next controlled-intake corridor after real app user mapping is verified.
+Recommended O-CW options:
+1. Add ownership/context selection contract for actor/organization/space without writes.
+2. Add no-write staticRowPreview alignment with mapped appUserId without exposing appUserId.
+3. Prepare future write-gate contract for activity_events, but do not enable writes yet.
+
+PASS marker
+PASS_O_CV_POSTCHECK_CONTROLLED_INTAKE_RUNTIME_VERIFICATION_ACCEPTED_DB_READ_ONLY_NO_DB_WRITE_NO_SQL_NO_AI
