@@ -1,0 +1,81 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-DJ-R3
+App user mapping focused diagnostic endpoint implementation proof
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-DJ-R3: fa92e5f
+- Expected origin/main before O-DJ-R3: fa92e5f
+- Baseline commit: fa92e5f docs: contract C8-I O-DJ-R2 app user mapping diagnostic
+
+Implemented file
+- src/app/api/activity/debug/app-user-mapping-lookup-error-focused-test/route.ts.
+
+Implementation scope
+- Focused diagnostic endpoint file created.
+- controlled-intake route.ts was not modified.
+- No endpoint was called by this script.
+- No runtime DB read was executed by this script.
+- No DB write was executed.
+- No SQL was executed.
+- No AI call was executed.
+- No activity_events insert was executed.
+- No semantic candidates were persisted.
+- No Value Objects were created.
+- No state facts, state deltas, or state snapshots were created.
+- No production write was enabled.
+
+Endpoint behavior
+- GET only.
+- Requires header x-app-user-mapping-lookup-error-focused-test: enabled.
+- Missing header returns 403 before Auth0 session read and before DB read.
+- Valid header reads Auth0 session server-side.
+- If no Auth0 subject exists, it returns sanitized unauthenticated result.
+- It checks Supabase URL and service-role-key presence without exposing values.
+- It builds Supabase admin client through getSupabaseAdminClient.
+- It executes a minimal read-only app_users query only when the endpoint is called in future runtime verification.
+- It returns sanitized categories only.
+
+Sanitized diagnostic fields
+- trustedAuthSubjectPresent.
+- trustedAuthSubjectShapeCategory.
+- supabaseAdminClientCreated.
+- supabaseUrlConfigured.
+- serviceRoleKeyConfigured.
+- appUsersQueryAttempted.
+- appUsersQuerySucceeded.
+- appUsersRowCountCategory.
+- mappingOutcomeCategory.
+- sanitizedErrorCategory.
+
+Forbidden exposure boundary
+- app user id is not exposed.
+- Auth0 subject value is not exposed.
+- raw session is not exposed.
+- tokens are not exposed.
+- Supabase URL value is not exposed.
+- service role key value is not exposed.
+- raw Supabase error message is not exposed.
+- stack trace is not exposed.
+
+Guardrails verified
+- Endpoint has no insert/update/delete/upsert/rpc calls.
+- Endpoint has no OpenAI/chat completion calls.
+- Endpoint has no console logging.
+- Endpoint does not accept client-supplied authSubject.
+- Endpoint does not accept client-supplied appUserId.
+- controlled-intake route hash before and after O-DJ-R3 matched.
+
+Validation
+- TypeScript passed through npx.cmd tsc --noEmit.
+
+Next step decision
+Proceed to O-DJ-R4 app user mapping focused diagnostic endpoint postcheck.
+O-DJ-R4 should verify tracked file state, markers, TypeScript, controlled-intake route unchanged and no forbidden patterns after commit.
+
+PASS marker
+PASS_O_DJ_R3_APP_USER_MAPPING_FOCUSED_DIAGNOSTIC_ENDPOINT_IMPLEMENTED_NO_CONTROLLED_INTAKE_ROUTE_CHANGE_NO_ENDPOINT_CALL_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
