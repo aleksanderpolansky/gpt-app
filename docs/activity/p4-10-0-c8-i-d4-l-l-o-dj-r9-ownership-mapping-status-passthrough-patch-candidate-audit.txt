@@ -1,0 +1,71 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R9 - ownership mapping status passthrough patch candidate audit
+Date = 2026-05-27 18:05:06 +02:00
+Status = STATIC_PATCH_CANDIDATE_AUDIT_COMPLETED
+
+1. Baseline
+Expected HEAD = eb28038
+Actual HEAD = eb28038
+Working tree before audit = clean
+
+2. Why O-DJ-R9 is still audit, not patch
+O-DJ-R8A corrected the source inspection and narrowed the likely issue.
+Before changing code, this gate verifies whether the patch target is concrete enough.
+
+3. Static checks
+ownershipCallsHelper = true
+ownershipHasAppUserLookupError = true
+ownershipHasStatusPassthrough = false
+ownershipHasMappedUserFoundLiteral = true
+ownershipHasNotFoundLiteral = false
+ownershipHasDuplicateLiteral = false
+ownershipHasGenericMappingRequiredCode = true
+ownershipHasResolverExecutedField = true
+ownershipHasDbWriteFalse = true
+ownershipHasActivityEventsFalse = true
+
+helperHasMappedUserFound = true
+helperHasNotFound = true
+helperHasDuplicate = true
+helperHasLookupError = true
+helperHasAppUsersQuery = true
+helperHasEqAuth0Sub = true
+
+odjr8aSupportsPassthroughProblem = true
+odjr8aConclusionMatches = true
+
+4. Patch candidate decision
+patchCandidateDecision = PATCH_CANDIDATE_CONFIRMED_OWNERSHIP_ENDPOINT_STATUS_PASSTHROUGH_OR_HELPER_RESULT_MAPPING
+
+5. Ownership status evidence lines
+System.Object[]
+
+6. Helper status evidence lines
+System.Object[]
+
+7. Ownership critical windows
+System.Object[]
+
+8. Helper critical windows
+System.Object[]
+
+9. Safety / guardrails
+- No endpoint call was executed by O-DJ-R9.
+- No browser runtime was executed by O-DJ-R9.
+- No runtime DB read was triggered.
+- No DB write.
+- No SQL.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+- No code patch.
+- TypeScript passed: npx.cmd tsc --noEmit.
+
+10. Decision
+PASS_O_DJ_R9_PATCH_CANDIDATE_AUDIT_COMPLETED_NO_CODE_CHANGE_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+
+11. Next step
+If patchCandidateDecision confirms the target, O-DJ-R10 may patch only ownership endpoint mapping-status handling or helper result mapping.
+Do not repeat O-DJ-R6 until after targeted patch and postcheck.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
