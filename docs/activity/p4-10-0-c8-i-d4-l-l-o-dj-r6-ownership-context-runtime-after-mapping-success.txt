@@ -1,0 +1,152 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R6 - ownership/context resolver browser runtime verification after mapping success
+Date = 2026-05-27 17:58:29 +02:00
+Status = RUNTIME_RECORDED_MAPPING_DIVERGENCE
+
+1. Runtime scope
+Endpoint tested in browser DevTools:
+/api/activity/debug/ownership-context-resolution-read-only-test
+Required header:
+x-controlled-intake-ownership-context-resolution-read-only-test: enabled
+Policy:
+- Read-only diagnostic endpoint only.
+- No controlled-intake integration.
+- No activity_events write.
+- Runtime endpoint calls happened from browser console only.
+
+2. Result summary
+O-DJ-R6 did not reach ownership/context resolver.
+The valid-header authenticated cases still failed during app user mapping inside the ownership/context diagnostic endpoint.
+
+3. Browser runtime cases
+Case missing_header:
+- HTTP status = 403
+- parseStatus = json_ok
+- headerAccepted = false
+- authSessionReadExecuted = false
+- appUserMappingExecuted = false
+- appUserMappingStatus = not_executed
+- appUserMapped = false
+- appUserMappingDbReadExecuted = false
+- ownershipContextResolutionExecuted = false
+- ownershipContextResolutionStatus = not_executed
+- ownershipContextResolved = false
+- ownershipContextDbReadExecuted = false
+- ownershipContextFailClosed = true
+- selectedContextScope = none
+- requestedContextAcceptedAsHintOnly = true
+- mappedAppUserRequired = true
+- responseSanitized = true
+- dbReadExecuted = false
+- dbWriteExecuted = false
+- sqlExecuted = false
+- aiCallExecuted = false
+- activityEventsInserted = false
+
+Case wrong_header:
+- HTTP status = 403
+- parseStatus = json_ok
+- headerAccepted = false
+- authSessionReadExecuted = false
+- appUserMappingExecuted = false
+- appUserMappingStatus = not_executed
+- appUserMapped = false
+- appUserMappingDbReadExecuted = false
+- ownershipContextResolutionExecuted = false
+- ownershipContextResolutionStatus = not_executed
+- ownershipContextResolved = false
+- ownershipContextDbReadExecuted = false
+- ownershipContextFailClosed = true
+- selectedContextScope = none
+- requestedContextAcceptedAsHintOnly = true
+- mappedAppUserRequired = true
+- responseSanitized = true
+- dbReadExecuted = false
+- dbWriteExecuted = false
+- sqlExecuted = false
+- aiCallExecuted = false
+- activityEventsInserted = false
+
+Case valid_header_authenticated_no_context_hints:
+- HTTP status = 403
+- parseStatus = json_ok
+- headerAccepted = true
+- authSessionReadExecuted = true
+- appUserMappingExecuted = true
+- appUserMappingStatus = app_user_lookup_error
+- appUserMapped = false
+- appUserMappingDbReadExecuted = true
+- ownershipContextResolutionExecuted = false
+- ownershipContextResolutionStatus = not_executed
+- ownershipContextResolved = false
+- ownershipContextDbReadExecuted = false
+- ownershipContextFailClosed = true
+- selectedContextScope = none
+- requestedContextAcceptedAsHintOnly = true
+- mappedAppUserRequired = true
+- responseSanitized = true
+- dbReadExecuted = true
+- dbWriteExecuted = false
+- sqlExecuted = false
+- aiCallExecuted = false
+- activityEventsInserted = false
+
+Case valid_header_authenticated_invalid_space_id:
+- HTTP status = 403
+- appUserMappingStatus = app_user_lookup_error
+- ownershipContextResolutionExecuted = false
+- ownershipContextResolutionStatus = not_executed
+
+Case valid_header_authenticated_ambiguous_space_and_organization:
+- HTTP status = 403
+- appUserMappingStatus = app_user_lookup_error
+- ownershipContextResolutionExecuted = false
+- ownershipContextResolutionStatus = not_executed
+
+4. Browser decision
+O-DJ-R6 browser helper decision:
+O_DJ_R6_INCONCLUSIVE_REVIEW_SANITIZED_OUTPUT
+
+5. Key diagnostic conclusion
+This is no longer the same blocker as before O-DJ-R5.
+O-DJ-R5 proved the focused app user mapping diagnostic endpoint can map the current authenticated session:
+- mappingOutcomeCategory = mapped
+- appUsersQuerySucceeded = true
+- appUsersRowCountCategory = one
+
+O-DJ-R6 proves the ownership/context diagnostic endpoint still fails earlier in its own mapping path:
+- appUserMappingStatus = app_user_lookup_error
+- appUserMapped = false
+- ownershipContextResolutionExecuted = false
+
+Therefore the next target is a helper/path divergence audit:
+- compare focused endpoint direct app_users read with ownership/context endpoint mapping helper usage
+- inspect selected columns/constants
+- inspect helper error handling
+- inspect imported helper path in ownership-context diagnostic endpoint
+- patch only the helper/path if confirmed
+
+6. Safety / guardrails
+- forbiddenKeysFoundTotal = 0
+- responseSanitized = true
+- No raw Auth0 subject pasted.
+- No appUserId pasted.
+- No actorId, spaceId, organizationId, actorSpaceRoleId pasted.
+- No token/secret/service role value pasted.
+- No raw Supabase error or stack trace pasted.
+- No DB write.
+- No SQL.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No semantic candidates persistence.
+- No Value Object creation.
+- No state facts/deltas/snapshots.
+
+7. Decision
+PASS_O_DJ_R6_RUNTIME_RECORDED_RESOLVER_NOT_REACHED_DUE_TO_MAPPING_HELPER_DIVERGENCE
+
+8. Next step
+O-DJ-R7 mapping helper/path divergence static audit.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
+Do not repeat O-DJ-R6 until the helper/path divergence is understood or patched.
