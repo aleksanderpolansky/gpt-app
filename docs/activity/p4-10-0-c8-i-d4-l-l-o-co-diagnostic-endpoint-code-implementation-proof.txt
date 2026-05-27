@@ -1,0 +1,65 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CO
+Diagnostic endpoint code implementation proof for server-side app user mapping read-only test
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CO: a3aefeb
+- Expected origin/main before O-CO: a3aefeb
+- Baseline commit: a3aefeb docs: add C8-I O-CN mapping diagnostic endpoint contract
+
+Purpose
+This block implements the diagnostic GET endpoint authorized by O-CN.
+
+Implemented endpoint
+- src/app/api/activity/debug/server-side-app-user-mapping-read-only-test/route.ts
+
+Implementation details
+- GET endpoint only.
+- Requires x-controlled-intake-server-side-app-user-mapping-read-only-test header.
+- Accepted diagnostic header value: enabled.
+- Reads server-side Auth0 session only after the diagnostic header passes.
+- Extracts only presence of trusted Auth0 subject.
+- Calls mapServerSideAppUserReadOnly with trusted provider auth0 and trusted authSubject.
+- Returns sanitized diagnostic response.
+- Does not expose appUserId.
+- Does not expose raw Auth0 session.
+- Does not expose raw Auth0 profile.
+- Does not expose tokens.
+- Does not expose raw DB rows.
+- Does not expose raw Supabase errors.
+
+Boundaries preserved during O-CO script execution
+- No runtime browser call was executed by this script.
+- No runtime DB read was executed by this script.
+- No DB write was executed.
+- No SQL was executed.
+- No AI call was executed.
+- controlled-intake route was not modified.
+- No activity_events insert was added.
+- No semantic candidate persistence was added.
+- No Value Object creation was added.
+- No state facts, state deltas or state snapshots were added.
+
+Runtime note
+The endpoint may execute a DB read only later when called explicitly in browser/runtime verification with the diagnostic header.
+
+TypeScript verification
+Command used:
+npx.cmd tsc --noEmit
+
+Result:
+PASS_TYPESCRIPT_CHECKED_THROUGH_NPX_CMD_AFTER_O_CO
+
+Next step decision
+Proceed to O-CP.
+O-CP should be browser/runtime verification contract for /api/activity/debug/server-side-app-user-mapping-read-only-test.
+O-CP should verify missing header, wrong header, authenticated valid header, and sanitized response boundaries.
+O-CP must not modify controlled-intake route and must not write DB, execute SQL or call AI.
+
+PASS marker
+PASS_DIAGNOSTIC_ENDPOINT_IMPLEMENTED_SERVER_SIDE_APP_USER_MAPPING_READ_ONLY_TEST_NO_SCRIPT_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
