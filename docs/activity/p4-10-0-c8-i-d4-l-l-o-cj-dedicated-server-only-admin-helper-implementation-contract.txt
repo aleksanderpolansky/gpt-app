@@ -1,0 +1,147 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CJ
+Dedicated server-only Supabase admin helper implementation contract
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CJ: 6dcf653
+- Expected origin/main before O-CJ: 6dcf653
+- Baseline commit: 6dcf653 docs: verify C8-I O-CI helper path evidence
+
+Purpose
+This block creates the implementation contract for a future dedicated server-only Supabase admin helper.
+
+This block is contract/report-only.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not create the future mapping diagnostic endpoint.
+It does not create a Supabase admin client.
+It does not modify src/app/api/activity/controlled-intake/route.ts.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+
+Decision carried forward from O-CI-POSTCHECK
+- adminClientHelperPathDecision: NO_EXACT_REUSABLE_SERVER_ONLY_ADMIN_HELPER_CONFIRMED_USE_NEW_DEDICATED_PATH.
+- selectedAdminClientHelperPath: lib/supabase/admin.ts.
+- adminClientImplementationMode: CREATE_NEW_DEDICATED_SERVER_ONLY_ADMIN_HELPER_IN_LATER_IMPLEMENTATION_GATE.
+- Safe admin candidates: 0.
+- preferredPathExists: False.
+- preferredPathIsSafeCandidate: False.
+
+Schema decisions carried forward from O-CF
+- Exact app user table: public.app_users.
+- Exact internal app user id field: public.app_users.id.
+- Exact Auth0 subject field: public.app_users.auth0_sub.
+- Lookup predicate: public.app_users.auth0_sub equals trusted server-side Auth0 authSubject.
+- Provider must be enforced from trusted Auth0 session, not from public.app_users.
+- public.app_users has UNIQUE (auth0_sub).
+- app_user_inactive is not supported by current public.app_users schema.
+- RLS is enabled for public.app_users.
+- No RLS policies were returned for public.app_users.
+
+Future helper path
+lib/supabase/admin.ts
+
+Future helper purpose
+The helper should create a server-only Supabase admin/service-role client for the first narrow use case: read-only mapping from trusted server-side Auth0 subject to public.app_users.
+
+Future helper export contract
+The future helper should export a named function:
+getSupabaseAdminClient
+
+Future helper import contract
+- The helper should import server-only guard at the top if supported by the project: import 'server-only'.
+- The helper should import createClient from @supabase/supabase-js.
+- The helper must not be used in client components.
+- The helper must not be imported from files containing use client.
+
+Future helper environment contract
+- Supabase URL may use NEXT_PUBLIC_SUPABASE_URL because the project URL is not a secret.
+- If the project has a server-only SUPABASE_URL variable, it may be preferred after explicit verification.
+- Service-role key must use SUPABASE_SERVICE_ROLE_KEY.
+- Service-role key must never use NEXT_PUBLIC_*.
+- Missing URL must fail closed.
+- Missing service-role key must fail closed.
+- Error messages must be sanitized and must not contain env var values.
+
+Future helper creation contract
+- Use createClient with Supabase URL and SUPABASE_SERVICE_ROLE_KEY.
+- Configure the helper in server-only module scope.
+- A lazy singleton is allowed.
+- The helper must not log env var values.
+- The helper must not print service-role key length, prefix, suffix or hash.
+- The helper must not return secrets.
+
+Allowed first use
+- Future read-only app user mapping helper.
+- Table scope: public.app_users only.
+- Select scope: id and auth0_sub only by default.
+- Optional email/name/picture fields are not needed for initial mapping and should not be selected unless a later proof gate authorizes them.
+
+Forbidden use
+- No DB writes.
+- No inserts into activity_events.
+- No semantic candidate persistence.
+- No Value Object creation.
+- No state facts, state deltas or state snapshots.
+- No raw SQL execution.
+- No general-purpose admin endpoint.
+- No accepting client-supplied appUserId, userId, actorId, organizationId or spaceId as trusted ownership.
+- No exposing service-role behavior directly to arbitrary user input.
+
+Future mapping query contract
+- Read trusted server-side Auth0 session only after diagnostic header passes.
+- Accept provider auth0 only.
+- Require trusted authSubject.
+- Query public.app_users where auth0_sub equals trusted authSubject.
+- Select id and auth0_sub.
+- Limit defensively to 2 rows.
+- Zero rows: app_user_not_found.
+- One row: mapped_user_found.
+- More than one row: app_user_duplicate fail-closed, even though UNIQUE (auth0_sub) should prevent it.
+- Do not execute inactive/status checks because current public.app_users schema has no active/status field.
+- Report appUserInactiveSupported false.
+- Report appUserInactiveCheckExecuted false.
+
+Safe response boundary for future mapping
+- Do not return raw DB rows.
+- Do not return raw Auth0 session.
+- Do not return raw Auth0 profile.
+- Do not return cookies.
+- Do not return access_token, refresh_token, id_token or any token.
+- Do not return full provider payload.
+- Do not return full user record.
+- Default response should expose booleans, mappingStatus, and safe proof flags only.
+- appUserId may be exposed only if a later contract explicitly allows a sanitized proof field.
+
+Future implementation gate
+O-CJ does not implement the helper.
+O-CJ authorizes only the next code implementation gate if the user explicitly proceeds.
+The next code gate should be O-CK.
+
+O-CK expected scope
+- Create lib/supabase/admin.ts.
+- Add server-only guard if available.
+- Add getSupabaseAdminClient function.
+- Do not call getSupabaseAdminClient at module import time in a way that reads DB.
+- Do not create any endpoint.
+- Do not modify controlled-intake route.
+- Do not run DB reads.
+- Do not run DB writes.
+- Do not run SQL.
+- Run TypeScript.
+- Commit only lib/supabase/admin.ts.
+
+Next step decision
+Proceed to O-CK dedicated server-only Supabase admin helper code implementation gate.
+O-CK should implement only lib/supabase/admin.ts.
+O-CK must remain no DB read, no DB write, no SQL, no AI, no diagnostic endpoint creation and no controlled-intake route integration.
+
+PASS marker
+PASS_DEDICATED_SERVER_ONLY_ADMIN_HELPER_IMPLEMENTATION_CONTRACT_CREATED_NO_DB_NO_WRITE_NO_SQL_NO_AI
