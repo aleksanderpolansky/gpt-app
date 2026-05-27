@@ -1,0 +1,218 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CU
+Controlled-intake browser/runtime verification execution results
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CU report: 73495c2
+- Expected origin/main before O-CU report: 73495c2
+- Baseline commit: 73495c2 docs: add C8-I O-CT controlled-intake runtime verification contract
+
+Purpose
+This report records the browser/runtime verification results for /api/activity/controlled-intake after O-CS and O-CS-REPAIR.
+
+Endpoint tested
+/api/activity/controlled-intake
+
+Method tested
+POST
+
+Browser/runtime execution timestamp
+- 2026-05-27T10:01:31.095Z.
+
+Execution note
+The first full O-CU browser run passed but its console JSON copy was truncated.
+A compact browser run was executed immediately after it.
+The compact result is complete and is used as the authoritative O-CU record.
+Some JavaScript was also accidentally pasted into PowerShell; those PowerShell parse errors are not treated as runtime verification.
+
+Overall result
+- overallPass: true.
+- finalDecision: PASS_O_CU_COMPACT_CONTROLLED_INTAKE_RUNTIME_VERIFICATION_MAPPED_USER_FOUND_NO_DB_WRITE_NO_SQL_NO_AI.
+
+Case 1: missing_no_write_preview_header
+- HTTP status: 403.
+- ok: false.
+- code: CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED.
+- productionWriteEnabled: false.
+- dbReadExecuted: false.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+- forbiddenTextFound: false.
+
+Case 2: fallback_without_mapping_mode
+- HTTP status: 401.
+- ok: false.
+- code: CONTROLLED_INTAKE_TRUSTED_CONTEXT_APP_USER_REQUIRED.
+- productionWriteEnabled: false.
+- dbReadExecuted: false.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+- forbiddenTextFound: false.
+
+Case 3: valid_server_side_read_only_mapping_preview_authenticated
+- HTTP status: 200.
+- ok: true.
+- mode: server_side_read_only_mapping_preview.
+- serverSideAppUserMappingExecuted: true.
+- serverSideAppUserMappingStatus: mapped_user_found.
+- serverSideAppUserMapped: true.
+- serverSideAppUserMappingDbReadExecuted: true.
+- serverSideAppUserMappingFailClosed: false.
+- serverSideAppUserMappingSelectedColumns: id,auth0_sub.
+- serverSideAppUserMappingTableName: public.app_users.
+- appUserInactiveSupported: false.
+- appUserInactiveCheckExecuted: false.
+- productionWriteEnabled: false.
+- dbReadExecuted: true.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+- semanticCandidatesPersisted: false.
+- valueObjectsCreated: false.
+- stateFactsCreated: false.
+- stateDeltasCreated: false.
+- stateSnapshotsCreated: false.
+- forbiddenTextFound: false.
+
+Boundary interpretation
+The route executed a runtime DB read only in the valid authenticated server_side_read_only_mapping_preview case.
+No DB write occurred.
+No SQL execution occurred.
+No AI call occurred.
+No activity_events insert occurred.
+No semantic candidate persistence occurred.
+No Value Object creation occurred.
+No state facts, state deltas or state snapshots were written.
+productionWriteEnabled remained false.
+
+Sanitized response boundary
+The compact browser verification found no forbidden sensitive text in any response.
+The response did not expose appUserId.
+The response did not expose authSubject.
+The response did not expose tokens.
+The response did not expose service-role configuration.
+
+Current decision
+O-CU browser/runtime verification is accepted.
+The controlled-intake route now verifies trusted Auth0 session to internal app user mapping in no-write preview mode.
+
+Next step decision
+Proceed to O-CV.
+O-CV should be a postcheck/report-only gate that verifies O-CU evidence, route boundaries and TypeScript after recording the runtime result.
+
+PASS marker
+PASS_O_CU_CONTROLLED_INTAKE_RUNTIME_VERIFICATION_RECORDED_MAPPED_USER_FOUND_DB_READ_ONLY_NO_DB_WRITE_NO_SQL_NO_AI
+
+Raw compact O-CU result JSON
+{
+  "gate": "P4.10.0-C8-I-D4-L-L-O-CU-COMPACT",
+  "timestamp": "2026-05-27T10:01:31.095Z",
+  "overallPass": true,
+  "finalDecision": "PASS_O_CU_COMPACT_CONTROLLED_INTAKE_RUNTIME_VERIFICATION_MAPPED_USER_FOUND_NO_DB_WRITE_NO_SQL_NO_AI",
+  "results": [
+    {
+      "name": "missing_no_write_preview_header",
+      "httpStatus": 403,
+      "ok": false,
+      "code": "CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED",
+      "mode": null,
+      "mapping": null,
+      "guardrails": {
+        "routeAuthIntegrated": true,
+        "routeProductionAuthMappingIntegrated": true,
+        "routeServerSideAppUserMappingIntegrated": true,
+        "routeScaffoldOnly": true,
+        "noWritePreview": true,
+        "productionWriteEnabled": false,
+        "previewHeaderAcceptedForProductionWrite": false,
+        "dbReadExecuted": false,
+        "dbWriteExecuted": false,
+        "sqlExecuted": false,
+        "aiCallExecuted": false,
+        "activityEventsInserted": false,
+        "semanticCandidatesPersisted": false,
+        "valueObjectsCreated": false,
+        "stateFactsCreated": false,
+        "stateDeltasCreated": false,
+        "stateSnapshotsCreated": false
+      },
+      "forbiddenTextFound": false
+    },
+    {
+      "name": "fallback_without_mapping_mode",
+      "httpStatus": 401,
+      "ok": false,
+      "code": "CONTROLLED_INTAKE_TRUSTED_CONTEXT_APP_USER_REQUIRED",
+      "mode": null,
+      "mapping": null,
+      "guardrails": {
+        "routeAuthIntegrated": true,
+        "routeProductionAuthMappingIntegrated": true,
+        "routeServerSideAppUserMappingIntegrated": true,
+        "routeScaffoldOnly": true,
+        "noWritePreview": true,
+        "productionWriteEnabled": false,
+        "previewHeaderAcceptedForProductionWrite": false,
+        "dbReadExecuted": false,
+        "dbWriteExecuted": false,
+        "sqlExecuted": false,
+        "aiCallExecuted": false,
+        "activityEventsInserted": false,
+        "semanticCandidatesPersisted": false,
+        "valueObjectsCreated": false,
+        "stateFactsCreated": false,
+        "stateDeltasCreated": false,
+        "stateSnapshotsCreated": false
+      },
+      "forbiddenTextFound": false
+    },
+    {
+      "name": "valid_server_side_read_only_mapping_preview_authenticated",
+      "httpStatus": 200,
+      "ok": true,
+      "code": null,
+      "mode": "server_side_read_only_mapping_preview",
+      "mapping": {
+        "serverSideAppUserMappingExecuted": true,
+        "serverSideAppUserMappingStatus": "mapped_user_found",
+        "serverSideAppUserMapped": true,
+        "serverSideAppUserMappingDbReadExecuted": true,
+        "serverSideAppUserMappingFailClosed": false,
+        "serverSideAppUserMappingSelectedColumns": "id,auth0_sub",
+        "serverSideAppUserMappingTableName": "public.app_users",
+        "appUserInactiveSupported": false,
+        "appUserInactiveCheckExecuted": false
+      },
+      "guardrails": {
+        "routeAuthIntegrated": true,
+        "routeProductionAuthMappingIntegrated": true,
+        "routeServerSideAppUserMappingIntegrated": true,
+        "routeScaffoldOnly": true,
+        "noWritePreview": true,
+        "productionWriteEnabled": false,
+        "previewHeaderAcceptedForProductionWrite": false,
+        "dbReadExecuted": true,
+        "dbWriteExecuted": false,
+        "sqlExecuted": false,
+        "aiCallExecuted": false,
+        "activityEventsInserted": false,
+        "semanticCandidatesPersisted": false,
+        "valueObjectsCreated": false,
+        "stateFactsCreated": false,
+        "stateDeltasCreated": false,
+        "stateSnapshotsCreated": false
+      },
+      "forbiddenTextFound": false
+    }
+  ]
+}
