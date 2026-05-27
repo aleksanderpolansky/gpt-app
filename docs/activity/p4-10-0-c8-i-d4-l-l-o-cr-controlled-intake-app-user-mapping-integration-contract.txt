@@ -1,0 +1,171 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CR
+Controlled-intake app user mapping integration contract
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CR: 6a4584d
+- Expected origin/main before O-CR: 6a4584d
+- Baseline commit: 6a4584d docs: verify C8-I O-CQ browser runtime JSON postcheck
+
+Purpose
+This block defines the contract for integrating verified server-side Auth0 to internal app user mapping into the controlled-intake route.
+
+This block is contract/report-only.
+It does not modify src/app/api/activity/controlled-intake/route.ts.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+It does not enable production writes.
+
+Verified evidence carried forward
+- O-CQ browser/runtime verification passed.
+- O-CQ-POSTCHECK accepted O-CQ after PowerShell-compatible JSON verification.
+- Browser/runtime valid-header diagnostic case returned mappingStatus: mapped_user_found.
+- Browser/runtime valid-header diagnostic case returned mappedUserFound: true.
+- Browser/runtime valid-header diagnostic case returned dbReadExecuted: true.
+- Browser/runtime valid-header diagnostic case returned selectedColumns: id,auth0_sub.
+- Browser/runtime valid-header diagnostic case returned tableName: public.app_users.
+- Browser/runtime valid-header diagnostic case returned dbWriteExecuted: false.
+- Browser/runtime valid-header diagnostic case returned sqlExecuted: false.
+- Browser/runtime valid-header diagnostic case returned aiCallExecuted: false.
+- Browser/runtime valid-header diagnostic case returned activityEventsInserted: false.
+
+Integration target
+- src/app/api/activity/controlled-intake/route.ts.
+
+Existing helper to reuse
+- lib/activity/controlledIntake/serverSideAppUserMappingReadOnly.ts.
+- Export: mapServerSideAppUserReadOnly.
+- Verified diagnostic endpoint: src/app/api/activity/debug/server-side-app-user-mapping-read-only-test/route.ts.
+
+Future integration principle
+The controlled-intake route must stop relying on mocked or unresolved server-side app user mapping when a trusted Auth0 session is available.
+The route must use trusted server-side Auth0 provider and authSubject, then map authSubject to public.app_users.id through the verified read-only mapping helper.
+
+Future integration flow
+1. Receive controlled-intake request.
+2. Preserve productionWriteEnabled: false.
+3. Preserve no activity_events insert.
+4. Build trusted server-side Auth0 context using existing auth/session helper path.
+5. Use provider and authSubject only from trusted server-side context.
+6. Call mapServerSideAppUserReadOnly with trusted provider and trusted authSubject.
+7. Keep appUserId internal only.
+8. Return sanitized mapping proof flags, not the raw appUserId.
+9. Continue to block all production persistence until a later explicit write gate.
+
+Trusted input rule
+- Do not accept client-supplied appUserId as ownership.
+- Do not accept client-supplied userId as ownership.
+- Do not accept client-supplied actorId as ownership.
+- Do not accept client-supplied organizationId as ownership.
+- Do not accept client-supplied spaceId as ownership.
+- Client payload may describe activity intent, but ownership must come from trusted server-side session mapping.
+
+Required future controlled-intake mapping result fields
+- serverSideAppUserMappingExecuted.
+- serverSideAppUserMappingStatus.
+- serverSideAppUserMapped.
+- serverSideAppUserMappingDbReadExecuted.
+- serverSideAppUserMappingFailClosed.
+- serverSideAppUserMappingSelectedColumns.
+- serverSideAppUserMappingTableName.
+- appUserInactiveSupported.
+- appUserInactiveCheckExecuted.
+
+Forbidden future response fields
+- appUserId.
+- authSubject.
+- raw Auth0 session.
+- raw Auth0 profile.
+- raw Supabase row.
+- raw Supabase error object.
+- service-role key.
+- environment variable values.
+- access_token.
+- refresh_token.
+- id_token.
+
+Expected future mapped_user_found behavior
+- serverSideAppUserMappingExecuted: true.
+- serverSideAppUserMappingStatus: mapped_user_found.
+- serverSideAppUserMapped: true.
+- serverSideAppUserMappingDbReadExecuted: true.
+- serverSideAppUserMappingFailClosed: false.
+- serverSideAppUserMappingSelectedColumns: id,auth0_sub.
+- serverSideAppUserMappingTableName: public.app_users.
+- appUserInactiveSupported: false.
+- appUserInactiveCheckExecuted: false.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+- productionWriteEnabled: false.
+
+Expected future safe failure behavior
+- provider_not_supported: fail closed, no write.
+- missing_auth_subject: fail closed, no write.
+- app_user_not_found: fail closed for controlled-intake integration, no write.
+- app_user_duplicate: fail closed, no write.
+- app_user_lookup_error: fail closed, no write.
+
+Important difference from diagnostic endpoint
+The diagnostic endpoint may return HTTP 200 when mapped_user_found.
+The controlled-intake route should treat app_user_not_found as a hard blocker for trusted ownership.
+No activity should be accepted as owned by an internal app user unless mapped_user_found is true.
+
+Inactive/status rule
+- Current public.app_users schema has no active/status field.
+- Controlled-intake integration must not pretend to check inactive/status.
+- appUserInactiveSupported must remain false.
+- appUserInactiveCheckExecuted must remain false.
+- Adding inactive/status support requires a later migration/status gate.
+
+Production write boundary
+- productionWriteEnabled must remain false.
+- activity_events insert must remain false.
+- semanticCandidatesPersisted must remain false.
+- valueObjectsCreated must remain false.
+- stateFactsWritten must remain false.
+- stateDeltasWritten must remain false.
+- stateSnapshotsWritten must remain false.
+
+Future implementation gate
+O-CR does not implement the integration.
+O-CR authorizes only the next code implementation gate if the user explicitly proceeds.
+The next code gate should be O-CS.
+
+O-CS expected scope
+- Modify src/app/api/activity/controlled-intake/route.ts only if required.
+- Reuse mapServerSideAppUserReadOnly.
+- Integrate server-side app user mapping before any future write logic.
+- Keep productionWriteEnabled false.
+- Keep dbWriteExecuted false.
+- Keep sqlExecuted false.
+- Keep aiCallExecuted false.
+- Keep activityEventsInserted false.
+- Do not persist semantic candidates.
+- Do not create Value Objects.
+- Do not write state facts, state deltas or state snapshots.
+- Do not expose appUserId in the response.
+- Run TypeScript.
+- Commit only the controlled-intake integration code and its proof report.
+
+Future verification after O-CS
+- O-CT should verify the controlled-intake route in browser/runtime or same-origin fetch.
+- O-CT may allow a DB read for mapping if the route is called with a valid server-side Auth0 session.
+- O-CT must verify no DB write, no SQL, no AI and no activity_events insert.
+
+Next step decision
+Proceed to O-CS controlled-intake app user mapping integration code gate.
+O-CS must remain no production write, no activity_events insert, no semantic persistence, no SQL and no AI.
+
+PASS marker
+PASS_CONTROLLED_INTAKE_APP_USER_MAPPING_INTEGRATION_CONTRACT_CREATED_NO_CODE_CHANGE_NO_DB_WRITE_NO_SQL_NO_AI
