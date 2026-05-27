@@ -1,0 +1,1795 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R12A2 - corrected static resolver contract inspection before positive runtime case
+Date = 2026-05-27 19:27:36 +02:00
+Status = CORRECTED_STATIC_RESOLVER_CONTRACT_INSPECTION_COMPLETED
+
+1. Baseline
+Expected HEAD = 66391e6
+Actual HEAD = 66391e6
+Working tree before inspection = clean
+
+2. Why O-DJ-R12A2 exists
+O-DJ-R12A had an audit integrity issue.
+The Select-SimpleWindow function contained "$Path:$j", which caused a PowerShell parser error.
+Because of that, routeWindows and resolverWindows were not captured, but O-DJ-R12A still committed a PASS report.
+O-DJ-R12A2 corrects that by using ${Path}:260 and explicitly asserting that windows are captured.
+
+3. Marker summary
+hasRequestedActorId = True
+hasRequestedSpaceId = True
+hasRequestedOrganizationId = True
+hasRequestedContextSource = True
+hasSelectedContextScope = True
+hasMissingRequestedContext = True
+hasRequestedContextInvalid = True
+hasContextAmbiguous = True
+hasResolvedStatus = True
+hasFailClosed = True
+hasOwnedSpaceResolved = True
+hasActorSpaceRoleResolved = True
+hasCreatorOrganizationResolved = True
+hasOrganizationActorResolved = True
+hasDbReadExecuted = True
+hasSpacesTable = True
+hasActorSpaceRolesTable = True
+hasOrganizationsTable = True
+hasActorsTable = True
+hasFromCalls = True
+hasEqMappedAppUserId = True
+
+4. Capture confirmation
+routeWindowsLineCount = 55
+resolverWindowsLineCount = 1045
+resolverFullSourceLineCount = 626
+
+5. Route context parameter windows
+
+----- WINDOW needle='requestedActorId' line=253 file=src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts -----
+  247:         }),
+  248:       }),
+  249:       403,
+  250:     );
+  251:   }
+  252: 
+  253:   const requestedActorId = request.nextUrl.searchParams.get('actorId');
+  254:   const requestedSpaceId = request.nextUrl.searchParams.get('spaceId');
+  255:   const requestedOrganizationId = request.nextUrl.searchParams.get('organizationId');
+  256:   const requestedContextSource = request.nextUrl.searchParams.get('contextSource');
+  257: 
+  258:   const ownershipContextResolution =
+  259:     await resolveControlledActivityIntakeOwnershipContextReadOnly({
+
+----- WINDOW needle='requestedActorId' line=261 file=src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts -----
+  260:       mappedAppUserId,
+  261:       requestedActorId,
+  262:       requestedSpaceId,
+  263:       requestedOrganizationId,
+  264:       requestedContextSource,
+  265:     });
+  266: 
+  267:   const dbReadExecuted =
+
+----- WINDOW needle='requestedSpaceId' line=254 file=src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=262 file=src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts -----
+  268:     appUserMappingDbReadExecuted || ownershipContextResolution.dbReadExecuted;
+
+----- WINDOW needle='requestedOrganizationId' line=255 file=src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=263 file=src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts -----
+  269: 
+
+----- WINDOW needle='requestedContextSource' line=256 file=src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts -----
+
+----- WINDOW needle='requestedContextSource' line=264 file=src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts -----
+  270:   return jsonResponse(
+
+----- WINDOW needle='resolveControlledActivityIntakeOwnershipContextReadOnly' line=5 file=src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts -----
+    1: import { NextRequest, NextResponse } from 'next/server';
+    2: 
+    3: import { auth0 } from '../../../../../../lib/auth0';
+    4: import { mapServerSideAppUserReadOnly } from '../../../../../../lib/activity/controlledIntake/serverSideAppUserMappingReadOnly';
+    5: import { resolveControlledActivityIntakeOwnershipContextReadOnly } from '../../../../../../lib/activity/controlledIntake/ownershipContextResolutionReadOnly';
+    6: 
+    7: export const dynamic = 'force-dynamic';
+    8: 
+    9: const GATE = 'P4.10.0-C8-I-D4-L-L-O-DG' as const;
+   10: const MODE = 'ownership_context_resolution_read_only_diagnostic' as const;
+   11: const REQUIRED_HEADER_NAME = 'x-controlled-intake-ownership-context-resolution-read-only-test' as const;
+
+----- WINDOW needle='resolveControlledActivityIntakeOwnershipContextReadOnly' line=259 file=src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts -----
+
+6. Resolver critical windows
+
+----- WINDOW needle='export type' line=3 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+    1: import { getSupabaseAdminClient } from '../../supabase/admin';
+    2: 
+    3: export type ControlledActivityIntakeOwnershipContextResolutionSelectedScope =
+    4:   | 'personal_space'
+    5:   | 'organization_creator'
+    6:   | 'none';
+    7: 
+    8: export type ControlledActivityIntakeOwnershipContextResolutionReadOnlyStatus =
+    9:   | 'not_executed'
+   10:   | 'missing_mapped_app_user'
+   11:   | 'missing_requested_context'
+
+----- WINDOW needle='export type' line=8 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+   12:   | 'requested_context_invalid'
+   13:   | 'owned_space_resolved'
+   14:   | 'owned_space_not_found'
+   15:   | 'owned_space_not_owned_by_mapped_user'
+   16:   | 'owned_space_inactive'
+
+----- WINDOW needle='export type' line=32 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+   24:   | 'organization_not_created_by_mapped_user'
+   25:   | 'organization_inactive'
+   26:   | 'organization_actor_resolved'
+   27:   | 'organization_actor_not_found'
+   28:   | 'organization_actor_mismatch'
+   29:   | 'context_ambiguous'
+   30:   | 'context_lookup_error';
+   31: 
+   32: export type ControlledActivityIntakeOwnershipContextResolutionReadOnlyInput = {
+   33:   mappedAppUserId: string | null | undefined;
+   34:   requestedActorId?: string | null | undefined;
+   35:   requestedSpaceId?: string | null | undefined;
+   36:   requestedOrganizationId?: string | null | undefined;
+   37:   requestedContextSource?: string | null | undefined;
+   38: };
+   39: 
+   40: export type ControlledActivityIntakeOwnershipContextResolutionReadOnlyResult = {
+
+----- WINDOW needle='export type' line=40 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+   41:   executed: boolean;
+   42:   status: ControlledActivityIntakeOwnershipContextResolutionReadOnlyStatus;
+   43:   resolved: boolean;
+   44:   dbReadExecuted: boolean;
+   45:   failClosed: boolean;
+   46:   selectedContextScope: ControlledActivityIntakeOwnershipContextResolutionSelectedScope;
+   47:   requestedContextAcceptedAsHintOnly: true;
+   48:   mappedAppUserRequired: true;
+
+----- WINDOW needle='mappedAppUserId' line=33 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='mappedAppUserId' line=189 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  181:   return [requestedActorId, requestedSpaceId, requestedOrganizationId].some(
+  182:     (value) => value !== null && !isValidUuid(value),
+  183:   );
+  184: }
+  185: 
+  186: export async function resolveControlledActivityIntakeOwnershipContextReadOnly(
+  187:   input: ControlledActivityIntakeOwnershipContextResolutionReadOnlyInput,
+  188: ): Promise<ControlledActivityIntakeOwnershipContextResolutionReadOnlyResult> {
+  189:   const mappedAppUserId = normalizeOptionalId(input.mappedAppUserId);
+  190:   const requestedActorId = normalizeOptionalId(input.requestedActorId);
+  191:   const requestedSpaceId = normalizeOptionalId(input.requestedSpaceId);
+  192:   const requestedOrganizationId = normalizeOptionalId(input.requestedOrganizationId);
+  193: 
+  194:   if (!mappedAppUserId) {
+  195:     return buildOwnershipContextResult({
+  196:       status: 'missing_mapped_app_user',
+  197:       failClosed: true,
+
+----- WINDOW needle='mappedAppUserId' line=194 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  198:     });
+  199:   }
+  200: 
+  201:   if (!isValidUuid(mappedAppUserId)) {
+  202:     return buildOwnershipContextResult({
+
+----- WINDOW needle='mappedAppUserId' line=201 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  203:       status: 'requested_context_invalid',
+  204:       appUserId: mappedAppUserId,
+  205:       failClosed: true,
+  206:     });
+  207:   }
+  208: 
+  209:   if (hasInvalidRequestedId(requestedActorId, requestedSpaceId, requestedOrganizationId)) {
+
+----- WINDOW needle='mappedAppUserId' line=204 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  210:     return buildOwnershipContextResult({
+  211:       status: 'requested_context_invalid',
+  212:       appUserId: mappedAppUserId,
+
+----- WINDOW needle='mappedAppUserId' line=212 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  213:       failClosed: true,
+  214:     });
+  215:   }
+  216: 
+  217:   if (!requestedSpaceId && !requestedOrganizationId) {
+  218:     return buildOwnershipContextResult({
+  219:       status: 'missing_requested_context',
+  220:       appUserId: mappedAppUserId,
+
+----- WINDOW needle='mappedAppUserId' line=220 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  221:       failClosed: true,
+  222:     });
+  223:   }
+  224: 
+  225:   if (requestedSpaceId && requestedOrganizationId) {
+  226:     return buildOwnershipContextResult({
+  227:       status: 'context_ambiguous',
+  228:       appUserId: mappedAppUserId,
+
+----- WINDOW needle='mappedAppUserId' line=228 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  229:       failClosed: true,
+  230:     });
+  231:   }
+  232: 
+  233:   const supabase = getSupabaseAdminClient();
+  234: 
+  235:   if (requestedSpaceId) {
+  236:     try {
+
+----- WINDOW needle='mappedAppUserId' line=246 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  238:         .from('spaces')
+  239:         .select(SPACES_SELECTED_COLUMNS)
+  240:         .eq('id', requestedSpaceId)
+  241:         .limit(2);
+  242: 
+  243:       if (spaceError) {
+  244:         return buildOwnershipContextResult({
+  245:           status: 'context_lookup_error',
+  246:           appUserId: mappedAppUserId,
+  247:           spaceId: requestedSpaceId,
+  248:           dbReadExecuted: true,
+  249:           failClosed: true,
+  250:           errorMessage: errorToMessage(spaceError),
+  251:         });
+  252:       }
+  253: 
+  254:       const spaceRows = rowsFromData<SpaceOwnershipRow>(spaceData);
+
+----- WINDOW needle='mappedAppUserId' line=259 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  255: 
+  256:       if (spaceRows.length === 0) {
+  257:         return buildOwnershipContextResult({
+  258:           status: 'owned_space_not_found',
+  259:           appUserId: mappedAppUserId,
+  260:           spaceId: requestedSpaceId,
+  261:           dbReadExecuted: true,
+  262:           failClosed: true,
+  263:         });
+  264:       }
+  265: 
+  266:       if (spaceRows.length > 1) {
+  267:         return buildOwnershipContextResult({
+
+----- WINDOW needle='mappedAppUserId' line=269 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  268:           status: 'context_ambiguous',
+  269:           appUserId: mappedAppUserId,
+  270:           spaceId: requestedSpaceId,
+  271:           dbReadExecuted: true,
+  272:           failClosed: true,
+  273:         });
+  274:       }
+  275: 
+  276:       const space = spaceRows[0];
+  277: 
+
+----- WINDOW needle='mappedAppUserId' line=278 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  278:       if (space.owner_user_id !== mappedAppUserId) {
+  279:         return buildOwnershipContextResult({
+  280:           status: 'owned_space_not_owned_by_mapped_user',
+  281:           appUserId: mappedAppUserId,
+  282:           spaceId: requestedSpaceId,
+  283:           dbReadExecuted: true,
+  284:           failClosed: true,
+  285:         });
+  286:       }
+
+----- WINDOW needle='mappedAppUserId' line=281 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  287: 
+  288:       if (!isActiveStatus(space.status)) {
+  289:         return buildOwnershipContextResult({
+
+----- WINDOW needle='mappedAppUserId' line=291 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  290:           status: 'owned_space_inactive',
+  291:           appUserId: mappedAppUserId,
+  292:           spaceId: requestedSpaceId,
+  293:           dbReadExecuted: true,
+  294:           failClosed: true,
+  295:         });
+  296:       }
+  297: 
+  298:       if (!requestedActorId) {
+  299:         return buildOwnershipContextResult({
+
+----- WINDOW needle='mappedAppUserId' line=305 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  300:           status: 'owned_space_resolved',
+  301:           resolved: true,
+  302:           dbReadExecuted: true,
+  303:           failClosed: false,
+  304:           selectedContextScope: 'personal_space',
+  305:           appUserId: mappedAppUserId,
+  306:           spaceId: requestedSpaceId,
+  307:           ownedSpaceResolved: true,
+  308:         });
+  309:       }
+  310: 
+  311:       const { data: actorData, error: actorError } = await supabase
+  312:         .from('actors')
+  313:         .select(ACTORS_SELECTED_COLUMNS)
+
+----- WINDOW needle='mappedAppUserId' line=320 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  314:         .eq('id', requestedActorId)
+  315:         .limit(2);
+  316: 
+  317:       if (actorError) {
+  318:         return buildOwnershipContextResult({
+  319:           status: 'context_lookup_error',
+  320:           appUserId: mappedAppUserId,
+  321:           actorId: requestedActorId,
+  322:           spaceId: requestedSpaceId,
+  323:           dbReadExecuted: true,
+  324:           failClosed: true,
+  325:           errorMessage: errorToMessage(actorError),
+  326:         });
+  327:       }
+  328: 
+
+----- WINDOW needle='mappedAppUserId' line=334 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  329:       const actorRows = rowsFromData<ActorRow>(actorData);
+  330: 
+  331:       if (actorRows.length === 0) {
+  332:         return buildOwnershipContextResult({
+  333:           status: 'actor_not_found',
+  334:           appUserId: mappedAppUserId,
+  335:           actorId: requestedActorId,
+  336:           spaceId: requestedSpaceId,
+  337:           dbReadExecuted: true,
+  338:           failClosed: true,
+  339:         });
+  340:       }
+  341: 
+  342:       if (actorRows.length > 1) {
+
+----- WINDOW needle='mappedAppUserId' line=345 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  343:         return buildOwnershipContextResult({
+  344:           status: 'context_ambiguous',
+  345:           appUserId: mappedAppUserId,
+  346:           actorId: requestedActorId,
+  347:           spaceId: requestedSpaceId,
+  348:           dbReadExecuted: true,
+  349:           failClosed: true,
+  350:         });
+  351:       }
+  352: 
+  353:       const actor = actorRows[0];
+
+----- WINDOW needle='mappedAppUserId' line=358 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  354: 
+  355:       if (!isActiveStatus(actor.status)) {
+  356:         return buildOwnershipContextResult({
+  357:           status: 'actor_inactive',
+  358:           appUserId: mappedAppUserId,
+  359:           actorId: requestedActorId,
+  360:           spaceId: requestedSpaceId,
+  361:           dbReadExecuted: true,
+  362:           failClosed: true,
+  363:         });
+  364:       }
+  365: 
+  366:       const { data: roleData, error: roleError } = await supabase
+
+----- WINDOW needle='mappedAppUserId' line=376 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  368:         .select(ACTOR_SPACE_ROLES_SELECTED_COLUMNS)
+  369:         .eq('actor_id', requestedActorId)
+  370:         .eq('space_id', requestedSpaceId)
+  371:         .limit(2);
+  372: 
+  373:       if (roleError) {
+  374:         return buildOwnershipContextResult({
+  375:           status: 'context_lookup_error',
+  376:           appUserId: mappedAppUserId,
+  377:           actorId: requestedActorId,
+  378:           spaceId: requestedSpaceId,
+  379:           dbReadExecuted: true,
+  380:           failClosed: true,
+  381:           errorMessage: errorToMessage(roleError),
+  382:         });
+  383:       }
+  384: 
+
+----- WINDOW needle='mappedAppUserId' line=390 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  385:       const roleRows = rowsFromData<ActorSpaceRoleRow>(roleData);
+  386: 
+  387:       if (roleRows.length === 0) {
+  388:         return buildOwnershipContextResult({
+  389:           status: 'actor_space_role_not_found',
+  390:           appUserId: mappedAppUserId,
+  391:           actorId: requestedActorId,
+  392:           spaceId: requestedSpaceId,
+  393:           dbReadExecuted: true,
+  394:           failClosed: true,
+  395:         });
+  396:       }
+  397: 
+  398:       if (roleRows.length > 1) {
+
+----- WINDOW needle='mappedAppUserId' line=401 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  399:         return buildOwnershipContextResult({
+  400:           status: 'context_ambiguous',
+  401:           appUserId: mappedAppUserId,
+  402:           actorId: requestedActorId,
+  403:           spaceId: requestedSpaceId,
+  404:           dbReadExecuted: true,
+  405:           failClosed: true,
+  406:         });
+  407:       }
+  408: 
+  409:       const role = roleRows[0];
+
+----- WINDOW needle='mappedAppUserId' line=414 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  410: 
+  411:       if (role.is_active !== true) {
+  412:         return buildOwnershipContextResult({
+  413:           status: 'actor_space_role_inactive',
+  414:           appUserId: mappedAppUserId,
+  415:           actorId: requestedActorId,
+  416:           spaceId: requestedSpaceId,
+  417:           actorSpaceRoleId: role.id,
+  418:           dbReadExecuted: true,
+  419:           failClosed: true,
+  420:         });
+  421:       }
+  422: 
+
+----- WINDOW needle='mappedAppUserId' line=429 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  423:       return buildOwnershipContextResult({
+  424:         status: 'actor_space_role_resolved',
+  425:         resolved: true,
+  426:         dbReadExecuted: true,
+  427:         failClosed: false,
+  428:         selectedContextScope: 'personal_space',
+  429:         appUserId: mappedAppUserId,
+  430:         actorId: requestedActorId,
+  431:         spaceId: requestedSpaceId,
+  432:         actorSpaceRoleId: role.id,
+  433:         functionType: role.function_type,
+  434:         authorityLevel: role.authority_level,
+  435:         responsibilityLevel: role.responsibility_level,
+  436:         ownedSpaceResolved: true,
+  437:         actorSpaceRoleResolved: true,
+
+----- WINDOW needle='mappedAppUserId' line=442 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  438:       });
+  439:     } catch (error) {
+  440:       return buildOwnershipContextResult({
+  441:         status: 'context_lookup_error',
+  442:         appUserId: mappedAppUserId,
+  443:         actorId: requestedActorId,
+  444:         spaceId: requestedSpaceId,
+  445:         dbReadExecuted: true,
+  446:         failClosed: true,
+  447:         errorMessage: errorToMessage(error),
+  448:       });
+  449:     }
+  450:   }
+
+----- WINDOW needle='mappedAppUserId' line=463 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  455:         .from('organizations')
+  456:         .select(ORGANIZATIONS_SELECTED_COLUMNS)
+  457:         .eq('id', requestedOrganizationId)
+  458:         .limit(2);
+  459: 
+  460:       if (organizationError) {
+  461:         return buildOwnershipContextResult({
+  462:           status: 'context_lookup_error',
+  463:           appUserId: mappedAppUserId,
+  464:           organizationId: requestedOrganizationId,
+  465:           dbReadExecuted: true,
+  466:           failClosed: true,
+  467:           errorMessage: errorToMessage(organizationError),
+  468:         });
+  469:       }
+  470: 
+  471:       const organizationRows = rowsFromData<OrganizationOwnershipRow>(organizationData);
+
+----- WINDOW needle='mappedAppUserId' line=476 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  472: 
+  473:       if (organizationRows.length === 0) {
+  474:         return buildOwnershipContextResult({
+  475:           status: 'organization_not_found',
+  476:           appUserId: mappedAppUserId,
+  477:           organizationId: requestedOrganizationId,
+  478:           dbReadExecuted: true,
+  479:           failClosed: true,
+  480:         });
+  481:       }
+  482: 
+  483:       if (organizationRows.length > 1) {
+  484:         return buildOwnershipContextResult({
+
+----- WINDOW needle='mappedAppUserId' line=486 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  485:           status: 'context_ambiguous',
+  486:           appUserId: mappedAppUserId,
+  487:           organizationId: requestedOrganizationId,
+  488:           dbReadExecuted: true,
+  489:           failClosed: true,
+  490:         });
+  491:       }
+  492: 
+  493:       const organization = organizationRows[0];
+  494: 
+
+----- WINDOW needle='mappedAppUserId' line=495 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  495:       if (organization.created_by_user_id !== mappedAppUserId) {
+  496:         return buildOwnershipContextResult({
+  497:           status: 'organization_not_created_by_mapped_user',
+  498:           appUserId: mappedAppUserId,
+  499:           organizationId: requestedOrganizationId,
+  500:           dbReadExecuted: true,
+  501:           failClosed: true,
+  502:         });
+  503:       }
+
+----- WINDOW needle='mappedAppUserId' line=498 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  504: 
+  505:       if (!isActiveStatus(organization.status)) {
+  506:         return buildOwnershipContextResult({
+
+----- WINDOW needle='mappedAppUserId' line=508 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  507:           status: 'organization_inactive',
+  508:           appUserId: mappedAppUserId,
+  509:           organizationId: requestedOrganizationId,
+  510:           dbReadExecuted: true,
+  511:           failClosed: true,
+  512:         });
+  513:       }
+  514: 
+  515:       if (!requestedActorId) {
+  516:         return buildOwnershipContextResult({
+
+----- WINDOW needle='mappedAppUserId' line=522 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  517:           status: 'creator_organization_resolved',
+  518:           resolved: true,
+  519:           dbReadExecuted: true,
+  520:           failClosed: false,
+  521:           selectedContextScope: 'organization_creator',
+  522:           appUserId: mappedAppUserId,
+  523:           organizationId: requestedOrganizationId,
+  524:           creatorOrganizationResolved: true,
+  525:         });
+  526:       }
+  527: 
+  528:       const { data: actorData, error: actorError } = await supabase
+  529:         .from('actors')
+  530:         .select(ACTORS_SELECTED_COLUMNS)
+
+----- WINDOW needle='mappedAppUserId' line=537 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  531:         .eq('id', requestedActorId)
+  532:         .limit(2);
+  533: 
+  534:       if (actorError) {
+  535:         return buildOwnershipContextResult({
+  536:           status: 'context_lookup_error',
+  537:           appUserId: mappedAppUserId,
+  538:           actorId: requestedActorId,
+  539:           organizationId: requestedOrganizationId,
+  540:           dbReadExecuted: true,
+  541:           failClosed: true,
+  542:           errorMessage: errorToMessage(actorError),
+  543:         });
+  544:       }
+  545: 
+
+----- WINDOW needle='mappedAppUserId' line=551 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  546:       const actorRows = rowsFromData<ActorRow>(actorData);
+  547: 
+  548:       if (actorRows.length === 0) {
+  549:         return buildOwnershipContextResult({
+  550:           status: 'organization_actor_not_found',
+  551:           appUserId: mappedAppUserId,
+  552:           actorId: requestedActorId,
+  553:           organizationId: requestedOrganizationId,
+  554:           dbReadExecuted: true,
+  555:           failClosed: true,
+  556:         });
+  557:       }
+  558: 
+  559:       if (actorRows.length > 1) {
+
+----- WINDOW needle='mappedAppUserId' line=562 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  560:         return buildOwnershipContextResult({
+  561:           status: 'context_ambiguous',
+  562:           appUserId: mappedAppUserId,
+  563:           actorId: requestedActorId,
+  564:           organizationId: requestedOrganizationId,
+  565:           dbReadExecuted: true,
+  566:           failClosed: true,
+  567:         });
+  568:       }
+  569: 
+  570:       const actor = actorRows[0];
+
+----- WINDOW needle='mappedAppUserId' line=575 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  571: 
+  572:       if (!isActiveStatus(actor.status)) {
+  573:         return buildOwnershipContextResult({
+  574:           status: 'actor_inactive',
+  575:           appUserId: mappedAppUserId,
+  576:           actorId: requestedActorId,
+  577:           organizationId: requestedOrganizationId,
+  578:           dbReadExecuted: true,
+  579:           failClosed: true,
+  580:         });
+  581:       }
+  582: 
+  583:       if (actor.organization_id !== requestedOrganizationId) {
+
+----- WINDOW needle='mappedAppUserId' line=586 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  584:         return buildOwnershipContextResult({
+  585:           status: 'organization_actor_mismatch',
+  586:           appUserId: mappedAppUserId,
+  587:           actorId: requestedActorId,
+  588:           organizationId: requestedOrganizationId,
+  589:           dbReadExecuted: true,
+  590:           failClosed: true,
+  591:         });
+  592:       }
+  593: 
+  594:       return buildOwnershipContextResult({
+
+----- WINDOW needle='mappedAppUserId' line=600 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  595:         status: 'organization_actor_resolved',
+  596:         resolved: true,
+  597:         dbReadExecuted: true,
+  598:         failClosed: false,
+  599:         selectedContextScope: 'organization_creator',
+  600:         appUserId: mappedAppUserId,
+  601:         actorId: requestedActorId,
+  602:         organizationId: requestedOrganizationId,
+  603:         creatorOrganizationResolved: true,
+  604:         organizationActorResolved: true,
+  605:       });
+  606:     } catch (error) {
+  607:       return buildOwnershipContextResult({
+  608:         status: 'context_lookup_error',
+
+----- WINDOW needle='mappedAppUserId' line=609 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  609:         appUserId: mappedAppUserId,
+  610:         actorId: requestedActorId,
+  611:         organizationId: requestedOrganizationId,
+  612:         dbReadExecuted: true,
+  613:         failClosed: true,
+  614:         errorMessage: errorToMessage(error),
+  615:       });
+  616:     }
+  617:   }
+
+----- WINDOW needle='mappedAppUserId' line=621 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  618: 
+  619:   return buildOwnershipContextResult({
+  620:     status: 'missing_requested_context',
+  621:     appUserId: mappedAppUserId,
+  622:     failClosed: true,
+  623:   });
+  624: }
+
+----- WINDOW needle='requestedActorId' line=34 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=177 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  169:     authorityLevel: null,
+  170:     responsibilityLevel: null,
+  171:     errorMessage: null,
+  172:     ...overrides,
+  173:   };
+  174: }
+  175: 
+  176: function hasInvalidRequestedId(
+  177:   requestedActorId: string | null,
+  178:   requestedSpaceId: string | null,
+  179:   requestedOrganizationId: string | null,
+  180: ): boolean {
+
+----- WINDOW needle='requestedActorId' line=181 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=190 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=209 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=298 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=314 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=321 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=335 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=346 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=359 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  367:         .from('actor_space_roles')
+
+----- WINDOW needle='requestedActorId' line=369 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=377 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=391 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=402 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=415 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=430 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=443 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  451: 
+
+----- WINDOW needle='requestedActorId' line=515 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=531 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=538 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=552 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=563 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=576 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=587 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=601 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedActorId' line=610 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=35 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=178 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=181 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=191 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=209 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=217 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=225 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=235 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  237:       const { data: spaceData, error: spaceError } = await supabase
+
+----- WINDOW needle='requestedSpaceId' line=240 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=247 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=260 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=270 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=282 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=292 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=306 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=322 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=336 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=347 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=360 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=370 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=378 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=392 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=403 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=416 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=431 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedSpaceId' line=444 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  452:   if (requestedOrganizationId) {
+
+----- WINDOW needle='requestedOrganizationId' line=36 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=179 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=181 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=192 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=209 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=217 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=225 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=452 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  453:     try {
+  454:       const { data: organizationData, error: organizationError } = await supabase
+
+----- WINDOW needle='requestedOrganizationId' line=457 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=464 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=477 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=487 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=499 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=509 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=523 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=539 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=553 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=564 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=577 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=583 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=588 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=602 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedOrganizationId' line=611 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requestedContextSource' line=37 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='missing_requested_context' line=11 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+   17:   | 'actor_space_role_resolved'
+   18:   | 'actor_space_role_not_found'
+   19:   | 'actor_space_role_inactive'
+
+----- WINDOW needle='missing_requested_context' line=219 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='missing_requested_context' line=620 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requested_context_invalid' line=12 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+   20:   | 'actor_not_found'
+
+----- WINDOW needle='requested_context_invalid' line=203 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='requested_context_invalid' line=211 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='context_ambiguous' line=29 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+   21:   | 'actor_inactive'
+   22:   | 'creator_organization_resolved'
+   23:   | 'organization_not_found'
+
+----- WINDOW needle='context_ambiguous' line=227 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='context_ambiguous' line=268 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='context_ambiguous' line=344 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='context_ambiguous' line=400 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='context_ambiguous' line=485 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='context_ambiguous' line=561 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='selectedContextScope' line=46 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+   49:   ownedSpaceResolved: boolean;
+   50:   actorSpaceRoleResolved: boolean;
+   51:   creatorOrganizationResolved: boolean;
+   52:   organizationActorResolved: boolean;
+   53:   responseSanitized: true;
+   54:   appUserId: string | null;
+
+----- WINDOW needle='selectedContextScope' line=155 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  147:   overrides: Partial<ControlledActivityIntakeOwnershipContextResolutionReadOnlyResult>,
+  148: ): ControlledActivityIntakeOwnershipContextResolutionReadOnlyResult {
+  149:   return {
+  150:     executed: true,
+  151:     status: 'not_executed',
+  152:     resolved: false,
+  153:     dbReadExecuted: false,
+  154:     failClosed: true,
+  155:     selectedContextScope: 'none',
+  156:     requestedContextAcceptedAsHintOnly: true,
+  157:     mappedAppUserRequired: true,
+  158:     ownedSpaceResolved: false,
+  159:     actorSpaceRoleResolved: false,
+  160:     creatorOrganizationResolved: false,
+  161:     organizationActorResolved: false,
+  162:     responseSanitized: true,
+  163:     appUserId: null,
+
+----- WINDOW needle='selectedContextScope' line=304 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='selectedContextScope' line=428 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='selectedContextScope' line=521 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='selectedContextScope' line=599 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='ownedSpaceResolved' line=49 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+   55:   actorId: string | null;
+   56:   spaceId: string | null;
+   57:   organizationId: string | null;
+
+----- WINDOW needle='ownedSpaceResolved' line=158 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  164:     actorId: null,
+  165:     spaceId: null,
+  166:     organizationId: null,
+
+----- WINDOW needle='ownedSpaceResolved' line=307 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='ownedSpaceResolved' line=436 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='actorSpaceRoleResolved' line=50 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+   58:   actorSpaceRoleId: string | null;
+
+----- WINDOW needle='actorSpaceRoleResolved' line=159 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  167:     actorSpaceRoleId: null,
+
+----- WINDOW needle='actorSpaceRoleResolved' line=437 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='creatorOrganizationResolved' line=51 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+   59:   functionType: string | null;
+
+----- WINDOW needle='creatorOrganizationResolved' line=160 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  168:     functionType: null,
+
+----- WINDOW needle='creatorOrganizationResolved' line=524 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='creatorOrganizationResolved' line=603 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='organizationActorResolved' line=52 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+   60:   authorityLevel: number | null;
+
+----- WINDOW needle='organizationActorResolved' line=161 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='organizationActorResolved' line=604 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=44 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=153 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  145: 
+  146: function buildOwnershipContextResult(
+
+----- WINDOW needle='dbReadExecuted' line=248 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=261 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=271 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=283 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=293 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=302 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=323 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=337 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=348 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=361 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=379 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=393 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=404 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=418 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=426 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=445 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=465 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=478 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=488 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=500 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=510 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=519 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=540 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=554 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=565 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=578 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=589 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=597 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='dbReadExecuted' line=612 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=45 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=154 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=197 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=205 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=213 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=221 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=229 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=249 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=262 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=272 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=284 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=294 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=303 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=324 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=338 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=349 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=362 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=380 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=394 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=405 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=419 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=427 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=446 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=466 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=479 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=489 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=501 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=511 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=520 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=541 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=555 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=566 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=579 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=590 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=598 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=613 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='failClosed' line=622 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='resolved' line=13 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='resolved' line=17 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='resolved' line=22 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='resolved' line=26 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='resolved' line=43 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='resolved' line=152 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+  144: }
+
+----- WINDOW needle='resolved' line=300 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='resolved' line=301 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='resolved' line=424 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='resolved' line=425 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='resolved' line=517 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='resolved' line=518 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='resolved' line=595 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='resolved' line=596 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.from(' line=238 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.from(' line=312 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.from(' line=367 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.from(' line=455 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.from(' line=529 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.select(' line=239 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.select(' line=313 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.select(' line=368 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.select(' line=456 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.select(' line=530 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.eq(' line=240 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.eq(' line=314 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.eq(' line=369 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.eq(' line=370 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.eq(' line=457 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+----- WINDOW needle='.eq(' line=531 file=lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts -----
+
+7. Full resolver source snapshot
+===== BEGIN FULL FILE: lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts =====
+    1: import { getSupabaseAdminClient } from '../../supabase/admin';
+    2: 
+    3: export type ControlledActivityIntakeOwnershipContextResolutionSelectedScope =
+    4:   | 'personal_space'
+    5:   | 'organization_creator'
+    6:   | 'none';
+    7: 
+    8: export type ControlledActivityIntakeOwnershipContextResolutionReadOnlyStatus =
+    9:   | 'not_executed'
+   10:   | 'missing_mapped_app_user'
+   11:   | 'missing_requested_context'
+   12:   | 'requested_context_invalid'
+   13:   | 'owned_space_resolved'
+   14:   | 'owned_space_not_found'
+   15:   | 'owned_space_not_owned_by_mapped_user'
+   16:   | 'owned_space_inactive'
+   17:   | 'actor_space_role_resolved'
+   18:   | 'actor_space_role_not_found'
+   19:   | 'actor_space_role_inactive'
+   20:   | 'actor_not_found'
+   21:   | 'actor_inactive'
+   22:   | 'creator_organization_resolved'
+   23:   | 'organization_not_found'
+   24:   | 'organization_not_created_by_mapped_user'
+   25:   | 'organization_inactive'
+   26:   | 'organization_actor_resolved'
+   27:   | 'organization_actor_not_found'
+   28:   | 'organization_actor_mismatch'
+   29:   | 'context_ambiguous'
+   30:   | 'context_lookup_error';
+   31: 
+   32: export type ControlledActivityIntakeOwnershipContextResolutionReadOnlyInput = {
+   33:   mappedAppUserId: string | null | undefined;
+   34:   requestedActorId?: string | null | undefined;
+   35:   requestedSpaceId?: string | null | undefined;
+   36:   requestedOrganizationId?: string | null | undefined;
+   37:   requestedContextSource?: string | null | undefined;
+   38: };
+   39: 
+   40: export type ControlledActivityIntakeOwnershipContextResolutionReadOnlyResult = {
+   41:   executed: boolean;
+   42:   status: ControlledActivityIntakeOwnershipContextResolutionReadOnlyStatus;
+   43:   resolved: boolean;
+   44:   dbReadExecuted: boolean;
+   45:   failClosed: boolean;
+   46:   selectedContextScope: ControlledActivityIntakeOwnershipContextResolutionSelectedScope;
+   47:   requestedContextAcceptedAsHintOnly: true;
+   48:   mappedAppUserRequired: true;
+   49:   ownedSpaceResolved: boolean;
+   50:   actorSpaceRoleResolved: boolean;
+   51:   creatorOrganizationResolved: boolean;
+   52:   organizationActorResolved: boolean;
+   53:   responseSanitized: true;
+   54:   appUserId: string | null;
+   55:   actorId: string | null;
+   56:   spaceId: string | null;
+   57:   organizationId: string | null;
+   58:   actorSpaceRoleId: string | null;
+   59:   functionType: string | null;
+   60:   authorityLevel: number | null;
+   61:   responsibilityLevel: number | null;
+   62:   errorMessage: string | null;
+   63: };
+   64: 
+   65: type SpaceOwnershipRow = {
+   66:   id: string | null;
+   67:   owner_user_id: string | null;
+   68:   status: string | null;
+   69: };
+   70: 
+   71: type ActorRow = {
+   72:   id: string | null;
+   73:   actor_type: string | null;
+   74:   person_id: string | null;
+   75:   organization_id: string | null;
+   76:   display_name: string | null;
+   77:   status: string | null;
+   78: };
+   79: 
+   80: type ActorSpaceRoleRow = {
+   81:   id: string | null;
+   82:   actor_id: string | null;
+   83:   space_id: string | null;
+   84:   function_type: string | null;
+   85:   is_active: boolean | null;
+   86:   authority_level: number | null;
+   87:   responsibility_level: number | null;
+   88: };
+   89: 
+   90: type OrganizationOwnershipRow = {
+   91:   id: string | null;
+   92:   created_by_user_id: string | null;
+   93:   organization_name: string | null;
+   94:   organization_type: string | null;
+   95:   status: string | null;
+   96: };
+   97: 
+   98: const SPACES_SELECTED_COLUMNS = 'id,owner_user_id,status' as const;
+   99: const ACTORS_SELECTED_COLUMNS = 'id,actor_type,person_id,organization_id,display_name,status' as const;
+  100: const ACTOR_SPACE_ROLES_SELECTED_COLUMNS =
+  101:   'id,actor_id,space_id,function_type,is_active,authority_level,responsibility_level' as const;
+  102: const ORGANIZATIONS_SELECTED_COLUMNS =
+  103:   'id,created_by_user_id,organization_name,organization_type,status' as const;
+  104: 
+  105: const UUID_PATTERN =
+  106:   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  107: 
+  108: function normalizeOptionalId(value: string | null | undefined): string | null {
+  109:   if (typeof value !== 'string') {
+  110:     return null;
+  111:   }
+  112: 
+  113:   const trimmedValue = value.trim();
+  114: 
+  115:   return trimmedValue.length > 0 ? trimmedValue : null;
+  116: }
+  117: 
+  118: function isValidUuid(value: string): boolean {
+  119:   return UUID_PATTERN.test(value);
+  120: }
+  121: 
+  122: function isActiveStatus(status: string | null): boolean {
+  123:   return status === 'active';
+  124: }
+  125: 
+  126: function rowsFromData<RowType>(data: unknown): RowType[] {
+  127:   return Array.isArray(data) ? (data as RowType[]) : [];
+  128: }
+  129: 
+  130: function errorToMessage(error: unknown): string {
+  131:   if (error instanceof Error) {
+  132:     return error.message;
+  133:   }
+  134: 
+  135:   if (typeof error === 'object' && error !== null && 'message' in error) {
+  136:     const maybeMessage = (error as { message?: unknown }).message;
+  137: 
+  138:     if (typeof maybeMessage === 'string') {
+  139:       return maybeMessage;
+  140:     }
+  141:   }
+  142: 
+  143:   return 'Unknown ownership/context lookup error.';
+  144: }
+  145: 
+  146: function buildOwnershipContextResult(
+  147:   overrides: Partial<ControlledActivityIntakeOwnershipContextResolutionReadOnlyResult>,
+  148: ): ControlledActivityIntakeOwnershipContextResolutionReadOnlyResult {
+  149:   return {
+  150:     executed: true,
+  151:     status: 'not_executed',
+  152:     resolved: false,
+  153:     dbReadExecuted: false,
+  154:     failClosed: true,
+  155:     selectedContextScope: 'none',
+  156:     requestedContextAcceptedAsHintOnly: true,
+  157:     mappedAppUserRequired: true,
+  158:     ownedSpaceResolved: false,
+  159:     actorSpaceRoleResolved: false,
+  160:     creatorOrganizationResolved: false,
+  161:     organizationActorResolved: false,
+  162:     responseSanitized: true,
+  163:     appUserId: null,
+  164:     actorId: null,
+  165:     spaceId: null,
+  166:     organizationId: null,
+  167:     actorSpaceRoleId: null,
+  168:     functionType: null,
+  169:     authorityLevel: null,
+  170:     responsibilityLevel: null,
+  171:     errorMessage: null,
+  172:     ...overrides,
+  173:   };
+  174: }
+  175: 
+  176: function hasInvalidRequestedId(
+  177:   requestedActorId: string | null,
+  178:   requestedSpaceId: string | null,
+  179:   requestedOrganizationId: string | null,
+  180: ): boolean {
+  181:   return [requestedActorId, requestedSpaceId, requestedOrganizationId].some(
+  182:     (value) => value !== null && !isValidUuid(value),
+  183:   );
+  184: }
+  185: 
+  186: export async function resolveControlledActivityIntakeOwnershipContextReadOnly(
+  187:   input: ControlledActivityIntakeOwnershipContextResolutionReadOnlyInput,
+  188: ): Promise<ControlledActivityIntakeOwnershipContextResolutionReadOnlyResult> {
+  189:   const mappedAppUserId = normalizeOptionalId(input.mappedAppUserId);
+  190:   const requestedActorId = normalizeOptionalId(input.requestedActorId);
+  191:   const requestedSpaceId = normalizeOptionalId(input.requestedSpaceId);
+  192:   const requestedOrganizationId = normalizeOptionalId(input.requestedOrganizationId);
+  193: 
+  194:   if (!mappedAppUserId) {
+  195:     return buildOwnershipContextResult({
+  196:       status: 'missing_mapped_app_user',
+  197:       failClosed: true,
+  198:     });
+  199:   }
+  200: 
+  201:   if (!isValidUuid(mappedAppUserId)) {
+  202:     return buildOwnershipContextResult({
+  203:       status: 'requested_context_invalid',
+  204:       appUserId: mappedAppUserId,
+  205:       failClosed: true,
+  206:     });
+  207:   }
+  208: 
+  209:   if (hasInvalidRequestedId(requestedActorId, requestedSpaceId, requestedOrganizationId)) {
+  210:     return buildOwnershipContextResult({
+  211:       status: 'requested_context_invalid',
+  212:       appUserId: mappedAppUserId,
+  213:       failClosed: true,
+  214:     });
+  215:   }
+  216: 
+  217:   if (!requestedSpaceId && !requestedOrganizationId) {
+  218:     return buildOwnershipContextResult({
+  219:       status: 'missing_requested_context',
+  220:       appUserId: mappedAppUserId,
+  221:       failClosed: true,
+  222:     });
+  223:   }
+  224: 
+  225:   if (requestedSpaceId && requestedOrganizationId) {
+  226:     return buildOwnershipContextResult({
+  227:       status: 'context_ambiguous',
+  228:       appUserId: mappedAppUserId,
+  229:       failClosed: true,
+  230:     });
+  231:   }
+  232: 
+  233:   const supabase = getSupabaseAdminClient();
+  234: 
+  235:   if (requestedSpaceId) {
+  236:     try {
+  237:       const { data: spaceData, error: spaceError } = await supabase
+  238:         .from('spaces')
+  239:         .select(SPACES_SELECTED_COLUMNS)
+  240:         .eq('id', requestedSpaceId)
+  241:         .limit(2);
+  242: 
+  243:       if (spaceError) {
+  244:         return buildOwnershipContextResult({
+  245:           status: 'context_lookup_error',
+  246:           appUserId: mappedAppUserId,
+  247:           spaceId: requestedSpaceId,
+  248:           dbReadExecuted: true,
+  249:           failClosed: true,
+  250:           errorMessage: errorToMessage(spaceError),
+  251:         });
+  252:       }
+  253: 
+  254:       const spaceRows = rowsFromData<SpaceOwnershipRow>(spaceData);
+  255: 
+  256:       if (spaceRows.length === 0) {
+  257:         return buildOwnershipContextResult({
+  258:           status: 'owned_space_not_found',
+  259:           appUserId: mappedAppUserId,
+  260:           spaceId: requestedSpaceId,
+  261:           dbReadExecuted: true,
+  262:           failClosed: true,
+  263:         });
+  264:       }
+  265: 
+  266:       if (spaceRows.length > 1) {
+  267:         return buildOwnershipContextResult({
+  268:           status: 'context_ambiguous',
+  269:           appUserId: mappedAppUserId,
+  270:           spaceId: requestedSpaceId,
+  271:           dbReadExecuted: true,
+  272:           failClosed: true,
+  273:         });
+  274:       }
+  275: 
+  276:       const space = spaceRows[0];
+  277: 
+  278:       if (space.owner_user_id !== mappedAppUserId) {
+  279:         return buildOwnershipContextResult({
+  280:           status: 'owned_space_not_owned_by_mapped_user',
+  281:           appUserId: mappedAppUserId,
+  282:           spaceId: requestedSpaceId,
+  283:           dbReadExecuted: true,
+  284:           failClosed: true,
+  285:         });
+  286:       }
+  287: 
+  288:       if (!isActiveStatus(space.status)) {
+  289:         return buildOwnershipContextResult({
+  290:           status: 'owned_space_inactive',
+  291:           appUserId: mappedAppUserId,
+  292:           spaceId: requestedSpaceId,
+  293:           dbReadExecuted: true,
+  294:           failClosed: true,
+  295:         });
+  296:       }
+  297: 
+  298:       if (!requestedActorId) {
+  299:         return buildOwnershipContextResult({
+  300:           status: 'owned_space_resolved',
+  301:           resolved: true,
+  302:           dbReadExecuted: true,
+  303:           failClosed: false,
+  304:           selectedContextScope: 'personal_space',
+  305:           appUserId: mappedAppUserId,
+  306:           spaceId: requestedSpaceId,
+  307:           ownedSpaceResolved: true,
+  308:         });
+  309:       }
+  310: 
+  311:       const { data: actorData, error: actorError } = await supabase
+  312:         .from('actors')
+  313:         .select(ACTORS_SELECTED_COLUMNS)
+  314:         .eq('id', requestedActorId)
+  315:         .limit(2);
+  316: 
+  317:       if (actorError) {
+  318:         return buildOwnershipContextResult({
+  319:           status: 'context_lookup_error',
+  320:           appUserId: mappedAppUserId,
+  321:           actorId: requestedActorId,
+  322:           spaceId: requestedSpaceId,
+  323:           dbReadExecuted: true,
+  324:           failClosed: true,
+  325:           errorMessage: errorToMessage(actorError),
+  326:         });
+  327:       }
+  328: 
+  329:       const actorRows = rowsFromData<ActorRow>(actorData);
+  330: 
+  331:       if (actorRows.length === 0) {
+  332:         return buildOwnershipContextResult({
+  333:           status: 'actor_not_found',
+  334:           appUserId: mappedAppUserId,
+  335:           actorId: requestedActorId,
+  336:           spaceId: requestedSpaceId,
+  337:           dbReadExecuted: true,
+  338:           failClosed: true,
+  339:         });
+  340:       }
+  341: 
+  342:       if (actorRows.length > 1) {
+  343:         return buildOwnershipContextResult({
+  344:           status: 'context_ambiguous',
+  345:           appUserId: mappedAppUserId,
+  346:           actorId: requestedActorId,
+  347:           spaceId: requestedSpaceId,
+  348:           dbReadExecuted: true,
+  349:           failClosed: true,
+  350:         });
+  351:       }
+  352: 
+  353:       const actor = actorRows[0];
+  354: 
+  355:       if (!isActiveStatus(actor.status)) {
+  356:         return buildOwnershipContextResult({
+  357:           status: 'actor_inactive',
+  358:           appUserId: mappedAppUserId,
+  359:           actorId: requestedActorId,
+  360:           spaceId: requestedSpaceId,
+  361:           dbReadExecuted: true,
+  362:           failClosed: true,
+  363:         });
+  364:       }
+  365: 
+  366:       const { data: roleData, error: roleError } = await supabase
+  367:         .from('actor_space_roles')
+  368:         .select(ACTOR_SPACE_ROLES_SELECTED_COLUMNS)
+  369:         .eq('actor_id', requestedActorId)
+  370:         .eq('space_id', requestedSpaceId)
+  371:         .limit(2);
+  372: 
+  373:       if (roleError) {
+  374:         return buildOwnershipContextResult({
+  375:           status: 'context_lookup_error',
+  376:           appUserId: mappedAppUserId,
+  377:           actorId: requestedActorId,
+  378:           spaceId: requestedSpaceId,
+  379:           dbReadExecuted: true,
+  380:           failClosed: true,
+  381:           errorMessage: errorToMessage(roleError),
+  382:         });
+  383:       }
+  384: 
+  385:       const roleRows = rowsFromData<ActorSpaceRoleRow>(roleData);
+  386: 
+  387:       if (roleRows.length === 0) {
+  388:         return buildOwnershipContextResult({
+  389:           status: 'actor_space_role_not_found',
+  390:           appUserId: mappedAppUserId,
+  391:           actorId: requestedActorId,
+  392:           spaceId: requestedSpaceId,
+  393:           dbReadExecuted: true,
+  394:           failClosed: true,
+  395:         });
+  396:       }
+  397: 
+  398:       if (roleRows.length > 1) {
+  399:         return buildOwnershipContextResult({
+  400:           status: 'context_ambiguous',
+  401:           appUserId: mappedAppUserId,
+  402:           actorId: requestedActorId,
+  403:           spaceId: requestedSpaceId,
+  404:           dbReadExecuted: true,
+  405:           failClosed: true,
+  406:         });
+  407:       }
+  408: 
+  409:       const role = roleRows[0];
+  410: 
+  411:       if (role.is_active !== true) {
+  412:         return buildOwnershipContextResult({
+  413:           status: 'actor_space_role_inactive',
+  414:           appUserId: mappedAppUserId,
+  415:           actorId: requestedActorId,
+  416:           spaceId: requestedSpaceId,
+  417:           actorSpaceRoleId: role.id,
+  418:           dbReadExecuted: true,
+  419:           failClosed: true,
+  420:         });
+  421:       }
+  422: 
+  423:       return buildOwnershipContextResult({
+  424:         status: 'actor_space_role_resolved',
+  425:         resolved: true,
+  426:         dbReadExecuted: true,
+  427:         failClosed: false,
+  428:         selectedContextScope: 'personal_space',
+  429:         appUserId: mappedAppUserId,
+  430:         actorId: requestedActorId,
+  431:         spaceId: requestedSpaceId,
+  432:         actorSpaceRoleId: role.id,
+  433:         functionType: role.function_type,
+  434:         authorityLevel: role.authority_level,
+  435:         responsibilityLevel: role.responsibility_level,
+  436:         ownedSpaceResolved: true,
+  437:         actorSpaceRoleResolved: true,
+  438:       });
+  439:     } catch (error) {
+  440:       return buildOwnershipContextResult({
+  441:         status: 'context_lookup_error',
+  442:         appUserId: mappedAppUserId,
+  443:         actorId: requestedActorId,
+  444:         spaceId: requestedSpaceId,
+  445:         dbReadExecuted: true,
+  446:         failClosed: true,
+  447:         errorMessage: errorToMessage(error),
+  448:       });
+  449:     }
+  450:   }
+  451: 
+  452:   if (requestedOrganizationId) {
+  453:     try {
+  454:       const { data: organizationData, error: organizationError } = await supabase
+  455:         .from('organizations')
+  456:         .select(ORGANIZATIONS_SELECTED_COLUMNS)
+  457:         .eq('id', requestedOrganizationId)
+  458:         .limit(2);
+  459: 
+  460:       if (organizationError) {
+  461:         return buildOwnershipContextResult({
+  462:           status: 'context_lookup_error',
+  463:           appUserId: mappedAppUserId,
+  464:           organizationId: requestedOrganizationId,
+  465:           dbReadExecuted: true,
+  466:           failClosed: true,
+  467:           errorMessage: errorToMessage(organizationError),
+  468:         });
+  469:       }
+  470: 
+  471:       const organizationRows = rowsFromData<OrganizationOwnershipRow>(organizationData);
+  472: 
+  473:       if (organizationRows.length === 0) {
+  474:         return buildOwnershipContextResult({
+  475:           status: 'organization_not_found',
+  476:           appUserId: mappedAppUserId,
+  477:           organizationId: requestedOrganizationId,
+  478:           dbReadExecuted: true,
+  479:           failClosed: true,
+  480:         });
+  481:       }
+  482: 
+  483:       if (organizationRows.length > 1) {
+  484:         return buildOwnershipContextResult({
+  485:           status: 'context_ambiguous',
+  486:           appUserId: mappedAppUserId,
+  487:           organizationId: requestedOrganizationId,
+  488:           dbReadExecuted: true,
+  489:           failClosed: true,
+  490:         });
+  491:       }
+  492: 
+  493:       const organization = organizationRows[0];
+  494: 
+  495:       if (organization.created_by_user_id !== mappedAppUserId) {
+  496:         return buildOwnershipContextResult({
+  497:           status: 'organization_not_created_by_mapped_user',
+  498:           appUserId: mappedAppUserId,
+  499:           organizationId: requestedOrganizationId,
+  500:           dbReadExecuted: true,
+  501:           failClosed: true,
+  502:         });
+  503:       }
+  504: 
+  505:       if (!isActiveStatus(organization.status)) {
+  506:         return buildOwnershipContextResult({
+  507:           status: 'organization_inactive',
+  508:           appUserId: mappedAppUserId,
+  509:           organizationId: requestedOrganizationId,
+  510:           dbReadExecuted: true,
+  511:           failClosed: true,
+  512:         });
+  513:       }
+  514: 
+  515:       if (!requestedActorId) {
+  516:         return buildOwnershipContextResult({
+  517:           status: 'creator_organization_resolved',
+  518:           resolved: true,
+  519:           dbReadExecuted: true,
+  520:           failClosed: false,
+  521:           selectedContextScope: 'organization_creator',
+  522:           appUserId: mappedAppUserId,
+  523:           organizationId: requestedOrganizationId,
+  524:           creatorOrganizationResolved: true,
+  525:         });
+  526:       }
+  527: 
+  528:       const { data: actorData, error: actorError } = await supabase
+  529:         .from('actors')
+  530:         .select(ACTORS_SELECTED_COLUMNS)
+  531:         .eq('id', requestedActorId)
+  532:         .limit(2);
+  533: 
+  534:       if (actorError) {
+  535:         return buildOwnershipContextResult({
+  536:           status: 'context_lookup_error',
+  537:           appUserId: mappedAppUserId,
+  538:           actorId: requestedActorId,
+  539:           organizationId: requestedOrganizationId,
+  540:           dbReadExecuted: true,
+  541:           failClosed: true,
+  542:           errorMessage: errorToMessage(actorError),
+  543:         });
+  544:       }
+  545: 
+  546:       const actorRows = rowsFromData<ActorRow>(actorData);
+  547: 
+  548:       if (actorRows.length === 0) {
+  549:         return buildOwnershipContextResult({
+  550:           status: 'organization_actor_not_found',
+  551:           appUserId: mappedAppUserId,
+  552:           actorId: requestedActorId,
+  553:           organizationId: requestedOrganizationId,
+  554:           dbReadExecuted: true,
+  555:           failClosed: true,
+  556:         });
+  557:       }
+  558: 
+  559:       if (actorRows.length > 1) {
+  560:         return buildOwnershipContextResult({
+  561:           status: 'context_ambiguous',
+  562:           appUserId: mappedAppUserId,
+  563:           actorId: requestedActorId,
+  564:           organizationId: requestedOrganizationId,
+  565:           dbReadExecuted: true,
+  566:           failClosed: true,
+  567:         });
+  568:       }
+  569: 
+  570:       const actor = actorRows[0];
+  571: 
+  572:       if (!isActiveStatus(actor.status)) {
+  573:         return buildOwnershipContextResult({
+  574:           status: 'actor_inactive',
+  575:           appUserId: mappedAppUserId,
+  576:           actorId: requestedActorId,
+  577:           organizationId: requestedOrganizationId,
+  578:           dbReadExecuted: true,
+  579:           failClosed: true,
+  580:         });
+  581:       }
+  582: 
+  583:       if (actor.organization_id !== requestedOrganizationId) {
+  584:         return buildOwnershipContextResult({
+  585:           status: 'organization_actor_mismatch',
+  586:           appUserId: mappedAppUserId,
+  587:           actorId: requestedActorId,
+  588:           organizationId: requestedOrganizationId,
+  589:           dbReadExecuted: true,
+  590:           failClosed: true,
+  591:         });
+  592:       }
+  593: 
+  594:       return buildOwnershipContextResult({
+  595:         status: 'organization_actor_resolved',
+  596:         resolved: true,
+  597:         dbReadExecuted: true,
+  598:         failClosed: false,
+  599:         selectedContextScope: 'organization_creator',
+  600:         appUserId: mappedAppUserId,
+  601:         actorId: requestedActorId,
+  602:         organizationId: requestedOrganizationId,
+  603:         creatorOrganizationResolved: true,
+  604:         organizationActorResolved: true,
+  605:       });
+  606:     } catch (error) {
+  607:       return buildOwnershipContextResult({
+  608:         status: 'context_lookup_error',
+  609:         appUserId: mappedAppUserId,
+  610:         actorId: requestedActorId,
+  611:         organizationId: requestedOrganizationId,
+  612:         dbReadExecuted: true,
+  613:         failClosed: true,
+  614:         errorMessage: errorToMessage(error),
+  615:       });
+  616:     }
+  617:   }
+  618: 
+  619:   return buildOwnershipContextResult({
+  620:     status: 'missing_requested_context',
+  621:     appUserId: mappedAppUserId,
+  622:     failClosed: true,
+  623:   });
+  624: }
+===== END FULL FILE: lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts =====
+
+8. Safety / guardrails
+- No endpoint call was executed by O-DJ-R12A2.
+- No browser runtime was executed by O-DJ-R12A2.
+- No runtime DB read was triggered by O-DJ-R12A2.
+- No DB write.
+- No SQL.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+- No code patch.
+- TypeScript passed: npx.cmd tsc --noEmit.
+
+9. Decision
+PASS_O_DJ_R12A2_CORRECTED_STATIC_RESOLVER_CONTRACT_INSPECTION_COMPLETED_WINDOWS_CAPTURED_NO_CODE_PATCH_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+
+10. Next step
+Use this corrected report to design O-DJ-R12B positive resolvable ownership/context runtime case.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
