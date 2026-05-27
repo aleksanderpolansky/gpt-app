@@ -1,0 +1,110 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CQ-POSTCHECK
+Browser/runtime JSON verification after PowerShell ConvertFrom-Json compatibility issue
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CQ-POSTCHECK: 3d22e98
+- Expected origin/main before O-CQ-POSTCHECK: 3d22e98
+- Baseline commit: 3d22e98 docs: record C8-I O-CQ browser runtime verification
+
+Problem observed
+The O-CQ report script used ConvertFrom-Json -Depth 80.
+The local Windows PowerShell version did not support the -Depth parameter.
+That caused the scripted JSON parsing verification to fail even though the browser/runtime result itself had passed.
+The script then continued and committed the O-CQ report.
+
+Postcheck correction
+O-CQ-POSTCHECK re-parsed the same browser/runtime result JSON using ConvertFrom-Json without -Depth.
+The JSON was parsed successfully.
+All three runtime cases were verified.
+TypeScript was checked again.
+The working tree was clean before this report.
+
+Browser/runtime result verified
+- overallPass: true.
+- failedCheckCount: 0.
+- finalDecision: PASS_O_CQ_BROWSER_RUNTIME_VERIFICATION_EXECUTED_BOUNDARIES_OK.
+
+Case 1: missing_header
+- HTTP status: 403.
+- diagnosticHeaderAccepted: false.
+- authSessionReadExecuted: false.
+- dbReadExecuted: false.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+- controlledIntakeRouteChanged: false.
+
+Case 2: wrong_header
+- HTTP status: 403.
+- diagnosticHeaderAccepted: false.
+- authSessionReadExecuted: false.
+- dbReadExecuted: false.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+- controlledIntakeRouteChanged: false.
+
+Case 3: valid_header_authenticated
+- HTTP status: 200.
+- diagnosticHeaderAccepted: true.
+- authSessionReadExecuted: true.
+- authSessionFound: true.
+- trustedProvider: auth0.
+- trustedAuthSubjectPresent: true.
+- mappingStatus: mapped_user_found.
+- mappedUserFound: true.
+- dbReadExecuted: true.
+- failClosed: false.
+- selectedColumns: id,auth0_sub.
+- tableName: public.app_users.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+- controlledIntakeRouteChanged: false.
+
+Sensitive response boundary verified
+- appUserId was not present.
+- access_token was not present.
+- refresh_token was not present.
+- id_token was not present.
+- serviceRoleKey was not present.
+- SUPABASE_SERVICE_ROLE_KEY was not present.
+
+Boundary status
+- Runtime DB read occurred only in valid-header authenticated diagnostic case.
+- No DB write occurred.
+- No SQL execution occurred.
+- No AI call occurred.
+- No activity_events insert occurred.
+- controlled-intake route was not modified.
+
+TypeScript verification
+Command used:
+npx.cmd tsc --noEmit
+
+Result:
+PASS_TYPESCRIPT_CHECKED_THROUGH_NPX_CMD_AFTER_O_CQ_POSTCHECK
+
+Current decision
+O-CQ is accepted after O-CQ-POSTCHECK.
+The Auth0 real session to internal app user mapping diagnostic path is verified and recorded.
+
+Next step decision
+Proceed to O-CR.
+O-CR should be a controlled-intake app user mapping integration contract.
+O-CR must not enable production writes.
+O-CR must not insert activity_events.
+O-CR must not persist semantic candidates, Value Objects, state facts, state deltas or state snapshots.
+O-CR must not execute SQL or call AI.
+
+PASS marker
+PASS_O_CQ_POSTCHECK_BROWSER_RUNTIME_JSON_VERIFIED_MAPPED_USER_FOUND_DB_READ_ONLY_NO_DB_WRITE_NO_SQL_NO_AI
