@@ -1,0 +1,96 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CW
+Controlled-intake next corridor planning/decision gate
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CW: 7bfc1a8
+- Expected origin/main before O-CW: 7bfc1a8
+- Baseline commit: 7bfc1a8 docs: verify C8-I O-CV controlled-intake runtime postcheck
+
+Purpose
+This gate decides the next controlled-intake corridor after real server-side Auth0 to internal app user mapping was verified.
+
+This block is planning/decision/report-only.
+It does not call the controlled-intake endpoint.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+It does not enable production writes.
+
+Accepted corridor behind us
+- O-CS integrated server_side_read_only_mapping_preview into /api/activity/controlled-intake.
+- O-CS-REPAIR added explicit activityEventsInserted: false guardrail.
+- O-CU browser/runtime verification passed.
+- O-CV postcheck accepted the runtime evidence.
+
+Verified current capability
+The controlled-intake route can now verify a trusted server-side Auth0 session and map it to an internal app user through public.app_users.
+The valid runtime case returned mappingStatus: mapped_user_found.
+The valid runtime case returned serverSideAppUserMapped: true.
+The valid runtime case returned serverSideAppUserMappingDbReadExecuted: true.
+The valid runtime case kept dbWriteExecuted: false.
+The valid runtime case kept sqlExecuted: false.
+The valid runtime case kept aiCallExecuted: false.
+The valid runtime case kept activityEventsInserted: false.
+
+Strategic problem now
+Mapping Auth0 session to internal app user is necessary but not sufficient for future activity_events persistence.
+Before any future activity_events write gate, the route must know the trusted ownership/context target:
+- actor id.
+- organization id, if the activity is organization-scoped.
+- space id, if the activity is space-scoped.
+- role/membership permission proving that the mapped app user is allowed to use that context.
+
+Rejected next move
+Do not proceed directly to activity_events write gate.
+Reason: internal app user mapping alone does not prove actor/organization/space ownership or permission.
+
+Selected next corridor
+Proceed with ownership/context selection and membership-resolution corridor without writes.
+
+Next corridor name
+P4.10.0-C8-I-D4-L-L-O-CX
+Controlled-intake ownership/context selection inventory and contract
+
+O-CX target
+O-CX should inspect existing source files and docs to identify the current actor/organization/space ownership model.
+O-CX should not query the database.
+O-CX should not execute SQL.
+O-CX should not modify code.
+O-CX should create a contract for the future route-level ownership/context mapping.
+
+Expected O-CX questions
+1. Which existing files define actor, organization, space, membership, role, or current user context logic?
+2. Which fields are already available in controlled-intake trusted context?
+3. Which client-supplied fields must remain untrusted?
+4. Which server-side or read-only model should later prove actor/organization/space access?
+5. Which failure statuses should fail closed before any future persistence?
+
+Future expected O-CY after O-CX
+O-CY may add a no-write ownership/context diagnostic helper or route only after O-CX contract.
+O-CY must still avoid activity_events writes.
+
+Non-negotiable guardrails for next corridor
+- No activity_events insert.
+- No production write.
+- No SQL.
+- No AI call.
+- No semantic persistence.
+- No Value Object creation.
+- No state facts/deltas/snapshots.
+- No appUserId/authSubject/token exposure.
+- Client-supplied actorId/organizationId/spaceId must not be trusted as ownership proof.
+
+Current decision
+O-CW selects O-CX ownership/context selection inventory and contract as the next step.
+
+PASS marker
+PASS_O_CW_NEXT_CORRIDOR_DECISION_SELECTED_OWNERSHIP_CONTEXT_CONTRACT_NO_ENDPOINT_CALL_NO_DB_WRITE_NO_SQL_NO_AI
