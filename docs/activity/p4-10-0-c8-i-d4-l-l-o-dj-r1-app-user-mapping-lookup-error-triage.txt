@@ -1,0 +1,72 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-DJ-R1
+App user mapping lookup error triage after O-DJ runtime verification
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-DJ-R1: a451477
+- Expected origin/main before O-DJ-R1: a451477
+- Baseline commit: a451477 docs: contract C8-I O-DI ownership context browser verification
+
+Observed O-DJ runtime result
+- missing_header returned 403 with headerAccepted false and no DB read.
+- wrong_header returned 403 with headerAccepted false and no DB read.
+- valid_header_no_context_hints returned 403 with appUserMappingStatus app_user_lookup_error.
+- valid_header_invalid_space_id returned 403 with appUserMappingStatus app_user_lookup_error.
+- valid_header_ambiguous_space_and_organization returned 403 with appUserMappingStatus app_user_lookup_error.
+- authSessionReadExecuted was true for valid header cases.
+- appUserMappingExecuted was true for valid header cases.
+- appUserMappingDbReadExecuted was true for valid header cases.
+- ownershipContextResolutionExecuted remained false because app user mapping failed.
+- DB write stayed false.
+- SQL stayed false.
+- AI call stayed false.
+- activityEventsInserted stayed false.
+
+Interpretation
+- The diagnostic endpoint header gate works.
+- Auth0 session read was reached in valid header cases.
+- The current blocker is server-side app user mapping lookup.
+- The ownership/context resolver was not actually tested yet because mapping failed first.
+- Do not proceed to controlled-intake integration.
+
+Local static/env triage boundary
+- This triage did not call the diagnostic endpoint.
+- This triage did not execute a runtime DB read.
+- This triage did not execute a DB write.
+- This triage did not execute SQL.
+- This triage did not call AI.
+- This triage did not insert activity_events.
+- This triage did not print secret values.
+
+Env key presence summary without secret values
+- .env.local: exists=True; has_supabase_url=True; has_service_role_key=True; has_auth0_secret=True; has_app_base_url=True; has_auth0_domain=True.
+- .env.development.local: exists=False; has_supabase_url=False; has_service_role_key=False; has_auth0_secret=False; has_app_base_url=False; has_auth0_domain=False.
+- .env: exists=False; has_supabase_url=False; has_service_role_key=False; has_auth0_secret=False; has_app_base_url=False; has_auth0_domain=False.
+
+Verified files
+- src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts exists.
+- lib/activity/controlledIntake/serverSideAppUserMappingReadOnly.ts exists.
+- lib/supabase/admin.ts exists.
+- src/app/api/activity/controlled-intake/route.ts remains no-write preview.
+
+Verified code markers
+- Diagnostic endpoint calls auth0.getSession.
+- Diagnostic endpoint calls mapServerSideAppUserReadOnly.
+- Diagnostic endpoint calls resolveControlledActivityIntakeOwnershipContextReadOnly only after mapping succeeds.
+- Mapping helper queries public.app_users.
+- Mapping helper selects id,auth0_sub.
+- Mapping helper can return app_user_lookup_error.
+
+Next step decision
+Proceed to O-DJ-R2 app user mapping lookup error focused diagnostic contract.
+O-DJ-R2 should define a narrow diagnostic plan to determine whether the lookup error is caused by missing/invalid Supabase env, service-role connection, table access, or helper result handling.
+O-DJ-R2 should not integrate controlled-intake route.
+O-DJ-R2 should not insert activity_events.
+
+PASS marker
+PASS_O_DJ_R1_APP_USER_MAPPING_LOOKUP_ERROR_TRIAGE_RECORDED_NO_ENDPOINT_CALL_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
