@@ -1,0 +1,203 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-DC
+Ownership/context resolver helper implementation contract
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-DC: 9ea1366
+- Expected origin/main before O-DC: 9ea1366
+- Baseline commit: 9ea1366 docs: decide C8-I O-DB ownership context resolver path
+
+Purpose
+This report defines the exact implementation contract for the future read-only ownership/context resolver helper.
+
+This block is implementation-contract/report-only.
+It does not call the controlled-intake endpoint.
+It does not query the database.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+It does not enable production writes.
+It does not modify application code.
+
+Accepted prerequisite
+- O-DB selected the resolver path.
+- O-DB approved path A: owned space with actor role.
+- O-DB approved path B: creator-owned organization actor context.
+- O-DB blocked default actor/organization/space selection.
+- O-DB blocked full organization membership claims.
+- O-DB blocked activity_events writes.
+
+Future helper file
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts
+
+Future helper exported function
+resolveControlledActivityIntakeOwnershipContextReadOnly
+
+Future helper role
+The helper resolves ownership/context using server-side trusted data only.
+The helper accepts mapped app user id from the already verified Auth0-to-app-user mapping step.
+The helper treats actorId, organizationId and spaceId from the request as hints only.
+The helper returns internal fields for server use and sanitized proof fields for safe route response.
+
+Future helper imports
+- getSupabaseAdminClient from ../../supabase/admin.
+
+Future input type
+ControlledActivityIntakeOwnershipContextResolutionReadOnlyInput:
+- mappedAppUserId: string | null.
+- requestedActorId?: string | null.
+- requestedSpaceId?: string | null.
+- requestedOrganizationId?: string | null.
+- requestedContextSource?: string | null.
+
+Future status type
+ControlledActivityIntakeOwnershipContextResolutionReadOnlyStatus:
+- not_executed.
+- missing_mapped_app_user.
+- missing_requested_context.
+- requested_context_invalid.
+- owned_space_resolved.
+- owned_space_not_found.
+- owned_space_not_owned_by_mapped_user.
+- owned_space_inactive.
+- actor_space_role_resolved.
+- actor_space_role_not_found.
+- actor_space_role_inactive.
+- actor_not_found.
+- actor_inactive.
+- creator_organization_resolved.
+- organization_not_found.
+- organization_not_created_by_mapped_user.
+- organization_inactive.
+- organization_actor_resolved.
+- organization_actor_not_found.
+- organization_actor_mismatch.
+- context_ambiguous.
+- context_lookup_error.
+
+Future result type
+ControlledActivityIntakeOwnershipContextResolutionReadOnlyResult:
+- executed: boolean.
+- status: ControlledActivityIntakeOwnershipContextResolutionReadOnlyStatus.
+- resolved: boolean.
+- dbReadExecuted: boolean.
+- failClosed: boolean.
+- selectedContextScope: personal_space | organization_creator | none.
+- requestedContextAcceptedAsHintOnly: true.
+- mappedAppUserRequired: true.
+- ownedSpaceResolved: boolean.
+- actorSpaceRoleResolved: boolean.
+- creatorOrganizationResolved: boolean.
+- organizationActorResolved: boolean.
+- responseSanitized: true.
+- appUserId: internal only.
+- actorId: internal only.
+- spaceId: internal only.
+- organizationId: internal only.
+- actorSpaceRoleId: internal only.
+- functionType: internal only.
+- authorityLevel: internal only.
+- responsibilityLevel: internal only.
+- errorMessage: internal only, sanitized later.
+
+Future selected columns
+spaces selected columns:
+- id.
+- owner_user_id.
+- status.
+
+actors selected columns:
+- id.
+- actor_type.
+- person_id.
+- organization_id.
+- display_name.
+- status.
+
+actor_space_roles selected columns:
+- id.
+- actor_id.
+- space_id.
+- function_type.
+- is_active.
+- authority_level.
+- responsibility_level.
+
+organizations selected columns:
+- id.
+- created_by_user_id.
+- organization_name.
+- organization_type.
+- status.
+
+Future query boundary: path A owned space with actor role
+1. If requestedSpaceId is present, query public.spaces by id with limit 2.
+2. Fail closed if no row.
+3. Fail closed if more than one row.
+4. Fail closed if spaces.owner_user_id does not equal mappedAppUserId.
+5. Fail closed if spaces.status is not active.
+6. If requestedActorId is present, query public.actors by id with limit 2.
+7. Fail closed if actor is missing, duplicated or inactive.
+8. Query public.actor_space_roles by actor_id + space_id with limit 2.
+9. Fail closed if role is missing, duplicated or inactive.
+10. Resolve owned space actor role context.
+
+Future query boundary: path B creator-owned organization actor context
+1. If requestedOrganizationId is present, query public.organizations by id with limit 2.
+2. Fail closed if no row.
+3. Fail closed if more than one row.
+4. Fail closed if organizations.created_by_user_id does not equal mappedAppUserId.
+5. Fail closed if organizations.status is not active.
+6. If requestedActorId is present, query public.actors by id with limit 2.
+7. Fail closed if actor is missing, duplicated or inactive.
+8. Fail closed if actors.organization_id does not equal requestedOrganizationId.
+9. Resolve creator-owned organization actor context.
+
+Future no-default policy
+The helper must not choose a default actor.
+The helper must not choose a default space.
+The helper must not choose a default organization.
+The helper must return missing_requested_context when no usable requested context is supplied.
+
+Future fail-closed policy
+All lookup errors must return context_lookup_error.
+All ambiguous duplicate rows must return context_ambiguous.
+All missing required trusted data must fail closed.
+All inactive entities must fail closed.
+All ownership mismatch cases must fail closed.
+
+Future sanitized response policy
+The route response may expose only boolean/status proof fields.
+The route response must not expose appUserId.
+The route response must not expose actorId.
+The route response must not expose spaceId.
+The route response must not expose organizationId.
+The route response must not expose actorSpaceRoleId.
+The route response must not expose authSubject.
+The route response must not expose tokens or secrets.
+
+Future implementation gate boundary
+The next gate may implement only the helper file.
+The next gate must not modify controlled-intake route.ts.
+The next gate must not call the endpoint.
+The next gate must not run runtime DB reads.
+The next gate must not insert activity_events.
+The next gate must not enable production writes.
+The next gate must not call AI.
+The next gate must run TypeScript check.
+
+Next step decision
+Proceed to O-DD ownership/context resolver helper code implementation gate.
+O-DD should create lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts.
+O-DD should be code-only helper implementation without route integration.
+
+PASS marker
+PASS_O_DC_OWNERSHIP_CONTEXT_RESOLVER_HELPER_IMPLEMENTATION_CONTRACT_CREATED_NO_CODE_CHANGE_NO_ENDPOINT_CALL_NO_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
