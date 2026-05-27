@@ -1,0 +1,91 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R8A - corrected narrow mapping source inspection
+Date = 2026-05-27 18:03:33 +02:00
+Status = CORRECTED_STATIC_SOURCE_INSPECTION_COMPLETED
+
+1. Baseline
+Expected HEAD = 1580d1d
+Actual HEAD = 1580d1d
+Working tree before inspection = clean
+
+2. Why O-DJ-R8A exists
+O-DJ-R8 created a report-only commit, but two Select-String regex patterns failed.
+Therefore focused endpoint and mapping helper source windows could be incomplete.
+O-DJ-R8A repeats the source inspection using only Select-String -SimpleMatch.
+No code patch is made in this gate.
+
+3. Files inspected
+- focused endpoint = src/app/api/activity/debug/app-user-mapping-lookup-error-focused-test/route.ts
+- ownership endpoint = src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts
+- mapping helper = lib/activity/controlledIntake/serverSideAppUserMappingReadOnly.ts
+- Supabase admin helper = lib/supabase/admin.ts
+- O-DJ-R7 report = docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r7-mapping-helper-path-divergence-static-audit.txt
+- O-DJ-R8 report = docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r8-narrow-mapping-source-inspection.txt
+
+4. Corrected static comparison booleans
+focusedHasDirectAppUsersQuery = true
+focusedHasSelect = true
+focusedHasAppUserSelectedColumns = true
+focusedHasLimit = true
+focusedHasMaybeSingle = false
+focusedHasSingle = false
+focusedHasEqAuth0Sub = true
+focusedHasRowCountCategory = true
+focusedHasMappingOutcomeCategory = true
+focusedHasQueryError = true
+
+helperHasAppUsersQuery = true
+helperHasSelect = true
+helperHasSelectedMappingColumns = true
+helperHasLimit = true
+helperHasMaybeSingle = false
+helperHasSingle = false
+helperHasEqAuth0Sub = true
+helperHasAppUserLookupError = true
+helperHasMappedUserFound = true
+helperHasNotFound = true
+helperHasDuplicate = true
+helperHasErrorBranch = true
+
+ownershipCallsHelper = true
+ownershipHasStatusPassthrough = false
+ownershipMapsLookupError = true
+ownershipHasResolverCall = false
+ownershipHasMappingRequiredCode = true
+
+5. Corrected inspection conclusion
+correctedConclusion = likely_ownership_endpoint_maps_helper_result_to_app_user_lookup_error_without_status_passthrough_or_helper_returns_too_generic_error
+
+6. Focused endpoint source windows
+System.Object[]
+
+7. Ownership endpoint source windows
+System.Object[]
+
+8. Mapping helper source windows
+System.Object[]
+
+9. Supabase admin helper source windows
+System.Object[]
+
+10. Safety / guardrails
+- No endpoint call was executed by O-DJ-R8A.
+- No browser runtime was executed by O-DJ-R8A.
+- No runtime DB read was triggered.
+- No DB write.
+- No SQL.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+- No code patch.
+- TypeScript passed: npx.cmd tsc --noEmit.
+
+11. Decision
+PASS_O_DJ_R8A_CORRECTED_NARROW_MAPPING_SOURCE_INSPECTION_COMPLETED_NO_CODE_CHANGE_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+
+12. Next step
+Review corrected source windows.
+If the mismatch is now concrete, O-DJ-R9 may patch only the mapping helper or ownership endpoint mapping-status handling.
+Do not repeat O-DJ-R6 until after a targeted patch and postcheck.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
