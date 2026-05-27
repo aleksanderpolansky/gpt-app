@@ -1,0 +1,62 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-DJ-R1A
+App user mapping triage correction/postcheck
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-DJ-R1A: e6f1cf5
+- Expected origin/main before O-DJ-R1A: e6f1cf5
+- Baseline commit: e6f1cf5 docs: record C8-I O-DJ-R1 app user mapping lookup triage
+
+Purpose
+This correction/postcheck records that O-DJ-R1 was pushed but had marker mismatches during local execution, and verifies the actual committed report content with the actual wording.
+
+Observed O-DJ-R1 execution issue
+- A strict marker check for .select('id,auth0_sub') failed because the helper select expression did not match that exact literal.
+- A strict marker check for 'ownershipContextResolutionExecuted remained false because app user mapping failed first' failed because the report wording was 'ownershipContextResolutionExecuted remained false because app user mapping failed'.
+- The user continued execution manually and committed the O-DJ-R1 report.
+- Git history was not rewritten.
+
+Accepted correction
+- O-DJ-R1 report exists and is committed.
+- O-DJ-R1 report contains appUserMappingStatus app_user_lookup_error.
+- O-DJ-R1 report contains ownershipContextResolutionExecuted remained false because app user mapping failed.
+- O-DJ-R1 report contains the final PASS marker.
+- O-DJ-R1 report records no endpoint call, no runtime DB read, no DB write, no SQL, no AI and no secret printing.
+
+Observed helper select lines
+- .select(SELECTED_MAPPING_COLUMNS)
+
+Verified helper facts
+- serverSideAppUserMappingReadOnly.ts queries app_users.
+- serverSideAppUserMappingReadOnly.ts references id.
+- serverSideAppUserMappingReadOnly.ts references auth0_sub.
+- serverSideAppUserMappingReadOnly.ts contains app_user_lookup_error.
+
+Current blocker
+- O-DJ runtime failed before ownership context resolution.
+- The blocker is app_user_lookup_error in server-side app user mapping.
+- .env.local exists and O-DJ-R1 recorded required local env key presence without secret values.
+- Next diagnosis must determine whether the lookup error is caused by Supabase connection, table access, malformed env value, Auth0 subject mismatch, or helper error handling.
+
+Execution boundary
+- This correction/postcheck did not call the diagnostic endpoint.
+- This correction/postcheck did not execute a runtime DB read.
+- This correction/postcheck did not execute a DB write.
+- This correction/postcheck did not execute SQL.
+- This correction/postcheck did not call AI.
+- This correction/postcheck did not insert activity_events.
+- This correction/postcheck did not modify application code.
+
+Next step decision
+Proceed to O-DJ-R2 app user mapping lookup error focused diagnostic contract.
+O-DJ-R2 should define a narrow diagnostic plan to identify the exact cause of app_user_lookup_error.
+O-DJ-R2 should not integrate controlled-intake route.
+O-DJ-R2 should not insert activity_events.
+
+PASS marker
+PASS_O_DJ_R1A_APP_USER_MAPPING_TRIAGE_CORRECTION_POSTCHECK_ACCEPTED_NO_ENDPOINT_CALL_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
