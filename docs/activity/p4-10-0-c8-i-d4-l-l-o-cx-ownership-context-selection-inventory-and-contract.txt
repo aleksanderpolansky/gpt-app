@@ -1,0 +1,1029 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CX
+Controlled-intake ownership/context selection inventory and contract
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CX: 94136f4
+- Expected origin/main before O-CX: 94136f4
+- Baseline commit: 94136f4 docs: decide C8-I O-CW controlled-intake next corridor
+
+Purpose
+This gate inventories existing source evidence for actor/organization/space/membership context and defines the next no-write ownership/context contract.
+
+This block is inventory/contract/report-only.
+It does not call the controlled-intake endpoint.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+It does not enable production writes.
+
+Accepted prerequisite
+- O-CW selected ownership/context selection and membership-resolution corridor without writes.
+- O-CU and O-CV verified trusted Auth0 session to internal app user mapping in controlled-intake no-write preview mode.
+- The valid mapped runtime case executed a DB read only for public.app_users mapping.
+- No DB write, SQL, AI call, activity_events insert or semantic persistence has been enabled.
+
+Current known controlled-intake files
+- src/app/api/activity/controlled-intake/route.ts.
+- lib/activity/controlledIntake/authContext.ts.
+- lib/activity/controlledIntake/serverSideAppUserMappingReadOnly.ts.
+- lib/activity/controlledIntake/serverSideAppUserMapping.ts.
+- lib/activity/controlledIntake/productionAuthMapping.ts.
+
+Inventory findings from existing controlled-intake files
+- authContext.ts already contains appUserId, actorId, organizationId and spaceId fields for preview trusted context.
+- serverSideAppUserMappingReadOnly.ts proves only Auth0 subject to internal app user mapping through public.app_users.
+- serverSideAppUserMapping.ts contains a static/test membershipReadModel concept.
+- productionAuthMapping.ts contains production trusted context mapping shape.
+- controlled-intake route currently has server_side_read_only_mapping_preview but does not yet prove actor/organization/space ownership from the database.
+
+Important boundary conclusion
+Internal app user mapping is necessary but not sufficient for activity_events persistence.
+Future persistence must not rely on client-supplied actorId, organizationId or spaceId as ownership proof.
+Future persistence must require a trusted server-side ownership/context resolution step.
+
+Selected future contract direction
+The next implementation corridor should add a no-write ownership/context resolution layer.
+This layer should resolve or verify actor/organization/space context for the mapped internal app user.
+This layer should fail closed when ownership/membership cannot be proven.
+This layer should return sanitized proof fields only.
+This layer should keep appUserId/internal ids out of public response unless explicitly safe and approved in a later contract.
+
+Required future ownership/context proof fields
+- ownershipContextResolutionExecuted.
+- ownershipContextResolutionStatus.
+- ownershipContextResolved.
+- ownershipContextDbReadExecuted.
+- ownershipContextFailClosed.
+- actorContextResolved.
+- organizationContextResolved.
+- spaceContextResolved.
+- membershipRoleResolved.
+- membershipSource.
+- selectedContextScope.
+
+Required future failure statuses
+- missing_mapped_app_user.
+- missing_requested_context.
+- actor_not_found.
+- actor_not_owned_by_mapped_user.
+- organization_not_found.
+- organization_membership_not_found.
+- organization_membership_inactive.
+- space_not_found.
+- space_membership_not_found.
+- space_membership_inactive.
+- context_ambiguous.
+- context_lookup_error.
+
+Client-supplied fields policy
+Client-supplied actorId, organizationId and spaceId may be treated only as requested context hints.
+They must not be treated as ownership proof.
+They must be verified through a trusted server-side read model before any future activity_events write.
+
+Next step decision
+Proceed to O-CY.
+O-CY should be a design gate for a no-write ownership/context resolver helper or diagnostic route.
+O-CY must not enable activity_events writes.
+O-CY must not execute SQL.
+O-CY must not call AI.
+O-CY must not persist semantic candidates, Value Objects, state facts, state deltas or state snapshots.
+
+PASS marker
+PASS_O_CX_OWNERSHIP_CONTEXT_SELECTION_INVENTORY_AND_CONTRACT_CREATED_NO_ENDPOINT_CALL_NO_DB_WRITE_NO_SQL_NO_AI
+
+================================================================================
+BEGIN SOURCE INVENTORY SCAN
+================================================================================
+Source inventory scan summary
+- Roots scanned: src, lib.
+- Extensions scanned: .ts, .tsx, .js, .jsx.
+- Source files scanned: 196.
+- Matching lines found: 1285.
+
+[1] lib/activity/controlledIntake/serverSideAppUserMapping.ts
+- matchCount: 100
+  L1: import type { ControlledActivityIntakeTrustedContext } from "./idempotency";
+  L31: readonly appUserId?: string | null;
+  L32: readonly internalUserId?: string | null;
+  L45: export type ControlledActivityIntakeServerSideMembershipStatus =
+  L51: export type ControlledActivityIntakeServerSideMembershipSource =
+  L52: | "organization_membership"
+  L53: | "space_membership"
+  L54: | "actor_space_role"
+  L57: export type ControlledActivityIntakeServerSideMembershipReadModel = {
+  L58: readonly actorId?: string | null;
+  ... truncated after 10 matching lines for this file ...
+
+[2] src/app/api/activity/controlled-intake/route.ts
+- matchCount: 62
+  L5: buildControlledActivityIntakeNoWritePreviewTrustedContext,
+  L13: buildControlledActivityIntakeProductionTrustedContext,
+  L86: const PREVIEW_MEMBERSHIP_ACTOR_ID_HEADER =
+  L87: "x-controlled-intake-preview-membership-actor-id";
+  L88: const PREVIEW_MEMBERSHIP_ORGANIZATION_ID_HEADER =
+  L89: "x-controlled-intake-preview-membership-organization-id";
+  L90: const PREVIEW_MEMBERSHIP_SPACE_ID_HEADER =
+  L91: "x-controlled-intake-preview-membership-space-id";
+  L92: const PREVIEW_MEMBERSHIP_ACTOR_STATUS_HEADER =
+  L93: "x-controlled-intake-preview-membership-actor-status";
+  ... truncated after 10 matching lines for this file ...
+
+[3] src/app/api/organizations/route.ts
+- matchCount: 51
+  L57: auth0_sub: string;
+  L76: .eq("auth0_sub", session.user.sub)
+  L111: function createPublicSlugFromOrganizationId(organizationId: string) {
+  L112: return `organization-${organizationId.slice(0, 8)}`;
+  L191: appUserId: string;
+  L205: input.geoArea.created_by_user_id === input.appUserId
+  L233: appUserId: string
+  L285: if (!canUseGeoAreaForOrganization({ geoArea, appUserId })) {
+  L334: if (!canUseGeoAreaForOrganization({ geoArea, appUserId })) {
+  L399: if (!canUseGeoAreaForOrganization({ geoArea, appUserId })) {
+  ... truncated after 10 matching lines for this file ...
+
+[4] src/app/api/activity/record/route.ts
+- matchCount: 49
+  L47: owner_user_id: string | null;
+  L48: owner_actor_id: string | null;
+  L88: link_role: string;
+  L342: function hasTemplateAccess(template: ActivityTemplateRow, appUserId: string) {
+  L348: return template.owner_user_id === appUserId;
+  L361: async function getTemplateById(templateId: string, appUserId: string) {
+  L375: if (!template || !hasTemplateAccess(template, appUserId)) {
+  L382: async function getTemplateBySlug(templateSlug: string, appUserId: string) {
+  L404: .eq("owner_user_id", appUserId)
+  L415: async function getShortcut(shortcutValue: string, appUserId: string) {
+  ... truncated after 10 matching lines for this file ...
+
+[5] src/app/api/directory/organizations/route.ts
+- matchCount: 48
+  L131: role: string | null;
+  L150: role: string | null;
+  L443: async function getActionStatsByOrganizationId(
+  L444: organizationIds: string[]
+  L446: const statsByOrganizationId = new Map<string, OrganizationActionStats>();
+  L448: for (const organizationId of organizationIds) {
+  L449: statsByOrganizationId.set(organizationId, getEmptyActionStats());
+  L452: if (organizationIds.length === 0) {
+  L453: return statsByOrganizationId;
+  L470: .in("organization_id", organizationIds)
+  ... truncated after 10 matching lines for this file ...
+
+[6] lib/activity/controlledIntake/authContext.ts
+- matchCount: 44
+  L1: import type { ControlledActivityIntakeTrustedContext } from "./idempotency";
+  L20: readonly appUserId?: string | null;
+  L21: readonly userId?: string | null;
+  L22: readonly actorId?: string | null;
+  L23: readonly organizationId?: string | null;
+  L24: readonly spaceId?: string | null;
+  L30: readonly clientOwnershipAccepted: false;
+  L50: readonly appUserId?: string | null;
+  L51: readonly actorId?: string | null;
+  L52: readonly organizationId?: string | null;
+  ... truncated after 10 matching lines for this file ...
+
+[7] lib/activity/valueObjectBridge.ts
+- matchCount: 37
+  L14: type ValueObjectCategoryRole =
+  L65: classificationRole: string | null;
+  L126: categoryRole?: ValueObjectCategoryRole;
+  L314: function normalizeCategoryRole(
+  L316: ): ValueObjectCategoryRole {
+  L317: const allowed: ValueObjectCategoryRole[] = [
+  L329: if (allowed.includes(value as ValueObjectCategoryRole)) {
+  L330: return value as ValueObjectCategoryRole;
+  L429: classificationRole: asString(classification.classificationRole),
+  L486: async function readValueObjectOwnerContext(
+  ... truncated after 10 matching lines for this file ...
+
+[8] src/app/api/activity/start/route.ts
+- matchCount: 33
+  L38: owner_user_id: string | null;
+  L39: owner_actor_id: string | null;
+  L79: link_role: string;
+  L159: function hasTemplateAccess(template: ActivityTemplateRow, appUserId: string) {
+  L165: return template.owner_user_id === appUserId;
+  L178: async function getTemplateById(templateId: string, appUserId: string) {
+  L192: if (!template || !hasTemplateAccess(template, appUserId)) {
+  L199: async function getTemplateBySlug(templateSlug: string, appUserId: string) {
+  L221: .eq("owner_user_id", appUserId)
+  L232: async function getShortcut(shortcutValue: string, appUserId: string) {
+  ... truncated after 10 matching lines for this file ...
+
+[9] lib/activity/controlledIntake/productionAuthMapping.ts
+- matchCount: 32
+  L1: import type { ControlledActivityIntakeTrustedContext } from "./idempotency";
+  L19: readonly appUserId?: string | null;
+  L20: readonly userId?: string | null;
+  L21: readonly actorId?: string | null;
+  L22: readonly organizationId?: string | null;
+  L23: readonly spaceId?: string | null;
+  L30: readonly clientOwnershipAccepted: false;
+  L64: readonly trustedContext: ControlledActivityIntakeTrustedContext;
+  L103: clientOwnershipAccepted: false,
+  L132: function buildTrustedContext(input: {
+  ... truncated after 10 matching lines for this file ...
+
+[10] src/app/api/activity/complete/route.ts
+- matchCount: 31
+  L107: actorId: string | null;
+  L436: actorId: null,
+  L445: actorId: null,
+  L456: actorId: null,
+  L460: const actorId =
+  L465: if (!isUuidLikeForCategoryDerivation(actorId)) {
+  L470: actorId: null,
+  L478: actorId,
+  L542: categoryRole: "semantic_component",
+  L575: if (!policy.enabled || policy.inputText === null || policy.actorId === null) {
+  ... truncated after 10 matching lines for this file ...
+
+[11] src/app/api/sync-user/route.ts
+- matchCount: 31
+  L21: auth0_sub: user.sub,
+  L28: onConflict: "auth0_sub",
+  L119: .eq("owner_user_id", appUser.id)
+  L136: owner_user_id: appUser.id,
+  L158: .eq("owner_user_id", appUser.id)
+  L175: owner_user_id: appUser.id,
+  L194: const { data: existingSelfRole, error: existingSelfRoleError } = await supabase
+  L195: .from("actor_space_roles")
+  L203: if (existingSelfRoleError) {
+  L205: { error: existingSelfRoleError.message },
+  ... truncated after 10 matching lines for this file ...
+
+[12] lib/activity/activityImpactProcessor.ts
+- matchCount: 27
+  L65: userId: string;
+  L90: userId: string;
+  L123: userId: string;
+  L289: userId: string;
+  L292: const { userId, eventId } = params;
+  L297: .eq("user_id", userId)
+  L495: userId: string;
+  L508: userId,
+  L536: p_user_id: userId,
+  L556: userId: string;
+  ... truncated after 10 matching lines for this file ...
+
+[13] src/app/api/object-action/suggestions/route.ts
+- matchCount: 27
+  L42: auth0_sub: string;
+  L50: role: string;
+  L104: classification_role: string;
+  L175: actorRole?: string | null;
+  L323: const MUTATION_ADMIN_ROLES = new Set(["owner", "admin", "moderator"]);
+  L610: reviewedByUserId: suggestion.reviewed_by_user_id,
+  L731: actor_role: input.actorRole ?? input.platformAdmin?.role ?? null,
+  L980: auth0_sub,
+  L985: .eq("auth0_sub", session.user.sub)
+  L1030: auth0_sub,
+  ... truncated after 10 matching lines for this file ...
+
+[14] src/app/offers/new/page.tsx
+- matchCount: 25
+  L104: const [organizationId, setOrganizationId] = useState("");
+  L105: const [organizationIdFromUrl, setOrganizationIdFromUrl] = useState("");
+  L176: if (!organizationId) {
+  L181: (valueObject) => valueObject.organization_id === organizationId
+  L183: }, [organizationId, valueObjects]);
+  L187: (organization) => organization.id === organizationId
+  L189: }, [organizationId, organizations]);
+  L299: const urlOrganizationId =
+  L301: ? new URLSearchParams(window.location.search).get("organizationId") ??
+  L305: setOrganizationIdFromUrl(urlOrganizationId);
+  ... truncated after 10 matching lines for this file ...
+
+[15] lib/activity/controlledIntake/idempotency.ts
+- matchCount: 20
+  L17: export interface ControlledActivityIntakeTrustedContext {
+  L18: appUserId?: string | null;
+  L19: actorId?: string | null;
+  L20: organizationId?: string | null;
+  L21: spaceId?: string | null;
+  L39: trustedContext: {
+  L40: appUserId?: string;
+  L41: actorId?: string;
+  L42: organizationId?: string;
+  L43: spaceId?: string;
+  ... truncated after 10 matching lines for this file ...
+
+[16] src/app/api/offers/route.ts
+- matchCount: 20
+  L41: .eq("auth0_sub", session.user.sub)
+  L348: appUserId: string,
+  L349: organizationId: string
+  L354: .eq("id", organizationId)
+  L355: .eq("created_by_user_id", appUserId)
+  L375: personActorId: string,
+  L376: organizationId: string,
+  L381: .select("id, title, value_type, organization_id, owner_actor_id")
+  L383: .eq("owner_actor_id", personActorId)
+  L384: .eq("organization_id", organizationId)
+  ... truncated after 10 matching lines for this file ...
+
+[17] src/app/purchase-history/page.tsx
+- matchCount: 20
+  L9: organizationId: string;
+  L18: organizationId?: string | null;
+  L51: const [organizationIdFilter, setOrganizationIdFilter] = useState<
+  L58: purchaseHistory[0]?.organizationName ?? organizationIdFilter;
+  L60: async function loadPurchaseHistory(nextOrganizationId?: string | null) {
+  L65: const organizationIdToUse =
+  L66: nextOrganizationId === undefined
+  L67: ? organizationIdFilter
+  L68: : nextOrganizationId;
+  L70: const apiUrl = organizationIdToUse
+  ... truncated after 10 matching lines for this file ...
+
+[18] src/app/admin/object-action/categories/page.tsx
+- matchCount: 18
+  L32: auth0_sub: string;
+  L40: role: string;
+  L70: actor_role: string | null;
+  L85: actor_role: string | null;
+  L126: const MUTATION_ADMIN_ROLES = new Set(["owner", "admin", "moderator"]);
+  L515: auth0_sub,
+  L520: .eq("auth0_sub", session.user.sub)
+  L545: async function getPlatformAdmin(appUserId: string): Promise<{
+  L555: role,
+  L559: .eq("app_user_id", appUserId)
+  ... truncated after 10 matching lines for this file ...
+
+[19] lib/activity/stateFacts/controlledPersistence/targetValueObject.ts
+- matchCount: 18
+  L35: owner_actor_id?: unknown;
+  L115: * - checks owner_actor_id against authenticated actor context;
+  L121: * if organization_id exists and owner_actor_id matches the authenticated actor,
+  L122: * access is marked as organization_actor. Broader organization role resolution
+  L146: .select("id, title, owner_actor_id, organization_id")
+  L167: const ownerActorId = toNullableString(valueObject.owner_actor_id);
+  L168: const organizationId = toNullableString(valueObject.organization_id);
+  L185: if (ownerActorId && isPlaceholderUuid(ownerActorId)) {
+  L188: "Placeholder owner actor identifiers cannot grant controlled persistence permission."
+  L192: if (organizationId && isPlaceholderUuid(organizationId)) {
+  ... truncated after 10 matching lines for this file ...
+
+[20] src/app/api/activity/debug-trace/route.ts
+- matchCount: 17
+  L313: userId: string;
+  L320: const { table, userId, column, values, limit, orderBy, ascending } = params;
+  L329: .eq("user_id", userId)
+  L380: userId: string;
+  L387: const { userId, eventIds, rawSignalIds, correctionIds, processingRunIds, limit } =
+  L401: userId,
+  L414: userId,
+  L427: userId,
+  L440: userId,
+  L466: userId,
+  ... truncated after 10 matching lines for this file ...
+
+[21] src/app/api/value-objects/debug/cloud-profile/route.ts
+- matchCount: 16
+  L10: auth0_sub?: string | null;
+  L28: category_role: string | null;
+  L63: hierarchy_role: string | null;
+  L70: category_role: string | null;
+  L103: userId: string;
+  L224: userId: row.user_id,
+  L251: rootRows: rows.filter((row) => row.hierarchy_role === "root").length,
+  L252: childRows: rows.filter((row) => row.hierarchy_role === "child").length,
+  L283: .select("id, auth0_sub")
+  L284: .eq("auth0_sub", auth0Sub)
+  ... truncated after 10 matching lines for this file ...
+
+[22] lib/activity/controlledIntake/serverSideAppUserMappingReadOnly.ts
+- matchCount: 16
+  L24: appUserId: string | null;
+  L28: selectedColumns: 'id,auth0_sub' | null;
+  L33: auth0_sub: string | null;
+  L37: const SELECTED_MAPPING_COLUMNS = 'id,auth0_sub' as const;
+  L91: appUserId: null,
+  L105: appUserId: null,
+  L116: .eq('auth0_sub', authSubject)
+  L128: appUserId: null,
+  L144: appUserId: null,
+  L158: appUserId: null,
+  ... truncated after 10 matching lines for this file ...
+
+[23] src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+- matchCount: 16
+  L147: userId: event.user_id,
+  L148: performedByActorId: event.performed_by_actor_id,
+  L149: actingAsActorId: event.acting_as_actor_id,
+  L150: actingForActorId: event.acting_for_actor_id,
+  L194: userId: string;
+  L195: actorId: string;
+  L210: user_id: params.userId,
+  L211: performed_by_actor_id: params.actorId,
+  L212: acting_as_actor_id: params.actorId,
+  L213: acting_for_actor_id: params.actorId,
+  ... truncated after 10 matching lines for this file ...
+
+[24] src/app/value-objects/new/page.tsx
+- matchCount: 16
+  L15: const [organizationId, setOrganizationId] = useState("");
+  L16: const [organizationIdFromUrl, setOrganizationIdFromUrl] = useState("");
+  L36: const urlOrganizationId =
+  L38: ? new URLSearchParams(window.location.search).get("organizationId") ?? ""
+  L41: setOrganizationIdFromUrl(urlOrganizationId);
+  L60: (organization) => organization.id === urlOrganizationId
+  L64: setOrganizationId(organizationFromUrl.id);
+  L69: setOrganizationId(loadedOrganizations[0].id);
+  L97: organizationId,
+  L138: (organization) => organization.id === organizationId
+  ... truncated after 10 matching lines for this file ...
+
+[25] src/app/api/object-action/categories/route.ts
+- matchCount: 15
+  L20: auth0_sub: string;
+  L28: role: string;
+  L51: actor_role: string | null;
+  L75: const MUTATION_ADMIN_ROLES = new Set(["owner", "admin", "moderator"]);
+  L97: actor_role,
+  L265: auth0_sub,
+  L270: .eq("auth0_sub", session.user.sub)
+  L325: role,
+  L453: reviewedByUserId: params.appUser.id,
+  L520: actor_role: params.platformAdmin.role,
+  ... truncated after 10 matching lines for this file ...
+
+[26] src/app/value-objects/debug/cloud-profile/page.tsx
+- matchCount: 15
+  L11: hierarchyRole: string;
+  L179: const rawRole = getNullableString(row, [
+  L180: "hierarchyRole",
+  L181: "hierarchy_role",
+  L182: "role",
+  L185: const hierarchyRole = rawRole ?? (parentValueObjectId ? "child" : "root");
+  L201: hierarchyRole,
+  L309: label: "Business German hierarchyRole=child",
+  L311: ? expectedChild.hierarchyRole === "child" || Boolean(expectedChild.parentValueObjectId)
+  L316: ? `hierarchyRole=${expectedChild.hierarchyRole}`
+  ... truncated after 10 matching lines for this file ...
+
+[27] lib/activity/controlledIntake/persist.ts
+- matchCount: 15
+  L4: ControlledActivityIntakeTrustedContext,
+  L14: export const CONTROLLED_ACTIVITY_INTAKE_OWNER_COLUMN = "user_id" as const;
+  L47: readonly trustedContext: ControlledActivityIntakeTrustedContext;
+  L176: const trustedContextRecord = asRecord(input.trustedContext);
+  L209: trustedContext: compactObject({
+  L210: appUserId: readString(trustedContextRecord, "appUserId"),
+  L211: actorId: readString(trustedContextRecord, "actorId"),
+  L212: organizationId: readString(trustedContextRecord, "organizationId"),
+  L213: spaceId: readString(trustedContextRecord, "spaceId"),
+  L214: requestSource: readString(trustedContextRecord, "requestSource"),
+  ... truncated after 10 matching lines for this file ...
+
+[28] lib/activity/stateFacts/controlledPersistence/auth.ts
+- matchCount: 15
+  L38: auth0_sub?: unknown;
+  L123: * - reads app_users by auth0_sub;
+  L150: .select("id, auth0_sub, email")
+  L151: .eq("auth0_sub", authSubject)
+  L170: const appUserId = toNullableString(appUser.id);
+  L171: const appUserAuthSubject = toNullableString(appUser.auth0_sub);
+  L173: if (!appUserId || !appUserAuthSubject || appUserAuthSubject !== authSubject) {
+  L180: if (isPlaceholderUuid(appUserId)) {
+  L190: .eq("user_id", appUserId)
+  L210: let actorId: UuidString | null = null;
+  ... truncated after 10 matching lines for this file ...
+
+[29] src/app/api/activity/debug-rubricator-value-object-bridge/route.ts
+- matchCount: 15
+  L18: auth0_sub: string | null;
+  L31: type EventOwnershipResult =
+  L75: .select("id, auth0_sub")
+  L76: .eq("auth0_sub", auth0Sub)
+  L113: async function assertEventOwnership(
+  L115: userId: string
+  L116: ): Promise<EventOwnershipResult> {
+  L121: .eq("user_id", userId)
+  L194: const ownership = await assertEventOwnership(eventId, appUser.id);
+  L196: if (!ownership.ok) {
+  ... truncated after 10 matching lines for this file ...
+
+[30] src/app/api/value-objects/route.ts
+- matchCount: 14
+  L9: auth0_sub?: string | null;
+  L56: organizationId?: unknown;
+  L145: .select("id, auth0_sub")
+  L146: .eq("auth0_sub", session.user.sub)
+  L207: appUserId: string,
+  L208: organizationId: string
+  L213: .eq("id", organizationId)
+  L214: .eq("created_by_user_id", appUserId)
+  L253: .eq("owner_actor_id", personActor.id)
+  L287: const organizationId = normalizeRequiredString(body.organizationId);
+  ... truncated after 10 matching lines for this file ...
+
+[31] src/app/admin/object-action/classifications/page.tsx
+- matchCount: 14
+  L29: auth0_sub: string;
+  L37: role: string;
+  L49: classification_role: string;
+  L376: auth0_sub,
+  L381: .eq("auth0_sub", session.user.sub)
+  L406: async function getPlatformAdmin(appUserId: string): Promise<{
+  L416: role,
+  L420: .eq("app_user_id", appUserId)
+  L516: classification_role,
+  L569: const organizationIds = getUniqueValues(
+  ... truncated after 10 matching lines for this file ...
+
+[32] src/app/purchase-confirmations/SellerPurchaseConfirmationsClient.tsx
+- matchCount: 14
+  L51: initialOrganizationIdFilter: string | null;
+  L198: initialOrganizationIdFilter,
+  L204: const [organizationIdFilter, setOrganizationIdFilter] = useState<
+  L206: >(initialOrganizationIdFilter);
+  L219: if (!organizationIdFilter) {
+  L224: (item) => item.organization_id === organizationIdFilter
+  L226: }, [purchaseConfirmations, organizationIdFilter]);
+  L229: if (!organizationIdFilter) {
+  L234: (item) => item.organization_id === organizationIdFilter
+  L241: return organization?.organization_name ?? organizationIdFilter;
+  ... truncated after 10 matching lines for this file ...
+
+[33] src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts
+- matchCount: 14
+  L186: function getActorId(event: ActivityEventRow, fallbackActorId: string | null) {
+  L191: fallbackActorId
+  L195: async function fetchActivityEvent(eventId: string, userId: string) {
+  L202: .eq("user_id", userId)
+  L494: const actorId = getActorId(event, personActor.id);
+  L496: if (!actorId) {
+  L502: error: "Could not resolve actorId from event or current person actor.",
+  L505: performedByActorId: event.performed_by_actor_id,
+  L506: actingAsActorId: event.acting_as_actor_id,
+  L507: actingForActorId: event.acting_for_actor_id,
+  ... truncated after 10 matching lines for this file ...
+
+[34] src/app/admin/object-action/suggestions/page.tsx
+- matchCount: 12
+  L27: auth0_sub: string;
+  L35: role: string;
+  L79: actor_role: string | null;
+  L586: auth0_sub,
+  L591: .eq("auth0_sub", session.user.sub)
+  L616: async function getPlatformAdmin(appUserId: string): Promise<{
+  L626: role,
+  L630: .eq("app_user_id", appUserId)
+  L745: actor_role,
+  L1112: role: {platformAdmin.role}
+  ... truncated after 10 matching lines for this file ...
+
+[35] src/app/api/activities/route.ts
+- matchCount: 12
+  L6: actorId?: string;
+  L7: spaceId?: string;
+  L8: participantRole: string;
+  L31: .eq("auth0_sub", session.user.sub)
+  L174: const primarySpaceId = body.primarySpaceId ?? null;
+  L202: primary_space_id: primarySpaceId,
+  L229: actor_id: participant.actorId ?? personActor.id,
+  L230: space_id: participant.spaceId ?? primarySpaceId,
+  L231: participant_role: participant.participantRole,
+  L239: space_id: primarySpaceId,
+  ... truncated after 10 matching lines for this file ...
+
+[36] lib/activity/stateFacts/controlledPersistence/types.ts
+- matchCount: 12
+  L37: | "personal_owner"
+  L139: untrustedClientUserId?: string | null;
+  L143: appUserId: UuidString;
+  L144: actorId: UuidString | null;
+  L152: ownerActorId: UuidString | null;
+  L153: organizationId: UuidString | null;
+  L281: | "rejected_not_owner"
+  L299: auth0UserId?: string | null;
+  L300: appUserId?: string | null;
+  L301: actorId?: string | null;
+  ... truncated after 10 matching lines for this file ...
+
+[37] lib/activity/stateFacts/controlledPersistence/rollback.ts
+- matchCount: 12
+  L57: userId: string;
+  L58: actorId: string | null;
+  L114: const userId = readString(source, "userId");
+  L115: if (!userId) {
+  L116: return { ok: false, reason: "userId is required." };
+  L152: userId,
+  L153: actorId: readNullableString(source, "actorId"),
+  L286: p_user_id: input.userId,
+  L287: p_actor_id: input.actorId,
+  L372: if (normalizedTarget.stateFact.userId !== normalized.userId) {
+  ... truncated after 10 matching lines for this file ...
+
+[38] lib/activity/activityRubricatorClassificationLifecycle.ts
+- matchCount: 12
+  L20: userId: string;
+  L31: userId: string;
+  L109: userId: input.userId,
+  L270: classificationRole: string;
+  L286: "classification_role",
+  L302: .eq("classification_role", input.classificationRole)
+  L500: classificationRole: rule.classificationRole,
+  L536: userId: input.userId,
+  L556: classification_role: rule.classificationRole,
+  L561: classified_by_user_id: input.userId,
+  ... truncated after 10 matching lines for this file ...
+
+[39] src/app/purchase-confirmations/page.tsx
+- matchCount: 11
+  L41: auth0_sub: string;
+  L53: organizationId?: string | string[];
+  L73: .eq("auth0_sub", session.user.sub)
+  L119: const sellerOrganizationIds =
+  L122: if (sellerOrganizationIds.length === 0) {
+  L163: .in("organization_id", sellerOrganizationIds)
+  L180: function getOrganizationIdFilter(
+  L183: organizationId?: string | string[];
+  L187: const rawValue = resolvedSearchParams?.organizationId;
+  L200: const organizationIdFilter = getOrganizationIdFilter(resolvedSearchParams);
+  ... truncated after 10 matching lines for this file ...
+
+[40] lib/objectAction/types.ts
+- matchCount: 11
+  L21: "owner_confirmed",
+  L28: export const ENTITY_CLASSIFICATION_ROLES = [
+  L34: "owner_selected",
+  L38: export type EntityClassificationRole =
+  L39: (typeof ENTITY_CLASSIFICATION_ROLES)[number];
+  L177: classification_role: EntityClassificationRole;
+  L363: classificationRole?: EntityClassificationRole;
+  L391: export function isEntityClassificationRole(
+  L393: ): value is EntityClassificationRole {
+  L394: return ENTITY_CLASSIFICATION_ROLES.includes(
+  ... truncated after 10 matching lines for this file ...
+
+[41] src/app/api/bookings/route.ts
+- matchCount: 11
+  L24: .eq("auth0_sub", session.user.sub)
+  L111: providerActorId: string,
+  L121: .eq("actor_id", providerActorId)
+  L240: const providerActorId = offer.provider_actor_id;
+  L242: if (!providerActorId) {
+  L269: const busyCheck = await isProviderBusy(providerActorId, startTime, endTime);
+  L324: actor_id: providerActorId,
+  L326: participant_role: "service_provider",
+  L334: participant_role: "service_receiver",
+  L352: actor_id: providerActorId,
+  ... truncated after 10 matching lines for this file ...
+
+[42] src/app/api/object-action/suggestions/audit-verify/route.ts
+- matchCount: 10
+  L11: auth0_sub: string;
+  L19: role: string;
+  L34: actor_role: string | null;
+  L161: actor_role: auditEvent.actor_role,
+  L254: auth0_sub,
+  L259: .eq("auth0_sub", session.user.sub)
+  L314: role,
+  L394: actor_role,
+  L557: appUserId: appUser.id,
+  L559: role: platformAdmin.role,
+
+[43] src/app/api/object-action/categories/audit-verify/route.ts
+- matchCount: 10
+  L11: auth0_sub: string;
+  L19: role: string;
+  L35: actor_role: string | null;
+  L152: actor_role: auditEvent.actor_role,
+  L242: auth0_sub,
+  L247: .eq("auth0_sub", session.user.sub)
+  L302: role,
+  L383: actor_role,
+  L545: appUserId: appUser.id,
+  L547: role: platformAdmin.role,
+
+[44] lib/activity/controlledIntake/validator.ts
+- matchCount: 9
+  L23: "userId",
+  L25: "appUserId",
+  L27: "ownerId",
+  L28: "owner_id",
+  L29: "actorId",
+  L31: "organizationId",
+  L35: "workspaceId",
+  L39: "auth0UserId",
+  L88: "Client payload must not provide ownership, identity, persistence, semantic-output, or server-controlled fields.",
+
+[45] lib/activity/knownTemplateRegistryRuleResolver.ts
+- matchCount: 9
+  L180: "classificationRole",
+  L181: hardcodedRule.classificationRole,
+  L182: metadata.knownTemplateRegistry.classificationRole,
+  L253: "classificationRole",
+  L254: hardcodedRule.classificationRole,
+  L255: snapshot.classificationRole,
+  L282: classificationRole: metadata.knownTemplateRegistry.classificationRole,
+  L299: classificationRole: hardcodedRule.classificationRole,
+  L314: classificationRole: snapshot.classificationRole,
+
+[46] src/app/api/purchase-confirmations/route.ts
+- matchCount: 9
+  L54: .eq("auth0_sub", session.user.sub)
+  L156: const sellerOrganizationIds =
+  L159: if (sellerOrganizationIds.length === 0) {
+  L182: .in("organization_id", sellerOrganizationIds)
+  L214: const organizationId = parseOptionalText(body.organizationId);
+  L222: if (!organizationId || purchaseAmount === null || purchaseAmount <= 0) {
+  L224: { error: "organizationId and positive purchaseAmount are required" },
+  L232: .eq("id", organizationId)
+  L281: p_organization_id: organizationId,
+
+[47] lib/activity/rubricatorValueObjectMapper.ts
+- matchCount: 8
+  L42: classificationRole: string | null;
+  L459: classificationRole: getString(row, "classification_role"),
+  L581: const ownerActorId =
+  L593: if (ownerActorId) {
+  L594: query = query.eq("owner_actor_id", ownerActorId);
+  L596: query = query.is("owner_actor_id", null);
+  L622: const ownerActorId =
+  L628: owner_actor_id: ownerActorId,
+
+[48] lib/activity/knownTemplateRegistryTable.ts
+- matchCount: 8
+  L11: "classification_role",
+  L38: classification_role: string;
+  L65: classificationRole: string;
+  L366: classification_role: readRequiredString(input, "classification_role", errors),
+  L413: classificationRole: row.classification_role,
+  L466: classificationRole:
+  L467: snapshot.classificationRole ===
+  L470: ["knownTemplateRegistry", "classificationRole"],
+
+[49] src/app/api/activity/debug/free-text-value-object-test/route.ts
+- matchCount: 8
+  L493: categoryRole: "semantic_component",
+  L531: personActorId: string;
+  L554: actorId: params.personActorId,
+  L555: organizationId: null,
+  L583: actorId: params.personActorId,
+  L584: organizationId: null,
+  L813: personActorId: personActor.id,
+  L838: userId: appUser.id,
+
+[50] lib/activity/knownTemplateRegistryMetadata.ts
+- matchCount: 8
+  L5: export type KnownTemplateRegistryClassificationRole = "primary";
+  L24: classificationRole: KnownTemplateRegistryClassificationRole;
+  L196: const classificationRoleRaw = readString(block, "classificationRole", errors, path);
+  L207: const classificationRole = expectLiteral(
+  L208: classificationRoleRaw,
+  L211: `${path}.classificationRole`
+  L238: classificationRole === null ||
+  L250: classificationRole,
+
+[51] src/app/admin/object-action/page.tsx
+- matchCount: 8
+  L9: auth0_sub: string;
+  L17: role: string;
+  L83: auth0_sub,
+  L88: .eq("auth0_sub", session.user.sub)
+  L113: async function getPlatformAdmin(appUserId: string): Promise<{
+  L123: role,
+  L127: .eq("app_user_id", appUserId)
+  L356: role: {platformAdmin.role}
+
+[52] src/app/admin/page.tsx
+- matchCount: 8
+  L9: auth0_sub: string;
+  L17: role: string;
+  L83: auth0_sub,
+  L88: .eq("auth0_sub", session.user.sub)
+  L113: async function getPlatformAdmin(appUserId: string): Promise<{
+  L123: role,
+  L127: .eq("app_user_id", appUserId)
+  L346: role: {platformAdmin.role}
+
+[53] lib/activity/categoryDerivation/persistDerivations.ts
+- matchCount: 7
+  L49: actorId?: string | null;
+  L50: organizationId?: string | null;
+  L126: actor_id: params.actorId ?? params.input.actorId ?? null,
+  L128: params.organizationId ?? params.input.organizationId ?? null,
+  L145: actorId: params.actorId ?? params.input.actorId ?? null,
+  L146: organizationId:
+  L147: params.organizationId ?? params.input.organizationId ?? null,
+
+[54] lib/activity/importedActivityTemplateMapping.ts
+- matchCount: 7
+  L5: userId: string;
+  L57: owner_user_id: string | null;
+  L400: async function loadActiveTemplates(userId: string) {
+  L405: "id, slug, title, short_title, description, template_group, template_scope, source_type, status, is_active, owner_user_id, default_activity_type_id, legacy_activity_code_template_id, default_duration_minutes, default_status, default_source_type, default_privacy_scope, default_metadata_json, sort_order"
+  L420: "id, slug, title, short_title, description, template_group, template_scope, source_type, status, is_active, owner_user_id, default_activity_type_id, legacy_activity_code_template_id, default_duration_minutes, default_status, default_source_type, default_privacy_scope, default_metadata_json, sort_order"
+  L423: .eq("owner_user_id", userId)
+  L526: const templates = await loadActiveTemplates(input.userId);
+
+[55] src/app/api/activity/intake/route.ts
+- matchCount: 6
+  L175: userId: string;
+  L180: const { userId, sourceType, sourceEventId, idempotencyKey } = params;
+  L186: .eq("user_id", userId)
+  L207: .eq("user_id", userId)
+  L363: userId: appUser.id,
+  L388: userId: appUser.id,
+
+[56] src/app/activities/new/page.tsx
+- matchCount: 6
+  L14: const [participantRole, setParticipantRole] = useState("self");
+  L40: participantRole,
+  L65: setParticipantRole("self");
+  L202: Participant role
+  L204: value={participantRole}
+  L205: onChange={(event) => setParticipantRole(event.target.value)}
+
+[57] lib/activity/categoryDerivation/persistence.ts
+- matchCount: 6
+  L246: actorId: nullableText(input.actorId),
+  L247: organizationId: nullableText(input.organizationId),
+  L264: actorId: params.input.actorId ?? null,
+  L265: organizationId: params.input.organizationId ?? null,
+  L283: actor_id: params.input.actorId ?? null,
+  L284: organization_id: params.input.organizationId ?? null,
+
+[58] lib/activity/stateFacts/controlledPersistence/rollbackPayloadBuilder.ts
+- matchCount: 6
+  L11: userId: string;
+  L12: actorId?: string | null;
+  L84: userId,
+  L85: actorId = null,
+  L92: user_id: requireNonEmptyString(userId, "userId"),
+  L93: actor_id: actorId,
+
+[59] lib/activity/categoryDerivation/completeRouteIntegration.ts
+- matchCount: 6
+  L39: actorId: string | null;
+  L40: organizationId?: string | null;
+  L304: const actorId = normalizeText(params.actorId);
+  L306: if (!actorId) {
+  L394: actorId,
+  L395: organizationId: normalizeText(params.organizationId),
+
+[60] src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts
+- matchCount: 6
+  L241: ? "Debug-only adapter validation proof. actorId is intentionally empty."
+  L254: function buildAdapterActorId(scenario: SupportedScenario, personActorId: string) {
+  L259: return personActorId;
+  L477: actorId: buildAdapterActorId(scenario, personActor.id),
+  L478: organizationId: null,
+  L524: intentionallyMissingActorId: scenario === "missing_actor_id",
+
+[61] src/app/api/directory/filters/route.ts
+- matchCount: 6
+  L326: const organizationIds = organizationRows.map(
+  L330: if (organizationIds.length === 0) {
+  L365: .in("organization_id", organizationIds),
+  L370: .in("organization_id", organizationIds)
+  L382: .in("entity_id", organizationIds)
+  L439: organizations: organizationIds.length,
+
+[62] lib/activity/rawActivitySignals.ts
+- matchCount: 6
+  L73: userId: string;
+  L146: user_id: input.userId,
+  L181: userId: string;
+  L194: .eq("user_id", params.userId)
+  L215: userId: string;
+  L225: .eq("user_id", params.userId)
+
+[63] src/app/api/activity/templates/route.ts
+- matchCount: 5
+  L16: owner_user_id: string | null;
+  L17: owner_actor_id: string | null;
+  L57: link_role: string;
+  L282: .eq("owner_user_id", appUser.id)
+  L424: linkRole: link.link_role,
+
+[64] src/app/my-purchase-confirmations/page.tsx
+- matchCount: 5
+  L38: auth0_sub: string;
+  L64: .eq("auth0_sub", session.user.sub)
+  L536: const organizationId =
+  L585: href={`/organizations/${organizationId}`}
+  L592: href={`/purchase-history?organizationId=${organizationId}`}
+
+[65] src/app/seller-certificates/page.tsx
+- matchCount: 5
+  L91: auth0_sub: string;
+  L422: .eq("auth0_sub", session.user.sub)
+  L468: const sellerOrganizationIds =
+  L471: if (sellerOrganizationIds.length === 0) {
+  L536: .in("organization_id", sellerOrganizationIds)
+
+[66] src/app/api/activity/debug/create-free-text-start-event/route.ts
+- matchCount: 4
+  L115: userId: event.user_id,
+  L116: performedByActorId: event.performed_by_actor_id,
+  L117: actingAsActorId: event.acting_as_actor_id,
+  L118: actingForActorId: event.acting_for_actor_id,
+
+[67] lib/supabase.ts
+- matchCount: 4
+  L4: const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  L10: if (!supabaseServiceRoleKey) {
+  L11: throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+  L14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+[68] src/app/api/activity/debug/state-fact-rollback-no-write-proof/route.ts
+- matchCount: 4
+  L79: userId: DEBUG_USER_ID,
+  L80: actorId: null,
+  L109: userId: DEBUG_USER_ID,
+  L110: actorId: null,
+
+[69] src/app/api/test/route.ts
+- matchCount: 4
+  L38: auth0_sub: session.user.sub,
+  L45: onConflict: "auth0_sub",
+  L60: role: "user",
+  L80: role: "assistant",
+
+[70] src/app/api/activity/debug/state-signal-candidate-shadow-test/route.ts
+- matchCount: 4
+  L75: userId: string;
+  L595: userId: "00000000-0000-0000-0000-000000000000",
+  L817: user_id: candidate.userId,
+  L851: userId: "00000000-0000-0000-0000-000000000000",
+
+[71] lib/objectAction/queries.ts
+- matchCount: 3
+  L63: classificationRole: EntityClassificationRow["classification_role"];
+  L198: classificationRole: row.classification_role,
+  L515: "id, entity_type, entity_id, object_type_id, action_type_id, context_id, contextual_category_id, classification_role, is_primary, confidence, status, source_type, classified_by_user_id, evidence_json, notes, created_at, updated_at"
+
+[72] lib/activity/categoryDerivation/types.ts
+- matchCount: 3
+  L23: | "role"
+  L70: actorId?: string | null;
+  L71: organizationId?: string | null;
+
+[73] lib/activity/stateFacts/controlledPersistence/rollbackIdempotency.ts
+- matchCount: 3
+  L73: if (!isNonEmptyString(input.userId)) {
+  L74: return "Rollback idempotency userId is required.";
+  L111: .eq("user_id", input.userId)
+
+[74] lib/activity/controlledIntake/serverSideAuthSession.ts
+- matchCount: 3
+  L24: readonly userId?: string | null;
+  L54: readonly clientOwnershipAccepted: false;
+  L117: clientOwnershipAccepted: false,
+
+[75] lib/activity/knownTemplateRubricatorRules.ts
+- matchCount: 3
+  L8: classificationRole: "primary";
+  L21: classificationRole: "primary",
+  L32: classificationRole: "primary",
+
+[76] src/app/api/time-blocks/route.ts
+- matchCount: 3
+  L23: .eq("auth0_sub", session.user.sub)
+  L157: const spaceId = body.spaceId ?? null;
+  L181: space_id: spaceId,
+
+[77] lib/supabase/admin.ts
+- matchCount: 3
+  L41: const serviceRoleKey = getRequiredServerEnv(
+  L42: "SUPABASE_SERVICE_ROLE_KEY"
+  L45: cachedSupabaseAdminClient = createClient(supabaseUrl, serviceRoleKey, {
+
+[78] src/app/certificates/redeem/page.tsx
+- matchCount: 3
+  L89: auth0_sub: string;
+  L221: .eq("auth0_sub", session.user.sub)
+  L506: Only the organization owner can confirm usage of this
+
+[79] src/app/api/calendar/events/route.ts
+- matchCount: 3
+  L23: .eq("auth0_sub", session.user.sub)
+  L155: const spaceId = body.spaceId ?? null;
+  L180: space_id: spaceId,
+
+[80] src/app/api/geo/areas/route.ts
+- matchCount: 3
+  L52: auth0_sub: string;
+  L179: .select("id, auth0_sub")
+  L180: .eq("auth0_sub", session.user.sub)
+
+... truncated after 80 files ...
+
+================================================================================
+END SOURCE INVENTORY SCAN
+================================================================================
