@@ -1,0 +1,238 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-DI
+Ownership/context resolver diagnostic browser verification contract
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-DI: 930aaa9
+- Expected origin/main before O-DI: 930aaa9
+- Baseline commit: 930aaa9 docs: verify C8-I O-DH ownership context diagnostic endpoint
+
+Purpose
+This report defines the browser/runtime verification contract for the ownership/context resolver diagnostic endpoint.
+
+This block is browser-verification-contract/report-only.
+It does not call the diagnostic endpoint.
+It does not call the controlled-intake endpoint.
+It does not execute a runtime DB read.
+It does not execute a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+It does not enable production writes.
+It does not modify application code.
+
+Accepted prerequisite
+- O-DG created the diagnostic endpoint.
+- O-DH postcheck accepted the diagnostic endpoint.
+- O-DH verified controlled-intake route was not modified.
+- O-DH verified no endpoint call and no runtime DB read.
+
+Endpoint under test for next gate
+- /api/activity/debug/ownership-context-resolution-read-only-test
+
+Required header
+- x-controlled-intake-ownership-context-resolution-read-only-test: enabled
+
+Future O-DJ execution environment
+- Browser DevTools Console.
+- URL: http://localhost:3000.
+- User should be authenticated for authenticated cases.
+- credentials: include must be used.
+
+Runtime verification cases for O-DJ
+
+Case 1: missing_header
+- Request: GET /api/activity/debug/ownership-context-resolution-read-only-test without diagnostic header.
+- Expected HTTP status: 403.
+- Expected code: OWNERSHIP_CONTEXT_RESOLUTION_READ_ONLY_TEST_HEADER_REQUIRED.
+- Expected headerAccepted: false.
+- Expected authSessionReadExecuted: false.
+- Expected appUserMappingExecuted: false.
+- Expected ownershipContextResolutionExecuted: false.
+- Expected guardrails.dbReadExecuted: false.
+- Expected dbWriteExecuted: false.
+- Expected sqlExecuted: false.
+- Expected aiCallExecuted: false.
+- Expected activityEventsInserted: false.
+
+Case 2: wrong_header
+- Request: GET endpoint with x-controlled-intake-ownership-context-resolution-read-only-test: wrong.
+- Expected HTTP status: 403.
+- Expected code: OWNERSHIP_CONTEXT_RESOLUTION_READ_ONLY_TEST_HEADER_REQUIRED.
+- Expected authSessionReadExecuted: false.
+- Expected appUserMappingExecuted: false.
+- Expected ownershipContextResolutionExecuted: false.
+- Expected guardrails.dbReadExecuted: false.
+- Expected dbWriteExecuted: false.
+
+Case 3: valid_header_unauthenticated
+- Run only if user is not logged in or in a clean unauthenticated session.
+- Expected HTTP status: 401.
+- Expected code: OWNERSHIP_CONTEXT_RESOLUTION_AUTH_SESSION_REQUIRED or OWNERSHIP_CONTEXT_RESOLUTION_AUTH_SESSION_READ_FAILED.
+- Expected headerAccepted: true.
+- Expected authSessionReadExecuted: true.
+- Expected appUserMappingExecuted: false.
+- Expected ownershipContextResolutionExecuted: false.
+- Expected guardrails.dbWriteExecuted: false.
+
+Case 4: valid_header_authenticated_no_context_hints
+- Run in authenticated browser session.
+- Expected HTTP status: 200 if app user mapping succeeds.
+- Expected appUserMappingExecuted: true.
+- Expected appUserMappingStatus: mapped_user_found.
+- Expected appUserMapped: true.
+- Expected ownershipContextResolutionExecuted: true.
+- Expected ownershipContextResolutionStatus: missing_requested_context.
+- Expected ownershipContextResolved: false.
+- Expected ownershipContextFailClosed: true.
+- Expected requestedContextAcceptedAsHintOnly: true.
+- Expected ownershipContextDbReadExecuted: false.
+- Expected guardrails.dbReadExecuted: true because app user mapping reads app_users.
+- Expected dbWriteExecuted: false.
+
+Case 5: valid_header_authenticated_invalid_space_id
+- Run in authenticated browser session.
+- Request: ?spaceId=not-a-uuid.
+- Expected HTTP status: 200 if app user mapping succeeds.
+- Expected ownershipContextResolutionStatus: requested_context_invalid.
+- Expected ownershipContextResolved: false.
+- Expected ownershipContextFailClosed: true.
+- Expected ownershipContextDbReadExecuted: false.
+- Expected dbWriteExecuted: false.
+
+Case 6: valid_header_authenticated_ambiguous_space_and_organization
+- Run in authenticated browser session.
+- Request: both spaceId and organizationId hints.
+- Expected HTTP status: 200 if app user mapping succeeds.
+- Expected ownershipContextResolutionStatus: context_ambiguous.
+- Expected ownershipContextResolved: false.
+- Expected ownershipContextFailClosed: true.
+- Expected ownershipContextDbReadExecuted: false.
+- Expected dbWriteExecuted: false.
+
+Optional Case 7: valid_header_authenticated_real_space_id
+- Run only if a known space id owned by mapped app user is available.
+- Expected status: owned_space_resolved, actor_space_role_resolved, or fail-closed ownership status.
+- Expected ownershipContextDbReadExecuted: true.
+- Expected no DB write.
+
+Optional Case 8: valid_header_authenticated_real_organization_id
+- Run only if a known organization id created by mapped app user is available.
+- Expected status: creator_organization_resolved, organization_actor_resolved, or fail-closed ownership status.
+- Expected ownershipContextDbReadExecuted: true.
+- Expected no DB write.
+
+Forbidden runtime output
+- Response must not expose appUserId.
+- Response must not expose authSubject.
+- Response must not expose actorId.
+- Response must not expose spaceId.
+- Response must not expose organizationId.
+- Response must not expose actorSpaceRoleId.
+- Response must not expose tokens.
+- Response must not expose service role key.
+- Response must not expose raw Supabase errors.
+
+Next step decision
+Proceed to O-DJ ownership/context resolver diagnostic browser runtime verification.
+O-DJ should execute the browser script manually in DevTools and return the full JSON result.
+O-DJ should not modify application code.
+O-DJ should not commit until the runtime results are reviewed.
+
+PASS marker
+PASS_O_DI_OWNERSHIP_CONTEXT_RESOLVER_DIAGNOSTIC_BROWSER_VERIFICATION_CONTRACT_CREATED_NO_ENDPOINT_CALL_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+
+================================================================================
+BEGIN FUTURE O-DJ BROWSER VERIFICATION SCRIPT
+================================================================================
+BROWSER VERIFICATION SCRIPT FOR FUTURE O-DJ EXECUTION ONLY
+
+IMPORTANT:
+This script is documentation for the next runtime/browser verification gate.
+O-DI does not execute this script.
+
+Run in browser DevTools Console at:
+http://localhost:3000
+
+The user must be authenticated for authenticated cases.
+
+(async () => {
+  const endpoint = "/api/activity/debug/ownership-context-resolution-read-only-test";
+  const requiredHeaderName = "x-controlled-intake-ownership-context-resolution-read-only-test";
+  const requiredHeaderValue = "enabled";
+
+  const results = [];
+
+  async function runCase(label, url, options = {}) {
+    const response = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+      ...options,
+    });
+
+    let body = null;
+
+    try {
+      body = await response.json();
+    } catch (error) {
+      body = {
+        jsonParseError: error instanceof Error ? error.message : String(error),
+      };
+    }
+
+    results.push({
+      label,
+      httpStatus: response.status,
+      ok: response.ok,
+      body,
+    });
+
+    return {
+      response,
+      body,
+    };
+  }
+
+  await runCase("missing_header", endpoint);
+
+  await runCase("wrong_header", endpoint, {
+    headers: {
+      [requiredHeaderName]: "wrong",
+    },
+  });
+
+  await runCase("valid_header_no_context_hints", endpoint, {
+    headers: {
+      [requiredHeaderName]: requiredHeaderValue,
+    },
+  });
+
+  await runCase("valid_header_invalid_space_id", `${endpoint}?spaceId=not-a-uuid`, {
+    headers: {
+      [requiredHeaderName]: requiredHeaderValue,
+    },
+  });
+
+  await runCase(
+    "valid_header_ambiguous_space_and_organization",
+    `${endpoint}?spaceId=00000000-0000-4000-8000-000000000001&organizationId=00000000-0000-4000-8000-000000000002`,
+    {
+      headers: {
+        [requiredHeaderName]: requiredHeaderValue,
+      },
+    },
+  );
+
+  console.log("O_DI_BROWSER_VERIFICATION_RESULTS");
+  console.log(JSON.stringify(results, null, 2));
+})();
+================================================================================
+END FUTURE O-DJ BROWSER VERIFICATION SCRIPT
+================================================================================
