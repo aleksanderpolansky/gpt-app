@@ -10,7 +10,9 @@ function getRequiredServerEnv(name: string): string {
   const value = process.env[name]?.trim();
 
   if (!value) {
-    throw new Error(Missing required server environment variable: );
+    throw new Error(
+"Missing required server environment variable: "
+ + name);
   }
 
   return value;
@@ -22,7 +24,9 @@ function getSupabaseAdminUrl(): string {
   const url = serverUrl || publicUrl;
 
   if (!url) {
-    throw new Error('Missing required server environment variable: SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL');
+    throw new Error(
+"Missing required server environment variable: SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL"
+);
   }
 
   return url;
@@ -34,7 +38,9 @@ export function getSupabaseAdminClient(): SupabaseAdminClient {
   }
 
   const supabaseUrl = getSupabaseAdminUrl();
-  const serviceRoleKey = getRequiredServerEnv('SUPABASE_SERVICE_ROLE_KEY');
+  const serviceRoleKey = getRequiredServerEnv(
+"SUPABASE_SERVICE_ROLE_KEY"
+);
 
   cachedSupabaseAdminClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: {
@@ -44,7 +50,8 @@ export function getSupabaseAdminClient(): SupabaseAdminClient {
     },
     global: {
       headers: {
-        'X-Client-Info': 'gpt-app-server-only-admin',
+        
+"X-Client-Info": "gpt-app-server-only-admin",
       },
     },
   });

@@ -1,0 +1,72 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CK-REPAIR
+Supabase admin helper TypeScript repair proof
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CK-REPAIR: a89e4d1
+- Expected origin/main before O-CK-REPAIR: a89e4d1
+- Baseline commit: a89e4d1 feat: add C8-I O-CK server-only Supabase admin helper
+
+Problem repaired
+The original O-CK script corrupted the TypeScript line for missing environment variable errors.
+The broken file contained a syntactically invalid throw expression.
+TypeScript failed during O-CK, but the old O-CK proof report was still created and committed.
+
+Repair scope
+- Replaced lib/supabase/admin.ts with corrected full file.
+- Created this repair proof report.
+- No endpoint was created.
+- controlled-intake route was not modified.
+- No DB read was executed.
+- No DB write was executed.
+- No SQL was executed.
+- No AI call was executed.
+- No activity_events insert was added.
+- No semantic candidate persistence was added.
+- No Value Object creation was added.
+- No state facts, state deltas or state snapshots were added.
+
+Repaired implementation details
+- Exports getSupabaseAdminClient.
+- Uses createClient from @supabase/supabase-js.
+- Uses SUPABASE_SERVICE_ROLE_KEY for server-only service-role access.
+- Uses SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL for project URL.
+- Uses lazy singleton caching.
+- Sets auth.autoRefreshToken false.
+- Sets auth.detectSessionInUrl false.
+- Sets auth.persistSession false.
+- Does not log env values.
+- Does not expose secrets.
+- Does not query DB.
+- Does not write DB.
+- Does not execute SQL.
+
+server-only guard status
+- SERVER_ONLY_IMPORT_NOT_INCLUDED_PACKAGE_NOT_DETECTED.
+
+TypeScript verification
+Command used:
+npx.cmd tsc --noEmit
+
+Pre-repair TypeScript exit code:
+1
+
+Post-repair TypeScript result:
+PASS_TYPESCRIPT_CHECKED_THROUGH_NPX_CMD_AFTER_O_CK_REPAIR
+
+Current decision
+O-CK is repaired by O-CK-REPAIR.
+The valid implementation baseline for the admin helper is this repair commit, not the original broken O-CK proof.
+
+Next step decision
+Proceed to O-CL.
+O-CL should create the read-only app user mapping helper contract using getSupabaseAdminClient.
+O-CL must remain no DB read, no DB write, no SQL, no AI, no diagnostic endpoint creation and no controlled-intake route integration unless explicitly converted later.
+
+PASS marker
+PASS_O_CK_REPAIR_ADMIN_HELPER_TYPESCRIPT_FIXED_NO_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
