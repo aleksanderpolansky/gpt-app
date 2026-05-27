@@ -1,0 +1,160 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CI
+Server-only Supabase admin client exact helper/path decision
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CI: 2f77371
+- Expected origin/main before O-CI: 2f77371
+- Baseline commit: 2f77371 docs: add C8-I O-CH Supabase admin client contract
+
+Purpose
+This block decides the exact helper/path strategy for the future server-only Supabase admin client.
+
+This block is static proof/report-only.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not create the future mapping diagnostic endpoint.
+It does not create a Supabase admin client.
+It does not modify src/app/api/activity/controlled-intake/route.ts.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+
+O-CH contract carried forward
+- The future admin client must be server-only.
+- The service-role key must never be public.
+- The service-role key candidate is SUPABASE_SERVICE_ROLE_KEY.
+- The first allowed use is read-only app user mapping.
+- The initial query scope is public.app_users.
+- Required mapping columns are id and auth0_sub.
+- Raw DB rows and raw Auth0 session output are forbidden.
+
+O-CF schema decisions carried forward
+- Exact app user table: public.app_users.
+- Exact internal app user id field: public.app_users.id.
+- Exact Auth0 subject field: public.app_users.auth0_sub.
+- Lookup predicate: public.app_users.auth0_sub equals trusted server-side Auth0 authSubject.
+- Provider must be enforced from trusted Auth0 session, not from public.app_users.
+- public.app_users has UNIQUE (auth0_sub).
+- app_user_inactive is not supported by current public.app_users schema.
+- RLS is enabled for public.app_users.
+- No RLS policies were returned for public.app_users.
+
+Static scan counts
+- Tracked TS/TSX files scanned: 202
+- Candidate rows: 29
+- Safe admin candidates: 0
+- Service-role candidates: 1
+- Server-only candidates: 0
+- Supabase create client candidates: 17
+
+Exact helper/path decision
+- preferredPath: lib/supabase/admin.ts
+- preferredPathExists: False
+- preferredPathIsSafeCandidate: False
+- adminClientHelperPathDecision: NO_EXACT_REUSABLE_SERVER_ONLY_ADMIN_HELPER_CONFIRMED_USE_NEW_DEDICATED_PATH
+- selectedAdminClientHelperPath: lib/supabase/admin.ts
+- adminClientImplementationMode: CREATE_NEW_DEDICATED_SERVER_ONLY_ADMIN_HELPER_IN_LATER_IMPLEMENTATION_GATE
+- nextStepDecision: Proceed to O-CJ dedicated server-only admin helper implementation contract.
+
+Decision interpretation
+O-CI does not authorize implementation.
+O-CI only selects the helper/path strategy for the next contract/proof block.
+If an existing helper is selected, the next block must prove its server-only/service-role safety before reuse.
+If a new helper path is selected, the next block must define the implementation contract before code is added.
+
+Future helper requirements
+- Must be server-only.
+- Must use the service-role key only on the server.
+- Must fail closed if required env vars are missing.
+- Must never log the service-role key.
+- Must never expose the service-role key in JSON responses.
+- Must initially support only read-only mapping access to public.app_users.
+
+Next step decision
+Proceed to O-CJ.
+O-CJ should create the admin client reuse/implementation proof contract according to the O-CI selected helper/path decision.
+O-CJ must remain no DB read, no DB write, no SQL, no AI, no diagnostic endpoint creation and no controlled-intake route integration unless explicitly converted into a later code implementation gate.
+
+PASS marker
+PASS_SERVER_ONLY_SUPABASE_ADMIN_CLIENT_HELPER_PATH_DECISION_NO_DB_NO_WRITE_NO_SQL_NO_AI
+
+Safe server-only admin helper candidates
+No matches found.
+
+Service-role candidate files
+Match count in report excerpt: 1
+lib/supabase.ts
+
+Server-only candidate files
+No matches found.
+
+Supabase create client candidate files
+Match count in report excerpt: 17
+lib/activity/activityRubricatorClassificationLifecycle.ts
+lib/activity/activityValueObjectLifecycle.ts
+lib/activity/categoryDerivation/completeRouteIntegration.ts
+lib/activity/categoryDerivation/persistDerivations.ts
+lib/activity/categoryDerivation/resolver.ts
+lib/activity/categoryDerivation/routeRunner.ts
+lib/activity/knownTemplateRegistryMetadata.ts
+lib/activity/knownTemplateRegistryRuleResolver.ts
+lib/activity/rubricatorValueObjectMapper.ts
+lib/activity/valueObjectBridge.ts
+lib/supabase.ts
+src/app/api/activity/complete/route.ts
+src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts
+src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts
+src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+src/app/api/activity/debug/category-derivation-route-runner-test/route.ts
+src/app/api/activity/debug/free-text-value-object-test/route.ts
+
+Candidate row summary
+Match count in report excerpt: 29
+lib/activity/activityRubricatorClassificationLifecycle.ts | supabaseJs=True | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/activityValueObjectLifecycle.ts | supabaseJs=True | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/categoryDerivation/completeRouteIntegration.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/categoryDerivation/persistDerivations.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/categoryDerivation/resolver.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/categoryDerivation/routeRunner.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/controlledIntake/serverSideAppUserMapping.ts | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=True
+lib/activity/controlledIntake/serverSideAuthSession.ts | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=True
+lib/activity/controlledIntake/serverSideAuthSessionRuntime.ts | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=True
+lib/activity/controlledIntake/serverSideAuthSessionRuntimeBridge.ts | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=True
+lib/activity/controlledIntake/serverSideAuthSessionRuntimeConnection.ts | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=True
+lib/activity/knownTemplateRegistryMetadata.ts | supabaseJs=True | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/knownTemplateRegistryRuleResolver.ts | supabaseJs=True | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/rubricatorValueObjectMapper.ts | supabaseJs=True | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/valueObjectBridge.ts | supabaseJs=True | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/supabase.ts | supabaseJs=True | createClient=True | serviceRole=True | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=True
+src/app/admin/object-action/categories/CategoryAdminButtons.tsx | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=True | apiOrServerPath=False | adminNamed=True
+src/app/admin/object-action/categories/page.tsx | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=False | adminNamed=True
+src/app/admin/object-action/classifications/page.tsx | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=False | adminNamed=True
+src/app/admin/object-action/page.tsx | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=False | adminNamed=True
+src/app/admin/object-action/suggestions/SuggestionModerationButtons.tsx | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=True | apiOrServerPath=False | adminNamed=True
+src/app/admin/object-action/suggestions/page.tsx | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=False | adminNamed=True
+src/app/admin/page.tsx | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=False | adminNamed=True
+src/app/api/activity/complete/route.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+src/app/api/activity/debug/category-derivation-route-runner-test/route.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+src/app/api/activity/debug/free-text-value-object-test/route.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+
+Service-role matching lines
+No matches found.
+
+Server-only matching lines
+No matches found.
+
+Supabase create client matching lines
+No matches found.
+
+app_users/auth0_sub mapping matching lines
+No matches found.
