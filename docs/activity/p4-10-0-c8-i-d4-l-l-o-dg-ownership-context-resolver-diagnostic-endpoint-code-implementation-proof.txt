@@ -1,0 +1,70 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-DG
+Ownership/context resolver diagnostic endpoint code implementation proof
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-DG: 0906a5f
+- Expected origin/main before O-DG: 0906a5f
+- Baseline commit: 0906a5f docs: contract C8-I O-DF ownership context diagnostic endpoint
+
+Implemented file
+- src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts.
+
+Implementation scope
+- Diagnostic endpoint file created.
+- controlled-intake route.ts was not modified.
+- No endpoint was called by this script.
+- No runtime DB read was executed by this script.
+- No DB write was executed.
+- No SQL was executed.
+- No AI call was executed.
+- No activity_events insert was executed.
+- No semantic candidates were persisted.
+- No Value Objects were created.
+- No state facts, state deltas, or state snapshots were created.
+- No production write was enabled.
+
+Endpoint behavior
+- GET only.
+- Requires header x-controlled-intake-ownership-context-resolution-read-only-test: enabled.
+- Missing header returns 403 without Auth0 session read, app user mapping, resolver call or DB read.
+- Authenticated path reads Auth0 session server-side.
+- App user mapping uses trusted server-side Auth0 subject.
+- Ownership/context resolver uses mapped internal app user id internally.
+- actorId, spaceId, organizationId and contextSource are query-string hints only.
+- Response is sanitized.
+
+Sanitization boundary
+- appUserId is not exposed.
+- authSubject is not exposed.
+- raw session is not exposed.
+- tokens are not exposed.
+- actorId is not exposed.
+- spaceId is not exposed.
+- organizationId is not exposed.
+- actorSpaceRoleId is not exposed.
+- raw Supabase errors are not exposed.
+- service role key is not exposed.
+
+Guardrails verified
+- Endpoint has no insert/update/delete/upsert/rpc calls.
+- Endpoint has no OpenAI/chat completion calls.
+- Endpoint has no console logging.
+- Endpoint has no token strings.
+- Endpoint has no service role key string.
+- controlled-intake route hash before and after O-DG matched.
+
+Validation
+- TypeScript passed through npx.cmd tsc --noEmit.
+
+Next step decision
+Proceed to O-DH ownership/context resolver diagnostic endpoint postcheck.
+O-DH should verify tracked file state, markers, TypeScript, route unchanged and no forbidden patterns after commit.
+
+PASS marker
+PASS_O_DG_OWNERSHIP_CONTEXT_RESOLVER_DIAGNOSTIC_ENDPOINT_IMPLEMENTED_NO_CONTROLLED_INTAKE_ROUTE_CHANGE_NO_ENDPOINT_CALL_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
