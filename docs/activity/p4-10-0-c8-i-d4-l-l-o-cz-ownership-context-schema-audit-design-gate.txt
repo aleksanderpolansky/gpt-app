@@ -1,0 +1,236 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CZ
+Controlled-intake ownership/context schema audit design gate
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CZ: 990cc3d
+- Expected origin/main before O-CZ: 990cc3d
+- Baseline commit: 990cc3d docs: design C8-I O-CY ownership context resolver
+
+Purpose
+This gate designs the SQL metadata audit needed before any ownership/context resolver implementation.
+
+This block is schema-audit-design/report-only.
+It does not call the controlled-intake endpoint.
+It does not query the database.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+It does not enable production writes.
+It does not modify code.
+
+Accepted prerequisite
+- O-CY designed the no-write ownership/context resolver contract.
+- O-CY blocked implementation until schema audit.
+- O-CY did not authorize DB read implementation.
+- O-CY did not approve default actor/organization/space selection.
+
+Schema audit goal
+Find the exact existing schema for actor/organization/space/membership ownership resolution.
+The audit must be metadata-only.
+The audit must identify exact table names, column names, primary keys, foreign keys, unique constraints, indexes, RLS status and policies.
+
+Required evidence to extract
+- exact actor table name.
+- exact actor id field.
+- exact actor to app user ownership field.
+- exact actor status field, if any.
+- exact organization table name.
+- exact organization id field.
+- exact organization membership table name.
+- exact organization membership user/app-user/actor linkage fields.
+- exact organization membership status field.
+- exact organization membership role field.
+- exact space table name.
+- exact space id field.
+- exact space membership table name, if used.
+- exact space membership status field, if used.
+- exact role values allowed to record controlled-intake activities.
+- exact RLS status for all candidate tables.
+- exact RLS policies for all candidate tables.
+
+Expected future output of SQL execution gate
+The next execution gate should produce a report with the actual metadata audit results.
+The report must not guess table names.
+The report must not silently invent missing tables or columns.
+If schema is insufficient, the next decision must be migration/design gate, not resolver implementation.
+
+Approved SQL execution scope for next gate only
+The next gate may execute metadata SELECT queries only.
+The next gate must not execute INSERT, UPDATE, DELETE, UPSERT, RPC, DDL, migrations or policy changes.
+The next gate must not call application endpoints.
+The next gate must not call AI.
+The next gate must not modify application code.
+
+Rejected actions
+- Do not implement ownershipContextResolutionReadOnly helper yet.
+- Do not modify controlled-intake route yet.
+- Do not add activity_events write gate yet.
+- Do not choose a default actor yet.
+- Do not trust client-supplied actorId/organizationId/spaceId.
+
+Next step decision
+Proceed to O-DA ownership/context schema audit SQL execution gate.
+O-DA may execute only the metadata SELECT queries documented in this O-CZ report.
+O-DA must record exact results in docs/activity.
+
+PASS marker
+PASS_O_CZ_OWNERSHIP_CONTEXT_SCHEMA_AUDIT_DESIGN_CREATED_NO_CODE_CHANGE_NO_ENDPOINT_CALL_NO_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+
+================================================================================
+BEGIN SQL METADATA AUDIT PLAN FOR FUTURE EXECUTION ONLY
+================================================================================
+SQL METADATA AUDIT PLAN FOR FUTURE EXECUTION GATE ONLY
+
+IMPORTANT:
+This SQL text is documentation for the next explicit SQL execution gate.
+O-CZ does not execute this SQL.
+
+Audit target:
+Find exact public schema tables, columns, constraints, indexes, RLS status and policies related to:
+- actors
+- organizations
+- spaces
+- memberships
+- actor/organization/space/user/app_user links
+- status fields
+- role fields
+
+Recommended metadata query group A: table candidates
+SELECT table_schema, table_name
+FROM information_schema.tables
+WHERE table_schema IN ('public')
+  AND (
+    table_name ILIKE '%actor%'
+    OR table_name ILIKE '%organization%'
+    OR table_name ILIKE '%space%'
+    OR table_name ILIKE '%member%'
+    OR table_name ILIKE '%role%'
+    OR table_name ILIKE '%user%'
+    OR table_name ILIKE '%app_user%'
+  )
+ORDER BY table_schema, table_name;
+
+Recommended metadata query group B: column candidates
+SELECT table_schema, table_name, column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_schema IN ('public')
+  AND (
+    table_name ILIKE '%actor%'
+    OR table_name ILIKE '%organization%'
+    OR table_name ILIKE '%space%'
+    OR table_name ILIKE '%member%'
+    OR table_name ILIKE '%role%'
+    OR table_name ILIKE '%user%'
+    OR table_name ILIKE '%app_user%'
+    OR column_name ILIKE '%actor%'
+    OR column_name ILIKE '%organization%'
+    OR column_name ILIKE '%space%'
+    OR column_name ILIKE '%member%'
+    OR column_name ILIKE '%role%'
+    OR column_name ILIKE '%status%'
+    OR column_name ILIKE '%user%'
+    OR column_name ILIKE '%app_user%'
+    OR column_name ILIKE '%auth0%'
+  )
+ORDER BY table_schema, table_name, ordinal_position;
+
+Recommended metadata query group C: primary keys, unique constraints and foreign keys
+SELECT
+  tc.table_schema,
+  tc.table_name,
+  tc.constraint_name,
+  tc.constraint_type,
+  kcu.column_name,
+  ccu.table_schema AS foreign_table_schema,
+  ccu.table_name AS foreign_table_name,
+  ccu.column_name AS foreign_column_name
+FROM information_schema.table_constraints tc
+LEFT JOIN information_schema.key_column_usage kcu
+  ON tc.constraint_name = kcu.constraint_name
+  AND tc.table_schema = kcu.table_schema
+LEFT JOIN information_schema.constraint_column_usage ccu
+  ON tc.constraint_name = ccu.constraint_name
+  AND tc.table_schema = ccu.table_schema
+WHERE tc.table_schema IN ('public')
+  AND (
+    tc.table_name ILIKE '%actor%'
+    OR tc.table_name ILIKE '%organization%'
+    OR tc.table_name ILIKE '%space%'
+    OR tc.table_name ILIKE '%member%'
+    OR tc.table_name ILIKE '%role%'
+    OR tc.table_name ILIKE '%user%'
+    OR tc.table_name ILIKE '%app_user%'
+  )
+ORDER BY tc.table_schema, tc.table_name, tc.constraint_type, tc.constraint_name, kcu.ordinal_position;
+
+Recommended metadata query group D: indexes
+SELECT
+  schemaname,
+  tablename,
+  indexname,
+  indexdef
+FROM pg_indexes
+WHERE schemaname IN ('public')
+  AND (
+    tablename ILIKE '%actor%'
+    OR tablename ILIKE '%organization%'
+    OR tablename ILIKE '%space%'
+    OR tablename ILIKE '%member%'
+    OR tablename ILIKE '%role%'
+    OR tablename ILIKE '%user%'
+    OR tablename ILIKE '%app_user%'
+  )
+ORDER BY schemaname, tablename, indexname;
+
+Recommended metadata query group E: RLS status
+SELECT
+  schemaname,
+  tablename,
+  rowsecurity
+FROM pg_tables
+WHERE schemaname IN ('public')
+  AND (
+    tablename ILIKE '%actor%'
+    OR tablename ILIKE '%organization%'
+    OR tablename ILIKE '%space%'
+    OR tablename ILIKE '%member%'
+    OR tablename ILIKE '%role%'
+    OR tablename ILIKE '%user%'
+    OR tablename ILIKE '%app_user%'
+  )
+ORDER BY schemaname, tablename;
+
+Recommended metadata query group F: RLS policies
+SELECT
+  schemaname,
+  tablename,
+  policyname,
+  permissive,
+  roles,
+  cmd,
+  qual,
+  with_check
+FROM pg_policies
+WHERE schemaname IN ('public')
+  AND (
+    tablename ILIKE '%actor%'
+    OR tablename ILIKE '%organization%'
+    OR tablename ILIKE '%space%'
+    OR tablename ILIKE '%member%'
+    OR tablename ILIKE '%role%'
+    OR tablename ILIKE '%user%'
+    OR tablename ILIKE '%app_user%'
+  )
+ORDER BY schemaname, tablename, policyname;
+================================================================================
+END SQL METADATA AUDIT PLAN FOR FUTURE EXECUTION ONLY
+================================================================================
