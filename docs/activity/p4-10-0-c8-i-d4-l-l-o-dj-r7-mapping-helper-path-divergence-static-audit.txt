@@ -1,0 +1,97 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R7 - mapping helper/path divergence static audit
+Date = 2026-05-27 17:59:57 +02:00
+Status = STATIC_AUDIT_COMPLETED
+
+1. Baseline
+Expected HEAD = 6495a5b
+Actual HEAD = 6495a5b
+Working tree before audit = clean
+
+2. Runtime context carried from previous gates
+O-DJ-R5 result:
+- focused app user mapping endpoint returned mappingOutcomeCategory = mapped
+- appUsersQuerySucceeded = true
+- appUsersRowCountCategory = one
+
+O-DJ-R6 result:
+- ownership/context endpoint returned appUserMappingStatus = app_user_lookup_error
+- appUserMapped = false
+- ownershipContextResolutionExecuted = false
+- ownershipContextResolutionStatus = not_executed
+
+3. Files audited
+- focused endpoint = src/app/api/activity/debug/app-user-mapping-lookup-error-focused-test/route.ts
+- ownership/context endpoint = src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts
+- mapping helper = lib/activity/controlledIntake/serverSideAppUserMappingReadOnly.ts
+- Supabase admin helper = lib/supabase/admin.ts
+- O-DJ-R5 report = docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r5-app-user-mapping-focused-browser-runtime-verification.txt
+- O-DJ-R6 report = docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r6-ownership-context-runtime-after-mapping-success.txt
+
+4. Static boolean findings
+focusedHasDirectAppUsersQuery = true
+focusedHasAppUserSelectedColumns = true
+focusedHasMappingOutcomeMapped = true
+focusedHasSanitizedErrorCategory = true
+focusedUsesSupabaseAdmin = true
+focusedUsesAuth0Session = true
+
+ownershipImportsMappingHelper = true
+ownershipHasAppUserLookupError = true
+ownershipHasOwnershipResolverExecuted = true
+ownershipHasHeader = true
+ownershipUsesAuth0Session = true
+ownershipUsesSearchParams = true
+
+helperHasSelectedMappingColumns = true
+helperQueriesAppUsers = true
+helperUsesMaybeSingle = false
+helperUsesSingle = false
+helperUsesLimit = true
+helperUsesEqAuth0Sub = true
+helperReturnsLookupError = true
+helperReturnsMappedUserFound = true
+
+adminHelperUsesServiceRole = true
+adminHelperUsesSupabaseUrl = true
+adminHelperCreatesClient = true
+
+5. Derived audit findings
+System.Object[]
+
+6. Likely static conclusion
+likelyCause = separate_mapping_paths_need_column_filter_error_handling_comparison
+
+7. Focused endpoint evidence lines
+System.Object[]
+
+8. Ownership endpoint mapping evidence lines
+System.Object[]
+
+9. Mapping helper evidence lines
+System.Object[]
+
+10. Supabase admin helper evidence lines
+System.Object[]
+
+11. Safety / guardrails
+- No endpoint call was executed by O-DJ-R7.
+- No browser runtime was executed by O-DJ-R7.
+- No runtime DB read was triggered by this PowerShell audit.
+- No DB write.
+- No SQL.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+- No code patch.
+- TypeScript passed: npx.cmd tsc --noEmit.
+
+12. Decision
+PASS_O_DJ_R7_STATIC_DIVERGENCE_AUDIT_COMPLETED_NO_CODE_CHANGE_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+
+13. Next step
+O-DJ-R8 should patch only the confirmed helper/path divergence if the report identifies a concrete mismatch.
+If the report is inconclusive, O-DJ-R8 should be a narrower static source inspection/report, not runtime.
+Do not repeat O-DJ-R6 yet.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
