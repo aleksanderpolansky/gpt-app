@@ -1,0 +1,48 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R12B - positive ownership context auto-candidate diagnostic endpoint
+Date = 2026-05-27 20:34:53 +02:00
+Status = POSITIVE_CONTEXT_AUTO_CANDIDATE_ENDPOINT_CREATED
+
+1. Baseline
+Expected HEAD = ea38039
+Actual HEAD = ea38039
+Working tree before O-DJ-R12B = clean
+
+2. New endpoint
+Endpoint = /api/activity/debug/ownership-context-positive-auto-candidate-read-only-test
+Required header = x-ownership-context-positive-auto-candidate-read-only-test: enabled
+File = src/app/api/activity/debug/ownership-context-positive-auto-candidate-read-only-test/route.ts
+
+3. Purpose
+Find a positive resolvable ownership/context candidate server-side.
+Do not expose raw appUserId, authSubject, actorId, spaceId, organizationId, roleId, session, token, secrets, raw errors, or stack traces.
+Return only sanitized candidate kind, row count categories, resolver status and boolean flags.
+
+4. Candidate search order
+1) owned_space via spaces.owner_app_user_id
+2) actor_space_role_space via actor_space_roles.app_user_id
+3) creator_organization via organizations.created_by_app_user_id
+4) organization_actor via actors.app_user_id + organization_id
+
+5. Runtime policy
+This PowerShell script did not call the endpoint.
+Runtime verification must be done in browser in O-DJ-R12C.
+
+6. Safety / guardrails
+- No endpoint call was executed by O-DJ-R12B PowerShell.
+- No browser runtime was executed by O-DJ-R12B PowerShell.
+- No runtime DB read was triggered by O-DJ-R12B PowerShell.
+- No DB write.
+- No SQL.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+- TypeScript passed: npx.cmd tsc --noEmit.
+
+7. Decision
+PASS_O_DJ_R12B_POSITIVE_CONTEXT_AUTO_CANDIDATE_DIAGNOSTIC_ENDPOINT_CREATED_TSC_PASS_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+
+8. Next step
+O-DJ-R12C browser runtime verification for the new positive auto-candidate endpoint.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
