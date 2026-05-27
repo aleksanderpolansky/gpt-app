@@ -1,0 +1,205 @@
+import { getSupabaseAdminClient } from '../../supabase/admin';
+
+export type ServerSideAppUserMappingReadOnlyStatus =
+  | 'provider_not_supported'
+  | 'missing_auth_subject'
+  | 'app_user_not_found'
+  | 'mapped_user_found'
+  | 'app_user_duplicate'
+  | 'app_user_lookup_error';
+
+export type ServerSideAppUserMappingReadOnlyInput = {
+  provider: string | null | undefined;
+  authSubject: string | null | undefined;
+};
+
+export type ServerSideAppUserMappingReadOnlyResult = {
+  mappingStatus: ServerSideAppUserMappingReadOnlyStatus;
+  mappedUserFound: boolean;
+  dbReadExecuted: boolean;
+  failClosed: boolean;
+  provider: string | null;
+  authSubjectPresent: boolean;
+  authSubjectMatched: boolean;
+  appUserId: string | null;
+  appUserInactiveSupported: false;
+  appUserInactiveCheckExecuted: false;
+  tableName: 'public.app_users';
+  selectedColumns: 'id,auth0_sub' | null;
+};
+
+type AppUserMappingRow = {
+  id: string | null;
+  auth0_sub: string | null;
+};
+
+const PUBLIC_APP_USERS_TABLE_NAME = 'public.app_users' as const;
+const SELECTED_MAPPING_COLUMNS = 'id,auth0_sub' as const;
+const SUPPORTED_PROVIDER = 'auth0';
+
+function normalizeProvider(provider: string | null | undefined): string | null {
+  if (typeof provider !== 'string') {
+    return null;
+  }
+
+  const normalizedProvider = provider.trim().toLowerCase();
+
+  return normalizedProvider.length > 0 ? normalizedProvider : null;
+}
+
+function normalizeAuthSubject(authSubject: string | null | undefined): string | null {
+  if (typeof authSubject !== 'string') {
+    return null;
+  }
+
+  const normalizedAuthSubject = authSubject.trim();
+
+  return normalizedAuthSubject.length > 0 ? normalizedAuthSubject : null;
+}
+
+function createResult(
+  values: Omit<
+    ServerSideAppUserMappingReadOnlyResult,
+    | 'appUserInactiveSupported'
+    | 'appUserInactiveCheckExecuted'
+    | 'tableName'
+  >,
+): ServerSideAppUserMappingReadOnlyResult {
+  return {
+    ...values,
+    appUserInactiveSupported: false,
+    appUserInactiveCheckExecuted: false,
+    tableName: PUBLIC_APP_USERS_TABLE_NAME,
+  };
+}
+
+export async function mapServerSideAppUserReadOnly(
+  input: ServerSideAppUserMappingReadOnlyInput,
+): Promise<ServerSideAppUserMappingReadOnlyResult> {
+  const provider = normalizeProvider(input.provider);
+  const authSubject = normalizeAuthSubject(input.authSubject);
+
+  if (provider !== SUPPORTED_PROVIDER) {
+    return createResult({
+      mappingStatus: 'provider_not_supported',
+      mappedUserFound: false,
+      dbReadExecuted: false,
+      failClosed: true,
+      provider,
+      authSubjectPresent: Boolean(authSubject),
+      authSubjectMatched: false,
+      appUserId: null,
+      selectedColumns: null,
+    });
+  }
+
+  if (!authSubject) {
+    return createResult({
+      mappingStatus: 'missing_auth_subject',
+      mappedUserFound: false,
+      dbReadExecuted: false,
+      failClosed: true,
+      provider,
+      authSubjectPresent: false,
+      authSubjectMatched: false,
+      appUserId: null,
+      selectedColumns: null,
+    });
+  }
+
+  try {
+    const supabaseAdmin = getSupabaseAdminClient();
+
+    const { data, error } = await supabaseAdmin
+      .from('app_users')
+      .select(SELECTED_MAPPING_COLUMNS)
+      .eq('auth0_sub', authSubject)
+      .limit(2);
+
+    if (error) {
+      return createResult({
+        mappingStatus: 'app_user_lookup_error',
+        mappedUserFound: false,
+        dbReadExecuted: true,
+        failClosed: true,
+        provider,
+        authSubjectPresent: true,
+        authSubjectMatched: false,
+        appUserId: null,
+        selectedColumns: SELECTED_MAPPING_COLUMNS,
+      });
+    }
+
+    const rows = Array.isArray(data) ? (data as AppUserMappingRow[]) : [];
+
+    if (rows.length === 0) {
+      return createResult({
+        mappingStatus: 'app_user_not_found',
+        mappedUserFound: false,
+        dbReadExecuted: true,
+        failClosed: false,
+        provider,
+        authSubjectPresent: true,
+        authSubjectMatched: false,
+        appUserId: null,
+        selectedColumns: SELECTED_MAPPING_COLUMNS,
+      });
+    }
+
+    if (rows.length > 1) {
+      return createResult({
+        mappingStatus: 'app_user_duplicate',
+        mappedUserFound: false,
+        dbReadExecuted: true,
+        failClosed: true,
+        provider,
+        authSubjectPresent: true,
+        authSubjectMatched: false,
+        appUserId: null,
+        selectedColumns: SELECTED_MAPPING_COLUMNS,
+      });
+    }
+
+    const row = rows[0];
+    const rowAppUserId = typeof row.id === 'string' ? row.id.trim() : '';
+    const rowAuthSubject = typeof row.auth0_sub === 'string' ? row.auth0_sub.trim() : '';
+
+    if (!rowAppUserId || rowAuthSubject !== authSubject) {
+      return createResult({
+        mappingStatus: 'app_user_lookup_error',
+        mappedUserFound: false,
+        dbReadExecuted: true,
+        failClosed: true,
+        provider,
+        authSubjectPresent: true,
+        authSubjectMatched: false,
+        appUserId: null,
+        selectedColumns: SELECTED_MAPPING_COLUMNS,
+      });
+    }
+
+    return createResult({
+      mappingStatus: 'mapped_user_found',
+      mappedUserFound: true,
+      dbReadExecuted: true,
+      failClosed: false,
+      provider,
+      authSubjectPresent: true,
+      authSubjectMatched: true,
+      appUserId: rowAppUserId,
+      selectedColumns: SELECTED_MAPPING_COLUMNS,
+    });
+  } catch {
+    return createResult({
+      mappingStatus: 'app_user_lookup_error',
+      mappedUserFound: false,
+      dbReadExecuted: true,
+      failClosed: true,
+      provider,
+      authSubjectPresent: true,
+      authSubjectMatched: false,
+      appUserId: null,
+      selectedColumns: SELECTED_MAPPING_COLUMNS,
+    });
+  }
+}

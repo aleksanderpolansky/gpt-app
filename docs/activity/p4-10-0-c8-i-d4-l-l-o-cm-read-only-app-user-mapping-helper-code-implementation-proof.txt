@@ -1,0 +1,72 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CM
+Read-only app user mapping helper code implementation proof
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CM: 6adaf96
+- Expected origin/main before O-CM: 6adaf96
+- Baseline commit: 6adaf96 docs: add C8-I O-CL app user mapping helper contract
+
+Purpose
+This block implements the read-only app user mapping helper authorized by O-CL.
+
+Implemented file
+- lib/activity/controlledIntake/serverSideAppUserMappingReadOnly.ts
+
+Implementation details
+- Imports getSupabaseAdminClient from lib/supabase/admin by relative server-side path.
+- Exports mapServerSideAppUserReadOnly.
+- Accepts provider and authSubject only.
+- Supports only provider auth0.
+- Fails before DB lookup for unsupported provider.
+- Fails before DB lookup for missing authSubject.
+- Queries public.app_users through Supabase public table name app_users.
+- Selects id and auth0_sub only.
+- Filters auth0_sub equals trusted authSubject.
+- Limits defensively to 2 rows.
+- Returns app_user_not_found for zero rows.
+- Returns mapped_user_found for one valid row.
+- Returns app_user_duplicate for more than one row.
+- Returns app_user_lookup_error for Supabase errors or malformed row data.
+- Does not execute inactive/status checks.
+- appUserInactiveSupported is false.
+- appUserInactiveCheckExecuted is false.
+
+Boundaries preserved during O-CM script execution
+- No runtime DB read was executed by this script.
+- No DB write was executed.
+- No SQL was executed.
+- No AI call was executed.
+- No endpoint was created.
+- controlled-intake route was not modified.
+- No activity_events insert was added.
+- No semantic candidate persistence was added.
+- No Value Object creation was added.
+- No state facts, state deltas or state snapshots were added.
+
+Safe response boundary
+- Helper does not return raw DB rows.
+- Helper does not return raw Supabase error objects.
+- Helper does not return raw Auth0 session.
+- Helper does not return cookies or tokens.
+- Helper does not return service-role configuration details.
+
+TypeScript verification
+Command used:
+npx.cmd tsc --noEmit
+
+Result:
+PASS_TYPESCRIPT_CHECKED_THROUGH_NPX_CMD_AFTER_O_CM
+
+Next step decision
+Proceed to O-CN.
+O-CN should create the diagnostic endpoint contract for server-side app user mapping read-only test.
+O-CN must remain no DB read, no DB write, no SQL, no AI and no controlled-intake route integration unless explicitly converted later.
+
+PASS marker
+PASS_READ_ONLY_APP_USER_MAPPING_HELPER_IMPLEMENTED_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
