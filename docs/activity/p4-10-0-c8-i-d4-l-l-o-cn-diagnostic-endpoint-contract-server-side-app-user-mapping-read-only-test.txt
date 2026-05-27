@@ -1,0 +1,174 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CN
+Diagnostic endpoint contract for server-side app user mapping read-only test
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CN: d40fced
+- Expected origin/main before O-CN: d40fced
+- Baseline commit: d40fced feat: add C8-I O-CM read-only app user mapping helper
+
+Purpose
+This block defines the contract for a future diagnostic endpoint that will execute the read-only app user mapping helper in an authenticated server-side runtime.
+
+This block is contract/report-only.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not create the diagnostic endpoint.
+It does not modify src/app/api/activity/controlled-intake/route.ts.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+
+O-CM implementation carried forward
+- Mapping helper path: lib/activity/controlledIntake/serverSideAppUserMappingReadOnly.ts.
+- Mapping helper export: mapServerSideAppUserReadOnly.
+- Mapping helper uses getSupabaseAdminClient.
+- Mapping helper queries app_users by auth0_sub.
+- Mapping helper selects id and auth0_sub only.
+- Mapping helper limits defensively to 2 rows.
+- Mapping helper statuses: provider_not_supported, missing_auth_subject, app_user_not_found, mapped_user_found, app_user_duplicate, app_user_lookup_error.
+
+Future diagnostic endpoint path
+src/app/api/activity/debug/server-side-app-user-mapping-read-only-test/route.ts
+
+Future diagnostic endpoint method
+- GET only.
+- No POST.
+- No PUT.
+- No PATCH.
+- No DELETE.
+
+Future diagnostic endpoint guard
+- The endpoint must require an explicit diagnostic header.
+- Header name: x-controlled-intake-server-side-app-user-mapping-read-only-test.
+- Recommended accepted value: enabled.
+- If the header is missing or invalid, the endpoint must fail before Auth0 session read and before DB lookup.
+- Header failure response must set diagnosticHeaderAccepted false.
+- Header failure response must set authSessionReadExecuted false.
+- Header failure response must set dbReadExecuted false.
+
+Future diagnostic endpoint runtime source
+- Read server-side Auth0 session using the existing server-side auth/session bridge.
+- Do not accept provider from the browser.
+- Do not accept authSubject from the browser.
+- Do not accept appUserId from the browser.
+- Do not accept userId, actorId, organizationId or spaceId from the browser as trusted ownership.
+- Provider and authSubject must come only from trusted server-side session/context extraction.
+
+Future diagnostic endpoint mapping flow
+1. Verify diagnostic header.
+2. Read trusted server-side Auth0 session/context.
+3. Build trusted context from the server-side Auth0 session.
+4. Call mapServerSideAppUserReadOnly with trusted provider and trusted authSubject.
+5. Return a sanitized diagnostic response.
+
+Future diagnostic endpoint expected imports
+- Import mapServerSideAppUserReadOnly from lib/activity/controlledIntake/serverSideAppUserMappingReadOnly.
+- Reuse existing server-side Auth0 session/context bridge where possible.
+- Do not import client-side Supabase helpers.
+- Do not import browser-only modules.
+- Do not import from files containing use client.
+
+Future safe response boundary
+- Do not return raw DB rows.
+- Do not return raw Supabase error objects.
+- Do not return raw Auth0 session.
+- Do not return raw Auth0 profile.
+- Do not return cookies.
+- Do not return access_token, refresh_token, id_token or any token.
+- Do not return full provider payload.
+- Do not return full user record.
+- Do not return service-role configuration details.
+- Do not return request headers.
+- Do not return environment variables.
+
+Future response contract fields
+- ok.
+- routeName.
+- diagnosticHeaderAccepted.
+- authSessionReadExecuted.
+- authSessionFound.
+- trustedProvider.
+- trustedAuthSubjectPresent.
+- mappingStatus.
+- mappedUserFound.
+- dbReadExecuted.
+- failClosed.
+- appUserInactiveSupported.
+- appUserInactiveCheckExecuted.
+- selectedColumns.
+- tableName.
+- controlledIntakeRouteChanged: false.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+- semanticCandidatesPersisted: false.
+- valueObjectsCreated: false.
+- stateFactsWritten: false.
+- stateDeltasWritten: false.
+- stateSnapshotsWritten: false.
+
+appUserId exposure decision
+- The default endpoint response should not expose appUserId.
+- If a proof field is needed later, it must be explicitly authorized in a separate browser verification contract.
+- O-CN does not authorize exposing appUserId.
+
+Expected future success behavior
+- If authenticated Auth0 session exists and public.app_users contains exactly one matching auth0_sub row, mappingStatus should be mapped_user_found.
+- mappedUserFound should be true.
+- dbReadExecuted should be true.
+- dbWriteExecuted should remain false.
+- controlledIntakeRouteChanged should remain false.
+
+Expected future safe failure behavior
+- Missing/invalid diagnostic header: fail before auth session and before DB lookup.
+- Unauthenticated session: fail before DB lookup.
+- Unsupported provider: provider_not_supported and dbReadExecuted false.
+- Missing authSubject: missing_auth_subject and dbReadExecuted false.
+- No app user row: app_user_not_found and dbReadExecuted true.
+- Duplicate rows: app_user_duplicate and failClosed true.
+- Supabase lookup error: app_user_lookup_error and failClosed true.
+
+Forbidden scope
+- No DB writes.
+- No inserts into activity_events.
+- No semantic candidate persistence.
+- No Value Object creation.
+- No state facts, state deltas or state snapshots.
+- No controlled-intake route integration.
+- No raw SQL execution.
+- No AI calls.
+- No production write enablement.
+
+Future implementation gate
+O-CN does not implement the endpoint.
+O-CN authorizes only the next code implementation gate if the user explicitly proceeds.
+The next code gate should be O-CO.
+
+O-CO expected scope
+- Create src/app/api/activity/debug/server-side-app-user-mapping-read-only-test/route.ts.
+- Implement diagnostic GET endpoint only.
+- Require x-controlled-intake-server-side-app-user-mapping-read-only-test header.
+- Read server-side Auth0 session/context.
+- Call mapServerSideAppUserReadOnly.
+- Return sanitized diagnostic response.
+- Do not modify controlled-intake route.
+- Do not write DB.
+- Do not execute SQL.
+- Do not call AI.
+- Run TypeScript.
+- Commit only the diagnostic endpoint file and its proof report.
+
+Next step decision
+Proceed to O-CO diagnostic endpoint code implementation gate.
+O-CO may execute a DB read only when the user later calls the diagnostic endpoint in browser/runtime verification, not during the PowerShell implementation script itself.
+
+PASS marker
+PASS_DIAGNOSTIC_ENDPOINT_CONTRACT_SERVER_SIDE_APP_USER_MAPPING_READ_ONLY_TEST_CREATED_NO_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
