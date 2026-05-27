@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { auth0 } from "../../../../../lib/auth0";
 import {
   buildControlledActivityIntakeNoWritePreviewTrustedContext,
   type ControlledActivityIntakeAuthContextFailure,
@@ -16,6 +17,11 @@ import {
   buildControlledActivityIntakeServerSideAppUserMapping,
   isControlledActivityIntakeServerSideAppUserMappingFailure,
 } from "../../../../../lib/activity/controlledIntake/serverSideAppUserMapping";
+import {
+  mapServerSideAppUserReadOnly,
+  type ServerSideAppUserMappingReadOnlyResult,
+  type ServerSideAppUserMappingReadOnlyStatus,
+} from "../../../../../lib/activity/controlledIntake/serverSideAppUserMappingReadOnly";
 import { validateControlledActivityIntake } from "../../../../../lib/activity/controlledIntake/validator";
 
 export const dynamic = "force-dynamic";
@@ -94,10 +100,15 @@ const PREVIEW_MEMBERSHIP_ROLE_HEADER =
 const PREVIEW_MEMBERSHIP_SOURCE_HEADER =
   "x-controlled-intake-preview-membership-source";
 
+const TRUSTED_SERVER_PROVIDER = "auth0" as const;
+
+type UnknownRecord = Record<string, unknown>;
+
 type ControlledActivityIntakeRouteMode =
   | "no_write_preview"
   | "production_static_preview"
-  | "server_side_static_preview";
+  | "server_side_static_preview"
+  | "server_side_read_only_mapping_preview";
 
 type ControlledActivityIntakeRouteErrorCode =
   | "CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED"
@@ -110,6 +121,7 @@ type ControlledActivityIntakeRouteErrorCode =
   | "CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED"
   | "CONTROLLED_INTAKE_APP_USER_MAPPING_AMBIGUOUS"
   | "CONTROLLED_INTAKE_APP_USER_MAPPING_BLOCKED"
+  | "CONTROLLED_INTAKE_APP_USER_MAPPING_LOOKUP_FAILED"
   | "CONTROLLED_INTAKE_AUTH_SUBJECT_MISMATCH"
   | "CONTROLLED_INTAKE_CONTEXT_NOT_VERIFIED"
   | "CONTROLLED_INTAKE_ACTOR_NOT_ALLOWED"
@@ -124,7 +136,7 @@ type ControlledActivityIntakeRouteGuardrails = {
   readonly noWritePreview: true;
   readonly productionWriteEnabled: false;
   readonly previewHeaderAcceptedForProductionWrite: false;
-  readonly dbReadExecuted: false;
+  readonly dbReadExecuted: boolean;
   readonly dbWriteExecuted: false;
   readonly sqlExecuted: false;
   readonly aiCallExecuted: false;
@@ -135,12 +147,27 @@ type ControlledActivityIntakeRouteGuardrails = {
   readonly stateSnapshotsCreated: false;
 };
 
+type ControlledActivityIntakeRouteServerSideAppUserMappingProof = {
+  readonly serverSideAppUserMappingExecuted: boolean;
+  readonly serverSideAppUserMappingStatus:
+    | ServerSideAppUserMappingReadOnlyStatus
+    | null;
+  readonly serverSideAppUserMapped: boolean;
+  readonly serverSideAppUserMappingDbReadExecuted: boolean;
+  readonly serverSideAppUserMappingFailClosed: boolean;
+  readonly serverSideAppUserMappingSelectedColumns: "id,auth0_sub" | null;
+  readonly serverSideAppUserMappingTableName: "public.app_users" | null;
+  readonly appUserInactiveSupported: false;
+  readonly appUserInactiveCheckExecuted: false;
+};
+
 type RouteErrorResponse = {
   readonly ok: false;
   readonly routeLayer: typeof CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER;
   readonly code: ControlledActivityIntakeRouteErrorCode;
   readonly message: string;
   readonly issues?: unknown;
+  readonly serverSideAppUserMapping?: ControlledActivityIntakeRouteServerSideAppUserMappingProof;
   readonly guardrails: ControlledActivityIntakeRouteGuardrails;
 };
 
@@ -186,7 +213,9 @@ function isControlledActivityIntakeValidatedPayloadFailure(
   return result.ok === false;
 }
 
-function buildRouteGuardrails(): ControlledActivityIntakeRouteGuardrails {
+function buildRouteGuardrails(input?: {
+  readonly dbReadExecuted?: boolean;
+}): ControlledActivityIntakeRouteGuardrails {
   return {
     routeAuthIntegrated: true,
     routeProductionAuthMappingIntegrated: true,
@@ -195,7 +224,7 @@ function buildRouteGuardrails(): ControlledActivityIntakeRouteGuardrails {
     noWritePreview: true,
     productionWriteEnabled: false,
     previewHeaderAcceptedForProductionWrite: false,
-    dbReadExecuted: false,
+    dbReadExecuted: input?.dbReadExecuted ?? false,
     dbWriteExecuted: false,
     sqlExecuted: false,
     aiCallExecuted: false,
@@ -226,6 +255,7 @@ function buildErrorResponse(
   message: string,
   status: number,
   issues?: unknown,
+  serverSideAppUserMapping?: ControlledActivityIntakeRouteServerSideAppUserMappingProof,
 ): NextResponse<RouteErrorResponse> {
   return NextResponse.json(
     {
@@ -233,8 +263,13 @@ function buildErrorResponse(
       routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
       code,
       message,
-      issues,
-      guardrails: buildRouteGuardrails(),
+      ...(typeof issues !== "undefined" ? { issues } : {}),
+      ...(serverSideAppUserMapping ? { serverSideAppUserMapping } : {}),
+      guardrails: buildRouteGuardrails({
+        dbReadExecuted:
+          serverSideAppUserMapping?.serverSideAppUserMappingDbReadExecuted ??
+          false,
+      }),
     },
     { status },
   );
@@ -258,6 +293,10 @@ function buildServerSideMappingFailureStatus(
     return 409;
   }
 
+  if (code === "CONTROLLED_INTAKE_APP_USER_MAPPING_LOOKUP_FAILED") {
+    return 500;
+  }
+
   if (
     code === "CONTROLLED_INTAKE_APP_USER_MAPPING_BLOCKED" ||
     code === "CONTROLLED_INTAKE_CONTEXT_NOT_VERIFIED" ||
@@ -269,6 +308,114 @@ function buildServerSideMappingFailureStatus(
   }
 
   return 400;
+}
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readStringProperty(source: unknown, key: string): string | null {
+  if (!isRecord(source)) {
+    return null;
+  }
+
+  const value = source[key];
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+
+  return normalized.length > 0 ? normalized : null;
+}
+
+function readAuthSubjectFromSession(session: unknown): string | null {
+  if (!isRecord(session)) {
+    return null;
+  }
+
+  const user = session.user;
+
+  if (!isRecord(user)) {
+    return null;
+  }
+
+  return readStringProperty(user, "sub");
+}
+
+function buildNotExecutedServerSideAppUserMappingProof(): ControlledActivityIntakeRouteServerSideAppUserMappingProof {
+  return {
+    serverSideAppUserMappingExecuted: false,
+    serverSideAppUserMappingStatus: null,
+    serverSideAppUserMapped: false,
+    serverSideAppUserMappingDbReadExecuted: false,
+    serverSideAppUserMappingFailClosed: true,
+    serverSideAppUserMappingSelectedColumns: null,
+    serverSideAppUserMappingTableName: null,
+    appUserInactiveSupported: false,
+    appUserInactiveCheckExecuted: false,
+  };
+}
+
+function buildSanitizedServerSideAppUserMappingProof(
+  result: ServerSideAppUserMappingReadOnlyResult,
+): ControlledActivityIntakeRouteServerSideAppUserMappingProof {
+  return {
+    serverSideAppUserMappingExecuted: true,
+    serverSideAppUserMappingStatus: result.mappingStatus,
+    serverSideAppUserMapped: result.mappedUserFound,
+    serverSideAppUserMappingDbReadExecuted: result.dbReadExecuted,
+    serverSideAppUserMappingFailClosed: result.failClosed,
+    serverSideAppUserMappingSelectedColumns: result.selectedColumns,
+    serverSideAppUserMappingTableName: result.tableName,
+    appUserInactiveSupported: false,
+    appUserInactiveCheckExecuted: false,
+  };
+}
+
+function buildReadOnlyMappingFailureRouteErrorCode(
+  mappingStatus: ServerSideAppUserMappingReadOnlyStatus,
+): ControlledActivityIntakeRouteErrorCode {
+  if (mappingStatus === "provider_not_supported") {
+    return "CONTROLLED_INTAKE_AUTH_IDENTITY_REQUIRED";
+  }
+
+  if (mappingStatus === "missing_auth_subject") {
+    return "CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED";
+  }
+
+  if (mappingStatus === "app_user_duplicate") {
+    return "CONTROLLED_INTAKE_APP_USER_MAPPING_AMBIGUOUS";
+  }
+
+  if (mappingStatus === "app_user_lookup_error") {
+    return "CONTROLLED_INTAKE_APP_USER_MAPPING_LOOKUP_FAILED";
+  }
+
+  return "CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED";
+}
+
+function buildReadOnlyMappingFailureMessage(
+  mappingStatus: ServerSideAppUserMappingReadOnlyStatus,
+): string {
+  if (mappingStatus === "provider_not_supported") {
+    return "Controlled intake requires supported trusted server-side auth provider.";
+  }
+
+  if (mappingStatus === "missing_auth_subject") {
+    return "Controlled intake requires trusted server-side auth subject.";
+  }
+
+  if (mappingStatus === "app_user_duplicate") {
+    return "Controlled intake app user mapping returned duplicate rows and failed closed.";
+  }
+
+  if (mappingStatus === "app_user_lookup_error") {
+    return "Controlled intake app user mapping lookup failed and failed closed.";
+  }
+
+  return "Controlled intake requires mapped internal app user.";
 }
 
 async function readJsonBody(request: NextRequest): Promise<unknown> {
@@ -584,6 +731,97 @@ async function handleServerSideStaticPreview(
   );
 }
 
+async function handleServerSideReadOnlyMappingPreview(
+  request: NextRequest,
+): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+  let session: unknown = null;
+
+  try {
+    session = await auth0.getSession();
+  } catch {
+    return buildErrorResponse(
+      "CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED",
+      "Controlled intake could not read trusted server-side auth session.",
+      401,
+      undefined,
+      buildNotExecutedServerSideAppUserMappingProof(),
+    );
+  }
+
+  if (!session) {
+    return buildErrorResponse(
+      "CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED",
+      "Controlled intake requires trusted server-side auth session.",
+      401,
+      undefined,
+      buildNotExecutedServerSideAppUserMappingProof(),
+    );
+  }
+
+  const authSubject = readAuthSubjectFromSession(session);
+
+  if (!authSubject) {
+    return buildErrorResponse(
+      "CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED",
+      "Controlled intake requires trusted server-side auth subject.",
+      401,
+      undefined,
+      buildNotExecutedServerSideAppUserMappingProof(),
+    );
+  }
+
+  const payloadResult = await buildValidatedPayloadFromRequest(request);
+
+  if (isControlledActivityIntakeValidatedPayloadFailure(payloadResult)) {
+    return payloadResult.response;
+  }
+
+  const serverSideAppUserMapping = await mapServerSideAppUserReadOnly({
+    provider: TRUSTED_SERVER_PROVIDER,
+    authSubject,
+  });
+  const serverSideAppUserMappingProof =
+    buildSanitizedServerSideAppUserMappingProof(serverSideAppUserMapping);
+
+  if (
+    serverSideAppUserMapping.mappingStatus !== "mapped_user_found" ||
+    !serverSideAppUserMapping.mappedUserFound ||
+    !serverSideAppUserMapping.appUserId
+  ) {
+    const code = buildReadOnlyMappingFailureRouteErrorCode(
+      serverSideAppUserMapping.mappingStatus,
+    );
+
+    return buildErrorResponse(
+      code,
+      buildReadOnlyMappingFailureMessage(
+        serverSideAppUserMapping.mappingStatus,
+      ),
+      buildServerSideMappingFailureStatus(code),
+      undefined,
+      serverSideAppUserMappingProof,
+    );
+  }
+
+  return NextResponse.json(
+    {
+      ok: true,
+      routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
+      mode: "server_side_read_only_mapping_preview",
+      validation: {
+        ok: true,
+      },
+      payload: payloadResult.payload,
+      serverSideAppUserMapping: serverSideAppUserMappingProof,
+      guardrails: buildRouteGuardrails({
+        dbReadExecuted:
+          serverSideAppUserMappingProof.serverSideAppUserMappingDbReadExecuted,
+      }),
+    },
+    { status: 200 },
+  );
+}
+
 export async function POST(
   request: NextRequest,
 ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
@@ -598,6 +836,10 @@ export async function POST(
   }
 
   const authMappingMode = readHeaderString(request, AUTH_MAPPING_MODE_HEADER);
+
+  if (authMappingMode === "server_side_read_only_mapping_preview") {
+    return await handleServerSideReadOnlyMappingPreview(request);
+  }
 
   if (authMappingMode === "server_side_static_preview") {
     return await handleServerSideStaticPreview(request);

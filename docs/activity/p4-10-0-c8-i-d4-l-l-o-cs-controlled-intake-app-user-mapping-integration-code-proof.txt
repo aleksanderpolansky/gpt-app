@@ -1,0 +1,78 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CS
+Controlled-intake app user mapping integration code proof
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CS: 84c92be
+- Expected origin/main before O-CS: 84c92be
+- Baseline commit: 84c92be docs: capture C8-I O-CS controlled-intake source snapshot
+
+Purpose
+This block integrates verified read-only server-side Auth0 to internal app user mapping into the controlled-intake route.
+
+Modified file
+- src/app/api/activity/controlled-intake/route.ts.
+
+Implemented integration
+- Added server_side_read_only_mapping_preview auth mapping mode.
+- Added auth0.getSession server-side session read for this mode.
+- Added mapServerSideAppUserReadOnly integration for this mode.
+- Used trusted provider auth0.
+- Used trusted Auth0 subject extracted from server-side session.
+- Did not accept client-supplied appUserId as trusted ownership for the new mode.
+- Did not expose raw appUserId in the new mode response.
+- Returned sanitized serverSideAppUserMapping proof fields only.
+
+Sanitized mapping proof fields
+- serverSideAppUserMappingExecuted.
+- serverSideAppUserMappingStatus.
+- serverSideAppUserMapped.
+- serverSideAppUserMappingDbReadExecuted.
+- serverSideAppUserMappingFailClosed.
+- serverSideAppUserMappingSelectedColumns.
+- serverSideAppUserMappingTableName.
+- appUserInactiveSupported.
+- appUserInactiveCheckExecuted.
+
+Fail-closed behavior
+- Missing server-side session fails before DB lookup.
+- Missing auth subject fails before DB lookup.
+- app_user_not_found fails closed for controlled-intake integration.
+- app_user_duplicate fails closed.
+- app_user_lookup_error fails closed.
+
+Boundaries preserved during O-CS script execution
+- No runtime controlled-intake endpoint call was executed by this script.
+- No runtime DB read was executed by this script.
+- No DB write was executed.
+- No SQL was executed.
+- No AI call was executed.
+- No activity_events insert was added.
+- No semantic candidate persistence was added.
+- No Value Object creation was added.
+- No state facts, state deltas or state snapshots were added.
+- productionWriteEnabled remains false.
+
+Runtime note
+The controlled-intake route may execute a DB read only later when called in server_side_read_only_mapping_preview mode with a valid authenticated server-side Auth0 session.
+
+TypeScript verification
+Command used:
+npx.cmd tsc --noEmit
+
+Result:
+PASS_TYPESCRIPT_CHECKED_THROUGH_NPX_CMD_AFTER_O_CS
+
+Next step decision
+Proceed to O-CT.
+O-CT should verify controlled-intake route runtime behavior for server_side_read_only_mapping_preview.
+O-CT may execute a runtime DB read only through the controlled-intake route valid authenticated test.
+O-CT must verify no DB write, no SQL, no AI, no activity_events insert and no appUserId exposure in the new mode response.
+
+PASS marker
+PASS_O_CS_CONTROLLED_INTAKE_APP_USER_MAPPING_INTEGRATED_NO_SCRIPT_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
