@@ -1,0 +1,87 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-DH
+Ownership/context resolver diagnostic endpoint postcheck
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-DH: c59717b
+- Expected origin/main before O-DH: c59717b
+- Baseline commit: c59717b feat: add C8-I O-DG ownership context diagnostic endpoint
+
+Purpose
+This postcheck verifies that O-DG created only the ownership/context resolver diagnostic endpoint and proof report, without controlled-intake route integration or runtime endpoint execution.
+
+Verified tracked state
+- O-DG changed exactly two files.
+- File 1: src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts.
+- File 2: docs/activity/p4-10-0-c8-i-d4-l-l-o-dg-ownership-context-resolver-diagnostic-endpoint-code-implementation-proof.txt.
+- controlled-intake route.ts was not changed by O-DG.
+
+Verified diagnostic endpoint content
+- Endpoint exports GET.
+- Endpoint is force-dynamic.
+- Endpoint requires header x-controlled-intake-ownership-context-resolution-read-only-test: enabled.
+- Endpoint uses auth0.getSession.
+- Endpoint calls mapServerSideAppUserReadOnly.
+- Endpoint calls resolveControlledActivityIntakeOwnershipContextReadOnly.
+- Endpoint reads actorId, spaceId, organizationId and contextSource only as query-string hints.
+- Endpoint returns sanitized proof fields.
+- Endpoint does not expose appUserId.
+- Endpoint does not expose authSubject.
+- Endpoint does not expose tokens.
+- Endpoint does not expose service role key.
+
+Verified forbidden patterns absent from diagnostic endpoint
+- No insert.
+- No update.
+- No delete.
+- No upsert.
+- No rpc.
+- No OpenAI call.
+- No chat completion call.
+- No console logging.
+- No token strings.
+- No service role key string.
+- No client-supplied authSubject.
+- No client-supplied appUserId.
+
+Verified controlled-intake route state
+- controlled-intake route still contains server_side_read_only_mapping_preview.
+- controlled-intake route still has productionWriteEnabled: false.
+- controlled-intake route still has dbWriteExecuted: false.
+- controlled-intake route still has sqlExecuted: false.
+- controlled-intake route still has aiCallExecuted: false.
+- controlled-intake route still has activityEventsInserted: false.
+- controlled-intake route still has semanticCandidatesPersisted: false.
+- controlled-intake route still has valueObjectsCreated: false.
+- controlled-intake route still has stateFactsCreated: false.
+- controlled-intake route still has stateDeltasCreated: false.
+- controlled-intake route still has stateSnapshotsCreated: false.
+
+Execution boundary
+- No endpoint call.
+- No diagnostic endpoint call.
+- No controlled-intake endpoint call.
+- No runtime DB read.
+- No DB write.
+- No SQL execution.
+- No AI call.
+- No activity_events insert.
+- No controlled-intake route integration.
+- No production write enablement.
+
+Validation
+- TypeScript passed through npx.cmd tsc --noEmit.
+
+Next step decision
+Proceed to O-DI ownership/context resolver diagnostic browser verification contract.
+O-DI should define the browser/runtime verification cases for the diagnostic endpoint.
+O-DI should not yet call the endpoint.
+O-DI should not modify controlled-intake route.ts.
+
+PASS marker
+PASS_O_DH_OWNERSHIP_CONTEXT_RESOLVER_DIAGNOSTIC_ENDPOINT_POSTCHECK_ACCEPTED_NO_CONTROLLED_INTAKE_ROUTE_CHANGE_NO_ENDPOINT_CALL_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
