@@ -1,0 +1,140 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CQ
+Browser/runtime verification execution results for server-side app user mapping read-only diagnostic endpoint
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CQ report: 9fd0a40
+- Expected origin/main before O-CQ report: 9fd0a40
+- Baseline commit: 9fd0a40 docs: add C8-I O-CP mapping diagnostic browser verification contract
+
+Purpose
+This report records the browser/runtime verification execution result for the diagnostic endpoint implemented in O-CO.
+
+Endpoint tested
+/api/activity/debug/server-side-app-user-mapping-read-only-test
+
+Diagnostic header
+- Header name: x-controlled-intake-server-side-app-user-mapping-read-only-test.
+- Accepted value: enabled.
+
+Execution note
+The JavaScript verification script was first accidentally pasted into PowerShell.
+That PowerShell attempt produced JavaScript parse errors and is not treated as browser/runtime verification.
+The valid O-CQ execution was performed in the browser console.
+
+Browser execution timestamp
+- 2026-05-27T09:33:12.402Z.
+
+Browser execution summary
+- overallPass: true.
+- failedCheckCount: 0.
+- finalDecision: PASS_O_CQ_BROWSER_RUNTIME_VERIFICATION_EXECUTED_BOUNDARIES_OK.
+
+Case 1: missing_header
+- HTTP status: 403.
+- diagnosticHeaderAccepted: false.
+- authSessionReadExecuted: false.
+- authSessionFound: false.
+- dbReadExecuted: false.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+- controlledIntakeRouteChanged: false.
+- diagnosticErrorCode: CONTROLLED_INTAKE_SERVER_SIDE_APP_USER_MAPPING_READ_ONLY_TEST_HEADER_REQUIRED.
+
+Case 2: wrong_header
+- HTTP status: 403.
+- diagnosticHeaderAccepted: false.
+- authSessionReadExecuted: false.
+- authSessionFound: false.
+- dbReadExecuted: false.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+- controlledIntakeRouteChanged: false.
+- diagnosticErrorCode: CONTROLLED_INTAKE_SERVER_SIDE_APP_USER_MAPPING_READ_ONLY_TEST_HEADER_REQUIRED.
+
+Case 3: valid_header_authenticated
+- HTTP status: 200.
+- ok: true.
+- diagnosticHeaderAccepted: true.
+- authSessionReadExecuted: true.
+- authSessionFound: true.
+- trustedProvider: auth0.
+- trustedAuthSubjectPresent: true.
+- mappingStatus: mapped_user_found.
+- mappedUserFound: true.
+- dbReadExecuted: true.
+- failClosed: false.
+- appUserInactiveSupported: false.
+- appUserInactiveCheckExecuted: false.
+- selectedColumns: id,auth0_sub.
+- tableName: public.app_users.
+- diagnosticErrorCode: null.
+- controlledIntakeRouteChanged: false.
+- dbWriteExecuted: false.
+- sqlExecuted: false.
+- aiCallExecuted: false.
+- activityEventsInserted: false.
+- semanticCandidatesPersisted: false.
+- valueObjectsCreated: false.
+- stateFactsWritten: false.
+- stateDeltasWritten: false.
+- stateSnapshotsWritten: false.
+
+Interpretation
+The diagnostic endpoint is reachable in the authenticated browser runtime.
+The explicit diagnostic header guard works.
+The endpoint reads the server-side Auth0 session only after the header passes.
+The endpoint successfully maps the trusted Auth0 subject to public.app_users.
+The internal app user mapping returned mapped_user_found.
+The endpoint selected id and auth0_sub only.
+The endpoint did not expose appUserId in the browser result.
+The endpoint did not expose tokens, raw Auth0 session, raw DB row or service-role configuration.
+
+Runtime DB read boundary
+A runtime DB read occurred only in the valid-header authenticated diagnostic case.
+This was allowed by O-CP.
+No DB write occurred.
+No SQL execution occurred.
+No AI call occurred.
+No activity_events insert occurred.
+
+Boundary status
+- controlled-intake route was not modified.
+- productionWriteEnabled remains false.
+- dbWriteExecuted remains false.
+- sqlExecuted remains false.
+- aiCallExecuted remains false.
+- activityEventsInserted remains false.
+- semanticCandidatesPersisted remains false.
+- valueObjectsCreated remains false.
+- stateFactsWritten remains false.
+- stateDeltasWritten remains false.
+- stateSnapshotsWritten remains false.
+
+Non-blocking console note
+The browser console printed ReferenceError: copy is not defined after the result JSON was already printed.
+This does not invalidate the O-CQ result because the verification summary was produced before the clipboard helper call.
+
+Current decision
+O-CQ browser/runtime verification is accepted.
+The Auth0 real session to internal app user mapping diagnostic path is verified.
+
+Next step decision
+Proceed to O-CR.
+O-CR should be a controlled-intake app user mapping integration contract.
+O-CR must not enable production writes.
+O-CR must not insert activity_events.
+O-CR must not persist semantic candidates, Value Objects, state facts, state deltas or state snapshots.
+O-CR must not execute SQL or call AI.
+
+PASS marker
+PASS_O_CQ_BROWSER_RUNTIME_VERIFICATION_RECORDED_MAPPED_USER_FOUND_DB_READ_ONLY_NO_DB_WRITE_NO_SQL_NO_AI
