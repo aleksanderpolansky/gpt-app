@@ -1,0 +1,566 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R10A2 - corrected exact source snapshot before targeted patch
+Date = 2026-05-27 18:10:12 +02:00
+Status = CORRECTED_EXACT_SOURCE_SNAPSHOT_CREATED_NO_CODE_CHANGE
+
+1. Baseline
+Expected HEAD = 2502ab0
+Actual HEAD = 2502ab0
+Working tree before snapshot = clean
+
+2. Why O-DJ-R10A2 exists
+O-DJ-R10A created a report-only commit, but full source blocks were serialized as System.Object[].
+That means O-DJ-R10A did not provide usable full source for a safe full-file patch.
+O-DJ-R10A2 repeats the exact source snapshot with explicit list flattening.
+
+3. Patch candidate context
+Confirmed by O-DJ-R9:
+PATCH_CANDIDATE_CONFIRMED_OWNERSHIP_ENDPOINT_STATUS_PASSTHROUGH_OR_HELPER_RESULT_MAPPING
+
+4. Static confirmation before patch
+ownershipCallsHelper = true
+ownershipHasStatusPassthrough = false
+ownershipMapsLookupError = true
+ownershipHasMappingRequiredCode = true
+
+helperHasMappedUserFound = true
+helperHasNotFound = true
+helperHasDuplicate = true
+helperHasLookupError = true
+
+odjr9ConfirmedPatchCandidate = true
+brokenOdjr10aHasSystemObjectArray = true
+
+5. Safety / guardrails
+- No endpoint call was executed by O-DJ-R10A2.
+- No browser runtime was executed by O-DJ-R10A2.
+- No runtime DB read was triggered.
+- No DB write.
+- No SQL.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+- No code patch.
+- TypeScript passed: npx.cmd tsc --noEmit.
+
+6. Decision
+PASS_O_DJ_R10A2_CORRECTED_EXACT_SOURCE_SNAPSHOT_CREATED_NO_CODE_CHANGE_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+
+7. Next step
+O-DJ-R10B may perform the first targeted code patch after reviewing this corrected exact source snapshot.
+Target remains narrow:
+- ownership endpoint mapping-status handling OR helper result mapping only.
+- no controlled-intake integration.
+- no activity_events write.
+
+8. Full ownership endpoint source
+===== BEGIN FULL FILE: src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts =====
+    1: import { NextRequest, NextResponse } from 'next/server';
+    2: 
+    3: import { auth0 } from '../../../../../../lib/auth0';
+    4: import { mapServerSideAppUserReadOnly } from '../../../../../../lib/activity/controlledIntake/serverSideAppUserMappingReadOnly';
+    5: import { resolveControlledActivityIntakeOwnershipContextReadOnly } from '../../../../../../lib/activity/controlledIntake/ownershipContextResolutionReadOnly';
+    6: 
+    7: export const dynamic = 'force-dynamic';
+    8: 
+    9: const GATE = 'P4.10.0-C8-I-D4-L-L-O-DG' as const;
+   10: const MODE = 'ownership_context_resolution_read_only_diagnostic' as const;
+   11: const REQUIRED_HEADER_NAME = 'x-controlled-intake-ownership-context-resolution-read-only-test' as const;
+   12: const REQUIRED_HEADER_VALUE = 'enabled' as const;
+   13: 
+   14: type DiagnosticGuardrails = {
+   15:   routeAuthIntegrated: boolean;
+   16:   appUserMappingIntegrated: boolean;
+   17:   ownershipContextResolverIntegrated: boolean;
+   18:   diagnosticEndpointOnly: boolean;
+   19:   productionWriteEnabled: false;
+   20:   dbReadExecuted: boolean;
+   21:   dbWriteExecuted: false;
+   22:   sqlExecuted: false;
+   23:   aiCallExecuted: false;
+   24:   activityEventsInserted: false;
+   25:   semanticCandidatesPersisted: false;
+   26:   valueObjectsCreated: false;
+   27:   stateFactsCreated: false;
+   28:   stateDeltasCreated: false;
+   29:   stateSnapshotsCreated: false;
+   30:   responseSanitized: true;
+   31: };
+   32: 
+   33: type DiagnosticResponseBody = {
+   34:   ok: boolean;
+   35:   gate: typeof GATE;
+   36:   mode: typeof MODE;
+   37:   code?: string;
+   38:   headerAccepted: boolean;
+   39:   authSessionReadExecuted: boolean;
+   40:   appUserMappingExecuted: boolean;
+   41:   appUserMappingStatus: string;
+   42:   appUserMapped: boolean;
+   43:   appUserMappingDbReadExecuted: boolean;
+   44:   ownershipContextResolutionExecuted: boolean;
+   45:   ownershipContextResolutionStatus: string;
+   46:   ownershipContextResolved: boolean;
+   47:   ownershipContextDbReadExecuted: boolean;
+   48:   ownershipContextFailClosed: boolean;
+   49:   selectedContextScope: string;
+   50:   requestedContextAcceptedAsHintOnly: boolean;
+   51:   mappedAppUserRequired: boolean;
+   52:   ownedSpaceResolved: boolean;
+   53:   actorSpaceRoleResolved: boolean;
+   54:   creatorOrganizationResolved: boolean;
+   55:   organizationActorResolved: boolean;
+   56:   responseSanitized: true;
+   57:   guardrails: DiagnosticGuardrails;
+   58: };
+   59: 
+   60: function isRecord(value: unknown): value is Record<string, unknown> {
+   61:   return typeof value === 'object' && value !== null;
+   62: }
+   63: 
+   64: function readStringProperty(value: unknown, key: string): string | null {
+   65:   if (!isRecord(value)) {
+   66:     return null;
+   67:   }
+   68: 
+   69:   const propertyValue = value[key];
+   70: 
+   71:   return typeof propertyValue === 'string' ? propertyValue : null;
+   72: }
+   73: 
+   74: function readBooleanProperty(value: unknown, key: string): boolean {
+   75:   if (!isRecord(value)) {
+   76:     return false;
+   77:   }
+   78: 
+   79:   return value[key] === true;
+   80: }
+   81: 
+   82: function readAuthSubjectFromSession(session: unknown): string | null {
+   83:   if (!isRecord(session)) {
+   84:     return null;
+   85:   }
+   86: 
+   87:   const user = session.user;
+   88: 
+   89:   if (!isRecord(user)) {
+   90:     return null;
+   91:   }
+   92: 
+   93:   return readStringProperty(user, 'sub');
+   94: }
+   95: 
+   96: function buildGuardrails(overrides?: Partial<DiagnosticGuardrails>): DiagnosticGuardrails {
+   97:   return {
+   98:     routeAuthIntegrated: true,
+   99:     appUserMappingIntegrated: true,
+  100:     ownershipContextResolverIntegrated: true,
+  101:     diagnosticEndpointOnly: true,
+  102:     productionWriteEnabled: false,
+  103:     dbReadExecuted: false,
+  104:     dbWriteExecuted: false,
+  105:     sqlExecuted: false,
+  106:     aiCallExecuted: false,
+  107:     activityEventsInserted: false,
+  108:     semanticCandidatesPersisted: false,
+  109:     valueObjectsCreated: false,
+  110:     stateFactsCreated: false,
+  111:     stateDeltasCreated: false,
+  112:     stateSnapshotsCreated: false,
+  113:     responseSanitized: true,
+  114:     ...overrides,
+  115:   };
+  116: }
+  117: 
+  118: function buildBody(overrides?: Partial<DiagnosticResponseBody>): DiagnosticResponseBody {
+  119:   return {
+  120:     ok: false,
+  121:     gate: GATE,
+  122:     mode: MODE,
+  123:     headerAccepted: false,
+  124:     authSessionReadExecuted: false,
+  125:     appUserMappingExecuted: false,
+  126:     appUserMappingStatus: 'not_executed',
+  127:     appUserMapped: false,
+  128:     appUserMappingDbReadExecuted: false,
+  129:     ownershipContextResolutionExecuted: false,
+  130:     ownershipContextResolutionStatus: 'not_executed',
+  131:     ownershipContextResolved: false,
+  132:     ownershipContextDbReadExecuted: false,
+  133:     ownershipContextFailClosed: true,
+  134:     selectedContextScope: 'none',
+  135:     requestedContextAcceptedAsHintOnly: true,
+  136:     mappedAppUserRequired: true,
+  137:     ownedSpaceResolved: false,
+  138:     actorSpaceRoleResolved: false,
+  139:     creatorOrganizationResolved: false,
+  140:     organizationActorResolved: false,
+  141:     responseSanitized: true,
+  142:     guardrails: buildGuardrails(),
+  143:     ...overrides,
+  144:   };
+  145: }
+  146: 
+  147: function jsonResponse(body: DiagnosticResponseBody, status: number): NextResponse<DiagnosticResponseBody> {
+  148:   return NextResponse.json(body, {
+  149:     status,
+  150:     headers: {
+  151:       'Cache-Control': 'no-store',
+  152:     },
+  153:   });
+  154: }
+  155: 
+  156: export async function GET(request: NextRequest): Promise<NextResponse<DiagnosticResponseBody>> {
+  157:   const headerValue = request.headers.get(REQUIRED_HEADER_NAME);
+  158: 
+  159:   if (headerValue !== REQUIRED_HEADER_VALUE) {
+  160:     return jsonResponse(
+  161:       buildBody({
+  162:         code: 'OWNERSHIP_CONTEXT_RESOLUTION_READ_ONLY_TEST_HEADER_REQUIRED',
+  163:         guardrails: buildGuardrails({
+  164:           routeAuthIntegrated: false,
+  165:           appUserMappingIntegrated: false,
+  166:           ownershipContextResolverIntegrated: false,
+  167:         }),
+  168:       }),
+  169:       403,
+  170:     );
+  171:   }
+  172: 
+  173:   let session: unknown = null;
+  174: 
+  175:   try {
+  176:     session = await auth0.getSession();
+  177:   } catch {
+  178:     return jsonResponse(
+  179:       buildBody({
+  180:         code: 'OWNERSHIP_CONTEXT_RESOLUTION_AUTH_SESSION_READ_FAILED',
+  181:         headerAccepted: true,
+  182:         authSessionReadExecuted: true,
+  183:         guardrails: buildGuardrails(),
+  184:       }),
+  185:       401,
+  186:     );
+  187:   }
+  188: 
+  189:   const trustedAuthSubject = readAuthSubjectFromSession(session);
+  190: 
+  191:   if (!trustedAuthSubject) {
+  192:     return jsonResponse(
+  193:       buildBody({
+  194:         code: 'OWNERSHIP_CONTEXT_RESOLUTION_AUTH_SESSION_REQUIRED',
+  195:         headerAccepted: true,
+  196:         authSessionReadExecuted: true,
+  197:         guardrails: buildGuardrails(),
+  198:       }),
+  199:       401,
+  200:     );
+  201:   }
+  202: 
+  203:   let appUserMapping: unknown = null;
+  204: 
+  205:   try {
+  206:     appUserMapping = await mapServerSideAppUserReadOnly({
+  207:       provider: 'auth0',
+  208:       authSubject: trustedAuthSubject,
+  209:     });
+  210:   } catch {
+  211:     return jsonResponse(
+  212:       buildBody({
+  213:         code: 'OWNERSHIP_CONTEXT_RESOLUTION_APP_USER_MAPPING_FAILED',
+  214:         headerAccepted: true,
+  215:         authSessionReadExecuted: true,
+  216:         appUserMappingExecuted: true,
+  217:         appUserMappingStatus: 'app_user_lookup_error',
+  218:         appUserMappingDbReadExecuted: true,
+  219:         guardrails: buildGuardrails({
+  220:           dbReadExecuted: true,
+  221:         }),
+  222:       }),
+  223:       500,
+  224:     );
+  225:   }
+  226: 
+  227:   const appUserMappingStatus = readStringProperty(appUserMapping, 'status') ?? 'app_user_lookup_error';
+  228:   const appUserMappingDbReadExecuted = readBooleanProperty(appUserMapping, 'dbReadExecuted');
+  229:   const mappedAppUserId = readStringProperty(appUserMapping, 'appUserId');
+  230:   const appUserMapped = appUserMappingStatus === 'mapped_user_found' && Boolean(mappedAppUserId);
+  231: 
+  232:   if (!appUserMapped) {
+  233:     return jsonResponse(
+  234:       buildBody({
+  235:         code: 'OWNERSHIP_CONTEXT_RESOLUTION_APP_USER_MAPPING_REQUIRED',
+  236:         headerAccepted: true,
+  237:         authSessionReadExecuted: true,
+  238:         appUserMappingExecuted: true,
+  239:         appUserMappingStatus,
+  240:         appUserMapped: false,
+  241:         appUserMappingDbReadExecuted,
+  242:         guardrails: buildGuardrails({
+  243:           dbReadExecuted: appUserMappingDbReadExecuted,
+  244:         }),
+  245:       }),
+  246:       403,
+  247:     );
+  248:   }
+  249: 
+  250:   const requestedActorId = request.nextUrl.searchParams.get('actorId');
+  251:   const requestedSpaceId = request.nextUrl.searchParams.get('spaceId');
+  252:   const requestedOrganizationId = request.nextUrl.searchParams.get('organizationId');
+  253:   const requestedContextSource = request.nextUrl.searchParams.get('contextSource');
+  254: 
+  255:   const ownershipContextResolution =
+  256:     await resolveControlledActivityIntakeOwnershipContextReadOnly({
+  257:       mappedAppUserId,
+  258:       requestedActorId,
+  259:       requestedSpaceId,
+  260:       requestedOrganizationId,
+  261:       requestedContextSource,
+  262:     });
+  263: 
+  264:   const dbReadExecuted =
+  265:     appUserMappingDbReadExecuted || ownershipContextResolution.dbReadExecuted;
+  266: 
+  267:   return jsonResponse(
+  268:     buildBody({
+  269:       ok: ownershipContextResolution.resolved,
+  270:       code: ownershipContextResolution.resolved
+  271:         ? 'OWNERSHIP_CONTEXT_RESOLUTION_READ_ONLY_RESOLVED'
+  272:         : 'OWNERSHIP_CONTEXT_RESOLUTION_READ_ONLY_FAIL_CLOSED',
+  273:       headerAccepted: true,
+  274:       authSessionReadExecuted: true,
+  275:       appUserMappingExecuted: true,
+  276:       appUserMappingStatus,
+  277:       appUserMapped: true,
+  278:       appUserMappingDbReadExecuted,
+  279:       ownershipContextResolutionExecuted: ownershipContextResolution.executed,
+  280:       ownershipContextResolutionStatus: ownershipContextResolution.status,
+  281:       ownershipContextResolved: ownershipContextResolution.resolved,
+  282:       ownershipContextDbReadExecuted: ownershipContextResolution.dbReadExecuted,
+  283:       ownershipContextFailClosed: ownershipContextResolution.failClosed,
+  284:       selectedContextScope: ownershipContextResolution.selectedContextScope,
+  285:       requestedContextAcceptedAsHintOnly:
+  286:         ownershipContextResolution.requestedContextAcceptedAsHintOnly,
+  287:       mappedAppUserRequired: ownershipContextResolution.mappedAppUserRequired,
+  288:       ownedSpaceResolved: ownershipContextResolution.ownedSpaceResolved,
+  289:       actorSpaceRoleResolved: ownershipContextResolution.actorSpaceRoleResolved,
+  290:       creatorOrganizationResolved: ownershipContextResolution.creatorOrganizationResolved,
+  291:       organizationActorResolved: ownershipContextResolution.organizationActorResolved,
+  292:       responseSanitized: ownershipContextResolution.responseSanitized,
+  293:       guardrails: buildGuardrails({
+  294:         dbReadExecuted,
+  295:       }),
+  296:     }),
+  297:     200,
+  298:   );
+  299: }
+===== END FULL FILE: src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts =====
+
+9. Full mapping helper source
+===== BEGIN FULL FILE: lib/activity/controlledIntake/serverSideAppUserMappingReadOnly.ts =====
+    1: import { getSupabaseAdminClient } from '../../supabase/admin';
+    2: 
+    3: export type ServerSideAppUserMappingReadOnlyStatus =
+    4:   | 'provider_not_supported'
+    5:   | 'missing_auth_subject'
+    6:   | 'app_user_not_found'
+    7:   | 'mapped_user_found'
+    8:   | 'app_user_duplicate'
+    9:   | 'app_user_lookup_error';
+   10: 
+   11: export type ServerSideAppUserMappingReadOnlyInput = {
+   12:   provider: string | null | undefined;
+   13:   authSubject: string | null | undefined;
+   14: };
+   15: 
+   16: export type ServerSideAppUserMappingReadOnlyResult = {
+   17:   mappingStatus: ServerSideAppUserMappingReadOnlyStatus;
+   18:   mappedUserFound: boolean;
+   19:   dbReadExecuted: boolean;
+   20:   failClosed: boolean;
+   21:   provider: string | null;
+   22:   authSubjectPresent: boolean;
+   23:   authSubjectMatched: boolean;
+   24:   appUserId: string | null;
+   25:   appUserInactiveSupported: false;
+   26:   appUserInactiveCheckExecuted: false;
+   27:   tableName: 'public.app_users';
+   28:   selectedColumns: 'id,auth0_sub' | null;
+   29: };
+   30: 
+   31: type AppUserMappingRow = {
+   32:   id: string | null;
+   33:   auth0_sub: string | null;
+   34: };
+   35: 
+   36: const PUBLIC_APP_USERS_TABLE_NAME = 'public.app_users' as const;
+   37: const SELECTED_MAPPING_COLUMNS = 'id,auth0_sub' as const;
+   38: const SUPPORTED_PROVIDER = 'auth0';
+   39: 
+   40: function normalizeProvider(provider: string | null | undefined): string | null {
+   41:   if (typeof provider !== 'string') {
+   42:     return null;
+   43:   }
+   44: 
+   45:   const normalizedProvider = provider.trim().toLowerCase();
+   46: 
+   47:   return normalizedProvider.length > 0 ? normalizedProvider : null;
+   48: }
+   49: 
+   50: function normalizeAuthSubject(authSubject: string | null | undefined): string | null {
+   51:   if (typeof authSubject !== 'string') {
+   52:     return null;
+   53:   }
+   54: 
+   55:   const normalizedAuthSubject = authSubject.trim();
+   56: 
+   57:   return normalizedAuthSubject.length > 0 ? normalizedAuthSubject : null;
+   58: }
+   59: 
+   60: function createResult(
+   61:   values: Omit<
+   62:     ServerSideAppUserMappingReadOnlyResult,
+   63:     | 'appUserInactiveSupported'
+   64:     | 'appUserInactiveCheckExecuted'
+   65:     | 'tableName'
+   66:   >,
+   67: ): ServerSideAppUserMappingReadOnlyResult {
+   68:   return {
+   69:     ...values,
+   70:     appUserInactiveSupported: false,
+   71:     appUserInactiveCheckExecuted: false,
+   72:     tableName: PUBLIC_APP_USERS_TABLE_NAME,
+   73:   };
+   74: }
+   75: 
+   76: export async function mapServerSideAppUserReadOnly(
+   77:   input: ServerSideAppUserMappingReadOnlyInput,
+   78: ): Promise<ServerSideAppUserMappingReadOnlyResult> {
+   79:   const provider = normalizeProvider(input.provider);
+   80:   const authSubject = normalizeAuthSubject(input.authSubject);
+   81: 
+   82:   if (provider !== SUPPORTED_PROVIDER) {
+   83:     return createResult({
+   84:       mappingStatus: 'provider_not_supported',
+   85:       mappedUserFound: false,
+   86:       dbReadExecuted: false,
+   87:       failClosed: true,
+   88:       provider,
+   89:       authSubjectPresent: Boolean(authSubject),
+   90:       authSubjectMatched: false,
+   91:       appUserId: null,
+   92:       selectedColumns: null,
+   93:     });
+   94:   }
+   95: 
+   96:   if (!authSubject) {
+   97:     return createResult({
+   98:       mappingStatus: 'missing_auth_subject',
+   99:       mappedUserFound: false,
+  100:       dbReadExecuted: false,
+  101:       failClosed: true,
+  102:       provider,
+  103:       authSubjectPresent: false,
+  104:       authSubjectMatched: false,
+  105:       appUserId: null,
+  106:       selectedColumns: null,
+  107:     });
+  108:   }
+  109: 
+  110:   try {
+  111:     const supabaseAdmin = getSupabaseAdminClient();
+  112: 
+  113:     const { data, error } = await supabaseAdmin
+  114:       .from('app_users')
+  115:       .select(SELECTED_MAPPING_COLUMNS)
+  116:       .eq('auth0_sub', authSubject)
+  117:       .limit(2);
+  118: 
+  119:     if (error) {
+  120:       return createResult({
+  121:         mappingStatus: 'app_user_lookup_error',
+  122:         mappedUserFound: false,
+  123:         dbReadExecuted: true,
+  124:         failClosed: true,
+  125:         provider,
+  126:         authSubjectPresent: true,
+  127:         authSubjectMatched: false,
+  128:         appUserId: null,
+  129:         selectedColumns: SELECTED_MAPPING_COLUMNS,
+  130:       });
+  131:     }
+  132: 
+  133:     const rows = Array.isArray(data) ? (data as AppUserMappingRow[]) : [];
+  134: 
+  135:     if (rows.length === 0) {
+  136:       return createResult({
+  137:         mappingStatus: 'app_user_not_found',
+  138:         mappedUserFound: false,
+  139:         dbReadExecuted: true,
+  140:         failClosed: false,
+  141:         provider,
+  142:         authSubjectPresent: true,
+  143:         authSubjectMatched: false,
+  144:         appUserId: null,
+  145:         selectedColumns: SELECTED_MAPPING_COLUMNS,
+  146:       });
+  147:     }
+  148: 
+  149:     if (rows.length > 1) {
+  150:       return createResult({
+  151:         mappingStatus: 'app_user_duplicate',
+  152:         mappedUserFound: false,
+  153:         dbReadExecuted: true,
+  154:         failClosed: true,
+  155:         provider,
+  156:         authSubjectPresent: true,
+  157:         authSubjectMatched: false,
+  158:         appUserId: null,
+  159:         selectedColumns: SELECTED_MAPPING_COLUMNS,
+  160:       });
+  161:     }
+  162: 
+  163:     const row = rows[0];
+  164:     const rowAppUserId = typeof row.id === 'string' ? row.id.trim() : '';
+  165:     const rowAuthSubject = typeof row.auth0_sub === 'string' ? row.auth0_sub.trim() : '';
+  166: 
+  167:     if (!rowAppUserId || rowAuthSubject !== authSubject) {
+  168:       return createResult({
+  169:         mappingStatus: 'app_user_lookup_error',
+  170:         mappedUserFound: false,
+  171:         dbReadExecuted: true,
+  172:         failClosed: true,
+  173:         provider,
+  174:         authSubjectPresent: true,
+  175:         authSubjectMatched: false,
+  176:         appUserId: null,
+  177:         selectedColumns: SELECTED_MAPPING_COLUMNS,
+  178:       });
+  179:     }
+  180: 
+  181:     return createResult({
+  182:       mappingStatus: 'mapped_user_found',
+  183:       mappedUserFound: true,
+  184:       dbReadExecuted: true,
+  185:       failClosed: false,
+  186:       provider,
+  187:       authSubjectPresent: true,
+  188:       authSubjectMatched: true,
+  189:       appUserId: rowAppUserId,
+  190:       selectedColumns: SELECTED_MAPPING_COLUMNS,
+  191:     });
+  192:   } catch {
+  193:     return createResult({
+  194:       mappingStatus: 'app_user_lookup_error',
+  195:       mappedUserFound: false,
+  196:       dbReadExecuted: true,
+  197:       failClosed: true,
+  198:       provider,
+  199:       authSubjectPresent: true,
+  200:       authSubjectMatched: false,
+  201:       appUserId: null,
+  202:       selectedColumns: SELECTED_MAPPING_COLUMNS,
+  203:     });
+  204:   }
+  205: }
+===== END FULL FILE: lib/activity/controlledIntake/serverSideAppUserMappingReadOnly.ts =====
