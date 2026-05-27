@@ -1,0 +1,60 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R12B2 - corrected static postcheck for positive auto-candidate endpoint
+Date = 2026-05-27 20:36:48 +02:00
+Status = CORRECTED_STATIC_POSTCHECK_COMPLETED
+
+1. Baseline
+Expected HEAD = bbee159
+Actual HEAD = bbee159
+O-DJ-R12B commit = bbee159
+O-DJ-R12B parent = ea38039
+Working tree before corrected postcheck = clean
+
+2. Why O-DJ-R12B2 exists
+O-DJ-R12B had an audit false fail in pending-file verification.
+git status showed the newly created endpoint directory instead of the nested route.ts path.
+The final O-DJ-R12B commit was still created, but this corrected report verifies the actual commit scope.
+
+3. Endpoint verification
+Endpoint file = src/app/api/activity/debug/ownership-context-positive-auto-candidate-read-only-test/route.ts
+Endpoint header = x-ownership-context-positive-auto-candidate-read-only-test: enabled
+Endpoint mode = ownership_context_positive_auto_candidate_read_only_diagnostic
+Candidate search function present = true
+Resolver call present = true
+Server-side mapping helper call present = true
+Supabase admin read client call present = true
+
+4. Commit scope
+Changed files in O-DJ-R12B commit:
+docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r12b-positive-context-auto-candidate-diagnostic-endpoint.txt
+src/app/api/activity/debug/ownership-context-positive-auto-candidate-read-only-test/route.ts
+
+Name-status:
+A	docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r12b-positive-context-auto-candidate-diagnostic-endpoint.txt
+A	src/app/api/activity/debug/ownership-context-positive-auto-candidate-read-only-test/route.ts
+
+Diff stat:
+ ...-context-auto-candidate-diagnostic-endpoint.txt |  48 ++
+ .../route.ts                                       | 642 +++++++++++++++++++++
+ 2 files changed, 690 insertions(+)
+
+5. Safety / guardrails
+- No endpoint call was executed by O-DJ-R12B2.
+- No browser runtime was executed by O-DJ-R12B2.
+- No runtime DB read was triggered by O-DJ-R12B2.
+- No DB write.
+- No SQL.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+- No code patch.
+- O-DJ-R12B commit changed only endpoint + report.
+- TypeScript passed: npx.cmd tsc --noEmit.
+
+6. Decision
+PASS_O_DJ_R12B2_CORRECTED_STATIC_POSTCHECK_POSITIVE_CONTEXT_ENDPOINT_COMMIT_SCOPE_VERIFIED_TSC_PASS_NO_CODE_PATCH_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+
+7. Next step
+O-DJ-R12C browser runtime verification for the positive auto-candidate endpoint.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
