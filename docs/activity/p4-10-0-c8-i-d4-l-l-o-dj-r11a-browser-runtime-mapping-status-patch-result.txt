@@ -1,0 +1,84 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R11A - browser runtime mappingStatus patch result
+Date = 2026-05-27 18:39:21 +02:00
+Status = BROWSER_RUNTIME_RESULT_RECORDED
+
+1. Baseline
+Expected HEAD = bd30ffe
+Actual HEAD = bd30ffe
+Working tree before report = clean
+
+2. Browser runtime source
+User-provided browser console output from O-DJ-R11.
+Endpoint tested: /api/activity/debug/ownership-context-resolution-read-only-test
+Runtime was executed in browser, not by this PowerShell report script.
+
+3. Runtime summary
+missingHeaderPass = true
+wrongHeaderPass = true
+mappingPatchRuntimePass = true
+guardrailsPass = true
+forbiddenKeysPass = false
+suspiciousValuesPass = true
+validMappedCasesCount = 3
+validStillLookupErrorCasesCount = 0
+
+4. Runtime interpretation
+Mapping-status patch is verified at runtime.
+All authenticated valid-header cases returned appUserMappingStatus = mapped_user_found.
+All authenticated valid-header cases returned appUserMapped = true.
+All authenticated valid-header cases reached ownershipContextResolutionExecuted = true.
+No valid authenticated case collapsed to app_user_lookup_error.
+
+5. Resolver outcomes
+valid_header_authenticated_no_context_hints:
+- HTTP 200
+- code = OWNERSHIP_CONTEXT_RESOLUTION_READ_ONLY_FAIL_CLOSED
+- ownershipContextResolutionStatus = missing_requested_context
+- ownershipContextFailClosed = true
+
+valid_header_authenticated_invalid_space_id:
+- HTTP 200
+- code = OWNERSHIP_CONTEXT_RESOLUTION_READ_ONLY_FAIL_CLOSED
+- ownershipContextResolutionStatus = requested_context_invalid
+- ownershipContextFailClosed = true
+
+valid_header_authenticated_ambiguous_space_and_organization:
+- HTTP 200
+- code = OWNERSHIP_CONTEXT_RESOLUTION_READ_ONLY_FAIL_CLOSED
+- ownershipContextResolutionStatus = context_ambiguous
+- ownershipContextFailClosed = true
+
+6. False-positive review
+The browser helper reported forbiddenKeysPass = false only because the key authSessionReadExecuted contains the fragment session.
+authSessionReadExecuted is an intentionally exposed boolean diagnostic field, not a raw session object.
+No suspicious values were found:
+- suspiciousValuesPass = true
+- anySuspiciousValues = []
+Therefore the forbidden-key failure is classified as browser-script false positive.
+
+7. Safety / guardrails
+- Missing/wrong header cases stayed fail-closed before auth/mapping/resolver.
+- Runtime valid cases performed read-only diagnostic DB reads only where expected.
+- dbWriteExecuted remained false.
+- sqlExecuted remained false.
+- aiCallExecuted remained false.
+- activityEventsInserted remained false.
+- semanticCandidatesPersisted remained false.
+- valueObjectsCreated remained false.
+- stateFactsCreated remained false.
+- stateDeltasCreated remained false.
+- stateSnapshotsCreated remained false.
+- responseSanitized remained true.
+- No controlled-intake integration.
+- No activity_events write.
+- TypeScript passed: npx.cmd tsc --noEmit.
+
+8. Decision
+PASS_O_DJ_R11A_BROWSER_RUNTIME_MAPPING_STATUS_PATCH_VERIFIED_RESOLVER_REACHED_FOR_VALID_CASES_FORBIDDEN_KEY_FALSE_POSITIVE_REVIEWED_NO_WRITE_GUARDRAIL_BREAK
+
+9. Next step
+O-DJ-R12 should test or inspect a positive resolvable ownership/context case.
+Current O-DJ-R11 valid cases reached resolver but intentionally used missing/invalid/ambiguous context hints.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
