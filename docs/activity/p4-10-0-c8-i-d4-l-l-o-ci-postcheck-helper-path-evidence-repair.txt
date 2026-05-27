@@ -1,0 +1,474 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CI-POSTCHECK
+Helper/path evidence repair after PowerShell variable-colon issue
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CI-POSTCHECK: 397bfc3
+- Expected origin/main before O-CI-POSTCHECK: 397bfc3
+- Baseline commit: 397bfc3 docs: decide C8-I O-CI Supabase admin helper path
+
+Purpose
+This postcheck repairs the evidence collection gap in O-CI.
+
+Problem observed
+O-CI attempted to define Get-MatchingLines with a string containing PowerShell variable-colon interpolation.
+The expression was equivalent to file/line/clean values separated by colon characters.
+PowerShell treated the colon after variable names as invalid drive-style variable syntax.
+As a result, Get-MatchingLines was not defined and matching-line evidence variables were not populated.
+
+Repair method
+O-CI-POSTCHECK uses Get-MatchingLinesSafe.
+Get-MatchingLinesSafe uses the format operator: {0}:{1}:{2}.
+No fragile variable-colon interpolation is used.
+
+This block is postcheck/report-only.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not create the future mapping diagnostic endpoint.
+It does not create a Supabase admin client.
+It does not modify src/app/api/activity/controlled-intake/route.ts.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+
+Repaired static scan counts
+- Tracked TS/TSX files scanned: 202
+- Candidate rows: 29
+- Safe admin candidates: 0
+- Service-role candidates: 1
+- Server-only candidates: 0
+- Supabase create client candidates: 17
+- Service-role matching lines: 4
+- Server-only matching lines: 0
+- Supabase create client matching lines: 73
+- app_users/auth0_sub matching lines: 250
+
+Reconfirmed exact helper/path decision
+- preferredPath: lib/supabase/admin.ts
+- preferredPathExists: False
+- preferredPathIsSafeCandidate: False
+- adminClientHelperPathDecision: NO_EXACT_REUSABLE_SERVER_ONLY_ADMIN_HELPER_CONFIRMED_USE_NEW_DEDICATED_PATH
+- selectedAdminClientHelperPath: lib/supabase/admin.ts
+- adminClientImplementationMode: CREATE_NEW_DEDICATED_SERVER_ONLY_ADMIN_HELPER_IN_LATER_IMPLEMENTATION_GATE
+- nextStepDecision: Proceed to O-CJ dedicated server-only admin helper implementation contract.
+
+Decision
+O-CI decision is confirmed after repaired evidence collection.
+No exact reusable server-only admin helper is confirmed.
+The selected future helper path remains lib/supabase/admin.ts.
+Implementation is still not authorized by O-CI-POSTCHECK.
+
+Next step decision
+Proceed to O-CJ.
+O-CJ should create the dedicated server-only admin helper implementation contract.
+O-CJ must remain no DB read, no DB write, no SQL, no AI, no diagnostic endpoint creation and no controlled-intake route integration unless explicitly converted later.
+
+PASS marker
+PASS_O_CI_POSTCHECK_HELPER_PATH_EVIDENCE_REPAIRED_NO_DB_NO_WRITE_NO_SQL_NO_AI
+
+Safe server-only admin helper candidates
+No matches found.
+
+Service-role candidate files
+Match count in report excerpt: 1
+lib/supabase.ts
+
+Server-only candidate files
+No matches found.
+
+Supabase create client candidate files
+Match count in report excerpt: 17
+lib/activity/activityRubricatorClassificationLifecycle.ts
+lib/activity/activityValueObjectLifecycle.ts
+lib/activity/categoryDerivation/completeRouteIntegration.ts
+lib/activity/categoryDerivation/persistDerivations.ts
+lib/activity/categoryDerivation/resolver.ts
+lib/activity/categoryDerivation/routeRunner.ts
+lib/activity/knownTemplateRegistryMetadata.ts
+lib/activity/knownTemplateRegistryRuleResolver.ts
+lib/activity/rubricatorValueObjectMapper.ts
+lib/activity/valueObjectBridge.ts
+lib/supabase.ts
+src/app/api/activity/complete/route.ts
+src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts
+src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts
+src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts
+src/app/api/activity/debug/category-derivation-route-runner-test/route.ts
+src/app/api/activity/debug/free-text-value-object-test/route.ts
+
+Candidate row summary
+Match count in report excerpt: 29
+lib/activity/activityRubricatorClassificationLifecycle.ts | supabaseJs=True | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/activityValueObjectLifecycle.ts | supabaseJs=True | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/categoryDerivation/completeRouteIntegration.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/categoryDerivation/persistDerivations.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/categoryDerivation/resolver.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/categoryDerivation/routeRunner.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/controlledIntake/serverSideAppUserMapping.ts | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=True
+lib/activity/controlledIntake/serverSideAuthSession.ts | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=True
+lib/activity/controlledIntake/serverSideAuthSessionRuntime.ts | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=True
+lib/activity/controlledIntake/serverSideAuthSessionRuntimeBridge.ts | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=True
+lib/activity/controlledIntake/serverSideAuthSessionRuntimeConnection.ts | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=True
+lib/activity/knownTemplateRegistryMetadata.ts | supabaseJs=True | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/knownTemplateRegistryRuleResolver.ts | supabaseJs=True | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/rubricatorValueObjectMapper.ts | supabaseJs=True | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/activity/valueObjectBridge.ts | supabaseJs=True | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+lib/supabase.ts | supabaseJs=True | createClient=True | serviceRole=True | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=True
+src/app/admin/object-action/categories/CategoryAdminButtons.tsx | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=True | apiOrServerPath=False | adminNamed=True
+src/app/admin/object-action/categories/page.tsx | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=False | adminNamed=True
+src/app/admin/object-action/classifications/page.tsx | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=False | adminNamed=True
+src/app/admin/object-action/page.tsx | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=False | adminNamed=True
+src/app/admin/object-action/suggestions/SuggestionModerationButtons.tsx | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=True | apiOrServerPath=False | adminNamed=True
+src/app/admin/object-action/suggestions/page.tsx | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=False | adminNamed=True
+src/app/admin/page.tsx | supabaseJs=False | createClient=False | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=False | adminNamed=True
+src/app/api/activity/complete/route.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+src/app/api/activity/debug/category-derivation-route-runner-test/route.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+src/app/api/activity/debug/free-text-value-object-test/route.ts | supabaseJs=False | createClient=True | serviceRole=False | serverOnly=False | useClient=False | apiOrServerPath=True | adminNamed=False
+
+Service-role matching lines
+Match count in report excerpt: 4
+lib/supabase.ts:4:const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+lib/supabase.ts:10:if (!supabaseServiceRoleKey) {
+lib/supabase.ts:11:throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+lib/supabase.ts:14:export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+Server-only matching lines
+No matches found.
+
+Supabase create client matching lines
+Match count in report excerpt: 73
+lib/activity/activityRubricatorClassificationLifecycle.ts:1:import type { SupabaseClient } from "@supabase/supabase-js";
+lib/activity/activityRubricatorClassificationLifecycle.ts:18:supabase: SupabaseClient;
+lib/activity/activityRubricatorClassificationLifecycle.ts:143:supabase: SupabaseClient;
+lib/activity/activityRubricatorClassificationLifecycle.ts:186:supabase: SupabaseClient;
+lib/activity/activityRubricatorClassificationLifecycle.ts:213:supabase: SupabaseClient;
+lib/activity/activityRubricatorClassificationLifecycle.ts:264:supabase: SupabaseClient;
+lib/activity/activityValueObjectLifecycle.ts:1:import type { SupabaseClient } from "@supabase/supabase-js";
+lib/activity/activityValueObjectLifecycle.ts:15:supabase: SupabaseClient;
+lib/activity/categoryDerivation/completeRouteIntegration.ts:18:type CategoryDerivationRouteRunnerSupabaseClient,
+lib/activity/categoryDerivation/completeRouteIntegration.ts:23:export type CategoryDerivationCompleteRouteIntegrationSupabaseClient =
+lib/activity/categoryDerivation/completeRouteIntegration.ts:24:CategoryDerivationRouteRunnerSupabaseClient & CategoryDerivationRunLookupClient;
+lib/activity/categoryDerivation/completeRouteIntegration.ts:37:supabase: CategoryDerivationCompleteRouteIntegrationSupabaseClient;
+lib/activity/categoryDerivation/persistDerivations.ts:26:export interface CategoryDerivationPersistenceSupabaseClient {
+lib/activity/categoryDerivation/persistDerivations.ts:205:supabase: CategoryDerivationPersistenceSupabaseClient,
+lib/activity/categoryDerivation/persistDerivations.ts:224:supabase: CategoryDerivationPersistenceSupabaseClient,
+lib/activity/categoryDerivation/persistDerivations.ts:243:supabase: CategoryDerivationPersistenceSupabaseClient,
+lib/activity/categoryDerivation/resolver.ts:42:export interface CategoryResolverSupabaseClient {
+lib/activity/categoryDerivation/resolver.ts:119:supabase: CategoryResolverSupabaseClient,
+lib/activity/categoryDerivation/resolver.ts:136:supabase: CategoryResolverSupabaseClient,
+lib/activity/categoryDerivation/resolver.ts:202:supabase: CategoryResolverSupabaseClient,
+lib/activity/categoryDerivation/resolver.ts:257:supabase: CategoryResolverSupabaseClient,
+lib/activity/categoryDerivation/routeRunner.ts:5:type CategoryResolverSupabaseClient,
+lib/activity/categoryDerivation/routeRunner.ts:27:export type CategoryDerivationRouteRunnerSupabaseClient =
+lib/activity/categoryDerivation/routeRunner.ts:28:CategoryResolverSupabaseClient & CategoryDerivationPersistenceClient;
+lib/activity/categoryDerivation/routeRunner.ts:31:supabase: CategoryDerivationRouteRunnerSupabaseClient;
+lib/activity/knownTemplateRegistryMetadata.ts:1:import type { SupabaseClient } from "@supabase/supabase-js";
+lib/activity/knownTemplateRegistryMetadata.ts:450:supabase: SupabaseClient,
+lib/activity/knownTemplateRegistryMetadata.ts:508:supabase: SupabaseClient,
+lib/activity/knownTemplateRegistryRuleResolver.ts:1:import type { SupabaseClient } from "@supabase/supabase-js";
+lib/activity/knownTemplateRegistryRuleResolver.ts:50:supabase: SupabaseClient;
+lib/activity/knownTemplateRegistryRuleResolver.ts:337:supabase: SupabaseClient;
+lib/activity/knownTemplateRegistryRuleResolver.ts:396:supabase: SupabaseClient;
+lib/activity/rubricatorValueObjectMapper.ts:1:import type { SupabaseClient } from "@supabase/supabase-js";
+lib/activity/rubricatorValueObjectMapper.ts:51:supabase: SupabaseClient;
+lib/activity/rubricatorValueObjectMapper.ts:324:supabase: SupabaseClient,
+lib/activity/rubricatorValueObjectMapper.ts:369:supabase: SupabaseClient,
+lib/activity/rubricatorValueObjectMapper.ts:401:supabase: SupabaseClient,
+lib/activity/rubricatorValueObjectMapper.ts:427:supabase: SupabaseClient,
+lib/activity/rubricatorValueObjectMapper.ts:574:supabase: SupabaseClient,
+lib/activity/rubricatorValueObjectMapper.ts:615:supabase: SupabaseClient,
+lib/activity/rubricatorValueObjectMapper.ts:659:supabase: SupabaseClient,
+lib/activity/valueObjectBridge.ts:1:import type { SupabaseClient } from "@supabase/supabase-js";
+lib/activity/valueObjectBridge.ts:144:supabase: SupabaseClient;
+lib/activity/valueObjectBridge.ts:447:supabase: SupabaseClient,
+lib/activity/valueObjectBridge.ts:487:supabase: SupabaseClient,
+lib/activity/valueObjectBridge.ts:529:supabase: SupabaseClient,
+lib/activity/valueObjectBridge.ts:562:supabase: SupabaseClient,
+lib/activity/valueObjectBridge.ts:612:supabase: SupabaseClient,
+lib/activity/valueObjectBridge.ts:645:supabase: SupabaseClient,
+lib/activity/valueObjectBridge.ts:675:supabase: SupabaseClient,
+lib/activity/valueObjectBridge.ts:729:supabase: SupabaseClient;
+lib/activity/valueObjectBridge.ts:897:supabase: SupabaseClient;
+lib/activity/valueObjectBridge.ts:1037:supabase: SupabaseClient;
+lib/supabase.ts:1:import { createClient } from "@supabase/supabase-js";
+lib/supabase.ts:14:export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+src/app/api/activity/complete/route.ts:24:type CategoryResolverSupabaseClient,
+src/app/api/activity/complete/route.ts:28:type CategoryDerivationPersistenceSupabaseClient,
+src/app/api/activity/complete/route.ts:37:type CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+src/app/api/activity/complete/route.ts:616:supabase as unknown as CategoryResolverSupabaseClient,
+src/app/api/activity/complete/route.ts:627:supabase as unknown as CategoryDerivationPersistenceSupabaseClient,
+src/app/api/activity/complete/route.ts:1407:supabase as unknown as CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts:15:type CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+src/app/api/activity/debug/category-derivation-complete-route-adapter-failure-test/route.ts:475:supabase as unknown as CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts:15:type CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+src/app/api/activity/debug/category-derivation-complete-route-adapter-idempotency-test/route.ts:517:supabase as unknown as CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts:14:type CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+src/app/api/activity/debug/category-derivation-controlled-production-persist-proof/route.ts:592:supabase as unknown as CategoryDerivationCompleteRouteIntegrationSupabaseClient,
+src/app/api/activity/debug/category-derivation-route-runner-test/route.ts:11:type CategoryDerivationRouteRunnerSupabaseClient,
+src/app/api/activity/debug/category-derivation-route-runner-test/route.ts:270:supabase: supabase as unknown as CategoryDerivationRouteRunnerSupabaseClient,
+src/app/api/activity/debug/free-text-value-object-test/route.ts:16:type CategoryResolverSupabaseClient,
+src/app/api/activity/debug/free-text-value-object-test/route.ts:20:type CategoryDerivationPersistenceSupabaseClient,
+src/app/api/activity/debug/free-text-value-object-test/route.ts:566:supabase as unknown as CategoryResolverSupabaseClient,
+src/app/api/activity/debug/free-text-value-object-test/route.ts:577:supabase as unknown as CategoryDerivationPersistenceSupabaseClient,
+
+app_users/auth0_sub mapping matching lines
+Match count in report excerpt: 250
+lib/activity/activityUserContext.ts:7:auth0_sub?: string | null;
+lib/activity/activityUserContext.ts:47:.from("app_users")
+lib/activity/activityUserContext.ts:49:.eq("auth0_sub", session.user.sub)
+lib/activity/controlledIntake/authContext.ts:20:readonly appUserId?: string | null;
+lib/activity/controlledIntake/authContext.ts:50:readonly appUserId?: string | null;
+lib/activity/controlledIntake/authContext.ts:61:readonly authSubject?: string;
+lib/activity/controlledIntake/authContext.ts:133:readonly appUserId: string;
+lib/activity/controlledIntake/authContext.ts:140:appUserId: input.appUserId,
+lib/activity/controlledIntake/authContext.ts:163:const authSubject = normalizeOptionalString(identity.sub);
+lib/activity/controlledIntake/authContext.ts:165:if (!authSubject) {
+lib/activity/controlledIntake/authContext.ts:173:const appUserId =
+lib/activity/controlledIntake/authContext.ts:174:normalizeOptionalString(mapping?.appUserId) ??
+lib/activity/controlledIntake/authContext.ts:177:if (!appUserId) {
+lib/activity/controlledIntake/authContext.ts:189:authSubject,
+lib/activity/controlledIntake/authContext.ts:191:appUserId,
+lib/activity/controlledIntake/authContext.ts:206:const appUserId = normalizeOptionalString(input.appUserId);
+lib/activity/controlledIntake/authContext.ts:208:if (!appUserId) {
+lib/activity/controlledIntake/authContext.ts:221:appUserId,
+lib/activity/controlledIntake/idempotency.ts:18:appUserId?: string | null;
+lib/activity/controlledIntake/idempotency.ts:40:appUserId?: string;
+lib/activity/controlledIntake/idempotency.ts:190:appUserId: normalizeOptionalText(trustedContext.appUserId),
+lib/activity/controlledIntake/persist.ts:210:appUserId: readString(trustedContextRecord, "appUserId"),
+lib/activity/controlledIntake/persist.ts:236:const appUserId = readString(trustedContextRecord, "appUserId");
+lib/activity/controlledIntake/persist.ts:238:if (!appUserId) {
+lib/activity/controlledIntake/persist.ts:240:"Controlled activity intake static row builder requires trustedContext.appUserId.",
+lib/activity/controlledIntake/persist.ts:247:user_id: appUserId,
+lib/activity/controlledIntake/productionAuthMapping.ts:19:readonly appUserId?: string | null;
+lib/activity/controlledIntake/productionAuthMapping.ts:63:readonly authSubject: string;
+lib/activity/controlledIntake/productionAuthMapping.ts:133:readonly appUserId: string;
+lib/activity/controlledIntake/productionAuthMapping.ts:140:appUserId: input.appUserId,
+lib/activity/controlledIntake/productionAuthMapping.ts:169:const authSubject = normalizeOptionalString(identity.sub);
+lib/activity/controlledIntake/productionAuthMapping.ts:171:if (!authSubject) {
+lib/activity/controlledIntake/productionAuthMapping.ts:179:const appUserId =
+lib/activity/controlledIntake/productionAuthMapping.ts:180:normalizeOptionalString(mapping?.appUserId) ??
+lib/activity/controlledIntake/productionAuthMapping.ts:183:if (!appUserId) {
+lib/activity/controlledIntake/productionAuthMapping.ts:195:authSubject,
+lib/activity/controlledIntake/productionAuthMapping.ts:197:appUserId,
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:11:readonly authSubject?: string | null;
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:31:readonly appUserId?: string | null;
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:33:readonly authSubject?: string | null;
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:140:readonly authSubject: string;
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:141:readonly appUserId: string;
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:350:const authSubject = normalizeOptionalString(identity.authSubject);
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:352:if (!authSubject) {
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:396:const mappedAuthSubject = normalizeOptionalString(appUserReadModel.authSubject);
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:398:if (!mappedAuthSubject) {
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:406:if (mappedAuthSubject !== authSubject) {
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:414:const appUserId = normalizeOptionalString(appUserReadModel.appUserId);
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:416:if (!appUserId) {
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:420:"Controlled intake app user mapping must include appUserId.",
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:469:appUserId,
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:489:authSubject,
+lib/activity/controlledIntake/serverSideAppUserMapping.ts:490:appUserId,
+lib/activity/controlledIntake/serverSideAuthSession.ts:21:readonly authSubject?: string | null;
+lib/activity/controlledIntake/serverSideAuthSession.ts:42:readonly authSubject: string;
+lib/activity/controlledIntake/serverSideAuthSession.ts:220:const authSubject = normalizeOptionalString(sessionReadModel.authSubject);
+lib/activity/controlledIntake/serverSideAuthSession.ts:222:if (!authSubject) {
+lib/activity/controlledIntake/serverSideAuthSession.ts:271:authSubject,
+lib/activity/controlledIntake/serverSideAuthSessionRuntime.ts:20:readonly authSubject?: string | null;
+lib/activity/controlledIntake/serverSideAuthSessionRuntime.ts:176:authSubject: normalizeOptionalString(input.authSubject) ?? input.authSubject,
+lib/activity/controlledIntake/serverSideAuthSessionRuntimeConnection.ts:260:const authSubject =
+lib/activity/controlledIntake/serverSideAuthSessionRuntimeConnection.ts:262:readString(projectAuthSession, "authSubject") ??
+lib/activity/controlledIntake/serverSideAuthSessionRuntimeConnection.ts:264:readString(nestedSessionRecord ?? {}, "authSubject");
+lib/activity/controlledIntake/serverSideAuthSessionRuntimeConnection.ts:286:authSubject,
+lib/activity/controlledIntake/serverSideAuthSessionRuntimeConnection.ts:379:if (!normalizeOptionalString(sessionReadModel.authSubject)) {
+lib/activity/controlledIntake/validator.ts:25:"appUserId",
+lib/activity/controlledIntake/validator.ts:26:"app_user_id",
+lib/activity/stateFacts/controlledPersistence/auth.ts:38:auth0_sub?: unknown;
+lib/activity/stateFacts/controlledPersistence/auth.ts:123:* - reads app_users by auth0_sub;
+lib/activity/stateFacts/controlledPersistence/auth.ts:139:const authSubject = toNullableString(sessionUser.sub);
+lib/activity/stateFacts/controlledPersistence/auth.ts:141:if (!authSubject) {
+lib/activity/stateFacts/controlledPersistence/auth.ts:149:.from("app_users")
+lib/activity/stateFacts/controlledPersistence/auth.ts:150:.select("id, auth0_sub, email")
+lib/activity/stateFacts/controlledPersistence/auth.ts:151:.eq("auth0_sub", authSubject)
+lib/activity/stateFacts/controlledPersistence/auth.ts:170:const appUserId = toNullableString(appUser.id);
+lib/activity/stateFacts/controlledPersistence/auth.ts:171:const appUserAuthSubject = toNullableString(appUser.auth0_sub);
+lib/activity/stateFacts/controlledPersistence/auth.ts:173:if (!appUserId || !appUserAuthSubject || appUserAuthSubject !== authSubject) {
+lib/activity/stateFacts/controlledPersistence/auth.ts:180:if (isPlaceholderUuid(appUserId)) {
+lib/activity/stateFacts/controlledPersistence/auth.ts:190:.eq("user_id", appUserId)
+lib/activity/stateFacts/controlledPersistence/auth.ts:241:appUserId,
+lib/activity/stateFacts/controlledPersistence/auth.ts:244:authSubject,
+lib/activity/stateFacts/controlledPersistence/payloadBuilder.ts:213:user_id: authenticatedActor.appUserId,
+lib/activity/stateFacts/controlledPersistence/persist.ts:166:if (clientUserId && clientUserId !== authenticatedActorResult.actor.appUserId) {
+lib/activity/stateFacts/controlledPersistence/types.ts:143:appUserId: UuidString;
+lib/activity/stateFacts/controlledPersistence/types.ts:146:authSubject: string;
+lib/activity/stateFacts/controlledPersistence/types.ts:300:appUserId?: string | null;
+src/app/admin/object-action/categories/page.tsx:32:auth0_sub: string;
+src/app/admin/object-action/categories/page.tsx:39:app_user_id: string;
+src/app/admin/object-action/categories/page.tsx:511:.from("app_users")
+src/app/admin/object-action/categories/page.tsx:515:auth0_sub,
+src/app/admin/object-action/categories/page.tsx:520:.eq("auth0_sub", session.user.sub)
+src/app/admin/object-action/categories/page.tsx:545:async function getPlatformAdmin(appUserId: string): Promise<{
+src/app/admin/object-action/categories/page.tsx:554:app_user_id,
+src/app/admin/object-action/categories/page.tsx:559:.eq("app_user_id", appUserId)
+src/app/admin/object-action/classifications/page.tsx:29:auth0_sub: string;
+src/app/admin/object-action/classifications/page.tsx:36:app_user_id: string;
+src/app/admin/object-action/classifications/page.tsx:372:.from("app_users")
+src/app/admin/object-action/classifications/page.tsx:376:auth0_sub,
+src/app/admin/object-action/classifications/page.tsx:381:.eq("auth0_sub", session.user.sub)
+src/app/admin/object-action/classifications/page.tsx:406:async function getPlatformAdmin(appUserId: string): Promise<{
+src/app/admin/object-action/classifications/page.tsx:415:app_user_id,
+src/app/admin/object-action/classifications/page.tsx:420:.eq("app_user_id", appUserId)
+src/app/admin/object-action/page.tsx:9:auth0_sub: string;
+src/app/admin/object-action/page.tsx:16:app_user_id: string;
+src/app/admin/object-action/page.tsx:79:.from("app_users")
+src/app/admin/object-action/page.tsx:83:auth0_sub,
+src/app/admin/object-action/page.tsx:88:.eq("auth0_sub", session.user.sub)
+src/app/admin/object-action/page.tsx:113:async function getPlatformAdmin(appUserId: string): Promise<{
+src/app/admin/object-action/page.tsx:122:app_user_id,
+src/app/admin/object-action/page.tsx:127:.eq("app_user_id", appUserId)
+src/app/admin/object-action/suggestions/page.tsx:27:auth0_sub: string;
+src/app/admin/object-action/suggestions/page.tsx:34:app_user_id: string;
+src/app/admin/object-action/suggestions/page.tsx:582:.from("app_users")
+src/app/admin/object-action/suggestions/page.tsx:586:auth0_sub,
+src/app/admin/object-action/suggestions/page.tsx:591:.eq("auth0_sub", session.user.sub)
+src/app/admin/object-action/suggestions/page.tsx:616:async function getPlatformAdmin(appUserId: string): Promise<{
+src/app/admin/object-action/suggestions/page.tsx:625:app_user_id,
+src/app/admin/object-action/suggestions/page.tsx:630:.eq("app_user_id", appUserId)
+src/app/admin/page.tsx:9:auth0_sub: string;
+src/app/admin/page.tsx:16:app_user_id: string;
+src/app/admin/page.tsx:79:.from("app_users")
+src/app/admin/page.tsx:83:auth0_sub,
+src/app/admin/page.tsx:88:.eq("auth0_sub", session.user.sub)
+src/app/admin/page.tsx:113:async function getPlatformAdmin(appUserId: string): Promise<{
+src/app/admin/page.tsx:122:app_user_id,
+src/app/admin/page.tsx:127:.eq("app_user_id", appUserId)
+src/app/api/activities/route.ts:29:.from("app_users")
+src/app/api/activities/route.ts:31:.eq("auth0_sub", session.user.sub)
+src/app/api/activity/controlled-intake/route.ts:29:const PREVIEW_APP_USER_ID_HEADER =
+src/app/api/activity/controlled-intake/route.ts:40:const PREVIEW_MAPPED_APP_USER_ID_HEADER =
+src/app/api/activity/controlled-intake/route.ts:60:const PREVIEW_APP_USER_READ_MODEL_APP_USER_ID_HEADER =
+src/app/api/activity/controlled-intake/route.ts:320:appUserId: readHeaderString(request, PREVIEW_APP_USER_ID_HEADER),
+src/app/api/activity/controlled-intake/route.ts:384:appUserId: readHeaderString(
+src/app/api/activity/controlled-intake/route.ts:386:PREVIEW_MAPPED_APP_USER_ID_HEADER,
+src/app/api/activity/controlled-intake/route.ts:460:authSubject: readHeaderString(
+src/app/api/activity/controlled-intake/route.ts:470:appUserId: readHeaderString(
+src/app/api/activity/controlled-intake/route.ts:472:PREVIEW_APP_USER_READ_MODEL_APP_USER_ID_HEADER,
+src/app/api/activity/controlled-intake/route.ts:478:authSubject: readHeaderString(
+src/app/api/activity/debug-known-template-registry/route.ts:391:requestedByAppUserId: appUser.id,
+src/app/api/activity/debug-rubricator-value-object-bridge/route.ts:18:auth0_sub: string | null;
+src/app/api/activity/debug-rubricator-value-object-bridge/route.ts:56:const auth0Sub =
+src/app/api/activity/debug-rubricator-value-object-bridge/route.ts:59:if (!auth0Sub) {
+src/app/api/activity/debug-rubricator-value-object-bridge/route.ts:74:.from("app_users")
+src/app/api/activity/debug-rubricator-value-object-bridge/route.ts:75:.select("id, auth0_sub")
+src/app/api/activity/debug-rubricator-value-object-bridge/route.ts:76:.eq("auth0_sub", auth0Sub)
+src/app/api/activity/debug-rubricator-value-object-bridge/route.ts:100:error: "Authenticated Auth0 user is not linked to app_users.",
+src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts:57:readonly authSubject: string;
+src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts:65:readonly authSubject: string;
+src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts:70:readonly authSubject: string;
+src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts:102:readonly authSubject: string;
+src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts:180:authSubject: identity.authSubject,
+src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts:299:getString(userRecord, "authSubject") ??
+src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts:300:getString(sessionRecord, "authSubject"),
+src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts:373:const authSubject = getSubject(sessionValue, userRecord);
+src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts:375:if (!authSubject) {
+src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts:388:sub: authSubject,
+src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts:389:authSubject,
+src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts:396:sub: authSubject,
+src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts:397:authSubject,
+src/app/api/activity/debug/real-auth-session-runtime-read-test/route.ts:405:authSubject,
+src/app/api/activity/debug/value-object-bridge-proof/route.ts:246:appUserId: string | null = null
+src/app/api/activity/debug/value-object-bridge-proof/route.ts:251:if (appUserId) {
+src/app/api/activity/debug/value-object-bridge-proof/route.ts:252:nextQuery = nextQuery.eq("user_id", appUserId);
+src/app/api/activity/record/route.ts:342:function hasTemplateAccess(template: ActivityTemplateRow, appUserId: string) {
+src/app/api/activity/record/route.ts:348:return template.owner_user_id === appUserId;
+src/app/api/activity/record/route.ts:361:async function getTemplateById(templateId: string, appUserId: string) {
+src/app/api/activity/record/route.ts:375:if (!template || !hasTemplateAccess(template, appUserId)) {
+src/app/api/activity/record/route.ts:382:async function getTemplateBySlug(templateSlug: string, appUserId: string) {
+src/app/api/activity/record/route.ts:404:.eq("owner_user_id", appUserId)
+src/app/api/activity/record/route.ts:415:async function getShortcut(shortcutValue: string, appUserId: string) {
+src/app/api/activity/record/route.ts:421:.or(`shortcut_scope.eq.system,user_id.eq.${appUserId}`)
+src/app/api/activity/record/route.ts:432:(shortcut) => shortcut.user_id === appUserId
+src/app/api/activity/record/route.ts:440:appUserId: string;
+src/app/api/activity/record/route.ts:442:const { body, appUserId } = params;
+src/app/api/activity/record/route.ts:451:const template = await getTemplateById(templateId, appUserId);
+src/app/api/activity/record/route.ts:463:const template = await getTemplateBySlug(templateSlug, appUserId);
+src/app/api/activity/record/route.ts:475:const shortcut = await getShortcut(shortcutValue, appUserId);
+src/app/api/activity/record/route.ts:481:const template = await getTemplateById(shortcut.template_id, appUserId);
+src/app/api/activity/record/route.ts:493:const shortcut = await getShortcut(legacyShortcutFromInput, appUserId);
+src/app/api/activity/record/route.ts:499:const template = await getTemplateById(shortcut.template_id, appUserId);
+src/app/api/activity/record/route.ts:594:appUserId: string;
+src/app/api/activity/record/route.ts:600:const { appUserId, actorId, naturalInput, durationMinutes, body } = params;
+src/app/api/activity/record/route.ts:615:user_id: appUserId,
+src/app/api/activity/record/route.ts:729:appUserId: appUser.id,
+src/app/api/activity/record/route.ts:750:appUserId: appUser.id,
+src/app/api/activity/start/route.ts:159:function hasTemplateAccess(template: ActivityTemplateRow, appUserId: string) {
+src/app/api/activity/start/route.ts:165:return template.owner_user_id === appUserId;
+src/app/api/activity/start/route.ts:178:async function getTemplateById(templateId: string, appUserId: string) {
+src/app/api/activity/start/route.ts:192:if (!template || !hasTemplateAccess(template, appUserId)) {
+src/app/api/activity/start/route.ts:199:async function getTemplateBySlug(templateSlug: string, appUserId: string) {
+src/app/api/activity/start/route.ts:221:.eq("owner_user_id", appUserId)
+src/app/api/activity/start/route.ts:232:async function getShortcut(shortcutValue: string, appUserId: string) {
+src/app/api/activity/start/route.ts:238:.or(`shortcut_scope.eq.system,user_id.eq.${appUserId}`)
+src/app/api/activity/start/route.ts:249:(shortcut) => shortcut.user_id === appUserId
+src/app/api/activity/start/route.ts:257:appUserId: string;
+src/app/api/activity/start/route.ts:259:const { body, appUserId } = params;
+src/app/api/activity/start/route.ts:268:const template = await getTemplateById(templateId, appUserId);
+src/app/api/activity/start/route.ts:280:const template = await getTemplateBySlug(templateSlug, appUserId);
+src/app/api/activity/start/route.ts:292:const shortcut = await getShortcut(shortcutValue, appUserId);
+src/app/api/activity/start/route.ts:298:const template = await getTemplateById(shortcut.template_id, appUserId);
+src/app/api/activity/start/route.ts:310:const shortcut = await getShortcut(legacyShortcutFromInput, appUserId);
+src/app/api/activity/start/route.ts:316:const template = await getTemplateById(shortcut.template_id, appUserId);
+src/app/api/activity/start/route.ts:504:appUserId: appUser.id,
+src/app/api/availability-rules/route.ts:21:.from("app_users")
+src/app/api/availability-rules/route.ts:23:.eq("auth0_sub", session.user.sub)
+src/app/api/bookings/route.ts:22:.from("app_users")
+src/app/api/bookings/route.ts:24:.eq("auth0_sub", session.user.sub)
+src/app/api/calendar/events/route.ts:21:.from("app_users")
+src/app/api/calendar/events/route.ts:23:.eq("auth0_sub", session.user.sub)
+src/app/api/certificates/cancel/route.ts:34:.from("app_users")
+src/app/api/certificates/cancel/route.ts:36:.eq("auth0_sub", session.user.sub)
+src/app/api/certificates/redeem/route.ts:34:.from("app_users")
+src/app/api/certificates/redeem/route.ts:36:.eq("auth0_sub", session.user.sub)
+src/app/api/certificates/request/route.ts:36:.from("app_users")
+src/app/api/certificates/request/route.ts:38:.eq("auth0_sub", session.user.sub)
+src/app/api/geo/areas/route.ts:52:auth0_sub: string;
+src/app/api/geo/areas/route.ts:178:.from("app_users")
+src/app/api/geo/areas/route.ts:179:.select("id, auth0_sub")
+src/app/api/geo/areas/route.ts:180:.eq("auth0_sub", session.user.sub)
+src/app/api/geo/suggestions/route.ts:146:.from("app_users")
+src/app/api/geo/suggestions/route.ts:148:.eq("auth0_sub", session.user.sub)
+src/app/api/locations/route.ts:19:.from("app_users")
+src/app/api/locations/route.ts:21:.eq("auth0_sub", session.user.sub)
+src/app/api/messages/route.ts:15:.from("app_users")
+src/app/api/messages/route.ts:17:.eq("auth0_sub", session.user.sub)
+src/app/api/messages/route.ts:22:.from("app_users")
+src/app/api/messages/route.ts:24:auth0_sub: session.user.sub,
+src/app/api/my/purchase-confirmations/route.ts:19:.from("app_users")
+src/app/api/my/purchase-confirmations/route.ts:21:.eq("auth0_sub", session.user.sub)
+src/app/api/object-action/categories/audit-verify/route.ts:11:auth0_sub: string;
+src/app/api/object-action/categories/audit-verify/route.ts:18:app_user_id: string;
+src/app/api/object-action/categories/audit-verify/route.ts:238:.from("app_users")
+src/app/api/object-action/categories/audit-verify/route.ts:242:auth0_sub,
+src/app/api/object-action/categories/audit-verify/route.ts:247:.eq("auth0_sub", session.user.sub)
+src/app/api/object-action/categories/audit-verify/route.ts:301:app_user_id,
+src/app/api/object-action/categories/audit-verify/route.ts:306:.eq("app_user_id", appUser.id)
+src/app/api/object-action/categories/audit-verify/route.ts:545:appUserId: appUser.id,
+src/app/api/object-action/categories/route.ts:20:auth0_sub: string;
+src/app/api/object-action/categories/route.ts:27:app_user_id: string;
+src/app/api/object-action/categories/route.ts:261:.from("app_users")
+src/app/api/object-action/categories/route.ts:265:auth0_sub,
+src/app/api/object-action/categories/route.ts:270:.eq("auth0_sub", session.user.sub)
+src/app/api/object-action/categories/route.ts:324:app_user_id,
+src/app/api/object-action/categories/route.ts:329:.eq("app_user_id", appUser.id)
+src/app/api/object-action/categories/route.ts:777:appUserId: appUser.id,
+src/app/api/object-action/suggestions/audit-verify/route.ts:11:auth0_sub: string;
+src/app/api/object-action/suggestions/audit-verify/route.ts:18:app_user_id: string;
+src/app/api/object-action/suggestions/audit-verify/route.ts:250:.from("app_users")
+src/app/api/object-action/suggestions/audit-verify/route.ts:254:auth0_sub,
+src/app/api/object-action/suggestions/audit-verify/route.ts:259:.eq("auth0_sub", session.user.sub)
