@@ -1,0 +1,65 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CO-POSTCHECK
+Diagnostic endpoint tracked-file verification after git status directory-display mismatch
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CO-POSTCHECK: b1bb8f4
+- Expected origin/main before O-CO-POSTCHECK: b1bb8f4
+- Baseline commit: b1bb8f4 feat: add C8-I O-CO mapping read-only diagnostic endpoint
+
+Problem observed
+O-CO implementation created and pushed the diagnostic endpoint.
+During final changed-file verification, git status displayed the new endpoint as an untracked directory path before git add.
+The script expected the full route.ts file path in git status output.
+Because of that display mismatch, the script printed STOP messages for the final changed-file check.
+After that, the script continued, added the exact route.ts file and proof report, committed and pushed O-CO.
+
+Postcheck decision
+The O-CO problem was a proof/checking mismatch, not a route implementation failure.
+The endpoint route file is now tracked by git.
+The O-CO proof report is now tracked by git.
+The working tree is clean.
+TypeScript passes through npx.cmd.
+
+Tracked files verified
+- src/app/api/activity/debug/server-side-app-user-mapping-read-only-test/route.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-co-diagnostic-endpoint-code-implementation-proof.txt
+
+Boundary verification
+- No controlled-intake route change is present.
+- No DB write was implemented.
+- No SQL execution was implemented.
+- No AI call was implemented.
+- No activity_events insert was implemented.
+- No semantic candidate persistence was implemented.
+- No Value Object creation was implemented.
+- No state facts, state deltas or state snapshots were implemented.
+
+Runtime boundary
+The endpoint may execute a DB read only later when explicitly called in browser/runtime verification with the diagnostic header.
+O-CO-POSTCHECK itself executed no runtime DB read.
+
+TypeScript verification
+Command used:
+npx.cmd tsc --noEmit
+
+Result:
+PASS_TYPESCRIPT_CHECKED_THROUGH_NPX_CMD_AFTER_O_CO_POSTCHECK
+
+Current decision
+O-CO is accepted after O-CO-POSTCHECK.
+The valid O-CO implementation baseline is b1bb8f4 plus this postcheck report.
+
+Next step decision
+Proceed to O-CP.
+O-CP should be browser/runtime verification contract for /api/activity/debug/server-side-app-user-mapping-read-only-test.
+O-CP should verify missing header, wrong header, authenticated valid header, and sanitized response boundaries.
+O-CP must not modify controlled-intake route and must not write DB, execute SQL or call AI.
+
+PASS marker
+PASS_O_CO_POSTCHECK_ENDPOINT_TRACKED_FILE_VERIFIED_NO_SCRIPT_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
