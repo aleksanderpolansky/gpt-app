@@ -1,0 +1,44 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R4A — report integrity correction postcheck
+Date: 2026-05-27 17:12:21 +02:00
+Status: PASS
+
+1. Reason
+- O-DJ-R4 PowerShell log showed a parser error during $report here-string assignment.
+- The problematic pattern was a variable immediately followed by a colon in an interpolated here-string.
+- Because Set-Content still ran afterwards, the report file could have been written from stale session state.
+- O-DJ-R4A corrects this without rewriting git history.
+
+2. Baseline
+- Starting HEAD: f625953
+- O-DJ-R3 base commit: bf7ae6d
+- Working tree before correction: clean
+
+3. Checks repeated intentionally
+- Verified O-DJ-R4 changed only its report file.
+- Verified controlled-intake route unchanged from O-DJ-R3 to O-DJ-R4.
+- Verified focused diagnostic endpoint markers.
+- Verified guardrails false.
+- Verified forbidden write / AI / raw exposure patterns absent.
+- Ran TypeScript: npx.cmd tsc --noEmit PASS.
+
+4. Files changed by O-DJ-R4A
+- Corrected deterministic report:
+  - docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r4-app-user-mapping-focused-diagnostic-endpoint-postcheck.txt
+- Added correction postcheck report:
+  - docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r4a-report-integrity-correction-postcheck.txt
+
+5. Runtime / DB / AI policy
+- No endpoint call.
+- No browser runtime.
+- No DB read intentionally triggered.
+- No DB write.
+- No SQL.
+- No AI/OpenAI call.
+
+6. Decision
+PASS_O_DJ_R4A_REPORT_INTEGRITY_CORRECTED_NO_CODE_CHANGE_NO_ENDPOINT_CALL_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+
+7. Next step
+O-DJ-R5 browser runtime verification for focused endpoint.
+Do not run old O-DJ ownership/context runtime yet.
