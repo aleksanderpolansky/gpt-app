@@ -1,0 +1,103 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R5 - app user mapping focused browser runtime verification
+Date: 2026-05-27 17:33:31 +02:00
+Status: PASS_MAPPING_MAPPED_WITH_BROWSER_SCRIPT_FALSE_POSITIVE_NOTE
+
+1. Runtime scope
+Endpoint tested in browser DevTools:
+/api/activity/debug/app-user-mapping-lookup-error-focused-test
+Required header:
+x-app-user-mapping-lookup-error-focused-test: enabled
+Policy:
+- Focused endpoint only.
+- Old O-DJ ownership/context runtime was not executed.
+- Runtime endpoint call happened from browser console only.
+- This verification intentionally allowed read-only DB read for valid authenticated header case.
+
+2. Browser runtime cases
+Case missing_header:
+- HTTP status = 403
+- parseStatus = json_ok
+- authSessionReadExecuted = false
+- trustedAuthSubjectPresent = false
+- trustedAuthSubjectShapeCategory = missing
+- supabaseAdminClientCreated = false
+- appUsersQueryAttempted = false
+- appUsersQuerySucceeded = false
+- appUsersRowCountCategory = unknown
+- mappingOutcomeCategory = unauthenticated
+- sanitizedErrorCategory = none
+- dbWriteExecuted = false
+- sqlExecuted = false
+- aiCallExecuted = false
+
+Case wrong_header:
+- HTTP status = 403
+- parseStatus = json_ok
+- authSessionReadExecuted = false
+- trustedAuthSubjectPresent = false
+- trustedAuthSubjectShapeCategory = missing
+- supabaseAdminClientCreated = false
+- appUsersQueryAttempted = false
+- appUsersQuerySucceeded = false
+- appUsersRowCountCategory = unknown
+- mappingOutcomeCategory = unauthenticated
+- sanitizedErrorCategory = none
+- dbWriteExecuted = false
+- sqlExecuted = false
+- aiCallExecuted = false
+
+Case valid_header_authenticated:
+- HTTP status = 200
+- parseStatus = json_ok
+- authSessionReadExecuted = true
+- trustedAuthSubjectPresent = true
+- trustedAuthSubjectShapeCategory = provider_pipe_subject
+- supabaseAdminClientCreated = true
+- supabaseUrlConfigured = true
+- serviceRoleKeyConfigured = true
+- appUsersQueryAttempted = true
+- appUsersQuerySucceeded = true
+- appUsersRowCountCategory = one
+- mappingOutcomeCategory = mapped
+- sanitizedErrorCategory = none
+- dbWriteExecuted = false
+- sqlExecuted = false
+- aiCallExecuted = false
+- activityEventsInserted = false
+- semanticCandidatesPersisted = false
+- valueObjectsCreated = false
+- stateFactsCreated = false
+- stateDeltasCreated = false
+- stateSnapshotsCreated = false
+
+3. False-positive note
+The browser helper printed decision FAIL_FORBIDDEN_RAW_OR_SECRET_LIKE_KEYS_PRESENT.
+This is classified as a browser-script false positive, not endpoint failure.
+Reason:
+- The forbidden-key checker matched allowed sanitized field names.
+- The matched names were trustedAuthSubjectPresent, trustedAuthSubjectShapeCategory, supabaseUrlConfigured, serviceRoleKeyConfigured.
+- These fields are allowed by the O-DJ-R3 focused diagnostic contract as boolean/category/env-presence fields.
+- No raw Auth0 subject, appUserId, actorId, spaceId, organizationId, token, secret value, Supabase URL value, service role value, raw error, or stack trace was pasted into the report.
+
+4. Decision
+PASS_O_DJ_R5_MAPPING_MAPPED_READ_ONLY_RUNTIME_VERIFIED
+The app user mapping lookup blocker is resolved for the authenticated browser session.
+
+5. Consequence
+Because mappingOutcomeCategory = mapped and appUsersRowCountCategory = one, the next step is to repeat ownership/context resolver browser runtime verification.
+Reason:
+Earlier O-DJ ownership/context runtime did not reach ownershipContextResolutionExecuted=true because mapping failed first.
+
+6. Runtime / DB / AI policy for this report creation
+- This PowerShell script does not call the endpoint.
+- This PowerShell script does not trigger DB read.
+- No DB write.
+- No SQL.
+- No OpenAI / AI call.
+- Report-only commit.
+
+7. Next step
+O-DJ-R6 ownership/context resolver browser runtime verification after mapping success.
+Do not integrate ownership resolver into controlled-intake yet.
+Do not enable activity_events write yet.
