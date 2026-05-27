@@ -1,0 +1,203 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-DA
+Ownership/context schema audit SQL execution results
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-DA recording: 208d3a1
+- Expected origin/main before O-DA recording: 208d3a1
+- Baseline commit: 208d3a1 docs: design C8-I O-CZ ownership context schema audit
+
+Purpose
+This report records the O-DA Supabase SQL Editor metadata SELECT audit result for ownership/context resolution.
+
+Execution boundary
+- SQL was executed manually in Supabase SQL Editor.
+- SQL execution scope was metadata SELECT only.
+- No INSERT.
+- No UPDATE.
+- No DELETE.
+- No UPSERT.
+- No RPC.
+- No DDL.
+- No policy change.
+- No application endpoint call.
+- No AI call.
+- No activity_events insert.
+
+Source result markers
+- gate: P4.10.0-C8-I-D4-L-L-O-DA.
+- name: ownership/context schema audit SQL execution gate.
+- final_decision_marker: O_DA_SQL_METADATA_AUDIT_EXECUTED_SELECT_ONLY_RESULTS_READY_FOR_RECORDING.
+
+Aggregate result counts
+- candidate_table_count: 75.
+- candidate_tables recorded: 75.
+- columns recorded: 1243.
+- constraints recorded: 1368.
+- constraint_definitions recorded: 490.
+- indexes recorded: 408.
+- rls_status rows recorded: 71.
+- rls_policies recorded: 33.
+- enums recorded: 0.
+
+Candidate tables
+action_types, activities, activity_category_derivations, activity_code_templates, activity_corrections, activity_event_value_object_instance_links, activity_event_value_object_links, activity_events, activity_participants, activity_processing_logs, activity_template_known_registry_rules, activity_template_links, activity_templates, activity_types, actor_space_roles, actors, app_users, availability_rules, bookings, calendar_events, category_derivation_runs, certificates, chat_messages, concept_aliases, contexts, contextual_categories, contextual_category_events, current_snapshots, daily_aggregates, directory_contextual_categories, entity_classifications, event_links, geo_areas, locations, object_action_affordances, object_action_contextual_categories, object_action_suggestion_events, object_action_suggestion_requests, object_classes, object_types, offer_items, offers, organization_categories, organization_claims, organization_directory_audit_events, organization_locations, organization_search_stats, organization_service_areas, organizations, persons, platform_admins, points_reward_rules, points_transactions, public_contextual_categories, purchase_confirmation_events, purchase_confirmations, raw_activity_signals, recommendation_feedback, spaces, time_blocks, user_activity_shortcuts, user_points_wallets, value_object_category_links, value_object_cloud_profiles_v1, value_object_daily_aggregates, value_object_hierarchy_profiles_v1, value_object_instances, value_object_relevance_edges, value_object_similarity_edges, value_object_state_deltas, value_object_state_fact_audit_events, value_object_state_facts, value_object_state_snapshots, value_object_usage_aggregates, value_objects.
+
+Key ownership/context tables found
+- public.app_users.
+- public.actors.
+- public.spaces.
+- public.actor_space_roles.
+- public.organizations.
+- public.activity_events.
+
+Important absence / schema interpretation guardrail
+- No dedicated organization_memberships table was found in the candidate table list.
+- No dedicated space_memberships table was found in the candidate table list.
+- Existing ownership/context resolver design should therefore treat actor_space_roles as the current role/membership candidate, but must not implement resolver logic until the next interpretation gate confirms this.
+
+public.app_users exact useful fields
+- id uuid not null default gen_random_uuid().
+- auth0_sub text not null.
+- email text nullable.
+- name text nullable.
+- picture text nullable.
+- created_at timestamptz not null default now().
+- updated_at timestamptz not null default now().
+- constraints: PRIMARY KEY (id), UNIQUE (auth0_sub).
+- RLS enabled: true.
+- RLS policies found: 0.
+
+public.actors exact useful fields
+- id uuid not null default gen_random_uuid().
+- actor_type text not null.
+- person_id uuid nullable.
+- organization_id uuid nullable.
+- family_id uuid nullable.
+- display_name text not null.
+- status text not null default 'active'.
+- created_at timestamptz not null default now().
+- updated_at timestamptz not null default now().
+- constraints: PRIMARY KEY (id).
+- foreign key: organization_id REFERENCES organizations(id) ON DELETE CASCADE.
+- foreign key: person_id REFERENCES persons(id) ON DELETE CASCADE.
+- indexes: actors_actor_type_idx, actors_person_id_idx, actors_pkey.
+- RLS enabled: true.
+- RLS policies found: 0.
+
+public.spaces exact useful fields
+- id uuid not null default gen_random_uuid().
+- owner_user_id uuid not null.
+- space_type text not null.
+- title text not null.
+- description text nullable.
+- parent_space_id uuid nullable.
+- status text not null default 'active'.
+- created_at timestamptz not null default now().
+- updated_at timestamptz not null default now().
+- constraints: PRIMARY KEY (id).
+- foreign key: owner_user_id REFERENCES app_users(id) ON DELETE CASCADE.
+- foreign key: parent_space_id REFERENCES spaces(id) ON DELETE SET NULL.
+- indexes: spaces_owner_user_id_idx, spaces_parent_space_id_idx, spaces_pkey, spaces_space_type_idx.
+- RLS enabled: true.
+- RLS policies found: 0.
+
+public.actor_space_roles exact useful fields
+- id uuid not null default gen_random_uuid().
+- actor_id uuid not null.
+- space_id uuid not null.
+- function_type text not null.
+- title text nullable.
+- is_active boolean not null default true.
+- authority_level integer nullable.
+- responsibility_level integer nullable.
+- created_at timestamptz not null default now().
+- constraints: PRIMARY KEY (id).
+- foreign key: actor_id REFERENCES actors(id) ON DELETE CASCADE.
+- foreign key: space_id REFERENCES spaces(id) ON DELETE CASCADE.
+- unique active role index: actor_space_roles_unique_active_role_idx on actor_id, space_id, function_type WHERE is_active = true.
+- indexes: actor_space_roles_actor_id_idx, actor_space_roles_function_type_idx, actor_space_roles_pkey, actor_space_roles_space_id_idx, actor_space_roles_unique_active_role_idx.
+- RLS enabled: true.
+- RLS policies found: 0.
+
+public.organizations exact useful fields
+- id uuid not null default gen_random_uuid().
+- created_by_user_id uuid not null.
+- organization_name text not null.
+- organization_type text not null.
+- owner_person_id uuid nullable.
+- description text nullable.
+- status text not null default 'active'.
+- country_code text nullable.
+- default_currency text nullable.
+- public_slug text nullable.
+- directory_status text not null default 'draft'.
+- verification_status text not null default 'unverified'.
+- is_public_profile_enabled boolean not null default false.
+- is_listed_in_directory boolean not null default false.
+- constraints: PRIMARY KEY (id).
+- foreign key: created_by_user_id REFERENCES app_users(id) ON DELETE CASCADE.
+- foreign key: owner_person_id REFERENCES persons(id) ON DELETE SET NULL.
+- directory_status check: draft, pending_review, published, hidden, suspended, archived.
+- verification_status check: unverified, pending, verified, rejected, revoked.
+- RLS enabled: true.
+- RLS policies found: 0.
+
+public.activity_events exact useful fields for future write gate
+- id uuid not null default gen_random_uuid().
+- user_id uuid not null.
+- performed_by_actor_id uuid nullable.
+- acting_as_actor_id uuid nullable.
+- acting_for_actor_id uuid nullable.
+- activity_type_id uuid nullable.
+- template_id uuid nullable.
+- event_code text nullable.
+- input_text text nullable.
+- title text nullable.
+- description text nullable.
+- started_at timestamptz nullable.
+- ended_at timestamptz nullable.
+- duration_minutes integer nullable.
+- source text not null default 'manual'.
+- status text not null default 'completed'.
+- privacy_scope text not null default 'private'.
+- processing_status text not null default 'processed'.
+- metadata_json jsonb not null default '{}'.
+- created_at timestamptz not null default now().
+- updated_at timestamptz not null default now().
+- activity_template_id uuid nullable.
+- foreign key: user_id REFERENCES app_users(id).
+- foreign key: performed_by_actor_id REFERENCES actors(id).
+- foreign key: acting_as_actor_id REFERENCES actors(id).
+- foreign key: acting_for_actor_id REFERENCES actors(id).
+- duration check: duration_minutes IS NULL OR duration_minutes >= 0.
+- time order check: started_at IS NULL OR ended_at IS NULL OR ended_at >= started_at.
+- privacy_scope allowed: private, shared_with_org, public_masked, public.
+- processing_status allowed: pending, processed, failed, skipped.
+- status allowed: draft, planned, confirmed, completed, cancelled, missed, corrected, started, paused, imported_pending, archived.
+- source allowed includes manual, chat_ai, calendar, booking, rule, import, system, manual_form, manual_chat, voice_input, app_action, system_event, api_webhook, nfc_sensor, wearable_import, calendar_import, ai_suggested, legacy_code.
+- RLS enabled: true.
+- RLS policy: No direct public activity events access.
+- RLS policy cmd: ALL.
+- RLS policy roles: anon, authenticated.
+- RLS policy qual: false.
+- RLS policy with_check: false.
+
+Preliminary implementation implication
+The future resolver probably needs to connect mapped app user -> spaces.owner_user_id and/or organizations.created_by_user_id, then connect actors and actor_space_roles.
+However, this is only a preliminary interpretation of metadata.
+No resolver code is authorized by O-DA.
+No activity_events write is authorized by O-DA.
+
+Next step decision
+Proceed to O-DB ownership/context schema interpretation and resolver path decision gate.
+O-DB should decide the safest exact resolver path using the recorded O-DA metadata.
+O-DB should remain report-only.
+
+PASS marker
+PASS_O_DA_OWNERSHIP_CONTEXT_SCHEMA_AUDIT_SQL_RESULTS_RECORDED_METADATA_SELECT_ONLY_NO_DB_WRITE_NO_AI
