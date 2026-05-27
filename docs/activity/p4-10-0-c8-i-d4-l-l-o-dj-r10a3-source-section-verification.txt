@@ -1,0 +1,41 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R10A3 - source section verification after O-DJ-R10A2
+Date = 2026-05-27 18:12:21 +02:00
+Status = SOURCE_SECTIONS_VERIFIED_AND_CLEAN_SOURCE_EXPORTED
+
+1. Baseline
+Expected HEAD = 04dabb6
+Actual HEAD = 04dabb6
+Working tree before O-DJ-R10A3 = clean
+
+2. Why O-DJ-R10A3 exists
+O-DJ-R10A2 committed a corrected source snapshot, but its global System.Object[] check was too broad.
+The report intentionally mentioned the old O-DJ-R10A System.Object[] defect.
+O-DJ-R10A3 verifies only the actual full-source sections.
+
+3. Verification
+ownership source section contains System.Object[] = false
+mapping helper source section contains System.Object[] = false
+
+4. Exported clean source files
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r10a3-ownership-route-source.ts.txt
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r10a3-mapping-helper-source.ts.txt
+
+5. Safety / guardrails
+- No endpoint call.
+- No browser runtime.
+- No runtime DB read.
+- No DB write.
+- No SQL.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+- No code patch.
+- TypeScript passed: npx.cmd tsc --noEmit.
+
+6. Decision
+PASS_O_DJ_R10A3_SOURCE_SECTIONS_VERIFIED_CLEAN_SOURCE_EXPORTED_NO_CODE_PATCH_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+
+7. Next step
+Upload the two exported .ts.txt source files.
+Then O-DJ-R10B can be the first targeted full-file code patch.
