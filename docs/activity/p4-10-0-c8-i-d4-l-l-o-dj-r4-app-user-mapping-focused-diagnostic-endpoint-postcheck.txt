@@ -1,178 +1,92 @@
 ﻿GPT-APP / AI-NAVIGATOR
-P4.10.0-C8-I-D4-L-L-O-DJ-R2
-App user mapping lookup error focused diagnostic contract
+C8-I O-DJ-R4 - app user mapping focused diagnostic endpoint postcheck
+Date: 2026-05-27 17:16:35 +02:00
+Status: PASS_WITH_O_DJ_R4B_FINAL_CORRECTION
 
-Date: 2026-05-27
-Timezone: Europe/Warsaw
-Repository: gpt-app
-Branch: main
+0. Correction note
+The original O-DJ-R4 PowerShell run produced a here-string parser error while assigning $report.
+O-DJ-R4 still created and committed a report.
+O-DJ-R4A added a correction report, but the main O-DJ-R4 report was not replaced because another interpolated variable/colon pattern caused a parser error.
+O-DJ-R4B replaces this report deterministically and does not rewrite git history.
 
-Baseline
-- Expected HEAD before O-DJ-R2: 5baf93a
-- Expected origin/main before O-DJ-R2: 5baf93a
-- Baseline commit: 5baf93a docs: verify C8-I O-DJ-R1A app user mapping triage correction
+1. Baseline
+O-DJ-R3 commit = bf7ae6d
+O-DJ-R4 commit = f625953
+O-DJ-R4A commit = 041ca9c
+O-DJ-R2 contract baseline = fa92e5f
+Working tree before O-DJ-R4B correction = clean
 
-Purpose
-This report defines the focused diagnostic plan for the app_user_lookup_error observed during O-DJ browser runtime verification.
+2. Scope verified
+O-DJ-R4 commit range changed only:
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r4-app-user-mapping-focused-diagnostic-endpoint-postcheck.txt
+O-DJ-R4A commit range changed only:
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r4a-report-integrity-correction-postcheck.txt
+O-DJ-R3 implementation scope remains:
+- src/app/api/activity/debug/app-user-mapping-lookup-error-focused-test/route.ts
+- docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r3-app-user-mapping-focused-diagnostic-endpoint-implementation-proof.txt
+controlled-intake route remained unchanged after O-DJ-R3:
+- src/app/api/activity/controlled-intake/route.ts
 
-This block is focused-diagnostic-contract/report-only.
-It does not call the diagnostic endpoint.
-It does not call the controlled-intake endpoint.
-It does not execute a runtime DB read.
-It does not execute a DB write.
-It does not execute SQL.
-It does not call AI.
-It does not insert activity_events.
-It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
-It does not enable production writes.
-It does not modify application code.
+3. Endpoint marker checks
+PASS:
+- GET route exists.
+- Required header exists: x-app-user-mapping-lookup-error-focused-test.
+- Required header value marker exists: enabled.
+- Server-side Auth0 session read marker exists: auth0.getSession.
+- Supabase admin helper marker exists: getSupabaseAdminClient.
+- app_users read-only query marker exists.
+- APP_USER_SELECTED_COLUMNS marker exists.
+- mappingOutcomeCategory marker exists.
+- sanitizedErrorCategory marker exists.
+- trustedAuthSubjectPresent marker exists.
+- trustedAuthSubjectShapeCategory marker exists.
+- appUsersRowCountCategory marker exists.
 
-Observed blocker
-- O-DJ runtime valid-header cases reached Auth0 session read.
-- O-DJ runtime valid-header cases reached app user mapping.
-- O-DJ runtime valid-header cases returned appUserMappingStatus app_user_lookup_error.
-- O-DJ runtime valid-header cases did not reach ownership context resolution.
-- Header gate passed for missing_header and wrong_header cases.
-- DB write stayed false.
-- SQL stayed false.
-- AI call stayed false.
-- activityEventsInserted stayed false.
+4. Guardrails verified false
+PASS:
+- productionWriteEnabled = false
+- dbWriteExecuted = false
+- sqlExecuted = false
+- aiCallExecuted = false
+- activityEventsInserted = false
+- semanticCandidatesPersisted = false
+- valueObjectsCreated = false
+- stateFactsCreated = false
+- stateDeltasCreated = false
+- stateSnapshotsCreated = false
 
-Known facts from O-DJ-R1 and O-DJ-R1A
-- .env.local exists.
-- .env.local contains a Supabase URL key.
-- .env.local contains SUPABASE_SERVICE_ROLE_KEY.
-- .env.local contains Auth0 keys.
-- serverSideAppUserMappingReadOnly.ts queries app_users.
-- serverSideAppUserMappingReadOnly.ts uses SELECTED_MAPPING_COLUMNS through .select(SELECTED_MAPPING_COLUMNS).
-- serverSideAppUserMappingReadOnly.ts references id and auth0_sub.
-- lib/supabase/admin.ts uses getSupabaseAdminClient and SUPABASE_SERVICE_ROLE_KEY.
+5. Forbidden patterns checked
+PASS:
+- No Supabase write methods: insert/update/delete/upsert/rpc.
+- No OpenAI/chat.completions usage.
+- No console output.
+- No client query params/searchParams usage.
+- No client-supplied appUserId exposure.
+- No raw/stack error exposure markers.
 
-Diagnostic question
-What exact cause produces app_user_lookup_error during the authenticated diagnostic endpoint call?
+6. TypeScript
+PASS:
+- npx.cmd tsc --noEmit
 
-Possible causes to distinguish
-1. Supabase environment variable exists but has malformed value.
-2. Supabase service role key exists but is invalid for the current Supabase project.
-3. Supabase URL points to a different project than expected.
-4. Supabase client creation succeeds, but app_users query fails.
-5. app_users table access fails despite service role key.
-6. SELECTED_MAPPING_COLUMNS expression is valid but the actual query returns an error.
-7. Auth0 subject is present but has a format mismatch with app_users.auth0_sub.
-8. Helper catches and collapses the real Supabase error into app_user_lookup_error without exposing enough sanitized detail.
+7. Runtime / DB / AI policy
+- No endpoint call was executed during O-DJ-R4B.
+- No browser runtime test was executed during O-DJ-R4B.
+- No DB read was intentionally triggered by this correction script.
+- No DB write was executed.
+- No SQL was executed.
+- No OpenAI / AI call was executed.
 
-Required next diagnostic design
-The next implementation gate should add a temporary read-only focused diagnostic endpoint or enhance an existing debug endpoint to expose only sanitized diagnostic categories.
-The diagnostic must remain read-only.
-The diagnostic must not expose appUserId.
-The diagnostic must not expose authSubject.
-The diagnostic must not expose raw Supabase error text.
-The diagnostic must not expose tokens.
-The diagnostic must not expose service role key.
-The diagnostic must not expose full env values.
+8. Result
+O-DJ-R4 is accepted only together with O-DJ-R4A and O-DJ-R4B correction records.
+The focused diagnostic endpoint is ready for the next controlled browser runtime verification.
 
-Future diagnostic endpoint candidate
-src/app/api/activity/debug/app-user-mapping-lookup-error-focused-test/route.ts
-
-Future diagnostic method
-GET only.
-
-Future required header
+9. Next step
+O-DJ-R5 browser runtime verification for focused endpoint.
+Endpoint:
+/api/activity/debug/app-user-mapping-lookup-error-focused-test
+Required header:
 x-app-user-mapping-lookup-error-focused-test: enabled
-
-Future diagnostic execution order
-1. Missing header returns 403 before Auth0 session read and before DB read.
-2. Valid header reads Auth0 session server-side.
-3. If no Auth0 subject, return sanitized unauthenticated result.
-4. Build Supabase admin client through getSupabaseAdminClient.
-5. Execute a minimal read-only app_users query using trusted server-side Auth0 subject.
-6. Return sanitized categories only.
-
-Future minimal read-only query
-Table: public.app_users.
-Selected columns: id, auth0_sub.
-Filter: auth0_sub equals trusted server-side Auth0 subject.
-Limit: 2.
-No insert.
-No update.
-No delete.
-No upsert.
-No rpc.
-No SQL string execution.
-
-Future sanitized diagnostic fields
-- ok.
-- gate.
-- mode.
-- headerAccepted.
-- authSessionReadExecuted.
-- trustedAuthSubjectPresent.
-- trustedAuthSubjectShapeCategory.
-- supabaseAdminClientCreated.
-- supabaseUrlConfigured.
-- serviceRoleKeyConfigured.
-- appUsersQueryAttempted.
-- appUsersQuerySucceeded.
-- appUsersRowCountCategory: zero | one | multiple | unknown.
-- mappingOutcomeCategory: mapped | not_found | duplicate | query_error | client_creation_error | unauthenticated.
-- sanitizedErrorCategory: none | env_missing | client_creation_error | query_error | unknown.
-- dbReadExecuted.
-- dbWriteExecuted false.
-- sqlExecuted false.
-- aiCallExecuted false.
-- activityEventsInserted false.
-- responseSanitized true.
-
-Future forbidden response fields
-- appUserId.
-- authSubject.
-- raw session.
-- access_token.
-- refresh_token.
-- id_token.
-- Supabase URL value.
-- service role key value.
-- raw Supabase error message.
-- stack trace.
-- actorId.
-- spaceId.
-- organizationId.
-- actorSpaceRoleId.
-
-Future expected runtime cases
-Case 1: missing header.
-- Expected HTTP status 403.
-- Expected no Auth0 session read.
-- Expected no DB read.
-- Expected dbWriteExecuted false.
-
-Case 2: valid header, authenticated.
-- Expected Auth0 session read true.
-- Expected trustedAuthSubjectPresent true.
-- Expected Supabase admin client creation attempted.
-- Expected appUsersQueryAttempted true unless client creation fails.
-- Expected dbReadExecuted true if query attempted.
-- Expected no DB write.
-- Expected one of the sanitized mappingOutcomeCategory values.
-
-Case 3: valid header, unauthenticated.
-- Expected no app_users query.
-- Expected mappingOutcomeCategory unauthenticated.
-- Expected dbWriteExecuted false.
-
-Decision boundary after future runtime
-If mappingOutcomeCategory is mapped, repeat O-DJ ownership/context resolver diagnostic browser verification.
-If mappingOutcomeCategory is not_found, inspect app_users auth0_sub synchronization path.
-If mappingOutcomeCategory is query_error, inspect Supabase URL/key/project/table access and helper error handling.
-If mappingOutcomeCategory is client_creation_error, inspect env value formatting and Supabase admin helper.
-If mappingOutcomeCategory is duplicate, inspect app_users uniqueness and duplicate data.
-
-Next step decision
-Proceed to O-DJ-R3 app user mapping focused diagnostic endpoint implementation gate.
-O-DJ-R3 should create only the focused diagnostic endpoint and proof report.
-O-DJ-R3 should not modify controlled-intake route.ts.
-O-DJ-R3 should not call the endpoint.
-O-DJ-R3 should not execute a runtime DB read as part of the script.
-
-PASS marker
-PASS_O_DJ_R2_APP_USER_MAPPING_LOOKUP_ERROR_FOCUSED_DIAGNOSTIC_CONTRACT_CREATED_NO_ENDPOINT_CALL_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+Expected purpose:
+Classify mappingOutcomeCategory as one of:
+mapped | not_found | duplicate | query_error | client_creation_error | unauthenticated
+Do not proceed to controlled-intake ownership integration until O-DJ-R5 identifies/fixes app user mapping and O-DJ ownership/context runtime reaches ownershipContextResolutionExecuted=true.
