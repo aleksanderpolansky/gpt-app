@@ -1,0 +1,139 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CH
+Server-only Supabase admin client contract
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CH: 203af66
+- Expected origin/main before O-CH: 203af66
+- Baseline commit: 203af66 docs: verify C8-I O-CG duplicate run final state
+
+Purpose
+This block defines the contract for a future server-only Supabase admin/service-role client needed by read-only app user mapping.
+
+This block is contract/report-only.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not create the future mapping diagnostic endpoint.
+It does not create a Supabase admin client.
+It does not modify src/app/api/activity/controlled-intake/route.ts.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+
+Why this contract is required
+O-CF proved that public.app_users exists and that the exact mapping field is public.app_users.auth0_sub.
+O-CF also proved that RLS is enabled for public.app_users and no RLS policies were returned.
+Therefore the future read-only mapping helper cannot assume normal client-side or user-scoped Supabase access.
+The mapping helper needs server-only Supabase admin/service-role access.
+
+O-CG inventory decision carried forward
+- serverOnlyAdminClientDecision: POSSIBLE_EXISTING_SERVER_ONLY_SERVICE_ROLE_PATTERN_FOUND_REVIEW_BEFORE_CODE
+- futureImplementationDependency: REVIEW_EXISTING_PATTERN_BEFORE_ADDING_NEW_ADMIN_CLIENT
+
+Schema decisions carried forward
+- Exact app user table: public.app_users.
+- Exact internal app user id field: public.app_users.id.
+- Exact Auth0 subject field: public.app_users.auth0_sub.
+- Lookup predicate: public.app_users.auth0_sub equals trusted server-side Auth0 authSubject.
+- Provider must be enforced from trusted Auth0 session, not from public.app_users.
+- public.app_users has UNIQUE (auth0_sub).
+- app_user_inactive is not supported by current public.app_users schema.
+- RLS is enabled for public.app_users.
+- No RLS policies were returned for public.app_users.
+
+Server-only Supabase admin client contract
+The future server-only admin client must satisfy all requirements below.
+
+1. Server-only boundary
+- The client must be created only in server-only code.
+- The preferred implementation must use a server-only guard such as import 'server-only' if the project supports it.
+- The client must never be imported by client components.
+- The client must never be imported from files containing use client.
+- The client must never be exposed through browser bundles.
+- The client must never be returned in API responses.
+
+2. Secret handling
+- The service-role key must be read only from server-side environment variables.
+- The service-role key must never use NEXT_PUBLIC_* variables.
+- The service-role key must never be logged.
+- The service-role key must never be included in thrown error messages.
+- The service-role key must never be included in JSON responses.
+- The service-role key must never be sent to the browser.
+
+3. Environment variables
+- Future implementation must confirm the exact existing environment variable names before code is changed.
+- The service-role key candidate is SUPABASE_SERVICE_ROLE_KEY.
+- The Supabase URL may use an existing server-side URL helper or environment variable already used by the project.
+- A public URL variable may be acceptable only for the project URL, never for the service-role key.
+- Missing URL or service-role key must fail closed with a safe server error.
+
+4. Allowed use in this corridor
+- The first allowed use is the future read-only app user mapping diagnostic corridor.
+- The initial query scope must be limited to public.app_users.
+- The initial selected columns must be minimal.
+- Required columns for the mapping helper are id and auth0_sub.
+- Optional internal-only columns may include email for internal proof, but raw row output is forbidden.
+
+5. Query behavior for future mapping
+- Query public.app_users where auth0_sub equals trusted server-side Auth0 authSubject.
+- Limit defensively to 2 rows so duplicate detection can fail closed.
+- If zero rows are found, return app_user_not_found.
+- If one row is found, return mapped_user_found.
+- If more than one row is found, return app_user_duplicate even though UNIQUE (auth0_sub) should prevent this.
+- Do not execute inactive/status checks because public.app_users has no active/status field.
+- Return appUserInactiveSupported false.
+- Return appUserInactiveCheckExecuted false.
+
+6. Forbidden use
+- No DB writes.
+- No insert into activity_events.
+- No semantic candidate persistence.
+- No Value Object creation.
+- No state facts, state deltas or state snapshots.
+- No general-purpose admin API route.
+- No raw SQL execution.
+- No direct exposure of service-role behavior to user input.
+- No accepting client-supplied appUserId, userId, actorId, organizationId or spaceId as trusted ownership.
+
+7. Safe response boundary
+- Do not return raw DB rows.
+- Do not return raw Auth0 session.
+- Do not return raw Auth0 profile.
+- Do not return cookies.
+- Do not return access_token, refresh_token, id_token or any token.
+- Do not return full provider payload.
+- Do not return full user record.
+- Default response should expose only booleans, safe mappingStatus and safe proof flags.
+- appUserId may be exposed only if a later contract explicitly allows a sanitized proof field.
+
+8. Error behavior
+- Missing server-side Supabase URL must fail closed.
+- Missing service-role key must fail closed.
+- Invalid environment configuration must fail closed.
+- Supabase read error must fail closed.
+- The error response must not expose env var values, stack traces, raw Supabase errors or raw DB records.
+
+9. Import and file-path decision
+O-CH does not choose final implementation path by itself.
+The next block must inspect the existing Supabase helper pattern and decide whether to reuse an existing server-only admin client or add a dedicated one.
+Possible future path, if no safe existing helper is confirmed: lib/supabase/admin.ts.
+This path is not authorized until the next proof block confirms it.
+
+Implementation authorization
+O-CH does not authorize implementation.
+O-CH only defines the contract.
+
+Next step decision
+Proceed to O-CI.
+O-CI should be server-only Supabase admin client exact helper/path decision and static proof.
+O-CI must remain no DB read, no DB write, no SQL, no AI, no diagnostic endpoint creation and no controlled-intake route integration.
+O-CI should decide whether a safe existing admin client can be reused or whether a new dedicated server-only helper must be implemented in a later block.
+
+PASS marker
+PASS_SERVER_ONLY_SUPABASE_ADMIN_CLIENT_CONTRACT_CREATED_NO_DB_NO_WRITE_NO_SQL_NO_AI
