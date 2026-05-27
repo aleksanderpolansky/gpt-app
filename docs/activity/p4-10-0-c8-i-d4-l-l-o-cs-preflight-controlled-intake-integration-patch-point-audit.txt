@@ -1,0 +1,239 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CS-PREFLIGHT
+Controlled-intake app user mapping integration exact patch-point audit
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CS-PREFLIGHT: 6dd9fc9
+- Expected origin/main before O-CS-PREFLIGHT: 6dd9fc9
+- Baseline commit: 6dd9fc9 docs: add C8-I O-CR controlled-intake mapping integration contract
+
+Purpose
+This block audits the exact current shape of src/app/api/activity/controlled-intake/route.ts before modifying it.
+
+This block is preflight/report-only.
+It does not modify src/app/api/activity/controlled-intake/route.ts.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+It does not enable production writes.
+
+Verified prerequisite
+- O-CR integration contract exists and passed.
+- O-CQ browser/runtime mapping verification passed and was postchecked.
+- mapServerSideAppUserReadOnly exists and is available.
+
+Controlled-intake route file
+- src/app/api/activity/controlled-intake/route.ts.
+
+Detected route shape
+- hasPostHandler: True.
+- hasGetHandler: False.
+- hasNextResponse: True.
+- hasProductionTrustedContext: True.
+- hasOldServerSideMapping: True.
+- hasReadOnlyMappingImport: False.
+- hasClientSuppliedAppUserIdText: True.
+- hasActivityEventsInsertText: False.
+- hasSqlText: False.
+- hasAiText: False.
+
+Import lines
+controlled-intake route:L1: import { NextRequest, NextResponse } from "next/server";
+controlled-intake route:L3: import {
+controlled-intake route:L8: import { buildControlledActivityIntakeIdempotency } from "../../../../../lib/activity/controlledIntake/idempotency";
+controlled-intake route:L9: import { buildControlledActivityIntakePayload } from "../../../../../lib/activity/controlledIntake/payloadBuilder";
+controlled-intake route:L10: import { buildControlledActivityIntakeActivityEventsStaticRow } from "../../../../../lib/activity/controlledIntake/persist";
+controlled-intake route:L11: import {
+controlled-intake route:L15: import {
+controlled-intake route:L19: import { validateControlledActivityIntake } from "../../../../../lib/activity/controlledIntake/validator";
+
+Exported route handler lines
+controlled-intake route:L587: export async function POST(
+
+Boundary marker lines
+controlled-intake route:L125: readonly productionWriteEnabled: false;
+controlled-intake route:L127: readonly dbReadExecuted: false;
+controlled-intake route:L128: readonly dbWriteExecuted: false;
+controlled-intake route:L129: readonly sqlExecuted: false;
+controlled-intake route:L130: readonly aiCallExecuted: false;
+controlled-intake route:L131: readonly semanticCandidatesPersisted: false;
+controlled-intake route:L132: readonly valueObjectsCreated: false;
+controlled-intake route:L196: productionWriteEnabled: false,
+controlled-intake route:L198: dbReadExecuted: false,
+controlled-intake route:L199: dbWriteExecuted: false,
+controlled-intake route:L200: sqlExecuted: false,
+controlled-intake route:L201: aiCallExecuted: false,
+controlled-intake route:L202: semanticCandidatesPersisted: false,
+controlled-intake route:L203: valueObjectsCreated: false,
+
+Auth/mapping-related lines
+controlled-intake route:L12: buildControlledActivityIntakeProductionTrustedContext,
+controlled-intake route:L16: buildControlledActivityIntakeServerSideAppUserMapping,
+controlled-intake route:L17: isControlledActivityIntakeServerSideAppUserMappingFailure,
+controlled-intake route:L18: } from "../../../../../lib/activity/controlledIntake/serverSideAppUserMapping";
+controlled-intake route:L53: const PREVIEW_SERVER_PROVIDER_HEADER =
+controlled-intake route:L54: "x-controlled-intake-preview-server-provider";
+controlled-intake route:L122: readonly routeServerSideAppUserMappingIntegrated: true;
+controlled-intake route:L158: readonly serverSideAppUserMapping?: unknown;
+controlled-intake route:L193: routeServerSideAppUserMappingIntegrated: true,
+controlled-intake route:L320: appUserId: readHeaderString(request, PREVIEW_APP_USER_ID_HEADER),
+controlled-intake route:L321: actorId: readHeaderString(request, PREVIEW_ACTOR_ID_HEADER),
+controlled-intake route:L322: organizationId: readHeaderString(request, PREVIEW_ORGANIZATION_ID_HEADER),
+controlled-intake route:L323: spaceId: readHeaderString(request, PREVIEW_SPACE_ID_HEADER),
+controlled-intake route:L377: buildControlledActivityIntakeProductionTrustedContext({
+controlled-intake route:L381: provider: "controlled-intake-production-static-preview",
+controlled-intake route:L384: appUserId: readHeaderString(
+controlled-intake route:L388: userId: readHeaderString(request, PREVIEW_MAPPED_USER_ID_HEADER),
+controlled-intake route:L389: actorId: readHeaderString(request, PREVIEW_MAPPED_ACTOR_ID_HEADER),
+controlled-intake route:L390: organizationId: readHeaderString(
+controlled-intake route:L394: spaceId: readHeaderString(request, PREVIEW_MAPPED_SPACE_ID_HEADER),
+controlled-intake route:L456: const serverSideAppUserMapping =
+controlled-intake route:L457: buildControlledActivityIntakeServerSideAppUserMapping({
+controlled-intake route:L460: authSubject: readHeaderString(
+controlled-intake route:L464: provider: readHeaderString(request, PREVIEW_SERVER_PROVIDER_HEADER),
+controlled-intake route:L469: appUserReadModel: {
+controlled-intake route:L470: appUserId: readHeaderString(
+controlled-intake route:L474: internalUserId: readHeaderString(
+controlled-intake route:L478: authSubject: readHeaderString(
+controlled-intake route:L498: actorId: readHeaderString(request, PREVIEW_REQUESTED_ACTOR_ID_HEADER),
+controlled-intake route:L499: organizationId: readHeaderString(
+controlled-intake route:L503: spaceId: readHeaderString(request, PREVIEW_REQUESTED_SPACE_ID_HEADER),
+controlled-intake route:L506: actorId: readHeaderString(request, PREVIEW_MEMBERSHIP_ACTOR_ID_HEADER),
+controlled-intake route:L507: organizationId: readHeaderString(
+controlled-intake route:L511: spaceId: readHeaderString(request, PREVIEW_MEMBERSHIP_SPACE_ID_HEADER),
+controlled-intake route:L535: isControlledActivityIntakeServerSideAppUserMappingFailure(
+controlled-intake route:L536: serverSideAppUserMapping,
+controlled-intake route:L540: serverSideAppUserMapping.code,
+controlled-intake route:L541: serverSideAppUserMapping.message,
+controlled-intake route:L542: buildServerSideMappingFailureStatus(serverSideAppUserMapping.code),
+controlled-intake route:L544: source: serverSideAppUserMapping.source,
+controlled-intake route:L545: layer: serverSideAppUserMapping.layer,
+controlled-intake route:L556: const trustedContext = serverSideAppUserMapping.trustedContext;
+controlled-intake route:L576: serverSideAppUserMapping,
+
+Response-related lines
+controlled-intake route:L13: isControlledActivityIntakeProductionAuthMappingFailure,
+controlled-intake route:L14: } from "../../../../../lib/activity/controlledIntake/productionAuthMapping";
+controlled-intake route:L16: buildControlledActivityIntakeServerSideAppUserMapping,
+controlled-intake route:L17: isControlledActivityIntakeServerSideAppUserMappingFailure,
+controlled-intake route:L18: } from "../../../../../lib/activity/controlledIntake/serverSideAppUserMapping";
+controlled-intake route:L27: const AUTH_MAPPING_MODE_HEADER = "x-controlled-intake-auth-mapping-mode";
+controlled-intake route:L110: | "CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED"
+controlled-intake route:L111: | "CONTROLLED_INTAKE_APP_USER_MAPPING_AMBIGUOUS"
+controlled-intake route:L112: | "CONTROLLED_INTAKE_APP_USER_MAPPING_BLOCKED"
+controlled-intake route:L121: readonly routeProductionAuthMappingIntegrated: true;
+controlled-intake route:L122: readonly routeServerSideAppUserMappingIntegrated: true;
+controlled-intake route:L139: readonly ok: false;
+controlled-intake route:L148: readonly ok: true;
+controlled-intake route:L152: readonly ok: true;
+controlled-intake route:L157: readonly productionAuthMapping?: unknown;
+controlled-intake route:L158: readonly serverSideAppUserMapping?: unknown;
+controlled-intake route:L164: readonly ok: true;
+controlled-intake route:L165: readonly payload: ReturnType<typeof buildControlledActivityIntakePayload>;
+controlled-intake route:L169: readonly ok: false;
+controlled-intake route:L180: return result.ok === false;
+controlled-intake route:L186: return result.ok === false;
+controlled-intake route:L190: return {
+controlled-intake route:L192: routeProductionAuthMappingIntegrated: true,
+controlled-intake route:L193: routeServerSideAppUserMappingIntegrated: true,
+controlled-intake route:L217: return undefined;
+controlled-intake route:L221: return trimmed.length > 0 ? trimmed : undefined;
+controlled-intake route:L230: return NextResponse.json(
+controlled-intake route:L232: ok: false,
+controlled-intake route:L243: function buildServerSideMappingFailureStatus(
+controlled-intake route:L249: code === "CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED"
+controlled-intake route:L251: return 401;
+controlled-intake route:L255: code === "CONTROLLED_INTAKE_APP_USER_MAPPING_AMBIGUOUS" ||
+controlled-intake route:L258: return 409;
+controlled-intake route:L262: code === "CONTROLLED_INTAKE_APP_USER_MAPPING_BLOCKED" ||
+controlled-intake route:L268: return 403;
+controlled-intake route:L271: return 400;
+controlled-intake route:L275: return await request.json();
+controlled-intake route:L286: return {
+controlled-intake route:L287: ok: false,
+controlled-intake route:L299: return {
+controlled-intake route:L300: ok: false,
+controlled-intake route:L310: return {
+controlled-intake route:L311: ok: true,
+controlled-intake route:L328: return buildErrorResponse(
+controlled-intake route:L341: return payloadResult.response;
+controlled-intake route:L356: return NextResponse.json(
+controlled-intake route:L358: ok: true,
+controlled-intake route:L362: ok: true,
+controlled-intake route:L376: const productionAuthMapping =
+controlled-intake route:L383: mapping: {
+controlled-intake route:L402: isControlledActivityIntakeProductionAuthMappingFailure(
+controlled-intake route:L403: productionAuthMapping,
+controlled-intake route:L406: return buildErrorResponse(
+controlled-intake route:L407: productionAuthMapping.code,
+controlled-intake route:L408: productionAuthMapping.message,
+controlled-intake route:L411: source: productionAuthMapping.source,
+controlled-intake route:L419: return payloadResult.response;
+controlled-intake route:L422: const trustedContext = productionAuthMapping.trustedContext;
+controlled-intake route:L434: return NextResponse.json(
+controlled-intake route:L436: ok: true,
+controlled-intake route:L440: ok: true,
+controlled-intake route:L442: productionAuthMapping,
+controlled-intake route:L456: const serverSideAppUserMapping =
+controlled-intake route:L457: buildControlledActivityIntakeServerSideAppUserMapping({
+controlled-intake route:L482: mappingSource:
+controlled-intake route:L487: mappingStatus:
+controlled-intake route:L535: isControlledActivityIntakeServerSideAppUserMappingFailure(
+controlled-intake route:L536: serverSideAppUserMapping,
+controlled-intake route:L539: return buildErrorResponse(
+controlled-intake route:L540: serverSideAppUserMapping.code,
+controlled-intake route:L541: serverSideAppUserMapping.message,
+controlled-intake route:L542: buildServerSideMappingFailureStatus(serverSideAppUserMapping.code),
+controlled-intake route:L544: source: serverSideAppUserMapping.source,
+controlled-intake route:L545: layer: serverSideAppUserMapping.layer,
+controlled-intake route:L553: return payloadResult.response;
+controlled-intake route:L556: const trustedContext = serverSideAppUserMapping.trustedContext;
+controlled-intake route:L568: return NextResponse.json(
+controlled-intake route:L570: ok: true,
+controlled-intake route:L574: ok: true,
+controlled-intake route:L576: serverSideAppUserMapping,
+controlled-intake route:L593: return buildErrorResponse(
+controlled-intake route:L600: const authMappingMode = readHeaderString(request, AUTH_MAPPING_MODE_HEADER);
+controlled-intake route:L602: if (authMappingMode === "server_side_static_preview") {
+controlled-intake route:L603: return await handleServerSideStaticPreview(request);
+controlled-intake route:L606: if (authMappingMode === "production_static_preview") {
+controlled-intake route:L607: return await handleProductionStaticPreview(request);
+controlled-intake route:L610: return await handleLegacyNoWritePreview(request);
+
+Patch-point decision
+The next code gate must not blindly replace the whole route.
+The next code gate must use this audit to apply a narrow controlled-intake integration patch.
+The patch should import mapServerSideAppUserReadOnly only once.
+The patch should execute the mapping only from trusted server-side Auth0 context.
+The patch should keep appUserId internal only.
+The patch should add sanitized mapping proof fields.
+The patch should keep productionWriteEnabled false.
+The patch should keep dbWriteExecuted false.
+The patch should keep sqlExecuted false.
+The patch should keep aiCallExecuted false.
+The patch should keep activityEventsInserted false.
+
+Expected future O-CS implementation constraints
+- Modify src/app/api/activity/controlled-intake/route.ts only if the exact patch markers still match.
+- Optionally update helper files only if TypeScript requires it and only after explicit verification.
+- Do not expose appUserId.
+- Do not accept client-supplied appUserId/userId/actorId/organizationId/spaceId as ownership.
+- Treat app_user_not_found as fail closed.
+- Treat app_user_duplicate as fail closed.
+- Treat app_user_lookup_error as fail closed.
+- Preserve no write boundary.
+
+Next step decision
+Proceed to O-CS controlled-intake app user mapping integration code gate.
+O-CS may modify controlled-intake route only after rechecking the exact patch-point markers from this preflight.
+
+PASS marker
+PASS_O_CS_PREFLIGHT_CONTROLLED_INTAKE_PATCH_POINTS_AUDITED_NO_CODE_CHANGE_NO_DB_WRITE_NO_SQL_NO_AI
