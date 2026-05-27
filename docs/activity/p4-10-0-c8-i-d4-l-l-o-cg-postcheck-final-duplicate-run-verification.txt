@@ -1,0 +1,74 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CG-POSTCHECK
+Final O-CG verification after duplicate run / baseline mismatch
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CG-POSTCHECK: 5f2e6d5
+- Expected origin/main before O-CG-POSTCHECK: 5f2e6d5
+- Final O-CG commit: 5f2e6d5 docs: add C8-I O-CG server-only Supabase client inventory
+- Earlier O-CG commit also exists: 49d136a docs: add C8-I O-CG server-only Supabase client inventory
+- O-CF baseline before O-CG was: b132ebd docs: record C8-I O-CF SQL schema audit results
+
+Purpose
+This postcheck closes the proof gap caused by O-CG being run twice.
+
+Problem observed
+The final log shows that O-CG was first completed and pushed as 49d136a.
+Then the O-CG script was run again while HEAD was already 49d136a.
+The script expected old baseline b132ebd and printed baseline mismatch STOP messages.
+Despite those messages, the script continued, regenerated the same O-CG report, ran TypeScript, committed and pushed a second O-CG commit 5f2e6d5.
+
+Postcheck decision
+The duplicate run is not a code/runtime problem.
+The final state is clean and pushed.
+The final O-CG report is marker-verified.
+TypeScript passes through npx.cmd.
+No code/config/SQL files are changed in this postcheck.
+
+Verified final O-CG conclusions
+- O-CG is inventory/report-only.
+- O-CG did not implement a DB read.
+- O-CG did not implement a DB write.
+- O-CG did not execute SQL.
+- O-CG did not call AI.
+- O-CG did not create the future mapping diagnostic endpoint.
+- O-CG did not create a Supabase admin client.
+- O-CG did not modify controlled-intake route.
+- Exact app user table: public.app_users.
+- Exact internal app user id field: public.app_users.id.
+- Exact Auth0 subject field: public.app_users.auth0_sub.
+- Lookup predicate: public.app_users.auth0_sub equals trusted server-side Auth0 authSubject.
+- Provider must be enforced from trusted Auth0 session.
+- public.app_users has UNIQUE (auth0_sub).
+- app_user_inactive is not supported by current public.app_users schema.
+- RLS is enabled for public.app_users.
+- No RLS policies were returned for public.app_users.
+- Future read-only mapping needs server-only Supabase service-role/admin access.
+
+Verified inventory decision
+- serverOnlyAdminClientDecision: POSSIBLE_EXISTING_SERVER_ONLY_SERVICE_ROLE_PATTERN_FOUND_REVIEW_BEFORE_CODE
+- futureImplementationDependency: REVIEW_EXISTING_PATTERN_BEFORE_ADDING_NEW_ADMIN_CLIENT
+
+TypeScript verification
+Command used:
+npx.cmd tsc --noEmit
+
+Result:
+PASS_TYPESCRIPT_CHECKED_THROUGH_NPX_CMD_AFTER_O_CG_POSTCHECK
+
+Current decision
+O-CG is now considered postchecked and safe to use as the planning baseline.
+The final accepted O-CG commit is 5f2e6d5.
+
+Next step decision
+Proceed to O-CH.
+O-CH should create the server-only Supabase admin client contract.
+O-CH must remain no DB read, no DB write, no SQL, no AI, no diagnostic endpoint creation and no controlled-intake route integration.
+
+PASS marker
+PASS_O_CG_POSTCHECK_FINAL_DUPLICATE_RUN_VERIFIED_NO_DB_NO_WRITE_NO_SQL_NO_AI
