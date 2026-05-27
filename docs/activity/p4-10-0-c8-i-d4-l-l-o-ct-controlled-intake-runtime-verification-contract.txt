@@ -1,0 +1,163 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CT
+Controlled-intake runtime verification contract for server_side_read_only_mapping_preview
+
+Date: 2026-05-27
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CT: e611da8
+- Expected origin/main before O-CT: e611da8
+- Baseline commit: e611da8 fix: add C8-I O-CS controlled-intake activityEventsInserted guardrail
+
+Purpose
+This block defines the browser/runtime verification contract for the controlled-intake route after O-CS and O-CS-REPAIR.
+
+This block is contract/report-only.
+It does not call the controlled-intake endpoint.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+It does not enable production writes.
+
+Endpoint under test
+/api/activity/controlled-intake
+
+Method under test
+POST
+
+Required headers for new mode
+- x-controlled-intake-no-write-preview: true.
+- x-controlled-intake-auth-mapping-mode: server_side_read_only_mapping_preview.
+
+Verified implementation carried forward
+- O-CS added server_side_read_only_mapping_preview mode.
+- O-CS integrated auth0.getSession for this mode.
+- O-CS integrated mapServerSideAppUserReadOnly for this mode.
+- O-CS-REPAIR added explicit activityEventsInserted: false guardrail.
+- TypeScript passed after O-CS.
+- TypeScript passed after O-CS-REPAIR.
+
+Runtime verification environment
+- Use browser console while authenticated in the app.
+- Use same-origin fetch.
+- Do not use Supabase SQL Editor.
+- Do not modify code during runtime verification.
+- Do not use PowerShell for endpoint calls.
+
+Required runtime test cases
+1. Missing no-write preview header.
+2. Valid no-write preview header but missing server_side_read_only_mapping_preview mode.
+3. Valid no-write preview header plus server_side_read_only_mapping_preview mode while authenticated.
+
+Expected case 1 behavior: missing no-write preview header
+- HTTP status: 403.
+- ok: false.
+- code: CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED.
+- guardrails.productionWriteEnabled: false.
+- guardrails.dbReadExecuted: false.
+- guardrails.dbWriteExecuted: false.
+- guardrails.sqlExecuted: false.
+- guardrails.aiCallExecuted: false.
+- guardrails.activityEventsInserted: false.
+
+Expected case 2 behavior: legacy no-write preview fallback without preview app user id
+- Should remain no-write.
+- A validation/auth-context failure is acceptable if preview app user id is missing.
+- guardrails.productionWriteEnabled: false.
+- guardrails.dbReadExecuted: false.
+- guardrails.dbWriteExecuted: false.
+- guardrails.sqlExecuted: false.
+- guardrails.aiCallExecuted: false.
+- guardrails.activityEventsInserted: false.
+
+Expected case 3 behavior: valid new mode authenticated
+- HTTP status should be 200 if payload is valid and mappingStatus is mapped_user_found.
+- ok should be true if payload is valid and mappingStatus is mapped_user_found.
+- mode should be server_side_read_only_mapping_preview.
+- serverSideAppUserMapping.serverSideAppUserMappingExecuted: true.
+- serverSideAppUserMapping.serverSideAppUserMappingStatus: mapped_user_found.
+- serverSideAppUserMapping.serverSideAppUserMapped: true.
+- serverSideAppUserMapping.serverSideAppUserMappingDbReadExecuted: true.
+- serverSideAppUserMapping.serverSideAppUserMappingFailClosed: false.
+- serverSideAppUserMapping.serverSideAppUserMappingSelectedColumns: id,auth0_sub.
+- serverSideAppUserMapping.serverSideAppUserMappingTableName: public.app_users.
+- serverSideAppUserMapping.appUserInactiveSupported: false.
+- serverSideAppUserMapping.appUserInactiveCheckExecuted: false.
+- guardrails.productionWriteEnabled: false.
+- guardrails.dbReadExecuted: true.
+- guardrails.dbWriteExecuted: false.
+- guardrails.sqlExecuted: false.
+- guardrails.aiCallExecuted: false.
+- guardrails.activityEventsInserted: false.
+- guardrails.semanticCandidatesPersisted: false.
+- guardrails.valueObjectsCreated: false.
+- guardrails.stateFactsCreated: false.
+- guardrails.stateDeltasCreated: false.
+- guardrails.stateSnapshotsCreated: false.
+
+Acceptable non-success interpretation for case 3
+If the request body is invalid, validation failure is not a mapping failure.
+If Auth0 session is missing, the route should fail before DB lookup.
+If public.app_users mapping is missing, the route should fail closed with no write.
+If mappingStatus is app_user_not_found, app_user_duplicate or app_user_lookup_error, this proves fail-closed behavior but not successful mapped intake preview.
+
+Sanitized response boundary checks
+The runtime response must not contain:
+- appUserId.
+- authSubject.
+- access_token.
+- refresh_token.
+- id_token.
+- cookies.
+- raw Auth0 session.
+- raw Auth0 profile.
+- raw Supabase row.
+- raw Supabase error object.
+- service-role key.
+- environment variable values.
+
+Allowed new-mode response proof fields
+- serverSideAppUserMappingExecuted.
+- serverSideAppUserMappingStatus.
+- serverSideAppUserMapped.
+- serverSideAppUserMappingDbReadExecuted.
+- serverSideAppUserMappingFailClosed.
+- serverSideAppUserMappingSelectedColumns.
+- serverSideAppUserMappingTableName.
+- appUserInactiveSupported.
+- appUserInactiveCheckExecuted.
+
+Runtime DB read boundary
+- A runtime DB read is allowed only in case 3 through mapServerSideAppUserReadOnly.
+- No runtime DB write is allowed in any case.
+- No SQL execution is allowed in any case.
+- No AI call is allowed in any case.
+- No activity_events insert is allowed in any case.
+
+Future runtime execution gate
+O-CT does not execute runtime verification.
+O-CT authorizes only the next browser/runtime execution gate if the user explicitly proceeds.
+The next gate should be O-CU.
+
+O-CU expected scope
+- Run browser console verification against /api/activity/controlled-intake.
+- Verify missing no-write preview header.
+- Verify no-write fallback boundary.
+- Verify server_side_read_only_mapping_preview mode while authenticated.
+- Verify sanitized response boundary.
+- Verify no appUserId exposure.
+- Verify no DB write, no SQL, no AI, no activity_events insert.
+- Record results in a report.
+
+Next step decision
+Proceed to O-CU controlled-intake browser/runtime verification execution gate.
+O-CU may execute a runtime DB read only through the valid authenticated server_side_read_only_mapping_preview test.
+
+PASS marker
+PASS_O_CT_CONTROLLED_INTAKE_RUNTIME_VERIFICATION_CONTRACT_CREATED_NO_ENDPOINT_CALL_NO_DB_WRITE_NO_SQL_NO_AI
