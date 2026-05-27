@@ -1,0 +1,176 @@
+GPT-APP / AI-NAVIGATOR
+P4.10.0-C8-I-D4-L-L-O-CL
+Read-only app user mapping helper contract
+
+Date: 2026-05-26
+Timezone: Europe/Warsaw
+Repository: gpt-app
+Branch: main
+
+Baseline
+- Expected HEAD before O-CL: 5fbd225
+- Expected origin/main before O-CL: 5fbd225
+- Baseline commit: 5fbd225 fix: repair C8-I O-CK Supabase admin helper TypeScript
+
+Purpose
+This block defines the contract for the future read-only app user mapping helper that will use getSupabaseAdminClient.
+
+This block is contract/report-only.
+It does not implement a DB read.
+It does not implement a DB write.
+It does not execute SQL.
+It does not call AI.
+It does not create the future mapping diagnostic endpoint.
+It does not modify src/app/api/activity/controlled-intake/route.ts.
+It does not insert activity_events.
+It does not persist semantic candidates, Value Objects, state facts, state deltas, or state snapshots.
+
+Admin helper baseline carried forward
+- Valid admin helper baseline: 5fbd225 O-CK-REPAIR.
+- Admin helper path: lib/supabase/admin.ts.
+- Admin helper export: getSupabaseAdminClient.
+- Admin helper uses SUPABASE_SERVICE_ROLE_KEY.
+- Admin helper TypeScript passes after O-CK-REPAIR.
+
+Schema decisions carried forward from O-CF
+- Exact app user table: public.app_users.
+- Exact internal app user id field: public.app_users.id.
+- Exact Auth0 subject field: public.app_users.auth0_sub.
+- Lookup predicate: public.app_users.auth0_sub equals trusted server-side Auth0 authSubject.
+- Provider must be enforced from trusted Auth0 session, not from public.app_users.
+- public.app_users has UNIQUE (auth0_sub).
+- app_user_inactive is not supported by current public.app_users schema.
+- RLS is enabled for public.app_users.
+- No RLS policies were returned for public.app_users.
+
+Future helper path recommendation
+lib/activity/controlledIntake/serverSideAppUserMappingReadOnly.ts
+
+Future helper purpose
+The helper should map a trusted server-side Auth0 subject to an internal app user id using a read-only query against public.app_users.
+
+Future helper import contract
+- Import getSupabaseAdminClient from lib/supabase/admin.
+- Do not import browser/client Supabase helpers.
+- Do not import from files containing use client.
+- Do not import the helper into client components.
+
+Future helper input contract
+The helper should accept a trusted context object with these fields:
+- provider.
+- authSubject.
+
+Input rules
+- provider must equal auth0.
+- authSubject must be a non-empty string.
+- Client-supplied appUserId, userId, actorId, organizationId and spaceId must not be accepted as trusted ownership.
+- The helper must not parse raw cookies.
+- The helper must not parse raw Auth0 tokens.
+- The helper must receive trusted server-side values only from the existing auth/session bridge.
+
+Future helper query contract
+- Use getSupabaseAdminClient.
+- Query public.app_users.
+- Select id and auth0_sub only.
+- Filter auth0_sub equals trusted authSubject.
+- Limit defensively to 2 rows.
+- Do not select email, name, picture or timestamps in the first implementation.
+- Do not query auth.users.
+- Do not query auth.identities.
+- Do not execute raw SQL.
+
+Future helper result statuses
+The future helper should return a discriminated result with mappingStatus:
+- provider_not_supported.
+- missing_auth_subject.
+- app_user_not_found.
+- mapped_user_found.
+- app_user_duplicate.
+- app_user_lookup_error.
+
+Success result contract
+For mapped_user_found:
+- mappedUserFound: true.
+- appUserId may be returned only as sanitized proof if the implementation contract explicitly allows it.
+- appUserInactiveSupported: false.
+- appUserInactiveCheckExecuted: false.
+- selectedColumns should be id and auth0_sub.
+- dbReadExecuted may be true only in the future implementation/diagnostic runtime gate, not in O-CL.
+
+Failure result contract
+For provider_not_supported:
+- mappedUserFound: false.
+- dbReadExecuted: false.
+- The helper must fail before DB lookup.
+
+For missing_auth_subject:
+- mappedUserFound: false.
+- dbReadExecuted: false.
+- The helper must fail before DB lookup.
+
+For app_user_not_found:
+- mappedUserFound: false.
+- dbReadExecuted: true in future runtime implementation.
+
+For app_user_duplicate:
+- mappedUserFound: false.
+- failClosed: true.
+- This should be defensive because UNIQUE (auth0_sub) exists.
+
+For app_user_lookup_error:
+- mappedUserFound: false.
+- failClosed: true.
+- Error details must be sanitized.
+
+Inactive/status rule
+- Current public.app_users schema has no active/status field.
+- The helper must not pretend to execute inactive/status checks.
+- appUserInactiveSupported must be false.
+- appUserInactiveCheckExecuted must be false.
+- Adding inactive/status support requires a later migration/status gate.
+
+Safe response boundary
+- Do not return raw DB rows.
+- Do not return raw Supabase error objects.
+- Do not return raw Auth0 session.
+- Do not return raw Auth0 profile.
+- Do not return cookies.
+- Do not return access_token, refresh_token, id_token or any token.
+- Do not return full provider payload.
+- Do not return full user record.
+- Do not return service-role configuration details.
+
+Forbidden scope
+- No DB writes.
+- No inserts into activity_events.
+- No semantic candidate persistence.
+- No Value Object creation.
+- No state facts, state deltas or state snapshots.
+- No diagnostic endpoint creation.
+- No controlled-intake route integration.
+- No raw SQL execution.
+- No AI calls.
+
+Future implementation gate
+O-CL does not implement the read-only mapping helper.
+O-CL authorizes only the next code implementation gate if the user explicitly proceeds.
+The next code gate should be O-CM.
+
+O-CM expected scope
+- Create lib/activity/controlledIntake/serverSideAppUserMappingReadOnly.ts.
+- Use getSupabaseAdminClient from lib/supabase/admin.
+- Implement read-only mapping helper only.
+- Do not create any endpoint.
+- Do not modify controlled-intake route.
+- Do not run DB reads during script execution.
+- Do not run DB writes.
+- Do not run SQL.
+- Run TypeScript.
+- Commit only the new helper file and its proof report.
+
+Next step decision
+Proceed to O-CM read-only app user mapping helper code implementation gate.
+O-CM must remain no runtime DB read during script execution, no DB write, no SQL, no AI, no diagnostic endpoint creation and no controlled-intake route integration.
+
+PASS marker
+PASS_READ_ONLY_APP_USER_MAPPING_HELPER_CONTRACT_CREATED_NO_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
