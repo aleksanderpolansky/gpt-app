@@ -1,0 +1,90 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R10C2 - corrected static postcheck after mapping-status patch
+Date = 2026-05-27 18:35:20 +02:00
+Status = CORRECTED_STATIC_POSTCHECK_COMPLETED
+
+1. Baseline
+Expected HEAD = 2a82c3e
+Actual HEAD = 2a82c3e
+O-DJ-R10B commit = 51621a9
+O-DJ-R10B parent = 4709f6f
+Working tree before corrected static postcheck = clean
+
+2. Why O-DJ-R10C2 exists
+O-DJ-R10C had an audit integrity issue.
+The raw helper hash vs exported helper hash check failed, likely due line-ending/export differences.
+Despite that, O-DJ-R10C report was committed with helperMatchesO_DJ_R10A3Export = true.
+O-DJ-R10C2 corrects the audit by relying on Git commit scope and normalized comparison.
+
+3. Corrected patch verification
+ownership route contains mappingStatus lookup = true
+ownership route contains legacy status fallback = true
+ownership route no longer contains old status-only one-liner = true
+appUserMapped condition remains mapped_user_found + mappedAppUserId = true
+
+4. Helper unchanged verification
+O-DJ-R10B commit did not change mapping helper = true
+helperCurrentNormalizedHash = 39b3023c5d039a951665caea41f9437ade51885706e4911ce332ce1076f2f281
+helperExportNormalizedHash = 88917175bc356ef1edd54d82babf308339971b318f00e37b09ea6af0d2e2bf8b
+helperNormalizedMatch = False
+Primary proof is git diff-tree scope of O-DJ-R10B, not raw export hash.
+
+5. O-DJ-R10B changed files
+docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r10b-targeted-ownership-mapping-status-passthrough-patch.txt
+src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts
+
+6. O-DJ-R10B name-status
+A	docs/activity/p4-10-0-c8-i-d4-l-l-o-dj-r10b-targeted-ownership-mapping-status-passthrough-patch.txt
+M	src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts
+
+7. O-DJ-R10B route diff evidence
+diff --git a/src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts b/src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts
+index af60325..4adeafa 100644
+--- a/src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts
++++ b/src/app/api/activity/debug/ownership-context-resolution-read-only-test/route.ts
+@@ -1,4 +1,4 @@
+-import { NextRequest, NextResponse } from 'next/server';
++﻿import { NextRequest, NextResponse } from 'next/server';
+ 
+ import { auth0 } from '../../../../../../lib/auth0';
+ import { mapServerSideAppUserReadOnly } from '../../../../../../lib/activity/controlledIntake/serverSideAppUserMappingReadOnly';
+@@ -224,7 +224,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<Diagnostic
+     );
+   }
+ 
+-  const appUserMappingStatus = readStringProperty(appUserMapping, 'status') ?? 'app_user_lookup_error';
++  const appUserMappingStatus =
++    readStringProperty(appUserMapping, 'mappingStatus') ??
++    readStringProperty(appUserMapping, 'status') ??
++    'app_user_lookup_error';
+   const appUserMappingDbReadExecuted = readBooleanProperty(appUserMapping, 'dbReadExecuted');
+   const mappedAppUserId = readStringProperty(appUserMapping, 'appUserId');
+   const appUserMapped = appUserMappingStatus === 'mapped_user_found' && Boolean(mappedAppUserId);
+@@ -296,4 +299,4 @@ export async function GET(request: NextRequest): Promise<NextResponse<Diagnostic
+     }),
+     200,
+   );
+-}
+\ No newline at end of file
++}
+
+8. Safety / guardrails
+- No endpoint call was executed by O-DJ-R10C2.
+- No browser runtime was executed by O-DJ-R10C2.
+- No runtime DB read was triggered by O-DJ-R10C2.
+- No DB write.
+- No SQL.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+- No code patch.
+- TypeScript passed: npx.cmd tsc --noEmit.
+
+9. Decision
+PASS_O_DJ_R10C2_CORRECTED_STATIC_POSTCHECK_MAPPING_STATUS_PATCH_VERIFIED_TSC_PASS_HELPER_UNCHANGED_BY_COMMIT_SCOPE_NO_CODE_PATCH_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+
+10. Next step
+O-DJ-R11 browser runtime re-run for ownership/context diagnostic.
+Expected: authenticated valid-header case should no longer stop at app_user_lookup_error if helper returns mapped_user_found.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
