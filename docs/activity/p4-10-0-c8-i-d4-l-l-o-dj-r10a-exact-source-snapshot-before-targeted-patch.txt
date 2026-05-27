@@ -1,0 +1,59 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R10A - exact source snapshot before targeted patch
+Date = 2026-05-27 18:07:51 +02:00
+Status = EXACT_SOURCE_SNAPSHOT_CREATED_NO_CODE_CHANGE
+
+1. Baseline
+Expected HEAD = e82540e
+Actual HEAD = e82540e
+Working tree before snapshot = clean
+
+2. Why O-DJ-R10A exists
+O-DJ-R9 confirmed the patch candidate.
+However the full route.ts replacement cannot be safely generated without exact current source.
+This gate captures exact full source before the first targeted code patch.
+
+3. Patch candidate context
+Confirmed by O-DJ-R9:
+PATCH_CANDIDATE_CONFIRMED_OWNERSHIP_ENDPOINT_STATUS_PASSTHROUGH_OR_HELPER_RESULT_MAPPING
+
+4. Static confirmation before patch
+ownershipCallsHelper = true
+ownershipHasStatusPassthrough = false
+ownershipMapsLookupError = true
+ownershipHasMappingRequiredCode = true
+
+helperHasMappedUserFound = true
+helperHasNotFound = true
+helperHasDuplicate = true
+helperHasLookupError = true
+
+odjr9ConfirmedPatchCandidate = true
+
+5. Safety / guardrails
+- No endpoint call was executed by O-DJ-R10A.
+- No browser runtime was executed by O-DJ-R10A.
+- No runtime DB read was triggered.
+- No DB write.
+- No SQL.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+- No code patch.
+- TypeScript passed: npx.cmd tsc --noEmit.
+
+6. Decision
+PASS_O_DJ_R10A_EXACT_SOURCE_SNAPSHOT_CREATED_NO_CODE_CHANGE_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_NO_AI
+
+7. Next step
+O-DJ-R10B may perform the first targeted code patch after reviewing this exact source snapshot.
+Target remains narrow:
+- ownership endpoint mapping-status handling OR helper result mapping only.
+- no controlled-intake integration.
+- no activity_events write.
+
+8. Full ownership endpoint source
+System.Object[]
+
+9. Full mapping helper source
+System.Object[]
