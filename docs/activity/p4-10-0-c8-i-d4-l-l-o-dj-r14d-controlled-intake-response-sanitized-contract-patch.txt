@@ -1,0 +1,53 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R14D - controlled-intake responseSanitized contract patch
+Date = 2026-05-28 11:50:00 +02:00
+Status = RESPONSE_SANITIZED_CONTRACT_PATCH_APPLIED
+
+1. Baseline
+Expected HEAD = f7145f1
+Actual HEAD before patch = f7145f1
+Last commit subject before patch = docs: inspect C8-I O-DJ-R14C controlled-intake route contract
+Working tree before patch = clean
+
+2. Evidence used
+O-DJ-R14C confirmed controlled-intake route contract inspection.
+O-DJ-R14C confirmed responseSanitized marker was absent.
+O-DJ-R14B-A confirmed this was a contract gap, not a write/security breach.
+
+3. Patch scope
+Patched file = src/app/api/activity/controlled-intake/route.ts
+Patch type = minimal preview/shadow response contract patch
+Inserted explicit responseSanitized: true marker after activityEventsInserted: false marker lines.
+Insertion base line matches = 1
+
+4. Preserved route mode
+server_side_read_only_mapping_preview remains present.
+This patch does not enable production controlled-intake integration.
+This patch does not enable activity_events write.
+
+5. Safety checks
+TypeScript passed: npx.cmd tsc --noEmit.
+No endpoint call was executed.
+No browser runtime was executed.
+No runtime DB read was triggered by this script.
+No DB write.
+No SQL execution.
+No AI/OpenAI call.
+No activity_events write.
+No Supabase write methods found after patch.
+No direct SQL/RPC marker found after patch.
+No rawError/errorMessage/stack marker found after patch.
+
+6. Corrected contract status
+CONTROLLED_INTAKE_RESPONSE_SANITIZED_MARKER_PRESENT = true
+CONTROLLED_INTAKE_PREVIEW_CONTRACT_PATCHED = true
+READY_FOR_CONTROLLED_INTAKE_PRODUCTION_INTEGRATION = false
+READY_FOR_ACTIVITY_EVENTS_WRITE = false
+
+7. Next step
+O-DJ-R14E should perform static postcheck of the patched controlled-intake route.
+O-DJ-R14E should remain no-runtime/no-endpoint-call unless explicitly moved to a browser runtime gate.
+Do not enable activity_events insert yet.
+
+8. Decision
+PASS_O_DJ_R14D_CONTROLLED_INTAKE_RESPONSE_SANITIZED_CONTRACT_PATCH_APPLIED_TSC_PASS_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_EXECUTION_NO_AI
