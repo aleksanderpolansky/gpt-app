@@ -1,0 +1,109 @@
+﻿GPT-APP / AI-NAVIGATOR
+O-DJ-R14G-A — browser runtime preview result report
+
+Date: 2026-05-28 13:40:43
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+
+Previous confirmed point:
+O-DJ-R14F-B — controlled-intake body contract extraction.
+
+Runtime gate:
+O-DJ-R14G / O-DJ-R14G-5 — browser POST runtime preview verification.
+
+Endpoint:
+POST /api/activity/controlled-intake
+
+Final successful payload:
+{
+  "inputText": "Walked for 10 minutes as a controlled no-write preview test.",
+  "title": "Controlled intake no-write preview test",
+  "requestedContext": null
+}
+
+Required headers:
+{
+  "Content-Type": "application/json",
+  "Accept": "application/json",
+  "x-controlled-intake-no-write-preview": "true",
+  "x-controlled-intake-auth-mapping-mode": "server_side_read_only_mapping_preview"
+}
+
+Observed final runtime result:
+HTTP 200 OK
+
+Top-level response:
+{
+  ok: true,
+  routeLayer: "controlled-activity-intake-route-auth-integration-no-write-v1",
+  mode: "server_side_read_only_mapping_preview"
+}
+
+Safety guardrails observed:
+{
+  routeAuthIntegrated: true,
+  routeProductionAuthMappingIntegrated: true,
+  routeServerSideAppUserMappingIntegrated: true,
+  routeScaffoldOnly: true,
+  noWritePreview: true,
+  productionWriteEnabled: false,
+  previewHeaderAcceptedForProductionWrite: false,
+  dbReadExecuted: true,
+  dbWriteExecuted: false,
+  sqlExecuted: false,
+  aiCallExecuted: false,
+  activityEventsInserted: false,
+  responseSanitized: true,
+  semanticCandidatesPersisted: false,
+  valueObjectsCreated: false,
+  stateFactsCreated: false,
+  stateDeltasCreated: false,
+  stateSnapshotsCreated: false
+}
+
+Success observations:
+- Valid minimal payload passed validation.
+- Required explicit no-write preview header was accepted.
+- server_side_read_only_mapping_preview mode was accepted.
+- Server-side app user mapping proof was present.
+- Payload was present.
+- Response was sanitized.
+- DB read was executed only for server-side read-only mapping.
+- No DB write was executed.
+- No SQL/RPC was executed.
+- No AI/OpenAI call was executed.
+- No activity_events insert was executed.
+- No semantic candidates were persisted.
+- No Value Objects were created.
+- No state facts/deltas/snapshots were created.
+
+Important response-shape note:
+The browser script expected staticRowPreview and trustedContextPreview, but the successful server_side_read_only_mapping_preview response did not expose these fields.
+This is not considered a failure for this mode because the final response was HTTP 200 OK, ok=true, mode=server_side_read_only_mapping_preview, payload present, serverSideAppUserMapping present, and all no-write guardrails were confirmed.
+
+Intermediate discoveries:
+1. Initial O-DJ-R14G call without explicit no-write header returned sanitized fail-closed:
+   403 CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED.
+2. Static discovery found:
+   NO_WRITE_PREVIEW_HEADER = "x-controlled-intake-no-write-preview"
+   noWritePreview !== "true"
+3. O-DJ-R14G-3 with exact no-write header reached validator and returned:
+   400 CONTROLLED_INTAKE_VALIDATION_FAILED.
+4. O-DJ-R14G-4 extracted sanitized validation issues:
+   - INPUT_TEXT_REQUIRED at $.inputText
+   - TITLE_REQUIRED at $.title
+5. O-DJ-R14G-5 added inputText and title and returned HTTP 200 OK.
+
+Final interpretation:
+O-DJ-R14G browser POST runtime preview verification is closed as PASS_WITH_RESPONSE_SHAPE_NOTE.
+The controlled-intake route is safe as a no-write preview reference for the next readiness decision.
+No activity_events write, SQL/RPC, AI/OpenAI, semantic persistence, VO creation, or state persistence occurred.
+
+Next recommended gate:
+O-DJ-R14H — static postcheck / readiness decision after runtime preview.
+
+Do not repeat without reason:
+- O-DJ-R5 through O-DJ-R14F-B.
+- O-DJ-R14G header discovery H1/H2.
+- O-DJ-R14G validation issues extraction.
+- Browser proof for valid minimal payload, unless route.ts changes.
+

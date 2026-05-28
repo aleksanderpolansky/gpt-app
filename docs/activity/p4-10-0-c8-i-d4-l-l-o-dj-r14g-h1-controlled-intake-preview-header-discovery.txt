@@ -1,0 +1,581 @@
+﻿GPT-APP / AI-NAVIGATOR
+O-DJ-R14G-H1 — controlled-intake preview header discovery
+Date: 2026-05-28 12:31:20
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+Route: src/app/api/activity/controlled-intake/route.ts
+
+Purpose:
+Find the exact explicit no-write preview header required by /api/activity/controlled-intake after browser POST returned:
+403 CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED.
+
+Safety:
+- Static inspection only.
+- No runtime call.
+- No DB write.
+- No SQL/RPC.
+- No AI/OpenAI.
+
+Header-like string literals:
+-  ? { issues } : {}),
+      ...(serverSideAppUserMapping ? { serverSideAppUserMapping } : {}),
+      guardrails: buildRouteGuardrails({
+        dbReadExecuted:
+          serverSideAppUserMapping?.serverSideAppUserMappingDbReadExecuted ??
+          false,
+      }),
+    },
+    { status },
+  );
+}
+
+function buildServerSideMappingFailureStatus(
+  code: ControlledActivityIntakeRouteErrorCode,
+): number {
+  if (
+    code === 
+-  | null;
+  readonly appUserInactiveSupported: false;
+  readonly appUserInactiveCheckExecuted: false;
+};
+
+type RouteErrorResponse = {
+  readonly ok: false;
+  readonly routeLayer: typeof CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER;
+  readonly code: ControlledActivityIntakeRouteErrorCode;
+  readonly message: string;
+  readonly issues?: unknown;
+  readonly serverSideAppUserMapping?: ControlledActivityIntakeRouteServerSideAppUserMappingProof;
+  readonly guardrails: ControlledActivityIntakeRouteGuardrails;
+};
+
+type RouteSuccessResponse = {
+  readonly ok: true;
+  readonly routeLayer: typeof CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER;
+  readonly mode: ControlledActivityIntakeRouteMode;
+  readonly validation?: {
+    readonly ok: true;
+  };
+  readonly payload?: unknown;
+  readonly idempotency?: unknown;
+  readonly staticRowPreview?: unknown;
+  readonly productionAuthMapping?: unknown;
+  readonly serverSideAppUserMapping?: unknown;
+  readonly trustedContextPreview?: unknown;
+  readonly guardrails: ControlledActivityIntakeRouteGuardrails;
+};
+
+type ControlledActivityIntakeValidatedPayloadSuccess = {
+  readonly ok: true;
+  readonly payload: ReturnType<typeof buildControlledActivityIntakePayload>;
+};
+
+type ControlledActivityIntakeValidatedPayloadFailure = {
+  readonly ok: false;
+  readonly response: NextResponse<RouteErrorResponse>;
+};
+
+type ControlledActivityIntakeValidatedPayloadResult =
+  | ControlledActivityIntakeValidatedPayloadSuccess
+  | ControlledActivityIntakeValidatedPayloadFailure;
+
+function isControlledActivityIntakeRouteAuthContextFailure(
+  result: ControlledActivityIntakeAuthContextResult,
+): result is ControlledActivityIntakeAuthContextFailure {
+  return result.ok === false;
+}
+
+function isControlledActivityIntakeValidatedPayloadFailure(
+  result: ControlledActivityIntakeValidatedPayloadResult,
+): result is ControlledActivityIntakeValidatedPayloadFailure {
+  return result.ok === false;
+}
+
+function buildRouteGuardrails(input?: {
+  readonly dbReadExecuted?: boolean;
+}): ControlledActivityIntakeRouteGuardrails {
+  return {
+    routeAuthIntegrated: true,
+    routeProductionAuthMappingIntegrated: true,
+    routeServerSideAppUserMappingIntegrated: true,
+    routeScaffoldOnly: true,
+    noWritePreview: true,
+    productionWriteEnabled: false,
+    previewHeaderAcceptedForProductionWrite: false,
+    dbReadExecuted: input?.dbReadExecuted ?? false,
+    dbWriteExecuted: false,
+    sqlExecuted: false,
+    aiCallExecuted: false,
+    activityEventsInserted: false,
+    responseSanitized: true,
+    semanticCandidatesPersisted: false,
+    valueObjectsCreated: false,
+    stateFactsCreated: false,
+    stateDeltasCreated: false,
+    stateSnapshotsCreated: false,
+  };
+}
+
+function readHeaderString(
+  request: NextRequest,
+  headerName: string,
+): string | undefined {
+  const rawValue = request.headers.get(headerName);
+
+  if (typeof rawValue !== 
+-  ||
+    !serverSideAppUserMapping.mappedUserFound ||
+    !serverSideAppUserMapping.appUserId
+  ) {
+    const code = buildReadOnlyMappingFailureRouteErrorCode(
+      serverSideAppUserMapping.mappingStatus,
+    );
+
+    return buildErrorResponse(
+      code,
+      buildReadOnlyMappingFailureMessage(
+        serverSideAppUserMapping.mappingStatus,
+      ),
+      buildServerSideMappingFailureStatus(code),
+      undefined,
+      serverSideAppUserMappingProof,
+    );
+  }
+
+  return NextResponse.json(
+    {
+      ok: true,
+      routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
+      mode: 
+-  as const;
+
+const NO_WRITE_PREVIEW_HEADER = 
+-  as const;
+
+type UnknownRecord = Record<string, unknown>;
+
+type ControlledActivityIntakeRouteMode =
+  | 
+- ) {
+    return undefined;
+  }
+
+  const trimmed = rawValue.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function buildErrorResponse(
+  code: ControlledActivityIntakeRouteErrorCode,
+  message: string,
+  status: number,
+  issues?: unknown,
+  serverSideAppUserMapping?: ControlledActivityIntakeRouteServerSideAppUserMappingProof,
+): NextResponse<RouteErrorResponse> {
+  return NextResponse.json(
+    {
+      ok: false,
+      routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
+      code,
+      message,
+      ...(typeof issues !== 
+- );
+}
+
+function buildNotExecutedServerSideAppUserMappingProof(): ControlledActivityIntakeRouteServerSideAppUserMappingProof {
+  return {
+    serverSideAppUserMappingExecuted: false,
+    serverSideAppUserMappingStatus: null,
+    serverSideAppUserMapped: false,
+    serverSideAppUserMappingDbReadExecuted: false,
+    serverSideAppUserMappingFailClosed: true,
+    serverSideAppUserMappingSelectedColumns: null,
+    serverSideAppUserMappingTableName: null,
+    appUserInactiveSupported: false,
+    appUserInactiveCheckExecuted: false,
+  };
+}
+
+function buildSanitizedServerSideAppUserMappingProof(
+  result: ServerSideAppUserMappingReadOnlyResult,
+): ControlledActivityIntakeRouteServerSideAppUserMappingProof {
+  return {
+    serverSideAppUserMappingExecuted: true,
+    serverSideAppUserMappingStatus: result.mappingStatus,
+    serverSideAppUserMapped: result.mappedUserFound,
+    serverSideAppUserMappingDbReadExecuted: result.dbReadExecuted,
+    serverSideAppUserMappingFailClosed: result.failClosed,
+    serverSideAppUserMappingSelectedColumns: result.selectedColumns,
+    serverSideAppUserMappingTableName: result.tableName,
+    appUserInactiveSupported: false,
+    appUserInactiveCheckExecuted: false,
+  };
+}
+
+function buildReadOnlyMappingFailureRouteErrorCode(
+  mappingStatus: ServerSideAppUserMappingReadOnlyStatus,
+): ControlledActivityIntakeRouteErrorCode {
+  if (mappingStatus === 
+- ,
+        400,
+      ),
+    };
+  }
+
+  const validation = validateControlledActivityIntake(body);
+
+  if (!validation.ok) {
+    return {
+      ok: false,
+      response: buildErrorResponse(
+        
+- ,
+        email: readHeaderString(
+          request,
+          PREVIEW_APP_USER_READ_MODEL_EMAIL_HEADER,
+        ),
+      },
+      requestedContext: {
+        actorId: readHeaderString(request, PREVIEW_REQUESTED_ACTOR_ID_HEADER),
+        organizationId: readHeaderString(
+          request,
+          PREVIEW_REQUESTED_ORGANIZATION_ID_HEADER,
+        ),
+        spaceId: readHeaderString(request, PREVIEW_REQUESTED_SPACE_ID_HEADER),
+      },
+      membershipReadModel: {
+        actorId: readHeaderString(request, PREVIEW_MEMBERSHIP_ACTOR_ID_HEADER),
+        organizationId: readHeaderString(
+          request,
+          PREVIEW_MEMBERSHIP_ORGANIZATION_ID_HEADER,
+        ),
+        spaceId: readHeaderString(request, PREVIEW_MEMBERSHIP_SPACE_ID_HEADER),
+        actorStatus: readHeaderString(
+          request,
+          PREVIEW_MEMBERSHIP_ACTOR_STATUS_HEADER,
+        ),
+        organizationMembershipStatus: readHeaderString(
+          request,
+          PREVIEW_MEMBERSHIP_ORGANIZATION_STATUS_HEADER,
+        ),
+        spaceMembershipStatus: readHeaderString(
+          request,
+          PREVIEW_MEMBERSHIP_SPACE_STATUS_HEADER,
+        ),
+        role: readHeaderString(request, PREVIEW_MEMBERSHIP_ROLE_HEADER),
+        membershipSource:
+          readHeaderString(request, PREVIEW_MEMBERSHIP_SOURCE_HEADER) ??
+          
+- ,
+        mappingStatus:
+          readHeaderString(
+            request,
+            PREVIEW_APP_USER_READ_MODEL_STATUS_HEADER,
+          ) ?? 
+- ,
+      },
+      mapping: {
+        appUserId: readHeaderString(
+          request,
+          PREVIEW_MAPPED_APP_USER_ID_HEADER,
+        ),
+        userId: readHeaderString(request, PREVIEW_MAPPED_USER_ID_HEADER),
+        actorId: readHeaderString(request, PREVIEW_MAPPED_ACTOR_ID_HEADER),
+        organizationId: readHeaderString(
+          request,
+          PREVIEW_MAPPED_ORGANIZATION_ID_HEADER,
+        ),
+        spaceId: readHeaderString(request, PREVIEW_MAPPED_SPACE_ID_HEADER),
+      },
+      requestSource:
+        readHeaderString(request, PREVIEW_REQUEST_SOURCE_HEADER) ??
+        
+- ,
+      },
+      requestSource:
+        readHeaderString(request, PREVIEW_REQUEST_SOURCE_HEADER) ??
+        
+- ,
+      identity: {
+        authSubject: readHeaderString(
+          request,
+          PREVIEW_SERVER_AUTH_SUBJECT_HEADER,
+        ),
+        provider: readHeaderString(request, PREVIEW_SERVER_PROVIDER_HEADER),
+        email: readHeaderString(request, PREVIEW_SERVER_EMAIL_HEADER),
+        sessionId: readHeaderString(request, PREVIEW_SERVER_SESSION_ID_HEADER),
+        requestSource: readHeaderString(request, PREVIEW_REQUEST_SOURCE_HEADER),
+      },
+      appUserReadModel: {
+        appUserId: readHeaderString(
+          request,
+          PREVIEW_APP_USER_READ_MODEL_APP_USER_ID_HEADER,
+        ),
+        internalUserId: readHeaderString(
+          request,
+          PREVIEW_APP_USER_READ_MODEL_INTERNAL_USER_ID_HEADER,
+        ),
+        authSubject: readHeaderString(
+          request,
+          PREVIEW_APP_USER_READ_MODEL_AUTH_SUBJECT_HEADER,
+        ),
+        mappingSource:
+          readHeaderString(
+            request,
+            PREVIEW_APP_USER_READ_MODEL_SOURCE_HEADER,
+          ) ?? 
+- ,
+      identity: {
+        sub: readHeaderString(request, PREVIEW_AUTH_SUBJECT_HEADER),
+        provider: 
+- ,
+      validation: {
+        ok: true,
+      },
+      payload: payloadResult.payload,
+      serverSideAppUserMapping: serverSideAppUserMappingProof,
+      guardrails: buildRouteGuardrails({
+        dbReadExecuted:
+          serverSideAppUserMappingProof.serverSideAppUserMappingDbReadExecuted,
+      }),
+    },
+    { status: 200 },
+  );
+}
+
+export async function POST(
+  request: NextRequest,
+): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+  const noWritePreview = readHeaderString(request, NO_WRITE_PREVIEW_HEADER);
+
+  if (noWritePreview !== 
+- ,
+      validation: {
+        ok: true,
+      },
+      productionAuthMapping,
+      trustedContextPreview: trustedContext,
+      payload,
+      idempotency,
+      staticRowPreview,
+      guardrails: buildRouteGuardrails(),
+    },
+    { status: 200 },
+  );
+}
+
+async function handleServerSideStaticPreview(
+  request: NextRequest,
+): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+  const serverSideAppUserMapping =
+    buildControlledActivityIntakeServerSideAppUserMapping({
+      source: 
+- ,
+      validation: {
+        ok: true,
+      },
+      serverSideAppUserMapping,
+      trustedContextPreview: trustedContext,
+      payload,
+      idempotency,
+      staticRowPreview,
+      guardrails: buildRouteGuardrails(),
+    },
+    { status: 200 },
+  );
+}
+
+async function handleServerSideReadOnlyMappingPreview(
+  request: NextRequest,
+): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+  let session: unknown = null;
+
+  try {
+    session = await auth0.getSession();
+  } catch {
+    return buildErrorResponse(
+      
+- ,
+    });
+
+  if (
+    isControlledActivityIntakeProductionAuthMappingFailure(
+      productionAuthMapping,
+    )
+  ) {
+    return buildErrorResponse(
+      productionAuthMapping.code,
+      productionAuthMapping.message,
+      401,
+      {
+        source: productionAuthMapping.source,
+      },
+    );
+  }
+
+  const payloadResult = await buildValidatedPayloadFromRequest(request);
+
+  if (isControlledActivityIntakeValidatedPayloadFailure(payloadResult)) {
+    return payloadResult.response;
+  }
+
+  const trustedContext = productionAuthMapping.trustedContext;
+  const payload = payloadResult.payload;
+  const idempotency = buildControlledActivityIntakeIdempotency(
+    payload,
+    trustedContext,
+  );
+  const staticRowPreview = buildControlledActivityIntakeActivityEventsStaticRow({
+    payload,
+    idempotency,
+    trustedContext,
+  });
+
+  return NextResponse.json(
+    {
+      ok: true,
+      routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
+      mode: 
+- ,
+    });
+
+  if (
+    isControlledActivityIntakeServerSideAppUserMappingFailure(
+      serverSideAppUserMapping,
+    )
+  ) {
+    return buildErrorResponse(
+      serverSideAppUserMapping.code,
+      serverSideAppUserMapping.message,
+      buildServerSideMappingFailureStatus(serverSideAppUserMapping.code),
+      {
+        source: serverSideAppUserMapping.source,
+        layer: serverSideAppUserMapping.layer,
+      },
+    );
+  }
+
+  const payloadResult = await buildValidatedPayloadFromRequest(request);
+
+  if (isControlledActivityIntakeValidatedPayloadFailure(payloadResult)) {
+    return payloadResult.response;
+  }
+
+  const trustedContext = serverSideAppUserMapping.trustedContext;
+  const payload = payloadResult.payload;
+  const idempotency = buildControlledActivityIntakeIdempotency(
+    payload,
+    trustedContext,
+  );
+  const staticRowPreview = buildControlledActivityIntakeActivityEventsStaticRow({
+    payload,
+    idempotency,
+    trustedContext,
+  });
+
+  return NextResponse.json(
+    {
+      ok: true,
+      routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
+      mode: 
+- ../../../../../lib/activity/controlledIntake/serverSideAppUserMappingReadOnly
+- ../../../../../lib/activity/controlledIntake/validator
+- ;
+
+const CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER =
+  
+- ;
+import { buildControlledActivityIntakeActivityEventsStaticRow } from 
+- ;
+import { buildControlledActivityIntakeIdempotency } from 
+- ;
+import { buildControlledActivityIntakePayload } from 
+- ;
+import {
+  buildControlledActivityIntakeNoWritePreviewTrustedContext,
+  type ControlledActivityIntakeAuthContextFailure,
+  type ControlledActivityIntakeAuthContextResult,
+} from 
+- ;
+import {
+  buildControlledActivityIntakeProductionTrustedContext,
+  isControlledActivityIntakeProductionAuthMappingFailure,
+} from 
+- ;
+import {
+  buildControlledActivityIntakeServerSideAppUserMapping,
+  isControlledActivityIntakeServerSideAppUserMappingFailure,
+} from 
+- Controlled activity intake validation failed.
+- Controlled intake app user mapping lookup failed and failed closed.
+- Controlled intake app user mapping returned duplicate rows and failed closed.
+- Controlled intake could not read trusted server-side auth session.
+- Controlled intake requires mapped internal app user.
+- Controlled intake requires supported trusted server-side auth provider.
+- Controlled intake requires trusted server-side auth session.
+- Controlled intake requires trusted server-side auth subject.
+- Controlled intake route requires explicit no-write preview header.
+- CONTROLLED_INTAKE_ACTOR_NOT_ALLOWED
+- CONTROLLED_INTAKE_APP_USER_MAPPING_AMBIGUOUS
+- CONTROLLED_INTAKE_APP_USER_MAPPING_BLOCKED
+- CONTROLLED_INTAKE_APP_USER_MAPPING_LOOKUP_FAILED
+- CONTROLLED_INTAKE_APP_USER_MAPPING_REQUIRED
+- CONTROLLED_INTAKE_AUTH_IDENTITY_REQUIRED
+- CONTROLLED_INTAKE_AUTH_SUBJECT_MISMATCH
+- CONTROLLED_INTAKE_AUTH_SUBJECT_REQUIRED
+- CONTROLLED_INTAKE_CONTEXT_NOT_VERIFIED
+- CONTROLLED_INTAKE_INVALID_JSON
+- CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED
+- CONTROLLED_INTAKE_ORGANIZATION_NOT_ALLOWED
+- CONTROLLED_INTAKE_SERVER_SESSION_REQUIRED
+- CONTROLLED_INTAKE_SPACE_NOT_ALLOWED
+- CONTROLLED_INTAKE_TRUSTED_CONTEXT_APP_USER_REQUIRED
+- CONTROLLED_INTAKE_VALIDATION_FAILED
+- no_write_preview
+- production_static_preview
+- server_side_read_only_mapping_preview
+- server_side_static_preview
+- x-controlled-intake-auth-mapping-mode
+- x-controlled-intake-preview-actor-id
+- x-controlled-intake-preview-app-user-id
+- x-controlled-intake-preview-app-user-read-model-app-user-id
+- x-controlled-intake-preview-app-user-read-model-auth-subject
+- x-controlled-intake-preview-app-user-read-model-email
+- x-controlled-intake-preview-app-user-read-model-internal-user-id
+- x-controlled-intake-preview-app-user-read-model-source
+- x-controlled-intake-preview-app-user-read-model-status
+- x-controlled-intake-preview-auth-subject
+- x-controlled-intake-preview-mapped-actor-id
+- x-controlled-intake-preview-mapped-app-user-id
+- x-controlled-intake-preview-mapped-organization-id
+- x-controlled-intake-preview-mapped-space-id
+- x-controlled-intake-preview-mapped-user-id
+- x-controlled-intake-preview-membership-actor-id
+- x-controlled-intake-preview-membership-actor-status
+- x-controlled-intake-preview-membership-organization-id
+- x-controlled-intake-preview-membership-organization-status
+- x-controlled-intake-preview-membership-role
+- x-controlled-intake-preview-membership-source
+- x-controlled-intake-preview-membership-space-id
+- x-controlled-intake-preview-membership-space-status
+- x-controlled-intake-preview-organization-id
+- x-controlled-intake-preview-requested-actor-id
+- x-controlled-intake-preview-requested-organization-id
+- x-controlled-intake-preview-requested-space-id
+- x-controlled-intake-preview-request-source
+- x-controlled-intake-preview-server-auth-subject
+- x-controlled-intake-preview-server-email
+- x-controlled-intake-preview-server-provider
+- x-controlled-intake-preview-server-session-id
+- x-controlled-intake-preview-space-id
+
+headers.get(...) calls:
+
+request.headers.get(...) calls:
+
+Context snippets:
+
+------------------------------------------------------------
+
+Interpretation:
+O-DJ-R14G browser runtime call reached the route and received sanitized fail-closed 403.
+Next step is to rerun browser POST with the exact explicit no-write preview header found above.
+

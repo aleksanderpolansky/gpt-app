@@ -1,0 +1,58 @@
+﻿GPT-APP / AI-NAVIGATOR
+O-DJ-R14G-H2 — exact no-write preview header/value discovery
+Date: 2026-05-28 12:37:38
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+Route: src/app/api/activity/controlled-intake/route.ts
+
+Purpose:
+O-DJ-R14G and O-DJ-R14G-2 both reached controlled-intake route but returned sanitized fail-closed 403:
+CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED.
+
+Safety:
+- Static inspection only.
+- No runtime call.
+- No DB write.
+- No SQL/RPC.
+- No AI/OpenAI.
+
+Extracted const candidates:
+NO_WRITE_PREVIEW_HEADER = "x-controlled-intake-no-write-preview"
+PREVIEW_APP_USER_ID_HEADER = "x-controlled-intake-preview-app-user-id"
+PREVIEW_ACTOR_ID_HEADER = "x-controlled-intake-preview-actor-id"
+PREVIEW_ORGANIZATION_ID_HEADER = "x-controlled-intake-preview-organization-id"
+PREVIEW_SPACE_ID_HEADER = "x-controlled-intake-preview-space-id"
+PREVIEW_REQUEST_SOURCE_HEADER = "x-controlled-intake-preview-request-source"
+PREVIEW_AUTH_SUBJECT_HEADER = "x-controlled-intake-preview-auth-subject"
+PREVIEW_MAPPED_APP_USER_ID_HEADER = "x-controlled-intake-preview-mapped-app-user-id"
+PREVIEW_MAPPED_USER_ID_HEADER = "x-controlled-intake-preview-mapped-user-id"
+PREVIEW_MAPPED_ACTOR_ID_HEADER = "x-controlled-intake-preview-mapped-actor-id"
+PREVIEW_MAPPED_ORGANIZATION_ID_HEADER = "x-controlled-intake-preview-mapped-organization-id"
+PREVIEW_MAPPED_SPACE_ID_HEADER = "x-controlled-intake-preview-mapped-space-id"
+PREVIEW_SERVER_AUTH_SUBJECT_HEADER = "x-controlled-intake-preview-server-auth-subject"
+PREVIEW_SERVER_PROVIDER_HEADER = "x-controlled-intake-preview-server-provider"
+PREVIEW_SERVER_EMAIL_HEADER = "x-controlled-intake-preview-server-email"
+PREVIEW_SERVER_SESSION_ID_HEADER = "x-controlled-intake-preview-server-session-id"
+PREVIEW_APP_USER_READ_MODEL_APP_USER_ID_HEADER = "x-controlled-intake-preview-app-user-read-model-app-user-id"
+PREVIEW_APP_USER_READ_MODEL_INTERNAL_USER_ID_HEADER = "x-controlled-intake-preview-app-user-read-model-internal-user-id"
+PREVIEW_APP_USER_READ_MODEL_AUTH_SUBJECT_HEADER = "x-controlled-intake-preview-app-user-read-model-auth-subject"
+PREVIEW_APP_USER_READ_MODEL_SOURCE_HEADER = "x-controlled-intake-preview-app-user-read-model-source"
+PREVIEW_APP_USER_READ_MODEL_STATUS_HEADER = "x-controlled-intake-preview-app-user-read-model-status"
+PREVIEW_APP_USER_READ_MODEL_EMAIL_HEADER = "x-controlled-intake-preview-app-user-read-model-email"
+PREVIEW_REQUESTED_ACTOR_ID_HEADER = "x-controlled-intake-preview-requested-actor-id"
+PREVIEW_REQUESTED_ORGANIZATION_ID_HEADER = "x-controlled-intake-preview-requested-organization-id"
+PREVIEW_REQUESTED_SPACE_ID_HEADER = "x-controlled-intake-preview-requested-space-id"
+PREVIEW_MEMBERSHIP_ACTOR_ID_HEADER = "x-controlled-intake-preview-membership-actor-id"
+PREVIEW_MEMBERSHIP_ORGANIZATION_ID_HEADER = "x-controlled-intake-preview-membership-organization-id"
+PREVIEW_MEMBERSHIP_SPACE_ID_HEADER = "x-controlled-intake-preview-membership-space-id"
+PREVIEW_MEMBERSHIP_ACTOR_STATUS_HEADER = "x-controlled-intake-preview-membership-actor-status"
+PREVIEW_MEMBERSHIP_ORGANIZATION_STATUS_HEADER = "x-controlled-intake-preview-membership-organization-status"
+PREVIEW_MEMBERSHIP_SPACE_STATUS_HEADER = "x-controlled-intake-preview-membership-space-status"
+PREVIEW_MEMBERSHIP_ROLE_HEADER = "x-controlled-intake-preview-membership-role"
+PREVIEW_MEMBERSHIP_SOURCE_HEADER = "x-controlled-intake-preview-membership-source"
+
+Extracted noWritePreview comparison candidates:
+noWritePreview !== "true"
+
+Manual interpretation required:
+Use the exact NO_WRITE_PREVIEW_HEADER name and the exact value from the noWritePreview comparison.
+
