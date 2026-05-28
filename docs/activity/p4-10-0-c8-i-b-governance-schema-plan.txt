@@ -1,0 +1,281 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-B — Governance / Schema Plan
+
+Date: 2026-05-28 18:05:37
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before report: 546d68f
+
+Purpose:
+Create the governance/schema plan for the future C8-I state/context layer before SQL audit and additive migration design.
+This document defines schema boundaries, naming, ownership, privacy, RLS/GRANT rules, lifecycle rules and no-overclaim constraints.
+
+Safety:
+- Doc-only gate.
+- No runtime call.
+- No browser call.
+- No DB read.
+- No DB write.
+- No SQL/RPC.
+- No AI/OpenAI.
+- No code patch.
+- No migration.
+- No activity_events write.
+- No state engine implementation.
+
+Previous closed gate:
+C8-I-A4-A confirmed:
+READY_FOR_C8_I_B_GOVERNANCE_SCHEMA_PLAN.
+
+Core inherited decisions:
+- Value Object remains unified.
+- No mandatory Value Object subtypes.
+- State is not stored inside VO type.
+- Category is not a state fact.
+- Hook is not a state fact.
+- AI candidate is not ontology truth.
+- Similarity is not relevance.
+- Relevance is not proof of causality.
+- State facts require source, evidence, confidence, privacy and correction lifecycle.
+- No medical, hormonal, legal, financial or social certainty without appropriate evidence.
+
+============================================================
+1. Governance scope
+============================================================
+
+C8-I-B defines governance for future schema only.
+It does not create tables.
+It does not write SQL.
+It does not implement state engine.
+It prepares the checklist for C8-I-C SQL audit and C8-I-D additive migration design.
+
+============================================================
+2. Future schema families
+============================================================
+
+Future C8-I schema may include these families:
+- state_dimensions
+- value_object_state_facts
+- activity_state_deltas
+- value_object_state_snapshots
+- state_relevance_rules
+- value_object_similarity_edges
+- value_object_relevance_edges
+- semantic_signatures
+- resolver_runs
+- resolver_candidate_links
+- resolver_feedback
+
+These are candidate families only.
+Actual tables must wait for C8-I-C SQL audit and C8-I-D additive migration design.
+
+============================================================
+3. Naming rules
+============================================================
+- Use snake_case table and column names.
+- Use stable *_key fields for semantic keys such as state_dimension_key and rule_key.
+- Use *_id only for database identifiers.
+- Use source_kind for classification: direct_measurement, user_self_report, semantic_hook, inferred_state, risk_flag, forbidden_overclaim.
+- Use privacy_level and sensitivity_level consistently.
+- Use confidence consistently and avoid unbounded AI certainty language.
+- Use evidence_summary instead of raw private text when possible.
+- Use status fields for lifecycle: active, provisional, corrected, rejected, expired.
+- Use valid_from, valid_to, observed_at, generated_at where time meaning differs.
+
+============================================================
+4. Ownership and subject rules
+============================================================
+- Every personal state row must be owned by the authenticated app user or by a private user-owned subject reference.
+- Never rely on client-submitted user_id as trusted identity.
+- Server-side Auth0/Supabase mapping remains the trusted identity source.
+- Enterprise or organization state must be explicitly separated from personal state.
+- Public directory/commercial data must not expose private personal state.
+- Family, child, health, emotional, finance, exact location and workplace-conflict contexts are private or sensitive by default.
+- A state fact must have a safe subject reference and must not expose raw identity unnecessarily.
+
+============================================================
+5. Privacy and sensitivity rules
+============================================================
+
+Default privacy:
+- direct_measurement: private by default
+- user_self_report: private by default
+- semantic_hook: private by default when personal
+- inferred_state: private by default
+- risk_flag: private/internal
+- forbidden_overclaim: internal suppression only
+- similarity_edge: private unless explicitly public and non-sensitive
+- relevance_edge: private unless explicitly public and non-sensitive
+
+Sensitive domains:
+- health
+- emotional state
+- family and child context
+- finance
+- exact location
+- workplace conflict
+- protected attributes
+- legal/tax/medical conclusions
+
+Rule:
+Sensitive data must be private by default and correctable by the user.
+
+============================================================
+6. Evidence and confidence rules
+============================================================
+- A category candidate is not evidence by itself.
+- A semantic hook is weak evidence only.
+- A user self-report is evidence of user-reported state, not objective medical/legal/financial certainty.
+- A direct measurement requires value, unit, source and time context.
+- An inferred state requires rule, evidence summary, confidence, time window and correction lifecycle.
+- A risk flag suppresses or downgrades unsafe interpretation.
+- A forbidden overclaim blocks fact creation.
+- Confidence must be conservative and explainable.
+
+============================================================
+7. Lifecycle rules
+============================================================
+- Every future state fact must be correctable.
+- Every future inferred state must be provisional unless confirmed.
+- Rejected inference must not continue to influence recommendations unless new evidence appears.
+- Expired facts/snapshots must not silently drive NBA ranking.
+- Corrections must create audit/correction rows or equivalent trace later.
+- State snapshots must include input facts/deltas used and expiry policy.
+- Resolver candidate links must be suppressible or correctable by user feedback.
+
+============================================================
+8. Similarity/relevance governance
+============================================================
+- Similarity edges and relevance edges must be separate future schema concepts.
+- Similarity must not be treated as causality.
+- Similarity must not create state facts.
+- Relevance must not be treated as proof.
+- Relevance must not override user choice in NBA v0.
+- Influence requires stricter evidence than relevance.
+- Risk flags can suppress relevance even when relevance score is high.
+- User feedback must be able to reduce or reject automatic similarity/relevance suggestions.
+
+============================================================
+9. Next Best Action governance
+============================================================
+- NBA v0 starts with weakest or under-attended direction detection.
+- NBA v0 must ask the user which direction to work on before suggesting actions.
+- NBA may use direct measurements, self-reports, hooks, inferred states, relevance edges and risk flags conservatively.
+- NBA must not claim certainty.
+- NBA must not make medical, legal, financial, hormonal or social claims.
+- NBA must explain why a candidate is shown.
+- NBA must collect feedback/correction.
+- NBA must not expose private state to other users.
+
+============================================================
+10. RLS and GRANT governance
+============================================================
+
+Future SQL migration order:
+create table -> indexes -> enable row level security -> policies -> explicit GRANT.
+
+Core rule:
+GRANT does not replace RLS.
+
+Default future access model:
+- anon: only public directory/profile/offers read-only, if explicitly intended.
+- authenticated: user-owned operations according to RLS.
+- service_role: backend/server routes only.
+- private activity/state/semantic/commercial-sensitive tables: never opened wider than necessary.
+- state-related personal tables: private by default.
+- semantic/resolver debug data: private or internal unless explicitly sanitized.
+- No broad public read on state facts, state deltas, state snapshots or personal resolver outputs.
+
+Supabase Data API rule:
+All new SQL migrations must include explicit GRANT statements next to RLS policies.
+
+============================================================
+11. Additive migration governance
+============================================================
+- Future migrations must be additive first.
+- Avoid destructive changes until data model is proven.
+- Prefer nullable columns and backfill steps when introducing new fields.
+- Use indexes only after identifying query patterns.
+- Use check constraints carefully and only for stable enums/contracts.
+- Avoid premature enum hard-locking if category/state vocabulary may evolve.
+- No migration before C8-I-C SQL audit and C8-I-D design.
+- No activity_events write enablement inside C8-I-B.
+
+============================================================
+12. Audit requirements for C8-I-C
+============================================================
+
+C8-I-C SQL audit should inspect:
+- existing activity tables
+- existing value object tables
+- existing category derivation tables or files
+- existing Auth0/Supabase identity mapping
+- existing RLS policies
+- existing grants
+- existing indexes
+- existing service_role/backend-only assumptions
+- existing no-write preview controlled-intake route contract
+- possible naming conflicts with future state tables
+- whether any current table is exposed through Data API too broadly
+
+============================================================
+13. Forbidden actions before C8-I-D
+============================================================
+- Do not create state_dimensions table yet.
+- Do not create value_object_state_facts table yet.
+- Do not create activity_state_deltas table yet.
+- Do not create value_object_state_snapshots table yet.
+- Do not create similarity/relevance edge tables yet.
+- Do not enable activity_events write from controlled-intake.
+- Do not add AI/OpenAI runtime state inference.
+- Do not add medical/hormonal/legal/financial certainty logic.
+- Do not add Value Object subtypes.
+
+============================================================
+14. Governance checklist for future table design
+============================================================
+- Does the table have clear owner/subject semantics?
+- Does it avoid VO subtypes?
+- Does it separate category, hook, fact, delta, snapshot and edge?
+- Does it include source/evidence/confidence where needed?
+- Does it include privacy/sensitivity where needed?
+- Does it include correction/lifecycle where needed?
+- Does it avoid raw sensitive text unless necessary?
+- Does it avoid public exposure by default?
+- Does it have RLS?
+- Does it have explicit GRANT?
+- Does it avoid broad anon access?
+- Does it avoid unsupported medical/legal/financial/social claims?
+
+============================================================
+15. C8-I-B readiness decision
+============================================================
+
+C8-I-B establishes governance/schema planning rules only.
+It does not implement schema.
+It does not create tables.
+It does not create migrations.
+It does not create runtime routes.
+It does not introduce Value Object subtypes.
+
+Decision:
+READY_FOR_C8_I_C_SQL_AUDIT
+
+Definition of Done:
+- Schema families documented.
+- Naming rules documented.
+- Ownership and subject rules documented.
+- Privacy and sensitivity rules documented.
+- Evidence and confidence rules documented.
+- Lifecycle rules documented.
+- Similarity/relevance governance documented.
+- NBA governance documented.
+- RLS and explicit GRANT governance documented.
+- Additive migration governance documented.
+- C8-I-C audit requirements documented.
+- Forbidden pre-migration actions documented.
+- Future table design checklist documented.
+- No runtime, DB read/write, SQL/RPC, AI/OpenAI, migration or code patch performed.
+
+Next step:
+C8-I-B-A — commit this report.
+Then C8-I-C — SQL audit before additive migration design.
