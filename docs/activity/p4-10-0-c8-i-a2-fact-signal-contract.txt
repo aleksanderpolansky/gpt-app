@@ -1,0 +1,543 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-A2 — Fact / Signal Contract
+
+Date: 2026-05-28 15:22:14
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before report: a764e12
+
+Purpose:
+Create the C8-I-A2 fact/signal contract.
+This contract defines how the platform must classify observations before anything can become a state fact, state delta, state snapshot, relevance rule or Next Best Action input.
+
+Safety:
+- Doc-only gate.
+- No runtime call.
+- No browser call.
+- No DB read.
+- No DB write.
+- No SQL/RPC.
+- No AI/OpenAI.
+- No code patch.
+- No migration.
+- No activity_events write.
+- No state engine implementation.
+
+Previous closed gate:
+C8-I-A1-A confirmed:
+READY_FOR_C8_I_A2_FACT_SIGNAL_CONTRACT.
+
+Core principle:
+A category is not a fact.
+A hook is not a fact.
+A semantic match is not a fact.
+An AI candidate is not ontology truth.
+A state fact requires source, evidence, confidence, privacy, correction and lifecycle rules.
+
+============================================================
+1. Signal kinds
+============================================================
+
+The system must classify every possible state-related input into one of six kinds:
+
+1. direct_measurement
+2. user_self_report
+3. semantic_hook
+4. inferred_state
+5. risk_flag
+6. forbidden_overclaim
+
+No other state-related output may bypass this classification.
+
+============================================================
+2. direct_measurement
+============================================================
+
+Definition:
+A direct_measurement is a value that comes from a sufficiently reliable source with an explicit unit, timestamp and measurement context.
+
+Examples:
+- sleep_hours = 6.5 from wearable or manually confirmed sleep log
+- duration_minutes = 45 from timer/calendar/activity log
+- distance_km = 1.2 from GPS/watch/manual input
+- repetitions = 20 from user-entered exercise record
+- money_amount = 100 PLN from user-entered transaction or confirmed purchase
+- rating = 4/5 from explicit user rating
+
+Required fields:
+- value
+- unit
+- sourceType
+- sourceId or sourceReference
+- measuredAt or periodStart/periodEnd
+- confidence
+- privacyLevel
+- correctionAllowed
+- normalizationRule if unit conversion is needed
+
+Allowed use:
+- Can feed aggregates.
+- Can feed state facts if contract rules allow.
+- Can feed state deltas if linked to an activity/event.
+- Can feed Next Best Action filters.
+
+Forbidden use:
+- Do not infer quality from quantity alone.
+- Do not infer medical state from ordinary measurements alone.
+- Do not infer financial condition from one amount.
+- Do not infer progress from time spent without quality or outcome signal.
+
+Default persistence later:
+Potential future table:
+- value_object_state_facts
+- activity_state_deltas
+- metric_observations
+Only after migration gate.
+
+Current C8-I-A2 status:
+Contract only. No persistence.
+
+============================================================
+3. user_self_report
+============================================================
+
+Definition:
+A user_self_report is an explicit statement by the user about their own state, feeling, perception, intention, constraint or condition.
+
+Examples:
+- I feel tired.
+- I am stressed.
+- I understand this topic 4/5.
+- I need more income.
+- I cannot focus.
+- I have pain in my back.
+- I feel calm after walking.
+- I am responsible for helping my child today.
+
+Required fields:
+- reportedStateKey
+- rawUserText or safe evidence summary
+- optional intensity/rating
+- timestamp
+- sourceType = user_self_report
+- privacyLevel
+- sensitivityLevel
+- correctionAllowed
+- confidence = user_reported, not objective certainty
+
+Allowed use:
+- Can affect recommendation difficulty.
+- Can create a candidate state fact with source=user.
+- Can increase priority of recovery, focus, care, finance or other directions.
+- Can be used as evidence for repeated-pattern analysis.
+
+Forbidden use:
+- Do not treat self-report as medical diagnosis.
+- Do not treat one self-report as permanent trait.
+- Do not expose sensitive self-report publicly.
+- Do not infer protected attributes.
+- Do not infer family/workplace/legal conclusions from one statement.
+
+Default persistence later:
+Potential future table:
+- value_object_state_facts
+with source_kind = user_self_report.
+Only after migration gate.
+
+Current C8-I-A2 status:
+Contract only. No persistence.
+
+============================================================
+4. semantic_hook
+============================================================
+
+Definition:
+A semantic_hook is a candidate signal produced from activity text, category derivation or contextual interpretation.
+It indicates possible relevance but does not assert a fact.
+
+Examples:
+- "helped child with math" -> childcare, parental_care, learning_support
+- "called three leads" -> lead_generation, outbound_sales
+- "walked 30 minutes" -> physical_activity, walking
+- "worked at home alone" -> home_context, low_interruption_possible
+- "had night shift" -> night_shift, recovery_need_possible
+
+Required fields:
+- hookKey
+- hookGroup
+- sourceTextFragment or safe evidence summary
+- sourceType
+- confidence
+- possibleStateDimensions
+- allowedInterpretation
+- forbiddenOverclaims
+- requiredEvidenceForFact
+- privacyLevel
+- correctionAllowed
+
+Allowed use:
+- Can suggest future questions.
+- Can influence weak-direction analysis only as low-confidence signal.
+- Can propose candidate links to state dimensions.
+- Can help choose which contract rule should be applied next.
+
+Forbidden use:
+- Do not persist as state fact automatically.
+- Do not claim objective truth.
+- Do not claim medical, emotional, financial or social facts.
+- Do not create Value Object subtype.
+- Do not bypass C8-I-A2 classification.
+
+Default persistence later:
+Potential future table:
+- semantic_hooks
+or embedded candidate section in category derivation run.
+Only after governance/schema decision.
+
+Current C8-I-A2 status:
+Contract only. No persistence.
+
+============================================================
+5. inferred_state
+============================================================
+
+Definition:
+An inferred_state is a state hypothesis derived from one or more direct measurements, self-reports, semantic hooks, repeated patterns or relevance rules.
+
+Examples:
+- possible fatigue after short sleep + long shift + user says tired
+- possible focus risk after noise + task switching + attention loss self-report
+- possible recovery need after high physical load + sleep deficit
+- possible financial pressure after repeated income_need self-reports and expenses
+- possible family care load after repeated childcare/family obligation hooks
+
+Required fields:
+- stateDimensionKey
+- inferenceRuleKey
+- inputEvidenceSummary
+- evidenceTypesUsed
+- confidence
+- timeWindow
+- privacyLevel
+- sensitivityLevel
+- explanation
+- correctionAllowed
+- expiry or refresh policy
+
+Allowed use:
+- Can affect recommendation ranking if confidence and evidence are sufficient.
+- Can trigger a clarifying question.
+- Can remain provisional.
+- Can be downgraded or deleted after correction.
+
+Forbidden use:
+- Do not present as certainty.
+- Do not infer diagnosis.
+- Do not infer exact hormones.
+- Do not infer legal/tax/financial conclusions.
+- Do not infer sensitive identity or protected attributes.
+- Do not expose to other users by default.
+
+Default persistence later:
+Potential future table:
+- value_object_state_facts
+with source_kind = inferred_state
+and confidence below direct measurement unless confirmed.
+Only after migration gate.
+
+Current C8-I-A2 status:
+Contract only. No persistence.
+
+============================================================
+6. risk_flag
+============================================================
+
+Definition:
+A risk_flag is a safety/privacy/interpretation warning that prevents overclaiming, unsafe storage or unsafe recommendation behavior.
+
+Examples:
+- medical_overclaim_risk
+- hormone_overclaim_risk
+- diagnosis_overclaim_risk
+- legal_overclaim_risk
+- financial_overclaim_risk
+- exact_location_sensitive
+- child_sensitive_context
+- workplace_sensitive_context
+- social_rating_risk
+- protected_attribute_risk
+
+Required fields:
+- riskKey
+- riskGroup
+- trigger
+- severity
+- recommendedSuppression
+- recommendedUserQuestion
+- privacyLevel
+- correctionAllowed
+- doNotPersistAsStateFact
+
+Allowed use:
+- Can suppress unsafe output.
+- Can require user confirmation.
+- Can downgrade inferred state to semantic hook.
+- Can block persistence until stronger evidence exists.
+- Can force private-by-default handling.
+
+Forbidden use:
+- Do not turn risk flag into user diagnosis.
+- Do not turn risk flag into social rating.
+- Do not expose risk flag publicly.
+- Do not use risk flag as punishment/scoring.
+
+Current C8-I-A2 status:
+Contract only. No persistence.
+
+============================================================
+7. forbidden_overclaim
+============================================================
+
+Definition:
+A forbidden_overclaim is an interpretation that the system must not make from available evidence.
+
+Examples:
+- "You have high cortisol" from stress text.
+- "Your testosterone is low" from tiredness.
+- "You are depressed" from one emotional statement.
+- "Your family relationship is bad" from one conflict.
+- "Your business is failing" from low sales activity.
+- "You are poor" from financial pressure text.
+- "Your employer violated the law" from a workplace complaint without legal analysis.
+- "This activity proves language progress" from minutes alone.
+
+Required handling:
+- Block the claim.
+- Replace with safe wording.
+- Keep as risk/suppression metadata only.
+- Ask for evidence or user confirmation if appropriate.
+- Never store as state fact.
+
+Allowed safe replacement:
+- "This may be a signal worth tracking."
+- "This is not enough to conclude X."
+- "The system can record this as a self-report or hook, not as a confirmed fact."
+- "A clarifying question is needed before using this as a state fact."
+
+Current C8-I-A2 status:
+Contract only. No persistence.
+
+============================================================
+8. Promotion rules
+============================================================
+
+semantic_hook may become user_self_report only if:
+- the user explicitly states personal state, feeling, condition, constraint or responsibility.
+
+semantic_hook may become direct_measurement only if:
+- numeric value, unit, source and context are present.
+- normalization is possible.
+- the measurement is not merely inferred from vague text.
+
+semantic_hook may support inferred_state only if:
+- combined with repeated pattern, direct measurement or user self-report.
+- inference rule explains why the state is possible.
+- confidence remains limited.
+- forbidden overclaims are checked first.
+
+user_self_report may support inferred_state if:
+- it is recent or repeated.
+- it has explicit intensity/rating or context.
+- it does not require medical/legal/financial certainty.
+
+direct_measurement may support inferred_state if:
+- a rule links measurement to state dimension.
+- the rule is conservative.
+- the output remains explainable and correctable.
+
+risk_flag blocks or downgrades output if:
+- unsupported medical/hormonal/diagnostic/legal/financial/social claim appears.
+- sensitive context is detected.
+- confidence is insufficient.
+
+forbidden_overclaim always blocks fact creation.
+
+============================================================
+9. Minimum fields for future state fact
+============================================================
+
+A future state fact must not be created unless these fields can be filled:
+
+- stateDimensionKey
+- subjectType
+- subjectId or safe subject reference
+- value or qualitativeState
+- sourceKind
+- sourceReference
+- evidenceSummary
+- confidence
+- privacyLevel
+- sensitivityLevel
+- validFrom or observedAt
+- validTo or expiryPolicy
+- correctionAllowed
+- createdByRule or createdByUser
+- status: active / provisional / corrected / rejected / expired
+
+A state fact must be correctable.
+A state fact must be explainable.
+A state fact must not be public by default.
+A state fact must not be created from category alone.
+
+============================================================
+10. Minimum fields for future state delta
+============================================================
+
+A future state delta describes change caused by activity/event.
+
+Required fields:
+- activityEventId or source event reference
+- stateDimensionKey
+- deltaDirection: increase / decrease / neutral / unknown
+- deltaMagnitude or qualitativeMagnitude
+- sourceKind
+- confidence
+- evidenceSummary
+- timeWindow
+- privacyLevel
+- correctionAllowed
+- ruleKey
+
+Examples:
+- sleep may decrease fatigue risk.
+- long night shift may increase recovery need.
+- deep work may increase cognitive load.
+- stretching may decrease physical tension self-report if confirmed.
+- sales calls may increase business development effort, not income.
+
+Forbidden:
+- Do not create hormone deltas without measurement.
+- Do not create medical deltas without evidence.
+- Do not create financial deltas without amount/result.
+- Do not create relationship deltas without explicit user report.
+
+Current C8-I-A2 status:
+Contract only. No persistence.
+
+============================================================
+11. Minimum fields for future state snapshot
+============================================================
+
+A future state snapshot summarizes current state over a time window.
+
+Required fields:
+- snapshotSubject
+- stateDimensionKey
+- timeWindowStart
+- timeWindowEnd
+- value or qualitativeState
+- inputFactsUsed
+- inputDeltasUsed
+- confidence
+- explanation
+- privacyLevel
+- sensitivityLevel
+- generatedAt
+- expiryPolicy
+- correctionAllowed
+
+Allowed:
+- "focus risk appears elevated today based on self-report and interruptions"
+- "recovery need may be elevated after night shift and short sleep"
+- "business development effort is under-attended this week based on logged activities"
+
+Forbidden:
+- medical diagnosis
+- hormone certainty
+- legal conclusion
+- social scoring
+- deterministic life prediction
+
+Current C8-I-A2 status:
+Contract only. No persistence.
+
+============================================================
+12. Next Best Action use
+============================================================
+
+NBA may use:
+- direct measurements
+- user self-reports
+- semantic hooks as weak signals
+- inferred states as provisional signals
+- risk flags as suppressors
+- forbidden overclaim rules as blockers
+
+NBA must not:
+- pretend certainty
+- act on hidden sensitive inferences
+- force one path without user choice
+- skip weakest-direction question
+- recommend intense activity when recovery/fatigue risk is high
+- recommend financial/legal/medical action as if professionally verified
+
+NBA v0 process remains:
+1. Detect weak/under-attended directions.
+2. Show direction list to user.
+3. User chooses direction.
+4. Generate action candidates.
+5. Explain why candidate is relevant.
+6. Ask for feedback/correction.
+7. Store learning as Semantic Capital only after later persistence gates.
+
+============================================================
+13. Privacy and correction rules
+============================================================
+
+Default privacy:
+- direct_measurement: private by default
+- user_self_report: private by default
+- semantic_hook: private by default if personal
+- inferred_state: private by default
+- risk_flag: private/internal
+- forbidden_overclaim: internal suppression only
+
+Correction:
+Every fact/signal must be correctable or rejectable by the user.
+User correction must override AI inference.
+Rejected inference must not continue to affect recommendations unless reintroduced with new evidence.
+
+Sensitive data:
+Health, emotional state, family, child, finance, exact location, workplace conflict and protected attributes require elevated privacy handling.
+
+============================================================
+14. C8-I-A2 readiness decision
+============================================================
+
+C8-I-A2 establishes the fact/signal contract only.
+It does not implement persistence.
+It does not introduce state tables yet.
+It does not introduce Value Object subtypes.
+It does not create migrations.
+It does not create runtime routes.
+
+Decision:
+READY_FOR_C8_I_A3_MVP_STATE_DIMENSIONS
+
+Definition of Done:
+- direct_measurement contract documented.
+- user_self_report contract documented.
+- semantic_hook contract documented.
+- inferred_state contract documented.
+- risk_flag contract documented.
+- forbidden_overclaim contract documented.
+- promotion rules documented.
+- minimum future state fact fields documented.
+- minimum future state delta fields documented.
+- minimum future state snapshot fields documented.
+- NBA usage rules documented.
+- privacy/correction rules documented.
+- no runtime, DB read/write, SQL/RPC, AI/OpenAI, migration or code patch performed.
+
+Next step:
+C8-I-A2-A — commit this report.
+Then C8-I-A3 — define MVP state dimensions.
