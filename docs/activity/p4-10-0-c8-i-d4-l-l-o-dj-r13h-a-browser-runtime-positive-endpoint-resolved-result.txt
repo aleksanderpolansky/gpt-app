@@ -1,0 +1,105 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R13H-A - browser runtime positive endpoint resolved result
+Date = 2026-05-28 09:51:41 +02:00
+Status = BROWSER_RUNTIME_RESULT_RECORDED
+
+1. Baseline
+Expected HEAD = 8ef35fe
+Actual HEAD = 8ef35fe
+Working tree before report = clean
+
+2. Browser runtime source
+User-provided O-DJ-R13H browser console output.
+Endpoint tested: /api/activity/debug/ownership-context-positive-auto-candidate-read-only-test
+Runtime was executed in browser, not by this PowerShell report script.
+
+3. Runtime decision
+PASS_O_DJ_R13H_POSITIVE_AUTO_CANDIDATE_RESOLVED_AFTER_RUNTIME_CONTRACT_PATCH_NO_FORBIDDEN_OUTPUT_NO_WRITE_GUARDRAIL_BREAK
+
+4. Header cases
+missingHeaderPass = true
+wrongHeaderPass = true
+missing header HTTP status = 403
+wrong header HTTP status = 403
+Both missing/wrong header cases failed closed before auth/mapping/candidate/resolver.
+
+5. Valid-header result
+HTTP status = 200
+ok = true
+code = OWNERSHIP_CONTEXT_POSITIVE_AUTO_CANDIDATE_RESOLVED
+appUserMappingStatus = mapped_user_found
+appUserMapped = true
+candidateSearchExecuted = true
+candidateKind = owned_space
+candidateFound = true
+
+6. Candidate search details
+candidateSearchSteps count = 1
+candidateSearchSteps[0].kind = owned_space
+candidateSearchSteps[0].attempted = true
+candidateSearchSteps[0].dbReadExecuted = true
+candidateSearchSteps[0].rowCountCategory = multiple
+candidateSearchSteps[0].usableCandidateFound = true
+candidateSearchSteps[0].sanitizedQueryErrorCategory = none
+candidateSearchErrorCategories = []
+
+7. Ownership resolver result
+ownershipContextResolutionExecuted = true
+ownershipContextResolutionStatus = owned_space_resolved
+ownershipContextResolved = true
+ownershipContextDbReadExecuted = true
+ownershipContextFailClosed = false
+selectedContextScope = personal_space
+requestedContextAcceptedAsHintOnly = true
+mappedAppUserRequired = true
+ownedSpaceResolved = true
+actorSpaceRoleResolved = false
+creatorOrganizationResolved = false
+organizationActorResolved = false
+
+8. Safety / guardrails
+guardrailsPass = true
+forbiddenKeysPass = true
+suspiciousValuesPass = true
+sanitizedCategoriesPass = true
+anyGuardrailFailures = []
+anyForbiddenKeys = []
+anySuspiciousValues = []
+anyInvalidSanitizedCategoryHits = []
+
+productionWriteEnabled = false
+dbReadExecuted = true
+dbWriteExecuted = false
+sqlExecuted = false
+aiCallExecuted = false
+activityEventsInserted = false
+semanticCandidatesPersisted = false
+valueObjectsCreated = false
+stateFactsCreated = false
+stateDeltasCreated = false
+stateSnapshotsCreated = false
+responseSanitized = true
+
+9. Interpretation
+O-DJ-R13G patch is runtime-verified.
+The corrected positive diagnostic endpoint can now find a usable owned_space candidate using spaces.owner_user_id = mappedAppUserId.
+The ownership resolver then resolves this candidate as owned_space_resolved with selectedContextScope = personal_space.
+This proves that the previous failure was caused by the wrong candidate lookup column contract, not by Auth0 mapping and not by the resolver.
+
+10. Non-goals preserved
+No production endpoint was changed.
+No controlled-intake integration was enabled.
+No activity_events write was enabled.
+No schema migration was created.
+No SQL was executed.
+No AI/OpenAI call was made.
+
+11. Decision
+PASS_O_DJ_R13H_A_POSITIVE_ENDPOINT_RUNTIME_RESOLVED_RESULT_RECORDED_NO_FORBIDDEN_OUTPUT_NO_WRITE_GUARDRAIL_BREAK
+
+12. Next step
+O-DJ-R13I should perform a static postcheck of the patched positive endpoint and nearby diagnostic reports.
+After that, decide whether to remove temporary probe endpoint, keep it as diagnostic evidence, or move to the next resolver/controlled-intake gate.
+Do not patch production logic yet.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
