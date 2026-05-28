@@ -1,0 +1,217 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R14C - controlled-intake route contract inspection
+Date = 2026-05-28 10:04:43 +02:00
+Status = ROUTE_CONTRACT_INSPECTION_RECORDED
+
+1. Baseline
+Current HEAD = e797735
+Last commit subject = docs: correct C8-I O-DJ-R14B readiness plan note
+Working tree before report = clean
+
+2. Route inspected
+Route file = src/app/api/activity/controlled-intake/route.ts
+Current mode marker = server_side_read_only_mapping_preview
+
+3. Contract marker inventory
+NextRequest present = true
+NextResponse present = true
+POST handler present = true
+GET handler present = false
+request.json marker present = true
+searchParams marker present = false
+auth0.getSession marker present = true
+mapServerSideAppUserReadOnly marker present = true
+resolveControlledActivityIntakeOwnershipContextReadOnly marker present = false
+appUserMappingStatus marker present = false
+appUserMapped marker present = false
+responseSanitized marker present = false
+productionWriteEnabled:false marker present = true
+dbWriteExecuted:false marker present = true
+activityEventsInserted:false marker present = true
+sqlExecuted:false marker present = true
+aiCallExecuted:false marker present = true
+
+4. Client-provided context/id marker inventory
+appUserId marker present = true
+userId marker present = true
+actorId marker present = true
+spaceId marker present = true
+organizationId marker present = true
+requestedContext marker present = true
+hint marker present = false
+
+5. Safety checks
+No Supabase write methods were found in controlled-intake route.
+No direct activity_events insert was found.
+No direct RPC/SQL marker was found.
+No console.log marker was found.
+No rawError/errorMessage/stack marker was found.
+TypeScript passed: npx.cmd tsc --noEmit.
+
+6. Confirmed contract gap
+responseSanitized marker is still absent in the current controlled-intake route.
+This confirms the O-DJ-R14B-A correction note.
+The next shadow/dry-run route or patched preview route must include explicit responseSanitized = true before any further integration readiness claim.
+
+7. Smallest safe shadow integration point
+The smallest safe next code step should not enable writes.
+The smallest safe next code step should add or prepare a write-disabled shadow/preview response contract that includes:
+- explicit responseSanitized = true
+- explicit dbWriteExecuted = false
+- explicit activityEventsInserted = false
+- explicit sqlExecuted = false
+- explicit aiCallExecuted = false
+- server-side Auth0 session source only
+- server-side app user mapping
+- ownership/context resolution as hint-only acceptance
+- sanitized activity_events insert preview only, no actual insert
+
+8. Readiness decision after inspection
+CONTROLLED_INTAKE_ROUTE_CONTRACT_UNDERSTOOD_ENOUGH_FOR_SHADOW_PATCH = true
+CONTROLLED_INTAKE_RESPONSE_SANITIZED_MARKER_PRESENT = false
+READY_FOR_CONTROLLED_INTAKE_PRODUCTION_INTEGRATION = false
+READY_FOR_ACTIVITY_EVENTS_WRITE = false
+
+9. Non-goals
+No code patch was made in O-DJ-R14C.
+No endpoint call was executed.
+No browser runtime was executed.
+No runtime DB read was triggered by this script.
+No DB write.
+No SQL execution.
+No AI/OpenAI call.
+No activity_events write.
+
+10. Recommended next gate
+O-DJ-R14D should patch the controlled-intake preview/shadow response contract only.
+O-DJ-R14D must remain no-write and should add explicit responseSanitized=true plus a sanitized preview contract.
+Do not enable activity_events insert in O-DJ-R14D.
+
+11. Route source match snippets
+
+11.1 HTTP method / route mode markers
+Pattern: export\s+async\s+function
+  L827: export async function POST(
+Pattern: server_side_read_only_mapping_preview
+  L111: | "server_side_read_only_mapping_preview";
+  L812: mode: "server_side_read_only_mapping_preview",
+  L842: if (authMappingMode === "server_side_read_only_mapping_preview") {
+Pattern: NextRequest
+  L1: import { NextRequest, NextResponse } from "next/server";
+  L242: request: NextRequest,
+  L423: async function readJsonBody(request: NextRequest): Promise<unknown> {
+  L428: request: NextRequest,
+  L466: request: NextRequest,
+  L523: request: NextRequest,
+  L603: request: NextRequest,
+  L737: request: NextRequest,
+  L828: request: NextRequest,
+Pattern: NextResponse
+  L1: import { NextRequest, NextResponse } from "next/server";
+  L198: readonly response: NextResponse<RouteErrorResponse>;
+  L261: ): NextResponse<RouteErrorResponse> {
+  L262: return NextResponse.json(
+  L467: ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+  L505: return NextResponse.json(
+  L524: ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+  L583: return NextResponse.json(
+  L604: ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+  L717: return NextResponse.json(
+  L738: ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+  L808: return NextResponse.json(
+  ... truncated, total matches = 13
+
+11.2 Auth / mapping / resolver markers
+Pattern: auth0
+  L3: import { auth0 } from "../../../../../lib/auth0";
+  L103: const TRUSTED_SERVER_PROVIDER = "auth0" as const;
+  L159: readonly serverSideAppUserMappingSelectedColumns: "id,auth0_sub" | null;
+  L742: session = await auth0.getSession();
+Pattern: getSession
+  L742: session = await auth0.getSession();
+Pattern: mapServerSideAppUserReadOnly
+  L21: mapServerSideAppUserReadOnly,
+  L781: const serverSideAppUserMapping = await mapServerSideAppUserReadOnly({
+Pattern: appUserMapping
+  L17: buildControlledActivityIntakeServerSideAppUserMapping,
+  L18: isControlledActivityIntakeServerSideAppUserMappingFailure,
+  L19: } from "../../../../../lib/activity/controlledIntake/serverSideAppUserMapping";
+  L22: type ServerSideAppUserMappingReadOnlyResult,
+  L23: type ServerSideAppUserMappingReadOnlyStatus,
+  L24: } from "../../../../../lib/activity/controlledIntake/serverSideAppUserMappingReadOnly";
+  L134: readonly routeServerSideAppUserMappingIntegrated: true;
+  L151: type ControlledActivityIntakeRouteServerSideAppUserMappingProof = {
+  L152: readonly serverSideAppUserMappingExecuted: boolean;
+  L153: readonly serverSideAppUserMappingStatus:
+  L154: | ServerSideAppUserMappingReadOnlyStatus
+  L157: readonly serverSideAppUserMappingDbReadExecuted: boolean;
+  ... truncated, total matches = 64
+Pattern: resolveControlledActivityIntakeOwnershipContextReadOnly
+  no matches
+Pattern: ownership
+  no matches
+
+11.3 Request / client id / context markers
+Pattern: json\(
+  L262: return NextResponse.json(
+  L424: return await request.json();
+  L505: return NextResponse.json(
+  L583: return NextResponse.json(
+  L717: return NextResponse.json(
+  L808: return NextResponse.json(
+Pattern: searchParams
+  no matches
+Pattern: appUserId
+  L469: appUserId: readHeaderString(request, PREVIEW_APP_USER_ID_HEADER),
+  L533: appUserId: readHeaderString(
+  L619: appUserId: readHeaderString(
+  L791: !serverSideAppUserMapping.appUserId
+Pattern: userId
+  L469: appUserId: readHeaderString(request, PREVIEW_APP_USER_ID_HEADER),
+  L533: appUserId: readHeaderString(
+  L537: userId: readHeaderString(request, PREVIEW_MAPPED_USER_ID_HEADER),
+  L619: appUserId: readHeaderString(
+  L623: internalUserId: readHeaderString(
+  L791: !serverSideAppUserMapping.appUserId
+Pattern: actorId
+  L470: actorId: readHeaderString(request, PREVIEW_ACTOR_ID_HEADER),
+  L538: actorId: readHeaderString(request, PREVIEW_MAPPED_ACTOR_ID_HEADER),
+  L647: actorId: readHeaderString(request, PREVIEW_REQUESTED_ACTOR_ID_HEADER),
+  L655: actorId: readHeaderString(request, PREVIEW_MEMBERSHIP_ACTOR_ID_HEADER),
+Pattern: spaceId
+  L472: spaceId: readHeaderString(request, PREVIEW_SPACE_ID_HEADER),
+  L543: spaceId: readHeaderString(request, PREVIEW_MAPPED_SPACE_ID_HEADER),
+  L652: spaceId: readHeaderString(request, PREVIEW_REQUESTED_SPACE_ID_HEADER),
+  L660: spaceId: readHeaderString(request, PREVIEW_MEMBERSHIP_SPACE_ID_HEADER),
+Pattern: organizationId
+  L471: organizationId: readHeaderString(request, PREVIEW_ORGANIZATION_ID_HEADER),
+  L539: organizationId: readHeaderString(
+  L648: organizationId: readHeaderString(
+  L656: organizationId: readHeaderString(
+Pattern: requestedContext
+  L646: requestedContext: {
+Pattern: hint
+  L132: readonly routeAuthIntegrated: true;
+  L221: routeAuthIntegrated: true,
+
+11.4 Guardrail markers
+Pattern: productionWriteEnabled
+  L137: readonly productionWriteEnabled: false;
+  L226: productionWriteEnabled: false,
+Pattern: dbWriteExecuted
+  L140: readonly dbWriteExecuted: false;
+  L229: dbWriteExecuted: false,
+Pattern: activityEventsInserted
+  L143: readonly activityEventsInserted: false;
+  L232: activityEventsInserted: false,
+Pattern: sqlExecuted
+  L141: readonly sqlExecuted: false;
+  L230: sqlExecuted: false,
+Pattern: aiCallExecuted
+  L142: readonly aiCallExecuted: false;
+  L231: aiCallExecuted: false,
+Pattern: responseSanitized
+  no matches
+
+12. Decision
+PASS_O_DJ_R14C_CONTROLLED_INTAKE_ROUTE_CONTRACT_INSPECTED_RESPONSE_SANITIZED_GAP_CONFIRMED_SHADOW_PATCH_READY_NO_CODE_PATCH_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_EXECUTION_NO_AI
