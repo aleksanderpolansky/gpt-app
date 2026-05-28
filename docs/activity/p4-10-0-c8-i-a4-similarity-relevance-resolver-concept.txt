@@ -1,0 +1,398 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-A4 — Similarity / Relevance Resolver Concept
+
+Date: 2026-05-28 17:59:02
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before report: 0c7febe
+
+Purpose:
+Define the C8-I-A4 similarity/relevance resolver concept before schema governance, SQL audit and migration design.
+This document separates semantic similarity from practical relevance and influence.
+
+Safety:
+- Doc-only gate.
+- No runtime call.
+- No browser call.
+- No DB read.
+- No DB write.
+- No SQL/RPC.
+- No AI/OpenAI.
+- No code patch.
+- No migration.
+- No activity_events write.
+- No state engine implementation.
+
+Previous closed gate:
+C8-I-A3-A confirmed:
+READY_FOR_C8_I_A4_SIMILARITY_RELEVANCE_RESOLVER_CONCEPT.
+
+Core inherited rules:
+- Value Object remains unified.
+- No mandatory Value Object subtypes.
+- Category is not a state fact.
+- Hook is not a state fact.
+- AI candidate is not ontology truth.
+- State dimensions are contract-level only at this stage.
+- Similarity is not relevance.
+- Relevance is not proof of causality.
+- No schema or SQL before governance/schema plan and SQL audit.
+
+============================================================
+1. Definitions
+============================================================
+
+Similarity:
+Similarity means that two Value Objects, activities, categories or contexts share semantic structure.
+Similarity is based on overlap, distance or closeness between category signatures, labels, descriptions, directions or observed patterns.
+
+Relevance:
+Relevance means that one object, state, activity or context matters for another object or decision.
+Relevance may exist even when two objects are not semantically similar.
+
+Influence:
+Influence means that there is a hypothesized or evidenced directional effect.
+Influence is stronger than relevance and requires stricter evidence.
+
+Resolver:
+The resolver is a future layer that separates and combines similarity edges, relevance edges, influence rules and current constraints for Next Best Action.
+
+============================================================
+2. Non-negotiable separation
+============================================================
+- Two language-learning activities may be similar because they share language_learning, grammar, practice and study categories.
+- Sleep is relevant to language learning because it may affect focus and recovery, but sleep is not semantically similar to grammar practice.
+- Financial pressure is relevant to career and B2B sales activity, but it is not similar to a sales call.
+- Family care load is relevant to time pressure and recovery need, but it is not similar to coding or marketing work.
+- Walking may be relevant to recovery, energy or physical_load, but it is not similar to writing a business proposal.
+- A CRM follow-up and a job interview preparation may be partially similar through career/business context, but their relevance depends on current goals.
+
+Rule:
+Similarity edge and relevance edge must be modeled separately in future schema and logic.
+
+============================================================
+3. Similarity edge concept
+============================================================
+
+Future candidate table:
+value_object_similarity_edges
+
+Purpose:
+Represent semantic closeness between two Value Objects or between derived semantic signatures.
+
+Possible future fields:
+- source_value_object_id
+- target_value_object_id
+- similarity_score
+- similarity_basis
+- shared_category_keys
+- shared_dimension_keys
+- signature_version
+- confidence
+- evidence_summary
+- calculated_at
+- expires_at or refresh_policy
+- correction_allowed
+
+Possible similarity_basis values:
+- semantic_category_overlap
+- shared_direction
+- shared_activity_pattern
+- shared_actor_context
+- shared_offer_or_commercial_context
+- shared_learning_context
+- shared_physical_context
+- manual_user_link
+- hybrid
+
+Allowed use:
+- Group similar activities.
+- Suggest reusable categories.
+- Suggest consolidation or hierarchy candidates.
+- Find analogous tasks.
+- Support search and clustering.
+- Support user review of duplicate or near-duplicate Value Objects.
+
+Forbidden use:
+- Do not treat similarity as causality.
+- Do not treat similarity as relevance.
+- Do not infer state facts from similarity alone.
+- Do not create mandatory Value Object subtypes from similarity clusters.
+- Do not make medical, financial, emotional or legal claims from similarity.
+
+============================================================
+4. Relevance edge concept
+============================================================
+
+Future candidate table:
+value_object_relevance_edges
+
+Purpose:
+Represent that one object, state dimension, activity type or context matters for another decision, direction or object.
+
+Possible future fields:
+- source_ref_type
+- source_ref_id
+- target_ref_type
+- target_ref_id
+- relevance_score
+- relevance_type
+- directionality
+- state_dimension_key
+- rule_key
+- confidence
+- evidence_summary
+- allowed_interpretation
+- forbidden_overclaims
+- privacy_level
+- sensitivity_level
+- calculated_at
+- expires_at or refresh_policy
+- correction_allowed
+
+Possible relevance_type values:
+- enables
+- blocks
+- constrains
+- increases_priority
+- decreases_priority
+- requires_recovery
+- requires_tool_or_environment
+- supports_goal
+- competes_for_time
+- competes_for_energy
+- risk_suppression
+- user_declared_relevance
+- rule_based_relevance
+
+Allowed use:
+- Filter Next Best Action candidates.
+- Explain why an action is suggested.
+- Detect constraints such as time, fatigue, focus, environment and family obligations.
+- Detect weak or under-attended directions.
+- Connect state dimensions to action feasibility.
+- Support user correction of relevance.
+
+Forbidden use:
+- Do not treat relevance as proof.
+- Do not claim causality without evidence.
+- Do not infer sensitive facts silently.
+- Do not expose private relevance edges publicly.
+- Do not override user choice without asking.
+
+============================================================
+5. State relevance rules concept
+============================================================
+
+Future candidate table:
+state_relevance_rules
+
+Purpose:
+Define conservative rules that connect state dimensions to recommendation behavior.
+
+Example rules:
+- fatigue high may decrease priority of intense cognitive or physical tasks.
+- recovery_need high may increase priority of low-load or recovery actions.
+- focus low may decrease priority of deep analytical work.
+- time_pressure high may increase priority of micro-actions.
+- environment_fit poor may suppress tasks requiring computer or quiet context.
+- financial_pressure high may increase priority of business_development_effort or career actions.
+- family_care_load high may constrain available time and increase need for flexible tasks.
+- learning_progress_signal weak may suggest review or active recall, not automatic level claim.
+- goal_balance under_attended may raise a direction in weakest-direction list.
+
+Rule requirements:
+- Every rule must have allowed interpretation.
+- Every rule must have forbidden overclaims.
+- Every rule must be explainable to the user.
+- Every rule must be correctable or suppressible by user feedback.
+- Every rule must respect privacy and sensitivity level.
+- Rules must not create medical, legal, financial or social certainty.
+
+============================================================
+6. Similarity scoring concept
+============================================================
+
+Similarity score may later be calculated from:
+- weighted category overlap
+- shared category depth
+- shared direction
+- shared activity type
+- shared actor role
+- shared object hierarchy
+- shared metric pattern
+- user-confirmed similarity
+- negative evidence when user rejects similarity
+
+Initial scoring idea:
+- category overlap can be the first weak score.
+- deep shared categories may weigh more than generic categories.
+- user-confirmed similarity should weigh more than automatic similarity.
+- rejected similarity should reduce or block repeated suggestions.
+- similarity score should be provisional until user feedback or stable pattern confirms it.
+
+Forbidden scoring behavior:
+- No hidden social scoring.
+- No sensitive-attribute similarity unless explicitly permitted and safe.
+- No medical similarity claim.
+- No deterministic personality classification.
+- No automatic hierarchy merge without user confirmation.
+
+============================================================
+7. Relevance scoring concept
+============================================================
+
+Relevance score may later be calculated from:
+- current selected direction
+- weakest or under-attended direction
+- current MVP state dimensions
+- time window
+- environment fit
+- goal priority
+- known obligations
+- risk flags
+- user feedback
+- recency
+- repeated patterns
+- explicit user instruction
+
+Initial scoring idea:
+- selected user direction is the strongest relevance modifier.
+- risk flags can suppress recommendations even if relevance is high.
+- fatigue/recovery can lower intensity recommendations.
+- time_pressure can shift from deep action to micro-action.
+- financial_pressure can raise business/career actions but cannot claim income certainty.
+- goal_balance can raise under-attended directions, but user must choose direction.
+
+Forbidden relevance behavior:
+- Do not choose automatically without user direction selection in NBA v0.
+- Do not use hidden sensitive inferences.
+- Do not rank the person morally.
+- Do not imply professional medical/legal/financial advice.
+- Do not use relevance score as a social score.
+
+============================================================
+8. Resolver pipeline concept
+============================================================
+
+Future resolver pipeline:
+- Input: activity/event/category bundle/value object candidates/state signals.
+- Build or read semantic signatures.
+- Compute similarity candidates separately.
+- Compute relevance candidates separately.
+- Apply state relevance rules.
+- Apply privacy and sensitivity gates.
+- Apply risk and forbidden_overclaim suppression.
+- Generate explainable candidate links.
+- Ask user for confirmation or correction where needed.
+- Use safe resolver output in NBA ranking only after user direction selection.
+
+Resolver output must include:
+- similarity candidates
+- relevance candidates
+- suppressed candidates
+- risk flags
+- explanation summary
+- confidence
+- privacy level
+- correction options
+
+============================================================
+9. Next Best Action use
+============================================================
+
+NBA v0 must use resolver output conservatively.
+
+NBA v0 process remains:
+- Detect weak or under-attended directions.
+- Show direction list from weakest to strongest.
+- Ask user which direction they want to work on now.
+- After user choice, create action candidates.
+- Use relevance to filter and rank candidates.
+- Use similarity to find analogous/reusable actions.
+- Use risk flags to suppress unsafe candidates.
+- Explain why a candidate is shown.
+- Collect feedback/correction.
+
+NBA must not:
+- skip the user direction choice.
+- pretend certainty.
+- claim medical, hormonal, legal, financial or social conclusions.
+- force one next action.
+- use hidden sensitive inference.
+- convert category directly to state fact.
+
+============================================================
+10. Examples
+============================================================
+
+Example 1:
+German grammar practice and English grammar practice are similar because both share language_learning and grammar_practice.
+Sleep is relevant to both because sleep may affect focus/recovery, but sleep is not similar to grammar practice.
+
+Example 2:
+B2B sales calls and CV preparation may be relevant to career/finance direction.
+They are only partially similar if both share business/career context.
+Neither implies income received or job success.
+
+Example 3:
+Family care activity is relevant to time_pressure, obligation_load and recovery_need.
+It is not similar to coding, but it can constrain coding feasibility.
+
+Example 4:
+Walking and stretching are similar in physical/recovery context.
+Walking may also be relevant to energy/recovery, but it must not be interpreted as automatic muscle growth or medical treatment.
+
+Example 5:
+Noise and no-computer context are relevant to environment_fit and focus.
+They are not similar to the task itself, but they affect task feasibility.
+
+============================================================
+11. Future schema candidates
+============================================================
+
+Possible future tables after later gated SQL design:
+- value_object_similarity_edges
+- value_object_relevance_edges
+- state_relevance_rules
+- semantic_signatures
+- resolver_runs
+- resolver_candidate_links
+- resolver_feedback
+
+No table is created in C8-I-A4.
+No migration is created in C8-I-A4.
+No SQL audit is performed in C8-I-A4.
+This remains a concept gate only.
+
+============================================================
+12. C8-I-A4 readiness decision
+============================================================
+
+C8-I-A4 establishes the similarity/relevance resolver concept only.
+It does not implement resolver code.
+It does not create tables.
+It does not create migrations.
+It does not create runtime routes.
+It does not introduce Value Object subtypes.
+
+Decision:
+READY_FOR_C8_I_B_GOVERNANCE_SCHEMA_PLAN
+
+Definition of Done:
+- Similarity definition documented.
+- Relevance definition documented.
+- Influence definition documented.
+- Similarity edge concept documented.
+- Relevance edge concept documented.
+- State relevance rules concept documented.
+- Similarity scoring concept documented.
+- Relevance scoring concept documented.
+- Resolver pipeline concept documented.
+- NBA usage documented.
+- Examples documented.
+- Future schema candidates documented without creating tables.
+- No runtime, DB read/write, SQL/RPC, AI/OpenAI, migration or code patch performed.
+
+Next step:
+C8-I-A4-A — commit this report.
+Then C8-I-B — governance/schema plan before SQL audit and migration design.
