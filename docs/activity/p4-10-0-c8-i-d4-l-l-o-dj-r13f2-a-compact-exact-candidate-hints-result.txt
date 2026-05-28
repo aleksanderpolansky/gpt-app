@@ -1,0 +1,94 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R13F2-A - compact exact candidate hints result
+Date = 2026-05-28 09:45:32 +02:00
+Status = EXACT_CANDIDATE_HINTS_RECORDED
+
+1. Baseline
+Expected HEAD = 0e53611
+Actual HEAD = 0e53611
+Working tree before report = clean
+
+2. Browser runtime source
+User-provided O-DJ-R13F2 compact browser console extraction.
+Endpoint tested: /api/activity/debug/ownership-context-column-contract-probe-read-only-test
+Runtime was executed in browser, not by this PowerShell report script.
+
+3. Valid-header result
+HTTP status = 200
+ok = true
+code = OWNERSHIP_CONTEXT_COLUMN_CONTRACT_PROBE_COMPLETED
+appUserMappingStatus = mapped_user_found
+appUserMapped = true
+probeExecuted = true
+
+4. Exact candidateContractHints
+candidateContractHints count = 2
+
+Hint 1:
+label = spaces_by_owner_user_id
+table = spaces
+filterColumn = owner_user_id
+filterValueSource = mapped_app_user_id
+rowCountCategory = multiple
+usableCandidateFound = true
+
+Hint 2:
+label = organizations_by_created_by_user_id
+table = organizations
+filterColumn = created_by_user_id
+filterValueSource = mapped_app_user_id
+rowCountCategory = multiple
+usableCandidateFound = true
+
+5. Exact filterOk
+spaces_by_owner_user_id: table = spaces, filterColumn = owner_user_id, selectShape = id, rowCountCategory = multiple, usableCandidateFound = true, sanitizedQueryErrorCategory = none, rawRowsReturned = false
+organizations_by_created_by_user_id: table = organizations, filterColumn = created_by_user_id, selectShape = id, rowCountCategory = multiple, usableCandidateFound = true, sanitizedQueryErrorCategory = none, rawRowsReturned = false
+
+6. Exact columnOk
+app_users.id
+app_users.auth0_sub
+spaces.id
+spaces.owner_user_id
+actor_space_roles.id
+actor_space_roles.space_id
+actor_space_roles.actor_id
+organizations.id
+organizations.created_by_user_id
+actors.id
+actors.organization_id
+
+7. Error categories
+columnProbeErrorCategories = [column_not_found]
+filterProbeErrorCategories = [column_not_found]
+
+8. Guardrails from browser output
+productionWriteEnabled = false
+dbReadExecuted = true
+dbWriteExecuted = false
+sqlExecuted = false
+aiCallExecuted = false
+activityEventsInserted = false
+semanticCandidatesPersisted = false
+valueObjectsCreated = false
+stateFactsCreated = false
+stateDeltasCreated = false
+stateSnapshotsCreated = false
+responseSanitized = true
+
+9. Interpretation
+The correct runtime lookup contract for a positive ownership candidate is:
+1) spaces.id where spaces.owner_user_id = mappedAppUserId
+2) organizations.id where organizations.created_by_user_id = mappedAppUserId
+
+The previously used fields owner_app_user_id and created_by_app_user_id are not valid runtime columns.
+actor_space_roles has id, space_id, actor_id but no confirmed user/app_user/profile filter column.
+actors has id and organization_id but no confirmed user/app_user/profile filter column.
+
+10. Decision
+PASS_O_DJ_R13F2_A_EXACT_CANDIDATE_HINTS_RECORDED_RUNTIME_CONTRACT_SPACES_OWNER_USER_ID_ORGANIZATIONS_CREATED_BY_USER_ID_NO_WRITE_GUARDRAIL_BREAK
+
+11. Next step
+O-DJ-R13G should patch the positive auto-candidate endpoint to use spaces.owner_user_id and organizations.created_by_user_id.
+Do not patch production logic yet.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
