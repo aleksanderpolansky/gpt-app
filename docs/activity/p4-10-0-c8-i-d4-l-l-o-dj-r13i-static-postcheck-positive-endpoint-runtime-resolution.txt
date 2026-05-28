@@ -1,0 +1,59 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R13I - static postcheck after positive endpoint runtime resolution
+Date = 2026-05-28 09:53:19 +02:00
+Status = STATIC_POSTCHECK_COMPLETED
+
+1. Baseline
+Expected HEAD = a9aef90
+Actual HEAD = a9aef90
+Working tree before report = clean
+
+2. Positive endpoint verified
+Endpoint file = src/app/api/activity/debug/ownership-context-positive-auto-candidate-read-only-test/route.ts
+Gate = P4.10.0-C8-I-D4-L-L-O-DJ-R13G
+Runtime contract present:
+- spaces.id where spaces.owner_user_id = mappedAppUserId
+- organizations.id where organizations.created_by_user_id = mappedAppUserId
+Invalid old columns absent:
+- owner_app_user_id
+- created_by_app_user_id
+Unconfirmed candidate lookup paths absent:
+- actor_space_roles
+- .from('actors')
+- .eq('app_user_id', mappedAppUserId)
+- .eq('user_id', mappedAppUserId)
+- .eq('profile_id', mappedAppUserId)
+
+3. Probe endpoint verified as temporary diagnostic evidence
+Probe endpoint file = src/app/api/activity/debug/ownership-context-column-contract-probe-read-only-test/route.ts
+Gate = P4.10.0-C8-I-D4-L-L-O-DJ-R13E
+The probe endpoint remains diagnostic-only and no-write.
+It may be removed later after context-transfer documentation or kept temporarily as evidence.
+
+4. Evidence reports verified
+O-DJ-R13F2-A exact runtime hints report exists and confirms:
+- spaces.owner_user_id
+- organizations.created_by_user_id
+O-DJ-R13G patch report exists and confirms patched endpoint.
+O-DJ-R13H-A runtime report exists and confirms 200 resolved / owned_space_resolved / personal_space.
+
+5. Safety / guardrails verified
+TypeScript passed: npx.cmd tsc --noEmit.
+No write methods found in positive endpoint or probe endpoint.
+No activity_events reference found in positive endpoint or probe endpoint.
+No console.log found in positive endpoint or probe endpoint.
+No raw error/stack fields found in positive endpoint or probe endpoint.
+Guardrail fields remain false for dbWrite/sql/ai/activity_events/semantic/value_objects/state writes.
+
+6. Conclusion
+The O-DJ-R13G patch is statically verified after O-DJ-R13H runtime PASS.
+The positive diagnostic endpoint now has a runtime-verified candidate lookup contract.
+The previous failure path is closed: candidate search no longer fails due to missing columns.
+
+7. Decision
+PASS_O_DJ_R13I_STATIC_POSTCHECK_POSITIVE_ENDPOINT_RUNTIME_RESOLUTION_VERIFIED_TSC_PASS_NO_CODE_PATCH_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_EXECUTION_NO_AI
+
+8. Next step
+Recommended next step: O-DJ-R14A resolver contract consolidation / readiness decision.
+Before moving to production controlled-intake integration, decide whether to remove the temporary O-DJ-R13E probe endpoint or keep it until the next context-transfer document.
+Do not enable activity_events write yet.
