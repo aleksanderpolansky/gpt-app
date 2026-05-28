@@ -1,0 +1,55 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R14B-A - controlled-intake readiness correction note
+Date = 2026-05-28 10:01:49 +02:00
+Status = CORRECTION_NOTE_RECORDED
+
+1. Baseline
+Current HEAD = 2dfd97e
+Last commit subject = docs: record C8-I O-DJ-R14B controlled-intake readiness plan
+Working tree before report = clean
+
+2. What happened in O-DJ-R14B
+O-DJ-R14B created and committed the controlled-intake integration readiness plan.
+However, during the static checks one assertion failed:
+controlled-intake route missing expected text: responseSanitized
+
+3. Interpretation
+This is not a write/security breach.
+The controlled-intake route remains in server_side_read_only_mapping_preview mode.
+No write methods are present.
+No activity_events insert is enabled.
+No direct SQL/RPC is enabled.
+No rawError/errorMessage/stack markers are present.
+
+4. Contract gap
+The current controlled-intake route does not yet expose an explicit responseSanitized marker.
+Therefore O-DJ-R14B should be read as a readiness plan with a correction note:
+- readiness planning is valid
+- production integration remains blocked
+- future shadow/dry-run route must include explicit responseSanitized = true
+
+5. Corrected readiness status
+READY_AS_REFERENCE_CONTRACT_FOR_NEXT_GATE = true
+READY_FOR_PRODUCTION_ACTIVITY_EVENTS_WRITE = false
+READY_FOR_CONTROLLED_INTAKE_PRODUCTION_INTEGRATION = false
+CONTROLLED_INTAKE_RESPONSE_SANITIZED_MARKER_PRESENT = false
+CONTROLLED_INTAKE_RESPONSE_SANITIZED_MARKER_REQUIRED_FOR_NEXT_SHADOW_GATE = true
+
+6. Safety / guardrails
+TypeScript passed: npx.cmd tsc --noEmit.
+No code patch was made in O-DJ-R14B-A.
+No endpoint call was executed.
+No browser runtime was executed.
+No runtime DB read was triggered by this script.
+No DB write.
+No SQL execution.
+No AI/OpenAI call.
+No activity_events write.
+
+7. Next step
+O-DJ-R14C should inspect the controlled-intake route request/response contract.
+O-DJ-R14C must explicitly include the responseSanitized marker gap in its findings.
+Do not enable writes in O-DJ-R14C.
+
+8. Decision
+PASS_O_DJ_R14B_A_CORRECTION_NOTE_RECORDED_RESPONSE_SANITIZED_MARKER_GAP_CONFIRMED_NO_SECURITY_WRITE_BREACH_TSC_PASS_NO_CODE_PATCH_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_EXECUTION_NO_AI
