@@ -1,0 +1,64 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R13C - sanitized query error category patch
+Date = 2026-05-28 08:07:13 +02:00
+Status = DIAGNOSTIC_ENDPOINT_PATCHED
+
+1. Baseline
+Expected HEAD = 2644fab
+Actual HEAD = 2644fab
+Working tree before patch = clean
+
+2. Reason
+O-DJ-R13B found two static contract problems:
+- spaces.owner_app_user_id_not_confirmed_outside_docs_and_positive_endpoint
+- organizations.created_by_app_user_id_not_confirmed_outside_docs_and_positive_endpoint
+O-DJ-R12C runtime returned rowCountCategory = unknown for candidate searches.
+The endpoint previously hid query errors completely.
+
+3. Patch
+Patched endpoint = /api/activity/debug/ownership-context-positive-auto-candidate-read-only-test
+File = src/app/api/activity/debug/ownership-context-positive-auto-candidate-read-only-test/route.ts
+Added sanitizedQueryErrorCategory per candidateSearchStep.
+Added candidateSearchErrorCategories summary.
+Added sanitized categories only:
+- none
+- column_not_found
+- relation_not_found
+- permission_or_rls
+- schema_cache_miss
+- query_error
+- unknown
+
+4. Non-goals
+The lookup contract was not changed yet.
+No fallback to owner_user_id or created_by_user_id was added yet.
+No production endpoint was changed.
+No controlled-intake integration was enabled.
+No activity_events write was enabled.
+
+5. Safety
+No raw DB error/message/detail/hint is returned in response.
+Only sanitized categories are returned.
+No raw appUserId/authSubject/actorId/spaceId/organizationId is returned.
+
+6. Checks
+TypeScript passed: npx.cmd tsc --noEmit.
+Static no-write checks passed.
+
+7. Guardrails
+- No endpoint call was executed by O-DJ-R13C PowerShell.
+- No browser runtime was executed by O-DJ-R13C PowerShell.
+- No runtime DB read was triggered by O-DJ-R13C PowerShell.
+- No DB write.
+- No SQL execution.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+
+8. Decision
+PASS_O_DJ_R13C_SANITIZED_QUERY_ERROR_CATEGORY_PATCH_APPLIED_TSC_PASS_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_EXECUTION_NO_AI
+
+9. Next step
+O-DJ-R13D browser runtime verification should call the endpoint and inspect sanitizedQueryErrorCategory values.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.

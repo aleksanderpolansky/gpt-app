@@ -7,7 +7,7 @@ import { resolveControlledActivityIntakeOwnershipContextReadOnly } from '../../.
 
 export const dynamic = 'force-dynamic';
 
-const GATE = 'P4.10.0-C8-I-D4-L-L-O-DJ-R12B' as const;
+const GATE = 'P4.10.0-C8-I-D4-L-L-O-DJ-R13C' as const;
 const MODE = 'ownership_context_positive_auto_candidate_read_only_diagnostic' as const;
 const REQUIRED_HEADER_NAME = 'x-ownership-context-positive-auto-candidate-read-only-test' as const;
 const REQUIRED_HEADER_VALUE = 'enabled' as const;
@@ -19,12 +19,22 @@ type CandidateKind =
   | 'organization_actor'
   | 'none';
 
+type SanitizedQueryErrorCategory =
+  | 'none'
+  | 'column_not_found'
+  | 'relation_not_found'
+  | 'permission_or_rls'
+  | 'schema_cache_miss'
+  | 'query_error'
+  | 'unknown';
+
 type CandidateSearchStep = {
   kind: CandidateKind;
   attempted: boolean;
   dbReadExecuted: boolean;
   rowCountCategory: 'not_attempted' | 'zero' | 'one' | 'multiple' | 'unknown';
   usableCandidateFound: boolean;
+  sanitizedQueryErrorCategory: SanitizedQueryErrorCategory;
 };
 
 type DiagnosticGuardrails = {
@@ -61,6 +71,7 @@ type DiagnosticResponseBody = {
   candidateKind: CandidateKind;
   candidateFound: boolean;
   candidateSearchSteps: CandidateSearchStep[];
+  candidateSearchErrorCategories: SanitizedQueryErrorCategory[];
   ownershipContextResolutionExecuted: boolean;
   ownershipContextResolutionStatus: string;
   ownershipContextResolved: boolean;
@@ -150,16 +161,84 @@ function categorizeRowCount(rows: unknown[]): CandidateSearchStep['rowCountCateg
   return 'multiple';
 }
 
-function sanitizeCandidateSearchStep(
-  values: CandidateSearchStep,
-): CandidateSearchStep {
+function readLowercaseQueryIssueText(value: unknown): string {
+  if (!isRecord(value)) {
+    return '';
+  }
+
+  const code = readStringProperty(value, 'code') ?? '';
+  const message = readStringProperty(value, 'message') ?? '';
+  const details = readStringProperty(value, 'details') ?? '';
+  const hint = readStringProperty(value, 'hint') ?? '';
+
+  return `${code} ${message} ${details} ${hint}`.toLowerCase();
+}
+
+function categorizeQueryIssue(value: unknown): SanitizedQueryErrorCategory {
+  const text = readLowercaseQueryIssueText(value);
+
+  if (!text) {
+    return 'unknown';
+  }
+
+  if (
+    text.includes('42703') ||
+    text.includes('column') && text.includes('does not exist') ||
+    text.includes('could not find') && text.includes('column')
+  ) {
+    return 'column_not_found';
+  }
+
+  if (
+    text.includes('42p01') ||
+    text.includes('relation') && text.includes('does not exist') ||
+    text.includes('could not find') && text.includes('table')
+  ) {
+    return 'relation_not_found';
+  }
+
+  if (
+    text.includes('42501') ||
+    text.includes('permission denied') ||
+    text.includes('row-level security') ||
+    text.includes('rls')
+  ) {
+    return 'permission_or_rls';
+  }
+
+  if (
+    text.includes('schema cache') ||
+    text.includes('pgrst') && text.includes('schema')
+  ) {
+    return 'schema_cache_miss';
+  }
+
+  return 'query_error';
+}
+
+function sanitizeCandidateSearchStep(values: CandidateSearchStep): CandidateSearchStep {
   return {
     kind: values.kind,
     attempted: values.attempted,
     dbReadExecuted: values.dbReadExecuted,
     rowCountCategory: values.rowCountCategory,
     usableCandidateFound: values.usableCandidateFound,
+    sanitizedQueryErrorCategory: values.sanitizedQueryErrorCategory,
   };
+}
+
+function collectCandidateSearchErrorCategories(
+  steps: CandidateSearchStep[],
+): SanitizedQueryErrorCategory[] {
+  const categories = new Set<SanitizedQueryErrorCategory>();
+
+  for (const step of steps) {
+    if (step.sanitizedQueryErrorCategory !== 'none') {
+      categories.add(step.sanitizedQueryErrorCategory);
+    }
+  }
+
+  return Array.from(categories);
 }
 
 function buildGuardrails(overrides?: Partial<DiagnosticGuardrails>): DiagnosticGuardrails {
@@ -199,6 +278,7 @@ function buildBody(overrides?: Partial<DiagnosticResponseBody>): DiagnosticRespo
     candidateKind: 'none',
     candidateFound: false,
     candidateSearchSteps: [],
+    candidateSearchErrorCategories: [],
     ownershipContextResolutionExecuted: false,
     ownershipContextResolutionStatus: 'not_executed',
     ownershipContextResolved: false,
@@ -246,6 +326,7 @@ async function findOwnedSpaceCandidate(
         dbReadExecuted: true,
         rowCountCategory: 'unknown',
         usableCandidateFound: false,
+        sanitizedQueryErrorCategory: categorizeQueryIssue(error),
       }),
     );
 
@@ -262,6 +343,7 @@ async function findOwnedSpaceCandidate(
       dbReadExecuted: true,
       rowCountCategory: categorizeRowCount(rows),
       usableCandidateFound: Boolean(usableRow),
+      sanitizedQueryErrorCategory: 'none',
     }),
   );
 
@@ -298,6 +380,7 @@ async function findActorSpaceRoleCandidate(
         dbReadExecuted: true,
         rowCountCategory: 'unknown',
         usableCandidateFound: false,
+        sanitizedQueryErrorCategory: categorizeQueryIssue(error),
       }),
     );
 
@@ -316,6 +399,7 @@ async function findActorSpaceRoleCandidate(
       dbReadExecuted: true,
       rowCountCategory: categorizeRowCount(rows),
       usableCandidateFound: Boolean(usableRow),
+      sanitizedQueryErrorCategory: 'none',
     }),
   );
 
@@ -352,6 +436,7 @@ async function findCreatorOrganizationCandidate(
         dbReadExecuted: true,
         rowCountCategory: 'unknown',
         usableCandidateFound: false,
+        sanitizedQueryErrorCategory: categorizeQueryIssue(error),
       }),
     );
 
@@ -368,6 +453,7 @@ async function findCreatorOrganizationCandidate(
       dbReadExecuted: true,
       rowCountCategory: categorizeRowCount(rows),
       usableCandidateFound: Boolean(usableRow),
+      sanitizedQueryErrorCategory: 'none',
     }),
   );
 
@@ -404,6 +490,7 @@ async function findOrganizationActorCandidate(
         dbReadExecuted: true,
         rowCountCategory: 'unknown',
         usableCandidateFound: false,
+        sanitizedQueryErrorCategory: categorizeQueryIssue(error),
       }),
     );
 
@@ -426,6 +513,7 @@ async function findOrganizationActorCandidate(
       dbReadExecuted: true,
       rowCountCategory: categorizeRowCount(rows),
       usableCandidateFound: Boolean(usableRow),
+      sanitizedQueryErrorCategory: 'none',
     }),
   );
 
@@ -566,6 +654,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Diagnostic
 
   const candidateSearch = await findPositiveCandidate(mappedAppUserId);
   const candidate = candidateSearch.candidate;
+  const candidateSearchErrorCategories = collectCandidateSearchErrorCategories(candidateSearch.steps);
 
   if (!candidate) {
     return jsonResponse(
@@ -581,6 +670,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Diagnostic
         candidateKind: 'none',
         candidateFound: false,
         candidateSearchSteps: candidateSearch.steps,
+        candidateSearchErrorCategories,
         guardrails: buildGuardrails({
           dbReadExecuted: true,
         }),
@@ -619,6 +709,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Diagnostic
       candidateKind: candidate.kind,
       candidateFound: true,
       candidateSearchSteps: candidateSearch.steps,
+      candidateSearchErrorCategories,
       ownershipContextResolutionExecuted: ownershipContextResolution.executed,
       ownershipContextResolutionStatus: ownershipContextResolution.status,
       ownershipContextResolved: ownershipContextResolution.resolved,
