@@ -1,0 +1,503 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R13B - compact schema contract decision summary
+Date = 2026-05-28 08:05:16 +02:00
+Status = COMPACT_SCHEMA_CONTRACT_DECISION_SUMMARY_CREATED
+
+1. Baseline
+Expected HEAD = 8acaea4
+Actual HEAD = 8acaea4
+Working tree before report = clean
+
+2. Why O-DJ-R13B exists
+O-DJ-R13A3 produced a full corrected static grep report.
+O-DJ-R13B creates a compact decision summary so the next patch is not guessed.
+Counts below exclude docs/ and the positive diagnostic endpoint itself from contract-relevant evidence.
+
+3. Current O-DJ-R12B endpoint candidate lookup contract
+1) spaces.id where spaces.owner_app_user_id = mappedAppUserId
+2) actor_space_roles.space_id where actor_space_roles.app_user_id = mappedAppUserId
+3) organizations.id where organizations.created_by_app_user_id = mappedAppUserId
+4) actors.id, actors.organization_id where actors.app_user_id = mappedAppUserId
+
+4. Compact grep count table
+Pattern | AllTrackedCount | ContractRelevantCount
+--- | ---: | ---:
+spaces | 771 | 7
+actor_space_roles | 774 | 8
+organizations | 1787 | 188
+actors | 1034 | 30
+owner_app_user_id | 96 | 0
+app_user_id | 951 | 28
+created_by_app_user_id | 115 | 0
+organization_id | 1710 | 145
+space_id | 769 | 23
+actor_id | 3174 | 176
+user_id | 8342 | 491
+app_users | 3053 | 79
+auth0_sub | 5882 | 105
+owner_user_id | 888 | 31
+created_by_user_id | 1130 | 70
+created_by | 1311 | 76
+owner_id | 494 | 1
+profile_id | 114 | 1
+create table spaces | 9 | 0
+create table actor_space_roles | 9 | 0
+create table organizations | 9 | 0
+create table actors | 9 | 0
+"spaces" | 771 | 7
+"actor_space_roles" | 774 | 8
+"organizations" | 1787 | 188
+"actors" | 1034 | 30
+
+5. Contract problem list
+- spaces.owner_app_user_id_not_confirmed_outside_docs_and_positive_endpoint
+- organizations.created_by_app_user_id_not_confirmed_outside_docs_and_positive_endpoint
+
+6. Recommended next step
+recommendedNextStep = O_DJ_R13C_PATCH_POSITIVE_ENDPOINT_TO_REPORT_SANITIZED_QUERY_ERROR_CATEGORIES_NOT_RAW_ERRORS
+
+7. Compact evidence
+
+----- Current endpoint table: spaces -----
+Pattern = spaces
+AllTrackedCount = 771
+ContractRelevantCount = 7
+CONTRACT_RELEVANT_MATCHES:
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:238:        .from('spaces')
+src/app/api/organizations/route.ts:860:    .from("spaces")
+src/app/api/sync-user/route.ts:117:    .from("spaces")
+src/app/api/sync-user/route.ts:134:      .from("spaces")
+src/app/api/sync-user/route.ts:156:    .from("spaces")
+src/app/api/sync-user/route.ts:173:      .from("spaces")
+src/app/api/sync-user/route.ts:285:    spaces: {
+
+----- Current endpoint table: actor_space_roles -----
+Pattern = actor_space_roles
+AllTrackedCount = 774
+ContractRelevantCount = 8
+CONTRACT_RELEVANT_MATCHES:
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:367:        .from('actor_space_roles')
+src/app/api/organizations/route.ts:879:    .from("actor_space_roles")
+src/app/api/organizations/route.ts:900:    .from("actor_space_roles")
+src/app/api/organizations/route.ts:921:    .from("actor_space_roles")
+src/app/api/sync-user/route.ts:195:    .from("actor_space_roles")
+src/app/api/sync-user/route.ts:214:      .from("actor_space_roles")
+src/app/api/sync-user/route.ts:238:    .from("actor_space_roles")
+src/app/api/sync-user/route.ts:257:      .from("actor_space_roles")
+
+----- Current endpoint table: organizations -----
+Pattern = organizations
+AllTrackedCount = 1787
+ContractRelevantCount = 188
+CONTRACT_RELEVANT_MATCHES:
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:455:        .from('organizations')
+src/app/admin/object-action/classifications/page.tsx:103:  organizationsById: Record<string, OrganizationRow>;
+src/app/admin/object-action/classifications/page.tsx:562:  organizationsById: Record<string, OrganizationRow>;
+src/app/admin/object-action/classifications/page.tsx:589:      organizationsResult,
+src/app/admin/object-action/classifications/page.tsx:597:            .from("organizations")
+src/app/admin/object-action/classifications/page.tsx:632:      organizationsResult.error ??
+src/app/admin/object-action/classifications/page.tsx:640:      organizationsById: mapRowsById(
+src/app/admin/object-action/classifications/page.tsx:641:        (organizationsResult.data ?? []) as OrganizationRow[]
+src/app/admin/object-action/classifications/page.tsx:657:      organizationsById: {},
+src/app/admin/object-action/classifications/page.tsx:685:      organizationsById: {},
+src/app/admin/object-action/classifications/page.tsx:708:      organizationsById: {},
+src/app/admin/object-action/classifications/page.tsx:732:      organizationsById: {},
+src/app/admin/object-action/classifications/page.tsx:753:    organizationsById: relatedData.organizationsById,
+src/app/admin/object-action/classifications/page.tsx:785:    organizationsById,
+src/app/admin/object-action/classifications/page.tsx:916:            Current focus: organizations classified into business directory
+src/app/admin/object-action/classifications/page.tsx:1191:                      organizationsById[classification.entity_id] ?? null;
+src/app/admin/object-action/page.tsx:53:      "Read-only overview of how organizations and other entities are classified in the Object-Action Rubricator.",
+src/app/admin/page.tsx:46:      "Open the public business directory and verify how organizations, categories and offers are visible to users.",
+src/app/admin/page.tsx:51:    href: "/organizations",
+src/app/admin/page.tsx:53:      "Open the internal organizations area for checking created organizations and related business data.",
+src/app/admin/page.tsx:60:      "Open offers and commercial objects connected to organizations, certificates and public directory pages.",
+src/app/admin/page.tsx:294:            directory checks, organizations and offers.
+src/app/api/directory/filters/route.ts:306:    const organizationsResult = await supabase
+src/app/api/directory/filters/route.ts:307:      .from("organizations")
+src/app/api/directory/filters/route.ts:313:    if (organizationsResult.error) {
+src/app/api/directory/filters/route.ts:317:          error: organizationsResult.error.message,
+src/app/api/directory/filters/route.ts:324:      (organizationsResult.data ?? []) as OrganizationRow[];
+src/app/api/directory/filters/route.ts:337:          organizations: 0,
+src/app/api/directory/filters/route.ts:439:        organizations: organizationIds.length,
+src/app/api/directory/organizations/[slug]/offers/route.ts:145:    .from("organizations")
+src/app/api/directory/organizations/[slug]/route.ts:465:    .from("organizations")
+src/app/api/directory/organizations/route.ts:1051:    .from("organizations")
+src/app/api/directory/organizations/route.ts:1192:    organizations: limitedRowsWithDistance.map((item) =>
+src/app/api/my/purchase-confirmations/route.ts:75:        organizations (
+src/app/api/offers/route.ts:352:    .from("organizations")
+src/app/api/offers/route.ts:457:      organizations (
+src/app/api/offers/route.ts:733:      organizations (
+src/app/api/organizations/[id]/location/route.ts:283:    .from("organizations")
+src/app/api/organizations/[id]/location/route.ts:634:      .from("organizations")
+src/app/api/organizations/route.ts:626:  const { data: organizations, error: organizationsError } = await supabase
+... truncated: 148 more relevant lines ...
+
+----- Current endpoint table: actors -----
+Pattern = actors
+AllTrackedCount = 1034
+ContractRelevantCount = 30
+CONTRACT_RELEVANT_MATCHES:
+lib/activity/activityUserContext.ts:87:    .from("actors")
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:312:        .from('actors')
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:529:        .from('actors')
+lib/activity/stateFacts/controlledPersistence/auth.ts:18: * - this helper does not create users, persons, actors, state facts, or dimensions.
+lib/activity/stateFacts/controlledPersistence/auth.ts:124: * - optionally reads persons and actors;
+lib/activity/stateFacts/controlledPersistence/auth.ts:214:      .from("actors")
+src/app/api/activities/route.ts:65:    .from("actors")
+src/app/api/availability-rules/route.ts:57:    .from("actors")
+src/app/api/bookings/[id]/cancel/route.ts:63:    .from("actors")
+src/app/api/bookings/[id]/complete/route.ts:63:    .from("actors")
+src/app/api/bookings/[id]/confirm/route.ts:63:    .from("actors")
+src/app/api/bookings/route.ts:58:    .from("actors")
+src/app/api/calendar/events/route.ts:57:    .from("actors")
+src/app/api/locations/route.ts:51:    .from("actors")
+src/app/api/offers/[id]/available-slots/route.ts:96:    .from("actors")
+src/app/api/offers/route.ts:75:    .from("actors")
+src/app/api/organizations/route.ts:756:    .from("actors")
+src/app/api/organizations/route.ts:842:      .from("actors")
+src/app/api/sync-user/route.ts:79:    .from("actors")
+src/app/api/sync-user/route.ts:96:      .from("actors")
+src/app/api/time-blocks/route.ts:57:    .from("actors")
+src/app/api/value-objects/route.ts:180:    .from("actors")
+supabase/migrations/002_seed_object_action_rubricator.sql:22:    ('business_entity', 'Business entity', 'Organizations, companies, entrepreneurs, communities and other actors in the business directory.', 10),
+supabase/migrations/012_activity_recording_backbone.sql:85:  performed_by_actor_id uuid references public.actors(id),
+supabase/migrations/012_activity_recording_backbone.sql:86:  acting_as_actor_id uuid references public.actors(id),
+supabase/migrations/012_activity_recording_backbone.sql:87:  acting_for_actor_id uuid references public.actors(id),
+supabase/migrations/012_activity_recording_backbone.sql:761:'Universal links from activity_events to value objects, contexts, observed objects, actors or other entities.';
+supabase/migrations/013_activity_templates_v2.sql:41:    references public.actors(id)
+supabase/migrations/013_activity_templates_v2.sql:795:'Default semantic links for activity_templates: value objects, contexts, observed objects, actors or future source-of-agency hypotheses.';
+supabase/migrations/023_value_object_state_foundation_p4_7.sql:27:  owner_actor_id uuid references public.actors(id),
+
+----- Current endpoint column: owner_app_user_id -----
+Pattern = owner_app_user_id
+AllTrackedCount = 96
+ContractRelevantCount = 0
+CONTRACT_RELEVANT_MATCHES = NO_MATCHES
+
+----- Current endpoint column: app_user_id -----
+Pattern = app_user_id
+AllTrackedCount = 951
+ContractRelevantCount = 28
+CONTRACT_RELEVANT_MATCHES:
+lib/activity/controlledIntake/validator.ts:26:  "app_user_id",
+src/app/admin/object-action/categories/page.tsx:39:  app_user_id: string;
+src/app/admin/object-action/categories/page.tsx:554:      app_user_id,
+src/app/admin/object-action/categories/page.tsx:559:    .eq("app_user_id", appUserId)
+src/app/admin/object-action/classifications/page.tsx:36:  app_user_id: string;
+src/app/admin/object-action/classifications/page.tsx:415:      app_user_id,
+src/app/admin/object-action/classifications/page.tsx:420:    .eq("app_user_id", appUserId)
+src/app/admin/object-action/page.tsx:16:  app_user_id: string;
+src/app/admin/object-action/page.tsx:122:      app_user_id,
+src/app/admin/object-action/page.tsx:127:    .eq("app_user_id", appUserId)
+src/app/admin/object-action/suggestions/page.tsx:34:  app_user_id: string;
+src/app/admin/object-action/suggestions/page.tsx:625:      app_user_id,
+src/app/admin/object-action/suggestions/page.tsx:630:    .eq("app_user_id", appUserId)
+src/app/admin/page.tsx:16:  app_user_id: string;
+src/app/admin/page.tsx:122:      app_user_id,
+src/app/admin/page.tsx:127:    .eq("app_user_id", appUserId)
+src/app/api/object-action/categories/audit-verify/route.ts:18:  app_user_id: string;
+src/app/api/object-action/categories/audit-verify/route.ts:301:      app_user_id,
+src/app/api/object-action/categories/audit-verify/route.ts:306:    .eq("app_user_id", appUser.id)
+src/app/api/object-action/categories/route.ts:27:  app_user_id: string;
+src/app/api/object-action/categories/route.ts:324:      app_user_id,
+src/app/api/object-action/categories/route.ts:329:    .eq("app_user_id", appUser.id)
+src/app/api/object-action/suggestions/audit-verify/route.ts:18:  app_user_id: string;
+src/app/api/object-action/suggestions/audit-verify/route.ts:313:      app_user_id,
+src/app/api/object-action/suggestions/audit-verify/route.ts:318:    .eq("app_user_id", appUser.id)
+src/app/api/object-action/suggestions/route.ts:49:  app_user_id: string;
+src/app/api/object-action/suggestions/route.ts:1089:      app_user_id,
+src/app/api/object-action/suggestions/route.ts:1094:    .eq("app_user_id", appUser.id)
+
+----- Current endpoint column: created_by_app_user_id -----
+Pattern = created_by_app_user_id
+AllTrackedCount = 115
+ContractRelevantCount = 0
+CONTRACT_RELEVANT_MATCHES = NO_MATCHES
+
+----- Current endpoint column: organization_id -----
+Pattern = organization_id
+AllTrackedCount = 1710
+ContractRelevantCount = 145
+CONTRACT_RELEVANT_MATCHES:
+lib/activity/categoryDerivation/persistDerivations.ts:127:    organization_id:
+lib/activity/categoryDerivation/persistence.ts:56:  organization_id?: string | null;
+lib/activity/categoryDerivation/persistence.ts:284:    organization_id: params.input.organizationId ?? null,
+lib/activity/categoryDerivation/types.ts:102:  organization_id?: string | null;
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:75:  organization_id: string | null;
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:99:const ACTORS_SELECTED_COLUMNS = 'id,actor_type,person_id,organization_id,display_name,status' as const;
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:583:      if (actor.organization_id !== requestedOrganizationId) {
+lib/activity/controlledIntake/validator.ts:32:  "organization_id",
+lib/activity/rubricatorValueObjectMapper.ts:590:    .is("organization_id", null)
+lib/activity/rubricatorValueObjectMapper.ts:629:      organization_id: null,
+lib/activity/stateFacts/controlledPersistence/targetValueObject.ts:36:  organization_id?: unknown;
+lib/activity/stateFacts/controlledPersistence/targetValueObject.ts:121: * if organization_id exists and owner_actor_id matches the authenticated actor,
+lib/activity/stateFacts/controlledPersistence/targetValueObject.ts:146:    .select("id, title, owner_actor_id, organization_id")
+lib/activity/stateFacts/controlledPersistence/targetValueObject.ts:168:  const organizationId = toNullableString(valueObject.organization_id);
+lib/activity/valueObjectBridge.ts:496:    .select("id, owner_actor_id, organization_id")
+lib/activity/valueObjectBridge.ts:518:    organization_id: string | null;
+lib/activity/valueObjectBridge.ts:523:    organizationId: row.organization_id,
+lib/activity/valueObjectBridge.ts:1325:        organization_id: ownerContext.organizationId,
+src/app/api/activity/record/route.ts:49:  organization_id: string | null;
+src/app/api/activity/start/route.ts:40:  organization_id: string | null;
+src/app/api/activity/templates/route.ts:18:  organization_id: string | null;
+src/app/api/directory/filters/route.ts:19:  organization_id: string;
+src/app/api/directory/filters/route.ts:24:  organization_id: string;
+src/app/api/directory/filters/route.ts:355:            organization_id,
+src/app/api/directory/filters/route.ts:365:          .in("organization_id", organizationIds),
+src/app/api/directory/filters/route.ts:369:          .select("organization_id, country_code, city, district")
+src/app/api/directory/filters/route.ts:370:          .in("organization_id", organizationIds)
+src/app/api/directory/organizations/[slug]/offers/route.ts:14:  organization_id: string | null;
+src/app/api/directory/organizations/[slug]/offers/route.ts:69:    organizationId: row.organization_id,
+src/app/api/directory/organizations/[slug]/offers/route.ts:184:      organization_id,
+src/app/api/directory/organizations/[slug]/offers/route.ts:226:    .eq("organization_id", organizationRow.id)
+src/app/api/directory/organizations/route.ts:102:  organization_id: string | null;
+src/app/api/directory/organizations/route.ts:463:      organization_id,
+src/app/api/directory/organizations/route.ts:470:    .in("organization_id", organizationIds)
+src/app/api/directory/organizations/route.ts:482:    if (!offer.organization_id) {
+src/app/api/directory/organizations/route.ts:491:      statsByOrganizationId.get(offer.organization_id) ??
+src/app/api/directory/organizations/route.ts:500:    statsByOrganizationId.set(offer.organization_id, currentStats);
+src/app/api/my/purchase-confirmations/route.ts:60:        organization_id,
+src/app/api/offers/route.ts:381:    .select("id, title, value_type, organization_id, owner_actor_id")
+src/app/api/offers/route.ts:384:    .eq("organization_id", organizationId)
+... truncated: 105 more relevant lines ...
+
+----- Current endpoint column: space_id -----
+Pattern = space_id
+AllTrackedCount = 769
+ContractRelevantCount = 23
+CONTRACT_RELEVANT_MATCHES:
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:83:  space_id: string | null;
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:101:  'id,actor_id,space_id,function_type,is_active,authority_level,responsibility_level' as const;
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:370:        .eq('space_id', requestedSpaceId)
+lib/activity/controlledIntake/validator.ts:36:  "workspace_id",
+src/app/activities/page.tsx:11:  space_id: string | null;
+src/app/api/activities/route.ts:202:      primary_space_id: primarySpaceId,
+src/app/api/activities/route.ts:230:          space_id: participant.spaceId ?? primarySpaceId,
+src/app/api/activities/route.ts:239:            space_id: primarySpaceId,
+src/app/api/activities/route.ts:268:          space_id: primarySpaceId,
+src/app/api/bookings/route.ts:296:      primary_space_id: offer.space_id,
+src/app/api/bookings/route.ts:325:          space_id: offer.space_id,
+src/app/api/bookings/route.ts:333:          space_id: offer.space_id,
+src/app/api/bookings/route.ts:353:      space_id: offer.space_id,
+src/app/api/calendar/events/route.ts:180:      space_id: spaceId,
+src/app/api/offers/route.ts:673:      space_id: spaceId,
+src/app/api/organizations/route.ts:882:      space_id: businessSpace.id,
+src/app/api/organizations/route.ts:903:      space_id: businessSpace.id,
+src/app/api/organizations/route.ts:924:      space_id: businessSpace.id,
+src/app/api/sync-user/route.ts:198:    .eq("space_id", personalSpace.id)
+src/app/api/sync-user/route.ts:217:        space_id: personalSpace.id,
+src/app/api/sync-user/route.ts:241:    .eq("space_id", marketplaceSpace.id)
+src/app/api/sync-user/route.ts:260:        space_id: marketplaceSpace.id,
+src/app/api/time-blocks/route.ts:181:      space_id: spaceId,
+
+----- Current endpoint column: actor_id -----
+Pattern = actor_id
+AllTrackedCount = 3174
+ContractRelevantCount = 176
+CONTRACT_RELEVANT_MATCHES:
+lib/activity/categoryDerivation/completeRouteIntegration.ts:56:  | "missing_actor_id"
+lib/activity/categoryDerivation/completeRouteIntegration.ts:311:      reason: "missing_actor_id",
+lib/activity/categoryDerivation/persistDerivations.ts:126:    actor_id: params.actorId ?? params.input.actorId ?? null,
+lib/activity/categoryDerivation/persistence.ts:55:  actor_id?: string | null;
+lib/activity/categoryDerivation/persistence.ts:283:    actor_id: params.input.actorId ?? null,
+lib/activity/categoryDerivation/types.ts:101:  actor_id?: string | null;
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:82:  actor_id: string | null;
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:101:  'id,actor_id,space_id,function_type,is_active,authority_level,responsibility_level' as const;
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:369:        .eq('actor_id', requestedActorId)
+lib/activity/controlledIntake/validator.ts:30:  "actor_id",
+lib/activity/rubricatorValueObjectMapper.ts:21:  performed_by_actor_id: string | null;
+lib/activity/rubricatorValueObjectMapper.ts:22:  acting_as_actor_id: string | null;
+lib/activity/rubricatorValueObjectMapper.ts:23:  acting_for_actor_id: string | null;
+lib/activity/rubricatorValueObjectMapper.ts:347:        "performed_by_actor_id",
+lib/activity/rubricatorValueObjectMapper.ts:348:        "acting_as_actor_id",
+lib/activity/rubricatorValueObjectMapper.ts:349:        "acting_for_actor_id",
+lib/activity/rubricatorValueObjectMapper.ts:582:    event.acting_as_actor_id ?? event.performed_by_actor_id ?? null;
+lib/activity/rubricatorValueObjectMapper.ts:594:    query = query.eq("owner_actor_id", ownerActorId);
+lib/activity/rubricatorValueObjectMapper.ts:596:    query = query.is("owner_actor_id", null);
+lib/activity/rubricatorValueObjectMapper.ts:623:    event.acting_as_actor_id ?? event.performed_by_actor_id ?? null;
+lib/activity/rubricatorValueObjectMapper.ts:628:      owner_actor_id: ownerActorId,
+lib/activity/stateFacts/controlledPersistence/rollback.ts:287:    p_actor_id: input.actorId,
+lib/activity/stateFacts/controlledPersistence/rollbackPayloadBuilder.ts:93:    actor_id: actorId,
+lib/activity/stateFacts/controlledPersistence/targetValueObject.ts:35:  owner_actor_id?: unknown;
+lib/activity/stateFacts/controlledPersistence/targetValueObject.ts:115: * - checks owner_actor_id against authenticated actor context;
+lib/activity/stateFacts/controlledPersistence/targetValueObject.ts:121: * if organization_id exists and owner_actor_id matches the authenticated actor,
+lib/activity/stateFacts/controlledPersistence/targetValueObject.ts:146:    .select("id, title, owner_actor_id, organization_id")
+lib/activity/stateFacts/controlledPersistence/targetValueObject.ts:167:  const ownerActorId = toNullableString(valueObject.owner_actor_id);
+lib/activity/stateFacts/controlledPersistence/types.ts:352:  actor_id: string | null;
+lib/activity/valueObjectBridge.ts:48:  performed_by_actor_id?: string | null;
+lib/activity/valueObjectBridge.ts:49:  acting_as_actor_id?: string | null;
+lib/activity/valueObjectBridge.ts:50:  acting_for_actor_id?: string | null;
+lib/activity/valueObjectBridge.ts:465:        "performed_by_actor_id",
+lib/activity/valueObjectBridge.ts:466:        "acting_as_actor_id",
+lib/activity/valueObjectBridge.ts:467:        "acting_for_actor_id",
+lib/activity/valueObjectBridge.ts:496:    .select("id, owner_actor_id, organization_id")
+lib/activity/valueObjectBridge.ts:517:    owner_actor_id: string | null;
+lib/activity/valueObjectBridge.ts:522:    ownerActorId: row.owner_actor_id,
+lib/activity/valueObjectBridge.ts:1320:        owner_actor_id:
+lib/activity/valueObjectBridge.ts:1322:          event.acting_as_actor_id ??
+... truncated: 136 more relevant lines ...
+
+----- Alternative ownership column: owner_user_id -----
+Pattern = owner_user_id
+AllTrackedCount = 888
+ContractRelevantCount = 31
+CONTRACT_RELEVANT_MATCHES:
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:67:  owner_user_id: string | null;
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:98:const SPACES_SELECTED_COLUMNS = 'id,owner_user_id,status' as const;
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:278:      if (space.owner_user_id !== mappedAppUserId) {
+lib/activity/importedActivityTemplateMapping.ts:57:  owner_user_id: string | null;
+lib/activity/importedActivityTemplateMapping.ts:405:        "id, slug, title, short_title, description, template_group, template_scope, source_type, status, is_active, owner_user_id, default_activity_type_id, legacy_activity_code_template_id, default_duration_minutes, default_status, default_source_type, default_privacy_scope, default_metadata_json, sort_order"
+lib/activity/importedActivityTemplateMapping.ts:420:      "id, slug, title, short_title, description, template_group, template_scope, source_type, status, is_active, owner_user_id, default_activity_type_id, legacy_activity_code_template_id, default_duration_minutes, default_status, default_source_type, default_privacy_scope, default_metadata_json, sort_order"
+lib/activity/importedActivityTemplateMapping.ts:423:    .eq("owner_user_id", userId)
+src/app/api/activity/intake/events/[id]/route.ts:671:  owner_user_id: string | null;
+src/app/api/activity/intake/events/[id]/route.ts:739:  return template.template_scope === "system" || template.owner_user_id === userId;
+src/app/api/activity/record/route.ts:47:  owner_user_id: string | null;
+src/app/api/activity/record/route.ts:348:    return template.owner_user_id === appUserId;
+src/app/api/activity/record/route.ts:404:    .eq("owner_user_id", appUserId)
+src/app/api/activity/start/route.ts:38:  owner_user_id: string | null;
+src/app/api/activity/start/route.ts:165:    return template.owner_user_id === appUserId;
+src/app/api/activity/start/route.ts:221:    .eq("owner_user_id", appUserId)
+src/app/api/activity/templates/route.ts:16:  owner_user_id: string | null;
+src/app/api/activity/templates/route.ts:282:    .eq("owner_user_id", appUser.id)
+src/app/api/organizations/route.ts:862:      owner_user_id: appUser.id,
+src/app/api/sync-user/route.ts:119:    .eq("owner_user_id", appUser.id)
+src/app/api/sync-user/route.ts:136:        owner_user_id: appUser.id,
+src/app/api/sync-user/route.ts:158:    .eq("owner_user_id", appUser.id)
+src/app/api/sync-user/route.ts:175:        owner_user_id: appUser.id,
+supabase/migrations/013_activity_templates_v2.sql:36:  owner_user_id uuid
+supabase/migrations/013_activity_templates_v2.sql:168:      (template_scope = 'system' and owner_user_id is null and organization_id is null)
+supabase/migrations/013_activity_templates_v2.sql:170:      (template_scope = 'user' and owner_user_id is not null)
+supabase/migrations/013_activity_templates_v2.sql:186:  and owner_user_id is null
+supabase/migrations/013_activity_templates_v2.sql:190:on public.activity_templates(owner_user_id, slug)
+supabase/migrations/013_activity_templates_v2.sql:192:  and owner_user_id is not null;
+supabase/migrations/013_activity_templates_v2.sql:203:on public.activity_templates(owner_user_id);
+supabase/migrations/013_activity_templates_v2.sql:399:    and owner_user_id is null
+supabase/migrations/013_activity_templates_v2.sql:406:      owner_user_id,
+
+----- Alternative ownership column: created_by_user_id -----
+Pattern = created_by_user_id
+AllTrackedCount = 1130
+ContractRelevantCount = 70
+CONTRACT_RELEVANT_MATCHES:
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:92:  created_by_user_id: string | null;
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:103:  'id,created_by_user_id,organization_name,organization_type,status' as const;
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:495:      if (organization.created_by_user_id !== mappedAppUserId) {
+src/app/admin/object-action/suggestions/page.tsx:49:  created_by_user_id: string | null;
+src/app/admin/object-action/suggestions/page.tsx:677:      created_by_user_id,
+src/app/admin/object-action/suggestions/page.tsx:2047:                              {suggestion.created_by_user_id ?? "ÔÇö"}
+src/app/api/geo/areas/route.ts:30:  created_by_user_id: string | null;
+src/app/api/geo/areas/route.ts:196:      row.created_by_user_id === appUser.id &&
+src/app/api/geo/areas/route.ts:261:      created_by_user_id,
+src/app/api/geo/areas/route.ts:320:      created_by_user_id,
+src/app/api/geo/areas/route.ts:379:      created_by_user_id,
+src/app/api/geo/areas/route.ts:384:    .eq("created_by_user_id", input.appUser.id)
+src/app/api/geo/suggestions/route.ts:36:  created_by_user_id: string | null;
+src/app/api/geo/suggestions/route.ts:427:      created_by_user_id,
+src/app/api/geo/suggestions/route.ts:557:      created_by_user_id,
+src/app/api/geo/suggestions/route.ts:565:    .eq("created_by_user_id", appUser.id)
+src/app/api/geo/suggestions/route.ts:694:      created_by_user_id: appUser.id,
+src/app/api/geo/suggestions/route.ts:715:      created_by_user_id,
+src/app/api/object-action/suggestions/route.ts:64:  created_by_user_id: string | null;
+src/app/api/object-action/suggestions/route.ts:231:  created_by_user_id,
+src/app/api/object-action/suggestions/route.ts:2319:      created_by_user_id: appUser?.id ?? null,
+src/app/api/offers/route.ts:353:    .select("id, organization_name, organization_type, status, created_by_user_id")
+src/app/api/offers/route.ts:355:    .eq("created_by_user_id", appUserId)
+src/app/api/organizations/[id]/location/route.ts:16:  created_by_user_id: string | null;
+src/app/api/organizations/[id]/location/route.ts:288:      created_by_user_id,
+src/app/api/organizations/[id]/location/route.ts:325:  if (organization.created_by_user_id !== input.appUserId) {
+src/app/api/organizations/[id]/location/route.ts:641:      .eq("created_by_user_id", appUser.id)
+src/app/api/organizations/[id]/location/route.ts:646:        created_by_user_id,
+src/app/api/organizations/route.ts:18:  created_by_user_id: string | null;
+src/app/api/organizations/route.ts:169:      created_by_user_id,
+src/app/api/organizations/route.ts:205:    input.geoArea.created_by_user_id === input.appUserId
+src/app/api/organizations/route.ts:488:      geoArea.created_by_user_id === appUserId &&
+src/app/api/organizations/route.ts:517:      created_by_user_id,
+src/app/api/organizations/route.ts:629:    .eq("created_by_user_id", appUser.id)
+src/app/api/organizations/route.ts:773:      created_by_user_id: appUser.id,
+src/app/api/purchase-confirmations/[id]/confirm/route.ts:87:    .select("id, created_by_user_id")
+src/app/api/purchase-confirmations/[id]/confirm/route.ts:101:  if (organization.created_by_user_id !== appUserId) {
+src/app/api/purchase-confirmations/[id]/events/route.ts:14:  created_by_user_id: string | null;
+src/app/api/purchase-confirmations/[id]/events/route.ts:144:        created_by_user_id,
+src/app/api/purchase-confirmations/[id]/events/route.ts:171:    relatedOrganization?.created_by_user_id === appUser.id &&
+... truncated: 30 more relevant lines ...
+
+----- Alternative ownership column: created_by -----
+Pattern = created_by
+AllTrackedCount = 1311
+ContractRelevantCount = 76
+CONTRACT_RELEVANT_MATCHES:
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:24:  | 'organization_not_created_by_mapped_user'
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:92:  created_by_user_id: string | null;
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:103:  'id,created_by_user_id,organization_name,organization_type,status' as const;
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:495:      if (organization.created_by_user_id !== mappedAppUserId) {
+lib/activity/controlledIntake/ownershipContextResolutionReadOnly.ts:497:          status: 'organization_not_created_by_mapped_user',
+lib/activity/controlledIntake/validator.ts:42:  "created_by",
+lib/activity/stateFacts/controlledPersistence/payloadBuilder.ts:236:      not_created_by_ai_directly: true,
+lib/activity/stateFacts/controlledPersistence/types.ts:232:    not_created_by_ai_directly: true;
+lib/activity/stateFacts/controlledPersistence/validator.ts:238:  const metadataCreatedByAi = readBooleanProperty(candidate.metadataJson, "created_by_ai_directly") === true;
+src/app/admin/object-action/suggestions/page.tsx:49:  created_by_user_id: string | null;
+src/app/admin/object-action/suggestions/page.tsx:677:      created_by_user_id,
+src/app/admin/object-action/suggestions/page.tsx:2047:                              {suggestion.created_by_user_id ?? "ÔÇö"}
+src/app/api/geo/areas/route.ts:30:  created_by_user_id: string | null;
+src/app/api/geo/areas/route.ts:196:      row.created_by_user_id === appUser.id &&
+src/app/api/geo/areas/route.ts:261:      created_by_user_id,
+src/app/api/geo/areas/route.ts:320:      created_by_user_id,
+src/app/api/geo/areas/route.ts:379:      created_by_user_id,
+src/app/api/geo/areas/route.ts:384:    .eq("created_by_user_id", input.appUser.id)
+src/app/api/geo/suggestions/route.ts:36:  created_by_user_id: string | null;
+src/app/api/geo/suggestions/route.ts:427:      created_by_user_id,
+src/app/api/geo/suggestions/route.ts:557:      created_by_user_id,
+src/app/api/geo/suggestions/route.ts:565:    .eq("created_by_user_id", appUser.id)
+src/app/api/geo/suggestions/route.ts:694:      created_by_user_id: appUser.id,
+src/app/api/geo/suggestions/route.ts:715:      created_by_user_id,
+src/app/api/object-action/suggestions/route.ts:64:  created_by_user_id: string | null;
+src/app/api/object-action/suggestions/route.ts:231:  created_by_user_id,
+src/app/api/object-action/suggestions/route.ts:2319:      created_by_user_id: appUser?.id ?? null,
+src/app/api/offers/route.ts:353:    .select("id, organization_name, organization_type, status, created_by_user_id")
+src/app/api/offers/route.ts:355:    .eq("created_by_user_id", appUserId)
+src/app/api/organizations/[id]/location/route.ts:16:  created_by_user_id: string | null;
+src/app/api/organizations/[id]/location/route.ts:288:      created_by_user_id,
+src/app/api/organizations/[id]/location/route.ts:325:  if (organization.created_by_user_id !== input.appUserId) {
+src/app/api/organizations/[id]/location/route.ts:641:      .eq("created_by_user_id", appUser.id)
+src/app/api/organizations/[id]/location/route.ts:646:        created_by_user_id,
+src/app/api/organizations/route.ts:18:  created_by_user_id: string | null;
+src/app/api/organizations/route.ts:169:      created_by_user_id,
+src/app/api/organizations/route.ts:205:    input.geoArea.created_by_user_id === input.appUserId
+src/app/api/organizations/route.ts:488:      geoArea.created_by_user_id === appUserId &&
+src/app/api/organizations/route.ts:517:      created_by_user_id,
+src/app/api/organizations/route.ts:629:    .eq("created_by_user_id", appUser.id)
+... truncated: 36 more relevant lines ...
+
+----- Alternative ownership column: owner_id -----
+Pattern = owner_id
+AllTrackedCount = 494
+ContractRelevantCount = 1
+CONTRACT_RELEVANT_MATCHES:
+lib/activity/controlledIntake/validator.ts:28:  "owner_id",
+
+----- Alternative ownership column: profile_id -----
+Pattern = profile_id
+AllTrackedCount = 114
+ContractRelevantCount = 1
+CONTRACT_RELEVANT_MATCHES:
+lib/activity/controlledIntake/validator.ts:38:  "profile_id",
+
+8. Safety / guardrails
+- No endpoint call was executed by O-DJ-R13B.
+- No browser runtime was executed by O-DJ-R13B.
+- No runtime DB read was triggered by O-DJ-R13B.
+- No DB write.
+- No SQL execution.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+- No code patch.
+- TypeScript was not repeated because O-DJ-R13A3 already passed and O-DJ-R13B is report-only.
+
+9. Decision
+PASS_O_DJ_R13B_COMPACT_SCHEMA_CONTRACT_DECISION_SUMMARY_CREATED_NO_CODE_PATCH_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_EXECUTION_NO_AI
+
+10. Next step
+Use this compact summary to implement O-DJ-R13C.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
