@@ -1,0 +1,214 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-A0 — State Readiness Decisions / Unified VO / No Subtypes
+
+Date: 2026-05-28 13:59:25
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before report: aeb7286
+
+Purpose:
+Document the architectural decisions required before C8-I-A1 state/context hooks readiness map.
+
+Safety:
+- Doc-only gate.
+- No runtime call.
+- No browser call.
+- No DB read.
+- No DB write.
+- No SQL/RPC.
+- No AI/OpenAI.
+- No code patch.
+- No migration.
+- No activity_events write.
+
+Previous closed gate:
+O-DJ-R14H-A confirmed controlled-intake readiness decision:
+READY_AS_NO_WRITE_PREVIEW_REFERENCE_FOR_C8_I_A0.
+
+Controlled-intake status:
+- controlled-intake route is accepted only as a no-write preview reference.
+- Explicit no-write header is required.
+- server_side_read_only_mapping_preview mode was runtime-verified.
+- Valid minimal payload requires inputText and title.
+- Runtime proof confirmed HTTP 200 OK with ok=true and no-write guardrails.
+- DB read may execute only for server-side read-only app-user mapping.
+- DB write remains disabled.
+- SQL/RPC remains disabled.
+- AI/OpenAI remains disabled.
+- activity_events insert remains disabled.
+- semantic persistence remains disabled.
+- Value Object creation remains disabled.
+- state facts/deltas/snapshots creation remains disabled.
+
+Decision 1 — Unified Value Object:
+Value Object remains a single unified entity.
+Do not introduce mandatory Value Object subtypes such as context_value_object, biological_value_object, process_value_object, baseline_value_object or similar structural subtype axes.
+
+Reason:
+One object may simultaneously be a process, context, goal, factor, commercial object, personal analytics object and source of influence.
+Mandatory subtypes would create sorting, filtering and future-extension conflicts.
+
+How VO roles are determined instead:
+- semantic category signature
+- parent/child hierarchy
+- actor ownership/context
+- source activity/event exposure
+- state dimensions
+- similarity edges
+- relevance/influence edges
+- current and baseline context
+
+Decision 2 — State tables instead of object types:
+State must be stored outside the Value Object type system.
+The platform should use universal state contracts/tables such as:
+- state_dimensions
+- value_object_state_facts
+- activity_state_deltas
+- value_object_state_snapshots
+- state_relevance_rules
+- value_object_similarity_edges
+- value_object_relevance_edges
+
+Decision 3 — Category is not a state fact:
+A category candidate may become a hook or signal, but it must not automatically become a state fact.
+State facts require a separate source/confidence/evidence/window/status/correction contract.
+
+Allowed:
+- category candidate
+- semantic hook
+- metric candidate
+- possible state signal
+- risk flag
+
+Not allowed:
+- converting AI category output directly into active ontology truth
+- converting category candidate directly into state fact
+- claiming medical, hormonal, emotional or financial facts without evidence contract
+
+Decision 4 — Direct measurement vs semantic hook vs inferred state:
+C8-I must separate:
+- direct measurement
+- user self-report
+- semantic hook
+- inferred state
+- risk flag
+- forbidden overclaim
+
+Examples:
+- walking can be a physical activity hook, but not automatic muscle growth.
+- coffee can be an alertness/sleep-risk signal, but not exact dopamine/cortisol state.
+- lead-generation can be business effort, but not income received or closed deal.
+- childcare/helping child learn can be family care load hook, but not automatic family climate improvement.
+
+Decision 5 — Similarity is not relevance:
+Similarity and relevance are separate mechanisms.
+
+Similarity:
+- based mostly on weighted semantic category overlap.
+- example: two language-learning activities are similar.
+
+Relevance:
+- based on influence/rules/current constraints.
+- example: sleep is relevant to language learning even if it is not semantically similar.
+
+Decision 6 — Baseline Context is graph-compatible:
+Baseline Context is not one questionnaire and not one Value Object.
+It is a graph-compatible layer of:
+- long-term factors
+- historical activities
+- stable and slow-changing Value Objects
+- actors
+- relationships
+- state facts
+- influence/relevance links
+- source/confidence/evidence metadata
+
+Baseline Context must not become:
+- social rating
+- deterministic destiny model
+- uncontrolled medical/social claim layer
+
+Sensitive baseline factors must remain:
+- voluntary
+- private by default
+- editable/correctable
+- source/confidence/evidence based
+- protected by privacy level
+
+Decision 7 — Next Best Action v0:
+First recommendation layer must not start with automatic “do X now”.
+It starts with weakest-direction detection.
+
+Process:
+1. Detect weakest or under-attended directions.
+2. Sort directions from weakest to strongest.
+3. Ask user which direction they want to work on now.
+4. After user choice, produce action candidates.
+5. Filter candidates by current state, baseline modifiers, obligations, environment, time window and risk filters.
+6. Offer variants from light/game-like to deep analytical or revenue-oriented.
+7. Collect feedback/correction as Semantic Capital.
+
+Initial top-level directions may include:
+- health
+- recovery
+- family
+- finance
+- career
+- languages
+- project
+- work
+- rest
+- social
+- user-defined strategic directions
+
+Decision 8 — C8-I implementation order:
+Do not start state engine implementation immediately.
+The order remains:
+1. C8-I-A0 decisions.
+2. C8-I-A1 state/context hooks readiness map.
+3. C8-I-A2 fact/signal contract.
+4. C8-I-A3 MVP state dimensions.
+5. C8-I-A4 similarity/relevance resolver concept.
+6. C8-I-B/C/D schema/governance audit, SQL audit, additive migration design.
+7. C8-I-E+ controlled implementation and proof routes.
+
+Decision 9 — SQL/migration guardrail:
+No SQL migration before:
+- hooks readiness map
+- fact/signal contract
+- MVP state dimensions
+- SQL audit
+
+For future SQL migrations:
+create table -> indexes -> enable row level security -> policies -> explicit GRANT.
+GRANT does not replace RLS.
+
+Decision 10 — Current C8-I-A0 conclusion:
+C8-I-A0 decisions are documented.
+The project may proceed to C8-I-A1 state/context hooks readiness map.
+
+Definition of Done:
+- Unified VO decision documented.
+- No mandatory VO subtypes decision documented.
+- State tables instead of object types documented.
+- Category != state fact documented.
+- Direct measurement / semantic hook / inferred state / risk flag / forbidden overclaim separation documented.
+- Similarity != relevance documented.
+- Baseline Context graph decision documented.
+- Weakest-direction NBA v0 documented.
+- Implementation order documented.
+- No runtime, DB write, SQL, AI/OpenAI or code patch performed.
+
+Decision:
+READY_FOR_C8_I_A1_STATE_CONTEXT_HOOKS_READINESS_MAP
+
+Next step:
+C8-I-A1 — create state/context hooks readiness map covering at minimum:
+- family/care
+- business/sales
+- physiological proxy
+- emotional
+- cognitive
+- financial
+- environment
+- risk/overclaim protection
+- metric hooks
