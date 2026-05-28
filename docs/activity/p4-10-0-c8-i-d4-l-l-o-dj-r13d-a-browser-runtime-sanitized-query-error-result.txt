@@ -1,0 +1,83 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R13D-A - browser runtime sanitized query error result
+Date = 2026-05-28 08:23:44 +02:00
+Status = BROWSER_RUNTIME_RESULT_RECORDED
+
+1. Baseline
+Expected HEAD = d211103
+Actual HEAD = d211103
+Working tree before report = clean
+
+2. Browser runtime source
+User-provided browser console output from O-DJ-R13D.
+Endpoint tested: /api/activity/debug/ownership-context-positive-auto-candidate-read-only-test
+Runtime was executed in browser, not by this PowerShell report script.
+
+3. Runtime summary
+missingHeaderPass = true
+wrongHeaderPass = true
+validResolvedPass = false
+validNoCandidateWithSanitizedErrorsPass = true
+validNoCandidateNoErrorsInconclusive = false
+validCandidateFailed = false
+guardrailsPass = true
+forbiddenKeysPass = true
+suspiciousValuesPass = true
+sanitizedCategoriesPass = true
+anyGuardrailFailures = []
+anyForbiddenKeys = []
+anySuspiciousValues = []
+anyInvalidSanitizedCategoryHits = []
+
+4. Valid-header case
+HTTP status = 404
+code = OWNERSHIP_CONTEXT_POSITIVE_AUTO_CANDIDATE_NOT_FOUND
+appUserMappingStatus = mapped_user_found
+appUserMapped = true
+candidateSearchExecuted = true
+candidateFound = false
+candidateSearchErrorCategories = [column_not_found]
+ownershipContextResolutionExecuted = false
+ownershipContextResolutionStatus = not_executed
+
+5. Candidate search result
+owned_space: attempted = true, rowCountCategory = unknown, usableCandidateFound = false, sanitizedQueryErrorCategory = column_not_found
+actor_space_role_space: attempted = true, rowCountCategory = unknown, usableCandidateFound = false, sanitizedQueryErrorCategory = column_not_found
+creator_organization: attempted = true, rowCountCategory = unknown, usableCandidateFound = false, sanitizedQueryErrorCategory = column_not_found
+organization_actor: attempted = true, rowCountCategory = unknown, usableCandidateFound = false, sanitizedQueryErrorCategory = column_not_found
+
+6. Interpretation
+The O-DJ-R13C patch works: sanitized query error categories are visible.
+The endpoint remains safe and sanitized.
+The mapping layer still works: mapped_user_found.
+The candidate search fails before resolver execution.
+All four candidate lookup paths currently hit column_not_found.
+This confirms that the current positive diagnostic lookup contract does not match runtime DB columns.
+
+7. Safety / guardrails
+- Missing/wrong header cases stayed fail-closed before auth/mapping/candidate/resolver.
+- No forbidden keys were exposed.
+- No suspicious values were exposed.
+- Sanitized categories were from the allowed list.
+- dbWriteExecuted remained false.
+- sqlExecuted remained false.
+- aiCallExecuted remained false.
+- activityEventsInserted remained false.
+- semanticCandidatesPersisted remained false.
+- valueObjectsCreated remained false.
+- stateFactsCreated remained false.
+- stateDeltasCreated remained false.
+- stateSnapshotsCreated remained false.
+- responseSanitized remained true.
+- No controlled-intake integration.
+- No activity_events write.
+- TypeScript passed: npx.cmd tsc --noEmit.
+
+8. Decision
+PASS_O_DJ_R13D_A_SANITIZED_QUERY_ERROR_CATEGORIES_VISIBLE_COLUMN_NOT_FOUND_CONFIRMED_NO_FORBIDDEN_OUTPUT_NO_WRITE_GUARDRAIL_BREAK
+
+9. Next step
+O-DJ-R13E should inspect and choose the correct candidate lookup contract.
+Do not patch production logic yet.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
