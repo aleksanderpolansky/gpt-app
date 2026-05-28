@@ -1,0 +1,750 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-A1 — State/Context Hooks Readiness Map
+
+Date: 2026-05-28 15:17:06
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before report: 18ff592
+
+Purpose:
+Create the C8-I-A1 state/context hooks readiness map.
+This document defines which semantic signals may become hooks for future state facts, state deltas, state snapshots, relevance rules and Next Best Action filtering.
+
+Safety:
+- Doc-only gate.
+- No runtime call.
+- No browser call.
+- No DB read.
+- No DB write.
+- No SQL/RPC.
+- No AI/OpenAI.
+- No code patch.
+- No migration.
+- No activity_events write.
+- No state engine implementation.
+
+Previous closed gate:
+C8-I-A0-A confirmed:
+READY_FOR_C8_I_A1_STATE_CONTEXT_HOOKS_READINESS_MAP.
+
+Core rule:
+A hook is not a state fact.
+A hook is not ontology truth.
+A hook is not a medical, financial, emotional or social claim.
+A hook is only a candidate signal that may later be processed by the C8-I-A2 fact/signal contract.
+
+Hook lifecycle:
+1. Activity/event/free text contains semantic material.
+2. Category derivation may produce category candidates and semantic hooks.
+3. Hooks remain inactive/candidate-level until validated by fact/signal rules.
+4. C8-I-A2 decides whether a hook is:
+   - direct measurement
+   - user self-report
+   - semantic hook
+   - inferred state
+   - risk flag
+   - forbidden overclaim
+5. Only after later contracts/migrations may state facts/deltas/snapshots be persisted.
+
+Universal hook fields expected later:
+- hookKey
+- hookGroup
+- sourceTextFragment or evidence summary
+- sourceType
+- confidence
+- privacyLevel
+- sensitivityLevel
+- possibleStateDimensions
+- allowedInterpretation
+- forbiddenOverclaims
+- requiredEvidenceForFact
+- recommendedNextContractHandling
+- correctionAllowed
+
+Readiness map groups:
+1. Family / care / social role hooks
+2. Business / sales / career hooks
+3. Physiological proxy hooks
+4. Emotional proxy hooks
+5. Cognitive / attention hooks
+6. Financial pressure / money hooks
+7. Environment / context hooks
+8. Time / load / obligation hooks
+9. Metric / quantitative hooks
+10. Risk / forbidden overclaim hooks
+
+============================================================
+1. Family / care / social role hooks
+============================================================
+
+Examples of input:
+- I helped my child with math.
+- I cooked dinner for the family.
+- I drove my daughter to school.
+- I had a difficult talk with my partner.
+- I took care of my mother.
+- I had to interrupt work because of a family obligation.
+
+Candidate hooks:
+- family_context
+- childcare
+- caregiving
+- parental_care
+- family_obligation
+- household_responsibility
+- social_role_parent
+- social_role_partner
+- social_role_caregiver
+- family_support_activity
+- family_conflict_signal
+- interrupted_by_family_context
+
+Possible future state dimensions:
+- family_care_load
+- social_obligation_load
+- recovery_constraint
+- attention_fragmentation
+- time_pressure
+- emotional_load
+
+Allowed interpretation:
+- This activity may indicate family/care involvement.
+- This activity may consume time, attention or recovery resources.
+- This activity may be relevant to Next Best Action scheduling.
+
+Forbidden overclaims:
+- Do not infer family relationship quality.
+- Do not infer child wellbeing.
+- Do not infer psychological diagnosis.
+- Do not infer conflict severity without explicit user report.
+- Do not infer moral evaluation of the user.
+
+Required evidence for future fact:
+- user self-report
+- repeated activity pattern
+- explicit role/relationship metadata
+- optional calendar/time evidence
+- user correction/confirmation
+
+C8-I-A2 handling:
+semantic_hook by default.
+Can become user_self_report only if user explicitly says "I feel", "I am responsible for", "I must", "I am exhausted because of".
+
+============================================================
+2. Business / sales / career hooks
+============================================================
+
+Examples of input:
+- I called three potential clients.
+- I sent a follow-up email.
+- I prepared a B2B offer.
+- I studied German for a sales manager interview.
+- I worked on my CV.
+- I had a negotiation with a customer.
+- I checked CRM tasks.
+
+Candidate hooks:
+- lead_generation
+- outbound_sales
+- follow_up
+- discovery_call
+- negotiation
+- offer_preparation
+- crm_work
+- customer_objection
+- sales_pipeline_activity
+- career_search
+- job_application
+- interview_preparation
+- professional_learning
+- business_strategy
+- revenue_related_activity
+
+Possible future state dimensions:
+- career_progress
+- business_development_effort
+- sales_pipeline_momentum
+- professional_skill_growth
+- financial_opportunity_signal
+- cognitive_load
+- communication_load
+
+Allowed interpretation:
+- This activity may indicate career/business effort.
+- This activity may be relevant to finance/career/project directions.
+- It may contribute to pipeline momentum if linked to a real lead/opportunity later.
+
+Forbidden overclaims:
+- Do not infer income received.
+- Do not infer deal closed.
+- Do not infer employer/customer commitment.
+- Do not infer professional competence from activity alone.
+- Do not infer business success from effort alone.
+
+Required evidence for future fact:
+- explicit deal status
+- CRM object
+- user-confirmed result
+- payment/order/contract evidence
+- repeated pipeline data
+
+C8-I-A2 handling:
+semantic_hook by default.
+metric_candidate if count, duration, money amount, number of calls/emails or conversion stage is present.
+
+============================================================
+3. Physiological proxy hooks
+============================================================
+
+Examples of input:
+- I walked for 30 minutes.
+- I did pull-ups.
+- I drank coffee.
+- I slept 5 hours.
+- I ate a protein meal.
+- I feel tired after work.
+- I stretched my back.
+
+Candidate hooks:
+- physical_activity
+- walking
+- strength_training
+- mobility
+- stretching
+- sleep_duration
+- food_intake
+- hydration
+- caffeine_intake
+- recovery_activity
+- fatigue_self_report
+- pain_self_report
+- physical_load
+- rest_deficit_possible
+
+Possible future state dimensions:
+- physical_load
+- recovery_need
+- fatigue
+- energy
+- sleep_pressure
+- musculoskeletal_load
+- nutrition_support_signal
+
+Allowed interpretation:
+- This activity may influence physical load or recovery.
+- Sleep/food/caffeine may be relevant to energy/focus, but only as proxy signals.
+- User self-report can be recorded as self-report, not objective medical fact.
+
+Forbidden overclaims:
+- Do not infer exact hormones.
+- Do not infer testosterone/cortisol/dopamine levels.
+- Do not infer diagnosis.
+- Do not infer injury unless explicitly reported.
+- Do not infer medical risk without explicit symptoms or evidence.
+
+Required evidence for future fact:
+- wearable/device data
+- user self-report
+- duration/intensity
+- medical data only if voluntarily provided
+- correction/confirmation
+
+C8-I-A2 handling:
+semantic_hook for activity type.
+metric_candidate for duration/reps/sets/sleep hours.
+user_self_report for phrases like "I feel tired", "I have pain".
+forbidden_overclaim for hormonal/medical certainty without evidence.
+
+============================================================
+4. Emotional proxy hooks
+============================================================
+
+Examples of input:
+- I was irritated after the call.
+- I felt calm after walking.
+- I was anxious before the interview.
+- I avoided the task because I felt overwhelmed.
+- I felt motivated after finishing the report.
+
+Candidate hooks:
+- stress_self_report
+- calm_self_report
+- anxiety_self_report
+- irritation_self_report
+- motivation_self_report
+- overwhelm_self_report
+- emotional_recovery_signal
+- emotional_load_signal
+- avoidance_due_to_emotion
+
+Possible future state dimensions:
+- stress
+- emotional_load
+- motivation
+- recovery
+- avoidance_risk
+- focus_risk
+
+Allowed interpretation:
+- User explicitly reported an emotional state.
+- Emotional state may affect recommendations and task difficulty.
+- Emotional hooks may change suggested next action intensity.
+
+Forbidden overclaims:
+- Do not infer psychiatric diagnosis.
+- Do not infer stable personality trait from one event.
+- Do not infer emotional state if not stated.
+- Do not infer relationship quality or workplace toxicity from one phrase alone.
+
+Required evidence for future fact:
+- user self-report
+- repeated pattern
+- optional context
+- explicit severity/intensity rating
+- correction/confirmation
+
+C8-I-A2 handling:
+user_self_report when emotional phrase is explicit.
+semantic_hook if only contextual risk exists.
+risk_flag if intensity or repetition suggests overload.
+
+============================================================
+5. Cognitive / attention hooks
+============================================================
+
+Examples of input:
+- I studied German for 45 minutes.
+- I lost focus after 20 minutes.
+- I was distracted by noise.
+- I read documentation passively.
+- I wrote an analytical report.
+- I switched tasks too often.
+
+Candidate hooks:
+- deep_work
+- passive_learning
+- active_learning
+- language_learning
+- analytical_work
+- attention_loss_self_report
+- distraction_noise
+- task_switching
+- cognitive_load
+- focus_context
+- learning_session
+- comprehension_self_rating_possible
+
+Possible future state dimensions:
+- focus
+- attention_load
+- cognitive_load
+- learning_progress
+- mental_fatigue
+- context_switching_load
+
+Allowed interpretation:
+- This activity may consume cognitive resources.
+- This activity may train a skill or language.
+- Distractions may affect focus and future scheduling.
+
+Forbidden overclaims:
+- Do not infer intelligence.
+- Do not infer cognitive disorder.
+- Do not infer real comprehension unless measured or self-rated.
+- Do not infer language level from one activity.
+
+Required evidence for future fact:
+- duration
+- mode: passive/active/notes/practice
+- self-rated comprehension
+- output artifact
+- test result
+- repeated pattern
+
+C8-I-A2 handling:
+semantic_hook by default.
+metric_candidate if minutes/counts/ratings are present.
+user_self_report if user explicitly rates focus/comprehension/fatigue.
+
+============================================================
+6. Financial pressure / money hooks
+============================================================
+
+Examples of input:
+- I need more income.
+- I paid a bill.
+- I bought equipment.
+- I received money from a client.
+- I spent time searching for better paid work.
+- I postponed a purchase.
+
+Candidate hooks:
+- income_need
+- expense
+- payment
+- purchase
+- revenue_received
+- financial_pressure_self_report
+- job_income_strategy
+- cost_control
+- investment_in_tools
+- delayed_spending
+
+Possible future state dimensions:
+- financial_pressure
+- income_progress
+- business_revenue_signal
+- spending_load
+- career_priority_pressure
+
+Allowed interpretation:
+- This may be relevant to finance/career/business directions.
+- Explicit amounts may be metric candidates.
+- User self-report may indicate financial pressure.
+
+Forbidden overclaims:
+- Do not infer poverty/wealth status.
+- Do not infer exact financial condition without user-provided data.
+- Do not infer tax/legal meaning.
+- Do not infer profit from revenue without costs.
+
+Required evidence for future fact:
+- explicit amount
+- currency
+- transaction type
+- user confirmation
+- optional document/payment evidence
+
+C8-I-A2 handling:
+metric_candidate if amount/currency present.
+user_self_report for "I need", "I worry", "pressure".
+semantic_hook for money-related activity.
+
+============================================================
+7. Environment / context hooks
+============================================================
+
+Examples of input:
+- I worked at home alone.
+- I was at the office.
+- It was noisy.
+- I was commuting.
+- I had only 20 minutes before work.
+- I was in a queue.
+- I could not use the computer.
+
+Candidate hooks:
+- home_context
+- office_context
+- commute_context
+- noise_distraction
+- limited_time_window
+- no_computer_available
+- mobile_only_context
+- waiting_time_context
+- family_nearby_context
+- workplace_constraint
+
+Possible future state dimensions:
+- environment_fit
+- focus_risk
+- time_window_constraint
+- tool_availability
+- interruption_risk
+- activity_feasibility
+
+Allowed interpretation:
+- Environment can restrict or enable possible next actions.
+- Context can help select low/high cognitive load activities.
+- Tool availability affects recommendation feasibility.
+
+Forbidden overclaims:
+- Do not infer exact location unless provided.
+- Do not store precise sensitive geolocation by default.
+- Do not infer unsafe environment without explicit evidence.
+
+Required evidence for future fact:
+- user statement
+- calendar/location setting if explicitly allowed
+- device/context metadata if explicitly allowed
+- correction/confirmation
+
+C8-I-A2 handling:
+semantic_hook by default.
+risk_flag if context strongly blocks planned activity.
+privacy_sensitive if location-like.
+
+============================================================
+8. Time / load / obligation hooks
+============================================================
+
+Examples of input:
+- I worked 8 hours.
+- I had only 10 minutes.
+- I was on duty.
+- I had a night shift.
+- I had to stop because of work.
+- I slept late.
+- I had no multitasking possibility.
+
+Candidate hooks:
+- work_shift
+- night_shift
+- short_time_window
+- hard_obligation
+- no_multitasking_context
+- fatigue_risk_from_workload
+- sleep_schedule_disruption
+- blocked_time
+- time_pressure
+- recovery_needed_after_shift
+
+Possible future state dimensions:
+- time_pressure
+- recovery_need
+- fatigue
+- availability
+- task_feasibility
+- obligation_load
+
+Allowed interpretation:
+- Time/obligation hooks can constrain recommendations.
+- Heavy work blocks may increase recovery priority.
+- Short windows may suggest micro-actions.
+
+Forbidden overclaims:
+- Do not infer chronic burnout from one long shift.
+- Do not infer employer/legal violation.
+- Do not infer medical incapacity.
+
+Required evidence for future fact:
+- duration
+- calendar/work schedule
+- user confirmation
+- repeated pattern
+- self-report of fatigue
+
+C8-I-A2 handling:
+metric_candidate if duration/time is present.
+semantic_hook for obligation.
+risk_flag if sleep/recovery/fatigue risk is explicit or repeated.
+
+============================================================
+9. Metric / quantitative hooks
+============================================================
+
+Examples of input:
+- 45 minutes German.
+- 3 calls.
+- 20 push-ups.
+- 10 EUR.
+- 5/5 comprehension.
+- 2 hours sleep.
+- 1.2 km walk.
+
+Candidate hooks:
+- duration_minutes
+- distance_km
+- money_amount
+- count
+- rating
+- repetitions
+- sets
+- sleep_hours
+- task_quantity
+- comprehension_score
+- intensity_score
+
+Possible future state dimensions:
+- depends on linked activity and dimension
+- physical_load
+- learning_progress
+- financial_signal
+- focus
+- recovery
+- time_allocation
+
+Allowed interpretation:
+- Quantities are metric candidates.
+- Metrics require unit normalization.
+- Metrics should be linked to source activity and semantic context.
+
+Forbidden overclaims:
+- Do not treat quantity as quality.
+- Do not treat time spent as progress without quality signal.
+- Do not infer performance improvement automatically.
+- Do not infer financial success from money-related number alone.
+
+Required evidence for future fact:
+- unit
+- value
+- context
+- source
+- normalization rule
+- correction possibility
+
+C8-I-A2 handling:
+metric_candidate.
+May later become direct_measurement if source is reliable and unit-normalized.
+
+============================================================
+10. Risk / forbidden overclaim hooks
+============================================================
+
+Risk triggers:
+- medical terms without evidence
+- hormone claims without measurement
+- psychological diagnosis terms
+- financial/legal conclusions
+- social ranking or social scoring
+- sensitive identity or protected attributes
+- exact location
+- family/child wellbeing claims
+- workplace legal conclusions
+- AI certainty language
+
+Candidate hooks:
+- medical_overclaim_risk
+- hormone_overclaim_risk
+- diagnosis_overclaim_risk
+- financial_overclaim_risk
+- legal_overclaim_risk
+- privacy_sensitive_context
+- location_sensitive_context
+- social_rating_risk
+- child_sensitive_context
+- workplace_sensitive_context
+
+Possible future state dimensions:
+- not a normal state dimension by default
+- used as validation and suppression layer
+- may influence privacy/risk handling
+
+Allowed interpretation:
+- Output must be softened or blocked.
+- The system should ask for confirmation/evidence when needed.
+- The system should avoid converting ambiguous text into factual claims.
+
+Forbidden overclaims:
+- Any unsupported diagnosis.
+- Any unsupported hormone state.
+- Any unsupported legal/tax/financial certainty.
+- Any social score.
+- Any hidden inference about sensitive personal attributes.
+
+Required evidence for future fact:
+- explicit user statement
+- explicit document/evidence
+- professional source only when appropriate
+- user permission
+- privacy/sensitivity handling
+
+C8-I-A2 handling:
+forbidden_overclaim or risk_flag.
+
+============================================================
+Cross-group mapping to future MVP state dimensions
+============================================================
+
+energy:
+- physiological proxy
+- sleep
+- food/hydration
+- work load
+- emotional self-report
+- cognitive load
+
+fatigue:
+- sleep deficit
+- long work
+- physical load
+- attention loss
+- user self-report
+
+focus:
+- deep work
+- distraction
+- noise
+- environment
+- task switching
+- cognitive load
+
+stress:
+- emotional self-report
+- conflict
+- financial pressure
+- deadline/time pressure
+- overload
+
+recovery:
+- sleep
+- rest
+- stretching
+- calm self-report
+- low-load activity
+- post-shift recovery
+
+cognitive_load:
+- analytical work
+- language learning
+- planning
+- documentation
+- multitasking
+
+physical_load:
+- walking
+- exercise
+- manual work
+- long standing
+- pain self-report
+
+family_care:
+- childcare
+- caregiving
+- household responsibility
+- family obligation
+- parental role
+
+financial_pressure:
+- income need
+- expenses
+- delayed spending
+- revenue search
+- debt/bill pressure if explicitly stated
+
+goal_balance:
+- over-attention to one direction
+- under-attention to weak directions
+- time distribution
+- recovery vs work imbalance
+- family/work conflict
+
+============================================================
+Readiness decision
+============================================================
+
+C8-I-A1 establishes a hooks map only.
+It does not implement state persistence.
+It does not introduce new Value Object subtypes.
+It does not treat categories as state facts.
+It prepares C8-I-A2 fact/signal contract.
+
+Decision:
+READY_FOR_C8_I_A2_FACT_SIGNAL_CONTRACT
+
+Definition of Done:
+- Family/care hooks documented.
+- Business/sales/career hooks documented.
+- Physiological proxy hooks documented.
+- Emotional proxy hooks documented.
+- Cognitive/attention hooks documented.
+- Financial hooks documented.
+- Environment/context hooks documented.
+- Time/load/obligation hooks documented.
+- Metric/quantitative hooks documented.
+- Risk/forbidden overclaim hooks documented.
+- Cross-group MVP state dimension mapping documented.
+- No runtime, DB read/write, SQL/RPC, AI/OpenAI, migration or code patch performed.
+
+Next step:
+C8-I-A1-A — commit this report.
+Then C8-I-A2 — create fact/signal contract separating direct measurement, user self-report, semantic hook, inferred state, risk flag and forbidden overclaim.
