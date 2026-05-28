@@ -1,0 +1,211 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-C — Static SQL Audit Before State Migrations
+
+Date: 2026-05-28 18:16:26
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before report: 4db7754
+
+Purpose:
+Perform a static repository audit before C8-I-D additive migration design.
+SQL audit scope: repository static audit only.
+
+Safety:
+- SQL executed: false
+- Migration created: false
+- Runtime called: false
+- DB read executed: false
+- DB write executed: false
+- AI/OpenAI called: false
+- Code patch executed: false
+- activity_events write enabled: false
+- state engine implemented: false
+
+Previous closed gate:
+C8-I-B-A confirmed:
+READY_FOR_C8_I_C_SQL_AUDIT.
+
+Future SQL migration order:
+create table -> indexes -> enable row level security -> policies -> explicit GRANT.
+
+Core rule:
+GRANT does not replace RLS.
+
+============================================================
+1. File inventory
+============================================================
+
+All scanned files: 944
+SQL files: 73
+Migration SQL files: 31
+Runtime files: 232
+Docs/activity files: 196
+
+Migration files:
+supabase\migrations\001_object_action_backbone.sql
+supabase\migrations\002_seed_object_action_rubricator.sql
+supabase\migrations\003_backfill_organization_directory_classifications.sql
+supabase\migrations\004_enable_object_action_rls.sql
+supabase\migrations\005_create_object_action_read_views_and_rpc.sql
+supabase\migrations\006_seed_core_object_action_examples.sql
+supabase\migrations\007_create_object_action_suggestion_requests.sql
+supabase\migrations\008_create_platform_admins.sql
+supabase\migrations\009_update_object_action_suggestion_admin_decision_constraint.sql
+supabase\migrations\010_create_object_action_suggestion_events.sql
+supabase\migrations\011_update_object_action_suggestion_request_source_constraint.sql
+supabase\migrations\012_activity_recording_backbone.sql
+supabase\migrations\013_activity_templates_v2.sql
+supabase\migrations\014_activity_events_v2_template_link.sql
+supabase\migrations\015_activity_impact_rules_v2_template_link.sql
+supabase\migrations\016_activity_atomic_aggregate_updates.sql
+supabase\migrations\017_activity_corrections.sql
+supabase\migrations\018_activity_corrections_status_rollback.sql
+supabase\migrations\019_activity_security_foundation.sql
+supabase\migrations\020_activity_raw_signals.sql
+supabase\migrations\021_activity_processing_logs.sql
+supabase\migrations\022_activity_processing_logs_complete_event_stage.sql
+supabase\migrations\023_value_object_state_foundation_p4_7.sql
+supabase\migrations\024_activity_template_known_registry_rules.sql
+supabase\migrations\025_p4_8_0_add_commercial_usage_and_purchase_currency.sql
+supabase\migrations\026_p4_8_0_drop_obsolete_purchase_confirmations_currency.sql
+supabase\migrations\20260524000000_c8_i_d4_l_e_value_object_state_fact_audit_events.sql
+supabase\migrations\20260524_p4_10_0_c8_i_d2_state_similarity_relevance_nba_additive.sql
+supabase\migrations\20260524_p4_10_0_c8_i_d3_state_dimensions_initial_seed.sql
+supabase\migrations\20260525001000_c8_i_d4_l_l_g_atomic_rollback_rpc.sql
+supabase\migrations\20260525133000_c8_i_d4_l_l_n_b_fix_state_fact_correction_status_rolled_back.sql
+
+============================================================
+2. SQL structure pattern counts
+============================================================
+
+create table matches: 54
+enable row level security matches: 34
+policy matches: 53
+grant matches: 12
+revoke matches: 13
+
+Interpretation:
+- This is a static file scan, not a database inspection.
+- Older migrations may predate the explicit GRANT rule.
+- This audit does not modify old migrations.
+- Future C8-I migrations must follow the explicit GRANT rule.
+
+============================================================
+3. Future state table name collision audit
+============================================================
+
+Candidate names checked:
+- state_dimensions
+- value_object_state_facts
+- activity_state_deltas
+- value_object_state_snapshots
+- state_relevance_rules
+- value_object_similarity_edges
+- value_object_relevance_edges
+- semantic_signatures
+- resolver_runs
+- resolver_candidate_links
+- resolver_feedback
+
+Name occurrence summary:
+state_dimensions | all=216 | sql=81 | runtime=2 | docs=22
+value_object_state_facts | all=464 | sql=95 | runtime=7 | docs=139
+activity_state_deltas | all=63 | sql=17 | runtime=0 | docs=36
+value_object_state_snapshots | all=568 | sql=49 | runtime=4 | docs=48
+state_relevance_rules | all=103 | sql=66 | runtime=0 | docs=6
+value_object_similarity_edges | all=120 | sql=57 | runtime=0 | docs=37
+value_object_relevance_edges | all=124 | sql=62 | runtime=0 | docs=37
+semantic_signatures | all=2 | sql=0 | runtime=0 | docs=2
+resolver_runs | all=2 | sql=0 | runtime=0 | docs=2
+resolver_candidate_links | all=2 | sql=0 | runtime=0 | docs=2
+resolver_feedback | all=2 | sql=0 | runtime=0 | docs=2
+
+Interpretation:
+- Documentation-only occurrences are expected after C8-I-A0 through C8-I-B.
+- SQL/runtime occurrences must be reviewed before C8-I-D to avoid accidental duplicate concepts.
+- No table creation is performed in this audit.
+
+============================================================
+4. Runtime / controlled-intake static audit
+============================================================
+
+runtime activity_events occurrences: 43
+runtime insert/rpc pattern occurrences: 75
+runtime controlled-intake occurrences: 222
+runtime no-write/guardrail marker occurrences: 100
+
+controlled-intake no-write preview:
+Existing C8-I flow relies on controlled-intake no-write preview as a reference, not as a production write path.
+
+============================================================
+5. RLS / GRANT audit conclusion
+============================================================
+
+- Future C8-I migrations must not rely on RLS alone.
+- Future C8-I migrations must not rely on GRANT alone.
+- Every future C8-I personal/state table must have explicit RLS policies.
+- Every future C8-I migration must include explicit GRANT statements near policies.
+- Private activity/state/semantic/commercial-sensitive tables must not receive broad anon access.
+- service_role remains backend/server-side only.
+- authenticated access must be user-owned and RLS-constrained.
+
+============================================================
+6. C8-I-D additive migration design constraints
+============================================================
+
+C8-I-D additive migration design constraints:
+- Design only additive migrations first.
+- No destructive changes.
+- No production write enablement inside migration design.
+- No Value Object subtypes.
+- Keep categories, hooks, facts, deltas, snapshots and edges separate.
+- Keep similarity and relevance as separate future concepts.
+- Keep state facts private and correctable by default.
+- Use source, evidence, confidence, privacy, sensitivity and lifecycle fields where required.
+- Use explicit RLS and explicit GRANT.
+- Prepare SQL after reviewing existing migration conventions found by this audit.
+
+============================================================
+7. Forbidden actions still active
+============================================================
+
+- Do not create state_dimensions table yet.
+- Do not create value_object_state_facts table yet.
+- Do not create activity_state_deltas table yet.
+- Do not create value_object_state_snapshots table yet.
+- Do not create value_object_similarity_edges table yet.
+- Do not create value_object_relevance_edges table yet.
+- Do not create state_relevance_rules table yet.
+- Do not enable controlled-intake production write.
+- Do not add AI/OpenAI runtime state inference.
+- Do not add medical, hormonal, legal, financial or social certainty logic.
+
+============================================================
+8. C8-I-C readiness decision
+============================================================
+
+C8-I-C establishes a static SQL/source audit before migration design.
+It does not execute SQL.
+It does not read the database.
+It does not write the database.
+It does not create migrations.
+It does not implement state engine.
+
+Decision:
+READY_FOR_C8_I_D_ADDITIVE_MIGRATION_DESIGN
+
+Definition of Done:
+- Repository static audit performed.
+- SQL file inventory recorded.
+- Migration file inventory recorded.
+- create table / RLS / policy / GRANT pattern counts recorded.
+- future state table name collision audit recorded.
+- runtime controlled-intake / activity_events static audit recorded.
+- RLS/GRANT conclusion recorded.
+- C8-I-D additive migration design constraints recorded.
+- No SQL executed.
+- No migration created.
+- No runtime, DB read/write, SQL/RPC, AI/OpenAI or code patch performed.
+
+Next step:
+C8-I-C-A — commit this audit report.
+Then C8-I-D — additive migration design.
