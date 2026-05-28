@@ -1,0 +1,584 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R14F-B - controlled-intake body contract extraction
+Date = 2026-05-28 12:09:30 +02:00
+Status = BODY_CONTRACT_EXTRACTION_COMPLETED
+
+1. Baseline
+Expected HEAD = 1ef230a
+Actual HEAD = 1ef230a
+Last commit subject = docs: extract C8-I O-DJ-R14F runtime readiness decision
+Working tree before report = clean
+
+2. Extracted static body facts
+POST handler count = 1
+request.json count = 1
+body word count = 4
+requestBody word count = 0
+inputText count = 0
+activityText count = 0
+requestedContext count = 1
+mode count = 6
+preview marker count = 3
+
+3. Likely minimal runtime payload for O-DJ-R14G
+{ "requestedContext": null }
+
+4. Safety interpretation
+This step did not call the endpoint.
+This step did not run browser runtime.
+This step did not trigger runtime DB read.
+This step did not enable activity_events write.
+This step did not change code.
+TypeScript passed: npx.cmd tsc --noEmit.
+
+5. Route source snippets
+
+5.1 POST handler context
+Pattern: export\s+async\s+function\s+POST\b
+  Match line = L829
+    L817:       },
+    L818:       payload: payloadResult.payload,
+    L819:       serverSideAppUserMapping: serverSideAppUserMappingProof,
+    L820:       guardrails: buildRouteGuardrails({
+    L821:         dbReadExecuted:
+    L822:           serverSideAppUserMappingProof.serverSideAppUserMappingDbReadExecuted,
+    L823:       }),
+    L824:     },
+    L825:     { status: 200 },
+    L826:   );
+    L827: }
+    L828: 
+    L829: export async function POST(
+    L830:   request: NextRequest,
+    L831: ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+    L832:   const noWritePreview = readHeaderString(request, NO_WRITE_PREVIEW_HEADER);
+    L833: 
+    L834:   if (noWritePreview !== "true") {
+    L835:     return buildErrorResponse(
+    L836:       "CONTROLLED_INTAKE_NO_WRITE_PREVIEW_REQUIRED",
+    L837:       "Controlled intake route requires explicit no-write preview header.",
+    L838:       403,
+    L839:     );
+    L840:   }
+    L841: 
+
+5.2 request.json context
+Pattern: \.json\(\)
+  Match line = L426
+    L410:   if (mappingStatus === "missing_auth_subject") {
+    L411:     return "Controlled intake requires trusted server-side auth subject.";
+    L412:   }
+    L413: 
+    L414:   if (mappingStatus === "app_user_duplicate") {
+    L415:     return "Controlled intake app user mapping returned duplicate rows and failed closed.";
+    L416:   }
+    L417: 
+    L418:   if (mappingStatus === "app_user_lookup_error") {
+    L419:     return "Controlled intake app user mapping lookup failed and failed closed.";
+    L420:   }
+    L421: 
+    L422:   return "Controlled intake requires mapped internal app user.";
+    L423: }
+    L424: 
+    L425: async function readJsonBody(request: NextRequest): Promise<unknown> {
+    L426:   return await request.json();
+    L427: }
+    L428: 
+    L429: async function buildValidatedPayloadFromRequest(
+    L430:   request: NextRequest,
+    L431: ): Promise<ControlledActivityIntakeValidatedPayloadResult> {
+    L432:   let body: unknown;
+    L433: 
+    L434:   try {
+    L435:     body = await readJsonBody(request);
+    L436:   } catch {
+    L437:     return {
+    L438:       ok: false,
+    L439:       response: buildErrorResponse(
+    L440:         "CONTROLLED_INTAKE_INVALID_JSON",
+    L441:         "Request body must be valid JSON.",
+    L442:         400,
+
+5.3 inputText context
+Pattern: \binputText\b
+  no matches
+
+5.4 activityText context
+Pattern: \bactivityText\b
+  no matches
+
+5.5 requestedContext context
+Pattern: \brequestedContext\b
+  Match line = L648
+    L636:             PREVIEW_APP_USER_READ_MODEL_SOURCE_HEADER,
+    L637:           ) ?? "test_injected_read_model",
+    L638:         mappingStatus:
+    L639:           readHeaderString(
+    L640:             request,
+    L641:             PREVIEW_APP_USER_READ_MODEL_STATUS_HEADER,
+    L642:           ) ?? "missing",
+    L643:         email: readHeaderString(
+    L644:           request,
+    L645:           PREVIEW_APP_USER_READ_MODEL_EMAIL_HEADER,
+    L646:         ),
+    L647:       },
+    L648:       requestedContext: {
+    L649:         actorId: readHeaderString(request, PREVIEW_REQUESTED_ACTOR_ID_HEADER),
+    L650:         organizationId: readHeaderString(
+    L651:           request,
+    L652:           PREVIEW_REQUESTED_ORGANIZATION_ID_HEADER,
+    L653:         ),
+    L654:         spaceId: readHeaderString(request, PREVIEW_REQUESTED_SPACE_ID_HEADER),
+    L655:       },
+    L656:       membershipReadModel: {
+    L657:         actorId: readHeaderString(request, PREVIEW_MEMBERSHIP_ACTOR_ID_HEADER),
+    L658:         organizationId: readHeaderString(
+    L659:           request,
+    L660:           PREVIEW_MEMBERSHIP_ORGANIZATION_ID_HEADER,
+
+5.6 response/guardrails context
+Pattern: responseSanitized|productionWriteEnabled|dbWriteExecuted|activityEventsInserted|NextResponse\.json|guardrails
+  Match line = L131
+    L123:   | "CONTROLLED_INTAKE_APP_USER_MAPPING_BLOCKED"
+    L124:   | "CONTROLLED_INTAKE_APP_USER_MAPPING_LOOKUP_FAILED"
+    L125:   | "CONTROLLED_INTAKE_AUTH_SUBJECT_MISMATCH"
+    L126:   | "CONTROLLED_INTAKE_CONTEXT_NOT_VERIFIED"
+    L127:   | "CONTROLLED_INTAKE_ACTOR_NOT_ALLOWED"
+    L128:   | "CONTROLLED_INTAKE_ORGANIZATION_NOT_ALLOWED"
+    L129:   | "CONTROLLED_INTAKE_SPACE_NOT_ALLOWED";
+    L130: 
+    L131: type ControlledActivityIntakeRouteGuardrails = {
+    L132:   readonly routeAuthIntegrated: true;
+    L133:   readonly routeProductionAuthMappingIntegrated: true;
+    L134:   readonly routeServerSideAppUserMappingIntegrated: true;
+    L135:   readonly routeScaffoldOnly: true;
+    L136:   readonly noWritePreview: true;
+    L137:   readonly productionWriteEnabled: false;
+    L138:   readonly previewHeaderAcceptedForProductionWrite: false;
+    L139:   readonly dbReadExecuted: boolean;
+
+  Match line = L137
+    L129:   | "CONTROLLED_INTAKE_SPACE_NOT_ALLOWED";
+    L130: 
+    L131: type ControlledActivityIntakeRouteGuardrails = {
+    L132:   readonly routeAuthIntegrated: true;
+    L133:   readonly routeProductionAuthMappingIntegrated: true;
+    L134:   readonly routeServerSideAppUserMappingIntegrated: true;
+    L135:   readonly routeScaffoldOnly: true;
+    L136:   readonly noWritePreview: true;
+    L137:   readonly productionWriteEnabled: false;
+    L138:   readonly previewHeaderAcceptedForProductionWrite: false;
+    L139:   readonly dbReadExecuted: boolean;
+    L140:   readonly dbWriteExecuted: false;
+    L141:   readonly sqlExecuted: false;
+    L142:   readonly aiCallExecuted: false;
+    L143:   readonly activityEventsInserted: false;
+    L144:   readonly semanticCandidatesPersisted: false;
+    L145:   readonly valueObjectsCreated: false;
+
+  Match line = L140
+    L132:   readonly routeAuthIntegrated: true;
+    L133:   readonly routeProductionAuthMappingIntegrated: true;
+    L134:   readonly routeServerSideAppUserMappingIntegrated: true;
+    L135:   readonly routeScaffoldOnly: true;
+    L136:   readonly noWritePreview: true;
+    L137:   readonly productionWriteEnabled: false;
+    L138:   readonly previewHeaderAcceptedForProductionWrite: false;
+    L139:   readonly dbReadExecuted: boolean;
+    L140:   readonly dbWriteExecuted: false;
+    L141:   readonly sqlExecuted: false;
+    L142:   readonly aiCallExecuted: false;
+    L143:   readonly activityEventsInserted: false;
+    L144:   readonly semanticCandidatesPersisted: false;
+    L145:   readonly valueObjectsCreated: false;
+    L146:   readonly stateFactsCreated: false;
+    L147:   readonly stateDeltasCreated: false;
+    L148:   readonly stateSnapshotsCreated: false;
+
+  Match line = L143
+    L135:   readonly routeScaffoldOnly: true;
+    L136:   readonly noWritePreview: true;
+    L137:   readonly productionWriteEnabled: false;
+    L138:   readonly previewHeaderAcceptedForProductionWrite: false;
+    L139:   readonly dbReadExecuted: boolean;
+    L140:   readonly dbWriteExecuted: false;
+    L141:   readonly sqlExecuted: false;
+    L142:   readonly aiCallExecuted: false;
+    L143:   readonly activityEventsInserted: false;
+    L144:   readonly semanticCandidatesPersisted: false;
+    L145:   readonly valueObjectsCreated: false;
+    L146:   readonly stateFactsCreated: false;
+    L147:   readonly stateDeltasCreated: false;
+    L148:   readonly stateSnapshotsCreated: false;
+    L149:   responseSanitized: true;
+    L150: };
+    L151: 
+
+  Match line = L149
+    L141:   readonly sqlExecuted: false;
+    L142:   readonly aiCallExecuted: false;
+    L143:   readonly activityEventsInserted: false;
+    L144:   readonly semanticCandidatesPersisted: false;
+    L145:   readonly valueObjectsCreated: false;
+    L146:   readonly stateFactsCreated: false;
+    L147:   readonly stateDeltasCreated: false;
+    L148:   readonly stateSnapshotsCreated: false;
+    L149:   responseSanitized: true;
+    L150: };
+    L151: 
+    L152: type ControlledActivityIntakeRouteServerSideAppUserMappingProof = {
+    L153:   readonly serverSideAppUserMappingExecuted: boolean;
+    L154:   readonly serverSideAppUserMappingStatus:
+    L155:     | ServerSideAppUserMappingReadOnlyStatus
+    L156:     | null;
+    L157:   readonly serverSideAppUserMapped: boolean;
+
+  Match line = L173
+    L165: 
+    L166: type RouteErrorResponse = {
+    L167:   readonly ok: false;
+    L168:   readonly routeLayer: typeof CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER;
+    L169:   readonly code: ControlledActivityIntakeRouteErrorCode;
+    L170:   readonly message: string;
+    L171:   readonly issues?: unknown;
+    L172:   readonly serverSideAppUserMapping?: ControlledActivityIntakeRouteServerSideAppUserMappingProof;
+    L173:   readonly guardrails: ControlledActivityIntakeRouteGuardrails;
+    L174: };
+    L175: 
+    L176: type RouteSuccessResponse = {
+    L177:   readonly ok: true;
+    L178:   readonly routeLayer: typeof CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER;
+    L179:   readonly mode: ControlledActivityIntakeRouteMode;
+    L180:   readonly validation?: {
+    L181:     readonly ok: true;
+
+  Match line = L189
+    L181:     readonly ok: true;
+    L182:   };
+    L183:   readonly payload?: unknown;
+    L184:   readonly idempotency?: unknown;
+    L185:   readonly staticRowPreview?: unknown;
+    L186:   readonly productionAuthMapping?: unknown;
+    L187:   readonly serverSideAppUserMapping?: unknown;
+    L188:   readonly trustedContextPreview?: unknown;
+    L189:   readonly guardrails: ControlledActivityIntakeRouteGuardrails;
+    L190: };
+    L191: 
+    L192: type ControlledActivityIntakeValidatedPayloadSuccess = {
+    L193:   readonly ok: true;
+    L194:   readonly payload: ReturnType<typeof buildControlledActivityIntakePayload>;
+    L195: };
+    L196: 
+    L197: type ControlledActivityIntakeValidatedPayloadFailure = {
+
+  Match line = L218
+    L210: }
+    L211: 
+    L212: function isControlledActivityIntakeValidatedPayloadFailure(
+    L213:   result: ControlledActivityIntakeValidatedPayloadResult,
+    L214: ): result is ControlledActivityIntakeValidatedPayloadFailure {
+    L215:   return result.ok === false;
+    L216: }
+    L217: 
+    L218: function buildRouteGuardrails(input?: {
+    L219:   readonly dbReadExecuted?: boolean;
+    L220: }): ControlledActivityIntakeRouteGuardrails {
+    L221:   return {
+    L222:     routeAuthIntegrated: true,
+    L223:     routeProductionAuthMappingIntegrated: true,
+    L224:     routeServerSideAppUserMappingIntegrated: true,
+    L225:     routeScaffoldOnly: true,
+    L226:     noWritePreview: true,
+
+  Match line = L220
+    L212: function isControlledActivityIntakeValidatedPayloadFailure(
+    L213:   result: ControlledActivityIntakeValidatedPayloadResult,
+    L214: ): result is ControlledActivityIntakeValidatedPayloadFailure {
+    L215:   return result.ok === false;
+    L216: }
+    L217: 
+    L218: function buildRouteGuardrails(input?: {
+    L219:   readonly dbReadExecuted?: boolean;
+    L220: }): ControlledActivityIntakeRouteGuardrails {
+    L221:   return {
+    L222:     routeAuthIntegrated: true,
+    L223:     routeProductionAuthMappingIntegrated: true,
+    L224:     routeServerSideAppUserMappingIntegrated: true,
+    L225:     routeScaffoldOnly: true,
+    L226:     noWritePreview: true,
+    L227:     productionWriteEnabled: false,
+    L228:     previewHeaderAcceptedForProductionWrite: false,
+
+  Match line = L227
+    L219:   readonly dbReadExecuted?: boolean;
+    L220: }): ControlledActivityIntakeRouteGuardrails {
+    L221:   return {
+    L222:     routeAuthIntegrated: true,
+    L223:     routeProductionAuthMappingIntegrated: true,
+    L224:     routeServerSideAppUserMappingIntegrated: true,
+    L225:     routeScaffoldOnly: true,
+    L226:     noWritePreview: true,
+    L227:     productionWriteEnabled: false,
+    L228:     previewHeaderAcceptedForProductionWrite: false,
+    L229:     dbReadExecuted: input?.dbReadExecuted ?? false,
+    L230:     dbWriteExecuted: false,
+    L231:     sqlExecuted: false,
+    L232:     aiCallExecuted: false,
+    L233:     activityEventsInserted: false,
+    L234:     responseSanitized: true,
+    L235:     semanticCandidatesPersisted: false,
+
+  Match line = L230
+    L222:     routeAuthIntegrated: true,
+    L223:     routeProductionAuthMappingIntegrated: true,
+    L224:     routeServerSideAppUserMappingIntegrated: true,
+    L225:     routeScaffoldOnly: true,
+    L226:     noWritePreview: true,
+    L227:     productionWriteEnabled: false,
+    L228:     previewHeaderAcceptedForProductionWrite: false,
+    L229:     dbReadExecuted: input?.dbReadExecuted ?? false,
+    L230:     dbWriteExecuted: false,
+    L231:     sqlExecuted: false,
+    L232:     aiCallExecuted: false,
+    L233:     activityEventsInserted: false,
+    L234:     responseSanitized: true,
+    L235:     semanticCandidatesPersisted: false,
+    L236:     valueObjectsCreated: false,
+    L237:     stateFactsCreated: false,
+    L238:     stateDeltasCreated: false,
+
+  Match line = L233
+    L225:     routeScaffoldOnly: true,
+    L226:     noWritePreview: true,
+    L227:     productionWriteEnabled: false,
+    L228:     previewHeaderAcceptedForProductionWrite: false,
+    L229:     dbReadExecuted: input?.dbReadExecuted ?? false,
+    L230:     dbWriteExecuted: false,
+    L231:     sqlExecuted: false,
+    L232:     aiCallExecuted: false,
+    L233:     activityEventsInserted: false,
+    L234:     responseSanitized: true,
+    L235:     semanticCandidatesPersisted: false,
+    L236:     valueObjectsCreated: false,
+    L237:     stateFactsCreated: false,
+    L238:     stateDeltasCreated: false,
+    L239:     stateSnapshotsCreated: false,
+    L240:   };
+    L241: }
+
+  Match line = L234
+    L226:     noWritePreview: true,
+    L227:     productionWriteEnabled: false,
+    L228:     previewHeaderAcceptedForProductionWrite: false,
+    L229:     dbReadExecuted: input?.dbReadExecuted ?? false,
+    L230:     dbWriteExecuted: false,
+    L231:     sqlExecuted: false,
+    L232:     aiCallExecuted: false,
+    L233:     activityEventsInserted: false,
+    L234:     responseSanitized: true,
+    L235:     semanticCandidatesPersisted: false,
+    L236:     valueObjectsCreated: false,
+    L237:     stateFactsCreated: false,
+    L238:     stateDeltasCreated: false,
+    L239:     stateSnapshotsCreated: false,
+    L240:   };
+    L241: }
+    L242: 
+
+  Match line = L264
+    L256: 
+    L257: function buildErrorResponse(
+    L258:   code: ControlledActivityIntakeRouteErrorCode,
+    L259:   message: string,
+    L260:   status: number,
+    L261:   issues?: unknown,
+    L262:   serverSideAppUserMapping?: ControlledActivityIntakeRouteServerSideAppUserMappingProof,
+    L263: ): NextResponse<RouteErrorResponse> {
+    L264:   return NextResponse.json(
+    L265:     {
+    L266:       ok: false,
+    L267:       routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
+    L268:       code,
+    L269:       message,
+    L270:       ...(typeof issues !== "undefined" ? { issues } : {}),
+    L271:       ...(serverSideAppUserMapping ? { serverSideAppUserMapping } : {}),
+    L272:       guardrails: buildRouteGuardrails({
+
+  Match line = L272
+    L264:   return NextResponse.json(
+    L265:     {
+    L266:       ok: false,
+    L267:       routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
+    L268:       code,
+    L269:       message,
+    L270:       ...(typeof issues !== "undefined" ? { issues } : {}),
+    L271:       ...(serverSideAppUserMapping ? { serverSideAppUserMapping } : {}),
+    L272:       guardrails: buildRouteGuardrails({
+    L273:         dbReadExecuted:
+    L274:           serverSideAppUserMapping?.serverSideAppUserMappingDbReadExecuted ??
+    L275:           false,
+    L276:       }),
+    L277:     },
+    L278:     { status },
+    L279:   );
+    L280: }
+
+  Match line = L507
+    L499:     trustedContext,
+    L500:   );
+    L501:   const staticRowPreview = buildControlledActivityIntakeActivityEventsStaticRow({
+    L502:     payload,
+    L503:     idempotency,
+    L504:     trustedContext,
+    L505:   });
+    L506: 
+    L507:   return NextResponse.json(
+    L508:     {
+    L509:       ok: true,
+    L510:       routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
+    L511:       mode: "no_write_preview",
+    L512:       validation: {
+    L513:         ok: true,
+    L514:       },
+    L515:       payload,
+
+  Match line = L518
+    L510:       routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
+    L511:       mode: "no_write_preview",
+    L512:       validation: {
+    L513:         ok: true,
+    L514:       },
+    L515:       payload,
+    L516:       idempotency,
+    L517:       staticRowPreview,
+    L518:       guardrails: buildRouteGuardrails(),
+    L519:     },
+    L520:     { status: 200 },
+    L521:   );
+    L522: }
+    L523: 
+    L524: async function handleProductionStaticPreview(
+    L525:   request: NextRequest,
+    L526: ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+
+  Match line = L585
+    L577:     trustedContext,
+    L578:   );
+    L579:   const staticRowPreview = buildControlledActivityIntakeActivityEventsStaticRow({
+    L580:     payload,
+    L581:     idempotency,
+    L582:     trustedContext,
+    L583:   });
+    L584: 
+    L585:   return NextResponse.json(
+    L586:     {
+    L587:       ok: true,
+    L588:       routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
+    L589:       mode: "production_static_preview",
+    L590:       validation: {
+    L591:         ok: true,
+    L592:       },
+    L593:       productionAuthMapping,
+
+  Match line = L598
+    L590:       validation: {
+    L591:         ok: true,
+    L592:       },
+    L593:       productionAuthMapping,
+    L594:       trustedContextPreview: trustedContext,
+    L595:       payload,
+    L596:       idempotency,
+    L597:       staticRowPreview,
+    L598:       guardrails: buildRouteGuardrails(),
+    L599:     },
+    L600:     { status: 200 },
+    L601:   );
+    L602: }
+    L603: 
+    L604: async function handleServerSideStaticPreview(
+    L605:   request: NextRequest,
+    L606: ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+
+  Match line = L719
+    L711:     trustedContext,
+    L712:   );
+    L713:   const staticRowPreview = buildControlledActivityIntakeActivityEventsStaticRow({
+    L714:     payload,
+    L715:     idempotency,
+    L716:     trustedContext,
+    L717:   });
+    L718: 
+    L719:   return NextResponse.json(
+    L720:     {
+    L721:       ok: true,
+    L722:       routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
+    L723:       mode: "server_side_static_preview",
+    L724:       validation: {
+    L725:         ok: true,
+    L726:       },
+    L727:       serverSideAppUserMapping,
+
+  Match line = L732
+    L724:       validation: {
+    L725:         ok: true,
+    L726:       },
+    L727:       serverSideAppUserMapping,
+    L728:       trustedContextPreview: trustedContext,
+    L729:       payload,
+    L730:       idempotency,
+    L731:       staticRowPreview,
+    L732:       guardrails: buildRouteGuardrails(),
+    L733:     },
+    L734:     { status: 200 },
+    L735:   );
+    L736: }
+    L737: 
+    L738: async function handleServerSideReadOnlyMappingPreview(
+    L739:   request: NextRequest,
+    L740: ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+
+  Match line = L810
+    L802:         serverSideAppUserMapping.mappingStatus,
+    L803:       ),
+    L804:       buildServerSideMappingFailureStatus(code),
+    L805:       undefined,
+    L806:       serverSideAppUserMappingProof,
+    L807:     );
+    L808:   }
+    L809: 
+    L810:   return NextResponse.json(
+    L811:     {
+    L812:       ok: true,
+    L813:       routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
+    L814:       mode: "server_side_read_only_mapping_preview",
+    L815:       validation: {
+    L816:         ok: true,
+    L817:       },
+    L818:       payload: payloadResult.payload,
+
+  Match line = L820
+    L812:       ok: true,
+    L813:       routeLayer: CONTROLLED_ACTIVITY_INTAKE_ROUTE_LAYER,
+    L814:       mode: "server_side_read_only_mapping_preview",
+    L815:       validation: {
+    L816:         ok: true,
+    L817:       },
+    L818:       payload: payloadResult.payload,
+    L819:       serverSideAppUserMapping: serverSideAppUserMappingProof,
+    L820:       guardrails: buildRouteGuardrails({
+    L821:         dbReadExecuted:
+    L822:           serverSideAppUserMappingProof.serverSideAppUserMappingDbReadExecuted,
+    L823:       }),
+    L824:     },
+    L825:     { status: 200 },
+    L826:   );
+    L827: }
+    L828: 
+
+6. Recommended next gate
+O-DJ-R14G should run one browser POST preview call using the likely minimal payload above, unless the snippets show a stricter body contract.
+The O-DJ-R14G browser script must verify responseSanitized=true, productionWriteEnabled=false, dbWriteExecuted=false, activityEventsInserted=false.
+Do not enable activity_events insert yet.
+
+7. Decision
+PASS_O_DJ_R14F_B_BODY_CONTRACT_EXTRACTED_TSC_PASS_NO_CODE_PATCH_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_EXECUTION_NO_AI
