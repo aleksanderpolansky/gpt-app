@@ -1,0 +1,50 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R14E - static postcheck of corrected controlled-intake responseSanitized contract
+Date = 2026-05-28 12:01:47 +02:00
+Status = STATIC_POSTCHECK_COMPLETED
+
+1. Baseline
+Expected HEAD = 56e1238
+Actual HEAD = 56e1238
+Last commit subject = fix: robustly correct C8-I O-DJ-R14D response sanitized contract
+Working tree before report = clean
+
+2. Corrected route contract verified
+Route file = src/app/api/activity/controlled-intake/route.ts
+server_side_read_only_mapping_preview remains present.
+responseSanitized type marker is present.
+responseSanitized object marker is present.
+responseSanitized type marker count = 1
+responseSanitized object marker count = 1
+
+3. D/D-A correction status
+O-DJ-R14D and O-DJ-R14D-A are not treated as independently clean closure points.
+They are superseded by O-DJ-R14D-B.
+O-DJ-R14D-B is the validated correction commit.
+
+4. Safety checks
+TypeScript passed: npx.cmd tsc --noEmit.
+No endpoint call was executed.
+No browser runtime was executed.
+No runtime DB read was triggered by this script.
+No DB write.
+No SQL execution.
+No AI/OpenAI call.
+No activity_events write.
+No Supabase write methods found.
+No direct SQL/RPC marker found.
+No rawError/errorMessage/stack marker found.
+
+5. Readiness after postcheck
+CONTROLLED_INTAKE_RESPONSE_SANITIZED_TYPE_MARKER_PRESENT = true
+CONTROLLED_INTAKE_RESPONSE_SANITIZED_OBJECT_MARKER_PRESENT = true
+CONTROLLED_INTAKE_PREVIEW_CONTRACT_PATCHED_AND_POSTCHECKED = true
+READY_FOR_CONTROLLED_INTAKE_PRODUCTION_INTEGRATION = false
+READY_FOR_ACTIVITY_EVENTS_WRITE = false
+
+6. Recommended next gate
+O-DJ-R14F should perform browser/runtime verification of controlled-intake preview/shadow response only if the endpoint is safe to call without writes.
+Do not enable activity_events insert yet.
+
+7. Decision
+PASS_O_DJ_R14E_STATIC_POSTCHECK_RESPONSE_SANITIZED_CONTRACT_VERIFIED_TSC_PASS_NO_CODE_PATCH_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_EXECUTION_NO_AI
