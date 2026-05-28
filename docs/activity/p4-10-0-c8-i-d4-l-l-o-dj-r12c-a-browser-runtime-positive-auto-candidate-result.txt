@@ -1,0 +1,76 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R12C-A - browser runtime positive auto-candidate result
+Date = 2026-05-28 07:53:23 +02:00
+Status = BROWSER_RUNTIME_RESULT_RECORDED
+
+1. Baseline
+Expected HEAD = e6796d1
+Actual HEAD = e6796d1
+Working tree before report = clean
+
+2. Browser runtime source
+User-provided browser console output from O-DJ-R12C.
+Endpoint tested: /api/activity/debug/ownership-context-positive-auto-candidate-read-only-test
+Runtime was executed in browser, not by this PowerShell report script.
+
+3. Runtime summary
+missingHeaderPass = true
+wrongHeaderPass = true
+validResolvedPass = false
+validNoCandidateInconclusive = true
+validCandidateFailed = false
+guardrailsPass = true
+forbiddenKeysPass = true
+suspiciousValuesPass = true
+anyGuardrailFailures = []
+anyForbiddenKeys = []
+anySuspiciousValues = []
+
+4. Valid-header case
+HTTP status = 404
+code = OWNERSHIP_CONTEXT_POSITIVE_AUTO_CANDIDATE_NOT_FOUND
+appUserMappingStatus = mapped_user_found
+appUserMapped = true
+candidateSearchExecuted = true
+candidateFound = false
+ownershipContextResolutionExecuted = false
+ownershipContextResolutionStatus = not_executed
+
+5. Candidate search result
+owned_space: attempted = true, rowCountCategory = unknown, usableCandidateFound = false
+actor_space_role_space: attempted = true, rowCountCategory = unknown, usableCandidateFound = false
+creator_organization: attempted = true, rowCountCategory = unknown, usableCandidateFound = false
+organization_actor: attempted = true, rowCountCategory = unknown, usableCandidateFound = false
+
+6. Interpretation
+The endpoint is safe and sanitized.
+The mapping layer is still working: mapped_user_found.
+The positive candidate search did not find a usable context candidate.
+All candidate rowCountCategory values are unknown, which suggests table/column mismatch or query error hidden by sanitization.
+This does not prove resolver failure because resolver was not executed in the valid-header case.
+
+7. Safety / guardrails
+- Missing/wrong header cases stayed fail-closed before auth/mapping/candidate/resolver.
+- No forbidden keys were exposed.
+- No suspicious values were exposed.
+- dbWriteExecuted remained false.
+- sqlExecuted remained false.
+- aiCallExecuted remained false.
+- activityEventsInserted remained false.
+- semanticCandidatesPersisted remained false.
+- valueObjectsCreated remained false.
+- stateFactsCreated remained false.
+- stateDeltasCreated remained false.
+- stateSnapshotsCreated remained false.
+- responseSanitized remained true.
+- No controlled-intake integration.
+- No activity_events write.
+- TypeScript passed: npx.cmd tsc --noEmit.
+
+8. Decision
+INCONCLUSIVE_O_DJ_R12C_A_NO_POSITIVE_CONTEXT_CANDIDATE_FOUND_SAFE_SANITIZED_RUNTIME_MAPPING_OK_GUARDRAILS_OK
+
+9. Next step
+O-DJ-R13A should inspect database schema/client contract for candidate lookup tables and columns without raw data exposure.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
