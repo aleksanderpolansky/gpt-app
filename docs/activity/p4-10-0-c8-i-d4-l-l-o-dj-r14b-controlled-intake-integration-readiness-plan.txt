@@ -1,0 +1,75 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R14B - controlled-intake integration readiness plan
+Date = 2026-05-28 09:59:15 +02:00
+Status = READINESS_PLAN_RECORDED
+
+1. Baseline
+Current HEAD = 902a2ed
+Last commit subject = docs: record C8-I O-DJ-R14A resolver readiness decision
+Working tree before report = clean
+
+2. Starting point
+O-DJ-R14A decision is accepted:
+- resolver/mapping/candidate diagnostic contract is ready as reference for next gate
+- production activity_events write is not ready
+- controlled-intake production integration is not ready
+
+3. Controlled-intake current status
+Route file = src/app/api/activity/controlled-intake/route.ts
+Current route remains in server_side_read_only_mapping_preview mode.
+No write methods were introduced.
+No activity_events insert was enabled.
+
+4. Integration target for future gate
+Future integration must not trust client-provided appUserId/userId/actorId/spaceId/organizationId as proof.
+Trusted identity source must remain server-side Auth0 session.
+Mapping must use serverSideAppUserMappingReadOnly or a controlled equivalent.
+Context resolution must use resolveControlledActivityIntakeOwnershipContextReadOnly or a controlled equivalent.
+Any requested context from request body must be treated as hint only.
+
+5. Required future dry-run / shadow route plan
+Before enabling any write, create a write-disabled dry-run or shadow route that:
+- reads server-side Auth0 session
+- maps Auth0 subject to app user
+- resolves ownership/context
+- builds a sanitized activity_events insert preview
+- returns no raw IDs/secrets/tokens/raw DB errors
+- keeps dbWriteExecuted = false
+- keeps activityEventsInserted = false
+- keeps sqlExecuted = false
+- keeps aiCallExecuted = false
+
+6. Required future write gate plan
+Actual activity_events write must remain blocked until a dedicated write gate defines:
+- exact activity_events insert payload
+- ownership fields copied only from server-side resolver result
+- audit fields
+- correction/rollback strategy
+- failure mode and fail-closed behavior
+- RLS/GRANT review if any schema or route privilege changes are introduced
+- no-client-ID-trust regression tests
+- browser-authenticated runtime tests
+- no raw error exposure tests
+
+7. Temporary diagnostic endpoints decision
+Keep O-DJ-R13E probe endpoint temporarily as evidence until a context-transfer document or cleanup gate.
+Keep O-DJ-R13G positive endpoint temporarily as runtime-verified resolver contract evidence.
+Do not expose these debug endpoints as production features.
+
+8. Non-goals
+No code patch was made in O-DJ-R14B.
+No endpoint call was executed.
+No browser runtime was executed.
+No runtime DB read was triggered by this script.
+No DB write.
+No SQL execution.
+No AI/OpenAI call.
+No activity_events write.
+
+9. Recommended next gate
+O-DJ-R14C should inspect controlled-intake route request/response contract and identify the smallest safe shadow integration point.
+O-DJ-R14C should remain report-only unless the route contract is fully understood.
+Do not enable writes in O-DJ-R14C.
+
+10. Decision
+PASS_O_DJ_R14B_CONTROLLED_INTAKE_INTEGRATION_READINESS_PLAN_RECORDED_TSC_PASS_NO_CODE_PATCH_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_EXECUTION_NO_AI
