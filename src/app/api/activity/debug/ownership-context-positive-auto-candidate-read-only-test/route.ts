@@ -7,16 +7,14 @@ import { resolveControlledActivityIntakeOwnershipContextReadOnly } from '../../.
 
 export const dynamic = 'force-dynamic';
 
-const GATE = 'P4.10.0-C8-I-D4-L-L-O-DJ-R13C' as const;
+const GATE = 'P4.10.0-C8-I-D4-L-L-O-DJ-R13G' as const;
 const MODE = 'ownership_context_positive_auto_candidate_read_only_diagnostic' as const;
 const REQUIRED_HEADER_NAME = 'x-ownership-context-positive-auto-candidate-read-only-test' as const;
 const REQUIRED_HEADER_VALUE = 'enabled' as const;
 
 type CandidateKind =
   | 'owned_space'
-  | 'actor_space_role_space'
   | 'creator_organization'
-  | 'organization_actor'
   | 'none';
 
 type SanitizedQueryErrorCategory =
@@ -92,17 +90,8 @@ type SpaceRow = {
   id: string | null;
 };
 
-type ActorSpaceRoleRow = {
-  space_id: string | null;
-};
-
 type OrganizationRow = {
   id: string | null;
-};
-
-type ActorRow = {
-  id: string | null;
-  organization_id: string | null;
 };
 
 type Candidate = {
@@ -183,16 +172,16 @@ function categorizeQueryIssue(value: unknown): SanitizedQueryErrorCategory {
 
   if (
     text.includes('42703') ||
-    text.includes('column') && text.includes('does not exist') ||
-    text.includes('could not find') && text.includes('column')
+    (text.includes('column') && text.includes('does not exist')) ||
+    (text.includes('could not find') && text.includes('column'))
   ) {
     return 'column_not_found';
   }
 
   if (
     text.includes('42p01') ||
-    text.includes('relation') && text.includes('does not exist') ||
-    text.includes('could not find') && text.includes('table')
+    (text.includes('relation') && text.includes('does not exist')) ||
+    (text.includes('could not find') && text.includes('table'))
   ) {
     return 'relation_not_found';
   }
@@ -208,7 +197,7 @@ function categorizeQueryIssue(value: unknown): SanitizedQueryErrorCategory {
 
   if (
     text.includes('schema cache') ||
-    text.includes('pgrst') && text.includes('schema')
+    (text.includes('pgrst') && text.includes('schema'))
   ) {
     return 'schema_cache_miss';
   }
@@ -315,7 +304,7 @@ async function findOwnedSpaceCandidate(
   const { data, error } = await supabaseAdmin
     .from('spaces')
     .select('id')
-    .eq('owner_app_user_id', mappedAppUserId)
+    .eq('owner_user_id', mappedAppUserId)
     .limit(2);
 
   if (error) {
@@ -356,63 +345,7 @@ async function findOwnedSpaceCandidate(
     requestedSpaceId: usableRow.id,
     requestedActorId: null,
     requestedOrganizationId: null,
-    requestedContextSource: 'auto_owned_space',
-  };
-}
-
-async function findActorSpaceRoleCandidate(
-  mappedAppUserId: string,
-  steps: CandidateSearchStep[],
-): Promise<Candidate | null> {
-  const supabaseAdmin = getSupabaseAdminClient();
-
-  const { data, error } = await supabaseAdmin
-    .from('actor_space_roles')
-    .select('space_id')
-    .eq('app_user_id', mappedAppUserId)
-    .limit(2);
-
-  if (error) {
-    steps.push(
-      sanitizeCandidateSearchStep({
-        kind: 'actor_space_role_space',
-        attempted: true,
-        dbReadExecuted: true,
-        rowCountCategory: 'unknown',
-        usableCandidateFound: false,
-        sanitizedQueryErrorCategory: categorizeQueryIssue(error),
-      }),
-    );
-
-    return null;
-  }
-
-  const rows = Array.isArray(data) ? (data as ActorSpaceRoleRow[]) : [];
-  const usableRow = rows.find(
-    (row) => typeof row.space_id === 'string' && row.space_id.trim().length > 0,
-  );
-
-  steps.push(
-    sanitizeCandidateSearchStep({
-      kind: 'actor_space_role_space',
-      attempted: true,
-      dbReadExecuted: true,
-      rowCountCategory: categorizeRowCount(rows),
-      usableCandidateFound: Boolean(usableRow),
-      sanitizedQueryErrorCategory: 'none',
-    }),
-  );
-
-  if (!usableRow?.space_id) {
-    return null;
-  }
-
-  return {
-    kind: 'actor_space_role_space',
-    requestedSpaceId: usableRow.space_id,
-    requestedActorId: null,
-    requestedOrganizationId: null,
-    requestedContextSource: 'auto_actor_space_role_space',
+    requestedContextSource: 'auto_owned_space_runtime_owner_user_id',
   };
 }
 
@@ -425,7 +358,7 @@ async function findCreatorOrganizationCandidate(
   const { data, error } = await supabaseAdmin
     .from('organizations')
     .select('id')
-    .eq('created_by_app_user_id', mappedAppUserId)
+    .eq('created_by_user_id', mappedAppUserId)
     .limit(2);
 
   if (error) {
@@ -466,67 +399,7 @@ async function findCreatorOrganizationCandidate(
     requestedSpaceId: null,
     requestedActorId: null,
     requestedOrganizationId: usableRow.id,
-    requestedContextSource: 'auto_creator_organization',
-  };
-}
-
-async function findOrganizationActorCandidate(
-  mappedAppUserId: string,
-  steps: CandidateSearchStep[],
-): Promise<Candidate | null> {
-  const supabaseAdmin = getSupabaseAdminClient();
-
-  const { data, error } = await supabaseAdmin
-    .from('actors')
-    .select('id,organization_id')
-    .eq('app_user_id', mappedAppUserId)
-    .limit(2);
-
-  if (error) {
-    steps.push(
-      sanitizeCandidateSearchStep({
-        kind: 'organization_actor',
-        attempted: true,
-        dbReadExecuted: true,
-        rowCountCategory: 'unknown',
-        usableCandidateFound: false,
-        sanitizedQueryErrorCategory: categorizeQueryIssue(error),
-      }),
-    );
-
-    return null;
-  }
-
-  const rows = Array.isArray(data) ? (data as ActorRow[]) : [];
-  const usableRow = rows.find(
-    (row) =>
-      typeof row.id === 'string' &&
-      row.id.trim().length > 0 &&
-      typeof row.organization_id === 'string' &&
-      row.organization_id.trim().length > 0,
-  );
-
-  steps.push(
-    sanitizeCandidateSearchStep({
-      kind: 'organization_actor',
-      attempted: true,
-      dbReadExecuted: true,
-      rowCountCategory: categorizeRowCount(rows),
-      usableCandidateFound: Boolean(usableRow),
-      sanitizedQueryErrorCategory: 'none',
-    }),
-  );
-
-  if (!usableRow?.id || !usableRow.organization_id) {
-    return null;
-  }
-
-  return {
-    kind: 'organization_actor',
-    requestedSpaceId: null,
-    requestedActorId: usableRow.id,
-    requestedOrganizationId: usableRow.organization_id,
-    requestedContextSource: 'auto_organization_actor',
+    requestedContextSource: 'auto_creator_organization_runtime_created_by_user_id',
   };
 }
 
@@ -544,26 +417,10 @@ async function findPositiveCandidate(mappedAppUserId: string): Promise<{
     };
   }
 
-  const actorSpaceRoleCandidate = await findActorSpaceRoleCandidate(mappedAppUserId, steps);
-  if (actorSpaceRoleCandidate) {
-    return {
-      candidate: actorSpaceRoleCandidate,
-      steps,
-    };
-  }
-
   const creatorOrganizationCandidate = await findCreatorOrganizationCandidate(mappedAppUserId, steps);
   if (creatorOrganizationCandidate) {
     return {
       candidate: creatorOrganizationCandidate,
-      steps,
-    };
-  }
-
-  const organizationActorCandidate = await findOrganizationActorCandidate(mappedAppUserId, steps);
-  if (organizationActorCandidate) {
-    return {
-      candidate: organizationActorCandidate,
       steps,
     };
   }

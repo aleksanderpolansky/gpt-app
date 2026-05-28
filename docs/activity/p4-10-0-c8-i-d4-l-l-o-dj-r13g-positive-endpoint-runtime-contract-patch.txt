@@ -1,0 +1,54 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R13G - positive auto-candidate endpoint runtime contract patch
+Date = 2026-05-28 09:48:30 +02:00
+Status = DIAGNOSTIC_ENDPOINT_PATCHED
+
+1. Baseline
+Expected HEAD = 4b33900
+Actual HEAD = 4b33900
+Working tree before patch = clean
+
+2. Evidence used
+O-DJ-R13F2-A recorded exact runtime candidate hints:
+- spaces.id where spaces.owner_user_id = mappedAppUserId
+- organizations.id where organizations.created_by_user_id = mappedAppUserId
+
+3. Patch
+Patched endpoint = /api/activity/debug/ownership-context-positive-auto-candidate-read-only-test
+File = src/app/api/activity/debug/ownership-context-positive-auto-candidate-read-only-test/route.ts
+Replaced old spaces lookup: owner_app_user_id -> owner_user_id
+Replaced old organizations lookup: created_by_app_user_id -> created_by_user_id
+Removed unconfirmed actor_space_roles / actors positive candidate lookup paths from this endpoint.
+
+4. Non-goals
+No production endpoint was changed.
+No controlled-intake integration was enabled.
+No activity_events write was enabled.
+No schema migration was created.
+No SQL was executed.
+
+5. Checks
+TypeScript passed: npx.cmd tsc --noEmit.
+Static no-write checks passed.
+Invalid runtime columns are absent from patched endpoint.
+Unconfirmed actor_space_roles / actors candidate lookup paths are absent from patched endpoint.
+
+6. Safety / guardrails
+- No endpoint call was executed by O-DJ-R13G PowerShell.
+- No browser runtime was executed by O-DJ-R13G PowerShell.
+- No runtime DB read was triggered by O-DJ-R13G PowerShell.
+- No DB write.
+- No SQL execution.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+
+7. Decision
+PASS_O_DJ_R13G_POSITIVE_ENDPOINT_RUNTIME_CONTRACT_PATCH_APPLIED_TSC_PASS_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_EXECUTION_NO_AI
+
+8. Next step
+O-DJ-R13H browser runtime verification should call the patched positive endpoint.
+Expected valid-header result: 200 resolved or 409 resolver fail-closed with candidateFound = true.
+Do not patch production logic yet.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
