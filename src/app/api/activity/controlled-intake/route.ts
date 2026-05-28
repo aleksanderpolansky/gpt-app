@@ -146,6 +146,7 @@ type ControlledActivityIntakeRouteGuardrails = {
   readonly stateFactsCreated: false;
   readonly stateDeltasCreated: false;
   readonly stateSnapshotsCreated: false;
+  responseSanitized: true;
 };
 
 type ControlledActivityIntakeRouteServerSideAppUserMappingProof = {
@@ -230,6 +231,7 @@ function buildRouteGuardrails(input?: {
     sqlExecuted: false,
     aiCallExecuted: false,
     activityEventsInserted: false,
+    responseSanitized: true,
     semanticCandidatesPersisted: false,
     valueObjectsCreated: false,
     stateFactsCreated: false,
