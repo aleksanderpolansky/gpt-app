@@ -1,0 +1,54 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R13E - column/filter contract probe diagnostic endpoint
+Date = 2026-05-28 09:37:27 +02:00
+Status = DIAGNOSTIC_ENDPOINT_CREATED
+
+1. Baseline
+Expected HEAD = 8387f22
+Actual HEAD = 8387f22
+Working tree before endpoint creation = clean
+
+2. Reason
+O-DJ-R13D-A confirmed that all four current candidate lookup paths return sanitizedQueryErrorCategory = column_not_found.
+This means the current positive diagnostic lookup contract does not match runtime DB columns.
+
+3. Created endpoint
+Endpoint = /api/activity/debug/ownership-context-column-contract-probe-read-only-test
+Header = x-ownership-context-column-contract-probe-read-only-test: enabled
+File = src/app/api/activity/debug/ownership-context-column-contract-probe-read-only-test/route.ts
+
+4. What endpoint returns
+- columnProbeResults
+- filterProbeResults
+- candidateContractHints
+- columnProbeErrorCategories
+- filterProbeErrorCategories
+
+5. Safety
+No raw rows are returned.
+No raw IDs are returned.
+No raw DB error/message/detail/hint is returned.
+Only sanitized categories and row-count categories are returned.
+
+6. Checks
+TypeScript passed: npx.cmd tsc --noEmit.
+Static no-write checks passed.
+
+7. Guardrails
+- No endpoint call was executed by O-DJ-R13E PowerShell.
+- No browser runtime was executed by O-DJ-R13E PowerShell.
+- No runtime DB read was triggered by O-DJ-R13E PowerShell.
+- No DB write.
+- No SQL execution.
+- No AI/OpenAI call.
+- No activity_events insert.
+- No controlled-intake integration.
+
+8. Decision
+PASS_O_DJ_R13E_COLUMN_CONTRACT_PROBE_DIAGNOSTIC_ENDPOINT_CREATED_TSC_PASS_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_EXECUTION_NO_AI
+
+9. Next step
+O-DJ-R13F browser runtime verification should call the probe endpoint and inspect candidateContractHints.
+Do not patch production logic yet.
+Do not integrate controlled-intake yet.
+Do not enable activity_events write yet.
