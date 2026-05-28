@@ -1,0 +1,690 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-A3 — MVP State Dimensions
+
+Date: 2026-05-28 15:32:02
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before report: 78dd5ef
+
+Purpose:
+Define the minimum viable set of state dimensions for the future state layer.
+This document does not implement state persistence.
+It defines state dimension keys, safe meaning, allowed evidence, forbidden overclaims and future use in Next Best Action.
+
+Safety:
+- Doc-only gate.
+- No runtime call.
+- No browser call.
+- No DB read.
+- No DB write.
+- No SQL/RPC.
+- No AI/OpenAI.
+- No code patch.
+- No migration.
+- No activity_events write.
+- No state engine implementation.
+
+Previous closed gate:
+C8-I-A2-A confirmed:
+READY_FOR_C8_I_A3_MVP_STATE_DIMENSIONS.
+
+Core rules inherited from C8-I-A0/A1/A2:
+- Value Object remains unified.
+- No mandatory Value Object subtypes.
+- State is not stored inside VO type.
+- Category is not a state fact.
+- Hook is not a state fact.
+- AI candidate is not ontology truth.
+- Similarity is not relevance.
+- Every future state fact must have source, evidence, confidence, privacy and correction lifecycle.
+- Medical, hormonal, legal, financial and social certainty is forbidden without appropriate evidence.
+
+============================================================
+1. MVP dimension selection rule
+============================================================
+
+A state dimension may enter MVP only if it satisfies all conditions:
+- It helps choose or filter a Next Best Action.
+- It can be estimated from activity logs, user self-report, direct measurement or conservative semantic hooks.
+- It is useful across multiple directions, not only one narrow feature.
+- It can be represented without medical, legal, financial or social overclaim.
+- It can be corrected by the user.
+- It can remain private by default.
+- It does not require Value Object subtypes.
+- It can work as provisional signal before persistence.
+
+============================================================
+2. MVP dimensions list
+============================================================
+
+- energy
+- fatigue
+- focus
+- stress
+- recovery_need
+- cognitive_load
+- physical_load
+- time_pressure
+- obligation_load
+- family_care_load
+- financial_pressure
+- environment_fit
+- business_development_effort
+- learning_progress_signal
+- goal_balance
+
+These are not medical facts.
+These are recommendation-support dimensions.
+
+============================================================
+3. Dimension: energy
+============================================================
+
+dimensionKey:
+energy
+
+Purpose:
+Estimate whether the user currently has enough subjective or contextual energy for a proposed action.
+
+Allowed sources:
+- user_self_report: energetic or tired
+- direct_measurement: sleep/rest/activity duration
+- semantic_hook: sleep, meal, hydration, work shift, recovery activity
+- inferred_state: provisional and explainable only
+
+Allowed interpretation:
+- Adjust NBA task intensity
+- Prefer lighter or heavier action candidates
+
+Forbidden overclaims:
+- Do not infer hormones
+- Do not infer medical condition
+- Do not infer permanent health status
+- Do not infer productivity value of the person
+
+Possible scale later:
+0-100 or low/medium/high/unknown
+
+Default privacy:
+private
+
+Correction:
+User correction overrides inference.
+
+============================================================
+4. Dimension: fatigue
+============================================================
+
+dimensionKey:
+fatigue
+
+Purpose:
+Estimate possible tiredness or fatigue risk to avoid recommending overloaded actions.
+
+Allowed sources:
+- user_self_report: tired or exhausted
+- direct_measurement: sleep hours, work duration, physical load duration
+- semantic_hook: night shift, long work, heavy training, attention loss
+- inferred_state: short sleep plus long work plus self-report
+
+Allowed interpretation:
+- Suggest recovery, low-load work or micro-actions
+- Suppress intense tasks if fatigue risk is high
+
+Forbidden overclaims:
+- Do not diagnose burnout
+- Do not infer medical incapacity
+- Do not infer chronic fatigue syndrome
+- Do not make workplace legal conclusions
+
+Possible scale later:
+0-100 or low/medium/high/unknown
+
+Default privacy:
+private
+
+Correction:
+User correction overrides inference.
+
+============================================================
+5. Dimension: focus
+============================================================
+
+dimensionKey:
+focus
+
+Purpose:
+Estimate whether the current context supports concentrated work or learning.
+
+Allowed sources:
+- user_self_report: cannot focus or focused
+- direct_measurement: session duration, interruptions, task switches
+- semantic_hook: noise, office, home alone, commute, no computer, deep work
+- inferred_state: distraction plus switching plus attention loss self-report
+
+Allowed interpretation:
+- Suggest deep work, passive learning, admin tasks or micro-actions
+- Avoid complex tasks when focus risk is high
+
+Forbidden overclaims:
+- Do not infer intelligence
+- Do not infer attention disorder
+- Do not infer language skill level
+- Do not treat minutes as comprehension
+
+Possible scale later:
+0-100 or low/medium/high/unknown
+
+Default privacy:
+private
+
+Correction:
+User correction overrides inference.
+
+============================================================
+6. Dimension: stress
+============================================================
+
+dimensionKey:
+stress
+
+Purpose:
+Represent user-reported or contextually possible stress load for safe recommendations.
+
+Allowed sources:
+- user_self_report: stressed, anxious, irritated
+- semantic_hook: conflict, deadline, financial pressure, difficult call
+- direct_measurement: optional user rating
+- inferred_state: only when self-report or repeated pattern exists
+
+Allowed interpretation:
+- Reduce recommendation difficulty
+- Suggest recovery or structured tasks
+- Ask clarifying question
+
+Forbidden overclaims:
+- Do not infer psychiatric diagnosis
+- Do not infer stable personality trait
+- Do not infer family or workplace toxicity from one event
+- Do not infer medical state
+
+Possible scale later:
+0-100 or low/medium/high/unknown
+
+Default privacy:
+private_sensitive
+
+Correction:
+User correction overrides inference.
+
+============================================================
+7. Dimension: recovery_need
+============================================================
+
+dimensionKey:
+recovery_need
+
+Purpose:
+Estimate whether the user may need rest, sleep, stretching, low-load action or decompression before intense work.
+
+Allowed sources:
+- user_self_report: tired, overloaded, pain, need rest
+- direct_measurement: sleep hours, work hours, training load
+- semantic_hook: night shift, long standing, heavy cognitive load, family obligation
+- inferred_state: fatigue plus work load plus short sleep
+
+Allowed interpretation:
+- Recommend lighter or recovery actions
+- Delay intense activities
+
+Forbidden overclaims:
+- Do not diagnose injury
+- Do not prescribe medical treatment
+- Do not infer exact physiological state
+- Do not infer hormones
+
+Possible scale later:
+0-100 or low/medium/high/unknown
+
+Default privacy:
+private
+
+Correction:
+User correction overrides inference.
+
+============================================================
+8. Dimension: cognitive_load
+============================================================
+
+dimensionKey:
+cognitive_load
+
+Purpose:
+Track mental effort and complexity load from learning, planning, coding, analysis and context switching.
+
+Allowed sources:
+- direct_measurement: duration of deep work, learning or planning
+- user_self_report: hard, easy, overwhelmed, understood rating
+- semantic_hook: documentation, language learning, coding, analysis, multitasking
+- inferred_state: repeated deep work plus attention loss plus self-report
+
+Allowed interpretation:
+- Suggest breaks, lower-complexity tasks or passive review
+- Balance learning and execution
+
+Forbidden overclaims:
+- Do not infer intelligence
+- Do not infer permanent cognitive capacity
+- Do not infer actual knowledge without test/output evidence
+- Do not treat time as progress
+
+Possible scale later:
+0-100 or low/medium/high/unknown
+
+Default privacy:
+private
+
+Correction:
+User correction overrides inference.
+
+============================================================
+9. Dimension: physical_load
+============================================================
+
+dimensionKey:
+physical_load
+
+Purpose:
+Track physical effort/load relevant to recovery and health-related recommendations.
+
+Allowed sources:
+- direct_measurement: steps, distance, duration, reps, sets
+- user_self_report: pain, tired muscles, easy or hard
+- semantic_hook: walking, pull-ups, dips, stretching, manual work
+- inferred_state: conservative and provisional only
+
+Allowed interpretation:
+- Avoid overloading the same body area
+- Suggest stretching, recovery or light movement
+
+Forbidden overclaims:
+- Do not infer muscle growth automatically
+- Do not infer injury unless reported
+- Do not infer medical state
+- Do not infer hormones
+
+Possible scale later:
+0-100 or low/medium/high/unknown
+
+Default privacy:
+private
+
+Correction:
+User correction overrides inference.
+
+============================================================
+10. Dimension: time_pressure
+============================================================
+
+dimensionKey:
+time_pressure
+
+Purpose:
+Represent whether the user has limited time or deadline pressure.
+
+Allowed sources:
+- direct_measurement: available minutes, calendar windows, duration
+- user_self_report: only 10 minutes, deadline soon
+- semantic_hook: before work, commute, queue, shift start, appointment
+- inferred_state: schedule plus short window
+
+Allowed interpretation:
+- Suggest micro-actions
+- Avoid deep work when time window is too short
+
+Forbidden overclaims:
+- Do not infer chronic overload
+- Do not infer legal/employer issue
+- Do not infer personal failure
+
+Possible scale later:
+0-100 or low/medium/high/unknown
+
+Default privacy:
+private
+
+Correction:
+User correction overrides inference.
+
+============================================================
+11. Dimension: obligation_load
+============================================================
+
+dimensionKey:
+obligation_load
+
+Purpose:
+Represent load from duties that are not freely chosen: work shift, family duty, caregiving, appointments, administrative deadlines.
+
+Allowed sources:
+- user_self_report: must, have to, responsible for
+- semantic_hook: work shift, family obligation, childcare, caregiving, appointment
+- direct_measurement: duration of duty
+- inferred_state: repeated obligation blocks
+
+Allowed interpretation:
+- Avoid unrealistic tasks
+- Suggest short or supportive actions
+
+Forbidden overclaims:
+- Do not morally judge the user
+- Do not infer family quality
+- Do not infer workplace legality
+- Do not infer social status
+
+Possible scale later:
+0-100 or low/medium/high/unknown
+
+Default privacy:
+private_sensitive_if_family_or_workplace
+
+Correction:
+User correction overrides inference.
+
+============================================================
+12. Dimension: family_care_load
+============================================================
+
+dimensionKey:
+family_care_load
+
+Purpose:
+Represent time/attention/care load from family, childcare, parental care and caregiving contexts.
+
+Allowed sources:
+- semantic_hook: childcare, parental care, caregiving, helping child learn
+- user_self_report: had to help child, took care of
+- direct_measurement: duration of family/care activity
+- inferred_state: repeated family/care obligations
+
+Allowed interpretation:
+- Account for care obligations
+- Recommend realistic tasks around family context
+
+Forbidden overclaims:
+- Do not infer family relationship quality
+- Do not infer child wellbeing
+- Do not infer parental quality
+- Do not infer psychological state of family members
+
+Possible scale later:
+0-100 or low/medium/high/unknown
+
+Default privacy:
+private_sensitive
+
+Correction:
+User correction overrides inference.
+
+============================================================
+13. Dimension: financial_pressure
+============================================================
+
+dimensionKey:
+financial_pressure
+
+Purpose:
+Represent user-reported or evidence-supported pressure related to money, income, expenses or revenue need.
+
+Allowed sources:
+- user_self_report: need more income, financial pressure
+- direct_measurement: amount, bill, expense, revenue if user provides it
+- semantic_hook: job search, revenue search, delayed spending, cost control
+- inferred_state: repeated money pressure self-reports plus expenses
+
+Allowed interpretation:
+- Prioritize career, sales, business development or cost-control actions
+- Ask for clarification
+
+Forbidden overclaims:
+- Do not infer poverty or wealth
+- Do not infer exact financial condition without data
+- Do not infer tax/legal conclusions
+- Do not infer profit from revenue alone
+
+Possible scale later:
+0-100 or low/medium/high/unknown
+
+Default privacy:
+private_sensitive
+
+Correction:
+User correction overrides inference.
+
+============================================================
+14. Dimension: environment_fit
+============================================================
+
+dimensionKey:
+environment_fit
+
+Purpose:
+Represent whether current environment supports the selected activity.
+
+Allowed sources:
+- semantic_hook: home alone, office, noise, commute, queue, no computer
+- user_self_report: cannot use computer, too noisy
+- direct_measurement: optional context setting
+- inferred_state: context plus activity requirements
+
+Allowed interpretation:
+- Select feasible actions
+- Suggest mobile, passive or light tasks when environment is weak
+
+Forbidden overclaims:
+- Do not infer exact location
+- Do not store precise location by default
+- Do not infer unsafe environment without evidence
+- Do not expose location-like context publicly
+
+Possible scale later:
+fit / partial_fit / poor_fit / unknown
+
+Default privacy:
+private_location_sensitive
+
+Correction:
+User correction overrides inference.
+
+============================================================
+15. Dimension: business_development_effort
+============================================================
+
+dimensionKey:
+business_development_effort
+
+Purpose:
+Represent activity effort connected with sales, lead generation, follow-up, negotiation, offers, business strategy and job/career development.
+
+Allowed sources:
+- direct_measurement: number of calls, emails, follow-ups, minutes
+- semantic_hook: outbound sales, CRM, offer preparation, negotiation, interview preparation
+- user_self_report: perceived progress, difficulty, result
+- inferred_state: repeated business/sales activities
+
+Allowed interpretation:
+- Detect under-attention to business/career direction
+- Suggest next business development actions
+
+Forbidden overclaims:
+- Do not infer income received
+- Do not infer deal closed
+- Do not infer business success
+- Do not infer professional competence from activity alone
+
+Possible scale later:
+0-100 or none/low/medium/high/unknown
+
+Default privacy:
+private
+
+Correction:
+User correction overrides inference.
+
+============================================================
+16. Dimension: learning_progress_signal
+============================================================
+
+dimensionKey:
+learning_progress_signal
+
+Purpose:
+Represent conservative learning-progress signals from study sessions, practice, tests, outputs and self-rated comprehension.
+
+Allowed sources:
+- direct_measurement: minutes, test score, repetitions, completed tasks
+- user_self_report: comprehension rating, difficulty rating
+- semantic_hook: language learning, course work, notes, active recall
+- inferred_state: repeated practice plus self-rating plus test result
+
+Allowed interpretation:
+- Suggest review, practice, test or next topic
+- Detect learning under-attention
+
+Forbidden overclaims:
+- Do not infer language level from one session
+- Do not treat time spent as mastery
+- Do not infer intelligence
+- Do not infer professional qualification without evidence
+
+Possible scale later:
+0-100 or weak/moderate/strong/unknown
+
+Default privacy:
+private
+
+Correction:
+User correction overrides inference.
+
+============================================================
+17. Dimension: goal_balance
+============================================================
+
+dimensionKey:
+goal_balance
+
+Purpose:
+Represent balance across user directions such as health, recovery, family, finance, career, languages, project, work and rest.
+
+Allowed sources:
+- direct_measurement: time allocation by direction
+- semantic_hook: activity categories and directions
+- user_self_report: priorities, dissatisfaction, overfocus
+- inferred_state: imbalance over time window
+
+Allowed interpretation:
+- Detect weak or under-attended directions
+- Ask user which direction they want to work on
+- Avoid over-optimizing one direction while harming another
+
+Forbidden overclaims:
+- Do not morally judge priorities
+- Do not infer life failure
+- Do not force automatic action
+- Do not create social scoring
+
+Possible scale later:
+balanced / under_attended / over_attended / unknown by direction
+
+Default privacy:
+private
+
+Correction:
+User correction overrides inference.
+
+============================================================
+18. Dimension implementation status
+============================================================
+
+All dimensions are contract-level definitions only.
+No state_dimensions table is created here.
+No state facts are created here.
+No state deltas are created here.
+No state snapshots are created here.
+No SQL migration is created here.
+No runtime routes are created here.
+
+Future schema may include:
+- state_dimensions
+- value_object_state_facts
+- activity_state_deltas
+- value_object_state_snapshots
+- state_relevance_rules
+- value_object_similarity_edges
+- value_object_relevance_edges
+
+But schema design must wait for:
+- C8-I-A4 similarity/relevance resolver concept
+- C8-I-B governance/schema plan
+- C8-I-C SQL audit
+- C8-I-D additive migration design
+
+============================================================
+19. MVP state dimension seed candidates
+============================================================
+
+Candidate seed rows for future state_dimensions table:
+
+- energy | physiological/cognitive | private | not medical
+- fatigue | physiological/cognitive | private | not diagnosis
+- focus | cognitive/context | private | not disorder
+- stress | emotional/context | private_sensitive | not diagnosis
+- recovery_need | physiological/time/context | private | not medical instruction
+- cognitive_load | cognitive | private | not intelligence
+- physical_load | physical | private | not medical
+- time_pressure | time/context | private | not legal conclusion
+- obligation_load | role/time/context | private_sensitive | not moral judgment
+- family_care_load | family/care/role | private_sensitive | not family quality
+- financial_pressure | finance/context | private_sensitive | not wealth/poverty
+- environment_fit | environment/context | private_sensitive_if_location | not exact location
+- business_development_effort | business/career | private | not income/deal
+- learning_progress_signal | learning | private | not mastery
+- goal_balance | cross-domain | private | not social score
+
+============================================================
+20. C8-I-A3 readiness decision
+============================================================
+
+C8-I-A3 establishes MVP state dimensions only.
+It does not implement persistence.
+It does not create tables.
+It does not create migrations.
+It does not create runtime routes.
+It does not introduce Value Object subtypes.
+
+Decision:
+READY_FOR_C8_I_A4_SIMILARITY_RELEVANCE_RESOLVER_CONCEPT
+
+Definition of Done:
+- MVP dimension selection rule documented.
+- MVP state dimensions list documented.
+- energy documented.
+- fatigue documented.
+- focus documented.
+- stress documented.
+- recovery_need documented.
+- cognitive_load documented.
+- physical_load documented.
+- time_pressure documented.
+- obligation_load documented.
+- family_care_load documented.
+- financial_pressure documented.
+- environment_fit documented.
+- business_development_effort documented.
+- learning_progress_signal documented.
+- goal_balance documented.
+- future seed candidates documented.
+- no runtime, DB read/write, SQL/RPC, AI/OpenAI, migration or code patch performed.
+
+Next step:
+C8-I-A3-A — commit this report.
+Then C8-I-A4 — define similarity/relevance resolver concept.
