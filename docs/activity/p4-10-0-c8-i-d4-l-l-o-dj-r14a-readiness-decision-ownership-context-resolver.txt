@@ -1,0 +1,74 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R14A - readiness decision / resolver contract consolidation
+Date = 2026-05-28 09:55:39 +02:00
+Status = READINESS_DECISION_RECORDED
+
+1. Baseline
+Expected HEAD = 3c12b3d
+Actual HEAD = 3c12b3d
+Working tree before report = clean
+
+2. Consolidated result
+The O-DJ-R10..O-DJ-R13 corridor is now closed for the diagnostic ownership/context resolver path.
+The positive diagnostic endpoint can find a candidate and resolve it:
+- candidateKind = owned_space
+- ownershipContextResolutionStatus = owned_space_resolved
+- selectedContextScope = personal_space
+- HTTP status = 200
+
+3. Root cause resolved
+The previous positive-candidate failure was caused by a runtime DB column contract mismatch.
+Invalid old fields:
+- spaces.owner_app_user_id
+- organizations.created_by_app_user_id
+Runtime-verified fields:
+- spaces.owner_user_id
+- organizations.created_by_user_id
+
+4. Current trusted contract
+Trusted identity source remains server-side Auth0 session.
+Client-provided appUserId/userId/actorId/spaceId/organizationId remain hints only, not proof.
+Server-side mapping helper maps Auth0 subject to app user.
+Ownership/context resolver fail-closes if the requested context is missing, invalid, ambiguous, or not owned.
+Positive diagnostic endpoint now proves owned_space resolver path works with runtime data.
+
+5. Readiness decision
+READY_AS_REFERENCE_CONTRACT_FOR_NEXT_GATE = true
+READY_FOR_PRODUCTION_ACTIVITY_EVENTS_WRITE = false
+READY_FOR_CONTROLLED_INTAKE_PRODUCTION_INTEGRATION = false
+
+Meaning:
+- The resolver/mapping/candidate diagnostic contract is reliable enough to use as the reference for the next design gate.
+- It is not yet permission to enable activity_events writes.
+- It is not yet permission to connect the controlled-intake production route.
+
+6. Temporary probe endpoint decision
+The O-DJ-R13E probe endpoint remains in the repo temporarily as diagnostic evidence.
+It should be removed later, preferably after the next context-transfer document or after a dedicated cleanup gate.
+Do not remove it in O-DJ-R14A because it documents the runtime contract discovery.
+
+7. Safety / guardrails
+TypeScript passed: npx.cmd tsc --noEmit.
+No code patch was made in O-DJ-R14A.
+No endpoint call was executed.
+No browser runtime was executed.
+No runtime DB read was triggered by this script.
+No DB write.
+No SQL execution.
+No AI/OpenAI call.
+No activity_events write.
+
+8. Recommended next gate
+O-DJ-R14B should prepare the next controlled-intake integration readiness plan.
+The next gate should remain no-write until a dedicated route-level write guard and rollback/audit plan is defined.
+Before actual integration, prepare:
+- exact production route target
+- expected request body contract
+- trusted server-side user/context resolution path
+- no-client-ID-trust checks
+- write-disabled dry-run route or shadow route
+- audit fields for later activity_events insert
+- rollback and cleanup procedure
+
+9. Decision
+PASS_O_DJ_R14A_READINESS_DECISION_RECORDED_RESOLVER_CONTRACT_READY_AS_REFERENCE_NOT_READY_FOR_PRODUCTION_WRITE_TSC_PASS_NO_CODE_PATCH_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_EXECUTION_NO_AI
