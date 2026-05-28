@@ -1,0 +1,58 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R14D-A - responseSanitized type contract correction
+Date = 2026-05-28 11:53:46 +02:00
+Status = CORRECTION_PATCH_APPLIED
+
+1. Baseline
+Expected HEAD = 969d0dd
+Actual HEAD before correction = 969d0dd
+Last commit subject before correction = fix: add C8-I O-DJ-R14D controlled-intake response sanitized marker
+Working tree before correction = clean
+
+2. Why correction was needed
+O-DJ-R14D attempted to add responseSanitized: true to the controlled-intake route.
+During O-DJ-R14D validation, TypeScript failed because responseSanitized was not declared in ControlledActivityIntakeRouteGuardrails.
+Therefore the previous O-DJ-R14D PASS must be read together with this O-DJ-R14D-A correction.
+Pre-correction TypeScript status = pre_correction_tsc_passed
+
+3. Correction applied
+Patched file = src/app/api/activity/controlled-intake/route.ts
+Added/confirmed type marker:
+responseSanitized: true;
+Added/confirmed guardrails object marker:
+responseSanitized: true,
+
+4. Preserved route mode and guardrails
+server_side_read_only_mapping_preview remains present.
+productionWriteEnabled remains present.
+dbWriteExecuted remains present.
+activityEventsInserted remains present.
+No activity_events insert was enabled.
+No production controlled-intake integration was enabled.
+
+5. Safety checks
+Post-correction TypeScript passed: npx.cmd tsc --noEmit.
+No endpoint call was executed.
+No browser runtime was executed.
+No runtime DB read was triggered by this script.
+No DB write.
+No SQL execution.
+No AI/OpenAI call.
+No activity_events write.
+No Supabase write methods found after correction.
+No direct SQL/RPC marker found after correction.
+No rawError/errorMessage/stack marker found after correction.
+
+6. Corrected contract status
+CONTROLLED_INTAKE_RESPONSE_SANITIZED_TYPE_MARKER_PRESENT = true
+CONTROLLED_INTAKE_RESPONSE_SANITIZED_OBJECT_MARKER_PRESENT = true
+CONTROLLED_INTAKE_PREVIEW_CONTRACT_PATCHED = true
+READY_FOR_CONTROLLED_INTAKE_PRODUCTION_INTEGRATION = false
+READY_FOR_ACTIVITY_EVENTS_WRITE = false
+
+7. Next step
+O-DJ-R14E should perform static postcheck of the corrected controlled-intake route.
+Do not enable activity_events insert yet.
+
+8. Decision
+PASS_O_DJ_R14D_A_RESPONSE_SANITIZED_TYPE_CONTRACT_CORRECTED_TSC_PASS_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_EXECUTION_NO_AI
