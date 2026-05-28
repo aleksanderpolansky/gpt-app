@@ -1,0 +1,267 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I O-DJ-R14F - controlled-intake runtime-call readiness inspection
+Date = 2026-05-28 12:04:26 +02:00
+Status = RUNTIME_CALL_READINESS_INSPECTION_COMPLETED
+
+1. Baseline
+Expected HEAD = e3b4f92
+Actual HEAD = e3b4f92
+Last commit subject = docs: verify C8-I O-DJ-R14E response sanitized postcheck
+Working tree before report = clean
+
+2. Route inspected
+Route file = src/app/api/activity/controlled-intake/route.ts
+No code patch was made.
+No endpoint call was executed.
+
+3. Static callable method inventory
+POST handler present = true
+GET handler present = false
+PUT handler present = false
+PATCH handler present = false
+DELETE handler present = false
+Recommended runtime method = POST
+Runtime call needs body = true
+Recommended runtime body note = JSON body likely required or accepted; inspect source snippets before runtime call.
+
+4. Static request/response marker inventory
+NextRequest present = true
+NextResponse present = true
+request.json marker present = true
+searchParams marker present = false
+headers marker present = true
+NextResponse.json marker present = true
+status marker present = true
+ok field marker present = true
+code field marker present = true
+guardrails field marker present = true
+
+5. Auth / mapping / ownership marker inventory
+auth0 marker present = true
+getSession marker present = true
+mapServerSideAppUserReadOnly marker present = true
+resolveControlledActivityIntakeOwnershipContextReadOnly marker present = false
+server_side_read_only_mapping_preview marker present = true
+
+6. Client context/id marker inventory
+appUserId marker present = true
+userId marker present = true
+actorId marker present = true
+spaceId marker present = true
+organizationId marker present = true
+requestedContext marker present = true
+hint marker present = false
+
+7. responseSanitized post-E verification
+responseSanitized type marker count = 1
+responseSanitized object marker count = 1
+
+8. Runtime-call readiness decision
+RUNTIME_PREVIEW_CALL_LIKELY_SAFE_TO_PLAN = true
+Runtime readiness reason = Route has callable method marker, JSON response marker, preview mode marker, and guardrails marker.
+This is not permission to enable activity_events write.
+This is only permission to prepare a runtime preview call script if the next gate accepts this inspection.
+
+9. Safety checks
+TypeScript passed: npx.cmd tsc --noEmit.
+No endpoint call was executed.
+No browser runtime was executed.
+No runtime DB read was triggered by this script.
+No DB write.
+No SQL execution.
+No AI/OpenAI call.
+No activity_events write.
+No Supabase write methods found.
+No direct SQL/RPC marker found.
+No rawError/errorMessage/stack marker found.
+
+10. Route source match snippets
+
+10.1 Method / request / response snippets
+Pattern: export\s+async\s+function
+  L829: export async function POST(
+Pattern: NextRequest
+  L1: import { NextRequest, NextResponse } from "next/server";
+  L244: request: NextRequest,
+  L425: async function readJsonBody(request: NextRequest): Promise<unknown> {
+  L430: request: NextRequest,
+  L468: request: NextRequest,
+  L525: request: NextRequest,
+  L605: request: NextRequest,
+  L739: request: NextRequest,
+  L830: request: NextRequest,
+Pattern: NextResponse
+  L1: import { NextRequest, NextResponse } from "next/server";
+  L199: readonly response: NextResponse<RouteErrorResponse>;
+  L263: ): NextResponse<RouteErrorResponse> {
+  L264: return NextResponse.json(
+  L469: ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+  L507: return NextResponse.json(
+  L526: ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+  L585: return NextResponse.json(
+  L606: ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+  L719: return NextResponse.json(
+  L740: ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+  L810: return NextResponse.json(
+  L831: ): Promise<NextResponse<RouteErrorResponse | RouteSuccessResponse>> {
+Pattern: NextResponse\.json
+  L264: return NextResponse.json(
+  L507: return NextResponse.json(
+  L585: return NextResponse.json(
+  L719: return NextResponse.json(
+  L810: return NextResponse.json(
+Pattern: \.json\(
+  L264: return NextResponse.json(
+  L426: return await request.json();
+  L507: return NextResponse.json(
+  L585: return NextResponse.json(
+  L719: return NextResponse.json(
+  L810: return NextResponse.json(
+Pattern: searchParams
+  no matches
+Pattern: headers
+  L243: function readHeaderString(
+  L247: const rawValue = request.headers.get(headerName);
+  L471: appUserId: readHeaderString(request, PREVIEW_APP_USER_ID_HEADER),
+  L472: actorId: readHeaderString(request, PREVIEW_ACTOR_ID_HEADER),
+  L473: organizationId: readHeaderString(request, PREVIEW_ORGANIZATION_ID_HEADER),
+  L474: spaceId: readHeaderString(request, PREVIEW_SPACE_ID_HEADER),
+  L475: requestSource: readHeaderString(request, PREVIEW_REQUEST_SOURCE_HEADER),
+  L531: sub: readHeaderString(request, PREVIEW_AUTH_SUBJECT_HEADER),
+  L535: appUserId: readHeaderString(
+  L539: userId: readHeaderString(request, PREVIEW_MAPPED_USER_ID_HEADER),
+  L540: actorId: readHeaderString(request, PREVIEW_MAPPED_ACTOR_ID_HEADER),
+  L541: organizationId: readHeaderString(
+  L545: spaceId: readHeaderString(request, PREVIEW_MAPPED_SPACE_ID_HEADER),
+  L548: readHeaderString(request, PREVIEW_REQUEST_SOURCE_HEADER) ??
+  L611: authSubject: readHeaderString(
+  L615: provider: readHeaderString(request, PREVIEW_SERVER_PROVIDER_HEADER),
+  ... truncated, total matches = 39
+Pattern: status:
+  L154: readonly serverSideAppUserMappingStatus:
+  L260: status: number,
+  L354: serverSideAppUserMappingStatus: null,
+  L370: serverSideAppUserMappingStatus: result.mappingStatus,
+  L382: mappingStatus: ServerSideAppUserMappingReadOnlyStatus,
+  L404: mappingStatus: ServerSideAppUserMappingReadOnlyStatus,
+  L520: { status: 200 },
+  L600: { status: 200 },
+  L638: mappingStatus:
+  L663: actorStatus: readHeaderString(
+  L667: organizationMembershipStatus: readHeaderString(
+  L671: spaceMembershipStatus: readHeaderString(
+  L734: { status: 200 },
+  L825: { status: 200 },
+
+10.2 Auth / mapping / resolver snippets
+Pattern: auth0
+  L3: import { auth0 } from "../../../../../lib/auth0";
+  L103: const TRUSTED_SERVER_PROVIDER = "auth0" as const;
+  L160: readonly serverSideAppUserMappingSelectedColumns: "id,auth0_sub" | null;
+  L744: session = await auth0.getSession();
+Pattern: getSession
+  L744: session = await auth0.getSession();
+Pattern: mapServerSideAppUserReadOnly
+  L21: mapServerSideAppUserReadOnly,
+  L783: const serverSideAppUserMapping = await mapServerSideAppUserReadOnly({
+Pattern: resolveControlledActivityIntakeOwnershipContextReadOnly
+  no matches
+Pattern: server_side_read_only_mapping_preview
+  L111: | "server_side_read_only_mapping_preview";
+  L814: mode: "server_side_read_only_mapping_preview",
+  L844: if (authMappingMode === "server_side_read_only_mapping_preview") {
+
+10.3 Guardrail / response contract snippets
+Pattern: productionWriteEnabled
+  L137: readonly productionWriteEnabled: false;
+  L227: productionWriteEnabled: false,
+Pattern: dbWriteExecuted
+  L140: readonly dbWriteExecuted: false;
+  L230: dbWriteExecuted: false,
+Pattern: activityEventsInserted
+  L143: readonly activityEventsInserted: false;
+  L233: activityEventsInserted: false,
+Pattern: responseSanitized
+  L149: responseSanitized: true;
+  L234: responseSanitized: true,
+Pattern: sqlExecuted
+  L141: readonly sqlExecuted: false;
+  L231: sqlExecuted: false,
+Pattern: aiCallExecuted
+  L142: readonly aiCallExecuted: false;
+  L232: aiCallExecuted: false,
+Pattern: guardrails
+  L131: type ControlledActivityIntakeRouteGuardrails = {
+  L173: readonly guardrails: ControlledActivityIntakeRouteGuardrails;
+  L189: readonly guardrails: ControlledActivityIntakeRouteGuardrails;
+  L218: function buildRouteGuardrails(input?: {
+  L220: }): ControlledActivityIntakeRouteGuardrails {
+  L272: guardrails: buildRouteGuardrails({
+  L518: guardrails: buildRouteGuardrails(),
+  L598: guardrails: buildRouteGuardrails(),
+  L732: guardrails: buildRouteGuardrails(),
+  L820: guardrails: buildRouteGuardrails({
+Pattern: ok:
+  L167: readonly ok: false;
+  L177: readonly ok: true;
+  L181: readonly ok: true;
+  L193: readonly ok: true;
+  L198: readonly ok: false;
+  L266: ok: false,
+  L438: ok: false,
+  L451: ok: false,
+  L462: ok: true,
+  L509: ok: true,
+  L513: ok: true,
+  L587: ok: true,
+  L591: ok: true,
+  L721: ok: true,
+  L725: ok: true,
+  L812: ok: true,
+  ... truncated, total matches = 17
+Pattern: code:
+  L169: readonly code: ControlledActivityIntakeRouteErrorCode;
+  L258: code: ControlledActivityIntakeRouteErrorCode,
+  L283: code: ControlledActivityIntakeRouteErrorCode,
+
+10.4 Client id / context snippets
+Pattern: appUserId
+  L471: appUserId: readHeaderString(request, PREVIEW_APP_USER_ID_HEADER),
+  L535: appUserId: readHeaderString(
+  L621: appUserId: readHeaderString(
+  L793: !serverSideAppUserMapping.appUserId
+Pattern: userId
+  L471: appUserId: readHeaderString(request, PREVIEW_APP_USER_ID_HEADER),
+  L535: appUserId: readHeaderString(
+  L539: userId: readHeaderString(request, PREVIEW_MAPPED_USER_ID_HEADER),
+  L621: appUserId: readHeaderString(
+  L625: internalUserId: readHeaderString(
+  L793: !serverSideAppUserMapping.appUserId
+Pattern: actorId
+  L472: actorId: readHeaderString(request, PREVIEW_ACTOR_ID_HEADER),
+  L540: actorId: readHeaderString(request, PREVIEW_MAPPED_ACTOR_ID_HEADER),
+  L649: actorId: readHeaderString(request, PREVIEW_REQUESTED_ACTOR_ID_HEADER),
+  L657: actorId: readHeaderString(request, PREVIEW_MEMBERSHIP_ACTOR_ID_HEADER),
+Pattern: spaceId
+  L474: spaceId: readHeaderString(request, PREVIEW_SPACE_ID_HEADER),
+  L545: spaceId: readHeaderString(request, PREVIEW_MAPPED_SPACE_ID_HEADER),
+  L654: spaceId: readHeaderString(request, PREVIEW_REQUESTED_SPACE_ID_HEADER),
+  L662: spaceId: readHeaderString(request, PREVIEW_MEMBERSHIP_SPACE_ID_HEADER),
+Pattern: organizationId
+  L473: organizationId: readHeaderString(request, PREVIEW_ORGANIZATION_ID_HEADER),
+  L541: organizationId: readHeaderString(
+  L650: organizationId: readHeaderString(
+  L658: organizationId: readHeaderString(
+Pattern: requestedContext
+  L648: requestedContext: {
+Pattern: hint
+  L132: readonly routeAuthIntegrated: true;
+  L222: routeAuthIntegrated: true,
+
+11. Recommended next gate
+If RUNTIME_PREVIEW_CALL_LIKELY_SAFE_TO_PLAN = true, O-DJ-R14G should prepare a browser runtime preview verification script.
+If RUNTIME_PREVIEW_CALL_LIKELY_SAFE_TO_PLAN = false, inspect or patch route contract before runtime.
+Do not enable activity_events insert yet.
+
+12. Decision
+PASS_O_DJ_R14F_CONTROLLED_INTAKE_RUNTIME_CALL_READINESS_INSPECTED_TSC_PASS_NO_CODE_PATCH_NO_RUNTIME_DB_READ_NO_DB_WRITE_NO_SQL_EXECUTION_NO_AI
