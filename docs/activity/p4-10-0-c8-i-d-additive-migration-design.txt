@@ -1,0 +1,527 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-D — Additive Migration Design
+
+Date: 2026-05-28 18:27:53
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before report: 5dcf562
+
+Purpose:
+Design the future additive SQL migration sequence for the C8-I state/context layer.
+This is a design report only.
+No SQL migration file is created.
+No SQL is executed.
+No database read/write is performed.
+No runtime write path is enabled.
+
+Previous closed gate:
+C8-I-C-A confirmed:
+READY_FOR_C8_I_D_ADDITIVE_MIGRATION_DESIGN.
+
+Safety:
+- SQL executed: false
+- Migration file created: false
+- Runtime called: false
+- DB read executed: false
+- DB write executed: false
+- AI/OpenAI called: false
+- Code patch executed: false
+- activity_events write enabled: false
+- state engine implemented: false
+
+Global future SQL order:
+create table -> indexes -> enable row level security -> policies -> explicit GRANT.
+
+Core security rule:
+GRANT does not replace RLS.
+
+============================================================
+1. Design scope
+============================================================
+
+C8-I-D defines the future additive migration design only.
+
+It does not create:
+- state_dimensions
+- state_relevance_rules
+- value_object_state_facts
+- activity_state_deltas
+- value_object_state_snapshots
+- semantic_signatures
+- value_object_similarity_edges
+- value_object_relevance_edges
+- resolver_runs
+- resolver_candidate_links
+- resolver_feedback
+
+It does not enable controlled-intake production write.
+It does not add Value Object subtypes.
+It does not add medical, hormonal, legal, financial or social certainty logic.
+
+============================================================
+2. Migration design principles
+============================================================
+
+Principles:
+- additive first
+- no destructive changes
+- no required backfill at first pass
+- nullable fields where semantics may evolve
+- categories, hooks, facts, deltas, snapshots and edges stay separate
+- similarity and relevance stay separate
+- personal state is private by default
+- user correction must be possible
+- source, evidence, confidence, privacy, sensitivity and lifecycle fields are required where needed
+- RLS and explicit GRANT are required
+- no broad anon access to personal state tables
+
+============================================================
+3. Proposed phased migration sequence
+============================================================
+
+Phase D1 — static catalogs:
+- state_dimensions
+- state_relevance_rules
+
+Phase D2 — personal state records:
+- value_object_state_facts
+- activity_state_deltas
+- value_object_state_snapshots
+
+Phase D3 — semantic signatures and edges:
+- semantic_signatures
+- value_object_similarity_edges
+- value_object_relevance_edges
+
+Phase D4 — resolver audit and feedback:
+- resolver_runs
+- resolver_candidate_links
+- resolver_feedback
+
+Phase D5 — runtime integration:
+- no production write by default
+- keep no-write preview behavior
+- enable write only behind explicit server-side gate later
+
+Runtime integration is not part of C8-I-D.
+
+============================================================
+4. Table design: state_dimensions
+============================================================
+
+Purpose:
+Catalog of allowed MVP state dimensions.
+
+Candidate fields:
+- id
+- dimension_key
+- title
+- domain
+- description
+- default_privacy_level
+- is_sensitive
+- claim_policy
+- is_active
+- created_at
+- updated_at
+
+Initial dimension keys:
+- energy
+- fatigue
+- focus
+- stress
+- recovery_need
+- cognitive_load
+- physical_load
+- time_pressure
+- obligation_load
+- family_care_load
+- financial_pressure
+- environment_fit
+- business_development_effort
+- learning_progress_signal
+- goal_balance
+
+Access:
+- authenticated read may be allowed
+- writes should be admin/service-only
+- anon access should be avoided unless explicitly required later
+
+============================================================
+5. Table design: state_relevance_rules
+============================================================
+
+Purpose:
+Catalog conservative rules connecting state dimensions to recommendation behavior.
+
+Candidate fields:
+- id
+- rule_key
+- state_dimension_key
+- relevance_type
+- condition_summary
+- allowed_interpretation
+- forbidden_overclaims
+- default_weight
+- is_active
+- created_at
+- updated_at
+
+Rules must be:
+- explainable
+- conservative
+- privacy-aware
+- correctable or suppressible by user feedback
+- free from medical, hormonal, legal, financial and social certainty claims
+
+Access:
+- authenticated read may be allowed
+- writes should be admin/service-only
+
+============================================================
+6. Table design: value_object_state_facts
+============================================================
+
+Purpose:
+Store user-owned state facts or provisional state facts.
+
+Candidate fields:
+- id
+- user_id
+- value_object_id
+- subject_ref_type
+- subject_ref_id
+- state_dimension_key
+- source_kind
+- source_ref_type
+- source_ref_id
+- observed_at
+- valid_from
+- valid_to
+- value_numeric
+- value_text
+- unit
+- confidence
+- evidence_summary
+- privacy_level
+- sensitivity_level
+- status
+- correction_of_id
+- created_at
+- updated_at
+
+Allowed source_kind:
+- direct_measurement
+- user_self_report
+- semantic_hook
+- inferred_state
+- risk_flag
+
+Rules:
+- forbidden_overclaim blocks fact creation
+- raw sensitive text should be avoided where possible
+- status should support provisional, active, corrected, rejected and expired states
+- user correction must be possible
+
+Access:
+- authenticated users can access only their own rows through RLS
+- service_role is backend/server only
+- anon must not access this table
+
+============================================================
+7. Table design: activity_state_deltas
+============================================================
+
+Purpose:
+Store provisional or confirmed state deltas connected to activities/events.
+
+Candidate fields:
+- id
+- user_id
+- activity_id
+- activity_event_id
+- value_object_id
+- state_dimension_key
+- delta_direction
+- delta_numeric
+- confidence
+- source_kind
+- evidence_summary
+- observed_at
+- valid_from
+- valid_to
+- privacy_level
+- sensitivity_level
+- status
+- correction_of_id
+- created_at
+- updated_at
+
+Rules:
+- delta is not automatic proof of causality
+- inferred deltas remain provisional
+- user correction must be possible
+- semantic_hook is weaker than direct measurement or user self-report
+
+Access:
+- authenticated users can access only their own rows through RLS
+- anon must not access this table
+
+============================================================
+8. Table design: value_object_state_snapshots
+============================================================
+
+Purpose:
+Store calculated state snapshots for value objects or directions.
+
+Candidate fields:
+- id
+- user_id
+- value_object_id
+- snapshot_at
+- window_start
+- window_end
+- state_dimension_key
+- value_numeric
+- value_text
+- confidence
+- source_fact_ids
+- source_delta_ids
+- evidence_summary
+- privacy_level
+- sensitivity_level
+- expires_at
+- status
+- created_at
+
+Rules:
+- expired snapshots must not silently drive NBA
+- source trace is required
+- snapshots are private by default
+- snapshots do not create diagnosis or certainty
+
+Access:
+- authenticated users can access only their own rows through RLS
+- anon must not access this table
+
+============================================================
+9. Table design: semantic_signatures
+============================================================
+
+Purpose:
+Store derived semantic signatures for value objects, activities or safe references.
+
+Candidate fields:
+- id
+- user_id
+- ref_type
+- ref_id
+- signature_version
+- category_keys
+- dimension_keys
+- actor_role_keys
+- context_keys
+- evidence_summary
+- privacy_level
+- sensitivity_level
+- status
+- created_at
+- updated_at
+
+Rules:
+- semantic signature is not truth
+- semantic signature is not a state fact
+- semantic signature can support similarity calculation
+- semantic signature can support relevance only through rules
+
+Access:
+- private/user-owned by default
+- public use only for explicitly public non-sensitive objects later
+
+============================================================
+10. Table design: value_object_similarity_edges
+============================================================
+
+Purpose:
+Store semantic closeness between value objects or signatures.
+
+Candidate fields:
+- id
+- user_id
+- source_value_object_id
+- target_value_object_id
+- similarity_score
+- similarity_basis
+- shared_category_keys
+- shared_dimension_keys
+- confidence
+- evidence_summary
+- signature_version
+- privacy_level
+- sensitivity_level
+- status
+- created_at
+- updated_at
+
+Rules:
+- similarity is not relevance
+- similarity is not causality
+- similarity must not create state facts
+- no automatic hierarchy merge without user confirmation
+
+Access:
+- private/user-owned by default
+- anon must not access personal similarity edges
+
+============================================================
+11. Table design: value_object_relevance_edges
+============================================================
+
+Purpose:
+Store practical relevance between source and target references.
+
+Candidate fields:
+- id
+- user_id
+- source_ref_type
+- source_ref_id
+- target_ref_type
+- target_ref_id
+- relevance_type
+- state_dimension_key
+- relevance_score
+- directionality
+- rule_key
+- confidence
+- evidence_summary
+- allowed_interpretation
+- forbidden_overclaims
+- privacy_level
+- sensitivity_level
+- status
+- created_at
+- updated_at
+
+Rules:
+- relevance is not proof
+- relevance is not causality
+- relevance must not override user choice in NBA v0
+- risk flags can suppress relevance
+- user feedback can reject relevance
+
+Access:
+- private/user-owned by default
+- anon must not access personal relevance edges
+
+============================================================
+12. Table design: resolver tables
+============================================================
+
+Tables:
+- resolver_runs
+- resolver_candidate_links
+- resolver_feedback
+
+Purpose:
+Store explainable resolver activity and user feedback.
+
+Core fields:
+- user_id
+- resolver_run_id
+- candidate_link_id
+- run_type
+- candidate_type
+- score
+- reason_summary
+- feedback_type
+- feedback_summary
+- privacy_level
+- status
+- created_at
+
+Rules:
+- feedback must be able to suppress bad suggestions
+- explanations should avoid raw sensitive text where possible
+- resolver output remains private/internal by default
+
+Access:
+- authenticated users can access only their own rows through RLS
+- anon must not access resolver traces
+
+============================================================
+13. RLS / GRANT design
+============================================================
+
+Future SQL migration order:
+create table -> indexes -> enable row level security -> policies -> explicit GRANT.
+
+Policy direction:
+- authenticated select/insert/update only own rows for personal tables
+- no anon access to personal state tables
+- service_role for backend/server routes only
+- catalog tables may be authenticated-read
+- public read only for explicitly public non-sensitive directory/commercial data
+
+GRANT direction:
+- grant select/insert/update/delete to authenticated only where RLS allows it
+- grant select to anon only for intentionally public read-only tables
+- do not grant broad anon access to state facts, state deltas, state snapshots, resolver runs or personal edges
+- GRANT does not replace RLS
+
+============================================================
+14. Index design
+============================================================
+
+Likely future indexes:
+- user_id
+- user_id plus state_dimension_key
+- user_id plus value_object_id
+- observed_at
+- snapshot_at
+- status
+- source_ref_type plus source_ref_id
+- target_ref_type plus target_ref_id
+- rule_key
+- dimension_key
+- similarity_score
+- relevance_score
+
+Index rule:
+Add only indexes that support expected queries.
+Avoid over-indexing in the first migration.
+
+============================================================
+15. C8-I-D readiness decision
+============================================================
+
+C8-I-D establishes additive migration design only.
+It does not create a SQL migration file.
+It does not execute SQL.
+It does not read or write the database.
+It does not enable runtime writes.
+It does not implement a state engine.
+
+Decision:
+READY_FOR_C8_I_E_SQL_MIGRATION_DRAFT
+
+Definition of Done:
+- additive migration sequence documented
+- state_dimensions design documented
+- state_relevance_rules design documented
+- value_object_state_facts design documented
+- activity_state_deltas design documented
+- value_object_state_snapshots design documented
+- semantic_signatures design documented
+- value_object_similarity_edges design documented
+- value_object_relevance_edges design documented
+- resolver tables design documented
+- RLS and explicit GRANT design documented
+- index design documented
+- no SQL executed
+- no migration file created
+- no DB read/write
+- no runtime enabled
+- no AI/OpenAI call performed
+
+Next step:
+C8-I-D-A — commit this migration design report.
+Then C8-I-E — draft SQL migration file only after review.
