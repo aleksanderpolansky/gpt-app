@@ -1,0 +1,56 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-E-SAFE-RETRY-FILE-V4 - SQL Migration Draft Report
+
+Date: 2026-05-28 20:45:04
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before report: efcee04
+
+Purpose:
+Create a clean draft SQL migration file for the C8-I state/context layer.
+
+Migration draft path:
+supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql
+
+Safety:
+- SQL executed: false
+- DB read executed: false
+- DB write executed: false
+- Runtime called: false
+- activity_events write enabled: false
+- Migration file created: true
+- Migration file executed: false
+
+Previous closed gate:
+C8-I-D-A confirmed:
+READY_FOR_C8_I_E_SQL_MIGRATION_DRAFT.
+
+Draft includes:
+- state_dimensions
+- state_relevance_rules
+- value_object_state_facts
+- activity_state_deltas
+- value_object_state_snapshots
+- semantic_signatures
+- value_object_similarity_edges
+- value_object_relevance_edges
+- resolver_runs
+- resolver_candidate_links
+- resolver_feedback
+
+Required SQL order:
+create table -> indexes -> enable row level security -> policies -> explicit GRANT.
+
+Core security rule:
+GRANT does not replace RLS.
+
+Decision:
+READY_FOR_C8_I_E_A_COMMIT_SQL_MIGRATION_DRAFT
+
+Definition of Done:
+- clean draft migration file created
+- report file created
+- SQL execution not performed
+- DB read/write not performed
+- runtime not called
+- TypeScript check passed
+- ready for commit only, not execution
