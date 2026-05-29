@@ -1,0 +1,95 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-N - SQL Execution Method Plan, No Execution
+
+Date: 2026-05-29 09:45:46
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before plan: f0b8574
+HEAD line: f0b8574 docs: decide C8-I M SQL execution readiness
+
+Inputs:
+- Migration draft: supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql
+- C8-I-M decision: docs/activity/p4-10-0-c8-i-m-sql-execution-readiness-decision.txt
+
+Safety:
+- SQL executed: false
+- DB read executed: false
+- DB write executed: false
+- Runtime called: false
+- supabase db push executed: false
+- psql executed: false
+- migration executed: false
+- activity_events write enabled: false
+- AI/OpenAI called: false
+- migration draft modified: false
+- code patch executed: false
+
+Previous closed gate:
+C8-I-M-A confirmed:
+TSC_PASS_AND_M_SQL_EXECUTION_READINESS_DECISION_COMMITTED.
+
+Starting decision from C8-I-M:
+STATIC_SQL_DRAFT_READY_FOR_EXECUTION_METHOD_DECISION_ONLY.
+DO_NOT_EXECUTE_SQL_YET.
+
+Method plan decision:
+STAGING_FIRST_MANUAL_EXECUTION_PLAN_SELECTED_NO_EXECUTION
+
+Selected method for a future gate:
+- Target first execution environment: staging or disposable non-production Supabase project.
+- Production execution: blocked.
+- Direct execution commands: not provided in this gate.
+- DB credentials or project identifiers: not printed in this gate.
+- Backup/rollback confirmation: required before any execution gate.
+- Exact execution command or UI action: deferred to a later explicit execution-authorization gate.
+- Any local database execution: blocked until separately authorized.
+- Any production database execution: blocked until staging verification is completed and separately authorized.
+
+Why staging-first:
+- C8-I tables are additive but security-sensitive.
+- Auth0/Supabase auth.uid compatibility is not proven.
+- The draft uses backend-mediated/service_role posture for private state/context tables.
+- Static review passed, but static review is not a substitute for a controlled migration environment.
+- No state engine, runtime write path, or activity_events production write should be enabled by this migration.
+
+Pre-execution checklist for the next gate:
+1. Confirm target environment name.
+2. Confirm target environment is not production.
+3. Confirm backup/export expectations for target environment.
+4. Confirm rollback expectation: additive migration can be reverted only by an explicit down/cleanup plan, not by assumption.
+5. Confirm no production runtime depends on these tables yet.
+6. Confirm no activity_events production write is enabled.
+7. Confirm no OpenAI/AI runtime inference is enabled.
+8. Confirm anon remains blocked for private state/context tables.
+9. Confirm authenticated direct access remains blocked for private state/context tables.
+10. Confirm service_role remains backend/server-side only.
+
+Execution decision:
+DO_NOT_EXECUTE_SQL_YET
+
+Required next gate:
+READY_FOR_C8_I_N_A_COMMIT_SQL_EXECUTION_METHOD_PLAN
+
+After commit, next planning gate:
+READY_FOR_C8_I_O_STAGING_EXECUTION_PRECHECK_NO_EXECUTION
+
+Verification:
+- Required migration markers: PASS
+- Required C8-I-M markers: PASS
+- Forbidden fragments: absent
+- Working tree was clean before writing this plan
+- No SQL execution performed
+- No DB read/write performed
+- No runtime called
+- No code patch performed
+
+Definition of Done:
+- execution method plan recorded
+- staging-first method selected
+- production execution blocked
+- exact execution command deferred
+- backup/rollback confirmation required next
+- SQL execution remains blocked
+- no SQL executed
+- no DB read/write
+- no runtime called
+- no code patch performed
