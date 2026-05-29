@@ -1,0 +1,170 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-W-RESULT-1 - Consolidated Read-Only Schema Drift Diagnostic Result, No Execution
+
+Date: 2026-05-29 12:36:10
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before report: 9764001
+HEAD line: 9764001 docs: record C8-I V partial diagnostic result
+
+User-provided diagnostic source:
+- C8-I-W manual consolidated read-only diagnostic result from Supabase Dashboard SQL Editor.
+- Result shape: one JSON value from C8-I-V2 consolidated diagnostic.
+- Target intended: current sandbox Supabase project only.
+- Production target: forbidden / not used.
+- Secrets/keys shared in chat: false.
+
+Confirmed diagnostic findings:
+SCHEMA_DRIFT_CONFIRMED
+RULE_KEY_MISSING_CONFIRMED
+PARTIAL_C8_I_SCHEMA_CONFIRMED
+SECURITY_GRANT_REVIEW_REQUIRED
+NO_PATCH_EXECUTED
+
+Summary from diagnostic JSON:
+- gate: C8-I-V2
+- mode: read_only_consolidated_schema_drift_diagnostic
+- target: current sandbox Supabase project only
+- rule_key_status: rule_key_missing
+- expected_tables_existing_count: 6
+- expected_tables_missing_count: 5
+- anon_authenticated_table_grant_rows: 12
+
+Existing C8-I tables visible in diagnostic:
+- state_dimensions
+- state_relevance_rules
+- value_object_relevance_edges
+- value_object_similarity_edges
+- value_object_state_facts
+- value_object_state_snapshots
+
+Expected C8-I tables missing or not created:
+- activity_state_deltas
+- semantic_signatures
+- resolver_runs
+- resolver_candidate_links
+- resolver_feedback
+
+state_relevance_rules schema drift:
+The live sandbox public.state_relevance_rules table exists, but it does not contain the expected rule_key column.
+The live table has an older/different structure with fields such as:
+- source_dimension_id
+- source_dimension_key
+- target_category_id
+- target_value_object_id
+- target_direction_key
+- relation
+- relevance_weight
+- explanation
+- safety_policy
+- metadata_json
+
+Root cause classification:
+CREATE_TABLE_IF_NOT_EXISTS_SCHEMA_DRIFT
+The first manual migration failed because public.state_relevance_rules already existed in sandbox with an older schema.
+Because create table if not exists does not add missing columns to an existing table, the migration later referenced rule_key and failed with:
+ERROR: 42703: column "rule_key" does not exist
+
+RLS/grant finding:
+RLS rowsecurity is true on the six existing C8-I tables:
+- state_dimensions
+- state_relevance_rules
+- value_object_relevance_edges
+- value_object_similarity_edges
+- value_object_state_facts
+- value_object_state_snapshots
+
+The diagnostic also shows broad table privileges for anon and authenticated on the six existing C8-I tables:
+- DELETE
+- INSERT
+- REFERENCES
+- SELECT
+- TRIGGER
+- TRUNCATE
+- UPDATE
+
+Security interpretation:
+GRANT does not replace RLS, and RLS does not replace GRANT.
+Because policies were not inspected by this diagnostic, this report does not claim that public write access is actually possible through the app/API.
+However, the broad anon/authenticated grants are not the intended backend-mediated security posture for private state/semantic tables and must be normalized in the next patch plan.
+TRUNCATE grants are especially security-sensitive and should not remain on private C8-I tables for anon/authenticated roles.
+
+Recommended patch direction:
+SANDBOX_ONLY_SCHEMA_RESET_AND_REBUILD_PLAN_RECOMMENDED
+
+Rationale:
+- The current project is a non-production sandbox with no real user data by user confirmation.
+- Existing C8-I tables are only partially present.
+- At least one table has old schema incompatible with the current migration draft.
+- Incremental ALTER-only repair would be more fragile than a sandbox-only reset/rebuild.
+- A reset/rebuild must still be explicit, reviewed, and separately authorized before execution.
+
+Patch plan outline for next gate:
+1. Prepare a no-execution sandbox-only cleanup/rebuild SQL package.
+2. The package must explicitly target only C8-I draft/state/semantic tables.
+3. The package must not touch production.
+4. The package must not touch unrelated commercial/core tables.
+5. The package must drop or rebuild only the C8-I sandbox draft objects needed to remove schema drift.
+6. The package must recreate the current intended schema from the corrected migration draft.
+7. The package must normalize GRANT posture:
+   - anon: no broad privileges on private state/semantic tables
+   - authenticated: no broad direct table privileges unless deliberately proven safe
+   - service_role: backend-mediated access only
+8. RLS must stay enabled.
+9. auth.uid() = user_id must remain not accepted as proven.
+10. activity_events write path must remain disabled.
+
+Next gate:
+READY_FOR_C8_I_W_RESULT_1_A_COMMIT_SCHEMA_DRIFT_CONFIRMED
+
+After commit, next gate:
+READY_FOR_C8_I_X_SANDBOX_ONLY_CLEANUP_REBUILD_PATCH_PLAN_NO_EXECUTION
+
+Blocked:
+- do not rerun the failed migration SQL
+- do not run production SQL
+- do not execute cleanup SQL
+- do not execute patch SQL
+- do not print secrets/keys
+- do not assume auth.uid() = user_id is proven
+- do not enable activity_events write path
+- do not enable runtime/AI state inference
+
+Safety:
+- SQL executed by this script: false
+- DB read by this script: false
+- DB write by this script: false
+- Runtime/API called by this script: false
+- env/secrets read by this script: false
+- Supabase credentials printed by this script: false
+- code patch performed by this script: false
+- migration draft modified by this script: false
+
+Verification:
+- branch main: PASS
+- working tree clean before report: PASS
+- local HEAD matches origin/main: PASS
+- latest commit is C8-I-V-RESULT-1-A: PASS
+- diagnostic V2 SQL markers: PASS
+- V1 partial report markers: PASS
+- U report markers: PASS
+- T failure report markers: PASS
+- consolidated diagnostic result recorded: PASS
+- schema drift confirmed: PASS
+- no SQL executed by this script
+- no DB read/write by this script
+- no runtime called by this script
+- no code patch performed by this script
+
+Definition of Done:
+- consolidated W diagnostic result recorded
+- rule_key missing confirmed
+- partial C8-I schema confirmed
+- broad anon/authenticated grants preserved as security-sensitive finding
+- sandbox-only reset/rebuild patch direction selected
+- no patch SQL executed
+- no cleanup SQL executed
+- no production action
+- no SQL executed by this script
+- no DB read/write by this script
+- no runtime called by this script
+- no code patch performed by this script
