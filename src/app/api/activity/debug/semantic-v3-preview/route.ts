@@ -5,6 +5,7 @@ import { deriveCategoryCandidates } from "../../../../../../lib/activity/categor
 import { buildActivityValueObjectExposureCandidatesV0 } from "../../../../../../lib/activity/categoryDerivation/semanticActivityValueObjectExposureV0";
 import { resolveSemanticBundleV0 } from "../../../../../../lib/activity/categoryDerivation/semanticBundleResolverV0";
 import { buildSemanticDerivationV3FromCurrentOutput } from "../../../../../../lib/activity/categoryDerivation/semanticContractV3Adapter";
+import { buildStateDeltaCandidatesV0 } from "../../../../../../lib/activity/categoryDerivation/semanticStateDeltaCandidatePolicyV0";
 import { enrichSemanticDerivationV3FromText } from "../../../../../../lib/activity/categoryDerivation/semanticTextSignalEnrichmentV0";
 import { buildValueObjectCandidatesV0 } from "../../../../../../lib/activity/categoryDerivation/semanticValueObjectCandidatePolicyV0";
 import type { CategoryDerivationInput } from "../../../../../../lib/activity/categoryDerivation/types";
@@ -100,6 +101,7 @@ export async function GET() {
     resolver: "semantic_bundle_resolver_v0",
     valueObjectPolicy: "value_object_candidate_policy_v0",
     exposurePolicy: "activity_value_object_exposure_v0",
+    stateDeltaPolicy: "state_delta_candidate_policy_v0",
     writes: {
       sqlExecuted: false,
       dbWriteExecuted: false,
@@ -159,7 +161,7 @@ export async function POST(request: Request) {
     metadata: {
       endpoint: "/api/activity/debug/semantic-v3-preview",
       mode: "read_only_preview",
-      p4Step: "C8-I-IMPLEMENT-8",
+      p4Step: "C8-I-IMPLEMENT-9",
       createdAt: new Date().toISOString(),
       dbWriteExecuted: false,
       valueObjectCreated: false,
@@ -200,6 +202,11 @@ export async function POST(request: Request) {
     valueObjectCandidates,
   });
 
+  const stateDeltaCandidates = buildStateDeltaCandidatesV0({
+    semanticV3,
+    exposureCandidates,
+  });
+
   return NextResponse.json({
     ok: true,
     endpoint: "/api/activity/debug/semantic-v3-preview",
@@ -208,6 +215,7 @@ export async function POST(request: Request) {
     resolver: "semantic_bundle_resolver_v0",
     valueObjectPolicy: "value_object_candidate_policy_v0",
     exposurePolicy: "activity_value_object_exposure_v0",
+    stateDeltaPolicy: "state_delta_candidate_policy_v0",
     activityEventId,
     input: {
       inputText: input.inputText,
@@ -230,6 +238,7 @@ export async function POST(request: Request) {
     semanticV3,
     valueObjectCandidates,
     exposureCandidates,
+    stateDeltaCandidates,
     writes: {
       sqlExecuted: false,
       dbWriteExecuted: false,
