@@ -146,11 +146,10 @@ export async function POST(request: Request) {
     description: input.description,
     durationMinutes: input.durationMinutes,
     inputLanguage: input.inputLanguage,
-    p4Step: "C8-I-IMPLEMENT-10",
+    p4Step: "C8-I-IMPLEMENT-10-FIX",
   });
 
   return NextResponse.json({
-    ok: true,
     endpoint: "/api/activity/debug/semantic-v3-preview",
     pipeline: "semantic_preview_pipeline_v0",
     ...result,
