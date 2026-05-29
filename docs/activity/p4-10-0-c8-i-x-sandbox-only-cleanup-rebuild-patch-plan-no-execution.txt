@@ -1,0 +1,117 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-X - Sandbox-Only Cleanup/Rebuild Patch Plan, No Execution
+
+Date: 2026-05-29 14:44:24
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before plan: a70d804
+HEAD line: a70d804 docs: record C8-I W schema drift confirmed
+
+Inputs:
+- Migration draft: supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql
+- W schema drift report: docs/activity/p4-10-0-c8-i-w-result-1-schema-drift-confirmed-no-execution.txt
+
+Prepared output:
+- Sandbox-only cleanup/rebuild SQL package: supabase/patches/20260529_c8_i_x_sandbox_only_cleanup_rebuild_no_execution.sql
+
+Decision:
+SANDBOX_ONLY_CLEANUP_REBUILD_PATCH_PLAN_RECORDED_NO_EXECUTION
+DO_NOT_RERUN_FAILED_MIGRATION_SQL
+NO_SQL_EXECUTION_IN_C8_I_X
+
+Confirmed basis from C8-I-W:
+- SCHEMA_DRIFT_CONFIRMED
+- RULE_KEY_MISSING_CONFIRMED
+- PARTIAL_C8_I_SCHEMA_CONFIRMED
+- SECURITY_GRANT_REVIEW_REQUIRED
+- CREATE_TABLE_IF_NOT_EXISTS_SCHEMA_DRIFT
+- rule_key_status: rule_key_missing
+- expected_tables_existing_count: 6
+- expected_tables_missing_count: 5
+
+Patch package purpose:
+1. Drop only C8-I sandbox draft/state/semantic tables.
+2. Rebuild the current intended C8-I schema from the committed migration draft.
+3. Normalize grants after rebuild:
+   - revoke all broad privileges from anon on private C8-I tables
+   - revoke all broad privileges from authenticated on private C8-I tables
+   - grant service_role backend-mediated table access
+4. Preserve RLS as enabled by migration draft.
+5. Keep auth.uid() = user_id not accepted as proven.
+6. Keep activity_events write path disabled.
+
+Sandbox-only cleanup table set:
+- resolver_candidate_links
+- resolver_feedback
+- resolver_runs
+- semantic_signatures
+- activity_state_deltas
+- value_object_state_snapshots
+- value_object_state_facts
+- value_object_relevance_edges
+- value_object_similarity_edges
+- state_relevance_rules
+- state_dimensions
+
+Scope restrictions:
+- current sandbox Supabase project only
+- production forbidden
+- do not touch unrelated commercial/core tables
+- do not touch user identity/auth tables
+- do not print secrets/keys
+- do not run automatically from PowerShell
+
+Security posture:
+- GRANT does not replace RLS
+- RLS does not replace GRANT
+- private C8-I state/semantic tables should not keep broad anon/authenticated direct table privileges
+- service_role remains backend/server-side only
+- auth.uid() = user_id remains not proven
+
+Required next gate:
+READY_FOR_C8_I_X_A_COMMIT_SANDBOX_ONLY_CLEANUP_REBUILD_PATCH_PLAN
+
+After commit:
+READY_FOR_C8_I_Y_FINAL_REVIEW_SANDBOX_ONLY_CLEANUP_REBUILD_SQL_NO_EXECUTION
+
+Blocked:
+- do not execute cleanup SQL in C8-I-X
+- do not execute patch SQL in C8-I-X
+- do not run production SQL
+- do not rerun the failed migration SQL
+- do not print secrets/keys
+- do not assume auth.uid() = user_id is proven
+- do not enable activity_events write path
+- do not enable runtime/AI state inference
+
+Safety:
+- SQL executed by this script: false
+- cleanup SQL executed by this script: false
+- patch SQL executed by this script: false
+- DB read by this script: false
+- DB write by this script: false
+- Runtime/API called by this script: false
+- env/secrets read by this script: false
+- Supabase credentials printed by this script: false
+
+Verification:
+- branch main: PASS
+- local HEAD matches origin/main: PASS
+- latest commit is C8-I-W-RESULT-1-A: PASS
+- previous partial X outputs cleaned if present: PASS
+- W schema drift report markers: PASS
+- migration draft markers: PASS
+- patch SQL package markers: PASS
+- forbidden patch SQL fragments absent: PASS
+- sandbox-only cleanup/rebuild plan recorded: PASS
+- no SQL executed by this script
+- no DB read/write by this script
+- no runtime called by this script
+
+Definition of Done:
+- sandbox-only cleanup/rebuild patch plan recorded
+- sandbox-only cleanup/rebuild SQL package prepared
+- failed migration rerun remains blocked
+- production action remains blocked
+- no SQL executed by this script
+- no DB read/write by this script
+- no runtime called by this script
