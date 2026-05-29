@@ -4,12 +4,14 @@ import { deriveCategoryCandidates } from "./ruleExtractor";
 import { buildActivityValueObjectExposureCandidatesV0 } from "./semanticActivityValueObjectExposureV0";
 import { resolveSemanticBundleV0 } from "./semanticBundleResolverV0";
 import { buildSemanticDerivationV3FromCurrentOutput } from "./semanticContractV3Adapter";
+import { buildSemanticReviewActionCandidatesV0 } from "./semanticReviewActionContractV0";
 import { buildStateDeltaCandidatesV0 } from "./semanticStateDeltaCandidatePolicyV0";
 import { enrichSemanticDerivationV3FromText } from "./semanticTextSignalEnrichmentV0";
 import { buildValueObjectCandidatesV0 } from "./semanticValueObjectCandidatePolicyV0";
 import type { CategoryDerivationInput } from "./types";
 import type { ActivityValueObjectExposureCandidateV0 } from "./semanticActivityValueObjectExposureV0";
 import type { SemanticDerivationV3Result } from "./semanticContractV3";
+import type { SemanticReviewActionCandidateV0 } from "./semanticReviewActionContractV0";
 import type { StateDeltaCandidateV0 } from "./semanticStateDeltaCandidatePolicyV0";
 import type { ValueObjectCandidateV0 } from "./semanticValueObjectCandidatePolicyV0";
 
@@ -41,6 +43,7 @@ export type SemanticPreviewPipelineResultV0 = {
   valueObjectPolicy: "value_object_candidate_policy_v0";
   exposurePolicy: "activity_value_object_exposure_v0";
   stateDeltaPolicy: "state_delta_candidate_policy_v0";
+  reviewActionPolicy: "semantic_review_action_contract_v0";
   activityEventId: string;
   input: {
     inputText: string;
@@ -64,6 +67,7 @@ export type SemanticPreviewPipelineResultV0 = {
   valueObjectCandidates: ValueObjectCandidateV0[];
   exposureCandidates: ActivityValueObjectExposureCandidateV0[];
   stateDeltaCandidates: StateDeltaCandidateV0[];
+  reviewActionCandidates: SemanticReviewActionCandidateV0[];
   writes: SemanticPreviewPipelineWritesV0;
 };
 
@@ -97,7 +101,7 @@ export function runSemanticPreviewPipelineV0(
     metadata: {
       endpoint: "semantic_preview_pipeline_v0",
       mode: "read_only_preview",
-      p4Step: params.p4Step ?? "C8-I-IMPLEMENT-10",
+      p4Step: params.p4Step ?? "C8-I-IMPLEMENT-12",
       createdAt: new Date().toISOString(),
       dbWriteExecuted: false,
       valueObjectCreated: false,
@@ -143,6 +147,13 @@ export function runSemanticPreviewPipelineV0(
     exposureCandidates,
   });
 
+  const reviewActionCandidates = buildSemanticReviewActionCandidatesV0({
+    semanticV3,
+    valueObjectCandidates,
+    exposureCandidates,
+    stateDeltaCandidates,
+  });
+
   return {
     ok: true,
     mode: "read_only_preview",
@@ -151,6 +162,7 @@ export function runSemanticPreviewPipelineV0(
     valueObjectPolicy: "value_object_candidate_policy_v0",
     exposurePolicy: "activity_value_object_exposure_v0",
     stateDeltaPolicy: "state_delta_candidate_policy_v0",
+    reviewActionPolicy: "semantic_review_action_contract_v0",
     activityEventId,
     input: {
       inputText: params.inputText,
@@ -174,6 +186,7 @@ export function runSemanticPreviewPipelineV0(
     valueObjectCandidates,
     exposureCandidates,
     stateDeltaCandidates,
+    reviewActionCandidates,
     writes: buildReadOnlyWritesV0(),
   };
 }

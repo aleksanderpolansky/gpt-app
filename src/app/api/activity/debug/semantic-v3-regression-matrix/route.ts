@@ -16,7 +16,10 @@ type RegressionCaseV0 = {
     minResolvedCategories: number;
     minValueObjects: number;
     minExposures: number;
-    minStateDeltas: number;
+    minstateDeltas: number;
+    reviewActions: number;
+    minReviewActions?: number;
+    actionKinds?: string[];
     valueObjectKeys?: string[];
     exposureTypes?: string[];
     dimensionKeys?: string[];
@@ -33,9 +36,11 @@ type RegressionCaseResultV0 = {
     valueObjects: number;
     exposures: number;
     stateDeltas: number;
+    reviewActions: number;
     valueObjectKeys: string[];
     exposureTypes: string[];
     dimensionKeys: string[];
+    actionKinds: string[];
     writes: SemanticPreviewPipelineResultV0["writes"];
   };
 };
@@ -72,6 +77,7 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
         "care_attention_time",
       ],
       requireNoWrites: true,
+      minReviewActions: 10,
     },
   },
   {
@@ -98,6 +104,7 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
         "work_context_exposure",
       ],
       requireNoWrites: true,
+      minReviewActions: 10,
     },
   },
   {
@@ -120,6 +127,7 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
         "needs_user_confirmation",
       ],
       requireNoWrites: true,
+      minReviewActions: 10,
     },
   },
   {
@@ -142,6 +150,7 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
         "needs_user_confirmation",
       ],
       requireNoWrites: true,
+      minReviewActions: 10,
     },
   },
 ];
@@ -212,9 +221,9 @@ function evaluateCase(testCase: RegressionCaseV0): RegressionCaseResultV0 {
     (candidate) => candidate.activityLinkType
   );
 
-  const dimensionKeys = preview.stateDeltaCandidates.map(
-    (candidate) => candidate.dimensionKey
-  );
+  const dimensionKeys = preview.stateDeltaCandidates.map((candidate) => candidate.dimensionKey);
+
+  const actionKinds = preview.reviewActionCandidates.map((candidate) => candidate.actionKind);
 
   const failures: string[] = [];
 
@@ -261,9 +270,18 @@ function evaluateCase(testCase: RegressionCaseV0): RegressionCaseResultV0 {
 
   assertIncludesAll(
     dimensionKeys,
+      actionKinds,
     testCase.expected.dimensionKeys,
+      actionKinds,
     failures,
     "dimensionKey"
+  );
+
+  assertIncludesAll(
+    actionKinds,
+    testCase.expected.actionKinds,
+    failures,
+    "actionKind"
   );
 
   if (testCase.expected.requireNoWrites) {
@@ -279,9 +297,11 @@ function evaluateCase(testCase: RegressionCaseV0): RegressionCaseResultV0 {
       valueObjects: preview.valueObjectCandidates.length,
       exposures: preview.exposureCandidates.length,
       stateDeltas: preview.stateDeltaCandidates.length,
+      reviewActions: preview.reviewActionCandidates.length,
       valueObjectKeys,
       exposureTypes,
       dimensionKeys,
+      actionKinds,
       writes: preview.writes,
     },
   };
@@ -319,3 +339,4 @@ export async function GET() {
 export async function POST() {
   return NextResponse.json(runRegressionMatrixV0());
 }
+
