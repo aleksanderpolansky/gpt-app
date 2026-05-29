@@ -1,0 +1,102 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-S - Sandbox SQL Execution Package / Manual Execution Plan, No Execution
+
+Date: 2026-05-29 11:36:43
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before plan: b191d53
+HEAD line: b191d53 docs: record C8-I R sandbox SQL authorization
+
+Inputs:
+- Migration draft: supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql
+- C8-I-R authorization record: docs/activity/p4-10-0-c8-i-r-explicit-sandbox-sql-execution-authorization-no-execution.txt
+- C8-I-Q final pre-execution review: docs/activity/p4-10-0-c8-i-q-final-pre-execution-command-review-no-execution.txt
+
+Safety:
+- SQL executed: false
+- DB read executed: false
+- DB write executed: false
+- Runtime called: false
+- supabase db push executed: false
+- psql executed: false
+- migration executed: false
+- Dashboard SQL execution performed: false
+- activity_events write enabled: false
+- AI/OpenAI called: false
+- migration draft modified: false
+- code patch executed: false
+- env/secrets read: false
+- Supabase credentials printed: false
+
+Previous closed gate:
+C8-I-R-A confirmed:
+TSC_PASS_AND_R_EXPLICIT_SANDBOX_SQL_EXECUTION_AUTHORIZATION_COMMITTED.
+
+Plan conclusion:
+SANDBOX_SQL_EXECUTION_PACKAGE_PREPARED_NO_EXECUTION
+
+Execution package:
+Execution package type: manual sandbox SQL execution plan.
+Selected method for later gate: Supabase Dashboard SQL Editor in the current sandbox project.
+Reason for dashboard/manual method: no local secrets, no connection strings, no service_role keys, and no DB password are needed in this chat or terminal.
+SQL source file: supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql.
+Do not use production project.
+Do not print Supabase secrets, service_role key, JWT secret, database password, or connection string.
+Do not execute SQL in this C8-I-S gate.
+Do not run supabase db push in this C8-I-S gate.
+Do not run psql in this C8-I-S gate.
+Do not run migration up or db reset in this C8-I-S gate.
+Do not enable activity_events write path in this gate.
+Do not enable OpenAI/AI runtime inference in this gate.
+
+Manual steps for a later explicit execution gate:
+Later gate only: open Supabase Dashboard manually.
+Later gate only: select the current sandbox project, not production.
+Later gate only: open SQL Editor.
+Later gate only: paste SQL from the migration draft file.
+Later gate only: review once again that the SQL begins with the C8-I safety markers and contains backend-mediated RLS patch markers.
+Later gate only: execute only after a new explicit C8-I-T authorization/command gate.
+Later gate only: capture result output without secrets.
+Later gate only: if execution fails, stop and copy the error text only, without credentials.
+
+Execution decision:
+DO_NOT_EXECUTE_SQL_IN_C8_I_S
+
+Required next gate:
+READY_FOR_C8_I_S_A_COMMIT_SANDBOX_SQL_EXECUTION_PACKAGE
+
+After commit, next gate:
+READY_FOR_C8_I_T_FINAL_SANDBOX_SQL_EXECUTION_STEP_OR_STOP
+
+Important boundary:
+This gate prepares the execution package and manual plan only.
+This gate does not execute SQL.
+This gate does not read env/secrets.
+This gate does not print Supabase credentials.
+This gate does not provide production execution.
+Any actual SQL execution requires a separate next gate and must remain sandbox-only.
+
+Verification:
+- Required migration markers: PASS
+- Required C8-I-Q markers: PASS
+- Required C8-I-R markers: PASS
+- Forbidden fragments: absent
+- Working tree was clean before writing this package
+- No SQL execution performed
+- No DB read/write performed
+- No runtime called
+- No code patch performed
+- No env/secrets read
+- No Supabase credentials printed
+
+Definition of Done:
+- sandbox SQL execution package recorded
+- manual dashboard method selected for later gate
+- migration source path recorded
+- production target forbidden
+- secrets/keys non-printing boundary recorded
+- SQL execution remains blocked in this gate
+- next gate may choose final sandbox SQL execution step or stop
+- no SQL executed
+- no DB read/write
+- no runtime called
+- no code patch performed
