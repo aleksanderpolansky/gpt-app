@@ -1,0 +1,112 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-J — SQL Patch Plan Before Migration Execution
+
+Date: 2026-05-29 09:13:55
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before plan: a13de2c
+
+Inputs:
+- Migration draft: supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql
+- C8-I-I decision: docs/activity/p4-10-0-c8-i-i-auth-rls-user-id-decision-or-sql-patch-plan.txt
+
+Purpose:
+Create the SQL patch plan required before any migration execution.
+
+Safety:
+- SQL executed: false
+- DB read executed: false
+- DB write executed: false
+- Runtime called: false
+- supabase db push executed: false
+- psql executed: false
+- migration executed: false
+- activity_events write enabled: false
+- AI/OpenAI called: false
+- code patch executed: false
+
+Previous closed gate:
+C8-I-I-A confirmed:
+TSC_PASS_AND_I_AUTH_RLS_USER_ID_DECISION_COMMITTED.
+
+Reason for patch plan:
+C8-I-I decided that SQL_PATCH_PLAN_REQUIRED_BEFORE_EXECUTION.
+C8-I-H found AUTH0_AND_AUTH_UID_BOTH_PRESENT_STATIC_COMPATIBILITY_NOT_PROVEN.
+Therefore auth.uid() = user_id is not accepted as proven.
+
+Current draft static indicators:
+- auth.uid() occurrences: 36
+- authenticated occurrences: 40
+- user_id occurrences: 59
+- create policy count: 29
+- grant count: 22
+- revoke count: 11
+
+Patch principle:
+The current C8-I migration draft must not be executed as-is.
+Before execution, the draft should be patched toward a conservative MVP access model:
+SERVICE_ROLE_BACKEND_MEDIATED_STATE_TABLES_UNTIL_AUTH_UID_COMPATIBILITY_IS_PROVEN.
+
+Target access model:
+1. Keep RLS enabled.
+2. Keep explicit GRANT.
+3. Keep anon access revoked.
+4. Keep service_role backend/server-side only.
+5. Do not rely on auth.uid() = user_id for private state/context tables yet.
+6. Do not allow authenticated client writes to private state/context tables until Auth0/Supabase ownership compatibility is proven.
+7. Do not enable production writes to activity_events.
+8. Do not implement state engine yet.
+
+Catalog/reference table plan:
+- state_dimensions: anon revoked; authenticated select may be allowed only for non-personal catalog/reference data; authenticated write denied; service_role all.
+- state_relevance_rules: anon revoked; authenticated select may be allowed only for non-personal catalog/reference data; authenticated write denied; service_role all.
+
+Private/user-owned state/context table plan:
+- value_object_state_facts: anon revoked; authenticated revoked/denied for MVP; no auth.uid() ownership policy until compatibility is proven; service_role all; backend/server routes mediate access.
+- activity_state_deltas: anon revoked; authenticated revoked/denied for MVP; no auth.uid() ownership policy until compatibility is proven; service_role all; backend/server routes mediate access.
+- value_object_state_snapshots: anon revoked; authenticated revoked/denied for MVP; no auth.uid() ownership policy until compatibility is proven; service_role all; backend/server routes mediate access.
+- semantic_signatures: anon revoked; authenticated revoked/denied for MVP; no auth.uid() ownership policy until compatibility is proven; service_role all; backend/server routes mediate access.
+- value_object_similarity_edges: anon revoked; authenticated revoked/denied for MVP; no auth.uid() ownership policy until compatibility is proven; service_role all; backend/server routes mediate access.
+- value_object_relevance_edges: anon revoked; authenticated revoked/denied for MVP; no auth.uid() ownership policy until compatibility is proven; service_role all; backend/server routes mediate access.
+- resolver_runs: anon revoked; authenticated revoked/denied for MVP; no auth.uid() ownership policy until compatibility is proven; service_role all; backend/server routes mediate access.
+- resolver_candidate_links: anon revoked; authenticated revoked/denied for MVP; no auth.uid() ownership policy until compatibility is proven; service_role all; backend/server routes mediate access.
+- resolver_feedback: anon revoked; authenticated revoked/denied for MVP; no auth.uid() ownership policy until compatibility is proven; service_role all; backend/server routes mediate access.
+
+Required SQL patch direction:
+1. Replace or remove authenticated insert/update policies that rely on user_id = auth.uid() for private state/context tables.
+2. For private state/context tables, use backend-mediated access for MVP:
+   - revoke all on table public.<private_table> from anon;
+   - revoke all on table public.<private_table> from authenticated;
+   - grant all on table public.<private_table> to service_role;
+   - keep row level security enabled;
+   - do not add permissive authenticated policies until user_id ownership compatibility is proven.
+3. For catalog/reference tables, allow at most authenticated read if needed:
+   - revoke all from anon;
+   - grant select to authenticated only if the table contains no personal/user-owned data;
+   - grant all to service_role;
+   - deny authenticated writes.
+4. Preserve user_id columns as application ownership fields, but do not equate them with auth.uid() until a future mapping decision.
+5. Future authenticated-client access should require a separate mapping design, for example:
+   - verified Supabase auth.uid() equals internal user UUID, or
+   - explicit app user mapping function, or
+   - server-side only mediation remains the permanent model.
+
+Patch target:
+BACKEND_MEDIATED_RLS_PATCH_REQUIRED_BEFORE_SQL_EXECUTION
+
+Execution decision:
+DO_NOT_EXECUTE_SQL_YET
+
+Next required gate:
+READY_FOR_C8_I_K_PATCH_MIGRATION_DRAFT_TO_BACKEND_MEDIATED_RLS
+
+Definition of Done:
+- SQL patch plan recorded.
+- Current draft execution remains blocked.
+- auth.uid() = user_id is not accepted as proven.
+- backend-mediated MVP access model selected.
+- private state/context tables planned as service_role/backend-mediated.
+- catalog/reference table distinction recorded.
+- no SQL executed
+- no DB read/write
+- no runtime called
+- no code patch performed
