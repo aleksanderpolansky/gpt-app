@@ -1,0 +1,117 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-U - Sandbox Schema Drift Diagnostic And Patch Plan, No Execution
+
+Date: 2026-05-29 11:54:26
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before plan: 156228d
+HEAD line: 156228d docs: record C8-I T sandbox SQL rule_key failure
+
+Inputs:
+- Migration draft: supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql
+- C8-I-T failure report: docs/activity/p4-10-0-c8-i-t-fail-1-manual-sandbox-sql-error-rule-key.txt
+- C8-I-S execution package plan: docs/activity/p4-10-0-c8-i-s-sandbox-sql-execution-package-or-manual-plan-no-execution.txt
+
+Prepared output:
+- Read-only diagnostic SQL file: supabase/diagnostics/20260529_c8_i_u_schema_drift_diagnostic_readonly.sql
+
+Observed failure:
+ERROR: 42703: column "rule_key" does not exist
+
+Safety:
+- SQL executed by this script: false
+- Diagnostic SQL executed by this script: false
+- DB read by this script: false
+- DB write by this script: false
+- Runtime/API called by this script: false
+- env/secrets read by this script: false
+- Supabase credentials printed by this script: false
+- code patch performed by this script: false
+- migration draft modified by this script: false
+
+Immediate decision:
+DO_NOT_RERUN_SAME_SQL
+
+Diagnostic plan conclusion:
+SCHEMA_DRIFT_DIAGNOSTIC_PLAN_RECORDED_NO_EXECUTION
+READ_ONLY_DIAGNOSTIC_SQL_FILE_PREPARED_NO_EXECUTION
+
+Primary hypothesis to test:
+The sandbox may already contain a pre-existing or partially-created public.state_relevance_rules table without the rule_key column.
+If that is true, create table if not exists would not add rule_key to the existing table, and later references to rule_key can fail.
+
+Other hypotheses to test:
+1. The SQL pasted into Dashboard differed from the committed migration draft.
+2. A statement referenced rule_key before the intended column was available.
+3. The failed transaction rolled back all C8-I changes, and the visible error is from a different existing object or older state.
+4. A previous manual experiment created partial C8-I schema objects in sandbox.
+
+Read-only diagnostic file:
+supabase/diagnostics/20260529_c8_i_u_schema_drift_diagnostic_readonly.sql
+
+What the diagnostic SQL checks:
+- whether expected C8-I tables exist
+- whether state_relevance_rules.rule_key exists
+- current columns for all expected C8-I tables
+- RLS flags via pg_tables.rowsecurity
+- indexes via pg_indexes
+- grants/privileges via information_schema.table_privileges
+
+Patch plan decision:
+NO_PATCH_UNTIL_READ_ONLY_DIAGNOSTIC_RESULT
+
+Possible next patch branches after diagnostic:
+A. If state_relevance_rules exists and rule_key is missing:
+   - classify as sandbox schema drift from pre-existing table
+   - prepare sandbox-only cleanup or ALTER patch in a later explicit gate
+   - do not assume production-safe behavior
+B. If state_relevance_rules does not exist:
+   - inspect exact failing SQL location and whether pasted SQL differs from migration draft
+   - prepare corrected migration draft in a later explicit gate
+C. If state_relevance_rules exists and rule_key exists:
+   - compare dashboard error context and local migration line references
+   - check whether the executed SQL was from stale Notepad or wrong project
+D. If partial C8-I objects exist:
+   - prepare sandbox-only cleanup plan before rerun
+   - cleanup must be explicit and committed before execution
+
+Required next gate:
+READY_FOR_C8_I_U_A_COMMIT_SCHEMA_DRIFT_DIAGNOSTIC_AND_PATCH_PLAN
+
+After commit, next gate:
+READY_FOR_C8_I_V_MANUAL_READ_ONLY_SCHEMA_DRIFT_DIAGNOSTIC
+
+Blocked:
+- do not rerun the same SQL
+- do not run production SQL
+- do not execute patch SQL
+- do not execute cleanup SQL
+- do not print secrets/keys
+- do not assume auth.uid() = user_id is proven
+- do not enable activity_events write path
+- do not enable runtime/AI state inference
+
+Verification:
+- branch main: PASS
+- working tree clean before plan: PASS
+- local HEAD matches origin/main: PASS
+- latest commit is C8-I-T-FAIL-1-A: PASS
+- required failure report markers: PASS
+- required migration markers: PASS
+- required C8-I-S markers: PASS
+- diagnostic SQL read-only static check: PASS
+- diagnostic SQL markers: PASS
+- no SQL executed by this script
+- no DB read/write by this script
+- no runtime called by this script
+- no code patch performed by this script
+
+Definition of Done:
+- schema drift diagnostic plan recorded
+- read-only diagnostic SQL file prepared
+- no rerun decision preserved
+- no patch until diagnostic result recorded
+- next manual read-only diagnostic gate identified
+- no SQL executed by this script
+- no DB read/write by this script
+- no runtime called by this script
+- no code patch performed by this script
