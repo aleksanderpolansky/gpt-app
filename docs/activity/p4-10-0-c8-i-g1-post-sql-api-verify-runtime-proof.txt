@@ -1,0 +1,130 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0 / C8-I / G1-C8-I-POST-SQL-API-VERIFY
+Runtime proof report — local backend/service_role read-only verification
+
+Date:
+2026-05-29
+
+Status:
+PASS
+
+Current scope:
+This report records the result of G1 / C8-I-POST-SQL-API-VERIFY after the C8-I sandbox cleanup/rebuild SQL was applied manually in Supabase and the schema drift was fixed.
+
+Relevant current commit before this report:
+5c20d37 — docs: plan C8-I X sandbox cleanup rebuild
+
+Files currently involved but not yet committed:
+1. docs/activity/p4-10-0-c8-i-y-final-review-sandbox-cleanup-rebuild-sql-no-execution.txt
+2. src/app/api/activity/debug/c8-i-post-sql-api-verify/route.ts
+3. docs/activity/p4-10-0-c8-i-g1-post-sql-api-verify-runtime-proof.txt
+
+Endpoint created:
+src/app/api/activity/debug/c8-i-post-sql-api-verify/route.ts
+
+Endpoint URL used locally:
+http://localhost:3000/api/activity/debug/c8-i-post-sql-api-verify
+
+Required header:
+x-c8-i-post-sql-api-verify: enabled
+
+Proof mode:
+read_only_service_role_c8_i_shape_check
+
+Runtime proof summary:
+- Proof status: 200
+- ok: True
+- code: C8_I_POST_SQL_API_VERIFY_PASS
+- gate: G1-C8-I-POST-SQL-API-VERIFY
+- mode: read_only_service_role_c8_i_shape_check
+- headerAccepted: True
+- supabaseUrlConfigured: True
+- serviceRoleKeyConfigured: True
+- supabaseAdminClientCreated: True
+- tableProofsAttempted: True
+- expectedTablesCount: 11
+- successfulTablesCount: 11
+- failedTablesCount: 0
+- allExpectedTablesReadable: True
+- ruleKeyShapeChecked: True
+- semanticSignaturesShapeChecked: True
+- sanitizedErrorCategory: none
+
+Header guard proof:
+- Calling endpoint without required header returned:
+  - status: 403
+  - code: C8_I_POST_SQL_API_VERIFY_HEADER_REQUIRED
+  - headerAccepted: False
+- Result: PASS, header guard works.
+
+C8-I tables verified through backend/service_role read-only shape-check:
+1. state_dimensions — selectedColumns: dimension_key — requiredMarkerColumn: dimension_key — ok: True
+2. state_relevance_rules — selectedColumns: rule_key — requiredMarkerColumn: rule_key — ok: True
+3. value_object_state_facts — selectedColumns: id — requiredMarkerColumn: id — ok: True
+4. activity_state_deltas — selectedColumns: id — requiredMarkerColumn: id — ok: True
+5. value_object_state_snapshots — selectedColumns: id — requiredMarkerColumn: id — ok: True
+6. semantic_signatures — selectedColumns: id — requiredMarkerColumn: id — ok: True
+7. value_object_similarity_edges — selectedColumns: id — requiredMarkerColumn: id — ok: True
+8. value_object_relevance_edges — selectedColumns: id — requiredMarkerColumn: id — ok: True
+9. resolver_runs — selectedColumns: id — requiredMarkerColumn: id — ok: True
+10. resolver_candidate_links — selectedColumns: id — requiredMarkerColumn: id — ok: True
+11. resolver_feedback — selectedColumns: id — requiredMarkerColumn: id — ok: True
+
+Runtime guardrails confirmed:
+- diagnosticEndpointOnly: true
+- productionWriteEnabled: false
+- dbReadExecuted: true
+- dbWriteExecuted: false
+- sqlExecuted: false
+- rpcExecuted: false
+- aiCallExecuted: false
+- activityEventsInserted: false
+- semanticCandidatesPersisted: false
+- valueObjectsCreated: false
+- stateFactsCreated: false
+- stateDeltasCreated: false
+- stateSnapshotsCreated: false
+- responseSanitized: true
+
+Important note about local root probe:
+The proof script reported LOCAL_SERVER_NOT_REACHABLE for root probe at http://localhost:3000, but the target endpoint itself responded correctly:
+- without required header: 403 guarded response
+- with required header: 200 PASS
+Therefore root probe is not treated as blocker for G1-C because the target debug endpoint was reachable and produced the expected controlled response.
+
+What this proves:
+1. Backend/service_role can reach the rebuilt C8-I tables.
+2. All 11 expected C8-I tables are readable by the diagnostic route.
+3. state_relevance_rules.rule_key is shape-checked through backend route.
+4. semantic_signatures is included in the 11-table verification.
+5. The endpoint is sanitized and read-only.
+6. No DB writes, SQL execution, RPC calls, AI calls, activity event inserts, state fact writes, state delta writes, or snapshot writes were performed.
+
+What this does NOT prove:
+1. It does not prove that the state engine is implemented.
+2. It does not prove activity_events write path readiness.
+3. It does not prove external ontology bridge runtime.
+4. It does not prove category resolver runtime.
+5. It does not prove UI review cards.
+6. It does not prove Auth0 + Supabase identity compatibility for user-facing RLS routes.
+
+Closed checks / do not repeat unless relevant code or SQL changes:
+1. Do not repeat schema drift / rule_key / RLS / GRANT checks unless SQL/migration/RLS/GRANT changes.
+2. Do not repeat this G1 backend read-only proof unless the route, C8-I schema, grants, RLS, or service_role client changes.
+3. Do not run activity_events write path as part of this gate.
+4. Do not claim state engine readiness from this proof.
+
+Next correct work block:
+C8-I-A1b — Category Source Hooks Map and unknown term lifecycle.
+
+Then:
+C8-I-A2b — JSON contract extension for:
+- unknownTermCandidates
+- externalConceptCandidates
+- localLookupCandidates
+- resolutionStatus
+- mappingStatus
+- missingInformationQuestions
+
+Commit/push rule:
+Do not commit or push this report or the endpoint unless the user explicitly allows it.

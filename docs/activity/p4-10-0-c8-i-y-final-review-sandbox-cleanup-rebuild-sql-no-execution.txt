@@ -1,0 +1,115 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-Y - Final Review Sandbox-Only Cleanup/Rebuild SQL, No Execution
+
+Date: 2026-05-29 14:53:29
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before review: 5c20d37
+HEAD line: 5c20d37 docs: plan C8-I X sandbox cleanup rebuild
+
+Reviewed inputs:
+- X patch plan report: docs/activity/p4-10-0-c8-i-x-sandbox-only-cleanup-rebuild-patch-plan-no-execution.txt
+- X SQL package: supabase/patches/20260529_c8_i_x_sandbox_only_cleanup_rebuild_no_execution.sql
+
+Review result:
+FINAL_REVIEW_PASSED_NO_EXECUTION
+SANDBOX_ONLY_CLEANUP_REBUILD_SQL_READY_FOR_MANUAL_EXECUTION_GATE
+NO_SQL_EXECUTION_IN_C8_I_Y
+NO_DB_READ_WRITE_IN_C8_I_Y
+
+Important environment wording:
+- Current project is an experimental project with no real users and no real production data by project assumption.
+- The term sandbox in this review means current experimental Supabase target only.
+- Real production is not created / not in use for this workflow.
+- Destructive SQL is still gated to preserve traceability and avoid accidental execution in any future non-experimental target.
+
+Static review findings:
+- X report markers present: PASS
+- Patch SQL package markers present: PASS
+- Forbidden patch SQL fragments absent: PASS
+- DROP TABLE targets limited to C8-I allowlist: PASS
+- Expected C8-I DROP TABLE targets present: PASS
+- Grant normalization markers present for anon/authenticated/service_role: PASS
+- Transaction markers begin/commit present: PASS
+- rule_key present in rebuild package: PASS
+- RLS enablement markers present: PASS
+- service_role grant posture present: PASS
+
+Allowed cleanup/rebuild table set reviewed:
+- resolver_candidate_links
+- resolver_feedback
+- resolver_runs
+- semantic_signatures
+- activity_state_deltas
+- value_object_state_snapshots
+- value_object_state_facts
+- value_object_relevance_edges
+- value_object_similarity_edges
+- state_relevance_rules
+- state_dimensions
+
+Confirmed not found in patch SQL:
+- drop database
+- drop schema
+- alter database
+- role management statements
+- database URLs
+- auth.users
+- storage.objects
+- public.organizations
+- public.users
+- public.user_profiles
+- public.activities
+- public.activity_events
+- public.purchase_confirmations
+- public.certificates
+- public.offers
+- public.value_objects
+
+Security posture preserved:
+- GRANT does not replace RLS.
+- RLS does not replace GRANT.
+- auth.uid() = user_id remains not accepted as proven.
+- activity_events write path remains disabled.
+- runtime/AI state inference remains disabled.
+- private C8-I state/semantic tables should not keep broad anon/authenticated direct table privileges.
+- service_role remains backend/server-side only.
+
+Decision:
+READY_FOR_C8_I_Y_A_COMMIT_FINAL_REVIEW_NO_EXECUTION
+
+After commit:
+READY_FOR_C8_I_Z_EXPLICIT_MANUAL_EXECUTION_AUTHORIZATION_FOR_CURRENT_EXPERIMENTAL_SUPABASE_ONLY
+
+Execution boundary:
+C8-I-Y does not execute SQL.
+C8-I-Y does not read/write DB.
+C8-I-Y does not call runtime.
+C8-I-Y does not print secrets.
+C8-I-Y only performs local static file review.
+
+Blocked until explicit next authorization:
+- do not execute cleanup/rebuild SQL automatically
+- do not use production
+- do not run patch SQL without explicit user authorization
+- do not change app runtime behavior
+- do not enable activity_events write path
+- do not assume auth.uid() = user_id is proven
+
+Verification:
+- branch main: PASS
+- working tree clean before review: PASS
+- local HEAD matches origin/main: PASS
+- latest commit is C8-I-X-A: PASS
+- TypeScript direct check: PASS
+- final static review: PASS
+- no SQL executed by this script
+- no DB read/write by this script
+- no runtime called by this script
+
+Definition of Done:
+- C8-I-Y final review report recorded
+- cleanup/rebuild SQL package reviewed statically
+- SQL package marked ready for explicit manual execution authorization gate
+- no SQL executed
+- no DB read/write
+- no runtime call
