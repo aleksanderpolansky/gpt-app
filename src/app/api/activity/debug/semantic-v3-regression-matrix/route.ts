@@ -7,24 +7,25 @@ import {
 
 export const dynamic = "force-dynamic";
 
+type RegressionCaseExpectedV0 = {
+  minResolvedCategories: number;
+  minValueObjects: number;
+  minExposures: number;
+  minStateDeltas: number;
+  minReviewActions: number;
+  valueObjectKeys?: string[];
+  exposureTypes?: string[];
+  dimensionKeys?: string[];
+  actionKinds?: string[];
+  requireNoWrites: true;
+};
+
 type RegressionCaseV0 = {
   caseKey: string;
   inputText: string;
   durationMinutes: number | null;
   inputLanguage: string;
-  expected: {
-    minResolvedCategories: number;
-    minValueObjects: number;
-    minExposures: number;
-    minstateDeltas: number;
-    reviewActions: number;
-    minReviewActions?: number;
-    actionKinds?: string[];
-    valueObjectKeys?: string[];
-    exposureTypes?: string[];
-    dimensionKeys?: string[];
-    requireNoWrites: true;
-  };
+  expected: RegressionCaseExpectedV0;
 };
 
 type RegressionCaseResultV0 = {
@@ -56,6 +57,7 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
       minValueObjects: 3,
       minExposures: 6,
       minStateDeltas: 6,
+      minReviewActions: 40,
       valueObjectKeys: [
         "vo:personal:child-learning-support",
         "vo:personal:mathematics-learning",
@@ -76,8 +78,19 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
         "family_care_load",
         "care_attention_time",
       ],
+      actionKinds: [
+        "confirm_category",
+        "reject_category",
+        "correct_category",
+        "confirm_value_object_candidate",
+        "reject_value_object_candidate",
+        "confirm_exposure_candidate",
+        "suppress_exposure_candidate",
+        "allow_future_state_delta_candidate",
+        "block_future_state_delta_candidate",
+        "open_raw_json",
+      ],
       requireNoWrites: true,
-      minReviewActions: 10,
     },
   },
   {
@@ -90,6 +103,7 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
       minValueObjects: 2,
       minExposures: 3,
       minStateDeltas: 2,
+      minReviewActions: 20,
       valueObjectKeys: [
         "vo:personal:cycling-activity",
         "vo:personal:commute-to-work",
@@ -103,8 +117,19 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
         "physical_load",
         "work_context_exposure",
       ],
+      actionKinds: [
+        "confirm_category",
+        "reject_category",
+        "correct_category",
+        "confirm_value_object_candidate",
+        "reject_value_object_candidate",
+        "confirm_exposure_candidate",
+        "suppress_exposure_candidate",
+        "allow_future_state_delta_candidate",
+        "block_future_state_delta_candidate",
+        "open_raw_json",
+      ],
       requireNoWrites: true,
-      minReviewActions: 10,
     },
   },
   {
@@ -117,6 +142,7 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
       minValueObjects: 1,
       minExposures: 1,
       minStateDeltas: 1,
+      minReviewActions: 12,
       valueObjectKeys: [
         "vo:organization-or-personal:massage-service-work",
       ],
@@ -126,8 +152,20 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
       dimensionKeys: [
         "needs_user_confirmation",
       ],
+      actionKinds: [
+        "confirm_category",
+        "reject_category",
+        "correct_category",
+        "confirm_value_object_candidate",
+        "reject_value_object_candidate",
+        "request_value_object_context",
+        "confirm_exposure_candidate",
+        "suppress_exposure_candidate",
+        "allow_future_state_delta_candidate",
+        "block_future_state_delta_candidate",
+        "open_raw_json",
+      ],
       requireNoWrites: true,
-      minReviewActions: 10,
     },
   },
   {
@@ -140,6 +178,7 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
       minValueObjects: 1,
       minExposures: 1,
       minStateDeltas: 1,
+      minReviewActions: 8,
       valueObjectKeys: [
         "vo:personal:general-activity",
       ],
@@ -149,8 +188,17 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
       dimensionKeys: [
         "needs_user_confirmation",
       ],
+      actionKinds: [
+        "confirm_value_object_candidate",
+        "reject_value_object_candidate",
+        "request_value_object_context",
+        "confirm_exposure_candidate",
+        "suppress_exposure_candidate",
+        "allow_future_state_delta_candidate",
+        "block_future_state_delta_candidate",
+        "open_raw_json",
+      ],
       requireNoWrites: true,
-      minReviewActions: 10,
     },
   },
 ];
@@ -210,7 +258,7 @@ function evaluateCase(testCase: RegressionCaseV0): RegressionCaseResultV0 {
     inputText: testCase.inputText,
     durationMinutes: testCase.durationMinutes,
     inputLanguage: testCase.inputLanguage,
-    p4Step: "C8-I-IMPLEMENT-10-REGRESSION",
+    p4Step: "C8-I-IMPLEMENT-12-FIX-REGRESSION",
   });
 
   const valueObjectKeys = preview.valueObjectCandidates.map(
@@ -221,9 +269,13 @@ function evaluateCase(testCase: RegressionCaseV0): RegressionCaseResultV0 {
     (candidate) => candidate.activityLinkType
   );
 
-  const dimensionKeys = preview.stateDeltaCandidates.map((candidate) => candidate.dimensionKey);
+  const dimensionKeys = preview.stateDeltaCandidates.map(
+    (candidate) => candidate.dimensionKey
+  );
 
-  const actionKinds = preview.reviewActionCandidates.map((candidate) => candidate.actionKind);
+  const actionKinds = preview.reviewActionCandidates.map(
+    (candidate) => candidate.actionKind
+  );
 
   const failures: string[] = [];
 
@@ -254,6 +306,15 @@ function evaluateCase(testCase: RegressionCaseV0): RegressionCaseResultV0 {
     );
   }
 
+  if (
+    preview.reviewActionCandidates.length <
+    testCase.expected.minReviewActions
+  ) {
+    failures.push(
+      `Expected at least ${testCase.expected.minReviewActions} review action candidates.`
+    );
+  }
+
   assertIncludesAll(
     valueObjectKeys,
     testCase.expected.valueObjectKeys,
@@ -270,9 +331,7 @@ function evaluateCase(testCase: RegressionCaseV0): RegressionCaseResultV0 {
 
   assertIncludesAll(
     dimensionKeys,
-      actionKinds,
     testCase.expected.dimensionKeys,
-      actionKinds,
     failures,
     "dimensionKey"
   );
@@ -339,4 +398,3 @@ export async function GET() {
 export async function POST() {
   return NextResponse.json(runRegressionMatrixV0());
 }
-
