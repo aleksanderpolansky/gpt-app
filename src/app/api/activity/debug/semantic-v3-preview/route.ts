@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 
 import { deriveCategoryCandidates } from "../../../../../../lib/activity/categoryDerivation/ruleExtractor";
+import { buildActivityValueObjectExposureCandidatesV0 } from "../../../../../../lib/activity/categoryDerivation/semanticActivityValueObjectExposureV0";
 import { resolveSemanticBundleV0 } from "../../../../../../lib/activity/categoryDerivation/semanticBundleResolverV0";
 import { buildSemanticDerivationV3FromCurrentOutput } from "../../../../../../lib/activity/categoryDerivation/semanticContractV3Adapter";
 import { enrichSemanticDerivationV3FromText } from "../../../../../../lib/activity/categoryDerivation/semanticTextSignalEnrichmentV0";
@@ -98,11 +99,13 @@ export async function GET() {
     enrichment: "deterministic_text_enrichment_v0",
     resolver: "semantic_bundle_resolver_v0",
     valueObjectPolicy: "value_object_candidate_policy_v0",
+    exposurePolicy: "activity_value_object_exposure_v0",
     writes: {
       sqlExecuted: false,
       dbWriteExecuted: false,
       activityEventInserted: false,
       valueObjectCreated: false,
+      activityValueObjectLinkCreated: false,
       stateFactCreated: false,
       stateDeltaCreated: false,
       stateSnapshotCreated: false,
@@ -156,10 +159,11 @@ export async function POST(request: Request) {
     metadata: {
       endpoint: "/api/activity/debug/semantic-v3-preview",
       mode: "read_only_preview",
-      p4Step: "C8-I-IMPLEMENT-7",
+      p4Step: "C8-I-IMPLEMENT-8",
       createdAt: new Date().toISOString(),
       dbWriteExecuted: false,
       valueObjectCreated: false,
+      activityValueObjectLinkCreated: false,
       stateFactCreated: false,
       stateDeltaCreated: false,
       stateSnapshotCreated: false,
@@ -191,6 +195,11 @@ export async function POST(request: Request) {
     inputText: input.inputText,
   });
 
+  const exposureCandidates = buildActivityValueObjectExposureCandidatesV0({
+    semanticV3,
+    valueObjectCandidates,
+  });
+
   return NextResponse.json({
     ok: true,
     endpoint: "/api/activity/debug/semantic-v3-preview",
@@ -198,6 +207,7 @@ export async function POST(request: Request) {
     enrichment: "deterministic_text_enrichment_v0",
     resolver: "semantic_bundle_resolver_v0",
     valueObjectPolicy: "value_object_candidate_policy_v0",
+    exposurePolicy: "activity_value_object_exposure_v0",
     activityEventId,
     input: {
       inputText: input.inputText,
@@ -219,11 +229,13 @@ export async function POST(request: Request) {
     },
     semanticV3,
     valueObjectCandidates,
+    exposureCandidates,
     writes: {
       sqlExecuted: false,
       dbWriteExecuted: false,
       activityEventInserted: false,
       valueObjectCreated: false,
+      activityValueObjectLinkCreated: false,
       stateFactCreated: false,
       stateDeltaCreated: false,
       stateSnapshotCreated: false,
