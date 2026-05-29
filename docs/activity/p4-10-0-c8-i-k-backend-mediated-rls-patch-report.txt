@@ -1,0 +1,91 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-K - Backend-mediated RLS Patch Report
+
+Date: 2026-05-29 09:25:35
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before patch: 22527bb
+
+Inputs:
+- Migration draft: supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql
+- C8-I-J patch plan: docs/activity/p4-10-0-c8-i-j-sql-patch-plan-before-migration-execution.txt
+
+Purpose:
+Patch the C8-I SQL migration draft to the conservative backend-mediated RLS model before any SQL execution.
+
+Safety:
+- SQL executed: false
+- DB read executed: false
+- DB write executed: false
+- Runtime called: false
+- supabase db push executed: false
+- psql executed: false
+- migration executed: false
+- activity_events write enabled: false
+- AI/OpenAI called: false
+- migration draft modified: true
+
+Previous closed gate:
+C8-I-J-A confirmed:
+TSC_PASS_AND_J_SQL_PATCH_PLAN_COMMITTED.
+
+Patch decision:
+BACKEND_MEDIATED_RLS_PATCH_APPLIED_TO_DRAFT
+
+Execution decision:
+DO_NOT_EXECUTE_SQL_YET
+
+Patch principle:
+SERVICE_ROLE_BACKEND_MEDIATED_STATE_TABLES_UNTIL_AUTH_UID_COMPATIBILITY_IS_PROVEN
+
+Reason:
+AUTH0_AND_AUTH_UID_BOTH_PRESENT_STATIC_COMPATIBILITY_NOT_PROVEN.
+auth.uid() = user_id is not accepted as proven.
+
+Static counts:
+- auth.uid() count before patch: 36
+- auth.uid() count after patch: 37
+- authenticated count before patch: 40
+- authenticated count after patch: 53
+
+Catalog/reference tables:
+state_dimensions
+state_relevance_rules
+
+Private/user-owned state/context tables:
+value_object_state_facts
+activity_state_deltas
+value_object_state_snapshots
+semantic_signatures
+value_object_similarity_edges
+value_object_relevance_edges
+resolver_runs
+resolver_candidate_links
+resolver_feedback
+
+Verification:
+- Required SQL markers: PASS
+- Private table backend-mediated marker verification: PASS
+- Catalog table marker verification: PASS
+- Forbidden fragments: absent
+- No SQL execution performed.
+- No DB read/write performed.
+- No runtime called.
+- No production write to activity_events enabled.
+- No state engine implemented.
+
+Next required gate:
+READY_FOR_C8_I_K_A_COMMIT_BACKEND_MEDIATED_RLS_PATCH
+
+Definition of Done:
+- Migration draft patched.
+- Backend-mediated MVP access model applied to draft.
+- Private state/context tables have anon revoked.
+- Private state/context tables have authenticated revoked.
+- Private state/context tables have service_role grant.
+- Catalog/reference tables have anon revoked.
+- Catalog/reference tables have authenticated select only.
+- Catalog/reference tables have service_role grant.
+- SQL execution remains blocked.
+- no SQL executed
+- no DB read/write
+- no runtime called

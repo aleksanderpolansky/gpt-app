@@ -379,4 +379,59 @@ revoke all on table public.resolver_feedback from anon;
 grant select, insert, update on table public.resolver_feedback to authenticated;
 grant all on table public.resolver_feedback to service_role;
 
+-- C8-I-K BACKEND-MEDIATED RLS PATCH START
+-- Purpose: conservative MVP access model before SQL execution.
+-- SQL executed: false
+-- DB read executed: false
+-- DB write executed: false
+-- Runtime called: false
+-- supabase db push executed: false
+-- psql executed: false
+-- migration executed: false
+-- Decision: DO_NOT_EXECUTE_SQL_YET
+-- Patch target: BACKEND_MEDIATED_RLS_PATCH_APPLIED_TO_DRAFT
+-- auth.uid() = user_id is not accepted as proven.
+-- Private state/context tables are backend-mediated/service_role until compatibility is proven.
+
+-- Catalog/reference tables: no anon; authenticated read only; service_role all.
+revoke all on table public.state_dimensions from anon;
+grant select on table public.state_dimensions to authenticated;
+grant all on table public.state_dimensions to service_role;
+revoke all on table public.state_relevance_rules from anon;
+grant select on table public.state_relevance_rules to authenticated;
+grant all on table public.state_relevance_rules to service_role;
+
+-- Private/user-owned state/context tables: no anon; no authenticated direct access for MVP; backend/service_role only.
+revoke all on table public.value_object_state_facts from anon;
+revoke all on table public.value_object_state_facts from authenticated;
+grant all on table public.value_object_state_facts to service_role;
+revoke all on table public.activity_state_deltas from anon;
+revoke all on table public.activity_state_deltas from authenticated;
+grant all on table public.activity_state_deltas to service_role;
+revoke all on table public.value_object_state_snapshots from anon;
+revoke all on table public.value_object_state_snapshots from authenticated;
+grant all on table public.value_object_state_snapshots to service_role;
+revoke all on table public.semantic_signatures from anon;
+revoke all on table public.semantic_signatures from authenticated;
+grant all on table public.semantic_signatures to service_role;
+revoke all on table public.value_object_similarity_edges from anon;
+revoke all on table public.value_object_similarity_edges from authenticated;
+grant all on table public.value_object_similarity_edges to service_role;
+revoke all on table public.value_object_relevance_edges from anon;
+revoke all on table public.value_object_relevance_edges from authenticated;
+grant all on table public.value_object_relevance_edges to service_role;
+revoke all on table public.resolver_runs from anon;
+revoke all on table public.resolver_runs from authenticated;
+grant all on table public.resolver_runs to service_role;
+revoke all on table public.resolver_candidate_links from anon;
+revoke all on table public.resolver_candidate_links from authenticated;
+grant all on table public.resolver_candidate_links to service_role;
+revoke all on table public.resolver_feedback from anon;
+revoke all on table public.resolver_feedback from authenticated;
+grant all on table public.resolver_feedback to service_role;
+
+-- C8-I-K BACKEND-MEDIATED RLS PATCH END
+
+
 commit;
+
