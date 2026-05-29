@@ -1,0 +1,94 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-R - Explicit Sandbox SQL Execution Authorization, No Execution
+
+Date: 2026-05-29 11:33:24
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before authorization record: d37990c
+HEAD line: d37990c docs: review C8-I Q final pre-execution boundary
+
+Inputs:
+- Migration draft: supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql
+- C8-I-Q final pre-execution review: docs/activity/p4-10-0-c8-i-q-final-pre-execution-command-review-no-execution.txt
+- C8-I-P current sandbox target plan: docs/activity/p4-10-0-c8-i-p-current-sandbox-target-backup-rollback-plan-no-execution.txt
+
+User authorization text:
+Я явно разрешаю подготовить C8-I-R для выполнения SQL migration только в текущем sandbox Supabase project. Production не трогать. Реальных пользовательских данных нет. Секреты и ключи не выводить.
+
+Authorization scope:
+- authorized action: prepare C8-I-R for SQL migration execution workflow
+- allowed target: current sandbox Supabase project only
+- production target: forbidden
+- real user data: absent by user confirmation
+- secrets/keys: must not be printed
+- env/secrets read in this gate: false
+- Supabase credentials printed in this gate: false
+- SQL execution in this gate: false
+- DB read/write in this gate: false
+- runtime/API call in this gate: false
+
+Safety:
+- SQL executed: false
+- DB read executed: false
+- DB write executed: false
+- Runtime called: false
+- supabase db push executed: false
+- psql executed: false
+- migration executed: false
+- Dashboard SQL execution performed: false
+- activity_events write enabled: false
+- AI/OpenAI called: false
+- migration draft modified: false
+- code patch executed: false
+- env/secrets read: false
+- Supabase credentials printed: false
+
+Previous closed gate:
+C8-I-Q-A confirmed:
+TSC_PASS_AND_Q_FINAL_PRE_EXECUTION_REVIEW_COMMITTED.
+
+Authorization conclusion:
+EXPLICIT_USER_AUTHORIZATION_RECORDED_FOR_CURRENT_SANDBOX_ONLY_NO_EXECUTION
+
+Execution decision:
+DO_NOT_EXECUTE_SQL_IN_C8_I_R
+
+Required next gate:
+READY_FOR_C8_I_R_A_COMMIT_EXPLICIT_SANDBOX_SQL_EXECUTION_AUTHORIZATION
+
+After commit, next gate:
+READY_FOR_C8_I_S_SANDBOX_SQL_EXECUTION_PACKAGE_OR_MANUAL_EXECUTION_PLAN
+
+Important boundary:
+This gate records explicit user authorization and scope only.
+This gate does not execute SQL.
+This gate does not read env/secrets.
+This gate does not print Supabase credentials.
+This gate does not provide a production execution path.
+Any later SQL execution must remain sandbox-only and must not print secrets or keys.
+
+Verification:
+- Required migration markers: PASS
+- Required C8-I-P markers: PASS
+- Required C8-I-Q markers: PASS
+- Forbidden fragments: absent
+- Working tree was clean before writing this authorization record
+- User authorization text recorded
+- No SQL execution performed
+- No DB read/write performed
+- No runtime called
+- No code patch performed
+- No env/secrets read
+- No Supabase credentials printed
+
+Definition of Done:
+- explicit user authorization recorded
+- current sandbox-only target recorded
+- production target forbidden
+- real user data absence recorded
+- secrets/keys non-printing boundary recorded
+- SQL execution remains blocked in this gate
+- next gate may prepare sandbox execution package or manual execution plan
+- no SQL executed
+- no DB read/write
+- no runtime called
+- no code patch performed
