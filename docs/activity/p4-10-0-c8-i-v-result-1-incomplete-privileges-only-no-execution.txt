@@ -1,0 +1,115 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-V-RESULT-1 - Partial Manual Read-Only Diagnostic Result, No Execution
+
+Date: 2026-05-29 12:28:37
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before report: fe637e8
+HEAD line: fe637e8 docs: plan C8-I U schema drift diagnostic
+
+User-provided diagnostic result:
+The uploaded/pasted diagnostic result contains only the information_schema.table_privileges result table.
+It does not contain the table_status, columns, rule_key_check, RLS, or index result tables from the C8-I-U diagnostic SQL.
+
+Result classification:
+MANUAL_READ_ONLY_DIAGNOSTIC_RESULT_INCOMPLETE_PRIVILEGES_ONLY
+
+Immediate decision:
+DO_NOT_RERUN_SAME_SQL
+NO_PATCH_UNTIL_COMPLETE_READ_ONLY_DIAGNOSTIC_RESULT
+
+Observed from provided privileges result:
+- privilege rows visible: 168
+- visible tables: 6
+- visible tables include:
+  - state_dimensions
+  - state_relevance_rules
+  - value_object_relevance_edges
+  - value_object_similarity_edges
+  - value_object_state_facts
+  - value_object_state_snapshots
+- visible grantees include:
+  - anon
+  - authenticated
+  - postgres
+  - service_role
+- visible privilege types include:
+  - DELETE
+  - INSERT
+  - REFERENCES
+  - SELECT
+  - TRIGGER
+  - TRUNCATE
+  - UPDATE
+
+Preliminary security observation:
+The uploaded privileges result shows broad table privileges for anon and authenticated on several C8-I state/semantic tables.
+This is not accepted as final security diagnosis until RLS status, policies, columns, and exact schema state are captured in one complete diagnostic result.
+However, it is a security-sensitive finding and must be preserved for the next gate.
+
+Missing information:
+- whether state_relevance_rules.rule_key exists
+- full list of state_relevance_rules columns
+- whether all expected C8-I tables exist
+- RLS rowsecurity status for all C8-I tables
+- indexes for all C8-I tables
+- whether expected missing tables are absent or simply not visible in the privileges-only result
+
+Prepared next diagnostic:
+supabase/diagnostics/20260529_c8_i_v2_schema_drift_consolidated_readonly.sql
+
+Why V2 is needed:
+The first read-only diagnostic returned or captured only one result table.
+V2 returns one consolidated JSON object in one result row, so the next manual result should not lose earlier result tabs.
+
+Required next gate:
+READY_FOR_C8_I_V_RESULT_1_A_COMMIT_PARTIAL_DIAGNOSTIC_AND_V2_CONSOLIDATED_SQL
+
+After commit, next gate:
+READY_FOR_C8_I_W_MANUAL_CONSOLIDATED_READ_ONLY_SCHEMA_DRIFT_DIAGNOSTIC
+
+Blocked:
+- do not rerun the failed migration SQL
+- do not run production SQL
+- do not execute patch SQL
+- do not execute cleanup SQL
+- do not print secrets/keys
+- do not assume auth.uid() = user_id is proven
+- do not enable activity_events write path
+- do not enable runtime/AI state inference
+
+Safety:
+- SQL executed by this script: false
+- Diagnostic V2 SQL executed by this script: false
+- DB read by this script: false
+- DB write by this script: false
+- Runtime/API called by this script: false
+- env/secrets read by this script: false
+- Supabase credentials printed by this script: false
+- code patch performed by this script: false
+- migration draft modified by this script: false
+
+Verification:
+- branch main: PASS
+- working tree clean before report: PASS
+- local HEAD matches origin/main: PASS
+- latest commit is C8-I-U-A: PASS
+- required U report markers: PASS
+- required failure report markers: PASS
+- diagnostic V2 SQL read-only static check: PASS
+- diagnostic V2 SQL markers: PASS
+- partial diagnostic result recorded: PASS
+- no SQL executed by this script
+- no DB read/write by this script
+- no runtime called by this script
+- no code patch performed by this script
+
+Definition of Done:
+- partial privileges-only diagnostic result recorded
+- incomplete result status recorded
+- broad anon/authenticated privileges observation recorded
+- consolidated V2 read-only diagnostic SQL prepared
+- no patch until complete diagnostic result preserved
+- no SQL executed by this script
+- no DB read/write by this script
+- no runtime called by this script
+- no code patch performed by this script
