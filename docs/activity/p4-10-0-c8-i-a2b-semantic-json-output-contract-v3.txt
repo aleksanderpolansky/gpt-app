@@ -1,0 +1,769 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0 / C8-I / A2b
+Semantic JSON/output contract v3
+Unknown Terms + Local Lookup + External Concepts + Resolution/Mapping Statuses
+
+Date:
+2026-05-29
+
+Status:
+DRAFT / DOCUMENTATION-ONLY
+
+Current baseline:
+This document starts after C8-I-A1b Category Source Hooks Map was committed and pushed.
+
+Last confirmed commit before A2b:
+745b1b8 — docs: map C8-I A1b category sources
+
+Purpose:
+Define the semantic JSON/output contract v3 before runtime implementation.
+The goal is to extend current category derivation output with:
+- unknownTermCandidates
+- localLookupCandidates
+- externalConceptCandidates
+- resolvedCategoryCandidates
+- resolutionStatus
+- mappingStatus
+- missingInformationQuestions
+without allowing uncontrolled active category creation.
+
+Current implementation discovered in A2b-0:
+1. Current debug flow can run:
+   - deriveCategoryCandidates
+   - resolveCategoryCandidates
+   - persistCategoryDerivations
+   - buildAdditionalCategoryLinksForBridge
+   - processActivityValueObjectBridge
+2. Current output already has extraction / resolution / persistence sections.
+3. Current extraction returns candidates.
+4. Current resolution returns candidates with resolution statuses.
+5. Current bridge can use resolved candidates for additional Value Object category links.
+6. Current system does not yet have full v3 semantic source contract:
+   - unknownTermCandidates
+   - localLookupCandidates
+   - externalConceptCandidates
+   - mappingStatus
+   - explicit source lifecycle
+   - explicit missing information questions tied to unresolved/ambiguous concepts
+
+Core rules:
+1. AI output is candidate, not truth.
+2. External concept is candidate, not internal category.
+3. Internal category is controlled product/semantic entity.
+4. Category can create state hook candidate, not state fact.
+5. State facts/deltas/snapshots require separate state contract.
+6. Local lookup must run before external lookup.
+7. User correction wins locally but does not automatically create global truth.
+8. Unknown terms must not block basic activity capture.
+
+Contract name:
+activity-category-derivation-v3-external-ontology-ready
+
+Top-level JSON shape:
+
+{
+  "schemaVersion": "activity-category-derivation-v3-external-ontology-ready",
+  "detectedLanguage": "ru|pl|en|de|es|uk|unknown",
+  "normalizedActivity": "short normalized sentence",
+  "overallConfidence": 0.0,
+  "metricCandidates": [],
+  "categoryCandidates": [],
+  "unknownTermCandidates": [],
+  "localLookupCandidates": [],
+  "externalConceptCandidates": [],
+  "resolvedCategoryCandidates": [],
+  "stateHookCandidates": [],
+  "riskFlags": [],
+  "forbiddenOverclaims": [],
+  "missingInformationQuestions": [],
+  "contractWarnings": [],
+  "contractErrors": []
+}
+
+1. schemaVersion
+
+Required:
+true
+
+Type:
+string
+
+Allowed initial value:
+activity-category-derivation-v3-external-ontology-ready
+
+Meaning:
+Identifies the expanded contract that can represent unknown terms, local lookup, external concept candidates, resolver statuses and mapping statuses.
+
+Safety:
+Do not treat v2 or older extraction output as v3 unless these fields are intentionally present or explicitly defaulted.
+
+2. detectedLanguage
+
+Required:
+true
+
+Type:
+string
+
+Allowed values:
+- ru
+- pl
+- en
+- de
+- es
+- uk
+- unknown
+
+Meaning:
+Language of the raw/normalized input, used for aliases, labels, lemmatization and ambiguity handling.
+
+Safety:
+Language detection is a signal, not ground truth. If uncertain, set unknown or low confidence.
+
+3. normalizedActivity
+
+Required:
+true
+
+Type:
+string
+
+Meaning:
+Short normalized sentence representing the activity without deleting the original raw input.
+
+Safety:
+Do not replace raw user text. Raw text remains evidence in Activity Event or input object.
+
+4. overallConfidence
+
+Required:
+true
+
+Type:
+number from 0 to 1
+
+Meaning:
+Overall confidence of the semantic extraction and resolution output.
+
+Safety:
+Low confidence must trigger needs_review or missingInformationQuestions instead of strong automation.
+
+5. metricCandidates[]
+
+Purpose:
+Extract measurable facts/signals from input.
+
+Item shape:
+{
+  "metricKey": "duration_minutes",
+  "value": 30,
+  "unit": "minutes",
+  "confidence": 0.98,
+  "evidence": {
+    "surfaceText": "30 минут",
+    "source": "raw_input"
+  }
+}
+
+Required item fields:
+- metricKey
+- value
+- confidence
+
+Recommended item fields:
+- unit
+- evidence
+
+Rules:
+- Metric candidate is not automatically state delta.
+- Duration can be used for activity event timing or exposure calculation after validation.
+- Numeric values should keep evidence.
+
+6. categoryCandidates[]
+
+Purpose:
+Initial semantic candidates from rule extractor, AI, parser, or other extractor.
+
+Item shape:
+{
+  "candidateSlug": "cycling",
+  "candidateTitle": "Cycling",
+  "semanticLayer": "action",
+  "categoryType": "activity",
+  "confidence": 0.9,
+  "isRequired": true,
+  "isCoreMeaning": true,
+  "needsUserReview": false,
+  "evidence": {
+    "matchedWords": ["ехал"],
+    "surfaceText": "ехал на велосипеде"
+  },
+  "resolutionStatus": "unresolved",
+  "source": "rule"
+}
+
+Required item fields:
+- candidateSlug
+- semanticLayer
+- categoryType
+- confidence
+- evidence
+- resolutionStatus
+- source
+
+Recommended item fields:
+- candidateTitle
+- isRequired
+- isCoreMeaning
+- needsUserReview
+
+Rules:
+- categoryCandidates are not active categories.
+- candidateSlug is provisional and may differ from canonicalSlug.
+- Candidate can be wrong or too broad.
+- Candidate must be auditable.
+
+Allowed semanticLayer values:
+- action
+- object
+- object_or_instrument
+- context
+- domain
+- role
+- duty
+- care
+- purpose
+- metric
+- participant
+- location
+- time_context
+- state_hook_source
+- unknown
+
+Allowed categoryType values:
+- activity
+- object
+- instrument
+- context
+- domain
+- role
+- responsibility
+- care_function
+- purpose
+- metric
+- commercial
+- personal
+- derived
+- unknown
+
+7. unknownTermCandidates[]
+
+Purpose:
+Represent terms that cannot be safely resolved locally or are ambiguous.
+
+Item shape:
+{
+  "surfaceText": "велосипеде",
+  "lemma": "велосипед",
+  "languageCode": "ru",
+  "possibleSemanticLayers": ["object_or_instrument"],
+  "localMatchStatus": "no_confident_match",
+  "requiresExternalLookup": true,
+  "ambiguityReason": null,
+  "confidence": 0.86,
+  "evidence": {
+    "source": "raw_input",
+    "span": null,
+    "matchedWords": ["велосипеде"]
+  }
+}
+
+Required item fields:
+- surfaceText
+- lemma
+- languageCode
+- possibleSemanticLayers
+- localMatchStatus
+- requiresExternalLookup
+- confidence
+- evidence
+
+Recommended item fields:
+- ambiguityReason
+
+Allowed localMatchStatus values:
+- not_checked
+- exact_match_found
+- alias_match_found
+- multiple_matches
+- no_confident_match
+- ambiguous
+- skipped
+
+Rules:
+- Unknown term never becomes internal category directly.
+- If localMatchStatus is multiple_matches or ambiguous, missingInformationQuestions should be considered.
+- Unknown term may trigger external lookup, but external lookup is not mandatory for activity capture.
+- If external lookup fails, keep unknown term as needs_review.
+
+8. localLookupCandidates[]
+
+Purpose:
+Represent results from local controlled lookup before external lookup.
+
+Item shape:
+{
+  "source": "seed_rubricator|user_history|local_alias|existing_value_object|previous_correction",
+  "matchedCategoryId": "uuid-or-null",
+  "matchedSlug": "bicycle",
+  "matchedAlias": "rower",
+  "semanticLayer": "object_or_instrument",
+  "categoryType": "instrument",
+  "confidence": 0.94,
+  "matchStatus": "local_alias",
+  "evidence": {
+    "surfaceText": "rower",
+    "languageCode": "pl"
+  }
+}
+
+Required item fields:
+- source
+- matchedSlug
+- semanticLayer
+- confidence
+- matchStatus
+- evidence
+
+Recommended item fields:
+- matchedCategoryId
+- matchedAlias
+- categoryType
+
+Allowed source values:
+- seed_rubricator
+- user_history
+- local_alias
+- existing_value_object
+- previous_correction
+- resolver_cache
+- system_rule
+
+Allowed matchStatus values:
+- local_exact
+- local_alias
+- local_ambiguous
+- local_conflict
+- previous_user_confirmed
+- previous_user_rejected
+- no_match
+
+Rules:
+- Local lookup runs before external lookup.
+- User-confirmed local meaning has high trust for this user.
+- Personal/local meaning does not automatically become global taxonomy truth.
+- Existing Value Object can help disambiguation but does not equal category match by itself.
+
+9. externalConceptCandidates[]
+
+Purpose:
+Represent external concept suggestions for unknown/ambiguous terms.
+
+Item shape:
+{
+  "source": "external_knowledge_graph",
+  "externalId": "concept:bicycle",
+  "canonicalLabel": "bicycle",
+  "description": "pedal-driven vehicle / transport object",
+  "conceptType": "object_or_instrument",
+  "confidence": 0.96,
+  "mappingStatus": "external_suggested",
+  "forUserDisplay": {
+    "safeLabel": "bicycle",
+    "safeDescription": "transport object"
+  }
+}
+
+Required item fields:
+- source
+- externalId
+- canonicalLabel
+- conceptType
+- confidence
+- mappingStatus
+
+Recommended item fields:
+- description
+- forUserDisplay
+
+Allowed mappingStatus values:
+- none
+- external_suggested
+- external_confirmed
+- rejected
+- merged
+
+Rules:
+- External concept is not internal category.
+- External concept cannot create active category directly.
+- External raw payload should not be exposed to normal user-facing UI.
+- Cache only concepts actually encountered/used.
+- External source availability should not block activity capture.
+
+10. resolvedCategoryCandidates[]
+
+Purpose:
+Represent resolver output after local lookup, external concept candidates and governance rules.
+
+Item shape:
+{
+  "candidateSlug": "cycling",
+  "canonicalSlug": "cycling",
+  "categoryId": "uuid-or-null",
+  "semanticLayer": "action",
+  "categoryType": "activity",
+  "resolutionStatus": "resolved_existing",
+  "mappingStatus": "local_exact",
+  "needsUserConfirmation": false,
+  "confidence": 0.92,
+  "evidence": {
+    "fromCandidateSlug": "cycling",
+    "matchedWords": ["ехал"],
+    "sourceChain": ["rule", "local_lookup", "resolver"]
+  }
+}
+
+Required item fields:
+- candidateSlug
+- canonicalSlug
+- semanticLayer
+- categoryType
+- resolutionStatus
+- mappingStatus
+- needsUserConfirmation
+- confidence
+- evidence
+
+Recommended item fields:
+- categoryId
+
+Allowed resolutionStatus values:
+- unresolved
+- resolved_existing
+- suggested_new
+- created_suggested
+- needs_review
+- rejected
+- merged
+
+Allowed mappingStatus values:
+- none
+- local_exact
+- local_alias
+- local_ambiguous
+- external_suggested
+- external_confirmed
+- user_confirmed
+- rejected
+- merged
+
+Rules:
+- Only resolved/suggested candidates with safe statuses can enter stable semantic bundle.
+- candidateSlug may differ from canonicalSlug.
+- categoryId can be null if category is not yet created.
+- created_active_global is forbidden in v3 MVP contract.
+- created_active can exist only in legacy/internal contexts and should not be used for external ontology auto-creation.
+- needsUserConfirmation should be true for ambiguous, external-only, low-confidence or new suggested categories.
+
+Bridge allowed statuses:
+For current Value Object bridge compatibility, only these should be considered safe for bridge link creation:
+- resolved_existing
+- created_suggested
+
+Legacy status warning:
+- created_active currently appears in older bridge allowlist.
+- Do not use created_active for AI/external ontology created categories.
+- Future bridge update should remove or restrict created_active for external ontology path.
+
+11. stateHookCandidates[]
+
+Purpose:
+Represent possible state influence hooks from resolved categories.
+
+Item shape:
+{
+  "hookKey": "physical_load",
+  "direction": "increase",
+  "confidence": 0.7,
+  "notAStateFactYet": true,
+  "evidence": {
+    "sourceCategories": ["cycling", "commute-by-bicycle"]
+  }
+}
+
+Required item fields:
+- hookKey
+- direction
+- confidence
+- notAStateFactYet
+- evidence
+
+Rules:
+- Must always include notAStateFactYet: true.
+- Hook does not write value_object_state_facts.
+- Hook does not write activity_state_deltas.
+- Hook does not write value_object_state_snapshots.
+- State facts/deltas/snapshots require separate state contract.
+
+12. riskFlags[]
+
+Purpose:
+Mark safety risks, ambiguity and overclaim prevention.
+
+Examples:
+- do_not_overclaim_health_effect
+- ambiguous_transport_mode
+- unresolved_external_concept
+- low_confidence_language_detection
+- medical_domain_requires_review
+- financial/legal_domain_requires_review
+
+Rules:
+- riskFlags should suppress strong automation.
+- riskFlags can trigger review UI.
+
+13. forbiddenOverclaims[]
+
+Purpose:
+Explicitly list claims that must not be made from this derivation.
+
+Examples:
+- confirmed_health_improvement
+- muscle_growth
+- high_cortisol
+- income_received
+- client_acquired
+- family_climate_improved
+
+Rules:
+- Must be used in AI explanation and recommendation safety.
+- Prevent category -> state fact shortcut.
+
+14. missingInformationQuestions[]
+
+Purpose:
+Represent questions that should be asked because semantic resolution is unsafe.
+
+Item shape:
+{
+  "questionKey": "transport_mode_ambiguous",
+  "questionText": "Что именно ты имел в виду: велосипед, самокат, ролики, мотоцикл или автомобиль?",
+  "blockingLevel": "blocks_resolution",
+  "relatedUnknownTerms": ["покатался"],
+  "relatedCandidateSlugs": ["ride"],
+  "answerOptions": [
+    {"label": "велосипед", "value": "bicycle"},
+    {"label": "самокат", "value": "scooter"},
+    {"label": "ролики", "value": "rollers"},
+    {"label": "мотоцикл", "value": "motorcycle"},
+    {"label": "автомобиль", "value": "car"}
+  ]
+}
+
+Required item fields:
+- questionKey
+- questionText
+- blockingLevel
+
+Recommended item fields:
+- relatedUnknownTerms
+- relatedCandidateSlugs
+- answerOptions
+
+Allowed blockingLevel values:
+- non_blocking
+- blocks_resolution
+- blocks_state_hooks
+- blocks_nba
+
+Rules:
+- Ask when ambiguity materially changes category, Value Object, state hooks, or NBA.
+- Questions should be short and user-facing.
+- Questions should not expose raw external payloads.
+
+15. contractWarnings[]
+
+Purpose:
+Non-fatal contract warnings.
+
+Examples:
+- external_lookup_skipped
+- local_lookup_ambiguous
+- low_confidence_candidate
+- unresolved_terms_present
+- legacy_resolution_status_detected
+
+16. contractErrors[]
+
+Purpose:
+Fatal or important contract errors.
+
+Examples:
+- invalid_schema_version
+- invalid_resolution_status
+- invalid_mapping_status
+- state_fact_attempted_from_category
+- active_category_creation_forbidden
+
+Safety behavior:
+If contractErrors contains fatal error, no persistence beyond safe audit/logging should happen.
+
+Example v3 output:
+
+{
+  "schemaVersion": "activity-category-derivation-v3-external-ontology-ready",
+  "detectedLanguage": "ru",
+  "normalizedActivity": "ехал на велосипеде 30 минут на работу",
+  "overallConfidence": 0.88,
+  "metricCandidates": [
+    {
+      "metricKey": "duration_minutes",
+      "value": 30,
+      "unit": "minutes",
+      "confidence": 0.98,
+      "evidence": {
+        "surfaceText": "30 минут",
+        "source": "raw_input"
+      }
+    }
+  ],
+  "categoryCandidates": [
+    {
+      "candidateSlug": "cycling",
+      "candidateTitle": "Cycling",
+      "semanticLayer": "action",
+      "categoryType": "activity",
+      "confidence": 0.88,
+      "isRequired": true,
+      "isCoreMeaning": true,
+      "needsUserReview": false,
+      "evidence": {
+        "matchedWords": ["ехал"],
+        "surfaceText": "ехал на велосипеде"
+      },
+      "resolutionStatus": "unresolved",
+      "source": "rule"
+    }
+  ],
+  "unknownTermCandidates": [
+    {
+      "surfaceText": "велосипеде",
+      "lemma": "велосипед",
+      "languageCode": "ru",
+      "possibleSemanticLayers": ["object_or_instrument"],
+      "localMatchStatus": "no_confident_match",
+      "requiresExternalLookup": true,
+      "ambiguityReason": null,
+      "confidence": 0.86,
+      "evidence": {
+        "source": "raw_input",
+        "span": null,
+        "matchedWords": ["велосипеде"]
+      }
+    }
+  ],
+  "localLookupCandidates": [],
+  "externalConceptCandidates": [
+    {
+      "source": "external_knowledge_graph",
+      "externalId": "concept:bicycle",
+      "canonicalLabel": "bicycle",
+      "description": "pedal-driven vehicle / transport object",
+      "conceptType": "object_or_instrument",
+      "confidence": 0.96,
+      "mappingStatus": "external_suggested",
+      "forUserDisplay": {
+        "safeLabel": "bicycle",
+        "safeDescription": "transport object"
+      }
+    }
+  ],
+  "resolvedCategoryCandidates": [
+    {
+      "candidateSlug": "bicycle",
+      "canonicalSlug": "bicycle",
+      "categoryId": null,
+      "semanticLayer": "object_or_instrument",
+      "categoryType": "instrument",
+      "resolutionStatus": "suggested_new",
+      "mappingStatus": "external_suggested",
+      "needsUserConfirmation": true,
+      "confidence": 0.86,
+      "evidence": {
+        "fromCandidateSlug": "bicycle",
+        "sourceChain": ["unknown_term", "external_concept", "resolver"]
+      }
+    }
+  ],
+  "stateHookCandidates": [
+    {
+      "hookKey": "physical_load",
+      "direction": "increase",
+      "confidence": 0.7,
+      "notAStateFactYet": true,
+      "evidence": {
+        "sourceCategories": ["cycling", "bicycle"]
+      }
+    }
+  ],
+  "riskFlags": ["do_not_overclaim_health_effect"],
+  "forbiddenOverclaims": [
+    "confirmed_health_improvement",
+    "muscle_growth",
+    "high_cortisol"
+  ],
+  "missingInformationQuestions": [],
+  "contractWarnings": [],
+  "contractErrors": []
+}
+
+Persistence implications:
+A2b does not implement persistence changes, but prepares later mapping:
+- categoryCandidates -> existing activity_category_derivations candidate fields
+- resolvedCategoryCandidates -> resolver output / activity category derivation resolved fields
+- unknownTermCandidates -> future unknown term or resolver event storage
+- localLookupCandidates -> future resolver audit detail
+- externalConceptCandidates -> future external_concepts / external_concept_labels / category_external_mappings
+- missingInformationQuestions -> future review UI / resolver feedback
+- stateHookCandidates -> future state hook contract, not facts/deltas/snapshots
+
+Runtime implementation order after A2b:
+1. Add TypeScript v3 contract types.
+2. Add safe default adapters from current v2/rule output to v3 shape.
+3. Add contract validator.
+4. Add local lookup candidate layer.
+5. Add unknown term detector.
+6. Add external concept candidate adapter, initially stubbed/no external call.
+7. Add resolver status/mapping status normalization.
+8. Add review-card payload.
+9. Only after schema audit, plan additive DB tables.
+10. Only after contract proof, add runtime route proof.
+
+Definition of Done for A2b:
+DOD-A2b-1 v3 top-level output fields are defined.
+DOD-A2b-2 unknownTermCandidates are defined.
+DOD-A2b-3 localLookupCandidates are defined.
+DOD-A2b-4 externalConceptCandidates are defined.
+DOD-A2b-5 resolvedCategoryCandidates are defined.
+DOD-A2b-6 resolutionStatus and mappingStatus vocabularies are defined.
+DOD-A2b-7 missingInformationQuestions are defined.
+DOD-A2b-8 stateHookCandidates remain not state facts.
+DOD-A2b-9 bridge compatibility boundary is documented.
+DOD-A2b-10 no runtime code or SQL changed.
+
+Next after A2b:
+C8-I-A3 — State Dimensions Linkage update:
+Confirm which category/source layers can produce state hooks, not facts, and add unresolved-concept safety behavior.
+
+Verification marker:
+No runtime code or SQL changed
