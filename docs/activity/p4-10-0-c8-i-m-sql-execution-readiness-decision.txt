@@ -1,0 +1,83 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-M - SQL Execution Readiness Decision After Postpatch Static Review
+
+Date: 2026-05-29 09:38:22
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before decision: 48d20d7
+HEAD line: 48d20d7 docs: review C8-I L postpatch SQL draft
+
+Inputs:
+- Migration draft: supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql
+- C8-I-K report: docs/activity/p4-10-0-c8-i-k-backend-mediated-rls-patch-report.txt
+- C8-I-L review: docs/activity/p4-10-0-c8-i-l-postpatch-static-sql-review.txt
+
+Safety:
+- SQL executed: false
+- DB read executed: false
+- DB write executed: false
+- Runtime called: false
+- supabase db push executed: false
+- psql executed: false
+- migration executed: false
+- activity_events write enabled: false
+- AI/OpenAI called: false
+- migration draft modified: false
+- code patch executed: false
+
+Previous closed gates:
+- C8-I-K-A: TSC_PASS_AND_K_BACKEND_MEDIATED_RLS_PATCH_COMMITTED.
+- C8-I-L-A: TSC_PASS_AND_L_POSTPATCH_STATIC_REVIEW_COMMITTED.
+
+Static readiness conclusion:
+STATIC_SQL_DRAFT_READY_FOR_EXECUTION_METHOD_DECISION_ONLY
+
+Execution decision:
+DO_NOT_EXECUTE_SQL_YET
+
+Reason:
+The migration draft passed postpatch static review, but execution method has not been selected in this gate.
+This gate does not authorize supabase db push, psql, migration up, db reset, production execution, runtime execution, or DB read/write.
+
+Required next gate:
+READY_FOR_C8_I_N_SQL_EXECUTION_METHOD_PLAN_NO_EXECUTION
+
+Allowed next work:
+- choose execution method and environment
+- decide whether execution is local, staging, or production
+- define rollback/backup expectations
+- define exact command later, only after method decision
+- keep SQL execution blocked until C8-I-N is committed
+
+Table checks:
+catalog state_dimensions: anon revoked, authenticated select only marker present, service_role grant marker present
+catalog state_relevance_rules: anon revoked, authenticated select only marker present, service_role grant marker present
+private value_object_state_facts: anon revoked, authenticated revoked, service_role grant marker present
+private activity_state_deltas: anon revoked, authenticated revoked, service_role grant marker present
+private value_object_state_snapshots: anon revoked, authenticated revoked, service_role grant marker present
+private semantic_signatures: anon revoked, authenticated revoked, service_role grant marker present
+private value_object_similarity_edges: anon revoked, authenticated revoked, service_role grant marker present
+private value_object_relevance_edges: anon revoked, authenticated revoked, service_role grant marker present
+private resolver_runs: anon revoked, authenticated revoked, service_role grant marker present
+private resolver_candidate_links: anon revoked, authenticated revoked, service_role grant marker present
+private resolver_feedback: anon revoked, authenticated revoked, service_role grant marker present
+
+Verification:
+- Required migration markers: PASS
+- Required K report markers: PASS
+- Required L review markers: PASS
+- Table access markers: PASS
+- Forbidden fragments: absent
+- Working tree was clean before writing this decision file
+- TypeScript check is required before commit
+- No SQL execution performed
+- No DB read/write performed
+- No runtime called
+
+Definition of Done:
+- SQL execution readiness decision recorded
+- SQL execution remains blocked
+- execution method decision required next
+- no SQL executed
+- no DB read/write
+- no runtime called
+- no code patch performed
