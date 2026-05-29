@@ -1,0 +1,84 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-L - Postpatch Static SQL Review Before Any SQL Execution
+
+Date: 2026-05-29 09:29:36
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before review: 26a5ff2
+
+Inputs:
+- Migration draft: supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql
+- C8-I-K report: docs/activity/p4-10-0-c8-i-k-backend-mediated-rls-patch-report.txt
+
+Safety:
+- SQL executed: false
+- DB read executed: false
+- DB write executed: false
+- Runtime called: false
+- supabase db push executed: false
+- psql executed: false
+- migration executed: false
+- activity_events write enabled: false
+- AI/OpenAI called: false
+- migration draft modified: false
+- code patch executed: false
+
+Previous closed gate:
+C8-I-K-A confirmed:
+TSC_PASS_AND_K_BACKEND_MEDIATED_RLS_PATCH_COMMITTED.
+
+Review scope:
+Static review of the committed C8-I migration draft after backend-mediated RLS patch.
+
+Patch block positions:
+- patch start index: 24395
+- patch end index: 27355
+- final commit index: 27394
+
+Private table static results:
+value_object_state_facts: grant_authenticated_count=1; unsafe_policy_count=4; final_revoke_authenticated_after_grant=True; anon_revoked=True; service_role_granted=True
+activity_state_deltas: grant_authenticated_count=1; unsafe_policy_count=4; final_revoke_authenticated_after_grant=True; anon_revoked=True; service_role_granted=True
+value_object_state_snapshots: grant_authenticated_count=1; unsafe_policy_count=4; final_revoke_authenticated_after_grant=True; anon_revoked=True; service_role_granted=True
+semantic_signatures: grant_authenticated_count=1; unsafe_policy_count=4; final_revoke_authenticated_after_grant=True; anon_revoked=True; service_role_granted=True
+value_object_similarity_edges: grant_authenticated_count=1; unsafe_policy_count=4; final_revoke_authenticated_after_grant=True; anon_revoked=True; service_role_granted=True
+value_object_relevance_edges: grant_authenticated_count=1; unsafe_policy_count=4; final_revoke_authenticated_after_grant=True; anon_revoked=True; service_role_granted=True
+resolver_runs: grant_authenticated_count=1; unsafe_policy_count=4; final_revoke_authenticated_after_grant=True; anon_revoked=True; service_role_granted=True
+resolver_candidate_links: grant_authenticated_count=1; unsafe_policy_count=4; final_revoke_authenticated_after_grant=True; anon_revoked=True; service_role_granted=True
+resolver_feedback: grant_authenticated_count=1; unsafe_policy_count=4; final_revoke_authenticated_after_grant=True; anon_revoked=True; service_role_granted=True
+
+Catalog table static results:
+state_dimensions: anon_revoked=True; select_authenticated_granted=True; grant_all_authenticated_count=0; service_role_granted=True
+state_relevance_rules: anon_revoked=True; select_authenticated_granted=True; grant_all_authenticated_count=0; service_role_granted=True
+
+Review failures:
+
+
+Review decision:
+READY_FOR_C8_I_L_A_COMMIT_POSTPATCH_STATIC_REVIEW
+
+Execution decision:
+DO_NOT_EXECUTE_SQL_YET
+
+Verification:
+- Required SQL markers checked.
+- Private final revoke/authenticated ordering checked.
+- Private anon revoke checked.
+- Private service_role grant checked.
+- Catalog anon revoke checked.
+- Catalog authenticated select checked.
+- Catalog grant-all-authenticated absence checked.
+- Catalog service_role grant checked.
+- Forbidden fragments checked.
+- No SQL execution performed.
+- No DB read/write performed.
+- No runtime called.
+
+Next required gate:
+READY_FOR_C8_I_L_A_COMMIT_POSTPATCH_STATIC_REVIEW
+
+Definition of Done:
+- postpatch static SQL review recorded
+- SQL execution remains blocked
+- no SQL executed
+- no DB read/write
+- no runtime called
+- no code patch performed
