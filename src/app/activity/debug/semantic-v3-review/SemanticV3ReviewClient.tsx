@@ -3,6 +3,9 @@
 import { useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 
+import SemanticPersistenceGatePanel, {
+  type SemanticPersistenceGateForUi,
+} from "./SemanticPersistenceGatePanel";
 import SemanticReviewActionsPanel, {
   type SemanticReviewActionCandidateForUi,
 } from "./SemanticReviewActionsPanel";
@@ -90,6 +93,8 @@ type PreviewResponse = {
   pipeline?: string;
   mode?: string;
   reviewActionPolicy?: string;
+  persistenceGatePolicy?: string;
+  persistenceGate?: SemanticPersistenceGateForUi;
   semanticV3?: {
     metricCandidates?: MetricCandidate[];
     categoryCandidates?: CategoryCandidate[];
@@ -779,6 +784,8 @@ export default function SemanticV3ReviewClient() {
               )}
             </div>
 
+            <SemanticPersistenceGatePanel gate={result?.persistenceGate ?? null} />
+
             <SemanticReviewActionsPanel actions={reviewActionCandidates} />
 
             <div style={styles.section}>
@@ -795,3 +802,6 @@ export default function SemanticV3ReviewClient() {
     </main>
   );
 }
+
+
+
