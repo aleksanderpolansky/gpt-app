@@ -1,0 +1,117 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-T-FAIL-1 - Manual Sandbox SQL Execution Failure Record
+
+Date: 2026-05-29 11:49:07
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD at failure record: 7feee06
+HEAD line: 7feee06 docs: plan C8-I S sandbox SQL execution package
+
+Observed manual SQL execution result:
+ERROR: 42703: column "rule_key" does not exist
+
+Execution context:
+- User executed SQL manually in Supabase Dashboard SQL Editor.
+- Target intended: current sandbox Supabase project only.
+- Production target: forbidden / not used.
+- Real user data: absent by user confirmation.
+- Secrets/keys shared in chat: false.
+- Secrets/keys printed by this script: false.
+- env/secrets read by this script: false.
+- DB read by this script: false.
+- DB write by this script: false.
+- SQL executed by this script: false.
+- Runtime/API called by this script: false.
+
+Immediate decision:
+DO_NOT_RERUN_SAME_SQL
+
+Failure classification:
+MANUAL_SANDBOX_SQL_EXECUTION_FAILED_WITH_UNDEFINED_COLUMN_RULE_KEY
+
+Postgres error:
+- SQLSTATE: 42703
+- Meaning in this context: undefined column reference
+- Column name from UI: rule_key
+
+Local static evidence from migration file:
+- migration path: supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql
+- contains state_relevance_rules string: True
+- contains rule_key string: True
+- contains begin marker: True
+- contains commit marker: True
+
+rule_key occurrences:
+line 42: rule_key text not null unique,
+line 53: create index if not exists idx_state_relevance_rules_rule_key on public.state_relevance_rules (rule_key);
+line 272: rule_key text,
+
+state_relevance_rules occurrences:
+line 38: -- state_relevance_rules
+line 40: create table if not exists public.state_relevance_rules (
+line 53: create index if not exists idx_state_relevance_rules_rule_key on public.state_relevance_rules (rule_key);
+line 54: create index if not exists idx_state_relevance_rules_dimension_key on public.state_relevance_rules (state_dimension_key);
+line 55: create index if not exists idx_state_relevance_rules_is_active on public.state_relevance_rules (is_active);
+line 56: alter table public.state_relevance_rules enable row level security;
+line 57: drop policy if exists state_relevance_rules_authenticated_read on public.state_relevance_rules;
+line 58: create policy state_relevance_rules_authenticated_read on public.state_relevance_rules for select to authenticated using (true);
+line 59: revoke all on table public.state_relevance_rules from anon;
+line 60: grant select on table public.state_relevance_rules to authenticated;
+line 61: grant all on table public.state_relevance_rules to service_role;
+line 400: revoke all on table public.state_relevance_rules from anon;
+line 401: grant select on table public.state_relevance_rules to authenticated;
+line 402: grant all on table public.state_relevance_rules to service_role;
+
+Interpretation:
+The intended migration design contains state_relevance_rules.rule_key.
+The manual Supabase execution failed because the live SQL execution context did not see a rule_key column where the SQL referenced it.
+
+likely causes to investigate in the next gate:
+1. The sandbox already has a pre-existing state_relevance_rules table without rule_key, and create table if not exists did not update that existing table.
+2. The executed SQL in Dashboard differed from the committed migration draft.
+3. A line in the migration references rule_key before the intended column exists.
+4. The transaction failed before commit; durable DB changes are not confirmed here.
+
+Transaction note:
+The migration file is wrapped in begin/commit.
+Because the visible error happened before commit, durable changes are likely rolled back by PostgreSQL transaction behavior, but this report does not verify the database state.
+A later diagnostic gate must confirm whether any C8-I tables were created or partially left in sandbox.
+
+Required next gate:
+READY_FOR_C8_I_U_SANDBOX_SCHEMA_DRIFT_DIAGNOSTIC_AND_PATCH_PLAN_NO_EXECUTION
+
+Allowed next work:
+- record this failure in git
+- inspect local migration statically
+- prepare read-only Supabase diagnostic query for user review
+- prepare non-production/sandbox-only cleanup or patch plan if needed
+
+Blocked:
+- do not rerun the same SQL
+- do not run production SQL
+- do not print secrets/keys
+- do not assume auth.uid() = user_id is proven
+- do not enable activity_events write path
+- do not enable runtime/AI state inference
+
+Verification:
+- branch main: PASS
+- working tree clean before report: PASS
+- local HEAD matches origin/main: PASS
+- latest commit is C8-I-S-A: PASS
+- required migration markers: PASS
+- required C8-I-S markers: PASS
+- failure recorded: PASS
+- no SQL executed by this script
+- no DB read/write by this script
+- no runtime called by this script
+- no code patch performed by this script
+
+Definition of Done:
+- failed manual sandbox SQL execution recorded
+- rule_key error recorded
+- no rerun decision recorded
+- next diagnostic/patch gate identified
+- no SQL executed by this script
+- no DB read/write by this script
+- no runtime called by this script
+- no code patch performed by this script
