@@ -1,0 +1,461 @@
+﻿GPT-APP / AI-NAVIGATOR
+P4.10.0 / C8-I / A1b
+Category Source Hooks Map + Unknown Term Lifecycle
+
+Date:
+2026-05-29
+
+Status:
+DRAFT / DOCUMENTATION-ONLY
+
+Current baseline:
+This document starts after G1 / C8-I-POST-SQL-API-VERIFY was committed and pushed.
+
+Last confirmed commit before A1b:
+77864c7 — test: verify C8-I post-SQL backend read-only tables
+
+Purpose:
+Define the controlled source map for categories before implementing runtime changes.
+The goal is to prevent uncontrolled category creation from AI or external sources and to prepare C8-I-A2b JSON contract expansion.
+
+Core architectural rule:
+AI output is candidate, not truth.
+External concept is candidate, not internal category.
+Category is hook/signal, not state fact.
+State facts/deltas/snapshots require a separate source/confidence/evidence/window contract.
+
+Existing implementation discovered in A1b-0:
+1. free-text debug route can call category derivation.
+2. current flow can run:
+   - deriveCategoryCandidates
+   - resolveCategoryCandidates
+   - persistCategoryDerivations
+   - buildAdditionalCategoryLinksForBridge
+   - processActivityValueObjectBridge
+3. current bridge link can use:
+   - categoryId
+   - categoryTable: contextual_categories
+   - categoryRole: semantic_component
+   - source: rule
+   - confidence
+   - derivationRunId
+   - activityCategoryDerivationId
+   - activityEventId
+   - candidateSlug
+   - candidateTitle
+   - semanticLayer
+   - categoryType
+   - resolutionStatus
+4. current bridge accepts resolution statuses:
+   - resolved_existing
+   - created_suggested
+   - created_active
+5. current system is still not a full external ontology bridge.
+6. current system does not yet have the full unknownTermCandidates / externalConceptCandidates / mappingStatus contract.
+
+A1b scope:
+Create the map of category sources and unknown term lifecycle.
+Do not implement runtime yet.
+Do not write SQL.
+Do not alter activity_events write path.
+Do not claim external ontology bridge runtime readiness.
+Do not claim state engine readiness.
+
+Category source hooks map:
+
+SOURCE 1 — raw user/app input
+Examples:
+- "ехал на велосипеде 30 минут на работу"
+- "купил палету посуды"
+- "учил математику с ребёнком"
+- "делал массаж клиенту"
+Role:
+The raw input is source evidence, not a category.
+Output:
+- surfaceText
+- inputLanguage
+- normalizedActivity
+- candidate terms
+- possible metrics
+Safety:
+Never discard raw text.
+Do not replace user wording with canonical category silently.
+
+SOURCE 2 — rule extractor / local parser
+Examples:
+- walked -> walking
+- to work -> commute/work context
+- 30 minutes -> duration_minutes
+Role:
+Fast deterministic extraction of obvious candidates.
+Output:
+- categoryCandidates
+- metricCandidates
+- possible stateHookCandidates
+Current implementation:
+deriveCategoryCandidates.
+Safety:
+Rule output remains candidate.
+Rule output cannot create active global category without resolver/governance.
+
+SOURCE 3 — local seed rubricator / controlled internal categories
+Examples:
+- walking
+- cycling
+- childcare
+- family_care
+- lead_generation
+Role:
+First lookup layer for known internal concepts.
+Output:
+- localLookupCandidates
+- possible resolved existing category
+Safety:
+Local first before external lookup.
+A local match can still be ambiguous if multiple internal categories match.
+
+SOURCE 4 — user history / personal semantic capital
+Examples:
+- user previously confirmed "rower" as bicycle in Polish
+- user previously corrected "покатался" to scooter, not bicycle
+- user often uses "работа" as physical job, not office task
+Role:
+High-trust personal disambiguation.
+Output:
+- personalAliasCandidates
+- userConfirmedMeaningCandidates
+- previousCorrectionCandidates
+Safety:
+User correction wins locally.
+Personal meaning must not automatically become global category.
+
+SOURCE 5 — local aliases / multilingual labels
+Examples:
+- bicycle / bike / rower / Fahrrad / bicicleta / велосипед
+- massage / masaż / masaje / Massage / массаж
+Role:
+Map different surface forms to existing controlled concepts.
+Output:
+- aliasMatchCandidates
+- language-specific label candidates
+Safety:
+Alias is not category.
+Alias must map to a controlled internal category or remain unresolved.
+
+SOURCE 6 — unknown term detector
+Examples:
+- "велосипед" when not found locally
+- "самокат" when no confident local match
+- "палета" when ambiguous between packaging/logistics/business object
+Role:
+Detect terms that cannot be safely resolved locally.
+Output:
+- unknownTermCandidates
+Required future fields:
+- surfaceText
+- lemma
+- languageCode
+- possibleSemanticLayers
+- localMatchStatus
+- requiresExternalLookup
+- ambiguityReason
+- evidence
+Safety:
+Unknown term does not become semantic category.
+If ambiguity is high, ask the user instead of inferring.
+
+SOURCE 7 — external concept lookup
+Examples:
+- bicycle from external knowledge source
+- pallet from external concept source
+- scooter from external concept source
+Role:
+Support recognition and multilingual identity for terms not present locally.
+Output:
+- externalConceptCandidates
+Required future fields:
+- source
+- externalId
+- canonicalLabel
+- description
+- conceptType
+- confidence
+- mappingStatus
+- rawReferenceAllowed: false by default in user-facing response
+Safety:
+External concept is not internal category.
+External concept cannot directly create active category.
+Cache only concepts actually encountered or used.
+
+SOURCE 8 — category resolver / canonicalizer
+Examples:
+- велосипед -> bicycle object_or_instrument
+- ехать на велосипеде -> cycling action
+- на работу -> commute context
+Role:
+Resolve candidates into controlled category bundle.
+Output:
+- resolvedCategoryCandidates
+Required future fields:
+- canonicalSlug
+- semanticLayer
+- categoryType
+- resolutionStatus
+- mappingStatus
+- needsUserConfirmation
+- confidence
+- evidence
+Allowed draft statuses:
+- resolved_existing
+- suggested_new
+- needs_review
+- rejected
+- merged
+- created_suggested
+Forbidden without governance:
+- created_active_global
+Safety:
+candidateSlug != canonicalSlug.
+object != action != context != role != duty != care != purpose.
+
+SOURCE 9 — user review / correction
+Examples:
+- user confirms "велосипед"
+- user changes "самокат" to "electric scooter"
+- user merges "bike" with existing bicycle
+- user rejects wrong concept
+Role:
+Turn suggestion into trusted local semantic capital.
+Output:
+- resolver_feedback
+- correction row
+- updated mapping status
+- personal alias or confirmed local mapping
+Safety:
+Correction must be auditable.
+Do not silently rewrite history.
+
+SOURCE 10 — domain taxonomy later
+Examples:
+- medical anatomy taxonomy
+- product taxonomy
+- tax/legal terminology
+- business process taxonomy
+Role:
+Specialized precision source for later phases.
+Output:
+- domainConceptCandidates
+- domainMappingCandidates
+Safety:
+Not MVP.
+Do not import large taxonomies before governance and scope rules.
+
+Unknown term lifecycle v0:
+
+Step 1 — input captured
+Raw Activity Event or free-text input is captured as evidence.
+No category is yet trusted solely because it appears in text.
+
+Step 2 — language and normalization
+Detect language and normalize basic wording.
+Keep surface text and raw text.
+
+Step 3 — initial category candidates
+Rule extractor / AI proposes candidate categories by:
+- action
+- object
+- context
+- role
+- duty
+- care
+- purpose
+- metric
+- domain
+- possible state hook
+
+Step 4 — local lookup first
+Search controlled internal categories, local aliases, user history, and existing Value Objects.
+
+Step 5 — unknown term candidate if local lookup fails or is ambiguous
+Create unknownTermCandidate when:
+- no confident local match
+- multiple conflicting local matches
+- language form is recognized but semantic identity is unclear
+- object/action/context separation is unclear
+- term may have domain-specific meaning
+
+Step 6 — external concept lookup only if needed
+External lookup is used when:
+- local match is missing
+- local match is ambiguous
+- multilingual identity is needed
+- term is important for downstream VO/state/NBA logic
+
+Step 7 — resolver builds suggested mapping
+The resolver proposes:
+- existing category match
+- new suggested internal category
+- merge with existing category
+- reject candidate
+- ask user / needs_review
+
+Step 8 — review and confirmation
+User or governance confirms, rejects, merges, or corrects.
+MVP should use simple review cards, not a full ontology admin.
+
+Step 9 — resolved semantic bundle
+Only resolved/suggested candidates with controlled status enter semantic bundle.
+Unresolved concepts stay outside stable bundle or are marked needs_review.
+
+Step 10 — Value Object exposure
+Resolved categories can link Activity Event to one or more Value Objects.
+This does not duplicate real time.
+Exposure links remain derivative.
+
+Step 11 — state hooks only
+Resolved categories may produce stateHookCandidates.
+They cannot produce state facts/deltas/snapshots without state contract.
+
+Step 12 — feedback becomes semantic capital
+User corrections and confirmations improve future local lookup.
+Personal correction is local high-trust signal, not automatic global truth.
+
+Decision rules:
+
+RULE 1 — Local first
+Search seed categories, user history, aliases, and existing Value Objects before external lookup.
+
+RULE 2 — External second
+Use external lookup only when needed.
+
+RULE 3 — No direct active category
+AI or external concept can create suggested category only.
+Active/global category requires resolver/governance/user confirmation rules.
+
+RULE 4 — No state facts from categories
+Category can produce hook/signal.
+Fact/delta/snapshot requires separate contract.
+
+RULE 5 — Ask when ambiguous
+"Покатался 30 минут" should ask or mark ambiguity:
+bicycle, scooter, rollers, motorcycle, car?
+Do not infer bicycle confidently.
+
+RULE 6 — Separate semantic layers
+bicycle != cycling != commute-by-bicycle != transport != physical_activity.
+
+RULE 7 — Keep evidence
+surfaceText, lemma, language, matched words, confidence, source, and resolver status must be auditable.
+
+RULE 8 — User correction wins locally
+User-confirmed meaning becomes high-trust personal semantic capital.
+It does not automatically create global taxonomy truth.
+
+RULE 9 — Avoid ontology explosion
+Do not turn every word into Value Object.
+Category is a semantic element.
+Value Object is created or updated only when there is stable purpose/history/usefulness.
+
+RULE 10 — Unknown term should not block activity capture
+If external service is unavailable, save activity normally and mark term as needs_review.
+
+Future C8-I-A2b JSON contract requirements:
+
+Top-level fields to add or confirm:
+- schemaVersion
+- detectedLanguage
+- normalizedActivity
+- overallConfidence
+- metricCandidates
+- categoryCandidates
+- unknownTermCandidates
+- localLookupCandidates
+- externalConceptCandidates
+- resolvedCategoryCandidates
+- stateHookCandidates
+- riskFlags
+- forbiddenOverclaims
+- missingInformationQuestions
+
+Required unknownTermCandidate fields:
+- surfaceText
+- lemma
+- languageCode
+- possibleSemanticLayers
+- localMatchStatus
+- requiresExternalLookup
+- ambiguityReason
+- evidence
+
+Required localLookupCandidate fields:
+- source
+- matchedCategoryId
+- matchedSlug
+- matchedAlias
+- semanticLayer
+- confidence
+- matchStatus
+
+Required externalConceptCandidate fields:
+- source
+- externalId
+- canonicalLabel
+- description
+- conceptType
+- confidence
+- mappingStatus
+
+Required resolvedCategoryCandidate fields:
+- candidateSlug
+- canonicalSlug
+- categoryId
+- semanticLayer
+- categoryType
+- resolutionStatus
+- mappingStatus
+- needsUserConfirmation
+- confidence
+- evidence
+
+Draft status vocabulary:
+resolutionStatus:
+- unresolved
+- resolved_existing
+- suggested_new
+- created_suggested
+- needs_review
+- rejected
+- merged
+
+mappingStatus:
+- none
+- local_exact
+- local_alias
+- local_ambiguous
+- external_suggested
+- external_confirmed
+- user_confirmed
+- rejected
+- merged
+
+Safety boundaries:
+1. Do not implement runtime external ontology lookup in A1b.
+2. Do not add SQL in A1b.
+3. Do not create external_concepts tables in A1b.
+4. Do not change activity_events write path in A1b.
+5. Do not change Value Object bridge behavior in A1b.
+6. Do not claim state engine implementation.
+7. Do not generate active global categories directly from AI/external source.
+
+Definition of Done for A1b:
+DOD-A1b-1 Category sources are listed and separated.
+DOD-A1b-2 Unknown term lifecycle is defined.
+DOD-A1b-3 Local-first / external-second rule is explicit.
+DOD-A1b-4 AI/external concepts remain candidates.
+DOD-A1b-5 User correction and resolver governance are explicit.
+DOD-A1b-6 State hook vs state fact boundary remains explicit.
+DOD-A1b-7 A2b JSON contract fields are prepared.
+DOD-A1b-8 No runtime code or SQL was changed.
+
+Next after A1b:
+C8-I-A2b — extend semantic JSON/output contract for unknown terms, local lookup, external concepts, resolution status, and mapping status.
