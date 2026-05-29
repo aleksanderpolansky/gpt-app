@@ -1,0 +1,71 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-F — Static SQL Migration Draft Review
+
+Date: 2026-05-29 07:35:43
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before review: f908238
+
+Migration draft reviewed:
+supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql
+
+Purpose:
+Review the C8-I-E SQL migration draft as text before any SQL execution.
+
+Safety:
+- SQL executed: false
+- DB read executed: false
+- DB write executed: false
+- Runtime called: false
+- supabase db push executed: false
+- psql executed: false
+- migration executed: false
+
+Previous closed gate:
+C8-I-E-A confirmed:
+TSC_PASS_AND_E_SQL_MIGRATION_DRAFT_COMMITTED.
+
+Static counts:
+- create table count: 11
+- RLS enable count: 12
+- create policy count: 29
+- grant count: 22
+- revoke count: 11
+
+Expected table review:
+state_dimensions: create=True; rls=True; revoke_anon=True; service_role_grant=True
+state_relevance_rules: create=True; rls=True; revoke_anon=True; service_role_grant=True
+value_object_state_facts: create=True; rls=True; revoke_anon=True; service_role_grant=True
+activity_state_deltas: create=True; rls=True; revoke_anon=True; service_role_grant=True
+value_object_state_snapshots: create=True; rls=True; revoke_anon=True; service_role_grant=True
+semantic_signatures: create=True; rls=True; revoke_anon=True; service_role_grant=True
+value_object_similarity_edges: create=True; rls=True; revoke_anon=True; service_role_grant=True
+value_object_relevance_edges: create=True; rls=True; revoke_anon=True; service_role_grant=True
+resolver_runs: create=True; rls=True; revoke_anon=True; service_role_grant=True
+resolver_candidate_links: create=True; rls=True; revoke_anon=True; service_role_grant=True
+resolver_feedback: create=True; rls=True; revoke_anon=True; service_role_grant=True
+
+Forbidden fragment review:
+none found
+
+Missing marker review:
+none found
+
+Rules confirmed:
+- SQL execution was not performed.
+- DB read/write was not performed.
+- Runtime was not called.
+- Migration remains a draft.
+- Explicit RLS and explicit GRANT are present in the draft structure.
+- GRANT does not replace RLS.
+- anon access is revoked from C8-I state/context tables.
+- service_role grant is present for backend/server-side use.
+- similarity and relevance remain separate.
+- relevance is not causality.
+- state facts are not medical, hormonal, legal, financial or social certainty.
+
+Decision:
+READY_FOR_C8_I_G_SQL_DRAFT_REVIEW_DECISION
+
+Next step:
+If READY, commit this static review report in C8-I-F-A.
+Then prepare C8-I-G as a separate decision gate before any SQL execution.
