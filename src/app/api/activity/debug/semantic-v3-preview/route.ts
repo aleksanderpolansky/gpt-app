@@ -5,6 +5,7 @@ import { deriveCategoryCandidates } from "../../../../../../lib/activity/categor
 import { resolveSemanticBundleV0 } from "../../../../../../lib/activity/categoryDerivation/semanticBundleResolverV0";
 import { buildSemanticDerivationV3FromCurrentOutput } from "../../../../../../lib/activity/categoryDerivation/semanticContractV3Adapter";
 import { enrichSemanticDerivationV3FromText } from "../../../../../../lib/activity/categoryDerivation/semanticTextSignalEnrichmentV0";
+import { buildValueObjectCandidatesV0 } from "../../../../../../lib/activity/categoryDerivation/semanticValueObjectCandidatePolicyV0";
 import type { CategoryDerivationInput } from "../../../../../../lib/activity/categoryDerivation/types";
 
 export const dynamic = "force-dynamic";
@@ -96,6 +97,7 @@ export async function GET() {
     mode: "read_only_preview",
     enrichment: "deterministic_text_enrichment_v0",
     resolver: "semantic_bundle_resolver_v0",
+    valueObjectPolicy: "value_object_candidate_policy_v0",
     writes: {
       sqlExecuted: false,
       dbWriteExecuted: false,
@@ -154,9 +156,10 @@ export async function POST(request: Request) {
     metadata: {
       endpoint: "/api/activity/debug/semantic-v3-preview",
       mode: "read_only_preview",
-      p4Step: "C8-I-IMPLEMENT-5",
+      p4Step: "C8-I-IMPLEMENT-7",
       createdAt: new Date().toISOString(),
       dbWriteExecuted: false,
+      valueObjectCreated: false,
       stateFactCreated: false,
       stateDeltaCreated: false,
       stateSnapshotCreated: false,
@@ -183,12 +186,18 @@ export async function POST(request: Request) {
     result: semanticV3Enriched,
   });
 
+  const valueObjectCandidates = buildValueObjectCandidatesV0({
+    semanticV3,
+    inputText: input.inputText,
+  });
+
   return NextResponse.json({
     ok: true,
     endpoint: "/api/activity/debug/semantic-v3-preview",
     mode: "read_only_preview",
     enrichment: "deterministic_text_enrichment_v0",
     resolver: "semantic_bundle_resolver_v0",
+    valueObjectPolicy: "value_object_candidate_policy_v0",
     activityEventId,
     input: {
       inputText: input.inputText,
@@ -209,6 +218,7 @@ export async function POST(request: Request) {
       errors: extractionResult.errors,
     },
     semanticV3,
+    valueObjectCandidates,
     writes: {
       sqlExecuted: false,
       dbWriteExecuted: false,
