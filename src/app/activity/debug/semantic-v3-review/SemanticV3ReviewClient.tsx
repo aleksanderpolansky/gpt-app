@@ -9,6 +9,7 @@ import SemanticPersistenceGatePanel, {
 import SemanticReviewActionsPanel, {
   type SemanticReviewActionCandidateForUi,
 } from "./SemanticReviewActionsPanel";
+import SemanticRouteGatePanel from "./SemanticRouteGatePanel";
 
 type MetricCandidate = {
   metricKey?: string;
@@ -786,6 +787,12 @@ export default function SemanticV3ReviewClient() {
 
             <SemanticPersistenceGatePanel gate={result?.persistenceGate ?? null} />
 
+            <SemanticRouteGatePanel
+              inputText={inputText}
+              durationMinutesText={durationMinutes}
+              inputLanguage={inputLanguage}
+            />
+
             <SemanticReviewActionsPanel actions={reviewActionCandidates} />
 
             <div style={styles.section}>
@@ -802,6 +809,8 @@ export default function SemanticV3ReviewClient() {
     </main>
   );
 }
+
+
 
 
 
