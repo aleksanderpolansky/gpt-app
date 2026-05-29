@@ -4,6 +4,7 @@ import { deriveCategoryCandidates } from "./ruleExtractor";
 import { buildActivityValueObjectExposureCandidatesV0 } from "./semanticActivityValueObjectExposureV0";
 import { resolveSemanticBundleV0 } from "./semanticBundleResolverV0";
 import { buildSemanticDerivationV3FromCurrentOutput } from "./semanticContractV3Adapter";
+import { buildSemanticPersistenceGateV0 } from "./semanticPersistenceGateV0";
 import { buildSemanticReviewActionCandidatesV0 } from "./semanticReviewActionContractV0";
 import { buildStateDeltaCandidatesV0 } from "./semanticStateDeltaCandidatePolicyV0";
 import { enrichSemanticDerivationV3FromText } from "./semanticTextSignalEnrichmentV0";
@@ -11,6 +12,7 @@ import { buildValueObjectCandidatesV0 } from "./semanticValueObjectCandidatePoli
 import type { CategoryDerivationInput } from "./types";
 import type { ActivityValueObjectExposureCandidateV0 } from "./semanticActivityValueObjectExposureV0";
 import type { SemanticDerivationV3Result } from "./semanticContractV3";
+import type { SemanticPersistenceGateDecisionV0 } from "./semanticPersistenceGateV0";
 import type { SemanticReviewActionCandidateV0 } from "./semanticReviewActionContractV0";
 import type { StateDeltaCandidateV0 } from "./semanticStateDeltaCandidatePolicyV0";
 import type { ValueObjectCandidateV0 } from "./semanticValueObjectCandidatePolicyV0";
@@ -44,6 +46,7 @@ export type SemanticPreviewPipelineResultV0 = {
   exposurePolicy: "activity_value_object_exposure_v0";
   stateDeltaPolicy: "state_delta_candidate_policy_v0";
   reviewActionPolicy: "semantic_review_action_contract_v0";
+  persistenceGatePolicy: "semantic_persistence_gate_design_v0";
   activityEventId: string;
   input: {
     inputText: string;
@@ -68,6 +71,7 @@ export type SemanticPreviewPipelineResultV0 = {
   exposureCandidates: ActivityValueObjectExposureCandidateV0[];
   stateDeltaCandidates: StateDeltaCandidateV0[];
   reviewActionCandidates: SemanticReviewActionCandidateV0[];
+  persistenceGate: SemanticPersistenceGateDecisionV0;
   writes: SemanticPreviewPipelineWritesV0;
 };
 
@@ -101,7 +105,7 @@ export function runSemanticPreviewPipelineV0(
     metadata: {
       endpoint: "semantic_preview_pipeline_v0",
       mode: "read_only_preview",
-      p4Step: params.p4Step ?? "C8-I-IMPLEMENT-12",
+      p4Step: params.p4Step ?? "C8-I-IMPLEMENT-14",
       createdAt: new Date().toISOString(),
       dbWriteExecuted: false,
       valueObjectCreated: false,
@@ -154,6 +158,15 @@ export function runSemanticPreviewPipelineV0(
     stateDeltaCandidates,
   });
 
+  const persistenceGate = buildSemanticPersistenceGateV0({
+    inputText: params.inputText,
+    semanticV3,
+    valueObjectCandidates,
+    exposureCandidates,
+    stateDeltaCandidates,
+    reviewActionCandidates,
+  });
+
   return {
     ok: true,
     mode: "read_only_preview",
@@ -163,6 +176,7 @@ export function runSemanticPreviewPipelineV0(
     exposurePolicy: "activity_value_object_exposure_v0",
     stateDeltaPolicy: "state_delta_candidate_policy_v0",
     reviewActionPolicy: "semantic_review_action_contract_v0",
+    persistenceGatePolicy: "semantic_persistence_gate_design_v0",
     activityEventId,
     input: {
       inputText: params.inputText,
@@ -187,6 +201,7 @@ export function runSemanticPreviewPipelineV0(
     exposureCandidates,
     stateDeltaCandidates,
     reviewActionCandidates,
+    persistenceGate,
     writes: buildReadOnlyWritesV0(),
   };
 }
