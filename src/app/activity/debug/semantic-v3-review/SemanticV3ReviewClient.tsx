@@ -3,6 +3,10 @@
 import { useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 
+import SemanticReviewActionsPanel, {
+  type SemanticReviewActionCandidateForUi,
+} from "./SemanticReviewActionsPanel";
+
 type MetricCandidate = {
   metricKey?: string;
   value?: string | number | boolean | null;
@@ -85,6 +89,7 @@ type PreviewResponse = {
   endpoint?: string;
   pipeline?: string;
   mode?: string;
+  reviewActionPolicy?: string;
   semanticV3?: {
     metricCandidates?: MetricCandidate[];
     categoryCandidates?: CategoryCandidate[];
@@ -96,6 +101,7 @@ type PreviewResponse = {
   valueObjectCandidates?: ValueObjectCandidate[];
   exposureCandidates?: ExposureCandidate[];
   stateDeltaCandidates?: StateDeltaCandidate[];
+  reviewActionCandidates?: SemanticReviewActionCandidateForUi[];
   writes?: Record<string, boolean>;
 };
 
@@ -206,7 +212,7 @@ const styles: Record<string, CSSProperties> = {
   },
   cards: {
     display: "grid",
-    gridTemplateColumns: "repeat(5, minmax(120px, 1fr))",
+    gridTemplateColumns: "repeat(6, minmax(120px, 1fr))",
     gap: "10px",
     marginBottom: "18px",
   },
@@ -374,6 +380,11 @@ export default function SemanticV3ReviewClient() {
     [result]
   );
 
+  const reviewActionCandidates = useMemo(
+    () => result?.reviewActionCandidates ?? [],
+    [result]
+  );
+
   async function runPreview() {
     setIsLoading(true);
     setErrorText(null);
@@ -421,7 +432,8 @@ export default function SemanticV3ReviewClient() {
         <h1 style={styles.title}>Semantic Preview Review Card v0</h1>
         <p style={styles.subtitle}>
           Read-only UI for checking the chain: free text → categories → resolved
-          bundle → Value Objects → exposures → state delta candidates.
+          bundle → Value Objects → exposures → state delta candidates → review
+          actions.
         </p>
       </header>
 
@@ -526,6 +538,10 @@ export default function SemanticV3ReviewClient() {
               <div style={styles.cardValue}>{stateDeltaCandidates.length}</div>
               <div style={styles.cardLabel}>state deltas</div>
             </div>
+            <div style={styles.card}>
+              <div style={styles.cardValue}>{reviewActionCandidates.length}</div>
+              <div style={styles.cardLabel}>review actions</div>
+            </div>
           </div>
 
           <div style={styles.panel}>
@@ -548,7 +564,9 @@ export default function SemanticV3ReviewClient() {
                           <td style={styles.td}>{item.metricKey ?? "—"}</td>
                           <td style={styles.td}>{formatValue(item.value)}</td>
                           <td style={styles.td}>{item.unit ?? "—"}</td>
-                          <td style={styles.td}>{formatNumber(item.confidence)}</td>
+                          <td style={styles.td}>
+                            {formatNumber(item.confidence)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -588,7 +606,9 @@ export default function SemanticV3ReviewClient() {
                           <td style={styles.td}>
                             <BoolBadge value={item.needsUserConfirmation} />
                           </td>
-                          <td style={styles.td}>{formatNumber(item.confidence)}</td>
+                          <td style={styles.td}>
+                            {formatNumber(item.confidence)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -617,7 +637,9 @@ export default function SemanticV3ReviewClient() {
                         <tr key={`${item.hookKey ?? "hook"}-${index}`}>
                           <td style={styles.td}>{item.hookKey ?? "—"}</td>
                           <td style={styles.td}>{item.direction ?? "—"}</td>
-                          <td style={styles.td}>{formatNumber(item.confidence)}</td>
+                          <td style={styles.td}>
+                            {formatNumber(item.confidence)}
+                          </td>
                           <td style={styles.td}>
                             <BoolBadge value={item.notAStateFactYet} />
                           </td>
@@ -654,7 +676,9 @@ export default function SemanticV3ReviewClient() {
                           <td style={styles.td}>{item.role ?? "—"}</td>
                           <td style={styles.td}>{item.scope ?? "—"}</td>
                           <td style={styles.td}>{item.action ?? "—"}</td>
-                          <td style={styles.td}>{formatNumber(item.confidence)}</td>
+                          <td style={styles.td}>
+                            {formatNumber(item.confidence)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -666,7 +690,9 @@ export default function SemanticV3ReviewClient() {
             </div>
 
             <div style={styles.section}>
-              <h2 style={styles.sectionTitle}>Activity → VO exposure candidates</h2>
+              <h2 style={styles.sectionTitle}>
+                Activity → VO exposure candidates
+              </h2>
               {exposureCandidates.length > 0 ? (
                 <div style={styles.tableWrap}>
                   <table style={styles.table}>
@@ -684,14 +710,18 @@ export default function SemanticV3ReviewClient() {
                       {exposureCandidates.map((item, index) => (
                         <tr key={`${item.exposureKey ?? "exposure"}-${index}`}>
                           <td style={styles.td}>{item.exposureKey ?? "—"}</td>
-                          <td style={styles.td}>{item.activityLinkType ?? "—"}</td>
+                          <td style={styles.td}>
+                            {item.activityLinkType ?? "—"}
+                          </td>
                           <td style={styles.td}>
                             {item.valueObjectSuggestedTitle ?? "—"}
                           </td>
                           <td style={styles.td}>
                             {item.expectedEffectDirection ?? "—"}
                           </td>
-                          <td style={styles.td}>{formatNumber(item.confidence)}</td>
+                          <td style={styles.td}>
+                            {formatNumber(item.confidence)}
+                          </td>
                           <td style={styles.td}>
                             <BoolBadge value={item.shouldCreateActivityLink} />
                           </td>
@@ -736,7 +766,9 @@ export default function SemanticV3ReviewClient() {
                           <td style={styles.td}>
                             <BoolBadge value={item.notAStateFactYet} />
                           </td>
-                          <td style={styles.td}>{formatNumber(item.confidence)}</td>
+                          <td style={styles.td}>
+                            {formatNumber(item.confidence)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -746,6 +778,8 @@ export default function SemanticV3ReviewClient() {
                 <EmptyState text="No state delta candidates yet." />
               )}
             </div>
+
+            <SemanticReviewActionsPanel actions={reviewActionCandidates} />
 
             <div style={styles.section}>
               <h2 style={styles.sectionTitle}>Raw JSON</h2>
