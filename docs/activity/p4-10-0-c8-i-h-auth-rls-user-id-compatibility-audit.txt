@@ -1,0 +1,438 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-H — Auth/RLS/user_id Compatibility Audit Before SQL Execution
+
+Date: 2026-05-29 07:41:37
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before audit: 4bb2d28
+
+Inputs:
+- Migration draft: supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql
+- C8-I-G decision: docs/activity/p4-10-0-c8-i-g-sql-draft-review-decision-before-execution.txt
+
+Purpose:
+Perform a static repository audit before any SQL execution to check whether the C8-I draft migration assumptions around auth.uid(), user_id ownership and RLS are safe to proceed with.
+
+Safety:
+- SQL executed: false
+- DB read executed: false
+- DB write executed: false
+- Runtime called: false
+- supabase db push executed: false
+- psql executed: false
+- migration executed: false
+- activity_events write enabled: false
+- AI/OpenAI called: false
+- code patch executed: false
+
+Repository inventory:
+- all scanned files: 950
+- source files: 201
+- sql files: 74
+- migration sql files: 32
+- docs/activity files: 201
+
+Static pattern summary:
+Auth0 references: all=19901; source=274; sql=0; docs=18932
+Supabase client references: all=17164; source=725; sql=29; docs=6364
+service_role / admin references: all=669; source=41; sql=17; docs=532
+auth.uid() SQL references: all=29; source=0; sql=27; docs=2
+user_id references: all=4912; source=142; sql=213; docs=3021
+Auth subject/sub references: all=2890; source=93; sql=0; docs=2521
+RLS references: all=913; source=0; sql=145; docs=160
+authenticated role references: all=1291; source=73; sql=98; docs=466
+activity_events references: all=6866; source=32; sql=89; docs=5259
+C8-I draft state table references: all=1702; source=13; sql=514; docs=318
+
+Key compatibility counts:
+- Auth0/source references: 292
+- auth.uid()/SQL references: 27
+- service_role/source references: 41
+- user_id/source references: 142
+- user_id/SQL references: 213
+
+Source evidence excerpts:
+
+SOURCE EVIDENCE — Auth0 references
+lib\auth0.ts:1: import { Auth0Client } from "@auth0/nextjs-auth0/server";
+lib\auth0.ts:3: export const auth0 = new Auth0Client();
+lib\activity\activityUserContext.ts:2: import { auth0 } from "../auth0";
+lib\activity\activityUserContext.ts:7: auth0_sub?: string | null;
+lib\activity\activityUserContext.ts:32: const session = await auth0.getSession();
+lib\activity\activityUserContext.ts:49: .eq("auth0_sub", session.user.sub)
+lib\activity\controlledIntake\serverSideAppUserMappingReadOnly.ts:28: selectedColumns: 'id,auth0_sub' | null;
+lib\activity\controlledIntake\serverSideAppUserMappingReadOnly.ts:33: auth0_sub: string | null;
+lib\activity\controlledIntake\serverSideAppUserMappingReadOnly.ts:37: const SELECTED_MAPPING_COLUMNS = 'id,auth0_sub' as const;
+lib\activity\controlledIntake\serverSideAppUserMappingReadOnly.ts:38: const SUPPORTED_PROVIDER = 'auth0';
+lib\activity\controlledIntake\serverSideAppUserMappingReadOnly.ts:116: .eq('auth0_sub', authSubject)
+lib\activity\controlledIntake\serverSideAppUserMappingReadOnly.ts:165: const rowAuthSubject = typeof row.auth0_sub === 'string' ? row.auth0_sub.trim() : '';
+lib\activity\controlledIntake\serverSideAuthSession.ts:4: export type ControlledActivityIntakeServerSideAuthProvider = "auth0";
+lib\activity\controlledIntake\serverSideAuthSession.ts:7: | "auth0_server_session"
+lib\activity\controlledIntake\serverSideAuthSession.ts:11: | "auth0_server_session"
+lib\activity\controlledIntake\serverSideAuthSession.ts:52: readonly auth0RuntimeReadExecuted: false;
+lib\activity\controlledIntake\serverSideAuthSession.ts:115: auth0RuntimeReadExecuted: false,
+lib\activity\controlledIntake\serverSideAuthSession.ts:151: if (normalized === "auth0") {
+lib\activity\controlledIntake\serverSideAuthSession.ts:152: return "auth0";
+lib\activity\controlledIntake\serverSideAuthSession.ts:234: "Controlled intake supports only explicit auth0 provider in this helper.",
+
+SOURCE EVIDENCE — Supabase client references
+lib\booking-conflicts.ts:1: import { supabase } from "./supabase";
+lib\booking-conflicts.ts:42: let query = supabase
+lib\supabase.ts:1: import { createClient } from "@supabase/supabase-js";
+lib\supabase.ts:3: const supabaseUrl = process.env.SUPABASE_URL;
+lib\supabase.ts:4: const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+lib\supabase.ts:6: if (!supabaseUrl) {
+lib\supabase.ts:7: throw new Error("Missing SUPABASE_URL");
+lib\supabase.ts:10: if (!supabaseServiceRoleKey) {
+lib\supabase.ts:11: throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+lib\supabase.ts:14: export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+lib\activity\activityImpactProcessor.ts:1: import { supabase } from "../supabase";
+lib\activity\activityImpactProcessor.ts:246: const { count, error } = await supabase
+lib\activity\activityImpactProcessor.ts:262: const { data, error } = await supabase
+lib\activity\activityImpactProcessor.ts:276: const { count, error } = await supabase
+lib\activity\activityImpactProcessor.ts:294: const { count, error } = await supabase
+lib\activity\activityImpactProcessor.ts:316: const { data, error } = await supabase
+lib\activity\activityImpactProcessor.ts:330: const { data, error } = await supabase
+lib\activity\activityImpactProcessor.ts:535: const { data, error } = await supabase.rpc("increment_daily_aggregate", {
+lib\activity\activityImpactProcessor.ts:576: const { data, error } = await supabase.rpc("upsert_current_snapshot", {
+lib\activity\activityImpactProcessor.ts:808: ? await supabase.from("impact_events").insert(impactRows).select()
+
+SOURCE EVIDENCE — service_role / admin references
+lib\supabase.ts:4: const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+lib\supabase.ts:11: throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+lib\activity\controlledIntake\ownershipContextResolutionReadOnly.ts:1: import { getSupabaseAdminClient } from '../../supabase/admin';
+lib\activity\controlledIntake\ownershipContextResolutionReadOnly.ts:233: const supabase = getSupabaseAdminClient();
+lib\activity\controlledIntake\serverSideAppUserMappingReadOnly.ts:1: import { getSupabaseAdminClient } from '../../supabase/admin';
+lib\activity\controlledIntake\serverSideAppUserMappingReadOnly.ts:111: const supabaseAdmin = getSupabaseAdminClient();
+lib\activity\controlledIntake\serverSideAppUserMappingReadOnly.ts:113: const { data, error } = await supabaseAdmin
+lib\supabase\admin.ts:5: type SupabaseAdminClient = ReturnType<typeof createClient>;
+lib\supabase\admin.ts:7: let cachedSupabaseAdminClient: SupabaseAdminClient | null = null;
+lib\supabase\admin.ts:21: function getSupabaseAdminUrl(): string {
+lib\supabase\admin.ts:35: export function getSupabaseAdminClient(): SupabaseAdminClient {
+lib\supabase\admin.ts:36: if (cachedSupabaseAdminClient) {
+lib\supabase\admin.ts:37: return cachedSupabaseAdminClient;
+lib\supabase\admin.ts:40: const supabaseUrl = getSupabaseAdminUrl();
+lib\supabase\admin.ts:42: "SUPABASE_SERVICE_ROLE_KEY"
+lib\supabase\admin.ts:45: cachedSupabaseAdminClient = createClient(supabaseUrl, serviceRoleKey, {
+lib\supabase\admin.ts:59: return cachedSupabaseAdminClient;
+src\app\api\activity\debug\app-user-mapping-lookup-error-focused-test\route.ts:4: import { getSupabaseAdminClient } from '../../../../../../lib/supabase/admin';
+src\app\api\activity\debug\app-user-mapping-lookup-error-focused-test\route.ts:62: supabaseAdminClientCreated: boolean;
+src\app\api\activity\debug\app-user-mapping-lookup-error-focused-test\route.ts:126: return Boolean((process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').trim());
+
+SOURCE EVIDENCE — auth.uid() SQL references
+none
+
+SOURCE EVIDENCE — user_id references
+lib\activity\activityImpactProcessor.ts:297: .eq("user_id", userId)
+lib\activity\activityProcessingLogs.ts:44: user_id: string;
+lib\activity\activityProcessingLogs.ts:160: user_id: input.userId,
+lib\activity\activityUserContext.ts:13: user_id: string;
+lib\activity\activityUserContext.ts:69: .eq("user_id", typedAppUser.id)
+lib\activity\rawActivitySignals.ts:53: user_id: string;
+lib\activity\rawActivitySignals.ts:146: user_id: input.userId,
+lib\activity\rawActivitySignals.ts:194: .eq("user_id", params.userId)
+lib\activity\rawActivitySignals.ts:225: .eq("user_id", params.userId)
+lib\activity\rubricatorValueObjectMapper.ts:9: user_id: string;
+lib\activity\rubricatorValueObjectMapper.ts:335: "user_id",
+lib\activity\valueObjectBridge.ts:41: user_id: string;
+lib\activity\valueObjectBridge.ts:458: "user_id",
+lib\activity\valueObjectBridge.ts:688: .eq("user_id", userId)
+lib\activity\valueObjectBridge.ts:778: user_id: event.user_id,
+lib\activity\valueObjectBridge.ts:830: event.user_id,
+lib\activity\valueObjectBridge.ts:851: user_id: event.user_id,
+lib\activity\valueObjectBridge.ts:874: onConflict: "user_id,value_object_id",
+lib\activity\valueObjectBridge.ts:1317: user_id: event.user_id,
+lib\activity\valueObjectBridge.ts:1358: user_id: event.user_id,
+
+SOURCE EVIDENCE — Auth subject/sub references
+lib\activity\activityUserContext.ts:49: .eq("auth0_sub", session.user.sub)
+lib\activity\controlledIntake\authContext.ts:12: readonly sub?: string | null;
+lib\activity\controlledIntake\authContext.ts:163: const authSubject = normalizeOptionalString(identity.sub);
+lib\activity\controlledIntake\productionAuthMapping.ts:11: readonly sub?: string | null;
+lib\activity\controlledIntake\productionAuthMapping.ts:169: const authSubject = normalizeOptionalString(identity.sub);
+lib\activity\controlledIntake\serverSideAuthSessionRuntimeConnection.ts:222: return asRecord(session.user) ?? asRecord(session.profile);
+lib\activity\controlledIntake\serverSideAuthSessionRuntimeConnection.ts:261: readString(projectAuthSession, "sub") ??
+lib\activity\controlledIntake\serverSideAuthSessionRuntimeConnection.ts:263: readString(nestedSessionRecord ?? {}, "sub") ??
+lib\activity\stateFacts\controlledPersistence\auth.ts:31: sub?: unknown;
+lib\activity\stateFacts\controlledPersistence\auth.ts:138: const sessionUser = session.user as AuthSessionUserLike;
+lib\activity\stateFacts\controlledPersistence\auth.ts:139: const authSubject = toNullableString(sessionUser.sub);
+src\app\admin\page.tsx:71: if (!session?.user?.sub) {
+src\app\admin\page.tsx:88: .eq("auth0_sub", session.user.sub)
+src\app\admin\object-action\page.tsx:71: if (!session?.user?.sub) {
+src\app\admin\object-action\page.tsx:88: .eq("auth0_sub", session.user.sub)
+src\app\admin\object-action\categories\page.tsx:503: if (!session?.user?.sub) {
+src\app\admin\object-action\categories\page.tsx:520: .eq("auth0_sub", session.user.sub)
+src\app\admin\object-action\classifications\page.tsx:364: if (!session?.user?.sub) {
+src\app\admin\object-action\classifications\page.tsx:381: .eq("auth0_sub", session.user.sub)
+src\app\admin\object-action\suggestions\page.tsx:574: if (!session?.user?.sub) {
+
+SOURCE EVIDENCE — RLS references
+none
+
+SOURCE EVIDENCE — authenticated role references
+lib\activity\activityUserContext.ts:40: { error: "Not authenticated" },
+lib\activity\controlledIntake\authContext.ts:159: "Controlled activity intake auth context requires authenticated identity.",
+lib\activity\controlledIntake\authContext.ts:169: "Controlled activity intake auth context requires authenticated identity subject.",
+lib\activity\controlledIntake\productionAuthMapping.ts:165: "Controlled activity intake production auth mapping requires authenticated server-side identity.",
+lib\activity\controlledIntake\productionAuthMapping.ts:175: "Controlled activity intake production auth mapping requires authenticated identity subject.",
+lib\activity\controlledIntake\serverSideAppUserMapping.ts:346: "Controlled intake requires authenticated server-side session identity.",
+lib\activity\stateFacts\controlledPersistence\auth.ts:119: * Resolves the authenticated application user for future controlled state fact persistence.
+lib\activity\stateFacts\controlledPersistence\auth.ts:144: "Authenticated session does not contain a stable subject identifier."
+lib\activity\stateFacts\controlledPersistence\auth.ts:157: "Application user could not be resolved from authenticated identity."
+lib\activity\stateFacts\controlledPersistence\auth.ts:166: "Application user was not found for authenticated identity."
+lib\activity\stateFacts\controlledPersistence\auth.ts:196: "Person context could not be read for authenticated application user."
+lib\activity\stateFacts\controlledPersistence\auth.ts:223: "Actor context could not be read for authenticated person."
+lib\activity\stateFacts\controlledPersistence\persist.ts:133: * 1. authenticated actor;
+lib\activity\stateFacts\controlledPersistence\persist.ts:169: "Client-provided user identity does not match the authenticated actor."
+lib\activity\stateFacts\controlledPersistence\targetValueObject.ts:115: * - checks owner_actor_id against authenticated actor context;
+lib\activity\stateFacts\controlledPersistence\targetValueObject.ts:121: * if organization_id exists and owner_actor_id matches the authenticated actor,
+lib\activity\stateFacts\controlledPersistence\targetValueObject.ts:204: "Authenticated actor context is required for controlled persistence permission."
+lib\activity\stateFacts\controlledPersistence\targetValueObject.ts:211: "Placeholder authenticated actor identifiers cannot be used for controlled persistence."
+lib\activity\stateFacts\controlledPersistence\targetValueObject.ts:218: "Target Value Object is not owned by the authenticated actor. Public visibility is not write permission."
+src\app\admin\page.tsx:74: errorMessage: "Not authenticated",
+
+SOURCE EVIDENCE — activity_events references
+lib\activity\rubricatorValueObjectMapper.ts:318: (entityType === "activity_event" || entityType === "activity_events") &&
+lib\activity\rubricatorValueObjectMapper.ts:331: .from("activity_events")
+lib\activity\valueObjectBridge.ts:454: .from("activity_events")
+lib\activity\controlledIntake\persist.ts:10: export const CONTROLLED_ACTIVITY_INTAKE_ACTIVITY_EVENTS_TABLE =
+lib\activity\controlledIntake\persist.ts:11: "activity_events" as const;
+lib\activity\controlledIntake\persist.ts:52: readonly table: typeof CONTROLLED_ACTIVITY_INTAKE_ACTIVITY_EVENTS_TABLE;
+lib\activity\controlledIntake\persist.ts:190: table: CONTROLLED_ACTIVITY_INTAKE_ACTIVITY_EVENTS_TABLE,
+lib\activity\controlledIntake\persist.ts:245: table: CONTROLLED_ACTIVITY_INTAKE_ACTIVITY_EVENTS_TABLE,
+src\app\api\activity\complete\route.ts:936: .from("activity_events")
+src\app\api\activity\complete\route.ts:1147: .from("activity_events")
+src\app\api\activity\complete\route.ts:1699: .from("activity_events")
+src\app\api\activity\day-summary\route.ts:503: .from("activity_events")
+src\app\api\activity\debug\category-derivation-complete-route-adapter-idempotency-test\route.ts:199: .from("activity_events")
+src\app\api\activity\debug\category-derivation-controlled-production-persist-proof\route.ts:208: .from("activity_events")
+src\app\api\activity\debug\category-derivation-controlled-production-persist-proof\route.ts:253: .from("activity_events")
+src\app\api\activity\debug\category-derivation-route-runner-test\route.ts:225: .from("activity_events")
+src\app\api\activity\debug\create-free-text-start-event\route.ts:325: .from("activity_events")
+src\app\api\activity\debug\free-text-value-object-test\route.ts:761: .from("activity_events")
+src\app\api\activity\debug\state-signal-candidate-shadow-test\route.ts:89: | "activity_events"
+src\app\api\activity\debug\value-object-bridge-proof\route.ts:445: const eventResult = await selectById("event", "activity_events", eventId, appUser.id);
+
+SOURCE EVIDENCE — C8-I draft state table references
+lib\activity\valueObjectBridge.ts:613: tableName: "value_object_daily_aggregates" | "value_object_state_snapshots",
+lib\activity\valueObjectBridge.ts:1574: "value_object_state_snapshots",
+lib\activity\valueObjectBridge.ts:1591: .from("value_object_state_snapshots")
+lib\activity\stateFacts\controlledPersistence\dimension.ts:154: * - reads state_dimensions by dimension_key;
+lib\activity\stateFacts\controlledPersistence\dimension.ts:173: .from("state_dimensions")
+lib\activity\stateFacts\controlledPersistence\idempotency.ts:133: * - reads value_object_state_facts by user_id, value_object_id, dimension_key, correction_status, and metadata_json.idempotency_key;
+lib\activity\stateFacts\controlledPersistence\idempotency.ts:154: .from("value_object_state_facts")
+lib\activity\stateFacts\controlledPersistence\persist.ts:139: * 7. one guarded insert into value_object_state_facts.
+lib\activity\stateFacts\controlledPersistence\persist.ts:260: .from("value_object_state_facts")
+lib\activity\stateFacts\controlledPersistence\rollbackTarget.ts:161: .from("value_object_state_facts")
+src\app\api\activity\debug\state-fact-rollback-no-write-proof\route.ts:37: .from("value_object_state_facts")
+src\app\api\activity\debug\state-fact-rollback-no-write-proof\route.ts:41: .from("value_object_state_facts")
+src\app\api\activity\debug\value-object-bridge-proof\route.ts:577: "value_object_state_snapshots",
+
+SQL evidence excerpts:
+
+SQL EVIDENCE — Auth0 references
+none
+
+SQL EVIDENCE — Supabase client references
+docs\sql\P4.10.0-C8-G2_verify_category_derivation_schema.sql:6: -- Run this only in Supabase SQL Editor after applying:
+docs\sql\P4.10.0-C8-G_additive_category_derivation_schema.sql:9: -- Review first, then execute manually in Supabase SQL Editor.
+docs\sql\P4.10.0-C8-P2_inspect_value_object_category_links_constraints.sql:8: -- - intended for Supabase SQL Editor
+docs\sql\P4.10.0-C8-P3-B6-D_live_context_resolution_check.sql:7: -- Run this SQL in Supabase SQL Editor.
+docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:10: -- 2) Run this SQL in Supabase SQL Editor.
+docs\sql\P4.7.8-R-L3_lightweight_known_template_chain_audit.sql:9: -- 2) Run in Supabase SQL Editor.
+docs\sql\P4.7.8-R-L5_second_known_template_seed_and_audit.sql:5: -- Preserve the manually verified Supabase DB seed in the repository.
+docs\sql\P4.8.0-A2_live_schema_inventory.sql:2: -- Run this in Supabase SQL Editor or through psql against the current project database.
+docs\sql\P4.8.0-A7.2_post_migration_verification.sql:4: supabase/migrations/025_p4_8_0_add_commercial_usage_and_purchase_currency.sql
+docs\value-objects\category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql:2: -- P4.10.0-C8-E-C — Category Derivation Layer v1 Supabase schema audit
+docs\value-objects\category-derivation-layer-v1-c8-e-c-supabase-schema-audit.sql:5: -- Run only in Supabase SQL Editor.
+docs\value-objects\category-derivation-layer-v1-c8-e-d-additive-migration-design.sql:8: -- This file is prepared after C8-E-C Supabase schema audit.
+docs\value-objects\category-derivation-layer-v1-c8-e-d-additive-migration-design.sql:9: -- It must be reviewed before execution in Supabase SQL Editor.
+docs\value-objects\category-derivation-layer-v1-c8-e-d2-reviewed-execution-migration.sql:6: -- RUN ONLY IN SUPABASE SQL EDITOR AFTER FINAL MANUAL REVIEW.
+docs\value-objects\category-derivation-layer-v1-c8-e-d2-reviewed-execution-migration.sql:8: -- This execution copy is prepared after C8-E-C Supabase schema audit and C8-E-D1 migration design review.
+docs\value-objects\category-derivation-layer-v1-c8-e-d2-reviewed-execution-migration.sql:9: -- It is intended to be executed once in Supabase SQL Editor, then verified with the post-execution SQL at the bottom.
+docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:2: -- P4.10.0-C8-I-C — Read-only Supabase SQL Audit for State Layers
+docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:10: -- This file is for Supabase SQL Editor.
+docs\value-objects\p4-10-0-c8-i-c-state-layers-readonly-sql-audit.sql:20: 'Read-only Supabase SQL audit for future state layers' as purpose,
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d3-c-state-dimensions-initial-seed-draft.sql:27: -- Keep this file outside supabase/migrations until reviewed.
+
+SQL EVIDENCE — service_role / admin references
+supabase\migrations\016_activity_atomic_aggregate_updates.sql:166: ) to anon, authenticated, service_role;
+supabase\migrations\016_activity_atomic_aggregate_updates.sql:178: ) to anon, authenticated, service_role;
+supabase\migrations\019_activity_security_foundation.sql:5: -- Server API routes currently use SUPABASE_SERVICE_ROLE_KEY and must keep backend ownership checks.
+supabase\migrations\020_activity_raw_signals.sql:7: -- Server API routes use SUPABASE_SERVICE_ROLE_KEY and must keep backend ownership checks.
+supabase\migrations\021_activity_processing_logs.sql:7: -- Server API routes use SUPABASE_SERVICE_ROLE_KEY and must keep backend ownership checks.
+supabase\migrations\20260525001000_c8_i_d4_l_l_g_atomic_rollback_rpc.sql:471: ) to service_role;
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:35: grant all on table public.state_dimensions to service_role;
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:61: grant all on table public.state_relevance_rules to service_role;
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:105: grant all on table public.value_object_state_facts to service_role;
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:146: grant all on table public.activity_state_deltas to service_role;
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:186: grant all on table public.value_object_state_snapshots to service_role;
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:220: grant all on table public.semantic_signatures to service_role;
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:256: grant all on table public.value_object_similarity_edges to service_role;
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:297: grant all on table public.value_object_relevance_edges to service_role;
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:323: grant all on table public.resolver_runs to service_role;
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:353: grant all on table public.resolver_candidate_links to service_role;
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:380: grant all on table public.resolver_feedback to service_role;
+
+SQL EVIDENCE — auth.uid() SQL references
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:100: create policy value_object_state_facts_authenticated_select_own on public.value_object_state_facts for select to authenticated using (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:101: create policy value_object_state_facts_authenticated_insert_own on public.value_object_state_facts for insert to authenticated with check (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:102: create policy value_object_state_facts_authenticated_update_own on public.value_object_state_facts for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:141: create policy activity_state_deltas_authenticated_select_own on public.activity_state_deltas for select to authenticated using (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:142: create policy activity_state_deltas_authenticated_insert_own on public.activity_state_deltas for insert to authenticated with check (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:143: create policy activity_state_deltas_authenticated_update_own on public.activity_state_deltas for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:181: create policy value_object_state_snapshots_authenticated_select_own on public.value_object_state_snapshots for select to authenticated using (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:182: create policy value_object_state_snapshots_authenticated_insert_own on public.value_object_state_snapshots for insert to authenticated with check (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:183: create policy value_object_state_snapshots_authenticated_update_own on public.value_object_state_snapshots for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:215: create policy semantic_signatures_authenticated_select_own on public.semantic_signatures for select to authenticated using (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:216: create policy semantic_signatures_authenticated_insert_own on public.semantic_signatures for insert to authenticated with check (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:217: create policy semantic_signatures_authenticated_update_own on public.semantic_signatures for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:251: create policy value_object_similarity_edges_authenticated_select_own on public.value_object_similarity_edges for select to authenticated using (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:252: create policy value_object_similarity_edges_authenticated_insert_own on public.value_object_similarity_edges for insert to authenticated with check (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:253: create policy value_object_similarity_edges_authenticated_update_own on public.value_object_similarity_edges for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:292: create policy value_object_relevance_edges_authenticated_select_own on public.value_object_relevance_edges for select to authenticated using (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:293: create policy value_object_relevance_edges_authenticated_insert_own on public.value_object_relevance_edges for insert to authenticated with check (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:294: create policy value_object_relevance_edges_authenticated_update_own on public.value_object_relevance_edges for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:318: create policy resolver_runs_authenticated_select_own on public.resolver_runs for select to authenticated using (user_id = auth.uid());
+supabase\migrations\20260528204503_c8_i_state_context_layer_draft.sql:319: create policy resolver_runs_authenticated_insert_own on public.resolver_runs for insert to authenticated with check (user_id = auth.uid());
+
+SQL EVIDENCE — user_id references
+docs\sql\P4.9.0-A7_minimal_v4_2_value_object_foundation.sql:143: user_id uuid NOT NULL REFERENCES public.app_users(id) ON DELETE CASCADE,
+docs\sql\P4.9.0-A7_minimal_v4_2_value_object_foundation.sql:165: ON public.activity_event_value_object_links(user_id);
+docs\sql\P4.9.0-A7_minimal_v4_2_value_object_foundation.sql:178: user_id uuid NOT NULL REFERENCES public.app_users(id) ON DELETE CASCADE,
+docs\sql\P4.9.0-A7_minimal_v4_2_value_object_foundation.sql:198: UNIQUE (user_id, value_object_id)
+docs\sql\P4.9.0-A7_minimal_v4_2_value_object_foundation.sql:202: ON public.value_object_usage_aggregates(user_id);
+docs\sql\P4.9.0-A7_minimal_v4_2_value_object_foundation.sql:208: ON public.value_object_usage_aggregates(user_id, exposure_minutes DESC, usage_count DESC);
+docs\sql\P4.9.1-A9_runtime_projection_verification.sql:13: ae.user_id,
+docs\sql\P4.9.1-A9_runtime_projection_verification.sql:31: l.user_id,
+docs\sql\P4.9.1-A9_runtime_projection_verification.sql:51: l.user_id,
+docs\sql\P4.9.1-A9_runtime_projection_verification.sql:68: ua.user_id,
+docs\sql\P4.9.1-A9_runtime_projection_verification.sql:91: sd.user_id,
+docs\sql\P4.9.1-A9_runtime_projection_verification.sql:110: da.user_id,
+docs\sql\P4.9.1-A9_runtime_projection_verification.sql:129: ss.user_id,
+docs\sql\P4.9.11-A1_parent_child_value_object_read_model_audit.sql:65: cp.user_id,
+docs\sql\P4.9.12-A2_create_value_object_hierarchy_profiles_v1.sql:31: cp.user_id,
+docs\sql\P4.9.12-A2_create_value_object_hierarchy_profiles_v1.sql:47: GROUP BY cp.user_id, cp.value_object_id
+docs\sql\P4.9.12-A2_create_value_object_hierarchy_profiles_v1.sql:51: cp.user_id,
+docs\sql\P4.9.12-A2_create_value_object_hierarchy_profiles_v1.sql:130: ON pcs.user_id = cp.user_id
+docs\sql\P4.9.12-A2_create_value_object_hierarchy_profiles_v1.sql:162: (SELECT count(DISTINCT user_id) FROM view_rows) AS distinct_users_count,
+docs\sql\P4.9.12-A2_create_value_object_hierarchy_profiles_v1.sql:190: 'userId', user_id,
+
+SQL EVIDENCE — Auth subject/sub references
+none
+
+SQL EVIDENCE — RLS references
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:77: alter table public.state_dimensions enable row level security;
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:152: alter table public.value_object_state_facts enable row level security;
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:219: alter table public.state_relevance_rules enable row level security;
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:272: alter table public.value_object_similarity_edges enable row level security;
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:341: alter table public.value_object_relevance_edges enable row level security;
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:399: alter table public.recommendation_feedback enable row level security;
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:451: execute 'create policy "No direct public state dimensions access" on public.state_dimensions for all to anon, authenticated using (false) with check (false)';
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:460: execute 'create policy "No direct public value object state facts access" on public.value_object_state_facts for all to anon, authenticated using (false) with check (false)';
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:469: execute 'create policy "No direct public state relevance rules access" on public.state_relevance_rules for all to anon, authenticated using (false) with check (false)';
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:478: execute 'create policy "No direct public value object similarity edges access" on public.value_object_similarity_edges for all to anon, authenticated using (false) with check (false)';
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:487: execute 'create policy "No direct public value object relevance edges access" on public.value_object_relevance_edges for all to anon, authenticated using (false) with check (false)';
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:496: execute 'create policy "No direct public recommendation feedback access" on public.recommendation_feedback for all to anon, authenticated using (false) with check (false)';
+supabase\migrations\007_create_object_action_suggestion_requests.sql:225: alter table object_action_suggestion_requests enable row level security;
+supabase\migrations\007_create_object_action_suggestion_requests.sql:231: create policy "Public can submit object action suggestion requests"
+supabase\migrations\007_create_object_action_suggestion_requests.sql:235: with check (
+supabase\migrations\019_activity_security_foundation.sql:10: alter table public.activity_types enable row level security;
+supabase\migrations\019_activity_security_foundation.sql:11: alter table public.activity_code_templates enable row level security;
+supabase\migrations\019_activity_security_foundation.sql:12: alter table public.activity_events enable row level security;
+supabase\migrations\019_activity_security_foundation.sql:13: alter table public.event_links enable row level security;
+supabase\migrations\019_activity_security_foundation.sql:14: alter table public.impact_rules enable row level security;
+
+SQL EVIDENCE — authenticated role references
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:451: execute 'create policy "No direct public state dimensions access" on public.state_dimensions for all to anon, authenticated using (false) with check (false)';
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:460: execute 'create policy "No direct public value object state facts access" on public.value_object_state_facts for all to anon, authenticated using (false) with check (false)';
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:469: execute 'create policy "No direct public state relevance rules access" on public.state_relevance_rules for all to anon, authenticated using (false) with check (false)';
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:478: execute 'create policy "No direct public value object similarity edges access" on public.value_object_similarity_edges for all to anon, authenticated using (false) with check (false)';
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:487: execute 'create policy "No direct public value object relevance edges access" on public.value_object_relevance_edges for all to anon, authenticated using (false) with check (false)';
+docs\value-objects\sql-drafts\p4-10-0-c8-i-d2-state-similarity-relevance-nba-additive-draft.sql:496: execute 'create policy "No direct public recommendation feedback access" on public.recommendation_feedback for all to anon, authenticated using (false) with check (false)';
+supabase\migrations\005_create_object_action_read_views_and_rpc.sql:251: grant select on public_contextual_categories to anon, authenticated;
+supabase\migrations\005_create_object_action_read_views_and_rpc.sql:252: grant select on directory_contextual_categories to anon, authenticated;
+supabase\migrations\005_create_object_action_read_views_and_rpc.sql:254: grant execute on function get_contextual_categories(text, text) to anon, authenticated;
+supabase\migrations\005_create_object_action_read_views_and_rpc.sql:255: grant execute on function resolve_contextual_category(text, text, text, text) to anon, authenticated;
+supabase\migrations\007_create_object_action_suggestion_requests.sql:227: grant insert on object_action_suggestion_requests to anon, authenticated;
+supabase\migrations\007_create_object_action_suggestion_requests.sql:234: to anon, authenticated
+supabase\migrations\016_activity_atomic_aggregate_updates.sql:166: ) to anon, authenticated, service_role;
+supabase\migrations\016_activity_atomic_aggregate_updates.sql:178: ) to anon, authenticated, service_role;
+supabase\migrations\019_activity_security_foundation.sql:6: -- These RLS policies protect anon/authenticated direct access and prepare the project for future user-scoped clients.
+supabase\migrations\019_activity_security_foundation.sql:23: -- 2. Private/personal activity data: no direct anon/authenticated access.
+supabase\migrations\019_activity_security_foundation.sql:26: revoke all on table public.activity_events from anon, authenticated;
+supabase\migrations\019_activity_security_foundation.sql:27: revoke all on table public.event_links from anon, authenticated;
+supabase\migrations\019_activity_security_foundation.sql:28: revoke all on table public.impact_events from anon, authenticated;
+supabase\migrations\019_activity_security_foundation.sql:29: revoke all on table public.current_snapshots from anon, authenticated;
+
+SQL EVIDENCE — activity_events references
+docs\sql\P4.10.0-C8-G2_verify_category_derivation_schema.sql:13: ('activity_events'),
+docs\sql\P4.10.0-C8-G_additive_category_derivation_schema.sql:57: activity_event_id uuid references public.activity_events(id) on delete cascade,
+docs\sql\P4.10.0-C8-G_additive_category_derivation_schema.sql:104: activity_event_id uuid not null references public.activity_events(id) on delete cascade,
+docs\sql\P4.10.0-C8-O3_verify_route_derivation_rows.sql:37: from activity_events e
+docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:22: FROM activity_events ae
+docs\sql\P4.7.8-R-L3_lightweight_known_template_chain_audit.sql:30: FROM activity_events ae
+docs\sql\P4.7.8-R-L6_second_known_template_cross_route_audit.sql:51: left join activity_events ae
+docs\sql\P4.7.8-R-L7_final_two_template_three_route_audit.sql:103: left join activity_events ae
+docs\sql\P4.7.9-R-A3_known_template_metadata_normalization.sql:16: --   - Does NOT touch activity_events.
+docs\sql\P4.8.0-A2_live_schema_inventory.sql:12: ('activity_events'),
+docs\sql\P4.8.0-A2_live_schema_inventory.sql:83: ('activity_events'),
+docs\sql\P4.8.0-A2_live_schema_inventory.sql:151: ('activity_events'),
+docs\sql\P4.8.0-A2_live_schema_inventory.sql:220: ('activity_events'),
+docs\sql\P4.8.0-A2_live_schema_inventory.sql:284: ('activity_events'),
+docs\sql\P4.8.0-A2_live_schema_inventory.sql:352: ('activity_events'),
+docs\sql\P4.9.0-A7_minimal_v4_2_value_object_foundation.sql:144: event_id uuid NOT NULL REFERENCES public.activity_events(id) ON DELETE CASCADE,
+docs\sql\P4.9.0-A7_minimal_v4_2_value_object_foundation.sql:184: last_event_id uuid NULL REFERENCES public.activity_events(id) ON DELETE SET NULL,
+docs\sql\P4.9.1-A9_runtime_projection_verification.sql:21: FROM public.activity_events ae
+docs\sql\P4.9.14-A1_value_object_identity_display_readiness_audit.sql:144: LEFT JOIN public.activity_events ae
+docs\sql\P4.9.2-A4_category_link_runtime_verification.sql:23: FROM public.activity_events ae
+
+SQL EVIDENCE — C8-I draft state table references
+docs\sql\P4.7.8-R-K1_known_template_chain_audit.sql:126: FROM value_object_state_snapshots s
+docs\sql\P4.7.8-R-L3_lightweight_known_template_chain_audit.sql:134: FROM value_object_state_snapshots s
+docs\sql\P4.7.8-R-L6_second_known_template_cross_route_audit.sql:194: join value_object_state_snapshots s
+docs\sql\P4.7.8-R-L7_final_two_template_three_route_audit.sql:269: join value_object_state_snapshots s
+docs\sql\P4.8.0-A2_live_schema_inventory.sql:57: ('value_object_state_snapshots'),
+docs\sql\P4.8.0-A2_live_schema_inventory.sql:128: ('value_object_state_snapshots'),
+docs\sql\P4.8.0-A2_live_schema_inventory.sql:196: ('value_object_state_snapshots'),
+docs\sql\P4.8.0-A2_live_schema_inventory.sql:265: ('value_object_state_snapshots'),
+docs\sql\P4.8.0-A2_live_schema_inventory.sql:329: ('value_object_state_snapshots'),
+docs\sql\P4.8.0-A2_live_schema_inventory.sql:397: ('value_object_state_snapshots'),
+docs\sql\P4.9.1-A9_runtime_projection_verification.sql:137: FROM public.value_object_state_snapshots ss
+docs\sql\P4.9.1-A9_runtime_projection_verification.sql:185: '07_value_object_state_snapshots' AS section,
+docs\sql\P4.9.2-A4_category_link_runtime_verification.sql:195: FROM public.value_object_state_snapshots ss
+docs\sql\P4.9.2-A4_category_link_runtime_verification.sql:280: '09_value_object_state_snapshots' AS section,
+docs\sql\P4.9.3-A2_knee_template_runtime_verification.sql:218: FROM public.value_object_state_snapshots ss
+docs\sql\P4.9.3-A2_knee_template_runtime_verification.sql:312: '10_value_object_state_snapshots' AS section,
+docs\sql\P4.9.4-A1_object_cloud_read_audit.sql:16: value_object_state_snapshots
+docs\sql\P4.9.4-A1_object_cloud_read_audit.sql:115: FROM public.value_object_state_snapshots ss
+docs\sql\P4.9.4-A1_object_cloud_read_audit.sql:206: (SELECT count(*) FROM public.value_object_state_snapshots) AS value_object_state_snapshots_count,
+docs\sql\P4.9.5-A1_create_value_object_cloud_profiles_v1.sql:20: - value_object_state_snapshots
+
+Compatibility finding:
+AUTH0_AND_AUTH_UID_BOTH_PRESENT_STATIC_COMPATIBILITY_NOT_PROVEN
+
+Interpretation:
+The C8-I migration draft is structurally reviewed, but execution is still blocked.
+The draft relies on auth.uid() and user_id equality in RLS policies.
+Static repository evidence must be used to decide whether authenticated client access will actually produce the same UUID as stored in user_id.
+If the app uses Auth0 subject identifiers, mirrored users, or server-side service_role mediation, direct auth.uid() = user_id may require adjustment before migration execution.
+
+Decision:
+DO_NOT_EXECUTE_SQL_YET
+
+Next required gate:
+READY_FOR_C8_I_I_AUTH_RLS_USER_ID_DECISION_OR_SQL_PATCH_PLAN
+
+Definition of Done:
+- Auth0 references scanned.
+- Supabase client/admin references scanned.
+- service_role references scanned.
+- auth.uid() references scanned.
+- user_id references scanned.
+- RLS references scanned.
+- C8-I draft migration ownership assumption identified.
+- SQL execution remains blocked.
+- no SQL executed
+- no DB read/write
+- no runtime called
+- no code patch performed
