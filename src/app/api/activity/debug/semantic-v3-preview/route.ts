@@ -1,14 +1,6 @@
-﻿import { randomUUID } from "crypto";
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 
-import { deriveCategoryCandidates } from "../../../../../../lib/activity/categoryDerivation/ruleExtractor";
-import { buildActivityValueObjectExposureCandidatesV0 } from "../../../../../../lib/activity/categoryDerivation/semanticActivityValueObjectExposureV0";
-import { resolveSemanticBundleV0 } from "../../../../../../lib/activity/categoryDerivation/semanticBundleResolverV0";
-import { buildSemanticDerivationV3FromCurrentOutput } from "../../../../../../lib/activity/categoryDerivation/semanticContractV3Adapter";
-import { buildStateDeltaCandidatesV0 } from "../../../../../../lib/activity/categoryDerivation/semanticStateDeltaCandidatePolicyV0";
-import { enrichSemanticDerivationV3FromText } from "../../../../../../lib/activity/categoryDerivation/semanticTextSignalEnrichmentV0";
-import { buildValueObjectCandidatesV0 } from "../../../../../../lib/activity/categoryDerivation/semanticValueObjectCandidatePolicyV0";
-import type { CategoryDerivationInput } from "../../../../../../lib/activity/categoryDerivation/types";
+import { runSemanticPreviewPipelineV0 } from "../../../../../../lib/activity/categoryDerivation/semanticPreviewPipelineV0";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +89,7 @@ export async function GET() {
     endpoint: "/api/activity/debug/semantic-v3-preview",
     method: "POST",
     mode: "read_only_preview",
+    pipeline: "semantic_preview_pipeline_v0",
     enrichment: "deterministic_text_enrichment_v0",
     resolver: "semantic_bundle_resolver_v0",
     valueObjectPolicy: "value_object_candidate_policy_v0",
@@ -147,107 +140,19 @@ export async function POST(request: Request) {
     );
   }
 
-  const activityEventId = randomUUID();
-
-  const derivationInput: CategoryDerivationInput = {
-    activityEventId,
+  const result = runSemanticPreviewPipelineV0({
     inputText: input.inputText,
     title: input.title,
     description: input.description,
     durationMinutes: input.durationMinutes,
     inputLanguage: input.inputLanguage,
-    actorId: null,
-    organizationId: null,
-    metadata: {
-      endpoint: "/api/activity/debug/semantic-v3-preview",
-      mode: "read_only_preview",
-      p4Step: "C8-I-IMPLEMENT-9",
-      createdAt: new Date().toISOString(),
-      dbWriteExecuted: false,
-      valueObjectCreated: false,
-      activityValueObjectLinkCreated: false,
-      stateFactCreated: false,
-      stateDeltaCreated: false,
-      stateSnapshotCreated: false,
-    },
-  };
-
-  const extractionResult = deriveCategoryCandidates(derivationInput);
-
-  const semanticV3Base = buildSemanticDerivationV3FromCurrentOutput({
-    inputText: input.inputText,
-    detectedLanguage: input.inputLanguage,
-    normalizedActivity: input.inputText,
-    durationMinutes: input.durationMinutes,
-    extractionResult,
-  });
-
-  const semanticV3Enriched = enrichSemanticDerivationV3FromText({
-    result: semanticV3Base,
-    inputText: input.inputText,
-    inputLanguage: input.inputLanguage,
-  });
-
-  const semanticV3 = resolveSemanticBundleV0({
-    result: semanticV3Enriched,
-  });
-
-  const valueObjectCandidates = buildValueObjectCandidatesV0({
-    semanticV3,
-    inputText: input.inputText,
-  });
-
-  const exposureCandidates = buildActivityValueObjectExposureCandidatesV0({
-    semanticV3,
-    valueObjectCandidates,
-  });
-
-  const stateDeltaCandidates = buildStateDeltaCandidatesV0({
-    semanticV3,
-    exposureCandidates,
+    p4Step: "C8-I-IMPLEMENT-10",
   });
 
   return NextResponse.json({
     ok: true,
     endpoint: "/api/activity/debug/semantic-v3-preview",
-    mode: "read_only_preview",
-    enrichment: "deterministic_text_enrichment_v0",
-    resolver: "semantic_bundle_resolver_v0",
-    valueObjectPolicy: "value_object_candidate_policy_v0",
-    exposurePolicy: "activity_value_object_exposure_v0",
-    stateDeltaPolicy: "state_delta_candidate_policy_v0",
-    activityEventId,
-    input: {
-      inputText: input.inputText,
-      title: input.title,
-      description: input.description,
-      durationMinutes: input.durationMinutes,
-      inputLanguage: input.inputLanguage,
-    },
-    extraction: {
-      ok: extractionResult.ok,
-      skipped: extractionResult.skipped ?? false,
-      skipReason: extractionResult.skipReason ?? null,
-      processorVersion: extractionResult.processorVersion,
-      ruleVersion: extractionResult.ruleVersion ?? null,
-      confidence: extractionResult.confidence ?? null,
-      candidateCount: extractionResult.candidates.length,
-      warnings: extractionResult.warnings,
-      errors: extractionResult.errors,
-    },
-    semanticV3,
-    valueObjectCandidates,
-    exposureCandidates,
-    stateDeltaCandidates,
-    writes: {
-      sqlExecuted: false,
-      dbWriteExecuted: false,
-      activityEventInserted: false,
-      valueObjectCreated: false,
-      activityValueObjectLinkCreated: false,
-      stateFactCreated: false,
-      stateDeltaCreated: false,
-      stateSnapshotCreated: false,
-    },
+    pipeline: "semantic_preview_pipeline_v0",
+    ...result,
   });
 }

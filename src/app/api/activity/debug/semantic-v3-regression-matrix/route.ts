@@ -1,0 +1,321 @@
+﻿import { NextResponse } from "next/server";
+
+import {
+  runSemanticPreviewPipelineV0,
+  type SemanticPreviewPipelineResultV0,
+} from "../../../../../../lib/activity/categoryDerivation/semanticPreviewPipelineV0";
+
+export const dynamic = "force-dynamic";
+
+type RegressionCaseV0 = {
+  caseKey: string;
+  inputText: string;
+  durationMinutes: number | null;
+  inputLanguage: string;
+  expected: {
+    minResolvedCategories: number;
+    minValueObjects: number;
+    minExposures: number;
+    minStateDeltas: number;
+    valueObjectKeys?: string[];
+    exposureTypes?: string[];
+    dimensionKeys?: string[];
+    requireNoWrites: true;
+  };
+};
+
+type RegressionCaseResultV0 = {
+  caseKey: string;
+  ok: boolean;
+  failures: string[];
+  actual: {
+    resolvedCategories: number;
+    valueObjects: number;
+    exposures: number;
+    stateDeltas: number;
+    valueObjectKeys: string[];
+    exposureTypes: string[];
+    dimensionKeys: string[];
+    writes: SemanticPreviewPipelineResultV0["writes"];
+  };
+};
+
+const REGRESSION_CASES_V0: RegressionCaseV0[] = [
+  {
+    caseKey: "family_child_math_learning_ru",
+    inputText: "учил ребёнка математике 30 минут",
+    durationMinutes: 30,
+    inputLanguage: "ru",
+    expected: {
+      minResolvedCategories: 5,
+      minValueObjects: 3,
+      minExposures: 6,
+      minStateDeltas: 6,
+      valueObjectKeys: [
+        "vo:personal:child-learning-support",
+        "vo:personal:mathematics-learning",
+        "vo:personal:family-care-load",
+      ],
+      exposureTypes: [
+        "supports",
+        "contributes_to",
+        "tracks_domain",
+        "loads",
+        "consumes_attention",
+      ],
+      dimensionKeys: [
+        "child_development_support",
+        "attention_load",
+        "learning_exposure",
+        "cognitive_load",
+        "family_care_load",
+        "care_attention_time",
+      ],
+      requireNoWrites: true,
+    },
+  },
+  {
+    caseKey: "cycling_commute_to_work_ru",
+    inputText: "ехал на велосипеде 30 минут на работу",
+    durationMinutes: 30,
+    inputLanguage: "ru",
+    expected: {
+      minResolvedCategories: 4,
+      minValueObjects: 2,
+      minExposures: 3,
+      minStateDeltas: 2,
+      valueObjectKeys: [
+        "vo:personal:cycling-activity",
+        "vo:personal:commute-to-work",
+      ],
+      exposureTypes: [
+        "contributes_to",
+        "loads",
+        "creates_context",
+      ],
+      dimensionKeys: [
+        "physical_load",
+        "work_context_exposure",
+      ],
+      requireNoWrites: true,
+    },
+  },
+  {
+    caseKey: "massage_client_service_ru",
+    inputText: "делал массаж клиенту 60 минут",
+    durationMinutes: 60,
+    inputLanguage: "ru",
+    expected: {
+      minResolvedCategories: 2,
+      minValueObjects: 1,
+      minExposures: 1,
+      minStateDeltas: 1,
+      valueObjectKeys: [
+        "vo:organization-or-personal:massage-service-work",
+      ],
+      exposureTypes: [
+        "needs_user_confirmation",
+      ],
+      dimensionKeys: [
+        "needs_user_confirmation",
+      ],
+      requireNoWrites: true,
+    },
+  },
+  {
+    caseKey: "unknown_general_activity_ru",
+    inputText: "читал книгу 20 минут",
+    durationMinutes: 20,
+    inputLanguage: "ru",
+    expected: {
+      minResolvedCategories: 0,
+      minValueObjects: 1,
+      minExposures: 1,
+      minStateDeltas: 1,
+      valueObjectKeys: [
+        "vo:personal:general-activity",
+      ],
+      exposureTypes: [
+        "needs_user_confirmation",
+      ],
+      dimensionKeys: [
+        "needs_user_confirmation",
+      ],
+      requireNoWrites: true,
+    },
+  },
+];
+
+function assertIncludesAll(
+  actual: string[],
+  expected: string[] | undefined,
+  failures: string[],
+  label: string
+): void {
+  for (const item of expected ?? []) {
+    if (!actual.includes(item)) {
+      failures.push(`Missing ${label}: ${item}`);
+    }
+  }
+}
+
+function validateNoWrites(
+  writes: SemanticPreviewPipelineResultV0["writes"],
+  failures: string[]
+): void {
+  if (writes.sqlExecuted !== false) {
+    failures.push("sqlExecuted must be false.");
+  }
+
+  if (writes.dbWriteExecuted !== false) {
+    failures.push("dbWriteExecuted must be false.");
+  }
+
+  if (writes.activityEventInserted !== false) {
+    failures.push("activityEventInserted must be false.");
+  }
+
+  if (writes.valueObjectCreated !== false) {
+    failures.push("valueObjectCreated must be false.");
+  }
+
+  if (writes.activityValueObjectLinkCreated !== false) {
+    failures.push("activityValueObjectLinkCreated must be false.");
+  }
+
+  if (writes.stateFactCreated !== false) {
+    failures.push("stateFactCreated must be false.");
+  }
+
+  if (writes.stateDeltaCreated !== false) {
+    failures.push("stateDeltaCreated must be false.");
+  }
+
+  if (writes.stateSnapshotCreated !== false) {
+    failures.push("stateSnapshotCreated must be false.");
+  }
+}
+
+function evaluateCase(testCase: RegressionCaseV0): RegressionCaseResultV0 {
+  const preview = runSemanticPreviewPipelineV0({
+    inputText: testCase.inputText,
+    durationMinutes: testCase.durationMinutes,
+    inputLanguage: testCase.inputLanguage,
+    p4Step: "C8-I-IMPLEMENT-10-REGRESSION",
+  });
+
+  const valueObjectKeys = preview.valueObjectCandidates.map(
+    (candidate) => candidate.candidateKey
+  );
+
+  const exposureTypes = preview.exposureCandidates.map(
+    (candidate) => candidate.activityLinkType
+  );
+
+  const dimensionKeys = preview.stateDeltaCandidates.map(
+    (candidate) => candidate.dimensionKey
+  );
+
+  const failures: string[] = [];
+
+  if (
+    preview.semanticV3.resolvedCategoryCandidates.length <
+    testCase.expected.minResolvedCategories
+  ) {
+    failures.push(
+      `Expected at least ${testCase.expected.minResolvedCategories} resolved categories.`
+    );
+  }
+
+  if (preview.valueObjectCandidates.length < testCase.expected.minValueObjects) {
+    failures.push(
+      `Expected at least ${testCase.expected.minValueObjects} value object candidates.`
+    );
+  }
+
+  if (preview.exposureCandidates.length < testCase.expected.minExposures) {
+    failures.push(
+      `Expected at least ${testCase.expected.minExposures} exposure candidates.`
+    );
+  }
+
+  if (preview.stateDeltaCandidates.length < testCase.expected.minStateDeltas) {
+    failures.push(
+      `Expected at least ${testCase.expected.minStateDeltas} state delta candidates.`
+    );
+  }
+
+  assertIncludesAll(
+    valueObjectKeys,
+    testCase.expected.valueObjectKeys,
+    failures,
+    "valueObjectKey"
+  );
+
+  assertIncludesAll(
+    exposureTypes,
+    testCase.expected.exposureTypes,
+    failures,
+    "exposureType"
+  );
+
+  assertIncludesAll(
+    dimensionKeys,
+    testCase.expected.dimensionKeys,
+    failures,
+    "dimensionKey"
+  );
+
+  if (testCase.expected.requireNoWrites) {
+    validateNoWrites(preview.writes, failures);
+  }
+
+  return {
+    caseKey: testCase.caseKey,
+    ok: failures.length === 0,
+    failures,
+    actual: {
+      resolvedCategories: preview.semanticV3.resolvedCategoryCandidates.length,
+      valueObjects: preview.valueObjectCandidates.length,
+      exposures: preview.exposureCandidates.length,
+      stateDeltas: preview.stateDeltaCandidates.length,
+      valueObjectKeys,
+      exposureTypes,
+      dimensionKeys,
+      writes: preview.writes,
+    },
+  };
+}
+
+function runRegressionMatrixV0() {
+  const results = REGRESSION_CASES_V0.map(evaluateCase);
+  const failed = results.filter((result) => !result.ok);
+
+  return {
+    ok: failed.length === 0,
+    matrix: "semantic_preview_regression_matrix_v0",
+    mode: "read_only_regression",
+    caseCount: results.length,
+    passedCount: results.length - failed.length,
+    failedCount: failed.length,
+    results,
+    writes: {
+      sqlExecuted: false,
+      dbWriteExecuted: false,
+      activityEventInserted: false,
+      valueObjectCreated: false,
+      activityValueObjectLinkCreated: false,
+      stateFactCreated: false,
+      stateDeltaCreated: false,
+      stateSnapshotCreated: false,
+    },
+  };
+}
+
+export async function GET() {
+  return NextResponse.json(runRegressionMatrixV0());
+}
+
+export async function POST() {
+  return NextResponse.json(runRegressionMatrixV0());
+}
