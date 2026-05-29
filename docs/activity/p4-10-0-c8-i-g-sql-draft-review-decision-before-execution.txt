@@ -1,0 +1,74 @@
+﻿GPT-APP / AI-NAVIGATOR
+C8-I-G — SQL Draft Review Decision Before Execution
+
+Date: 2026-05-29 07:38:45
+Project path: C:\Users\Admin\Documents\projects\gpt-app
+HEAD before decision: fcfac44
+
+Inputs:
+- Migration draft: supabase/migrations/20260528204503_c8_i_state_context_layer_draft.sql
+- Static review: docs/activity/p4-10-0-c8-i-f-static-sql-migration-draft-review.txt
+
+Previous closed gates:
+- C8-I-E-A confirmed: TSC_PASS_AND_E_SQL_MIGRATION_DRAFT_COMMITTED.
+- C8-I-F-A confirmed: TSC_PASS_AND_F_STATIC_SQL_DRAFT_REVIEW_COMMITTED.
+
+Purpose:
+Record the decision after static SQL draft review and before any SQL execution.
+
+Safety:
+- SQL executed: false
+- DB read executed: false
+- DB write executed: false
+- Runtime called: false
+- supabase db push executed: false
+- psql executed: false
+- migration executed: false
+- activity_events write enabled: false
+- AI/OpenAI called: false
+
+Decision summary:
+The C8-I-E SQL migration draft passed static text review.
+The draft is committed and preserved for review.
+The draft must not be executed yet.
+
+Reason:
+The migration draft uses auth.uid() in RLS policies.
+Before any SQL execution, the project must verify compatibility between:
+- Auth0 identity model
+- Supabase authenticated role / auth.uid()
+- existing user_id ownership convention
+- server-side service_role routes
+- future authenticated client access
+- RLS policy assumptions for state/context tables
+
+Risk if skipped:
+Executing RLS policies with the wrong ownership model could create tables that are structurally valid but unusable or misleading for the actual Auth0 + Supabase architecture.
+
+Confirmed guardrails:
+- GRANT does not replace RLS.
+- RLS does not replace GRANT.
+- anon access must remain revoked for personal state/context tables.
+- service_role is backend/server-side only.
+- personal state tables remain private by default.
+- similarity and relevance remain separate.
+- relevance is not causality.
+- state facts are not medical, hormonal, legal, financial or social certainty.
+- no controlled-intake production write is enabled.
+- no state engine is implemented.
+
+Execution decision:
+DO_NOT_EXECUTE_SQL_YET
+
+Next required gate:
+READY_FOR_C8_I_H_AUTH_RLS_USER_ID_COMPATIBILITY_AUDIT_BEFORE_SQL_EXECUTION
+
+Definition of Done:
+- C8-I-E draft migration acknowledged as committed.
+- C8-I-F static review acknowledged as committed.
+- SQL execution explicitly blocked for now.
+- Auth/RLS/user_id compatibility audit required before any supabase db push or psql execution.
+- no SQL executed
+- no DB read/write
+- no runtime called
+- no AI/OpenAI call
