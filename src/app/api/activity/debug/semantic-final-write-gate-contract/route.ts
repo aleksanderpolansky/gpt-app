@@ -134,7 +134,7 @@ export async function GET(request: Request) {
     selectedSpaceIdSha256Prefix,
     finalWriteGateContract,
     actorResolutionProof: {
-      policy: actorResolutionResult.policy,
+      policy: "semantic_actor_resolution_dry_run_v0",
       mode: actorResolutionResult.mode,
       auth0Session: actorResolutionResult.auth0Session,
       appUserMapping: actorResolutionResult.appUserMapping,
@@ -164,3 +164,4 @@ export async function GET(request: Request) {
       : "Do not prepare semantic persistence write route until final write-gate readiness is true in browser-authenticated scope.",
   });
 }
+
