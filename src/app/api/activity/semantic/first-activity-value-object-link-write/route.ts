@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { auth0 } from "../../../../../../lib/auth0";
 import { getSupabaseAdminClient } from "../../../../../../lib/supabase/admin";
+import { buildC32StableLinkBundle } from "../../../../../../lib/activity/categoryDerivation/c32SemanticPersistenceProofHelpers";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -632,38 +633,8 @@ function buildStableLinkBundle(params: {
   actorIdSha256Prefix: string | null;
   selectedSpaceIdSha256Prefix: string | null;
 }) {
-  const linkCandidate = {
-    linkType: "semantic_exposure",
-    exposureType: "primary_subject",
-    confidence: 1,
-    evidence: {
-      policy: "first_activity_value_object_link_explicit_write_gate_v0",
-      activityEventIdSha256Prefix: params.activityEventIdSha256Prefix,
-      valueObjectIdSha256Prefix: params.valueObjectIdSha256Prefix,
-      actorIdSha256Prefix: params.actorIdSha256Prefix,
-      selectedSpaceIdSha256Prefix: params.selectedSpaceIdSha256Prefix,
-      reason:
-        "The activity event produced a stable semantic bundle whose primary subject is the existing personal Value Object.",
-      noStateFactCreated: true,
-      noStateDeltaCreated: true,
-      noStateSnapshotCreated: true,
-    },
-    metadata: {
-      source: "c32_first_activity_value_object_link_gate",
-      activityEventRemainsSourceOfTruth: true,
-      valueObjectIsUnifiedNoHardSubtype: true,
-      categoryDoesNotCreateStateFact: true,
-      createsStateNow: false,
-      createsValueObjectNow: false,
-    },
-  };
-
-  return {
-    linkCandidate,
-    bundleHash: stableHash(linkCandidate),
-  };
+  return buildC32StableLinkBundle(params);
 }
-
 function buildReadiness(params: {
   sessionAvailable: boolean;
   appUserMapping: any;
@@ -1146,3 +1117,5 @@ export async function POST(request: Request) {
     next: "C32 final verification and transfer report can be prepared.",
   });
 }
+
+
