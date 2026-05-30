@@ -488,12 +488,14 @@ function parseWriteGate(body: unknown): {
   executeControlledWrite: boolean;
   expectedPolicy: string | null;
   acknowledgedFirstControlledDbWrite: string | null;
+  selectedSpaceIdSha256Prefix: string | null;
 } {
   if (!isRecord(body)) {
     return {
       executeControlledWrite: false,
       expectedPolicy: null,
       acknowledgedFirstControlledDbWrite: null,
+      selectedSpaceIdSha256Prefix: null,
     };
   }
 
@@ -504,6 +506,10 @@ function parseWriteGate(body: unknown): {
       body,
       "acknowledgedFirstControlledDbWrite"
     ),
+    selectedSpaceIdSha256Prefix: readStringProperty(
+      body,
+      "selectedSpaceIdSha256Prefix"
+    ),
   };
 }
 
@@ -511,6 +517,7 @@ async function runActorBootstrapControlledWrite(params: {
   executeControlledWrite: boolean;
   expectedPolicy: string | null;
   acknowledgedFirstControlledDbWrite: string | null;
+  selectedSpaceIdSha256Prefix: string | null;
 }): Promise<{
   auth0Session: {
     readOk: boolean;
@@ -774,7 +781,15 @@ async function runActorBootstrapControlledWrite(params: {
     };
   }
 
-  if (linkedSpaces.length > 1) {
+  const selectedSpace =
+    linkedSpaces.length === 1
+      ? linkedSpaces[0]
+      : linkedSpaces.find(
+          (space) =>
+            space.spaceIdSha256Prefix === params.selectedSpaceIdSha256Prefix
+        );
+
+  if (!selectedSpace) {
     return {
       auth0Session: {
         readOk: sessionReadOk,
@@ -802,7 +817,9 @@ async function runActorBootstrapControlledWrite(params: {
       })),
       writeResult: buildBlockedResult(
         "blocked_multiple_spaces",
-        "More than one linked space was found; controlled write requires one unambiguous space."
+        params.selectedSpaceIdSha256Prefix
+          ? "Selected space hash was not found among linked spaces."
+          : "More than one linked space was found; controlled write requires selectedSpaceIdSha256Prefix."
       ),
       writes: buildWrites({
         dbReadExecuted,
@@ -813,8 +830,6 @@ async function runActorBootstrapControlledWrite(params: {
       }),
     };
   }
-
-  const selectedSpace = linkedSpaces[0];
 
   const existingActorsForSpace = await findExistingActorsForSpace(
     supabase,
@@ -1198,6 +1213,7 @@ export async function GET() {
     executeControlledWrite: false,
     expectedPolicy: null,
     acknowledgedFirstControlledDbWrite: null,
+    selectedSpaceIdSha256Prefix: null,
   });
 
   return NextResponse.json({
@@ -1297,4 +1313,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
 

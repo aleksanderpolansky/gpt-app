@@ -433,6 +433,75 @@ function toCandidateSummaries(
     );
 }
 
+
+async function addActorCandidatesViaLinkedSpaces(
+  supabase: SupabaseAdminClientV0,
+  appUserId: string,
+  candidates: ActorCandidateAccumulatorV0
+): Promise<number> {
+  const possibleSpaceUserColumns = [
+    "app_user_id",
+    "user_id",
+    "owner_user_id",
+    "created_by_user_id",
+    "created_by",
+  ];
+
+  let actorSpaceRoleRowsBySpace = 0;
+
+  for (const column of possibleSpaceUserColumns) {
+    let spaceRows: Record<string, unknown>[] = [];
+
+    try {
+      const { data, error } = await supabase
+        .from("spaces")
+        .select("id")
+        .eq(column, appUserId)
+        .limit(50);
+
+      if (error) {
+        continue;
+      }
+
+      spaceRows = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+    } catch {
+      continue;
+    }
+
+    for (const spaceRow of spaceRows) {
+      const spaceId = readStringProperty(spaceRow, "id");
+
+      if (!spaceId) {
+        continue;
+      }
+
+      const result = await readRowsByColumnEquals(
+        supabase,
+        "actor_space_roles",
+        "id, actor_id, space_id",
+        "space_id",
+        spaceId,
+        50
+      );
+
+      if (!result.ok) {
+        continue;
+      }
+
+      actorSpaceRoleRowsBySpace += result.rows.length;
+
+      for (const row of result.rows) {
+        addActorCandidate(
+          candidates,
+          readStringProperty(row, "actor_id"),
+          `spaces.${column}->actor_space_roles.space_id`
+        );
+      }
+    }
+  }
+
+  return actorSpaceRoleRowsBySpace;
+}
 async function mapAppUserByAuthSubject(
   supabase: SupabaseAdminClientV0,
   trustedAuthSubject: string | null
@@ -617,6 +686,13 @@ async function resolveActorCandidates(
       );
     }
   }
+
+  const linkedSpaceActorRows = await addActorCandidatesViaLinkedSpaces(
+    supabase,
+    appUserId,
+    candidates
+  );
+  actorSpaceRoleRowsByUser += linkedSpaceActorRows;
 
   const directActorIds = Array.from(candidates.keys());
 
@@ -878,3 +954,4 @@ export async function buildSemanticActorResolutionDryRunV0(): Promise<SemanticAc
     writes: buildWrites(supabaseReadExecuted),
   };
 }
+
