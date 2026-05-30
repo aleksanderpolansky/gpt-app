@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 
+import { buildSemanticPersistenceDryRunRouteV0 } from "../../../../../../lib/activity/categoryDerivation/semanticPersistenceDryRunRouteContractV0";
 import {
   runSemanticPreviewPipelineV0,
   type SemanticPreviewPipelineResultV0,
@@ -38,11 +39,41 @@ type RegressionCaseResultV0 = {
     exposures: number;
     stateDeltas: number;
     reviewActions: number;
+    persistenceGatePolicy: string;
+    persistenceGateCanPersistNow: false;
     valueObjectKeys: string[];
     exposureTypes: string[];
     dimensionKeys: string[];
     actionKinds: string[];
     writes: SemanticPreviewPipelineResultV0["writes"];
+  };
+};
+
+type DryRunSmokeResultV0 = {
+  ok: boolean;
+  failures: string[];
+  actual: {
+    policy: string;
+    dryRunOnly: boolean;
+    canWriteNow: boolean;
+    sqlAllowedNow: boolean;
+    supabaseInsertAllowedNow: boolean;
+    routeGateCanWriteNow: boolean;
+    routeGateCanExecuteRouteNow: boolean;
+    matchedPreviewTargetFound: boolean;
+    warnings: number;
+    writes: {
+      sqlExecuted: false;
+      dbWriteExecuted: false;
+      activityEventInserted: false;
+      categoryResolutionPersisted: false;
+      valueObjectCreated: false;
+      activityValueObjectLinkCreated: false;
+      reviewActionPersisted: false;
+      stateFactCreated: false;
+      stateDeltaCreated: false;
+      stateSnapshotCreated: false;
+    };
   };
 };
 
@@ -108,15 +139,8 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
         "vo:personal:cycling-activity",
         "vo:personal:commute-to-work",
       ],
-      exposureTypes: [
-        "contributes_to",
-        "loads",
-        "creates_context",
-      ],
-      dimensionKeys: [
-        "physical_load",
-        "work_context_exposure",
-      ],
+      exposureTypes: ["contributes_to", "loads", "creates_context"],
+      dimensionKeys: ["physical_load", "work_context_exposure"],
       actionKinds: [
         "confirm_category",
         "reject_category",
@@ -143,15 +167,9 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
       minExposures: 1,
       minStateDeltas: 1,
       minReviewActions: 12,
-      valueObjectKeys: [
-        "vo:organization-or-personal:massage-service-work",
-      ],
-      exposureTypes: [
-        "needs_user_confirmation",
-      ],
-      dimensionKeys: [
-        "needs_user_confirmation",
-      ],
+      valueObjectKeys: ["vo:organization-or-personal:massage-service-work"],
+      exposureTypes: ["needs_user_confirmation"],
+      dimensionKeys: ["needs_user_confirmation"],
       actionKinds: [
         "confirm_category",
         "reject_category",
@@ -179,15 +197,9 @@ const REGRESSION_CASES_V0: RegressionCaseV0[] = [
       minExposures: 1,
       minStateDeltas: 1,
       minReviewActions: 8,
-      valueObjectKeys: [
-        "vo:personal:general-activity",
-      ],
-      exposureTypes: [
-        "needs_user_confirmation",
-      ],
-      dimensionKeys: [
-        "needs_user_confirmation",
-      ],
+      valueObjectKeys: ["vo:personal:general-activity"],
+      exposureTypes: ["needs_user_confirmation"],
+      dimensionKeys: ["needs_user_confirmation"],
       actionKinds: [
         "confirm_value_object_candidate",
         "reject_value_object_candidate",
@@ -258,7 +270,7 @@ function evaluateCase(testCase: RegressionCaseV0): RegressionCaseResultV0 {
     inputText: testCase.inputText,
     durationMinutes: testCase.durationMinutes,
     inputLanguage: testCase.inputLanguage,
-    p4Step: "C8-I-IMPLEMENT-12-FIX-REGRESSION",
+    p4Step: "C8-I-IMPLEMENT-19-REGRESSION-MATRIX",
   });
 
   const valueObjectKeys = preview.valueObjectCandidates.map(
@@ -315,6 +327,18 @@ function evaluateCase(testCase: RegressionCaseV0): RegressionCaseResultV0 {
     );
   }
 
+  if (preview.persistenceGatePolicy !== "semantic_persistence_gate_design_v0") {
+    failures.push("Missing semantic_persistence_gate_design_v0 policy.");
+  }
+
+  if (preview.persistenceGate.canPersistNow !== false) {
+    failures.push("persistenceGate.canPersistNow must be false.");
+  }
+
+  if (preview.persistenceGate.canCreateStateFactNow !== false) {
+    failures.push("persistenceGate.canCreateStateFactNow must be false.");
+  }
+
   assertIncludesAll(
     valueObjectKeys,
     testCase.expected.valueObjectKeys,
@@ -357,6 +381,8 @@ function evaluateCase(testCase: RegressionCaseV0): RegressionCaseResultV0 {
       exposures: preview.exposureCandidates.length,
       stateDeltas: preview.stateDeltaCandidates.length,
       reviewActions: preview.reviewActionCandidates.length,
+      persistenceGatePolicy: preview.persistenceGatePolicy,
+      persistenceGateCanPersistNow: preview.persistenceGate.canPersistNow,
       valueObjectKeys,
       exposureTypes,
       dimensionKeys,
@@ -366,17 +392,142 @@ function evaluateCase(testCase: RegressionCaseV0): RegressionCaseResultV0 {
   };
 }
 
-function runRegressionMatrixV0() {
-  const results = REGRESSION_CASES_V0.map(evaluateCase);
-  const failed = results.filter((result) => !result.ok);
+function evaluateDryRunSmoke(): DryRunSmokeResultV0 {
+  const failures: string[] = [];
+
+  const preview = runSemanticPreviewPipelineV0({
+    inputText: "учил ребёнка математике 30 минут",
+    durationMinutes: 30,
+    inputLanguage: "ru",
+    p4Step: "C8-I-IMPLEMENT-19-DRY-RUN-SMOKE",
+  });
+
+  const dryRun = buildSemanticPersistenceDryRunRouteV0({
+    preview,
+    requestedIntent: "persist_value_object_candidate",
+    requestedTargetKey: "vo:personal:child-learning-support",
+    requestedActionKey: null,
+    userConfirmed: true,
+    clientRequestedWriteExecution: true,
+  });
+
+  if (dryRun.policy !== "semantic_persistence_dry_run_route_skeleton_v0") {
+    failures.push("Missing semantic_persistence_dry_run_route_skeleton_v0 policy.");
+  }
+
+  if (dryRun.dryRunOnly !== true) {
+    failures.push("dryRunOnly must be true.");
+  }
+
+  if (dryRun.canWriteNow !== false) {
+    failures.push("dryRun.canWriteNow must be false.");
+  }
+
+  if (dryRun.sqlAllowedNow !== false) {
+    failures.push("dryRun.sqlAllowedNow must be false.");
+  }
+
+  if (dryRun.supabaseInsertAllowedNow !== false) {
+    failures.push("dryRun.supabaseInsertAllowedNow must be false.");
+  }
+
+  if (dryRun.routeGate.policy !== "semantic_persistence_route_gate_contract_v0") {
+    failures.push("Missing semantic_persistence_route_gate_contract_v0 policy.");
+  }
+
+  if (dryRun.routeGate.canWriteNow !== false) {
+    failures.push("routeGate.canWriteNow must be false.");
+  }
+
+  if (dryRun.routeGate.canExecuteRouteNow !== false) {
+    failures.push("routeGate.canExecuteRouteNow must be false.");
+  }
+
+  if (dryRun.routeGate.sqlAllowedNow !== false) {
+    failures.push("routeGate.sqlAllowedNow must be false.");
+  }
+
+  if (dryRun.routeGate.supabaseInsertAllowedNow !== false) {
+    failures.push("routeGate.supabaseInsertAllowedNow must be false.");
+  }
+
+  if (dryRun.routeGate.canCreateStateFactNow !== false) {
+    failures.push("routeGate.canCreateStateFactNow must be false.");
+  }
+
+  if (dryRun.routeGate.matchedPreviewTarget.found !== true) {
+    failures.push("Expected dry-run requested target to match preview gate target.");
+  }
+
+  if (dryRun.writes.sqlExecuted !== false) {
+    failures.push("dryRun.writes.sqlExecuted must be false.");
+  }
+
+  if (dryRun.writes.dbWriteExecuted !== false) {
+    failures.push("dryRun.writes.dbWriteExecuted must be false.");
+  }
+
+  if (dryRun.writes.activityEventInserted !== false) {
+    failures.push("dryRun.writes.activityEventInserted must be false.");
+  }
+
+  if (dryRun.writes.valueObjectCreated !== false) {
+    failures.push("dryRun.writes.valueObjectCreated must be false.");
+  }
+
+  if (dryRun.writes.activityValueObjectLinkCreated !== false) {
+    failures.push("dryRun.writes.activityValueObjectLinkCreated must be false.");
+  }
+
+  if (dryRun.writes.reviewActionPersisted !== false) {
+    failures.push("dryRun.writes.reviewActionPersisted must be false.");
+  }
+
+  if (dryRun.writes.stateFactCreated !== false) {
+    failures.push("dryRun.writes.stateFactCreated must be false.");
+  }
+
+  if (dryRun.writes.stateDeltaCreated !== false) {
+    failures.push("dryRun.writes.stateDeltaCreated must be false.");
+  }
+
+  if (dryRun.writes.stateSnapshotCreated !== false) {
+    failures.push("dryRun.writes.stateSnapshotCreated must be false.");
+  }
 
   return {
-    ok: failed.length === 0,
+    ok: failures.length === 0,
+    failures,
+    actual: {
+      policy: dryRun.policy,
+      dryRunOnly: dryRun.dryRunOnly,
+      canWriteNow: dryRun.canWriteNow,
+      sqlAllowedNow: dryRun.sqlAllowedNow,
+      supabaseInsertAllowedNow: dryRun.supabaseInsertAllowedNow,
+      routeGateCanWriteNow: dryRun.routeGate.canWriteNow,
+      routeGateCanExecuteRouteNow: dryRun.routeGate.canExecuteRouteNow,
+      matchedPreviewTargetFound: dryRun.routeGate.matchedPreviewTarget.found,
+      warnings: dryRun.warnings.length,
+      writes: dryRun.writes,
+    },
+  };
+}
+
+function runRegressionMatrixV0() {
+  const results = REGRESSION_CASES_V0.map(evaluateCase);
+  const dryRunSmoke = evaluateDryRunSmoke();
+
+  const failed = results.filter((result) => !result.ok);
+  const dryRunSmokeFailed = !dryRunSmoke.ok;
+
+  return {
+    ok: failed.length === 0 && !dryRunSmokeFailed,
     matrix: "semantic_preview_regression_matrix_v0",
     mode: "read_only_regression",
     caseCount: results.length,
     passedCount: results.length - failed.length,
     failedCount: failed.length,
+    dryRunSmoke,
     results,
     writes: {
       sqlExecuted: false,
@@ -387,6 +538,9 @@ function runRegressionMatrixV0() {
       stateFactCreated: false,
       stateDeltaCreated: false,
       stateSnapshotCreated: false,
+      dryRunRouteDbWriteExecuted: false,
+      dryRunRouteStateDeltaCreated: false,
+      dryRunRouteStateFactCreated: false,
     },
   };
 }
