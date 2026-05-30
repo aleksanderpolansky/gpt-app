@@ -437,7 +437,8 @@ function toCandidateSummaries(
 async function addActorCandidatesViaLinkedSpaces(
   supabase: SupabaseAdminClientV0,
   appUserId: string,
-  candidates: ActorCandidateAccumulatorV0
+  candidates: ActorCandidateAccumulatorV0,
+  selectedSpaceIdSha256Prefix: string | null
 ): Promise<number> {
   const possibleSpaceUserColumns = [
     "app_user_id",
@@ -472,6 +473,13 @@ async function addActorCandidatesViaLinkedSpaces(
       const spaceId = readStringProperty(spaceRow, "id");
 
       if (!spaceId) {
+        continue;
+      }
+
+      if (
+        selectedSpaceIdSha256Prefix &&
+        hashDiagnosticValue(spaceId) !== selectedSpaceIdSha256Prefix
+      ) {
         continue;
       }
 
@@ -594,7 +602,8 @@ async function resolveActorCandidates(
   supabase: SupabaseAdminClientV0,
   appUserId: string | null,
   actorsProbe: SemanticActorResolutionTableProbeV0,
-  actorSpaceRolesProbe: SemanticActorResolutionTableProbeV0
+  actorSpaceRolesProbe: SemanticActorResolutionTableProbeV0,
+  selectedSpaceIdSha256Prefix: string | null
 ): Promise<SemanticActorResolutionDryRunV0["actorResolution"]> {
   if (!appUserId) {
     return {
@@ -690,7 +699,8 @@ async function resolveActorCandidates(
   const linkedSpaceActorRows = await addActorCandidatesViaLinkedSpaces(
     supabase,
     appUserId,
-    candidates
+    candidates,
+    selectedSpaceIdSha256Prefix
   );
   actorSpaceRoleRowsByUser += linkedSpaceActorRows;
 
@@ -765,7 +775,9 @@ async function resolveActorCandidates(
   };
 }
 
-export async function buildSemanticActorResolutionDryRunV0(): Promise<SemanticActorResolutionDryRunV0> {
+export async function buildSemanticActorResolutionDryRunV0(params?: {
+  selectedSpaceIdSha256Prefix?: string | null;
+}): Promise<SemanticActorResolutionDryRunV0> {
   let session: unknown = null;
   let sessionReadOk = true;
   let sessionReadErrorName: string | null = null;
@@ -870,7 +882,8 @@ export async function buildSemanticActorResolutionDryRunV0(): Promise<SemanticAc
         supabase,
         appUserMappingWithRawId.rawAppUserId,
         actorsProbe,
-        actorSpaceRolesProbe
+        actorSpaceRolesProbe,
+        params?.selectedSpaceIdSha256Prefix ?? null
       );
       supabaseReadExecuted = true;
     } catch (error) {
@@ -954,4 +967,5 @@ export async function buildSemanticActorResolutionDryRunV0(): Promise<SemanticAc
     writes: buildWrites(supabaseReadExecuted),
   };
 }
+
 

@@ -5,11 +5,19 @@ import { buildSemanticActorResolutionDryRunV0 } from "../../../../../../lib/acti
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET() {
-  const result = await buildSemanticActorResolutionDryRunV0();
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const selectedSpaceIdSha256Prefix = url.searchParams.get(
+    "selectedSpaceIdSha256Prefix"
+  );
+
+  const result = await buildSemanticActorResolutionDryRunV0({
+    selectedSpaceIdSha256Prefix,
+  });
 
   return NextResponse.json({
     ok: true,
+    selectedSpaceIdSha256Prefix,
     endpoint: "/api/activity/debug/semantic-actor-resolution-dry-run",
     policy: result.endpointPolicy,
     mode: result.mode,
@@ -24,3 +32,4 @@ export async function GET() {
     writes: result.writes,
   });
 }
+
