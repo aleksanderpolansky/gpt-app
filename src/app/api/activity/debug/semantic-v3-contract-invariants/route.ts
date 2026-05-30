@@ -7,6 +7,7 @@ import {
   DEFAULT_FORBIDDEN_OVERCLAIMS,
   SEMANTIC_CONTRACT_V3_ADAPTER_VERSION,
   SEMANTIC_CONTRACT_V3_SCHEMA_VERSION,
+  SEMANTIC_CONTRACT_V3_REQUIRED_INVARIANT_CODES,
   canEnterStableSemanticBundle,
   normalizeMappingStatus,
   normalizeResolutionStatus,
@@ -88,20 +89,24 @@ function buildBooleanFunctionCheck(params: {
   });
 }
 
-function buildKnownGapCheck(params: {
+function buildNamedInvariantCodeCheck(params: {
   key: string;
-  expectedFutureInvariantCode: string;
-  currentlyPresent: boolean;
+  requiredCode: string;
 }): InvariantCheck {
+  const currentlyPresent = includesValue(
+    SEMANTIC_CONTRACT_V3_REQUIRED_INVARIANT_CODES,
+    params.requiredCode
+  );
+
   return buildCheck({
     key: params.key,
-    passed: !params.currentlyPresent,
-    severity: "known_gap",
+    passed: currentlyPresent,
+    severity: "hard",
     details: {
-      expectedFutureInvariantCode: params.expectedFutureInvariantCode,
-      currentlyPresent: params.currentlyPresent,
+      requiredCode: params.requiredCode,
+      currentlyPresent,
       meaning:
-        "This is intentionally reported as a known gap, not as a hard failure. C33-B.3 may add explicit named invariant codes.",
+        "This invariant code must be exported by semanticContractV3 and visible to the debug proof route.",
     },
   });
 }
@@ -232,29 +237,27 @@ export async function GET() {
       },
     }),
   ];
-
-  const knownGapChecks: InvariantCheck[] = [
-    buildKnownGapCheck({
-      key: "known_gap_missing_named_code_category_does_not_create_state_fact",
-      expectedFutureInvariantCode: "category_does_not_create_state_fact",
-      currentlyPresent: false,
+  const namedInvariantChecks: InvariantCheck[] = [
+    buildNamedInvariantCodeCheck({
+      key: "named_invariant_code_category_does_not_create_state_fact_present",
+      requiredCode: "category_does_not_create_state_fact",
     }),
-    buildKnownGapCheck({
-      key: "known_gap_missing_named_code_external_concept_is_not_internal_category",
-      expectedFutureInvariantCode: "external_concept_is_not_internal_category",
-      currentlyPresent: false,
+    buildNamedInvariantCodeCheck({
+      key: "named_invariant_code_external_concept_is_not_internal_category_present",
+      requiredCode: "external_concept_is_not_internal_category",
     }),
-    buildKnownGapCheck({
-      key: "known_gap_missing_named_code_unresolved_category_cannot_enter_stable_bundle",
-      expectedFutureInvariantCode: "unresolved_category_cannot_enter_stable_bundle",
-      currentlyPresent: false,
+    buildNamedInvariantCodeCheck({
+      key: "named_invariant_code_unresolved_category_cannot_enter_stable_bundle_present",
+      requiredCode: "unresolved_category_cannot_enter_stable_bundle",
     }),
   ];
 
-  const checks = [...hardChecks, ...knownGapChecks];
+  const knownGapChecks: InvariantCheck[] = [];
+  const hardAndNamedChecks = [...hardChecks, ...namedInvariantChecks];
+  const checks = [...hardAndNamedChecks, ...knownGapChecks];
 
-  const failedHardChecks = hardChecks.filter((check) => !check.passed);
-  const passedHardChecks = hardChecks.filter((check) => check.passed);
+  const failedHardChecks = hardAndNamedChecks.filter((check) => !check.passed);
+  const passedHardChecks = hardAndNamedChecks.filter((check) => check.passed);
   const passedKnownGapChecks = knownGapChecks.filter((check) => check.passed);
 
   const writes = {
@@ -279,16 +282,19 @@ export async function GET() {
     schemaVersion: SEMANTIC_CONTRACT_V3_SCHEMA_VERSION,
     adapterVersion: SEMANTIC_CONTRACT_V3_ADAPTER_VERSION,
     summary: {
-      hardCheckCount: hardChecks.length,
+      hardCheckCount: hardAndNamedChecks.length,
+      baseHardCheckCount: hardChecks.length,
+      namedInvariantCheckCount: namedInvariantChecks.length,
       passedHardCheckCount: passedHardChecks.length,
       failedHardCheckCount: failedHardChecks.length,
       knownGapCheckCount: knownGapChecks.length,
       passedKnownGapCheckCount: passedKnownGapChecks.length,
       note:
-        "Known gaps document missing explicit named invariant codes and do not fail this route.",
+        "Named invariant codes are now hard checks. Known gaps must remain zero for this proof route.",
     },
     checks,
     failedHardChecks,
     writes,
   });
 }
+

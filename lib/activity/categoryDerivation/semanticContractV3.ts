@@ -292,6 +292,49 @@ export const DEFAULT_FORBIDDEN_OVERCLAIMS: readonly string[] = [
   "family_climate_improved",
 ] as const;
 
+export type SemanticContractV3InvariantCode =
+  | "category_does_not_create_state_fact"
+  | "external_concept_is_not_internal_category"
+  | "unresolved_category_cannot_enter_stable_bundle";
+
+export const SEMANTIC_CONTRACT_V3_REQUIRED_INVARIANT_CODES: readonly SemanticContractV3InvariantCode[] =
+  [
+    "category_does_not_create_state_fact",
+    "external_concept_is_not_internal_category",
+    "unresolved_category_cannot_enter_stable_bundle",
+  ];
+
+export const SEMANTIC_CONTRACT_V3_REQUIRED_INVARIANT_DESCRIPTIONS: Readonly<
+  Record<SemanticContractV3InvariantCode, string>
+> = {
+  category_does_not_create_state_fact:
+    "A category, semantic bundle, external concept, or candidate may create state hook candidates, but it must not directly create state facts, state deltas, or state snapshots.",
+  external_concept_is_not_internal_category:
+    "An external ontology concept is only a lookup or alias candidate until it is resolved into an internal category through the controlled resolver/governance path.",
+  unresolved_category_cannot_enter_stable_bundle:
+    "An unresolved, rejected, ambiguous, or user-review-required category candidate cannot enter a stable semantic bundle as an active category.",
+};
+
+export function isSemanticContractV3InvariantCode(
+  value: unknown
+): value is SemanticContractV3InvariantCode {
+  return (
+    typeof value === "string" &&
+    SEMANTIC_CONTRACT_V3_REQUIRED_INVARIANT_CODES.includes(
+      value as SemanticContractV3InvariantCode
+    )
+  );
+}
+
+export function getSemanticContractV3RequiredInvariantCodes(): SemanticContractV3InvariantCode[] {
+  return [...SEMANTIC_CONTRACT_V3_REQUIRED_INVARIANT_CODES];
+}
+
+export function getSemanticContractV3InvariantDescription(
+  code: SemanticContractV3InvariantCode
+): string {
+  return SEMANTIC_CONTRACT_V3_REQUIRED_INVARIANT_DESCRIPTIONS[code];
+}
 export function clampConfidence(value: unknown, fallback = 0.5): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return fallback;
@@ -406,3 +449,4 @@ export function createEmptySemanticDerivationV3(params: {
     contractErrors: [],
   };
 }
+

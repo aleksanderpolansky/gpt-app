@@ -1,5 +1,6 @@
 ﻿import {
-  DEFAULT_FORBIDDEN_OVERCLAIMS,
+  SEMANTIC_CONTRACT_V3_REQUIRED_INVARIANT_CODES,
+DEFAULT_FORBIDDEN_OVERCLAIMS,
   SEMANTIC_CONTRACT_V3_ADAPTER_VERSION,
   SEMANTIC_CONTRACT_V3_SCHEMA_VERSION,
   clampConfidence,
@@ -22,6 +23,10 @@
   type StateHookCandidateV3,
   type UnknownTermCandidateV3,
 } from "./semanticContractV3";
+export const SEMANTIC_CONTRACT_V3_ADAPTER_INVARIANT_CODES = [
+  ...SEMANTIC_CONTRACT_V3_REQUIRED_INVARIANT_CODES,
+] as const;
+
 
 export type BuildSemanticDerivationV3FromCurrentOutputParams = {
   inputText?: string | null;
@@ -955,3 +960,4 @@ export function buildSemanticDerivationV3FromCurrentOutput(
     contractErrors,
   };
 }
+
