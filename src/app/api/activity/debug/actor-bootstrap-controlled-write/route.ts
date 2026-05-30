@@ -961,8 +961,7 @@ async function runActorBootstrapControlledWrite(params: {
     actorInsertPayload.organization_id = selectedSpace.organizationId;
   }
 
-  const actorInsertResult = await supabase
-    .from("actors")
+  const actorInsertResult = await (supabase.from("actors") as any)
     .insert(actorInsertPayload)
     .select("id")
     .single();
@@ -1070,8 +1069,7 @@ async function runActorBootstrapControlledWrite(params: {
     };
   }
 
-  const roleInsertResult = await supabase
-    .from("actor_space_roles")
+  const roleInsertResult = await (supabase.from("actor_space_roles") as any)
     .insert({
       actor_id: createdActorId,
       space_id: selectedSpace.spaceId,
@@ -1299,3 +1297,4 @@ export async function POST(request: Request) {
     );
   }
 }
+
