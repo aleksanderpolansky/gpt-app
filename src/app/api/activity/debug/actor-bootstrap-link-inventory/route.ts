@@ -515,14 +515,14 @@ export async function GET() {
   let supabaseClientError: string | null = null;
 
   const inventories: TableInventoryV0[] = [];
-  let appUserMapping = {
+  let appUserMapping: Awaited<ReturnType<typeof readAppUserByAuthSubject>> = {
     attempted: false,
-    outcome: "not_attempted_no_session" as const,
-    rowCount: null as number | null,
-    appUserId: null as string | null,
-    appUserIdSha256Prefix: null as string | null,
-    errorCode: null as string | null,
-    errorMessage: null as string | null,
+    outcome: "not_attempted_no_session",
+    rowCount: null,
+    appUserId: null,
+    appUserIdSha256Prefix: null,
+    errorCode: null,
+    errorMessage: null,
   };
 
   const matchProbes: MatchProbeV0[] = [];
@@ -649,3 +649,4 @@ export async function GET() {
     writes: buildWrites(supabaseReadExecuted),
   });
 }
+
