@@ -61,8 +61,7 @@ type DryRunSmokeResultV0 = {
     routeGateCanWriteNow: boolean;
     routeGateCanExecuteRouteNow: boolean;
     matchedPreviewTargetFound: boolean;
-    warnings: number;
-    writes: {
+    warnings: number;`n    authenticatedContextPolicy: string;`n    authenticatedContextCanOpenWriteGate: boolean;`n    authenticatedContextCanTrustClientIdentity: boolean;`n    authenticatedContextBlockers: number;`n    writes: {
       sqlExecuted: false;
       dbWriteExecuted: false;
       activityEventInserted: false;
@@ -408,8 +407,7 @@ function evaluateDryRunSmoke(): DryRunSmokeResultV0 {
     requestedTargetKey: "vo:personal:child-learning-support",
     requestedActionKey: null,
     userConfirmed: true,
-    clientRequestedWriteExecution: true,
-  });
+    clientRequestedWriteExecution: true,`n    clientProvidedAuthenticatedUserId: "client-user-untrusted",`n    clientProvidedActorId: "client-actor-untrusted",`n    clientProvidedRlsVerificationToken: "client-rls-token-untrusted",`n  });
 
   if (dryRun.policy !== "semantic_persistence_dry_run_route_skeleton_v0") {
     failures.push("Missing semantic_persistence_dry_run_route_skeleton_v0 policy.");
@@ -455,9 +453,7 @@ function evaluateDryRunSmoke(): DryRunSmokeResultV0 {
     failures.push("routeGate.canCreateStateFactNow must be false.");
   }
 
-  if (dryRun.routeGate.matchedPreviewTarget.found !== true) {
-    failures.push("Expected dry-run requested target to match preview gate target.");
-  }
+  if (dryRun.routeGate.matchedPreviewTarget.found !== true) {`n    failures.push("Expected dry-run requested target to match preview gate target.");`n  }`n`n  if (`n    dryRun.authenticatedContext.policy !==`n    "semantic_persistence_authenticated_context_contract_v0"`n  ) {`n    failures.push("Missing semantic_persistence_authenticated_context_contract_v0 policy.");`n  }`n`n  if (dryRun.authenticatedContext.canOpenWriteGate !== false) {`n    failures.push("authenticatedContext.canOpenWriteGate must be false.");`n  }`n`n  if (dryRun.authenticatedContext.canTrustClientIdentity !== false) {`n    failures.push("authenticatedContext.canTrustClientIdentity must be false.");`n  }
 
   if (dryRun.writes.sqlExecuted !== false) {
     failures.push("dryRun.writes.sqlExecuted must be false.");
@@ -507,8 +503,7 @@ function evaluateDryRunSmoke(): DryRunSmokeResultV0 {
       routeGateCanWriteNow: dryRun.routeGate.canWriteNow,
       routeGateCanExecuteRouteNow: dryRun.routeGate.canExecuteRouteNow,
       matchedPreviewTargetFound: dryRun.routeGate.matchedPreviewTarget.found,
-      warnings: dryRun.warnings.length,
-      writes: dryRun.writes,
+      warnings: dryRun.warnings.length,`n      authenticatedContextPolicy: dryRun.authenticatedContext.policy,`n      authenticatedContextCanOpenWriteGate:`n        dryRun.authenticatedContext.canOpenWriteGate,`n      authenticatedContextCanTrustClientIdentity:`n        dryRun.authenticatedContext.canTrustClientIdentity,`n      authenticatedContextBlockers: dryRun.authenticatedContext.blockers.length,`n      writes: dryRun.writes,
     },
   };
 }
@@ -552,3 +547,4 @@ export async function GET() {
 export async function POST() {
   return NextResponse.json(runRegressionMatrixV0());
 }
+

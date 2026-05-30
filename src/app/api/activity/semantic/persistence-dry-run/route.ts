@@ -21,6 +21,9 @@ type PersistenceDryRunBody = {
   requestedActionKey?: unknown;
   userConfirmed?: unknown;
   explicitWriteExecutionEnabled?: unknown;
+  authenticatedUserId?: unknown;
+  actorId?: unknown;
+  rlsVerificationToken?: unknown;
 };
 
 function asString(value: unknown): string | null {
@@ -94,6 +97,8 @@ export async function GET() {
     method: "POST",
     mode: "non_debug_dry_run_no_write",
     policy: "semantic_persistence_dry_run_route_skeleton_v0",
+    authenticatedContextPolicy:
+      "semantic_persistence_authenticated_context_contract_v0",
     writes: {
       sqlExecuted: false,
       dbWriteExecuted: false,
@@ -114,6 +119,9 @@ export async function GET() {
       requestedTargetKey: "vo:personal:child-learning-support",
       userConfirmed: true,
       explicitWriteExecutionEnabled: true,
+      authenticatedUserId: "client-supplied-user-id-is-untrusted",
+      actorId: "client-supplied-actor-id-is-untrusted",
+      rlsVerificationToken: "client-supplied-token-is-untrusted",
     },
   });
 }
@@ -153,7 +161,7 @@ export async function POST(request: Request) {
     inputText,
     durationMinutes,
     inputLanguage,
-    p4Step: "C8-I-IMPLEMENT-18-DRY-RUN-PERSISTENCE-ROUTE",
+    p4Step: "C8-I-IMPLEMENT-20-AUTHENTICATED-DRY-RUN-CONTEXT",
   });
 
   const dryRun = buildSemanticPersistenceDryRunRouteV0({
@@ -163,6 +171,9 @@ export async function POST(request: Request) {
     requestedActionKey: asString(body.requestedActionKey),
     userConfirmed: asBoolean(body.userConfirmed),
     clientRequestedWriteExecution: asBoolean(body.explicitWriteExecutionEnabled),
+    clientProvidedAuthenticatedUserId: asString(body.authenticatedUserId),
+    clientProvidedActorId: asString(body.actorId),
+    clientProvidedRlsVerificationToken: asString(body.rlsVerificationToken),
   });
 
   return NextResponse.json({
@@ -170,6 +181,7 @@ export async function POST(request: Request) {
     endpoint: "/api/activity/semantic/persistence-dry-run",
     mode: "non_debug_dry_run_no_write",
     policy: "semantic_persistence_dry_run_route_skeleton_v0",
+    authenticatedContextPolicy: dryRun.authenticatedContext.policy,
     dryRun,
     writes: dryRun.writes,
   });

@@ -1,4 +1,8 @@
 ﻿import {
+  buildSemanticPersistenceAuthenticatedContextV0,
+  type SemanticPersistenceAuthenticatedContextDecisionV0,
+} from "./semanticPersistenceAuthenticatedContextV0";
+import {
   buildSemanticPersistenceRouteGateV0,
   type SemanticPersistenceRouteGateDecisionV0,
   type SemanticPersistenceRouteIntentV0,
@@ -30,6 +34,9 @@ export type SemanticPersistenceDryRunRouteRequestV0 = {
   requestedActionKey: string | null;
   userConfirmed: boolean;
   clientRequestedWriteExecution: boolean;
+  clientProvidedAuthenticatedUserId: string | null;
+  clientProvidedActorId: string | null;
+  clientProvidedRlsVerificationToken: string | null;
   serverAuthenticatedUserAvailable: false;
   serverActorAvailable: false;
   serverRlsVerificationAvailable: false;
@@ -46,6 +53,7 @@ export type SemanticPersistenceDryRunRouteResultV0 = {
   sqlAllowedNow: false;
   supabaseInsertAllowedNow: false;
   request: SemanticPersistenceDryRunRouteRequestV0;
+  authenticatedContext: SemanticPersistenceAuthenticatedContextDecisionV0;
   previewSummary: {
     ok: true;
     activityEventId: string;
@@ -70,6 +78,9 @@ export type BuildSemanticPersistenceDryRunRouteV0Params = {
   requestedActionKey?: string | null;
   userConfirmed?: boolean | null;
   clientRequestedWriteExecution?: boolean | null;
+  clientProvidedAuthenticatedUserId?: string | null;
+  clientProvidedActorId?: string | null;
+  clientProvidedRlsVerificationToken?: string | null;
 };
 
 export function buildSemanticPersistenceDryRunRouteWritesV0(): SemanticPersistenceDryRunRouteWritesV0 {
@@ -102,6 +113,20 @@ export function buildSemanticPersistenceDryRunRouteV0(
   const clientRequestedWriteExecution =
     params.clientRequestedWriteExecution === true;
 
+  const clientProvidedAuthenticatedUserId = trimOrNull(
+    params.clientProvidedAuthenticatedUserId
+  );
+  const clientProvidedActorId = trimOrNull(params.clientProvidedActorId);
+  const clientProvidedRlsVerificationToken = trimOrNull(
+    params.clientProvidedRlsVerificationToken
+  );
+
+  const authenticatedContext = buildSemanticPersistenceAuthenticatedContextV0({
+    clientProvidedAuthenticatedUserId,
+    clientProvidedActorId,
+    clientProvidedRlsVerificationToken,
+  });
+
   const routeGate = buildSemanticPersistenceRouteGateV0({
     preview: params.preview,
     requestedIntent: params.requestedIntent,
@@ -120,6 +145,16 @@ export function buildSemanticPersistenceDryRunRouteV0(
   if (clientRequestedWriteExecution) {
     warnings.push(
       "Client requested write execution, but the dry-run route ignores it and keeps explicitWriteExecutionEnabled=false."
+    );
+  }
+
+  if (
+    clientProvidedAuthenticatedUserId ||
+    clientProvidedActorId ||
+    clientProvidedRlsVerificationToken
+  ) {
+    warnings.push(
+      "Client-provided identity fields were received but are treated as untrusted diagnostic input only."
     );
   }
 
@@ -145,10 +180,14 @@ export function buildSemanticPersistenceDryRunRouteV0(
       requestedActionKey,
       userConfirmed,
       clientRequestedWriteExecution,
+      clientProvidedAuthenticatedUserId,
+      clientProvidedActorId,
+      clientProvidedRlsVerificationToken,
       serverAuthenticatedUserAvailable: false,
       serverActorAvailable: false,
       serverRlsVerificationAvailable: false,
     },
+    authenticatedContext,
     previewSummary: {
       ok: params.preview.ok,
       activityEventId: params.preview.activityEventId,
