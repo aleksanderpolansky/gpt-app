@@ -18,6 +18,16 @@ type Auth0DiagnosticWritesV0 = {
   stateSnapshotCreated: false;
 };
 
+type Auth0SessionDiagnosticUserSummaryV0 = {
+  userObjectAvailable: boolean;
+  hasSub: boolean;
+  subSha256Prefix: string | null;
+  hasEmail: boolean;
+  hasName: boolean;
+  hasNickname: boolean;
+  claimKeys: string[];
+};
+
 function buildNoWrites(): Auth0DiagnosticWritesV0 {
   return {
     sqlExecuted: false,
@@ -53,23 +63,18 @@ function getObjectKeys(value: unknown): string[] {
   return Object.keys(value as Record<string, unknown>).sort();
 }
 
-function hasStringField(
-  value: unknown,
-  fieldName: string
-): boolean {
+function hasStringField(value: unknown, fieldName: string): boolean {
   if (!value || typeof value !== "object") {
     return false;
   }
 
   const record = value as Record<string, unknown>;
+  const fieldValue = record[fieldName];
 
-  return typeof record[fieldName] === "string" && record[fieldName].length > 0;
+  return typeof fieldValue === "string" && fieldValue.length > 0;
 }
 
-function getStringField(
-  value: unknown,
-  fieldName: string
-): string | null {
+function getStringField(value: unknown, fieldName: string): string | null {
   if (!value || typeof value !== "object") {
     return null;
   }
@@ -82,14 +87,29 @@ function getStringField(
     : null;
 }
 
+function buildUserSummary(user: unknown): Auth0SessionDiagnosticUserSummaryV0 {
+  const subject = getStringField(user, "sub");
+
+  return {
+    userObjectAvailable: Boolean(user),
+    hasSub: hasStringField(user, "sub"),
+    subSha256Prefix: hashDiagnosticValue(subject),
+    hasEmail: hasStringField(user, "email"),
+    hasName: hasStringField(user, "name"),
+    hasNickname: hasStringField(user, "nickname"),
+    claimKeys: getObjectKeys(user),
+  };
+}
+
 export async function GET() {
-  let session: Awaited<ReturnType<typeof auth0.getSession>> | null = null;
+  let session: { user?: unknown } | null = null;
   let sessionReadOk = true;
   let sessionReadErrorName: string | null = null;
   let sessionReadErrorMessage: string | null = null;
 
   try {
-    session = await auth0.getSession();
+    const auth0Session = await auth0.getSession();
+    session = auth0Session ? { user: auth0Session.user } : null;
   } catch (error) {
     sessionReadOk = false;
     sessionReadErrorName =
@@ -101,7 +121,6 @@ export async function GET() {
   }
 
   const user = session?.user ?? null;
-  const subject = getStringField(user, "sub");
 
   return NextResponse.json({
     ok: true,
@@ -111,18 +130,10 @@ export async function GET() {
     countdownBeforeRealIntegrationChanges: "3/3",
     auth0SessionReadAttempted: true,
     auth0SessionReadOk: sessionReadOk,
-    auth0SessionReadErrorName,
-    auth0SessionReadErrorMessage,
+    auth0SessionReadErrorName: sessionReadErrorName,
+    auth0SessionReadErrorMessage: sessionReadErrorMessage,
     sessionAvailable: Boolean(session),
-    userSummary: {
-      userObjectAvailable: Boolean(user),
-      hasSub: hasStringField(user, "sub"),
-      subSha256Prefix: hashDiagnosticValue(subject),
-      hasEmail: hasStringField(user, "email"),
-      hasName: hasStringField(user, "name"),
-      hasNickname: hasStringField(user, "nickname"),
-      claimKeys: getObjectKeys(user),
-    },
+    userSummary: buildUserSummary(user),
     serverAuthReadinessImpact: {
       provesAuth0ClientImportWorks: sessionReadOk,
       provesSessionCanBeReadOnServer: sessionReadOk,
