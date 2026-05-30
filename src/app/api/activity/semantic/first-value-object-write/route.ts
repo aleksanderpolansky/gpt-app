@@ -611,7 +611,7 @@ async function findExistingValueObject(params: {
 
   const { data, error } = await params.supabase
     .from("value_objects")
-    .select("id, title, source, status, created_at")
+    .select("id, title, source, value_type, status, created_at")
     .eq("app_user_id", params.appUserId)
     .eq("space_id", params.selectedSpaceId)
     .eq("source", "semantic_candidate")
@@ -1044,6 +1044,7 @@ export async function POST(request: Request) {
     status: valueObjectCandidate.status,
     visibility: valueObjectCandidate.visibility,
     source: valueObjectCandidate.source,
+    value_type: "personal_development",
     semantic_signature: valueObjectCandidate.semanticSignature,
     metadata: {
       createdByPolicy: "first_value_object_explicit_write_gate_v0",
@@ -1063,7 +1064,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from("value_objects")
     .insert(insertPayload)
-    .select("id, title, source, status, created_at")
+    .select("id, title, source, value_type, status, created_at")
     .single();
 
   if (error) {
@@ -1109,6 +1110,7 @@ export async function POST(request: Request) {
       idSha256Prefix: hashDiagnosticValue(insertedValueObjectId),
       title: readStringProperty(data, "title"),
       source: readStringProperty(data, "source"),
+      valueType: readStringProperty(data, "value_type"),
       status: readStringProperty(data, "status"),
     },
     context: publicContext(context),
@@ -1128,3 +1130,4 @@ export async function POST(request: Request) {
     next: "C32-H/I can prepare first activity_value_object_links write gate.",
   });
 }
+
