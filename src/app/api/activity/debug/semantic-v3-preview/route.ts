@@ -198,6 +198,7 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json({
+    ...result,
     endpoint: ENDPOINT,
     routeContractVersion: ROUTE_CONTRACT_VERSION,
     policy: ROUTE_CONTRACT_VERSION,
@@ -217,7 +218,7 @@ export async function POST(request: Request) {
       inputLanguage: input.inputLanguage,
     },
     preview: result,
-    ...result,
     writes: result.writes,
   });
 }
+
