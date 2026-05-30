@@ -9,25 +9,23 @@ export const runtime = "nodejs";
 
 type JsonRecord = Record<string, unknown>;
 
-type ProbeResultV0 = {
+type ProbeResult = {
   table: string;
   column: string;
-  attempted: boolean;
   exists: boolean;
   errorCode: string | null;
   errorMessage: string | null;
 };
 
-type TableInventoryV0 = {
+type TableInventory = {
   table: string;
   tableReadable: boolean;
   existingColumns: string[];
   missingColumns: string[];
-  probes: ProbeResultV0[];
+  probes: ProbeResult[];
 };
 
-type AppUserMappingV0 = {
-  attempted: boolean;
+type AppUserMapping = {
   outcome:
     | "not_attempted_no_session"
     | "mapped"
@@ -41,7 +39,7 @@ type AppUserMappingV0 = {
   errorMessage: string | null;
 };
 
-type SelectedSpaceResolutionV0 = {
+type SpaceResolution = {
   outcome:
     | "not_attempted_no_app_user"
     | "missing_selected_space_scope"
@@ -54,11 +52,9 @@ type SelectedSpaceResolutionV0 = {
   selectedSpaceOrganizationIdSha256Prefix: string | null;
   matchCount: number | null;
   sourceColumns: string[];
-  errorCode: string | null;
-  errorMessage: string | null;
 };
 
-type ActorResolutionV0 = {
+type ActorResolution = {
   outcome:
     | "not_attempted_no_space"
     | "resolved_single_actor"
@@ -73,25 +69,7 @@ type ActorResolutionV0 = {
   errorMessage: string | null;
 };
 
-type WriteFlagsV0 = {
-  sqlExecuted: false;
-  dbReadExecuted: boolean;
-  dbWriteExecuted: boolean;
-  supabaseReadExecuted: boolean;
-  supabaseWriteExecuted: boolean;
-  activityEventInserted: boolean;
-  valueObjectCreated: false;
-  activityValueObjectLinkCreated: false;
-  actorCreated: false;
-  actorUpdated: false;
-  userCreated: false;
-  userUpdated: false;
-  stateDeltaCreated: false;
-  stateFactCreated: false;
-  stateSnapshotCreated: false;
-};
-
-type FirstSemanticPersistenceReadinessV0 = {
+type Readiness = {
   policy: "first_semantic_persistence_write_v0";
   mode: "explicit_first_semantic_persistence_write_route";
   selectedSpaceIdSha256Prefix: string | null;
@@ -102,17 +80,17 @@ type FirstSemanticPersistenceReadinessV0 = {
     trustedAuthSubjectPresent: boolean;
     trustedAuthSubjectSha256Prefix: string | null;
   };
-  appUserMapping: Omit<AppUserMappingV0, "appUserId">;
+  appUserMapping: Omit<AppUserMapping, "appUserId">;
   selectedSpaceResolution: Omit<
-    SelectedSpaceResolutionV0,
+    SpaceResolution,
     "selectedSpaceId" | "selectedSpaceOrganizationId"
   >;
-  actorResolution: Omit<ActorResolutionV0, "actorId">;
+  actorResolution: Omit<ActorResolution, "actorId">;
   targetInventories: {
-    activityEvents: TableInventoryV0;
-    valueObjects: TableInventoryV0;
-    activityValueObjectLinks: TableInventoryV0;
-    activityStateDeltas: TableInventoryV0;
+    activityEvents: TableInventory;
+    valueObjects: TableInventory;
+    activityValueObjectLinks: TableInventory;
+    activityStateDeltas: TableInventory;
   };
   readinessDecision: {
     canAttemptFirstSemanticActivityEventWriteWithExplicitPost: boolean;
@@ -132,9 +110,27 @@ type FirstSemanticPersistenceReadinessV0 = {
   };
 };
 
-type PublicReadinessV0 = Omit<FirstSemanticPersistenceReadinessV0, "raw">;
+type PublicReadiness = Omit<Readiness, "raw">;
 
-type ParsedWriteBodyV0 = {
+type WriteFlags = {
+  sqlExecuted: false;
+  dbReadExecuted: boolean;
+  dbWriteExecuted: boolean;
+  supabaseReadExecuted: boolean;
+  supabaseWriteExecuted: boolean;
+  activityEventInserted: boolean;
+  valueObjectCreated: false;
+  activityValueObjectLinkCreated: false;
+  actorCreated: false;
+  actorUpdated: false;
+  userCreated: false;
+  userUpdated: false;
+  stateDeltaCreated: false;
+  stateFactCreated: false;
+  stateSnapshotCreated: false;
+};
+
+type ParsedBody = {
   executeSemanticPersistenceWrite: boolean;
   expectedPolicy: string | null;
   acknowledgement: string | null;
@@ -144,7 +140,7 @@ type ParsedWriteBodyV0 = {
   durationMinutes: number | null;
 };
 
-const SPACE_USER_LINK_COLUMNS_V0 = [
+const SPACE_USER_LINK_COLUMNS = [
   "app_user_id",
   "user_id",
   "owner_user_id",
@@ -152,7 +148,7 @@ const SPACE_USER_LINK_COLUMNS_V0 = [
   "created_by",
 ];
 
-const SPACE_PROBE_COLUMNS_V0 = [
+const SPACE_COLUMNS = [
   "id",
   "organization_id",
   "app_user_id",
@@ -168,7 +164,7 @@ const SPACE_PROBE_COLUMNS_V0 = [
   "updated_at",
 ];
 
-const ACTIVITY_EVENTS_PROBE_COLUMNS_V0 = [
+const ACTIVITY_EVENT_COLUMNS = [
   "id",
   "actor_id",
   "space_id",
@@ -198,7 +194,7 @@ const ACTIVITY_EVENTS_PROBE_COLUMNS_V0 = [
   "updated_at",
 ];
 
-const VALUE_OBJECTS_PROBE_COLUMNS_V0 = [
+const VALUE_OBJECT_COLUMNS = [
   "id",
   "actor_id",
   "space_id",
@@ -212,7 +208,7 @@ const VALUE_OBJECTS_PROBE_COLUMNS_V0 = [
   "updated_at",
 ];
 
-const ACTIVITY_VALUE_OBJECT_LINKS_PROBE_COLUMNS_V0 = [
+const ACTIVITY_VALUE_OBJECT_LINK_COLUMNS = [
   "id",
   "activity_event_id",
   "activity_id",
@@ -224,7 +220,7 @@ const ACTIVITY_VALUE_OBJECT_LINKS_PROBE_COLUMNS_V0 = [
   "updated_at",
 ];
 
-const ACTIVITY_STATE_DELTAS_PROBE_COLUMNS_V0 = [
+const ACTIVITY_STATE_DELTA_COLUMNS = [
   "id",
   "activity_event_id",
   "activity_id",
@@ -238,11 +234,7 @@ const ACTIVITY_STATE_DELTAS_PROBE_COLUMNS_V0 = [
 ];
 
 function sanitizeErrorMessage(value: string | null | undefined): string | null {
-  if (!value) {
-    return null;
-  }
-
-  return value.slice(0, 260);
+  return value ? value.slice(0, 260) : null;
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -303,7 +295,7 @@ function buildWrites(params: {
   dbReadExecuted: boolean;
   dbWriteExecuted: boolean;
   activityEventInserted: boolean;
-}): WriteFlagsV0 {
+}): WriteFlags {
   return {
     sqlExecuted: false,
     dbReadExecuted: params.dbReadExecuted,
@@ -327,7 +319,7 @@ async function probeColumn(
   supabase: any,
   table: string,
   column: string
-): Promise<ProbeResultV0> {
+): Promise<ProbeResult> {
   try {
     const { error } = await supabase.from(table).select(column).limit(1);
 
@@ -335,7 +327,6 @@ async function probeColumn(
       return {
         table,
         column,
-        attempted: true,
         exists: false,
         errorCode: error.code ?? "unknown",
         errorMessage: sanitizeErrorMessage(error.message),
@@ -345,7 +336,6 @@ async function probeColumn(
     return {
       table,
       column,
-      attempted: true,
       exists: true,
       errorCode: null,
       errorMessage: null,
@@ -354,7 +344,6 @@ async function probeColumn(
     return {
       table,
       column,
-      attempted: true,
       exists: false,
       errorCode: "unexpected_probe_error",
       errorMessage:
@@ -365,12 +354,12 @@ async function probeColumn(
   }
 }
 
-async function buildTableInventory(
+async function buildInventory(
   supabase: any,
   table: string,
   columns: string[]
-): Promise<TableInventoryV0> {
-  const probes: ProbeResultV0[] = [];
+): Promise<TableInventory> {
+  const probes: ProbeResult[] = [];
 
   for (const column of columns) {
     probes.push(await probeColumn(supabase, table, column));
@@ -393,8 +382,8 @@ async function buildTableInventory(
   };
 }
 
-function selectExistingColumns(
-  inventory: TableInventoryV0,
+function selectColumns(
+  inventory: TableInventory,
   preferredColumns: string[]
 ): string {
   const selected = preferredColumns.filter((column) =>
@@ -408,13 +397,12 @@ function selectExistingColumns(
   return selected.length > 0 ? selected.join(", ") : "id";
 }
 
-async function readAppUserByAuthSubject(
+async function mapAppUser(
   supabase: any,
   trustedAuthSubject: string | null
-): Promise<AppUserMappingV0> {
+): Promise<AppUserMapping> {
   if (!trustedAuthSubject) {
     return {
-      attempted: false,
       outcome: "not_attempted_no_session",
       rowCount: null,
       appUserId: null,
@@ -432,7 +420,6 @@ async function readAppUserByAuthSubject(
 
   if (error) {
     return {
-      attempted: true,
       outcome: "query_error",
       rowCount: null,
       appUserId: null,
@@ -446,7 +433,6 @@ async function readAppUserByAuthSubject(
 
   if (rows.length === 0) {
     return {
-      attempted: true,
       outcome: "not_found",
       rowCount: 0,
       appUserId: null,
@@ -458,7 +444,6 @@ async function readAppUserByAuthSubject(
 
   if (rows.length > 1) {
     return {
-      attempted: true,
       outcome: "duplicate",
       rowCount: rows.length,
       appUserId: null,
@@ -471,7 +456,6 @@ async function readAppUserByAuthSubject(
   const appUserId = readStringProperty(rows[0], "id");
 
   return {
-    attempted: true,
     outcome: appUserId ? "mapped" : "query_error",
     rowCount: rows.length,
     appUserId,
@@ -485,8 +469,8 @@ async function resolveSelectedSpace(params: {
   supabase: any;
   appUserId: string | null;
   selectedSpaceIdSha256Prefix: string | null;
-  spacesInventory: TableInventoryV0;
-}): Promise<SelectedSpaceResolutionV0> {
+  spacesInventory: TableInventory;
+}): Promise<SpaceResolution> {
   if (!params.appUserId) {
     return {
       outcome: "not_attempted_no_app_user",
@@ -496,8 +480,6 @@ async function resolveSelectedSpace(params: {
       selectedSpaceOrganizationIdSha256Prefix: null,
       matchCount: null,
       sourceColumns: [],
-      errorCode: null,
-      errorMessage: null,
     };
   }
 
@@ -510,39 +492,29 @@ async function resolveSelectedSpace(params: {
       selectedSpaceOrganizationIdSha256Prefix: null,
       matchCount: null,
       sourceColumns: [],
-      errorCode: null,
-      errorMessage: null,
     };
   }
 
-  const candidates = new Map<
+  const matches = new Map<
     string,
-    {
-      spaceId: string;
-      organizationId: string | null;
-      sourceColumns: string[];
-    }
+    { spaceId: string; organizationId: string | null; sourceColumns: string[] }
   >();
 
-  const userLinkColumns = SPACE_USER_LINK_COLUMNS_V0.filter((column) =>
+  const availableUserColumns = SPACE_USER_LINK_COLUMNS.filter((column) =>
     params.spacesInventory.existingColumns.includes(column)
   );
 
-  const selectColumns = selectExistingColumns(params.spacesInventory, [
+  const columnsToSelect = selectColumns(params.spacesInventory, [
     "id",
     "organization_id",
-    "app_user_id",
-    "user_id",
-    "owner_user_id",
-    "created_by_user_id",
-    "created_by",
+    ...SPACE_USER_LINK_COLUMNS,
   ]);
 
-  for (const column of userLinkColumns) {
+  for (const column of availableUserColumns) {
     try {
       const { data, error } = await params.supabase
         .from("spaces")
-        .select(selectColumns)
+        .select(columnsToSelect)
         .eq(column, params.appUserId)
         .limit(100);
 
@@ -563,7 +535,7 @@ async function resolveSelectedSpace(params: {
           continue;
         }
 
-        const existing = candidates.get(spaceId);
+        const existing = matches.get(spaceId);
 
         if (existing) {
           if (!existing.sourceColumns.includes(column)) {
@@ -572,7 +544,7 @@ async function resolveSelectedSpace(params: {
           continue;
         }
 
-        candidates.set(spaceId, {
+        matches.set(spaceId, {
           spaceId,
           organizationId: readStringProperty(row, "organization_id"),
           sourceColumns: [column],
@@ -583,9 +555,9 @@ async function resolveSelectedSpace(params: {
     }
   }
 
-  const matches = Array.from(candidates.values());
+  const selectedMatches = Array.from(matches.values());
 
-  if (matches.length === 0) {
+  if (selectedMatches.length === 0) {
     return {
       outcome: "space_not_found",
       selectedSpaceId: null,
@@ -594,26 +566,22 @@ async function resolveSelectedSpace(params: {
       selectedSpaceOrganizationIdSha256Prefix: null,
       matchCount: 0,
       sourceColumns: [],
-      errorCode: null,
-      errorMessage: null,
     };
   }
 
-  if (matches.length > 1) {
+  if (selectedMatches.length > 1) {
     return {
       outcome: "multiple_matching_spaces",
       selectedSpaceId: null,
       selectedSpaceIdSha256Prefix: params.selectedSpaceIdSha256Prefix,
       selectedSpaceOrganizationId: null,
       selectedSpaceOrganizationIdSha256Prefix: null,
-      matchCount: matches.length,
-      sourceColumns: matches.flatMap((match) => match.sourceColumns),
-      errorCode: null,
-      errorMessage: null,
+      matchCount: selectedMatches.length,
+      sourceColumns: selectedMatches.flatMap((match) => match.sourceColumns),
     };
   }
 
-  const selected = matches[0];
+  const selected = selectedMatches[0];
 
   return {
     outcome: "resolved_single_space",
@@ -625,15 +593,13 @@ async function resolveSelectedSpace(params: {
     ),
     matchCount: 1,
     sourceColumns: selected.sourceColumns,
-    errorCode: null,
-    errorMessage: null,
   };
 }
 
 async function resolveActorForSpace(params: {
   supabase: any;
   selectedSpaceId: string | null;
-}): Promise<ActorResolutionV0> {
+}): Promise<ActorResolution> {
   if (!params.selectedSpaceId) {
     return {
       outcome: "not_attempted_no_space",
@@ -710,7 +676,7 @@ async function resolveActorForSpace(params: {
 
 async function buildReadiness(
   selectedSpaceIdSha256Prefix: string | null
-): Promise<FirstSemanticPersistenceReadinessV0> {
+): Promise<Readiness> {
   let session: unknown = null;
   let sessionReadOk = true;
 
@@ -723,36 +689,37 @@ async function buildReadiness(
   const trustedAuthSubject = readAuthSubjectFromSession(session);
   const supabase = getSupabaseAdminClient() as any;
 
-  const [
-    spacesInventory,
-    activityEventsInventory,
-    valueObjectsInventory,
-    activityValueObjectLinksInventory,
-    activityStateDeltasInventory,
-  ] = await Promise.all([
-    buildTableInventory(supabase, "spaces", SPACE_PROBE_COLUMNS_V0),
-    buildTableInventory(
-      supabase,
-      "activity_events",
-      ACTIVITY_EVENTS_PROBE_COLUMNS_V0
-    ),
-    buildTableInventory(supabase, "value_objects", VALUE_OBJECTS_PROBE_COLUMNS_V0),
-    buildTableInventory(
-      supabase,
-      "activity_value_object_links",
-      ACTIVITY_VALUE_OBJECT_LINKS_PROBE_COLUMNS_V0
-    ),
-    buildTableInventory(
-      supabase,
-      "activity_state_deltas",
-      ACTIVITY_STATE_DELTAS_PROBE_COLUMNS_V0
-    ),
-  ]);
-
-  const appUserMapping = await readAppUserByAuthSubject(
+  const spacesInventory = await buildInventory(
     supabase,
-    trustedAuthSubject
+    "spaces",
+    SPACE_COLUMNS
   );
+
+  const activityEventsInventory = await buildInventory(
+    supabase,
+    "activity_events",
+    ACTIVITY_EVENT_COLUMNS
+  );
+
+  const valueObjectsInventory = await buildInventory(
+    supabase,
+    "value_objects",
+    VALUE_OBJECT_COLUMNS
+  );
+
+  const activityValueObjectLinksInventory = await buildInventory(
+    supabase,
+    "activity_value_object_links",
+    ACTIVITY_VALUE_OBJECT_LINK_COLUMNS
+  );
+
+  const activityStateDeltasInventory = await buildInventory(
+    supabase,
+    "activity_state_deltas",
+    ACTIVITY_STATE_DELTA_COLUMNS
+  );
+
+  const appUserMapping = await mapAppUser(supabase, trustedAuthSubject);
 
   const selectedSpaceResolution = await resolveSelectedSpace({
     supabase,
@@ -824,7 +791,6 @@ async function buildReadiness(
       trustedAuthSubjectSha256Prefix: hashDiagnosticValue(trustedAuthSubject),
     },
     appUserMapping: {
-      attempted: appUserMapping.attempted,
       outcome: appUserMapping.outcome,
       rowCount: appUserMapping.rowCount,
       appUserIdSha256Prefix: appUserMapping.appUserIdSha256Prefix,
@@ -839,8 +805,6 @@ async function buildReadiness(
         selectedSpaceResolution.selectedSpaceOrganizationIdSha256Prefix,
       matchCount: selectedSpaceResolution.matchCount,
       sourceColumns: selectedSpaceResolution.sourceColumns,
-      errorCode: selectedSpaceResolution.errorCode,
-      errorMessage: selectedSpaceResolution.errorMessage,
     },
     actorResolution: {
       outcome: actorResolution.outcome,
@@ -862,7 +826,37 @@ async function buildReadiness(
       semanticWriteGateStillRequiresExplicitPostConfirmation: true,
       firstWriteTarget: "activity_events",
       valueObjectWritesEnabledNow: false,
-      activityValueObjectLinkWritesEnif (!isRecord(body)) {
+      activityValueObjectLinkWritesEnabledNow: false,
+      stateWritesEnabledNow: false,
+      blockers,
+      positiveSignals,
+    },
+    raw: {
+      appUserId: appUserMapping.appUserId,
+      selectedSpaceId: selectedSpaceResolution.selectedSpaceId,
+      selectedSpaceOrganizationId:
+        selectedSpaceResolution.selectedSpaceOrganizationId,
+      actorId: actorResolution.actorId,
+    },
+  };
+}
+
+function publicReadiness(readiness: Readiness): PublicReadiness {
+  return {
+    policy: readiness.policy,
+    mode: readiness.mode,
+    selectedSpaceIdSha256Prefix: readiness.selectedSpaceIdSha256Prefix,
+    auth0Session: readiness.auth0Session,
+    appUserMapping: readiness.appUserMapping,
+    selectedSpaceResolution: readiness.selectedSpaceResolution,
+    actorResolution: readiness.actorResolution,
+    targetInventories: readiness.targetInventories,
+    readinessDecision: readiness.readinessDecision,
+  };
+}
+
+function parseWriteBody(body: unknown): ParsedBody {
+  if (!isRecord(body)) {
     return {
       executeSemanticPersistenceWrite: false,
       expectedPolicy: null,
@@ -895,7 +889,7 @@ async function buildReadiness(
 
 function addIfColumnExists(params: {
   payload: Record<string, string | number>;
-  inventory: TableInventoryV0;
+  inventory: TableInventory;
   column: string;
   value: string | number | null;
 }) {
@@ -909,7 +903,7 @@ function addIfColumnExists(params: {
 }
 
 function buildActivityEventPayload(params: {
-  readiness: FirstSemanticPersistenceReadinessV0;
+  readiness: Readiness;
   inputText: string;
   inputLanguage: string;
   durationMinutes: number | null;
