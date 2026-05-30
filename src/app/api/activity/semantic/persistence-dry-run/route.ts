@@ -2,6 +2,7 @@
 
 import { buildSemanticPersistenceDryRunRouteV0 } from "../../../../../../lib/activity/categoryDerivation/semanticPersistenceDryRunRouteContractV0";
 import { buildSemanticServerAuthOwnershipDryRunContextV0 } from "../../../../../../lib/activity/categoryDerivation/semanticServerAuthOwnershipDryRunContextV0";
+import type { SemanticPersistenceRouteIntentV0 } from "../../../../../../lib/activity/categoryDerivation/semanticPersistenceRouteGateContractV0";
 import { runSemanticPreviewPipelineV0 } from "../../../../../../lib/activity/categoryDerivation/semanticPreviewPipelineV0";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,14 @@ type SemanticPersistenceDryRunBodyV0 = {
   authenticatedUserId?: unknown;
   actorId?: unknown;
   rlsVerificationToken?: unknown;
+};
+
+type SemanticPersistenceDryRunDefaultsV0 = {
+  inputText: string;
+  durationMinutes: number;
+  inputLanguage: string;
+  requestedIntent: SemanticPersistenceRouteIntentV0;
+  requestedTargetKey: string;
 };
 
 function asString(value: unknown): string | null {
@@ -49,12 +58,28 @@ function asDurationMinutes(value: unknown): number | null {
   return null;
 }
 
-function buildDefaultDryRunBody(): Required<
-  Pick<
-    SemanticPersistenceDryRunBodyV0,
-    "inputText" | "durationMinutes" | "inputLanguage" | "requestedIntent" | "requestedTargetKey"
-  >
-> {
+function asIntent(
+  value: unknown,
+  fallback: SemanticPersistenceRouteIntentV0
+): SemanticPersistenceRouteIntentV0 {
+  const text = asString(value);
+
+  if (
+    text === "persist_activity_event" ||
+    text === "persist_category_resolution" ||
+    text === "persist_value_object_candidate" ||
+    text === "persist_activity_value_object_link" ||
+    text === "persist_state_delta_candidate" ||
+    text === "execute_review_action" ||
+    text === "unknown"
+  ) {
+    return text;
+  }
+
+  return fallback;
+}
+
+function buildDefaultDryRunBody(): SemanticPersistenceDryRunDefaultsV0 {
   return {
     inputText: "учил ребёнка математике 30 минут",
     durationMinutes: 30,
@@ -74,7 +99,7 @@ export async function GET() {
     method: "POST",
     policy: "semantic_persistence_dry_run_route_skeleton_v0",
     mode: "dry_run_only_no_write",
-    countdownBeforeFirstDbWrite: "4/4",
+    countdownBeforeFirstDbWrite: "3/4",
     serverAuthOwnershipContext,
     exampleBody: buildDefaultDryRunBody(),
     writes: {
@@ -112,18 +137,19 @@ export async function POST(request: Request) {
 
   const defaults = buildDefaultDryRunBody();
 
-  const inputText = asString(body.inputText) ?? defaults.inputText;
-  const durationMinutes =
-    asDurationMinutes(body.durationMinutes) ??
-    (defaults.durationMinutes as number);
-  const inputLanguage = asString(body.inputLanguage) ?? defaults.inputLanguage;
-  const p4Step =
+  const inputText: string = asString(body.inputText) ?? defaults.inputText;
+  const durationMinutes: number =
+    asDurationMinutes(body.durationMinutes) ?? defaults.durationMinutes;
+  const inputLanguage: string =
+    asString(body.inputLanguage) ?? defaults.inputLanguage;
+  const p4Step: string =
     asString(body.p4Step) ??
     "C8-I-IMPLEMENT-28-SEMANTIC-PERSISTENCE-DRY-RUN";
-
-  const requestedIntent =
-    asString(body.requestedIntent) ?? defaults.requestedIntent;
-  const requestedTargetKey =
+  const requestedIntent: SemanticPersistenceRouteIntentV0 = asIntent(
+    body.requestedIntent,
+    defaults.requestedIntent
+  );
+  const requestedTargetKey: string =
     asString(body.requestedTargetKey) ?? defaults.requestedTargetKey;
   const requestedActionKey = asString(body.requestedActionKey);
   const userConfirmed = asBoolean(body.userConfirmed);
@@ -158,7 +184,7 @@ export async function POST(request: Request) {
     endpoint: "/api/activity/semantic/persistence-dry-run",
     policy: dryRun.policy,
     mode: dryRun.mode,
-    countdownBeforeFirstDbWrite: "4/4",
+    countdownBeforeFirstDbWrite: "3/4",
     dryRunOnly: dryRun.dryRunOnly,
     canWriteNow: dryRun.canWriteNow,
     sqlAllowedNow: dryRun.sqlAllowedNow,
