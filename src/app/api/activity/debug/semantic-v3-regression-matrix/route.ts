@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 
 import { buildSemanticPersistenceDryRunRouteV0 } from "../../../../../../lib/activity/categoryDerivation/semanticPersistenceDryRunRouteContractV0";
+import { buildSemanticServerAuthReadinessGateV0 } from "../../../../../../lib/activity/categoryDerivation/semanticServerAuthReadinessGateV0";
 import {
   runSemanticPreviewPipelineV0,
   type SemanticPreviewPipelineResultV0,
@@ -80,6 +81,33 @@ type DryRunSmokeResultV0 = {
       reviewActionPersisted: false;
       stateFactCreated: false;
       stateDeltaCreated: false;
+      stateSnapshotCreated: false;
+    };
+  };
+};
+
+type ServerAuthReadinessSmokeResultV0 = {
+  ok: boolean;
+  failures: string[];
+  actual: {
+    policy: string;
+    readyForRealPersistence: boolean;
+    canOpenWriteGate: boolean;
+    canTrustClientIdentity: boolean;
+    serverAuthenticatedUserAvailable: boolean;
+    serverActorResolutionAvailable: boolean;
+    serverRlsVerificationAvailable: boolean;
+    sqlAllowedNow: boolean;
+    supabaseInsertAllowedNow: boolean;
+    blockers: number;
+    writes: {
+      sqlExecuted: false;
+      dbWriteExecuted: false;
+      activityEventInserted: false;
+      valueObjectCreated: false;
+      activityValueObjectLinkCreated: false;
+      stateDeltaCreated: false;
+      stateFactCreated: false;
       stateSnapshotCreated: false;
     };
   };
@@ -278,7 +306,7 @@ function evaluateCase(testCase: RegressionCaseV0): RegressionCaseResultV0 {
     inputText: testCase.inputText,
     durationMinutes: testCase.durationMinutes,
     inputLanguage: testCase.inputLanguage,
-    p4Step: "C8-I-IMPLEMENT-20-FIX-REGRESSION-MATRIX",
+    p4Step: "C8-I-IMPLEMENT-22-REGRESSION-MATRIX",
   });
 
   const valueObjectKeys = preview.valueObjectCandidates.map(
@@ -407,7 +435,7 @@ function evaluateDryRunSmoke(): DryRunSmokeResultV0 {
     inputText: "учил ребёнка математике 30 минут",
     durationMinutes: 30,
     inputLanguage: "ru",
-    p4Step: "C8-I-IMPLEMENT-20-FIX-DRY-RUN-SMOKE",
+    p4Step: "C8-I-IMPLEMENT-22-DRY-RUN-SMOKE",
   });
 
   const dryRun = buildSemanticPersistenceDryRunRouteV0({
@@ -563,21 +591,130 @@ function evaluateDryRunSmoke(): DryRunSmokeResultV0 {
   };
 }
 
+function evaluateServerAuthReadinessSmoke(): ServerAuthReadinessSmokeResultV0 {
+  const failures: string[] = [];
+
+  const gate = buildSemanticServerAuthReadinessGateV0({
+    clientProvidedAuthenticatedUserId: "client-user-untrusted",
+    clientProvidedActorId: "client-actor-untrusted",
+    clientProvidedOrganizationId: "client-organization-untrusted",
+    clientProvidedRlsVerificationToken: "client-rls-token-untrusted",
+    requestedIntent: "persist_value_object_candidate",
+    requestedTargetKey: "vo:personal:child-learning-support",
+  });
+
+  if (gate.policy !== "semantic_server_auth_integration_design_gate_v0") {
+    failures.push("Missing semantic_server_auth_integration_design_gate_v0 policy.");
+  }
+
+  if (gate.readyForRealPersistence !== false) {
+    failures.push("readyForRealPersistence must be false.");
+  }
+
+  if (gate.canOpenWriteGate !== false) {
+    failures.push("canOpenWriteGate must be false.");
+  }
+
+  if (gate.canTrustClientIdentity !== false) {
+    failures.push("canTrustClientIdentity must be false.");
+  }
+
+  if (gate.serverAuthenticatedUserAvailable !== false) {
+    failures.push("serverAuthenticatedUserAvailable must be false.");
+  }
+
+  if (gate.serverActorResolutionAvailable !== false) {
+    failures.push("serverActorResolutionAvailable must be false.");
+  }
+
+  if (gate.serverRlsVerificationAvailable !== false) {
+    failures.push("serverRlsVerificationAvailable must be false.");
+  }
+
+  if (gate.sqlAllowedNow !== false) {
+    failures.push("sqlAllowedNow must be false.");
+  }
+
+  if (gate.supabaseInsertAllowedNow !== false) {
+    failures.push("supabaseInsertAllowedNow must be false.");
+  }
+
+  if (gate.canCreateStateFactNow !== false) {
+    failures.push("canCreateStateFactNow must be false.");
+  }
+
+  if (gate.writes.sqlExecuted !== false) {
+    failures.push("gate.writes.sqlExecuted must be false.");
+  }
+
+  if (gate.writes.dbWriteExecuted !== false) {
+    failures.push("gate.writes.dbWriteExecuted must be false.");
+  }
+
+  if (gate.writes.activityEventInserted !== false) {
+    failures.push("gate.writes.activityEventInserted must be false.");
+  }
+
+  if (gate.writes.valueObjectCreated !== false) {
+    failures.push("gate.writes.valueObjectCreated must be false.");
+  }
+
+  if (gate.writes.activityValueObjectLinkCreated !== false) {
+    failures.push("gate.writes.activityValueObjectLinkCreated must be false.");
+  }
+
+  if (gate.writes.stateDeltaCreated !== false) {
+    failures.push("gate.writes.stateDeltaCreated must be false.");
+  }
+
+  if (gate.writes.stateFactCreated !== false) {
+    failures.push("gate.writes.stateFactCreated must be false.");
+  }
+
+  if (gate.writes.stateSnapshotCreated !== false) {
+    failures.push("gate.writes.stateSnapshotCreated must be false.");
+  }
+
+  return {
+    ok: failures.length === 0,
+    failures,
+    actual: {
+      policy: gate.policy,
+      readyForRealPersistence: gate.readyForRealPersistence,
+      canOpenWriteGate: gate.canOpenWriteGate,
+      canTrustClientIdentity: gate.canTrustClientIdentity,
+      serverAuthenticatedUserAvailable: gate.serverAuthenticatedUserAvailable,
+      serverActorResolutionAvailable: gate.serverActorResolutionAvailable,
+      serverRlsVerificationAvailable: gate.serverRlsVerificationAvailable,
+      sqlAllowedNow: gate.sqlAllowedNow,
+      supabaseInsertAllowedNow: gate.supabaseInsertAllowedNow,
+      blockers: gate.blockers.length,
+      writes: gate.writes,
+    },
+  };
+}
+
 function runRegressionMatrixV0() {
   const results = REGRESSION_CASES_V0.map(evaluateCase);
   const dryRunSmoke = evaluateDryRunSmoke();
+  const serverAuthReadinessSmoke = evaluateServerAuthReadinessSmoke();
 
   const failed = results.filter((result) => !result.ok);
   const dryRunSmokeFailed = !dryRunSmoke.ok;
+  const serverAuthReadinessSmokeFailed = !serverAuthReadinessSmoke.ok;
 
   return {
-    ok: failed.length === 0 && !dryRunSmokeFailed,
+    ok:
+      failed.length === 0 &&
+      !dryRunSmokeFailed &&
+      !serverAuthReadinessSmokeFailed,
     matrix: "semantic_preview_regression_matrix_v0",
     mode: "read_only_regression",
     caseCount: results.length,
     passedCount: results.length - failed.length,
     failedCount: failed.length,
     dryRunSmoke,
+    serverAuthReadinessSmoke,
     results,
     writes: {
       sqlExecuted: false,
@@ -591,6 +728,9 @@ function runRegressionMatrixV0() {
       dryRunRouteDbWriteExecuted: false,
       dryRunRouteStateDeltaCreated: false,
       dryRunRouteStateFactCreated: false,
+      serverAuthGateDbWriteExecuted: false,
+      serverAuthGateStateFactCreated: false,
+      serverAuthGateStateDeltaCreated: false,
     },
   };
 }
