@@ -7,7 +7,7 @@ import { getSupabaseAdminClient } from "../../../../../../lib/supabase/admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-type SupabaseAdminClientV0 = ReturnType<typeof getSupabaseAdminClient>;
+type JsonRecord = Record<string, unknown>;
 
 type ProbeResultV0 = {
   table: string;
@@ -47,8 +47,7 @@ type SelectedSpaceResolutionV0 = {
     | "missing_selected_space_scope"
     | "resolved_single_space"
     | "space_not_found"
-    | "multiple_matching_spaces"
-    | "query_error";
+    | "multiple_matching_spaces";
   selectedSpaceId: string | null;
   selectedSpaceIdSha256Prefix: string | null;
   selectedSpaceOrganizationId: string | null;
@@ -72,6 +71,24 @@ type ActorResolutionV0 = {
   actorIdAvailableForFutureWriteGate: boolean;
   errorCode: string | null;
   errorMessage: string | null;
+};
+
+type WriteFlagsV0 = {
+  sqlExecuted: false;
+  dbReadExecuted: boolean;
+  dbWriteExecuted: boolean;
+  supabaseReadExecuted: boolean;
+  supabaseWriteExecuted: boolean;
+  activityEventInserted: boolean;
+  valueObjectCreated: false;
+  activityValueObjectLinkCreated: false;
+  actorCreated: false;
+  actorUpdated: false;
+  userCreated: false;
+  userUpdated: false;
+  stateDeltaCreated: false;
+  stateFactCreated: false;
+  stateSnapshotCreated: false;
 };
 
 type FirstSemanticPersistenceReadinessV0 = {
@@ -115,23 +132,7 @@ type FirstSemanticPersistenceReadinessV0 = {
   };
 };
 
-type WriteFlagsV0 = {
-  sqlExecuted: false;
-  dbReadExecuted: boolean;
-  dbWriteExecuted: boolean;
-  supabaseReadExecuted: boolean;
-  supabaseWriteExecuted: boolean;
-  activityEventInserted: boolean;
-  valueObjectCreated: false;
-  activityValueObjectLinkCreated: false;
-  actorCreated: false;
-  actorUpdated: false;
-  userCreated: false;
-  userUpdated: false;
-  stateDeltaCreated: false;
-  stateFactCreated: false;
-  stateSnapshotCreated: false;
-};
+type PublicReadinessV0 = Omit<FirstSemanticPersistenceReadinessV0, "raw">;
 
 type ParsedWriteBodyV0 = {
   executeSemanticPersistenceWrite: boolean;
@@ -185,8 +186,6 @@ const ACTIVITY_EVENTS_PROBE_COLUMNS_V0 = [
   "source",
   "source_type",
   "status",
-  "type",
-  "activity_type",
   "duration_minutes",
   "duration_min",
   "minutes",
@@ -246,7 +245,7 @@ function sanitizeErrorMessage(value: string | null | undefined): string | null {
   return value.slice(0, 260);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null;
 }
 
@@ -258,6 +257,18 @@ function readStringProperty(value: unknown, key: string): string | null {
   const fieldValue = value[key];
 
   return typeof fieldValue === "string" && fieldValue.length > 0
+    ? fieldValue
+    : null;
+}
+
+function readNumberProperty(value: unknown, key: string): number | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const fieldValue = value[key];
+
+  return typeof fieldValue === "number" && Number.isFinite(fieldValue)
     ? fieldValue
     : null;
 }
@@ -288,20 +299,6 @@ function hashDiagnosticValue(value: unknown): string | null {
     .slice(0, 16);
 }
 
-function readNumberProperty(value: unknown, key: string): number | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const fieldValue = value[key];
-
-  if (typeof fieldValue !== "number" || Number.isNaN(fieldValue)) {
-    return null;
-  }
-
-  return fieldValue;
-}
-
 function buildWrites(params: {
   dbReadExecuted: boolean;
   dbWriteExecuted: boolean;
@@ -327,7 +324,7 @@ function buildWrites(params: {
 }
 
 async function probeColumn(
-  supabase: SupabaseAdminClientV0,
+  supabase: any,
   table: string,
   column: string
 ): Promise<ProbeResultV0> {
@@ -369,7 +366,7 @@ async function probeColumn(
 }
 
 async function buildTableInventory(
-  supabase: SupabaseAdminClientV0,
+  supabase: any,
   table: string,
   columns: string[]
 ): Promise<TableInventoryV0> {
@@ -412,7 +409,7 @@ function selectExistingColumns(
 }
 
 async function readAppUserByAuthSubject(
-  supabase: SupabaseAdminClientV0,
+  supabase: any,
   trustedAuthSubject: string | null
 ): Promise<AppUserMappingV0> {
   if (!trustedAuthSubject) {
@@ -445,7 +442,7 @@ async function readAppUserByAuthSubject(
     };
   }
 
-  const rows = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+  const rows = Array.isArray(data) ? (data as JsonRecord[]) : [];
 
   if (rows.length === 0) {
     return {
@@ -485,7 +482,7 @@ async function readAppUserByAuthSubject(
 }
 
 async function resolveSelectedSpace(params: {
-  supabase: SupabaseAdminClientV0;
+  supabase: any;
   appUserId: string | null;
   selectedSpaceIdSha256Prefix: string | null;
   spacesInventory: TableInventoryV0;
@@ -542,41 +539,47 @@ async function resolveSelectedSpace(params: {
   ]);
 
   for (const column of userLinkColumns) {
-    const { data, error } = await params.supabase
-      .from("spaces")
-      .select(selectColumns)
-      .eq(column, params.appUserId)
-      .limit(50);
+    try {
+      const { data, error } = await params.supabase
+        .from("spaces")
+        .select(selectColumns)
+        .eq(column, params.appUserId)
+        .limit(100);
 
-    if (error) {
+      if (error) {
+        continue;
+      }
+
+      const rows = Array.isArray(data) ? (data as JsonRecord[]) : [];
+
+      for (const row of rows) {
+        const spaceId = readStringProperty(row, "id");
+
+        if (!spaceId) {
+          continue;
+        }
+
+        if (hashDiagnosticValue(spaceId) !== params.selectedSpaceIdSha256Prefix) {
+          continue;
+        }
+
+        const existing = candidates.get(spaceId);
+
+        if (existing) {
+          if (!existing.sourceColumns.includes(column)) {
+            existing.sourceColumns.push(column);
+          }
+          continue;
+        }
+
+        candidates.set(spaceId, {
+          spaceId,
+          organizationId: readStringProperty(row, "organization_id"),
+          sourceColumns: [column],
+        });
+      }
+    } catch {
       continue;
-    }
-
-    const rows = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
-
-    for (const row of rows) {
-      const spaceId = readStringProperty(row, "id");
-
-      if (!spaceId) {
-        continue;
-      }
-
-      if (hashDiagnosticValue(spaceId) !== params.selectedSpaceIdSha256Prefix) {
-        continue;
-      }
-
-      const existing = candidates.get(spaceId);
-
-      if (existing) {
-        existing.sourceColumns.push(column);
-        continue;
-      }
-
-      candidates.set(spaceId, {
-        spaceId,
-        organizationId: readStringProperty(row, "organization_id"),
-        sourceColumns: [column],
-      });
     }
   }
 
@@ -628,7 +631,7 @@ async function resolveSelectedSpace(params: {
 }
 
 async function resolveActorForSpace(params: {
-  supabase: SupabaseAdminClientV0;
+  supabase: any;
   selectedSpaceId: string | null;
 }): Promise<ActorResolutionV0> {
   if (!params.selectedSpaceId) {
@@ -647,7 +650,7 @@ async function resolveActorForSpace(params: {
     .from("actor_space_roles")
     .select("id, actor_id, space_id")
     .eq("space_id", params.selectedSpaceId)
-    .limit(10);
+    .limit(20);
 
   if (error) {
     return {
@@ -661,7 +664,7 @@ async function resolveActorForSpace(params: {
     };
   }
 
-  const rows = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+  const rows = Array.isArray(data) ? (data as JsonRecord[]) : [];
   const actorIds = Array.from(
     new Set(
       rows
@@ -718,7 +721,7 @@ async function buildReadiness(
   }
 
   const trustedAuthSubject = readAuthSubjectFromSession(session);
-  const supabase = getSupabaseAdminClient();
+  const supabase = getSupabaseAdminClient() as any;
 
   const [
     spacesInventory,
@@ -859,23 +862,7 @@ async function buildReadiness(
       semanticWriteGateStillRequiresExplicitPostConfirmation: true,
       firstWriteTarget: "activity_events",
       valueObjectWritesEnabledNow: false,
-      activityValueObjectLinkWritesEnabledNow: false,
-      stateWritesEnabledNow: false,
-      blockers,
-      positiveSignals,
-    },
-    raw: {
-      appUserId: appUserMapping.appUserId,
-      selectedSpaceId: selectedSpaceResolution.selectedSpaceId,
-      selectedSpaceOrganizationId:
-        selectedSpaceResolution.selectedSpaceOrganizationId,
-      actorId: actorResolution.actorId,
-    },
-  };
-}
-
-function parseWriteBody(body: unknown): ParsedWriteBodyV0 {
-  if (!isRecord(body)) {
+      activityValueObjectLinkWritesEnif (!isRecord(body)) {
     return {
       executeSemanticPersistenceWrite: false,
       expectedPolicy: null,
@@ -892,10 +879,43 @@ function parseWriteBody(body: unknown): ParsedWriteBodyV0 {
     "C31-C first semantic persistence write probe";
 
   return {
-    etionMinutes: number | null;
-}): Record<string, string | number | null> {
+    executeSemanticPersistenceWrite:
+      body.executeSemanticPersistenceWrite === true,
+    expectedPolicy: readStringProperty(body, "expectedPolicy"),
+    acknowledgement: readStringProperty(body, "acknowledgement"),
+    selectedSpaceIdSha256Prefix: readStringProperty(
+      body,
+      "selectedSpaceIdSha256Prefix"
+    ),
+    inputText: inputText.slice(0, 500),
+    inputLanguage: readStringProperty(body, "inputLanguage") ?? "en",
+    durationMinutes: readNumberProperty(body, "durationMinutes"),
+  };
+}
+
+function addIfColumnExists(params: {
+  payload: Record<string, string | number>;
+  inventory: TableInventoryV0;
+  column: string;
+  value: string | number | null;
+}) {
+  if (
+    params.value !== null &&
+    params.value !== undefined &&
+    params.inventory.existingColumns.includes(params.column)
+  ) {
+    params.payload[params.column] = params.value;
+  }
+}
+
+function buildActivityEventPayload(params: {
+  readiness: FirstSemanticPersistenceReadinessV0;
+  inputText: string;
+  inputLanguage: string;
+  durationMinutes: number | null;
+}): Record<string, string | number> {
   const inventory = params.readiness.targetInventories.activityEvents;
-  const payload: Record<string, string | number | null> = {};
+  const payload: Record<string, string | number> = {};
   const now = new Date().toISOString();
   const title = params.inputText.slice(0, 140);
 
@@ -945,7 +965,13 @@ function parseWriteBody(body: unknown): ParsedWriteBodyV0 {
     addIfColumnExists({ payload, inventory, column, value: title });
   }
 
-  for (const column of ["description", "comment", "note", "input_text", "raw_text"]) {
+  for (const column of [
+    "description",
+    "comment",
+    "note",
+    "input_text",
+    "raw_text",
+  ]) {
     addIfColumnExists({
       payload,
       inventory,
@@ -970,15 +996,6 @@ function parseWriteBody(body: unknown): ParsedWriteBodyV0 {
     value: "completed",
   });
 
-  for (const column of ["type", "activity_type"]) {
-    addIfColumnExists({
-      payload,
-      inventory,
-      column,
-      value: "semantic_persistence_probe",
-    });
-  }
-
   for (const column of ["input_language", "language"]) {
     addIfColumnExists({
       payload,
@@ -999,7 +1016,13 @@ function parseWriteBody(body: unknown): ParsedWriteBodyV0 {
     }
   }
 
-  for (const column of ["occurred_at", "started_at", "created_at", "updated_at"]) {
+  for (const column of [
+    "occurred_at",
+    "started_at",
+    "ended_at",
+    "created_at",
+    "updated_at",
+  ]) {
     addIfColumnExists({
       payload,
       inventory,
@@ -1009,22 +1032,6 @@ function parseWriteBody(body: unknown): ParsedWriteBodyV0 {
   }
 
   return payload;
-}
-
-function publicReadiness(
-  readiness: FirstSemanticPersistenceReadinessV0
-): Omit<FirstSemanticPersistenceReadinessV0, "raw"> {
-  return {
-    policy: readiness.policy,
-    mode: readiness.mode,
-    selectedSpaceIdSha256Prefix: readiness.selectedSpaceIdSha256Prefix,
-    auth0Session: readiness.auth0Session,
-    appUserMapping: readiness.appUserMapping,
-    selectedSpaceResolution: readiness.selectedSpaceResolution,
-    actorResolution: readiness.actorResolution,
-    targetInventories: readiness.targetInventories,
-    readinessDecision: readiness.readinessDecision,
-  };
 }
 
 export async function GET(request: Request) {
@@ -1170,9 +1177,10 @@ export async function POST(request: Request) {
     });
   }
 
-  const insertResult = await (getSupabaseAdminClient().from(
-    "activity_events"
-  ) as any)
+  const supabase = getSupabaseAdminClient() as any;
+
+  const insertResult = await supabase
+    .from("activity_events")
     .insert(payload)
     .select("id")
     .single();
