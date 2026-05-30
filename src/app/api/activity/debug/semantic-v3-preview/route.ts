@@ -3,6 +3,18 @@
 import { runSemanticPreviewPipelineV0 } from "../../../../../../lib/activity/categoryDerivation/semanticPreviewPipelineV0";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const ENDPOINT = "/api/activity/debug/semantic-v3-preview";
+const ROUTE_CONTRACT_VERSION = "semantic_v3_preview_route_contract_v0";
+const READINESS_MODE = "route_contract_readiness_no_pipeline_execution";
+const PREVIEW_MODE = "read_only_preview_post_body_no_db_write";
+const PIPELINE = "semantic_preview_pipeline_v0";
+const ENRICHMENT = "deterministic_text_enrichment_v0";
+const RESOLVER = "semantic_bundle_resolver_v0";
+const VALUE_OBJECT_POLICY = "value_object_candidate_policy_v0";
+const EXPOSURE_POLICY = "activity_value_object_exposure_v0";
+const STATE_DELTA_POLICY = "state_delta_candidate_policy_v0";
 
 type SemanticV3PreviewBody = {
   inputText?: unknown;
@@ -13,6 +25,22 @@ type SemanticV3PreviewBody = {
   inputLanguage?: unknown;
   detectedLanguage?: unknown;
 };
+
+function buildReadOnlyWrites() {
+  return {
+    sqlExecuted: false,
+    dbReadExecuted: false,
+    dbWriteExecuted: false,
+    supabaseReadExecuted: false,
+    supabaseWriteExecuted: false,
+    activityEventInserted: false,
+    valueObjectCreated: false,
+    activityValueObjectLinkCreated: false,
+    stateFactCreated: false,
+    stateDeltaCreated: false,
+    stateSnapshotCreated: false,
+  };
+}
 
 function asString(value: unknown): string | null {
   if (typeof value !== "string") {
@@ -86,29 +114,39 @@ function buildPreviewInput(body: SemanticV3PreviewBody):
 export async function GET() {
   return NextResponse.json({
     ok: true,
-    endpoint: "/api/activity/debug/semantic-v3-preview",
-    method: "POST",
-    mode: "read_only_preview",
-    pipeline: "semantic_preview_pipeline_v0",
-    enrichment: "deterministic_text_enrichment_v0",
-    resolver: "semantic_bundle_resolver_v0",
-    valueObjectPolicy: "value_object_candidate_policy_v0",
-    exposurePolicy: "activity_value_object_exposure_v0",
-    stateDeltaPolicy: "state_delta_candidate_policy_v0",
-    writes: {
-      sqlExecuted: false,
-      dbWriteExecuted: false,
-      activityEventInserted: false,
-      valueObjectCreated: false,
-      activityValueObjectLinkCreated: false,
-      stateFactCreated: false,
-      stateDeltaCreated: false,
-      stateSnapshotCreated: false,
+    endpoint: ENDPOINT,
+    routeContractVersion: ROUTE_CONTRACT_VERSION,
+    policy: ROUTE_CONTRACT_VERSION,
+    mode: READINESS_MODE,
+    routeMode: PREVIEW_MODE,
+    supportedMethods: ["GET", "POST"],
+    methodSemantics: {
+      GET: "Returns this route contract, example payload, and no-write policy. It does not run the semantic preview pipeline.",
+      POST: "Runs deterministic semantic preview pipeline from request body. It is read-only and must not write to DB or create state facts/deltas/snapshots.",
     },
+    pipeline: PIPELINE,
+    enrichment: ENRICHMENT,
+    resolver: RESOLVER,
+    valueObjectPolicy: VALUE_OBJECT_POLICY,
+    exposurePolicy: EXPOSURE_POLICY,
+    stateDeltaPolicy: STATE_DELTA_POLICY,
+    writes: buildReadOnlyWrites(),
     example: {
+      method: "POST",
       inputText: "учил ребёнка математике 30 минут",
       durationMinutes: 30,
       inputLanguage: "ru",
+    },
+    validation: {
+      requiredAnyOf: ["inputText", "naturalInput"],
+      optionalFields: [
+        "title",
+        "description",
+        "durationMinutes",
+        "inputLanguage",
+        "detectedLanguage",
+      ],
+      durationMinutes: "number >= 0 when provided",
     },
   });
 }
@@ -122,7 +160,12 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
+        endpoint: ENDPOINT,
+        routeContractVersion: ROUTE_CONTRACT_VERSION,
+        policy: ROUTE_CONTRACT_VERSION,
+        mode: PREVIEW_MODE,
         error: "Invalid JSON body.",
+        writes: buildReadOnlyWrites(),
       },
       { status: 400 }
     );
@@ -134,7 +177,12 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
+        endpoint: ENDPOINT,
+        routeContractVersion: ROUTE_CONTRACT_VERSION,
+        policy: ROUTE_CONTRACT_VERSION,
+        mode: PREVIEW_MODE,
         error: input.error,
+        writes: buildReadOnlyWrites(),
       },
       { status: 400 }
     );
@@ -146,12 +194,30 @@ export async function POST(request: Request) {
     description: input.description,
     durationMinutes: input.durationMinutes,
     inputLanguage: input.inputLanguage,
-    p4Step: "C8-I-IMPLEMENT-10-FIX",
+    p4Step: "C33-C-PREVIEW-ROUTE-CONTRACT",
   });
 
   return NextResponse.json({
-    endpoint: "/api/activity/debug/semantic-v3-preview",
-    pipeline: "semantic_preview_pipeline_v0",
+    endpoint: ENDPOINT,
+    routeContractVersion: ROUTE_CONTRACT_VERSION,
+    policy: ROUTE_CONTRACT_VERSION,
+    mode: PREVIEW_MODE,
+    method: "POST",
+    pipeline: PIPELINE,
+    enrichment: ENRICHMENT,
+    resolver: RESOLVER,
+    valueObjectPolicy: VALUE_OBJECT_POLICY,
+    exposurePolicy: EXPOSURE_POLICY,
+    stateDeltaPolicy: STATE_DELTA_POLICY,
+    submittedInput: {
+      inputText: input.inputText,
+      title: input.title,
+      description: input.description,
+      durationMinutes: input.durationMinutes,
+      inputLanguage: input.inputLanguage,
+    },
+    preview: result,
     ...result,
+    writes: result.writes,
   });
 }
