@@ -195,7 +195,7 @@ async function resolveSelectedSpace(params: {
     try {
       const { data, error } = await params.supabase
         .from("spaces")
-        .select("id, organization_id")
+        .select("id")
         .eq(column, params.appUserId)
         .limit(100);
 
@@ -227,7 +227,7 @@ async function resolveSelectedSpace(params: {
 
         matches.set(spaceId, {
           spaceId,
-          organizationId: readStringProperty(row, "organization_id"),
+          organizationId: null,
           sourceColumns: [column],
         });
       }
@@ -634,3 +634,4 @@ export async function GET(request: Request) {
       : "Stop and inspect verification blockers before any further semantic writes.",
   });
 }
+
