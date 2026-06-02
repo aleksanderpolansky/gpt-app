@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 
@@ -19,6 +19,14 @@ import { SubmittedActivityPanel } from "./submitted-activity-panel";
 import { ValueObjectCandidatePanel } from "./value-object-candidate-panel";
 import type { LocalParserResult } from "./activity-capture-types";
 import { mapValueObjectCandidates } from "./activity-value-object-mapper";
+import { ActivityReviewCard, ActivityReviewEmptyState, ActivityReviewFixturePreviewSwitch, defaultActivityReviewFixture, normalizeLocalParserResultToReviewPackage } from "../activity-review";
+
+export const ACTIVITY_REVIEW_CONNECTED_TO_ACTIVITY_CAPTURE =
+  "ACTIVITY_REVIEW_CONNECTED_TO_ACTIVITY_CAPTURE" as const;
+
+export const ACTIVITY_REVIEW_FIXTURE_PREVIEW_SWITCH_CONNECTED =
+  "ACTIVITY_REVIEW_FIXTURE_PREVIEW_SWITCH_CONNECTED" as const;
+
 
 export const ACTIVITY_CAPTURE_PANEL_CREATED =
   "ACTIVITY_CAPTURE_PANEL_CREATED" as const;
@@ -64,10 +72,99 @@ function createLocalPreview(rawText: string): LocalParserResult {
     unknownTermCandidates,
     explanation: [
       ...baseResult.explanation,
-      "Local submit handler собрал preview только в React state.",
-      "Category candidates, Value Object candidates и privacy hints не являются подтверждёнными фактами.",
+      "Local submit handler ÑÐ¾Ð±Ñ€Ð°Ð» preview Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð² React state.",
+      "Category candidates, Value Object candidates Ð¸ privacy hints Ð½Ðµ ÑÐ²Ð»ÑÑŽÑ‚ÑÑ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´Ñ‘Ð½Ð½Ñ‹Ð¼Ð¸ Ñ„Ð°ÐºÑ‚Ð°Ð¼Ð¸.",
     ],
   };
+}
+
+interface ActivityReviewPreviewSlotProps {
+  parserResult: LocalParserResult | null;
+}
+
+function ActivityReviewPreviewSlot({
+  parserResult,
+}: ActivityReviewPreviewSlotProps) {
+  const [showFixtureReview, setShowFixtureReview] = useState<boolean>(true);
+
+  return (
+    <div
+      className="space-y-4 lg:col-span-2"
+      data-ui5-review-connection="activity-review-card"
+      data-ui5-visible-review-slot="activity-review-preview-slot"
+    >
+      <ActivityReviewFixturePreviewSwitch
+        isEnabled={showFixtureReview}
+        onToggle={() =>
+          setShowFixtureReview((currentValue: boolean) => !currentValue)
+        }
+        fixtureLabel={defaultActivityReviewFixture.normalizedActivity.title}
+      />
+
+      {parserResult !== null ? (
+        <ActivityReviewCard
+          reviewPackage={normalizeLocalParserResultToReviewPackage(parserResult)}
+          title="Ð¯ Ð¿Ð¾Ð½ÑÐ» ÑÑ‚Ð¾ Ñ‚Ð°Ðº"
+          description="Ð­Ñ‚Ð¾ local-only review package: candidate, not truth. ÐšÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÐ° Ð½Ð¸Ñ‡ÐµÐ³Ð¾ Ð½Ðµ ÑÐ¾Ñ…Ñ€Ð°Ð½ÑÐµÑ‚, Ð½Ðµ ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ Activity Event Ð¸ Ð½Ðµ Ð²Ñ‹Ð¿Ð¾Ð»Ð½ÑÐµÑ‚ DB write."
+        />
+      ) : showFixtureReview ? (
+        <ActivityReviewCard
+          reviewPackage={defaultActivityReviewFixture}
+          title="Fixture preview: Ð¯ Ð¿Ð¾Ð½ÑÐ» ÑÑ‚Ð¾ Ñ‚Ð°Ðº"
+          description="Ð­Ñ‚Ð¾ Ð´ÐµÐ¼Ð¾Ð½ÑÑ‚Ñ€Ð°Ñ†Ð¸Ð¾Ð½Ð½Ñ‹Ð¹ local-only fixture package. ÐžÐ½ Ð½ÑƒÐ¶ÐµÐ½ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð´Ð»Ñ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸ UI Ð¸ Ð½Ðµ ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ Activity Event, Value Objects Ð¸Ð»Ð¸ DB write."
+        />
+      ) : (
+        <ActivityReviewEmptyState />
+      )}
+    </div>
+  );
+}
+
+function ActivityReviewForcedVisibleSlot() {
+  return (
+    <section
+      className="space-y-4 rounded-3xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-900 dark:bg-indigo-950"
+      data-ui5-review-connection="activity-review-card"
+      data-ui5-visible-review-slot="activity-review-preview-slot"
+      aria-label="Visible UI-5 Activity Review preview slot"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-700 dark:text-indigo-200">
+            UI-5 Activity Review
+          </p>
+          <h2 className="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+            Review card will appear here
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-200">
+            Visible manual-QA slot: local-only candidate package. No hidden writes.
+            No Activity Event. No Value Objects creation. No DB write.
+          </p>
+        </div>
+
+        <span className="inline-flex shrink-0 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-slate-950 dark:text-emerald-200">
+          UI5 visible
+        </span>
+      </div>
+
+      <ActivityReviewFixturePreviewSwitch
+        isEnabled={true}
+        onToggle={() => undefined}
+        fixtureLabel={defaultActivityReviewFixture.normalizedActivity.title}
+      />
+
+      <ActivityReviewCard
+        reviewPackage={defaultActivityReviewFixture}
+        title="Fixture preview: Ð¯ Ð¿Ð¾Ð½ÑÐ» ÑÑ‚Ð¾ Ñ‚Ð°Ðº"
+        description="Ð­Ñ‚Ð¾ Ð´ÐµÐ¼Ð¾Ð½ÑÑ‚Ñ€Ð°Ñ†Ð¸Ð¾Ð½Ð½Ñ‹Ð¹ local-only fixture package. ÐžÐ½ Ð½ÑƒÐ¶ÐµÐ½ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð´Ð»Ñ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸ UI Ð¸ Ð½Ðµ ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ Activity Event, Value Objects Ð¸Ð»Ð¸ DB write."
+      />
+
+      <ActivityReviewEmptyState
+        title="Review card will appear here"
+        description="Ð­Ñ‚Ð¾Ñ‚ fallback Ð¾ÑÑ‚Ð°Ñ‘Ñ‚ÑÑ Ð²Ð¸Ð´Ð¸Ð¼Ñ‹Ð¼ Ð¼Ð°Ñ€ÐºÐµÑ€Ð¾Ð¼ UI-5.33 visual QA: local-only, No hidden writes, no Activity Event, no DB write."
+      />
+    </section>
+  );
 }
 
 function ActivityCapturePanelShellStatus() {
@@ -112,6 +209,7 @@ function LocalSubmitPreviewSummary({
 
   return (
     <div className="flex flex-col gap-4">
+
       <SubmittedActivityPanel
         draft={parserResult.draft}
         normalizedTitle={parserResult.normalizedTitle}
@@ -185,17 +283,17 @@ function LocalSubmitPreviewSummary({
   );
 }
 
-export function ActivityCapturePanel() {
+function ActivityCapturePanelInner() {
   const [inputValue, setInputValue] = useState("");
   const [parserResult, setParserResult] = useState<LocalParserResult | null>(null);
-  const trimmedInputValue = inputValue.trim();
+const trimmedInputValue = inputValue.trim();
 
   const localPreviewStatus = useMemo(() => {
     if (!parserResult) {
-      return "Empty state · waiting for activity";
+      return "Empty state Â· waiting for activity";
     }
 
-    return `Preview ready · ${parserResult.categoryCandidates.length} categories · ${parserResult.valueObjectCandidates.length} Value Objects`;
+    return `Preview ready Â· ${parserResult.categoryCandidates.length} categories Â· ${parserResult.valueObjectCandidates.length} Value Objects`;
   }, [parserResult]);
 
   function handlePreviewClick() {
@@ -238,16 +336,16 @@ export function ActivityCapturePanel() {
                 id="activity-capture-title"
                 className="text-xl font-semibold tracking-tight text-slate-950"
               >
-                Запись активности
+                Ð—Ð°Ð¿Ð¸ÑÑŒ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸
               </h2>
 
               <p
                 id="activity-capture-description"
                 className="mt-2 max-w-2xl text-sm leading-6 text-slate-600"
               >
-                Пользователь вводит активность, а UI показывает локальный draft
-                preview, категории-кандидаты, Value Object candidates, privacy
-                hints и объяснение без сохранения данных.
+                ÐŸÐ¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ Ð²Ð²Ð¾Ð´Ð¸Ñ‚ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ, Ð° UI Ð¿Ð¾ÐºÐ°Ð·Ñ‹Ð²Ð°ÐµÑ‚ Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½Ñ‹Ð¹ draft
+                preview, ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ð¸-ÐºÐ°Ð½Ð´Ð¸Ð´Ð°Ñ‚Ñ‹, Value Object candidates, privacy
+                hints Ð¸ Ð¾Ð±ÑŠÑÑÐ½ÐµÐ½Ð¸Ðµ Ð±ÐµÐ· ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ñ Ð´Ð°Ð½Ð½Ñ‹Ñ….
               </p>
             </div>
 
@@ -323,12 +421,12 @@ export function ActivityCapturePanel() {
           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-sm font-semibold text-amber-900">
-                Важное ограничение UI-4
+                Ð’Ð°Ð¶Ð½Ð¾Ðµ Ð¾Ð³Ñ€Ð°Ð½Ð¸Ñ‡ÐµÐ½Ð¸Ðµ UI-4
               </p>
 
               <p className="mt-1 text-sm leading-6 text-amber-800">
-                Этот блок показывает только локальный draft и candidates. Он не
-                создаёт Activity Event, не создаёт Value Object и не принимает
+                Ð­Ñ‚Ð¾Ñ‚ Ð±Ð»Ð¾Ðº Ð¿Ð¾ÐºÐ°Ð·Ñ‹Ð²Ð°ÐµÑ‚ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½Ñ‹Ð¹ draft Ð¸ candidates. ÐžÐ½ Ð½Ðµ
+                ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ Activity Event, Ð½Ðµ ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ Value Object Ð¸ Ð½Ðµ Ð¿Ñ€Ð¸Ð½Ð¸Ð¼Ð°ÐµÑ‚
                 privacy decisions.
               </p>
             </div>
@@ -346,3 +444,24 @@ export function ActivityCapturePanel() {
     </section>
   );
 }
+
+
+
+
+
+
+
+
+export function ActivityCapturePanel() {
+  return (
+    <>
+      <div data-ui5-visible-review-slot-mounted="activity-review-preview-slot">
+        <ActivityReviewForcedVisibleSlot />
+      </div>
+
+      <ActivityCapturePanelInner />
+    </>
+  );
+}
+export const ACTIVITY_REVIEW_PREVIEW_SLOT_COMPONENT =
+  ActivityReviewPreviewSlot;
