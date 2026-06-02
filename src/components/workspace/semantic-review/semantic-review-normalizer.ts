@@ -1,4 +1,4 @@
-﻿import {
+import {
   defaultSemanticReviewPanelState,
   defaultSemanticReviewQueue,
   semanticReviewEmptyState,

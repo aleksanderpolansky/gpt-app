@@ -1,4 +1,4 @@
-﻿export const SEMANTIC_REVIEW_ACTIVITY_BRIDGE_CREATED = true as const;
+export const SEMANTIC_REVIEW_ACTIVITY_BRIDGE_CREATED = true as const;
 
 export interface SemanticReviewActivityBridgeProps {
   href?: string;

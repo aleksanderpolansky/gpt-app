@@ -1,4 +1,4 @@
-﻿export const SEMANTIC_REVIEW_WORKSPACE_ENTRY_CREATED = true as const;
+export const SEMANTIC_REVIEW_WORKSPACE_ENTRY_CREATED = true as const;
 
 export interface SemanticReviewWorkspaceEntryProps {
   href?: string;

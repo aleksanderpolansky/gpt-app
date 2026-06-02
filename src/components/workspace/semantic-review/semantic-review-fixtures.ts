@@ -1,4 +1,4 @@
-﻿import type { ReviewActionAvailability } from "../activity-review";
+import type { ReviewActionAvailability } from "../activity-review";
 
 import type {
   SemanticExternalConceptHint,

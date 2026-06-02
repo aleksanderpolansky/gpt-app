@@ -1,4 +1,4 @@
-﻿import { CategoryResolutionCard } from "./category-resolution-card";
+import { CategoryResolutionCard } from "./category-resolution-card";
 import { ExternalConceptHintCard } from "./external-concept-hint-card";
 import { LocalMatchesList } from "./local-matches-list";
 import { MergeDialog } from "./merge-dialog";
@@ -258,4 +258,3 @@ export function NeedsReviewQueue({
     </section>
   );
 }
-

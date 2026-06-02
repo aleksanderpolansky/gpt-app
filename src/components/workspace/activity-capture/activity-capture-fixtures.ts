@@ -1,4 +1,4 @@
-﻿import type { ActivityDomain } from "./activity-capture-types";
+import type { ActivityDomain } from "./activity-capture-types";
 
 export const ACTIVITY_CAPTURE_FIXTURES_CREATED =
   "ACTIVITY_CAPTURE_FIXTURES_CREATED" as const;

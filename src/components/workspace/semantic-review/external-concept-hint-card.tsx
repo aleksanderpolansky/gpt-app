@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   SemanticExternalConceptHint,
   SemanticReviewConfidence,
 } from "./semantic-review-types";
@@ -189,4 +189,3 @@ export function ExternalConceptHintCard({
     </section>
   );
 }
-

@@ -1,4 +1,4 @@
-﻿import {
+import {
   SemanticReviewPanel,
   defaultSemanticReviewQueue,
 } from "../../../components/workspace/semantic-review";

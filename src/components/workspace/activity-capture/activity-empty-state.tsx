@@ -1,4 +1,4 @@
-﻿import type { ActivityCaptureExamplePrompt } from "./activity-capture-fixtures";
+import type { ActivityCaptureExamplePrompt } from "./activity-capture-fixtures";
 
 export const ACTIVITY_CAPTURE_EMPTY_STATE_CREATED =
   "ACTIVITY_CAPTURE_EMPTY_STATE_CREATED" as const;

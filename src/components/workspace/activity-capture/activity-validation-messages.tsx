@@ -1,4 +1,4 @@
-﻿export const ACTIVITY_CAPTURE_VALIDATION_CREATED =
+export const ACTIVITY_CAPTURE_VALIDATION_CREATED =
   "ACTIVITY_CAPTURE_VALIDATION_CREATED" as const;
 
 export interface ActivityValidationMessagesProps {

@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   SemanticConceptCandidateKind,
   SemanticLocalMatch,
 } from "./semantic-review-types";
@@ -269,4 +269,3 @@ export function LocalMatchesList({
     </section>
   );
 }
-

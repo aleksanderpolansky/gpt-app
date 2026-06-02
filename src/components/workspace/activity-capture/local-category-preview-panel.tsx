@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   LocalCategoryCandidate,
   UnknownTermCandidate,
 } from "./activity-capture-types";

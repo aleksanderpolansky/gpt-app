@@ -1,4 +1,4 @@
-﻿import type { LocalActivityDraft } from "./activity-capture-types";
+import type { LocalActivityDraft } from "./activity-capture-types";
 
 export const SUBMITTED_ACTIVITY_PANEL_CREATED =
   "SUBMITTED_ACTIVITY_PANEL_CREATED" as const;

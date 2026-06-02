@@ -1,4 +1,4 @@
-﻿export const ACTIVITY_CAPTURE_A11Y_ADDED =
+export const ACTIVITY_CAPTURE_A11Y_ADDED =
   "ACTIVITY_CAPTURE_A11Y_ADDED" as const;
 
 export interface ActivityAccessibilityNotesProps {

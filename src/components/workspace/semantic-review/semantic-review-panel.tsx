@@ -1,4 +1,4 @@
-﻿import { NeedsReviewQueue } from "./needs-review-queue";
+import { NeedsReviewQueue } from "./needs-review-queue";
 import {
   SemanticReviewBlockedState,
   SemanticReviewEmptyState,

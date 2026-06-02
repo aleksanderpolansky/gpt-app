@@ -1,4 +1,4 @@
-﻿import type { PrivacyHint } from "./activity-capture-types";
+import type { PrivacyHint } from "./activity-capture-types";
 
 export const PRIVACY_HINTS_PANEL_CREATED =
   "PRIVACY_HINTS_PANEL_CREATED" as const;

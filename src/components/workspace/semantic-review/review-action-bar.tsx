@@ -1,4 +1,4 @@
-﻿import {
+import {
   buildSemanticReviewActionPolicy,
   getPrimarySemanticReviewAction,
   getSecondarySemanticReviewActions,
@@ -249,4 +249,3 @@ export function ReviewActionBar({
     </section>
   );
 }
-

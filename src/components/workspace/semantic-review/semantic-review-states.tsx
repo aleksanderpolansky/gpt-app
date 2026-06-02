@@ -1,4 +1,4 @@
-﻿import type { ReactNode } from "react";
+import type { ReactNode } from "react";
 
 export const SEMANTIC_REVIEW_STATES_CREATED = true as const;
 

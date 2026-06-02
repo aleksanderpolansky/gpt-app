@@ -1,4 +1,4 @@
-﻿export const SEMANTIC_REVIEW_EXPORTS_CREATED = true as const;
+export const SEMANTIC_REVIEW_EXPORTS_CREATED = true as const;
 export const SEMANTIC_REVIEW_INDEX_EXPORTS_UPDATED = true as const;
 
 export * from "./semantic-review-types";

@@ -1,4 +1,4 @@
-﻿export const ACTIVITY_CAPTURE_PREVIEW_ACTIONS_CREATED =
+export const ACTIVITY_CAPTURE_PREVIEW_ACTIONS_CREATED =
   "ACTIVITY_CAPTURE_PREVIEW_ACTIONS_CREATED" as const;
 
 export interface ActivityPreviewActionRowProps {

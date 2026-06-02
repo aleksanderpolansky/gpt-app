@@ -1,4 +1,4 @@
-﻿import {
+import {
   buildSemanticReviewActionPolicy,
   getSemanticReviewActionPolicyReason,
 } from "./semantic-review-action-policy";

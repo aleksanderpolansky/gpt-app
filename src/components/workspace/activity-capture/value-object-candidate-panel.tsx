@@ -1,4 +1,4 @@
-﻿import type { ValueObjectCandidate } from "./activity-capture-types";
+import type { ValueObjectCandidate } from "./activity-capture-types";
 
 export const VALUE_OBJECT_CANDIDATE_PANEL_CREATED =
   "VALUE_OBJECT_CANDIDATE_PANEL_CREATED" as const;

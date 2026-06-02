@@ -1,4 +1,4 @@
-﻿export const ACTIVITY_CAPTURE_TYPES_CREATED =
+export const ACTIVITY_CAPTURE_TYPES_CREATED =
   "ACTIVITY_CAPTURE_TYPES_CREATED" as const;
 
 export type LocalActivityStatus = "draft" | "preview";
