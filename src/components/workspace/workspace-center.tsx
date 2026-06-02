@@ -1,4 +1,4 @@
-﻿/**
+/**
  * UI-3.11 — CenterWorkspace flex-1 / p-5.
  * UI-3.12 — Greeting / context header connected.
  * UI-3.13 — KPI strip connected through UI-kit metric primitive.
@@ -28,6 +28,7 @@ import {
   workspaceTimelineFixture,
 } from "./workspace-fixtures";
 
+import { ActivityCapturePanel } from "./activity-capture/activity-capture-panel";
 import { WorkspaceActivityReviewPanel } from "./workspace-activity-review-panel";
 import { WorkspaceContextHeader } from "./workspace-context-header";
 import { WorkspaceFilterToolbar } from "./workspace-filter-toolbar";
@@ -63,6 +64,9 @@ function CenterSectionLabel({ children }: { readonly children: ReactNode }) {
   );
 }
 
+export const ACTIVITY_CAPTURE_CONNECTED_TO_WORKSPACE_CENTER =
+  "ACTIVITY_CAPTURE_CONNECTED_TO_WORKSPACE_CENTER" as const;
+
 export function WorkspaceCenter() {
   return (
     <section className="min-h-0 flex-1 overflow-y-auto p-5">
@@ -80,6 +84,26 @@ export function WorkspaceCenter() {
       <WorkspaceOverviewCards />
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+        <div
+          data-ui4-activity-capture="local-mvp"
+          className="rounded-[28px] border border-indigo-100 bg-gradient-to-br from-white via-indigo-50/40 to-white p-4 shadow-sm"
+        >
+          <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">
+                UI-4 Activity Capture
+              </p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Local MVP connected inside workspace center. Draft preview only:
+                no Activity Event, no DB write, no API call.
+              </p>
+            </div>
+            <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+              Local MVP connected
+            </span>
+          </div>
+          <ActivityCapturePanel />
+        </div>
         <WorkspaceActivityReviewPanel />
 
         <article className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
