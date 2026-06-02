@@ -1,4 +1,4 @@
-export const ACTIVITY_REVIEW_EMPTY_STATE_CREATED =
+﻿export const ACTIVITY_REVIEW_EMPTY_STATE_CREATED =
   "ACTIVITY_REVIEW_EMPTY_STATE_CREATED" as const;
 
 interface ActivityReviewEmptyStateProps {

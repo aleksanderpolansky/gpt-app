@@ -1,4 +1,4 @@
-/**
+﻿/**
  * UI-3.11 — CenterWorkspace flex-1 / p-5.
  * UI-3.12 — Greeting / context header connected.
  * UI-3.13 — KPI strip connected through UI-kit metric primitive.
@@ -35,6 +35,16 @@ import { WorkspaceFilterToolbar } from "./workspace-filter-toolbar";
 import { WorkspaceKpiStrip } from "./workspace-kpi-strip";
 import { WorkspaceOverviewCards } from "./workspace-overview-cards";
 import { WorkspaceStatePlaceholders } from "./workspace-state-placeholders";
+import {
+  SemanticReviewActivityBridge,
+  SemanticReviewWorkspaceEntry,
+} from "./semantic-review";
+
+export const UI6_SEMANTIC_REVIEW_WORKSPACE_ENTRY_CONNECTED =
+  "UI6_SEMANTIC_REVIEW_WORKSPACE_ENTRY_CONNECTED" as const;
+
+export const UI6_SEMANTIC_REVIEW_ACTIVITY_BRIDGE_CONNECTED =
+  "UI6_SEMANTIC_REVIEW_ACTIVITY_BRIDGE_CONNECTED" as const;
 
 export const WORKSPACE_CENTER_RESULT = "WORKSPACE_CENTER_CREATED" as const;
 
@@ -105,6 +115,10 @@ export function WorkspaceCenter() {
           <ActivityCapturePanel />
         </div>
         <WorkspaceActivityReviewPanel />
+
+      <SemanticReviewActivityBridge />
+
+      <SemanticReviewWorkspaceEntry />
 
         <article className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
           <CenterSectionLabel>Timeline preview</CenterSectionLabel>

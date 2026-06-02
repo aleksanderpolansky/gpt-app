@@ -1,4 +1,4 @@
-import type { LinkedValueObjectCandidate } from "./activity-review-types";
+﻿import type { LinkedValueObjectCandidate } from "./activity-review-types";
 
 export const LINKED_VALUE_OBJECTS_SECTION_CREATED =
   "LINKED_VALUE_OBJECTS_SECTION_CREATED" as const;

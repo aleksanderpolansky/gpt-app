@@ -1,4 +1,4 @@
-import type { ReviewAction, ReviewActionFeedback } from "./activity-review-types";
+﻿import type { ReviewAction, ReviewActionFeedback } from "./activity-review-types";
 import {
   countHiddenReviewActions,
   getVisibleReviewActions,

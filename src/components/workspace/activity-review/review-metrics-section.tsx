@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   ReviewConfidence,
   ReviewMetric,
 } from "./activity-review-types";

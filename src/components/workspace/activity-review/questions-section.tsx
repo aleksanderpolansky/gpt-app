@@ -1,4 +1,4 @@
-import type { ReviewQuestion } from "./activity-review-types";
+﻿import type { ReviewQuestion } from "./activity-review-types";
 import {
   countHiddenReviewQuestions,
   getReviewQuestionsRecommendation,

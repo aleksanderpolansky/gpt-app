@@ -1,4 +1,4 @@
-import type { ReviewNormalizedActivity } from "./activity-review-types";
+﻿import type { ReviewNormalizedActivity } from "./activity-review-types";
 
 export const NORMALIZED_ACTIVITY_SECTION_CREATED =
   "NORMALIZED_ACTIVITY_SECTION_CREATED" as const;

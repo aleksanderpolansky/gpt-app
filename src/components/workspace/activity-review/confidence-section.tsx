@@ -1,4 +1,4 @@
-import type { ReviewPackage } from "./activity-review-types";
+﻿import type { ReviewPackage } from "./activity-review-types";
 import {
   buildReviewConfidenceAssessment,
   getReviewConfidenceSummary,

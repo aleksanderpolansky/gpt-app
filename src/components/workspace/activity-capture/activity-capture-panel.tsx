@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 
@@ -72,8 +72,8 @@ function createLocalPreview(rawText: string): LocalParserResult {
     unknownTermCandidates,
     explanation: [
       ...baseResult.explanation,
-      "Local submit handler ÑÐ¾Ð±Ñ€Ð°Ð» preview Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð² React state.",
-      "Category candidates, Value Object candidates Ð¸ privacy hints Ð½Ðµ ÑÐ²Ð»ÑÑŽÑ‚ÑÑ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´Ñ‘Ð½Ð½Ñ‹Ð¼Ð¸ Ñ„Ð°ÐºÑ‚Ð°Ð¼Ð¸.",
+      "Local submit handler собрал preview только в React state.",
+      "Category candidates, Value Object candidates и privacy hints не являются подтверждёнными фактами.",
     ],
   };
 }
@@ -104,14 +104,14 @@ function ActivityReviewPreviewSlot({
       {parserResult !== null ? (
         <ActivityReviewCard
           reviewPackage={normalizeLocalParserResultToReviewPackage(parserResult)}
-          title="Ð¯ Ð¿Ð¾Ð½ÑÐ» ÑÑ‚Ð¾ Ñ‚Ð°Ðº"
-          description="Ð­Ñ‚Ð¾ local-only review package: candidate, not truth. ÐšÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÐ° Ð½Ð¸Ñ‡ÐµÐ³Ð¾ Ð½Ðµ ÑÐ¾Ñ…Ñ€Ð°Ð½ÑÐµÑ‚, Ð½Ðµ ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ Activity Event Ð¸ Ð½Ðµ Ð²Ñ‹Ð¿Ð¾Ð»Ð½ÑÐµÑ‚ DB write."
+          title="Я понял это так"
+          description="Это local-only review package: candidate, not truth. Карточка ничего не сохраняет, не создаёт Activity Event и не выполняет DB write."
         />
       ) : showFixtureReview ? (
         <ActivityReviewCard
           reviewPackage={defaultActivityReviewFixture}
-          title="Fixture preview: Ð¯ Ð¿Ð¾Ð½ÑÐ» ÑÑ‚Ð¾ Ñ‚Ð°Ðº"
-          description="Ð­Ñ‚Ð¾ Ð´ÐµÐ¼Ð¾Ð½ÑÑ‚Ñ€Ð°Ñ†Ð¸Ð¾Ð½Ð½Ñ‹Ð¹ local-only fixture package. ÐžÐ½ Ð½ÑƒÐ¶ÐµÐ½ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð´Ð»Ñ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸ UI Ð¸ Ð½Ðµ ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ Activity Event, Value Objects Ð¸Ð»Ð¸ DB write."
+          title="Fixture preview: Я понял это так"
+          description="Это демонстрационный local-only fixture package. Он нужен только для проверки UI и не создаёт Activity Event, Value Objects или DB write."
         />
       ) : (
         <ActivityReviewEmptyState />
@@ -155,13 +155,13 @@ function ActivityReviewForcedVisibleSlot() {
 
       <ActivityReviewCard
         reviewPackage={defaultActivityReviewFixture}
-        title="Fixture preview: Ð¯ Ð¿Ð¾Ð½ÑÐ» ÑÑ‚Ð¾ Ñ‚Ð°Ðº"
-        description="Ð­Ñ‚Ð¾ Ð´ÐµÐ¼Ð¾Ð½ÑÑ‚Ñ€Ð°Ñ†Ð¸Ð¾Ð½Ð½Ñ‹Ð¹ local-only fixture package. ÐžÐ½ Ð½ÑƒÐ¶ÐµÐ½ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð´Ð»Ñ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸ UI Ð¸ Ð½Ðµ ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ Activity Event, Value Objects Ð¸Ð»Ð¸ DB write."
+        title="Fixture preview: Я понял это так"
+        description="Это демонстрационный local-only fixture package. Он нужен только для проверки UI и не создаёт Activity Event, Value Objects или DB write."
       />
 
       <ActivityReviewEmptyState
         title="Review card will appear here"
-        description="Ð­Ñ‚Ð¾Ñ‚ fallback Ð¾ÑÑ‚Ð°Ñ‘Ñ‚ÑÑ Ð²Ð¸Ð´Ð¸Ð¼Ñ‹Ð¼ Ð¼Ð°Ñ€ÐºÐµÑ€Ð¾Ð¼ UI-5.33 visual QA: local-only, No hidden writes, no Activity Event, no DB write."
+        description="Этот fallback остаётся видимым маркером UI-5.33 visual QA: local-only, No hidden writes, no Activity Event, no DB write."
       />
     </section>
   );
@@ -290,10 +290,10 @@ const trimmedInputValue = inputValue.trim();
 
   const localPreviewStatus = useMemo(() => {
     if (!parserResult) {
-      return "Empty state Â· waiting for activity";
+      return "Empty state · waiting for activity";
     }
 
-    return `Preview ready Â· ${parserResult.categoryCandidates.length} categories Â· ${parserResult.valueObjectCandidates.length} Value Objects`;
+    return `Preview ready · ${parserResult.categoryCandidates.length} categories · ${parserResult.valueObjectCandidates.length} Value Objects`;
   }, [parserResult]);
 
   function handlePreviewClick() {
@@ -336,16 +336,16 @@ const trimmedInputValue = inputValue.trim();
                 id="activity-capture-title"
                 className="text-xl font-semibold tracking-tight text-slate-950"
               >
-                Ð—Ð°Ð¿Ð¸ÑÑŒ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸
+                Запись активности
               </h2>
 
               <p
                 id="activity-capture-description"
                 className="mt-2 max-w-2xl text-sm leading-6 text-slate-600"
               >
-                ÐŸÐ¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ Ð²Ð²Ð¾Ð´Ð¸Ñ‚ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ, Ð° UI Ð¿Ð¾ÐºÐ°Ð·Ñ‹Ð²Ð°ÐµÑ‚ Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½Ñ‹Ð¹ draft
-                preview, ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ð¸-ÐºÐ°Ð½Ð´Ð¸Ð´Ð°Ñ‚Ñ‹, Value Object candidates, privacy
-                hints Ð¸ Ð¾Ð±ÑŠÑÑÐ½ÐµÐ½Ð¸Ðµ Ð±ÐµÐ· ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ñ Ð´Ð°Ð½Ð½Ñ‹Ñ….
+                Пользователь вводит активность, а UI показывает локальный draft
+                preview, категории-кандидаты, Value Object candidates, privacy
+                hints и объяснение без сохранения данных.
               </p>
             </div>
 
@@ -421,12 +421,12 @@ const trimmedInputValue = inputValue.trim();
           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-sm font-semibold text-amber-900">
-                Ð’Ð°Ð¶Ð½Ð¾Ðµ Ð¾Ð³Ñ€Ð°Ð½Ð¸Ñ‡ÐµÐ½Ð¸Ðµ UI-4
+                Важное ограничение UI-4
               </p>
 
               <p className="mt-1 text-sm leading-6 text-amber-800">
-                Ð­Ñ‚Ð¾Ñ‚ Ð±Ð»Ð¾Ðº Ð¿Ð¾ÐºÐ°Ð·Ñ‹Ð²Ð°ÐµÑ‚ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½Ñ‹Ð¹ draft Ð¸ candidates. ÐžÐ½ Ð½Ðµ
-                ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ Activity Event, Ð½Ðµ ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ Value Object Ð¸ Ð½Ðµ Ð¿Ñ€Ð¸Ð½Ð¸Ð¼Ð°ÐµÑ‚
+                Этот блок показывает только локальный draft и candidates. Он не
+                создаёт Activity Event, не создаёт Value Object и не принимает
                 privacy decisions.
               </p>
             </div>

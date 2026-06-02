@@ -1,4 +1,4 @@
-import type { ReviewChip } from "./activity-review-types";
+﻿import type { ReviewChip } from "./activity-review-types";
 import {
   countHiddenReviewChips,
   getReviewChipSummary,

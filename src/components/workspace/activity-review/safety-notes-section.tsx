@@ -1,4 +1,4 @@
-import type { ReviewSafetyNote } from "./activity-review-types";
+﻿import type { ReviewSafetyNote } from "./activity-review-types";
 
 export const SAFETY_NOTES_SECTION_CREATED =
   "SAFETY_NOTES_SECTION_CREATED" as const;

@@ -1,4 +1,4 @@
-import type { ReviewRawActivity } from "./activity-review-types";
+﻿import type { ReviewRawActivity } from "./activity-review-types";
 
 export const RAW_ACTIVITY_SECTION_CREATED =
   "RAW_ACTIVITY_SECTION_CREATED" as const;
