@@ -41,3 +41,10 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+# Local AI-NAVIGATOR development artifacts
+*_RESULT.txt
+*_CONTEXT.txt
+*.bak.*
+_local_artifacts/
+_glossary_stage1_inventory_*/
+_glossary_stage1_inventory_*.zip

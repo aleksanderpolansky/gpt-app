@@ -1,5 +1,4 @@
-﻿import { ContextualAIColumn, getContextForRoute } from "../../../components/workspace/contextual-ai";
-import {
+﻿import {
   SemanticReviewPanel,
   defaultSemanticReviewQueue,
 } from "../../../components/workspace/semantic-review";
@@ -16,11 +15,9 @@ const routeSafetyStatements = [
 ] as const;
 
 export default function SemanticReviewRoutePage() {
-    const semanticReviewAIContext = getContextForRoute("/semantic/review");
-
   return (
-    <div className="grid min-h-0 gap-4 xl:grid-cols-3">
-      <div className="min-w-0 xl:col-span-2">
+    <div className="min-h-0">
+      <div className="min-w-0">
         <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-950 dark:bg-slate-900 dark:text-slate-50 sm:px-6 lg:px-8">
               <div className="mx-auto max-w-7xl space-y-5">
                 <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
@@ -80,13 +77,9 @@ export default function SemanticReviewRoutePage() {
               </div>
             </main>
       </div>
-
-      <ContextualAIColumn
-        context={semanticReviewAIContext}
-        className="hidden xl:flex"
-      />
-    </div>
+</div>
   );
 }
+
 
 

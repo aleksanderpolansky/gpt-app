@@ -1,5 +1,4 @@
-﻿import { ContextualAIColumn, getContextForRoute } from "../../components/workspace/contextual-ai";
-import { auth0 } from "../../../lib/auth0";
+﻿import { auth0 } from "../../../lib/auth0";
 import { supabase } from "../../../lib/supabase";
 import LocalDateTime from "../../components/LocalDateTime";
 
@@ -540,12 +539,9 @@ export default async function MyPurchaseConfirmationsPage() {
                         organization?.organization_name ?? "ÐŸÑ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ðµ";
                       const statusStyle = getStatusStyle(item.status);
                       const auditHref = `/purchase-confirmations/${item.id}/events`;
-
-                                            const buyerConfirmationsAIContext = getContextForRoute("/buyer-confirmations");
-
                       return (
-                        <div key={ui15ConfirmationKeyIndex} className="grid min-h-0 gap-4 xl:grid-cols-3">
-                          <div className="min-w-0 xl:col-span-2">
+                        <div key={ui15ConfirmationKeyIndex} className="min-h-0">
+                          <div className="min-w-0">
                             <tr
                                                       key={item.id}
                                                       style={{ borderTop: "1px solid #eeeeee" }}
@@ -663,12 +659,7 @@ export default async function MyPurchaseConfirmationsPage() {
                                                       </td>
                                                     </tr>
                           </div>
-
-                          <ContextualAIColumn
-                            context={buyerConfirmationsAIContext}
-                            className="hidden xl:flex"
-                          />
-                        </div>
+</div>
                       );
                     })}
                   </tbody>
@@ -681,3 +672,4 @@ export default async function MyPurchaseConfirmationsPage() {
     </main>
   );
 }
+

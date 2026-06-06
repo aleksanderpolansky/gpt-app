@@ -1,5 +1,4 @@
-﻿import { ContextualAIColumn, getContextForRoute } from "@/components/workspace/contextual-ai";
-import {
+﻿import {
   createTodayTimelineViewModel,
   TodayTimeline,
   todayTimelineDefaultFixture,
@@ -7,30 +6,17 @@ import {
 
 export default function TodayPage() {
   const viewModel = createTodayTimelineViewModel(todayTimelineDefaultFixture);
-
-  const todayAIContext = getContextForRoute("/today");
-
-
   return (
 
-    <div className="grid min-h-0 gap-4 xl:grid-cols-3">
+    <div className="min-h-0">
 
-      <div className="min-w-0 xl:col-span-2">
+      <div className="min-w-0">
 
         <TodayTimeline viewModel={viewModel} />
 
       </div>
-
-
-      <ContextualAIColumn
-
-        context={todayAIContext}
-
-        className="hidden xl:flex"
-
-      />
-
-    </div>
+</div>
 
   );
 }
+

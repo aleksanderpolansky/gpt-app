@@ -1,5 +1,4 @@
-﻿import { ContextualAIColumn, getContextForRoute } from "../../components/workspace/contextual-ai";
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 
 import type { CommercialCoreViewModel } from "../../components/workspace/commercial-core";
 import {
@@ -27,20 +26,14 @@ const buyerConfirmationsCommercialViewModel: CommercialCoreViewModel = {
 };
 
 export default function PurchaseConfirmationsPage() {
-    const sellerConfirmationsAIContext = getContextForRoute("/seller-confirmations");
-
   return (
-    <div className="grid min-h-0 gap-4 xl:grid-cols-3">
-      <div className="min-w-0 xl:col-span-2">
+    <div className="min-h-0">
+      <div className="min-w-0">
         <CommercialDashboardComposer viewModel={buyerConfirmationsCommercialViewModel} />
       </div>
-
-      <ContextualAIColumn
-        context={sellerConfirmationsAIContext}
-        className="hidden xl:flex"
-      />
-    </div>
+</div>
   );
 }
+
 
 

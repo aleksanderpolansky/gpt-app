@@ -1,5 +1,4 @@
-﻿import { ContextualAIColumn, getContextForRoute } from "@/components/workspace/contextual-ai";
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ValueObjectsPanel } from "@/components/workspace/value-objects/value-objects-panel";
@@ -11,11 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default function ValueObjectsPage() {
-    const objectsAIContext = getContextForRoute("/objects");
-
   return (
-    <div className="grid min-h-0 gap-4 xl:grid-cols-3">
-      <div className="min-w-0 xl:col-span-2">
+    <div className="min-h-0">
+      <div className="min-w-0">
         <div className="min-h-screen bg-slate-50">
               <div className="mx-auto flex max-w-7xl justify-end px-6 pt-6">
                 <Link
@@ -29,12 +26,8 @@ export default function ValueObjectsPage() {
               <ValueObjectsPanel />
             </div>
       </div>
-
-      <ContextualAIColumn
-        context={objectsAIContext}
-        className="hidden xl:flex"
-      />
-    </div>
+</div>
   );
 }
+
 

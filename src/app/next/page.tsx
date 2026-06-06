@@ -1,5 +1,4 @@
-﻿import { ContextualAIColumn, getContextForRoute } from "@/components/workspace/contextual-ai";
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 
 import {
   NextBestActionDashboard,
@@ -13,19 +12,13 @@ export const metadata: Metadata = {
 };
 
 export default function NextBestActionRoute() {
-  const nextAIContext = getContextForRoute("/next");
-
   return (
-    <div className="grid min-h-0 gap-4 xl:grid-cols-3">
-      <div className="min-w-0 xl:col-span-2">
+    <div className="min-h-0">
+      <div className="min-w-0">
         <NextBestActionDashboard viewModel={nextBestActionFixture} />
       </div>
-
-      <ContextualAIColumn
-        context={nextAIContext}
-        className="hidden xl:flex"
-      />
-    </div>
+</div>
   );
 }
+
 

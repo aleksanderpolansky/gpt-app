@@ -1,6 +1,4 @@
 ﻿"use client";
-
-import { ContextualAIColumn, getContextForRoute } from "../../components/workspace/contextual-ai";
 import { useEffect, useState } from "react";
 
 type PublicPurchaseHistoryItem = {
@@ -124,12 +122,9 @@ export default function PurchaseHistoryPage() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps -- UI-15 scoped lint: initial route query is read once for preview state.
   }, []);
-
-    const publicPurchasesAIContext = getContextForRoute("/public-purchases");
-
   return (
-    <div className="grid min-h-0 gap-4 xl:grid-cols-3">
-      <div className="min-w-0 xl:col-span-2">
+    <div className="min-h-0">
+      <div className="min-w-0">
         <main
               style={{
                 minHeight: "100vh",
@@ -436,13 +431,9 @@ export default function PurchaseHistoryPage() {
               </div>
             </main>
       </div>
-
-      <ContextualAIColumn
-        context={publicPurchasesAIContext}
-        className="hidden xl:flex"
-      />
-    </div>
+</div>
   );
 }
+
 
 
