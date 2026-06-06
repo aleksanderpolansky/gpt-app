@@ -32,7 +32,7 @@ function getStatusLabel(status: MobilePreviewStatus): string {
 
 function getMobileTabClassName(tab: MobileTabItem, activeTabKey: MobileTabKey): string {
   const baseClassName =
-    "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-medium transition";
+    "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center text-xs font-medium transition";
 
   if (tab.key === activeTabKey) {
     return `${baseClassName} bg-secondary text-primary`;
@@ -44,10 +44,10 @@ function getMobileTabClassName(tab: MobileTabItem, activeTabKey: MobileTabKey): 
 export function MobileTabs({ activeTabKey, tabs }: MobileTabsProps) {
   return (
     <nav
-      className="grid grid-cols-5 fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-3 pb-4 pt-2 backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-30 w-full max-w-full overflow-x-hidden border-t border-border bg-background/95 px-3 pb-4 pt-2 backdrop-blur"
       aria-label="Mobile shell tab navigation"
     >
-      <div className="grid grid-cols-5 mx-auto flex w-full max-w-md gap-1 rounded-2xl border border-border bg-card p-1 shadow-sm">
+      <div className="mx-auto grid min-w-0 w-full max-w-full grid-cols-5 gap-1 rounded-2xl border border-border bg-card p-1 shadow-sm">
         {tabs.map((tab) => {
           const isActive = tab.key === activeTabKey;
 
@@ -60,8 +60,8 @@ export function MobileTabs({ activeTabKey, tabs }: MobileTabsProps) {
               aria-current={isActive ? "page" : undefined}
               title={tab.description}
             >
-              <span className="grid grid-cols-5 w-full truncate">{tab.shortLabel}</span>
-              <span className="grid grid-cols-5 w-full truncate text-xs font-normal">
+              <span className="block w-full truncate leading-4">{tab.shortLabel}</span>
+              <span className="block w-full truncate text-xs font-normal leading-4">
                 {getStatusLabel(tab.status)}
               </span>
             </a>
