@@ -1,4 +1,5 @@
-﻿import type { Metadata } from "next";
+﻿import { ContextualAIColumn, getContextForRoute } from "@/components/workspace/contextual-ai";
+import type { Metadata } from "next";
 
 import {
   AnalyticsDashboard,
@@ -12,5 +13,19 @@ export const metadata: Metadata = {
 };
 
 export default function AnalyticsPage() {
-  return <AnalyticsDashboard viewModel={analyticsDashboardFixture} />;
+  const analyticsAIContext = getContextForRoute("/analytics");
+
+  return (
+    <div className="grid min-h-0 gap-4 xl:grid-cols-3">
+      <div className="min-w-0 xl:col-span-2">
+        <AnalyticsDashboard viewModel={analyticsDashboardFixture} />
+      </div>
+
+      <ContextualAIColumn
+        context={analyticsAIContext}
+        className="hidden xl:flex"
+      />
+    </div>
+  );
 }
+

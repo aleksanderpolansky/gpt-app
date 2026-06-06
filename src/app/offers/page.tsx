@@ -1,4 +1,5 @@
-﻿import type { Metadata } from "next";
+﻿import { ContextualAIColumn, getContextForRoute } from "../../components/workspace/contextual-ai";
+import type { Metadata } from "next";
 
 import type { CommercialCoreViewModel } from "../../components/workspace/commercial-core";
 import {
@@ -26,8 +27,20 @@ const offersCommercialViewModel: CommercialCoreViewModel = {
 };
 
 export default function OffersPage() {
+    const offersAIContext = getContextForRoute("/offers");
+
   return (
-    <CommercialDashboardComposer viewModel={offersCommercialViewModel} />
+    <div className="grid min-h-0 gap-4 xl:grid-cols-3">
+      <div className="min-w-0 xl:col-span-2">
+        <CommercialDashboardComposer viewModel={offersCommercialViewModel} />
+      </div>
+
+      <ContextualAIColumn
+        context={offersAIContext}
+        className="hidden xl:flex"
+      />
+    </div>
   );
 }
+
 

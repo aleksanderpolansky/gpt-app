@@ -1,4 +1,5 @@
-﻿/**
+﻿import { ContextualAIColumn, getContextForRoute } from "./contextual-ai";
+/**
  * UI-3.16 — placeholder Activity Review panel.
  *
  * This component is fixture-only and local to UI-3.
@@ -58,9 +59,12 @@ function ReviewSectionLabel({ children }: { readonly children: React.ReactNode }
 
 export function WorkspaceActivityReviewPanel() {
   const activity = workspaceActivityPreviewFixture;
+  const activityReviewAIContext = getContextForRoute("/activity/review");
 
   return (
-    <article className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
+    <div className="grid min-h-0 gap-4 xl:grid-cols-3">
+      <div className="min-w-0 xl:col-span-2">
+        <article className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <ReviewSectionLabel>Activity Review placeholder</ReviewSectionLabel>
@@ -173,6 +177,14 @@ export function WorkspaceActivityReviewPanel() {
       <p className="mt-4 text-xs text-[#7c8099]">
         ACTIVITY_REVIEW_PLACEHOLDER_CREATED · review panel · done 16/32 · left 16
       </p>
-    </article>
+        </article>
+      </div>
+
+      <ContextualAIColumn
+        context={activityReviewAIContext}
+        className="hidden xl:flex"
+      />
+    </div>
   );
 }
+
