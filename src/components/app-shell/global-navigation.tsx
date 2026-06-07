@@ -12,6 +12,7 @@ import {
   Home,
   LayoutDashboard,
   MessageSquare,
+  Plus,
   Search,
   Settings,
   ShoppingBag,
@@ -110,12 +111,16 @@ function TreeItem({
   children,
   defaultOpen,
   href = "#",
+  actionHref,
+  actionTitle,
 }: {
   readonly label: string;
   readonly depth?: number;
   readonly children?: ReactNode;
   readonly defaultOpen?: boolean;
   readonly href?: string;
+  readonly actionHref?: string;
+  readonly actionTitle?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
   const pl = depth === 1 ? "pl-9" : depth === 2 ? "pl-12" : "pl-[60px]";
@@ -144,12 +149,25 @@ function TreeItem({
   }
 
   return (
-    <a
-      href={href}
-      className={`flex w-full items-center rounded-md py-1.5 pr-3 ${pl} ${textSize} ${textColor} transition-all hover:bg-gray-50 hover:text-[#1a1d2e]`}
-    >
-      <span className="flex-1 text-left leading-tight">{label}</span>
-    </a>
+    <div className="group flex w-full items-center rounded-md pr-2 transition-all hover:bg-gray-50">
+      <a
+        href={href}
+        className={`flex min-w-0 flex-1 items-center py-1.5 pr-2 ${pl} ${textSize} ${textColor} transition-all group-hover:text-[#1a1d2e]`}
+      >
+        <span className="flex-1 truncate text-left leading-tight">{label}</span>
+      </a>
+
+      {actionHref ? (
+        <a
+          href={actionHref}
+          title={actionTitle ?? `Добавить: ${label}`}
+          aria-label={actionTitle ?? `Добавить: ${label}`}
+          className="mr-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border border-transparent text-[#b0b4c8] transition-all hover:border-[#dfe4ff] hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
+        >
+          <Plus size={12} strokeWidth={2.4} />
+        </a>
+      ) : null}
+    </div>
   );
 }
 
@@ -180,24 +198,28 @@ export function GlobalSidebar() {
         </div>
 
         <ExpandableSidebarItem icon={ShoppingBag} label="Каталог" defaultOpen>
-          <TreeItem label="Предприятия" depth={1} href="/organizations" />
-          <TreeItem label="Авто" depth={1} defaultOpen>
-            <TreeItem label="Продажа автомобилей" depth={2} href="/offers" />
-            <TreeItem label="Аренда автомобилей" depth={2} href="/offers" />
-            <TreeItem label="Ремонт автомобилей" depth={2} href="/offers" />
-            <TreeItem label="Ремонт ходовой части" depth={2} href="/offers" />
-            <TreeItem label="Ремонт двигателя" depth={2} href="/offers" />
-            <TreeItem label="Ремонт коробки передач" depth={2} href="/offers" />
-          </TreeItem>
-          <TreeItem label="Предложения предприятий" depth={1} href="/offers" />
-          <TreeItem label="Товары" depth={1} href="/offers" />
-          <TreeItem label="Услуги" depth={1} href="/offers" />
-          <TreeItem label="Подарочные сертификаты" depth={1} defaultOpen href="/certificates">
-            <TreeItem label="Массаж" depth={2} href="/certificates" />
-            <TreeItem label="Кино" depth={2} href="/certificates" />
-            <TreeItem label="Кафе" depth={2} href="/certificates" />
-          </TreeItem>
-          <TreeItem label="Мероприятия" depth={1} href="/offers" />
+          <TreeItem
+            label="Предприятия"
+            depth={1}
+            href="/directory"
+            actionHref="/organizations/new"
+            actionTitle="Создать предприятие"
+          />
+          <TreeItem
+            label="Предложения предприятий"
+            depth={1}
+            href="/offers"
+            actionHref="/offers/new"
+            actionTitle="Создать предложение предприятия"
+          />
+          <TreeItem
+            label="Подарочные сертификаты"
+            depth={1}
+            href="/certificates"
+            actionHref="/certificates/new"
+            actionTitle="Создать подарочный сертификат"
+          />
+          <TreeItem label="Мероприятия" depth={1} href="/calendar" />
         </ExpandableSidebarItem>
 
         <div className="pb-0.5 pt-1">

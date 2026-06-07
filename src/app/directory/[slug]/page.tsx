@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../../lib/supabase";
 import DirectoryPurchaseConfirmationForm from "./DirectoryPurchaseConfirmationForm";
@@ -837,177 +837,138 @@ async function getDirectoryOrganizationOffers(
   };
 }
 
-function getLocationLabel(location: DirectoryLocation | null) {
-  if (!location) {
-    return "Локация не указана";
+
+
+
+
+
+
+
+
+
+
+
+type CertificateAvailabilityView = {
+  maxTotal: number | null;
+  issuedCount: number;
+  remaining: number | null;
+  isSoldOut: boolean;
+  label: string;
+};
+
+type PublicDirectoryOfferWithCertificateAvailability = PublicDirectoryOffer & {
+  certificateAvailability: CertificateAvailabilityView;
+};
+
+type CertificateAvailabilityCountRow = {
+  offer_id: string | null;
+  status: string | null;
+};
+
+const CERTIFICATE_AVAILABILITY_EXCLUDED_STATUSES = new Set([
+  "cancelled",
+  "canceled",
+  "expired",
+  "rejected",
+  "refunded",
+]);
+
+function buildCertificateAvailability(
+  offer: PublicDirectoryOffer,
+  issuedCount: number,
+): CertificateAvailabilityView {
+  if (!offer.certificateAvailable) {
+    return {
+      maxTotal: null,
+      issuedCount: 0,
+      remaining: null,
+      isSoldOut: false,
+      label: "Сертификат недоступен",
+    };
   }
 
-  if (location.addressVisibility === "hidden") {
-    return "Адрес скрыт";
+  const maxTotal = offer.certificate.maxCertificatesTotal;
+
+  if (typeof maxTotal !== "number" || maxTotal <= 0) {
+    return {
+      maxTotal: null,
+      issuedCount,
+      remaining: null,
+      isSoldOut: false,
+      label: "Количество сертификатов не ограничено",
+    };
   }
 
-  const parts = [
-    location.city,
-    location.district,
-    location.addressVisibility === "public" ? location.streetAddress : null,
-  ].filter(Boolean);
+  const remaining = Math.max(maxTotal - issuedCount, 0);
 
-  if (parts.length === 0) {
-    return "Локация не указана";
-  }
-
-  if (location.addressVisibility === "approximate") {
-    return `${parts.join(", ")} · приблизительная локация`;
-  }
-
-  return parts.join(", ");
+  return {
+    maxTotal,
+    issuedCount,
+    remaining,
+    isSoldOut: remaining <= 0,
+    label: `Доступно сертификатов: ${remaining} из ${maxTotal}`,
+  };
 }
 
-function getVerificationLabel(status: string | null | undefined) {
-  if (status === "verified") {
-    return "Проверено";
+async function getOffersWithCertificateAvailability(
+  offers: PublicDirectoryOffer[],
+): Promise<PublicDirectoryOfferWithCertificateAvailability[]> {
+  const certificateOfferIds = offers
+    .filter((offer) => offer.certificateAvailable)
+    .map((offer) => offer.id);
+
+  if (certificateOfferIds.length === 0) {
+    return offers.map((offer) => ({
+      ...offer,
+      certificateAvailability: buildCertificateAvailability(offer, 0),
+    }));
   }
 
-  if (status === "pending") {
-    return "На проверке";
+  const { data: certificateRows, error: certificateRowsError } = await supabase
+    .from("certificates")
+    .select("offer_id,status")
+    .in("offer_id", certificateOfferIds);
+
+  if (certificateRowsError) {
+    return offers.map((offer) => ({
+      ...offer,
+      certificateAvailability: {
+        ...buildCertificateAvailability(offer, 0),
+        label:
+          typeof offer.certificate.maxCertificatesTotal === "number" &&
+          offer.certificate.maxCertificatesTotal > 0
+            ? `Лимит сертификатов: ${offer.certificate.maxCertificatesTotal}; остаток не удалось проверить`
+            : "Количество сертификатов не ограничено",
+      },
+    }));
   }
 
-  if (status === "rejected") {
-    return "Проверка отклонена";
-  }
+  const issuedCountByOfferId = new Map<string, number>();
 
-  if (status === "revoked") {
-    return "Проверка отозвана";
-  }
+  for (const row of (certificateRows ?? []) as CertificateAvailabilityCountRow[]) {
+    if (!row.offer_id) {
+      continue;
+    }
 
-  return "Не проверено";
-}
+    const normalizedStatus = (row.status ?? "").toLowerCase();
 
-function getOrganizationTypeLabel(type: string | null | undefined) {
-  if (type === "private_business") {
-    return "Частное предприятие";
-  }
+    if (CERTIFICATE_AVAILABILITY_EXCLUDED_STATUSES.has(normalizedStatus)) {
+      continue;
+    }
 
-  if (type === "company") {
-    return "Компания";
-  }
-
-  if (type === "ngo") {
-    return "Организация";
-  }
-
-  return type ?? "Предприятие";
-}
-
-function getAddressVisibilityLabel(visibility: string | null | undefined) {
-  if (visibility === "public") {
-    return "Публичный адрес";
-  }
-
-  if (visibility === "approximate") {
-    return "Приблизительная локация";
-  }
-
-  if (visibility === "hidden") {
-    return "Адрес скрыт";
-  }
-
-  return "Не указано";
-}
-
-function getOfferTypeLabel(type: string | null | undefined) {
-  if (type === "bookable_service") {
-    return "Услуга с бронированием";
-  }
-
-  if (type === "product") {
-    return "Товар";
-  }
-
-  if (type === "service") {
-    return "Услуга";
-  }
-
-  if (type === "bundle") {
-    return "Набор / bundle";
-  }
-
-  if (type === "reward") {
-    return "Reward offer";
-  }
-
-  return type ?? "Предложение";
-}
-
-function formatMoney(
-  amount: number | null | undefined,
-  currency: string | null | undefined
-) {
-  if (typeof amount !== "number") {
-    return "—";
-  }
-
-  return `${new Intl.NumberFormat("pl-PL", {
-    maximumFractionDigits: 2,
-  }).format(amount)} ${currency ?? ""}`.trim();
-}
-
-function formatPoints(value: number | null | undefined) {
-  if (typeof value !== "number") {
-    return "0";
-  }
-
-  return new Intl.NumberFormat("pl-PL", {
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function getCertificatePaymentLabel(offer: PublicDirectoryOffer) {
-  if (!offer.certificate.available) {
-    return "Сертификат недоступен";
-  }
-
-  if (offer.certificate.paymentMode === "points_only") {
-    return `${formatPoints(offer.certificate.pointsPrice)} POINTS`;
-  }
-
-  if (offer.certificate.paymentMode === "money_only") {
-    return formatMoney(
-      offer.certificate.moneyPrice,
-      offer.certificate.currency ?? offer.currency
+    issuedCountByOfferId.set(
+      row.offer_id,
+      (issuedCountByOfferId.get(row.offer_id) ?? 0) + 1,
     );
   }
 
-  if (offer.certificate.paymentMode === "mixed") {
-    return `${formatPoints(
-      offer.certificate.pointsPrice
-    )} POINTS + ${formatMoney(
-      offer.certificate.moneyPrice,
-      offer.certificate.currency ?? offer.currency
-    )}`;
-  }
-
-  return "Сертификат доступен";
-}
-
-function getBookingLabel(offer: PublicDirectoryOffer) {
-  if (!offer.requiresBooking) {
-    return "Бронирование не требуется";
-  }
-
-  if (offer.defaultDurationMinutes) {
-    return `Требуется бронирование · ${offer.defaultDurationMinutes} мин.`;
-  }
-
-  return "Требуется бронирование";
-}
-
-function getOfferDetailHref(offerId: string) {
-  return `/offers/${offerId}`;
-}
-
-function getCertificateOrderHref(offerId: string) {
-  return `/certificates/new?offerId=${offerId}`;
+  return offers.map((offer) => ({
+    ...offer,
+    certificateAvailability: buildCertificateAvailability(
+      offer,
+      issuedCountByOfferId.get(offer.id) ?? 0,
+    ),
+  }));
 }
 
 export default async function DirectoryOrganizationPage({
@@ -1026,329 +987,468 @@ export default async function DirectoryOrganizationPage({
     ? await getDirectoryOrganizationOffers(organization.id)
     : { offers: [], errorMessage: null };
 
-  const offers = offersResult.offers;
+  const offers = await getOffersWithCertificateAvailability(offersResult.offers);
   const offersErrorMessage = offersResult.errorMessage;
 
+  const firstOfferWithCertificate =
+    offers.find((offer) => offer.certificateAvailable) ?? null;
+
+  const formatPublicMoney = (
+    amount: number | null | undefined,
+    currency: string | null | undefined,
+  ) => {
+    if (amount === null || amount === undefined) {
+      return "—";
+    }
+
+    return `${new Intl.NumberFormat("pl-PL", {
+      maximumFractionDigits: 2,
+    }).format(amount)} ${currency ?? organization?.defaultCurrency ?? "PLN"}`;
+  };
+
+  const formatPublicPoints = (points: number | null | undefined) => {
+    if (points === null || points === undefined || points <= 0) {
+      return "0";
+    }
+
+    return new Intl.NumberFormat("pl-PL", {
+      maximumFractionDigits: 2,
+    }).format(points);
+  };
+
+  const getPublicOfferTypeLabel = (offerType: string) => {
+    switch (offerType) {
+      case "bookable_service":
+        return "Услуга с записью";
+      case "service":
+        return "Услуга";
+      case "product":
+        return "Товар";
+      case "bundle":
+        return "Пакет";
+      case "consultation":
+        return "Консультация";
+      case "reward":
+        return "Сертификат / reward";
+      default:
+        return offerType;
+    }
+  };
+
+  const getPublicOrganizationTypeLabel = (organizationType: string) => {
+    switch (organizationType) {
+      case "private_business":
+        return "Частный бизнес";
+      case "company":
+        return "Компания";
+      case "non_profit":
+        return "Некоммерческая организация";
+      case "public_institution":
+        return "Публичная организация";
+      default:
+        return organizationType;
+    }
+  };
+
+  const getPublicVerificationLabel = (verificationStatus: string) => {
+    switch (verificationStatus) {
+      case "verified":
+        return "Проверено";
+      case "pending":
+        return "На проверке";
+      case "rejected":
+        return "Отклонено";
+      default:
+        return "Без верификации";
+    }
+  };
+
+  const getPublicLocationLabel = () => {
+    if (!organization?.primaryLocation) {
+      return "Локация не указана";
+    }
+
+    const location = organization.primaryLocation;
+
+    const parts = [
+      location.label,
+      location.city,
+      location.district,
+      location.region,
+      location.countryCode,
+    ].filter(Boolean);
+
+    return parts.length > 0 ? parts.join(", ") : "Локация не указана";
+  };
+
+  const getPublicBookingLabel = (offer: PublicDirectoryOffer) => {
+    if (!offer.requiresBooking) {
+      return "Без обязательной записи";
+    }
+
+    if (offer.defaultDurationMinutes) {
+      return `Требуется запись · ${offer.defaultDurationMinutes} мин.`;
+    }
+
+    return "Требуется запись";
+  };
+
+  const getPublicCertificatePaymentLabel = (offer: PublicDirectoryOffer) => {
+    if (!offer.certificateAvailable) {
+      return "Недоступен";
+    }
+
+    if (offer.certificate.paymentMode === "points_only") {
+      return `${formatPublicPoints(offer.certificate.pointsPrice)} POINTS`;
+    }
+
+    if (offer.certificate.paymentMode === "money_only") {
+      return formatPublicMoney(
+        offer.certificate.moneyPrice,
+        offer.certificate.currency ?? offer.currency,
+      );
+    }
+
+    if (offer.certificate.paymentMode === "mixed") {
+      return `${formatPublicPoints(
+        offer.certificate.pointsPrice,
+      )} POINTS + ${formatPublicMoney(
+        offer.certificate.moneyPrice,
+        offer.certificate.currency ?? offer.currency,
+      )}`;
+    }
+
+    return "Сертификат доступен";
+  };
+
+  const organizationDescription =
+    organization?.shortDescription ??
+    organization?.description ??
+    "Описание пока не добавлено.";
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#ffffff",
-        color: "#111111",
-        padding: "40px 16px",
-        fontFamily: "Arial, Helvetica, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "1100px",
-          margin: "0 auto",
-        }}
-      >
-        <header style={{ marginBottom: "24px" }}>
-          <Link
-            href="/directory"
-            style={{
-              color: "#2563eb",
-              textDecoration: "underline",
-              display: "inline-block",
-              marginBottom: "16px",
-            }}
-          >
-            ← Назад в каталог
-          </Link>
+    <main className="min-h-full bg-[#f5f6fb] px-4 py-8 text-[#1a1d2e]">
+      <div className="mx-auto grid w-full max-w-[1120px] gap-5">
+        <Link
+          href="/directory"
+          className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] transition hover:bg-gray-50"
+        >
+          ← Назад в каталог
+        </Link>
 
-          {errorMessage ? (
-            <>
-              <h1
-                style={{
-                  fontSize: "32px",
-                  lineHeight: "1.2",
-                  fontWeight: 700,
-                  margin: "0 0 10px",
-                }}
-              >
-                Ошибка загрузки карточки
-              </h1>
-
-              <p
-                style={{
-                  margin: 0,
-                  color: "#a40000",
-                  fontSize: "16px",
-                  lineHeight: "1.5",
-                }}
-              >
-                {errorMessage}
-              </p>
-            </>
-          ) : null}
-
-          {organization ? (
-            <>
-              <div
-                style={{
-                  color: "#666666",
-                  fontSize: "14px",
-                  marginBottom: "8px",
-                }}
-              >
-                {organization.primaryCategory?.name ?? "Категория не указана"}
-              </div>
-
-              <h1
-                style={{
-                  fontSize: "38px",
-                  lineHeight: "1.15",
-                  fontWeight: 700,
-                  margin: "0 0 10px",
-                }}
-              >
-                {organization.name}
-              </h1>
-
-              <p
-                style={{
-                  margin: "0 0 8px",
-                  color: "#555555",
-                  fontSize: "17px",
-                  lineHeight: "1.5",
-                }}
-              >
-                {organization.shortDescription ??
-                  organization.description ??
-                  "Описание пока не добавлено."}
-              </p>
-
-              <p
-                style={{
-                  margin: "0 0 16px",
-                  color: "#666666",
-                  fontSize: "14px",
-                  lineHeight: "1.5",
-                }}
-              >
-                На этой публичной карточке показывается только безопасная
-                информация предприятия. Если адрес скрыт или указан
-                приблизительно, точный адрес и точные координаты не раскрываются.
-              </p>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: "10px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <a
-                  href="#register-purchase"
-                  style={{
-                    display: "inline-block",
-                    padding: "11px 16px",
-                    borderRadius: "8px",
-                    border: "1px solid #16a34a",
-                    background: "#16a34a",
-                    color: "#ffffff",
-                    textDecoration: "none",
-                    fontWeight: 800,
-                  }}
-                >
-                  Зарегистрировать покупку
-                </a>
-
-                <a
-                  href="#public-offers"
-                  style={{
-                    display: "inline-block",
-                    padding: "11px 16px",
-                    borderRadius: "8px",
-                    border: "1px solid #2563eb",
-                    background: "#2563eb",
-                    color: "#ffffff",
-                    textDecoration: "none",
-                    fontWeight: 700,
-                  }}
-                >
-                  Посмотреть предложения
-                </a>
-              </div>
-            </>
-          ) : null}
-        </header>
+        {errorMessage ? (
+          <section className="rounded-[18px] border border-[#fecaca] bg-[#fff1f2] p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#b42318]">
+              Directory error
+            </div>
+            <h1 className="text-[28px] font-bold text-[#7f1d1d]">
+              Ошибка загрузки карточки
+            </h1>
+            <p className="mt-2 text-[14px] leading-6 text-[#b42318]">
+              {errorMessage}
+            </p>
+          </section>
+        ) : null}
 
         {organization ? (
           <>
-            <section
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                gap: "16px",
-                marginBottom: "24px",
-              }}
-            >
-              <div
-                style={{
-                  border: "1px solid #dddddd",
-                  borderRadius: "16px",
-                  padding: "20px",
-                  background: "#ffffff",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-                }}
-              >
-                <div style={{ color: "#666666", marginBottom: "8px" }}>
+            <header className="overflow-hidden rounded-[22px] border border-[rgba(0,0,0,0.07)] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+              <div className="grid gap-6 p-6 lg:grid-cols-[1.4fr_0.6fr]">
+                <div>
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    <span className="rounded-full border border-[#dfe4ff] bg-[#eef2ff] px-3 py-1.5 text-[12px] font-semibold text-[#3b6ef8]">
+                      {organization.primaryCategory?.name ??
+                        "Категория будет уточнена AI"}
+                    </span>
+                    <span className="rounded-full border border-[#e5e7eb] bg-[#f8f9fd] px-3 py-1.5 text-[12px] font-semibold text-[#4a4f6a]">
+                      {getPublicLocationLabel()}
+                    </span>
+                  </div>
+
+                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7c8099]">
+                    Public enterprise card
+                  </div>
+
+                  <h1 className="text-[32px] font-bold tracking-[-0.035em] text-[#111827]">
+                    {organization.name}
+                  </h1>
+
+                  <p className="mt-3 max-w-[780px] text-[14px] leading-6 text-[#5a5f7a]">
+                    {organizationDescription}
+                  </p>
+
+                  <p className="mt-3 max-w-[760px] text-[12.5px] leading-5 text-[#7c8099]">
+                    На публичной карточке показывается безопасная информация:
+                    предприятие, публичные предложения, сертификаты и форма
+                    регистрации внешней покупки. Точный адрес не раскрывается,
+                    если он скрыт или указан приблизительно.
+                  </p>
+
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    <a
+                      href="#public-offers"
+                      className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.22)] transition hover:bg-[#2f5fe3]"
+                    >
+                      Посмотреть предложения
+                    </a>
+
+                    <a
+                      href="#register-purchase"
+                      className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
+                    >
+                      Зарегистрировать покупку
+                    </a>
+                  </div>
+                </div>
+
+                <aside className="grid content-start gap-3 rounded-[18px] border border-[#edf0f7] bg-[#f8f9fd] p-5">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+                      Предприятие
+                    </div>
+                    <div className="mt-1 text-[20px] font-bold text-[#111827]">
+                      {getPublicOrganizationTypeLabel(organization.type)}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2 text-[13px] leading-5 text-[#5a5f7a]">
+                    <p className="m-0">
+                      <strong className="text-[#343854]">Проверка:</strong>{" "}
+                      {getPublicVerificationLabel(organization.verificationStatus)}
+                    </p>
+                    <p className="m-0">
+                      <strong className="text-[#343854]">Валюта:</strong>{" "}
+                      {organization.defaultCurrency ?? "PLN"}
+                    </p>
+                    <p className="m-0">
+                      <strong className="text-[#343854]">Предложений:</strong>{" "}
+                      {offers.length}
+                    </p>
+                    <p className="m-0">
+                      <strong className="text-[#343854]">Сертификат:</strong>{" "}
+                      {firstOfferWithCertificate ? "доступен" : "нет"}
+                    </p>
+                  </div>
+                </aside>
+              </div>
+            </header>
+
+            <section className="grid gap-4 md:grid-cols-3">
+              <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
                   Тип
                 </div>
-                <div style={{ fontSize: "18px", fontWeight: 700 }}>
-                  {getOrganizationTypeLabel(organization.type)}
+                <div className="mt-2 text-[20px] font-bold text-[#111827]">
+                  {getPublicOrganizationTypeLabel(organization.type)}
                 </div>
-              </div>
+              </article>
 
-              <div
-                style={{
-                  border: "1px solid #dddddd",
-                  borderRadius: "16px",
-                  padding: "20px",
-                  background: "#ffffff",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-                }}
-              >
-                <div style={{ color: "#666666", marginBottom: "8px" }}>
-                  Проверка
-                </div>
-                <div style={{ fontSize: "18px", fontWeight: 700 }}>
-                  {getVerificationLabel(organization.verificationStatus)}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  border: "1px solid #dddddd",
-                  borderRadius: "16px",
-                  padding: "20px",
-                  background: "#ffffff",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-                }}
-              >
-                <div style={{ color: "#666666", marginBottom: "8px" }}>
+              <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
                   Локация
                 </div>
-                <div style={{ fontSize: "18px", fontWeight: 700 }}>
-                  {getLocationLabel(organization.primaryLocation)}
+                <div className="mt-2 text-[20px] font-bold text-[#111827]">
+                  {getPublicLocationLabel()}
                 </div>
+              </article>
+
+              <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+                  Публичный flow
+                </div>
+                <div className="mt-2 text-[20px] font-bold text-[#3b6ef8]">
+                  Offer → Certificate
+                </div>
+              </article>
+            </section>
+
+            <section className="rounded-[18px] border border-[#dbeafe] bg-[#eff6ff] p-6 text-[#1e3a8a] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.22em]">
+                POINTS / money boundary
               </div>
+
+              <h2 className="mt-2 text-[22px] font-bold">
+                Сертификаты и POINTS
+              </h2>
+
+              <p className="mt-2 max-w-[860px] text-[13px] leading-6">
+                POINTS — это бонусные единицы программы лояльности, а не
+                деньги, валюта или средство платежа. Если сертификат показывает
+                схему вроде “2.33 POINTS + 50 PLN”, это означает смешанную
+                оплату: часть стоимости покрывается POINTS, остаток оплачивается
+                деньгами.
+              </p>
             </section>
 
             <section
-              style={{
-                border: "1px solid #dddddd",
-                borderRadius: "16px",
-                background: "#ffffff",
-                overflow: "hidden",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-                marginBottom: "24px",
-              }}
+              id="public-offers"
+              className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
             >
-              <div
-                style={{
-                  padding: "20px 24px",
-                  borderBottom: "1px solid #eeeeee",
-                }}
-              >
-                <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  Информация о предприятии
-                </h2>
-                <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Базовая публичная информация из каталога.
-                </p>
+              <div className="mb-5 flex flex-col gap-3 border-b border-[#edf0f7] pb-5 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7c8099]">
+                    Public offers
+                  </div>
+
+                  <h2 className="mt-2 text-[26px] font-bold tracking-[-0.03em] text-[#111827]">
+                    Публичные предложения
+                  </h2>
+
+                  <p className="mt-2 text-[14px] leading-6 text-[#5a5f7a]">
+                    Здесь показываются реальные предложения предприятия:
+                    услуга как Value Object, цена, запись и доступность
+                    подарочного сертификата.
+                  </p>
+                </div>
+
+                <span className="w-fit rounded-full border border-[#dfe3f1] bg-[#f8f9fd] px-4 py-2 text-[13px] font-bold text-[#4a4f6a]">
+                  {offers.length} предложений
+                </span>
               </div>
 
-              <div
-                style={{
-                  padding: "20px 24px",
-                  display: "grid",
-                  gap: "12px",
-                }}
-              >
-                <div>
-                  <strong>Категория:</strong>{" "}
-                  {organization.primaryCategory?.name ?? "Не указана"}
+              {offersErrorMessage ? (
+                <div className="mb-4 rounded-xl border border-[#fecaca] bg-[#fff1f2] px-4 py-3 text-[13px] font-medium text-[#b42318]">
+                  {offersErrorMessage}
                 </div>
+              ) : null}
 
-                <div>
-                  <strong>Страна:</strong>{" "}
-                  {organization.countryCode ?? "Не указана"}
+              {offers.length === 0 ? (
+                <div className="rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-4 text-[14px] text-[#92400e]">
+                  У этого предприятия пока нет публичных предложений.
                 </div>
-
-                <div>
-                  <strong>Валюта:</strong>{" "}
-                  {organization.defaultCurrency ?? "Не указана"}
-                </div>
-
-                <div>
-                  <strong>Видимость адреса:</strong>{" "}
-                  {getAddressVisibilityLabel(
-                    organization.primaryLocation?.addressVisibility
-                  )}
-                </div>
-
-                <div>
-                  <strong>Город:</strong>{" "}
-                  {organization.primaryLocation?.city ?? "Не указан"}
-                </div>
-
-                {organization.primaryLocation?.district ? (
-                  <div>
-                    <strong>Район:</strong>{" "}
-                    {organization.primaryLocation.district}
-                  </div>
-                ) : null}
-
-                {organization.primaryLocation?.streetAddress ? (
-                  <div>
-                    <strong>Адрес:</strong>{" "}
-                    {organization.primaryLocation.streetAddress}
-                  </div>
-                ) : null}
-
-                {organization.publicEmail ? (
-                  <div>
-                    <strong>Email:</strong> {organization.publicEmail}
-                  </div>
-                ) : null}
-
-                {organization.publicPhone ? (
-                  <div>
-                    <strong>Телефон:</strong> {organization.publicPhone}
-                  </div>
-                ) : null}
-
-                {organization.websiteUrl ? (
-                  <div>
-                    <strong>Сайт:</strong>{" "}
-                    <a
-                      href={organization.websiteUrl}
-                      target="_blank"
-                      rel="noreferrer"
+              ) : (
+                <div className="grid gap-4">
+                  {offers.map((offer) => (
+                    <article
+                      key={offer.id}
+                      className="grid gap-5 rounded-[18px] border border-[#edf0f7] bg-[#ffffff] p-5 shadow-[0_8px_22px_rgba(15,23,42,0.05)] lg:grid-cols-[1.35fr_0.65fr]"
                     >
-                      {organization.websiteUrl}
-                    </a>
-                  </div>
-                ) : null}
+                      <div>
+                        <div className="mb-2 flex flex-wrap gap-2">
+                          <span className="rounded-full border border-[#dfe4ff] bg-[#eef2ff] px-3 py-1.5 text-[12px] font-semibold text-[#3b6ef8]">
+                            {getPublicOfferTypeLabel(offer.offerType)}
+                          </span>
+                          <span className="rounded-full border border-[#e5e7eb] bg-[#f8f9fd] px-3 py-1.5 text-[12px] font-semibold text-[#4a4f6a]">
+                            {getPublicBookingLabel(offer)}
+                          </span>
+                          {offer.certificateAvailable ? (
+                            <span className="rounded-full border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-1.5 text-[12px] font-semibold text-[#15803d]">
+                              Сертификат доступен
+                            </span>
+                          ) : null}
+                        </div>
 
-                {organization.bookingUrl ? (
-                  <div>
-                    <strong>Бронирование:</strong>{" "}
-                    <a
-                      href={organization.bookingUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {organization.bookingUrl}
-                    </a>
-                  </div>
-                ) : null}
-              </div>
+                        <h3 className="text-[24px] font-bold tracking-[-0.03em] text-[#111827]">
+                          {offer.title}
+                        </h3>
+
+                        <p className="mt-3 max-w-[820px] text-[14px] leading-6 text-[#5a5f7a]">
+                          {offer.description ?? "Описание пока не добавлено."}
+                        </p>
+
+                        <div className="mt-4 grid gap-3 md:grid-cols-3">
+                          <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+                              Цена
+                            </div>
+                            <div className="mt-1 text-[20px] font-bold text-[#111827]">
+                              {formatPublicMoney(offer.price, offer.currency)}
+                            </div>
+                            {offer.regularPrice ? (
+                              <div className="mt-1 text-[12px] text-[#7c8099]">
+                                Обычная цена:{" "}
+                                {formatPublicMoney(
+                                  offer.regularPrice,
+                                  offer.currency,
+                                )}
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+                              Запись
+                            </div>
+                            <div className="mt-1 text-[20px] font-bold text-[#111827]">
+                              {offer.requiresBooking ? "Нужна" : "Не нужна"}
+                            </div>
+                            <div className="mt-1 text-[12px] text-[#7c8099]">
+                              {offer.defaultDurationMinutes
+                                ? `${offer.defaultDurationMinutes} мин.`
+                                : "длительность не указана"}
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+                              Сертификат
+                            </div>
+                            <div className="mt-1 text-[20px] font-bold text-[#111827]">
+                              {offer.certificateAvailable ? "Да" : "Нет"}
+                            </div>
+                            <div className="mt-1 text-[12px] text-[#7c8099]">
+                              
+                              <span data-check="certificate-availability-card-visible">
+                                {offer.certificateAvailability.label}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {offer.certificateAvailable ? (
+                          <div className="mt-4 rounded-2xl border border-[#dbeafe] bg-[#eff6ff] p-4 text-[#1e3a8a]">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
+                              Certificate payment
+                            </div>
+                            <div className="mt-1 text-[18px] font-bold">
+                              {getPublicCertificatePaymentLabel(offer)}
+                            </div>
+                            <div
+                              data-check="certificate-availability-payment-visible"
+                              className="mt-2 rounded-xl border border-[#bfdbfe] bg-white px-3 py-2 text-[12.5px] font-semibold text-[#1d4ed8]"
+                            >
+                              {offer.certificateAvailability.label}
+                            </div>
+                            <p className="mt-2 text-[12.5px] leading-5">
+                              {offer.certificate.terms ??
+                                "Условия сертификата пока не добавлены."}
+                            </p>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <aside className="grid content-start gap-3 rounded-[18px] border border-[#edf0f7] bg-[#f8f9fd] p-4">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+                          Быстрые действия
+                        </div>
+
+                        <Link
+                          href={`/offers/${offer.id}`}
+                          className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-center text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
+                        >
+                          Подробное описание
+                        </Link>
+
+                        {offer.certificateAvailable ? (
+                          <Link
+                            href={`/certificates/new?offerId=${offer.id}`}
+                            className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-center text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.22)] transition hover:bg-[#2f5fe3]"
+                          >
+                            Заказать сертификат
+                          </Link>
+                        ) : null}
+
+                        <a
+                          href="#register-purchase"
+                          className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-center text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
+                        >
+                          Зарегистрировать покупку
+                        </a>
+                      </aside>
+                    </article>
+                  ))}
+                </div>
+              )}
             </section>
 
             <DirectoryPurchaseConfirmationForm
@@ -1356,312 +1456,26 @@ export default async function DirectoryOrganizationPage({
               organizationDefaultCurrency={organization.defaultCurrency}
             />
 
-            <section
-              style={{
-                border: "1px solid #bfdbfe",
-                borderRadius: "16px",
-                background: "#eff6ff",
-                padding: "20px 24px",
-                marginBottom: "24px",
-                color: "#1e3a8a",
-              }}
-            >
-              <h2 style={{ margin: "0 0 8px", fontSize: "20px" }}>
-                Offers, certificates и POINTS
-              </h2>
-              <p style={{ margin: 0, lineHeight: "1.5" }}>
-                POINTS — это бонусные единицы программы лояльности, а не деньги,
-                валюта или средство платежа. Публичные предложения ниже
-                показывают только безопасные условия для покупателя.
-              </p>
-            </section>
-
-            <section
-              id="public-offers"
-              style={{
-                border: "1px solid #dddddd",
-                borderRadius: "16px",
-                background: "#ffffff",
-                overflow: "hidden",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-                marginBottom: "24px",
-              }}
-            >
-              <div
-                style={{
-                  padding: "20px 24px",
-                  borderBottom: "1px solid #eeeeee",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: "12px",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div>
-                  <h2 style={{ margin: 0, fontSize: "22px" }}>
-                    Публичные предложения
-                  </h2>
-                  <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                    Товары, услуги, наборы и сертификаты, доступные в публичной
-                    карточке предприятия.
-                  </p>
-                </div>
-
-                <div
-                  style={{
-                    border: "1px solid #dddddd",
-                    borderRadius: "999px",
-                    padding: "7px 12px",
-                    color: "#444444",
-                    fontWeight: 700,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {offers.length} предложений
-                </div>
-              </div>
-
-              {offersErrorMessage ? (
-                <div
-                  style={{
-                    padding: "20px 24px",
-                    color: "#a40000",
-                    background: "#fff5f5",
-                    borderBottom: "1px solid #f2b8b5",
-                  }}
-                >
-                  {offersErrorMessage}
-                </div>
-              ) : null}
-
-              {offers.length === 0 ? (
-                <div style={{ padding: "24px", color: "#666666" }}>
-                  У этого предприятия пока нет публичных предложений.
-                </div>
-              ) : (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                    gap: "16px",
-                    padding: "20px",
-                  }}
-                >
-                  {offers.map((offer) => (
-                    <article
-                      key={offer.id}
-                      style={{
-                        border: "1px solid #dddddd",
-                        borderRadius: "16px",
-                        padding: "18px",
-                        background: "#ffffff",
-                        boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-                        display: "grid",
-                        gap: "10px",
-                      }}
-                    >
-                      <div>
-                        <div
-                          style={{
-                            color: "#666666",
-                            fontSize: "13px",
-                            marginBottom: "6px",
-                          }}
-                        >
-                          {getOfferTypeLabel(offer.offerType)}
-                        </div>
-
-                        <h3
-                          style={{
-                            margin: 0,
-                            fontSize: "20px",
-                            lineHeight: "1.25",
-                          }}
-                        >
-                          {offer.title}
-                        </h3>
-                      </div>
-
-                      <p
-                        style={{
-                          margin: 0,
-                          color: "#555555",
-                          lineHeight: "1.5",
-                        }}
-                      >
-                        {offer.description ?? "Описание пока не добавлено."}
-                      </p>
-
-                      <div
-                        style={{
-                          display: "grid",
-                          gap: "6px",
-                          color: "#444444",
-                          fontSize: "14px",
-                        }}
-                      >
-                        <div>
-                          <strong>Цена:</strong>{" "}
-                          {offer.isFree
-                            ? "Бесплатно"
-                            : formatMoney(offer.price, offer.currency)}
-                        </div>
-
-                        {offer.regularPrice ? (
-                          <div>
-                            <strong>Обычная цена:</strong>{" "}
-                            {formatMoney(offer.regularPrice, offer.currency)}
-                          </div>
-                        ) : null}
-
-                        <div>
-                          <strong>Бронирование:</strong>{" "}
-                          {getBookingLabel(offer)}
-                        </div>
-
-                        <div>
-                          <strong>Сертификат:</strong>{" "}
-                          {offer.certificateAvailable
-                            ? "Доступен"
-                            : "Недоступен"}
-                        </div>
-
-                        {offer.certificateAvailable ? (
-                          <>
-                            <div>
-                              <strong>Стоимость сертификата:</strong>{" "}
-                              {getCertificatePaymentLabel(offer)}
-                            </div>
-
-                            <div>
-                              <strong>Срок действия:</strong>{" "}
-                              {offer.certificate.validityDays
-                                ? `${offer.certificate.validityDays} дней`
-                                : "Не указан"}
-                            </div>
-
-                            <div>
-                              <strong>Можно отменить:</strong>{" "}
-                              {offer.certificate.isCancellable ? "Да" : "Нет"}
-                            </div>
-
-                            <div>
-                              <strong>Можно передать:</strong>{" "}
-                              {offer.certificate.isTransferable ? "Да" : "Нет"}
-                            </div>
-
-                            {offer.certificate.terms ? (
-                              <div>
-                                <strong>Условия:</strong>{" "}
-                                {offer.certificate.terms}
-                              </div>
-                            ) : null}
-                          </>
-                        ) : null}
-                      </div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "8px",
-                          flexWrap: "wrap",
-                          marginTop: "4px",
-                        }}
-                      >
-                        <Link
-                          href={getOfferDetailHref(offer.id)}
-                          style={{
-                            display: "inline-block",
-                            padding: "9px 12px",
-                            borderRadius: "8px",
-                            border: "1px solid #dddddd",
-                            background: "#ffffff",
-                            color: "#111111",
-                            textDecoration: "none",
-                            fontWeight: 600,
-                          }}
-                        >
-                          Подробное описание
-                        </Link>
-
-                        {offer.certificateAvailable ? (
-                          <Link
-                            href={getCertificateOrderHref(offer.id)}
-                            style={{
-                              display: "inline-block",
-                              padding: "9px 12px",
-                              borderRadius: "8px",
-                              border: "1px solid #2563eb",
-                              background: "#2563eb",
-                              color: "#ffffff",
-                              textDecoration: "none",
-                              fontWeight: 700,
-                            }}
-                          >
-                            Заказать сертификат
-                          </Link>
-                        ) : null}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section
-              style={{
-                display: "flex",
-                gap: "10px",
-                flexWrap: "wrap",
-              }}
-            >
+            <section className="flex flex-wrap gap-2">
               <Link
                 href="/directory"
-                style={{
-                  display: "inline-block",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  border: "1px solid #dddddd",
-                  background: "#ffffff",
-                  color: "#111111",
-                  textDecoration: "none",
-                  fontWeight: 600,
-                }}
+                className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
               >
                 Назад в каталог
               </Link>
 
               <a
-                href="#register-purchase"
-                style={{
-                  display: "inline-block",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  border: "1px solid #16a34a",
-                  background: "#16a34a",
-                  color: "#ffffff",
-                  textDecoration: "none",
-                  fontWeight: 800,
-                }}
+                href="#public-offers"
+                className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white transition hover:bg-[#2f5fe3]"
               >
-                Зарегистрировать покупку
+                Посмотреть предложения
               </a>
 
               <a
-                href="#public-offers"
-                style={{
-                  display: "inline-block",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  border: "1px solid #2563eb",
-                  background: "#2563eb",
-                  color: "#ffffff",
-                  textDecoration: "none",
-                  fontWeight: 700,
-                }}
+                href="#register-purchase"
+                className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
               >
-                Посмотреть предложения
+                Зарегистрировать покупку
               </a>
             </section>
           </>
@@ -1670,3 +1484,5 @@ export default async function DirectoryOrganizationPage({
     </main>
   );
 }
+
+

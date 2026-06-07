@@ -1,5 +1,8 @@
-import Link from "next/link";
+﻿import Link from "next/link";
+
 import { supabase } from "../../../../lib/supabase";
+
+import CertificateOrderForm from "./CertificateOrderForm";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +67,7 @@ function getFirstSearchParam(value: string | string[] | undefined) {
 }
 
 async function getCertificateOrderPageData(
-  offerId: string | null
+  offerId: string | null,
 ): Promise<CertificateOrderPageData> {
   if (!offerId) {
     return {
@@ -102,7 +105,7 @@ async function getCertificateOrderPageData(
       status,
       created_at,
       updated_at
-    `
+    `,
     )
     .eq("id", offerId)
     .eq("status", "active")
@@ -140,7 +143,7 @@ async function getCertificateOrderPageData(
       status,
       country_code,
       default_currency
-    `
+    `,
     )
     .eq("id", offer.organization_id)
     .eq("status", "active")
@@ -163,7 +166,7 @@ async function getCertificateOrderPageData(
 
 function formatMoney(
   amount: number | null | undefined,
-  currency: string | null | undefined
+  currency: string | null | undefined,
 ) {
   if (typeof amount !== "number") {
     return "—";
@@ -185,27 +188,20 @@ function formatPoints(value: number | null | undefined) {
 }
 
 function getOfferTypeLabel(type: string | null | undefined) {
-  if (type === "bookable_service") {
-    return "Услуга с бронированием";
+  switch (type) {
+    case "bookable_service":
+      return "Услуга с бронированием";
+    case "product":
+      return "Товар";
+    case "service":
+      return "Услуга";
+    case "bundle":
+      return "Набор / bundle";
+    case "reward":
+      return "Reward offer";
+    default:
+      return type ?? "Предложение";
   }
-
-  if (type === "product") {
-    return "Товар";
-  }
-
-  if (type === "service") {
-    return "Услуга";
-  }
-
-  if (type === "bundle") {
-    return "Набор / bundle";
-  }
-
-  if (type === "reward") {
-    return "Reward offer";
-  }
-
-  return type ?? "Предложение";
 }
 
 function getCertificatePaymentLabel(offer: OfferRow | null) {
@@ -224,14 +220,14 @@ function getCertificatePaymentLabel(offer: OfferRow | null) {
   if (offer.certificate_payment_mode === "money_only") {
     return formatMoney(
       offer.certificate_money_price,
-      offer.certificate_currency ?? offer.currency
+      offer.certificate_currency ?? offer.currency,
     );
   }
 
   if (offer.certificate_payment_mode === "mixed") {
     return `${formatPoints(offer.certificate_points_price)} POINTS + ${formatMoney(
       offer.certificate_money_price,
-      offer.certificate_currency ?? offer.currency
+      offer.certificate_currency ?? offer.currency,
     )}`;
   }
 
@@ -259,521 +255,310 @@ function getOfferHref(offer: OfferRow | null) {
   return `/offers/${offer.id}`;
 }
 
-function getOrganizationInternalHref(organization: OrganizationRow | null) {
-  if (!organization?.id) {
-    return "/organizations";
+function getPolicyLabel(policy: string | null | undefined) {
+  switch (policy) {
+    case "refund_until_seller_confirmation":
+      return "Возврат до подтверждения продавца";
+    case "refund_until_delivery":
+      return "Возврат до оказания услуги";
+    case "manual_review":
+      return "Ручное рассмотрение";
+    case "no_refund":
+      return "Без возврата";
+    default:
+      return policy ?? "не указано";
   }
+}
 
-  return `/organizations/${organization.id}`;
+function getOrganizationTypeLabel(type: string | null | undefined) {
+  switch (type) {
+    case "private_business":
+      return "частный бизнес";
+    case "company":
+      return "компания";
+    case "non_profit":
+      return "некоммерческая организация";
+    case "public_institution":
+      return "публичная организация";
+    default:
+      return type ?? "тип не указан";
+  }
 }
 
 export default async function NewCertificatePage({
   searchParams,
 }: CertificateNewPageProps) {
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const resolvedSearchParams = await searchParams;
   const offerId = getFirstSearchParam(resolvedSearchParams?.offerId);
-
   const { offer, organization, errorMessage } =
     await getCertificateOrderPageData(offerId);
 
+  const canOrderCertificate = Boolean(
+    offer?.certificate_available && offer.status === "active",
+  );
+
+  const organizationName = organization?.organization_name ?? "Предприятие не найдено";
+  const offerTitle = offer?.title ?? "Предложение не найдено";
   const directoryHref = getDirectoryHref(organization);
   const offerHref = getOfferHref(offer);
-  const organizationInternalHref = getOrganizationInternalHref(organization);
-
-  const canOrderCertificate = Boolean(offer?.certificate_available);
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#ffffff",
-        color: "#111111",
-        padding: "40px 16px",
-        fontFamily: "Arial, Helvetica, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "1050px",
-          margin: "0 auto",
-        }}
-      >
-        <header style={{ marginBottom: "24px" }}>
-          <Link
-            href={offer ? offerHref : directoryHref}
-            style={{
-              color: "#2563eb",
-              textDecoration: "underline",
-              display: "inline-block",
-              marginBottom: "16px",
-            }}
-          >
-            ← Назад к предложению
-          </Link>
+    <main className="min-h-full bg-[#f5f6fb] px-4 py-8 text-[#1a1d2e]">
+      <div className="mx-auto grid w-full max-w-[1120px] gap-5">
+        <Link
+          href={offerHref}
+          className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] transition hover:bg-gray-50"
+        >
+          ← Назад к предложению
+        </Link>
 
-          <h1
-            style={{
-              fontSize: "38px",
-              lineHeight: "1.15",
-              fontWeight: 700,
-              margin: "0 0 10px",
-            }}
-          >
-            Заказ сертификата
-          </h1>
+        <header className="rounded-[22px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7c8099]">
+            Commercial core / Certificate order
+          </div>
 
-          <p
-            style={{
-              margin: "0 0 16px",
-              color: "#555555",
-              fontSize: "17px",
-              lineHeight: "1.5",
-            }}
-          >
-            Сертификат создаётся на основании конкретного предложения
-            предприятия. На этом шаге страница подготавливает заказ; запись
-            заявки в базу данных будет добавлена следующим этапом.
-          </p>
+          <div className="grid gap-5 lg:grid-cols-[1.35fr_0.65fr]">
+            <div>
+              <h1 className="text-[32px] font-bold tracking-[-0.035em] text-[#111827]">
+                Получить подарочный сертификат
+              </h1>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-              flexWrap: "wrap",
-            }}
-          >
-            <Link
-              href={offerHref}
-              style={{
-                display: "inline-block",
-                padding: "10px 14px",
-                borderRadius: "8px",
-                border: "1px solid #dddddd",
-                background: "#ffffff",
-                color: "#111111",
-                textDecoration: "none",
-                fontWeight: 700,
-              }}
-            >
-              Подробное описание offer
-            </Link>
+              <p className="mt-3 max-w-[820px] text-[14px] leading-6 text-[#5a5f7a]">
+                Сертификат создаётся на основании конкретного предложения
+                предприятия. Сейчас сертификат будет добавлен в список
+                заказанных сертификатов в личном кабинете. Email-уведомление
+                будет подключено позже.
+              </p>
 
-            <Link
-              href={directoryHref}
-              style={{
-                display: "inline-block",
-                padding: "10px 14px",
-                borderRadius: "8px",
-                border: "1px solid #dddddd",
-                background: "#ffffff",
-                color: "#111111",
-                textDecoration: "none",
-                fontWeight: 700,
-              }}
-            >
-              Публичная карточка предприятия
-            </Link>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Link
+                  href={offerHref}
+                  className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
+                >
+                  Подробное описание offer
+                </Link>
 
-            <Link
-              href={organizationInternalHref}
-              style={{
-                display: "inline-block",
-                padding: "10px 14px",
-                borderRadius: "8px",
-                border: "1px solid #16a34a",
-                background: "#16a34a",
-                color: "#ffffff",
-                textDecoration: "none",
-                fontWeight: 800,
-              }}
-            >
-              Зарегистрировать покупку у предприятия
-            </Link>
+                <Link
+                  href={directoryHref}
+                  className="rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
+                >
+                  Публичная карточка предприятия
+                </Link>
+
+                <Link
+                  href="/my-certificates"
+                  className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
+                >
+                  Мои сертификаты
+                </Link>
+              </div>
+            </div>
+
+            <aside className="grid content-start gap-3 rounded-[18px] border border-[#dbeafe] bg-[#eff6ff] p-5 text-[#1e3a8a]">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
+                Стоимость сертификата
+              </div>
+
+              <div className="text-[28px] font-bold tracking-[-0.03em]">
+                {getCertificatePaymentLabel(offer)}
+              </div>
+
+              <p className="text-[12px] leading-5">
+                POINTS — бонусные единицы программы лояльности, а не деньги,
+                валюта или средство платежа.
+              </p>
+            </aside>
           </div>
         </header>
 
         {errorMessage ? (
-          <section
-            style={{
-              border: "1px solid #f2b8b5",
-              borderRadius: "16px",
-              background: "#fff5f5",
-              color: "#a40000",
-              padding: "20px 24px",
-              marginBottom: "24px",
-            }}
-          >
-            <h2 style={{ margin: "0 0 8px", fontSize: "22px" }}>
-              Ошибка загрузки
+          <section className="rounded-[18px] border border-[#fecaca] bg-[#fff1f2] p-5 text-[#b42318] shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
+              Ошибка
+            </div>
+            <h2 className="mt-2 text-[22px] font-bold">
+              Не удалось загрузить сертификат
             </h2>
-            <p style={{ margin: 0 }}>{errorMessage}</p>
+            <p className="mt-2 text-[14px] leading-6">{errorMessage}</p>
+          </section>
+        ) : null}
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+              Предприятие
+            </div>
+            <div className="mt-2 text-[20px] font-bold text-[#111827]">
+              {organizationName}
+            </div>
+            <div className="mt-1 text-[12px] text-[#7c8099]">
+              {getOrganizationTypeLabel(organization?.organization_type)}
+            </div>
+          </article>
+
+          <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+              Предложение
+            </div>
+            <div className="mt-2 text-[20px] font-bold text-[#111827]">
+              {offerTitle}
+            </div>
+            <div className="mt-1 text-[12px] text-[#7c8099]">
+              {getOfferTypeLabel(offer?.offer_type)}
+            </div>
+          </article>
+
+          <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+              Статус
+            </div>
+            <div className="mt-2 text-[20px] font-bold text-[#111827]">
+              {canOrderCertificate ? "Доступен" : "Недоступен"}
+            </div>
+            <div className="mt-1 text-[12px] text-[#7c8099]">
+              {offer?.certificate_validity_days
+                ? `${offer.certificate_validity_days} дней`
+                : "срок не указан"}
+            </div>
+          </article>
+        </section>
+
+        <section className="rounded-[18px] border border-[#dbeafe] bg-[#eff6ff] p-6 text-[#1e3a8a] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.22em]">
+            POINTS / email / availability
+          </div>
+
+          <h2 className="mt-2 text-[22px] font-bold">
+            Что произойдёт после получения сертификата
+          </h2>
+
+          <div className="mt-3 grid gap-2 text-[13px] leading-6">
+            <p className="m-0">
+              <strong>Сертификат:</strong> будет создан через штатный API и
+              должен появиться в личном кабинете в разделе “Мои сертификаты”.
+            </p>
+            <p className="m-0">
+              <strong>Email:</strong> пока не отправляем. TODO: добавить email
+              уведомление получателю сертификата.
+            </p>
+            <p className="m-0">
+              <strong>Доступное количество:</strong> на следующем шаге публичная
+              карточка предприятия должна показывать остаток: лимит минус уже
+              заказанные активные сертификаты.
+            </p>
+          </div>
+        </section>
+
+        {offer ? (
+          <section className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+            <div className="mb-4 border-b border-[#edf0f7] pb-4">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7c8099]">
+                Данные сертификата
+              </div>
+
+              <h2 className="mt-2 text-[24px] font-bold text-[#111827]">
+                {offer.title}
+              </h2>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+                  Оплата
+                </div>
+                <div className="mt-2 text-[20px] font-bold text-[#111827]">
+                  {getCertificatePaymentLabel(offer)}
+                </div>
+                <div className="mt-1 text-[12px] text-[#7c8099]">
+                  Цена offer: {formatMoney(offer.price, offer.currency)}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+                  Условия
+                </div>
+                <div className="mt-2 grid gap-1 text-[13px] leading-5 text-[#5a5f7a]">
+                  <p className="m-0">
+                    Продавец подтверждает:{" "}
+                    <strong className="text-[#343854]">
+                      {offer.requires_seller_confirmation ? "да" : "нет"}
+                    </strong>
+                  </p>
+                  <p className="m-0">
+                    Можно передать:{" "}
+                    <strong className="text-[#343854]">
+                      {offer.is_transferable ? "да" : "нет"}
+                    </strong>
+                  </p>
+                  <p className="m-0">
+                    Можно отменить:{" "}
+                    <strong className="text-[#343854]">
+                      {offer.is_cancellable ? "да" : "нет"}
+                    </strong>
+                  </p>
+                  <p className="m-0">
+                    Возврат:{" "}
+                    <strong className="text-[#343854]">
+                      {getPolicyLabel(offer.points_refund_policy)}
+                    </strong>
+                  </p>
+                  {offer.max_certificates_total ? (
+                    <p className="m-0">
+                      Лимит сертификатов:{" "}
+                      <strong className="text-[#343854]">
+                        {offer.max_certificates_total}
+                      </strong>
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            {offer.certificate_terms ? (
+              <div className="mt-4 rounded-2xl border border-[#dbeafe] bg-[#eff6ff] p-4 text-[#1e3a8a]">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
+                  Условия сертификата
+                </div>
+                <p className="mt-2 text-[13px] leading-6">
+                  {offer.certificate_terms}
+                </p>
+              </div>
+            ) : null}
           </section>
         ) : null}
 
         {offer ? (
-          <>
-            {!canOrderCertificate ? (
-              <section
-                style={{
-                  border: "1px solid #f2b8b5",
-                  borderRadius: "16px",
-                  background: "#fff5f5",
-                  color: "#a40000",
-                  padding: "20px 24px",
-                  marginBottom: "24px",
-                }}
-              >
-                <h2 style={{ margin: "0 0 8px", fontSize: "22px" }}>
-                  Сертификат недоступен
-                </h2>
-                <p style={{ margin: 0, lineHeight: "1.5" }}>
-                  Для этого предложения заказ сертификата сейчас недоступен.
-                </p>
-              </section>
-            ) : null}
-
-            <section
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
-                gap: "16px",
-                marginBottom: "24px",
-              }}
-            >
-              <div
-                style={{
-                  border: "1px solid #dddddd",
-                  borderRadius: "16px",
-                  padding: "20px",
-                  background: "#ffffff",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-                }}
-              >
-                <div style={{ color: "#666666", marginBottom: "8px" }}>
-                  Предприятие
-                </div>
-                <div style={{ fontSize: "20px", fontWeight: 700 }}>
-                  {organization?.organization_name ?? "Не указано"}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  border: "1px solid #dddddd",
-                  borderRadius: "16px",
-                  padding: "20px",
-                  background: "#ffffff",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-                }}
-              >
-                <div style={{ color: "#666666", marginBottom: "8px" }}>
-                  Предложение
-                </div>
-                <div style={{ fontSize: "20px", fontWeight: 700 }}>
-                  {offer.title}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  border: "1px solid #bfdbfe",
-                  borderRadius: "16px",
-                  padding: "20px",
-                  background: "#eff6ff",
-                  color: "#1e3a8a",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-                }}
-              >
-                <div style={{ marginBottom: "8px" }}>Стоимость сертификата</div>
-                <div style={{ fontSize: "20px", fontWeight: 800 }}>
-                  {getCertificatePaymentLabel(offer)}
-                </div>
-              </div>
-            </section>
-
-            <section
-              style={{
-                border: "1px solid #bfdbfe",
-                borderRadius: "16px",
-                background: "#eff6ff",
-                padding: "20px 24px",
-                marginBottom: "24px",
-                color: "#1e3a8a",
-              }}
-            >
-              <h2 style={{ margin: "0 0 8px", fontSize: "20px" }}>
-                POINTS и сертификаты
-              </h2>
-              <p style={{ margin: 0, lineHeight: "1.5" }}>
-                POINTS — это бонусные единицы программы лояльности, а не деньги,
-                валюта или средство платежа. Сертификат относится к выбранному
-                offer, а регистрация покупки относится к предприятию в целом.
-              </p>
-            </section>
-
-            <section
-              style={{
-                border: "1px solid #dddddd",
-                borderRadius: "16px",
-                background: "#ffffff",
-                overflow: "hidden",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-                marginBottom: "24px",
-              }}
-            >
-              <div
-                style={{
-                  padding: "20px 24px",
-                  borderBottom: "1px solid #eeeeee",
-                }}
-              >
-                <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  Данные сертификата
-                </h2>
-                <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Информация, которая будет использована для создания заявки.
-                </p>
-              </div>
-
-              <div
-                style={{
-                  padding: "20px 24px",
-                  display: "grid",
-                  gap: "12px",
-                }}
-              >
-                <div>
-                  <strong>Offer id:</strong> {offer.id}
-                </div>
-
-                <div>
-                  <strong>Тип предложения:</strong>{" "}
-                  {getOfferTypeLabel(offer.offer_type)}
-                </div>
-
-                <div>
-                  <strong>Описание:</strong>{" "}
-                  {offer.description ?? "Описание пока не добавлено."}
-                </div>
-
-                <div>
-                  <strong>Обычная цена offer:</strong>{" "}
-                  {offer.is_free
-                    ? "Бесплатно"
-                    : formatMoney(offer.price, offer.currency)}
-                </div>
-
-                <div>
-                  <strong>Сертификат доступен:</strong>{" "}
-                  {offer.certificate_available ? "Да" : "Нет"}
-                </div>
-
-                <div>
-                  <strong>Стоимость сертификата:</strong>{" "}
-                  {getCertificatePaymentLabel(offer)}
-                </div>
-
-                <div>
-                  <strong>Срок действия:</strong>{" "}
-                  {offer.certificate_validity_days
-                    ? `${offer.certificate_validity_days} дней`
-                    : "Не указан"}
-                </div>
-
-                <div>
-                  <strong>Требуется подтверждение продавца:</strong>{" "}
-                  {offer.requires_seller_confirmation ? "Да" : "Нет"}
-                </div>
-
-                <div>
-                  <strong>Можно отменить:</strong>{" "}
-                  {offer.is_cancellable ? "Да" : "Нет"}
-                </div>
-
-                <div>
-                  <strong>Можно передать:</strong>{" "}
-                  {offer.is_transferable ? "Да" : "Нет"}
-                </div>
-
-                <div>
-                  <strong>Политика возврата POINTS:</strong>{" "}
-                  {offer.points_refund_policy}
-                </div>
-
-                {offer.max_certificates_total ? (
-                  <div>
-                    <strong>Максимальное количество сертификатов:</strong>{" "}
-                    {offer.max_certificates_total}
-                  </div>
-                ) : null}
-
-                {offer.certificate_terms ? (
-                  <div>
-                    <strong>Условия сертификата:</strong>{" "}
-                    {offer.certificate_terms}
-                  </div>
-                ) : null}
-              </div>
-            </section>
-
-            <section
-              style={{
-                border: "1px solid #dddddd",
-                borderRadius: "16px",
-                background: "#ffffff",
-                overflow: "hidden",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-                marginBottom: "24px",
-              }}
-            >
-              <div
-                style={{
-                  padding: "20px 24px",
-                  borderBottom: "1px solid #eeeeee",
-                }}
-              >
-                <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  Форма заказа сертификата
-                </h2>
-                <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Следующим шагом эта форма будет сохранять заявку в таблицу
-                  certificates.
-                </p>
-              </div>
-
-              <form
-                style={{
-                  padding: "20px 24px",
-                  display: "grid",
-                  gap: "14px",
-                }}
-              >
-                <label style={{ display: "grid", gap: "6px" }}>
-                  <span style={{ fontWeight: 700 }}>Имя получателя</span>
-                  <input
-                    type="text"
-                    name="receiver_person_name"
-                    placeholder="Например: Anna Kowalska"
-                    disabled={!canOrderCertificate}
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid #cbd5e1",
-                      fontSize: "15px",
-                    }}
-                  />
-                </label>
-
-                <label style={{ display: "grid", gap: "6px" }}>
-                  <span style={{ fontWeight: 700 }}>Email получателя</span>
-                  <input
-                    type="email"
-                    name="receiver_email"
-                    placeholder="email@example.com"
-                    disabled={!canOrderCertificate}
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid #cbd5e1",
-                      fontSize: "15px",
-                    }}
-                  />
-                </label>
-
-                <label style={{ display: "grid", gap: "6px" }}>
-                  <span style={{ fontWeight: 700 }}>Сообщение</span>
-                  <textarea
-                    name="message"
-                    placeholder="Короткое сообщение для получателя сертификата"
-                    disabled={!canOrderCertificate}
-                    rows={4}
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid #cbd5e1",
-                      fontSize: "15px",
-                      resize: "vertical",
-                    }}
-                  />
-                </label>
-
-                <button
-                  type="button"
-                  disabled
-                  style={{
-                    justifySelf: "start",
-                    padding: "11px 16px",
-                    borderRadius: "8px",
-                    border: "1px solid #94a3b8",
-                    background: "#e2e8f0",
-                    color: "#475569",
-                    fontWeight: 800,
-                    cursor: "not-allowed",
-                  }}
-                >
-                  Создание заявки будет добавлено следующим шагом
-                </button>
-              </form>
-            </section>
-
-            <section
-              style={{
-                display: "flex",
-                gap: "10px",
-                flexWrap: "wrap",
-              }}
-            >
-              <Link
-                href={offerHref}
-                style={{
-                  display: "inline-block",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  border: "1px solid #dddddd",
-                  background: "#ffffff",
-                  color: "#111111",
-                  textDecoration: "none",
-                  fontWeight: 700,
-                }}
-              >
-                Назад к offer
-              </Link>
-
-              <Link
-                href={directoryHref}
-                style={{
-                  display: "inline-block",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  border: "1px solid #dddddd",
-                  background: "#ffffff",
-                  color: "#111111",
-                  textDecoration: "none",
-                  fontWeight: 700,
-                }}
-              >
-                Публичная карточка предприятия
-              </Link>
-
-              <Link
-                href={organizationInternalHref}
-                style={{
-                  display: "inline-block",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  border: "1px solid #16a34a",
-                  background: "#16a34a",
-                  color: "#ffffff",
-                  textDecoration: "none",
-                  fontWeight: 800,
-                }}
-              >
-                Зарегистрировать покупку у предприятия
-              </Link>
-            </section>
-          </>
+          <CertificateOrderForm
+            offerId={offer.id}
+            offerTitle={offer.title}
+            organizationName={organizationName}
+            canOrderCertificate={canOrderCertificate}
+          />
         ) : null}
+
+        <section className="flex flex-wrap gap-2">
+          <Link
+            href={offerHref}
+            className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
+          >
+            Назад к offer
+          </Link>
+
+          <Link
+            href={directoryHref}
+            className="rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
+          >
+            Публичная карточка предприятия
+          </Link>
+
+          <Link
+            href="/my-certificates"
+            className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
+          >
+            Мои сертификаты
+          </Link>
+        </section>
       </div>
     </main>
   );

@@ -1,13 +1,13 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type Organization = {
   id: string;
   organization_name: string;
-  organization_type: string;
-  status: string;
+  organization_type?: string | null;
+  status?: string | null;
 };
 
 type ValueObject = {
@@ -21,28 +21,123 @@ type ValueObject = {
   organizations?: Organization | null;
 };
 
-type OfferItemForm = {
-  localId: string;
-  valueObjectId: string;
-  quantity: string;
-  unitPrice: string;
-  currency: string;
-  isRequired: boolean;
+type Offer = {
+  id: string;
+  organization_id?: string | null;
+  value_object_id?: string | null;
+  offer_type?: string | null;
+  title?: string | null;
+  description?: string | null;
+  price?: number | string | null;
+  currency?: string | null;
+  certificate_available?: boolean | null;
+  certificate_payment_mode?: string | null;
+  certificate_points_price?: number | string | null;
+  certificate_money_price?: number | string | null;
+  certificate_currency?: string | null;
+  certificate_validity_days?: number | string | null;
+  status?: string | null;
 };
 
-function createEmptyOfferItem(currency = "PLN"): OfferItemForm {
-  return {
-    localId: crypto.randomUUID(),
-    valueObjectId: "",
-    quantity: "1",
-    unitPrice: "",
-    currency,
-    isRequired: true,
-  };
-}
+type OrganizationsResponse = {
+  ok?: boolean;
+  error?: string;
+  organizations?: Organization[];
+};
+
+type ValueObjectsResponse = {
+  ok?: boolean;
+  error?: string;
+  valueObjects?: ValueObject[];
+  value_objects?: ValueObject[];
+};
+
+type CreateOfferResponse = {
+  ok?: boolean;
+  error?: string;
+  offer?: Offer;
+};
+
+const PILOT_OFFER_TITLE = "Relaksacyjny masaż łydek w Szczecinie";
+
+const PILOT_OFFER_DESCRIPTION =
+  "Relaksacyjny masaż łydek w Szczecinie. Oferta obejmuje 30-minutową usługę masażu relaksacyjnego ukierunkowaną na rozluźnienie napięcia mięśniowego, poprawę komfortu nóg i regenerację po chodzeniu, pracy stojącej, sporcie lub długim siedzeniu.\n\nUsługa jest przeznaczona dla osób, które odczuwają zmęczenie, napięcie lub ciężkość nóg po codziennej aktywności. Ma charakter relaksacyjny i regeneracyjny. Nie jest usługą medyczną i nie zastępuje konsultacji lekarskiej ani fizjoterapeutycznej.";
+
+const PILOT_CERTIFICATE_TERMS =
+  "Certyfikat uprawnia do skorzystania z jednej 30-minutowej usługi: relaksacyjny masaż łydek w Szczecinie. Termin realizacji należy uzgodnić wcześniej ze sprzedawcą. Certyfikat nie jest usługą medyczną i nie zastępuje konsultacji lekarskiej ani fizjoterapeutycznej.";
 
 function todayDateInputValue() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function normalizeCurrency(value: string) {
+  const trimmedValue = value.trim().toUpperCase();
+
+  return trimmedValue.length > 0 ? trimmedValue : "PLN";
+}
+
+function getOrganizationTypeLabel(type: string | null | undefined) {
+  switch (type) {
+    case "private_business":
+      return "частный бизнес";
+    case "company":
+      return "компания";
+    case "non_profit":
+      return "некоммерческая организация";
+    case "public_institution":
+      return "публичная организация";
+    default:
+      return type ?? "тип не указан";
+  }
+}
+
+function getValueTypeLabel(type: string | null | undefined) {
+  switch (type) {
+    case "service":
+      return "услуга";
+    case "bookable_service":
+      return "услуга с записью";
+    case "product":
+      return "товар";
+    case "consultation":
+      return "консультация";
+    case "access":
+      return "доступ";
+    case "content":
+      return "контент";
+    default:
+      return type ?? "ценный объект";
+  }
+}
+
+function formatMoney(value: string | number | null | undefined, currency: string) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
+  const numericValue = Number(value);
+
+  if (Number.isNaN(numericValue)) {
+    return `${value} ${currency}`.trim();
+  }
+
+  return `${new Intl.NumberFormat("pl-PL", {
+    maximumFractionDigits: 2,
+  }).format(numericValue)} ${currency}`.trim();
+}
+
+function parseNonNegativeNumber(value: string) {
+  if (value.trim().length === 0) {
+    return 0;
+  }
+
+  const parsedValue = Number(value);
+
+  if (Number.isNaN(parsedValue) || parsedValue < 0) {
+    return 0;
+  }
+
+  return parsedValue;
 }
 
 function parsePositiveNumber(value: string) {
@@ -55,46 +150,18 @@ function parsePositiveNumber(value: string) {
   return parsedValue;
 }
 
-function parseNonNegativeNumber(value: string) {
-  const parsedValue = Number(value);
+function buildOfferTitleFromValueObject(valueObject: ValueObject) {
+  const title = valueObject.title.trim();
 
-  if (Number.isNaN(parsedValue) || parsedValue < 0) {
-    return null;
+  if (title.toLowerCase().includes("szczecin")) {
+    return title;
   }
 
-  return parsedValue;
+  return `${title} w Szczecinie`;
 }
 
-function round2(value: number) {
-  return Math.round(value * 100) / 100;
-}
-
-function getAutomaticPaymentMode(offerPrice: number | null, coveredAmount: number) {
-  if (!offerPrice || coveredAmount <= 0) {
-    return "money_only";
-  }
-
-  if (coveredAmount >= offerPrice) {
-    return "points_only";
-  }
-
-  return "mixed";
-}
-
-function getPaymentModeLabel(paymentMode: string) {
-  if (paymentMode === "money_only") {
-    return "Money only";
-  }
-
-  if (paymentMode === "points_only") {
-    return "Points only";
-  }
-
-  if (paymentMode === "mixed") {
-    return "Mixed: money + points";
-  }
-
-  return paymentMode;
+function buildCertificateTerms(valueObjectTitle: string) {
+  return `Certyfikat uprawnia do skorzystania z jednej 30-minutowej usługi: ${valueObjectTitle} w Szczecinie. Termin realizacji należy uzgodnić wcześniej ze sprzedawcą. Certyfikat nie jest usługą medyczną i nie zastępuje konsultacji lekarskiej ani fizjoterapeutycznej.`;
 }
 
 export default function NewOfferPage() {
@@ -105,11 +172,7 @@ export default function NewOfferPage() {
   const [organizationIdFromUrl, setOrganizationIdFromUrl] = useState("");
   const [valueObjectId, setValueObjectId] = useState("");
 
-  const [offerItems, setOfferItems] = useState<OfferItemForm[]>([
-    createEmptyOfferItem("PLN"),
-  ]);
-
-  const [offerType, setOfferType] = useState("bundle");
+  const [offerType, setOfferType] = useState("bookable_service");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -118,32 +181,20 @@ export default function NewOfferPage() {
   const [isPaid, setIsPaid] = useState(true);
   const [isFree, setIsFree] = useState(false);
 
-  const [isDiscountActive, setIsDiscountActive] = useState(false);
-  const [discountType, setDiscountType] = useState("manual_price");
-  const [discountValue, setDiscountValue] = useState("");
-  const [discountStartsAt, setDiscountStartsAt] = useState("");
-  const [discountEndsAt, setDiscountEndsAt] = useState("");
-  const [lowestPrice30Days, setLowestPrice30Days] = useState("");
-  const [lowestPrice30DaysCurrency, setLowestPrice30DaysCurrency] =
-    useState("PLN");
-  const [lowestPrice30DaysPeriodStart, setLowestPrice30DaysPeriodStart] =
-    useState("");
-  const [lowestPrice30DaysPeriodEnd, setLowestPrice30DaysPeriodEnd] =
-    useState("");
-  const [discountLegalNote, setDiscountLegalNote] = useState("");
-
   const [certificateAvailable, setCertificateAvailable] = useState(true);
   const [certificatePointsCoveredAmount, setCertificatePointsCoveredAmount] =
-    useState("");
+    useState("0");
   const [certificateCurrency, setCertificateCurrency] = useState("PLN");
-  const [certificateTerms, setCertificateTerms] = useState("");
+  const [certificateTerms, setCertificateTerms] = useState(
+    PILOT_CERTIFICATE_TERMS,
+  );
   const [certificateValidityDays, setCertificateValidityDays] = useState("180");
   const [requiresSellerConfirmation, setRequiresSellerConfirmation] =
     useState(true);
   const [isTransferable, setIsTransferable] = useState(true);
   const [isCancellable, setIsCancellable] = useState(true);
   const [pointsRefundPolicy, setPointsRefundPolicy] = useState(
-    "refund_until_seller_confirmation"
+    "refund_until_seller_confirmation",
   );
   const [maxCertificatesTotal, setMaxCertificatesTotal] = useState("");
   const [maxCertificatesPerUser, setMaxCertificatesPerUser] = useState("");
@@ -156,21 +207,28 @@ export default function NewOfferPage() {
   const [referenceExchangeRateSource, setReferenceExchangeRateSource] =
     useState("manual");
   const [referenceExchangeRateDate, setReferenceExchangeRateDate] = useState(
-    todayDateInputValue()
+    todayDateInputValue(),
   );
 
-  const [requiresBooking, setRequiresBooking] = useState(false);
-  const [bookingMode, setBookingMode] = useState("not_required");
-  const [defaultDurationMinutes, setDefaultDurationMinutes] = useState("");
-  const [minDurationMinutes, setMinDurationMinutes] = useState("");
-  const [maxDurationMinutes, setMaxDurationMinutes] = useState("");
+  const [requiresBooking, setRequiresBooking] = useState(true);
+  const [bookingMode, setBookingMode] = useState("seller_confirmed");
+  const [defaultDurationMinutes, setDefaultDurationMinutes] = useState("30");
+  const [minDurationMinutes, setMinDurationMinutes] = useState("30");
+  const [maxDurationMinutes, setMaxDurationMinutes] = useState("30");
   const [quantityLimit, setQuantityLimit] = useState("");
   const [targetReceiverType, setTargetReceiverType] = useState("person");
 
   const [message, setMessage] = useState("");
-  const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(true);
-  const [isLoadingValueObjects, setIsLoadingValueObjects] = useState(true);
+  const [createdOffer, setCreatedOffer] = useState<Offer | null>(null);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const selectedOrganization = useMemo(
+    () =>
+      organizations.find((organization) => organization.id === organizationId) ??
+      null,
+    [organizationId, organizations],
+  );
 
   const filteredValueObjects = useMemo(() => {
     if (!organizationId) {
@@ -178,111 +236,66 @@ export default function NewOfferPage() {
     }
 
     return valueObjects.filter(
-      (valueObject) => valueObject.organization_id === organizationId
+      (valueObject) => valueObject.organization_id === organizationId,
     );
   }, [organizationId, valueObjects]);
 
-  const selectedOrganization = useMemo(() => {
-    return organizations.find(
-      (organization) => organization.id === organizationId
-    );
-  }, [organizationId, organizations]);
+  const selectedValueObject = useMemo(
+    () =>
+      valueObjects.find((valueObject) => valueObject.id === valueObjectId) ??
+      null,
+    [valueObjectId, valueObjects],
+  );
 
-  const calculatedItemsTotal = useMemo(() => {
-    return offerItems.reduce((sum, item) => {
-      const quantity = Number(item.quantity);
-      const unitPrice = Number(item.unitPrice);
-
-      if (Number.isNaN(quantity) || Number.isNaN(unitPrice)) {
-        return sum;
-      }
-
-      return sum + quantity * unitPrice;
-    }, 0);
-  }, [offerItems]);
-
-  const certificatePricingPreview = useMemo(() => {
+  const certificatePreview = useMemo(() => {
     const offerPrice = parsePositiveNumber(price);
+    const coveredByPoints = parseNonNegativeNumber(certificatePointsCoveredAmount);
+
+    if (!certificateAvailable || !offerPrice) {
+      return {
+        mode: "money_only",
+        moneyToPay: offerPrice ?? 0,
+        pointsPrice: 0,
+        warning: null as string | null,
+      };
+    }
+
+    if (coveredByPoints > offerPrice) {
+      return {
+        mode: "invalid",
+        moneyToPay: 0,
+        pointsPrice: 0,
+        warning:
+          "Сумма покрытия POINTS не может быть больше цены предложения.",
+      };
+    }
+
+    if (coveredByPoints <= 0) {
+      return {
+        mode: "money_only",
+        moneyToPay: offerPrice,
+        pointsPrice: 0,
+        warning: null,
+      };
+    }
+
     const exchangeRate = parsePositiveNumber(referenceExchangeRate);
     const valuePerPoint = parsePositiveNumber(referenceValuePerPoint);
 
-    if (!certificateAvailable) {
-      return {
-        canCalculate: false,
-        coveredAmount: 0,
-        calculatedPointsPrice: 0,
-        moneyToPay: offerPrice ?? 0,
-        paymentMode: "money_only",
-        warning: null,
-      };
-    }
-
-    if (!offerPrice) {
-      return {
-        canCalculate: false,
-        coveredAmount: 0,
-        calculatedPointsPrice: 0,
-        moneyToPay: 0,
-        paymentMode: "money_only",
-        warning: "Введите Current price, чтобы рассчитать POINTS.",
-      };
-    }
-
-    const enteredCoveredAmount = parseNonNegativeNumber(
-      certificatePointsCoveredAmount
-    );
-
-    const coveredAmount = enteredCoveredAmount ?? 0;
-    const paymentMode = getAutomaticPaymentMode(offerPrice, coveredAmount);
-
-    if (coveredAmount > offerPrice) {
-      return {
-        canCalculate: false,
-        coveredAmount,
-        calculatedPointsPrice: 0,
-        moneyToPay: 0,
-        paymentMode,
-        warning:
-          "Сумма покрытия points не может быть больше текущей цены offer.",
-      };
-    }
-
-    if (paymentMode === "money_only") {
-      return {
-        canCalculate: true,
-        coveredAmount: 0,
-        calculatedPointsPrice: 0,
-        moneyToPay: round2(offerPrice),
-        paymentMode,
-        warning: null,
-      };
-    }
-
     if (!exchangeRate || !valuePerPoint) {
       return {
-        canCalculate: false,
-        coveredAmount,
-        calculatedPointsPrice: 0,
+        mode: "invalid",
         moneyToPay: offerPrice,
-        paymentMode,
-        warning:
-          "Введите курс: например, если 1 EUR = 4.30 PLN, укажите 4.30.",
+        pointsPrice: 0,
+        warning: "Для расчёта POINTS нужен курс и ценность одного POINT.",
       };
     }
 
-    const calculatedPointsPrice = round2(
-      coveredAmount / exchangeRate / valuePerPoint
-    );
-
-    const moneyToPay =
-      paymentMode === "points_only" ? 0 : round2(offerPrice - coveredAmount);
-
     return {
-      canCalculate: true,
-      coveredAmount: round2(coveredAmount),
-      calculatedPointsPrice,
-      moneyToPay,
-      paymentMode,
+      mode: coveredByPoints >= offerPrice ? "points_only" : "mixed",
+      moneyToPay: Math.round((offerPrice - coveredByPoints) * 100) / 100,
+      pointsPrice:
+        Math.round((coveredByPoints / exchangeRate / valuePerPoint) * 100) / 100,
       warning: null,
     };
   }, [
@@ -293,35 +306,123 @@ export default function NewOfferPage() {
     referenceValuePerPoint,
   ]);
 
-  async function loadOrganizations() {
-    setIsLoadingOrganizations(true);
+  const canSubmit =
+    !isSubmitting &&
+    !isLoadingData &&
+    organizationId.trim().length > 0 &&
+    title.trim().length > 1 &&
+    parsePositiveNumber(price) !== null &&
+    certificatePreview.warning === null;
 
-    const urlOrganizationId =
-      typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search).get("organizationId") ??
-          ""
+  const applyValueObjectToOffer = useCallback((valueObject: ValueObject) => {
+    const nextTitle = buildOfferTitleFromValueObject(valueObject);
+    const nextCurrency = valueObject.default_currency ?? "PLN";
+    const nextPrice =
+      valueObject.default_price !== null &&
+      valueObject.default_price !== undefined
+        ? String(valueObject.default_price)
         : "";
+
+    const nextDuration =
+      valueObject.default_duration_minutes !== null &&
+      valueObject.default_duration_minutes !== undefined
+        ? String(valueObject.default_duration_minutes)
+        : "30";
+
+    setValueObjectId(valueObject.id);
+    setOrganizationId(valueObject.organization_id ?? "");
+    setOfferType(
+      valueObject.value_type === "service" ? "bookable_service" : valueObject.value_type,
+    );
+    setTitle(nextTitle);
+    setDescription(PILOT_OFFER_DESCRIPTION);
+    setPrice(nextPrice);
+    setRegularPrice(nextPrice);
+    setCurrency(nextCurrency);
+    setCertificateCurrency(nextCurrency);
+    setCertificatePointsCoveredAmount("0");
+    setCertificateTerms(buildCertificateTerms(valueObject.title));
+    setDefaultDurationMinutes(nextDuration);
+    setMinDurationMinutes(nextDuration);
+    setMaxDurationMinutes(nextDuration);
+    setRequiresBooking(true);
+    setBookingMode("seller_confirmed");
+    setIsPaid(true);
+    setIsFree(false);
+    setCertificateAvailable(true);
+    setRequiresSellerConfirmation(true);
+    setIsTransferable(true);
+    setIsCancellable(true);
+    setIsPublicReward(true);
+    setCreatedOffer(null);
+    setMessage("");
+  }, []);
+
+  const loadInitialData = useCallback(async () => {
+    setIsLoadingData(true);
+    setMessage("");
+
+    const searchParams =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search)
+        : new URLSearchParams();
+
+    const urlOrganizationId = searchParams.get("organizationId") ?? "";
+    const urlValueObjectId = searchParams.get("valueObjectId") ?? "";
 
     setOrganizationIdFromUrl(urlOrganizationId);
 
     try {
-      const response = await fetch("/api/organizations", {
-        method: "GET",
-        cache: "no-store",
-      });
+      const [organizationsResponse, valueObjectsResponse] = await Promise.all([
+        fetch("/api/organizations", {
+          method: "GET",
+          cache: "no-store",
+        }),
+        fetch("/api/value-objects", {
+          method: "GET",
+          cache: "no-store",
+        }),
+      ]);
 
-      const data = await response.json();
+      const organizationsData =
+        (await organizationsResponse.json()) as OrganizationsResponse;
+      const valueObjectsData =
+        (await valueObjectsResponse.json()) as ValueObjectsResponse;
 
-      if (!response.ok || !data.ok) {
-        setMessage(data.error ?? "Failed to load organizations");
+      if (!organizationsResponse.ok || !organizationsData.ok) {
+        setMessage(organizationsData.error ?? "Не удалось загрузить предприятия.");
         return;
       }
 
-      const loadedOrganizations: Organization[] = data.organizations ?? [];
+      if (!valueObjectsResponse.ok || !valueObjectsData.ok) {
+        setMessage(valueObjectsData.error ?? "Не удалось загрузить услуги.");
+        return;
+      }
+
+      const loadedOrganizations = Array.isArray(organizationsData.organizations)
+        ? organizationsData.organizations
+        : [];
+
+      const loadedValueObjects = Array.isArray(valueObjectsData.valueObjects)
+        ? valueObjectsData.valueObjects
+        : Array.isArray(valueObjectsData.value_objects)
+          ? valueObjectsData.value_objects
+          : [];
+
       setOrganizations(loadedOrganizations);
+      setValueObjects(loadedValueObjects);
+
+      const valueObjectFromUrl = loadedValueObjects.find(
+        (valueObject) => valueObject.id === urlValueObjectId,
+      );
+
+      if (valueObjectFromUrl) {
+        applyValueObjectToOffer(valueObjectFromUrl);
+        return;
+      }
 
       const organizationFromUrl = loadedOrganizations.find(
-        (organization) => organization.id === urlOrganizationId
+        (organization) => organization.id === urlOrganizationId,
       );
 
       if (organizationFromUrl) {
@@ -334,190 +435,92 @@ export default function NewOfferPage() {
       }
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "Unknown error occurred"
+        error instanceof Error
+          ? error.message
+          : "Неизвестная ошибка загрузки данных.",
       );
     } finally {
-      setIsLoadingOrganizations(false);
+      setIsLoadingData(false);
     }
-  }
-
-  async function loadValueObjects() {
-    setIsLoadingValueObjects(true);
-
-    try {
-      const response = await fetch("/api/value-objects", {
-        method: "GET",
-        cache: "no-store",
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        setMessage(data.error ?? "Failed to load value objects");
-        return;
-      }
-
-      setValueObjects(data.valueObjects ?? []);
-    } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "Unknown error occurred"
-      );
-    } finally {
-      setIsLoadingValueObjects(false);
-    }
-  }
+  }, [applyValueObjectToOffer]);
 
   useEffect(() => {
-    loadOrganizations();
-    loadValueObjects();
-  }, []);
+    const timeoutId = window.setTimeout(() => {
+      void loadInitialData();
+    }, 0);
 
-  useEffect(() => {
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [loadInitialData]);
+
+  function handleOrganizationChange(nextOrganizationId: string) {
+    setOrganizationId(nextOrganizationId);
     setValueObjectId("");
-    setOfferItems([createEmptyOfferItem(currency)]);
-  }, [organizationId]);
-
-  useEffect(() => {
-    setCertificateCurrency(currency);
-    setLowestPrice30DaysCurrency(currency);
-  }, [currency]);
-
-  useEffect(() => {
-    if (
-      price.trim().length > 0 &&
-      certificatePointsCoveredAmount.trim().length === 0
-    ) {
-      setCertificatePointsCoveredAmount(price);
-    }
-  }, [price, certificatePointsCoveredAmount]);
-
-  function findValueObject(valueObjectIdToFind: string) {
-    return valueObjects.find(
-      (valueObject) => valueObject.id === valueObjectIdToFind
-    );
+    setCreatedOffer(null);
+    setMessage("");
   }
 
-  function applyMainValueObjectDefaults(selectedId: string) {
-    const selectedValueObject = findValueObject(selectedId);
+  function handleValueObjectChange(nextValueObjectId: string) {
+    const nextValueObject = valueObjects.find(
+      (valueObject) => valueObject.id === nextValueObjectId,
+    );
 
-    if (!selectedValueObject) {
+    if (!nextValueObject) {
+      setValueObjectId("");
       return;
     }
 
-    setTitle(selectedValueObject.title);
-    setOfferType(
-      selectedValueObject.value_type === "service"
-        ? "bookable_service"
-        : selectedValueObject.value_type
-    );
-
-    if (selectedValueObject.default_price !== null) {
-      const defaultPrice = String(selectedValueObject.default_price);
-
-      setPrice(defaultPrice);
-      setRegularPrice(defaultPrice);
-      setCertificatePointsCoveredAmount(defaultPrice);
-    }
-
-    if (selectedValueObject.default_currency) {
-      setCurrency(selectedValueObject.default_currency);
-      setCertificateCurrency(selectedValueObject.default_currency);
-      setLowestPrice30DaysCurrency(selectedValueObject.default_currency);
-    }
-
-    if (selectedValueObject.default_duration_minutes !== null) {
-      setDefaultDurationMinutes(
-        String(selectedValueObject.default_duration_minutes)
-      );
-      setMinDurationMinutes(String(selectedValueObject.default_duration_minutes));
-      setMaxDurationMinutes(String(selectedValueObject.default_duration_minutes));
-    }
+    applyValueObjectToOffer(nextValueObject);
   }
 
-  function updateOfferItem(
-    localId: string,
-    updates: Partial<Omit<OfferItemForm, "localId">>
-  ) {
-    setOfferItems((currentItems) =>
-      currentItems.map((item) =>
-        item.localId === localId ? { ...item, ...updates } : item
-      )
-    );
+  function applyMassageOfferPilot() {
+    setOfferType("bookable_service");
+    setTitle(PILOT_OFFER_TITLE);
+    setDescription(PILOT_OFFER_DESCRIPTION);
+    setPrice("60");
+    setRegularPrice("60");
+    setCurrency("PLN");
+    setCertificateCurrency("PLN");
+    setCertificatePointsCoveredAmount("0");
+    setCertificateTerms(PILOT_CERTIFICATE_TERMS);
+    setCertificateValidityDays("180");
+    setDefaultDurationMinutes("30");
+    setMinDurationMinutes("30");
+    setMaxDurationMinutes("30");
+    setRequiresBooking(true);
+    setBookingMode("seller_confirmed");
+    setIsPaid(true);
+    setIsFree(false);
+    setCertificateAvailable(true);
+    setRequiresSellerConfirmation(true);
+    setIsTransferable(true);
+    setIsCancellable(true);
+    setPointsRefundPolicy("refund_until_seller_confirmation");
+    setIsPublicReward(true);
+    setCreatedOffer(null);
+    setMessage("");
   }
 
-  function handleOfferItemValueObjectChange(localId: string, selectedId: string) {
-    const selectedValueObject = findValueObject(selectedId);
-
-    updateOfferItem(localId, {
-      valueObjectId: selectedId,
-      unitPrice:
-        selectedValueObject?.default_price !== null &&
-        selectedValueObject?.default_price !== undefined
-          ? String(selectedValueObject.default_price)
-          : "",
-      currency: selectedValueObject?.default_currency || currency,
-    });
-  }
-
-  function addOfferItem() {
-    setOfferItems((currentItems) => [
-      ...currentItems,
-      createEmptyOfferItem(currency),
-    ]);
-  }
-
-  function removeOfferItem(localId: string) {
-    setOfferItems((currentItems) => {
-      if (currentItems.length <= 1) {
-        return currentItems;
-      }
-
-      return currentItems.filter((item) => item.localId !== localId);
-    });
-  }
-
-  function useItemsTotalAsOfferPrice() {
-    if (calculatedItemsTotal > 0) {
-      const total = String(calculatedItemsTotal);
-
-      setPrice(total);
-      setRegularPrice(total);
-      setCertificatePointsCoveredAmount(total);
-    }
-  }
-
-  function prepareDiscountDates() {
-    if (!isDiscountActive) {
-      return;
-    }
-
-    const today = todayDateInputValue();
-
-    if (!discountStartsAt) {
-      setDiscountStartsAt(today);
-    }
-
-    if (!lowestPrice30DaysPeriodEnd) {
-      setLowestPrice30DaysPeriodEnd(today);
-    }
-  }
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setMessage("");
+    setCreatedOffer(null);
     setIsSubmitting(true);
 
-    const preparedItems = offerItems
-      .filter((item) => item.valueObjectId.trim().length > 0)
-      .map((item, index) => ({
-        valueObjectId: item.valueObjectId,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        currency: item.currency || currency,
-        sortOrder: index,
-        isRequired: item.isRequired,
-      }));
+    const preparedItems = valueObjectId
+      ? [
+          {
+            valueObjectId,
+            quantity: "1",
+            unitPrice: price,
+            currency: normalizeCurrency(currency),
+            sortOrder: 0,
+            isRequired: true,
+          },
+        ]
+      : [];
 
     try {
       const response = await fetch("/api/offers", {
@@ -525,1841 +528,854 @@ export default function NewOfferPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        cache: "no-store",
         body: JSON.stringify({
           organizationId,
           valueObjectId: valueObjectId || null,
           offerType,
-          title,
-          description,
-          price,
-          regularPrice,
-          currency,
+          title: title.trim(),
+          description: description.trim() || null,
+          price: price.trim(),
+          regularPrice: regularPrice.trim() || price.trim(),
+          currency: normalizeCurrency(currency),
           isPaid,
           isFree,
 
-          isDiscountActive,
-          discountType,
-          discountValue,
-          discountStartsAt,
-          discountEndsAt,
-          lowestPrice30Days,
-          lowestPrice30DaysCurrency,
-          lowestPrice30DaysPeriodStart,
-          lowestPrice30DaysPeriodEnd,
-          discountLegalNote,
+          isDiscountActive: false,
+          discountType: "manual_price",
+          discountValue: "",
+          discountStartsAt: "",
+          discountEndsAt: "",
+          lowestPrice30Days: "",
+          lowestPrice30DaysCurrency: normalizeCurrency(currency),
+          lowestPrice30DaysPeriodStart: "",
+          lowestPrice30DaysPeriodEnd: "",
+          discountLegalNote: "",
 
           certificateAvailable,
-          certificatePointsCoveredAmount,
-          certificateCurrency,
-          certificateTerms,
-          certificateValidityDays,
+          certificatePointsCoveredAmount:
+            certificatePointsCoveredAmount.trim().length > 0
+              ? certificatePointsCoveredAmount.trim()
+              : "0",
+          certificateCurrency: normalizeCurrency(certificateCurrency || currency),
+          certificateTerms: certificateTerms.trim() || null,
+          certificateValidityDays: certificateValidityDays.trim() || "180",
           requiresSellerConfirmation,
           isTransferable,
           isCancellable,
           pointsRefundPolicy,
-          maxCertificatesTotal,
-          maxCertificatesPerUser,
+          maxCertificatesTotal: maxCertificatesTotal.trim() || null,
+          maxCertificatesPerUser: maxCertificatesPerUser.trim() || null,
           isPublicReward,
 
-          pointsCurrencyCode,
-          referenceCurrency,
-          referenceValuePerPoint,
-          referenceExchangeRate,
+          pointsCurrencyCode: normalizeCurrency(pointsCurrencyCode),
+          referenceCurrency: normalizeCurrency(referenceCurrency),
+          referenceValuePerPoint: referenceValuePerPoint.trim() || "1",
+          referenceExchangeRate: referenceExchangeRate.trim() || "4.30",
           referenceExchangeRateSource,
           referenceExchangeRateDate,
 
           requiresBooking,
           bookingMode,
-          defaultDurationMinutes,
-          minDurationMinutes,
-          maxDurationMinutes,
-          quantityLimit,
+          defaultDurationMinutes: defaultDurationMinutes.trim() || null,
+          minDurationMinutes: minDurationMinutes.trim() || null,
+          maxDurationMinutes: maxDurationMinutes.trim() || null,
+          quantityLimit: quantityLimit.trim() || null,
           targetReceiverType,
           items: preparedItems,
         }),
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as CreateOfferResponse;
 
       if (!response.ok || !data.ok) {
-        setMessage(data.error ?? "Failed to create offer");
+        setMessage(data.error ?? "Не удалось создать предложение.");
         return;
       }
 
-      setMessage("Offer created successfully");
-
-      setValueObjectId("");
-      setOfferItems([createEmptyOfferItem(currency)]);
-      setOfferType("bundle");
-      setTitle("");
-      setDescription("");
-      setPrice("");
-      setRegularPrice("");
-      setCurrency("PLN");
-      setIsPaid(true);
-      setIsFree(false);
-
-      setIsDiscountActive(false);
-      setDiscountType("manual_price");
-      setDiscountValue("");
-      setDiscountStartsAt("");
-      setDiscountEndsAt("");
-      setLowestPrice30Days("");
-      setLowestPrice30DaysCurrency("PLN");
-      setLowestPrice30DaysPeriodStart("");
-      setLowestPrice30DaysPeriodEnd("");
-      setDiscountLegalNote("");
-
-      setCertificateAvailable(true);
-      setCertificatePointsCoveredAmount("");
-      setCertificateCurrency("PLN");
-      setCertificateTerms("");
-      setCertificateValidityDays("180");
-      setRequiresSellerConfirmation(true);
-      setIsTransferable(true);
-      setIsCancellable(true);
-      setPointsRefundPolicy("refund_until_seller_confirmation");
-      setMaxCertificatesTotal("");
-      setMaxCertificatesPerUser("");
-      setIsPublicReward(true);
-
-      setPointsCurrencyCode("POINT");
-      setReferenceCurrency("EUR");
-      setReferenceValuePerPoint("1");
-      setReferenceExchangeRate("4.30");
-      setReferenceExchangeRateSource("manual");
-      setReferenceExchangeRateDate(todayDateInputValue());
-
-      setRequiresBooking(false);
-      setBookingMode("not_required");
-      setDefaultDurationMinutes("");
-      setMinDurationMinutes("");
-      setMaxDurationMinutes("");
-      setQuantityLimit("");
-      setTargetReceiverType("person");
+      setCreatedOffer(data.offer ?? null);
+      setMessage("Предложение создано. Теперь можно проверить сертификат и каталог.");
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "Unknown error occurred"
+        error instanceof Error
+          ? error.message
+          : "Неизвестная ошибка создания предложения.",
       );
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  const isLoading = isLoadingOrganizations || isLoadingValueObjects;
-
-  const hasAtLeastOneItem = offerItems.some(
-    (item) => item.valueObjectId.trim().length > 0
-  );
-
-  const isSubmitDisabled =
-    isSubmitting ||
-    isLoading ||
-    organizations.length === 0 ||
-    organizationId.trim().length === 0 ||
-    title.trim().length === 0 ||
-    (!valueObjectId && !hasAtLeastOneItem);
+  const createdOfferId = createdOffer?.id ?? null;
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#ffffff",
-        color: "#111111",
-        padding: "40px 16px",
-        fontFamily: "Arial, Helvetica, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "980px",
-          margin: "0 auto",
-        }}
-      >
-        <header style={{ marginBottom: "32px", textAlign: "center" }}>
-          <h1
-            style={{
-              fontSize: "32px",
-              lineHeight: "1.2",
-              fontWeight: 700,
-              margin: "0 0 12px",
-            }}
-          >
-            Create offer
-          </h1>
-
-          <p
-            style={{
-              maxWidth: "820px",
-              margin: "0 auto 20px",
-              color: "#555555",
-              fontSize: "16px",
-              lineHeight: "1.5",
-            }}
-          >
-            Create a commercial offer connected to one organization. The seller
-            enters the money amount covered by points, and the system calculates
-            how many POINT will be charged after usage confirmation.
-          </p>
-
-          <nav
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: "24px",
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <Link
-              href="/"
-              style={{ color: "#2563eb", textDecoration: "underline" }}
-            >
-              На главную
-            </Link>
-
-            <Link
-              href="/organizations"
-              style={{ color: "#2563eb", textDecoration: "underline" }}
-            >
-              Мои организации
-            </Link>
-
-            {organizationId ? (
-              <Link
-                href={`/organizations/${organizationId}`}
-                style={{ color: "#2563eb", textDecoration: "underline" }}
-              >
-                Открыть организацию
-              </Link>
-            ) : null}
-
-            <Link
-              href="/offers"
-              style={{ color: "#2563eb", textDecoration: "underline" }}
-            >
-              Offers
-            </Link>
-
-            <Link
-              href="/value-objects"
-              style={{ color: "#2563eb", textDecoration: "underline" }}
-            >
-              Value objects
-            </Link>
-          </nav>
-        </header>
-
-        {isLoading ? (
-          <div
-            style={{
-              border: "1px solid #dddddd",
-              borderRadius: "10px",
-              padding: "16px",
-              background: "#f9fafb",
-              marginBottom: "16px",
-            }}
-          >
-            Loading organizations and value objects...
+    <main className="min-h-full bg-[#f5f6fb] px-4 py-8 text-[#1a1d2e]">
+      <div className="mx-auto grid w-full max-w-[1120px] gap-5">
+        <header className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7c8099]">
+            Commercial core / Enterprise offer
           </div>
-        ) : null}
 
-        {!isLoading && organizations.length === 0 ? (
-          <div
-            style={{
-              border: "1px solid #facc15",
-              borderRadius: "10px",
-              padding: "16px",
-              background: "#fefce8",
-              marginBottom: "16px",
-            }}
-          >
-            You need to create an organization first.{" "}
-            <Link href="/organizations/new">Create organization</Link>
-          </div>
-        ) : null}
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h1 className="text-[30px] font-bold tracking-[-0.03em] text-[#111827]">
+                Создать предложение предприятия
+              </h1>
 
-        {organizationIdFromUrl &&
-        !selectedOrganization &&
-        !isLoadingOrganizations ? (
-          <div
-            style={{
-              border: "1px solid #facc15",
-              borderRadius: "10px",
-              padding: "16px",
-              background: "#fefce8",
-              marginBottom: "16px",
-            }}
-          >
-            Organization from URL was not found or access is denied. The first
-            available organization was selected instead.
-          </div>
-        ) : null}
-
-        <form
-          onSubmit={handleSubmit}
-          style={{
-            border: "1px solid #dddddd",
-            borderRadius: "12px",
-            padding: "20px",
-            background: "#f9fafb",
-            display: "grid",
-            gap: "18px",
-            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
-          }}
-        >
-          <section
-            style={{
-              border: "1px solid #e5e7eb",
-              borderRadius: "10px",
-              padding: "16px",
-              background: "#ffffff",
-              display: "grid",
-              gap: "16px",
-            }}
-          >
-            <h2 style={{ margin: 0, fontSize: "22px" }}>1. Organization</h2>
-
-            <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-              Organization
-              <select
-                value={organizationId}
-                onChange={(event) => setOrganizationId(event.target.value)}
-                required
-                disabled={isLoading || organizations.length === 0}
-                style={{
-                  width: "100%",
-                  border: "1px solid #cccccc",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  fontSize: "16px",
-                  boxSizing: "border-box",
-                  fontWeight: 400,
-                }}
-              >
-                {organizations.length === 0 ? (
-                  <option value="">No organizations available</option>
-                ) : null}
-
-                {organizations.map((organization) => (
-                  <option key={organization.id} value={organization.id}>
-                    {organization.organization_name} —{" "}
-                    {organization.organization_type}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {selectedOrganization ? (
-              <p style={{ margin: 0, color: "#555555" }}>
-                Selected organization:{" "}
-                <strong>{selectedOrganization.organization_name}</strong>
+              <p className="mt-2 max-w-[820px] text-[14px] leading-6 text-[#5a5f7a]">
+                Предложение связывает предприятие, услугу как Value Object,
+                цену, условия записи и подарочный сертификат. Здесь мы создаём
+                реальное предложение для Szczecin.
               </p>
-            ) : null}
-          </section>
-
-          <section
-            style={{
-              border: "1px solid #e5e7eb",
-              borderRadius: "10px",
-              padding: "16px",
-              background: "#ffffff",
-              display: "grid",
-              gap: "16px",
-            }}
-          >
-            <h2 style={{ margin: 0, fontSize: "22px" }}>2. Offer header</h2>
-
-            <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-              Main value object
-              <select
-                value={valueObjectId}
-                onChange={(event) => {
-                  setValueObjectId(event.target.value);
-                  applyMainValueObjectDefaults(event.target.value);
-                }}
-                disabled={isLoading || organizationId.trim().length === 0}
-                style={{
-                  width: "100%",
-                  border: "1px solid #cccccc",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  fontSize: "16px",
-                  boxSizing: "border-box",
-                  fontWeight: 400,
-                }}
-              >
-                <option value="">No main value object selected</option>
-
-                {filteredValueObjects.map((valueObject) => (
-                  <option key={valueObject.id} value={valueObject.id}>
-                    {valueObject.title} ({valueObject.value_type})
-                  </option>
-                ))}
-              </select>
-
-              <span style={{ fontWeight: 400, color: "#666666" }}>
-                Optional. For bundles, this can be empty or one main object.
-              </span>
-            </label>
-
-            <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-              Offer type
-              <select
-                value={offerType}
-                onChange={(event) => setOfferType(event.target.value)}
-                required
-                style={{
-                  width: "100%",
-                  border: "1px solid #cccccc",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  fontSize: "16px",
-                  boxSizing: "border-box",
-                  fontWeight: 400,
-                }}
-              >
-                <option value="product">Product</option>
-                <option value="service">Service</option>
-                <option value="consultation">Consultation</option>
-                <option value="gift_certificate">Gift certificate</option>
-                <option value="discount_certificate">Discount certificate</option>
-                <option value="free_trial">Free trial</option>
-                <option value="loyalty_reward">Loyalty reward</option>
-                <option value="bundle">Bundle</option>
-                <option value="subscription">Subscription</option>
-                <option value="event">Event</option>
-                <option value="bookable_service">Bookable service</option>
-              </select>
-            </label>
-
-            <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-              Title
-              <input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Basic service package"
-                required
-                style={{
-                  width: "100%",
-                  border: "1px solid #cccccc",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  fontSize: "16px",
-                  boxSizing: "border-box",
-                  fontWeight: 400,
-                }}
-              />
-            </label>
-
-            <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-              Description
-              <textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Offer details"
-                rows={4}
-                style={{
-                  width: "100%",
-                  border: "1px solid #cccccc",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  fontSize: "16px",
-                  boxSizing: "border-box",
-                  resize: "vertical",
-                  fontWeight: 400,
-                }}
-              />
-            </label>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 160px",
-                gap: "12px",
-              }}
-            >
-              <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-                Regular price
-                <input
-                  type="number"
-                  step="0.01"
-                  value={regularPrice}
-                  onChange={(event) => setRegularPrice(event.target.value)}
-                  placeholder="299"
-                  style={{
-                    width: "100%",
-                    border: "1px solid #cccccc",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    fontSize: "16px",
-                    boxSizing: "border-box",
-                    fontWeight: 400,
-                  }}
-                />
-              </label>
-
-              <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-                Current price
-                <input
-                  type="number"
-                  step="0.01"
-                  value={price}
-                  onChange={(event) => setPrice(event.target.value)}
-                  placeholder="249"
-                  style={{
-                    width: "100%",
-                    border: "1px solid #cccccc",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    fontSize: "16px",
-                    boxSizing: "border-box",
-                    fontWeight: 400,
-                  }}
-                />
-              </label>
-
-              <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-                Currency
-                <input
-                  value={currency}
-                  onChange={(event) => setCurrency(event.target.value)}
-                  placeholder="PLN"
-                  style={{
-                    width: "100%",
-                    border: "1px solid #cccccc",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    fontSize: "16px",
-                    boxSizing: "border-box",
-                    fontWeight: 400,
-                  }}
-                />
-              </label>
             </div>
 
-            <button
-              type="button"
-              onClick={useItemsTotalAsOfferPrice}
-              style={{
-                border: "1px solid #111827",
-                borderRadius: "8px",
-                padding: "10px 14px",
-                background: "#ffffff",
-                color: "#111827",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              Use items total as offer price ({calculatedItemsTotal.toFixed(2)}{" "}
-              {currency})
-            </button>
-          </section>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/organizations"
+                className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
+              >
+                Мои предприятия
+              </Link>
 
-          <section
-            style={{
-              border: "1px solid #e5e7eb",
-              borderRadius: "10px",
-              padding: "16px",
-              background: "#ffffff",
-              display: "grid",
-              gap: "16px",
-            }}
+              <Link
+                href="/offers"
+                className="rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
+              >
+                Список предложений
+              </Link>
+            </div>
+          </div>
+        </header>
+
+        <section className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+          <form
+            onSubmit={handleSubmit}
+            className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
           >
-            <h2 style={{ margin: 0, fontSize: "22px" }}>
-              3. Discount and legal price info
-            </h2>
-
-            <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <input
-                type="checkbox"
-                checked={isDiscountActive}
-                onChange={(event) => {
-                  setIsDiscountActive(event.target.checked);
-                  if (event.target.checked) {
-                    prepareDiscountDates();
-                  }
-                }}
-              />
-              Discount active
-            </label>
-
-            <p style={{ margin: 0, color: "#555555", lineHeight: "1.5" }}>
-              If you show a price reduction in Poland/EU, you should store the
-              lowest price from the 30 days before the discount. This field will
-              later be displayed near the reduced price.
-            </p>
-
-            {isDiscountActive ? (
-              <div style={{ display: "grid", gap: "14px" }}>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "12px",
-                  }}
-                >
-                  <label
-                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                  >
-                    Discount type
-                    <select
-                      value={discountType}
-                      onChange={(event) => setDiscountType(event.target.value)}
-                      style={{
-                        width: "100%",
-                        border: "1px solid #cccccc",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        fontSize: "16px",
-                        boxSizing: "border-box",
-                        fontWeight: 400,
-                      }}
-                    >
-                      <option value="manual_price">Manual reduced price</option>
-                      <option value="percent">Percent</option>
-                      <option value="fixed_amount">Fixed amount</option>
-                    </select>
-                  </label>
-
-                  <label
-                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                  >
-                    Discount value
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={discountValue}
-                      onChange={(event) => setDiscountValue(event.target.value)}
-                      placeholder="20"
-                      style={{
-                        width: "100%",
-                        border: "1px solid #cccccc",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        fontSize: "16px",
-                        boxSizing: "border-box",
-                        fontWeight: 400,
-                      }}
-                    />
-                  </label>
-                </div>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "12px",
-                  }}
-                >
-                  <label
-                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                  >
-                    Discount starts at
-                    <input
-                      type="date"
-                      value={discountStartsAt}
-                      onChange={(event) =>
-                        setDiscountStartsAt(event.target.value)
-                      }
-                      style={{
-                        width: "100%",
-                        border: "1px solid #cccccc",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        fontSize: "16px",
-                        boxSizing: "border-box",
-                        fontWeight: 400,
-                      }}
-                    />
-                  </label>
-
-                  <label
-                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                  >
-                    Discount ends at
-                    <input
-                      type="date"
-                      value={discountEndsAt}
-                      onChange={(event) => setDiscountEndsAt(event.target.value)}
-                      style={{
-                        width: "100%",
-                        border: "1px solid #cccccc",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        fontSize: "16px",
-                        boxSizing: "border-box",
-                        fontWeight: 400,
-                      }}
-                    />
-                  </label>
-                </div>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 160px",
-                    gap: "12px",
-                  }}
-                >
-                  <label
-                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                  >
-                    Lowest price 30 days before discount
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={lowestPrice30Days}
-                      onChange={(event) =>
-                        setLowestPrice30Days(event.target.value)
-                      }
-                      placeholder="299"
-                      required={isDiscountActive}
-                      style={{
-                        width: "100%",
-                        border: "1px solid #cccccc",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        fontSize: "16px",
-                        boxSizing: "border-box",
-                        fontWeight: 400,
-                      }}
-                    />
-                  </label>
-
-                  <label
-                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                  >
-                    Currency
-                    <input
-                      value={lowestPrice30DaysCurrency}
-                      onChange={(event) =>
-                        setLowestPrice30DaysCurrency(event.target.value)
-                      }
-                      placeholder="PLN"
-                      style={{
-                        width: "100%",
-                        border: "1px solid #cccccc",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        fontSize: "16px",
-                        boxSizing: "border-box",
-                        fontWeight: 400,
-                      }}
-                    />
-                  </label>
-                </div>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "12px",
-                  }}
-                >
-                  <label
-                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                  >
-                    30-day period start
-                    <input
-                      type="date"
-                      value={lowestPrice30DaysPeriodStart}
-                      onChange={(event) =>
-                        setLowestPrice30DaysPeriodStart(event.target.value)
-                      }
-                      style={{
-                        width: "100%",
-                        border: "1px solid #cccccc",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        fontSize: "16px",
-                        boxSizing: "border-box",
-                        fontWeight: 400,
-                      }}
-                    />
-                  </label>
-
-                  <label
-                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                  >
-                    30-day period end
-                    <input
-                      type="date"
-                      value={lowestPrice30DaysPeriodEnd}
-                      onChange={(event) =>
-                        setLowestPrice30DaysPeriodEnd(event.target.value)
-                      }
-                      style={{
-                        width: "100%",
-                        border: "1px solid #cccccc",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        fontSize: "16px",
-                        boxSizing: "border-box",
-                        fontWeight: 400,
-                      }}
-                    />
-                  </label>
-                </div>
-
-                <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-                  Discount legal note
-                  <textarea
-                    value={discountLegalNote}
-                    onChange={(event) => setDiscountLegalNote(event.target.value)}
-                    placeholder="Lowest price in 30 days before discount: 299 PLN."
-                    rows={3}
-                    style={{
-                      width: "100%",
-                      border: "1px solid #cccccc",
-                      borderRadius: "8px",
-                      padding: "12px",
-                      fontSize: "16px",
-                      boxSizing: "border-box",
-                      resize: "vertical",
-                      fontWeight: 400,
-                    }}
-                  />
-                </label>
-              </div>
-            ) : null}
-          </section>
-
-          <section
-            style={{
-              border: "1px solid #e5e7eb",
-              borderRadius: "10px",
-              padding: "16px",
-              background: "#ffffff",
-              display: "grid",
-              gap: "16px",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: "12px",
-                alignItems: "center",
-              }}
-            >
+            <div className="mb-5 flex flex-col gap-3 border-b border-[#edf0f7] pb-5 md:flex-row md:items-start md:justify-between">
               <div>
-                <h2 style={{ margin: 0, fontSize: "22px" }}>4. Offer items</h2>
-                <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Add one or more value objects with quantity and unit price.
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+                  Шаг 2
+                </div>
+                <h2 className="mt-1 text-[22px] font-bold text-[#111827]">
+                  Предложение на базе услуги
+                </h2>
+                <p className="mt-1 text-[13px] leading-5 text-[#7c8099]">
+                  Услуга уже создана. Теперь оформляем offer и включаем
+                  подарочный сертификат.
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={addOfferItem}
-                disabled={filteredValueObjects.length === 0}
-                style={{
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "10px 14px",
-                  background:
-                    filteredValueObjects.length === 0 ? "#9ca3af" : "#111827",
-                  color: "#ffffff",
-                  fontWeight: 700,
-                  cursor:
-                    filteredValueObjects.length === 0
-                      ? "not-allowed"
-                      : "pointer",
-                }}
+                onClick={applyMassageOfferPilot}
+                className="rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
               >
-                Add item
+                Заполнить offer массажа
               </button>
             </div>
 
-            {organizationId && filteredValueObjects.length === 0 ? (
-              <div
-                style={{
-                  border: "1px solid #facc15",
-                  borderRadius: "10px",
-                  padding: "14px",
-                  background: "#fefce8",
-                }}
-              >
-                No value objects connected to this organization yet.{" "}
-                <Link
-                  href={`/value-objects/new?organizationId=${encodeURIComponent(
-                    organizationId
-                  )}`}
-                >
-                  Create value object
-                </Link>
+            {organizationIdFromUrl &&
+            !selectedOrganization &&
+            !isLoadingData ? (
+              <div className="mb-5 rounded-xl border border-[#facc15] bg-[#fefce8] px-4 py-3 text-[13px] leading-5 text-[#92400e]">
+                Предприятие из ссылки не найдено или доступ запрещён. Выберите
+                предприятие вручную.
               </div>
             ) : null}
 
-            {offerItems.map((item, index) => {
-              const selectedValueObject = findValueObject(item.valueObjectId);
-              const quantity = Number(item.quantity);
-              const unitPrice = Number(item.unitPrice);
-              const lineTotal =
-                Number.isNaN(quantity) || Number.isNaN(unitPrice)
-                  ? 0
-                  : quantity * unitPrice;
+            {selectedOrganization ? (
+              <div className="mb-5 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-[13px] leading-5 text-[#1d4ed8]">
+                <strong>Выбранное предприятие:</strong>{" "}
+                {selectedOrganization.organization_name}
+              </div>
+            ) : null}
 
-              return (
-                <div
-                  key={item.localId}
-                  style={{
-                    border: "1px solid #dddddd",
-                    borderRadius: "10px",
-                    padding: "14px",
-                    background: "#f9fafb",
-                    display: "grid",
-                    gap: "12px",
-                  }}
+            <div className="grid gap-5">
+              <div className="grid gap-2">
+                <label className="text-[13px] font-semibold text-[#343854]">
+                  Предприятие
+                </label>
+                <select
+                  value={organizationId}
+                  onChange={(event) => handleOrganizationChange(event.target.value)}
+                  required
+                  disabled={isLoadingData || organizations.length === 0}
+                  className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: "12px",
-                      alignItems: "center",
-                    }}
-                  >
-                    <strong>Item {index + 1}</strong>
-
-                    <button
-                      type="button"
-                      onClick={() => removeOfferItem(item.localId)}
-                      disabled={offerItems.length <= 1}
-                      style={{
-                        border: "1px solid #dc2626",
-                        borderRadius: "8px",
-                        padding: "6px 10px",
-                        background: "#ffffff",
-                        color:
-                          offerItems.length <= 1 ? "#9ca3af" : "#dc2626",
-                        cursor:
-                          offerItems.length <= 1 ? "not-allowed" : "pointer",
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </div>
-
-                  <label
-                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                  >
-                    Value object
-                    <select
-                      value={item.valueObjectId}
-                      onChange={(event) =>
-                        handleOfferItemValueObjectChange(
-                          item.localId,
-                          event.target.value
-                        )
-                      }
-                      style={{
-                        width: "100%",
-                        border: "1px solid #cccccc",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        fontSize: "16px",
-                        boxSizing: "border-box",
-                        fontWeight: 400,
-                      }}
-                    >
-                      <option value="">Select value object</option>
-
-                      {filteredValueObjects.map((valueObject) => (
-                        <option key={valueObject.id} value={valueObject.id}>
-                          {valueObject.title} ({valueObject.value_type})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  {selectedValueObject ? (
-                    <p style={{ margin: 0, color: "#666666" }}>
-                      Selected: {selectedValueObject.title} /{" "}
-                      {selectedValueObject.value_type}
-                    </p>
+                  {organizations.length === 0 ? (
+                    <option value="">Нет доступных предприятий</option>
                   ) : null}
 
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr 120px",
-                      gap: "12px",
-                    }}
-                  >
-                    <label
-                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                    >
-                      Quantity
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={item.quantity}
-                        onChange={(event) =>
-                          updateOfferItem(item.localId, {
-                            quantity: event.target.value,
-                          })
-                        }
-                        style={{
-                          width: "100%",
-                          border: "1px solid #cccccc",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          fontSize: "16px",
-                          boxSizing: "border-box",
-                          fontWeight: 400,
-                        }}
-                      />
-                    </label>
+                  {organizations.map((organization) => (
+                    <option key={organization.id} value={organization.id}>
+                      {organization.organization_name} —{" "}
+                      {getOrganizationTypeLabel(organization.organization_type)}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                    <label
-                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                    >
-                      Unit price
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={item.unitPrice}
-                        onChange={(event) =>
-                          updateOfferItem(item.localId, {
-                            unitPrice: event.target.value,
-                          })
-                        }
-                        style={{
-                          width: "100%",
-                          border: "1px solid #cccccc",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          fontSize: "16px",
-                          boxSizing: "border-box",
-                          fontWeight: 400,
-                        }}
-                      />
-                    </label>
-
-                    <label
-                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                    >
-                      Currency
-                      <input
-                        value={item.currency}
-                        onChange={(event) =>
-                          updateOfferItem(item.localId, {
-                            currency: event.target.value,
-                          })
-                        }
-                        style={{
-                          width: "100%",
-                          border: "1px solid #cccccc",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          fontSize: "16px",
-                          boxSizing: "border-box",
-                          fontWeight: 400,
-                        }}
-                      />
-                    </label>
-                  </div>
-
-                  <label
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      alignItems: "center",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={item.isRequired}
-                      onChange={(event) =>
-                        updateOfferItem(item.localId, {
-                          isRequired: event.target.checked,
-                        })
-                      }
-                    />
-                    Required item
-                  </label>
-
-                  <p style={{ margin: 0, fontWeight: 700 }}>
-                    Line total: {lineTotal.toFixed(2)}{" "}
-                    {item.currency || currency}
-                  </p>
-                </div>
-              );
-            })}
-          </section>
-
-          <section
-            style={{
-              border: "1px solid #bfdbfe",
-              borderRadius: "10px",
-              padding: "16px",
-              background: "#eff6ff",
-              display: "grid",
-              gap: "16px",
-            }}
-          >
-            <h2 style={{ margin: 0, fontSize: "22px" }}>
-              5. Certificate / reward rules
-            </h2>
-
-            <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <input
-                type="checkbox"
-                checked={certificateAvailable}
-                onChange={(event) =>
-                  setCertificateAvailable(event.target.checked)
-                }
-              />
-              Certificate / reward available
-            </label>
-
-            {certificateAvailable ? (
-              <>
-                <div
-                  style={{
-                    border: "1px solid #bfdbfe",
-                    borderRadius: "10px",
-                    padding: "14px",
-                    background: "#ffffff",
-                    display: "grid",
-                    gap: "12px",
-                  }}
+              <div className="grid gap-2">
+                <label className="text-[13px] font-semibold text-[#343854]">
+                  Услуга / основной Value Object
+                </label>
+                <select
+                  value={valueObjectId}
+                  onChange={(event) => handleValueObjectChange(event.target.value)}
+                  disabled={isLoadingData || filteredValueObjects.length === 0}
+                  className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
                 >
-                  <h3 style={{ margin: 0, fontSize: "18px" }}>
-                    Points calculation
-                  </h3>
+                  <option value="">
+                    {filteredValueObjects.length === 0
+                      ? "Нет услуг для выбранного предприятия"
+                      : "Выберите услугу"}
+                  </option>
 
-                  <p style={{ margin: 0, color: "#374151", lineHeight: "1.5" }}>
-                    Продавец указывает, какую сумму в валюте offer он готов
-                    покрыть points. Система автоматически определяет режим
-                    оплаты и рассчитывает, сколько POINT будет списано с
-                    покупателя после подтверждения использования.
-                  </p>
+                  {filteredValueObjects.map((valueObject) => (
+                    <option key={valueObject.id} value={valueObject.id}>
+                      {valueObject.title} ({getValueTypeLabel(valueObject.value_type)})
+                    </option>
+                  ))}
+                </select>
 
-                  <div
-                    style={{
-                      border: "1px solid #dddddd",
-                      borderRadius: "10px",
-                      padding: "12px",
-                      background: "#f9fafb",
-                      display: "grid",
-                      gap: "6px",
-                      lineHeight: "1.5",
-                    }}
+                {organizationId && filteredValueObjects.length === 0 ? (
+                  <Link
+                    href={`/value-objects/new?organizationId=${organizationId}`}
+                    className="text-[12px] font-semibold text-[#3b6ef8] underline-offset-4 hover:underline"
                   >
-                    <strong>Automatic payment mode</strong>
-                    <span>
-                      {getPaymentModeLabel(
-                        certificatePricingPreview.paymentMode
-                      )}
-                    </span>
-                    <span style={{ color: "#555555" }}>
-                      0 {currency} covered by points → money only. Partial
-                      coverage → mixed. Full coverage → points only.
-                    </span>
-                  </div>
+                    Сначала добавить услугу для этого предприятия
+                  </Link>
+                ) : null}
+              </div>
 
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "12px",
-                    }}
+              <div className="grid gap-2">
+                <label className="text-[13px] font-semibold text-[#343854]">
+                  Название предложения
+                </label>
+                <input
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="Relaksacyjny masaż łydek w Szczecinie"
+                  className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                  required
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <label className="text-[13px] font-semibold text-[#343854]">
+                  Описание предложения
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder={PILOT_OFFER_DESCRIPTION}
+                  rows={7}
+                  className="w-full resize-y rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] leading-6 text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="grid gap-2">
+                  <label className="text-[13px] font-semibold text-[#343854]">
+                    Тип offer
+                  </label>
+                  <select
+                    value={offerType}
+                    onChange={(event) => setOfferType(event.target.value)}
+                    className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
                   >
-                    <label
-                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                    >
-                      Amount covered by points ({certificateCurrency || currency})
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={certificatePointsCoveredAmount}
-                        onChange={(event) =>
-                          setCertificatePointsCoveredAmount(event.target.value)
-                        }
-                        placeholder="For example: 50"
-                        style={{
-                          width: "100%",
-                          border: "1px solid #cccccc",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          fontSize: "16px",
-                          boxSizing: "border-box",
-                          fontWeight: 400,
-                        }}
-                      />
-                    </label>
-
-                    <label
-                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                    >
-                      Certificate currency
-                      <input
-                        value={certificateCurrency}
-                        onChange={(event) =>
-                          setCertificateCurrency(event.target.value)
-                        }
-                        placeholder="PLN"
-                        style={{
-                          width: "100%",
-                          border: "1px solid #cccccc",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          fontSize: "16px",
-                          boxSizing: "border-box",
-                          fontWeight: 400,
-                        }}
-                      />
-                    </label>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr 1fr",
-                      gap: "12px",
-                    }}
-                  >
-                    <label
-                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                    >
-                      Points currency
-                      <input
-                        value={pointsCurrencyCode}
-                        onChange={(event) =>
-                          setPointsCurrencyCode(event.target.value)
-                        }
-                        placeholder="POINT"
-                        style={{
-                          width: "100%",
-                          border: "1px solid #cccccc",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          fontSize: "16px",
-                          boxSizing: "border-box",
-                          fontWeight: 400,
-                        }}
-                      />
-                    </label>
-
-                    <label
-                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                    >
-                      Reference currency
-                      <input
-                        value={referenceCurrency}
-                        onChange={(event) =>
-                          setReferenceCurrency(event.target.value)
-                        }
-                        placeholder="EUR"
-                        style={{
-                          width: "100%",
-                          border: "1px solid #cccccc",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          fontSize: "16px",
-                          boxSizing: "border-box",
-                          fontWeight: 400,
-                        }}
-                      />
-                    </label>
-
-                    <label
-                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                    >
-                      Value per point
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={referenceValuePerPoint}
-                        onChange={(event) =>
-                          setReferenceValuePerPoint(event.target.value)
-                        }
-                        placeholder="1"
-                        style={{
-                          width: "100%",
-                          border: "1px solid #cccccc",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          fontSize: "16px",
-                          boxSizing: "border-box",
-                          fontWeight: 400,
-                        }}
-                      />
-                    </label>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr 1fr",
-                      gap: "12px",
-                    }}
-                  >
-                    <label
-                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                    >
-                      Exchange rate
-                      <input
-                        type="number"
-                        step="0.0001"
-                        min="0"
-                        value={referenceExchangeRate}
-                        onChange={(event) =>
-                          setReferenceExchangeRate(event.target.value)
-                        }
-                        placeholder="4.30"
-                        style={{
-                          width: "100%",
-                          border: "1px solid #cccccc",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          fontSize: "16px",
-                          boxSizing: "border-box",
-                          fontWeight: 400,
-                        }}
-                      />
-                    </label>
-
-                    <label
-                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                    >
-                      Rate source
-                      <input
-                        value={referenceExchangeRateSource}
-                        onChange={(event) =>
-                          setReferenceExchangeRateSource(event.target.value)
-                        }
-                        placeholder="manual"
-                        style={{
-                          width: "100%",
-                          border: "1px solid #cccccc",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          fontSize: "16px",
-                          boxSizing: "border-box",
-                          fontWeight: 400,
-                        }}
-                      />
-                    </label>
-
-                    <label
-                      style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                    >
-                      Rate date
-                      <input
-                        type="date"
-                        value={referenceExchangeRateDate}
-                        onChange={(event) =>
-                          setReferenceExchangeRateDate(event.target.value)
-                        }
-                        style={{
-                          width: "100%",
-                          border: "1px solid #cccccc",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          fontSize: "16px",
-                          boxSizing: "border-box",
-                          fontWeight: 400,
-                        }}
-                      />
-                    </label>
-                  </div>
-
-                  <div
-                    style={{
-                      border: certificatePricingPreview.warning
-                        ? "1px solid #f0d28a"
-                        : "1px solid #bfe5c8",
-                      borderRadius: "10px",
-                      padding: "14px",
-                      background: certificatePricingPreview.warning
-                        ? "#fff8e6"
-                        : "#edf8f0",
-                      color: certificatePricingPreview.warning
-                        ? "#7a4b00"
-                        : "#176b2c",
-                      display: "grid",
-                      gap: "6px",
-                      lineHeight: "1.5",
-                    }}
-                  >
-                    <strong>Calculation preview</strong>
-
-                    {certificatePricingPreview.warning ? (
-                      <span>{certificatePricingPreview.warning}</span>
-                    ) : (
-                      <>
-                        <span>
-                          Payment mode:{" "}
-                          <strong>
-                            {getPaymentModeLabel(
-                              certificatePricingPreview.paymentMode
-                            )}
-                          </strong>
-                        </span>
-                        <span>
-                          Offer price:{" "}
-                          <strong>
-                            {price || "0"} {currency}
-                          </strong>
-                        </span>
-                        <span>
-                          Covered by points:{" "}
-                          <strong>
-                            {certificatePricingPreview.coveredAmount.toFixed(2)}{" "}
-                            {certificateCurrency || currency}
-                          </strong>
-                        </span>
-                        <span>
-                          Reference:{" "}
-                          <strong>
-                            1 {pointsCurrencyCode || "POINT"} ={" "}
-                            {referenceValuePerPoint || "1"}{" "}
-                            {referenceCurrency || "EUR"}
-                          </strong>
-                        </span>
-                        <span>
-                          Exchange rate:{" "}
-                          <strong>
-                            1 {referenceCurrency || "EUR"} ={" "}
-                            {referenceExchangeRate || "0"}{" "}
-                            {certificateCurrency || currency}
-                          </strong>
-                        </span>
-                        <span>
-                          Buyer will be charged after usage confirmation:{" "}
-                          <strong>
-                            {certificatePricingPreview.calculatedPointsPrice.toFixed(
-                              2
-                            )}{" "}
-                            {pointsCurrencyCode || "POINT"}
-                          </strong>
-                        </span>
-                        <span>
-                          Buyer money payment:{" "}
-                          <strong>
-                            {certificatePricingPreview.moneyToPay.toFixed(2)}{" "}
-                            {certificateCurrency || currency}
-                          </strong>
-                        </span>
-                      </>
-                    )}
-                  </div>
+                    <option value="bookable_service">Услуга с записью</option>
+                    <option value="service">Услуга</option>
+                    <option value="product">Товар</option>
+                    <option value="bundle">Пакет / bundle</option>
+                    <option value="consultation">Консультация</option>
+                    <option value="reward">Reward / сертификат</option>
+                  </select>
                 </div>
 
-                <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-                  Certificate terms
-                  <textarea
-                    value={certificateTerms}
-                    onChange={(event) => setCertificateTerms(event.target.value)}
-                    placeholder="Certificate can be used once within 180 days. Booking required."
-                    rows={4}
-                    style={{
-                      width: "100%",
-                      border: "1px solid #cccccc",
-                      borderRadius: "8px",
-                      padding: "12px",
-                      fontSize: "16px",
-                      boxSizing: "border-box",
-                      resize: "vertical",
-                      fontWeight: 400,
+                <div className="grid gap-2">
+                  <label className="text-[13px] font-semibold text-[#343854]">
+                    Цена
+                  </label>
+                  <input
+                    value={price}
+                    onChange={(event) => {
+                      setPrice(event.target.value);
+                      setRegularPrice(event.target.value);
                     }}
+                    inputMode="decimal"
+                    placeholder="60"
+                    className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                    required
                   />
+                </div>
+
+                <div className="grid gap-2">
+                  <label className="text-[13px] font-semibold text-[#343854]">
+                    Валюта
+                  </label>
+                  <input
+                    value={currency}
+                    onChange={(event) => {
+                      const nextCurrency = event.target.value;
+                      setCurrency(nextCurrency);
+                      setCertificateCurrency(nextCurrency);
+                    }}
+                    maxLength={3}
+                    placeholder="PLN"
+                    className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] uppercase text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <label className="text-[13px] font-semibold text-[#343854]">
+                    Длительность, мин.
+                  </label>
+                  <input
+                    value={defaultDurationMinutes}
+                    onChange={(event) => {
+                      setDefaultDurationMinutes(event.target.value);
+                      setMinDurationMinutes(event.target.value);
+                      setMaxDurationMinutes(event.target.value);
+                    }}
+                    inputMode="numeric"
+                    placeholder="30"
+                    className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-3 rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={requiresBooking}
+                    onChange={(event) => setRequiresBooking(event.target.checked)}
+                    className="mt-1 h-4 w-4"
+                  />
+                  <span>
+                    <span className="block text-[13px] font-semibold text-[#343854]">
+                      Требуется согласование времени
+                    </span>
+                    <span className="mt-1 block text-[12px] leading-5 text-[#7c8099]">
+                      Для массажа клиент должен договориться о времени со
+                      продавцом.
+                    </span>
+                  </span>
                 </label>
 
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr",
-                    gap: "12px",
-                  }}
-                >
-                  <label
-                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                  >
-                    Validity days
-                    <input
-                      type="number"
-                      value={certificateValidityDays}
-                      onChange={(event) =>
-                        setCertificateValidityDays(event.target.value)
-                      }
-                      placeholder="180"
-                      style={{
-                        width: "100%",
-                        border: "1px solid #cccccc",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        fontSize: "16px",
-                        boxSizing: "border-box",
-                        fontWeight: 400,
-                      }}
-                    />
-                  </label>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <div className="grid gap-2">
+                    <label className="text-[12px] font-semibold text-[#4a4f6a]">
+                      Режим записи
+                    </label>
+                    <select
+                      value={bookingMode}
+                      onChange={(event) => setBookingMode(event.target.value)}
+                      className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                    >
+                      <option value="seller_confirmed">Подтверждает продавец</option>
+                      <option value="not_required">Запись не требуется</option>
+                      <option value="manual">Ручное согласование</option>
+                    </select>
+                  </div>
 
-                  <label
-                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                  >
-                    Max certificates total
-                    <input
-                      type="number"
-                      value={maxCertificatesTotal}
+                  <div className="grid gap-2">
+                    <label className="text-[12px] font-semibold text-[#4a4f6a]">
+                      Для кого
+                    </label>
+                    <select
+                      value={targetReceiverType}
                       onChange={(event) =>
-                        setMaxCertificatesTotal(event.target.value)
+                        setTargetReceiverType(event.target.value)
                       }
-                      placeholder="Optional"
-                      style={{
-                        width: "100%",
-                        border: "1px solid #cccccc",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        fontSize: "16px",
-                        boxSizing: "border-box",
-                        fontWeight: 400,
-                      }}
-                    />
-                  </label>
+                      className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                    >
+                      <option value="person">Для человека</option>
+                      <option value="organization">Для организации</option>
+                      <option value="any">Для любого получателя</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
 
-                  <label
-                    style={{ display: "grid", gap: "8px", fontWeight: 700 }}
-                  >
-                    Max per user
+              <section className="grid gap-4 rounded-2xl border border-[#dbeafe] bg-[#eff6ff] p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1d4ed8]">
+                      Подарочный сертификат
+                    </div>
+                    <h3 className="mt-1 text-[18px] font-bold text-[#1e3a8a]">
+                      Включить сертификат на базе этого предложения
+                    </h3>
+                    <p className="mt-1 text-[12px] leading-5 text-[#1d4ed8]">
+                      Сертификат будет связан с offer и услугой. На этом этапе
+                      сертификат оплачивается деньгами, POINTS можно подключать
+                      позже.
+                    </p>
+                  </div>
+
+                  <label className="flex items-center gap-2 rounded-full border border-[#bfdbfe] bg-white px-3 py-2 text-[12px] font-semibold text-[#1d4ed8]">
                     <input
-                      type="number"
+                      type="checkbox"
+                      checked={certificateAvailable}
+                      onChange={(event) =>
+                        setCertificateAvailable(event.target.checked)
+                      }
+                    />
+                    Сертификат доступен
+                  </label>
+                </div>
+
+                {certificateAvailable ? (
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <label className="text-[13px] font-semibold text-[#1e3a8a]">
+                        Условия сертификата
+                      </label>
+                      <textarea
+                        value={certificateTerms}
+                        onChange={(event) =>
+                          setCertificateTerms(event.target.value)
+                        }
+                        rows={4}
+                        className="w-full resize-y rounded-xl border border-[#bfdbfe] bg-white px-4 py-3 text-[13px] leading-6 text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                      />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-4">
+                      <div className="grid gap-2">
+                        <label className="text-[12px] font-semibold text-[#1e3a8a]">
+                          Срок, дней
+                        </label>
+                        <input
+                          value={certificateValidityDays}
+                          onChange={(event) =>
+                            setCertificateValidityDays(event.target.value)
+                          }
+                          inputMode="numeric"
+                          placeholder="180"
+                          className="w-full rounded-xl border border-[#bfdbfe] bg-white px-4 py-3 text-[13px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <label className="text-[12px] font-semibold text-[#1e3a8a]">
+                          Валюта сертификата
+                        </label>
+                        <input
+                          value={certificateCurrency}
+                          onChange={(event) =>
+                            setCertificateCurrency(event.target.value)
+                          }
+                          maxLength={3}
+                          placeholder="PLN"
+                          className="w-full rounded-xl border border-[#bfdbfe] bg-white px-4 py-3 text-[13px] uppercase text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <label className="text-[12px] font-semibold text-[#1e3a8a]">
+                          Покрытие POINTS
+                        </label>
+                        <input
+                          value={certificatePointsCoveredAmount}
+                          onChange={(event) =>
+                            setCertificatePointsCoveredAmount(event.target.value)
+                          }
+                          inputMode="decimal"
+                          placeholder="0"
+                          className="w-full rounded-xl border border-[#bfdbfe] bg-white px-4 py-3 text-[13px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <label className="text-[12px] font-semibold text-[#1e3a8a]">
+                          Лимит сертификатов
+                        </label>
+                        <input
+                          value={maxCertificatesTotal}
+                          onChange={(event) =>
+                            setMaxCertificatesTotal(event.target.value)
+                          }
+                          inputMode="numeric"
+                          placeholder="без лимита"
+                          className="w-full rounded-xl border border-[#bfdbfe] bg-white px-4 py-3 text-[13px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <label className="flex items-start gap-2 text-[12px] font-semibold text-[#1d4ed8]">
+                        <input
+                          type="checkbox"
+                          checked={requiresSellerConfirmation}
+                          onChange={(event) =>
+                            setRequiresSellerConfirmation(event.target.checked)
+                          }
+                          className="mt-0.5"
+                        />
+                        Продавец подтверждает использование
+                      </label>
+
+                      <label className="flex items-start gap-2 text-[12px] font-semibold text-[#1d4ed8]">
+                        <input
+                          type="checkbox"
+                          checked={isTransferable}
+                          onChange={(event) =>
+                            setIsTransferable(event.target.checked)
+                          }
+                          className="mt-0.5"
+                        />
+                        Можно передать другому человеку
+                      </label>
+
+                      <label className="flex items-start gap-2 text-[12px] font-semibold text-[#1d4ed8]">
+                        <input
+                          type="checkbox"
+                          checked={isCancellable}
+                          onChange={(event) =>
+                            setIsCancellable(event.target.checked)
+                          }
+                          className="mt-0.5"
+                        />
+                        Можно отменить по правилам платформы
+                      </label>
+                    </div>
+                  </div>
+                ) : null}
+              </section>
+
+              <details className="rounded-2xl border border-[#edf0f7] bg-white p-4">
+                <summary className="cursor-pointer text-[13px] font-bold text-[#4a4f6a]">
+                  Дополнительные настройки POINTS и ограничений
+                </summary>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-2">
+                    <label className="text-[12px] font-semibold text-[#4a4f6a]">
+                      Валюта баллов
+                    </label>
+                    <input
+                      value={pointsCurrencyCode}
+                      onChange={(event) =>
+                        setPointsCurrencyCode(event.target.value)
+                      }
+                      className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px]"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <label className="text-[12px] font-semibold text-[#4a4f6a]">
+                      Базовая валюта
+                    </label>
+                    <input
+                      value={referenceCurrency}
+                      onChange={(event) =>
+                        setReferenceCurrency(event.target.value)
+                      }
+                      className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px]"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <label className="text-[12px] font-semibold text-[#4a4f6a]">
+                      Курс 1 EUR к PLN
+                    </label>
+                    <input
+                      value={referenceExchangeRate}
+                      onChange={(event) =>
+                        setReferenceExchangeRate(event.target.value)
+                      }
+                      className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px]"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <label className="text-[12px] font-semibold text-[#4a4f6a]">
+                      Value per point
+                    </label>
+                    <input
+                      value={referenceValuePerPoint}
+                      onChange={(event) =>
+                        setReferenceValuePerPoint(event.target.value)
+                      }
+                      className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px]"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <label className="text-[12px] font-semibold text-[#4a4f6a]">
+                      Источник курса
+                    </label>
+                    <input
+                      value={referenceExchangeRateSource}
+                      onChange={(event) =>
+                        setReferenceExchangeRateSource(event.target.value)
+                      }
+                      className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px]"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <label className="text-[12px] font-semibold text-[#4a4f6a]">
+                      Дата курса
+                    </label>
+                    <input
+                      type="date"
+                      value={referenceExchangeRateDate}
+                      onChange={(event) =>
+                        setReferenceExchangeRateDate(event.target.value)
+                      }
+                      className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px]"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <label className="text-[12px] font-semibold text-[#4a4f6a]">
+                      Лимит на пользователя
+                    </label>
+                    <input
                       value={maxCertificatesPerUser}
                       onChange={(event) =>
                         setMaxCertificatesPerUser(event.target.value)
                       }
-                      placeholder="Optional"
-                      style={{
-                        width: "100%",
-                        border: "1px solid #cccccc",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        fontSize: "16px",
-                        boxSizing: "border-box",
-                        fontWeight: 400,
-                      }}
+                      placeholder="без лимита"
+                      className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px]"
                     />
-                  </label>
-                </div>
+                  </div>
 
-                <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-                  Points refund policy
-                  <select
-                    value={pointsRefundPolicy}
-                    onChange={(event) => setPointsRefundPolicy(event.target.value)}
-                    style={{
-                      width: "100%",
-                      border: "1px solid #cccccc",
-                      borderRadius: "8px",
-                      padding: "12px",
-                      fontSize: "16px",
-                      boxSizing: "border-box",
-                      fontWeight: 400,
-                    }}
-                  >
-                    <option value="no_refund">No refund</option>
-                    <option value="refund_until_seller_confirmation">
-                      Refund until usage confirmation
-                    </option>
-                    <option value="refund_until_delivery">
-                      Refund until delivery
-                    </option>
-                    <option value="manual_review">Manual review</option>
-                  </select>
-                </label>
-
-                <div style={{ display: "grid", gap: "10px" }}>
-                  <label
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      alignItems: "center",
-                    }}
-                  >
+                  <div className="grid gap-2">
+                    <label className="text-[12px] font-semibold text-[#4a4f6a]">
+                      Лимит количества услуг
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={requiresSellerConfirmation}
-                      onChange={(event) =>
-                        setRequiresSellerConfirmation(event.target.checked)
-                      }
+                      value={quantityLimit}
+                      onChange={(event) => setQuantityLimit(event.target.value)}
+                      placeholder="без лимита"
+                      className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px]"
                     />
-                    Requires usage confirmation
-                  </label>
+                  </div>
 
-                  <label
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      alignItems: "center",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isTransferable}
+                  <div className="grid gap-2">
+                    <label className="text-[12px] font-semibold text-[#4a4f6a]">
+                      Политика возврата
+                    </label>
+                    <select
+                      value={pointsRefundPolicy}
                       onChange={(event) =>
-                        setIsTransferable(event.target.checked)
+                        setPointsRefundPolicy(event.target.value)
                       }
-                    />
-                    Transferable to another receiver
-                  </label>
+                      className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px]"
+                    >
+                      <option value="refund_until_seller_confirmation">
+                        Возврат до подтверждения продавца
+                      </option>
+                      <option value="refund_until_delivery">
+                        Возврат до оказания услуги
+                      </option>
+                      <option value="manual_review">Ручное рассмотрение</option>
+                      <option value="no_refund">Без возврата</option>
+                    </select>
+                  </div>
 
-                  <label
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      alignItems: "center",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isCancellable}
-                      onChange={(event) =>
-                        setIsCancellable(event.target.checked)
-                      }
-                    />
-                    Cancellable
-                  </label>
-
-                  <label
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      alignItems: "center",
-                    }}
-                  >
+                  <label className="flex items-start gap-2 text-[12px] font-semibold text-[#4a4f6a]">
                     <input
                       type="checkbox"
                       checked={isPublicReward}
-                      onChange={(event) =>
-                        setIsPublicReward(event.target.checked)
-                      }
+                      onChange={(event) => setIsPublicReward(event.target.checked)}
+                      className="mt-0.5"
                     />
-                    Show in public reward / certificate catalog
+                    Публичный reward / сертификат
                   </label>
                 </div>
-              </>
+              </details>
+
+              {message ? (
+                <div
+                  className={`rounded-xl border px-4 py-3 text-[13px] font-medium ${
+                    createdOffer
+                      ? "border-[#bbf7d0] bg-[#f0fdf4] text-[#166534]"
+                      : "border-[#fecaca] bg-[#fff1f2] text-[#b42318]"
+                  }`}
+                >
+                  {message}
+                </div>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                className="rounded-xl bg-[#3b6ef8] px-5 py-3 text-[14px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.24)] transition hover:bg-[#2f5fe3] disabled:cursor-not-allowed disabled:bg-[#aeb6c8] disabled:shadow-none"
+              >
+                {isSubmitting ? "Создаю предложение..." : "Создать предложение"}
+              </button>
+            </div>
+          </form>
+
+          <aside className="grid content-start gap-4">
+            <section className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+                Связь данных
+              </div>
+
+              <h2 className="mt-2 text-[20px] font-bold text-[#111827]">
+                Enterprise → Value Object → Offer
+              </h2>
+
+              <div className="mt-3 grid gap-3 text-[13px] leading-5 text-[#5a5f7a]">
+                <p className="m-0">
+                  <strong className="text-[#343854]">Предприятие:</strong>{" "}
+                  {selectedOrganization?.organization_name ?? "не выбрано"}
+                </p>
+                <p className="m-0">
+                  <strong className="text-[#343854]">Услуга:</strong>{" "}
+                  {selectedValueObject?.title ?? "не выбрана"}
+                </p>
+                <p className="m-0">
+                  <strong className="text-[#343854]">Цена:</strong>{" "}
+                  {formatMoney(price, normalizeCurrency(currency))}
+                </p>
+                <p className="m-0">
+                  <strong className="text-[#343854]">Сертификат:</strong>{" "}
+                  {certificateAvailable ? "включён" : "выключен"}
+                </p>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {[
+                  "offer",
+                  "masaże",
+                  "łydki",
+                  "Szczecin",
+                  "certificate-ready",
+                  "enterprise-owned",
+                ].map((chip) => (
+                  <span
+                    key={chip}
+                    className="rounded-full border border-[#dfe4ff] bg-[#eef2ff] px-3 py-1.5 text-[12px] font-semibold text-[#3b6ef8]"
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+                Preview сертификата
+              </div>
+
+              <h2 className="mt-2 text-[20px] font-bold text-[#111827]">
+                {certificateAvailable
+                  ? "Подарочный сертификат будет доступен"
+                  : "Сертификат выключен"}
+              </h2>
+
+              <div className="mt-3 grid gap-2 text-[13px] leading-5 text-[#5a5f7a]">
+                <p className="m-0">
+                  <strong className="text-[#343854]">К оплате деньгами:</strong>{" "}
+                  {formatMoney(
+                    certificatePreview.moneyToPay,
+                    normalizeCurrency(certificateCurrency || currency),
+                  )}
+                </p>
+                <p className="m-0">
+                  <strong className="text-[#343854]">POINTS:</strong>{" "}
+                  {certificatePreview.pointsPrice}
+                </p>
+                <p className="m-0">
+                  <strong className="text-[#343854]">Срок:</strong>{" "}
+                  {certificateValidityDays || "180"} дней
+                </p>
+              </div>
+
+              {certificatePreview.warning ? (
+                <div className="mt-3 rounded-xl border border-[#fecaca] bg-[#fff1f2] px-3 py-2 text-[12px] font-medium text-[#b42318]">
+                  {certificatePreview.warning}
+                </div>
+              ) : null}
+            </section>
+
+            <section className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+                Что дальше
+              </div>
+
+              <ol className="mt-3 grid gap-3 text-[13px] leading-5 text-[#5a5f7a]">
+                <li>
+                  <strong className="text-[#343854]">1.</strong> Создать offer.
+                </li>
+                <li>
+                  <strong className="text-[#343854]">2.</strong> Открыть
+                  сертификат на базе offer.
+                </li>
+                <li>
+                  <strong className="text-[#343854]">3.</strong> Проверить
+                  появление в списке предложений.
+                </li>
+                <li>
+                  <strong className="text-[#343854]">4.</strong> Потом связать
+                  offer с динамическими категориями меню.
+                </li>
+              </ol>
+            </section>
+
+            {createdOffer ? (
+              <section className="rounded-[18px] border border-[#bbf7d0] bg-[#f0fdf4] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#15803d]">
+                  Предложение создано
+                </div>
+
+                <h2 className="mt-2 text-[20px] font-bold text-[#14532d]">
+                  {createdOffer.title ?? title}
+                </h2>
+
+                <div className="mt-3 grid gap-2 text-[13px] leading-5 text-[#166534]">
+                  <p className="m-0">
+                    <strong>Цена:</strong>{" "}
+                    {formatMoney(createdOffer.price ?? price, createdOffer.currency ?? currency)}
+                  </p>
+                  <p className="m-0">
+                    <strong>Сертификат:</strong>{" "}
+                    {createdOffer.certificate_available ?? certificateAvailable
+                      ? "доступен"
+                      : "выключен"}
+                  </p>
+                  <p className="m-0">
+                    <strong>Статус:</strong> {createdOffer.status ?? "active"}
+                  </p>
+                </div>
+
+                <div className="mt-4 grid gap-2">
+                  {createdOfferId ? (
+                    <Link
+                      href={`/certificates/new?offerId=${createdOfferId}`}
+                      className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-center text-[13px] font-bold text-white transition hover:bg-[#2f5fe3]"
+                    >
+                      Открыть сертификат на базе offer
+                    </Link>
+                  ) : null}
+
+                  <Link
+                    href="/offers"
+                    className="rounded-xl border border-[#bbf7d0] bg-white px-4 py-3 text-center text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
+                  >
+                    Перейти к списку предложений
+                  </Link>
+
+                  <Link
+                    href="/certificates"
+                    className="rounded-xl border border-[#bbf7d0] bg-white px-4 py-3 text-center text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
+                  >
+                    Перейти к сертификатам
+                  </Link>
+                </div>
+              </section>
             ) : null}
-          </section>
-
-          <section
-            style={{
-              border: "1px solid #e5e7eb",
-              borderRadius: "10px",
-              padding: "16px",
-              background: "#ffffff",
-              display: "grid",
-              gap: "16px",
-            }}
-          >
-            <h2 style={{ margin: 0, fontSize: "22px" }}>
-              6. Booking and options
-            </h2>
-
-            <div style={{ display: "grid", gap: "10px" }}>
-              <label
-                style={{ display: "flex", gap: "8px", alignItems: "center" }}
-              >
-                <input
-                  type="checkbox"
-                  checked={isPaid}
-                  onChange={(event) => setIsPaid(event.target.checked)}
-                />
-                Paid
-              </label>
-
-              <label
-                style={{ display: "flex", gap: "8px", alignItems: "center" }}
-              >
-                <input
-                  type="checkbox"
-                  checked={isFree}
-                  onChange={(event) => setIsFree(event.target.checked)}
-                />
-                Free
-              </label>
-
-              <label
-                style={{ display: "flex", gap: "8px", alignItems: "center" }}
-              >
-                <input
-                  type="checkbox"
-                  checked={requiresBooking}
-                  onChange={(event) => setRequiresBooking(event.target.checked)}
-                />
-                Requires booking
-              </label>
-            </div>
-
-            <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-              Booking mode
-              <select
-                value={bookingMode}
-                onChange={(event) => setBookingMode(event.target.value)}
-                required
-                style={{
-                  width: "100%",
-                  border: "1px solid #cccccc",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  fontSize: "16px",
-                  boxSizing: "border-box",
-                  fontWeight: 400,
-                }}
-              >
-                <option value="not_required">Not required</option>
-                <option value="fixed_slots">Fixed slots</option>
-                <option value="request_confirmation">Request confirmation</option>
-                <option value="auto_confirm">Auto confirm</option>
-                <option value="manual_confirm">Manual confirm</option>
-              </select>
-            </label>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
-                gap: "12px",
-              }}
-            >
-              <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-                Default duration minutes
-                <input
-                  type="number"
-                  value={defaultDurationMinutes}
-                  onChange={(event) =>
-                    setDefaultDurationMinutes(event.target.value)
-                  }
-                  placeholder="20"
-                  style={{
-                    width: "100%",
-                    border: "1px solid #cccccc",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    fontSize: "16px",
-                    boxSizing: "border-box",
-                    fontWeight: 400,
-                  }}
-                />
-              </label>
-
-              <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-                Min duration minutes
-                <input
-                  type="number"
-                  value={minDurationMinutes}
-                  onChange={(event) => setMinDurationMinutes(event.target.value)}
-                  placeholder="20"
-                  style={{
-                    width: "100%",
-                    border: "1px solid #cccccc",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    fontSize: "16px",
-                    boxSizing: "border-box",
-                    fontWeight: 400,
-                  }}
-                />
-              </label>
-
-              <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-                Max duration minutes
-                <input
-                  type="number"
-                  value={maxDurationMinutes}
-                  onChange={(event) => setMaxDurationMinutes(event.target.value)}
-                  placeholder="20"
-                  style={{
-                    width: "100%",
-                    border: "1px solid #cccccc",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    fontSize: "16px",
-                    boxSizing: "border-box",
-                    fontWeight: 400,
-                  }}
-                />
-              </label>
-            </div>
-
-            <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-              Quantity limit
-              <input
-                type="number"
-                value={quantityLimit}
-                onChange={(event) => setQuantityLimit(event.target.value)}
-                placeholder="Optional"
-                style={{
-                  width: "100%",
-                  border: "1px solid #cccccc",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  fontSize: "16px",
-                  boxSizing: "border-box",
-                  fontWeight: 400,
-                }}
-              />
-            </label>
-
-            <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-              Target receiver type
-              <input
-                value={targetReceiverType}
-                onChange={(event) => setTargetReceiverType(event.target.value)}
-                placeholder="person, business, family"
-                style={{
-                  width: "100%",
-                  border: "1px solid #cccccc",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  fontSize: "16px",
-                  boxSizing: "border-box",
-                  fontWeight: 400,
-                }}
-              />
-            </label>
-          </section>
-
-          <button
-            type="submit"
-            disabled={isSubmitDisabled}
-            style={{
-              width: "100%",
-              border: "none",
-              borderRadius: "8px",
-              padding: "16px 18px",
-              background: isSubmitDisabled ? "#9ca3af" : "#111827",
-              color: "#ffffff",
-              fontSize: "17px",
-              fontWeight: 700,
-              cursor: isSubmitDisabled ? "not-allowed" : "pointer",
-            }}
-          >
-            {isSubmitting ? "Creating..." : "Create offer"}
-          </button>
-        </form>
-
-        {message ? (
-          <div
-            style={{
-              marginTop: "16px",
-              border: "1px solid #bfdbfe",
-              borderRadius: "10px",
-              padding: "14px",
-              background: "#eff6ff",
-            }}
-          >
-            {message}
-          </div>
-        ) : null}
+          </aside>
+        </section>
       </div>
     </main>
   );
