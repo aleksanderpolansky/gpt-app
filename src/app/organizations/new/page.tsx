@@ -3,6 +3,54 @@
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 
+type SemanticIntakeCandidate = {
+  label?: string;
+  slug?: string;
+  confidence?: number;
+  reason?: string;
+  sourceText?: string;
+  visibilitySuggestion?: "public_safe" | "internal_only" | "needs_review";
+};
+
+type SemanticIntakeUnknownTerm = {
+  term?: string;
+  reason?: string;
+  suggestedLookup?: string;
+};
+
+type SemanticIntakeResponse = {
+  ok?: boolean;
+  error?: string;
+  mode?: string;
+  objectType?: string;
+  objectId?: string | null;
+  source?: string;
+  model?: string;
+  responseId?: string;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    total_tokens?: number;
+  } | null;
+  analysis?: {
+    language?: string;
+    normalizedTitle?: string;
+    shortSummary?: string;
+    categoryCandidates?: SemanticIntakeCandidate[];
+    unknownTermCandidates?: SemanticIntakeUnknownTerm[];
+    riskFlags?: string[];
+  };
+  persistence?: {
+    wroteToDatabase?: boolean;
+    createdCategoryCandidatesRows?: boolean;
+    createdApprovedCategories?: boolean;
+    createdPublicSemanticCloudLinks?: boolean;
+    note?: string;
+  };
+};
+
+type SemanticIntakeStatus = "idle" | "running" | "done" | "failed";
+
 type CreateOrganizationResponse = {
   ok?: boolean;
   error?: string;
@@ -81,6 +129,14 @@ export default function NewOrganizationPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [semanticIntakeStatus, setSemanticIntakeStatus] =
+    useState<SemanticIntakeStatus>("idle");
+  const [semanticIntake, setSemanticIntake] =
+    useState<SemanticIntakeResponse | null>(null);
+  const [semanticIntakeError, setSemanticIntakeError] = useState<string | null>(
+    null,
+  );
+
   const organizationId = result?.organization?.id ?? null;
 
   const locationPreview = useMemo(() => {
@@ -106,11 +162,79 @@ export default function NewOrganizationPage() {
     organizationName.trim().length >= 2 &&
     (!includeLocation || normalizeCountryCode(countryCode).length === 2);
 
+  async function triggerOrganizationSemanticIntake(
+    createData: CreateOrganizationResponse,
+  ) {
+    const organization = createData.organization;
+
+    if (!organization) {
+      setSemanticIntakeStatus("failed");
+      setSemanticIntakeError("AI-анализ не запущен: предприятие отсутствует в ответе API.");
+      return;
+    }
+
+    setSemanticIntakeStatus("running");
+    setSemanticIntake(null);
+    setSemanticIntakeError(null);
+
+    try {
+      const semanticResponse = await fetch("/api/ai/semantic-intake/organization", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body: JSON.stringify({
+          objectType: "organization",
+          objectId: organization.id,
+          source: "organization_create_success_client_preview",
+          name: organization.organization_name,
+          description: organization.description ?? description.trim() ?? "",
+          organizationType: organization.organization_type ?? organizationType,
+          country:
+            createData.organizationLocation?.country_code ??
+            (includeLocation ? normalizeCountryCode(countryCode) : ""),
+          city:
+            createData.organizationLocation?.city ??
+            (includeLocation ? city.trim() : ""),
+          district:
+            createData.organizationLocation?.district ??
+            (includeLocation ? district.trim() : ""),
+        }),
+      });
+
+      const semanticData =
+        (await semanticResponse.json()) as SemanticIntakeResponse;
+
+      if (!semanticResponse.ok || !semanticData.ok) {
+        setSemanticIntakeStatus("failed");
+        setSemanticIntake(semanticData);
+        setSemanticIntakeError(
+          semanticData.error ?? "AI-анализ предприятия не выполнен.",
+        );
+        return;
+      }
+
+      setSemanticIntakeStatus("done");
+      setSemanticIntake(semanticData);
+      console.info("Organization semantic intake preview", semanticData);
+    } catch (error) {
+      setSemanticIntakeStatus("failed");
+      setSemanticIntakeError(
+        error instanceof Error
+          ? error.message
+          : "Неизвестная ошибка AI-анализа предприятия.",
+      );
+    }
+  }
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setResult(null);
     setErrorMessage(null);
+    setSemanticIntake(null);
+    setSemanticIntakeError(null);
+    setSemanticIntakeStatus("idle");
     setIsSubmitting(true);
 
     const payload: Record<string, unknown> = {
@@ -143,6 +267,7 @@ export default function NewOrganizationPage() {
       }
 
       setResult(data);
+      void triggerOrganizationSemanticIntake(data);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Неизвестная ошибка создания предприятия.",
@@ -394,6 +519,81 @@ export default function NewOrganizationPage() {
               </p>
             </div>
 
+            <div className="mt-4 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-4 text-[12px] leading-5 text-[#1e3a8a]">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2563eb]">
+                OpenAI semantic intake preview
+              </div>
+
+              <p className="m-0">
+                <strong>Статус:</strong>{" "}
+                {semanticIntakeStatus === "idle"
+                  ? "ожидает запуска после создания предприятия"
+                  : semanticIntakeStatus === "running"
+                    ? "AI-анализ выполняется..."
+                    : semanticIntakeStatus === "done"
+                      ? "AI-анализ выполнен"
+                      : "AI-анализ не выполнен"}
+              </p>
+
+              {semanticIntakeError ? (
+                <p className="mt-2 rounded-lg border border-[#fecaca] bg-white px-3 py-2 text-[#b42318]">
+                  {semanticIntakeError}
+                </p>
+              ) : null}
+
+              {semanticIntake?.analysis?.shortSummary ? (
+                <p className="mt-2">
+                  <strong>Summary:</strong>{" "}
+                  {semanticIntake.analysis.shortSummary}
+                </p>
+              ) : null}
+
+              {semanticIntake?.responseId ? (
+                <p className="mt-2">
+                  <strong>Response ID:</strong> {semanticIntake.responseId}
+                </p>
+              ) : null}
+
+              {semanticIntake?.model ? (
+                <p className="mt-1">
+                  <strong>Model:</strong> {semanticIntake.model}
+                </p>
+              ) : null}
+
+              {semanticIntake?.usage?.total_tokens ? (
+                <p className="mt-1">
+                  <strong>Tokens:</strong> {semanticIntake.usage.total_tokens}
+                </p>
+              ) : null}
+
+              {semanticIntake?.analysis?.categoryCandidates?.length ? (
+                <div className="mt-3">
+                  <strong>Category candidates:</strong>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {semanticIntake.analysis.categoryCandidates.map((candidate) => (
+                      <span
+                        key={`${candidate.slug ?? candidate.label}-${candidate.confidence ?? "na"}`}
+                        className="rounded-full border border-[#bfdbfe] bg-white px-3 py-1 text-[11px] font-semibold text-[#1d4ed8]"
+                      >
+                        {candidate.label}
+                        {typeof candidate.confidence === "number"
+                          ? ` · ${Math.round(candidate.confidence * 100)}%`
+                          : ""}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {semanticIntake?.persistence ? (
+                <p className="mt-3 text-[#475569]">
+                  DB persistence:{" "}
+                  {semanticIntake.persistence.wroteToDatabase
+                    ? "writes enabled"
+                    : "preview only, no category DB writes"}
+                </p>
+              ) : null}
+            </div>
             <details className="mt-4 rounded-xl border border-[#d1fae5] bg-white p-4 text-[12px] text-[#5a5f7a]">
               <summary className="cursor-pointer font-semibold text-[#166534]">
                 Служебная информация для разработчика
@@ -424,3 +624,4 @@ export default function NewOrganizationPage() {
     </main>
   );
 }
+
