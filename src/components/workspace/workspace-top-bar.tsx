@@ -7,6 +7,7 @@
  * Result marker: WORKSPACE_TOP_BAR_CREATED
  */
 
+import { WorkspaceSemanticCloudButton } from "./semantic-cloud/workspace-semantic-cloud-button";
 import type { WorkspaceContext, WorkspaceProfile } from "./workspace-types";
 
 export const WORKSPACE_TOP_BAR_RESULT = "WORKSPACE_TOP_BAR_CREATED" as const;
@@ -69,6 +70,7 @@ export function WorkspaceTopBar({ profile, context }: WorkspaceTopBarProps) {
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
+          <WorkspaceSemanticCloudButton />
         <div className="hidden items-center gap-2 xl:flex">
           <TopBarStatusPill label={profile.currentMode} />
           <TopBarStatusPill label={profile.privacyLabel} />
@@ -95,3 +97,4 @@ export function WorkspaceTopBar({ profile, context }: WorkspaceTopBarProps) {
     </header>
   );
 }
+

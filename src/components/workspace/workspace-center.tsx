@@ -35,6 +35,7 @@ import { WorkspaceFilterToolbar } from "./workspace-filter-toolbar";
 import { WorkspaceKpiStrip } from "./workspace-kpi-strip";
 import { WorkspaceOverviewCards } from "./workspace-overview-cards";
 import { WorkspaceStatePlaceholders } from "./workspace-state-placeholders";
+import { WorkspaceSemanticCloudButton } from "./semantic-cloud/workspace-semantic-cloud-button";
 import {
   SemanticReviewActivityBridge,
   SemanticReviewWorkspaceEntry,
@@ -84,6 +85,9 @@ export function WorkspaceCenter() {
         profile={workspaceProfileFixture}
         context={workspaceContextFixture}
       />
+      <div className="mb-4 flex justify-end">
+        <WorkspaceSemanticCloudButton />
+      </div>
 
       <WorkspaceKpiStrip />
 
@@ -152,3 +156,4 @@ export function WorkspaceCenter() {
     </section>
   );
 }
+
