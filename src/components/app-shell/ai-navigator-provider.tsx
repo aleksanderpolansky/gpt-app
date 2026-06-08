@@ -52,22 +52,13 @@ const DEFAULT_MESSAGES: AiNavigatorMessage[] = [
     text: "Привет! Я AI-Навигатор. Могу помочь разобрать активность, подсказать следующий шаг или объяснить текущую страницу.",
     createdAt: new Date(0).toISOString(),
   },
-  {
-    id: 2,
-    role: "insight",
-    text: "История этой панели теперь сквозная: она не должна сбрасываться при переходе между страницами.",
-    createdAt: new Date(0).toISOString(),
-  },
-  {
-    id: 3,
-    role: "rec",
-    text: "На этом этапе история хранится локально в браузере. DB write-flow для восстановления на новом устройстве пока не открыт.",
-    createdAt: new Date(0).toISOString(),
-  },
 ];
 
+export const UI_MINI_FIX_AI_NAVIGATOR_COMPACT_INITIAL_STATE =
+  "UI_MINI_FIX_AI_NAVIGATOR_COMPACT_INITIAL_STATE" as const;
+
 function safeStorageKey(email: string | null) {
-  return `gpt-app:ai-navigator:v1:${email || "guest"}`;
+  return `gpt-app:ai-navigator:v2-compact:${email || "guest"}`;
 }
 
 function readMessagesFromLocalStorage(storageKey: string): AiNavigatorMessage[] {
@@ -306,3 +297,4 @@ export function useAiNavigator() {
 
   return context;
 }
+

@@ -28,6 +28,9 @@ const ACTIVITY_EXAMPLES = [
   "40 минут анализировал продажи одноразовой посуды",
 ];
 
+export const UI_MINI_FIX_ACTIVITY_COMPOSER_ON_DEMAND_IN_GLOBAL_AI =
+  "UI_MINI_FIX_ACTIVITY_COMPOSER_ON_DEMAND_IN_GLOBAL_AI" as const;
+
 function ActivityComposer() {
   const { addActivityPreview } = useAiNavigator();
   const [activityText, setActivityText] = useState("");
@@ -205,6 +208,8 @@ export function GlobalAiNavigator() {
     clearHistory,
   } = useAiNavigator();
 
+  const [isActivityComposerOpen, setIsActivityComposerOpen] = useState(false);
+
   return (
     <aside className="hidden w-[292px] flex-shrink-0 flex-col overflow-hidden border-l border-[rgba(0,0,0,0.07)] bg-white xl:flex">
       <div className="border-b border-[rgba(0,0,0,0.06)] px-4 pb-3 pt-4">
@@ -228,7 +233,7 @@ export function GlobalAiNavigator() {
       </div>
 
       <div className="scrollbar-hide flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
-        <ActivityComposer />
+        {isActivityComposerOpen ? <ActivityComposer /> : null}
 
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
@@ -257,8 +262,20 @@ export function GlobalAiNavigator() {
             <button
               key={label}
               type="button"
-              onClick={() => setInput(prompt)}
-              className="flex items-center gap-1.5 rounded-lg border border-transparent bg-[#f5f6fb] px-2.5 py-2 text-left text-[11px] font-medium text-[#5a5f7a] transition-all hover:border-[#3b6ef8]/15 hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
+              onClick={() => {
+                if (label === "Записать активность") {
+                  setIsActivityComposerOpen(true);
+                  return;
+                }
+
+                setInput(prompt);
+              }}
+              aria-pressed={label === "Записать активность" ? isActivityComposerOpen : undefined}
+              className={
+                label === "Записать активность" && isActivityComposerOpen
+                  ? "flex items-center gap-1.5 rounded-lg border border-[#3b6ef8]/25 bg-[#eef2ff] px-2.5 py-2 text-left text-[11px] font-semibold text-[#3b6ef8] transition-all"
+                  : "flex items-center gap-1.5 rounded-lg border border-transparent bg-[#f5f6fb] px-2.5 py-2 text-left text-[11px] font-medium text-[#5a5f7a] transition-all hover:border-[#3b6ef8]/15 hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
+              }
             >
               <Icon size={11} />
               <span className="leading-tight">{label}</span>
@@ -295,3 +312,4 @@ export function GlobalAiNavigator() {
     </aside>
   );
 }
+

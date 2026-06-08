@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, type ElementType, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
 import {
   Bell,
   Bookmark,
@@ -21,8 +21,35 @@ import {
 } from "lucide-react";
 
 import { UserSessionTopBarControls } from "../auth/user-session-client";
+import { WorkspaceSemanticCloudButton } from "../workspace/semantic-cloud/workspace-semantic-cloud-button";
 
 type IconComponent = ElementType;
+
+type SidebarOrganizationLocation = {
+  country_code?: string | null;
+  city?: string | null;
+  district?: string | null;
+};
+
+type SidebarOrganization = {
+  id: string;
+  organization_name: string;
+  primaryLocation?: SidebarOrganizationLocation | null;
+  location?: SidebarOrganizationLocation | null;
+  locations?: SidebarOrganizationLocation[];
+};
+
+type SidebarOrganizationsResponse = {
+  ok?: boolean;
+  error?: string;
+  organizations?: SidebarOrganization[];
+};
+
+export const UI_MINI_FIX_REAL_ORGANIZATIONS_IN_GLOBAL_NAV =
+  "UI_MINI_FIX_REAL_ORGANIZATIONS_IN_GLOBAL_NAV" as const;
+
+export const UI_MINI_FIX_SEMANTIC_CLOUD_TOP_SEARCH_IN_GLOBAL_NAV =
+  "UI_MINI_FIX_SEMANTIC_CLOUD_TOP_SEARCH_IN_GLOBAL_NAV" as const;
 
 function Badge({
   count,
@@ -171,7 +198,112 @@ function TreeItem({
   );
 }
 
+function getOrganizationInitial(organization: SidebarOrganization) {
+  return organization.organization_name.trim().charAt(0).toUpperCase() || "•";
+}
+
+function BusinessOrganizationTreeItem({
+  organization,
+}: {
+  readonly organization: SidebarOrganization;
+}) {
+  const locationLabel = getOrganizationLocationLabel(organization);
+  const href = `/organizations/${encodeURIComponent(organization.id)}`;
+
+  return (
+    <a
+      href={href}
+      title={organization.organization_name}
+      className="group ml-9 flex min-w-0 items-center gap-2 rounded-md py-1.5 pl-2 pr-2 text-[11.5px] font-medium text-[#5a5f7a] transition-all hover:bg-gray-50 hover:text-[#1a1d2e]"
+    >
+      <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#eef2ff] text-[10px] font-bold text-[#3b6ef8] ring-1 ring-[#dbe4ff]">
+        {getOrganizationInitial(organization)}
+      </span>
+
+      <span className="min-w-0 flex-1">
+        <span className="block truncate leading-tight">
+          {organization.organization_name}
+        </span>
+        {locationLabel ? (
+          <span className="mt-0.5 block truncate text-[10px] font-normal leading-tight text-[#9ca3b8]">
+            {locationLabel}
+          </span>
+        ) : null}
+      </span>
+    </a>
+  );
+}
+
+export const UI_MINI_FIX_BUSINESS_NAV_DETAIL_LINKS =
+  "UI_MINI_FIX_BUSINESS_NAV_DETAIL_LINKS" as const;
+
+function getOrganizationLocationLabel(organization: SidebarOrganization) {
+  const location =
+    organization.primaryLocation ??
+    organization.location ??
+    organization.locations?.[0] ??
+    null;
+
+  if (!location) {
+    return null;
+  }
+
+  const parts = [location.country_code, location.city, location.district].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(", ") : null;
+}
+
 export function GlobalSidebar() {
+  const [organizations, setOrganizations] = useState<SidebarOrganization[]>([]);
+  const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(false);
+  const [organizationsError, setOrganizationsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadOrganizations() {
+      setIsLoadingOrganizations(true);
+      setOrganizationsError(null);
+
+      try {
+        const response = await fetch("/api/organizations", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        const data = (await response.json()) as SidebarOrganizationsResponse;
+
+        if (!response.ok || !data.ok) {
+          if (isMounted) {
+            setOrganizationsError(data.error ?? "Не удалось загрузить предприятия.");
+          }
+
+          return;
+        }
+
+        if (isMounted) {
+          setOrganizations(Array.isArray(data.organizations) ? data.organizations : []);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setOrganizationsError(error instanceof Error ? error.message : "Неизвестная ошибка загрузки предприятий.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingOrganizations(false);
+        }
+      }
+    }
+
+    void loadOrganizations();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const visibleOrganizations = useMemo(() => organizations.slice(0, 8), [organizations]);
+
   return (
     <aside className="hidden w-[240px] flex-shrink-0 flex-col overflow-hidden border-r border-[rgba(0,0,0,0.07)] bg-white lg:flex">
       <div className="flex items-center gap-2.5 border-b border-[rgba(0,0,0,0.06)] px-4 py-4">
@@ -231,10 +363,36 @@ export function GlobalSidebar() {
         <SidebarMainItem icon={Clock} label="Время" href="/today" />
 
         <ExpandableSidebarItem icon={Wallet} label="Деньги" defaultOpen>
-          <TreeItem label="Бизнес" depth={1} href="/organizations" />
-          <TreeItem label="Предприятие А" depth={2} href="/organizations" />
-          <TreeItem label="Предприятие Б" depth={2} href="/organizations" />
-          <TreeItem label="Предприятие Ц" depth={2} href="/organizations" />
+          <TreeItem label="Бизнес" depth={1} defaultOpen>
+            {isLoadingOrganizations ? (
+              <TreeItem label="Загружаю предприятия..." depth={2} href="/organizations" />
+            ) : organizationsError ? (
+              <TreeItem label="Ошибка загрузки предприятий" depth={2} href="/organizations" />
+            ) : visibleOrganizations.length > 0 ? (
+              <>
+                {visibleOrganizations.map((organization) => (
+                  <BusinessOrganizationTreeItem
+                    key={organization.id}
+                    organization={organization}
+                  />
+                ))}
+
+                {organizations.length > visibleOrganizations.length ? (
+                  <TreeItem
+                    label={`Показать все предприятия: ${organizations.length}`}
+                    depth={2}
+                    href="/organizations"
+                  />
+                ) : null}
+              </>
+            ) : (
+              <TreeItem
+                label="Пока нет предприятий — создать"
+                depth={2}
+                href="/organizations/new"
+              />
+            )}
+          </TreeItem>
           <TreeItem label="Карьера" depth={1} href="/next" />
           <TreeItem label="Менеджер по продажам" depth={2} href="/next" />
           <TreeItem label="Усиление карьерных возможностей" depth={2} defaultOpen>
@@ -266,8 +424,8 @@ export function GlobalSidebar() {
 export function GlobalTopBar() {
   return (
     <header className="flex h-[56px] flex-shrink-0 items-center gap-4 border-b border-[rgba(0,0,0,0.07)] bg-white px-5">
-      <div className="max-w-[480px] flex-1">
-        <div className="relative">
+      <div className="flex flex-1 items-center gap-2">
+        <div className="relative w-[430px] max-w-[46vw] flex-shrink-0">
           <Search
             size={14}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-[#b0b4c8]"
@@ -277,6 +435,10 @@ export function GlobalTopBar() {
             placeholder="Поиск по платформе, людям, целям и возможностям"
             className="w-full rounded-lg border border-transparent bg-[#f5f6fb] py-2 pl-9 pr-4 text-[12.5px] text-[#4a4f6a] placeholder-[#b0b4c8] transition-all focus:border-[#3b6ef8] focus:bg-white focus:outline-none"
           />
+        </div>
+
+        <div className="flex-shrink-0">
+          <WorkspaceSemanticCloudButton />
         </div>
       </div>
 
@@ -295,3 +457,6 @@ export function GlobalTopBar() {
     </header>
   );
 }
+
+
+
