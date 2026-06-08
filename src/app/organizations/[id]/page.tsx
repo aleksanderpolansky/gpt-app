@@ -1,4 +1,7 @@
-﻿import { auth0 } from "../../../../lib/auth0";
+﻿import Link from "next/link";
+import type { ReactNode } from "react";
+
+import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import PurchaseConfirmationForm from "./PurchaseConfirmationForm";
 import OrganizationLocationEditForm from "./OrganizationLocationEditForm";
@@ -153,8 +156,6 @@ type AppUser = {
   name?: string | null;
 };
 
-
-
 type OrganizationCurrentCategory = {
   classificationId: string;
   contextualCategoryId: string;
@@ -166,6 +167,7 @@ type OrganizationCurrentCategory = {
   isPrimary: boolean | null;
   updatedAt: string | null;
 };
+
 type OrganizationCategorySuggestionRequest = {
   id: string;
   user_text: string;
@@ -182,11 +184,12 @@ type OrganizationCategorySuggestionRequest = {
   created_at: string;
   updated_at: string;
 };
+
 type PageData = {
   organization: Organization | null;
   primaryLocation: OrganizationLocation | null;
   valueObjects: ValueObject[];
-  offers: Offer[];
+  offers: Offer[];
   categorySuggestionRequests?: OrganizationCategorySuggestionRequest[];
   currentCategory?: OrganizationCurrentCategory | null;
   errorMessage: string | null;
@@ -197,6 +200,21 @@ type OrganizationDetailsPageProps = {
   params: Promise<{
     id: string;
   }>;
+};
+
+type TabItem = {
+  id:
+    | "overview"
+    | "location"
+    | "semantic"
+    | "value-objects"
+    | "offers"
+    | "purchases"
+    | "settings"
+    | "danger";
+  label: string;
+  description: string;
+  badge?: string;
 };
 
 function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
@@ -258,28 +276,16 @@ function getPaymentModeLabel(paymentMode: string | null | undefined) {
   return paymentMode || "Not specified";
 }
 
-function getPaymentModeStyle(paymentMode: string | null | undefined) {
+function getPaymentModeClassName(paymentMode: string | null | undefined) {
   if (paymentMode === "points_only") {
-    return {
-      background: "#edf8f0",
-      color: "#176b2c",
-      border: "1px solid #bfe5c8",
-    };
+    return "border-[#bfe5c8] bg-[#edf8f0] text-[#176b2c]";
   }
 
   if (paymentMode === "mixed") {
-    return {
-      background: "#fff8e6",
-      color: "#7a4b00",
-      border: "1px solid #f0d28a",
-    };
+    return "border-[#f0d28a] bg-[#fff8e6] text-[#7a4b00]";
   }
 
-  return {
-    background: "#f5f5f5",
-    color: "#555555",
-    border: "1px solid #dddddd",
-  };
+  return "border-[#dfe3f1] bg-[#f8f9fd] text-[#4a4f6a]";
 }
 
 function getDiscountTypeLabel(discountType: string | null | undefined) {
@@ -884,6 +890,171 @@ async function getOrganizationPageData(
   };
 }
 
+function DetailRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-[#edf0f7] bg-white px-4 py-3">
+      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#8b91aa]">
+        {label}
+      </div>
+      <div className="mt-1 text-[14px] font-semibold text-[#1a1d2e]">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function StatusPill({
+  children,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "blue" | "green" | "amber" | "red";
+}) {
+  const toneClassName = {
+    neutral: "border-[#dfe3f1] bg-[#f8f9fd] text-[#4a4f6a]",
+    blue: "border-[#dfe4ff] bg-[#eef2ff] text-[#3b6ef8]",
+    green: "border-[#bbf7d0] bg-[#f0fdf4] text-[#166534]",
+    amber: "border-[#fde68a] bg-[#fffbeb] text-[#92400e]",
+    red: "border-[#fecaca] bg-[#fff1f2] text-[#b42318]",
+  }[tone];
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[12px] font-bold ${toneClassName}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function SectionHeader({
+  eyebrow,
+  title,
+  description,
+  action,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div>
+        {eyebrow ? (
+          <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#8b91aa]">
+            {eyebrow}
+          </div>
+        ) : null}
+        <h2 className="text-[24px] font-bold tracking-[-0.03em] text-[#111827]">
+          {title}
+        </h2>
+        {description ? (
+          <p className="mt-2 max-w-[760px] text-[14px] leading-6 text-[#5a5f7a]">
+            {description}
+          </p>
+        ) : null}
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
+  );
+}
+
+function EmptyState({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="rounded-[18px] border border-dashed border-[#dfe3f1] bg-[#f8f9fd] p-6">
+      <h3 className="text-[18px] font-bold text-[#343854]">{title}</h3>
+      <p className="mt-2 text-[14px] leading-6 text-[#7c8099]">
+        {description}
+      </p>
+      {action ? <div className="mt-4">{action}</div> : null}
+    </div>
+  );
+}
+
+function Card({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={`rounded-[22px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)] ${className}`}
+    >
+      {children}
+    </section>
+  );
+}
+
+function getTabInputId(tabId: TabItem["id"]) {
+  return `org-detail-tab-${tabId}`;
+}
+
+function TabRadio({ tab, defaultChecked = false }: { tab: TabItem; defaultChecked?: boolean }) {
+  return (
+    <input
+      id={getTabInputId(tab.id)}
+      name="org-detail-tabs"
+      type="radio"
+      defaultChecked={defaultChecked}
+      className="org-detail-tab-radio"
+    />
+  );
+}
+
+function TabLabel({ tab }: { tab: TabItem }) {
+  return (
+    <label
+      htmlFor={getTabInputId(tab.id)}
+      className="org-detail-tab-label group flex cursor-pointer items-start justify-between gap-3 rounded-2xl border border-transparent px-4 py-3 text-left transition hover:border-[#dfe4ff] hover:bg-[#f8f9fd]"
+    >
+      <span>
+        <span className="block text-[14px] font-bold text-[#343854]">
+          {tab.label}
+        </span>
+        <span className="mt-1 block text-[12px] leading-5 text-[#7c8099]">
+          {tab.description}
+        </span>
+      </span>
+      {tab.badge ? (
+        <span className="rounded-full border border-[#dfe4ff] bg-[#eef2ff] px-2.5 py-1 text-[11px] font-bold text-[#3b6ef8]">
+          {tab.badge}
+        </span>
+      ) : null}
+    </label>
+  );
+}
+
+function TabPanel({
+  id,
+  children,
+}: {
+  id: TabItem["id"];
+  children: ReactNode;
+}) {
+  return (
+    <div data-org-detail-panel={id} className="org-detail-panel">
+      {children}
+    </div>
+  );
+}
+
 export default async function OrganizationDetailsPage({
   params,
 }: OrganizationDetailsPageProps) {
@@ -924,1087 +1095,982 @@ export default async function OrganizationDetailsPage({
       request.status === "needs_review"
   );
 
+  const tabs: TabItem[] = [
+    {
+      id: "overview",
+      label: "Overview",
+      description: "Главная информация",
+    },
+    {
+      id: "location",
+      label: "Location",
+      description: "Город, район, координаты",
+    },
+    {
+      id: "semantic",
+      label: "Semantic / AI",
+      description: "Категории и заявки",
+      badge: activeCategorySuggestionRequests.length
+        ? String(activeCategorySuggestionRequests.length)
+        : undefined,
+    },
+    {
+      id: "value-objects",
+      label: "Value Objects",
+      description: "Товары и услуги",
+      badge: String(valueObjects.length),
+    },
+    {
+      id: "offers",
+      label: "Offers",
+      description: "Коммерческие условия",
+      badge: String(offers.length),
+    },
+    {
+      id: "purchases",
+      label: "Purchases",
+      description: "Подтверждения покупок",
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      description: "Настройки карточки",
+    },
+    {
+      id: "danger",
+      label: "Danger zone",
+      description: "Архивирование / удаление",
+    },
+  ];
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#ffffff",
-        color: "#111111",
-        padding: "40px 16px",
-        fontFamily: "Arial, Helvetica, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "1100px",
-          margin: "0 auto",
-        }}
-      >
-        <header
-          style={{
-            marginBottom: "32px",
-            textAlign: "center",
-          }}
-        >
-          <h1
-            style={{
-              fontSize: "32px",
-              lineHeight: "1.2",
-              fontWeight: 700,
-              margin: "0 0 12px",
-            }}
-          >
-            Organization details
-          </h1>
+    <main className="min-h-full bg-[#f5f6fb] px-4 py-6 text-[#1a1d2e]">
+      <style>{`
+        .org-detail-tab-radio {
+          position: absolute;
+          opacity: 0;
+          pointer-events: none;
+        }
 
-          <nav
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: "24px",
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <a href="/" style={{ color: "#2563eb" }}>
-              На главную
-            </a>
+        .org-detail-layout {
+          display: grid;
+          gap: 20px;
+          align-items: start;
+        }
 
-            <a href="/organizations" style={{ color: "#2563eb" }}>
-              Мои организации
-            </a>
+        .org-detail-tabs-sidebar {
+          width: 100%;
+        }
 
-            <a href={createValueObjectHref} style={{ color: "#2563eb" }}>
-              Create value object
-            </a>
+        .org-detail-main-content {
+          min-width: 0;
+        }
 
-            <a href={createOfferHref} style={{ color: "#2563eb" }}>
-              Create offer
-            </a>
+        @media (min-width: 1024px) {
+          .org-detail-layout {
+            grid-template-columns: 280px minmax(0, 1fr);
+          }
 
-            <a href={myPurchaseConfirmationsHref} style={{ color: "#2563eb" }}>
-              My purchase confirmations
-            </a>
+          .org-detail-tabs-sidebar {
+            width: 280px;
+            position: sticky;
+            top: 96px;
+          }
+        }
 
-            <a href={purchaseConfirmationsHref} style={{ color: "#2563eb" }}>
-              Seller purchase confirmations
-            </a>
+        @media (min-width: 1440px) {
+          .org-detail-layout {
+            grid-template-columns: 300px minmax(0, 1fr);
+          }
 
-            <a href={publicPurchaseHistoryHref} style={{ color: "#2563eb" }}>
-              Public purchase history
-            </a>
-          </nav>
-        </header>
+          .org-detail-tabs-sidebar {
+            width: 300px;
+          }
+        }
 
-        {errorMessage ? (
-          <div
-            style={{
-              border: "1px solid #f5c2c7",
-              borderRadius: "10px",
-              padding: "18px",
-              background: "#f8d7da",
-              color: "#842029",
-            }}
-          >
-            {errorMessage}
-          </div>
-        ) : null}
+        .org-detail-panel {
+          display: none;
+        }
 
-        {!errorMessage && !organization ? (
-          <div
-            style={{
-              border: "1px solid #facc15",
-              borderRadius: "10px",
-              padding: "18px",
-              background: "#fefce8",
-            }}
-          >
-            Organization not found or access denied.
-          </div>
-        ) : null}
+        #org-detail-tab-overview:checked ~ .org-detail-shell [data-org-detail-panel="overview"],
+        #org-detail-tab-location:checked ~ .org-detail-shell [data-org-detail-panel="location"],
+        #org-detail-tab-semantic:checked ~ .org-detail-shell [data-org-detail-panel="semantic"],
+        #org-detail-tab-value-objects:checked ~ .org-detail-shell [data-org-detail-panel="value-objects"],
+        #org-detail-tab-offers:checked ~ .org-detail-shell [data-org-detail-panel="offers"],
+        #org-detail-tab-purchases:checked ~ .org-detail-shell [data-org-detail-panel="purchases"],
+        #org-detail-tab-settings:checked ~ .org-detail-shell [data-org-detail-panel="settings"],
+        #org-detail-tab-danger:checked ~ .org-detail-shell [data-org-detail-panel="danger"] {
+          display: block;
+        }
 
-        {!errorMessage && organization ? (
-          <div style={{ display: "grid", gap: "20px" }}>
-            <section
-              style={{
-                border: "1px solid #dddddd",
-                borderRadius: "12px",
-                padding: "20px",
-                background: "#f9fafb",
-                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
-              }}
-            >
-              <h2
-                style={{
-                  fontSize: "26px",
-                  margin: "0 0 12px",
-                }}
-              >
-                {organization.organization_name}
+        #org-detail-tab-overview:checked ~ .org-detail-shell label[for="org-detail-tab-overview"],
+        #org-detail-tab-location:checked ~ .org-detail-shell label[for="org-detail-tab-location"],
+        #org-detail-tab-semantic:checked ~ .org-detail-shell label[for="org-detail-tab-semantic"],
+        #org-detail-tab-value-objects:checked ~ .org-detail-shell label[for="org-detail-tab-value-objects"],
+        #org-detail-tab-offers:checked ~ .org-detail-shell label[for="org-detail-tab-offers"],
+        #org-detail-tab-purchases:checked ~ .org-detail-shell label[for="org-detail-tab-purchases"],
+        #org-detail-tab-settings:checked ~ .org-detail-shell label[for="org-detail-tab-settings"],
+        #org-detail-tab-danger:checked ~ .org-detail-shell label[for="org-detail-tab-danger"] {
+          border-color: #dfe4ff;
+          background: #eef2ff;
+          box-shadow: 0 10px 24px rgba(59, 110, 248, 0.10);
+        }
+
+        #org-detail-tab-overview:checked ~ .org-detail-shell label[for="org-detail-tab-overview"] span:first-child span:first-child,
+        #org-detail-tab-location:checked ~ .org-detail-shell label[for="org-detail-tab-location"] span:first-child span:first-child,
+        #org-detail-tab-semantic:checked ~ .org-detail-shell label[for="org-detail-tab-semantic"] span:first-child span:first-child,
+        #org-detail-tab-value-objects:checked ~ .org-detail-shell label[for="org-detail-tab-value-objects"] span:first-child span:first-child,
+        #org-detail-tab-offers:checked ~ .org-detail-shell label[for="org-detail-tab-offers"] span:first-child span:first-child,
+        #org-detail-tab-purchases:checked ~ .org-detail-shell label[for="org-detail-tab-purchases"] span:first-child span:first-child,
+        #org-detail-tab-settings:checked ~ .org-detail-shell label[for="org-detail-tab-settings"] span:first-child span:first-child,
+        #org-detail-tab-danger:checked ~ .org-detail-shell label[for="org-detail-tab-danger"] span:first-child span:first-child {
+          color: #3b6ef8;
+        }
+      `}</style>
+
+      <div className="mx-auto grid w-full max-w-[1180px] gap-5">
+        {tabs.map((tab, index) => (
+          <TabRadio key={tab.id} tab={tab} defaultChecked={index === 0} />
+        ))}
+
+        <div className="org-detail-shell grid gap-5">
+          <header className="rounded-[24px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.22em] text-[#8b91aa]">
+                  Commercial core / Organization workspace
+                </div>
+
+                <h1 className="text-[32px] font-bold tracking-[-0.04em] text-[#111827]">
+                  {organization?.organization_name ?? "Organization details"}
+                </h1>
+
+                <p className="mt-2 max-w-[780px] text-[14px] leading-6 text-[#5a5f7a]">
+                  {organization?.description ??
+                    "Карточка предприятия объединяет профиль, локацию, публичную категорию, товары/услуги, offers, подтверждения покупок и настройки."}
+                </p>
+
+                <p className="mt-4 max-w-[760px] text-[12px] font-medium leading-5 text-[#8b91aa]">
+                  Подробности профиля, статус, локация, валюта и публичная категория
+                  находятся во вкладках Overview, Location и Semantic / AI.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 lg:justify-end">
+                <Link
+                  href="/organizations"
+                  className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
+                >
+                  Мои организации
+                </Link>
+
+                {organization ? (
+                  <>
+                    <Link
+                      href={createValueObjectHref}
+                      className="rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
+                    >
+                      Create value object
+                    </Link>
+                    <Link
+                      href={createOfferHref}
+                      className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.24)] transition hover:bg-[#2f5fe3]"
+                    >
+                      Create offer
+                    </Link>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          </header>
+
+          {errorMessage ? (
+            <Card className="border-[#fecaca] bg-[#fff1f2]">
+              <h2 className="text-[22px] font-bold text-[#b42318]">
+                Не удалось загрузить предприятие
               </h2>
-
-              <p style={{ margin: "0 0 6px" }}>
-                <strong>Type:</strong> {organization.organization_type}
+              <p className="mt-2 text-[14px] leading-6 text-[#b42318]">
+                {errorMessage}
               </p>
+            </Card>
+          ) : null}
 
-              <p style={{ margin: "0 0 6px" }}>
-                <strong>Status:</strong> {organization.status}
+          {!errorMessage && !organization ? (
+            <Card className="border-[#fde68a] bg-[#fffbeb]">
+              <h2 className="text-[22px] font-bold text-[#92400e]">
+                Organization not found or access denied
+              </h2>
+              <p className="mt-2 text-[14px] leading-6 text-[#92400e]">
+                Проверьте ссылку или вернитесь к списку ваших предприятий.
               </p>
-
-              <p style={{ margin: "0 0 6px" }}>
-                <strong>Location:</strong> {getLocationLabel(primaryLocation)}
-              </p>
-
-              {locationGeoStatusLabel ? (
-                <p
-                  style={{
-                    margin: "0 0 6px",
-                    color: "#92400e",
-                    fontSize: "14px",
-                    fontWeight: 700,
-                  }}
-                >
-                  <strong>Location status:</strong> {locationGeoStatusLabel}
-                </p>
-              ) : null}
-
-              <p style={{ margin: "0 0 6px" }}>
-                <strong>Address visibility:</strong>{" "}
-                {getLocationVisibilityLabel(primaryLocation)}
-              </p>
-
-              <p style={{ margin: "0 0 6px" }}>
-                <strong>Coordinates:</strong>{" "}
-                {getCoordinatesLabel(primaryLocation)}
-              </p>
-
-              <p style={{ margin: "0 0 6px" }}>
-                <strong>Country:</strong>{" "}
-                {organization.country_code || "Not specified"}
-              </p>
-
-              <p style={{ margin: "0 0 6px" }}>
-                <strong>Default currency:</strong>{" "}
-                {organization.default_currency || "Not specified"}
-              </p>
-
-              <p style={{ margin: "0 0 6px" }}>
-                <strong>Description:</strong>{" "}
-                {organization.description || "Not specified"}
-              </p>
-              {canEditOrganizationLocation ? (
-                <section
-                  style={{
-                    marginTop: "18px",
-                    border: "1px solid #bbf7d0",
-                    borderRadius: "12px",
-                    padding: "16px",
-                    background: "#f0fdf4",
-                  }}
-                >
-                  <h3
-                    style={{
-                      margin: "0 0 8px",
-                      fontSize: "18px",
-                      color: "#166534",
-                    }}
-                  >
-                    Current public category
-                  </h3>
-
-                  {currentCategory ? (
-                    <div
-                      style={{
-                        display: "grid",
-                        gap: "6px",
-                        color: "#14532d",
-                        fontSize: "13px",
-                        lineHeight: "1.5",
-                      }}
-                    >
-                      <p style={{ margin: 0 }}>
-                        <strong>Category:</strong>{" "}
-                        {currentCategory.categoryName}
-                      </p>
-
-                      <p style={{ margin: 0 }}>
-                        <strong>Slug:</strong> {currentCategory.categorySlug}
-                      </p>
-
-                      <p style={{ margin: 0 }}>
-                        <strong>Status:</strong>{" "}
-                        {currentCategory.classificationStatus}
-                      </p>
-
-                      <p style={{ margin: 0 }}>
-                        <strong>Role:</strong>{" "}
-                        {currentCategory.classificationRole}
-                      </p>
-
-                      <p style={{ margin: 0 }}>
-                        <strong>Source:</strong>{" "}
-                        {currentCategory.sourceType ?? "not specified"}
-                      </p>
-
-                      <p style={{ margin: 0 }}>
-                        <strong>Classification ID:</strong>{" "}
-                        {currentCategory.classificationId}
-                      </p>
-                    </div>
-                  ) : (
-                    <p
-                      style={{
-                        margin: 0,
-                        color: "#166534",
-                        fontSize: "13px",
-                        lineHeight: "1.5",
-                      }}
-                    >
-                      No approved primary Object-Action category is currently
-                      assigned to this organization.
-                    </p>
-                  )}
-                </section>
-              ) : null}
-
-
-              {canEditOrganizationLocation ? (
-                <div style={{ marginTop: "18px" }}>
-                  <OrganizationLocationEditForm
-                    organizationId={organization.id}
-                    initialCountryCode={
-                      primaryLocation?.country_code ?? organization.country_code ?? null
-                    }
-                    initialCity={primaryLocation?.city ?? null}
-                    initialDistrict={primaryLocation?.district ?? null}
-                    initialAddressVisibility={
-                      primaryLocation?.address_visibility ?? "approximate"
-                    }
-                    initialLatitude={primaryLocation?.latitude ?? null}
-                    initialLongitude={primaryLocation?.longitude ?? null}
-                  />
-                </div>
-              ) : null}
-
-              {canEditOrganizationLocation ? (
-                <div style={{ marginTop: "18px" }}>
-                  {activeCategorySuggestionRequests.length > 0 ? (
-                    <div
-                      style={{
-                        marginBottom: "12px",
-                        border: "1px solid #fbbf24",
-                        borderRadius: "10px",
-                        padding: "12px",
-                        background: "#fffbeb",
-                        color: "#92400e",
-                        fontSize: "13px",
-                        lineHeight: "1.5",
-                      }}
-                    >
-                      <strong>
-                        There is already an active category change request for
-                        this organization.
-                      </strong>{" "}
-                      Active requests:{" "}
-                      <strong>{activeCategorySuggestionRequests.length}</strong>.
-                      You can still send another request, but it may duplicate
-                      an existing pending review.
-                    </div>
-                  ) : null}
-                  <DirectorySuggestionRequestForm
-                    title="Suggest organization category change"
-                    description="Describe what this organization really does and suggest a better public directory category. The request will be reviewed by an admin before changing the public directory."
-                    textareaLabel="Organization activity description"
-                    textareaPlaceholder="Example: This company provides AI automation consulting, workflow optimization and business process improvement for small companies."
-                    submitButtonLabel="Send category change request"
-                    successTitle="Category change request sent."
-                    entityType="organization"
-                    entityId={organization.id}
-                    requestSource="organization_category_change"
-                    locale="en"
-                    contextCode="business_directory"
-                    initialText={organization.description ?? ""}
-                    showProposedCategoryField={true}
-                  />
-                </div>
-              ) : null}
-
-              {canEditOrganizationLocation ? (
-                <section
-                  style={{
-                    marginTop: "18px",
-                    border: "1px solid #bfdbfe",
-                    borderRadius: "12px",
-                    padding: "16px",
-                    background: "#f8fbff",
-                  }}
-                >
-                  <h3
-                    style={{
-                      margin: "0 0 8px",
-                      fontSize: "18px",
-                      color: "#1e3a8a",
-                    }}
-                  >
-                    Recent category change requests
-                  </h3>
-
-                  <p
-                    style={{
-                      margin: "0 0 12px",
-                      color: "#1e40af",
-                      fontSize: "13px",
-                      lineHeight: "1.5",
-                    }}
-                  >
-                    Last requests submitted for this organization. Public
-                    category changes only after admin approval.
-                  </p>
-
-                  {categorySuggestionRequests.length === 0 ? (
-                    <p
-                      style={{
-                        margin: 0,
-                        color: "#666666",
-                        fontSize: "14px",
-                      }}
-                    >
-                      No category change requests yet.
-                    </p>
-                  ) : (
-                    <div style={{ display: "grid", gap: "10px" }}>
-                      {categorySuggestionRequests.map((request) => (
-                        <article
-                          key={request.id}
-                          style={{
-                            border: "1px solid #dbeafe",
-                            borderRadius: "10px",
-                            padding: "12px",
-                            background: "#ffffff",
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: "8px",
-                              flexWrap: "wrap",
-                              alignItems: "center",
-                              marginBottom: "8px",
-                            }}
-                          >
-                            <strong style={{ color: "#111827" }}>
-                              {request.proposed_category_text ??
-                                request.ai_suggested_category_text ??
-                                "Category not specified"}
-                            </strong>
-
-                            <span
-                              style={{
-                                border: "1px solid #bfdbfe",
-                                borderRadius: "999px",
-                                padding: "2px 8px",
-                                background: "#eff6ff",
-                                color: "#1e40af",
-                                fontSize: "12px",
-                                fontWeight: 700,
-                              }}
-                            >
-                              {request.status}
-                            </span>
-
-                            <span
-                              style={{
-                                border: "1px solid #e5e7eb",
-                                borderRadius: "999px",
-                                padding: "2px 8px",
-                                background: "#f9fafb",
-                                color: "#374151",
-                                fontSize: "12px",
-                                fontWeight: 700,
-                              }}
-                            >
-                              AI: {request.ai_status ?? "not_requested"}
-                            </span>
-                          </div>
-
-                          <p
-                            style={{
-                              margin: "0 0 8px",
-                              color: "#374151",
-                              fontSize: "13px",
-                              lineHeight: "1.5",
-                            }}
-                          >
-                            {request.user_text}
-                          </p>
-
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns:
-                                "repeat(auto-fit, minmax(180px, 1fr))",
-                              gap: "6px",
-                              color: "#6b7280",
-                              fontSize: "12px",
-                              lineHeight: "1.4",
-                            }}
-                          >
-                            <span>ID: {request.id}</span>
-                            <span>Source: {request.request_source}</span>
-                            <span>Created: {request.created_at}</span>
-                            <span>Updated: {request.updated_at}</span>
-
-                            {request.admin_decision ? (
-                              <span>
-                                Admin decision: {request.admin_decision}
-                              </span>
-                            ) : null}
-
-                            {request.reviewed_at ? (
-                              <span>Reviewed: {request.reviewed_at}</span>
-                            ) : null}
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  )}
-                </section>
-              ) : null}
-
-              <p
-                style={{
-                  margin: "12px 0 0",
-                  color: "#666666",
-                  fontSize: "14px",
-                }}
+              <Link
+                href="/organizations"
+                className="mt-4 inline-flex rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white transition hover:bg-[#2f5fe3]"
               >
-                ID: {organization.id}
-              </p>
-            </section>
+                Вернуться к организациям
+              </Link>
+            </Card>
+          ) : null}
 
-            <PurchaseConfirmationForm
-              organizationId={organizationId}
-              organizationDefaultCurrency={organization.default_currency ?? null}
-              myPurchaseConfirmationsHref={myPurchaseConfirmationsHref}
-              purchaseConfirmationsHref={purchaseConfirmationsHref}
-              publicPurchaseHistoryHref={publicPurchaseHistoryHref}
-            />
-
-            <section
-              style={{
-                border: "1px solid #dddddd",
-                borderRadius: "12px",
-                padding: "20px",
-                background: "#ffffff",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: "12px",
-                  alignItems: "center",
-                  marginBottom: "16px",
-                }}
-              >
-                <div>
-                  <h2 style={{ margin: 0, fontSize: "24px" }}>
-                    Value objects
-                  </h2>
-                  <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                    Products, services and certificates connected to this
-                    organization.
+          {!errorMessage && organization ? (
+            <div className="org-detail-layout">
+              <aside className="org-detail-tabs-sidebar rounded-[24px] border border-[rgba(0,0,0,0.07)] bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                <div className="px-3 pb-3 pt-2">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#8b91aa]">
+                    Разделы
+                  </div>
+                  <p className="mt-1 text-[12px] leading-5 text-[#7c8099]">
+                    Нажмите вкладку, чтобы открыть нужный блок карточки.
                   </p>
                 </div>
 
-                <a
-                  href={createValueObjectHref}
-                  style={{
-                    color: "#2563eb",
-                    textDecoration: "underline",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Create value object
-                </a>
-              </div>
-
-              {valueObjects.length === 0 ? (
-                <p style={{ margin: 0, color: "#666666" }}>
-                  No value objects connected to this organization yet.
-                </p>
-              ) : (
-                <div style={{ display: "grid", gap: "12px" }}>
-                  {valueObjects.map((valueObject) => (
-                    <article
-                      key={valueObject.id}
-                      style={{
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "10px",
-                        padding: "14px",
-                        background: "#f9fafb",
-                      }}
-                    >
-                      <h3 style={{ margin: "0 0 8px", fontSize: "20px" }}>
-                        {valueObject.title}
-                      </h3>
-
-                      <p style={{ margin: "0 0 6px" }}>
-                        <strong>Type:</strong> {valueObject.value_type}
-                      </p>
-
-                      <p style={{ margin: "0 0 6px" }}>
-                        <strong>Price:</strong>{" "}
-                        {formatMoney(
-                          valueObject.default_price,
-                          valueObject.default_currency
-                        )}
-                      </p>
-
-                      <p style={{ margin: 0 }}>
-                        <strong>Status:</strong> {valueObject.status}
-                      </p>
-                    </article>
+                <nav className="grid gap-1">
+                  {tabs.map((tab) => (
+                    <TabLabel key={tab.id} tab={tab} />
                   ))}
-                </div>
-              )}
-            </section>
+                </nav>
+              </aside>
 
-            <section
-              style={{
-                border: "1px solid #dddddd",
-                borderRadius: "12px",
-                padding: "20px",
-                background: "#ffffff",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: "12px",
-                  alignItems: "center",
-                  marginBottom: "16px",
-                }}
-              >
-                <div>
-                  <h2 style={{ margin: 0, fontSize: "24px" }}>Offers</h2>
-                  <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                    Commercial offers, certificates and rewards connected to this
-                    organization.
-                  </p>
-                </div>
+              <div className="org-detail-main-content">
+                <TabPanel id="overview">
+                  <Card>
+                    <SectionHeader
+                      eyebrow="Overview"
+                      title="Краткая карточка предприятия"
+                      description="Основная информация, которая нужна владельцу, маркетологу, QA и будущему каталогу."
+                    />
 
-                <a
-                  href={createOfferHref}
-                  style={{
-                    color: "#2563eb",
-                    textDecoration: "underline",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Create offer
-                </a>
-              </div>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      <DetailRow label="Type" value={organization.organization_type} />
+                      <DetailRow label="Status" value={organization.status} />
+                      <DetailRow
+                        label="Location"
+                        value={getLocationLabel(primaryLocation)}
+                      />
+                      <DetailRow
+                        label="Address visibility"
+                        value={getLocationVisibilityLabel(primaryLocation)}
+                      />
+                      <DetailRow
+                        label="Country"
+                        value={organization.country_code || "Not specified"}
+                      />
+                      <DetailRow
+                        label="Default currency"
+                        value={organization.default_currency || "Not specified"}
+                      />
+                      <DetailRow
+                        label="Value Objects"
+                        value={String(valueObjects.length)}
+                      />
+                      <DetailRow label="Offers" value={String(offers.length)} />
+                      <DetailRow
+                        label="Category requests"
+                        value={String(categorySuggestionRequests.length)}
+                      />
+                    </div>
 
-              {offers.length === 0 ? (
-                <p style={{ margin: 0, color: "#666666" }}>
-                  No offers connected to this organization yet.
-                </p>
-              ) : (
-                <div style={{ display: "grid", gap: "16px" }}>
-                  {offers.map((offer) => {
-                    const paymentModeStyle = getPaymentModeStyle(
-                      offer.certificate_payment_mode
-                    );
+                    <div className="mt-5 rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-5">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8b91aa]">
+                        Description
+                      </div>
+                      <p className="mt-2 text-[14px] leading-6 text-[#343854]">
+                        {organization.description || "Not specified"}
+                      </p>
+                    </div>
 
-                    return (
-                      <article
-                        key={offer.id}
-                        style={{
-                          border: "1px solid #e5e7eb",
-                          borderRadius: "12px",
-                          padding: "16px",
-                          background: "#f9fafb",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            gap: "12px",
-                            alignItems: "flex-start",
-                            flexWrap: "wrap",
-                            marginBottom: "12px",
-                          }}
-                        >
-                          <div>
-                            <h3 style={{ margin: "0 0 8px", fontSize: "22px" }}>
-                              {offer.title}
-                            </h3>
+                    <div className="mt-5 rounded-2xl border border-[#edf0f7] bg-white p-5">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8b91aa]">
+                        Technical ID
+                      </div>
+                      <p className="mt-2 break-all font-mono text-[12px] text-[#5a5f7a]">
+                        {organization.id}
+                      </p>
+                    </div>
+                  </Card>
+                </TabPanel>
 
-                            <p style={{ margin: 0, color: "#555555" }}>
-                              {offer.offer_type} / {offer.status}
-                            </p>
+                <TabPanel id="location">
+                  <Card>
+                    <SectionHeader
+                      eyebrow="Location"
+                      title="Локация предприятия"
+                      description="Здесь отображается публичная или приблизительная локация, координаты и статус geo-suggestion."
+                    />
+
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <DetailRow
+                        label="Location"
+                        value={getLocationLabel(primaryLocation)}
+                      />
+                      <DetailRow
+                        label="Address visibility"
+                        value={getLocationVisibilityLabel(primaryLocation)}
+                      />
+                      <DetailRow
+                        label="Coordinates"
+                        value={getCoordinatesLabel(primaryLocation)}
+                      />
+                      <DetailRow
+                        label="Location status"
+                        value={locationGeoStatusLabel ?? "No review flags"}
+                      />
+                    </div>
+
+                    {canEditOrganizationLocation ? (
+                      <div className="mt-5 rounded-[20px] border border-[#dbeafe] bg-[#f8fbff] p-5">
+                        <OrganizationLocationEditForm
+                          organizationId={organization.id}
+                          initialCountryCode={
+                            primaryLocation?.country_code ??
+                            organization.country_code ??
+                            null
+                          }
+                          initialCity={primaryLocation?.city ?? null}
+                          initialDistrict={primaryLocation?.district ?? null}
+                          initialAddressVisibility={
+                            primaryLocation?.address_visibility ?? "approximate"
+                          }
+                          initialLatitude={primaryLocation?.latitude ?? null}
+                          initialLongitude={primaryLocation?.longitude ?? null}
+                        />
+                      </div>
+                    ) : (
+                      <EmptyState
+                        title="Редактирование недоступно"
+                        description="Текущий пользователь не является владельцем предприятия или не имеет прав на изменение локации."
+                      />
+                    )}
+                  </Card>
+                </TabPanel>
+
+                <TabPanel id="semantic">
+                  <div className="grid gap-5">
+                    <Card>
+                      <SectionHeader
+                        eyebrow="Semantic / AI"
+                        title="Публичная категория и заявки на изменение"
+                        description="AI и заявки дают только candidate/preview. Публичная категория меняется только после governance/admin approval."
+                      />
+
+                      <div className="rounded-[20px] border border-[#bbf7d0] bg-[#f0fdf4] p-5">
+                        <h3 className="text-[18px] font-bold text-[#166534]">
+                          Current public category
+                        </h3>
+
+                        {currentCategory ? (
+                          <div className="mt-4 grid gap-3 md:grid-cols-2">
+                            <DetailRow
+                              label="Category"
+                              value={currentCategory.categoryName}
+                            />
+                            <DetailRow
+                              label="Slug"
+                              value={currentCategory.categorySlug}
+                            />
+                            <DetailRow
+                              label="Status"
+                              value={currentCategory.classificationStatus}
+                            />
+                            <DetailRow
+                              label="Role"
+                              value={currentCategory.classificationRole}
+                            />
+                            <DetailRow
+                              label="Source"
+                              value={currentCategory.sourceType ?? "not specified"}
+                            />
+                            <DetailRow
+                              label="Updated"
+                              value={currentCategory.updatedAt ?? "not specified"}
+                            />
                           </div>
+                        ) : (
+                          <p className="mt-2 text-[14px] leading-6 text-[#166534]">
+                            No approved primary Object-Action category is currently
+                            assigned to this organization.
+                          </p>
+                        )}
+                      </div>
 
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: "8px",
-                              flexWrap: "wrap",
-                              alignItems: "center",
-                            }}
-                          >
-                            <span
-                              style={{
-                                display: "inline-block",
-                                borderRadius: "999px",
-                                padding: "6px 10px",
-                                fontSize: "13px",
-                                fontWeight: 700,
-                                ...paymentModeStyle,
-                              }}
-                            >
-                              {getPaymentModeLabel(
-                                offer.certificate_payment_mode
-                              )}
-                            </span>
+                      {canEditOrganizationLocation ? (
+                        <div className="mt-5">
+                          {activeCategorySuggestionRequests.length > 0 ? (
+                            <div className="mb-4 rounded-2xl border border-[#fde68a] bg-[#fffbeb] p-4 text-[13px] leading-6 text-[#92400e]">
+                              <strong>
+                                There is already an active category change request.
+                              </strong>{" "}
+                              Active requests:{" "}
+                              <strong>{activeCategorySuggestionRequests.length}</strong>.
+                              You can still send another request, but it may duplicate
+                              an existing pending review.
+                            </div>
+                          ) : null}
 
-                            <span
-                              style={{
-                                display: "inline-block",
-                                borderRadius: "999px",
-                                padding: "6px 10px",
-                                fontSize: "13px",
-                                fontWeight: 700,
-                                background:
-                                  offer.status === "active"
-                                    ? "#edf8f0"
-                                    : "#f5f5f5",
-                                color:
-                                  offer.status === "active"
-                                    ? "#176b2c"
-                                    : "#555555",
-                                border:
-                                  offer.status === "active"
-                                    ? "1px solid #bfe5c8"
-                                    : "1px solid #dddddd",
-                              }}
-                            >
-                              {offer.status}
-                            </span>
+                          <div className="rounded-[20px] border border-[#edf0f7] bg-white p-5">
+                            <DirectorySuggestionRequestForm
+                              title="Suggest organization category change"
+                              description="Describe what this organization really does and suggest a better public directory category. The request will be reviewed by an admin before changing the public directory."
+                              textareaLabel="Organization activity description"
+                              textareaPlaceholder="Example: This company provides AI automation consulting, workflow optimization and business process improvement for small companies."
+                              submitButtonLabel="Send category change request"
+                              successTitle="Category change request sent."
+                              entityType="organization"
+                              entityId={organization.id}
+                              requestSource="organization_category_change"
+                              locale="en"
+                              contextCode="business_directory"
+                              initialText={organization.description ?? ""}
+                              showProposedCategoryField={true}
+                            />
                           </div>
                         </div>
+                      ) : null}
+                    </Card>
 
-                        <section
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns:
-                              "repeat(auto-fit, minmax(190px, 1fr))",
-                            gap: "12px",
-                            marginBottom: "14px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              border: "1px solid #dddddd",
-                              borderRadius: "10px",
-                              padding: "12px",
-                              background: "#ffffff",
-                            }}
-                          >
-                            <div
-                              style={{
-                                color: "#666666",
-                                marginBottom: "6px",
-                              }}
+                    <Card>
+                      <SectionHeader
+                        eyebrow="Semantic request history"
+                        title="Recent category change requests"
+                        description="Last requests submitted for this organization. Public category changes only after admin approval."
+                      />
+
+                      {categorySuggestionRequests.length === 0 ? (
+                        <EmptyState
+                          title="No category change requests yet"
+                          description="Заявки на изменение категории пока не отправлялись."
+                        />
+                      ) : (
+                        <div className="grid gap-3">
+                          {categorySuggestionRequests.map((request) => (
+                            <article
+                              key={request.id}
+                              className="rounded-2xl border border-[#dbeafe] bg-[#f8fbff] p-4"
                             >
-                              Current price
-                            </div>
-                            <div style={{ fontSize: "20px", fontWeight: 700 }}>
-                              {formatMoney(offer.price, offer.currency)}
-                            </div>
-                          </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-[16px] font-bold text-[#111827]">
+                                  {request.proposed_category_text ??
+                                    request.ai_suggested_category_text ??
+                                    "Category not specified"}
+                                </h3>
+                                <StatusPill tone="blue">{request.status}</StatusPill>
+                                <StatusPill>
+                                  AI: {request.ai_status ?? "not_requested"}
+                                </StatusPill>
+                              </div>
 
-                          <div
-                            style={{
-                              border: "1px solid #dddddd",
-                              borderRadius: "10px",
-                              padding: "12px",
-                              background: "#ffffff",
-                            }}
-                          >
-                            <div
-                              style={{
-                                color: "#666666",
-                                marginBottom: "6px",
-                              }}
-                            >
-                              Regular price
-                            </div>
-                            <div style={{ fontSize: "20px", fontWeight: 700 }}>
-                              {formatMoney(offer.regular_price, offer.currency)}
-                            </div>
-                          </div>
+                              <p className="mt-3 text-[13px] leading-6 text-[#374151]">
+                                {request.user_text}
+                              </p>
 
-                          <div
-                            style={{
-                              border: "1px solid #bfdbfe",
-                              borderRadius: "10px",
-                              padding: "12px",
-                              background: "#eff6ff",
-                            }}
-                          >
-                            <div
-                              style={{
-                                color: "#1e3a8a",
-                                marginBottom: "6px",
-                              }}
-                            >
-                              Buyer pays POINT
-                            </div>
-                            <div style={{ fontSize: "20px", fontWeight: 700 }}>
-                              {formatMoney(
-                                offer.certificate_points_price ?? 0,
-                                offer.points_currency_code ?? "POINT"
-                              )}
-                            </div>
-                          </div>
-
-                          <div
-                            style={{
-                              border: "1px solid #dddddd",
-                              borderRadius: "10px",
-                              padding: "12px",
-                              background: "#ffffff",
-                            }}
-                          >
-                            <div
-                              style={{
-                                color: "#666666",
-                                marginBottom: "6px",
-                              }}
-                            >
-                              Buyer pays money
-                            </div>
-                            <div style={{ fontSize: "20px", fontWeight: 700 }}>
-                              {formatMoney(
-                                offer.certificate_money_price,
-                                offer.certificate_currency ?? offer.currency
-                              )}
-                            </div>
-                          </div>
-                        </section>
-
-                        <div
-                          style={{
-                            display: "grid",
-                            gap: "6px",
-                            marginBottom: "14px",
-                          }}
-                        >
-                          <p style={{ margin: 0 }}>
-                            <strong>Description:</strong>{" "}
-                            {offer.description || "Not specified"}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Paid:</strong>{" "}
-                            {getBooleanLabel(offer.is_paid)} /{" "}
-                            <strong>Free:</strong>{" "}
-                            {getBooleanLabel(offer.is_free)}
-                          </p>
+                              <div className="mt-3 grid gap-2 text-[12px] text-[#6b7280] md:grid-cols-2">
+                                <span>ID: {request.id}</span>
+                                <span>Source: {request.request_source}</span>
+                                <span>Created: {request.created_at}</span>
+                                <span>Updated: {request.updated_at}</span>
+                                {request.admin_decision ? (
+                                  <span>
+                                    Admin decision: {request.admin_decision}
+                                  </span>
+                                ) : null}
+                                {request.reviewed_at ? (
+                                  <span>Reviewed: {request.reviewed_at}</span>
+                                ) : null}
+                              </div>
+                            </article>
+                          ))}
                         </div>
+                      )}
+                    </Card>
+                  </div>
+                </TabPanel>
 
-                        <section
-                          style={{
-                            border: "1px solid #bfdbfe",
-                            borderRadius: "10px",
-                            padding: "14px",
-                            background: "#eff6ff",
-                            marginBottom: "14px",
-                            display: "grid",
-                            gap: "8px",
-                          }}
+                <TabPanel id="value-objects">
+                  <Card>
+                    <SectionHeader
+                      eyebrow="Value Objects"
+                      title="Товары и услуги предприятия"
+                      description="Value Object является базой для offer и сертификата, а также самостоятельным информационным объектом."
+                      action={
+                        <Link
+                          href={createValueObjectHref}
+                          className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.24)] transition hover:bg-[#2f5fe3]"
                         >
-                          <h4
-                            style={{
-                              fontSize: "18px",
-                              margin: 0,
-                            }}
+                          Create value object
+                        </Link>
+                      }
+                    />
+
+                    {valueObjects.length === 0 ? (
+                      <EmptyState
+                        title="No value objects connected"
+                        description="Добавьте первый товар или услугу предприятия как enterprise-owned Value Object."
+                        action={
+                          <Link
+                            href={createValueObjectHref}
+                            className="inline-flex rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white transition hover:bg-[#2f5fe3]"
                           >
-                            Certificate / reward commercial rules
-                          </h4>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Certificate available:</strong>{" "}
-                            {getBooleanLabel(offer.certificate_available)}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Automatic payment mode:</strong>{" "}
-                            {getPaymentModeLabel(offer.certificate_payment_mode)}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Amount covered by points:</strong>{" "}
-                            {formatMoney(
-                              offer.certificate_points_covered_amount,
-                              offer.certificate_currency ?? offer.currency
-                            )}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Buyer will be charged:</strong>{" "}
-                            {formatMoney(
-                              offer.certificate_points_price ?? 0,
-                              offer.points_currency_code ?? "POINT"
-                            )}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Buyer money payment:</strong>{" "}
-                            {formatMoney(
-                              offer.certificate_money_price,
-                              offer.certificate_currency ?? offer.currency
-                            )}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Reference:</strong> 1{" "}
-                            {offer.points_currency_code ?? "POINT"} ={" "}
-                            {formatNumber(offer.reference_value_per_point ?? 1)}{" "}
-                            {offer.reference_currency ?? "EUR"}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Exchange rate:</strong> 1{" "}
-                            {offer.reference_currency ?? "EUR"} ={" "}
-                            {formatNumber(offer.reference_exchange_rate)}{" "}
-                            {offer.certificate_currency ?? offer.currency ?? ""}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Rate source:</strong>{" "}
-                            {offer.reference_exchange_rate_source ??
-                              "Not specified"}{" "}
-                            / <strong>Rate date:</strong>{" "}
-                            {offer.reference_exchange_rate_date ??
-                              "Not specified"}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Terms:</strong>{" "}
-                            {offer.certificate_terms || "Not specified"}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Validity days:</strong>{" "}
-                            {offer.certificate_validity_days ?? "Not specified"}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Seller confirmation:</strong>{" "}
-                            {getBooleanLabel(
-                              offer.requires_seller_confirmation
-                            )}{" "}
-                            / <strong>Transferable:</strong>{" "}
-                            {getBooleanLabel(offer.is_transferable)} /{" "}
-                            <strong>Cancellable:</strong>{" "}
-                            {getBooleanLabel(offer.is_cancellable)}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Refund policy:</strong>{" "}
-                            {offer.points_refund_policy ?? "Not specified"}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Max total:</strong>{" "}
-                            {offer.max_certificates_total ?? "Not specified"} /{" "}
-                            <strong>Max per user:</strong>{" "}
-                            {offer.max_certificates_per_user ??
-                              "Not specified"}{" "}
-                            / <strong>Public reward:</strong>{" "}
-                            {getBooleanLabel(offer.is_public_reward)}
-                          </p>
-                        </section>
-
-                        <section
-                          style={{
-                            border: "1px solid #f0d28a",
-                            borderRadius: "10px",
-                            padding: "14px",
-                            background: "#fff8e6",
-                            marginBottom: "14px",
-                            display: "grid",
-                            gap: "8px",
-                          }}
-                        >
-                          <h4
-                            style={{
-                              fontSize: "18px",
-                              margin: 0,
-                            }}
+                            Create value object
+                          </Link>
+                        }
+                      />
+                    ) : (
+                      <div className="grid gap-3">
+                        {valueObjects.map((valueObject) => (
+                          <article
+                            key={valueObject.id}
+                            className="rounded-[18px] border border-[#edf0f7] bg-[#f8f9fd] p-5"
                           >
-                            Discount and legal price info
-                          </h4>
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                              <div>
+                                <h3 className="text-[20px] font-bold tracking-[-0.02em] text-[#111827]">
+                                  {valueObject.title}
+                                </h3>
+                                <p className="mt-2 text-[14px] leading-6 text-[#5a5f7a]">
+                                  {valueObject.description ?? "No description"}
+                                </p>
+                              </div>
+                              <StatusPill
+                                tone={valueObject.status === "active" ? "green" : "neutral"}
+                              >
+                                {valueObject.status}
+                              </StatusPill>
+                            </div>
 
-                          <p style={{ margin: 0 }}>
-                            <strong>Discount active:</strong>{" "}
-                            {getBooleanLabel(offer.is_discount_active)}
-                          </p>
+                            <div className="mt-4 grid gap-3 md:grid-cols-3">
+                              <DetailRow label="Type" value={valueObject.value_type} />
+                              <DetailRow
+                                label="Price"
+                                value={formatMoney(
+                                  valueObject.default_price,
+                                  valueObject.default_currency
+                                )}
+                              />
+                              <DetailRow
+                                label="Duration"
+                                value={
+                                  valueObject.default_duration_minutes
+                                    ? `${valueObject.default_duration_minutes} min`
+                                    : "Not specified"
+                                }
+                              />
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                </TabPanel>
 
-                          <p style={{ margin: 0 }}>
-                            <strong>Discount type:</strong>{" "}
-                            {getDiscountTypeLabel(offer.discount_type)}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Discount value:</strong>{" "}
-                            {formatNumber(offer.discount_value)}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Discount period:</strong>{" "}
-                            {formatDate(offer.discount_starts_at)} →{" "}
-                            {formatDate(offer.discount_ends_at)}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>
-                              Lowest price 30 days before discount:
-                            </strong>{" "}
-                            {formatMoney(
-                              offer.lowest_price_30_days,
-                              offer.lowest_price_30_days_currency ??
-                                offer.currency
-                            )}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>30-day period:</strong>{" "}
-                            {formatDate(
-                              offer.lowest_price_30_days_period_start
-                            )}{" "}
-                            →{" "}
-                            {formatDate(offer.lowest_price_30_days_period_end)}
-                          </p>
-
-                          <p style={{ margin: 0 }}>
-                            <strong>Legal note:</strong>{" "}
-                            {offer.discount_legal_note || "Not specified"}
-                          </p>
-                        </section>
-
-                        <div
-                          style={{
-                            marginTop: "10px",
-                            border: "1px solid #dddddd",
-                            borderRadius: "8px",
-                            padding: "10px",
-                            background: "#ffffff",
-                          }}
+                <TabPanel id="offers">
+                  <Card>
+                    <SectionHeader
+                      eyebrow="Offers"
+                      title="Коммерческие условия и сертификаты"
+                      description="Offer в текущей логике является базой/коммерческими условиями для создания сертификатов, а не универсальной корзиной."
+                      action={
+                        <Link
+                          href={createOfferHref}
+                          className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.24)] transition hover:bg-[#2f5fe3]"
                         >
-                          <strong>Items:</strong>
+                          Create offer
+                        </Link>
+                      }
+                    />
 
-                          {!offer.offer_items ||
-                          offer.offer_items.length === 0 ? (
-                            <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                              No offer items.
-                            </p>
-                          ) : (
-                            <ul
-                              style={{ margin: "8px 0 0", paddingLeft: "20px" }}
-                            >
-                              {offer.offer_items.map((item) => {
-                                const relatedValueObject = getFirstRelatedItem(
-                                  item.value_objects
-                                );
-
-                                return (
-                                  <li key={item.id}>
-                                    {relatedValueObject?.title ??
-                                      item.value_object_id}{" "}
-                                    × {item.quantity} —{" "}
-                                    {formatMoney(
-                                      item.total_price,
-                                      item.currency
+                    {offers.length === 0 ? (
+                      <EmptyState
+                        title="No offers connected"
+                        description="Создайте offer после добавления хотя бы одного Value Object."
+                        action={
+                          <Link
+                            href={createOfferHref}
+                            className="inline-flex rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white transition hover:bg-[#2f5fe3]"
+                          >
+                            Create offer
+                          </Link>
+                        }
+                      />
+                    ) : (
+                      <div className="grid gap-4">
+                        {offers.map((offer) => (
+                          <article
+                            key={offer.id}
+                            className="rounded-[20px] border border-[#edf0f7] bg-[#f8f9fd] p-5"
+                          >
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                              <div>
+                                <h3 className="text-[22px] font-bold tracking-[-0.03em] text-[#111827]">
+                                  {offer.title}
+                                </h3>
+                                <p className="mt-2 text-[14px] leading-6 text-[#5a5f7a]">
+                                  {offer.description || "Not specified"}
+                                </p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  <StatusPill>{offer.offer_type}</StatusPill>
+                                  <StatusPill
+                                    tone={offer.status === "active" ? "green" : "neutral"}
+                                  >
+                                    {offer.status}
+                                  </StatusPill>
+                                  <span
+                                    className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[12px] font-bold ${getPaymentModeClassName(
+                                      offer.certificate_payment_mode
+                                    )}`}
+                                  >
+                                    {getPaymentModeLabel(
+                                      offer.certificate_payment_mode
                                     )}
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          )}
-                        </div>
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
 
-                        <div
-                          style={{
-                            display: "grid",
-                            gap: "6px",
-                            marginTop: "14px",
-                            color: "#555555",
-                            fontSize: "14px",
-                          }}
+                            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                              <DetailRow
+                                label="Current price"
+                                value={formatMoney(offer.price, offer.currency)}
+                              />
+                              <DetailRow
+                                label="Regular price"
+                                value={formatMoney(offer.regular_price, offer.currency)}
+                              />
+                              <DetailRow
+                                label="Buyer pays POINT"
+                                value={formatMoney(
+                                  offer.certificate_points_price ?? 0,
+                                  offer.points_currency_code ?? "POINT"
+                                )}
+                              />
+                              <DetailRow
+                                label="Buyer pays money"
+                                value={formatMoney(
+                                  offer.certificate_money_price,
+                                  offer.certificate_currency ?? offer.currency
+                                )}
+                              />
+                            </div>
+
+                            <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                              <div className="rounded-2xl border border-[#dbeafe] bg-[#eff6ff] p-4">
+                                <h4 className="text-[16px] font-bold text-[#1e3a8a]">
+                                  Certificate / reward commercial rules
+                                </h4>
+                                <div className="mt-3 grid gap-2 text-[13px] leading-6 text-[#1e3a8a]">
+                                  <p>
+                                    <strong>Certificate available:</strong>{" "}
+                                    {getBooleanLabel(offer.certificate_available)}
+                                  </p>
+                                  <p>
+                                    <strong>Amount covered by points:</strong>{" "}
+                                    {formatMoney(
+                                      offer.certificate_points_covered_amount,
+                                      offer.certificate_currency ?? offer.currency
+                                    )}
+                                  </p>
+                                  <p>
+                                    <strong>Reference:</strong> 1{" "}
+                                    {offer.points_currency_code ?? "POINT"} ={" "}
+                                    {formatNumber(
+                                      offer.reference_value_per_point ?? 1
+                                    )}{" "}
+                                    {offer.reference_currency ?? "EUR"}
+                                  </p>
+                                  <p>
+                                    <strong>Terms:</strong>{" "}
+                                    {offer.certificate_terms || "Not specified"}
+                                  </p>
+                                  <p>
+                                    <strong>Validity days:</strong>{" "}
+                                    {offer.certificate_validity_days ??
+                                      "Not specified"}
+                                  </p>
+                                  <p>
+                                    <strong>Seller confirmation:</strong>{" "}
+                                    {getBooleanLabel(
+                                      offer.requires_seller_confirmation
+                                    )}
+                                  </p>
+                                  <p>
+                                    <strong>Transferable:</strong>{" "}
+                                    {getBooleanLabel(offer.is_transferable)} /{" "}
+                                    <strong>Cancellable:</strong>{" "}
+                                    {getBooleanLabel(offer.is_cancellable)}
+                                  </p>
+                                  <p>
+                                    <strong>Refund policy:</strong>{" "}
+                                    {offer.points_refund_policy ?? "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="rounded-2xl border border-[#fde68a] bg-[#fffbeb] p-4">
+                                <h4 className="text-[16px] font-bold text-[#92400e]">
+                                  Discount and legal price info
+                                </h4>
+                                <div className="mt-3 grid gap-2 text-[13px] leading-6 text-[#92400e]">
+                                  <p>
+                                    <strong>Discount active:</strong>{" "}
+                                    {getBooleanLabel(offer.is_discount_active)}
+                                  </p>
+                                  <p>
+                                    <strong>Discount type:</strong>{" "}
+                                    {getDiscountTypeLabel(offer.discount_type)}
+                                  </p>
+                                  <p>
+                                    <strong>Discount value:</strong>{" "}
+                                    {formatNumber(offer.discount_value)}
+                                  </p>
+                                  <p>
+                                    <strong>Discount period:</strong>{" "}
+                                    {formatDate(offer.discount_starts_at)} →{" "}
+                                    {formatDate(offer.discount_ends_at)}
+                                  </p>
+                                  <p>
+                                    <strong>Lowest price 30 days:</strong>{" "}
+                                    {formatMoney(
+                                      offer.lowest_price_30_days,
+                                      offer.lowest_price_30_days_currency ??
+                                        offer.currency
+                                    )}
+                                  </p>
+                                  <p>
+                                    <strong>Legal note:</strong>{" "}
+                                    {offer.discount_legal_note || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="mt-5 rounded-2xl border border-[#edf0f7] bg-white p-4">
+                              <h4 className="text-[16px] font-bold text-[#343854]">
+                                Items
+                              </h4>
+
+                              {!offer.offer_items || offer.offer_items.length === 0 ? (
+                                <p className="mt-2 text-[14px] text-[#7c8099]">
+                                  No offer items.
+                                </p>
+                              ) : (
+                                <ul className="mt-3 grid gap-2 text-[14px] text-[#4a4f6a]">
+                                  {offer.offer_items.map((item) => {
+                                    const relatedValueObject = getFirstRelatedItem(
+                                      item.value_objects
+                                    );
+
+                                    return (
+                                      <li key={item.id}>
+                                        {relatedValueObject?.title ??
+                                          item.value_object_id}{" "}
+                                        × {item.quantity} —{" "}
+                                        {formatMoney(item.total_price, item.currency)}
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              )}
+                            </div>
+
+                            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                              <DetailRow
+                                label="Requires booking"
+                                value={getBooleanLabel(offer.requires_booking)}
+                              />
+                              <DetailRow label="Booking mode" value={offer.booking_mode} />
+                              <DetailRow
+                                label="Default duration"
+                                value={
+                                  offer.default_duration_minutes
+                                    ? `${offer.default_duration_minutes} minutes`
+                                    : "Not specified"
+                                }
+                              />
+                              <DetailRow
+                                label="Min duration"
+                                value={
+                                  offer.min_duration_minutes
+                                    ? `${offer.min_duration_minutes} minutes`
+                                    : "Not specified"
+                                }
+                              />
+                              <DetailRow
+                                label="Max duration"
+                                value={
+                                  offer.max_duration_minutes
+                                    ? `${offer.max_duration_minutes} minutes`
+                                    : "Not specified"
+                                }
+                              />
+                              <DetailRow
+                                label="Quantity limit"
+                                value={offer.quantity_limit ?? "Not specified"}
+                              />
+                              <DetailRow
+                                label="Target receiver"
+                                value={offer.target_receiver_type || "Not specified"}
+                              />
+                              <DetailRow
+                                label="Created at"
+                                value={new Date(offer.created_at).toLocaleString()}
+                              />
+                              <DetailRow label="Offer ID" value={offer.id} />
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                </TabPanel>
+
+                <TabPanel id="purchases">
+                  <div className="grid gap-5">
+                    <Card>
+                      <SectionHeader
+                        eyebrow="Purchases"
+                        title="Подтверждения покупок"
+                        description="Покупатель может зарегистрировать внешнюю покупку, а продавец позже подтверждает или отклоняет её."
+                      />
+                      <PurchaseConfirmationForm
+                        organizationId={organizationId}
+                        organizationDefaultCurrency={
+                          organization.default_currency ?? null
+                        }
+                        myPurchaseConfirmationsHref={myPurchaseConfirmationsHref}
+                        purchaseConfirmationsHref={purchaseConfirmationsHref}
+                        publicPurchaseHistoryHref={publicPurchaseHistoryHref}
+                      />
+                    </Card>
+
+                    <Card>
+                      <SectionHeader
+                        eyebrow="Purchase links"
+                        title="Связанные журналы покупок"
+                        description="Быстрые переходы к текущим страницам коммерческого ядра."
+                      />
+
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <Link
+                          href={myPurchaseConfirmationsHref}
+                          className="rounded-2xl border border-[#dfe3f1] bg-[#f8f9fd] p-4 text-[14px] font-bold text-[#343854] transition hover:border-[#dfe4ff] hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
                         >
-                          <p style={{ margin: 0 }}>
-                            <strong>Requires booking:</strong>{" "}
-                            {getBooleanLabel(offer.requires_booking)}
-                          </p>
+                          My purchase confirmations
+                        </Link>
+                        <Link
+                          href={purchaseConfirmationsHref}
+                          className="rounded-2xl border border-[#dfe3f1] bg-[#f8f9fd] p-4 text-[14px] font-bold text-[#343854] transition hover:border-[#dfe4ff] hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
+                        >
+                          Seller purchase confirmations
+                        </Link>
+                        <Link
+                          href={publicPurchaseHistoryHref}
+                          className="rounded-2xl border border-[#dfe3f1] bg-[#f8f9fd] p-4 text-[14px] font-bold text-[#343854] transition hover:border-[#dfe4ff] hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
+                        >
+                          Public purchase history
+                        </Link>
+                      </div>
+                    </Card>
+                  </div>
+                </TabPanel>
 
-                          <p style={{ margin: 0 }}>
-                            <strong>Booking mode:</strong> {offer.booking_mode}
-                          </p>
+                <TabPanel id="settings">
+                  <Card>
+                    <SectionHeader
+                      eyebrow="Settings"
+                      title="Настройки предприятия"
+                      description="Этот раздел пока не открывает новых write-flow. Он показывает безопасную карту будущих настроек."
+                    />
 
-                          <p style={{ margin: 0 }}>
-                            <strong>Default duration:</strong>{" "}
-                            {offer.default_duration_minutes ?? "Not specified"}{" "}
-                            minutes
-                          </p>
+                    <div className="grid gap-3">
+                      <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-5">
+                        <h3 className="text-[17px] font-bold text-[#343854]">
+                          Public profile settings
+                        </h3>
+                        <p className="mt-2 text-[14px] leading-6 text-[#7c8099]">
+                          Будущая настройка публичности профиля, логотипа,
+                          фото, описания и карточки каталога. Сейчас не изменяется
+                          этим UI-only блоком.
+                        </p>
+                      </div>
 
-                          <p style={{ margin: 0 }}>
-                            <strong>Min duration:</strong>{" "}
-                            {offer.min_duration_minutes ?? "Not specified"}{" "}
-                            minutes
-                          </p>
+                      <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-5">
+                        <h3 className="text-[17px] font-bold text-[#343854]">
+                          Access and owner checks
+                        </h3>
+                        <p className="mt-2 text-[14px] leading-6 text-[#7c8099]">
+                          Текущий canEdit marker:{" "}
+                          <strong>
+                            {canEditOrganizationLocation ? "owner/edit allowed" : "read only"}
+                          </strong>
+                          . Отдельный audit доступа для /organizations/[id] нужен
+                          позже перед delete/archive.
+                        </p>
+                      </div>
 
-                          <p style={{ margin: 0 }}>
-                            <strong>Max duration:</strong>{" "}
-                            {offer.max_duration_minutes ?? "Not specified"}{" "}
-                            minutes
-                          </p>
+                      <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-5">
+                        <h3 className="text-[17px] font-bold text-[#343854]">
+                          Media / logo
+                        </h3>
+                        <p className="mt-2 text-[14px] leading-6 text-[#7c8099]">
+                          Фото и логотип предприятия остаются будущим шагом после
+                          проверки schema/API на logo_url, image_url, avatar_url
+                          или отдельную media/storage model.
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                </TabPanel>
 
-                          <p style={{ margin: 0 }}>
-                            <strong>Quantity limit:</strong>{" "}
-                            {offer.quantity_limit ?? "Not specified"}
-                          </p>
+                <TabPanel id="danger">
+                  <Card className="border-[#fecaca]">
+                    <SectionHeader
+                      eyebrow="Danger zone"
+                      title="Архивирование или удаление предприятия"
+                      description="Этот раздел намеренно не выполняет DB write. Реальное удаление будет только после отдельного backend/schema gate."
+                    />
 
-                          <p style={{ margin: 0 }}>
-                            <strong>Target receiver:</strong>{" "}
-                            {offer.target_receiver_type || "Not specified"}
-                          </p>
+                    <div className="rounded-[20px] border border-[#fecaca] bg-[#fff1f2] p-5">
+                      <h3 className="text-[18px] font-bold text-[#b42318]">
+                        Delete flow is not enabled in this UI-only step
+                      </h3>
+                      <p className="mt-2 text-[14px] leading-6 text-[#b42318]">
+                        Безопасный следующий вариант — soft delete / archive,
+                        потому что предприятие может быть связано с Value Objects,
+                        offers, certificates, purchase confirmations, public semantic
+                        cloud и category classifications.
+                      </p>
 
-                          <p style={{ margin: 0 }}>
-                            <strong>Offer ID:</strong> {offer.id}
-                          </p>
+                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        <button
+                          type="button"
+                          disabled
+                          className="cursor-not-allowed rounded-xl border border-[#fecaca] bg-white px-4 py-3 text-[13px] font-bold text-[#b42318] opacity-60"
+                        >
+                          Archive organization — future gate
+                        </button>
+                        <button
+                          type="button"
+                          disabled
+                          className="cursor-not-allowed rounded-xl bg-[#b42318] px-4 py-3 text-[13px] font-bold text-white opacity-50"
+                        >
+                          Hard delete disabled
+                        </button>
+                      </div>
 
-                          <p style={{ margin: 0 }}>
-                            <strong>Created at:</strong>{" "}
-                            {new Date(offer.created_at).toLocaleString()}
-                          </p>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          </div>
-        ) : null}
+                      <p className="mt-4 text-[12px] leading-5 text-[#b42318]">
+                        Required future approval phrase: ORGANIZATION_DELETE_GATE_APPROVED.
+                        Перед этим нужно проверить API, schema, dependencies,
+                        access policy, RLS/GRANT and audit behavior.
+                      </p>
+                    </div>
+                  </Card>
+                </TabPanel>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
     </main>
   );
 }
+
+
