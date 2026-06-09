@@ -1,10 +1,11 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import PurchaseConfirmationForm from "./PurchaseConfirmationForm";
 import OrganizationLocationEditForm from "./OrganizationLocationEditForm";
+import OrganizationCategoryReviewActions from "./OrganizationCategoryReviewActions";
 import DirectorySuggestionRequestForm from "../../directory/components/DirectorySuggestionRequestForm";
 
 export const dynamic = "force-dynamic";
@@ -164,8 +165,27 @@ type OrganizationCurrentCategory = {
   classificationRole: string;
   classificationStatus: string;
   sourceType: string | null;
+  reviewState: string | null;
   isPrimary: boolean | null;
   updatedAt: string | null;
+};
+
+type BusinessDirectoryContextRow = {
+  id: string;
+};
+
+type OrganizationCategoryOptionRow = {
+  id: string;
+  slug: string;
+  name: string;
+  sort_order: number | null;
+};
+
+type OrganizationCategoryOption = {
+  id: string;
+  slug: string;
+  name: string;
+  sortOrder: number | null;
 };
 
 type OrganizationCategorySuggestionRequest = {
@@ -192,6 +212,7 @@ type PageData = {
   offers: Offer[];
   categorySuggestionRequests?: OrganizationCategorySuggestionRequest[];
   currentCategory?: OrganizationCurrentCategory | null;
+  categoryOptions?: OrganizationCategoryOption[];
   errorMessage: string | null;
   canEditOrganizationLocation?: boolean;
 };
@@ -500,6 +521,23 @@ async function enrichLocationWithGeoStatus(input: {
   };
 }
 
+
+function getClassificationReviewState(input: {
+  evidenceJson: Record<string, unknown> | null;
+  sourceType: string | null;
+}) {
+  const reviewState = input.evidenceJson?.review_state;
+
+  if (typeof reviewState === "string" && reviewState.trim().length > 0) {
+    return reviewState;
+  }
+
+  if (input.sourceType === "ai_suggested") {
+    return "ai_candidate";
+  }
+
+  return input.sourceType;
+}
 async function getCurrentAppUser(): Promise<{
   appUser: AppUser | null;
   errorMessage: string | null;
@@ -801,6 +839,7 @@ async function getOrganizationPageData(
     classification_role: string;
     status: string;
     source_type: string | null;
+    evidence_json: Record<string, unknown> | null;
     is_primary: boolean | null;
     updated_at: string | null;
   };
@@ -823,6 +862,7 @@ async function getOrganizationPageData(
       classification_role,
       status,
       source_type,
+      evidence_json,
       is_primary,
       updated_at
     `
@@ -830,7 +870,7 @@ async function getOrganizationPageData(
     .eq("entity_type", "organization")
     .eq("entity_id", organizationId)
     .eq("classification_role", "primary")
-    .eq("status", "approved")
+    .in("status", ["approved", "published"])
     .eq("is_primary", true)
     .order("updated_at", { ascending: false })
     .limit(1);
@@ -870,9 +910,48 @@ async function getOrganizationPageData(
         classificationRole: currentClassification.classification_role,
         classificationStatus: currentClassification.status,
         sourceType: currentClassification.source_type,
+        reviewState: getClassificationReviewState({
+          evidenceJson: currentClassification.evidence_json,
+          sourceType: currentClassification.source_type,
+        }),
         isPrimary: currentClassification.is_primary,
         updatedAt: currentClassification.updated_at,
       };
+    }
+  }
+
+  let categoryOptions: OrganizationCategoryOption[] = [];
+
+  const { data: businessDirectoryContextData } = await supabase
+    .from("contexts")
+    .select("id")
+    .eq("code", "business_directory")
+    .maybeSingle();
+
+  const businessDirectoryContext =
+    businessDirectoryContextData as BusinessDirectoryContextRow | null;
+
+  if (businessDirectoryContext?.id) {
+    const { data: categoryOptionsData, error: categoryOptionsError } =
+      await supabase
+        .from("contextual_categories")
+        .select("id, slug, name, sort_order")
+        .eq("context_id", businessDirectoryContext.id)
+        .eq("is_active", true)
+        .in("status", ["approved", "published"])
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+
+    if (!categoryOptionsError) {
+      const categoryRows =
+        (categoryOptionsData as OrganizationCategoryOptionRow[] | null) ?? [];
+
+      categoryOptions = categoryRows.map((category) => ({
+        id: category.id,
+        slug: category.slug,
+        name: category.name,
+        sortOrder: category.sort_order,
+      }));
     }
   }
 
@@ -885,6 +964,7 @@ async function getOrganizationPageData(
     offers: (offersResult.data as unknown as Offer[] | null) ?? [],
     categorySuggestionRequests: categorySuggestionRequests,
     currentCategory: currentCategory,
+    categoryOptions: categoryOptions,
     errorMessage: null,
     canEditOrganizationLocation: organization.created_by_user_id === appUser.id,
   };
@@ -1082,6 +1162,7 @@ export default async function OrganizationDetailsPage({
     offers,
     categorySuggestionRequests = [],
     currentCategory = null,
+    categoryOptions = [],
     errorMessage,
     canEditOrganizationLocation = false,
   } = await getOrganizationPageData(organizationId);
@@ -1109,7 +1190,7 @@ export default async function OrganizationDetailsPage({
     {
       id: "semantic",
       label: "Semantic / AI",
-      description: "Категории и заявки",
+      description: "AI-категория и уточнения",
       badge: activeCategorySuggestionRequests.length
         ? String(activeCategorySuggestionRequests.length)
         : undefined,
@@ -1449,13 +1530,13 @@ export default async function OrganizationDetailsPage({
                     <Card>
                       <SectionHeader
                         eyebrow="Semantic / AI"
-                        title="Публичная категория и заявки на изменение"
-                        description="AI и заявки дают только candidate/preview. Публичная категория меняется только после governance/admin approval."
+                        title="AI-категория предприятия и заявки на уточнение"
+                        description="AI может назначить рабочую публичную категорию сразу. Если источник ai_suggested, это AI candidate: категория уже записана и видна в Semantic Cloud, но её можно подтвердить, заменить или убрать."
                       />
 
                       <div className="rounded-[20px] border border-[#bbf7d0] bg-[#f0fdf4] p-5">
                         <h3 className="text-[18px] font-bold text-[#166534]">
-                          Current public category
+                          Текущая категория предприятия
                         </h3>
 
                         {currentCategory ? (
@@ -1481,24 +1562,37 @@ export default async function OrganizationDetailsPage({
                               value={currentCategory.sourceType ?? "not specified"}
                             />
                             <DetailRow
+                              label="Review state"
+                              value={currentCategory.reviewState ?? "not specified"}
+                            />
+                            <DetailRow
                               label="Updated"
                               value={currentCategory.updatedAt ?? "not specified"}
                             />
                           </div>
                         ) : (
                           <p className="mt-2 text-[14px] leading-6 text-[#166534]">
-                            No approved primary Object-Action category is currently
-                            assigned to this organization.
+                            Категория предприятия ещё не назначена. После создания
+                            предприятия серверная AI-категоризация должна добавить
+                            primary category как AI candidate.
                           </p>
                         )}
                       </div>
+
+                      {canEditOrganizationLocation ? (
+                        <OrganizationCategoryReviewActions
+                          organizationId={organization.id}
+                          currentCategory={currentCategory}
+                          categoryOptions={categoryOptions}
+                        />
+                      ) : null}
 
                       {canEditOrganizationLocation ? (
                         <div className="mt-5">
                           {activeCategorySuggestionRequests.length > 0 ? (
                             <div className="mb-4 rounded-2xl border border-[#fde68a] bg-[#fffbeb] p-4 text-[13px] leading-6 text-[#92400e]">
                               <strong>
-                                There is already an active category change request.
+                                There is already an active category correction request.
                               </strong>{" "}
                               Active requests:{" "}
                               <strong>{activeCategorySuggestionRequests.length}</strong>.
@@ -1509,12 +1603,12 @@ export default async function OrganizationDetailsPage({
 
                           <div className="rounded-[20px] border border-[#edf0f7] bg-white p-5">
                             <DirectorySuggestionRequestForm
-                              title="Suggest organization category change"
-                              description="Describe what this organization really does and suggest a better public directory category. The request will be reviewed by an admin before changing the public directory."
+                              title="Suggest organization category correction"
+                              description="Describe what this organization really does and suggest a better category. The current AI category can be confirmed, corrected or removed through governance/review flow."
                               textareaLabel="Organization activity description"
                               textareaPlaceholder="Example: This company provides AI automation consulting, workflow optimization and business process improvement for small companies."
-                              submitButtonLabel="Send category change request"
-                              successTitle="Category change request sent."
+                              submitButtonLabel="Send category correction request"
+                              successTitle="Category correction request sent."
                               entityType="organization"
                               entityId={organization.id}
                               requestSource="organization_category_change"
@@ -1531,14 +1625,14 @@ export default async function OrganizationDetailsPage({
                     <Card>
                       <SectionHeader
                         eyebrow="Semantic request history"
-                        title="Recent category change requests"
-                        description="Last requests submitted for this organization. Public category changes only after admin approval."
+                        title="Recent category correction requests"
+                        description="Last requests submitted for this organization. AI-assigned category is already attached as candidate; requests help confirm, replace or remove it."
                       />
 
                       {categorySuggestionRequests.length === 0 ? (
                         <EmptyState
-                          title="No category change requests yet"
-                          description="Заявки на изменение категории пока не отправлялись."
+                          title="No category correction requests yet"
+                          description="Заявки на уточнение категории пока не отправлялись."
                         />
                       ) : (
                         <div className="grid gap-3">
@@ -2072,5 +2166,3 @@ export default async function OrganizationDetailsPage({
     </main>
   );
 }
-
-

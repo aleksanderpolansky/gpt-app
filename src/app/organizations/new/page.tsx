@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
@@ -52,6 +52,7 @@ type SemanticIntakeResponse = {
 type SemanticIntakeStatus = "idle" | "running" | "done" | "failed";
 
 type CreateOrganizationResponse = {
+  semanticIntake?: SemanticIntakeResponse | null;
   ok?: boolean;
   error?: string;
   organization?: {
@@ -162,71 +163,6 @@ export default function NewOrganizationPage() {
     organizationName.trim().length >= 2 &&
     (!includeLocation || normalizeCountryCode(countryCode).length === 2);
 
-  async function triggerOrganizationSemanticIntake(
-    createData: CreateOrganizationResponse,
-  ) {
-    const organization = createData.organization;
-
-    if (!organization) {
-      setSemanticIntakeStatus("failed");
-      setSemanticIntakeError("AI-анализ не запущен: предприятие отсутствует в ответе API.");
-      return;
-    }
-
-    setSemanticIntakeStatus("running");
-    setSemanticIntake(null);
-    setSemanticIntakeError(null);
-
-    try {
-      const semanticResponse = await fetch("/api/ai/semantic-intake/organization", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-        body: JSON.stringify({
-          objectType: "organization",
-          objectId: organization.id,
-          source: "organization_create_success_client_preview",
-          name: organization.organization_name,
-          description: organization.description ?? description.trim() ?? "",
-          organizationType: organization.organization_type ?? organizationType,
-          country:
-            createData.organizationLocation?.country_code ??
-            (includeLocation ? normalizeCountryCode(countryCode) : ""),
-          city:
-            createData.organizationLocation?.city ??
-            (includeLocation ? city.trim() : ""),
-          district:
-            createData.organizationLocation?.district ??
-            (includeLocation ? district.trim() : ""),
-        }),
-      });
-
-      const semanticData =
-        (await semanticResponse.json()) as SemanticIntakeResponse;
-
-      if (!semanticResponse.ok || !semanticData.ok) {
-        setSemanticIntakeStatus("failed");
-        setSemanticIntake(semanticData);
-        setSemanticIntakeError(
-          semanticData.error ?? "AI-анализ предприятия не выполнен.",
-        );
-        return;
-      }
-
-      setSemanticIntakeStatus("done");
-      setSemanticIntake(semanticData);
-      console.info("Organization semantic intake preview", semanticData);
-    } catch (error) {
-      setSemanticIntakeStatus("failed");
-      setSemanticIntakeError(
-        error instanceof Error
-          ? error.message
-          : "Неизвестная ошибка AI-анализа предприятия.",
-      );
-    }
-  }
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -267,7 +203,24 @@ export default function NewOrganizationPage() {
       }
 
       setResult(data);
-      void triggerOrganizationSemanticIntake(data);
+
+      const serverSemanticIntake = data.semanticIntake ?? null;
+      setSemanticIntake(serverSemanticIntake);
+
+      if (serverSemanticIntake?.ok) {
+        setSemanticIntakeStatus("done");
+      } else if (serverSemanticIntake) {
+        setSemanticIntakeStatus("failed");
+        setSemanticIntakeError(
+          serverSemanticIntake.error ??
+            "Серверная AI-категоризация предприятия не выполнена.",
+        );
+      } else {
+        setSemanticIntakeStatus("failed");
+        setSemanticIntakeError(
+          "Сервер не вернул результат AI-категоризации предприятия.",
+        );
+      }
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Неизвестная ошибка создания предприятия.",
@@ -521,18 +474,18 @@ export default function NewOrganizationPage() {
 
             <div className="mt-4 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-4 text-[12px] leading-5 text-[#1e3a8a]">
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2563eb]">
-                OpenAI semantic intake preview
+                AI-категоризация предприятия
               </div>
 
               <p className="m-0">
                 <strong>Статус:</strong>{" "}
                 {semanticIntakeStatus === "idle"
-                  ? "ожидает запуска после создания предприятия"
+                  ? "ожидает результата серверной AI-категоризации"
                   : semanticIntakeStatus === "running"
-                    ? "AI-анализ выполняется..."
+                    ? "AI-категоризация выполняется..."
                     : semanticIntakeStatus === "done"
-                      ? "AI-анализ выполнен"
-                      : "AI-анализ не выполнен"}
+                      ? "AI-категория назначена"
+                      : "AI-категория не назначена"}
               </p>
 
               {semanticIntakeError ? (
@@ -543,7 +496,7 @@ export default function NewOrganizationPage() {
 
               {semanticIntake?.analysis?.shortSummary ? (
                 <p className="mt-2">
-                  <strong>Summary:</strong>{" "}
+                  <strong>Краткое описание:</strong>{" "}
                   {semanticIntake.analysis.shortSummary}
                 </p>
               ) : null}
@@ -568,7 +521,7 @@ export default function NewOrganizationPage() {
 
               {semanticIntake?.analysis?.categoryCandidates?.length ? (
                 <div className="mt-3">
-                  <strong>Category candidates:</strong>
+                  <strong>AI-категории:</strong>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {semanticIntake.analysis.categoryCandidates.map((candidate) => (
                       <span
@@ -587,10 +540,10 @@ export default function NewOrganizationPage() {
 
               {semanticIntake?.persistence ? (
                 <p className="mt-3 text-[#475569]">
-                  DB persistence:{" "}
+                  Запись категории:{" "}
                   {semanticIntake.persistence.wroteToDatabase
-                    ? "writes enabled"
-                    : "preview only, no category DB writes"}
+                    ? "категория записана в базу данных"
+                    : "категория не записана в базу данных"}
                 </p>
               ) : null}
             </div>
@@ -624,4 +577,3 @@ export default function NewOrganizationPage() {
     </main>
   );
 }
-

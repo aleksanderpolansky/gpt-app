@@ -1,7 +1,8 @@
-﻿import { randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { getDefaultCurrencyByCountryCode, normalizeCountryCode } from "@/lib/commercial/currency";
 import { auth0 } from "../../../../lib/auth0";
+import { runOrganizationSemanticIntake } from "../../../../lib/organizations/organizationSemanticIntake";
 import { supabase } from "../../../../lib/supabase";
 
 type GeoAreaRow = {
@@ -473,14 +474,6 @@ function getPrimaryLocationForOrganization(
   );
 }
 
-function normalizeNameForMatching(value: string | null | undefined) {
-  if (!value) {
-    return "";
-  }
-
-  return value.trim().toLowerCase();
-}
-
 function isOwnSuggestedGeoArea(geoArea: GeoAreaRow | null, appUserId: string) {
   return Boolean(
     geoArea &&
@@ -938,6 +931,37 @@ export async function POST(request: Request) {
     );
   }
 
+  let semanticIntake = null;
+
+  try {
+    semanticIntake = await runOrganizationSemanticIntake({
+      objectType: "organization",
+      objectId: organization.id,
+      source: "organization_create_api_post_write_flow",
+      name: organization.organization_name,
+      description: organization.description,
+      organizationType: organization.organization_type,
+      country:
+        organizationLocation?.country_code ??
+        organization.country_code ??
+        locationInput.countryCode,
+      city: organizationLocation?.city ?? locationInput.city,
+      district: organizationLocation?.district ?? locationInput.district,
+      classifiedByUserId: appUser.id,
+      persist: true,
+      replaceExistingAiPrimary: true,
+    });
+  } catch (error) {
+    semanticIntake = {
+      ok: false,
+      mode: "organization_create_api_semantic_intake_unhandled_error",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown organization semantic intake error.",
+    };
+  }
+
   return NextResponse.json({
     ok: true,
     organization,
@@ -956,5 +980,6 @@ export async function POST(request: Request) {
       publicSlug: organization.public_slug,
       publishedAt: organization.directory_published_at,
     },
+    semanticIntake,
   });
 }
