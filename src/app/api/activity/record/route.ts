@@ -20,6 +20,7 @@ import {
   markRawActivitySignalFailed,
   markRawActivitySignalProcessed,
 } from "../../../../../lib/activity/rawActivitySignals";
+import { writeActivityProcessingServiceLog } from "../../../../../lib/activity/serviceLog";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -716,6 +717,64 @@ export async function POST(request: Request) {
     );
   }
 
+  const serviceLogRawMessageText =
+    typeof body.naturalInput === "string"
+      ? body.naturalInput
+      : typeof body.input === "string"
+        ? body.input
+        : typeof body.comment === "string"
+          ? body.comment
+          : typeof body.title === "string"
+            ? body.title
+            : null;
+
+  await writeActivityProcessingServiceLog(
+    {
+      user_id: appUser.id,
+      app_user_id: appUser.id,
+      actor_user_id: personActor.id,
+      source_surface: "api",
+      source_route: "/api/activity/record",
+      source_action: "record_request_received",
+      http_method: "POST",
+      raw_message_text: serviceLogRawMessageText,
+      message_received_at: new Date().toISOString(),
+      stage_key: "MESSAGE_RECEIVED_BY_SYSTEM",
+      stage_status: "received",
+      is_preview: false,
+      is_write_attempted: false,
+      activity_event_created: false,
+      value_object_created: false,
+      activity_value_object_link_created: false,
+      classification_created: false,
+      aggregate_updated: false,
+      privacy_scope: "private",
+      contains_sensitive_data: serviceLogRawMessageText !== null,
+      public_safe: false,
+      raw_text_publicly_visible: false,
+      ai_output_publicly_visible: false,
+      display_title: "Activity record request received",
+      display_summary:
+        "The activity record route received an authenticated request after JSON parsing and before domain persistence.",
+      visible_in_service_log: true,
+      visible_in_activity_capture: true,
+      visible_in_today: false,
+      visible_in_value_object: false,
+      visible_in_analytics: false,
+      evidence_json: {
+        step: "SERVICE_LOG_STEP14_ACTIVITY_RECORD_REQUEST_RECEIVED",
+        route: "/api/activity/record",
+        phase: "request_received_after_body_parse",
+        domainWriteAttemptedAtThisCheckpoint: false,
+      },
+    },
+    {
+      enabled: true,
+      nonBlocking: true,
+      processorName: "activity-record-route",
+      processorVersion: "service-log-step14",
+    },
+  );
   const naturalInput = asString(body.naturalInput);
   const legacyInput = asString(body.input);
   const durationMinutes = asNumber(body.durationMinutes);
@@ -1042,6 +1101,74 @@ export async function POST(request: Request) {
     durationMs: getDurationMs(processingStartedAt),
   });
 
+  await writeActivityProcessingServiceLog(
+    {
+      user_id: appUser.id,
+      app_user_id: appUser.id,
+      actor_user_id: personActor.id,
+      source_surface: "api",
+      source_route: "/api/activity/record",
+      source_action: "activity_event_saved",
+      http_method: "POST",
+      raw_message_text: inputText,
+      message_received_at: new Date().toISOString(),
+      stage_key: "ACTIVITY_EVENT_SAVED",
+      stage_status: "completed",
+      processor_name: "activity-record-route",
+      processor_version: "service-log-step19",
+      processing_started_at: processingStartedAt.toISOString(),
+      processing_finished_at: new Date().toISOString(),
+      processing_duration_ms: getDurationMs(processingStartedAt),
+      is_preview: false,
+      is_write_attempted: true,
+      activity_event_created: true,
+      value_object_created: false,
+      activity_value_object_link_created: false,
+      classification_created: false,
+      aggregate_updated: false,
+      activity_event_id: createdEvent.id,
+      activity_template_id: createdEvent.activity_template_id,
+      duration_minutes_candidate: effectiveDurationMinutes,
+      duration_minutes_confirmed:
+        typeof createdEvent.duration_minutes === "number"
+          ? createdEvent.duration_minutes
+          : null,
+      privacy_scope: "private",
+      contains_sensitive_data: inputText.length > 0,
+      public_safe: false,
+      raw_text_publicly_visible: false,
+      ai_output_publicly_visible: false,
+      display_title: "Activity event saved",
+      display_summary:
+        "The activity record route successfully inserted an activity_events row.",
+      visible_in_service_log: true,
+      visible_in_activity_capture: true,
+      visible_in_today: true,
+      visible_in_value_object: false,
+      visible_in_analytics: false,
+      evidence_json: {
+        step: "SERVICE_LOG_STEP19_ACTIVITY_EVENT_SAVED",
+        route: "/api/activity/record",
+        phase: "activity_event_saved",
+        activityEventId: createdEvent.id,
+        templateId: template.id,
+        templateSlug: template.slug,
+        resolvedBy,
+        source,
+        status,
+        domainWriteAttemptedAtThisCheckpoint: true,
+        activityEventCreatedAtThisCheckpoint: true,
+        downstreamEventLinksAttemptedAtThisCheckpoint: false,
+        downstreamImpactProcessingAttemptedAtThisCheckpoint: false,
+      },
+    },
+    {
+      enabled: true,
+      nonBlocking: true,
+      processorName: "activity-record-route",
+      processorVersion: "service-log-step19",
+    },
+  );
   const eventLinkRows = buildEventLinkRows({
     eventId: createdEvent.id,
     template,
@@ -1128,6 +1255,88 @@ export async function POST(request: Request) {
     durationMs: getDurationMs(processingStartedAt),
   });
 
+  const serviceLogEventLinksCount = Array.isArray(eventLinks)
+    ? eventLinks.length
+    : 0;
+
+  await writeActivityProcessingServiceLog(
+    {
+      user_id: appUser.id,
+      app_user_id: appUser.id,
+      actor_user_id: personActor.id,
+      source_surface: "api",
+      source_route: "/api/activity/record",
+      source_action:
+        eventLinkRows.length > 0 ? "event_links_saved" : "event_links_skipped",
+      http_method: "POST",
+      raw_message_text: inputText,
+      message_received_at: new Date().toISOString(),
+      stage_key: "CATEGORY_LINKS_SAVED",
+      stage_status: eventLinkRows.length > 0 ? "completed" : "skipped",
+      processor_name: "activity-record-route",
+      processor_version: "service-log-step20",
+      processing_started_at: processingStartedAt.toISOString(),
+      processing_finished_at: new Date().toISOString(),
+      processing_duration_ms: getDurationMs(processingStartedAt),
+      is_preview: false,
+      is_write_attempted: true,
+      activity_event_created: true,
+      value_object_created: false,
+      activity_value_object_link_created: false,
+      classification_created: false,
+      aggregate_updated: false,
+      activity_event_id: createdEvent.id,
+      activity_template_id: createdEvent.activity_template_id,
+      duration_minutes_candidate: effectiveDurationMinutes,
+      duration_minutes_confirmed:
+        typeof createdEvent.duration_minutes === "number"
+          ? createdEvent.duration_minutes
+          : null,
+      privacy_scope: "private",
+      contains_sensitive_data: inputText.length > 0,
+      public_safe: false,
+      raw_text_publicly_visible: false,
+      ai_output_publicly_visible: false,
+      display_title:
+        eventLinkRows.length > 0
+          ? "Activity event links saved"
+          : "Activity event links skipped",
+      display_summary:
+        eventLinkRows.length > 0
+          ? "The activity record route saved event_links rows after creating the activity event."
+          : "The activity record route had no event_links rows to save after creating the activity event.",
+      visible_in_service_log: true,
+      visible_in_activity_capture: true,
+      visible_in_today: true,
+      visible_in_value_object: false,
+      visible_in_analytics: false,
+      evidence_json: {
+        step: "SERVICE_LOG_STEP20_EVENT_LINKS_SAVED_OR_SKIPPED",
+        route: "/api/activity/record",
+        phase: eventLinkRows.length > 0 ? "event_links_saved" : "event_links_skipped",
+        activityEventId: createdEvent.id,
+        templateId: template.id,
+        templateSlug: template.slug,
+        resolvedBy,
+        source,
+        status,
+        eventLinkRowsCount: eventLinkRows.length,
+        eventLinksCount: serviceLogEventLinksCount,
+        domainWriteAttemptedAtThisCheckpoint: true,
+        activityEventCreatedAtThisCheckpoint: true,
+        downstreamEventLinksAttemptedAtThisCheckpoint: eventLinkRows.length > 0,
+        downstreamEventLinksCreatedAtThisCheckpoint: serviceLogEventLinksCount,
+        downstreamImpactProcessingAttemptedAtThisCheckpoint: false,
+      },
+    },
+    {
+      enabled: true,
+      nonBlocking: true,
+      processorName: "activity-record-route",
+      processorVersion: "service-log-step20",
+    },
+  );
+
   try {
     const impactResult = await processActivityImpacts({
       eventId: createdEvent.id,
@@ -1210,6 +1419,104 @@ export async function POST(request: Request) {
       durationMs: getDurationMs(processingStartedAt),
     });
 
+    await writeActivityProcessingServiceLog(
+      {
+        user_id: appUser.id,
+        app_user_id: appUser.id,
+        actor_user_id: personActor.id,
+        source_surface: "api",
+        source_route: "/api/activity/record",
+        source_action: impactResult.ok
+          ? impactResult.skipped
+            ? "impact_processing_skipped"
+            : "impact_processing_done"
+          : "impact_processing_failed",
+        http_method: "POST",
+        raw_message_text: inputText,
+        message_received_at: new Date().toISOString(),
+        stage_key: "METRICS_SAVED",
+        stage_status: impactResult.ok
+          ? impactResult.skipped
+            ? "skipped"
+            : "completed"
+          : "failed",
+        processor_name: "activity-record-route",
+        processor_version: "service-log-step21",
+        processing_started_at: processingStartedAt.toISOString(),
+        processing_finished_at: new Date().toISOString(),
+        processing_duration_ms: getDurationMs(processingStartedAt),
+        is_preview: false,
+        is_write_attempted: true,
+        activity_event_created: true,
+        value_object_created: false,
+        activity_value_object_link_created: false,
+        classification_created: false,
+        aggregate_updated: false,
+        activity_event_id: createdEvent.id,
+        activity_template_id: createdEvent.activity_template_id,
+        duration_minutes_candidate: effectiveDurationMinutes,
+        duration_minutes_confirmed:
+          typeof createdEvent.duration_minutes === "number"
+            ? createdEvent.duration_minutes
+            : null,
+        metric_summary_json: {
+          impactProcessor: {
+            ok: impactResult.ok,
+            skipped: impactResult.skipped,
+            reason: impactResult.reason,
+            counts: impactResult.counts,
+          },
+        },
+        privacy_scope: "private",
+        contains_sensitive_data: inputText.length > 0,
+        public_safe: false,
+        raw_text_publicly_visible: false,
+        ai_output_publicly_visible: false,
+        display_title: impactResult.ok
+          ? impactResult.skipped
+            ? "Activity impact processing skipped"
+            : "Activity impact processing completed"
+          : "Activity impact processing failed",
+        display_summary:
+          "The activity record route finished rule-based impact processing after event_links handling.",
+        visible_in_service_log: true,
+        visible_in_activity_capture: true,
+        visible_in_today: true,
+        visible_in_value_object: false,
+        visible_in_analytics: true,
+        evidence_json: {
+          step: "SERVICE_LOG_STEP21_IMPACT_PROCESSING_DONE_OR_SKIPPED",
+          route: "/api/activity/record",
+          phase: impactResult.ok
+            ? impactResult.skipped
+              ? "impact_processing_skipped"
+              : "impact_processing_done"
+            : "impact_processing_failed",
+          activityEventId: createdEvent.id,
+          templateId: template.id,
+          templateSlug: template.slug,
+          resolvedBy,
+          source,
+          status,
+          impactProcessorOk: impactResult.ok,
+          impactProcessorSkipped: impactResult.skipped,
+          impactProcessorReason: impactResult.reason,
+          impactProcessorCounts: impactResult.counts,
+          domainWriteAttemptedAtThisCheckpoint: true,
+          activityEventCreatedAtThisCheckpoint: true,
+          downstreamEventLinksAttemptedAtThisCheckpoint: eventLinkRows.length > 0,
+          downstreamEventLinksCreatedAtThisCheckpoint: serviceLogEventLinksCount,
+          downstreamImpactProcessingAttemptedAtThisCheckpoint: true,
+        },
+      },
+      {
+        enabled: true,
+        nonBlocking: true,
+        processorName: "activity-record-route",
+        processorVersion: "service-log-step21",
+      },
+    );
+
 
     const rubricatorClassificationResult =
       await ensureActivityEventRubricatorClassificationForKnownTemplate({
@@ -1265,6 +1572,150 @@ export async function POST(request: Request) {
       durationMs: getDurationMs(processingStartedAt),
     });
 
+    await writeActivityProcessingServiceLog(
+      {
+        user_id: appUser.id,
+        app_user_id: appUser.id,
+        actor_user_id: personActor.id,
+        source_surface: "api",
+        source_route: "/api/activity/record",
+        source_action: rubricatorClassificationResult.ok
+          ? rubricatorClassificationResult.skipped
+            ? "rubricator_classification_skipped"
+            : "rubricator_classification_done"
+          : "rubricator_classification_warning",
+        http_method: "POST",
+        raw_message_text: inputText,
+        message_received_at: new Date().toISOString(),
+        stage_key: "CATEGORY_LINKS_SAVED",
+        stage_status: rubricatorClassificationResult.ok
+          ? rubricatorClassificationResult.skipped
+            ? "skipped"
+            : "completed"
+          : "warning",
+        processor_name: "activity-record-route",
+        processor_version: "service-log-step22",
+        processing_started_at: processingStartedAt.toISOString(),
+        processing_finished_at: new Date().toISOString(),
+        processing_duration_ms: getDurationMs(processingStartedAt),
+        is_preview: false,
+        is_write_attempted: true,
+        activity_event_created: true,
+        value_object_created: false,
+        activity_value_object_link_created: false,
+        classification_created: rubricatorClassificationResult.created,
+        aggregate_updated: false,
+        activity_event_id: createdEvent.id,
+        activity_template_id: createdEvent.activity_template_id,
+        entity_classification_ids_json:
+          rubricatorClassificationResult.classificationId !== null
+            ? [rubricatorClassificationResult.classificationId]
+            : [],
+        category_candidates_json: [
+          {
+            source: "known_template_rubricator",
+            ruleKey: rubricatorClassificationResult.ruleKey,
+            classificationId: rubricatorClassificationResult.classificationId,
+            classificationStatus:
+              rubricatorClassificationResult.classificationStatus,
+            created: rubricatorClassificationResult.created,
+            alreadyExisted: rubricatorClassificationResult.alreadyExisted,
+            skipped: rubricatorClassificationResult.skipped,
+            skipReason: rubricatorClassificationResult.skipReason,
+          },
+        ],
+        duration_minutes_candidate: effectiveDurationMinutes,
+        duration_minutes_confirmed:
+          typeof createdEvent.duration_minutes === "number"
+            ? createdEvent.duration_minutes
+            : null,
+        privacy_scope: "private",
+        contains_sensitive_data: inputText.length > 0,
+        public_safe: false,
+        raw_text_publicly_visible: false,
+        ai_output_publicly_visible: false,
+        warning_messages_json: rubricatorClassificationResult.errors,
+        skipped_reason: rubricatorClassificationResult.skipped
+          ? rubricatorClassificationResult.skipReason
+          : null,
+        debug_payload_json: {
+          rubricatorClassificationLog: {
+            ok: rubricatorClassificationLogResult.ok,
+            error: rubricatorClassificationLogResult.error,
+            logId: rubricatorClassificationLogResult.log?.id ?? null,
+          },
+          ruleResolver: JSON.parse(
+            JSON.stringify(
+              buildRubricatorResolverLogMetadata(
+                rubricatorClassificationResult,
+              ),
+            ),
+          ),
+        },
+        display_title: rubricatorClassificationResult.ok
+          ? rubricatorClassificationResult.skipped
+            ? "Rubricator classification skipped"
+            : "Rubricator classification ensured"
+          : "Rubricator classification warning",
+        display_summary:
+          "The activity record route finished known-template rubricator classification before Value Object bridge.",
+        visible_in_service_log: true,
+        visible_in_activity_capture: true,
+        visible_in_today: true,
+        visible_in_value_object: true,
+        visible_in_analytics: true,
+        evidence_json: {
+          step: "SERVICE_LOG_STEP22_RUBRICATOR_CLASSIFICATION_DONE_OR_SKIPPED",
+          route: "/api/activity/record",
+          phase: rubricatorClassificationResult.ok
+            ? rubricatorClassificationResult.skipped
+              ? "rubricator_classification_skipped"
+              : "rubricator_classification_done"
+            : "rubricator_classification_warning",
+          activityEventId: createdEvent.id,
+          templateId: template.id,
+          templateSlug: template.slug,
+          resolvedBy,
+          source,
+          status,
+          rubricatorClassificationOk: rubricatorClassificationResult.ok,
+          rubricatorClassificationSkipped:
+            rubricatorClassificationResult.skipped,
+          rubricatorClassificationSkipReason:
+            rubricatorClassificationResult.skipReason,
+          rubricatorClassificationRuleKey: rubricatorClassificationResult.ruleKey,
+          rubricatorClassificationId:
+            rubricatorClassificationResult.classificationId,
+          rubricatorClassificationStatus:
+            rubricatorClassificationResult.classificationStatus,
+          rubricatorClassificationCreated:
+            rubricatorClassificationResult.created,
+          rubricatorClassificationAlreadyExisted:
+            rubricatorClassificationResult.alreadyExisted,
+          rubricatorClassificationErrors:
+            rubricatorClassificationResult.errors,
+          rubricatorProcessingLogOk: rubricatorClassificationLogResult.ok,
+          rubricatorProcessingLogId:
+            rubricatorClassificationLogResult.log?.id ?? null,
+          domainWriteAttemptedAtThisCheckpoint: true,
+          activityEventCreatedAtThisCheckpoint: true,
+          downstreamEventLinksAttemptedAtThisCheckpoint:
+            eventLinkRows.length > 0,
+          downstreamEventLinksCreatedAtThisCheckpoint:
+            serviceLogEventLinksCount,
+          downstreamImpactProcessingAttemptedAtThisCheckpoint: true,
+          downstreamRubricatorClassificationAttemptedAtThisCheckpoint: true,
+          downstreamValueObjectBridgeAttemptedAtThisCheckpoint: false,
+        },
+      },
+      {
+        enabled: true,
+        nonBlocking: true,
+        processorName: "activity-record-route",
+        processorVersion: "service-log-step22",
+      },
+    );
+
     const valueObjectBridgeResult = await processActivityValueObjectBridge({
       supabase,
       eventId: createdEvent.id,
@@ -1307,6 +1758,324 @@ export async function POST(request: Request) {
       finishedAt: new Date().toISOString(),
       durationMs: getDurationMs(processingStartedAt),
     });
+
+    await writeActivityProcessingServiceLog(
+      {
+        user_id: appUser.id,
+        app_user_id: appUser.id,
+        actor_user_id: personActor.id,
+        source_surface: "api",
+        source_route: "/api/activity/record",
+        source_action: valueObjectBridgeResult.ok
+          ? valueObjectBridgeResult.skipped
+            ? "value_object_bridge_skipped"
+            : "value_object_bridge_done"
+          : "value_object_bridge_warning",
+        http_method: "POST",
+        raw_message_text: inputText,
+        message_received_at: new Date().toISOString(),
+        stage_key: "VO_LINKS_SAVED",
+        stage_status: valueObjectBridgeResult.ok
+          ? valueObjectBridgeResult.skipped
+            ? "skipped"
+            : "completed"
+          : "warning",
+        processor_name: "activity-record-route",
+        processor_version: "service-log-step23",
+        processing_started_at: processingStartedAt.toISOString(),
+        processing_finished_at: new Date().toISOString(),
+        processing_duration_ms: getDurationMs(processingStartedAt),
+        is_preview: false,
+        is_write_attempted: true,
+        activity_event_created: true,
+        value_object_created:
+          (valueObjectBridgeResult.bridgeResult?.created.length ?? 0) > 0,
+        activity_value_object_link_created:
+          (valueObjectBridgeResult.bridgeResult?.created.length ?? 0) > 0,
+        classification_created: rubricatorClassificationResult.created,
+        aggregate_updated: false,
+        activity_event_id: createdEvent.id,
+        activity_template_id: createdEvent.activity_template_id,
+        value_object_candidates_json: JSON.parse(
+          JSON.stringify([
+            {
+              source: "activity_value_object_bridge",
+              ok: valueObjectBridgeResult.ok,
+              skipped: valueObjectBridgeResult.skipped,
+              skipReason: valueObjectBridgeResult.skipReason,
+              mappingSkipped:
+                valueObjectBridgeResult.mappingResult?.skipped ?? null,
+              mappingsCount:
+                valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+              classificationSummaryCount:
+                valueObjectBridgeResult.mappingResult?.classificationSummary
+                  .length ?? 0,
+              bridgeCreatedCount:
+                valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+              bridgeMappingsRequested:
+                valueObjectBridgeResult.bridgeResult?.mappingsRequested ?? 0,
+            },
+          ]),
+        ),
+        duration_minutes_candidate: effectiveDurationMinutes,
+        duration_minutes_confirmed:
+          typeof createdEvent.duration_minutes === "number"
+            ? createdEvent.duration_minutes
+            : null,
+        metric_summary_json: {
+          valueObjectBridge: {
+            ok: valueObjectBridgeResult.ok,
+            skipped: valueObjectBridgeResult.skipped,
+            mappingSkipped:
+              valueObjectBridgeResult.mappingResult?.skipped ?? null,
+            mappingsCount:
+              valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+            bridgeCreatedCount:
+              valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+          },
+        },
+        privacy_scope: "private",
+        contains_sensitive_data: inputText.length > 0,
+        public_safe: false,
+        raw_text_publicly_visible: false,
+        ai_output_publicly_visible: false,
+        warning_messages_json: JSON.parse(
+          JSON.stringify(valueObjectBridgeResult.errors),
+        ),
+        skipped_reason: valueObjectBridgeResult.skipped
+          ? valueObjectBridgeResult.skipReason
+          : null,
+        debug_payload_json: JSON.parse(
+          JSON.stringify({
+            valueObjectBridgeResult: {
+              ok: valueObjectBridgeResult.ok,
+              skipped: valueObjectBridgeResult.skipped,
+              skipReason: valueObjectBridgeResult.skipReason,
+              errors: valueObjectBridgeResult.errors,
+              mapping: valueObjectBridgeResult.mappingResult
+                ? {
+                    ok: valueObjectBridgeResult.mappingResult.ok,
+                    skipped: valueObjectBridgeResult.mappingResult.skipped,
+                    skipReason:
+                      valueObjectBridgeResult.mappingResult.skipReason,
+                    classificationSummaryCount:
+                      valueObjectBridgeResult.mappingResult
+                        .classificationSummary.length,
+                    mappingsCount:
+                      valueObjectBridgeResult.mappingResult.mappings.length,
+                  }
+                : null,
+              bridge: valueObjectBridgeResult.bridgeResult
+                ? {
+                    ok: valueObjectBridgeResult.bridgeResult.ok,
+                    skipped: valueObjectBridgeResult.bridgeResult.skipped,
+                    skipReason:
+                      valueObjectBridgeResult.bridgeResult.skipReason,
+                    mappingsRequested:
+                      valueObjectBridgeResult.bridgeResult.mappingsRequested,
+                    createdCount:
+                      valueObjectBridgeResult.bridgeResult.created.length,
+                    errors: valueObjectBridgeResult.bridgeResult.errors,
+                  }
+                : null,
+            },
+            valueObjectBridgeLog: {
+              ok: valueObjectBridgeLogResult.ok,
+              error: valueObjectBridgeLogResult.error,
+              logId: valueObjectBridgeLogResult.log?.id ?? null,
+            },
+          }),
+        ),
+        display_title: valueObjectBridgeResult.ok
+          ? valueObjectBridgeResult.skipped
+            ? "Value Object bridge skipped"
+            : "Value Object bridge completed"
+          : "Value Object bridge warning",
+        display_summary:
+          "The activity record route finished Value Object bridge processing before returning the final UI response.",
+        visible_in_service_log: true,
+        visible_in_activity_capture: true,
+        visible_in_today: true,
+        visible_in_value_object: true,
+        visible_in_analytics: true,
+        evidence_json: JSON.parse(
+          JSON.stringify({
+            step: "SERVICE_LOG_STEP23_VALUE_OBJECT_BRIDGE_DONE_OR_SKIPPED",
+            route: "/api/activity/record",
+            phase: valueObjectBridgeResult.ok
+              ? valueObjectBridgeResult.skipped
+                ? "value_object_bridge_skipped"
+                : "value_object_bridge_done"
+              : "value_object_bridge_warning",
+            activityEventId: createdEvent.id,
+            templateId: template.id,
+            templateSlug: template.slug,
+            resolvedBy,
+            source,
+            status,
+            valueObjectBridgeOk: valueObjectBridgeResult.ok,
+            valueObjectBridgeSkipped: valueObjectBridgeResult.skipped,
+            valueObjectBridgeSkipReason: valueObjectBridgeResult.skipReason,
+            valueObjectBridgeErrors: valueObjectBridgeResult.errors,
+            valueObjectBridgeMappingSkipped:
+              valueObjectBridgeResult.mappingResult?.skipped ?? null,
+            valueObjectBridgeMappingsCount:
+              valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+            valueObjectBridgeCreatedCount:
+              valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+            valueObjectBridgeLogOk: valueObjectBridgeLogResult.ok,
+            valueObjectBridgeLogId:
+              valueObjectBridgeLogResult.log?.id ?? null,
+            domainWriteAttemptedAtThisCheckpoint: true,
+            activityEventCreatedAtThisCheckpoint: true,
+            downstreamEventLinksAttemptedAtThisCheckpoint:
+              eventLinkRows.length > 0,
+            downstreamEventLinksCreatedAtThisCheckpoint:
+              serviceLogEventLinksCount,
+            downstreamImpactProcessingAttemptedAtThisCheckpoint: true,
+            downstreamRubricatorClassificationAttemptedAtThisCheckpoint: true,
+            downstreamValueObjectBridgeAttemptedAtThisCheckpoint: true,
+          }),
+        ),
+      },
+      {
+        enabled: true,
+        nonBlocking: true,
+        processorName: "activity-record-route",
+        processorVersion: "service-log-step23",
+      },
+    );
+
+  await writeActivityProcessingServiceLog(
+    {
+      user_id: appUser.id,
+      app_user_id: appUser.id,
+      actor_user_id: personActor.id,
+      source_surface: "api",
+      source_route: "/api/activity/record",
+      source_action: "ui_result_visible",
+      http_method: "POST",
+      raw_message_text: inputText,
+      message_received_at: new Date().toISOString(),
+      stage_key: "UI_RESULT_VISIBLE",
+      stage_status: "completed",
+      processor_name: "activity-record-route",
+      processor_version: "service-log-step24",
+      processing_started_at: processingStartedAt.toISOString(),
+      processing_finished_at: new Date().toISOString(),
+      processing_duration_ms: getDurationMs(processingStartedAt),
+      is_preview: false,
+      is_write_attempted: true,
+      activity_event_created: true,
+      value_object_created:
+        (valueObjectBridgeResult.bridgeResult?.created.length ?? 0) > 0,
+      activity_value_object_link_created:
+        (valueObjectBridgeResult.bridgeResult?.created.length ?? 0) > 0,
+      classification_created: rubricatorClassificationResult.created,
+      aggregate_updated: false,
+      activity_event_id: createdEvent.id,
+      activity_template_id: createdEvent.activity_template_id,
+      value_object_candidates_json: JSON.parse(
+        JSON.stringify([
+          {
+            source: "final_ui_result",
+            valueObjectBridgeOk: valueObjectBridgeResult.ok,
+            valueObjectBridgeSkipped: valueObjectBridgeResult.skipped,
+            valueObjectBridgeCreatedCount:
+              valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+            valueObjectBridgeMappingsCount:
+              valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+          },
+        ]),
+      ),
+      duration_minutes_candidate: effectiveDurationMinutes,
+      duration_minutes_confirmed:
+        typeof createdEvent.duration_minutes === "number"
+          ? createdEvent.duration_minutes
+          : null,
+      metric_summary_json: JSON.parse(
+        JSON.stringify({
+          finalUiResult: {
+            eventLinksCount: serviceLogEventLinksCount,
+            impactProcessorOk: impactResult.ok,
+            impactProcessorSkipped: impactResult.skipped,
+            rubricatorClassificationOk: rubricatorClassificationResult.ok,
+            rubricatorClassificationSkipped:
+              rubricatorClassificationResult.skipped,
+            valueObjectBridgeOk: valueObjectBridgeResult.ok,
+            valueObjectBridgeSkipped: valueObjectBridgeResult.skipped,
+            valueObjectBridgeCreatedCount:
+              valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+          },
+        }),
+      ),
+      privacy_scope: "private",
+      contains_sensitive_data: inputText.length > 0,
+      public_safe: false,
+      raw_text_publicly_visible: false,
+      ai_output_publicly_visible: false,
+      display_title: "Activity record UI result ready",
+      display_summary:
+        "The activity record route completed all current processing checkpoints and is returning the final success response to the UI.",
+      visible_in_service_log: true,
+      visible_in_activity_capture: true,
+      visible_in_today: true,
+      visible_in_value_object: true,
+      visible_in_analytics: true,
+      evidence_json: JSON.parse(
+        JSON.stringify({
+          step: "SERVICE_LOG_STEP24_UI_RESULT_VISIBLE",
+          route: "/api/activity/record",
+          phase: "final_success_response_ready",
+          activityEventId: createdEvent.id,
+          templateId: template.id,
+          templateSlug: template.slug,
+          resolvedBy,
+          source,
+          status,
+          eventLinksCount: serviceLogEventLinksCount,
+          impactProcessorOk: impactResult.ok,
+          impactProcessorSkipped: impactResult.skipped,
+          impactProcessorReason: impactResult.reason,
+          rubricatorClassificationOk: rubricatorClassificationResult.ok,
+          rubricatorClassificationSkipped:
+            rubricatorClassificationResult.skipped,
+          rubricatorClassificationCreated:
+            rubricatorClassificationResult.created,
+          rubricatorClassificationId:
+            rubricatorClassificationResult.classificationId,
+          valueObjectBridgeOk: valueObjectBridgeResult.ok,
+          valueObjectBridgeSkipped: valueObjectBridgeResult.skipped,
+          valueObjectBridgeSkipReason: valueObjectBridgeResult.skipReason,
+          valueObjectBridgeCreatedCount:
+            valueObjectBridgeResult.bridgeResult?.created.length ?? 0,
+          valueObjectBridgeMappingsCount:
+            valueObjectBridgeResult.mappingResult?.mappings.length ?? 0,
+          responseWillIncludeEvent: true,
+          responseWillIncludeEventLinks: true,
+          responseWillIncludeImpactProcessor: true,
+          responseWillIncludeRubricatorClassification: true,
+          responseWillIncludeValueObjectBridge: true,
+          domainWriteAttemptedAtThisCheckpoint: true,
+          activityEventCreatedAtThisCheckpoint: true,
+          downstreamEventLinksAttemptedAtThisCheckpoint:
+            eventLinkRows.length > 0,
+          downstreamEventLinksCreatedAtThisCheckpoint:
+            serviceLogEventLinksCount,
+          downstreamImpactProcessingAttemptedAtThisCheckpoint: true,
+          downstreamRubricatorClassificationAttemptedAtThisCheckpoint: true,
+          downstreamValueObjectBridgeAttemptedAtThisCheckpoint: true,
+          finalUiResponseReadyAtThisCheckpoint: true,
+        }),
+      ),
+    },
+    {
+      enabled: true,
+      nonBlocking: true,
+      processorName: "activity-record-route",
+      processorVersion: "service-log-step24",
+    },
+  );
 
     return NextResponse.json({
       ok: true,
@@ -1465,6 +2234,9 @@ export async function POST(request: Request) {
     );
   }
 }
+
+
+
 
 
 
