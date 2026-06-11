@@ -1,21 +1,27 @@
 ﻿/**
  * UI-3.9 — LeftSemanticNavigation 240px contract.
  * UI-3.10 — Navigation groups/tree added.
+ * R-18 — Service Log read-only audit route link added.
  *
- * This component is fixture-only and local to UI-3.
+ * This component is local to the workspace shell.
  * It does not call network, database, auth, environment variables or server routes.
  *
  * Result markers:
  * WORKSPACE_LEFT_NAV_CREATED
  * WORKSPACE_LEFT_NAV_TREE_CREATED
+ * SERVICE_LOG_LEFT_NAV_LINK_CREATED
  */
 
+import Link from "next/link";
 import type { WorkspaceNavigationGroup } from "./workspace-types";
 
 export const WORKSPACE_LEFT_NAV_RESULT = "WORKSPACE_LEFT_NAV_CREATED" as const;
 
 export const WORKSPACE_LEFT_NAV_TREE_RESULT =
   "WORKSPACE_LEFT_NAV_TREE_CREATED" as const;
+
+export const SERVICE_LOG_LEFT_NAV_LINK_RESULT =
+  "SERVICE_LOG_LEFT_NAV_LINK_CREATED" as const;
 
 export type WorkspaceLeftNavProps = {
   readonly navigation: readonly WorkspaceNavigationGroup[];
@@ -173,18 +179,40 @@ export function WorkspaceLeftNav({
         ))}
       </div>
 
+      <section className="mt-4 rounded-xl border border-[#3b6ef8]/20 bg-[#eef2ff] p-3">
+        <p className="text-xs font-semibold text-[#1a1d2e]">
+          Operational audit
+        </p>
+
+        <Link
+          href="/service-log"
+          className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-[#3b6ef8]/30 bg-white px-3 py-2 text-sm font-semibold text-[#1a1d2e] transition hover:border-[#3b6ef8] hover:bg-[#f8faff]"
+        >
+          <span>Service Log</span>
+          <span className="rounded-full border border-[#3b6ef8]/20 bg-[#eef2ff] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#3b6ef8]">
+            read-only
+          </span>
+        </Link>
+
+        <p className="mt-2 text-xs leading-5 text-[#7c8099]">
+          Private GET-only processing audit viewer. No writes, no approval and
+          no automatic action execution.
+        </p>
+      </section>
+
       <div className="mt-4 rounded-xl border border-black/10 bg-[#eef2ff] p-3">
         <p className="text-xs font-semibold text-[#1a1d2e]">
           Navigation tree boundary
         </p>
         <p className="mt-1 text-xs leading-5 text-[#7c8099]">
-          Groups and tree nodes are visual placeholders in UI-3. No routing, no
-          hidden writes, no persistence and no automatic action execution.
+          Groups and tree nodes are visual placeholders in UI-3. No hidden
+          writes, no persistence and no automatic action execution.
         </p>
       </div>
 
       <p className="mt-4 text-xs text-[#7c8099]">
-        WORKSPACE_LEFT_NAV_TREE_CREATED · width 240px · done 10/32 · left 22
+        WORKSPACE_LEFT_NAV_TREE_CREATED · SERVICE_LOG_LEFT_NAV_LINK_CREATED ·
+        width 240px · done 10/32 · left 22
       </p>
     </aside>
   );
