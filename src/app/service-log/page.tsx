@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   ServiceLogApiError,
   ServiceLogRunListItem,
@@ -704,11 +704,22 @@ function ServiceLogRowCard({ item }: { readonly item: ServiceLogRunListItem }) {
 }
 
 export default function ServiceLogPage() {
-  const [draftFilters, setDraftFilters] = useState<ServiceLogViewerFilters>(() =>
-    readInitialFiltersFromBrowserUrl(),
-  );
-  const [activeFilters, setActiveFilters] =
-    useState<ServiceLogViewerFilters>(() => readInitialFiltersFromBrowserUrl());
+  const [draftFilters, setDraftFilters] =
+    useState<ServiceLogViewerFilters>(DEFAULT_FILTERS);
+  const [appliedFilters, setAppliedFilters] =
+    useState<ServiceLogViewerFilters>(DEFAULT_FILTERS);
+
+  useEffect(() => {
+    const browserFilters = readInitialFiltersFromBrowserUrl();
+
+    // Keep the first render deterministic between server and client.
+    // Browser URL filters are applied only after hydration and do not trigger an automatic fetch.
+    queueMicrotask(() => {
+      setDraftFilters(browserFilters);
+      setAppliedFilters(browserFilters);
+    });
+  }, []);
+
   const [items, setItems] = useState<ServiceLogRunListItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<readonly string[]>([]);
@@ -725,8 +736,8 @@ export default function ServiceLogPage() {
   }, [items.length]);
 
   const activeFilterSummary = useMemo(
-    () => summarizeFilterState(activeFilters),
-    [activeFilters],
+    () => summarizeFilterState(appliedFilters),
+    [appliedFilters],
   );
 
   async function loadRowsWithFilters(
@@ -737,7 +748,7 @@ export default function ServiceLogPage() {
   ): Promise<void> {
     setLoadState("loading");
     setErrorMessage(null);
-    setActiveFilters(filters);
+    setAppliedFilters(filters);
 
     if (syncBrowserUrl) {
       syncServiceLogBrowserUrl(filters);
@@ -817,7 +828,7 @@ export default function ServiceLogPage() {
 
   function refreshRows(): void {
     setNextCursor(null);
-    void loadRowsWithFilters(activeFilters, "replace", null, true);
+    void loadRowsWithFilters(appliedFilters, "replace", null, true);
   }
 
   function loadMoreRows(): void {
@@ -825,7 +836,7 @@ export default function ServiceLogPage() {
       return;
     }
 
-    void loadRowsWithFilters(activeFilters, "append", nextCursor, false);
+    void loadRowsWithFilters(appliedFilters, "append", nextCursor, false);
   }
 
   return (
@@ -1099,5 +1110,8 @@ export default function ServiceLogPage() {
     </main>
   );
 }
+
+
+
 
 
