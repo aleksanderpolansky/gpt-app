@@ -1315,6 +1315,14 @@ function buildLocalActivityPreviewReply(classification: UnifiedMessageClassifica
     `Category candidates: ${categories.join(", ")}`,
     `Value Object candidates: ${valueObjects.join(", ")}`,
     "",
+    "Value Object bridge proof:",
+    "Это ещё не создание Value Object, а только кандидатная связь.",
+    valueObjects.length > 0
+      ? `Кандидаты Value Object: ${valueObjects.join(", ")}`
+      : "Кандидаты Value Object: пока не найдены.",
+    "Открыть список текущих Value Objects: /value-objects",
+    "Следующий gated шаг: подтвердить активность, затем обработать category/VO candidates через review/write gate.",
+    "",
     "Статус: local preview only.",
     "Пока не создан Activity Event, не созданы категории, не создан и не обновлён Value Object, нет DB write.",
     "",
@@ -1770,6 +1778,14 @@ async function buildNoWriteSemanticActivityPreviewReply(
       `Причина распознавания: ${classification.reason}`,
       "",
       ...activityReviewPackageLines,
+      "",
+      "Value Object bridge proof:",
+      "Это ещё не создание Value Object, а только кандидатная связь.",
+      valueObjects.length > 0
+        ? `Кандидаты Value Object: ${valueObjects.join(", ")}`
+        : "Кандидаты Value Object: пока не найдены.",
+      "Открыть список текущих Value Objects: /value-objects",
+      "Следующий gated шаг: подтвердить активность, затем обработать category/VO candidates через review/write gate.",
       "",
       "No-write safety check:",
       ...sideEffectLines,

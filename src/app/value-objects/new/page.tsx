@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
@@ -324,19 +324,19 @@ export default function NewValueObjectPage() {
       <div className="mx-auto grid w-full max-w-[1120px] gap-5">
         <header className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
           <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7c8099]">
-            Commercial core / Enterprise value object
+            Manual Value Object / Creation hub
           </div>
 
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <h1 className="text-[30px] font-bold tracking-[-0.03em] text-[#111827]">
-                Добавить услугу предприятия
+                Добавить ценный объект
               </h1>
 
               <p className="mt-2 max-w-[780px] text-[14px] leading-6 text-[#5a5f7a]">
-                Здесь создаётся не старая категория “товар / услуга”, а ценный
-                объект предприятия. Позже на его базе можно создать предложение
-                и подарочный сертификат.
+                Ручное создание становится каноническим маршрутом для Value
+                Object. Личный объект пользователя и коммерческий объект
+                предприятия должны вести к одной модели, но через разные gates.
               </p>
             </div>
 
@@ -357,6 +357,124 @@ export default function NewValueObjectPage() {
             </div>
           </div>
         </header>
+        <section className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="rounded-[18px] border border-[#dfe6ff] bg-[#f7f9ff] p-5 shadow-[0_8px_24px_rgba(59,110,248,0.07)]">
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
+              Personal manual Value Object
+            </div>
+
+            <h2 className="text-[20px] font-bold tracking-[-0.02em] text-[#111827]">
+              Личный ценный объект: цель, проект, навык, здоровье
+            </h2>
+
+            <p className="mt-2 text-[14px] leading-6 text-[#5a5f7a]">
+              Это архитектурный no-write слой для ручного создания личного
+              Value Object. Он нужен как канонический контракт, к которому позже
+              будет подключён автоматический процесс Activity → Categories →
+              Value Objects.
+            </p>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-2xl border border-[#e3e8ff] bg-white p-4">
+                <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+                  creation_mode
+                </div>
+                <div className="mt-1 font-mono text-[13px] font-semibold text-[#1a1d2e]">
+                  personal_manual
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#e3e8ff] bg-white p-4">
+                <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+                  visibility
+                </div>
+                <div className="mt-1 font-mono text-[13px] font-semibold text-[#1a1d2e]">
+                  private_by_default
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#e3e8ff] bg-white p-4">
+                <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+                  owner
+                </div>
+                <div className="mt-1 font-mono text-[13px] font-semibold text-[#1a1d2e]">
+                  owner_actor_id = current person actor
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#e3e8ff] bg-white p-4">
+                <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+                  organization
+                </div>
+                <div className="mt-1 font-mono text-[13px] font-semibold text-[#1a1d2e]">
+                  organization_id = null
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-dashed border-[#c9d5ff] bg-white p-4">
+              <div className="text-[13px] font-bold text-[#1a1d2e]">
+                Первый безопасный ID-шаблон
+              </div>
+              <div className="mt-2 font-mono text-[13px] text-[#3b6ef8]">
+                manual-personal-goal-draft
+              </div>
+              <div className="mt-2 text-[13px] leading-5 text-[#5a5f7a]">
+                Будущая ссылка на карточку будет иметь вид:
+                <span className="ml-1 font-mono text-[#1a1d2e]">
+                  /value-objects/manual-personal-goal-draft
+                </span>
+                . Сейчас это contract proof, не запись в базу.
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#7c8099]">
+              Enterprise commercial Value Object
+            </div>
+
+            <h2 className="text-[20px] font-bold tracking-[-0.02em] text-[#111827]">
+              Коммерческий объект предприятия
+            </h2>
+
+            <p className="mt-2 text-[14px] leading-6 text-[#5a5f7a]">
+              Ниже остаётся существующий authenticated POST-маршрут для
+              создания коммерческого Value Object предприятия: услуги, товара,
+              консультации, доступа или материала.
+            </p>
+
+            <div className="mt-4 grid gap-3">
+              <div className="rounded-2xl bg-[#f5f6fb] p-4">
+                <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+                  creation_mode
+                </div>
+                <div className="mt-1 font-mono text-[13px] font-semibold text-[#1a1d2e]">
+                  enterprise_commercial
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-[#f5f6fb] p-4">
+                <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+                  write_gate
+                </div>
+                <div className="mt-1 font-mono text-[13px] font-semibold text-[#1a1d2e]">
+                  Auth0 + organization access + /api/value-objects POST
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-[#f5f6fb] p-4">
+                <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+                  future adapter
+                </div>
+                <div className="mt-1 text-[13px] leading-5 text-[#4a4f6a]">
+                  Activity-derived candidates will reuse this manual creation
+                  contract instead of creating a separate object model.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <section className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
           <form
