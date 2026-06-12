@@ -1,8 +1,10 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
+
+type UsageScope = "private" | "commercial";
 
 type AppUserRow = {
   id: string;
@@ -53,6 +55,8 @@ type OrganizationAccessResult =
     };
 
 type ValueObjectRequestBody = {
+  usageScope?: unknown;
+  creationMode?: unknown;
   organizationId?: unknown;
   valueType?: unknown;
   title?: unknown;
@@ -63,6 +67,7 @@ type ValueObjectRequestBody = {
   defaultDurationMinutes?: unknown;
   isMarketplaceSellable?: unknown;
   isFreePossible?: unknown;
+  commercialUsage?: unknown;
 };
 
 function normalizeRequiredString(value: unknown): string | null {
@@ -125,6 +130,56 @@ function normalizeBoolean(value: unknown): boolean {
   return value === true;
 }
 
+function normalizeUsageScope(value: unknown): UsageScope | null {
+  if (value === "private" || value === "commercial") {
+    return value;
+  }
+
+  return null;
+}
+
+function normalizeCommercialUsage(value: unknown): string {
+  const normalized = normalizeOptionalString(value);
+
+  if (
+    normalized === "catalog_info" ||
+    normalized === "certificate_base" ||
+    normalized === "both"
+  ) {
+    return normalized;
+  }
+
+  return "none";
+}
+
+function normalizeDraftCreationMode(value: unknown): boolean {
+  const normalized = normalizeOptionalString(value);
+
+  return (
+    normalized === "draft" ||
+    normalized === "manual_draft" ||
+    normalized === "draft_first"
+  );
+}
+
+function getDraftDefaults(usageScope: UsageScope) {
+  if (usageScope === "commercial") {
+    return {
+      title: "Новый коммерческий ценный объект",
+      valueType: "service",
+    };
+  }
+
+  return {
+    title: "Новый частный ценный объект",
+    valueType: "personal_value_object",
+  };
+}
+
+function buildValueObjectEditUrl(id: string) {
+  return `/value-objects/${id}/edit`;
+}
+
 async function getCurrentUserContext(): Promise<CurrentUserContext> {
   const session = await auth0.getSession();
 
@@ -135,7 +190,7 @@ async function getCurrentUserContext(): Promise<CurrentUserContext> {
       personActor: null,
       errorResponse: NextResponse.json(
         { error: "Not authenticated" },
-        { status: 401 }
+        { status: 401 },
       ),
     };
   }
@@ -153,7 +208,7 @@ async function getCurrentUserContext(): Promise<CurrentUserContext> {
       personActor: null,
       errorResponse: NextResponse.json(
         { error: appUserError?.message ?? "App user not found" },
-        { status: 500 }
+        { status: 500 },
       ),
     };
   }
@@ -171,7 +226,7 @@ async function getCurrentUserContext(): Promise<CurrentUserContext> {
       personActor: null,
       errorResponse: NextResponse.json(
         { error: personError?.message ?? "Person not found" },
-        { status: 500 }
+        { status: 500 },
       ),
     };
   }
@@ -190,7 +245,7 @@ async function getCurrentUserContext(): Promise<CurrentUserContext> {
       personActor: null,
       errorResponse: NextResponse.json(
         { error: personActorError?.message ?? "Person actor not found" },
-        { status: 500 }
+        { status: 500 },
       ),
     };
   }
@@ -205,7 +260,7 @@ async function getCurrentUserContext(): Promise<CurrentUserContext> {
 
 async function verifyOrganizationAccess(
   appUserId: string,
-  organizationId: string
+  organizationId: string,
 ): Promise<OrganizationAccessResult> {
   const { data: organization, error: organizationError } = await supabase
     .from("organizations")
@@ -219,7 +274,7 @@ async function verifyOrganizationAccess(
       organization: null,
       errorResponse: NextResponse.json(
         { error: "Organization not found or access denied" },
-        { status: 403 }
+        { status: 403 },
       ),
     };
   }
@@ -248,7 +303,7 @@ export async function GET() {
         organization_type,
         status
       )
-    `
+    `,
     )
     .eq("owner_actor_id", personActor.id)
     .order("created_at", { ascending: false });
@@ -256,13 +311,193 @@ export async function GET() {
   if (valueObjectsError) {
     return NextResponse.json(
       { error: valueObjectsError.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
   return NextResponse.json({
     ok: true,
     valueObjects,
+  });
+}
+
+async function createDraftValueObject(
+  body: ValueObjectRequestBody,
+  appUser: AppUserRow,
+  personActor: ActorRow,
+  usageScope: UsageScope,
+) {
+  const defaults = getDraftDefaults(usageScope);
+  const organizationId = normalizeOptionalString(body.organizationId);
+  const valueType = normalizeOptionalString(body.valueType) ?? defaults.valueType;
+  const title = normalizeOptionalString(body.title) ?? defaults.title;
+  const description = normalizeOptionalString(body.description);
+  const unitType = normalizeOptionalString(body.unitType);
+  const defaultPrice = normalizeOptionalNumber(body.defaultPrice);
+  const defaultCurrency = normalizeOptionalString(body.defaultCurrency);
+  const defaultDurationMinutes = normalizeOptionalNumber(
+    body.defaultDurationMinutes,
+  );
+  const isMarketplaceSellable =
+    usageScope === "commercial" ? normalizeBoolean(body.isMarketplaceSellable) : false;
+  const isFreePossible = normalizeBoolean(body.isFreePossible);
+  const commercialUsage =
+    usageScope === "commercial" ? normalizeCommercialUsage(body.commercialUsage) : "none";
+
+  let organization: OrganizationRow | null = null;
+
+  if (usageScope === "commercial") {
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: "organizationId is required for commercial Value Object drafts" },
+        { status: 400 },
+      );
+    }
+
+    const {
+      organization: verifiedOrganization,
+      errorResponse: organizationAccessErrorResponse,
+    } = await verifyOrganizationAccess(appUser.id, organizationId);
+
+    if (organizationAccessErrorResponse) {
+      return organizationAccessErrorResponse;
+    }
+
+    organization = verifiedOrganization;
+  }
+
+  const { data: valueObject, error: valueObjectError } = await supabase
+    .from("value_objects")
+    .insert({
+      owner_actor_id: personActor.id,
+      created_by_actor_id: personActor.id,
+      actor_id: personActor.id,
+      app_user_id: appUser.id,
+      owner_user_id: appUser.id,
+      organization_id: organization?.id ?? null,
+      usage_scope: usageScope,
+      value_type: valueType,
+      title,
+      description,
+      unit_type: unitType,
+      default_price: defaultPrice,
+      default_currency: defaultCurrency,
+      default_duration_minutes: defaultDurationMinutes,
+      is_marketplace_sellable: isMarketplaceSellable,
+      is_free_possible: isFreePossible,
+      commercial_usage: commercialUsage,
+      visibility: "private",
+      source: "manual",
+      status: "draft",
+    })
+    .select(
+      `
+      *,
+      organizations (
+        id,
+        organization_name,
+        organization_type,
+        status
+      )
+    `,
+    )
+    .single();
+
+  if (valueObjectError) {
+    return NextResponse.json(
+      { error: valueObjectError.message },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    mode: "draft_first",
+    valueObject,
+    redirectUrl: buildValueObjectEditUrl(valueObject.id),
+  });
+}
+
+async function createLegacyCommercialValueObject(
+  body: ValueObjectRequestBody,
+  appUser: AppUserRow,
+  personActor: ActorRow,
+) {
+  const organizationId = normalizeRequiredString(body.organizationId);
+  const valueType = normalizeRequiredString(body.valueType);
+  const title = normalizeRequiredString(body.title);
+  const description = normalizeOptionalString(body.description);
+  const unitType = normalizeOptionalString(body.unitType);
+  const defaultPrice = normalizeOptionalNumber(body.defaultPrice);
+  const defaultCurrency = normalizeOptionalString(body.defaultCurrency);
+  const defaultDurationMinutes = normalizeOptionalNumber(
+    body.defaultDurationMinutes,
+  );
+  const isMarketplaceSellable = normalizeBoolean(body.isMarketplaceSellable);
+  const isFreePossible = normalizeBoolean(body.isFreePossible);
+
+  if (!organizationId || !valueType || !title) {
+    return NextResponse.json(
+      { error: "organizationId, valueType and title are required" },
+      { status: 400 },
+    );
+  }
+
+  const { organization, errorResponse: organizationAccessErrorResponse } =
+    await verifyOrganizationAccess(appUser.id, organizationId);
+
+  if (organizationAccessErrorResponse) {
+    return organizationAccessErrorResponse;
+  }
+
+  const { data: valueObject, error: valueObjectError } = await supabase
+    .from("value_objects")
+    .insert({
+      owner_actor_id: personActor.id,
+      created_by_actor_id: personActor.id,
+      actor_id: personActor.id,
+      app_user_id: appUser.id,
+      owner_user_id: appUser.id,
+      organization_id: organization.id,
+      usage_scope: "commercial",
+      value_type: valueType,
+      title,
+      description,
+      unit_type: unitType,
+      default_price: defaultPrice,
+      default_currency: defaultCurrency,
+      default_duration_minutes: defaultDurationMinutes,
+      is_marketplace_sellable: isMarketplaceSellable,
+      is_free_possible: isFreePossible,
+      commercial_usage: "none",
+      visibility: "private",
+      source: "manual",
+      status: "active",
+    })
+    .select(
+      `
+      *,
+      organizations (
+        id,
+        organization_name,
+        organization_type,
+        status
+      )
+    `,
+    )
+    .single();
+
+  if (valueObjectError) {
+    return NextResponse.json(
+      { error: valueObjectError.message },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    mode: "legacy_commercial_active",
+    valueObject,
   });
 }
 
@@ -280,75 +515,23 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json(
       { error: "Invalid JSON body" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  const organizationId = normalizeRequiredString(body.organizationId);
-  const valueType = normalizeRequiredString(body.valueType);
-  const title = normalizeRequiredString(body.title);
-  const description = normalizeOptionalString(body.description);
-  const unitType = normalizeOptionalString(body.unitType);
-  const defaultPrice = normalizeOptionalNumber(body.defaultPrice);
-  const defaultCurrency = normalizeOptionalString(body.defaultCurrency);
-  const defaultDurationMinutes = normalizeOptionalNumber(
-    body.defaultDurationMinutes
-  );
-  const isMarketplaceSellable = normalizeBoolean(body.isMarketplaceSellable);
-  const isFreePossible = normalizeBoolean(body.isFreePossible);
+  const usageScope = normalizeUsageScope(body.usageScope);
+  const draftModeRequested = normalizeDraftCreationMode(body.creationMode);
 
-  if (!organizationId || !valueType || !title) {
+  if (draftModeRequested && !usageScope) {
     return NextResponse.json(
-      { error: "organizationId, valueType and title are required" },
-      { status: 400 }
+      { error: "usageScope is required for draft-first Value Object creation" },
+      { status: 400 },
     );
   }
 
-  const { organization, errorResponse: organizationAccessErrorResponse } =
-    await verifyOrganizationAccess(appUser.id, organizationId);
-
-  if (organizationAccessErrorResponse) {
-    return organizationAccessErrorResponse;
+  if (usageScope) {
+    return createDraftValueObject(body, appUser, personActor, usageScope);
   }
 
-  const { data: valueObject, error: valueObjectError } = await supabase
-    .from("value_objects")
-    .insert({
-      owner_actor_id: personActor.id,
-      organization_id: organization.id,
-      value_type: valueType,
-      title,
-      description,
-      unit_type: unitType,
-      default_price: defaultPrice,
-      default_currency: defaultCurrency,
-      default_duration_minutes: defaultDurationMinutes,
-      is_marketplace_sellable: isMarketplaceSellable,
-      is_free_possible: isFreePossible,
-      status: "active",
-    })
-    .select(
-      `
-      *,
-      organizations (
-        id,
-        organization_name,
-        organization_type,
-        status
-      )
-    `
-    )
-    .single();
-
-  if (valueObjectError) {
-    return NextResponse.json(
-      { error: valueObjectError.message },
-      { status: 500 }
-    );
-  }
-
-  return NextResponse.json({
-    ok: true,
-    valueObject,
-  });
+  return createLegacyCommercialValueObject(body, appUser, personActor);
 }
