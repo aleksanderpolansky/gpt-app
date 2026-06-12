@@ -524,7 +524,7 @@ export async function analyzeObjectActionSuggestion(
     const response = await openai.responses.create({
       model: aiModel,
       reasoning: {
-        effort: "minimal",
+        effort: "low",
       },
       input: [
         {

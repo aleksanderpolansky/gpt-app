@@ -48,3 +48,8 @@ next-env.d.ts
 _local_artifacts/
 _glossary_stage1_inventory_*/
 _glossary_stage1_inventory_*.zip
+
+# AI Navigator / AVO local generated reports
+AVO_STEP*.txt
+AVO_STEP*.json
+_ai_work_reports/

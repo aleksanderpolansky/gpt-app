@@ -99,7 +99,7 @@ export async function runAiJson<T = unknown>({
   const response = await openai.responses.create({
     model: model || OPENAI_DEFAULT_MODEL,
     reasoning: {
-      effort: "minimal",
+      effort: "low",
     },
     input: [
       {

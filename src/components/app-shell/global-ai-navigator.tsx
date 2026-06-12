@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import {
   Activity,
   HelpCircle,
@@ -32,67 +32,29 @@ export const UI_MINI_FIX_ACTIVITY_COMPOSER_ON_DEMAND_IN_GLOBAL_AI =
   "UI_MINI_FIX_ACTIVITY_COMPOSER_ON_DEMAND_IN_GLOBAL_AI" as const;
 
 function ActivityComposer() {
-  const { addActivityPreview } = useAiNavigator();
-  const [activityText, setActivityText] = useState("");
-
-  function submitActivity(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const trimmedText = activityText.trim();
-
-    if (!trimmedText) {
-      return;
-    }
-
-    addActivityPreview(trimmedText);
-    setActivityText("");
-  }
+  const { setInput } = useAiNavigator();
 
   return (
     <section className="rounded-xl border border-[#3b6ef8]/15 bg-gradient-to-br from-[#eef2ff] to-[#f5f0ff] p-3">
       <div className="mb-2 flex items-center gap-1.5">
         <Activity size={12} className="text-[#3b6ef8]" />
         <span className="text-[10.5px] font-semibold uppercase tracking-wide text-[#3b6ef8]">
-          Ввод активности
+          Единый ввод сообщений
         </span>
       </div>
 
       <p className="mb-2 text-[12px] leading-relaxed text-[#3d3657]">
-        Local preview: без DB write, без создания Activity Event. История панели
-        сохраняется в localStorage этого браузера.
+        Все действия вводятся через нижнее поле “Напишите сообщение”. Быстрые
+        примеры ниже только подставляют текст в единый composer и не создают
+        отдельную точку входа.
       </p>
-
-      <form onSubmit={submitActivity} className="space-y-2">
-        <textarea
-          value={activityText}
-          onChange={(event) => setActivityText(event.target.value)}
-          placeholder="Например: 25 минут немецкий, 8 подтягиваний, звонок клиенту..."
-          className="min-h-[82px] w-full resize-none rounded-xl border border-[rgba(0,0,0,0.07)] bg-white px-3 py-2 text-[12.5px] leading-relaxed text-[#1a1d2e] placeholder-[#b0b4c8] transition-all focus:border-[#3b6ef8] focus:outline-none"
-        />
-
-        <div className="flex gap-1.5">
-          <button
-            type="submit"
-            className="flex-1 rounded-lg bg-[#3b6ef8] px-3 py-2 text-[11.5px] font-semibold text-white transition-colors hover:bg-[#2c5df0]"
-          >
-            Разобрать
-          </button>
-          <button
-            type="button"
-            onClick={() => setActivityText("")}
-            className="rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 py-2 text-[11.5px] font-semibold text-[#5a5f7a] transition-colors hover:bg-[#f5f6fb]"
-          >
-            Очистить
-          </button>
-        </div>
-      </form>
 
       <div className="mt-2 flex flex-wrap gap-1.5">
         {ACTIVITY_EXAMPLES.map((example) => (
           <button
             key={example}
             type="button"
-            onClick={() => setActivityText(example)}
+            onClick={() => setInput(example)}
             className="rounded-full border border-[#3b6ef8]/15 bg-white px-2 py-1 text-[10px] font-medium text-[#5a5f7a] transition-all hover:border-[#3b6ef8]/30 hover:text-[#3b6ef8]"
           >
             {example}
@@ -103,12 +65,58 @@ function ActivityComposer() {
   );
 }
 
+function FormattedMessageContent({ text }: { text: string }) {
+  const normalizedText = text.replace(/\r\n/g, "\n").trim();
+
+  if (!normalizedText) {
+    return null;
+  }
+
+  const lines = normalizedText
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return (
+    <span className="block space-y-2">
+      {lines.map((line, index) => {
+        const lowerLine = line.toLowerCase();
+        const isCommandLine = line.startsWith("—") || line.startsWith("-");
+        const isImportantLine =
+          lowerLine.startsWith("текст:") ||
+          lowerLine.startsWith("длительность:") ||
+          lowerLine.startsWith("intent:") ||
+          lowerLine.startsWith("confidence:") ||
+          lowerLine.startsWith("category candidates:") ||
+          lowerLine.startsWith("value object candidates:") ||
+          lowerLine.startsWith("статус:") ||
+          lowerLine.startsWith("db write") ||
+          lowerLine.startsWith("service log");
+
+        return (
+          <span
+            key={`message-line-${index}-${line.slice(0, 32)}`}
+            className={[
+              "block whitespace-pre-wrap break-words",
+              isCommandLine ? "border-l-2 border-[#3b6ef8]/30 pl-2 text-[#3b6ef8]" : "",
+              isImportantLine ? "font-medium text-[#1f2a44]" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {line}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
 function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
         <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-[#3b6ef8] px-3 py-2 text-[12px] leading-relaxed text-white">
-          {message.text}
+          <FormattedMessageContent text={message.text} />
         </div>
       </div>
     );
@@ -124,7 +132,7 @@ function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
           </span>
         </div>
         <p className="text-[12px] leading-relaxed text-red-700">
-          {message.text}
+          <FormattedMessageContent text={message.text} />
         </p>
         {message.text.includes("Нужно войти") ? (
           <a
@@ -147,8 +155,8 @@ function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
             Activity preview
           </span>
         </div>
-        <p className="text-[12px] leading-relaxed text-[#2d3047]">
-          {message.text}
+        <p className="whitespace-pre-line text-[12px] leading-relaxed text-[#2d3047]">
+          <FormattedMessageContent text={message.text} />
         </p>
       </div>
     );
@@ -163,8 +171,8 @@ function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
             Контекст
           </span>
         </div>
-        <p className="text-[12px] leading-relaxed text-[#3d3657]">
-          {message.text}
+        <p className="whitespace-pre-line text-[12px] leading-relaxed text-[#3d3657]">
+          <FormattedMessageContent text={message.text} />
         </p>
       </div>
     );
@@ -179,8 +187,8 @@ function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
             Рекомендация
           </span>
         </div>
-        <p className="text-[12px] leading-relaxed text-[#1a3d2e]">
-          {message.text}
+        <p className="whitespace-pre-line text-[12px] leading-relaxed text-[#1a3d2e]">
+          <FormattedMessageContent text={message.text} />
         </p>
       </div>
     );
@@ -191,8 +199,8 @@ function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
       <div className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#3b6ef8]">
         <Sparkles size={9} className="text-white" />
       </div>
-      <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-[#f5f6fb] px-3 py-2 text-[12px] leading-relaxed text-[#2d3047]">
-        {message.text}
+      <div className="max-w-[85%] whitespace-pre-line rounded-2xl rounded-tl-sm bg-[#f5f6fb] px-3 py-2 text-[12px] leading-relaxed text-[#2d3047]">
+        <FormattedMessageContent text={message.text} />
       </div>
     </div>
   );
