@@ -228,9 +228,536 @@ function hasAvoDurationSignal(text: string): boolean {
   return /(\d+)\s*(min|m|h)\b/i.test(text);
 }
 
+
+type AvoGeneralActivityCandidateKind =
+  | "obvious_activity"
+  | "ambiguous_activity"
+  | "ordinary_chat"
+  | "dual_intent_question_activity";
+
+type AvoGeneralActivityCandidate = {
+  kind: AvoGeneralActivityCandidateKind;
+  score: number;
+  reasons: string[];
+};
+
+const AVO_GENERAL_NO_SAVE_MARKERS: readonly string[] = [
+  "\u043d\u0435 \u0437\u0430\u043f\u0438\u0441\u044b\u0432\u0430\u0439",
+  "\u043d\u0435 \u0437\u0430\u043f\u0438\u0448\u0438",
+  "\u043d\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u044f\u0439",
+  "\u043d\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0438",
+  "\u044d\u0442\u043e \u043d\u0435 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
+  "do not record",
+  "do not save",
+  "dont record",
+  "dont save",
+  "no guardar",
+  "no guardes",
+  "nicht speichern",
+  "nie zapisuj",
+  "nie zapisywac",
+];
+
+const AVO_GENERAL_FUTURE_PLAN_MARKERS: readonly string[] = [
+  "\u0431\u0443\u0434\u0443",
+  "\u0431\u0443\u0434\u0435\u043c",
+  "\u0437\u0430\u0432\u0442\u0440\u0430",
+  "\u043f\u043b\u0430\u043d\u0438\u0440\u0443\u044e",
+  "\u0441\u043e\u0431\u0438\u0440\u0430\u044e\u0441\u044c",
+  "\u0445\u043e\u0447\u0443",
+  "\u043d\u0430\u0434\u043e",
+  "\u043d\u0443\u0436\u043d\u043e",
+  "i will",
+  "going to",
+  "tomorrow",
+  "voy a",
+  "planeo",
+  "werde",
+  "morgen",
+  "planuje",
+  "jutro",
+];
+
+const AVO_GENERAL_SELF_MARKERS: readonly string[] = [
+  "\u044f ",
+  "\u043c\u043d\u0435 ",
+  "\u043c\u0435\u043d\u044f ",
+  "i ",
+  "my ",
+  "yo ",
+  "ich ",
+  "mir ",
+  "mich ",
+  "ja ",
+  "mnie ",
+];
+
+const AVO_GENERAL_SLEEP_MARKERS: readonly string[] = [
+  "\u0441\u043f\u0430\u043b",
+  "\u0441\u043f\u0430\u043b\u0430",
+  "\u0441\u043f\u0430\u043b\u0438",
+  "\u043f\u043e\u0441\u043f\u0430\u043b",
+  "\u043f\u043e\u0441\u043f\u0430\u043b\u0430",
+  "\u0441\u043e\u043d",
+  "\u0441\u043d\u0430",
+  "sleep",
+  "slept",
+  "dormi",
+  "dormido",
+  "geschlafen",
+  "schlaf",
+  "spalem",
+  "spalam",
+  "spanie",
+  "sen",
+];
+
+const AVO_GENERAL_STATE_MARKERS: readonly string[] = [
+  "\u0443\u0441\u0442\u0430\u043b",
+  "\u0443\u0441\u0442\u0430\u043b\u0430",
+  "\u0443\u0441\u0442\u0430\u043b\u043e\u0441\u0442\u044c",
+  "\u0431\u043e\u043b\u0435\u043b",
+  "\u0431\u043e\u043b\u0435\u043b\u0430",
+  "\u0431\u043e\u043b\u0438\u0442",
+  "\u0433\u043e\u043b\u043e\u0432\u0430",
+  "\u0441\u0430\u043c\u043e\u0447\u0443\u0432\u0441\u0442\u0432\u0438\u0435",
+  "tired",
+  "fatigue",
+  "headache",
+  "dolor",
+  "cansado",
+  "cansada",
+  "mude",
+  "muede",
+  "bol",
+  "zmeczony",
+  "zmeczona",
+];
+
+const AVO_GENERAL_ACTION_MARKERS: readonly string[] = [
+  "\u0440\u0430\u0431\u043e\u0442\u0430\u043b",
+  "\u0440\u0430\u0431\u043e\u0442\u0430\u043b\u0430",
+  "\u0443\u0447\u0438\u043b",
+  "\u0443\u0447\u0438\u043b\u0430",
+  "\u0443\u0447\u0438\u043b\u0441\u044f",
+  "\u0437\u0430\u043d\u0438\u043c\u0430\u043b\u0441\u044f",
+  "\u0437\u0430\u043d\u0438\u043c\u0430\u043b\u0430\u0441\u044c",
+  "\u0447\u0438\u0442\u0430\u043b",
+  "\u0447\u0438\u0442\u0430\u043b\u0430",
+  "\u0441\u043b\u0443\u0448\u0430\u043b",
+  "\u0441\u043b\u0443\u0448\u0430\u043b\u0430",
+  "\u0441\u043c\u043e\u0442\u0440\u0435\u043b",
+  "\u0441\u043c\u043e\u0442\u0440\u0435\u043b\u0430",
+  "\u0433\u0443\u043b\u044f\u043b",
+  "\u0433\u0443\u043b\u044f\u043b\u0430",
+  "\u0448\u0435\u043b",
+  "\u0448\u043b\u0430",
+  "\u0435\u0445\u0430\u043b",
+  "\u0435\u0445\u0430\u043b\u0430",
+  "\u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u0430\u043b\u0441\u044f",
+  "\u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u0430\u043b\u0430\u0441\u044c",
+  "\u0434\u0435\u043b\u0430\u043b",
+  "\u0434\u0435\u043b\u0430\u043b\u0430",
+  "\u0441\u0434\u0435\u043b\u0430\u043b",
+  "\u0441\u0434\u0435\u043b\u0430\u043b\u0430",
+  "\u0435\u043b",
+  "\u0435\u043b\u0430",
+  "\u043f\u0438\u043b",
+  "\u043f\u0438\u043b\u0430",
+  "worked",
+  "studied",
+  "learned",
+  "read",
+  "watched",
+  "listened",
+  "walked",
+  "trained",
+  "exercised",
+  "ate",
+  "drank",
+  "trabaje",
+  "estudie",
+  "aprendi",
+  "camine",
+  "entrene",
+  "comi",
+  "bebi",
+  "arbeitete",
+  "gelernt",
+  "gelesen",
+  "gehort",
+  "gesehen",
+  "gegangen",
+  "trainiert",
+  "gegessen",
+  "getrunken",
+  "pracowalem",
+  "pracowalam",
+  "uczylem",
+  "uczylam",
+  "czytalem",
+  "czytalam",
+  "spacerowalem",
+  "spacerowalam",
+  "trenowalem",
+  "trenowalam",
+  "jadlem",
+  "jadlam",
+];
+
+const AVO_GENERAL_COMPLETED_RESULT_MARKERS: readonly string[] = [
+  "\u0441\u0434\u0435\u043b\u0430\u043b",
+  "\u0441\u0434\u0435\u043b\u0430\u043b\u0430",
+  "\u0437\u0430\u043a\u043e\u043d\u0447\u0438\u043b",
+  "\u0437\u0430\u043a\u043e\u043d\u0447\u0438\u043b\u0430",
+  "\u043f\u0440\u043e\u0448\u0435\u043b",
+  "\u043f\u0440\u043e\u0448\u043b\u0430",
+  "\u043f\u0440\u043e\u0447\u0438\u0442\u0430\u043b",
+  "\u043f\u0440\u043e\u0447\u0438\u0442\u0430\u043b\u0430",
+  "\u043d\u0430\u043f\u0438\u0441\u0430\u043b",
+  "\u043d\u0430\u043f\u0438\u0441\u0430\u043b\u0430",
+  "\u043e\u0442\u043f\u0440\u0430\u0432\u0438\u043b",
+  "\u043e\u0442\u043f\u0440\u0430\u0432\u0438\u043b\u0430",
+  "finished",
+  "completed",
+  "sent",
+  "wrote",
+  "termine",
+  "complete",
+  "beendet",
+  "fertig",
+  "skonczylem",
+  "skonczylam",
+  "wyslalem",
+  "wyslalam",
+];
+
+const AVO_GENERAL_TIME_MARKERS: readonly string[] = [
+  "\u0441\u0435\u0433\u043e\u0434\u043d\u044f",
+  "\u0432\u0447\u0435\u0440\u0430",
+  "\u0443\u0442\u0440\u043e\u043c",
+  "\u0434\u043d\u0435\u043c",
+  "\u0434\u043d\u0451\u043c",
+  "\u0432\u0435\u0447\u0435\u0440\u043e\u043c",
+  "\u043d\u043e\u0447\u044c\u044e",
+  "today",
+  "yesterday",
+  "morning",
+  "evening",
+  "ayer",
+  "hoy",
+  "gestern",
+  "heute",
+  "wczoraj",
+  "dzisiaj",
+];
+
+const AVO_GENERAL_QUESTION_MARKERS: readonly string[] = [
+  "?",
+  "\u0447\u0442\u043e ",
+  "\u043a\u0430\u043a ",
+  "\u043f\u043e\u0447\u0435\u043c\u0443 ",
+  "\u043d\u043e\u0440\u043c\u0430\u043b\u044c\u043d\u043e",
+  "what ",
+  "how ",
+  "why ",
+  "normal",
+  "que ",
+  "como ",
+  "warum ",
+  "czy ",
+  "jak ",
+];
+
+function normalizeAvoGeneralSearchText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function hasAvoGeneralMarker(text: string, markers: readonly string[]): boolean {
+  return markers.some((marker) => text.includes(marker));
+}
+
+function hasAvoGeneralPastActionShape(text: string): boolean {
+  return /\b[\p{L}]{3,}(?:\u043b|\u043b\u0430|\u043b\u0438|\u043b\u0441\u044f|\u043b\u0430\u0441\u044c)\b/iu.test(text);
+}
+
+function hasAvoGeneralDurationSignal(text: string): boolean {
+  if (hasAvoDurationSignal(text)) {
+    return true;
+  }
+
+  return /\b\d{1,2}[:.]\d{2}\b/.test(text);
+}
+
+function parseAvoGeneralNumber(value: string): number | null {
+  const parsed = Number.parseFloat(value.replace(",", "."));
+
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function inferAvoGeneralDurationMinutes(text: string): number | null {
+  const lowerText = normalizeAvoGeneralSearchText(text);
+
+  if (hasAvoUnicodeMarker(lowerText, AVO_RU_HALF_HOUR_MARKERS)) {
+    return 30;
+  }
+
+  if (lowerText.includes("\u043f\u043e\u043b\u0442\u043e\u0440\u0430 \u0447\u0430\u0441\u0430")) {
+    return 90;
+  }
+
+  const clockMatch = lowerText.match(/\b(\d{1,2})[:.](\d{2})\b/);
+  if (clockMatch) {
+    const hours = Number.parseInt(clockMatch[1] ?? "", 10);
+    const minutes = Number.parseInt(clockMatch[2] ?? "", 10);
+
+    if (
+      Number.isFinite(hours) &&
+      Number.isFinite(minutes) &&
+      hours >= 0 &&
+      hours <= 24 &&
+      minutes >= 0 &&
+      minutes < 60
+    ) {
+      return hours * 60 + minutes;
+    }
+  }
+
+  let totalMinutes = 0;
+
+  const hourRegex = /(\d+(?:[.,]\d+)?)\s*(?:\u0447\u0430\u0441|\u0447\u0430\u0441\u0430|\u0447\u0430\u0441\u043e\u0432|h|hour|hours|hora|horas|stunde|stunden|godzin|godziny)\b/giu;
+  let hourMatch = hourRegex.exec(lowerText);
+  while (hourMatch !== null) {
+    const value = parseAvoGeneralNumber(hourMatch[1] ?? "");
+    if (value !== null) {
+      totalMinutes += value * 60;
+    }
+
+    hourMatch = hourRegex.exec(lowerText);
+  }
+
+  const minuteRegex = /(\d+(?:[.,]\d+)?)\s*(?:\u043c\u0438\u043d|\u043c\u0438\u043d\u0443\u0442|\u043c\u0438\u043d\u0443\u0442\u044b|min|mins|minute|minutes|minuto|minutos|minuten|minuty|minut)\b/giu;
+  let minuteMatch = minuteRegex.exec(lowerText);
+  while (minuteMatch !== null) {
+    const value = parseAvoGeneralNumber(minuteMatch[1] ?? "");
+    if (value !== null) {
+      totalMinutes += value;
+    }
+
+    minuteMatch = minuteRegex.exec(lowerText);
+  }
+
+  if (totalMinutes > 0 && totalMinutes <= 1440) {
+    return Math.round(totalMinutes);
+  }
+
+  return null;
+}
+
+function inferAvoGeneralActivityTitle(text: string): string | null {
+  const lowerText = normalizeAvoGeneralSearchText(text);
+
+  if (hasAvoGeneralMarker(lowerText, AVO_GENERAL_SLEEP_MARKERS)) {
+    return "\u0421\u043e\u043d";
+  }
+
+  if (
+    hasAvoGeneralMarker(lowerText, [
+      "\u0440\u0430\u0431\u043e\u0442\u0430\u043b",
+      "\u0440\u0430\u0431\u043e\u0442\u0430\u043b\u0430",
+      "worked",
+      "arbeitete",
+      "pracowalem",
+      "pracowalam",
+    ])
+  ) {
+    return "\u0420\u0430\u0431\u043e\u0442\u0430";
+  }
+
+  if (
+    hasAvoGeneralMarker(lowerText, [
+      "\u0443\u0447\u0438\u043b",
+      "\u0443\u0447\u0438\u043b\u0430",
+      "\u0437\u0430\u043d\u0438\u043c\u0430\u043b\u0441\u044f",
+      "\u0437\u0430\u043d\u0438\u043c\u0430\u043b\u0430\u0441\u044c",
+      "studied",
+      "learned",
+      "gelernt",
+      "uczylem",
+      "uczylam",
+    ])
+  ) {
+    return "\u041e\u0431\u0443\u0447\u0435\u043d\u0438\u0435";
+  }
+
+  if (
+    hasAvoGeneralMarker(lowerText, [
+      "\u0433\u0443\u043b\u044f\u043b",
+      "\u0433\u0443\u043b\u044f\u043b\u0430",
+      "walked",
+      "spacerowalem",
+      "spacerowalam",
+    ])
+  ) {
+    return "\u041f\u0440\u043e\u0433\u0443\u043b\u043a\u0430";
+  }
+
+  if (
+    hasAvoGeneralMarker(lowerText, [
+      "\u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u0430\u043b\u0441\u044f",
+      "\u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u0430\u043b\u0430\u0441\u044c",
+      "trained",
+      "exercised",
+      "trainiert",
+      "trenowalem",
+      "trenowalam",
+    ])
+  ) {
+    return "\u0422\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u043a\u0430";
+  }
+
+  if (hasAvoGeneralMarker(lowerText, AVO_GENERAL_STATE_MARKERS)) {
+    return "\u0421\u0430\u043c\u043e\u0447\u0443\u0432\u0441\u0442\u0432\u0438\u0435";
+  }
+
+  return null;
+}
+
+function detectGeneralActivityCandidate(message: string): AvoGeneralActivityCandidate {
+  const normalizedText = message.trim();
+  const searchText = normalizeAvoGeneralSearchText(normalizedText);
+  const reasons: string[] = [];
+  let score = 0;
+
+  if (!normalizedText) {
+    return { kind: "ordinary_chat", score: 0, reasons: ["empty message"] };
+  }
+
+  if (hasAvoGeneralMarker(searchText, AVO_GENERAL_NO_SAVE_MARKERS)) {
+    return { kind: "ordinary_chat", score: 0, reasons: ["explicit no-save guard"] };
+  }
+
+  if (hasAvoGeneralMarker(searchText, AVO_GENERAL_FUTURE_PLAN_MARKERS)) {
+    return {
+      kind: "ordinary_chat",
+      score: 0.18,
+      reasons: ["future/plan marker; not a completed activity"],
+    };
+  }
+
+  const hasQuestionSignal =
+    normalizedText.includes("?") ||
+    hasAvoGeneralMarker(searchText, AVO_GENERAL_QUESTION_MARKERS);
+  const hasDuration = hasAvoGeneralDurationSignal(searchText);
+  const hasSleep = hasAvoGeneralMarker(searchText, AVO_GENERAL_SLEEP_MARKERS);
+  const hasState = hasAvoGeneralMarker(searchText, AVO_GENERAL_STATE_MARKERS);
+  const hasSelf = hasAvoGeneralMarker(searchText, AVO_GENERAL_SELF_MARKERS);
+  const hasAction = hasAvoGeneralMarker(searchText, AVO_GENERAL_ACTION_MARKERS);
+  const hasCompletedResult = hasAvoGeneralMarker(
+    searchText,
+    AVO_GENERAL_COMPLETED_RESULT_MARKERS,
+  );
+  const hasTime = hasAvoGeneralMarker(searchText, AVO_GENERAL_TIME_MARKERS);
+  const hasPastActionShape = hasAvoGeneralPastActionShape(searchText);
+
+  if (hasDuration) {
+    score += 0.35;
+    reasons.push("duration marker");
+  }
+
+  if (hasSleep) {
+    score += 0.45;
+    reasons.push("sleep/recovery marker");
+  }
+
+  if (hasAction) {
+    score += 0.35;
+    reasons.push("completed/self action marker");
+  }
+
+  if (hasCompletedResult) {
+    score += 0.3;
+    reasons.push("completed-result marker");
+  }
+
+  if (hasPastActionShape) {
+    score += 0.24;
+    reasons.push("past-action word shape");
+  }
+
+  if (hasSelf) {
+    score += 0.15;
+    reasons.push("self/implied-user marker");
+  }
+
+  if (hasTime) {
+    score += 0.12;
+    reasons.push("time marker");
+  }
+
+  if (hasState) {
+    score += 0.24;
+    reasons.push("state/health marker");
+  }
+
+  const looksLikeSelfFact =
+    hasSleep ||
+    hasAction ||
+    hasState ||
+    hasCompletedResult ||
+    (hasPastActionShape && (hasDuration || hasSelf || hasTime));
+
+  if (hasQuestionSignal && looksLikeSelfFact) {
+    return {
+      kind: "dual_intent_question_activity",
+      score: Math.min(0.95, score + 0.12),
+      reasons: [...reasons, "question + self activity/state fact"],
+    };
+  }
+
+  if (score >= 0.62 && looksLikeSelfFact) {
+    return {
+      kind: "obvious_activity",
+      score: Math.min(0.95, score),
+      reasons,
+    };
+  }
+
+  if (score >= 0.38 && looksLikeSelfFact) {
+    return {
+      kind: "ambiguous_activity",
+      score,
+      reasons,
+    };
+  }
+
+  return {
+    kind: "ordinary_chat",
+    score,
+    reasons: reasons.length > 0 ? reasons : ["no activity candidate signal"],
+  };
+}
+
 function classifyAvoCyrillicRouteOverride(
   normalizedText: string,
 ): UnifiedMessageClassification | null {
+  const lowerText = normalizeAvoGeneralSearchText(normalizedText);
+
+  if (hasAvoGeneralMarker(lowerText, AVO_GENERAL_NO_SAVE_MARKERS)) {
+    return {
+      intent: "cancel",
+      confidence: 0.96,
+      reason: "Explicit no-save / do-not-record guard recognized.",
+      normalizedText,
+    };
+  }
   if (hasAvoUnicodeMarker(normalizedText, AVO_RU_CONFIRMATION_MARKERS)) {
     return {
       intent: "confirmation",
@@ -296,6 +823,12 @@ function classifyAvoCyrillicRouteOverride(
 function inferActivityRecordPayloadDurationMinutes(
   preview: LocalPendingPreview,
 ): number | null {
+  const generalDurationMinutes = inferAvoGeneralDurationMinutes(
+    [preview.duration ?? "", preview.text].filter(Boolean).join(" "),
+  );
+  if (generalDurationMinutes !== null) {
+    return generalDurationMinutes;
+  }
   const source = `${preview.duration ?? ""} ${preview.text}`.toLowerCase();
 
   // AVO_STEP20_9_2_DURATION_PATCH
@@ -335,6 +868,10 @@ function inferActivityRecordPayloadDurationMinutes(
 }
 
 function inferActivityRecordPayloadTitle(preview: LocalPendingPreview): string {
+  const generalTitle = inferAvoGeneralActivityTitle(preview.text);
+  if (generalTitle !== null) {
+    return generalTitle;
+  }
   const text = preview.text.toLowerCase();
 
   // AVO_STEP20_9_2_TITLE_PATCH
@@ -462,6 +999,20 @@ function classifyUnifiedMessage(message: string): UnifiedMessageClassification {
     return cyrillicRouteOverride;
   }
 
+
+  const generalActivityCandidate = detectGeneralActivityCandidate(normalizedText);
+  if (
+    generalActivityCandidate.kind === "obvious_activity" ||
+    generalActivityCandidate.kind === "dual_intent_question_activity" ||
+    generalActivityCandidate.kind === "ambiguous_activity"
+  ) {
+    return {
+      intent: "activity_preview",
+      confidence: generalActivityCandidate.score,
+      reason: `General activity candidate (${generalActivityCandidate.kind}): ${generalActivityCandidate.reasons.join(", ")}.`,
+      normalizedText,
+    };
+  }
   const lowerText = normalizedText.toLowerCase();
 
   const hasQuestionMark = normalizedText.includes("?");
