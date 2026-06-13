@@ -168,19 +168,24 @@ export default function NewValueObjectPage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <Link
                 href="/value-objects"
-                className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
               >
                 Все Value Objects
               </Link>
-
               <Link
                 href="/workspace"
-                className="rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] shadow-sm transition hover:bg-[#e2e8ff]"
               >
                 Workspace
+              </Link>
+              <Link
+                href="/value-objects/characteristics-rollup-preview"
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#86efac] bg-[#dcfce7] px-4 py-3 text-[13px] font-bold text-[#047857] shadow-sm transition hover:bg-[#bbf7d0]"
+              >
+                Characteristics model
               </Link>
             </div>
           </div>
