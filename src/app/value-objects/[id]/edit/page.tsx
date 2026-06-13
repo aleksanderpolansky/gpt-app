@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { ValueObjectDraftReadPanel } from "../../../../components/workspace/value-objects/value-object-draft-read-panel";
+
 type ValueObjectEditPageProps = {
   params: Promise<{
     id: string;
@@ -107,6 +109,8 @@ export default async function ValueObjectEditPage({
             </p>
           </div>
         </section>
+
+        <ValueObjectDraftReadPanel valueObjectId={id} />
 
         <section className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
