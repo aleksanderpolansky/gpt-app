@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
 import {
@@ -360,7 +360,29 @@ export function GlobalSidebar() {
           </p>
         </div>
 
-        <SidebarMainItem icon={Clock} label="Время" href="/today" />
+        <ExpandableSidebarItem icon={Clock} label="Время" defaultOpen>
+          <TreeItem
+            label="Календарь"
+            depth={1}
+            href="/calendar"
+            actionHref="/calendar/new"
+            actionTitle="Добавить ивент календаря"
+          />
+          <TreeItem
+            label="Мои ценные объекты"
+            depth={1}
+            href="/value-objects"
+            actionHref="/value-objects/new"
+            actionTitle="Добавить частный ценный объект"
+          />
+          <TreeItem
+            label="Мой лог активностей"
+            depth={1}
+            href="/activity-today"
+            actionHref="/activity-capture"
+            actionTitle="Добавить активность"
+          />
+        </ExpandableSidebarItem>
 
         <ExpandableSidebarItem icon={Wallet} label="Деньги" defaultOpen>
           <TreeItem label="Бизнес" depth={1} defaultOpen>
