@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ValueObjectDraftReadPanel } from "../../../../components/workspace/value-objects/value-object-draft-read-panel";
+import { ValueObjectDraftTitleEditor } from "../../../../components/workspace/value-objects/value-object-draft-title-editor";
 
 type ValueObjectEditPageProps = {
   params: Promise<{
@@ -109,6 +110,8 @@ export default async function ValueObjectEditPage({
             </p>
           </div>
         </section>
+
+        <ValueObjectDraftTitleEditor valueObjectId={id} />
 
         <ValueObjectDraftReadPanel valueObjectId={id} />
 

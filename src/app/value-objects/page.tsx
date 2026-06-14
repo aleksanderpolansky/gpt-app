@@ -1,6 +1,7 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 
+import { ActualValueObjectsList } from "@/components/workspace/value-objects/actual-value-objects-list";
 import { ValueObjectsPanel } from "@/components/workspace/value-objects/value-objects-panel";
 
 export const metadata: Metadata = {
@@ -23,6 +24,10 @@ export default function ValueObjectsPage() {
                 </Link>
               </div>
         
+              <div className="mx-auto max-w-7xl px-6 pt-6">
+                <ActualValueObjectsList />
+              </div>
+
               <ValueObjectsPanel />
             </div>
       </div>
