@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 
@@ -22,6 +22,7 @@ type ActorRow = {
 
 type ValueObjectRow = {
   id: string;
+  parent_value_object_id?: string | null;
   owner_actor_id?: string | null;
   created_by_actor_id?: string | null;
   actor_id?: string | null;
@@ -84,6 +85,7 @@ type DraftPatchResult =
 
 const VALUE_OBJECT_SELECT = `
   id,
+  parent_value_object_id,
   owner_actor_id,
   created_by_actor_id,
   actor_id,
@@ -113,6 +115,7 @@ const VALUE_OBJECT_SELECT = `
 `;
 
 const ALLOWED_PATCH_KEYS = new Set([
+  "parentValueObjectId",
   "valueType",
   "title",
   "description",
@@ -439,6 +442,30 @@ function addStringPatchField(
   return null;
 }
 
+function addParentValueObjectPatchField(
+  patch: Record<string, string | number | boolean | null>,
+  body: DraftPatchBody,
+) {
+  if (!Object.prototype.hasOwnProperty.call(body, "parentValueObjectId")) {
+    return null;
+  }
+
+  const raw = body.parentValueObjectId;
+
+  if (raw === null || raw === "") {
+    patch.parent_value_object_id = null;
+    return null;
+  }
+
+  const normalizedParentValueObjectId = normalizeValueObjectId(raw);
+
+  if (!normalizedParentValueObjectId) {
+    return "parentValueObjectId must be a Value Object id or null";
+  }
+
+  patch.parent_value_object_id = normalizedParentValueObjectId;
+  return null;
+}
 function addNumberPatchField(
   patch: Record<string, string | number | boolean | null>,
   body: DraftPatchBody,
@@ -562,6 +589,21 @@ function buildDraftPatch(
     };
   }
 
+  const parentValueObjectFieldError = addParentValueObjectPatchField(
+    patch,
+    draftBody,
+  );
+
+  if (parentValueObjectFieldError) {
+    return {
+      patch: null,
+      errorResponse: NextResponse.json(
+        { error: parentValueObjectFieldError },
+        { status: 400 },
+      ),
+    };
+  }
+
   const numberFieldErrors = [
     addNumberPatchField(patch, draftBody, "defaultPrice", "default_price"),
     addNumberPatchField(
@@ -668,6 +710,109 @@ function buildDraftPatch(
   };
 }
 
+async function wouldCreateParentValueObjectCycle(
+  candidateParentValueObject: ValueObjectRow,
+  childValueObjectId: string,
+  appUser: AppUserRow,
+  personActor: ActorRow,
+): Promise<boolean> {
+  let currentParentValueObjectId =
+    candidateParentValueObject.parent_value_object_id ?? null;
+  const visitedParentIds = new Set<string>();
+
+  for (let depth = 0; depth < 50; depth += 1) {
+    if (!currentParentValueObjectId) {
+      return false;
+    }
+
+    if (currentParentValueObjectId === childValueObjectId) {
+      return true;
+    }
+
+    if (visitedParentIds.has(currentParentValueObjectId)) {
+      return true;
+    }
+
+    visitedParentIds.add(currentParentValueObjectId);
+
+    const {
+      valueObject: currentParentValueObject,
+      errorResponse: currentParentReadErrorResponse,
+    } = await readOwnedValueObject(
+      currentParentValueObjectId,
+      appUser,
+      personActor,
+    );
+
+    if (currentParentReadErrorResponse || !currentParentValueObject) {
+      return true;
+    }
+
+    currentParentValueObjectId =
+      currentParentValueObject.parent_value_object_id ?? null;
+  }
+
+  return true;
+}
+
+async function validateParentValueObjectPatch(
+  patch: Record<string, string | number | boolean | null>,
+  valueObject: ValueObjectRow,
+  appUser: AppUserRow,
+  personActor: ActorRow,
+): Promise<NextResponse | null> {
+  if (!Object.prototype.hasOwnProperty.call(patch, "parent_value_object_id")) {
+    return null;
+  }
+
+  const parentValueObjectId = patch.parent_value_object_id;
+
+  if (parentValueObjectId === null) {
+    return null;
+  }
+
+  if (typeof parentValueObjectId !== "string") {
+    return NextResponse.json(
+      { error: "parentValueObjectId must be a Value Object id or null" },
+      { status: 400 },
+    );
+  }
+
+  if (parentValueObjectId === valueObject.id) {
+    return NextResponse.json(
+      { error: "Value Object cannot be its own parent" },
+      { status: 400 },
+    );
+  }
+
+  const {
+    valueObject: parentValueObject,
+    errorResponse: parentReadErrorResponse,
+  } = await readOwnedValueObject(parentValueObjectId, appUser, personActor);
+
+  if (parentReadErrorResponse || !parentValueObject) {
+    return NextResponse.json(
+      { error: "Parent Value Object not found or access denied" },
+      { status: 400 },
+    );
+  }
+
+  const createsCycle = await wouldCreateParentValueObjectCycle(
+    parentValueObject,
+    valueObject.id,
+    appUser,
+    personActor,
+  );
+
+  if (createsCycle) {
+    return NextResponse.json(
+      { error: "Parent Value Object relationship would create a cycle" },
+      { status: 400 },
+    );
+  }
+
+  return null;
+}
 export async function GET(_request: Request, context: ValueObjectRouteContext) {
   const { id: rawId } = await context.params;
   const valueObjectId = normalizeValueObjectId(rawId);
@@ -747,6 +892,17 @@ export async function PATCH(request: Request, context: ValueObjectRouteContext) 
     return patchErrorResponse;
   }
 
+  const parentValueObjectPatchErrorResponse =
+    await validateParentValueObjectPatch(
+      patch,
+      valueObject,
+      appUser,
+      personActor,
+    );
+
+  if (parentValueObjectPatchErrorResponse) {
+    return parentValueObjectPatchErrorResponse;
+  }
   const { data: updatedValueObjectData, error: updateError } = await supabase
     .from("value_objects")
     .update(patch)
