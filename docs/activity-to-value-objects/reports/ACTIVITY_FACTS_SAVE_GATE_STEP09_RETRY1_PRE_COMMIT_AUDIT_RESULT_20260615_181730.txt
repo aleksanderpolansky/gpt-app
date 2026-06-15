@@ -1,0 +1,243 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_FACTS_SAVE_GATE_CONTROLLED_IMPLEMENTATION
+STEP 09 RETRY 1 / 12 — PRE-COMMIT INTEGRATION AUDIT WITH PRECISE SQL CHECK
+Generated: 2026-06-15 18:17:32
+Mode: PRE-COMMIT AUDIT ONLY / FALSE-POSITIVE SQL CHECK FIX
+DB writes: NO
+SQL execution: NO
+External AI calls: NO
+Commit/push: NO
+
+==============================
+1. CLEANUP / MOVE STEP09 ORIGINAL REPORTS
+==============================
+Moved Step09 original report: ACTIVITY_FACTS_SAVE_GATE_STEP09_PRE_COMMIT_AUDIT_RESULT_20260615_181109.txt -> docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP09_PRE_COMMIT_AUDIT_RESULT_20260615_181109.txt
+
+==============================
+2. EXPECTED FILES / REPORTS CHECK
+==============================
+[PASS] Expected file exists: src\app\api\activity\facts\save-gate\route.ts
+[PASS] Expected file exists: src\lib\activity\facts\saveGate\requestValidation.ts
+[PASS] Expected file exists: src\lib\activity\facts\saveGate\executionPlan.ts
+[PASS] Expected file exists: src\components\activity-to-value-objects\save-gate-plan-preview.tsx
+[PASS] Expected file exists: src\app\activity-capture\save-gate-plan-preview\page.tsx
+[PASS] Expected file exists: docs\activity-to-value-objects\save-gate-step01-route-scaffold.md
+[PASS] Expected file exists: docs\activity-to-value-objects\save-gate-step01-retry1-route-scaffold-audit-fix.md
+[PASS] Expected file exists: docs\activity-to-value-objects\save-gate-step02-route-smoke-checks.md
+[PASS] Expected file exists: docs\activity-to-value-objects\save-gate-step02-retry1-route-smoke-checks.md
+[PASS] Expected file exists: docs\activity-to-value-objects\save-gate-step03-request-validation-helpers.md
+[PASS] Expected file exists: docs\activity-to-value-objects\save-gate-step04-expanded-route-smoke-checks.md
+[PASS] Expected file exists: docs\activity-to-value-objects\save-gate-step05-no-write-execution-plan-builder.md
+[PASS] Expected file exists: docs\activity-to-value-objects\save-gate-step06-plan-route-smoke-checks.md
+[PASS] Expected file exists: docs\activity-to-value-objects\save-gate-step07-read-only-plan-preview-ui.md
+[PASS] Expected file exists: docs\activity-to-value-objects\save-gate-step07-retry1-read-only-plan-preview-ui-marker-fix.md
+[PASS] Expected file exists: docs\activity-to-value-objects\save-gate-step08-ui-route-smoke-check.md
+[PASS] Expected file exists: docs\activity-to-value-objects\save-gate-step09-pre-commit-integration-audit.md
+[PASS] Expected report exists: pattern ACTIVITY_FACTS_SAVE_GATE_STEP01_ROUTE_SCAFFOLD_RESULT_*.txt found 1 file(s).
+       - C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP01_ROUTE_SCAFFOLD_RESULT_20260615_172636.txt
+[PASS] Expected report exists: pattern ACTIVITY_FACTS_SAVE_GATE_STEP01_RETRY1_ROUTE_SCAFFOLD_AUDIT_FIX_RESULT_*.txt found 1 file(s).
+       - C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP01_RETRY1_ROUTE_SCAFFOLD_AUDIT_FIX_RESULT_20260615_172755.txt
+[PASS] Expected report exists: pattern ACTIVITY_FACTS_SAVE_GATE_STEP02_ROUTE_SMOKE_RESULT_*.txt found 1 file(s).
+       - C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP02_ROUTE_SMOKE_RESULT_20260615_173443.txt
+[PASS] Expected report exists: pattern ACTIVITY_FACTS_SAVE_GATE_STEP02_RETRY1_ROUTE_SMOKE_RESULT_*.txt found 1 file(s).
+       - C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP02_RETRY1_ROUTE_SMOKE_RESULT_20260615_173616.txt
+[PASS] Expected report exists: pattern ACTIVITY_FACTS_SAVE_GATE_STEP03_REQUEST_VALIDATION_HELPERS_RESULT_*.txt found 1 file(s).
+       - C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP03_REQUEST_VALIDATION_HELPERS_RESULT_20260615_174537.txt
+[PASS] Expected report exists: pattern ACTIVITY_FACTS_SAVE_GATE_STEP04_EXPANDED_ROUTE_SMOKE_RESULT_*.txt found 1 file(s).
+       - C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP04_EXPANDED_ROUTE_SMOKE_RESULT_20260615_175242.txt
+[PASS] Expected report exists: pattern ACTIVITY_FACTS_SAVE_GATE_STEP05_NO_WRITE_PLAN_BUILDER_RESULT_*.txt found 1 file(s).
+       - C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP05_NO_WRITE_PLAN_BUILDER_RESULT_20260615_175453.txt
+[PASS] Expected report exists: pattern ACTIVITY_FACTS_SAVE_GATE_STEP06_PLAN_ROUTE_SMOKE_RESULT_*.txt found 1 file(s).
+       - C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP06_PLAN_ROUTE_SMOKE_RESULT_20260615_180133.txt
+[PASS] Expected report exists: pattern ACTIVITY_FACTS_SAVE_GATE_STEP07_PLAN_PREVIEW_UI_RESULT_*.txt found 1 file(s).
+       - C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP07_PLAN_PREVIEW_UI_RESULT_20260615_180412.txt
+[PASS] Expected report exists: pattern ACTIVITY_FACTS_SAVE_GATE_STEP07_RETRY1_PLAN_PREVIEW_UI_MARKER_FIX_RESULT_*.txt found 1 file(s).
+       - C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP07_RETRY1_PLAN_PREVIEW_UI_MARKER_FIX_RESULT_20260615_180601.txt
+[PASS] Expected report exists: pattern ACTIVITY_FACTS_SAVE_GATE_STEP08_UI_ROUTE_SMOKE_RESULT_*.txt found 1 file(s).
+       - C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP08_UI_ROUTE_SMOKE_RESULT_20260615_180817.txt
+[PASS] Expected report exists: pattern ACTIVITY_FACTS_SAVE_GATE_STEP09_PRE_COMMIT_AUDIT_RESULT_*.txt found 1 file(s).
+       - C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP09_PRE_COMMIT_AUDIT_RESULT_20260615_181109.txt
+Missing expected files/reports count: 0
+
+==============================
+3. UNEXPECTED MIGRATION / SQL FILE CHECK
+==============================
+[PASS] No new save-gate/activity-to-VO SQL migration files detected.
+
+==============================
+4. PRECISE SAFETY CHECKS
+==============================
+
+----- PRECISE FORBIDDEN CHECK: No Supabase import in save-gate/UI files -----
+Regex: import\s+\{?\s*supabase\b|from\s+["'][^"']*lib/supabase["']|from\s+["']@/lib/supabase["']
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No Supabase from/select calls in save-gate/UI files -----
+Regex: \.from\s*\(|\.select\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable DB write methods in save-gate/UI files -----
+Regex: \.(insert|upsert|update|delete)\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No external AI import/constructor/client call in save-gate/UI files -----
+Regex: from\s+["']openai["']|new\s+OpenAI\s*\(|\bopenai\s*\.
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable SQL calls in save-gate/UI files; ignore sqlExecuted safety flags -----
+Regex: (\bsupabase\s*\.\s*rpc\s*\(|\bdb\s*\.\s*execute\s*\(|\bclient\s*\.\s*query\s*\(|\bpool\s*\.\s*query\s*\(|\bexecuteSql\s*\(|\brawSql\s*\(|\bsql\s*`)
+[PASS] No precise forbidden hits.
+
+==============================
+5. UI NO-PERSISTENCE STRUCTURE CHECK
+==============================
+[PASS] Required UI marker found: Read-only no-write execution plan
+[PASS] Required UI marker found: noWriteExecutionPlan
+[PASS] Required UI marker found: Planned writes preview
+[PASS] Required UI marker found: POST write-intent
+[PASS] Required UI marker found: DB write executed
+[PASS] Required UI marker found: sideEffects.rowsActuallyWritten
+[PASS] Required UI marker found: plan.noWriteGuarantee.rowsActuallyWritten
+[PASS] Required UI marker found: /api/activity/facts/save-gate
+[PASS] Forbidden UI persistence marker absent: Save changes
+[PASS] Forbidden UI persistence marker absent: Confirm write
+[PASS] Forbidden UI persistence marker absent: Execute write
+[PASS] Forbidden UI persistence marker absent: Create facts now
+[PASS] Forbidden UI persistence marker absent: Записать в базу
+[PASS] Forbidden UI persistence marker absent: Сохранить факты
+[PASS] Page renders SaveGatePlanPreview.
+
+==============================
+6. ROUTE / VALIDATOR / PLAN STATIC CONTRACT CHECK
+==============================
+[PASS] Route marker found: ACTIVITY_FACTS_SAVE_GATE_INVALID_JSON
+[PASS] Route marker found: ACTIVITY_FACTS_SAVE_GATE_VALIDATION_FAILED
+[PASS] Route marker found: ACTIVITY_FACTS_SAVE_GATE_WRITE_NOT_ENABLED
+[PASS] Route marker found: productionWriteEnabled: false
+[PASS] Route marker found: dbWriteExecuted: false
+[PASS] Route marker found: sqlExecuted: false
+[PASS] Route marker found: openAiCallExecuted: false
+[PASS] Route marker found: buildNoWriteExecutionPlan
+[PASS] Route marker found: noWriteExecutionPlan
+[PASS] Route marker found: plan_scaffold_only_no_persistence
+[PASS] Validator marker found: validateActivityFactsSaveGateRequest
+[PASS] Validator marker found: future_server_mediated_write
+[PASS] Validator marker found: contract_preview_only
+[PASS] Validator marker found: writeIntentDetected
+[PASS] Validator marker found: CLIENT_SAFETY_BOOLEAN_REQUIRED
+[PASS] Plan marker found: buildNoWriteExecutionPlan
+[PASS] Plan marker found: no_write_execution_plan_v1
+[PASS] Plan marker found: preview_only_not_executed
+[PASS] Plan marker found: activity_object_facts
+[PASS] Plan marker found: activity_fact_review_items
+[PASS] Plan marker found: activity_fact_recalculation_queue
+[PASS] Plan marker found: rowsActuallyWritten: 0
+
+==============================
+7. TARGETED LINT
+==============================
+Targeted lint exit code: 0
+
+==============================
+8. CREATE RETRY DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\save-gate-step09-retry1-pre-commit-integration-audit.md
+
+==============================
+9. GIT STATUS / DIFF SUMMARY
+==============================
+git status --short:
+?? ACTIVITY_FACTS_SAVE_GATE_STEP09_RETRY1_PRE_COMMIT_AUDIT_RESULT_20260615_181730.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP01_RETRY1_ROUTE_SCAFFOLD_AUDIT_FIX_RESULT_20260615_172755.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP01_ROUTE_SCAFFOLD_RESULT_20260615_172636.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP02_RETRY1_ROUTE_SMOKE_RESULT_20260615_173616.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP02_ROUTE_SMOKE_RESULT_20260615_173443.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP03_REQUEST_VALIDATION_HELPERS_RESULT_20260615_174537.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP04_EXPANDED_ROUTE_SMOKE_RESULT_20260615_175242.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP05_NO_WRITE_PLAN_BUILDER_RESULT_20260615_175453.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP06_PLAN_ROUTE_SMOKE_RESULT_20260615_180133.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP07_PLAN_PREVIEW_UI_RESULT_20260615_180412.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP07_RETRY1_PLAN_PREVIEW_UI_MARKER_FIX_RESULT_20260615_180601.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP08_UI_ROUTE_SMOKE_RESULT_20260615_180817.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP09_PRE_COMMIT_AUDIT_RESULT_20260615_181109.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP11_COMMIT_ONLY_RESULT_20260615_170324.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP12_PUSH_ONLY_RESULT_20260615_170755.txt
+?? docs/activity-to-value-objects/save-gate-step01-retry1-route-scaffold-audit-fix.md
+?? docs/activity-to-value-objects/save-gate-step01-route-scaffold.md
+?? docs/activity-to-value-objects/save-gate-step02-retry1-route-smoke-checks.md
+?? docs/activity-to-value-objects/save-gate-step02-route-smoke-checks.md
+?? docs/activity-to-value-objects/save-gate-step03-request-validation-helpers.md
+?? docs/activity-to-value-objects/save-gate-step04-expanded-route-smoke-checks.md
+?? docs/activity-to-value-objects/save-gate-step05-no-write-execution-plan-builder.md
+?? docs/activity-to-value-objects/save-gate-step06-plan-route-smoke-checks.md
+?? docs/activity-to-value-objects/save-gate-step07-read-only-plan-preview-ui.md
+?? docs/activity-to-value-objects/save-gate-step07-retry1-read-only-plan-preview-ui-marker-fix.md
+?? docs/activity-to-value-objects/save-gate-step08-ui-route-smoke-check.md
+?? docs/activity-to-value-objects/save-gate-step09-pre-commit-integration-audit.md
+?? docs/activity-to-value-objects/save-gate-step09-retry1-pre-commit-integration-audit.md
+?? src/app/activity-capture/save-gate-plan-preview/
+?? src/app/api/activity/facts/
+?? src/components/activity-to-value-objects/save-gate-plan-preview.tsx
+?? src/lib/activity/
+
+git diff --name-only:
+
+git diff --cached --name-only:
+
+Untracked save-gate files:
+docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP01_RETRY1_ROUTE_SCAFFOLD_AUDIT_FIX_RESULT_20260615_172755.txt
+docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP01_ROUTE_SCAFFOLD_RESULT_20260615_172636.txt
+docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP02_RETRY1_ROUTE_SMOKE_RESULT_20260615_173616.txt
+docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP02_ROUTE_SMOKE_RESULT_20260615_173443.txt
+docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP03_REQUEST_VALIDATION_HELPERS_RESULT_20260615_174537.txt
+docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP04_EXPANDED_ROUTE_SMOKE_RESULT_20260615_175242.txt
+docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP05_NO_WRITE_PLAN_BUILDER_RESULT_20260615_175453.txt
+docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP06_PLAN_ROUTE_SMOKE_RESULT_20260615_180133.txt
+docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP07_PLAN_PREVIEW_UI_RESULT_20260615_180412.txt
+docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP07_RETRY1_PLAN_PREVIEW_UI_MARKER_FIX_RESULT_20260615_180601.txt
+docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP08_UI_ROUTE_SMOKE_RESULT_20260615_180817.txt
+docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP09_PRE_COMMIT_AUDIT_RESULT_20260615_181109.txt
+docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP11_COMMIT_ONLY_RESULT_20260615_170324.txt
+docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP12_PUSH_ONLY_RESULT_20260615_170755.txt
+docs/activity-to-value-objects/save-gate-step01-retry1-route-scaffold-audit-fix.md
+docs/activity-to-value-objects/save-gate-step01-route-scaffold.md
+docs/activity-to-value-objects/save-gate-step02-retry1-route-smoke-checks.md
+docs/activity-to-value-objects/save-gate-step02-route-smoke-checks.md
+docs/activity-to-value-objects/save-gate-step03-request-validation-helpers.md
+docs/activity-to-value-objects/save-gate-step04-expanded-route-smoke-checks.md
+docs/activity-to-value-objects/save-gate-step05-no-write-execution-plan-builder.md
+docs/activity-to-value-objects/save-gate-step06-plan-route-smoke-checks.md
+docs/activity-to-value-objects/save-gate-step07-read-only-plan-preview-ui.md
+docs/activity-to-value-objects/save-gate-step07-retry1-read-only-plan-preview-ui-marker-fix.md
+docs/activity-to-value-objects/save-gate-step08-ui-route-smoke-check.md
+docs/activity-to-value-objects/save-gate-step09-pre-commit-integration-audit.md
+docs/activity-to-value-objects/save-gate-step09-retry1-pre-commit-integration-audit.md
+src/app/activity-capture/save-gate-plan-preview/page.tsx
+src/app/api/activity/facts/save-gate/route.ts
+src/components/activity-to-value-objects/save-gate-plan-preview.tsx
+src/lib/activity/facts/saveGate/executionPlan.ts
+src/lib/activity/facts/saveGate/requestValidation.ts
+
+==============================
+10. STEP 09 RETRY 1 CONCLUSION
+==============================
+Missing expected files/reports count: 0
+Unexpected SQL migration files count: 0
+Precise forbidden code hits count: 0
+UI structure issues count: 0
+Route/static contract issues count: 0
+Targeted lint exit code: 0
+STEP 09 RETRY 1 RESULT: PASS
+Pre-commit integration audit passed after precise SQL false-positive fix.
+Expected files and reports are present.
+No unexpected SQL migration files were detected.
+No executable DB/Supabase/SQL/external AI patterns were detected.
+UI remains read-only and has no persistence controls.
+Route, validator and no-write execution plan contract markers are present.
+Targeted lint passed.
+No DB write was executed.
+No SQL was executed.
+No external AI call was executed.
+No commit/push was executed.
+Next expected step: Step 10 / 12 — commit gate preparation.
+Future commit confirmation phrase: ACTIVITY_FACTS_SAVE_GATE_COMMIT_APPROVED

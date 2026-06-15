@@ -1,0 +1,126 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_FACTS_SAVE_GATE_CONTROLLED_IMPLEMENTATION
+STEP 07 / 12 — READ-ONLY NO-WRITE PLAN PREVIEW UI
+Generated: 2026-06-15 18:04:15
+Mode: READ-ONLY UI ONLY
+DB writes: NO
+SQL execution: NO
+External AI calls: NO
+Commit/push: NO
+
+==============================
+1. CLEANUP / MOVE STEP06 REPORTS
+==============================
+Moved Step06 report: ACTIVITY_FACTS_SAVE_GATE_STEP06_PLAN_ROUTE_SMOKE_RESULT_20260615_180133.txt -> docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP06_PLAN_ROUTE_SMOKE_RESULT_20260615_180133.txt
+
+==============================
+2. CREATE READ-ONLY PLAN PREVIEW COMPONENT
+==============================
+Created/updated: src\components\activity-to-value-objects\save-gate-plan-preview.tsx
+
+==============================
+3. CREATE READ-ONLY PLAN PREVIEW ROUTE PAGE
+==============================
+Created/updated: src\app\activity-capture\save-gate-plan-preview\page.tsx
+
+==============================
+4. CREATE STEP07 DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\save-gate-step07-read-only-plan-preview-ui.md
+
+==============================
+5. PRECISE SAFETY CHECKS
+==============================
+
+----- PRECISE FORBIDDEN CHECK: No Supabase import in save-gate/UI files -----
+Regex: import\s+\{?\s*supabase\b|from\s+["'][^"']*lib/supabase["']|from\s+["']@/lib/supabase["']
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No Supabase from/select calls in save-gate/UI files -----
+Regex: \.from\s*\(|\.select\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable DB write methods in save-gate/UI files -----
+Regex: \.(insert|upsert|update|delete)\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No external AI import/constructor/client call in save-gate/UI files -----
+Regex: from\s+["']openai["']|new\s+OpenAI\s*\(|\bopenai\s*\.
+[PASS] No precise forbidden hits.
+
+==============================
+6. TARGETED LINT
+==============================
+Targeted lint exit code: 0
+
+==============================
+7. STATIC UI STRUCTURE CHECK
+==============================
+[PASS] Component marker found: Read-only no-write execution plan
+[PASS] Component marker found: noWriteExecutionPlan
+[PASS] Component marker found: Planned writes preview
+[PASS] Component marker found: POST write-intent
+[PASS] Component marker found: DB write executed
+[FAIL] Component marker missing: sideEffects.rowsActuallyWritten
+[FAIL] Component marker missing: plan.noWriteGuarantee.rowsActuallyWritten
+[PASS] Component marker found: /api/activity/facts/save-gate
+[PASS] Forbidden UI persistence marker absent: Save changes
+[PASS] Forbidden UI persistence marker absent: Confirm write
+[PASS] Forbidden UI persistence marker absent: Execute write
+[PASS] Forbidden UI persistence marker absent: Create facts now
+[PASS] Forbidden UI persistence marker absent: Записать в базу
+[PASS] Forbidden UI persistence marker absent: Сохранить факты
+[PASS] Page imports/renders SaveGatePlanPreview.
+
+==============================
+8. OPTIONAL MANUAL CHECKS
+==============================
+No dev server was started by this script.
+Manual UI route:
+http://localhost:3000/activity-capture/save-gate-plan-preview
+Manual API route:
+http://localhost:3000/api/activity/facts/save-gate
+
+Expected UI behavior:
+- Page loads read-only no-write execution plan.
+- GET preview button loads API GET.
+- POST preview button loads safe preview.
+- POST write-intent button receives blocked 409 but still displays no-write plan.
+- UI has no save/confirm persistence button.
+
+==============================
+9. GIT STATUS
+==============================
+?? ACTIVITY_FACTS_SAVE_GATE_STEP07_PLAN_PREVIEW_UI_RESULT_20260615_180412.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP01_RETRY1_ROUTE_SCAFFOLD_AUDIT_FIX_RESULT_20260615_172755.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP01_ROUTE_SCAFFOLD_RESULT_20260615_172636.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP02_RETRY1_ROUTE_SMOKE_RESULT_20260615_173616.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP02_ROUTE_SMOKE_RESULT_20260615_173443.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP03_REQUEST_VALIDATION_HELPERS_RESULT_20260615_174537.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP04_EXPANDED_ROUTE_SMOKE_RESULT_20260615_175242.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP05_NO_WRITE_PLAN_BUILDER_RESULT_20260615_175453.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP06_PLAN_ROUTE_SMOKE_RESULT_20260615_180133.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP11_COMMIT_ONLY_RESULT_20260615_170324.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP12_PUSH_ONLY_RESULT_20260615_170755.txt
+?? docs/activity-to-value-objects/save-gate-step01-retry1-route-scaffold-audit-fix.md
+?? docs/activity-to-value-objects/save-gate-step01-route-scaffold.md
+?? docs/activity-to-value-objects/save-gate-step02-retry1-route-smoke-checks.md
+?? docs/activity-to-value-objects/save-gate-step02-route-smoke-checks.md
+?? docs/activity-to-value-objects/save-gate-step03-request-validation-helpers.md
+?? docs/activity-to-value-objects/save-gate-step04-expanded-route-smoke-checks.md
+?? docs/activity-to-value-objects/save-gate-step05-no-write-execution-plan-builder.md
+?? docs/activity-to-value-objects/save-gate-step06-plan-route-smoke-checks.md
+?? docs/activity-to-value-objects/save-gate-step07-read-only-plan-preview-ui.md
+?? src/app/activity-capture/save-gate-plan-preview/
+?? src/app/api/activity/facts/
+?? src/components/activity-to-value-objects/save-gate-plan-preview.tsx
+?? src/lib/activity/
+
+==============================
+10. STEP 07 CONCLUSION
+==============================
+Precise forbidden code hits count: 0
+Targeted lint exit code: 0
+Structure issues count: 2
+STEP 07 RESULT: NEEDS REVIEW
+Review precise forbidden checks, lint or UI structure before continuing.

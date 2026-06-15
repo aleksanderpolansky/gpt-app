@@ -1,0 +1,86 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_FACTS_SAVE_GATE_CONTROLLED_IMPLEMENTATION
+STEP 01 RETRY 1 / 12 — ROUTE SCAFFOLD AUDIT FALSE-POSITIVE FIX
+Generated: 2026-06-15 17:27:56
+Mode: TEXT PATCH + PRECISE RE-AUDIT ONLY
+DB writes: NO
+SQL execution: NO
+OpenAI calls: NO
+Commit/push: NO
+
+==============================
+1. CLEANUP / MOVE STEP01 ORIGINAL REPORTS
+==============================
+Moved Step01 report: ACTIVITY_FACTS_SAVE_GATE_STEP01_ROUTE_SCAFFOLD_RESULT_20260615_172636.txt -> docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP01_ROUTE_SCAFFOLD_RESULT_20260615_172636.txt
+
+==============================
+2. PATCH FALSE-POSITIVE SAFETY TEXT
+==============================
+Patched route safety text: "This route must not call OpenAI." -> "This route must not call external AI providers."
+
+==============================
+3. CREATE RETRY DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\save-gate-step01-retry1-route-scaffold-audit-fix.md
+
+==============================
+4. PRECISE SAFETY CHECKS
+==============================
+
+----- PRECISE FORBIDDEN CHECK: No Supabase import in save-gate route -----
+Regex: import\s+\{?\s*supabase\b|from\s+["'][^"']*lib/supabase["']|from\s+["']@/lib/supabase["']
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No Supabase from/select calls in save-gate route -----
+Regex: \.from\s*\(|\.select\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable DB write methods in save-gate route -----
+Regex: \.(insert|upsert|update|delete)\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No OpenAI import/constructor/client call in save-gate route -----
+Regex: from\s+["']openai["']|new\s+OpenAI\s*\(|\bopenai\s*\.
+[PASS] No precise forbidden hits.
+
+==============================
+5. TARGETED LINT
+==============================
+Targeted lint exit code: 0
+
+==============================
+6. OPTIONAL MANUAL ROUTE CHECKS
+==============================
+No dev server was started by this script.
+Manual GET check after dev server starts:
+http://localhost:3000/api/activity/facts/save-gate
+
+Expected Step 01 retry behavior:
+- GET returns 200 no-write contract preview.
+- POST with routeMode=contract_preview_only returns 200.
+- POST with routeMode=future_server_mediated_write returns 409.
+- Any response must keep dbWriteExecuted=false, sqlExecuted=false, openAiCallExecuted=false.
+
+==============================
+7. GIT STATUS
+==============================
+?? ACTIVITY_FACTS_SAVE_GATE_STEP01_RETRY1_ROUTE_SCAFFOLD_AUDIT_FIX_RESULT_20260615_172755.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP01_ROUTE_SCAFFOLD_RESULT_20260615_172636.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP11_COMMIT_ONLY_RESULT_20260615_170324.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP12_PUSH_ONLY_RESULT_20260615_170755.txt
+?? docs/activity-to-value-objects/save-gate-step01-retry1-route-scaffold-audit-fix.md
+?? docs/activity-to-value-objects/save-gate-step01-route-scaffold.md
+?? src/app/api/activity/facts/
+
+==============================
+8. STEP 01 RETRY 1 CONCLUSION
+==============================
+Precise forbidden code hits count: 0
+Targeted lint exit code: 0
+STEP 01 RETRY 1 RESULT: PASS
+No-write save-gate API route scaffold is clean after false-positive fix.
+No DB write was executed.
+No SQL was executed.
+No external AI call was executed.
+No commit/push was executed.
+Next expected step: Step 02 / 12 — route contract smoke checks.
