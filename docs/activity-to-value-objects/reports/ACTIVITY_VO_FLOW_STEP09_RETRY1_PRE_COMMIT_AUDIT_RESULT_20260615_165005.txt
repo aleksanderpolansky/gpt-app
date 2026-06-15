@@ -1,0 +1,254 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_TO_VALUE_OBJECTS_CONTROLLED_FLOW
+STEP 09 RETRY 1 / 12 — PRE-COMMIT INTEGRATION AUDIT, FALSE-POSITIVE CLASSIFIER
+Generated: 2026-06-15 16:50:06
+Mode: READ-ONLY RE-AUDIT + DOC LOCK
+DB writes: NO
+SQL execution: NO
+OpenAI calls: NO
+API route created: NO
+Commit/push: NO
+
+==============================
+1. CLEANUP / MOVE STEP09 ORIGINAL REPORTS
+==============================
+Moved Step09 original report: ACTIVITY_VO_FLOW_STEP09_PRE_COMMIT_AUDIT_RESULT_20260615_164134.txt -> docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP09_PRE_COMMIT_AUDIT_RESULT_20260615_164134.txt
+
+==============================
+2. EXPECTED FILES / ROUTES
+==============================
+[OK]      Expected file :: src/types/activity-to-value-objects.ts
+[OK]      Expected file :: src/data/activity-to-value-objects/football-with-child-preview.ts
+[OK]      Expected file :: src/components/activity-to-value-objects/activity-facts-preview.tsx
+[OK]      Expected file :: src/app/activity-capture/facts-preview/page.tsx
+[OK]      Expected file :: src/types/value-object-tree-preview.ts
+[OK]      Expected file :: src/data/activity-to-value-objects/value-object-tree-preview.ts
+[OK]      Expected file :: src/components/activity-to-value-objects/value-object-tree-preview.tsx
+[OK]      Expected file :: src/app/value-objects/tree-preview/page.tsx
+[OK]      Expected file :: src/types/activity-value-object-flow-map.ts
+[OK]      Expected file :: src/data/activity-to-value-objects/controlled-flow-map.ts
+[OK]      Expected file :: src/components/activity-to-value-objects/controlled-flow-map.tsx
+[OK]      Expected file :: src/app/activity-capture/controlled-flow-map/page.tsx
+[OK]      Expected file :: src/types/activity-facts-save-gate.ts
+[OK]      Expected file :: src/data/activity-to-value-objects/save-gate-contract-preview.ts
+[OK]      Expected file :: src/components/activity-to-value-objects/save-gate-preview.tsx
+[OK]      Expected file :: src/app/activity-capture/save-gate-preview/page.tsx
+[OK]      Expected file :: docs/activity-to-value-objects/step02-activity-processing-package-contract.md
+[OK]      Expected file :: docs/activity-to-value-objects/step03-activity-facts-preview-ui.md
+[OK]      Expected file :: docs/activity-to-value-objects/step04-value-objects-tree-preview.md
+[OK]      Expected file :: docs/activity-to-value-objects/step05-controlled-flow-map.md
+[OK]      Expected file :: docs/activity-to-value-objects/step06-save-gate-api-preflight.md
+[OK]      Expected file :: docs/activity-to-value-objects/step07-save-gate-contract.md
+[OK]      Expected file :: docs/activity-to-value-objects/step08-save-gate-preview-ui.md
+[OK]      Expected file :: docs/activity-to-value-objects/step09-pre-commit-integration-audit.md
+
+==============================
+3. FILE CLASSIFICATION
+==============================
+New code files audited:
+ - src/types/activity-to-value-objects.ts
+ - src/data/activity-to-value-objects/football-with-child-preview.ts
+ - src/components/activity-to-value-objects/activity-facts-preview.tsx
+ - src/app/activity-capture/facts-preview/page.tsx
+ - src/types/value-object-tree-preview.ts
+ - src/data/activity-to-value-objects/value-object-tree-preview.ts
+ - src/components/activity-to-value-objects/value-object-tree-preview.tsx
+ - src/app/value-objects/tree-preview/page.tsx
+ - src/types/activity-value-object-flow-map.ts
+ - src/data/activity-to-value-objects/controlled-flow-map.ts
+ - src/components/activity-to-value-objects/controlled-flow-map.tsx
+ - src/app/activity-capture/controlled-flow-map/page.tsx
+ - src/types/activity-facts-save-gate.ts
+ - src/data/activity-to-value-objects/save-gate-contract-preview.ts
+ - src/components/activity-to-value-objects/save-gate-preview.tsx
+ - src/app/activity-capture/save-gate-preview/page.tsx
+
+New docs audited:
+ - docs/activity-to-value-objects/step02-activity-processing-package-contract.md
+ - docs/activity-to-value-objects/step03-activity-facts-preview-ui.md
+ - docs/activity-to-value-objects/step04-value-objects-tree-preview.md
+ - docs/activity-to-value-objects/step05-controlled-flow-map.md
+ - docs/activity-to-value-objects/step06-save-gate-api-preflight.md
+ - docs/activity-to-value-objects/step07-save-gate-contract.md
+ - docs/activity-to-value-objects/step08-save-gate-preview-ui.md
+ - docs/activity-to-value-objects/step09-pre-commit-integration-audit.md
+
+==============================
+4. PRECISE FORBIDDEN CHECKS
+==============================
+This retry intentionally avoids naive word checks.
+Allowed safety text may contain words like Supabase, OpenAI, or endpoint names.
+Forbidden means executable import/call/write/route creation, not safety labels.
+
+
+----- PRECISE FORBIDDEN CHECK: No Supabase import in new code files -----
+Regex: import\s+\{?\s*supabase\b|from\s+["'][^"']*lib/supabase["']|from\s+["']@/lib/supabase["']
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable Supabase write methods in new code files -----
+Regex: \.(insert|upsert|update|delete)\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No Supabase from/select runtime calls in preview UI/data/type files -----
+Regex: \.from\s*\(|\.select\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No OpenAI import/constructor/client call in new code files -----
+Regex: from\s+["']openai["']|new\s+OpenAI\s*\(|\bopenai\s*\.
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No fetch call to future save-gate API -----
+Regex: fetch\s*\(\s*["']/api/activity/facts/save-gate
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No server API handler created for future save-gate in new files -----
+Regex: export\s+async\s+function\s+(POST|PUT|PATCH|DELETE)\b
+[PASS] No precise forbidden hits.
+
+==============================
+5. STRUCTURAL FORBIDDEN CHECKS
+==============================
+[PASS] Future save-gate API route was NOT created.
+[PASS] No new activity-to-VO/save-gate SQL migration files found.
+
+==============================
+6. POSITIVE CHECKS
+==============================
+
+----- POSITIVE CHECK: Preview routes are exported -----
+Regex: export\s+default\s+function
+C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-capture\facts-preview\page.tsx:3: export default function ActivityCaptureFactsPreviewPage() {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-capture\controlled-flow-map\page.tsx:3: export default function ActivityCaptureControlledFlowMapPage() {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-capture\save-gate-preview\page.tsx:3: export default function ActivityCaptureSaveGatePreviewPage() {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\tree-preview\page.tsx:3: export default function ValueObjectsTreePreviewPage() {
+
+----- POSITIVE CHECK: No-write safety booleans are present -----
+Regex: dbWriteAllowed:\s*false|dbWriteExecuted:\s*false|sqlAllowed:\s*false|sqlExecuted:\s*false|openAiCallAllowed:\s*false|openAiCallExecuted:\s*false
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\football-with-child-preview.ts:302: dbWriteAllowed: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\football-with-child-preview.ts:303: sqlAllowed: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\football-with-child-preview.ts:304: openAiCallAllowed: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\types\value-object-tree-preview.ts:50: dbWriteAllowed: false;
+C:\Users\Admin\Documents\projects\gpt-app\src\types\value-object-tree-preview.ts:51: sqlAllowed: false;
+C:\Users\Admin\Documents\projects\gpt-app\src\types\value-object-tree-preview.ts:52: openAiCallAllowed: false;
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\value-object-tree-preview.ts:239: dbWriteAllowed: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\value-object-tree-preview.ts:240: sqlAllowed: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\value-object-tree-preview.ts:241: openAiCallAllowed: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\types\activity-value-object-flow-map.ts:45: dbWriteAllowed: false;
+C:\Users\Admin\Documents\projects\gpt-app\src\types\activity-value-object-flow-map.ts:46: sqlAllowed: false;
+C:\Users\Admin\Documents\projects\gpt-app\src\types\activity-value-object-flow-map.ts:47: openAiCallAllowed: false;
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\controlled-flow-map.ts:155: dbWriteAllowed: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\controlled-flow-map.ts:156: sqlAllowed: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\controlled-flow-map.ts:157: openAiCallAllowed: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\save-gate-contract-preview.ts:85: dbWriteExecuted: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\save-gate-contract-preview.ts:86: sqlExecuted: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\save-gate-contract-preview.ts:87: openAiCallExecuted: false,
+
+----- POSITIVE CHECK: activity_object_facts vocabulary is present -----
+Regex: activity_object_facts
+C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\activity-facts-preview.tsx:283: title="6. Preview будущих activity_object_facts"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\activity-facts-preview.tsx:384: объектов и будущие строки activity_object_facts.
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\controlled-flow-map.ts:64: titleRu: "Запись activity_object_facts",
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\controlled-flow-map.ts:161: "Rows shown here are not persisted activity_object_facts.",
+C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\controlled-flow-map.tsx:118: Эта таблица показывает, куда попадут будущие activity_object_facts после подтверждений и save gate.
+C:\Users\Admin\Documents\projects\gpt-app\src\types\activity-facts-save-gate.ts:85: | "activity_object_facts"
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\save-gate-contract-preview.ts:129: targetTable: "activity_object_facts",
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\save-gate-contract-preview.ts:138: targetTable: "activity_object_facts",
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step02-activity-processing-package-contract.md:35: - `activity_object_facts`
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step02-activity-processing-package-contract.md:64: 6. future `activity_object_facts` preview table.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step03-activity-facts-preview-ui.md:23: 7. future `activity_object_facts` preview rows;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step05-controlled-flow-map.md:20: It shows how a future `activity_object_facts` row maps to an existing or candidate Value Object in the tree.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step05-controlled-flow-map.md:45: - no automatic activity_object_facts persistence.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step05-controlled-flow-map.md:52: - `activity_object_facts`
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step06-save-gate-api-preflight.md:23: 5. insert rows into `activity_object_facts`;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step07-save-gate-contract.md:31: 5. insert `activity_object_facts`;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step08-save-gate-preview-ui.md:50: - no automatic activity_object_facts persistence.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step09-pre-commit-integration-audit.md:36: - No automatic `activity_object_facts` persistence.
+
+----- POSITIVE CHECK: parent_value_object_id source-of-truth is mentioned -----
+Regex: parent_value_object_id
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\value-object-tree-preview.ts:247: "The real tree must use value_objects.parent_value_object_id as source of truth.",
+C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\value-object-tree-preview.tsx:240: <span className="font-mono"> value_objects.parent_value_object_id</span>. Дочерние объекты
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step04-value-objects-tree-preview.md:49: `value_objects.parent_value_object_id`
+
+==============================
+7. TARGETED LINT — ALL NEW FILES
+==============================
+Lint command: npx eslint "src/types/activity-to-value-objects.ts" "src/data/activity-to-value-objects/football-with-child-preview.ts" "src/components/activity-to-value-objects/activity-facts-preview.tsx" "src/app/activity-capture/facts-preview/page.tsx" "src/types/value-object-tree-preview.ts" "src/data/activity-to-value-objects/value-object-tree-preview.ts" "src/components/activity-to-value-objects/value-object-tree-preview.tsx" "src/app/value-objects/tree-preview/page.tsx" "src/types/activity-value-object-flow-map.ts" "src/data/activity-to-value-objects/controlled-flow-map.ts" "src/components/activity-to-value-objects/controlled-flow-map.tsx" "src/app/activity-capture/controlled-flow-map/page.tsx" "src/types/activity-facts-save-gate.ts" "src/data/activity-to-value-objects/save-gate-contract-preview.ts" "src/components/activity-to-value-objects/save-gate-preview.tsx" "src/app/activity-capture/save-gate-preview/page.tsx"
+Targeted lint exit code: 0
+
+==============================
+8. CREATE RETRY DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\step09-retry1-pre-commit-integration-audit.md
+
+==============================
+9. GIT SUMMARY
+==============================
+
+----- git status --short -----
+?? ACTIVITY_VO_FLOW_STEP09_RETRY1_PRE_COMMIT_AUDIT_RESULT_20260615_165005.txt
+?? docs/activity-to-value-objects/
+?? src/app/activity-capture/controlled-flow-map/
+?? src/app/activity-capture/facts-preview/
+?? src/app/activity-capture/save-gate-preview/
+?? src/app/value-objects/tree-preview/
+?? src/components/activity-to-value-objects/
+?? src/data/activity-to-value-objects/
+?? src/types/activity-facts-save-gate.ts
+?? src/types/activity-to-value-objects.ts
+?? src/types/activity-value-object-flow-map.ts
+?? src/types/value-object-tree-preview.ts
+
+----- untracked files -----
+ACTIVITY_VO_FLOW_STEP09_RETRY1_PRE_COMMIT_AUDIT_RESULT_20260615_165005.txt
+docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt
+docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP02_CONTRACT_RESULT_20260615_160531.txt
+docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP03_FACTS_PREVIEW_UI_RESULT_20260615_160715.txt
+docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP04_VO_TREE_PREVIEW_RESULT_20260615_161855.txt
+docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP05_CONTROL_FLOW_MAP_RESULT_20260615_162144.txt
+docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt
+docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP07_SAVE_GATE_CONTRACT_RESULT_20260615_163137.txt
+docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP08_SAVE_GATE_PREVIEW_UI_RESULT_20260615_163313.txt
+docs/activity-to-value-objects/reports/ACTIVITY_VO_FLOW_STEP09_PRE_COMMIT_AUDIT_RESULT_20260615_164134.txt
+docs/activity-to-value-objects/step02-activity-processing-package-contract.md
+docs/activity-to-value-objects/step03-activity-facts-preview-ui.md
+docs/activity-to-value-objects/step04-value-objects-tree-preview.md
+docs/activity-to-value-objects/step05-controlled-flow-map.md
+docs/activity-to-value-objects/step06-save-gate-api-preflight.md
+docs/activity-to-value-objects/step07-save-gate-contract.md
+docs/activity-to-value-objects/step08-save-gate-preview-ui.md
+docs/activity-to-value-objects/step09-pre-commit-integration-audit.md
+docs/activity-to-value-objects/step09-retry1-pre-commit-integration-audit.md
+src/app/activity-capture/controlled-flow-map/page.tsx
+src/app/activity-capture/facts-preview/page.tsx
+src/app/activity-capture/save-gate-preview/page.tsx
+src/app/value-objects/tree-preview/page.tsx
+src/components/activity-to-value-objects/activity-facts-preview.tsx
+src/components/activity-to-value-objects/controlled-flow-map.tsx
+src/components/activity-to-value-objects/save-gate-preview.tsx
+src/components/activity-to-value-objects/value-object-tree-preview.tsx
+src/data/activity-to-value-objects/controlled-flow-map.ts
+src/data/activity-to-value-objects/football-with-child-preview.ts
+src/data/activity-to-value-objects/save-gate-contract-preview.ts
+src/data/activity-to-value-objects/value-object-tree-preview.ts
+src/types/activity-facts-save-gate.ts
+src/types/activity-to-value-objects.ts
+src/types/activity-value-object-flow-map.ts
+src/types/value-object-tree-preview.ts
+
+==============================
+10. STEP 09 RETRY 1 CONCLUSION
+==============================
+Missing expected files count: 0
+Unexpected forbidden files count: 0
+Precise forbidden code hits count: 0
+Targeted lint exit code: 0
+STEP 09 RETRY 1 RESULT: PASS
+Refined pre-commit audit passed.
+Original Step09 forbidden hits were false positives from safety vocabulary and contract endpoint strings.
+No API save-gate route was created.
+No DB write was executed.
+No SQL was executed.
+No OpenAI call was executed.
+Next expected step: Step 10 / 12 — commit gate preparation.
+Required commit confirmation phrase: ACTIVITY_VO_FLOW_PREVIEW_COMMIT_APPROVED

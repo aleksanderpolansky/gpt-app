@@ -1,0 +1,78 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_TO_VALUE_OBJECTS_CONTROLLED_FLOW
+STEP 05 / 12 — CONTROLLED FLOW MAP
+Generated: 2026-06-15 16:21:47
+Mode: READ-ONLY UI / FLOW MAP
+DB writes: NO
+SQL execution: NO
+OpenAI calls: NO
+Commit/push: NO
+
+==============================
+1. CLEANUP / MOVE STEP04 REPORTS
+==============================
+Moved Step04 report: ACTIVITY_VO_FLOW_STEP04_VO_TREE_PREVIEW_RESULT_20260615_161855.txt -> docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP04_VO_TREE_PREVIEW_RESULT_20260615_161855.txt
+
+==============================
+2. CREATE CONTROL FLOW MAP TYPES
+==============================
+Created/updated: src\types\activity-value-object-flow-map.ts
+
+==============================
+3. CREATE CONTROL FLOW MAP FIXTURE
+==============================
+Created/updated: src\data\activity-to-value-objects\controlled-flow-map.ts
+
+==============================
+4. CREATE CONTROL FLOW MAP COMPONENT
+==============================
+Created/updated: src\components\activity-to-value-objects\controlled-flow-map.tsx
+
+==============================
+5. CREATE ROUTE PAGE
+==============================
+Created/updated: src\app\activity-capture\controlled-flow-map\page.tsx
+New route: /activity-capture/controlled-flow-map
+
+==============================
+6. CREATE DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\step05-controlled-flow-map.md
+
+==============================
+7. TARGETED LINT
+==============================
+Targeted lint exit code: 0
+
+==============================
+8. OPTIONAL ROUTE SMOKE CHECK
+==============================
+No dev server was started by this script.
+Manual checks after successful lint:
+http://localhost:3000/activity-capture/controlled-flow-map
+http://localhost:3000/activity-capture/facts-preview
+http://localhost:3000/value-objects/tree-preview
+
+==============================
+9. GIT STATUS
+==============================
+?? ACTIVITY_VO_FLOW_STEP05_CONTROL_FLOW_MAP_RESULT_20260615_162144.txt
+?? docs/activity-to-value-objects/
+?? src/app/activity-capture/controlled-flow-map/
+?? src/app/activity-capture/facts-preview/
+?? src/app/value-objects/tree-preview/
+?? src/components/activity-to-value-objects/
+?? src/data/activity-to-value-objects/
+?? src/types/activity-to-value-objects.ts
+?? src/types/activity-value-object-flow-map.ts
+?? src/types/value-object-tree-preview.ts
+
+==============================
+10. STEP 05 CONCLUSION
+==============================
+STEP 05 RESULT: PASS
+Read-only Controlled Flow Map page was created.
+No DB write was executed.
+No SQL was executed.
+No OpenAI call was executed.
+Next expected step: Step 06 / 12 — no-write API/save-gate preflight for future server-mediated writes.

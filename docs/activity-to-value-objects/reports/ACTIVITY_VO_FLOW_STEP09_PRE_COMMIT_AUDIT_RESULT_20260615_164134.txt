@@ -1,0 +1,377 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_TO_VALUE_OBJECTS_CONTROLLED_FLOW
+STEP 09 / 12 — PRE-COMMIT INTEGRATION AUDIT
+Generated: 2026-06-15 16:41:35
+Mode: READ-ONLY AUDIT + DOC LOCK
+DB writes: NO
+SQL execution: NO
+OpenAI calls: NO
+API route created: NO
+Commit/push: NO
+
+==============================
+1. CLEANUP / MOVE STEP08 REPORTS
+==============================
+Moved Step08 report: ACTIVITY_VO_FLOW_STEP08_SAVE_GATE_PREVIEW_UI_RESULT_20260615_163313.txt -> docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP08_SAVE_GATE_PREVIEW_UI_RESULT_20260615_163313.txt
+
+==============================
+2. EXPECTED FILES / ROUTES
+==============================
+[OK]      Step02 type contract :: src/types/activity-to-value-objects.ts
+[OK]      Step02 activity fixture :: src/data/activity-to-value-objects/football-with-child-preview.ts
+[OK]      Step03 facts preview component :: src/components/activity-to-value-objects/activity-facts-preview.tsx
+[OK]      Step03 facts preview route :: src/app/activity-capture/facts-preview/page.tsx
+[OK]      Step04 tree type :: src/types/value-object-tree-preview.ts
+[OK]      Step04 tree fixture :: src/data/activity-to-value-objects/value-object-tree-preview.ts
+[OK]      Step04 tree component :: src/components/activity-to-value-objects/value-object-tree-preview.tsx
+[OK]      Step04 tree route :: src/app/value-objects/tree-preview/page.tsx
+[OK]      Step05 flow map type :: src/types/activity-value-object-flow-map.ts
+[OK]      Step05 flow map fixture :: src/data/activity-to-value-objects/controlled-flow-map.ts
+[OK]      Step05 flow map component :: src/components/activity-to-value-objects/controlled-flow-map.tsx
+[OK]      Step05 flow map route :: src/app/activity-capture/controlled-flow-map/page.tsx
+[OK]      Step07 save gate type :: src/types/activity-facts-save-gate.ts
+[OK]      Step07 save gate fixture :: src/data/activity-to-value-objects/save-gate-contract-preview.ts
+[OK]      Step08 save gate preview component :: src/components/activity-to-value-objects/save-gate-preview.tsx
+[OK]      Step08 save gate preview route :: src/app/activity-capture/save-gate-preview/page.tsx
+[OK]      Step02 doc lock :: docs/activity-to-value-objects/step02-activity-processing-package-contract.md
+[OK]      Step03 doc lock :: docs/activity-to-value-objects/step03-activity-facts-preview-ui.md
+[OK]      Step04 doc lock :: docs/activity-to-value-objects/step04-value-objects-tree-preview.md
+[OK]      Step05 doc lock :: docs/activity-to-value-objects/step05-controlled-flow-map.md
+[OK]      Step06 doc lock :: docs/activity-to-value-objects/step06-save-gate-api-preflight.md
+[OK]      Step07 doc lock :: docs/activity-to-value-objects/step07-save-gate-contract.md
+[OK]      Step08 doc lock :: docs/activity-to-value-objects/step08-save-gate-preview-ui.md
+
+==============================
+3. FORBIDDEN FILE / ROUTE CHECKS
+==============================
+[PASS] Future save-gate API route was NOT created.
+[PASS] No new activity-to-VO/save-gate SQL migration files found.
+
+----- FORBIDDEN CHECK: No direct insert in new preview/code contract files -----
+Pattern: .insert(
+[PASS] No forbidden hits.
+
+----- FORBIDDEN CHECK: No direct update in new preview/code contract files -----
+Pattern: .update(
+[PASS] No forbidden hits.
+
+----- FORBIDDEN CHECK: No direct delete in new preview/code contract files -----
+Pattern: .delete(
+[PASS] No forbidden hits.
+
+----- FORBIDDEN CHECK: No Supabase client use in new preview/code contract files -----
+Pattern: supabase
+[FAIL] Forbidden hits found: 5
+C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\save-gate-preview.tsx:305: ["directBrowserSupabaseWriteAllowed", String(response.safety.directBrowserSupabaseWriteAllowed)],
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\controlled-flow-map.ts:163: "The page must not call Supabase, SQL, OpenAI or hidden write APIs.",
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\save-gate-contract-preview.ts:167: directBrowserSupabaseWriteAllowed: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\types\activity-facts-save-gate.ts:119: directBrowserSupabaseWriteAllowed: false;
+C:\Users\Admin\Documents\projects\gpt-app\src\types\activity-facts.ts:12: * - This file does not write to Supabase.
+
+----- FORBIDDEN CHECK: No OpenAI use in new preview/code contract files -----
+Pattern: openai
+[FAIL] Forbidden hits found: 16
+C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\activity-facts-preview.tsx:334: ["openAiCallAllowed", String(pkg.safety.openAiCallAllowed)],
+C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\controlled-flow-map.tsx:175: ["openAiCallAllowed", String(pkg.safety.openAiCallAllowed)],
+C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\save-gate-preview.tsx:276: ["openAiCallExecuted", String(response.openAiCallExecuted)],
+C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\value-object-tree-preview.tsx:150: ["openAiCallAllowed", String(pkg.safety.openAiCallAllowed)],
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\controlled-flow-map.ts:157: openAiCallAllowed: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\controlled-flow-map.ts:163: "The page must not call Supabase, SQL, OpenAI or hidden write APIs.",
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\football-with-child-preview.ts:304: openAiCallAllowed: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\save-gate-contract-preview.ts:87: openAiCallExecuted: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\value-object-tree-preview.ts:241: openAiCallAllowed: false,
+C:\Users\Admin\Documents\projects\gpt-app\src\types\activity-facts-save-gate.ts:102: openAiCallExecuted: boolean;
+C:\Users\Admin\Documents\projects\gpt-app\src\types\activity-facts.ts:13: * - This file does not call OpenAI.
+C:\Users\Admin\Documents\projects\gpt-app\src\types\activity-to-value-objects.ts:189: openAiCallAllowed: boolean;
+C:\Users\Admin\Documents\projects\gpt-app\src\types\activity-value-object-flow-map.ts:47: openAiCallAllowed: false;
+C:\Users\Admin\Documents\projects\gpt-app\src\types\value-object-characteristics-rollup.ts:4: // Runtime status: no DB writes, no SQL execution, no OpenAI calls.
+C:\Users\Admin\Documents\projects\gpt-app\src\types\value-object-characteristics-rollup.ts:233: noOpenAiCallRequired: boolean;
+C:\Users\Admin\Documents\projects\gpt-app\src\types\value-object-tree-preview.ts:52: openAiCallAllowed: false;
+
+----- FORBIDDEN CHECK: No fetch to save-gate API in new preview/code contract files -----
+Pattern: /api/activity/facts/save-gate
+[FAIL] Forbidden hits found: 3
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\save-gate-contract-preview.ts:84: endpoint: "/api/activity/facts/save-gate",
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\save-gate-contract-preview.ts:174: "The future stable endpoint should be /api/activity/facts/save-gate.",
+C:\Users\Admin\Documents\projects\gpt-app\src\types\activity-facts-save-gate.ts:99: endpoint: "/api/activity/facts/save-gate";
+
+==============================
+4. POSITIVE SIGNAL CHECKS
+==============================
+
+----- Find new preview routes -----
+Pattern: export default function
+Root: src/app/activity-capture/facts-preview
+Root: src/app/activity-capture/controlled-flow-map
+Root: src/app/activity-capture/save-gate-preview
+Root: src/app/value-objects/tree-preview
+C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-capture\facts-preview\page.tsx:3: export default function ActivityCaptureFactsPreviewPage() {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-capture\controlled-flow-map\page.tsx:3: export default function ActivityCaptureControlledFlowMapPage() {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-capture\save-gate-preview\page.tsx:3: export default function ActivityCaptureSaveGatePreviewPage() {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\tree-preview\page.tsx:3: export default function ValueObjectsTreePreviewPage() {
+
+----- Find no-write / preview safety text -----
+Pattern: No DB write
+Root: docs/activity-to-value-objects
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step02-activity-processing-package-contract.md:7: Mode: no DB writes, no SQL, no OpenAI calls, no commit/push.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step03-activity-facts-preview-ui.md:7: Mode: no DB writes, no SQL, no OpenAI calls, no commit/push.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step03-activity-facts-preview-ui.md:35: - no DB writes;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step04-value-objects-tree-preview.md:7: Mode: no DB writes, no SQL, no OpenAI calls, no commit/push.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step04-value-objects-tree-preview.md:57: - no DB writes;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step05-controlled-flow-map.md:7: Mode: no DB writes, no SQL, no OpenAI calls, no commit/push.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step05-controlled-flow-map.md:40: - no DB writes;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step06-save-gate-api-preflight.md:7: Mode: no DB writes, no SQL, no OpenAI calls, no commit/push.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step06-save-gate-api-preflight.md:53: - no DB writes;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step07-save-gate-contract.md:7: Mode: no DB writes, no SQL, no OpenAI calls, no API route, no commit/push.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step07-save-gate-contract.md:43: - no DB writes;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step08-save-gate-preview-ui.md:7: Mode: no DB writes, no SQL, no OpenAI calls, no API route, no commit/push.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step08-save-gate-preview-ui.md:44: - no DB writes;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:716: No DB write was executed.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP02_CONTRACT_RESULT_20260615_160531.txt:49: No DB write was executed.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP03_FACTS_PREVIEW_UI_RESULT_20260615_160715.txt:59: No DB write was executed.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP04_VO_TREE_PREVIEW_RESULT_20260615_161855.txt:72: No DB write was executed.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP05_CONTROL_FLOW_MAP_RESULT_20260615_162144.txt:75: No DB write was executed.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:835: 65:       "Route performs no DB write.",
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2400: No DB write was executed.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP07_SAVE_GATE_CONTRACT_RESULT_20260615_163137.txt:58: No DB write was executed.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP08_SAVE_GATE_PREVIEW_UI_RESULT_20260615_163313.txt:70: No DB write was executed.
+
+----- Find activity_object_facts references in new docs/data/components -----
+Pattern: activity_object_facts
+Root: src
+Root: docs/activity-to-value-objects
+C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\activity-facts-preview.tsx:283: title="6. Preview будущих activity_object_facts"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\activity-facts-preview.tsx:384: объектов и будущие строки activity_object_facts.
+C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\controlled-flow-map.tsx:118: Эта таблица показывает, куда попадут будущие activity_object_facts после подтверждений и save gate.
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\controlled-flow-map.ts:64: titleRu: "Запись activity_object_facts",
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\controlled-flow-map.ts:161: "Rows shown here are not persisted activity_object_facts.",
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\save-gate-contract-preview.ts:129: targetTable: "activity_object_facts",
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\save-gate-contract-preview.ts:138: targetTable: "activity_object_facts",
+C:\Users\Admin\Documents\projects\gpt-app\src\types\activity-facts-save-gate.ts:85: | "activity_object_facts"
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step02-activity-processing-package-contract.md:35: - `activity_object_facts`
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step02-activity-processing-package-contract.md:64: 6. future `activity_object_facts` preview table.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step03-activity-facts-preview-ui.md:23: 7. future `activity_object_facts` preview rows;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step05-controlled-flow-map.md:20: It shows how a future `activity_object_facts` row maps to an existing or candidate Value Object in the tree.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step05-controlled-flow-map.md:45: - no automatic activity_object_facts persistence.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step05-controlled-flow-map.md:52: - `activity_object_facts`
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step06-save-gate-api-preflight.md:23: 5. insert rows into `activity_object_facts`;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step07-save-gate-contract.md:31: 5. insert `activity_object_facts`;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step08-save-gate-preview-ui.md:50: - no automatic activity_object_facts persistence.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:284: ----- Search migrations: activity_object_facts -----
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:285: Pattern: activity_object_facts
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:287: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:131: -- 2. activity_object_facts
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:288: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:134: create table if not exists public.activity_object_facts (
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:289: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:161: constraint activity_object_facts_semantic_key_check check (semantic_object_key ~ '^[a-z][a-z0-9_]{1,79}$'),
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:290: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:162: constraint activity_object_facts_measure_type_check check (
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:291: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:180: constraint activity_object_facts_unit_check check (
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:292: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:205: constraint activity_object_facts_status_check check (
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:293: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:216: constraint activity_object_facts_source_type_check check (
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:294: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:227: constraint activity_object_facts_confidence_check check (confidence >= 0 and confidence <= 1),
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:295: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:228: constraint activity_object_facts_one_value_check check (
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:296: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:235: create index if not exists activity_object_facts_event_idx on public.activity_object_facts(activity_event_id);
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:297: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:236: create index if not exists activity_object_facts_user_created_idx on public.activity_object_facts(user_id, created_at desc);
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:298: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:237: create index if not exists activity_object_facts_user_semantic_idx on public.activity_object_facts(user_id, semantic_object_key, created_at desc);
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:299: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:238: create index if not exists activity_object_facts_user_value_object_idx on public.activity_object_facts(user_id, value_object_id, created_at desc) where value_object_id is not null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:300: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:239: create index if not exists activity_object_facts_status_idx on public.activity_object_facts(user_id, fact_status, created_at desc);
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:301: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:240: create index if not exists activity_object_facts_performed_actor_idx on public.activity_object_facts(performed_by_actor_id, created_at desc) where performed_by_actor_id is not null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:302: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:242: drop trigger if exists trg_activity_object_facts_updated_at on public.activity_object_facts;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:303: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:243: create trigger trg_activity_object_facts_updated_at
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:304: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:244: before update on public.activity_object_facts
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:305: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:248: alter table public.activity_object_facts enable row level security;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:306: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:249: revoke all on table public.activity_object_facts from anon, authenticated;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:307: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:250: grant select, insert, update, delete on table public.activity_object_facts to service_role;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:308: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:251: drop policy if exists no_direct_public_activity_object_facts_access on public.activity_object_facts;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:309: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:252: create policy no_direct_public_activity_object_facts_access
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:310: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:253: on public.activity_object_facts
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:311: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:259: comment on table public.activity_object_facts is 'Private user-owned object facts derived from activity_events. Shared Value Objects are references only; fact rows remain private.';
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:312: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:260: comment on column public.activity_object_facts.semantic_object_key is 'Stable lower snake_case semantic object/category key used when value_object_id is null or as stable analytic key.';
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:313: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:261: comment on column public.activity_object_facts.value_object_id is 'Optional link to public.value_objects(id). Nullable so facts can exist before a Value Object is linked.';
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:314: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:270: fact_id uuid null references public.activity_object_facts(id) on delete set null,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:582: ----- Search src: activity_object_facts -----
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:583: Pattern: activity_object_facts
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1785: ----- Search src: activity_object_facts -----
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1786: Pattern: activity_object_facts
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1788: C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\activity-facts-preview.tsx:283: title="6. Preview будущих activity_object_facts"
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1789: C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\activity-facts-preview.tsx:384: объектов и будущие строки activity_object_facts.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1790: C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\controlled-flow-map.tsx:118: Эта таблица показывает, куда попадут будущие activity_object_facts после подтверждений и save gate.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1791: C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\controlled-flow-map.ts:64: titleRu: "Запись activity_object_facts",
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1792: C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\controlled-flow-map.ts:161: "Rows shown here are not persisted activity_object_facts.",
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2081: ----- Migration window: activity_object_facts -----
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2082: 131: -- 2. activity_object_facts
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2085: 134: create table if not exists public.activity_object_facts (
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2112: 161:   constraint activity_object_facts_semantic_key_check check (semantic_object_key ~ '^[a-z][a-z0-9_]{1,79}$'),
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2113: 162:   constraint activity_object_facts_measure_type_check check (
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2131: 180:   constraint activity_object_facts_unit_check check (
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2156: 205:   constraint activity_object_facts_status_check check (
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2167: 216:   constraint activity_object_facts_source_type_check check (
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2178: 227:   constraint activity_object_facts_confidence_check check (confidence >= 0 and confidence <= 1),
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2179: 228:   constraint activity_object_facts_one_value_check check (
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2186: 235: create index if not exists activity_object_facts_event_idx on public.activity_object_facts(activity_event_id);
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2187: 236: create index if not exists activity_object_facts_user_created_idx on public.activity_object_facts(user_id, created_at desc);
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2188: 237: create index if not exists activity_object_facts_user_semantic_idx on public.activity_object_facts(user_id, semantic_object_key, created_at desc);
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2189: 238: create index if not exists activity_object_facts_user_value_object_idx on public.activity_object_facts(user_id, value_object_id, created_at desc) where value_object_id is not null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2190: 239: create index if not exists activity_object_facts_status_idx on public.activity_object_facts(user_id, fact_status, created_at desc);
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2191: 240: create index if not exists activity_object_facts_performed_actor_idx on public.activity_object_facts(performed_by_actor_id, created_at desc) where performed_by_actor_id is not null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2193: 242: drop trigger if exists trg_activity_object_facts_updated_at on public.activity_object_facts;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2194: 243: create trigger trg_activity_object_facts_updated_at
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2195: 244: before update on public.activity_object_facts
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2199: 248: alter table public.activity_object_facts enable row level security;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2200: 249: revoke all on table public.activity_object_facts from anon, authenticated;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2201: 250: grant select, insert, update, delete on table public.activity_object_facts to service_role;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2202: 251: drop policy if exists no_direct_public_activity_object_facts_access on public.activity_object_facts;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2203: 252: create policy no_direct_public_activity_object_facts_access
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2204: 253: on public.activity_object_facts
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2210: 259: comment on table public.activity_object_facts is 'Private user-owned object facts derived from activity_events. Shared Value Objects are references only; fact rows remain private.';
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2211: 260: comment on column public.activity_object_facts.semantic_object_key is 'Stable lower snake_case semantic object/category key used when value_object_id is null or as stable analytic key.';
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2212: 261: comment on column public.activity_object_facts.value_object_id is 'Optional link to public.value_objects(id). Nullable so facts can exist before a Value Object is linked.';
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:2223: 270:   fact_id uuid null references public.activity_object_facts(id) on delete set null,
+
+----- Find parent_value_object_id source-of-truth references -----
+Pattern: parent_value_object_id
+Root: src
+Root: docs/activity-to-value-objects
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:61: parent_value_object_id: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:86: parent_value_object_id: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:253: rowsWithParent: rows.filter((row) => row.parent_value_object_id !== null)
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:429: .flatMap((row) => [row.value_object_id, row.parent_value_object_id])
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:441: "id, title, value_type, status, commercial_usage, parent_value_object_id, created_at, updated_at"
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:505: row.parent_value_object_id !== null
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:506: ? valueObjectMap.get(row.parent_value_object_id) ?? null
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:519: parentValueObjectId: valueObject.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:524: parentValueObjectId: row.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:533: parentValueObjectId: parent.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:25: parent_value_object_id?: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:88: parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:456: patch.parent_value_object_id = null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:466: patch.parent_value_object_id = normalizedParentValueObjectId;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:720: candidateParentValueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:752: currentParentValueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:764: if (!Object.prototype.hasOwnProperty.call(patch, "parent_value_object_id")) {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:768: const parentValueObjectId = patch.parent_value_object_id;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:155: "parent_value_object_id",
+C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\value-object-tree-preview.tsx:240: <span className="font-mono"> value_objects.parent_value_object_id</span>. Дочерние объекты
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:7: parent_value_object_id?: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:41: const parentValueObjectId = valueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:108: currentJson.valueObject.parent_value_object_id ?? "";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:190: responseJson.valueObject.parent_value_object_id ?? "";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:218: вычисляются по parent_value_object_id.
+C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\value-object-tree-preview.ts:247: "The real tree must use value_objects.parent_value_object_id as source of truth.",
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\step04-value-objects-tree-preview.md:49: `value_objects.parent_value_object_id`
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:386: ----- Search migrations: parent_value_object_id -----
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:387: Pattern: parent_value_object_id
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:620: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:61: parent_value_object_id: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:621: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:86: parent_value_object_id: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:623: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:253: rowsWithParent: rows.filter((row) => row.parent_value_object_id !== null)
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:626: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:429: .flatMap((row) => [row.value_object_id, row.parent_value_object_id])
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:627: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:441: "id, title, value_type, status, commercial_usage, parent_value_object_id, created_at, updated_at"
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:634: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:519: parentValueObjectId: valueObject.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:635: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:524: parentValueObjectId: row.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:636: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:533: parentValueObjectId: parent.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:643: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:466: patch.parent_value_object_id = normalizedParentValueObjectId;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:651: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:768: const parentValueObjectId = patch.parent_value_object_id;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:672: C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:41: const parentValueObjectId = valueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:675: ----- Search src: parent_value_object_id -----
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:676: Pattern: parent_value_object_id
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:678: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:61: parent_value_object_id: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:679: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:86: parent_value_object_id: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:680: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:253: rowsWithParent: rows.filter((row) => row.parent_value_object_id !== null)
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:681: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:429: .flatMap((row) => [row.value_object_id, row.parent_value_object_id])
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:682: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:441: "id, title, value_type, status, commercial_usage, parent_value_object_id, created_at, updated_at"
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:683: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:505: row.parent_value_object_id !== null
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:684: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:506: ? valueObjectMap.get(row.parent_value_object_id) ?? null
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:685: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:519: parentValueObjectId: valueObject.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:686: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:524: parentValueObjectId: row.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:687: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:533: parentValueObjectId: parent.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:688: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:25: parent_value_object_id?: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:689: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:88: parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:690: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:456: patch.parent_value_object_id = null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:691: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:466: patch.parent_value_object_id = normalizedParentValueObjectId;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:692: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:720: candidateParentValueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:693: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:752: currentParentValueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:694: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:764: if (!Object.prototype.hasOwnProperty.call(patch, "parent_value_object_id")) {
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:695: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:768: const parentValueObjectId = patch.parent_value_object_id;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:696: C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:155: "parent_value_object_id",
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:697: C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:7: parent_value_object_id?: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:698: C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:41: const parentValueObjectId = valueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:699: C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:108: currentJson.valueObject.parent_value_object_id ?? "";
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:700: C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:190: responseJson.valueObject.parent_value_object_id ?? "";
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt:701: C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:218: вычисляются по parent_value_object_id.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1073: 25:   parent_value_object_id?: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1136: 88:   parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1862: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:519: parentValueObjectId: valueObject.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1863: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:524: parentValueObjectId: row.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1864: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:533: parentValueObjectId: parent.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1871: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:466: patch.parent_value_object_id = normalizedParentValueObjectId;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1879: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:768: const parentValueObjectId = patch.parent_value_object_id;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1900: C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:41: const parentValueObjectId = valueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1933: ----- Search src: parent_value_object_id -----
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1934: Pattern: parent_value_object_id
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1936: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:61: parent_value_object_id: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1937: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:86: parent_value_object_id: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1938: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:253: rowsWithParent: rows.filter((row) => row.parent_value_object_id !== null)
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1939: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:429: .flatMap((row) => [row.value_object_id, row.parent_value_object_id])
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1940: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:441: "id, title, value_type, status, commercial_usage, parent_value_object_id, created_at, updated_at"
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1941: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:505: row.parent_value_object_id !== null
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1942: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:506: ? valueObjectMap.get(row.parent_value_object_id) ?? null
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1943: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:519: parentValueObjectId: valueObject.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1944: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:524: parentValueObjectId: row.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1945: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:533: parentValueObjectId: parent.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1946: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:25: parent_value_object_id?: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1947: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:88: parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1948: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:456: patch.parent_value_object_id = null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1949: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:466: patch.parent_value_object_id = normalizedParentValueObjectId;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1950: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:720: candidateParentValueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1951: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:752: currentParentValueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1952: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:764: if (!Object.prototype.hasOwnProperty.call(patch, "parent_value_object_id")) {
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1953: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:768: const parentValueObjectId = patch.parent_value_object_id;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1954: C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:155: "parent_value_object_id",
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1955: C:\Users\Admin\Documents\projects\gpt-app\src\components\activity-to-value-objects\value-object-tree-preview.tsx:240: <span className="font-mono"> value_objects.parent_value_object_id</span>. Дочерние объекты
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1956: C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:7: parent_value_object_id?: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1957: C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:41: const parentValueObjectId = valueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1958: C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:108: currentJson.valueObject.parent_value_object_id ?? "";
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1959: C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:190: responseJson.valueObject.parent_value_object_id ?? "";
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1960: C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:218: вычисляются по parent_value_object_id.
+C:\Users\Admin\Documents\projects\gpt-app\docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP06_SAVE_GATE_PREFLIGHT_RESULT_20260615_162413.txt:1961: C:\Users\Admin\Documents\projects\gpt-app\src\data\activity-to-value-objects\value-object-tree-preview.ts:247: "The real tree must use value_objects.parent_value_object_id as source of truth.",
+
+==============================
+5. TARGETED LINT — ALL NEW FILES
+==============================
+Lint command: npx eslint "src/types/activity-to-value-objects.ts" "src/data/activity-to-value-objects/football-with-child-preview.ts" "src/components/activity-to-value-objects/activity-facts-preview.tsx" "src/app/activity-capture/facts-preview/page.tsx" "src/types/value-object-tree-preview.ts" "src/data/activity-to-value-objects/value-object-tree-preview.ts" "src/components/activity-to-value-objects/value-object-tree-preview.tsx" "src/app/value-objects/tree-preview/page.tsx" "src/types/activity-value-object-flow-map.ts" "src/data/activity-to-value-objects/controlled-flow-map.ts" "src/components/activity-to-value-objects/controlled-flow-map.tsx" "src/app/activity-capture/controlled-flow-map/page.tsx" "src/types/activity-facts-save-gate.ts" "src/data/activity-to-value-objects/save-gate-contract-preview.ts" "src/components/activity-to-value-objects/save-gate-preview.tsx" "src/app/activity-capture/save-gate-preview/page.tsx"
+Targeted lint exit code: 0
+
+==============================
+6. CREATE STEP09 DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\step09-pre-commit-integration-audit.md
+
+==============================
+7. GIT DIFF SUMMARY
+==============================
+
+----- git status --short -----
+?? ACTIVITY_VO_FLOW_STEP09_PRE_COMMIT_AUDIT_RESULT_20260615_164134.txt
+?? docs/activity-to-value-objects/
+?? src/app/activity-capture/controlled-flow-map/
+?? src/app/activity-capture/facts-preview/
+?? src/app/activity-capture/save-gate-preview/
+?? src/app/value-objects/tree-preview/
+?? src/components/activity-to-value-objects/
+?? src/data/activity-to-value-objects/
+?? src/types/activity-facts-save-gate.ts
+?? src/types/activity-to-value-objects.ts
+?? src/types/activity-value-object-flow-map.ts
+?? src/types/value-object-tree-preview.ts
+
+----- git diff --stat -----
+
+----- git diff --name-only -----
+
+==============================
+8. STEP 09 CONCLUSION
+==============================
+Missing expected files count: 0
+Unexpected forbidden files count: 0
+Forbidden code hits count: 24
+Targeted lint exit code: 0
+STEP 09 RESULT: NEEDS REVIEW
+Review missing/unexpected/forbidden/lint findings before commit gate.

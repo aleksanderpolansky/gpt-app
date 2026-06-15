@@ -1,0 +1,52 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_TO_VALUE_OBJECTS_CONTROLLED_FLOW
+STEP 02 / 12 — ACTIVITY PROCESSING PACKAGE CONTRACT
+Generated: 2026-06-15 16:05:34
+Mode: CODE/DATA CONTRACT ONLY
+DB writes: NO
+SQL execution: NO
+OpenAI calls: NO
+Commit/push: NO
+
+==============================
+1. CLEANUP / MOVE STEP01 REPORTS
+==============================
+Moved Step01 report: ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt -> docs\activity-to-value-objects\reports\ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt
+
+==============================
+2. CREATE TYPE CONTRACT
+==============================
+Created/updated: src\types\activity-to-value-objects.ts
+
+==============================
+3. CREATE PREVIEW FIXTURE
+==============================
+Created/updated: src\data\activity-to-value-objects\football-with-child-preview.ts
+
+==============================
+4. CREATE DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\step02-activity-processing-package-contract.md
+
+==============================
+5. TARGETED LINT
+==============================
+Targeted lint exit code: 0
+
+==============================
+6. GIT STATUS
+==============================
+?? ACTIVITY_VO_FLOW_STEP02_CONTRACT_RESULT_20260615_160531.txt
+?? docs/activity-to-value-objects/
+?? src/data/activity-to-value-objects/
+?? src/types/activity-to-value-objects.ts
+
+==============================
+7. STEP 02 CONCLUSION
+==============================
+STEP 02 RESULT: PASS
+Contract and fixture were created.
+No DB write was executed.
+No SQL was executed.
+No OpenAI call was executed.
+Next expected step: Step 03 / 12 — create read-only Activity Facts Preview UI page.

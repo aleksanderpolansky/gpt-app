@@ -1,0 +1,719 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_TO_VALUE_OBJECTS_CONTROLLED_FLOW
+STEP 01 / 12 — PREFLIGHT
+Generated: 2026-06-15 15:58:45
+Mode: READ-ONLY INSPECTION
+DB writes: NO
+SQL execution: NO
+OpenAI calls: NO
+Commit/push: NO
+
+==============================
+1. GIT STATE
+==============================
+
+----- git branch -----
+main
+
+----- git status --short -----
+?? ACTIVITY_VO_FLOW_STEP01_PREFLIGHT_RESULT_20260615_155844.txt
+
+----- last commit -----
+10dedc0 Facts: add activity facts persistence layer
+
+==============================
+2. EXPECTED ROUTES / FILES
+==============================
+[OK]      Workspace route :: src/app/workspace/page.tsx
+[OK]      Right AI column :: src/components/workspace/contextual-ai/contextual-ai-column.tsx
+[OK]      Activity Capture route :: src/app/activity-capture/page.tsx
+[OK]      Value Objects list route :: src/app/value-objects/page.tsx
+[OK]      Value Object detail route :: src/app/value-objects/[id]/page.tsx
+[OK]      Value Object new route :: src/app/value-objects/new/page.tsx
+[OK]      Value Object edit route :: src/app/value-objects/[id]/edit/page.tsx
+[OK]      Value Objects components folder :: src/components/workspace/value-objects
+[OK]      Value Object card components folder :: src/components/workspace/value-object-card
+[MISSING] Project Knowledge route :: src/app/project-knowledge/page.tsx
+[OK]      Analytics route :: src/app/analytics/page.tsx
+[OK]      Today route :: src/app/today/page.tsx
+[OK]      Supabase migrations folder :: supabase/migrations
+[OK]      Package file :: package.json
+
+==============================
+3. ROUTE INVENTORY
+==============================
+PAGE ROUTE: /activities/new :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\new\page.tsx
+PAGE ROUTE: /activities :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activities\page.tsx
+PAGE ROUTE: /activity/debug/semantic-dry-run-review :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activity\debug\semantic-dry-run-review\page.tsx
+PAGE ROUTE: /activity/debug/semantic-v3-review :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activity\debug\semantic-v3-review\page.tsx
+PAGE ROUTE: /activity/debug/server-auth-readiness-review :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activity\debug\server-auth-readiness-review\page.tsx
+PAGE ROUTE: /activity-capture :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-capture\page.tsx
+PAGE ROUTE: /activity-today :: C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-today\page.tsx
+PAGE ROUTE: /admin/object-action/categories :: C:\Users\Admin\Documents\projects\gpt-app\src\app\admin\object-action\categories\page.tsx
+PAGE ROUTE: /admin/object-action/classifications :: C:\Users\Admin\Documents\projects\gpt-app\src\app\admin\object-action\classifications\page.tsx
+PAGE ROUTE: /admin/object-action :: C:\Users\Admin\Documents\projects\gpt-app\src\app\admin\object-action\page.tsx
+PAGE ROUTE: /admin/object-action/suggestions :: C:\Users\Admin\Documents\projects\gpt-app\src\app\admin\object-action\suggestions\page.tsx
+PAGE ROUTE: /admin :: C:\Users\Admin\Documents\projects\gpt-app\src\app\admin\page.tsx
+PAGE ROUTE: /analytics :: C:\Users\Admin\Documents\projects\gpt-app\src\app\analytics\page.tsx
+PAGE ROUTE: /availability-rules/new :: C:\Users\Admin\Documents\projects\gpt-app\src\app\availability-rules\new\page.tsx
+PAGE ROUTE: /availability-rules :: C:\Users\Admin\Documents\projects\gpt-app\src\app\availability-rules\page.tsx
+PAGE ROUTE: /bookings/new :: C:\Users\Admin\Documents\projects\gpt-app\src\app\bookings\new\page.tsx
+PAGE ROUTE: /bookings :: C:\Users\Admin\Documents\projects\gpt-app\src\app\bookings\page.tsx
+PAGE ROUTE: /businesses/new :: C:\Users\Admin\Documents\projects\gpt-app\src\app\businesses\new\page.tsx
+PAGE ROUTE: /businesses :: C:\Users\Admin\Documents\projects\gpt-app\src\app\businesses\page.tsx
+PAGE ROUTE: /calendar/new :: C:\Users\Admin\Documents\projects\gpt-app\src\app\calendar\new\page.tsx
+PAGE ROUTE: /calendar :: C:\Users\Admin\Documents\projects\gpt-app\src\app\calendar\page.tsx
+PAGE ROUTE: /certificates/new :: C:\Users\Admin\Documents\projects\gpt-app\src\app\certificates\new\page.tsx
+PAGE ROUTE: /certificates :: C:\Users\Admin\Documents\projects\gpt-app\src\app\certificates\page.tsx
+PAGE ROUTE: /certificates/redeem :: C:\Users\Admin\Documents\projects\gpt-app\src\app\certificates\redeem\page.tsx
+PAGE ROUTE: /directory/[slug] :: C:\Users\Admin\Documents\projects\gpt-app\src\app\directory\[slug]\page.tsx
+PAGE ROUTE: /directory :: C:\Users\Admin\Documents\projects\gpt-app\src\app\directory\page.tsx
+PAGE ROUTE: /locations/new :: C:\Users\Admin\Documents\projects\gpt-app\src\app\locations\new\page.tsx
+PAGE ROUTE: /locations :: C:\Users\Admin\Documents\projects\gpt-app\src\app\locations\page.tsx
+PAGE ROUTE: /m :: C:\Users\Admin\Documents\projects\gpt-app\src\app\m\page.tsx
+PAGE ROUTE: /my-certificates :: C:\Users\Admin\Documents\projects\gpt-app\src\app\my-certificates\page.tsx
+PAGE ROUTE: /my-purchase-confirmations :: C:\Users\Admin\Documents\projects\gpt-app\src\app\my-purchase-confirmations\page.tsx
+PAGE ROUTE: /next :: C:\Users\Admin\Documents\projects\gpt-app\src\app\next\page.tsx
+PAGE ROUTE: /offers/[id] :: C:\Users\Admin\Documents\projects\gpt-app\src\app\offers\[id]\page.tsx
+PAGE ROUTE: /offers/available-slots :: C:\Users\Admin\Documents\projects\gpt-app\src\app\offers\available-slots\page.tsx
+PAGE ROUTE: /offers/new :: C:\Users\Admin\Documents\projects\gpt-app\src\app\offers\new\page.tsx
+PAGE ROUTE: /offers :: C:\Users\Admin\Documents\projects\gpt-app\src\app\offers\page.tsx
+PAGE ROUTE: /organizations/[id] :: C:\Users\Admin\Documents\projects\gpt-app\src\app\organizations\[id]\page.tsx
+PAGE ROUTE: /organizations/new :: C:\Users\Admin\Documents\projects\gpt-app\src\app\organizations\new\page.tsx
+PAGE ROUTE: /organizations :: C:\Users\Admin\Documents\projects\gpt-app\src\app\organizations\page.tsx
+PAGE ROUTE: / :: C:\Users\Admin\Documents\projects\gpt-app\src\app\page.tsx
+PAGE ROUTE: /points :: C:\Users\Admin\Documents\projects\gpt-app\src\app\points\page.tsx
+PAGE ROUTE: /privacy-audit :: C:\Users\Admin\Documents\projects\gpt-app\src\app\privacy-audit\page.tsx
+PAGE ROUTE: /public/purchases :: C:\Users\Admin\Documents\projects\gpt-app\src\app\public\purchases\page.tsx
+PAGE ROUTE: /purchase-confirmations/[id]/events :: C:\Users\Admin\Documents\projects\gpt-app\src\app\purchase-confirmations\[id]\events\page.tsx
+PAGE ROUTE: /purchase-confirmations :: C:\Users\Admin\Documents\projects\gpt-app\src\app\purchase-confirmations\page.tsx
+PAGE ROUTE: /purchase-history :: C:\Users\Admin\Documents\projects\gpt-app\src\app\purchase-history\page.tsx
+PAGE ROUTE: /rewards :: C:\Users\Admin\Documents\projects\gpt-app\src\app\rewards\page.tsx
+PAGE ROUTE: /seller/purchase-confirmations :: C:\Users\Admin\Documents\projects\gpt-app\src\app\seller\purchase-confirmations\page.tsx
+PAGE ROUTE: /seller-certificates :: C:\Users\Admin\Documents\projects\gpt-app\src\app\seller-certificates\page.tsx
+PAGE ROUTE: /semantic/review :: C:\Users\Admin\Documents\projects\gpt-app\src\app\semantic\review\page.tsx
+PAGE ROUTE: /service-log/[id] :: C:\Users\Admin\Documents\projects\gpt-app\src\app\service-log\[id]\page.tsx
+PAGE ROUTE: /service-log :: C:\Users\Admin\Documents\projects\gpt-app\src\app\service-log\page.tsx
+PAGE ROUTE: /time-blocks/new :: C:\Users\Admin\Documents\projects\gpt-app\src\app\time-blocks\new\page.tsx
+PAGE ROUTE: /time-blocks :: C:\Users\Admin\Documents\projects\gpt-app\src\app\time-blocks\page.tsx
+PAGE ROUTE: /today :: C:\Users\Admin\Documents\projects\gpt-app\src\app\today\page.tsx
+PAGE ROUTE: /value-objects/[id]/edit :: C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\[id]\edit\page.tsx
+PAGE ROUTE: /value-objects/[id] :: C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\[id]\page.tsx
+PAGE ROUTE: /value-objects/characteristics-rollup-preview :: C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\characteristics-rollup-preview\page.tsx
+PAGE ROUTE: /value-objects/debug/cloud-profile :: C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx
+PAGE ROUTE: /value-objects/new :: C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\new\page.tsx
+PAGE ROUTE: /value-objects :: C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\page.tsx
+PAGE ROUTE: /workspace :: C:\Users\Admin\Documents\projects\gpt-app\src\app\workspace\page.tsx
+
+==============================
+4. API ROUTE INVENTORY
+==============================
+API ROUTE: /api/activities :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activities\route.ts
+API ROUTE: /api/activity/capture/detached-semantic-preview :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\capture\detached-semantic-preview\route.ts
+API ROUTE: /api/activity/complete :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\complete\route.ts
+API ROUTE: /api/activity/controlled-intake :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\controlled-intake\route.ts
+API ROUTE: /api/activity/day-summary :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\day-summary\route.ts
+API ROUTE: /api/activity/debug/activity-capture-semantic-integration-proof :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\activity-capture-semantic-integration-proof\route.ts
+API ROUTE: /api/activity/debug/activity-semantic-orchestration-skeleton :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\activity-semantic-orchestration-skeleton\route.ts
+API ROUTE: /api/activity/debug/actor-bootstrap-controlled-write :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\actor-bootstrap-controlled-write\route.ts
+API ROUTE: /api/activity/debug/actor-bootstrap-link-inventory :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\actor-bootstrap-link-inventory\route.ts
+API ROUTE: /api/activity/debug/app-user-mapping-lookup-error-focused-test :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\app-user-mapping-lookup-error-focused-test\route.ts
+API ROUTE: /api/activity/debug/auth0-session-diagnostic :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\auth0-session-diagnostic\route.ts
+API ROUTE: /api/activity/debug/c8-i-post-sql-api-verify :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\c8-i-post-sql-api-verify\route.ts
+API ROUTE: /api/activity/debug/category-derivation-complete-route-adapter-failure-test :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-complete-route-adapter-failure-test\route.ts
+API ROUTE: /api/activity/debug/category-derivation-complete-route-adapter-idempotency-test :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-complete-route-adapter-idempotency-test\route.ts
+API ROUTE: /api/activity/debug/category-derivation-controlled-production-persist-proof :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-controlled-production-persist-proof\route.ts
+API ROUTE: /api/activity/debug/category-derivation-route-runner-test :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-route-runner-test\route.ts
+API ROUTE: /api/activity/debug/create-free-text-start-event :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\create-free-text-start-event\route.ts
+API ROUTE: /api/activity/debug/external-concept-stub :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\external-concept-stub\route.ts
+API ROUTE: /api/activity/debug/free-text-value-object-test :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\free-text-value-object-test\route.ts
+API ROUTE: /api/activity/debug/internal-user-actor-mapping-readiness :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\internal-user-actor-mapping-readiness\route.ts
+API ROUTE: /api/activity/debug/local-controlled-category-lookup :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\local-controlled-category-lookup\route.ts
+API ROUTE: /api/activity/debug/ownership-context-column-contract-probe-read-only-test :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\ownership-context-column-contract-probe-read-only-test\route.ts
+API ROUTE: /api/activity/debug/ownership-context-positive-auto-candidate-read-only-test :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\ownership-context-positive-auto-candidate-read-only-test\route.ts
+API ROUTE: /api/activity/debug/ownership-context-resolution-read-only-test :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\ownership-context-resolution-read-only-test\route.ts
+API ROUTE: /api/activity/debug/ownership-rls-verification-readiness :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\ownership-rls-verification-readiness\route.ts
+API ROUTE: /api/activity/debug/primary-category-source-search-order-proof :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\primary-category-source-search-order-proof\route.ts
+API ROUTE: /api/activity/debug/real-auth-session-runtime-read-test :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\real-auth-session-runtime-read-test\route.ts
+API ROUTE: /api/activity/debug/resolver-decision-contract :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\resolver-decision-contract\route.ts
+API ROUTE: /api/activity/debug/semantic-actor-resolution-dry-run :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\semantic-actor-resolution-dry-run\route.ts
+API ROUTE: /api/activity/debug/semantic-final-write-gate-contract :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\semantic-final-write-gate-contract\route.ts
+API ROUTE: /api/activity/debug/semantic-next-action-preview :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\semantic-next-action-preview\route.ts
+API ROUTE: /api/activity/debug/semantic-v3-contract-invariants :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\semantic-v3-contract-invariants\route.ts
+API ROUTE: /api/activity/debug/semantic-v3-persistence-route-gate :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\semantic-v3-persistence-route-gate\route.ts
+API ROUTE: /api/activity/debug/semantic-v3-preview :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\semantic-v3-preview\route.ts
+API ROUTE: /api/activity/debug/semantic-v3-regression-matrix :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\semantic-v3-regression-matrix\route.ts
+API ROUTE: /api/activity/debug/server-side-app-user-mapping-read-only-test :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\server-side-app-user-mapping-read-only-test\route.ts
+API ROUTE: /api/activity/debug/source-order-resolver-blocker-preview :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\source-order-resolver-blocker-preview\route.ts
+API ROUTE: /api/activity/debug/stable-bundle-persistence-gate-blocker :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-bundle-persistence-gate-blocker\route.ts
+API ROUTE: /api/activity/debug/stable-bundle-resolver-gate-integration :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-bundle-resolver-gate-integration\route.ts
+API ROUTE: /api/activity/debug/stable-semantic-bundle-activity-event-reference-dry-run :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-activity-event-reference-dry-run\route.ts
+API ROUTE: /api/activity/debug/stable-semantic-bundle-explicit-sandbox-write-gate :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-explicit-sandbox-write-gate\route.ts
+API ROUTE: /api/activity/debug/stable-semantic-bundle-persistence-service-dry-run-parity :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-persistence-service-dry-run-parity\route.ts
+API ROUTE: /api/activity/debug/stable-semantic-bundle-persistence-service-sandbox-write-adapter :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-persistence-service-sandbox-write-adapter\route.ts
+API ROUTE: /api/activity/debug/stable-semantic-bundle-persistence-service-skeleton :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-persistence-service-skeleton\route.ts
+API ROUTE: /api/activity/debug/stable-semantic-bundle-post-schema-write-gate-readiness :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-post-schema-write-gate-readiness\route.ts
+API ROUTE: /api/activity/debug/stable-semantic-bundle-post-write-verification :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-post-write-verification\route.ts
+API ROUTE: /api/activity/debug/stable-semantic-bundle-preview :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-preview\route.ts
+API ROUTE: /api/activity/debug/stable-semantic-bundle-schema-preflight :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-schema-preflight\route.ts
+API ROUTE: /api/activity/debug/stable-semantic-bundle-transaction-contract :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-transaction-contract\route.ts
+API ROUTE: /api/activity/debug/stable-semantic-bundle-write-contract :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-write-contract\route.ts
+API ROUTE: /api/activity/debug/stable-semantic-bundle-write-gate-dry-run :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-write-gate-dry-run\route.ts
+API ROUTE: /api/activity/debug/state-fact-rollback-no-write-proof :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\state-fact-rollback-no-write-proof\route.ts
+API ROUTE: /api/activity/debug/state-signal-candidate-shadow-test :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\state-signal-candidate-shadow-test\route.ts
+API ROUTE: /api/activity/debug/unknown-term-detector :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\unknown-term-detector\route.ts
+API ROUTE: /api/activity/debug/unresolved-stable-bundle-blocker :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\unresolved-stable-bundle-blocker\route.ts
+API ROUTE: /api/activity/debug/value-object-bridge-proof :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\value-object-bridge-proof\route.ts
+API ROUTE: /api/activity/debug-known-template-registry :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug-known-template-registry\route.ts
+API ROUTE: /api/activity/debug-rubricator-value-object-bridge :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug-rubricator-value-object-bridge\route.ts
+API ROUTE: /api/activity/debug-trace :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug-trace\route.ts
+API ROUTE: /api/activity/events/[id]/corrections :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\events\[id]\corrections\route.ts
+API ROUTE: /api/activity/events/[id] :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\events\[id]\route.ts
+API ROUTE: /api/activity/events :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\events\route.ts
+API ROUTE: /api/activity/intake/events/[id]/confirm :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\events\[id]\confirm\route.ts
+API ROUTE: /api/activity/intake/events/[id]/reject :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\events\[id]\reject\route.ts
+API ROUTE: /api/activity/intake/events/[id] :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\events\[id]\route.ts
+API ROUTE: /api/activity/intake/events :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\events\route.ts
+API ROUTE: /api/activity/intake :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\route.ts
+API ROUTE: /api/activity/intake/signals/[id]/ignore :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\signals\[id]\ignore\route.ts
+API ROUTE: /api/activity/intake/signals/[id]/promote :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\signals\[id]\promote\route.ts
+API ROUTE: /api/activity/intake/signals :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\intake\signals\route.ts
+API ROUTE: /api/activity/record :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\record\route.ts
+API ROUTE: /api/activity/semantic/first-activity-value-object-link-write :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\first-activity-value-object-link-write\route.ts
+API ROUTE: /api/activity/semantic/first-persistence-write :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\first-persistence-write\route.ts
+API ROUTE: /api/activity/semantic/first-persistence-write/verify :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\first-persistence-write\verify\route.ts
+API ROUTE: /api/activity/semantic/first-value-object-write :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\first-value-object-write\route.ts
+API ROUTE: /api/activity/semantic/persistence-dry-run :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\persistence-dry-run\route.ts
+API ROUTE: /api/activity/semantic/runtime-schema-proof :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\runtime-schema-proof\route.ts
+API ROUTE: /api/activity/semantic/server-auth-readiness :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\server-auth-readiness\route.ts
+API ROUTE: /api/activity/semantic/stable-bundle-proof :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\stable-bundle-proof\route.ts
+API ROUTE: /api/activity/semantic/value-object-link-readiness :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\value-object-link-readiness\route.ts
+API ROUTE: /api/activity/semantic/value-object-scope-readiness :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\value-object-scope-readiness\route.ts
+API ROUTE: /api/activity/semantic/value-object-space-decision :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\value-object-space-decision\route.ts
+API ROUTE: /api/activity/semantic-orchestration-preview :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic-orchestration-preview\route.ts
+API ROUTE: /api/activity/semantic-review/new-concept-candidates-preview :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic-review\new-concept-candidates-preview\route.ts
+API ROUTE: /api/activity/start :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\start\route.ts
+API ROUTE: /api/activity/state-facts/controlled-persist :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\state-facts\controlled-persist\route.ts
+API ROUTE: /api/activity/state-hooks/preview :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\state-hooks\preview\route.ts
+API ROUTE: /api/activity/templates :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\templates\route.ts
+API ROUTE: /api/activity/value-objects/candidates-preview :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\value-objects\candidates-preview\route.ts
+API ROUTE: /api/ai/semantic-intake/organization :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\ai\semantic-intake\organization\route.ts
+API ROUTE: /api/availability-rules :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\availability-rules\route.ts
+API ROUTE: /api/bookings/[id]/cancel :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\bookings\[id]\cancel\route.ts
+API ROUTE: /api/bookings/[id]/complete :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\bookings\[id]\complete\route.ts
+API ROUTE: /api/bookings/[id]/confirm :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\bookings\[id]\confirm\route.ts
+API ROUTE: /api/bookings :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\bookings\route.ts
+API ROUTE: /api/calendar/events :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\calendar\events\route.ts
+API ROUTE: /api/certificates/cancel :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\certificates\cancel\route.ts
+API ROUTE: /api/certificates/expire-due :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\certificates\expire-due\route.ts
+API ROUTE: /api/certificates/redeem :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\certificates\redeem\route.ts
+API ROUTE: /api/certificates/request :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\certificates\request\route.ts
+API ROUTE: /api/directory/filters :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\directory\filters\route.ts
+API ROUTE: /api/directory/organizations/[slug]/offers :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\directory\organizations\[slug]\offers\route.ts
+API ROUTE: /api/directory/organizations/[slug] :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\directory\organizations\[slug]\route.ts
+API ROUTE: /api/directory/organizations :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\directory\organizations\route.ts
+API ROUTE: /api/geo/areas :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\geo\areas\route.ts
+API ROUTE: /api/geo/suggestions :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\geo\suggestions\route.ts
+API ROUTE: /api/locations :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\locations\route.ts
+API ROUTE: /api/me :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\me\route.ts
+API ROUTE: /api/messages :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\messages\route.ts
+API ROUTE: /api/my/purchase-confirmations :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\my\purchase-confirmations\route.ts
+API ROUTE: /api/object-action/categories/audit-verify :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\object-action\categories\audit-verify\route.ts
+API ROUTE: /api/object-action/categories :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\object-action\categories\route.ts
+API ROUTE: /api/object-action/suggestions/audit-verify :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\object-action\suggestions\audit-verify\route.ts
+API ROUTE: /api/object-action/suggestions :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\object-action\suggestions\route.ts
+API ROUTE: /api/offers/[id]/available-slots :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\offers\[id]\available-slots\route.ts
+API ROUTE: /api/offers :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\offers\route.ts
+API ROUTE: /api/organizations/[id]/category-review :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\organizations\[id]\category-review\route.ts
+API ROUTE: /api/organizations/[id]/location :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\organizations\[id]\location\route.ts
+API ROUTE: /api/organizations :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\organizations\route.ts
+API ROUTE: /api/points/transactions :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\points\transactions\route.ts
+API ROUTE: /api/points/wallet :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\points\wallet\route.ts
+API ROUTE: /api/public/purchase-history :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\public\purchase-history\route.ts
+API ROUTE: /api/public/rewards :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\public\rewards\route.ts
+API ROUTE: /api/purchase-confirmations/[id]/confirm :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\purchase-confirmations\[id]\confirm\route.ts
+API ROUTE: /api/purchase-confirmations/[id]/events :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\purchase-confirmations\[id]\events\route.ts
+API ROUTE: /api/purchase-confirmations/[id]/reject :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\purchase-confirmations\[id]\reject\route.ts
+API ROUTE: /api/purchase-confirmations :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\purchase-confirmations\route.ts
+API ROUTE: /api/semantic-cloud/public :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\semantic-cloud\public\route.ts
+API ROUTE: /api/service-log/runs/[id] :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\service-log\runs\[id]\route.ts
+API ROUTE: /api/service-log/runs :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\service-log\runs\route.ts
+API ROUTE: /api/sync-user :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\sync-user\route.ts
+API ROUTE: /api/test :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\test\route.ts
+API ROUTE: /api/time-blocks :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\time-blocks\route.ts
+API ROUTE: /api/value-objects/[id] :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts
+API ROUTE: /api/value-objects/debug/cloud-profile :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts
+API ROUTE: /api/value-objects :: C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\route.ts
+
+==============================
+5. SUPABASE / MIGRATION SIGNALS
+==============================
+
+----- Latest migration files -----
+20260615135403_activity_facts_persistence_layer.sql
+20260612_183044_avo_value_objects_author_first_usage_scope.sql
+20260611203935_ai_navigator_manual_activity_template.sql
+20260609_service_log_activity_processing_service_log.sql
+20260531_c33j4_stable_semantic_bundle_schema.sql
+20260528204503_c8_i_state_context_layer_draft.sql
+20260525133000_c8_i_d4_l_l_n_b_fix_state_fact_correction_status_rolled_back.sql
+20260525001000_c8_i_d4_l_l_g_atomic_rollback_rpc.sql
+20260524000000_c8_i_d4_l_e_value_object_state_fact_audit_events.sql
+20260524_p4_10_0_c8_i_d3_state_dimensions_initial_seed.sql
+20260524_p4_10_0_c8_i_d2_state_similarity_relevance_nba_additive.sql
+026_p4_8_0_drop_obsolete_purchase_confirmations_currency.sql
+025_p4_8_0_add_commercial_usage_and_purchase_currency.sql
+024_activity_template_known_registry_rules.sql
+023_value_object_state_foundation_p4_7.sql
+022_activity_processing_logs_complete_event_stage.sql
+021_activity_processing_logs.sql
+020_activity_raw_signals.sql
+019_activity_security_foundation.sql
+018_activity_corrections_status_rollback.sql
+017_activity_corrections.sql
+016_activity_atomic_aggregate_updates.sql
+015_activity_impact_rules_v2_template_link.sql
+014_activity_events_v2_template_link.sql
+013_activity_templates_v2.sql
+012_activity_recording_backbone.sql
+011_update_object_action_suggestion_request_source_constraint.sql
+010_create_object_action_suggestion_events.sql
+009_update_object_action_suggestion_admin_decision_constraint.sql
+008_create_platform_admins.sql
+
+----- Search migrations: activity_object_facts -----
+Pattern: activity_object_facts
+Root: supabase
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:131: -- 2. activity_object_facts
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:134: create table if not exists public.activity_object_facts (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:161: constraint activity_object_facts_semantic_key_check check (semantic_object_key ~ '^[a-z][a-z0-9_]{1,79}$'),
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:162: constraint activity_object_facts_measure_type_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:180: constraint activity_object_facts_unit_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:205: constraint activity_object_facts_status_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:216: constraint activity_object_facts_source_type_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:227: constraint activity_object_facts_confidence_check check (confidence >= 0 and confidence <= 1),
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:228: constraint activity_object_facts_one_value_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:235: create index if not exists activity_object_facts_event_idx on public.activity_object_facts(activity_event_id);
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:236: create index if not exists activity_object_facts_user_created_idx on public.activity_object_facts(user_id, created_at desc);
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:237: create index if not exists activity_object_facts_user_semantic_idx on public.activity_object_facts(user_id, semantic_object_key, created_at desc);
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:238: create index if not exists activity_object_facts_user_value_object_idx on public.activity_object_facts(user_id, value_object_id, created_at desc) where value_object_id is not null;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:239: create index if not exists activity_object_facts_status_idx on public.activity_object_facts(user_id, fact_status, created_at desc);
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:240: create index if not exists activity_object_facts_performed_actor_idx on public.activity_object_facts(performed_by_actor_id, created_at desc) where performed_by_actor_id is not null;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:242: drop trigger if exists trg_activity_object_facts_updated_at on public.activity_object_facts;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:243: create trigger trg_activity_object_facts_updated_at
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:244: before update on public.activity_object_facts
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:248: alter table public.activity_object_facts enable row level security;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:249: revoke all on table public.activity_object_facts from anon, authenticated;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:250: grant select, insert, update, delete on table public.activity_object_facts to service_role;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:251: drop policy if exists no_direct_public_activity_object_facts_access on public.activity_object_facts;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:252: create policy no_direct_public_activity_object_facts_access
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:253: on public.activity_object_facts
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:259: comment on table public.activity_object_facts is 'Private user-owned object facts derived from activity_events. Shared Value Objects are references only; fact rows remain private.';
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:260: comment on column public.activity_object_facts.semantic_object_key is 'Stable lower snake_case semantic object/category key used when value_object_id is null or as stable analytic key.';
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:261: comment on column public.activity_object_facts.value_object_id is 'Optional link to public.value_objects(id). Nullable so facts can exist before a Value Object is linked.';
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:270: fact_id uuid null references public.activity_object_facts(id) on delete set null,
+
+----- Search migrations: activity_event_measures -----
+Pattern: activity_event_measures
+Root: supabase
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:21: -- 1. activity_event_measures
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:24: create table if not exists public.activity_event_measures (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:44: constraint activity_event_measures_measure_type_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:62: constraint activity_event_measures_unit_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:87: constraint activity_event_measures_source_type_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:98: constraint activity_event_measures_confidence_check check (confidence >= 0 and confidence <= 1),
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:99: constraint activity_event_measures_one_value_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:106: create index if not exists activity_event_measures_event_idx on public.activity_event_measures(activity_event_id);
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:107: create index if not exists activity_event_measures_user_created_idx on public.activity_event_measures(user_id, created_at desc);
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:108: create index if not exists activity_event_measures_type_unit_idx on public.activity_event_measures(measure_type, unit);
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:109: create index if not exists activity_event_measures_performed_actor_idx on public.activity_event_measures(performed_by_actor_id, created_at desc) where performed_by_actor_id is not null;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:111: drop trigger if exists trg_activity_event_measures_updated_at on public.activity_event_measures;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:112: create trigger trg_activity_event_measures_updated_at
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:113: before update on public.activity_event_measures
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:117: alter table public.activity_event_measures enable row level security;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:118: revoke all on table public.activity_event_measures from anon, authenticated;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:119: grant select, insert, update, delete on table public.activity_event_measures to service_role;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:120: drop policy if exists no_direct_public_activity_event_measures_access on public.activity_event_measures;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:121: create policy no_direct_public_activity_event_measures_access
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:122: on public.activity_event_measures
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:128: comment on table public.activity_event_measures is 'Private server-mediated measures extracted from activity_events. No direct browser Data API access.';
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:137: measure_id uuid null references public.activity_event_measures(id) on delete set null,
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:271: measure_id uuid null references public.activity_event_measures(id) on delete set null,
+
+----- Search migrations: activity_fact_review_items -----
+Pattern: activity_fact_review_items
+Root: supabase
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:264: -- 3. activity_fact_review_items
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:267: create table if not exists public.activity_fact_review_items (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:290: constraint activity_fact_review_items_decision_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:293: constraint activity_fact_review_items_proposed_one_value_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:298: constraint activity_fact_review_items_edited_value_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:306: create index if not exists activity_fact_review_items_event_idx on public.activity_fact_review_items(activity_event_id);
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:307: create index if not exists activity_fact_review_items_user_decision_idx on public.activity_fact_review_items(user_id, user_decision, created_at desc);
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:309: drop trigger if exists trg_activity_fact_review_items_updated_at on public.activity_fact_review_items;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:310: create trigger trg_activity_fact_review_items_updated_at
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:311: before update on public.activity_fact_review_items
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:315: alter table public.activity_fact_review_items enable row level security;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:316: revoke all on table public.activity_fact_review_items from anon, authenticated;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:317: grant select, insert, update, delete on table public.activity_fact_review_items to service_role;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:318: drop policy if exists no_direct_public_activity_fact_review_items_access on public.activity_fact_review_items;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:319: create policy no_direct_public_activity_fact_review_items_access
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:320: on public.activity_fact_review_items
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:326: comment on table public.activity_fact_review_items is 'Private server-mediated review decisions for proposed activity facts.';
+
+----- Search migrations: activity_fact_recalculation_queue -----
+Pattern: activity_fact_recalculation_queue
+Root: supabase
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:329: -- 4. activity_fact_recalculation_queue
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:332: create table if not exists public.activity_fact_recalculation_queue (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:349: constraint activity_fact_recalculation_queue_semantic_key_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:352: constraint activity_fact_recalculation_queue_reason_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:364: constraint activity_fact_recalculation_queue_status_check check (
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:369: create index if not exists activity_fact_recalculation_queue_status_idx on public.activity_fact_recalculation_queue(queue_status, scheduled_at asc);
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:370: create index if not exists activity_fact_recalculation_queue_user_idx on public.activity_fact_recalculation_queue(user_id, created_at desc);
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:371: create index if not exists activity_fact_recalculation_queue_value_object_idx on public.activity_fact_recalculation_queue(value_object_id, created_at desc) where value_object_id is not null;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:373: drop trigger if exists trg_activity_fact_recalculation_queue_updated_at on public.activity_fact_recalculation_queue;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:374: create trigger trg_activity_fact_recalculation_queue_updated_at
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:375: before update on public.activity_fact_recalculation_queue
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:379: alter table public.activity_fact_recalculation_queue enable row level security;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:380: revoke all on table public.activity_fact_recalculation_queue from anon, authenticated;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:381: grant select, insert, update, delete on table public.activity_fact_recalculation_queue to service_role;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:382: drop policy if exists no_direct_public_activity_fact_recalculation_queue_access on public.activity_fact_recalculation_queue;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:383: create policy no_direct_public_activity_fact_recalculation_queue_access
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:384: on public.activity_fact_recalculation_queue
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql:390: comment on table public.activity_fact_recalculation_queue is 'Private server-mediated queue for invalidating or recomputing analytics after fact or hierarchy changes.';
+
+----- Search migrations: parent_value_object_id -----
+Pattern: parent_value_object_id
+Root: supabase
+[NO HITS]
+
+----- Search migrations: value_objects -----
+Pattern: value_objects
+Root: supabase
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\012_activity_recording_backbone.sql:4: -- activity_links, time_blocks, value_objects, organizations, offers, certificates or points.
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\014_activity_events_v2_template_link.sql:10: -- activity_participants, activity_links, time_blocks, value_objects or commercial core.
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\023_value_object_state_foundation_p4_7.sql:24: value_object_id uuid not null references public.value_objects(id),
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\023_value_object_state_foundation_p4_7.sql:229: value_object_id uuid not null references public.value_objects(id),
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\023_value_object_state_foundation_p4_7.sql:316: value_object_id uuid not null references public.value_objects(id),
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\023_value_object_state_foundation_p4_7.sql:387: value_object_id uuid not null references public.value_objects(id),
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\025_p4_8_0_add_commercial_usage_and_purchase_currency.sql:6: - Add value_objects.commercial_usage
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\025_p4_8_0_add_commercial_usage_and_purchase_currency.sql:20: alter table public.value_objects
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\025_p4_8_0_add_commercial_usage_and_purchase_currency.sql:23: alter table public.value_objects
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\025_p4_8_0_add_commercial_usage_and_purchase_currency.sql:24: drop constraint if exists value_objects_commercial_usage_check;
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\025_p4_8_0_add_commercial_usage_and_purchase_currency.sql:26: alter table public.value_objects
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\025_p4_8_0_add_commercial_usage_and_purchase_currency.sql:27: add constraint value_objects_commercial_usage_check
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\025_p4_8_0_add_commercial_usage_and_purchase_currency.sql:38: comment on column public.value_objects.commercial_usage is
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\025_p4_8_0_add_commercial_usage_and_purchase_currency.sql:77: (table_name = 'value_objects' and column_name = 'commercial_usage')
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\025_p4_8_0_add_commercial_usage_and_purchase_currency.sql:88: 'value_objects_commercial_usage_check',
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\025_p4_8_0_add_commercial_usage_and_purchase_currency.sql:99: count(*) as value_objects_with_invalid_commercial_usage
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\025_p4_8_0_add_commercial_usage_and_purchase_currency.sql:100: from public.value_objects
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260524000000_c8_i_d4_l_e_value_object_state_fact_audit_events.sql:87: REFERENCES public.value_objects(id)
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260524_p4_10_0_c8_i_d2_state_similarity_relevance_nba_additive.sql:96: value_object_id uuid not null references public.value_objects(id) on delete cascade,
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260524_p4_10_0_c8_i_d2_state_similarity_relevance_nba_additive.sql:180: target_value_object_id uuid references public.value_objects(id) on delete set null,
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260524_p4_10_0_c8_i_d2_state_similarity_relevance_nba_additive.sql:245: source_value_object_id uuid not null references public.value_objects(id) on delete cascade,
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260524_p4_10_0_c8_i_d2_state_similarity_relevance_nba_additive.sql:246: target_value_object_id uuid not null references public.value_objects(id) on delete cascade,
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260524_p4_10_0_c8_i_d2_state_similarity_relevance_nba_additive.sql:303: source_value_object_id uuid references public.value_objects(id) on delete cascade,
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260524_p4_10_0_c8_i_d2_state_similarity_relevance_nba_additive.sql:304: target_value_object_id uuid references public.value_objects(id) on delete cascade,
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260524_p4_10_0_c8_i_d3_state_dimensions_initial_seed.sql:20: -- - This draft must not touch value_objects.
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260524_p4_10_0_c8_i_d3_state_dimensions_initial_seed.sql:455: --    - alter table public.value_objects
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260524_p4_10_0_c8_i_d3_state_dimensions_initial_seed.sql:460: --    - insert into public.value_objects
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260609_service_log_activity_processing_service_log.sql:7: --   This table is NOT the source of truth for activity_events, value_objects,
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260609_service_log_activity_processing_service_log.sql:369: 'Append-first private service log for verifying the semantic activity processing pipeline. Not a source-of-truth replacement for activity_events, value_objects, categories, metrics, corrections or analytics.';
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260612_183044_avo_value_objects_author_first_usage_scope.sql:7: -- Make public.value_objects ready for author-first draft-first flow:
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260612_183044_avo_value_objects_author_first_usage_scope.sql:32: alter table public.value_objects
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260612_183044_avo_value_objects_author_first_usage_scope.sql:41: where conname = 'value_objects_usage_scope_check'
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260612_183044_avo_value_objects_author_first_usage_scope.sql:42: and conrelid = 'public.value_objects'::regclass
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260612_183044_avo_value_objects_author_first_usage_scope.sql:44: alter table public.value_objects
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260612_183044_avo_value_objects_author_first_usage_scope.sql:45: add constraint value_objects_usage_scope_check
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260612_183044_avo_value_objects_author_first_usage_scope.sql:58: where conname = 'value_objects_created_by_actor_id_fkey'
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260612_183044_avo_value_objects_author_first_usage_scope.sql:59: and conrelid = 'public.value_objects'::regclass
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260612_183044_avo_value_objects_author_first_usage_scope.sql:61: alter table public.value_objects
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260612_183044_avo_value_objects_author_first_usage_scope.sql:62: add constraint value_objects_created_by_actor_id_fkey
+C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260612_183044_avo_value_objects_author_first_usage_scope.sql:69: update public.value_objects
+
+==============================
+6. CODE SIGNALS: ACTIVITY INPUT / AI COLUMN
+==============================
+
+----- Search src: ActivityComposer -----
+Pattern: ActivityComposer
+Root: src
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx:34: function ActivityComposer() {
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx:219: const [isActivityComposerOpen, setIsActivityComposerOpen] = useState(false);
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx:244: {isActivityComposerOpen ? <ActivityComposer /> : null}
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx:275: setIsActivityComposerOpen(true);
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx:281: aria-pressed={label === "Записать активность" ? isActivityComposerOpen : undefined}
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx:283: label === "Записать активность" && isActivityComposerOpen
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP03_20260611_145119:34: function ActivityComposer() {
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP03_20260611_145119:211: const [isActivityComposerOpen, setIsActivityComposerOpen] = useState(false);
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP03_20260611_145119:236: {isActivityComposerOpen ? <ActivityComposer /> : null}
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP03_20260611_145119:267: setIsActivityComposerOpen(true);
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP03_20260611_145119:273: aria-pressed={label === "Записать активность" ? isActivityComposerOpen : undefined}
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP03_20260611_145119:275: label === "Записать активность" && isActivityComposerOpen
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP06_20260611_152623:34: function ActivityComposer() {
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP06_20260611_152623:173: const [isActivityComposerOpen, setIsActivityComposerOpen] = useState(false);
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP06_20260611_152623:198: {isActivityComposerOpen ? <ActivityComposer /> : null}
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP06_20260611_152623:229: setIsActivityComposerOpen(true);
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP06_20260611_152623:235: aria-pressed={label === "Записать активность" ? isActivityComposerOpen : undefined}
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP06_20260611_152623:237: label === "Записать активность" && isActivityComposerOpen
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_1_20260611_162931:34: function ActivityComposer() {
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_1_20260611_162931:196: const [isActivityComposerOpen, setIsActivityComposerOpen] = useState(false);
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_1_20260611_162931:221: {isActivityComposerOpen ? <ActivityComposer /> : null}
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_1_20260611_162931:252: setIsActivityComposerOpen(true);
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_1_20260611_162931:258: aria-pressed={label === "Записать активность" ? isActivityComposerOpen : undefined}
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_1_20260611_162931:260: label === "Записать активность" && isActivityComposerOpen
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_20260611_162251:34: function ActivityComposer() {
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_20260611_162251:173: const [isActivityComposerOpen, setIsActivityComposerOpen] = useState(false);
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_20260611_162251:198: {isActivityComposerOpen ? <ActivityComposer /> : null}
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_20260611_162251:229: setIsActivityComposerOpen(true);
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_20260611_162251:235: aria-pressed={label === "Записать активность" ? isActivityComposerOpen : undefined}
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_20260611_162251:237: label === "Записать активность" && isActivityComposerOpen
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_2_20260611_163217:34: function ActivityComposer() {
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_2_20260611_163217:196: const [isActivityComposerOpen, setIsActivityComposerOpen] = useState(false);
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_2_20260611_163217:221: {isActivityComposerOpen ? <ActivityComposer /> : null}
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_2_20260611_163217:252: setIsActivityComposerOpen(true);
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_2_20260611_163217:258: aria-pressed={label === "Записать активность" ? isActivityComposerOpen : undefined}
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_2_20260611_163217:260: label === "Записать активность" && isActivityComposerOpen
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_3_20260611_163412:34: function ActivityComposer() {
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_3_20260611_163412:196: const [isActivityComposerOpen, setIsActivityComposerOpen] = useState(false);
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_3_20260611_163412:221: {isActivityComposerOpen ? <ActivityComposer /> : null}
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-ai-navigator.tsx.bak.AVO_STEP09_3_20260611_163412:252: setIsActivityComposerOpen(true);
+
+----- Search src: textarea -----
+Pattern: textarea
+Root: src/components/workspace/contextual-ai
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\contextual-ai\contextual-ai-column.tsx:118: <textarea
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\contextual-ai\contextual-ai-column.tsx.bak.20260606_180438:82: <textarea
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\contextual-ai\contextual-ai-column.tsx.bak.20260606_183825:83: <textarea
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\contextual-ai\contextual-ai-column.tsx.bak.20260606_184135:113: <textarea
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\contextual-ai\contextual-ai-column.tsx.bak.20260606_185134:117: <textarea
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\contextual-ai\contextual-ai-column.tsx.bak.20260606_195324:118: <textarea
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\contextual-ai\contextual-ai-column.tsx.bak.20260606_195658:118: <textarea
+
+----- Search src: activity capture -----
+Pattern: activity-capture
+Root: src
+C:\Users\Admin\Documents\projects\gpt-app\src\app\activity-today\page.tsx:2226: href="/activity-capture"
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\activity-capture-semantic-integration-proof\route.ts:20: const ENDPOINT = "/api/activity/debug/activity-capture-semantic-integration-proof";
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\activity-capture-semantic-integration-proof\route.ts:165: p4Step: "C33-E-ACTIVITY-CAPTURE-SEMANTIC-INTEGRATION-PROOF",
+C:\Users\Admin\Documents\projects\gpt-app\src\components\app-shell\global-navigation.tsx:382: actionHref="/activity-capture"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\workspace-center.tsx:31: import { ActivityCapturePanel } from "./activity-capture/activity-capture-panel";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\workspace-center.tsx:97: data-ui4-activity-capture="local-mvp"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\workspace-fixtures.ts:169: id: "activity-capture",
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-accessibility-notes.tsx:25: id="activity-capture-a11y-summary"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-accessibility-notes.tsx:26: aria-labelledby="activity-capture-a11y-title"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-accessibility-notes.tsx:36: id="activity-capture-a11y-title"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-capture-fixtures.ts:1: import type { ActivityDomain } from "./activity-capture-types";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-capture-panel.tsx:11: import { activityCaptureExamplePrompts } from "./activity-capture-fixtures";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-capture-panel.tsx:20: import type { LocalParserResult } from "./activity-capture-types";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-capture-panel.tsx:45: const inputRegionId = "activity-capture-input-region";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-capture-panel.tsx:46: const previewRegionId = "activity-capture-preview-region";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-capture-panel.tsx:47: const safetyRegionId = "activity-capture-safety-boundary";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-capture-panel.tsx:323: aria-labelledby="activity-capture-title"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-capture-panel.tsx:324: aria-describedby="activity-capture-description activity-capture-a11y-summary"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-capture-panel.tsx:336: id="activity-capture-title"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-capture-panel.tsx:343: id="activity-capture-description"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-category-mapper.ts:6: } from "./activity-capture-types";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-empty-state.tsx:1: import type { ActivityCaptureExamplePrompt } from "./activity-capture-fixtures";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-empty-state.tsx:26: aria-labelledby="activity-capture-empty-state-title"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-empty-state.tsx:36: id="activity-capture-empty-state-title"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-input.tsx:8: } from "./activity-capture-fixtures";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-input.tsx:53: htmlFor="activity-capture-input"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-input.tsx:59: <p id="activity-capture-input-help" className="text-xs leading-5 text-slate-500">
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-input.tsx:66: id="activity-capture-input"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-input.tsx:67: aria-describedby="activity-capture-input-help activity-capture-input-counter"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-input.tsx:79: id="activity-capture-input-counter"
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-local-parser.ts:7: } from "./activity-capture-types";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-privacy-hint-mapper.ts:6: } from "./activity-capture-types";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-quick-example-prompts.tsx:1: import type { ActivityCaptureExamplePrompt } from "./activity-capture-fixtures";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\activity-value-object-mapper.ts:5: } from "./activity-capture-types";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\local-category-preview-panel.tsx:4: } from "./activity-capture-types";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\local-parsing-explanation-panel.tsx:5: } from "./activity-capture-types";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\privacy-hints-panel.tsx:1: import type { PrivacyHint } from "./activity-capture-types";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\submitted-activity-panel.tsx:1: import type { LocalActivityDraft } from "./activity-capture-types";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-capture\value-object-candidate-panel.tsx:1: import type { ValueObjectCandidate } from "./activity-capture-types";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\activity-review\activity-review-normalizer.ts:6: } from "../activity-capture/activity-capture-types";
+
+----- Search src: activity_event -----
+Pattern: activity_event
+Root: src
+C:\Users\Admin\Documents\projects\gpt-app\src\app\activity\debug\semantic-dry-run-review\SemanticDryRunReviewClient.tsx:558: <option value="persist_activity_event">persist_activity_event</option>
+C:\Users\Admin\Documents\projects\gpt-app\src\app\activity\debug\semantic-v3-review\SemanticRouteGatePanel.tsx:346: <option value="persist_activity_event">persist_activity_event</option>
+C:\Users\Admin\Documents\projects\gpt-app\src\app\activity\debug\server-auth-readiness-review\ServerAuthReadinessReviewClient.tsx:524: <option value="persist_activity_event">persist_activity_event</option>
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\complete\route.ts:936: .from("activity_events")
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\complete\route.ts:1147: .from("activity_events")
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\complete\route.ts:1699: .from("activity_events")
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\day-summary\route.ts:503: .from("activity_events")
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-complete-route-adapter-failure-test\route.ts:29: "missing_activity_event_id",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-complete-route-adapter-failure-test\route.ts:116: return "missing_activity_event_id";
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-complete-route-adapter-failure-test\route.ts:227: scenario === "missing_activity_event_id"
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-complete-route-adapter-failure-test\route.ts:523: scenario === "missing_activity_event_id",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-complete-route-adapter-idempotency-test\route.ts:199: .from("activity_events")
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-complete-route-adapter-idempotency-test\route.ts:214: .eq("activity_event_id", eventId)
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-complete-route-adapter-idempotency-test\route.ts:651: activity_event_id: row.activity_event_id ?? null,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-complete-route-adapter-idempotency-test\route.ts:664: activity_event_id: row.activity_event_id ?? null,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-controlled-production-persist-proof\route.ts:208: .from("activity_events")
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-controlled-production-persist-proof\route.ts:253: .from("activity_events")
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-controlled-production-persist-proof\route.ts:266: .eq("activity_event_id", eventId)
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-controlled-production-persist-proof\route.ts:565: "Failed to create controlled production_persist proof activity_event.",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-controlled-production-persist-proof\route.ts:583: "Created proof activity_event does not contain all required proof metadata markers.",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-controlled-production-persist-proof\route.ts:649: "Failed to refetch controlled proof activity_event.",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-controlled-production-persist-proof\route.ts:796: activity_event_id: row.activity_event_id ?? null,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-controlled-production-persist-proof\route.ts:809: activity_event_id: row.activity_event_id ?? null,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\category-derivation-route-runner-test\route.ts:225: .from("activity_events")
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\create-free-text-start-event\route.ts:315: "Clean non-completed free-text activity_event for production /api/activity/complete test.",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\create-free-text-start-event\route.ts:325: .from("activity_events")
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\free-text-value-object-test\route.ts:761: .from("activity_events")
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\ownership-rls-verification-readiness\route.ts:128: table: "activity_events",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\ownership-rls-verification-readiness\route.ts:147: relationColumns: ["activity_event_id", "value_object_id", "actor_id", "organization_id"],
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\ownership-rls-verification-readiness\route.ts:155: relationColumns: ["activity_event_id", "value_object_id", "dimension_id", "dimension_key", "actor_id", "organization_id"],
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\semantic-v3-persistence-route-gate\route.ts:79: text === "persist_activity_event" ||
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-activity-event-reference-dry-run\route.ts:4: STABLE_SEMANTIC_BUNDLE_ACTIVITY_EVENT_REFERENCE_DRY_RUN_MODE_V0,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-activity-event-reference-dry-run\route.ts:5: STABLE_SEMANTIC_BUNDLE_ACTIVITY_EVENT_REFERENCE_DRY_RUN_POLICY_V0,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-activity-event-reference-dry-run\route.ts:16: "stable_semantic_bundle_activity_event_reference_dry_run_route_v0";
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-activity-event-reference-dry-run\route.ts:26: STABLE_SEMANTIC_BUNDLE_ACTIVITY_EVENT_REFERENCE_DRY_RUN_POLICY_V0,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-activity-event-reference-dry-run\route.ts:28: STABLE_SEMANTIC_BUNDLE_ACTIVITY_EVENT_REFERENCE_DRY_RUN_MODE_V0,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\stable-semantic-bundle-activity-event-reference-dry-run\route.ts:31: "stable_bundle_can_reference_existing_activity_event_but_must_not_create_it",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\state-signal-candidate-shadow-test\route.ts:89: | "activity_events"
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\state-signal-candidate-shadow-test\route.ts:99: | "activity_event"
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\value-object-bridge-proof\route.ts:445: const eventResult = await selectById("event", "activity_events", eventId, appUser.id);
+
+----- Search src: activity_object_facts -----
+Pattern: activity_object_facts
+Root: src
+[NO HITS]
+
+----- Search src: value_object_id -----
+Pattern: value_object_id
+Root: src
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\ownership-rls-verification-readiness\route.ts:147: relationColumns: ["activity_event_id", "value_object_id", "actor_id", "organization_id"],
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\ownership-rls-verification-readiness\route.ts:155: relationColumns: ["activity_event_id", "value_object_id", "dimension_id", "dimension_key", "actor_id", "organization_id"],
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\state-fact-rollback-no-write-proof\route.ts:12: const WRONG_VALUE_OBJECT_ID = "00000000-0000-4000-8000-000000000111";
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\state-fact-rollback-no-write-proof\route.ts:81: valueObjectId: WRONG_VALUE_OBJECT_ID,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\state-fact-rollback-no-write-proof\route.ts:111: valueObjectId: WRONG_VALUE_OBJECT_ID,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\state-signal-candidate-shadow-test\route.ts:818: value_object_id: candidate.valueObjectId,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\value-object-bridge-proof\route.ts:474: "value_object_id",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\value-object-bridge-proof\route.ts:476: "target_value_object_id",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\value-object-bridge-proof\route.ts:508: columns: ["value_object_id", "object_id"],
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\value-object-bridge-proof\route.ts:515: "value_object_id",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\value-object-bridge-proof\route.ts:553: columns: ["value_object_id", "object_id"],
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\value-object-bridge-proof\route.ts:569: columns: ["value_object_id", "object_id"],
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\value-object-bridge-proof\route.ts:585: columns: ["value_object_id", "object_id"],
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\value-object-bridge-proof\route.ts:601: columns: ["value_object_id", "object_id"],
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\debug\value-object-bridge-proof\route.ts:613: columns: ["value_object_id", "object_id"],
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\first-activity-value-object-link-write\route.ts:577: .select("id, activity_event_id, value_object_id, link_type, exposure_type, confidence, created_at")
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\first-activity-value-object-link-write\route.ts:579: .eq("value_object_id", params.valueObjectId)
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\first-activity-value-object-link-write\route.ts:1033: value_object_id: context.valueObjectResolution.valueObjectId,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\first-activity-value-object-link-write\route.ts:1052: .select("id, activity_event_id, value_object_id, link_type, exposure_type, confidence, created_at")
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\first-persistence-write\route.ts:215: "value_object_id",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\runtime-schema-proof\route.ts:51: "value_object_id",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\runtime-schema-proof\route.ts:79: "value_object_id",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\value-object-link-readiness\route.ts:187: "value_object_id",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\value-object-link-readiness\route.ts:207: "value_object_id",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\semantic\value-object-link-readiness\route.ts:796: "value_object_id"
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\offers\route.ts:467: value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\offers\route.ts:674: value_object_id: valueObjectId,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\offers\route.ts:758: value_object_id: item.valueObjectId,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:25: value_object_id: string;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:60: value_object_id: string;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:61: parent_value_object_id: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:86: parent_value_object_id: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:225: valueObjectId: row.value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:253: rowsWithParent: rows.filter((row) => row.parent_value_object_id !== null)
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:376: cloudQuery = cloudQuery.eq("value_object_id", valueObjectId);
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:404: hierarchyQuery = hierarchyQuery.eq("value_object_id", valueObjectId);
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:429: .flatMap((row) => [row.value_object_id, row.parent_value_object_id])
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:441: "id, title, value_type, status, commercial_usage, parent_value_object_id, created_at, updated_at"
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:463: valueObjectId: row.value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:503: const valueObject = valueObjectMap.get(row.value_object_id) ?? null;
+
+----- Search src: parentValueObjectId -----
+Pattern: parentValueObjectId
+Root: src
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:519: parentValueObjectId: valueObject.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:524: parentValueObjectId: row.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:533: parentValueObjectId: parent.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:118: "parentValueObjectId",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:449: if (!Object.prototype.hasOwnProperty.call(body, "parentValueObjectId")) {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:453: const raw = body.parentValueObjectId;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:460: const normalizedParentValueObjectId = normalizeValueObjectId(raw);
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:462: if (!normalizedParentValueObjectId) {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:463: return "parentValueObjectId must be a Value Object id or null";
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:466: patch.parent_value_object_id = normalizedParentValueObjectId;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:719: let currentParentValueObjectId =
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:724: if (!currentParentValueObjectId) {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:728: if (currentParentValueObjectId === childValueObjectId) {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:732: if (visitedParentIds.has(currentParentValueObjectId)) {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:736: visitedParentIds.add(currentParentValueObjectId);
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:742: currentParentValueObjectId,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:751: currentParentValueObjectId =
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:768: const parentValueObjectId = patch.parent_value_object_id;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:770: if (parentValueObjectId === null) {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:774: if (typeof parentValueObjectId !== "string") {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:776: { error: "parentValueObjectId must be a Value Object id or null" },
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:781: if (parentValueObjectId === valueObject.id) {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:791: } = await readOwnedValueObject(parentValueObjectId, appUser, personActor);
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:12: parentValueObjectId: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:152: const parentValueObjectId =
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:154: "parentValueObjectId",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:185: const hierarchyRole = rawRole ?? (parentValueObjectId ? "child" : "root");
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:190: Boolean(parentValueObjectId),
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:202: parentValueObjectId,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:258: expectedChild?.parentValueObjectId === EXPECTED_PARENT_ID ||
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:292: ? `parentValueObjectId=${expectedChild.parentValueObjectId ?? "null"}, parentTitle=${
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:311: ? expectedChild.hierarchyRole === "child" || Boolean(expectedChild.parentValueObjectId)
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:322: ? expectedRoot.parentValueObjectId === null
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:327: ? `parentValueObjectId=${expectedRoot.parentValueObjectId ?? "null"}, hierarchyRole=${
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:416: {profile.parentValueObjectId ?? "null"}
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:528: profile.parentValueObjectId !== null || profile.hierarchyRole === "child",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:535: profile.parentValueObjectId === null && profile.hierarchyRole !== "child",
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:559: (profile) => profile.parentValueObjectId !== null && !profile.parentExists,
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:41: const parentValueObjectId = valueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:44: parentValueObjectId &&
+
+----- Search src: parent_value_object_id -----
+Pattern: parent_value_object_id
+Root: src
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:61: parent_value_object_id: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:86: parent_value_object_id: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:253: rowsWithParent: rows.filter((row) => row.parent_value_object_id !== null)
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:429: .flatMap((row) => [row.value_object_id, row.parent_value_object_id])
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:441: "id, title, value_type, status, commercial_usage, parent_value_object_id, created_at, updated_at"
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:505: row.parent_value_object_id !== null
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:506: ? valueObjectMap.get(row.parent_value_object_id) ?? null
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:519: parentValueObjectId: valueObject.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:524: parentValueObjectId: row.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\debug\cloud-profile\route.ts:533: parentValueObjectId: parent.parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:25: parent_value_object_id?: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:88: parent_value_object_id,
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:456: patch.parent_value_object_id = null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:466: patch.parent_value_object_id = normalizedParentValueObjectId;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:720: candidateParentValueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:752: currentParentValueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:764: if (!Object.prototype.hasOwnProperty.call(patch, "parent_value_object_id")) {
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\value-objects\[id]\route.ts:768: const parentValueObjectId = patch.parent_value_object_id;
+C:\Users\Admin\Documents\projects\gpt-app\src\app\value-objects\debug\cloud-profile\page.tsx:155: "parent_value_object_id",
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:7: parent_value_object_id?: string | null;
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:41: const parentValueObjectId = valueObject.parent_value_object_id ?? null;
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:108: currentJson.valueObject.parent_value_object_id ?? "";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:190: responseJson.valueObject.parent_value_object_id ?? "";
+C:\Users\Admin\Documents\projects\gpt-app\src\components\workspace\value-objects\value-object-parent-editor.tsx:218: вычисляются по parent_value_object_id.
+
+==============================
+7. PACKAGE SCRIPTS
+==============================
+SCRIPT: dev = next dev
+SCRIPT: build = next build
+SCRIPT: start = next start
+SCRIPT: lint = eslint
+
+==============================
+8. PREFLIGHT CONCLUSION TEMPLATE
+==============================
+Step 01 only inspected files/routes/signals.
+No code was changed.
+No DB write was executed.
+No SQL was executed.
+No OpenAI call was executed.
+Next expected step after review: Step 02 / 12 — define ActivityProcessingPackage contract and preview data model.
