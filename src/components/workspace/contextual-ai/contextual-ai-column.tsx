@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, type FormEvent } from "react";
 import {
@@ -13,6 +13,7 @@ import {
 
 import { UserSessionMiniStatus } from "../../auth/user-session-client";
 import type { ContextualAIColumnProps } from "./contextual-ai.types";
+import { RightAiSaveIntentCard } from "./right-ai-save-intent-card";
 
 type WorkspaceMessage = {
   id: number;
@@ -114,6 +115,7 @@ function ActivityComposer({
         OpenAI call и без создания Activity Event.
       </p>
 
+      <RightAiSaveIntentCard />
       <form onSubmit={submitActivity} className="space-y-2">
         <textarea
           value={activityText}
