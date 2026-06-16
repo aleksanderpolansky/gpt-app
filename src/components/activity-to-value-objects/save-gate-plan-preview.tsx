@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -35,6 +35,15 @@ type SaveGateRequestSummary = {
   idempotencyKey?: string | null;
   routeMode?: string | null;
   futurePersistenceMode?: string | null;
+  ownershipContext?: {
+    mode?: string | null;
+    serverDerivedOwnership?: boolean | null;
+    directBrowserSupabaseWriteAllowed?: boolean | null;
+    factRowsRemainPrivateUserOwned?: boolean | null;
+    confirmSaveBlockedBy?: string | null;
+    browserWriteRule?: string | null;
+    valueObjectPrivacyRule?: string | null;
+  } | null;
   factDecisionCount?: number;
   editedFactDecisionCount?: number;
   valueObjectCandidateDecisionCount?: number;
@@ -98,6 +107,15 @@ type SaveGatePlanResponse = {
   openAiCallExecuted?: boolean;
   requestSummary?: SaveGateRequestSummary;
   futurePersistenceMode?: string | null;
+  ownershipContext?: {
+    mode?: string | null;
+    serverDerivedOwnership?: boolean | null;
+    directBrowserSupabaseWriteAllowed?: boolean | null;
+    factRowsRemainPrivateUserOwned?: boolean | null;
+    confirmSaveBlockedBy?: string | null;
+    browserWriteRule?: string | null;
+    valueObjectPrivacyRule?: string | null;
+  } | null;
   validation?: SaveGateValidation;
   plannedWrites?: SaveGatePlannedWrite[];
   skipped?: SaveGateSkipped;
@@ -591,6 +609,26 @@ export function SaveGatePlanPreview() {
               )}
             />
               <KeyValueCard
+                label="Ownership context"
+                value={textLabel(response.ownershipContext?.mode)}
+              />
+              <KeyValueCard
+                label="Server-derived ownership"
+                value={textLabel(String(response.ownershipContext?.serverDerivedOwnership ?? "—"))}
+              />
+              <KeyValueCard
+                label="Direct browser Supabase write"
+                value={textLabel(String(response.ownershipContext?.directBrowserSupabaseWriteAllowed ?? "—"))}
+              />
+              <KeyValueCard
+                label="Fact rows remain private"
+                value={textLabel(String(response.ownershipContext?.factRowsRemainPrivateUserOwned ?? "—"))}
+              />
+              <KeyValueCard
+                label="Ownership block code"
+                value={textLabel(response.ownershipContext?.confirmSaveBlockedBy)}
+              />
+              <KeyValueCard
                 label="Write intent"
                 value={boolLabel(response.requestSummary?.writeIntentDetected)}
               />
@@ -695,7 +733,6 @@ export function SaveGatePlanPreview() {
     </section>
   );
 }
-
 
 
 

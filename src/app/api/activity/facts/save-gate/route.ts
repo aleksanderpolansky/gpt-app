@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import {
   saveGateContractPreviewRequest,
@@ -6,6 +6,7 @@ import {
 } from "@/data/activity-to-value-objects/save-gate-contract-preview";
 import { buildNoWriteExecutionPlan } from "@/lib/activity/facts/saveGate/executionPlan";
 import { buildActivityFactsGuardedPersistenceContract } from "@/lib/activity/facts/saveGate/persistenceContract";
+import { buildNoWriteOwnershipContext } from "@/lib/activity/facts/saveGate/ownershipContext";
 import {
   validateActivityFactsSaveGateRequest,
   type ActivityFactsSaveGateValidationResult,
@@ -65,6 +66,7 @@ function buildNoWriteResponse(params: {
     productionWriteEnabled: false,
     requestSummary: params.validation.summary,
     futurePersistenceMode: params.validation.summary.futurePersistenceMode,
+    ownershipContext: buildNoWriteOwnershipContext(),
     futurePersistenceContract: {
       allowedModes: ["preview", "confirm_save"],
       currentMode: params.validation.summary.futurePersistenceMode,
@@ -193,7 +195,6 @@ export async function POST(request: Request) {
     { status: 200 }
   );
 }
-
 
 
 
