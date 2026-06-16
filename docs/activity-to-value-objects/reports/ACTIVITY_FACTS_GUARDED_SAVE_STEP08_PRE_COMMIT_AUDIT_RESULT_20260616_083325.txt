@@ -1,0 +1,344 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_FACTS_SAVE_GATE_GUARDED_PERSISTENCE
+STEP 08 / 12 — PRE-COMMIT AUDIT USING DOCUMENTED BOUNDARY
+Generated: 2026-06-16 08:33:28
+Mode: PRE-COMMIT AUDIT ONLY
+DB writes: NO
+SQL execution: NO
+External AI calls: NO
+Commit/push: NO
+
+==============================
+1. CLEANUP / MOVE STEP07 RETRY1 REPORTS
+==============================
+Moved Step07 Retry1 report: ACTIVITY_FACTS_GUARDED_SAVE_STEP07_RETRY1_UI_LABELS_PRECOMMIT_BOUNDARY_RESULT_20260616_082933.txt -> docs\activity-to-value-objects\reports\ACTIVITY_FACTS_GUARDED_SAVE_STEP07_RETRY1_UI_LABELS_PRECOMMIT_BOUNDARY_RESULT_20260616_082933.txt
+
+==============================
+2. BOUNDARY FILE EXISTENCE CHECK
+==============================
+[PASS] Boundary file exists: src\app\api\activity\facts\save-gate\route.ts
+[PASS] Boundary file exists: src\lib\activity\facts\saveGate\persistenceContract.ts
+[PASS] Boundary file exists: src\lib\activity\facts\saveGate\executionPlan.ts
+[PASS] Boundary file exists: src\lib\activity\facts\saveGate\requestValidation.ts
+[PASS] Boundary file exists: src\components\activity-to-value-objects\guarded-persistence-contract-preview.tsx
+[PASS] Boundary file exists: src\app\activity-capture\guarded-persistence-contract-preview\page.tsx
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step01-preflight.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step02-persistence-contract.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step02-retry1-persistence-contract-audit-fix.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step03-route-contract-wiring.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step03-retry1-route-contract-wiring.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step03-retry2-route-contract-wiring.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step04-route-smoke.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step04-retry1-route-smoke.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step04-retry2-route-smoke.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step04-retry4-route-smoke-utf8-nobom.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step04-retry5-minimal-body-smoke.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step04-retry6-node-fetch-smoke.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step05-readonly-ui.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step06-ui-smoke.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step06-retry1-ui-smoke.md
+[PASS] Boundary file exists: docs\activity-to-value-objects\facts-guarded-save-step07-ui-labels-precommit-boundary.md
+Reports in docs/activity-to-value-objects/reports matching guarded-save block: 18
+[PASS] Guarded-save step reports are present in reports folder.
+
+==============================
+3. STATIC MARKER AUDIT
+==============================
+
+----- MARKER CHECK: Save-gate route contract markers -----
+File: src\app\api\activity\facts\save-gate\route.ts
+[PASS] Marker found: contractPreviewRequest: saveGateContractPreviewRequest
+[PASS] Marker found: guardedPersistenceContract
+[PASS] Marker found: buildActivityFactsGuardedPersistenceContract
+[PASS] Marker found: activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1
+[PASS] Marker found: guarded_persistence_contract_only_no_write
+[PASS] Marker found: productionWriteEnabled: false
+[PASS] Marker found: dbWriteExecuted: false
+[PASS] Marker found: sqlExecuted: false
+[PASS] Marker found: openAiCallExecuted: false
+[PASS] Marker found: ACTIVITY_FACTS_SAVE_GATE_WRITE_NOT_ENABLED
+[PASS] Marker found: ACTIVITY_FACTS_SAVE_GATE_VALIDATION_FAILED
+[PASS] Marker found: ACTIVITY_FACTS_SAVE_GATE_INVALID_JSON
+
+----- MARKER CHECK: Persistence contract markers -----
+File: src\lib\activity\facts\saveGate\persistenceContract.ts
+[PASS] Marker found: activity_facts_guarded_persistence_contract_v1
+[PASS] Marker found: server_mediated_write_disabled
+[PASS] Marker found: not_executed_contract_preview
+[PASS] Marker found: real_write_requires_separate_runtime_gate
+[PASS] Marker found: rowsActuallyWritten: 0
+[PASS] Marker found: activity_events
+[PASS] Marker found: activity_event_measures
+[PASS] Marker found: activity_object_facts
+[PASS] Marker found: activity_fact_review_items
+[PASS] Marker found: activity_fact_recalculation_queue
+
+----- MARKER CHECK: Read-only UI component markers -----
+File: src\components\activity-to-value-objects\guarded-persistence-contract-preview.tsx
+[PASS] Marker found: "use client"
+[PASS] Marker found: fetch("/api/activity/facts/save-gate"
+[PASS] Marker found: method: "GET"
+[PASS] Marker found: cache: "no-store"
+[PASS] Marker found: guardedPersistenceContract
+[PASS] Marker found: noWriteExecutionPlan
+[PASS] Marker found: LOCKED: false
+[PASS] Marker found: LOCKED: 0
+[PASS] Marker found: BROKEN: true
+[PASS] Marker found: no-write execution plan returned by the save-gate route
+[PASS] Marker found: NO SAVE BUTTON
+
+----- MARKER CHECK: Read-only UI page markers -----
+File: src\app\activity-capture\guarded-persistence-contract-preview\page.tsx
+[PASS] Marker found: Activity Facts Guarded Persistence Contract
+[PASS] Marker found: does not create, update, delete, confirm or save anything
+[PASS] Marker found: no-write execution plan returned by the save-gate route
+[PASS] Marker found: Encoding note: UI shell labels are ASCII-stable
+
+----- MARKER CHECK: Pre-commit boundary document markers -----
+File: docs\activity-to-value-objects\facts-guarded-save-step07-ui-labels-precommit-boundary.md
+[PASS] Marker found: Pre-commit audit boundary
+[PASS] Marker found: No Supabase client import
+[PASS] Marker found: No raw SQL execution
+[PASS] Marker found: UI source uses GET only
+[PASS] Marker found: Step 08 / 12 should run the pre-commit audit
+
+==============================
+4. PRECISE SAFETY FORBIDDEN AUDIT
+==============================
+
+----- PRECISE FORBIDDEN CHECK: No Supabase import in guarded-save UI/route/contract files -----
+Regex: import\s+\{?\s*supabase\b|from\s+["'][^"']*lib/supabase["']|from\s+["']@/lib/supabase["']
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No Supabase from/select calls in guarded-save UI/route/contract files -----
+Regex: \.from\s*\(|\.select\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable DB write methods in guarded-save UI/route/contract files -----
+Regex: \.(insert|upsert|update|delete)\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No external AI import/constructor/client call in guarded-save UI/route/contract files -----
+Regex: from\s+["']openai["']|new\s+OpenAI\s*\(|\bopenai\s*\.
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable SQL calls in guarded-save UI/route/contract files; ignore sqlExecuted safety flags -----
+Regex: (\bsupabase\s*\.\s*rpc\s*\(|\bdb\s*\.\s*execute\s*\(|\bclient\s*\.\s*query\s*\(|\bpool\s*\.\s*query\s*\(|\bexecuteSql\s*\(|\brawSql\s*\(|\bsql\s*`)
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No UI input fields or forms in read-only preview source files -----
+Regex: <input|<textarea|<select|<form|onSubmit=|type=["']submit["']
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No UI save/write/delete action controls in read-only preview source files -----
+Regex: <button|saveGateWrite|confirmSave|executeWrite|deleteFact|createFact|onClick=\{.*(save|write|delete|create|confirm)
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No non-GET fetch in read-only preview UI source files -----
+Regex: method:\s*["'](POST|PUT|PATCH|DELETE)["']|fetch\([^)]*,\s*\{[^}]*method:\s*["'](POST|PUT|PATCH|DELETE)["']
+[PASS] No precise forbidden hits.
+
+==============================
+5. GIT STATUS BOUNDARY AUDIT
+==============================
+ M src/app/api/activity/facts/save-gate/route.ts
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP08_PRE_COMMIT_AUDIT_RESULT_20260616_083325.txt
+?? docs/activity-to-value-objects/facts-guarded-save-step01-preflight.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-persistence-contract.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-retry1-persistence-contract-audit-fix.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-retry1-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-retry2-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry1-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry2-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry4-route-smoke-utf8-nobom.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry5-minimal-body-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry6-node-fetch-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step05-readonly-ui.md
+?? docs/activity-to-value-objects/facts-guarded-save-step06-retry1-ui-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step06-ui-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step07-ui-labels-precommit-boundary.md
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP01_PREFLIGHT_RESULT_20260615_184221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_PERSISTENCE_CONTRACT_RESULT_20260615_193130.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_RETRY1_PERSISTENCE_CONTRACT_AUDIT_FIX_RESULT_20260615_193325.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY1_ROUTE_CONTRACT_WIRING_RESULT_20260615_201146.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY2_ROUTE_CONTRACT_WIRING_RESULT_20260615_201350.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_ROUTE_CONTRACT_WIRING_RESULT_20260615_193558.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDERR_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDOUT_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY1_ROUTE_SMOKE_RESULT_20260615_201946.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY2_ROUTE_SMOKE_RESULT_20260615_202221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY3_VALIDATION_DIAGNOSTIC_RESULT_20260615_203856.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY4_ROUTE_SMOKE_UTF8_NOBOM_RESULT_20260616_065717.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY5_MINIMAL_BODY_SMOKE_RESULT_20260616_070026.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY6_NODE_FETCH_SMOKE_RESULT_20260616_070305.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_ROUTE_SMOKE_RESULT_20260615_201604.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP05_READONLY_UI_RESULT_20260616_070554.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP06_RETRY1_UI_SMOKE_RESULT_20260616_082527.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP06_UI_SMOKE_RESULT_20260616_070830.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP07_RETRY1_UI_LABELS_PRECOMMIT_BOUNDARY_RESULT_20260616_082933.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP07_UI_LABELS_PRECOMMIT_BOUNDARY_RESULT_20260616_082732.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+?? src/app/activity-capture/guarded-persistence-contract-preview/
+?? src/components/activity-to-value-objects/guarded-persistence-contract-preview.tsx
+?? src/lib/activity/facts/saveGate/persistenceContract.ts
+[PASS] Git status path is inside expected boundary: src/app/api/activity/facts/save-gate/route.ts
+[PASS] Git status path is inside expected boundary: ACTIVITY_FACTS_GUARDED_SAVE_STEP08_PRE_COMMIT_AUDIT_RESULT_20260616_083325.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step01-preflight.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step02-persistence-contract.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step02-retry1-persistence-contract-audit-fix.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step03-retry1-route-contract-wiring.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step03-retry2-route-contract-wiring.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step03-route-contract-wiring.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step04-retry1-route-smoke.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step04-retry2-route-smoke.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step04-retry4-route-smoke-utf8-nobom.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step04-retry5-minimal-body-smoke.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step04-retry6-node-fetch-smoke.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step04-route-smoke.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step05-readonly-ui.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step06-retry1-ui-smoke.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step06-ui-smoke.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/facts-guarded-save-step07-ui-labels-precommit-boundary.md
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP01_PREFLIGHT_RESULT_20260615_184221.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_PERSISTENCE_CONTRACT_RESULT_20260615_193130.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_RETRY1_PERSISTENCE_CONTRACT_AUDIT_FIX_RESULT_20260615_193325.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY1_ROUTE_CONTRACT_WIRING_RESULT_20260615_201146.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY2_ROUTE_CONTRACT_WIRING_RESULT_20260615_201350.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_ROUTE_CONTRACT_WIRING_RESULT_20260615_193558.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDERR_20260615_201604.log
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDOUT_20260615_201604.log
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY1_ROUTE_SMOKE_RESULT_20260615_201946.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY2_ROUTE_SMOKE_RESULT_20260615_202221.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY3_VALIDATION_DIAGNOSTIC_RESULT_20260615_203856.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY4_ROUTE_SMOKE_UTF8_NOBOM_RESULT_20260616_065717.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY5_MINIMAL_BODY_SMOKE_RESULT_20260616_070026.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY6_NODE_FETCH_SMOKE_RESULT_20260616_070305.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_ROUTE_SMOKE_RESULT_20260615_201604.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP05_READONLY_UI_RESULT_20260616_070554.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP06_RETRY1_UI_SMOKE_RESULT_20260616_082527.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP06_UI_SMOKE_RESULT_20260616_070830.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP07_RETRY1_UI_LABELS_PRECOMMIT_BOUNDARY_RESULT_20260616_082933.txt
+[PASS] Git status path is inside expected boundary: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP07_UI_LABELS_PRECOMMIT_BOUNDARY_RESULT_20260616_082732.txt
+[WARN] Git status path outside strict current boundary or inherited earlier artifact: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+[WARN] Git status path outside strict current boundary or inherited earlier artifact: docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+[PASS] Git status path is inside expected boundary: src/app/activity-capture/guarded-persistence-contract-preview/
+[PASS] Git status path is inside expected boundary: src/components/activity-to-value-objects/guarded-persistence-contract-preview.tsx
+[PASS] Git status path is inside expected boundary: src/lib/activity/facts/saveGate/persistenceContract.ts
+
+==============================
+6. NODE API/UI SMOKE RECHECK
+==============================
+Created Node pre-commit smoke script: ACTIVITY_FACTS_GUARDED_SAVE_STEP08_PRE_COMMIT_AUDIT_SMOKE_20260616_083325.cjs
+Node exit code: 0
+NODE STEP08 PRE-COMMIT SMOKE START
+Node version: v24.15.0
+Port 3000 API GET status: 200
+[PASS] Selected port 3000
+[PASS] A usable dev server port was detected.
+[PASS] API GET returns 200.
+[PASS] API GET parses as JSON.
+[PASS] API GET contains "productionWriteEnabled":false
+[PASS] API GET contains "dbWriteExecuted":false
+[PASS] API GET contains "sqlExecuted":false
+[PASS] API GET contains "openAiCallExecuted":false
+[PASS] API GET contains "rowsActuallyWritten":0
+[PASS] API GET contains "guardedPersistenceContract"
+[PASS] API GET contains "activity_facts_guarded_persistence_contract_v1"
+[PASS] API GET contains "server_mediated_write_disabled"
+[PASS] API GET contains "not_executed_contract_preview"
+[PASS] API GET contains "real_write_requires_separate_runtime_gate"
+Page status: 200
+Page content-type: text/html; charset=utf-8
+[PASS] UI page returns 200.
+[PASS] UI page response is HTML.
+[PASS] UI HTML contains marker: Activity Facts Guarded Persistence Contract
+[PASS] UI HTML contains marker: Read-only preview
+[PASS] UI HTML contains marker: does not create, update, delete, confirm or save anything
+[PASS] UI HTML contains marker: no-write execution plan returned by the save-gate route
+[PASS] UI HTML contains marker: Encoding note: UI shell labels are ASCII-stable
+NODE_TOTAL_ISSUES: 0
+NODE_RESULT: PASS
+Removed temporary Node pre-commit smoke script: ACTIVITY_FACTS_GUARDED_SAVE_STEP08_PRE_COMMIT_AUDIT_SMOKE_20260616_083325.cjs
+Node reported PASS: True
+
+==============================
+7. TARGETED LINT
+==============================
+Targeted lint exit code: 0
+
+==============================
+8. CREATE STEP08 DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\facts-guarded-save-step08-pre-commit-audit.md
+
+==============================
+9. FINAL GIT STATUS
+==============================
+ M src/app/api/activity/facts/save-gate/route.ts
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP08_PRE_COMMIT_AUDIT_RESULT_20260616_083325.txt
+?? docs/activity-to-value-objects/facts-guarded-save-step01-preflight.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-persistence-contract.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-retry1-persistence-contract-audit-fix.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-retry1-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-retry2-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry1-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry2-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry4-route-smoke-utf8-nobom.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry5-minimal-body-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry6-node-fetch-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step05-readonly-ui.md
+?? docs/activity-to-value-objects/facts-guarded-save-step06-retry1-ui-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step06-ui-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step07-ui-labels-precommit-boundary.md
+?? docs/activity-to-value-objects/facts-guarded-save-step08-pre-commit-audit.md
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP01_PREFLIGHT_RESULT_20260615_184221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_PERSISTENCE_CONTRACT_RESULT_20260615_193130.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_RETRY1_PERSISTENCE_CONTRACT_AUDIT_FIX_RESULT_20260615_193325.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY1_ROUTE_CONTRACT_WIRING_RESULT_20260615_201146.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY2_ROUTE_CONTRACT_WIRING_RESULT_20260615_201350.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_ROUTE_CONTRACT_WIRING_RESULT_20260615_193558.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDERR_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDOUT_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY1_ROUTE_SMOKE_RESULT_20260615_201946.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY2_ROUTE_SMOKE_RESULT_20260615_202221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY3_VALIDATION_DIAGNOSTIC_RESULT_20260615_203856.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY4_ROUTE_SMOKE_UTF8_NOBOM_RESULT_20260616_065717.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY5_MINIMAL_BODY_SMOKE_RESULT_20260616_070026.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY6_NODE_FETCH_SMOKE_RESULT_20260616_070305.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_ROUTE_SMOKE_RESULT_20260615_201604.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP05_READONLY_UI_RESULT_20260616_070554.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP06_RETRY1_UI_SMOKE_RESULT_20260616_082527.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP06_UI_SMOKE_RESULT_20260616_070830.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP07_RETRY1_UI_LABELS_PRECOMMIT_BOUNDARY_RESULT_20260616_082933.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP07_UI_LABELS_PRECOMMIT_BOUNDARY_RESULT_20260616_082732.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+?? src/app/activity-capture/guarded-persistence-contract-preview/
+?? src/components/activity-to-value-objects/guarded-persistence-contract-preview.tsx
+?? src/lib/activity/facts/saveGate/persistenceContract.ts
+
+==============================
+10. STEP 08 CONCLUSION
+==============================
+Missing boundary files count: 0
+Marker issues count: 0
+Forbidden hits count: 0
+Node exit code: 0
+Node reported PASS: True
+Targeted lint exit code: 0
+Total blocking issues count: 0
+STEP 08 RESULT: PASS
+Pre-commit audit passed using the documented boundary.
+API/UI smoke passed.
+Safety forbidden checks passed.
+Targeted lint passed.
+No DB write was executed.
+No SQL was executed.
+No external AI call was executed.
+No commit/push was executed.
+Next expected step: Step 09 / 12 — commit gate preparation.

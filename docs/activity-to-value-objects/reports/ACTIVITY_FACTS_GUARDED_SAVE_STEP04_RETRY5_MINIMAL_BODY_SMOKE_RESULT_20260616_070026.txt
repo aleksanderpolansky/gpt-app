@@ -1,0 +1,194 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_FACTS_SAVE_GATE_GUARDED_PERSISTENCE
+STEP 04 RETRY 5 / 12 — ROUTE SMOKE WITH MINIMAL VALID BODY
+Generated: 2026-06-16 07:00:29
+Mode: RUNTIME ROUTE SMOKE / NO-WRITE / MINIMAL BODY
+DB writes: NO
+SQL execution: NO
+External AI calls: NO
+Commit/push: NO
+
+==============================
+1. CLEANUP / MOVE STEP04 RETRY4 REPORTS
+==============================
+Moved Step04 Retry4 report: ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY4_ROUTE_SMOKE_UTF8_NOBOM_RESULT_20260616_065717.txt -> docs\activity-to-value-objects\reports\ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY4_ROUTE_SMOKE_UTF8_NOBOM_RESULT_20260616_065717.txt
+
+==============================
+2. STATIC SAFETY CHECKS
+==============================
+[PASS] Exists: src\app\api\activity\facts\save-gate\route.ts
+[PASS] Exists: src\lib\activity\facts\saveGate\persistenceContract.ts
+[PASS] Exists: src\lib\activity\facts\saveGate\executionPlan.ts
+[PASS] Exists: src\lib\activity\facts\saveGate\requestValidation.ts
+[PASS] Route marker found: contractPreviewRequest: saveGateContractPreviewRequest
+[PASS] Route marker found: guardedPersistenceContract
+[PASS] Route marker found: buildActivityFactsGuardedPersistenceContract
+[PASS] Route marker found: activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1
+[PASS] Route marker found: guarded_persistence_contract_only_no_write
+[PASS] Route marker found: productionWriteEnabled: false
+[PASS] Route marker found: dbWriteExecuted: false
+[PASS] Route marker found: sqlExecuted: false
+[PASS] Route marker found: openAiCallExecuted: false
+[PASS] Route marker found: ACTIVITY_FACTS_SAVE_GATE_WRITE_NOT_ENABLED
+[PASS] Route marker found: ACTIVITY_FACTS_SAVE_GATE_VALIDATION_FAILED
+[PASS] Route marker found: ACTIVITY_FACTS_SAVE_GATE_INVALID_JSON
+
+----- PRECISE FORBIDDEN CHECK: No Supabase import in guarded-save route/contract files -----
+Regex: import\s+\{?\s*supabase\b|from\s+["'][^"']*lib/supabase["']|from\s+["']@/lib/supabase["']
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No Supabase from/select calls in guarded-save route/contract files -----
+Regex: \.from\s*\(|\.select\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable DB write methods in guarded-save route/contract files -----
+Regex: \.(insert|upsert|update|delete)\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No external AI import/constructor/client call in guarded-save route/contract files -----
+Regex: from\s+["']openai["']|new\s+OpenAI\s*\(|\bopenai\s*\.
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable SQL calls in guarded-save route/contract files; ignore sqlExecuted safety flags -----
+Regex: (\bsupabase\s*\.\s*rpc\s*\(|\bdb\s*\.\s*execute\s*\(|\bclient\s*\.\s*query\s*\(|\bpool\s*\.\s*query\s*\(|\bexecuteSql\s*\(|\brawSql\s*\(|\bsql\s*`)
+[PASS] No precise forbidden hits.
+
+==============================
+3. PORT AUTO-DETECT
+==============================
+Port 3000 GET status: 200
+Port 3000 body preview: {"ok":true,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":["fact-football-30m","fact-play-wi
+[PASS] Selected port 3000: guardedPersistenceContract found.
+Selected base URL: http://localhost:3000
+
+==============================
+4. GET ROUTE SMOKE
+==============================
+GET status: 200
+[PASS] GET returned 200.
+[PASS] GET body parsed as JSON.
+
+Raw marker check: GET raw response
+[PASS] Raw marker found: "productionWriteEnabled":false
+[PASS] Raw marker found: "dbWriteExecuted":false
+[PASS] Raw marker found: "sqlExecuted":false
+[PASS] Raw marker found: "openAiCallExecuted":false
+[PASS] Raw marker found: "rowsActuallyWritten":0
+[PASS] Raw marker found: "guardedPersistenceContract"
+[PASS] Raw marker found: "activity_facts_guarded_persistence_contract_v1"
+[PASS] Raw marker found: "server_mediated_write_disabled"
+[PASS] Raw marker found: "not_executed_contract_preview"
+[PASS] Raw marker found: "real_write_requires_separate_runtime_gate"
+
+==============================
+5. MINIMAL VALID POST BODY
+==============================
+Minimal valid body JSON:
+{"routeMode":"contract_preview_only","sourcePackageId":"step04-retry5-minimal-valid-package","idempotencyKey":"step04-retry5-minimal-valid-idempotency","factDecisions":[{"factLocalId":"family_time","decision":"accept"},{"factLocalId":"physical_activity","decision":"accept"}],"editedFactDecisions":[],"valueObjectCandidateDecisions":[{"semanticObjectKey":"family_time","proposedTitleRu":"Family time","decision":"use_existing"},{"semanticObjectKey":"physical_activity","proposedTitleRu":"Physical activity","decision":"use_existing"}],"clientSafetyConfirmation":{"userReviewedPreview":true,"userConfirmedMissingValueObjectCreation":false,"userConfirmedFactWrite":false,"userUnderstandsPreviewIsNotDiagnosis":true}}
+
+==============================
+6. VALID POST SMOKE
+==============================
+Valid POST status: 400
+Valid POST body preview: {"ok":false,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[],"safety":{"serverMediatedOnly":true,"directBrowserSupabaseWriteAllowed":false,"duplicateChronologicalTimeAllowed":false,"medicalDiagnosisAllowed":false,"notes":["This response is a contract preview only.","No route was created in Step 07.","No database write was executed in Step 07.","The future stable endpoint should be /api/activity/facts/save-gate.","One activity can create several object facts, but total chronological time remains 30 minutes.","Facts linked to shared/system Value Objects remain private user-owned rows."]},"contractPreviewRequest":{"routeMode":"contract_preview_only","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","sourcePackageId":"fixture-football-with-child-30m-v1","activityProcessingPackage":{"packageId":"fixture-football-with-child-30m-v1","status":"preview_only","rawInput":{"text":"Играл с ребёнком в футбол 30 минут.","locale":"ru","source":"manual_test_fixture","capturedAtIso":"2026-06-15T16:00:00+02:00"},"recognition":{"status":"obvious_activity","confidence":0.96,"reason":"Фраза содержит действие в прошедшем времени, участника, объект активности и явную длительность.","detectedActivityTitle":"Игра с ребёнком 
+[FAIL] Valid POST did not return 200 with guardedPersistenceContract.
+[PASS] Valid POST body parsed as JSON.
+
+Raw marker check: valid POST raw response
+[PASS] Raw marker found: "productionWriteEnabled":false
+[PASS] Raw marker found: "dbWriteExecuted":false
+[PASS] Raw marker found: "sqlExecuted":false
+[PASS] Raw marker found: "openAiCallExecuted":false
+[PASS] Raw marker found: "rowsActuallyWritten":0
+[PASS] Raw marker found: "guardedPersistenceContract"
+[PASS] Raw marker found: "activity_facts_guarded_persistence_contract_v1"
+[PASS] Raw marker found: "server_mediated_write_disabled"
+[PASS] Raw marker found: "not_executed_contract_preview"
+[PASS] Raw marker found: "real_write_requires_separate_runtime_gate"
+
+==============================
+7. WRITE-INTENT BLOCK SMOKE
+==============================
+Write-intent variants count: 3
+
+Write-intent POST attempt 1
+Status: 400
+Body preview: {"ok":false,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[],"safety":{"serverMediatedOnly":true,"directBrowserSupabaseWriteAllowed":false,"duplicateChronologicalTimeAllowed":false,"medicalDiagnosisAllowed":false,"notes":["This response is a contract preview only.","No route was created in Step 07.","No database write was executed in Step 07.","The future stable endpoint should be /api/activity/facts/save-gate.","One activity can create several object facts, but total chronological time remains 30 minutes.","Facts linked to shared/system Value Objects remain private user-owned rows."]},"contractPreviewRequest":{"routeMode":"contract_preview_only","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","sourcePackageId":"fixture-football-with-child-30m-v1","activityProcessingPackage":{"packageId":"fixture-football-with-child-30m-v1","status":"preview_only","rawInput":{"text":"Играл с ребёнком в футбол 30 минут.","locale":"ru","source":"manual_test_fixture","capturedAtIso":"2026-06-15T16:00:00+02:00"},"recognition":{"status":"obvious_activity","confidence":0.96,"reason":"Фраза содержит действие в прошедшем времени, участника, объект активности и явную длительность.","detectedActivityTitle":"Игра с ребёнком 
+
+Write-intent POST attempt 2
+Status: 400
+Body preview: {"ok":false,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[],"safety":{"serverMediatedOnly":true,"directBrowserSupabaseWriteAllowed":false,"duplicateChronologicalTimeAllowed":false,"medicalDiagnosisAllowed":false,"notes":["This response is a contract preview only.","No route was created in Step 07.","No database write was executed in Step 07.","The future stable endpoint should be /api/activity/facts/save-gate.","One activity can create several object facts, but total chronological time remains 30 minutes.","Facts linked to shared/system Value Objects remain private user-owned rows."]},"contractPreviewRequest":{"routeMode":"contract_preview_only","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","sourcePackageId":"fixture-football-with-child-30m-v1","activityProcessingPackage":{"packageId":"fixture-football-with-child-30m-v1","status":"preview_only","rawInput":{"text":"Играл с ребёнком в футбол 30 минут.","locale":"ru","source":"manual_test_fixture","capturedAtIso":"2026-06-15T16:00:00+02:00"},"recognition":{"status":"obvious_activity","confidence":0.96,"reason":"Фраза содержит действие в прошедшем времени, участника, объект активности и явную длительность.","detectedActivityTitle":"Игра с ребёнком 
+
+Write-intent POST attempt 3
+Status: 400
+Body preview: {"ok":false,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[],"safety":{"serverMediatedOnly":true,"directBrowserSupabaseWriteAllowed":false,"duplicateChronologicalTimeAllowed":false,"medicalDiagnosisAllowed":false,"notes":["This response is a contract preview only.","No route was created in Step 07.","No database write was executed in Step 07.","The future stable endpoint should be /api/activity/facts/save-gate.","One activity can create several object facts, but total chronological time remains 30 minutes.","Facts linked to shared/system Value Objects remain private user-owned rows."]},"contractPreviewRequest":{"routeMode":"contract_preview_only","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","sourcePackageId":"fixture-football-with-child-30m-v1","activityProcessingPackage":{"packageId":"fixture-football-with-child-30m-v1","status":"preview_only","rawInput":{"text":"Играл с ребёнком в футбол 30 минут.","locale":"ru","source":"manual_test_fixture","capturedAtIso":"2026-06-15T16:00:00+02:00"},"recognition":{"status":"obvious_activity","confidence":0.96,"reason":"Фраза содержит действие в прошедшем времени, участника, объект активности и явную длительность.","detectedActivityTitle":"Игра с ребёнком 
+[FAIL] No write-intent variant produced expected 409.
+
+==============================
+8. INVALID REQUEST SMOKES
+==============================
+Invalid JSON status: 400
+Invalid JSON body preview: {"ok":false,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[],"safety":{"serverMediatedOnly":true,"directBrowserSupabaseWriteAllowed":false,"duplicateChronologicalTimeAllowed":false,"medicalDiagnosisAllowed":false,"notes":["This response is a contract preview only.","No route was created in Step 07.","No database write was executed in Step 07.","The future stable endpoint should be /api/activity/facts/save-gate.","One activity can create several object facts, but total chronological time remains 30 minutes.","Facts linked to shared/system Value Objects remain private user-owned rows."]},"contractPreviewRequest":{"routeMode":"contract_preview_only","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","sourcePackageId":"fixture-football-with-child-30m-v1","activityProcessingPackage":{"packageId":"fixture-football-with-child-30m-v1","status":"preview_only","rawInput":{"text":"Играл с ребёнком в футбол 30 минут.","locale":"ru","source":"manual_test_fixture","capturedAtIso":"2026-06-15T16:00:00+02:00"},"recognition":{"status":"obvious_activity","confidence":0.96,"reason":"Фраза содержит действие в прошедшем времени, участника, объект активности и явную длительность.","detectedActivityTitle":"Игра с ребёнком 
+[PASS] Invalid JSON returned 400 with expected error.
+Invalid structured status: 400
+Invalid structured body preview: {"ok":false,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[],"safety":{"serverMediatedOnly":true,"directBrowserSupabaseWriteAllowed":false,"duplicateChronologicalTimeAllowed":false,"medicalDiagnosisAllowed":false,"notes":["This response is a contract preview only.","No route was created in Step 07.","No database write was executed in Step 07.","The future stable endpoint should be /api/activity/facts/save-gate.","One activity can create several object facts, but total chronological time remains 30 minutes.","Facts linked to shared/system Value Objects remain private user-owned rows."]},"contractPreviewRequest":{"routeMode":"contract_preview_only","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","sourcePackageId":"fixture-football-with-child-30m-v1","activityProcessingPackage":{"packageId":"fixture-football-with-child-30m-v1","status":"preview_only","rawInput":{"text":"Играл с ребёнком в футбол 30 минут.","locale":"ru","source":"manual_test_fixture","capturedAtIso":"2026-06-15T16:00:00+02:00"},"recognition":{"status":"obvious_activity","confidence":0.96,"reason":"Фраза содержит действие в прошедшем времени, участника, объект активности и явную длительность.","detectedActivityTitle":"Игра с ребёнком 
+[FAIL] Invalid structured body did not return expected 400/validation error.
+
+==============================
+9. CREATE RETRY5 DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\facts-guarded-save-step04-retry5-minimal-body-smoke.md
+
+==============================
+10. TARGETED LINT
+==============================
+Targeted lint exit code: 0
+
+==============================
+11. GIT STATUS
+==============================
+ M src/app/api/activity/facts/save-gate/route.ts
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY5_MINIMAL_BODY_SMOKE_RESULT_20260616_070026.txt
+?? docs/activity-to-value-objects/facts-guarded-save-step01-preflight.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-persistence-contract.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-retry1-persistence-contract-audit-fix.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-retry1-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-retry2-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry1-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry2-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry4-route-smoke-utf8-nobom.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry5-minimal-body-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-route-smoke.md
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP01_PREFLIGHT_RESULT_20260615_184221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_PERSISTENCE_CONTRACT_RESULT_20260615_193130.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_RETRY1_PERSISTENCE_CONTRACT_AUDIT_FIX_RESULT_20260615_193325.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY1_ROUTE_CONTRACT_WIRING_RESULT_20260615_201146.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY2_ROUTE_CONTRACT_WIRING_RESULT_20260615_201350.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_ROUTE_CONTRACT_WIRING_RESULT_20260615_193558.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDERR_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDOUT_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY1_ROUTE_SMOKE_RESULT_20260615_201946.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY2_ROUTE_SMOKE_RESULT_20260615_202221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY3_VALIDATION_DIAGNOSTIC_RESULT_20260615_203856.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY4_ROUTE_SMOKE_UTF8_NOBOM_RESULT_20260616_065717.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_ROUTE_SMOKE_RESULT_20260615_201604.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+?? src/lib/activity/facts/saveGate/persistenceContract.ts
+
+==============================
+12. STEP 04 RETRY 5 CONCLUSION
+==============================
+Structure issues count: 0
+Forbidden hits count: 0
+Selected base URL: http://localhost:3000
+Port issues count: 0
+GET issues count: 0
+Valid POST issues count: 1
+Write-intent issues count: 1
+Invalid request issues count: 1
+Targeted lint exit code: 0
+Total blocking issues count: 3
+STEP 04 RETRY 5 RESULT: NEEDS REVIEW
+Review route smoke output before continuing.

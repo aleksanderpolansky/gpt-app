@@ -1,0 +1,237 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_FACTS_SAVE_GATE_GUARDED_PERSISTENCE
+STEP 06 / 12 — UI SMOKE / STATIC CHECKS FOR GUARDED PERSISTENCE CONTRACT PREVIEW
+Generated: 2026-06-16 07:08:32
+Mode: UI SMOKE + STATIC CHECKS ONLY
+DB writes: NO
+SQL execution: NO
+External AI calls: NO
+Commit/push: NO
+
+==============================
+1. CLEANUP / MOVE STEP05 REPORTS
+==============================
+Moved Step05 report: ACTIVITY_FACTS_GUARDED_SAVE_STEP05_READONLY_UI_RESULT_20260616_070554.txt -> docs\activity-to-value-objects\reports\ACTIVITY_FACTS_GUARDED_SAVE_STEP05_READONLY_UI_RESULT_20260616_070554.txt
+
+==============================
+2. FILE EXISTENCE CHECK
+==============================
+[PASS] Exists: src\components\activity-to-value-objects\guarded-persistence-contract-preview.tsx
+[PASS] Exists: src\app\activity-capture\guarded-persistence-contract-preview\page.tsx
+[PASS] Exists: src\app\api\activity\facts\save-gate\route.ts
+[PASS] Exists: src\lib\activity\facts\saveGate\persistenceContract.ts
+[PASS] Exists: src\lib\activity\facts\saveGate\executionPlan.ts
+[PASS] Exists: src\lib\activity\facts\saveGate\requestValidation.ts
+
+==============================
+3. STATIC UI STRUCTURE CHECK
+==============================
+[PASS] Component marker found: "use client"
+[PASS] Component marker found: fetch("/api/activity/facts/save-gate"
+[PASS] Component marker found: method: "GET"
+[PASS] Component marker found: cache: "no-store"
+[PASS] Component marker found: guardedPersistenceContract
+[PASS] Component marker found: noWriteExecutionPlan
+[PASS] Component marker found: productionWriteEnabled
+[PASS] Component marker found: dbWriteExecuted
+[PASS] Component marker found: sqlExecuted
+[PASS] Component marker found: openAiCallExecuted
+[PASS] Component marker found: rowsActuallyWritten
+[PASS] Component marker found: Draft row counts for future persistence
+[PASS] Component marker found: Contract blockers
+[PASS] Component marker found: Contract warnings
+[PASS] Component marker found: Validation errors / warnings
+[PASS] Component marker found: No-write execution plan JSON
+[PASS] Component marker found: Guarded persistence contract JSON
+[PASS] Component marker found: READ ONLY
+[PASS] Component marker found: NO DB WRITE
+[PASS] Component marker found: NO SQL
+[PASS] Component marker found: NO EXTERNAL AI
+[PASS] Component marker found: NO SAVE BUTTON
+[PASS] Page marker found: GuardedPersistenceContractPreview
+[PASS] Page marker found: Activity Facts Guarded Persistence Contract
+[PASS] Page marker found: Read-only preview of the future server-mediated persistence contract
+[PASS] Page marker found: does not create, update, delete, confirm or save anything
+[FAIL] Page marker missing: no-write execution plan returned by the save-gate route
+
+==============================
+4. PRECISE SAFETY CHECKS
+==============================
+
+----- PRECISE FORBIDDEN CHECK: No Supabase import in guarded-save UI/route/contract files -----
+Regex: import\s+\{?\s*supabase\b|from\s+["'][^"']*lib/supabase["']|from\s+["']@/lib/supabase["']
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No Supabase from/select calls in guarded-save UI/route/contract files -----
+Regex: \.from\s*\(|\.select\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable DB write methods in guarded-save UI/route/contract files -----
+Regex: \.(insert|upsert|update|delete)\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No external AI import/constructor/client call in guarded-save UI/route/contract files -----
+Regex: from\s+["']openai["']|new\s+OpenAI\s*\(|\bopenai\s*\.
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable SQL calls in guarded-save UI/route/contract files; ignore sqlExecuted safety flags -----
+Regex: (\bsupabase\s*\.\s*rpc\s*\(|\bdb\s*\.\s*execute\s*\(|\bclient\s*\.\s*query\s*\(|\bpool\s*\.\s*query\s*\(|\bexecuteSql\s*\(|\brawSql\s*\(|\bsql\s*`)
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No UI input fields or forms in read-only preview -----
+Regex: <input|<textarea|<select|<form|onSubmit=|type=["']submit["']
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No UI save/write/delete action controls in read-only preview -----
+Regex: <button|saveGateWrite|confirmSave|executeWrite|deleteFact|createFact|onClick=\{.*(save|write|delete|create|confirm)
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No non-GET fetch in read-only preview UI -----
+Regex: method:\s*["'](POST|PUT|PATCH|DELETE)["']|fetch\([^)]*,\s*\{[^}]*method:\s*["'](POST|PUT|PATCH|DELETE)["']
+[PASS] No precise forbidden hits.
+
+==============================
+5. CREATE NODE UI SMOKE SCRIPT
+==============================
+Created Node UI smoke script: ACTIVITY_FACTS_GUARDED_SAVE_STEP06_UI_SMOKE_20260616_070830.cjs
+
+==============================
+6. RUN NODE UI SMOKE
+==============================
+Node exit code: 0
+NODE UI SMOKE START
+Node version: v24.15.0
+
+==============================
+A. PORT AUTO-DETECT THROUGH API
+==============================
+Port 3000 API GET status: 200
+Port 3000 API body preview: {"ok":true,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":["fact-football-30m","fact-play-with-child-30m","fact-outdoor-time-30m"],"semanticObjectKeys":["football","play_with_child","outdoor_t
+[PASS] Selected port 3000
+[PASS] A usable dev server port was detected.
+
+==============================
+B. API GET SMOKE
+==============================
+Selected base URL: http://localhost:3000
+API status: 200
+API content-type: application/json
+[PASS] API GET returns 200.
+[PASS] API GET parses as JSON.
+
+----- API GET: API no-write marker check -----
+[PASS] API GET contains "productionWriteEnabled":false
+[PASS] API GET contains "dbWriteExecuted":false
+[PASS] API GET contains "sqlExecuted":false
+[PASS] API GET contains "openAiCallExecuted":false
+[PASS] API GET contains "rowsActuallyWritten":0
+[PASS] API GET contains "guardedPersistenceContract"
+[PASS] API GET contains "activity_facts_guarded_persistence_contract_v1"
+[PASS] API GET contains "server_mediated_write_disabled"
+[PASS] API GET contains "not_executed_contract_preview"
+[PASS] API GET contains "real_write_requires_separate_runtime_gate"
+
+API important fields:
+{
+  "ok": true,
+  "routeMode": "contract_preview_only",
+  "writeStatus": "not_executed_contract_preview",
+  "routeStatus": "guarded_persistence_contract_only_no_write",
+  "productionWriteEnabled": false,
+  "dbWriteExecuted": false,
+  "sqlExecuted": false,
+  "openAiCallExecuted": false,
+  "contractMode": "activity_facts_guarded_persistence_contract_v1",
+  "persistenceMode": "server_mediated_write_disabled",
+  "validationErrors": 0,
+  "validationWarnings": 0
+}
+
+==============================
+C. UI PAGE SMOKE
+==============================
+Page URL: http://localhost:3000/activity-capture/guarded-persistence-contract-preview
+Page status: 200
+Page content-type: text/html; charset=utf-8
+Page html preview: <!DOCTYPE html><html lang="ru"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="/_next/static/chunks/%5Broot-of-the-server%5D__0~ta3gj._.css" data-precedence="next_static/chunks/[root-of-the-server]__0~ta3gj._.css"/><link rel="preload" as="script" fetchPriority="low" href="/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_10z625~._.js"/><script src="/_next/static/chunks/node_modules_next_dist_compiled_next-devtools_index_0553esy.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_compiled_react-server-dom-turbopack_0p3wegg._.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_compiled_0rpq4pf._.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_115brz8._.js" async=""></script><script src="/_next/static/chunks/node_modules_%40swc_helpers_cjs_0-4ujiy._.js" async=""></script><script src="/_next/static/ch
+[PASS] UI page returns 200.
+[PASS] UI page response is HTML.
+[PASS] UI HTML contains marker: Activity Facts Guarded Persistence Contract
+[PASS] UI HTML contains marker: Read-only preview
+[PASS] UI HTML contains marker: does not create, update, delete, confirm or save anything
+[PASS] UI HTML does not contain forbidden marker: <form
+[FAIL] UI HTML does not contain forbidden marker: <input
+[PASS] UI HTML does not contain forbidden marker: <textarea
+[PASS] UI HTML does not contain forbidden marker: <select
+[PASS] UI HTML does not contain forbidden marker: type="submit"
+[PASS] UI HTML does not contain forbidden marker: method="post"
+
+==============================
+D. NODE UI SMOKE CONCLUSION
+==============================
+NODE_TOTAL_ISSUES: 1
+NODE_RESULT: NEEDS_REVIEW
+Removed temporary Node UI smoke script: ACTIVITY_FACTS_GUARDED_SAVE_STEP06_UI_SMOKE_20260616_070830.cjs
+Node reported PASS: False
+
+==============================
+7. CREATE STEP06 DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\facts-guarded-save-step06-ui-smoke.md
+
+==============================
+8. TARGETED LINT
+==============================
+Targeted lint exit code: 0
+
+==============================
+9. GIT STATUS
+==============================
+ M src/app/api/activity/facts/save-gate/route.ts
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP06_UI_SMOKE_RESULT_20260616_070830.txt
+?? docs/activity-to-value-objects/facts-guarded-save-step01-preflight.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-persistence-contract.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-retry1-persistence-contract-audit-fix.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-retry1-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-retry2-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry1-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry2-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry4-route-smoke-utf8-nobom.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry5-minimal-body-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry6-node-fetch-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step05-readonly-ui.md
+?? docs/activity-to-value-objects/facts-guarded-save-step06-ui-smoke.md
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP01_PREFLIGHT_RESULT_20260615_184221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_PERSISTENCE_CONTRACT_RESULT_20260615_193130.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_RETRY1_PERSISTENCE_CONTRACT_AUDIT_FIX_RESULT_20260615_193325.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY1_ROUTE_CONTRACT_WIRING_RESULT_20260615_201146.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY2_ROUTE_CONTRACT_WIRING_RESULT_20260615_201350.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_ROUTE_CONTRACT_WIRING_RESULT_20260615_193558.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDERR_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDOUT_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY1_ROUTE_SMOKE_RESULT_20260615_201946.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY2_ROUTE_SMOKE_RESULT_20260615_202221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY3_VALIDATION_DIAGNOSTIC_RESULT_20260615_203856.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY4_ROUTE_SMOKE_UTF8_NOBOM_RESULT_20260616_065717.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY5_MINIMAL_BODY_SMOKE_RESULT_20260616_070026.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY6_NODE_FETCH_SMOKE_RESULT_20260616_070305.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_ROUTE_SMOKE_RESULT_20260615_201604.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP05_READONLY_UI_RESULT_20260616_070554.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+?? src/app/activity-capture/guarded-persistence-contract-preview/
+?? src/components/activity-to-value-objects/guarded-persistence-contract-preview.tsx
+?? src/lib/activity/facts/saveGate/persistenceContract.ts
+
+==============================
+10. STEP 06 CONCLUSION
+==============================
+Structure issues count: 1
+Forbidden hits count: 0
+Node exit code: 0
+Node reported PASS: False
+Targeted lint exit code: 0
+STEP 06 RESULT: NEEDS REVIEW
+Review UI smoke, structure, safety or lint before continuing.

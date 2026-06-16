@@ -1,0 +1,2495 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_FACTS_SAVE_GATE_GUARDED_PERSISTENCE
+STEP 04 RETRY 3 / 12 — VALIDATION DIAGNOSTIC
+Generated: 2026-06-15 20:38:58
+Mode: DIAGNOSTIC ONLY
+DB writes: NO
+SQL execution: NO
+External AI calls: NO
+Commit/push: NO
+
+==============================
+1. CLEANUP / MOVE STEP04 RETRY2 REPORTS
+==============================
+Moved Step04 Retry2 report: ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY2_ROUTE_SMOKE_RESULT_20260615_202221.txt -> docs\activity-to-value-objects\reports\ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY2_ROUTE_SMOKE_RESULT_20260615_202221.txt
+
+==============================
+2. ROUTE EXCERPTS
+==============================
+File: src\app\api\activity\facts\save-gate\route.ts
+
+----- Pattern: contractPreviewRequest -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:4: saveGateContractPreviewRequest,
+  PRE:  import { NextResponse } from "next/server";
+  PRE:  
+  PRE:  import {
+  POST: saveGateContractPreviewResponse,
+  POST: } from "@/data/activity-to-value-objects/save-gate-contract-preview";
+  POST: import { buildNoWriteExecutionPlan } from "@/lib/activity/facts/saveGate/executionPlan";
+  POST: import { buildActivityFactsGuardedPersistenceContract } from "@/lib/activity/facts/saveGate/persistenceContract";
+  POST: import {
+  POST: validateActivityFactsSaveGateRequest,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:58: contractPreviewRequest: saveGateContractPreviewRequest,
+  PRE:  validation: params.validation,
+  PRE:  noWritePlan: executionPlan,
+  PRE:  });
+  PRE:  
+  PRE:  return {
+  PRE:  ...params.response,
+  POST: ok: params.ok,
+  POST: endpoint: ENDPOINT,
+  POST: routeLayer: ROUTE_LAYER,
+  POST: routePurpose: "activity_facts_save_gate_scaffold_no_write",
+  POST: routeLayer: "activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1",
+  POST: routeStatus: "guarded_persistence_contract_only_no_write",
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:120: saveGateContractPreviewRequest
+  PRE:  { status: params.status }
+  PRE:  );
+  PRE:  }
+  PRE:  
+  PRE:  export async function GET() {
+  PRE:  const validation = validateActivityFactsSaveGateRequest(
+  POST: );
+  POST: 
+  POST: return NextResponse.json(
+  POST: buildNoWriteResponse({
+  POST: response: saveGateContractPreviewResponse,
+  POST: validation,
+
+----- Pattern: saveGateContractPreviewRequest -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:4: saveGateContractPreviewRequest,
+  PRE:  import { NextResponse } from "next/server";
+  PRE:  
+  PRE:  import {
+  POST: saveGateContractPreviewResponse,
+  POST: } from "@/data/activity-to-value-objects/save-gate-contract-preview";
+  POST: import { buildNoWriteExecutionPlan } from "@/lib/activity/facts/saveGate/executionPlan";
+  POST: import { buildActivityFactsGuardedPersistenceContract } from "@/lib/activity/facts/saveGate/persistenceContract";
+  POST: import {
+  POST: validateActivityFactsSaveGateRequest,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:58: contractPreviewRequest: saveGateContractPreviewRequest,
+  PRE:  validation: params.validation,
+  PRE:  noWritePlan: executionPlan,
+  PRE:  });
+  PRE:  
+  PRE:  return {
+  PRE:  ...params.response,
+  POST: ok: params.ok,
+  POST: endpoint: ENDPOINT,
+  POST: routeLayer: ROUTE_LAYER,
+  POST: routePurpose: "activity_facts_save_gate_scaffold_no_write",
+  POST: routeLayer: "activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1",
+  POST: routeStatus: "guarded_persistence_contract_only_no_write",
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:120: saveGateContractPreviewRequest
+  PRE:  { status: params.status }
+  PRE:  );
+  PRE:  }
+  PRE:  
+  PRE:  export async function GET() {
+  PRE:  const validation = validateActivityFactsSaveGateRequest(
+  POST: );
+  POST: 
+  POST: return NextResponse.json(
+  POST: buildNoWriteResponse({
+  POST: response: saveGateContractPreviewResponse,
+  POST: validation,
+
+----- Pattern: buildNoWriteExecutionPlan -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:7: import { buildNoWriteExecutionPlan } from "@/lib/activity/facts/saveGate/executionPlan";
+  PRE:  import { NextResponse } from "next/server";
+  PRE:  
+  PRE:  import {
+  PRE:  saveGateContractPreviewRequest,
+  PRE:  saveGateContractPreviewResponse,
+  PRE:  } from "@/data/activity-to-value-objects/save-gate-contract-preview";
+  POST: import { buildActivityFactsGuardedPersistenceContract } from "@/lib/activity/facts/saveGate/persistenceContract";
+  POST: import {
+  POST: validateActivityFactsSaveGateRequest,
+  POST: type ActivityFactsSaveGateValidationResult,
+  POST: } from "@/lib/activity/facts/saveGate/requestValidation";
+  POST: import type { ActivityFactsSaveGateResponse } from "@/types/activity-facts-save-gate";
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:50: const executionPlan = buildNoWriteExecutionPlan(params.validation);
+  PRE:  
+  PRE:  function buildNoWriteResponse(params: {
+  PRE:  response: ActivityFactsSaveGateResponse;
+  PRE:  validation: ActivityFactsSaveGateValidationResult;
+  PRE:  ok: boolean;
+  PRE:  }) {
+  POST: const guardedPersistenceContract = buildActivityFactsGuardedPersistenceContract({
+  POST: validation: params.validation,
+  POST: noWritePlan: executionPlan,
+  POST: });
+  POST: 
+  POST: return {
+
+----- Pattern: buildActivityFactsGuardedPersistenceContract -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:8: import { buildActivityFactsGuardedPersistenceContract } from "@/lib/activity/facts/saveGate/persistenceContract";
+  PRE:  
+  PRE:  import {
+  PRE:  saveGateContractPreviewRequest,
+  PRE:  saveGateContractPreviewResponse,
+  PRE:  } from "@/data/activity-to-value-objects/save-gate-contract-preview";
+  PRE:  import { buildNoWriteExecutionPlan } from "@/lib/activity/facts/saveGate/executionPlan";
+  POST: import {
+  POST: validateActivityFactsSaveGateRequest,
+  POST: type ActivityFactsSaveGateValidationResult,
+  POST: } from "@/lib/activity/facts/saveGate/requestValidation";
+  POST: import type { ActivityFactsSaveGateResponse } from "@/types/activity-facts-save-gate";
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:51: const guardedPersistenceContract = buildActivityFactsGuardedPersistenceContract({
+  PRE:  function buildNoWriteResponse(params: {
+  PRE:  response: ActivityFactsSaveGateResponse;
+  PRE:  validation: ActivityFactsSaveGateValidationResult;
+  PRE:  ok: boolean;
+  PRE:  }) {
+  PRE:  const executionPlan = buildNoWriteExecutionPlan(params.validation);
+  POST: validation: params.validation,
+  POST: noWritePlan: executionPlan,
+  POST: });
+  POST: 
+  POST: return {
+  POST: ...params.response,
+
+----- Pattern: POST -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:133: export async function POST(request: Request) {
+  PRE:  ok: true,
+  PRE:  }),
+  PRE:  { status: 200 }
+  PRE:  );
+  PRE:  }
+  PRE:  
+  POST: let body: unknown = {};
+  POST: let invalidJson = false;
+  POST: 
+  POST: try {
+  POST: body = await request.json();
+  POST: } catch {
+
+----- Pattern: NextResponse.json -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:97: return NextResponse.json(
+  PRE:  function buildValidationErrorResponse(params: {
+  PRE:  validation: ActivityFactsSaveGateValidationResult;
+  PRE:  errorCode: string;
+  PRE:  errorMessage: string;
+  PRE:  status: number;
+  PRE:  }) {
+  POST: {
+  POST: ...buildNoWriteResponse({
+  POST: response: {
+  POST: ...saveGateContractPreviewResponse,
+  POST: ok: false,
+  POST: writeStatus: "not_executed_contract_preview",
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:123: return NextResponse.json(
+  PRE:  
+  PRE:  export async function GET() {
+  PRE:  const validation = validateActivityFactsSaveGateRequest(
+  PRE:  saveGateContractPreviewRequest
+  PRE:  );
+  PRE:  
+  POST: buildNoWriteResponse({
+  POST: response: saveGateContractPreviewResponse,
+  POST: validation,
+  POST: ok: true,
+  POST: }),
+  POST: { status: 200 }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:174: return NextResponse.json(
+  PRE:  errorMessage:
+  PRE:  "The save-gate route exists only as a no-write execution-plan scaffold in this step. Write intent was detected and blocked.",
+  PRE:  status: 409,
+  PRE:  });
+  PRE:  }
+  PRE:  
+  POST: buildNoWriteResponse({
+  POST: response: saveGateContractPreviewResponse,
+  POST: validation,
+  POST: ok: true,
+  POST: }),
+  POST: { status: 200 }
+
+----- Pattern: ACTIVITY_FACTS_SAVE_GATE_VALIDATION_FAILED -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:158: errorCode: "ACTIVITY_FACTS_SAVE_GATE_VALIDATION_FAILED",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  if (!validation.ok) {
+  PRE:  return buildValidationErrorResponse({
+  PRE:  validation,
+  POST: errorMessage: "Request body did not pass save-gate validation.",
+  POST: status: 400,
+  POST: });
+  POST: }
+  POST: 
+  POST: if (validation.summary.writeIntentDetected) {
+
+----- Pattern: ACTIVITY_FACTS_SAVE_GATE_WRITE_NOT_ENABLED -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:167: errorCode: "ACTIVITY_FACTS_SAVE_GATE_WRITE_NOT_ENABLED",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  if (validation.summary.writeIntentDetected) {
+  PRE:  return buildValidationErrorResponse({
+  PRE:  validation,
+  POST: errorMessage:
+  POST: "The save-gate route exists only as a no-write execution-plan scaffold in this step. Write intent was detected and blocked.",
+  POST: status: 409,
+  POST: });
+  POST: }
+  POST: 
+
+==============================
+3. VALIDATION HELPER EXCERPTS
+==============================
+File: src\lib\activity\facts\saveGate\requestValidation.ts
+
+----- Pattern: validateActivityFactsSaveGateRequest -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:364: export function validateActivityFactsSaveGateRequest(
+  PRE:  return {
+  PRE:  writeIntentDetected: reasons.length > 0,
+  PRE:  writeIntentReasons: reasons,
+  PRE:  };
+  PRE:  }
+  PRE:  
+  POST: body: unknown
+  POST: ): ActivityFactsSaveGateValidationResult {
+  POST: const requestRecord = asRecord(body);
+  POST: const errors: ActivityFactsSaveGateValidationIssue[] = [];
+  POST: const warnings: ActivityFactsSaveGateValidationIssue[] = [];
+  POST: 
+
+----- Pattern: normalizedBody -----
+[INFO] No hits.
+
+----- Pattern: CLIENT_SAFETY_BOOLEAN_REQUIRED -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:175: code: "CLIENT_SAFETY_BOOLEAN_REQUIRED",
+  PRE:  "userUnderstandsPreviewIsNotDiagnosis",
+  PRE:  ];
+  PRE:  
+  PRE:  for (const field of requiredBooleanFields) {
+  PRE:  if (asBoolean(safety[field]) === null) {
+  PRE:  pushIssue(params.errors, {
+  POST: fieldPath: `clientSafetyConfirmation.${field}`,
+  POST: severity: "error",
+  POST: messageRu: `clientSafetyConfirmation.${field} должен быть boolean.`,
+  POST: });
+  POST: }
+  POST: }
+
+----- Pattern: factDecisions -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:205: function validateFactDecisions(params: {
+  PRE:  messageRu:
+  PRE:  "Пользователь не подтвердил, что preview не является медицинским диагнозом.",
+  PRE:  });
+  PRE:  }
+  PRE:  }
+  PRE:  
+  POST: body: Record<string, unknown>;
+  POST: errors: ActivityFactsSaveGateValidationIssue[];
+  POST: }) {
+  POST: const factDecisions = asArray(params.body.factDecisions);
+  POST: 
+  POST: for (const [index, rawDecision] of factDecisions.entries()) {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:209: const factDecisions = asArray(params.body.factDecisions);
+  PRE:  }
+  PRE:  
+  PRE:  function validateFactDecisions(params: {
+  PRE:  body: Record<string, unknown>;
+  PRE:  errors: ActivityFactsSaveGateValidationIssue[];
+  PRE:  }) {
+  POST: 
+  POST: for (const [index, rawDecision] of factDecisions.entries()) {
+  POST: const decision = asRecord(rawDecision);
+  POST: const factLocalId = asString(decision.factLocalId);
+  POST: const decisionValue = asString(decision.decision);
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:211: for (const [index, rawDecision] of factDecisions.entries()) {
+  PRE:  function validateFactDecisions(params: {
+  PRE:  body: Record<string, unknown>;
+  PRE:  errors: ActivityFactsSaveGateValidationIssue[];
+  PRE:  }) {
+  PRE:  const factDecisions = asArray(params.body.factDecisions);
+  PRE:  
+  POST: const decision = asRecord(rawDecision);
+  POST: const factLocalId = asString(decision.factLocalId);
+  POST: const decisionValue = asString(decision.decision);
+  POST: 
+  POST: if (!factLocalId) {
+  POST: pushIssue(params.errors, {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:219: fieldPath: `factDecisions.${index}.factLocalId`,
+  PRE:  const factLocalId = asString(decision.factLocalId);
+  PRE:  const decisionValue = asString(decision.decision);
+  PRE:  
+  PRE:  if (!factLocalId) {
+  PRE:  pushIssue(params.errors, {
+  PRE:  code: "FACT_LOCAL_ID_REQUIRED",
+  POST: severity: "error",
+  POST: messageRu: "factLocalId обязателен для каждого решения по факту.",
+  POST: });
+  POST: }
+  POST: 
+  POST: if (!decisionValue || !ALLOWED_FACT_DECISIONS.has(decisionValue)) {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:228: fieldPath: `factDecisions.${index}.decision`,
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  if (!decisionValue || !ALLOWED_FACT_DECISIONS.has(decisionValue)) {
+  PRE:  pushIssue(params.errors, {
+  PRE:  code: "FACT_DECISION_UNSUPPORTED",
+  POST: severity: "error",
+  POST: messageRu: "decision должен быть accept, reject, edit или defer.",
+  POST: });
+  POST: }
+  POST: }
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:236: function validateEditedFactDecisions(params: {
+  PRE:  messageRu: "decision должен быть accept, reject, edit или defer.",
+  PRE:  });
+  PRE:  }
+  PRE:  }
+  PRE:  }
+  PRE:  
+  POST: body: Record<string, unknown>;
+  POST: errors: ActivityFactsSaveGateValidationIssue[];
+  POST: }) {
+  POST: const editedFactDecisions = asArray(params.body.editedFactDecisions);
+  POST: 
+  POST: for (const [index, rawDecision] of editedFactDecisions.entries()) {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:240: const editedFactDecisions = asArray(params.body.editedFactDecisions);
+  PRE:  }
+  PRE:  
+  PRE:  function validateEditedFactDecisions(params: {
+  PRE:  body: Record<string, unknown>;
+  PRE:  errors: ActivityFactsSaveGateValidationIssue[];
+  PRE:  }) {
+  POST: 
+  POST: for (const [index, rawDecision] of editedFactDecisions.entries()) {
+  POST: const decision = asRecord(rawDecision);
+  POST: const factLocalId = asString(decision.factLocalId);
+  POST: const decisionValue = asString(decision.decision);
+  POST: const editedFact = asRecord(decision.editedFact);
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:242: for (const [index, rawDecision] of editedFactDecisions.entries()) {
+  PRE:  function validateEditedFactDecisions(params: {
+  PRE:  body: Record<string, unknown>;
+  PRE:  errors: ActivityFactsSaveGateValidationIssue[];
+  PRE:  }) {
+  PRE:  const editedFactDecisions = asArray(params.body.editedFactDecisions);
+  PRE:  
+  POST: const decision = asRecord(rawDecision);
+  POST: const factLocalId = asString(decision.factLocalId);
+  POST: const decisionValue = asString(decision.decision);
+  POST: const editedFact = asRecord(decision.editedFact);
+  POST: 
+  POST: if (!factLocalId) {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:251: fieldPath: `editedFactDecisions.${index}.factLocalId`,
+  PRE:  const decisionValue = asString(decision.decision);
+  PRE:  const editedFact = asRecord(decision.editedFact);
+  PRE:  
+  PRE:  if (!factLocalId) {
+  PRE:  pushIssue(params.errors, {
+  PRE:  code: "EDITED_FACT_LOCAL_ID_REQUIRED",
+  POST: severity: "error",
+  POST: messageRu: "factLocalId обязателен для каждого editedFactDecision.",
+  POST: });
+  POST: }
+  POST: 
+  POST: if (decisionValue !== "edit") {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:260: fieldPath: `editedFactDecisions.${index}.decision`,
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  if (decisionValue !== "edit") {
+  PRE:  pushIssue(params.errors, {
+  PRE:  code: "EDITED_FACT_DECISION_MUST_BE_EDIT",
+  POST: severity: "error",
+  POST: messageRu: "editedFactDecision.decision должен быть edit.",
+  POST: });
+  POST: }
+  POST: 
+  POST: if (Object.keys(editedFact).length === 0) {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:269: fieldPath: `editedFactDecisions.${index}.editedFact`,
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  if (Object.keys(editedFact).length === 0) {
+  PRE:  pushIssue(params.errors, {
+  PRE:  code: "EDITED_FACT_PATCH_REQUIRED",
+  POST: severity: "error",
+  POST: messageRu: "editedFact обязателен для решения edit.",
+  POST: });
+  POST: }
+  POST: }
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:387: if (!Array.isArray(requestRecord.factDecisions)) {
+  PRE:  value: requestRecord.idempotencyKey,
+  PRE:  fieldPath: "idempotencyKey",
+  PRE:  labelRu: "idempotencyKey",
+  PRE:  errors,
+  PRE:  });
+  PRE:  
+  POST: pushIssue(errors, {
+  POST: code: "FACT_DECISIONS_ARRAY_REQUIRED",
+  POST: fieldPath: "factDecisions",
+  POST: severity: "error",
+  POST: messageRu: "factDecisions должен быть массивом.",
+  POST: });
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:390: fieldPath: "factDecisions",
+  PRE:  errors,
+  PRE:  });
+  PRE:  
+  PRE:  if (!Array.isArray(requestRecord.factDecisions)) {
+  PRE:  pushIssue(errors, {
+  PRE:  code: "FACT_DECISIONS_ARRAY_REQUIRED",
+  POST: severity: "error",
+  POST: messageRu: "factDecisions должен быть массивом.",
+  POST: });
+  POST: }
+  POST: 
+  POST: if (!Array.isArray(requestRecord.editedFactDecisions)) {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:392: messageRu: "factDecisions должен быть массивом.",
+  PRE:  
+  PRE:  if (!Array.isArray(requestRecord.factDecisions)) {
+  PRE:  pushIssue(errors, {
+  PRE:  code: "FACT_DECISIONS_ARRAY_REQUIRED",
+  PRE:  fieldPath: "factDecisions",
+  PRE:  severity: "error",
+  POST: });
+  POST: }
+  POST: 
+  POST: if (!Array.isArray(requestRecord.editedFactDecisions)) {
+  POST: pushIssue(errors, {
+  POST: code: "EDITED_FACT_DECISIONS_ARRAY_REQUIRED",
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:396: if (!Array.isArray(requestRecord.editedFactDecisions)) {
+  PRE:  fieldPath: "factDecisions",
+  PRE:  severity: "error",
+  PRE:  messageRu: "factDecisions должен быть массивом.",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  POST: pushIssue(errors, {
+  POST: code: "EDITED_FACT_DECISIONS_ARRAY_REQUIRED",
+  POST: fieldPath: "editedFactDecisions",
+  POST: severity: "error",
+  POST: messageRu: "editedFactDecisions должен быть массивом.",
+  POST: });
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:399: fieldPath: "editedFactDecisions",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  if (!Array.isArray(requestRecord.editedFactDecisions)) {
+  PRE:  pushIssue(errors, {
+  PRE:  code: "EDITED_FACT_DECISIONS_ARRAY_REQUIRED",
+  POST: severity: "error",
+  POST: messageRu: "editedFactDecisions должен быть массивом.",
+  POST: });
+  POST: }
+  POST: 
+  POST: if (!Array.isArray(requestRecord.valueObjectCandidateDecisions)) {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:401: messageRu: "editedFactDecisions должен быть массивом.",
+  PRE:  
+  PRE:  if (!Array.isArray(requestRecord.editedFactDecisions)) {
+  PRE:  pushIssue(errors, {
+  PRE:  code: "EDITED_FACT_DECISIONS_ARRAY_REQUIRED",
+  PRE:  fieldPath: "editedFactDecisions",
+  PRE:  severity: "error",
+  POST: });
+  POST: }
+  POST: 
+  POST: if (!Array.isArray(requestRecord.valueObjectCandidateDecisions)) {
+  POST: pushIssue(errors, {
+  POST: code: "VALUE_OBJECT_CANDIDATE_DECISIONS_ARRAY_REQUIRED",
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:420: validateFactDecisions({
+  PRE:  validateClientSafetyConfirmation({
+  PRE:  body: requestRecord,
+  PRE:  errors,
+  PRE:  warnings,
+  PRE:  });
+  PRE:  
+  POST: body: requestRecord,
+  POST: errors,
+  POST: });
+  POST: 
+  POST: validateEditedFactDecisions({
+  POST: body: requestRecord,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:425: validateEditedFactDecisions({
+  PRE:  
+  PRE:  validateFactDecisions({
+  PRE:  body: requestRecord,
+  PRE:  errors,
+  PRE:  });
+  PRE:  
+  POST: body: requestRecord,
+  POST: errors,
+  POST: });
+  POST: 
+  POST: validateValueObjectCandidateDecisions({
+  POST: body: requestRecord,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:441: factDecisionCount: asArray(requestRecord.factDecisions).length,
+  PRE:  const writeIntent = detectWriteIntent(requestRecord);
+  PRE:  
+  PRE:  const summary: ActivityFactsSaveGateRequestSummary = {
+  PRE:  sourcePackageId,
+  PRE:  idempotencyKey,
+  PRE:  routeMode,
+  POST: editedFactDecisionCount: asArray(requestRecord.editedFactDecisions).length,
+  POST: valueObjectCandidateDecisionCount: asArray(
+  POST: requestRecord.valueObjectCandidateDecisions
+  POST: ).length,
+  POST: writeIntentDetected: writeIntent.writeIntentDetected,
+  POST: writeIntentReasons: writeIntent.writeIntentReasons,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:442: editedFactDecisionCount: asArray(requestRecord.editedFactDecisions).length,
+  PRE:  
+  PRE:  const summary: ActivityFactsSaveGateRequestSummary = {
+  PRE:  sourcePackageId,
+  PRE:  idempotencyKey,
+  PRE:  routeMode,
+  PRE:  factDecisionCount: asArray(requestRecord.factDecisions).length,
+  POST: valueObjectCandidateDecisionCount: asArray(
+  POST: requestRecord.valueObjectCandidateDecisions
+  POST: ).length,
+  POST: writeIntentDetected: writeIntent.writeIntentDetected,
+  POST: writeIntentReasons: writeIntent.writeIntentReasons,
+  POST: validationErrorCount: errors.length,
+
+----- Pattern: valueObjectCandidateDecisions -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:277: function validateValueObjectCandidateDecisions(params: {
+  PRE:  messageRu: "editedFact обязателен для решения edit.",
+  PRE:  });
+  PRE:  }
+  PRE:  }
+  PRE:  }
+  PRE:  
+  POST: body: Record<string, unknown>;
+  POST: errors: ActivityFactsSaveGateValidationIssue[];
+  POST: }) {
+  POST: const candidateDecisions = asArray(params.body.valueObjectCandidateDecisions);
+  POST: 
+  POST: for (const [index, rawDecision] of candidateDecisions.entries()) {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:281: const candidateDecisions = asArray(params.body.valueObjectCandidateDecisions);
+  PRE:  }
+  PRE:  
+  PRE:  function validateValueObjectCandidateDecisions(params: {
+  PRE:  body: Record<string, unknown>;
+  PRE:  errors: ActivityFactsSaveGateValidationIssue[];
+  PRE:  }) {
+  POST: 
+  POST: for (const [index, rawDecision] of candidateDecisions.entries()) {
+  POST: const decision = asRecord(rawDecision);
+  POST: const semanticObjectKey = asString(decision.semanticObjectKey);
+  POST: const proposedTitleRu = asString(decision.proposedTitleRu);
+  POST: const decisionValue = asString(decision.decision);
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:292: fieldPath: `valueObjectCandidateDecisions.${index}.semanticObjectKey`,
+  PRE:  const proposedTitleRu = asString(decision.proposedTitleRu);
+  PRE:  const decisionValue = asString(decision.decision);
+  PRE:  
+  PRE:  if (!semanticObjectKey) {
+  PRE:  pushIssue(params.errors, {
+  PRE:  code: "SEMANTIC_OBJECT_KEY_REQUIRED",
+  POST: severity: "error",
+  POST: messageRu:
+  POST: "semanticObjectKey обязателен для каждого решения по кандидату Value Object.",
+  POST: });
+  POST: }
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:302: fieldPath: `valueObjectCandidateDecisions.${index}.proposedTitleRu`,
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  if (!proposedTitleRu) {
+  PRE:  pushIssue(params.errors, {
+  PRE:  code: "PROPOSED_TITLE_REQUIRED",
+  POST: severity: "error",
+  POST: messageRu:
+  POST: "proposedTitleRu обязателен для каждого решения по кандидату Value Object.",
+  POST: });
+  POST: }
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:315: fieldPath: `valueObjectCandidateDecisions.${index}.decision`,
+  PRE:  if (
+  PRE:  !decisionValue ||
+  PRE:  !ALLOWED_VALUE_OBJECT_DECISIONS.has(decisionValue)
+  PRE:  ) {
+  PRE:  pushIssue(params.errors, {
+  PRE:  code: "VALUE_OBJECT_CANDIDATE_DECISION_UNSUPPORTED",
+  POST: severity: "error",
+  POST: messageRu:
+  POST: "decision должен быть use_existing, create_new, skip или defer.",
+  POST: });
+  POST: }
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:331: const candidateDecisions = asArray(body.valueObjectCandidateDecisions);
+  PRE:  writeIntentDetected: boolean;
+  PRE:  writeIntentReasons: string[];
+  PRE:  } {
+  PRE:  const reasons: string[] = [];
+  PRE:  const routeMode = asString(body.routeMode);
+  PRE:  const safety = asRecord(body.clientSafetyConfirmation);
+  POST: 
+  POST: if (routeMode === "future_server_mediated_write") {
+  POST: reasons.push("routeMode=future_server_mediated_write");
+  POST: }
+  POST: 
+  POST: if (asBoolean(safety.userConfirmedFactWrite) === true) {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:353: `valueObjectCandidateDecisions.${index}.decision=create_new`
+  PRE:  for (const [index, rawDecision] of candidateDecisions.entries()) {
+  PRE:  const decision = asRecord(rawDecision);
+  PRE:  const decisionValue = asString(decision.decision);
+  PRE:  
+  PRE:  if (decisionValue === "create_new") {
+  PRE:  reasons.push(
+  POST: );
+  POST: }
+  POST: }
+  POST: 
+  POST: return {
+  POST: writeIntentDetected: reasons.length > 0,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:405: if (!Array.isArray(requestRecord.valueObjectCandidateDecisions)) {
+  PRE:  fieldPath: "editedFactDecisions",
+  PRE:  severity: "error",
+  PRE:  messageRu: "editedFactDecisions должен быть массивом.",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  POST: pushIssue(errors, {
+  POST: code: "VALUE_OBJECT_CANDIDATE_DECISIONS_ARRAY_REQUIRED",
+  POST: fieldPath: "valueObjectCandidateDecisions",
+  POST: severity: "error",
+  POST: messageRu: "valueObjectCandidateDecisions должен быть массивом.",
+  POST: });
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:408: fieldPath: "valueObjectCandidateDecisions",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  if (!Array.isArray(requestRecord.valueObjectCandidateDecisions)) {
+  PRE:  pushIssue(errors, {
+  PRE:  code: "VALUE_OBJECT_CANDIDATE_DECISIONS_ARRAY_REQUIRED",
+  POST: severity: "error",
+  POST: messageRu: "valueObjectCandidateDecisions должен быть массивом.",
+  POST: });
+  POST: }
+  POST: 
+  POST: validateClientSafetyConfirmation({
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:410: messageRu: "valueObjectCandidateDecisions должен быть массивом.",
+  PRE:  
+  PRE:  if (!Array.isArray(requestRecord.valueObjectCandidateDecisions)) {
+  PRE:  pushIssue(errors, {
+  PRE:  code: "VALUE_OBJECT_CANDIDATE_DECISIONS_ARRAY_REQUIRED",
+  PRE:  fieldPath: "valueObjectCandidateDecisions",
+  PRE:  severity: "error",
+  POST: });
+  POST: }
+  POST: 
+  POST: validateClientSafetyConfirmation({
+  POST: body: requestRecord,
+  POST: errors,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:430: validateValueObjectCandidateDecisions({
+  PRE:  
+  PRE:  validateEditedFactDecisions({
+  PRE:  body: requestRecord,
+  PRE:  errors,
+  PRE:  });
+  PRE:  
+  POST: body: requestRecord,
+  POST: errors,
+  POST: });
+  POST: 
+  POST: const writeIntent = detectWriteIntent(requestRecord);
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:444: requestRecord.valueObjectCandidateDecisions
+  PRE:  sourcePackageId,
+  PRE:  idempotencyKey,
+  PRE:  routeMode,
+  PRE:  factDecisionCount: asArray(requestRecord.factDecisions).length,
+  PRE:  editedFactDecisionCount: asArray(requestRecord.editedFactDecisions).length,
+  PRE:  valueObjectCandidateDecisionCount: asArray(
+  POST: ).length,
+  POST: writeIntentDetected: writeIntent.writeIntentDetected,
+  POST: writeIntentReasons: writeIntent.writeIntentReasons,
+  POST: validationErrorCount: errors.length,
+  POST: validationWarningCount: warnings.length,
+  POST: };
+
+----- Pattern: writeIntentDetected -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:23: writeIntentDetected: boolean;
+  PRE:  sourcePackageId: string | null;
+  PRE:  idempotencyKey: string | null;
+  PRE:  routeMode: ActivityFactsSaveGateRouteMode | null;
+  PRE:  factDecisionCount: number;
+  PRE:  editedFactDecisionCount: number;
+  PRE:  valueObjectCandidateDecisionCount: number;
+  POST: writeIntentReasons: string[];
+  POST: validationErrorCount: number;
+  POST: validationWarningCount: number;
+  POST: };
+  POST: 
+  POST: export type ActivityFactsSaveGateValidationResult = {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:325: writeIntentDetected: boolean;
+  PRE:  });
+  PRE:  }
+  PRE:  }
+  PRE:  }
+  PRE:  
+  PRE:  function detectWriteIntent(body: Record<string, unknown>): {
+  POST: writeIntentReasons: string[];
+  POST: } {
+  POST: const reasons: string[] = [];
+  POST: const routeMode = asString(body.routeMode);
+  POST: const safety = asRecord(body.clientSafetyConfirmation);
+  POST: const candidateDecisions = asArray(body.valueObjectCandidateDecisions);
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:359: writeIntentDetected: reasons.length > 0,
+  PRE:  `valueObjectCandidateDecisions.${index}.decision=create_new`
+  PRE:  );
+  PRE:  }
+  PRE:  }
+  PRE:  
+  PRE:  return {
+  POST: writeIntentReasons: reasons,
+  POST: };
+  POST: }
+  POST: 
+  POST: export function validateActivityFactsSaveGateRequest(
+  POST: body: unknown
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:446: writeIntentDetected: writeIntent.writeIntentDetected,
+  PRE:  routeMode,
+  PRE:  factDecisionCount: asArray(requestRecord.factDecisions).length,
+  PRE:  editedFactDecisionCount: asArray(requestRecord.editedFactDecisions).length,
+  PRE:  valueObjectCandidateDecisionCount: asArray(
+  PRE:  requestRecord.valueObjectCandidateDecisions
+  PRE:  ).length,
+  POST: writeIntentReasons: writeIntent.writeIntentReasons,
+  POST: validationErrorCount: errors.length,
+  POST: validationWarningCount: warnings.length,
+  POST: };
+  POST: 
+  POST: return {
+
+----- Pattern: productionWriteEnabled -----
+[INFO] No hits.
+
+----- Pattern: writeIntentConfirmed -----
+[INFO] No hits.
+
+----- Pattern: dbWriteAllowed -----
+[INFO] No hits.
+
+----- Pattern: ACTIVITY_FACTS_SAVE_GATE_VALIDATION_FAILED -----
+[INFO] No hits.
+
+----- Pattern: errorCode -----
+[INFO] No hits.
+
+----- Pattern: errors -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:33: errors: ActivityFactsSaveGateValidationIssue[];
+  PRE:  };
+  PRE:  
+  PRE:  export type ActivityFactsSaveGateValidationResult = {
+  PRE:  ok: boolean;
+  PRE:  requestRecord: Record<string, unknown>;
+  PRE:  summary: ActivityFactsSaveGateRequestSummary;
+  POST: warnings: ActivityFactsSaveGateValidationIssue[];
+  POST: };
+  POST: 
+  POST: const ALLOWED_ROUTE_MODES = new Set<string>([
+  POST: "contract_preview_only",
+  POST: "future_server_mediated_write",
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:95: errors: ActivityFactsSaveGateValidationIssue[];
+  PRE:  }
+  PRE:  
+  PRE:  function validateRequiredSafeId(params: {
+  PRE:  value: unknown;
+  PRE:  fieldPath: string;
+  PRE:  labelRu: string;
+  POST: }): string | null {
+  POST: const value = asString(params.value);
+  POST: 
+  POST: if (!value) {
+  POST: pushIssue(params.errors, {
+  POST: code: "REQUIRED_STRING_MISSING",
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:100: pushIssue(params.errors, {
+  PRE:  labelRu: string;
+  PRE:  errors: ActivityFactsSaveGateValidationIssue[];
+  PRE:  }): string | null {
+  PRE:  const value = asString(params.value);
+  PRE:  
+  PRE:  if (!value) {
+  POST: code: "REQUIRED_STRING_MISSING",
+  POST: fieldPath: params.fieldPath,
+  POST: severity: "error",
+  POST: messageRu: `${params.labelRu}: обязательная строка отсутствует.`,
+  POST: });
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:111: pushIssue(params.errors, {
+  PRE:  });
+  PRE:  
+  PRE:  return null;
+  PRE:  }
+  PRE:  
+  PRE:  if (!SAFE_ID_PATTERN.test(value)) {
+  POST: code: "UNSAFE_ID_FORMAT",
+  POST: fieldPath: params.fieldPath,
+  POST: severity: "error",
+  POST: messageRu:
+  POST: `${params.labelRu}: строка должна быть безопасным техническим ключом ` +
+  POST: "из букв, цифр, точки, подчёркивания, дефиса или двоеточия.",
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:128: errors: ActivityFactsSaveGateValidationIssue[]
+  PRE:  
+  PRE:  return value;
+  PRE:  }
+  PRE:  
+  PRE:  function validateRouteMode(
+  PRE:  value: unknown,
+  POST: ): ActivityFactsSaveGateRouteMode | null {
+  POST: const routeMode = asString(value);
+  POST: 
+  POST: if (!routeMode) {
+  POST: pushIssue(errors, {
+  POST: code: "ROUTE_MODE_REQUIRED",
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:133: pushIssue(errors, {
+  PRE:  value: unknown,
+  PRE:  errors: ActivityFactsSaveGateValidationIssue[]
+  PRE:  ): ActivityFactsSaveGateRouteMode | null {
+  PRE:  const routeMode = asString(value);
+  PRE:  
+  PRE:  if (!routeMode) {
+  POST: code: "ROUTE_MODE_REQUIRED",
+  POST: fieldPath: "routeMode",
+  POST: severity: "error",
+  POST: messageRu: "routeMode обязателен.",
+  POST: });
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:144: pushIssue(errors, {
+  PRE:  });
+  PRE:  
+  PRE:  return null;
+  PRE:  }
+  PRE:  
+  PRE:  if (!ALLOWED_ROUTE_MODES.has(routeMode)) {
+  POST: code: "ROUTE_MODE_UNSUPPORTED",
+  POST: fieldPath: "routeMode",
+  POST: severity: "error",
+  POST: messageRu:
+  POST: "routeMode должен быть contract_preview_only или future_server_mediated_write.",
+  POST: });
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:160: errors: ActivityFactsSaveGateValidationIssue[];
+  PRE:  
+  PRE:  return routeMode as ActivityFactsSaveGateRouteMode;
+  PRE:  }
+  PRE:  
+  PRE:  function validateClientSafetyConfirmation(params: {
+  PRE:  body: Record<string, unknown>;
+  POST: warnings: ActivityFactsSaveGateValidationIssue[];
+  POST: }) {
+  POST: const safety = asRecord(params.body.clientSafetyConfirmation);
+  POST: 
+  POST: const requiredBooleanFields = [
+  POST: "userReviewedPreview",
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:174: pushIssue(params.errors, {
+  PRE:  "userConfirmedFactWrite",
+  PRE:  "userUnderstandsPreviewIsNotDiagnosis",
+  PRE:  ];
+  PRE:  
+  PRE:  for (const field of requiredBooleanFields) {
+  PRE:  if (asBoolean(safety[field]) === null) {
+  POST: code: "CLIENT_SAFETY_BOOLEAN_REQUIRED",
+  POST: fieldPath: `clientSafetyConfirmation.${field}`,
+  POST: severity: "error",
+  POST: messageRu: `clientSafetyConfirmation.${field} должен быть boolean.`,
+  POST: });
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:207: errors: ActivityFactsSaveGateValidationIssue[];
+  PRE:  });
+  PRE:  }
+  PRE:  }
+  PRE:  
+  PRE:  function validateFactDecisions(params: {
+  PRE:  body: Record<string, unknown>;
+  POST: }) {
+  POST: const factDecisions = asArray(params.body.factDecisions);
+  POST: 
+  POST: for (const [index, rawDecision] of factDecisions.entries()) {
+  POST: const decision = asRecord(rawDecision);
+  POST: const factLocalId = asString(decision.factLocalId);
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:217: pushIssue(params.errors, {
+  PRE:  for (const [index, rawDecision] of factDecisions.entries()) {
+  PRE:  const decision = asRecord(rawDecision);
+  PRE:  const factLocalId = asString(decision.factLocalId);
+  PRE:  const decisionValue = asString(decision.decision);
+  PRE:  
+  PRE:  if (!factLocalId) {
+  POST: code: "FACT_LOCAL_ID_REQUIRED",
+  POST: fieldPath: `factDecisions.${index}.factLocalId`,
+  POST: severity: "error",
+  POST: messageRu: "factLocalId обязателен для каждого решения по факту.",
+  POST: });
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:226: pushIssue(params.errors, {
+  PRE:  severity: "error",
+  PRE:  messageRu: "factLocalId обязателен для каждого решения по факту.",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  if (!decisionValue || !ALLOWED_FACT_DECISIONS.has(decisionValue)) {
+  POST: code: "FACT_DECISION_UNSUPPORTED",
+  POST: fieldPath: `factDecisions.${index}.decision`,
+  POST: severity: "error",
+  POST: messageRu: "decision должен быть accept, reject, edit или defer.",
+  POST: });
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:238: errors: ActivityFactsSaveGateValidationIssue[];
+  PRE:  }
+  PRE:  }
+  PRE:  }
+  PRE:  
+  PRE:  function validateEditedFactDecisions(params: {
+  PRE:  body: Record<string, unknown>;
+  POST: }) {
+  POST: const editedFactDecisions = asArray(params.body.editedFactDecisions);
+  POST: 
+  POST: for (const [index, rawDecision] of editedFactDecisions.entries()) {
+  POST: const decision = asRecord(rawDecision);
+  POST: const factLocalId = asString(decision.factLocalId);
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:249: pushIssue(params.errors, {
+  PRE:  const decision = asRecord(rawDecision);
+  PRE:  const factLocalId = asString(decision.factLocalId);
+  PRE:  const decisionValue = asString(decision.decision);
+  PRE:  const editedFact = asRecord(decision.editedFact);
+  PRE:  
+  PRE:  if (!factLocalId) {
+  POST: code: "EDITED_FACT_LOCAL_ID_REQUIRED",
+  POST: fieldPath: `editedFactDecisions.${index}.factLocalId`,
+  POST: severity: "error",
+  POST: messageRu: "factLocalId обязателен для каждого editedFactDecision.",
+  POST: });
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:258: pushIssue(params.errors, {
+  PRE:  severity: "error",
+  PRE:  messageRu: "factLocalId обязателен для каждого editedFactDecision.",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  if (decisionValue !== "edit") {
+  POST: code: "EDITED_FACT_DECISION_MUST_BE_EDIT",
+  POST: fieldPath: `editedFactDecisions.${index}.decision`,
+  POST: severity: "error",
+  POST: messageRu: "editedFactDecision.decision должен быть edit.",
+  POST: });
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:267: pushIssue(params.errors, {
+  PRE:  severity: "error",
+  PRE:  messageRu: "editedFactDecision.decision должен быть edit.",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  if (Object.keys(editedFact).length === 0) {
+  POST: code: "EDITED_FACT_PATCH_REQUIRED",
+  POST: fieldPath: `editedFactDecisions.${index}.editedFact`,
+  POST: severity: "error",
+  POST: messageRu: "editedFact обязателен для решения edit.",
+  POST: });
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:279: errors: ActivityFactsSaveGateValidationIssue[];
+  PRE:  }
+  PRE:  }
+  PRE:  }
+  PRE:  
+  PRE:  function validateValueObjectCandidateDecisions(params: {
+  PRE:  body: Record<string, unknown>;
+  POST: }) {
+  POST: const candidateDecisions = asArray(params.body.valueObjectCandidateDecisions);
+  POST: 
+  POST: for (const [index, rawDecision] of candidateDecisions.entries()) {
+  POST: const decision = asRecord(rawDecision);
+  POST: const semanticObjectKey = asString(decision.semanticObjectKey);
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:290: pushIssue(params.errors, {
+  PRE:  const decision = asRecord(rawDecision);
+  PRE:  const semanticObjectKey = asString(decision.semanticObjectKey);
+  PRE:  const proposedTitleRu = asString(decision.proposedTitleRu);
+  PRE:  const decisionValue = asString(decision.decision);
+  PRE:  
+  PRE:  if (!semanticObjectKey) {
+  POST: code: "SEMANTIC_OBJECT_KEY_REQUIRED",
+  POST: fieldPath: `valueObjectCandidateDecisions.${index}.semanticObjectKey`,
+  POST: severity: "error",
+  POST: messageRu:
+  POST: "semanticObjectKey обязателен для каждого решения по кандидату Value Object.",
+  POST: });
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:300: pushIssue(params.errors, {
+  PRE:  messageRu:
+  PRE:  "semanticObjectKey обязателен для каждого решения по кандидату Value Object.",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  if (!proposedTitleRu) {
+  POST: code: "PROPOSED_TITLE_REQUIRED",
+  POST: fieldPath: `valueObjectCandidateDecisions.${index}.proposedTitleRu`,
+  POST: severity: "error",
+  POST: messageRu:
+  POST: "proposedTitleRu обязателен для каждого решения по кандидату Value Object.",
+  POST: });
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:313: pushIssue(params.errors, {
+  PRE:  }
+  PRE:  
+  PRE:  if (
+  PRE:  !decisionValue ||
+  PRE:  !ALLOWED_VALUE_OBJECT_DECISIONS.has(decisionValue)
+  PRE:  ) {
+  POST: code: "VALUE_OBJECT_CANDIDATE_DECISION_UNSUPPORTED",
+  POST: fieldPath: `valueObjectCandidateDecisions.${index}.decision`,
+  POST: severity: "error",
+  POST: messageRu:
+  POST: "decision должен быть use_existing, create_new, skip или defer.",
+  POST: });
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:368: const errors: ActivityFactsSaveGateValidationIssue[] = [];
+  PRE:  }
+  PRE:  
+  PRE:  export function validateActivityFactsSaveGateRequest(
+  PRE:  body: unknown
+  PRE:  ): ActivityFactsSaveGateValidationResult {
+  PRE:  const requestRecord = asRecord(body);
+  POST: const warnings: ActivityFactsSaveGateValidationIssue[] = [];
+  POST: 
+  POST: const routeMode = validateRouteMode(requestRecord.routeMode, errors);
+  POST: 
+  POST: const sourcePackageId = validateRequiredSafeId({
+  POST: value: requestRecord.sourcePackageId,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:371: const routeMode = validateRouteMode(requestRecord.routeMode, errors);
+  PRE:  body: unknown
+  PRE:  ): ActivityFactsSaveGateValidationResult {
+  PRE:  const requestRecord = asRecord(body);
+  PRE:  const errors: ActivityFactsSaveGateValidationIssue[] = [];
+  PRE:  const warnings: ActivityFactsSaveGateValidationIssue[] = [];
+  PRE:  
+  POST: 
+  POST: const sourcePackageId = validateRequiredSafeId({
+  POST: value: requestRecord.sourcePackageId,
+  POST: fieldPath: "sourcePackageId",
+  POST: labelRu: "sourcePackageId",
+  POST: errors,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:377: errors,
+  PRE:  const routeMode = validateRouteMode(requestRecord.routeMode, errors);
+  PRE:  
+  PRE:  const sourcePackageId = validateRequiredSafeId({
+  PRE:  value: requestRecord.sourcePackageId,
+  PRE:  fieldPath: "sourcePackageId",
+  PRE:  labelRu: "sourcePackageId",
+  POST: });
+  POST: 
+  POST: const idempotencyKey = validateRequiredSafeId({
+  POST: value: requestRecord.idempotencyKey,
+  POST: fieldPath: "idempotencyKey",
+  POST: labelRu: "idempotencyKey",
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:384: errors,
+  PRE:  });
+  PRE:  
+  PRE:  const idempotencyKey = validateRequiredSafeId({
+  PRE:  value: requestRecord.idempotencyKey,
+  PRE:  fieldPath: "idempotencyKey",
+  PRE:  labelRu: "idempotencyKey",
+  POST: });
+  POST: 
+  POST: if (!Array.isArray(requestRecord.factDecisions)) {
+  POST: pushIssue(errors, {
+  POST: code: "FACT_DECISIONS_ARRAY_REQUIRED",
+  POST: fieldPath: "factDecisions",
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:388: pushIssue(errors, {
+  PRE:  fieldPath: "idempotencyKey",
+  PRE:  labelRu: "idempotencyKey",
+  PRE:  errors,
+  PRE:  });
+  PRE:  
+  PRE:  if (!Array.isArray(requestRecord.factDecisions)) {
+  POST: code: "FACT_DECISIONS_ARRAY_REQUIRED",
+  POST: fieldPath: "factDecisions",
+  POST: severity: "error",
+  POST: messageRu: "factDecisions должен быть массивом.",
+  POST: });
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:397: pushIssue(errors, {
+  PRE:  severity: "error",
+  PRE:  messageRu: "factDecisions должен быть массивом.",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  if (!Array.isArray(requestRecord.editedFactDecisions)) {
+  POST: code: "EDITED_FACT_DECISIONS_ARRAY_REQUIRED",
+  POST: fieldPath: "editedFactDecisions",
+  POST: severity: "error",
+  POST: messageRu: "editedFactDecisions должен быть массивом.",
+  POST: });
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:406: pushIssue(errors, {
+  PRE:  severity: "error",
+  PRE:  messageRu: "editedFactDecisions должен быть массивом.",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  if (!Array.isArray(requestRecord.valueObjectCandidateDecisions)) {
+  POST: code: "VALUE_OBJECT_CANDIDATE_DECISIONS_ARRAY_REQUIRED",
+  POST: fieldPath: "valueObjectCandidateDecisions",
+  POST: severity: "error",
+  POST: messageRu: "valueObjectCandidateDecisions должен быть массивом.",
+  POST: });
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:416: errors,
+  PRE:  messageRu: "valueObjectCandidateDecisions должен быть массивом.",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  validateClientSafetyConfirmation({
+  PRE:  body: requestRecord,
+  POST: warnings,
+  POST: });
+  POST: 
+  POST: validateFactDecisions({
+  POST: body: requestRecord,
+  POST: errors,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:422: errors,
+  PRE:  errors,
+  PRE:  warnings,
+  PRE:  });
+  PRE:  
+  PRE:  validateFactDecisions({
+  PRE:  body: requestRecord,
+  POST: });
+  POST: 
+  POST: validateEditedFactDecisions({
+  POST: body: requestRecord,
+  POST: errors,
+  POST: });
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:427: errors,
+  PRE:  body: requestRecord,
+  PRE:  errors,
+  PRE:  });
+  PRE:  
+  PRE:  validateEditedFactDecisions({
+  PRE:  body: requestRecord,
+  POST: });
+  POST: 
+  POST: validateValueObjectCandidateDecisions({
+  POST: body: requestRecord,
+  POST: errors,
+  POST: });
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:432: errors,
+  PRE:  body: requestRecord,
+  PRE:  errors,
+  PRE:  });
+  PRE:  
+  PRE:  validateValueObjectCandidateDecisions({
+  PRE:  body: requestRecord,
+  POST: });
+  POST: 
+  POST: const writeIntent = detectWriteIntent(requestRecord);
+  POST: 
+  POST: const summary: ActivityFactsSaveGateRequestSummary = {
+  POST: sourcePackageId,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:448: validationErrorCount: errors.length,
+  PRE:  editedFactDecisionCount: asArray(requestRecord.editedFactDecisions).length,
+  PRE:  valueObjectCandidateDecisionCount: asArray(
+  PRE:  requestRecord.valueObjectCandidateDecisions
+  PRE:  ).length,
+  PRE:  writeIntentDetected: writeIntent.writeIntentDetected,
+  PRE:  writeIntentReasons: writeIntent.writeIntentReasons,
+  POST: validationWarningCount: warnings.length,
+  POST: };
+  POST: 
+  POST: return {
+  POST: ok: errors.length === 0,
+  POST: requestRecord,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:453: ok: errors.length === 0,
+  PRE:  writeIntentReasons: writeIntent.writeIntentReasons,
+  PRE:  validationErrorCount: errors.length,
+  PRE:  validationWarningCount: warnings.length,
+  PRE:  };
+  PRE:  
+  PRE:  return {
+  POST: requestRecord,
+  POST: summary,
+  POST: errors,
+  POST: warnings,
+  POST: };
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:456: errors,
+  PRE:  };
+  PRE:  
+  PRE:  return {
+  PRE:  ok: errors.length === 0,
+  PRE:  requestRecord,
+  PRE:  summary,
+  POST: warnings,
+  POST: };
+  POST: }
+  POST: 
+  POST: export function isActivityFactsSaveGateDecision(
+  POST: value: unknown
+
+==============================
+4. EXECUTION PLAN EXCERPTS
+==============================
+File: src\lib\activity\facts\saveGate\executionPlan.ts
+
+----- Pattern: buildNoWriteExecutionPlan -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:220: export function buildNoWriteExecutionPlan(
+  PRE:  factLocalIds,
+  PRE:  semanticObjectKeys,
+  PRE:  reasonsRu,
+  PRE:  };
+  PRE:  }
+  PRE:  
+  POST: validation: ActivityFactsSaveGateValidationResult
+  POST: ): ActivityFactsSaveGateNoWriteExecutionPlan {
+  POST: const requestRecord = validation.requestRecord;
+  POST: 
+  POST: const {
+  POST: acceptedFactLocalIds,
+
+----- Pattern: plannedWrites -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:42: plannedWrites: ActivityFactsSaveGatePlannedWrite[];
+  PRE:  deferredFactLocalIds: string[];
+  PRE:  editedFactLocalIds: string[];
+  PRE:  valueObjectCreateCandidateKeys: string[];
+  PRE:  valueObjectUseExistingCandidateKeys: string[];
+  PRE:  valueObjectSkippedCandidateKeys: string[];
+  PRE:  valueObjectDeferredCandidateKeys: string[];
+  POST: skipped: ActivityFactsSaveGatePlanSkipped;
+  POST: noWriteGuarantee: {
+  POST: dbReadExecuted: false;
+  POST: dbWriteExecuted: false;
+  POST: sqlExecuted: false;
+  POST: openAiCallExecuted: false;
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:78: plannedWrites: ActivityFactsSaveGatePlannedWrite[],
+  PRE:  const trimmed = value.trim();
+  PRE:  
+  PRE:  return trimmed.length > 0 ? trimmed : null;
+  PRE:  }
+  PRE:  
+  PRE:  function pushPlannedWrite(
+  POST: write: ActivityFactsSaveGatePlannedWrite
+  POST: ) {
+  POST: plannedWrites.push(write);
+  POST: }
+  POST: 
+  POST: function classifyFactDecisions(requestRecord: UnknownRecord) {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:81: plannedWrites.push(write);
+  PRE:  }
+  PRE:  
+  PRE:  function pushPlannedWrite(
+  PRE:  plannedWrites: ActivityFactsSaveGatePlannedWrite[],
+  PRE:  write: ActivityFactsSaveGatePlannedWrite
+  PRE:  ) {
+  POST: }
+  POST: 
+  POST: function classifyFactDecisions(requestRecord: UnknownRecord) {
+  POST: const acceptedFactLocalIds: string[] = [];
+  POST: const rejectedFactLocalIds: string[] = [];
+  POST: const deferredFactLocalIds: string[] = [];
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:240: const plannedWrites: ActivityFactsSaveGatePlannedWrite[] = [];
+  PRE:  valueObjectCreateCandidateKeys,
+  PRE:  valueObjectUseExistingCandidateKeys,
+  PRE:  valueObjectSkippedCandidateKeys,
+  PRE:  valueObjectDeferredCandidateKeys,
+  PRE:  } = classifyValueObjectCandidateDecisions(requestRecord);
+  PRE:  
+  POST: 
+  POST: const acceptedOrEditedFactLocalIds = [
+  POST: ...acceptedFactLocalIds,
+  POST: ...editedFactLocalIds,
+  POST: ];
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:248: pushPlannedWrite(plannedWrites, {
+  PRE:  const acceptedOrEditedFactLocalIds = [
+  PRE:  ...acceptedFactLocalIds,
+  PRE:  ...editedFactLocalIds,
+  PRE:  ];
+  PRE:  
+  PRE:  if (acceptedOrEditedFactLocalIds.length > 0) {
+  POST: targetTable: "activity_events",
+  POST: operation: "insert",
+  POST: localSourceId:
+  POST: validation.summary.sourcePackageId ?? "unknown-source-package",
+  POST: plannedDbId: null,
+  POST: descriptionRu:
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:261: pushPlannedWrite(plannedWrites, {
+  PRE:  "Будущий save gate создаст activity_event как хронологический источник фактов.",
+  PRE:  writeStatus: "not_executed_contract_preview",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  for (const factLocalId of acceptedOrEditedFactLocalIds) {
+  POST: targetTable: "activity_object_facts",
+  POST: operation: "insert",
+  POST: localSourceId: factLocalId,
+  POST: plannedDbId: null,
+  POST: descriptionRu:
+  POST: `Будущий save gate создаст user-owned activity_object_fact для ${factLocalId}.`,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:271: pushPlannedWrite(plannedWrites, {
+  PRE:  plannedDbId: null,
+  PRE:  descriptionRu:
+  PRE:  `Будущий save gate создаст user-owned activity_object_fact для ${factLocalId}.`,
+  PRE:  writeStatus: "not_executed_contract_preview",
+  PRE:  });
+  PRE:  
+  POST: targetTable: "activity_fact_review_items",
+  POST: operation: "insert",
+  POST: localSourceId: `review-${factLocalId}`,
+  POST: plannedDbId: null,
+  POST: descriptionRu:
+  POST: `Будущий save gate создаст review/audit item для ${factLocalId}.`,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:283: pushPlannedWrite(plannedWrites, {
+  PRE:  `Будущий save gate создаст review/audit item для ${factLocalId}.`,
+  PRE:  writeStatus: "not_executed_contract_preview",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  for (const semanticObjectKey of valueObjectCreateCandidateKeys) {
+  POST: targetTable: "value_objects",
+  POST: operation: "insert",
+  POST: localSourceId: semanticObjectKey,
+  POST: plannedDbId: null,
+  POST: descriptionRu:
+  POST: `Будущий save gate создаст Value Object для semanticObjectKey=${semanticObjectKey}.`,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:299: pushPlannedWrite(plannedWrites, {
+  PRE:  
+  PRE:  if (
+  PRE:  acceptedOrEditedFactLocalIds.length > 0 ||
+  PRE:  valueObjectCreateCandidateKeys.length > 0 ||
+  PRE:  valueObjectUseExistingCandidateKeys.length > 0
+  PRE:  ) {
+  POST: targetTable: "activity_fact_recalculation_queue",
+  POST: operation: "insert",
+  POST: localSourceId:
+  POST: validation.summary.idempotencyKey ?? "unknown-idempotency-key",
+  POST: plannedDbId: null,
+  POST: descriptionRu:
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:332: plannedWrites,
+  PRE:  deferredFactLocalIds,
+  PRE:  editedFactLocalIds,
+  PRE:  valueObjectCreateCandidateKeys,
+  PRE:  valueObjectUseExistingCandidateKeys,
+  PRE:  valueObjectSkippedCandidateKeys,
+  PRE:  valueObjectDeferredCandidateKeys,
+  POST: skipped,
+  POST: noWriteGuarantee: {
+  POST: dbReadExecuted: false,
+  POST: dbWriteExecuted: false,
+  POST: sqlExecuted: false,
+  POST: openAiCallExecuted: false,
+
+----- Pattern: activity_events -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:6: | "activity_events"
+  PRE:  import type { ActivityFactsSaveGateValidationResult } from "@/lib/activity/facts/saveGate/requestValidation";
+  PRE:  
+  PRE:  export type ActivityFactsSaveGatePlanOperation = "insert";
+  PRE:  
+  PRE:  export type ActivityFactsSaveGatePlanTargetTable =
+  POST: | "activity_event_measures"
+  POST: | "value_objects"
+  POST: | "activity_object_facts"
+  POST: | "activity_fact_review_items"
+  POST: | "activity_fact_recalculation_queue";
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:249: targetTable: "activity_events",
+  PRE:  ...acceptedFactLocalIds,
+  PRE:  ...editedFactLocalIds,
+  PRE:  ];
+  PRE:  
+  PRE:  if (acceptedOrEditedFactLocalIds.length > 0) {
+  PRE:  pushPlannedWrite(plannedWrites, {
+  POST: operation: "insert",
+  POST: localSourceId:
+  POST: validation.summary.sourcePackageId ?? "unknown-source-package",
+  POST: plannedDbId: null,
+  POST: descriptionRu:
+  POST: "Будущий save gate создаст activity_event как хронологический источник фактов.",
+
+----- Pattern: activity_object_facts -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:9: | "activity_object_facts"
+  PRE:  export type ActivityFactsSaveGatePlanOperation = "insert";
+  PRE:  
+  PRE:  export type ActivityFactsSaveGatePlanTargetTable =
+  PRE:  | "activity_events"
+  PRE:  | "activity_event_measures"
+  PRE:  | "value_objects"
+  POST: | "activity_fact_review_items"
+  POST: | "activity_fact_recalculation_queue";
+  POST: 
+  POST: export type ActivityFactsSaveGatePlannedWrite = {
+  POST: targetTable: ActivityFactsSaveGatePlanTargetTable;
+  POST: operation: ActivityFactsSaveGatePlanOperation;
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:262: targetTable: "activity_object_facts",
+  PRE:  writeStatus: "not_executed_contract_preview",
+  PRE:  });
+  PRE:  }
+  PRE:  
+  PRE:  for (const factLocalId of acceptedOrEditedFactLocalIds) {
+  PRE:  pushPlannedWrite(plannedWrites, {
+  POST: operation: "insert",
+  POST: localSourceId: factLocalId,
+  POST: plannedDbId: null,
+  POST: descriptionRu:
+  POST: `Будущий save gate создаст user-owned activity_object_fact для ${factLocalId}.`,
+  POST: writeStatus: "not_executed_contract_preview",
+
+----- Pattern: activity_fact_review_items -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:10: | "activity_fact_review_items"
+  PRE:  
+  PRE:  export type ActivityFactsSaveGatePlanTargetTable =
+  PRE:  | "activity_events"
+  PRE:  | "activity_event_measures"
+  PRE:  | "value_objects"
+  PRE:  | "activity_object_facts"
+  POST: | "activity_fact_recalculation_queue";
+  POST: 
+  POST: export type ActivityFactsSaveGatePlannedWrite = {
+  POST: targetTable: ActivityFactsSaveGatePlanTargetTable;
+  POST: operation: ActivityFactsSaveGatePlanOperation;
+  POST: localSourceId: string;
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:272: targetTable: "activity_fact_review_items",
+  PRE:  descriptionRu:
+  PRE:  `Будущий save gate создаст user-owned activity_object_fact для ${factLocalId}.`,
+  PRE:  writeStatus: "not_executed_contract_preview",
+  PRE:  });
+  PRE:  
+  PRE:  pushPlannedWrite(plannedWrites, {
+  POST: operation: "insert",
+  POST: localSourceId: `review-${factLocalId}`,
+  POST: plannedDbId: null,
+  POST: descriptionRu:
+  POST: `Будущий save gate создаст review/audit item для ${factLocalId}.`,
+  POST: writeStatus: "not_executed_contract_preview",
+
+----- Pattern: activity_fact_recalculation_queue -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:11: | "activity_fact_recalculation_queue";
+  PRE:  export type ActivityFactsSaveGatePlanTargetTable =
+  PRE:  | "activity_events"
+  PRE:  | "activity_event_measures"
+  PRE:  | "value_objects"
+  PRE:  | "activity_object_facts"
+  PRE:  | "activity_fact_review_items"
+  POST: 
+  POST: export type ActivityFactsSaveGatePlannedWrite = {
+  POST: targetTable: ActivityFactsSaveGatePlanTargetTable;
+  POST: operation: ActivityFactsSaveGatePlanOperation;
+  POST: localSourceId: string;
+  POST: plannedDbId: null;
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\executionPlan.ts:300: targetTable: "activity_fact_recalculation_queue",
+  PRE:  if (
+  PRE:  acceptedOrEditedFactLocalIds.length > 0 ||
+  PRE:  valueObjectCreateCandidateKeys.length > 0 ||
+  PRE:  valueObjectUseExistingCandidateKeys.length > 0
+  PRE:  ) {
+  PRE:  pushPlannedWrite(plannedWrites, {
+  POST: operation: "insert",
+  POST: localSourceId:
+  POST: validation.summary.idempotencyKey ?? "unknown-idempotency-key",
+  POST: plannedDbId: null,
+  POST: descriptionRu:
+  POST: "Будущий save gate поставит затронутые user-owned facts в очередь пересчёта аналитики.",
+
+----- Pattern: plannedTargetTables -----
+[INFO] No hits.
+
+==============================
+5. PERSISTENCE CONTRACT EXCERPTS
+==============================
+File: src\lib\activity\facts\saveGate\persistenceContract.ts
+
+----- Pattern: buildActivityFactsGuardedPersistenceContract -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:245: export function buildActivityFactsGuardedPersistenceContract(input: {
+  PRE:  plan: ActivityFactsSaveGateNoWriteExecutionPlan,
+  PRE:  table: ActivityFactsSaveGatePlanTargetTable
+  PRE:  ): ActivityFactsSaveGatePlannedWrite[] {
+  PRE:  return plan.plannedWrites.filter((write) => write.targetTable === table);
+  PRE:  }
+  PRE:  
+  POST: readonly validation: ActivityFactsSaveGateValidationResult;
+  POST: readonly noWritePlan: ActivityFactsSaveGateNoWriteExecutionPlan;
+  POST: readonly actorScope?: Partial<ActivityFactsGuardedPersistenceActorScope>;
+  POST: }): ActivityFactsGuardedPersistenceContract {
+  POST: const { validation, noWritePlan } = input;
+  POST: const body = asRecord(validation.normalizedBody);
+
+----- Pattern: collectFactDecisions -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:226: function collectFactDecisions(validation: ActivityFactsSaveGateValidationResult): MinimalFactDecision[] {
+  PRE:  .replace(/^-+|-+$/g, "")
+  PRE:  .slice(0, 80);
+  PRE:  
+  PRE:  return `${prefix}_${normalized || fallback}`;
+  PRE:  }
+  PRE:  
+  POST: const body = asRecord(validation.normalizedBody);
+  POST: return asArray(body.factDecisions).map((item) => asRecord(item));
+  POST: }
+  POST: 
+  POST: function collectValueObjectDecisions(
+  POST: validation: ActivityFactsSaveGateValidationResult
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:254: const factDecisions = collectFactDecisions(validation);
+  PRE:  readonly actorScope?: Partial<ActivityFactsGuardedPersistenceActorScope>;
+  PRE:  }): ActivityFactsGuardedPersistenceContract {
+  PRE:  const { validation, noWritePlan } = input;
+  PRE:  const body = asRecord(validation.normalizedBody);
+  PRE:  const sourcePackageId = asString(body.sourcePackageId) ?? noWritePlan.sourcePackageId;
+  PRE:  const idempotencyKey = asString(body.idempotencyKey) ?? noWritePlan.idempotencyKey;
+  POST: const valueObjectDecisions = collectValueObjectDecisions(validation);
+  POST: const activityEventDraftId = stableDraftId("draft_activity_event", sourcePackageId, "activity");
+  POST: 
+  POST: const actorScope: ActivityFactsGuardedPersistenceActorScope = {
+  POST: authenticatedUserId: input.actorScope?.authenticatedUserId ?? null,
+  POST: ownerActorId: input.actorScope?.ownerActorId ?? null,
+
+----- Pattern: collectValueObjectDecisions -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:231: function collectValueObjectDecisions(
+  PRE:  
+  PRE:  function collectFactDecisions(validation: ActivityFactsSaveGateValidationResult): MinimalFactDecision[] {
+  PRE:  const body = asRecord(validation.normalizedBody);
+  PRE:  return asArray(body.factDecisions).map((item) => asRecord(item));
+  PRE:  }
+  PRE:  
+  POST: validation: ActivityFactsSaveGateValidationResult
+  POST: ): MinimalValueObjectDecision[] {
+  POST: const body = asRecord(validation.normalizedBody);
+  POST: return asArray(body.valueObjectCandidateDecisions).map((item) => asRecord(item));
+  POST: }
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:255: const valueObjectDecisions = collectValueObjectDecisions(validation);
+  PRE:  }): ActivityFactsGuardedPersistenceContract {
+  PRE:  const { validation, noWritePlan } = input;
+  PRE:  const body = asRecord(validation.normalizedBody);
+  PRE:  const sourcePackageId = asString(body.sourcePackageId) ?? noWritePlan.sourcePackageId;
+  PRE:  const idempotencyKey = asString(body.idempotencyKey) ?? noWritePlan.idempotencyKey;
+  PRE:  const factDecisions = collectFactDecisions(validation);
+  POST: const activityEventDraftId = stableDraftId("draft_activity_event", sourcePackageId, "activity");
+  POST: 
+  POST: const actorScope: ActivityFactsGuardedPersistenceActorScope = {
+  POST: authenticatedUserId: input.actorScope?.authenticatedUserId ?? null,
+  POST: ownerActorId: input.actorScope?.ownerActorId ?? null,
+  POST: personId: input.actorScope?.personId ?? null,
+
+----- Pattern: factLocalId -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:142: readonly factLocalId?: unknown;
+  PRE:  };
+  PRE:  readonly blockers: string[];
+  PRE:  readonly warnings: string[];
+  PRE:  };
+  PRE:  
+  PRE:  type MinimalFactDecision = {
+  POST: readonly decision?: unknown;
+  POST: readonly reasonRu?: unknown;
+  POST: };
+  POST: 
+  POST: type MinimalValueObjectDecision = {
+  POST: readonly semanticObjectKey?: unknown;
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:302: const localFactId = asString(decision.factLocalId) ?? `fact-${index + 1}`;
+  PRE:  
+  PRE:  const measures: ActivityFactsGuardedPersistenceMeasureDraftRow[] = [];
+  PRE:  const objectFacts: ActivityFactsGuardedPersistenceObjectFactDraftRow[] = [];
+  PRE:  const reviewItems: ActivityFactsGuardedPersistenceReviewItemDraftRow[] = [];
+  PRE:  
+  PRE:  acceptedOrEditedFacts.forEach((decision, index) => {
+  POST: const measureLocalId = `measure-${localFactId}`;
+  POST: const measureDraftId = stableDraftId("draft_measure", measureLocalId, `measure-${index + 1}`);
+  POST: const factDraftId = stableDraftId("draft_fact", localFactId, `fact-${index + 1}`);
+  POST: const reviewDraftId = stableDraftId("draft_review", localFactId, `review-${index + 1}`);
+  POST: 
+  POST: measureIdsByLocalMeasureId[measureLocalId] = measureDraftId;
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:384: return asString(decision.factLocalId) ?? "unknown_fact";
+  PRE:  draftId: stableDraftId("draft_recalc_queue", sourcePackageId, "activity"),
+  PRE:  activityEventDraftId,
+  PRE:  reason: "activity_fact_created",
+  PRE:  affectedValueObjectIds: Object.values(valueObjectIdsBySemanticObjectKey),
+  PRE:  affectedSemanticObjectKeys: [
+  PRE:  ...acceptedOrEditedFacts.map((decision) => {
+  POST: }),
+  POST: ...Object.keys(valueObjectIdsBySemanticObjectKey),
+  POST: ],
+  POST: ownerActorId: actorScope.ownerActorId,
+  POST: writeStatus: "not_executed_contract_preview",
+  POST: },
+
+----- Pattern: decision -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:88: readonly reviewDecision: "accept" | "edit" | "reject" | "ignore" | "defer";
+  PRE:  export type ActivityFactsGuardedPersistenceReviewItemDraftRow = {
+  PRE:  readonly table: "activity_fact_review_items";
+  PRE:  readonly draftId: string;
+  PRE:  readonly activityEventDraftId: string;
+  PRE:  readonly objectFactDraftId: string | null;
+  PRE:  readonly localFactId: string;
+  POST: readonly reasonRu: string | null;
+  POST: readonly reviewerActorId: string | null;
+  POST: readonly writeStatus: ActivityFactsGuardedPersistenceWriteStatus;
+  POST: };
+  POST: 
+  POST: export type ActivityFactsGuardedPersistenceRecalculationQueueDraftRow = {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:141: type MinimalFactDecision = {
+  PRE:  readonly productionWriteEnabled: false;
+  PRE:  };
+  PRE:  readonly blockers: string[];
+  PRE:  readonly warnings: string[];
+  PRE:  };
+  PRE:  
+  POST: readonly factLocalId?: unknown;
+  POST: readonly decision?: unknown;
+  POST: readonly reasonRu?: unknown;
+  POST: };
+  POST: 
+  POST: type MinimalValueObjectDecision = {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:143: readonly decision?: unknown;
+  PRE:  readonly blockers: string[];
+  PRE:  readonly warnings: string[];
+  PRE:  };
+  PRE:  
+  PRE:  type MinimalFactDecision = {
+  PRE:  readonly factLocalId?: unknown;
+  POST: readonly reasonRu?: unknown;
+  POST: };
+  POST: 
+  POST: type MinimalValueObjectDecision = {
+  POST: readonly semanticObjectKey?: unknown;
+  POST: readonly decision?: unknown;
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:147: type MinimalValueObjectDecision = {
+  PRE:  type MinimalFactDecision = {
+  PRE:  readonly factLocalId?: unknown;
+  PRE:  readonly decision?: unknown;
+  PRE:  readonly reasonRu?: unknown;
+  PRE:  };
+  PRE:  
+  POST: readonly semanticObjectKey?: unknown;
+  POST: readonly decision?: unknown;
+  POST: readonly selectedExistingValueObjectId?: unknown;
+  POST: readonly proposedTitleRu?: unknown;
+  POST: };
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:149: readonly decision?: unknown;
+  PRE:  readonly decision?: unknown;
+  PRE:  readonly reasonRu?: unknown;
+  PRE:  };
+  PRE:  
+  PRE:  type MinimalValueObjectDecision = {
+  PRE:  readonly semanticObjectKey?: unknown;
+  POST: readonly selectedExistingValueObjectId?: unknown;
+  POST: readonly proposedTitleRu?: unknown;
+  POST: };
+  POST: 
+  POST: function asRecord(value: unknown): Record<string, unknown> {
+  POST: return value && typeof value === "object" && !Array.isArray(value)
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:171: function normalizeReviewDecision(
+  PRE:  return typeof value === "string" && value.trim().length > 0
+  PRE:  ? value.trim()
+  PRE:  : null;
+  PRE:  }
+  PRE:  
+  PRE:  
+  POST: decision: unknown
+  POST: ): "accept" | "edit" | "reject" | "ignore" | "defer" {
+  POST: if (decision === "accept") {
+  POST: return "accept";
+  POST: }
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:172: decision: unknown
+  PRE:  ? value.trim()
+  PRE:  : null;
+  PRE:  }
+  PRE:  
+  PRE:  
+  PRE:  function normalizeReviewDecision(
+  POST: ): "accept" | "edit" | "reject" | "ignore" | "defer" {
+  POST: if (decision === "accept") {
+  POST: return "accept";
+  POST: }
+  POST: 
+  POST: if (decision === "edit") {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:174: if (decision === "accept") {
+  PRE:  }
+  PRE:  
+  PRE:  
+  PRE:  function normalizeReviewDecision(
+  PRE:  decision: unknown
+  PRE:  ): "accept" | "edit" | "reject" | "ignore" | "defer" {
+  POST: return "accept";
+  POST: }
+  POST: 
+  POST: if (decision === "edit") {
+  POST: return "edit";
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:178: if (decision === "edit") {
+  PRE:  decision: unknown
+  PRE:  ): "accept" | "edit" | "reject" | "ignore" | "defer" {
+  PRE:  if (decision === "accept") {
+  PRE:  return "accept";
+  PRE:  }
+  PRE:  
+  POST: return "edit";
+  POST: }
+  POST: 
+  POST: if (decision === "reject") {
+  POST: return "reject";
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:182: if (decision === "reject") {
+  PRE:  }
+  PRE:  
+  PRE:  if (decision === "edit") {
+  PRE:  return "edit";
+  PRE:  }
+  PRE:  
+  POST: return "reject";
+  POST: }
+  POST: 
+  POST: if (decision === "ignore") {
+  POST: return "ignore";
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:186: if (decision === "ignore") {
+  PRE:  }
+  PRE:  
+  PRE:  if (decision === "reject") {
+  PRE:  return "reject";
+  PRE:  }
+  PRE:  
+  POST: return "ignore";
+  POST: }
+  POST: 
+  POST: return "defer";
+  POST: }
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:194: decision: unknown
+  PRE:  }
+  PRE:  
+  PRE:  return "defer";
+  PRE:  }
+  PRE:  
+  PRE:  function normalizeObjectFactReviewStatus(
+  POST: ): "accepted" | "edited" | "pending" | "rejected" | "ignored" {
+  POST: if (decision === "accept") {
+  POST: return "accepted";
+  POST: }
+  POST: 
+  POST: if (decision === "edit") {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:196: if (decision === "accept") {
+  PRE:  return "defer";
+  PRE:  }
+  PRE:  
+  PRE:  function normalizeObjectFactReviewStatus(
+  PRE:  decision: unknown
+  PRE:  ): "accepted" | "edited" | "pending" | "rejected" | "ignored" {
+  POST: return "accepted";
+  POST: }
+  POST: 
+  POST: if (decision === "edit") {
+  POST: return "edited";
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:200: if (decision === "edit") {
+  PRE:  decision: unknown
+  PRE:  ): "accepted" | "edited" | "pending" | "rejected" | "ignored" {
+  PRE:  if (decision === "accept") {
+  PRE:  return "accepted";
+  PRE:  }
+  PRE:  
+  POST: return "edited";
+  POST: }
+  POST: 
+  POST: if (decision === "reject") {
+  POST: return "rejected";
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:204: if (decision === "reject") {
+  PRE:  }
+  PRE:  
+  PRE:  if (decision === "edit") {
+  PRE:  return "edited";
+  PRE:  }
+  PRE:  
+  POST: return "rejected";
+  POST: }
+  POST: 
+  POST: if (decision === "ignore") {
+  POST: return "ignored";
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:208: if (decision === "ignore") {
+  PRE:  }
+  PRE:  
+  PRE:  if (decision === "reject") {
+  PRE:  return "rejected";
+  PRE:  }
+  PRE:  
+  POST: return "ignored";
+  POST: }
+  POST: 
+  POST: return "pending";
+  POST: }
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:226: function collectFactDecisions(validation: ActivityFactsSaveGateValidationResult): MinimalFactDecision[] {
+  PRE:  .replace(/^-+|-+$/g, "")
+  PRE:  .slice(0, 80);
+  PRE:  
+  PRE:  return `${prefix}_${normalized || fallback}`;
+  PRE:  }
+  PRE:  
+  POST: const body = asRecord(validation.normalizedBody);
+  POST: return asArray(body.factDecisions).map((item) => asRecord(item));
+  POST: }
+  POST: 
+  POST: function collectValueObjectDecisions(
+  POST: validation: ActivityFactsSaveGateValidationResult
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:228: return asArray(body.factDecisions).map((item) => asRecord(item));
+  PRE:  
+  PRE:  return `${prefix}_${normalized || fallback}`;
+  PRE:  }
+  PRE:  
+  PRE:  function collectFactDecisions(validation: ActivityFactsSaveGateValidationResult): MinimalFactDecision[] {
+  PRE:  const body = asRecord(validation.normalizedBody);
+  POST: }
+  POST: 
+  POST: function collectValueObjectDecisions(
+  POST: validation: ActivityFactsSaveGateValidationResult
+  POST: ): MinimalValueObjectDecision[] {
+  POST: const body = asRecord(validation.normalizedBody);
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:231: function collectValueObjectDecisions(
+  PRE:  
+  PRE:  function collectFactDecisions(validation: ActivityFactsSaveGateValidationResult): MinimalFactDecision[] {
+  PRE:  const body = asRecord(validation.normalizedBody);
+  PRE:  return asArray(body.factDecisions).map((item) => asRecord(item));
+  PRE:  }
+  PRE:  
+  POST: validation: ActivityFactsSaveGateValidationResult
+  POST: ): MinimalValueObjectDecision[] {
+  POST: const body = asRecord(validation.normalizedBody);
+  POST: return asArray(body.valueObjectCandidateDecisions).map((item) => asRecord(item));
+  POST: }
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:233: ): MinimalValueObjectDecision[] {
+  PRE:  const body = asRecord(validation.normalizedBody);
+  PRE:  return asArray(body.factDecisions).map((item) => asRecord(item));
+  PRE:  }
+  PRE:  
+  PRE:  function collectValueObjectDecisions(
+  PRE:  validation: ActivityFactsSaveGateValidationResult
+  POST: const body = asRecord(validation.normalizedBody);
+  POST: return asArray(body.valueObjectCandidateDecisions).map((item) => asRecord(item));
+  POST: }
+  POST: 
+  POST: function findPlannedWritesForTable(
+  POST: plan: ActivityFactsSaveGateNoWriteExecutionPlan,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:235: return asArray(body.valueObjectCandidateDecisions).map((item) => asRecord(item));
+  PRE:  }
+  PRE:  
+  PRE:  function collectValueObjectDecisions(
+  PRE:  validation: ActivityFactsSaveGateValidationResult
+  PRE:  ): MinimalValueObjectDecision[] {
+  PRE:  const body = asRecord(validation.normalizedBody);
+  POST: }
+  POST: 
+  POST: function findPlannedWritesForTable(
+  POST: plan: ActivityFactsSaveGateNoWriteExecutionPlan,
+  POST: table: ActivityFactsSaveGatePlanTargetTable
+  POST: ): ActivityFactsSaveGatePlannedWrite[] {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:254: const factDecisions = collectFactDecisions(validation);
+  PRE:  readonly actorScope?: Partial<ActivityFactsGuardedPersistenceActorScope>;
+  PRE:  }): ActivityFactsGuardedPersistenceContract {
+  PRE:  const { validation, noWritePlan } = input;
+  PRE:  const body = asRecord(validation.normalizedBody);
+  PRE:  const sourcePackageId = asString(body.sourcePackageId) ?? noWritePlan.sourcePackageId;
+  PRE:  const idempotencyKey = asString(body.idempotencyKey) ?? noWritePlan.idempotencyKey;
+  POST: const valueObjectDecisions = collectValueObjectDecisions(validation);
+  POST: const activityEventDraftId = stableDraftId("draft_activity_event", sourcePackageId, "activity");
+  POST: 
+  POST: const actorScope: ActivityFactsGuardedPersistenceActorScope = {
+  POST: authenticatedUserId: input.actorScope?.authenticatedUserId ?? null,
+  POST: ownerActorId: input.actorScope?.ownerActorId ?? null,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:255: const valueObjectDecisions = collectValueObjectDecisions(validation);
+  PRE:  }): ActivityFactsGuardedPersistenceContract {
+  PRE:  const { validation, noWritePlan } = input;
+  PRE:  const body = asRecord(validation.normalizedBody);
+  PRE:  const sourcePackageId = asString(body.sourcePackageId) ?? noWritePlan.sourcePackageId;
+  PRE:  const idempotencyKey = asString(body.idempotencyKey) ?? noWritePlan.idempotencyKey;
+  PRE:  const factDecisions = collectFactDecisions(validation);
+  POST: const activityEventDraftId = stableDraftId("draft_activity_event", sourcePackageId, "activity");
+  POST: 
+  POST: const actorScope: ActivityFactsGuardedPersistenceActorScope = {
+  POST: authenticatedUserId: input.actorScope?.authenticatedUserId ?? null,
+  POST: ownerActorId: input.actorScope?.ownerActorId ?? null,
+  POST: personId: input.actorScope?.personId ?? null,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:266: const acceptedOrEditedFacts = factDecisions.filter((decision) => {
+  PRE:  ownerActorId: input.actorScope?.ownerActorId ?? null,
+  PRE:  personId: input.actorScope?.personId ?? null,
+  PRE:  organizationId: input.actorScope?.organizationId ?? null,
+  PRE:  timezone: input.actorScope?.timezone ?? "Europe/Warsaw",
+  PRE:  };
+  PRE:  
+  POST: return decision.decision === "accept" || decision.decision === "edit";
+  POST: });
+  POST: 
+  POST: const activityEventPlanned = findPlannedWritesForTable(noWritePlan, "activity_events").length > 0;
+  POST: 
+  POST: const activityEvent: ActivityFactsGuardedPersistenceActivityEventDraftRow | null =
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:267: return decision.decision === "accept" || decision.decision === "edit";
+  PRE:  personId: input.actorScope?.personId ?? null,
+  PRE:  organizationId: input.actorScope?.organizationId ?? null,
+  PRE:  timezone: input.actorScope?.timezone ?? "Europe/Warsaw",
+  PRE:  };
+  PRE:  
+  PRE:  const acceptedOrEditedFacts = factDecisions.filter((decision) => {
+  POST: });
+  POST: 
+  POST: const activityEventPlanned = findPlannedWritesForTable(noWritePlan, "activity_events").length > 0;
+  POST: 
+  POST: const activityEvent: ActivityFactsGuardedPersistenceActivityEventDraftRow | null =
+  POST: activityEventPlanned || acceptedOrEditedFacts.length > 0
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:301: acceptedOrEditedFacts.forEach((decision, index) => {
+  PRE:  const valueObjectIdsBySemanticObjectKey: Record<string, string> = {};
+  PRE:  
+  PRE:  const measures: ActivityFactsGuardedPersistenceMeasureDraftRow[] = [];
+  PRE:  const objectFacts: ActivityFactsGuardedPersistenceObjectFactDraftRow[] = [];
+  PRE:  const reviewItems: ActivityFactsGuardedPersistenceReviewItemDraftRow[] = [];
+  PRE:  
+  POST: const localFactId = asString(decision.factLocalId) ?? `fact-${index + 1}`;
+  POST: const measureLocalId = `measure-${localFactId}`;
+  POST: const measureDraftId = stableDraftId("draft_measure", measureLocalId, `measure-${index + 1}`);
+  POST: const factDraftId = stableDraftId("draft_fact", localFactId, `fact-${index + 1}`);
+  POST: const reviewDraftId = stableDraftId("draft_review", localFactId, `review-${index + 1}`);
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:302: const localFactId = asString(decision.factLocalId) ?? `fact-${index + 1}`;
+  PRE:  
+  PRE:  const measures: ActivityFactsGuardedPersistenceMeasureDraftRow[] = [];
+  PRE:  const objectFacts: ActivityFactsGuardedPersistenceObjectFactDraftRow[] = [];
+  PRE:  const reviewItems: ActivityFactsGuardedPersistenceReviewItemDraftRow[] = [];
+  PRE:  
+  PRE:  acceptedOrEditedFacts.forEach((decision, index) => {
+  POST: const measureLocalId = `measure-${localFactId}`;
+  POST: const measureDraftId = stableDraftId("draft_measure", measureLocalId, `measure-${index + 1}`);
+  POST: const factDraftId = stableDraftId("draft_fact", localFactId, `fact-${index + 1}`);
+  POST: const reviewDraftId = stableDraftId("draft_review", localFactId, `review-${index + 1}`);
+  POST: 
+  POST: measureIdsByLocalMeasureId[measureLocalId] = measureDraftId;
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:321: source: decision.decision === "edit" ? "user_edited" : "save_gate_contract",
+  PRE:  activityEventDraftId,
+  PRE:  localMeasureId: measureLocalId,
+  PRE:  measureType: "duration",
+  PRE:  numericValue: null,
+  PRE:  unit: null,
+  PRE:  confidence: null,
+  POST: writeStatus: "not_executed_contract_preview",
+  POST: });
+  POST: 
+  POST: objectFacts.push({
+  POST: table: "activity_object_facts",
+  POST: draftId: factDraftId,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:336: reviewStatus: normalizeObjectFactReviewStatus(decision.decision),
+  PRE:  localFactId,
+  PRE:  semanticObjectKey: localFactId,
+  PRE:  valueObjectId: null,
+  PRE:  measureType: "duration",
+  PRE:  numericValue: null,
+  PRE:  unit: null,
+  POST: factSourceType: decision.decision === "edit" ? "user_edited" : "user_confirmed",
+  POST: ownerActorId: actorScope.ownerActorId,
+  POST: writeStatus: "not_executed_contract_preview",
+  POST: });
+  POST: 
+  POST: reviewItems.push({
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:337: factSourceType: decision.decision === "edit" ? "user_edited" : "user_confirmed",
+  PRE:  semanticObjectKey: localFactId,
+  PRE:  valueObjectId: null,
+  PRE:  measureType: "duration",
+  PRE:  numericValue: null,
+  PRE:  unit: null,
+  PRE:  reviewStatus: normalizeObjectFactReviewStatus(decision.decision),
+  POST: ownerActorId: actorScope.ownerActorId,
+  POST: writeStatus: "not_executed_contract_preview",
+  POST: });
+  POST: 
+  POST: reviewItems.push({
+  POST: table: "activity_fact_review_items",
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:348: reviewDecision: normalizeReviewDecision(decision.decision),
+  PRE:  reviewItems.push({
+  PRE:  table: "activity_fact_review_items",
+  PRE:  draftId: reviewDraftId,
+  PRE:  activityEventDraftId,
+  PRE:  objectFactDraftId: factDraftId,
+  PRE:  localFactId,
+  POST: reasonRu: asString(decision.reasonRu),
+  POST: reviewerActorId: actorScope.ownerActorId,
+  POST: writeStatus: "not_executed_contract_preview",
+  POST: });
+  POST: });
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:349: reasonRu: asString(decision.reasonRu),
+  PRE:  table: "activity_fact_review_items",
+  PRE:  draftId: reviewDraftId,
+  PRE:  activityEventDraftId,
+  PRE:  objectFactDraftId: factDraftId,
+  PRE:  localFactId,
+  PRE:  reviewDecision: normalizeReviewDecision(decision.decision),
+  POST: reviewerActorId: actorScope.ownerActorId,
+  POST: writeStatus: "not_executed_contract_preview",
+  POST: });
+  POST: });
+  POST: 
+  POST: valueObjectDecisions.forEach((decision, index) => {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:355: valueObjectDecisions.forEach((decision, index) => {
+  PRE:  reasonRu: asString(decision.reasonRu),
+  PRE:  reviewerActorId: actorScope.ownerActorId,
+  PRE:  writeStatus: "not_executed_contract_preview",
+  PRE:  });
+  PRE:  });
+  PRE:  
+  POST: const semanticObjectKey = asString(decision.semanticObjectKey) ?? `semantic-object-${index + 1}`;
+  POST: const selectedExistingValueObjectId = asString(decision.selectedExistingValueObjectId);
+  POST: 
+  POST: if (selectedExistingValueObjectId) {
+  POST: valueObjectIdsBySemanticObjectKey[semanticObjectKey] = selectedExistingValueObjectId;
+  POST: return;
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:356: const semanticObjectKey = asString(decision.semanticObjectKey) ?? `semantic-object-${index + 1}`;
+  PRE:  reviewerActorId: actorScope.ownerActorId,
+  PRE:  writeStatus: "not_executed_contract_preview",
+  PRE:  });
+  PRE:  });
+  PRE:  
+  PRE:  valueObjectDecisions.forEach((decision, index) => {
+  POST: const selectedExistingValueObjectId = asString(decision.selectedExistingValueObjectId);
+  POST: 
+  POST: if (selectedExistingValueObjectId) {
+  POST: valueObjectIdsBySemanticObjectKey[semanticObjectKey] = selectedExistingValueObjectId;
+  POST: return;
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:357: const selectedExistingValueObjectId = asString(decision.selectedExistingValueObjectId);
+  PRE:  writeStatus: "not_executed_contract_preview",
+  PRE:  });
+  PRE:  });
+  PRE:  
+  PRE:  valueObjectDecisions.forEach((decision, index) => {
+  PRE:  const semanticObjectKey = asString(decision.semanticObjectKey) ?? `semantic-object-${index + 1}`;
+  POST: 
+  POST: if (selectedExistingValueObjectId) {
+  POST: valueObjectIdsBySemanticObjectKey[semanticObjectKey] = selectedExistingValueObjectId;
+  POST: return;
+  POST: }
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:364: if (decision.decision === "create_new") {
+  PRE:  
+  PRE:  if (selectedExistingValueObjectId) {
+  PRE:  valueObjectIdsBySemanticObjectKey[semanticObjectKey] = selectedExistingValueObjectId;
+  PRE:  return;
+  PRE:  }
+  PRE:  
+  POST: valueObjectIdsBySemanticObjectKey[semanticObjectKey] = stableDraftId(
+  POST: "future_value_object",
+  POST: semanticObjectKey,
+  POST: `value-object-${index + 1}`
+  POST: );
+  POST: }
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:383: ...acceptedOrEditedFacts.map((decision) => {
+  PRE:  table: "activity_fact_recalculation_queue",
+  PRE:  draftId: stableDraftId("draft_recalc_queue", sourcePackageId, "activity"),
+  PRE:  activityEventDraftId,
+  PRE:  reason: "activity_fact_created",
+  PRE:  affectedValueObjectIds: Object.values(valueObjectIdsBySemanticObjectKey),
+  PRE:  affectedSemanticObjectKeys: [
+  POST: return asString(decision.factLocalId) ?? "unknown_fact";
+  POST: }),
+  POST: ...Object.keys(valueObjectIdsBySemanticObjectKey),
+  POST: ],
+  POST: ownerActorId: actorScope.ownerActorId,
+  POST: writeStatus: "not_executed_contract_preview",
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:384: return asString(decision.factLocalId) ?? "unknown_fact";
+  PRE:  draftId: stableDraftId("draft_recalc_queue", sourcePackageId, "activity"),
+  PRE:  activityEventDraftId,
+  PRE:  reason: "activity_fact_created",
+  PRE:  affectedValueObjectIds: Object.values(valueObjectIdsBySemanticObjectKey),
+  PRE:  affectedSemanticObjectKeys: [
+  PRE:  ...acceptedOrEditedFacts.map((decision) => {
+  POST: }),
+  POST: ...Object.keys(valueObjectIdsBySemanticObjectKey),
+  POST: ],
+  POST: ownerActorId: actorScope.ownerActorId,
+  POST: writeStatus: "not_executed_contract_preview",
+  POST: },
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:422: blockers.push("no_accepted_or_edited_fact_decisions");
+  PRE:  
+  PRE:  if (!activityEvent) {
+  PRE:  blockers.push("no_activity_event_draft_row");
+  PRE:  }
+  PRE:  
+  PRE:  if (acceptedOrEditedFacts.length === 0) {
+  POST: }
+  POST: 
+  POST: return {
+  POST: contractMode: "activity_facts_guarded_persistence_contract_v1",
+  POST: persistenceMode: "server_mediated_write_disabled",
+  POST: sourcePackageId,
+
+----- Pattern: sourcePackageId -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:41: readonly sourcePackageId: string | null;
+  PRE:  export type ActivityFactsGuardedPersistenceActivityEventDraftRow = {
+  PRE:  readonly table: "activity_events";
+  PRE:  readonly draftId: string;
+  PRE:  readonly ownerActorId: string | null;
+  PRE:  readonly personId: string | null;
+  PRE:  readonly organizationId: string | null;
+  POST: readonly idempotencyKey: string | null;
+  POST: readonly sourceText: string | null;
+  POST: readonly eventStatus: "draft_from_save_gate" | "ready_for_insert";
+  POST: readonly occurredAtIso: string | null;
+  POST: readonly startedAtIso: string | null;
+  POST: readonly endedAtIso: string | null;
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:121: readonly sourcePackageId: string | null;
+  PRE:  readonly recalculationQueueItems: ActivityFactsGuardedPersistenceRecalculationQueueDraftRow[];
+  PRE:  };
+  PRE:  
+  PRE:  export type ActivityFactsGuardedPersistenceContract = {
+  PRE:  readonly contractMode: "activity_facts_guarded_persistence_contract_v1";
+  PRE:  readonly persistenceMode: ActivityFactsGuardedPersistenceMode;
+  POST: readonly idempotencyKey: string | null;
+  POST: readonly actorScope: ActivityFactsGuardedPersistenceActorScope;
+  POST: readonly noWritePlan: ActivityFactsSaveGateNoWriteExecutionPlan;
+  POST: readonly draftIdMap: ActivityFactsGuardedPersistenceDraftIdMap;
+  POST: readonly draftRows: ActivityFactsGuardedPersistenceDraftRows;
+  POST: readonly plannedWrites: ActivityFactsSaveGatePlannedWrite[];
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:252: const sourcePackageId = asString(body.sourcePackageId) ?? noWritePlan.sourcePackageId;
+  PRE:  readonly validation: ActivityFactsSaveGateValidationResult;
+  PRE:  readonly noWritePlan: ActivityFactsSaveGateNoWriteExecutionPlan;
+  PRE:  readonly actorScope?: Partial<ActivityFactsGuardedPersistenceActorScope>;
+  PRE:  }): ActivityFactsGuardedPersistenceContract {
+  PRE:  const { validation, noWritePlan } = input;
+  PRE:  const body = asRecord(validation.normalizedBody);
+  POST: const idempotencyKey = asString(body.idempotencyKey) ?? noWritePlan.idempotencyKey;
+  POST: const factDecisions = collectFactDecisions(validation);
+  POST: const valueObjectDecisions = collectValueObjectDecisions(validation);
+  POST: const activityEventDraftId = stableDraftId("draft_activity_event", sourcePackageId, "activity");
+  POST: 
+  POST: const actorScope: ActivityFactsGuardedPersistenceActorScope = {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:256: const activityEventDraftId = stableDraftId("draft_activity_event", sourcePackageId, "activity");
+  PRE:  const { validation, noWritePlan } = input;
+  PRE:  const body = asRecord(validation.normalizedBody);
+  PRE:  const sourcePackageId = asString(body.sourcePackageId) ?? noWritePlan.sourcePackageId;
+  PRE:  const idempotencyKey = asString(body.idempotencyKey) ?? noWritePlan.idempotencyKey;
+  PRE:  const factDecisions = collectFactDecisions(validation);
+  PRE:  const valueObjectDecisions = collectValueObjectDecisions(validation);
+  POST: 
+  POST: const actorScope: ActivityFactsGuardedPersistenceActorScope = {
+  POST: authenticatedUserId: input.actorScope?.authenticatedUserId ?? null,
+  POST: ownerActorId: input.actorScope?.ownerActorId ?? null,
+  POST: personId: input.actorScope?.personId ?? null,
+  POST: organizationId: input.actorScope?.organizationId ?? null,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:280: sourcePackageId,
+  PRE:  ? {
+  PRE:  table: "activity_events",
+  PRE:  draftId: activityEventDraftId,
+  PRE:  ownerActorId: actorScope.ownerActorId,
+  PRE:  personId: actorScope.personId,
+  PRE:  organizationId: actorScope.organizationId,
+  POST: idempotencyKey,
+  POST: sourceText: asString(body.rawText) ?? null,
+  POST: eventStatus: "draft_from_save_gate",
+  POST: occurredAtIso: null,
+  POST: startedAtIso: null,
+  POST: endedAtIso: null,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:378: draftId: stableDraftId("draft_recalc_queue", sourcePackageId, "activity"),
+  PRE:  
+  PRE:  const recalculationQueueItems: ActivityFactsGuardedPersistenceRecalculationQueueDraftRow[] =
+  PRE:  acceptedOrEditedFacts.length > 0
+  PRE:  ? [
+  PRE:  {
+  PRE:  table: "activity_fact_recalculation_queue",
+  POST: activityEventDraftId,
+  POST: reason: "activity_fact_created",
+  POST: affectedValueObjectIds: Object.values(valueObjectIdsBySemanticObjectKey),
+  POST: affectedSemanticObjectKeys: [
+  POST: ...acceptedOrEditedFacts.map((decision) => {
+  POST: return asString(decision.factLocalId) ?? "unknown_fact";
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:428: sourcePackageId,
+  PRE:  blockers.push("no_accepted_or_edited_fact_decisions");
+  PRE:  }
+  PRE:  
+  PRE:  return {
+  PRE:  contractMode: "activity_facts_guarded_persistence_contract_v1",
+  PRE:  persistenceMode: "server_mediated_write_disabled",
+  POST: idempotencyKey,
+  POST: actorScope,
+  POST: noWritePlan,
+  POST: draftIdMap,
+  POST: draftRows: {
+  POST: activityEvent,
+
+----- Pattern: idempotencyKey -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:42: readonly idempotencyKey: string | null;
+  PRE:  readonly table: "activity_events";
+  PRE:  readonly draftId: string;
+  PRE:  readonly ownerActorId: string | null;
+  PRE:  readonly personId: string | null;
+  PRE:  readonly organizationId: string | null;
+  PRE:  readonly sourcePackageId: string | null;
+  POST: readonly sourceText: string | null;
+  POST: readonly eventStatus: "draft_from_save_gate" | "ready_for_insert";
+  POST: readonly occurredAtIso: string | null;
+  POST: readonly startedAtIso: string | null;
+  POST: readonly endedAtIso: string | null;
+  POST: readonly timezone: string;
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:122: readonly idempotencyKey: string | null;
+  PRE:  };
+  PRE:  
+  PRE:  export type ActivityFactsGuardedPersistenceContract = {
+  PRE:  readonly contractMode: "activity_facts_guarded_persistence_contract_v1";
+  PRE:  readonly persistenceMode: ActivityFactsGuardedPersistenceMode;
+  PRE:  readonly sourcePackageId: string | null;
+  POST: readonly actorScope: ActivityFactsGuardedPersistenceActorScope;
+  POST: readonly noWritePlan: ActivityFactsSaveGateNoWriteExecutionPlan;
+  POST: readonly draftIdMap: ActivityFactsGuardedPersistenceDraftIdMap;
+  POST: readonly draftRows: ActivityFactsGuardedPersistenceDraftRows;
+  POST: readonly plannedWrites: ActivityFactsSaveGatePlannedWrite[];
+  POST: readonly plannedTargetTables: ActivityFactsSaveGatePlanTargetTable[];
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:253: const idempotencyKey = asString(body.idempotencyKey) ?? noWritePlan.idempotencyKey;
+  PRE:  readonly noWritePlan: ActivityFactsSaveGateNoWriteExecutionPlan;
+  PRE:  readonly actorScope?: Partial<ActivityFactsGuardedPersistenceActorScope>;
+  PRE:  }): ActivityFactsGuardedPersistenceContract {
+  PRE:  const { validation, noWritePlan } = input;
+  PRE:  const body = asRecord(validation.normalizedBody);
+  PRE:  const sourcePackageId = asString(body.sourcePackageId) ?? noWritePlan.sourcePackageId;
+  POST: const factDecisions = collectFactDecisions(validation);
+  POST: const valueObjectDecisions = collectValueObjectDecisions(validation);
+  POST: const activityEventDraftId = stableDraftId("draft_activity_event", sourcePackageId, "activity");
+  POST: 
+  POST: const actorScope: ActivityFactsGuardedPersistenceActorScope = {
+  POST: authenticatedUserId: input.actorScope?.authenticatedUserId ?? null,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:281: idempotencyKey,
+  PRE:  table: "activity_events",
+  PRE:  draftId: activityEventDraftId,
+  PRE:  ownerActorId: actorScope.ownerActorId,
+  PRE:  personId: actorScope.personId,
+  PRE:  organizationId: actorScope.organizationId,
+  PRE:  sourcePackageId,
+  POST: sourceText: asString(body.rawText) ?? null,
+  POST: eventStatus: "draft_from_save_gate",
+  POST: occurredAtIso: null,
+  POST: startedAtIso: null,
+  POST: endedAtIso: null,
+  POST: timezone: actorScope.timezone,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:429: idempotencyKey,
+  PRE:  }
+  PRE:  
+  PRE:  return {
+  PRE:  contractMode: "activity_facts_guarded_persistence_contract_v1",
+  PRE:  persistenceMode: "server_mediated_write_disabled",
+  PRE:  sourcePackageId,
+  POST: actorScope,
+  POST: noWritePlan,
+  POST: draftIdMap,
+  POST: draftRows: {
+  POST: activityEvent,
+  POST: measures,
+
+----- Pattern: warnings -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:138: readonly warnings: string[];
+  PRE:  readonly sqlExecuted: false;
+  PRE:  readonly externalAiCallExecuted: false;
+  PRE:  readonly rowsActuallyWritten: 0;
+  PRE:  readonly productionWriteEnabled: false;
+  PRE:  };
+  PRE:  readonly blockers: string[];
+  POST: };
+  POST: 
+  POST: type MinimalFactDecision = {
+  POST: readonly factLocalId?: unknown;
+  POST: readonly decision?: unknown;
+  POST: readonly reasonRu?: unknown;
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:451: warnings: [
+  PRE:  sqlExecuted: false,
+  PRE:  externalAiCallExecuted: false,
+  PRE:  rowsActuallyWritten: 0,
+  PRE:  productionWriteEnabled: false,
+  PRE:  },
+  PRE:  blockers,
+  POST: "contract_only_no_persistence",
+  POST: "draft_rows_are_not_database_rows",
+  POST: "real_write_requires_separate_runtime_gate",
+  POST: ],
+  POST: };
+  POST: }
+
+----- Pattern: blockers -----
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:137: readonly blockers: string[];
+  PRE:  readonly dbWriteExecuted: false;
+  PRE:  readonly sqlExecuted: false;
+  PRE:  readonly externalAiCallExecuted: false;
+  PRE:  readonly rowsActuallyWritten: 0;
+  PRE:  readonly productionWriteEnabled: false;
+  PRE:  };
+  POST: readonly warnings: string[];
+  POST: };
+  POST: 
+  POST: type MinimalFactDecision = {
+  POST: readonly factLocalId?: unknown;
+  POST: readonly decision?: unknown;
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:411: const blockers: string[] = [];
+  PRE:  noWritePlan.plannedWrites.forEach((write) => {
+  PRE:  if (!plannedTargetTables.includes(write.targetTable)) {
+  PRE:  plannedTargetTables.push(write.targetTable);
+  PRE:  }
+  PRE:  });
+  PRE:  
+  POST: 
+  POST: if (!validation.ok) {
+  POST: blockers.push("validation_not_ok");
+  POST: }
+  POST: 
+  POST: if (!activityEvent) {
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:414: blockers.push("validation_not_ok");
+  PRE:  }
+  PRE:  });
+  PRE:  
+  PRE:  const blockers: string[] = [];
+  PRE:  
+  PRE:  if (!validation.ok) {
+  POST: }
+  POST: 
+  POST: if (!activityEvent) {
+  POST: blockers.push("no_activity_event_draft_row");
+  POST: }
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:418: blockers.push("no_activity_event_draft_row");
+  PRE:  
+  PRE:  if (!validation.ok) {
+  PRE:  blockers.push("validation_not_ok");
+  PRE:  }
+  PRE:  
+  PRE:  if (!activityEvent) {
+  POST: }
+  POST: 
+  POST: if (acceptedOrEditedFacts.length === 0) {
+  POST: blockers.push("no_accepted_or_edited_fact_decisions");
+  POST: }
+  POST: 
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:422: blockers.push("no_accepted_or_edited_fact_decisions");
+  PRE:  
+  PRE:  if (!activityEvent) {
+  PRE:  blockers.push("no_activity_event_draft_row");
+  PRE:  }
+  PRE:  
+  PRE:  if (acceptedOrEditedFacts.length === 0) {
+  POST: }
+  POST: 
+  POST: return {
+  POST: contractMode: "activity_facts_guarded_persistence_contract_v1",
+  POST: persistenceMode: "server_mediated_write_disabled",
+  POST: sourcePackageId,
+HIT C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\persistenceContract.ts:450: blockers,
+  PRE:  dbWriteExecuted: false,
+  PRE:  sqlExecuted: false,
+  PRE:  externalAiCallExecuted: false,
+  PRE:  rowsActuallyWritten: 0,
+  PRE:  productionWriteEnabled: false,
+  PRE:  },
+  POST: warnings: [
+  POST: "contract_only_no_persistence",
+  POST: "draft_rows_are_not_database_rows",
+  POST: "real_write_requires_separate_runtime_gate",
+  POST: ],
+  POST: };
+
+==============================
+6. PORT AUTO-DETECT
+==============================
+Port 3000 GET status: 200
+[PASS] Selected port: 3000
+Selected base URL: http://localhost:3000
+
+==============================
+7. GET FULL RAW RESPONSE DIAGNOSTIC
+==============================
+GET status: 200
+GET raw length: 28524
+
+----- RAW MARKER CHECK: GET raw response -----
+[PASS] Raw marker found: "productionWriteEnabled":false
+[PASS] Raw marker found: "dbWriteExecuted":false
+[PASS] Raw marker found: "sqlExecuted":false
+[PASS] Raw marker found: "openAiCallExecuted":false
+[PASS] Raw marker found: "rowsActuallyWritten":0
+[PASS] Raw marker found: "guardedPersistenceContract"
+[PASS] Raw marker found: "contractPreviewRequest"
+
+GET full raw response:
+{"ok":true,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":["fact-football-30m","fact-play-with-child-30m","fact-outdoor-time-30m"],"semanticObjectKeys":["football","play_with_child","outdoor_time"],"reasonsRu":["Ð¤Ð°ÐºÑ‚ fact-football-30m Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","Ð¤Ð°ÐºÑ‚ fact-play-with-child-30m Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","Ð¤Ð°ÐºÑ‚ fact-outdoor-time-30m Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","ÐšÐ°Ð½Ð´Ð¸Ð´Ð°Ñ‚ Value Object football Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","ÐšÐ°Ð½Ð´Ð¸Ð´Ð°Ñ‚ Value Object play_with_child Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","ÐšÐ°Ð½Ð´Ð¸Ð´Ð°Ñ‚ Value Object outdoor_time Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼."]},"plannedWrites":[{"targetTable":"activity_events","operation":"insert","localSourceId":"fixture-football-with-child-30m-v1","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ activity_event ÐºÐ°Ðº Ñ…Ñ€Ð¾Ð½Ð¾Ð»Ð¾Ð³Ð¸Ñ‡ÐµÑÐºÐ¸Ð¹ Ð¸ÑÑ‚Ð¾Ñ‡Ð½Ð¸Ðº Ñ„Ð°ÐºÑ‚Ð¾Ð².","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_object_facts","operation":"insert","localSourceId":"fact-family-time-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ user-owned activity_object_fact Ð´Ð»Ñ fact-family-time-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_review_items","operation":"insert","localSourceId":"review-fact-family-time-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ review/audit item Ð´Ð»Ñ fact-family-time-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_object_facts","operation":"insert","localSourceId":"fact-physical-activity-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ user-owned activity_object_fact Ð´Ð»Ñ fact-physical-activity-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_review_items","operation":"insert","localSourceId":"review-fact-physical-activity-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ review/audit item Ð´Ð»Ñ fact-physical-activity-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_recalculation_queue","operation":"insert","localSourceId":"fixture-save-gate-football-with-child-30m-v1","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate Ð¿Ð¾ÑÑ‚Ð°Ð²Ð¸Ñ‚ Ð·Ð°Ñ‚Ñ€Ð¾Ð½ÑƒÑ‚Ñ‹Ðµ user-owned facts Ð² Ð¾Ñ‡ÐµÑ€ÐµÐ´ÑŒ Ð¿ÐµÑ€ÐµÑÑ‡Ñ‘Ñ‚Ð° Ð°Ð½Ð°Ð»Ð¸Ñ‚Ð¸ÐºÐ¸.","writeStatus":"not_executed_contract_preview"}],"safety":{"serverMediatedOnly":true,"directBrowserSupabaseWriteAllowed":false,"duplicateChronologicalTimeAllowed":false,"medicalDiagnosisAllowed":false,"notes":["This response is a contract preview only.","No route was created in Step 07.","No database write was executed in Step 07.","The future stable endpoint should be /api/activity/facts/save-gate.","One activity can create several object facts, but total chronological time remains 30 minutes.","Facts linked to shared/system Value Objects remain private user-owned rows."]},"contractPreviewRequest":{"routeMode":"contract_preview_only","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","sourcePackageId":"fixture-football-with-child-30m-v1","activityProcessingPackage":{"packageId":"fixture-football-with-child-30m-v1","status":"preview_only","rawInput":{"text":"Ð˜Ð³Ñ€Ð°Ð» Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼ Ð² Ñ„ÑƒÑ‚Ð±Ð¾Ð» 30 Ð¼Ð¸Ð½ÑƒÑ‚.","locale":"ru","source":"manual_test_fixture","capturedAtIso":"2026-06-15T16:00:00+02:00"},"recognition":{"status":"obvious_activity","confidence":0.96,"reason":"Ð¤Ñ€Ð°Ð·Ð° ÑÐ¾Ð´ÐµÑ€Ð¶Ð¸Ñ‚ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ðµ Ð² Ð¿Ñ€Ð¾ÑˆÐµÐ´ÑˆÐµÐ¼ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸, ÑƒÑ‡Ð°ÑÑ‚Ð½Ð¸ÐºÐ°, Ð¾Ð±ÑŠÐµÐºÑ‚ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸ Ð¸ ÑÐ²Ð½ÑƒÑŽ Ð´Ð»Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ÑÑ‚ÑŒ.","detectedActivityTitle":"Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼ Ð² Ñ„ÑƒÑ‚Ð±Ð¾Ð»","shouldAskUserBeforeSaving":false},"measures":[{"localId":"measure-duration-30m","measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"confidence":0.99,"evidenceText":"30 Ð¼Ð¸Ð½ÑƒÑ‚","normalizedLabel":"30 minutes"}],"semanticCategories":[{"localId":"cat-play","semanticObjectKey":"play","labelRu":"Ð˜Ð³Ñ€Ð°","layer":"activity_type","confidence":0.9,"evidenceText":"Ð˜Ð³Ñ€Ð°Ð»","reason":"Ð“Ð»Ð°Ð³Ð¾Ð» ÑƒÐºÐ°Ð·Ñ‹Ð²Ð°ÐµÑ‚ Ð½Ð° Ð¸Ð³Ñ€Ð¾Ð²ÑƒÑŽ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ."},{"localId":"cat-football","semanticObjectKey":"football","labelRu":"Ð¤ÑƒÑ‚Ð±Ð¾Ð»","layer":"object","confidence":0.98,"evidenceText":"Ñ„ÑƒÑ‚Ð±Ð¾Ð»","reason":"ÐŸÑ€ÑÐ¼Ð¾ Ð½Ð°Ð·Ð²Ð°Ð½ Ð¾Ð±ÑŠÐµÐºÑ‚/Ð²Ð¸Ð´ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸."},{"localId":"cat-child","semanticObjectKey":"child","labelRu":"Ð ÐµÐ±Ñ‘Ð½Ð¾Ðº","layer":"relationship","confidence":0.96,"evidenceText":"Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","reason":"Ð£ÐºÐ°Ð·Ð°Ð½ ÑƒÑ‡Ð°ÑÑ‚Ð½Ð¸Ðº Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸."},{"localId":"cat-play-with-child","semanticObjectKey":"play_with_child","labelRu":"Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","layer":"care","confidence":0.94,"evidenceText":"Ð˜Ð³Ñ€Ð°Ð» Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","reason":"Ð¤Ñ€Ð°Ð·Ð° Ð¾Ð¿Ð¸ÑÑ‹Ð²Ð°ÐµÑ‚ Ð½Ðµ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¸Ð³Ñ€Ñƒ, Ð½Ð¾ Ð¸ Ñ€Ð¾Ð´Ð¸Ñ‚ÐµÐ»ÑŒÑÐºÑƒÑŽ/ÑÐµÐ¼ÐµÐ¹Ð½ÑƒÑŽ Ñ„ÑƒÐ½ÐºÑ†Ð¸ÑŽ Ð·Ð°Ð±Ð¾Ñ‚Ñ‹ Ð¸ ÑÐ¾Ð²Ð¼ÐµÑÑ‚Ð½Ð¾Ð³Ð¾ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸."},{"localId":"cat-family-time","semanticObjectKey":"family_time","labelRu":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ","layer":"purpose","confidence":0.88,"evidenceText":"Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","reason":"Ð¡Ð¾Ð²Ð¼ÐµÑÑ‚Ð½Ð°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼ Ð¾Ñ‚Ð½Ð¾ÑÐ¸Ñ‚ÑÑ Ðº ÑÐµÐ¼ÐµÐ¹Ð½Ð¾Ð¼Ñƒ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸."},{"localId":"cat-outdoor-time","semanticObjectKey":"outdoor_time","labelRu":"Ð’Ñ€ÐµÐ¼Ñ Ð½Ð° ÑÐ²ÐµÐ¶ÐµÐ¼ Ð²Ð¾Ð·Ð´ÑƒÑ…Ðµ","layer":"environment","confidence":0.62,"evidenceText":"Ñ„ÑƒÑ‚Ð±Ð¾Ð»","reason":"Ð¤ÑƒÑ‚Ð±Ð¾Ð» Ñ‡Ð°ÑÑ‚Ð¾ Ð¿Ñ€Ð¾Ð¸ÑÑ…Ð¾Ð´Ð¸Ñ‚ Ð½Ð° ÑƒÐ»Ð¸Ñ†Ðµ, Ð½Ð¾ ÑÑ‚Ð¾ Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½Ð¾ ÑÐ²Ð½Ð¾, Ð¿Ð¾ÑÑ‚Ð¾Ð¼Ñƒ ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ Ð¾ÑÑ‚Ð°Ñ‘Ñ‚ÑÑ Ð¼ÐµÐ½ÐµÐµ ÑƒÐ²ÐµÑ€ÐµÐ½Ð½Ð¾Ð¹."},{"localId":"cat-physical-activity","semanticObjectKey":"physical_activity","labelRu":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","layer":"physiology","confidence":0.86,"evidenceText":"Ñ„ÑƒÑ‚Ð±Ð¾Ð» 30 Ð¼Ð¸Ð½ÑƒÑ‚","reason":"Ð¤ÑƒÑ‚Ð±Ð¾Ð» Ð¿Ñ€ÐµÐ´Ð¿Ð¾Ð»Ð°Ð³Ð°ÐµÑ‚ Ð´Ð²Ð¸Ð³Ð°Ñ‚ÐµÐ»ÑŒÐ½ÑƒÑŽ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ."}],"valueObjectMatches":[{"semanticCategoryLocalId":"cat-play","matchStatus":"missing_candidate","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":null,"confidence":0.65,"reason":"Ð’ fixture Ð½Ðµ ÑÑ‡Ð¸Ñ‚Ð°ÐµÑ‚ÑÑ, Ñ‡Ñ‚Ð¾ Ð¾Ð±Ñ‰Ð¸Ð¹ Ð¾Ð±ÑŠÐµÐºÑ‚ 'Ð˜Ð³Ñ€Ð°' ÑƒÐ¶Ðµ ÑÑƒÑ‰ÐµÑÑ‚Ð²ÑƒÐµÑ‚."},{"semanticCategoryLocalId":"cat-football","matchStatus":"missing_candidate","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":null,"confidence":0.78,"reason":"ÐÑƒÐ¶Ð½Ð¾ Ð¿Ñ€Ð¾Ð²ÐµÑ€Ð¸Ñ‚ÑŒ ÑÑƒÑ‰ÐµÑÑ‚Ð²Ð¾Ð²Ð°Ð½Ð¸Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð° 'Ð¤ÑƒÑ‚Ð±Ð¾Ð»' Ð² Ñ€ÐµÐ°Ð»ÑŒÐ½Ñ‹Ñ… Value Objects."},{"semanticCategoryLocalId":"cat-child","matchStatus":"deferred","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":null,"confidence":0.5,"reason":"ÐŸÐµÑ€ÑÐ¾Ð½Ð°Ð»ÑŒÐ½Ñ‹Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ñ‹ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ° Ñ‚Ñ€ÐµÐ±ÑƒÑŽÑ‚ Ð¾Ñ‚Ð´ÐµÐ»ÑŒÐ½Ð¾Ð¹ privacy/relationship Ð¼Ð¾Ð´ÐµÐ»Ð¸; Ð² Ð¿ÐµÑ€Ð²Ð¾Ð¼ preview Ð»ÑƒÑ‡ÑˆÐµ Ð½Ðµ ÑÐ¾Ð·Ð´Ð°Ð²Ð°Ñ‚ÑŒ Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¸."},{"semanticCategoryLocalId":"cat-play-with-child","matchStatus":"missing_candidate","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":"Ð¡ÐµÐ¼ÑŒÑ","confidence":0.86,"reason":"Ð•ÑÐ»Ð¸ Ñ‚Ð°ÐºÐ¾Ð³Ð¾ VO Ð½ÐµÑ‚, ÑÐ¸ÑÑ‚ÐµÐ¼Ð° Ð´Ð¾Ð»Ð¶Ð½Ð° Ð¿Ñ€ÐµÐ´Ð»Ð¾Ð¶Ð¸Ñ‚ÑŒ ÑÐ¾Ð·Ð´Ð°Ñ‚ÑŒ 'Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼' Ð¿Ð¾Ð´ Ð²ÐµÑ‚ÐºÐ¾Ð¹ 'Ð¡ÐµÐ¼ÑŒÑ'."},{"semanticCategoryLocalId":"cat-family-time","matchStatus":"matched_existing","valueObjectId":"VO_DEMO_FAMILY_TIME","valueObjectTitle":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ","parentValueObjectId":"VO_DEMO_FAMILY","parentValueObjectTitle":"Ð¡ÐµÐ¼ÑŒÑ","confidence":0.92,"reason":"Ð”ÐµÐ¼Ð¾Ð½ÑÑ‚Ñ€Ð°Ñ†Ð¸Ð¾Ð½Ð½Ñ‹Ð¹ Ð¿Ñ€Ð¸Ð¼ÐµÑ€ Ð½Ð°Ð¹Ð´ÐµÐ½Ð½Ð¾Ð³Ð¾ Ð»Ð¸Ñ‡Ð½Ð¾Ð³Ð¾ Value Object."},{"semanticCategoryLocalId":"cat-outdoor-time","matchStatus":"missing_candidate","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":"Ð¡Ñ€ÐµÐ´Ð°","confidence":0.58,"reason":"ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ Ð¿Ð¾Ð»ÐµÐ·Ð½Ð°, Ð½Ð¾ Ñ‚Ñ€ÐµÐ±ÑƒÐµÑ‚ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¸Ñ, Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ ÑƒÐ»Ð¸Ñ†Ð° Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½Ð° ÑÐ²Ð½Ð¾."},{"semanticCategoryLocalId":"cat-physical-activity","matchStatus":"matched_existing","valueObjectId":"VO_DEMO_PHYSICAL_ACTIVITY","valueObjectTitle":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","parentValueObjectId":"VO_DEMO_ORGANISM","parentValueObjectTitle":"ÐžÑ€Ð³Ð°Ð½Ð¸Ð·Ð¼","confidence":0.83,"reason":"Ð”ÐµÐ¼Ð¾Ð½ÑÑ‚Ñ€Ð°Ñ†Ð¸Ð¾Ð½Ð½Ñ‹Ð¹ Ð¿Ñ€Ð¸Ð¼ÐµÑ€ Ð½Ð°Ð¹Ð´ÐµÐ½Ð½Ð¾Ð³Ð¾ ÑÐ¸ÑÑ‚ÐµÐ¼Ð½Ð¾Ð³Ð¾/Ñ„Ð¸Ð·Ð¸Ð¾Ð»Ð¾Ð³Ð¸Ñ‡ÐµÑÐºÐ¾Ð³Ð¾ Value Object."}],"missingValueObjectCandidates":[{"semanticCategoryLocalId":"cat-play","semanticObjectKey":"play","proposedTitleRu":"Ð˜Ð³Ñ€Ð°","proposedUsageScope":"private","proposedAuthorType":"user","proposedParentValueObjectId":null,"proposedParentTitleRu":null,"reason":"ÐœÐ¾Ð¶Ð½Ð¾ ÑÐ¾Ð·Ð´Ð°Ñ‚ÑŒ Ð¾Ð±Ñ‰Ð¸Ð¹ Ð»Ð¸Ñ‡Ð½Ñ‹Ð¹ Ð¾Ð±ÑŠÐµÐºÑ‚, ÐµÑÐ»Ð¸ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ Ñ…Ð¾Ñ‡ÐµÑ‚ Ð¾Ñ‚ÑÐ»ÐµÐ¶Ð¸Ð²Ð°Ñ‚ÑŒ Ð¸Ð³Ñ€Ñ‹ ÐºÐ°Ðº Ð¾Ñ‚Ð´ÐµÐ»ÑŒÐ½ÑƒÑŽ Ð²ÐµÑ‚ÐºÑƒ.","requiresUserConfirmation":true},{"semanticCategoryLocalId":"cat-football","semanticObjectKey":"football","proposedTitleRu":"Ð¤ÑƒÑ‚Ð±Ð¾Ð»","proposedUsageScope":"private","proposedAuthorType":"user","proposedParentValueObjectId":null,"proposedParentTitleRu":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","reason":"Ð¤ÑƒÑ‚Ð±Ð¾Ð» Ð¼Ð¾Ð¶ÐµÑ‚ Ð±Ñ‹Ñ‚ÑŒ Ð´Ð¾Ñ‡ÐµÑ€Ð½Ð¸Ð¼ Ð¾Ð±ÑŠÐµÐºÑ‚Ð¾Ð¼ Ñ„Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ¾Ð¹ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸ Ð¸Ð»Ð¸ Ð¾Ñ‚Ð´ÐµÐ»ÑŒÐ½Ñ‹Ð¼ ÑÐ¿Ð¾Ñ€Ñ‚Ð¸Ð²Ð½Ñ‹Ð¼ Ð½Ð°Ð²Ñ‹ÐºÐ¾Ð¼.","requiresUserConfirmation":true},{"semanticCategoryLocalId":"cat-play-with-child","semanticObjectKey":"play_with_child","proposedTitleRu":"Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","proposedUsageScope":"private","proposedAuthorType":"user","proposedParentValueObjectId":null,"proposedParentTitleRu":"Ð¡ÐµÐ¼ÑŒÑ","reason":"ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ Ð¾Ñ‚Ñ€Ð°Ð¶Ð°ÐµÑ‚ Ñ€Ð¾Ð´Ð¸Ñ‚ÐµÐ»ÑŒÑÐºÑƒÑŽ/ÑÐµÐ¼ÐµÐ¹Ð½ÑƒÑŽ Ñ„ÑƒÐ½ÐºÑ†Ð¸ÑŽ, Ð½Ðµ ÑÐ²Ð¾Ð´Ð¸Ð¼ÑƒÑŽ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ðº Ñ„ÑƒÑ‚Ð±Ð¾Ð»Ñƒ.","requiresUserConfirmation":true},{"semanticCategoryLocalId":"cat-outdoor-time","semanticObjectKey":"outdoor_time","proposedTitleRu":"Ð’Ñ€ÐµÐ¼Ñ Ð½Ð° ÑÐ²ÐµÐ¶ÐµÐ¼ Ð²Ð¾Ð·Ð´ÑƒÑ…Ðµ","proposedUsageScope":"private","proposedAuthorType":"user","proposedParentValueObjectId":null,"proposedParentTitleRu":"Ð¡Ñ€ÐµÐ´Ð°","reason":"Ð¡Ð¾Ð·Ð´Ð°Ð²Ð°Ñ‚ÑŒ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¿Ð¾ÑÐ»Ðµ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¸Ñ, Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ ÑÐ²ÐµÐ¶Ð¸Ð¹ Ð²Ð¾Ð·Ð´ÑƒÑ… Ð²Ñ‹Ð²ÐµÐ´ÐµÐ½ Ð¿Ñ€ÐµÐ´Ð¿Ð¾Ð»Ð¾Ð¶Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾.","requiresUserConfirmation":true}],"factPreviews":[{"localId":"fact-family-time-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-family-time","semanticObjectKey":"family_time","valueObjectId":"VO_DEMO_FAMILY_TIME","valueObjectTitle":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ","measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"ready_for_fact_write","confidence":0.92,"explanation":"ÐŸÐ¾ÑÐ»Ðµ save gate Ð±ÑƒÐ´ÐµÑ‚ ÑÐ¾Ð·Ð´Ð°Ð½ user-owned activity_object_fact Ð½Ð° 30 Ð¼Ð¸Ð½ÑƒÑ‚ ÑÐµÐ¼ÐµÐ¹Ð½Ð¾Ð³Ð¾ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸."},{"localId":"fact-physical-activity-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-physical-activity","semanticObjectKey":"physical_activity","valueObjectId":"VO_DEMO_PHYSICAL_ACTIVITY","valueObjectTitle":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"ready_for_fact_write","confidence":0.83,"explanation":"ÐžÐ´Ð½Ð° Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ð´Ð°Ñ‘Ñ‚ 30 Ð¼Ð¸Ð½ÑƒÑ‚ Ð²Ð¾Ð·Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ Ð½Ð° Ñ„Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÑƒÑŽ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ð±ÐµÐ· ÑƒÐ²ÐµÐ»Ð¸Ñ‡ÐµÐ½Ð¸Ñ Ð¾Ð±Ñ‰ÐµÐ³Ð¾ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸."},{"localId":"fact-football-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-football","semanticObjectKey":"football","valueObjectId":null,"valueObjectTitle":null,"measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"needs_value_object","confidence":0.78,"explanation":"Ð¤Ð°ÐºÑ‚ Ð¼Ð¾Ð¶Ð½Ð¾ Ð·Ð°Ð¿Ð¸ÑÐ°Ñ‚ÑŒ Ð¿Ð¾ semantic_object_key, Ð° value_object_id Ð´Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð¿Ð¾ÑÐ»Ðµ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ñ/ÑÐ¾Ð¿Ð¾ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð¸Ñ VO."},{"localId":"fact-play-with-child-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-play-with-child","semanticObjectKey":"play_with_child","valueObjectId":null,"valueObjectTitle":null,"measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"needs_user_confirmation","confidence":0.86,"explanation":"ÐÑƒÐ¶ÐµÐ½ Ð²Ð¾Ð¿Ñ€Ð¾Ñ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŽ: ÑÐ¾Ð·Ð´Ð°Ñ‚ÑŒ Value Object 'Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼' Ð² Ð²ÐµÑ‚ÐºÐµ 'Ð¡ÐµÐ¼ÑŒÑ'?"},{"localId":"fact-outdoor-time-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-outdoor-time","semanticObjectKey":"outdoor_time","valueObjectId":null,"valueObjectTitle":null,"measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"needs_user_confirmation","confidence":0.58,"explanation":"ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ Ð¼ÐµÐ½ÐµÐµ ÑƒÐ²ÐµÑ€ÐµÐ½Ð½Ð°Ñ, Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ Ð¼ÐµÑÑ‚Ð¾ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸ Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½Ð¾ ÑÐ²Ð½Ð¾."}],"safety":{"previewOnly":true,"dbWriteAllowed":false,"sqlAllowed":false,"openAiCallAllowed":false,"medicalDiagnosisAllowed":false,"notes":["Fixture is a deterministic preview contract, not a saved Activity Event.","ValueObject IDs with VO_DEMO_* are placeholders and must not be treated as DB IDs.","One activity can create several object facts, but chronological total time remains 30 minutes.","Missing Value Objects require user confirmation before creation.","Health/physiology categories are observation signals, not medical diagnosis."]},"counters":{"measureCount":1,"semanticCategoryCount":7,"matchedValueObjectCount":2,"missingValueObjectCandidateCount":4,"factPreviewCount":5}},"factDecisions":[{"factLocalId":"fact-family-time-30m","decision":"accept","reasonRu":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾ ÐºÐ°Ðº ÑÑƒÑ‰ÐµÑÑ‚Ð²ÑƒÑŽÑ‰Ð¸Ð¹ Value Object."},{"factLocalId":"fact-physical-activity-30m","decision":"accept","reasonRu":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ð½Ð°Ð¹Ð´ÐµÐ½Ð° ÐºÐ°Ðº ÑÑƒÑ‰ÐµÑÑ‚Ð²ÑƒÑŽÑ‰Ð¸Ð¹ Value Object."},{"factLocalId":"fact-football-30m","decision":"defer","reasonRu":"Ð¡Ð½Ð°Ñ‡Ð°Ð»Ð° Ð½ÑƒÐ¶Ð½Ð¾ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ñ‚ÑŒ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ Ð¸Ð»Ð¸ Ð²Ñ‹Ð±Ð¾Ñ€ Value Object 'Ð¤ÑƒÑ‚Ð±Ð¾Ð»'."},{"factLocalId":"fact-play-with-child-30m","decision":"defer","reasonRu":"Ð¡Ð½Ð°Ñ‡Ð°Ð»Ð° Ð½ÑƒÐ¶Ð½Ð¾ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ñ‚ÑŒ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ 'Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼'."},{"factLocalId":"fact-outdoor-time-30m","decision":"defer","reasonRu":"ÐÑƒÐ¶Ð½Ð¾ ÑƒÑ‚Ð¾Ñ‡Ð½Ð¸Ñ‚ÑŒ, Ð±Ñ‹Ð»Ð° Ð»Ð¸ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ Ð½Ð° ÑÐ²ÐµÐ¶ÐµÐ¼ Ð²Ð¾Ð·Ð´ÑƒÑ…Ðµ."}],"editedFactDecisions":[],"valueObjectCandidateDecisions":[{"semanticObjectKey":"football","proposedTitleRu":"Ð¤ÑƒÑ‚Ð±Ð¾Ð»","decision":"defer","selectedExistingValueObjectId":null,"selectedExistingValueObjectTitle":null,"proposedParentValueObjectId":"VO_DEMO_PHYSICAL_ACTIVITY","proposedParentTitleRu":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","reasonRu":"ÐŸÐ¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ ÐµÑ‰Ñ‘ Ð½Ðµ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ð» ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð° 'Ð¤ÑƒÑ‚Ð±Ð¾Ð»'."},{"semanticObjectKey":"play_with_child","proposedTitleRu":"Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","decision":"defer","selectedExistingValueObjectId":null,"selectedExistingValueObjectTitle":null,"proposedParentValueObjectId":"VO_DEMO_FAMILY_TIME","proposedParentTitleRu":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ","reasonRu":"ÐŸÐ¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ ÐµÑ‰Ñ‘ Ð½Ðµ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ð» ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð° 'Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼'."},{"semanticObjectKey":"outdoor_time","proposedTitleRu":"Ð’Ñ€ÐµÐ¼Ñ Ð½Ð° ÑÐ²ÐµÐ¶ÐµÐ¼ Ð²Ð¾Ð·Ð´ÑƒÑ…Ðµ","decision":"defer","selectedExistingValueObjectId":null,"selectedExistingValueObjectTitle":null,"proposedParentValueObjectId":"VO_DEMO_ORGANISM","proposedParentTitleRu":"ÐžÑ€Ð³Ð°Ð½Ð¸Ð·Ð¼","reasonRu":"ÐÑƒÐ¶Ð½Ð¾ ÑƒÑ‚Ð¾Ñ‡Ð½Ð¸Ñ‚ÑŒ ÐºÐ¾Ð½Ñ‚ÐµÐºÑÑ‚, Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ ÑƒÐ»Ð¸Ñ†Ð° Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½Ð° ÑÐ²Ð½Ð¾."}],"clientSafetyConfirmation":{"userReviewedPreview":true,"userConfirmedMissingValueObjectCreation":false,"userConfirmedFactWrite":false,"userUnderstandsPreviewIsNotDiagnosis":true}},"routePurpose":"activity_facts_save_gate_scaffold_no_write","routeLayer":"activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1","routeStatus":"guarded_persistence_contract_only_no_write","productionWriteEnabled":false,"requestSummary":{"sourcePackageId":"fixture-football-with-child-30m-v1","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","routeMode":"contract_preview_only","factDecisionCount":5,"editedFactDecisionCount":0,"valueObjectCandidateDecisionCount":3,"writeIntentDetected":false,"writeIntentReasons":[],"validationErrorCount":0,"validationWarningCount":0},"validation":{"ok":true,"errors":[],"warnings":[]},"noWriteExecutionPlan":{"ok":true,"planMode":"no_write_execution_plan_v1","planStatus":"preview_only_not_executed","sourcePackageId":"fixture-football-with-child-30m-v1","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","acceptedFactLocalIds":["fact-family-time-30m","fact-physical-activity-30m"],"rejectedFactLocalIds":[],"deferredFactLocalIds":["fact-football-30m","fact-play-with-child-30m","fact-outdoor-time-30m"],"editedFactLocalIds":[],"valueObjectCreateCandidateKeys":[],"valueObjectUseExistingCandidateKeys":[],"valueObjectSkippedCandidateKeys":[],"valueObjectDeferredCandidateKeys":["football","play_with_child","outdoor_time"],"plannedWrites":[{"targetTable":"activity_events","operation":"insert","localSourceId":"fixture-football-with-child-30m-v1","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ activity_event ÐºÐ°Ðº Ñ…Ñ€Ð¾Ð½Ð¾Ð»Ð¾Ð³Ð¸Ñ‡ÐµÑÐºÐ¸Ð¹ Ð¸ÑÑ‚Ð¾Ñ‡Ð½Ð¸Ðº Ñ„Ð°ÐºÑ‚Ð¾Ð².","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_object_facts","operation":"insert","localSourceId":"fact-family-time-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ user-owned activity_object_fact Ð´Ð»Ñ fact-family-time-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_review_items","operation":"insert","localSourceId":"review-fact-family-time-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ review/audit item Ð´Ð»Ñ fact-family-time-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_object_facts","operation":"insert","localSourceId":"fact-physical-activity-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ user-owned activity_object_fact Ð´Ð»Ñ fact-physical-activity-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_review_items","operation":"insert","localSourceId":"review-fact-physical-activity-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ review/audit item Ð´Ð»Ñ fact-physical-activity-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_recalculation_queue","operation":"insert","localSourceId":"fixture-save-gate-football-with-child-30m-v1","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate Ð¿Ð¾ÑÑ‚Ð°Ð²Ð¸Ñ‚ Ð·Ð°Ñ‚Ñ€Ð¾Ð½ÑƒÑ‚Ñ‹Ðµ user-owned facts Ð² Ð¾Ñ‡ÐµÑ€ÐµÐ´ÑŒ Ð¿ÐµÑ€ÐµÑÑ‡Ñ‘Ñ‚Ð° Ð°Ð½Ð°Ð»Ð¸Ñ‚Ð¸ÐºÐ¸.","writeStatus":"not_executed_contract_preview"}],"skipped":{"factLocalIds":["fact-football-30m","fact-play-with-child-30m","fact-outdoor-time-30m"],"semanticObjectKeys":["football","play_with_child","outdoor_time"],"reasonsRu":["Ð¤Ð°ÐºÑ‚ fact-football-30m Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","Ð¤Ð°ÐºÑ‚ fact-play-with-child-30m Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","Ð¤Ð°ÐºÑ‚ fact-outdoor-time-30m Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","ÐšÐ°Ð½Ð´Ð¸Ð´Ð°Ñ‚ Value Object football Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","ÐšÐ°Ð½Ð´Ð¸Ð´Ð°Ñ‚ Value Object play_with_child Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","ÐšÐ°Ð½Ð´Ð¸Ð´Ð°Ñ‚ Value Object outdoor_time Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼."]},"noWriteGuarantee":{"dbReadExecuted":false,"dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"rowsActuallyWritten":0}},"guardedPersistenceContract":{"contractMode":"activity_facts_guarded_persistence_contract_v1","persistenceMode":"server_mediated_write_disabled","sourcePackageId":"fixture-football-with-child-30m-v1","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","actorScope":{"authenticatedUserId":null,"ownerActorId":null,"personId":null,"organizationId":null,"timezone":"Europe/Warsaw"},"noWritePlan":{"ok":true,"planMode":"no_write_execution_plan_v1","planStatus":"preview_only_not_executed","sourcePackageId":"fixture-football-with-child-30m-v1","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","acceptedFactLocalIds":["fact-family-time-30m","fact-physical-activity-30m"],"rejectedFactLocalIds":[],"deferredFactLocalIds":["fact-football-30m","fact-play-with-child-30m","fact-outdoor-time-30m"],"editedFactLocalIds":[],"valueObjectCreateCandidateKeys":[],"valueObjectUseExistingCandidateKeys":[],"valueObjectSkippedCandidateKeys":[],"valueObjectDeferredCandidateKeys":["football","play_with_child","outdoor_time"],"plannedWrites":[{"targetTable":"activity_events","operation":"insert","localSourceId":"fixture-football-with-child-30m-v1","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ activity_event ÐºÐ°Ðº Ñ…Ñ€Ð¾Ð½Ð¾Ð»Ð¾Ð³Ð¸Ñ‡ÐµÑÐºÐ¸Ð¹ Ð¸ÑÑ‚Ð¾Ñ‡Ð½Ð¸Ðº Ñ„Ð°ÐºÑ‚Ð¾Ð².","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_object_facts","operation":"insert","localSourceId":"fact-family-time-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ user-owned activity_object_fact Ð´Ð»Ñ fact-family-time-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_review_items","operation":"insert","localSourceId":"review-fact-family-time-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ review/audit item Ð´Ð»Ñ fact-family-time-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_object_facts","operation":"insert","localSourceId":"fact-physical-activity-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ user-owned activity_object_fact Ð´Ð»Ñ fact-physical-activity-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_review_items","operation":"insert","localSourceId":"review-fact-physical-activity-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ review/audit item Ð´Ð»Ñ fact-physical-activity-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_recalculation_queue","operation":"insert","localSourceId":"fixture-save-gate-football-with-child-30m-v1","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate Ð¿Ð¾ÑÑ‚Ð°Ð²Ð¸Ñ‚ Ð·Ð°Ñ‚Ñ€Ð¾Ð½ÑƒÑ‚Ñ‹Ðµ user-owned facts Ð² Ð¾Ñ‡ÐµÑ€ÐµÐ´ÑŒ Ð¿ÐµÑ€ÐµÑÑ‡Ñ‘Ñ‚Ð° Ð°Ð½Ð°Ð»Ð¸Ñ‚Ð¸ÐºÐ¸.","writeStatus":"not_executed_contract_preview"}],"skipped":{"factLocalIds":["fact-football-30m","fact-play-with-child-30m","fact-outdoor-time-30m"],"semanticObjectKeys":["football","play_with_child","outdoor_time"],"reasonsRu":["Ð¤Ð°ÐºÑ‚ fact-football-30m Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","Ð¤Ð°ÐºÑ‚ fact-play-with-child-30m Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","Ð¤Ð°ÐºÑ‚ fact-outdoor-time-30m Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","ÐšÐ°Ð½Ð´Ð¸Ð´Ð°Ñ‚ Value Object football Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","ÐšÐ°Ð½Ð´Ð¸Ð´Ð°Ñ‚ Value Object play_with_child Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼.","ÐšÐ°Ð½Ð´Ð¸Ð´Ð°Ñ‚ Value Object outdoor_time Ð¾Ñ‚Ð»Ð¾Ð¶ÐµÐ½ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¼."]},"noWriteGuarantee":{"dbReadExecuted":false,"dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"rowsActuallyWritten":0}},"draftIdMap":{"activityEventId":"draft_activity_event_fixture-football-with-child-30m-v1","measureIdsByLocalMeasureId":{},"factIdsByLocalFactId":{},"reviewItemIdsByLocalFactId":{},"recalculationQueueItemIds":[],"valueObjectIdsBySemanticObjectKey":{}},"draftRows":{"activityEvent":{"table":"activity_events","draftId":"draft_activity_event_fixture-football-with-child-30m-v1","ownerActorId":null,"personId":null,"organizationId":null,"sourcePackageId":"fixture-football-with-child-30m-v1","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","sourceText":null,"eventStatus":"draft_from_save_gate","occurredAtIso":null,"startedAtIso":null,"endedAtIso":null,"timezone":"Europe/Warsaw","writeStatus":"not_executed_contract_preview"},"measures":[],"objectFacts":[],"reviewItems":[],"recalculationQueueItems":[]},"plannedWrites":[{"targetTable":"activity_events","operation":"insert","localSourceId":"fixture-football-with-child-30m-v1","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ activity_event ÐºÐ°Ðº Ñ…Ñ€Ð¾Ð½Ð¾Ð»Ð¾Ð³Ð¸Ñ‡ÐµÑÐºÐ¸Ð¹ Ð¸ÑÑ‚Ð¾Ñ‡Ð½Ð¸Ðº Ñ„Ð°ÐºÑ‚Ð¾Ð².","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_object_facts","operation":"insert","localSourceId":"fact-family-time-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ user-owned activity_object_fact Ð´Ð»Ñ fact-family-time-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_review_items","operation":"insert","localSourceId":"review-fact-family-time-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ review/audit item Ð´Ð»Ñ fact-family-time-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_object_facts","operation":"insert","localSourceId":"fact-physical-activity-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ user-owned activity_object_fact Ð´Ð»Ñ fact-physical-activity-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_review_items","operation":"insert","localSourceId":"review-fact-physical-activity-30m","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate ÑÐ¾Ð·Ð´Ð°ÑÑ‚ review/audit item Ð´Ð»Ñ fact-physical-activity-30m.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_recalculation_queue","operation":"insert","localSourceId":"fixture-save-gate-football-with-child-30m-v1","plannedDbId":null,"descriptionRu":"Ð‘ÑƒÐ´ÑƒÑ‰Ð¸Ð¹ save gate Ð¿Ð¾ÑÑ‚Ð°Ð²Ð¸Ñ‚ Ð·Ð°Ñ‚Ñ€Ð¾Ð½ÑƒÑ‚Ñ‹Ðµ user-owned facts Ð² Ð¾Ñ‡ÐµÑ€ÐµÐ´ÑŒ Ð¿ÐµÑ€ÐµÑÑ‡Ñ‘Ñ‚Ð° Ð°Ð½Ð°Ð»Ð¸Ñ‚Ð¸ÐºÐ¸.","writeStatus":"not_executed_contract_preview"}],"plannedTargetTables":["activity_events","activity_object_facts","activity_fact_review_items","activity_fact_recalculation_queue"],"safety":{"dbReadExecuted":false,"dbWriteExecuted":false,"sqlExecuted":false,"externalAiCallExecuted":false,"rowsActuallyWritten":0,"productionWriteEnabled":false},"blockers":["no_accepted_or_edited_fact_decisions"],"warnings":["contract_only_no_persistence","draft_rows_are_not_database_rows","real_write_requires_separate_runtime_gate"]},"sideEffects":{"dbReadExecuted":false,"dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"valueObjectCreated":false,"activityEventCreated":false,"activityEventMeasureCreated":false,"activityObjectFactCreated":false,"activityFactReviewItemCreated":false,"recalculationQueueItemCreated":false,"rowsActuallyWritten":0},"rules":["This route is a no-write execution-plan scaffold for the future server-mediated save gate.","This route validates request shape and builds a planned-write preview.","This route does not persist anything.","This route must not insert, update, upsert or delete rows.","This route must not call Supabase directly in this step.","This route must not execute SQL.","This route must not call external AI providers.","This route blocks explicit write-intent requests until a later gated implementation step.","The future write flow must remain server-mediated and must preserve user-owned fact privacy."]}
+
+GET top-level keys: ok, routeMode, writeStatus, endpoint, dbWriteExecuted, sqlExecuted, openAiCallExecuted, createdIds, skipped, plannedWrites, safety, contractPreviewRequest, routePurpose, routeLayer, routeStatus, productionWriteEnabled, requestSummary, validation, noWriteExecutionPlan, guardedPersistenceContract, sideEffects, rules
+[PASS] contractPreviewRequest exists in GET JSON.
+
+contractPreviewRequest full JSON:
+
+GET validation full JSON:
+
+GET guardedPersistenceContract blockers/warnings:
+blockers: "no_accepted_or_edited_fact_decisions"
+warnings: [
+    "contract_only_no_persistence",
+    "draft_rows_are_not_database_rows",
+    "real_write_requires_separate_runtime_gate"
+]
+
+==============================
+8. POST FULL ERROR DIAGNOSTIC
+==============================
+Posting GET.contractPreviewRequest...
+POST status: 400
+POST raw length: 20269
+
+POST full raw response:
+{"ok":false,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[],"safety":{"serverMediatedOnly":true,"directBrowserSupabaseWriteAllowed":false,"duplicateChronologicalTimeAllowed":false,"medicalDiagnosisAllowed":false,"notes":["This response is a contract preview only.","No route was created in Step 07.","No database write was executed in Step 07.","The future stable endpoint should be /api/activity/facts/save-gate.","One activity can create several object facts, but total chronological time remains 30 minutes.","Facts linked to shared/system Value Objects remain private user-owned rows."]},"contractPreviewRequest":{"routeMode":"contract_preview_only","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","sourcePackageId":"fixture-football-with-child-30m-v1","activityProcessingPackage":{"packageId":"fixture-football-with-child-30m-v1","status":"preview_only","rawInput":{"text":"Ð˜Ð³Ñ€Ð°Ð» Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼ Ð² Ñ„ÑƒÑ‚Ð±Ð¾Ð» 30 Ð¼Ð¸Ð½ÑƒÑ‚.","locale":"ru","source":"manual_test_fixture","capturedAtIso":"2026-06-15T16:00:00+02:00"},"recognition":{"status":"obvious_activity","confidence":0.96,"reason":"Ð¤Ñ€Ð°Ð·Ð° ÑÐ¾Ð´ÐµÑ€Ð¶Ð¸Ñ‚ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ðµ Ð² Ð¿Ñ€Ð¾ÑˆÐµÐ´ÑˆÐµÐ¼ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸, ÑƒÑ‡Ð°ÑÑ‚Ð½Ð¸ÐºÐ°, Ð¾Ð±ÑŠÐµÐºÑ‚ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸ Ð¸ ÑÐ²Ð½ÑƒÑŽ Ð´Ð»Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ÑÑ‚ÑŒ.","detectedActivityTitle":"Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼ Ð² Ñ„ÑƒÑ‚Ð±Ð¾Ð»","shouldAskUserBeforeSaving":false},"measures":[{"localId":"measure-duration-30m","measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"confidence":0.99,"evidenceText":"30 Ð¼Ð¸Ð½ÑƒÑ‚","normalizedLabel":"30 minutes"}],"semanticCategories":[{"localId":"cat-play","semanticObjectKey":"play","labelRu":"Ð˜Ð³Ñ€Ð°","layer":"activity_type","confidence":0.9,"evidenceText":"Ð˜Ð³Ñ€Ð°Ð»","reason":"Ð“Ð»Ð°Ð³Ð¾Ð» ÑƒÐºÐ°Ð·Ñ‹Ð²Ð°ÐµÑ‚ Ð½Ð° Ð¸Ð³Ñ€Ð¾Ð²ÑƒÑŽ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ."},{"localId":"cat-football","semanticObjectKey":"football","labelRu":"Ð¤ÑƒÑ‚Ð±Ð¾Ð»","layer":"object","confidence":0.98,"evidenceText":"Ñ„ÑƒÑ‚Ð±Ð¾Ð»","reason":"ÐŸÑ€ÑÐ¼Ð¾ Ð½Ð°Ð·Ð²Ð°Ð½ Ð¾Ð±ÑŠÐµÐºÑ‚/Ð²Ð¸Ð´ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸."},{"localId":"cat-child","semanticObjectKey":"child","labelRu":"Ð ÐµÐ±Ñ‘Ð½Ð¾Ðº","layer":"relationship","confidence":0.96,"evidenceText":"Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","reason":"Ð£ÐºÐ°Ð·Ð°Ð½ ÑƒÑ‡Ð°ÑÑ‚Ð½Ð¸Ðº Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸."},{"localId":"cat-play-with-child","semanticObjectKey":"play_with_child","labelRu":"Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","layer":"care","confidence":0.94,"evidenceText":"Ð˜Ð³Ñ€Ð°Ð» Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","reason":"Ð¤Ñ€Ð°Ð·Ð° Ð¾Ð¿Ð¸ÑÑ‹Ð²Ð°ÐµÑ‚ Ð½Ðµ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¸Ð³Ñ€Ñƒ, Ð½Ð¾ Ð¸ Ñ€Ð¾Ð´Ð¸Ñ‚ÐµÐ»ÑŒÑÐºÑƒÑŽ/ÑÐµÐ¼ÐµÐ¹Ð½ÑƒÑŽ Ñ„ÑƒÐ½ÐºÑ†Ð¸ÑŽ Ð·Ð°Ð±Ð¾Ñ‚Ñ‹ Ð¸ ÑÐ¾Ð²Ð¼ÐµÑÑ‚Ð½Ð¾Ð³Ð¾ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸."},{"localId":"cat-family-time","semanticObjectKey":"family_time","labelRu":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ","layer":"purpose","confidence":0.88,"evidenceText":"Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","reason":"Ð¡Ð¾Ð²Ð¼ÐµÑÑ‚Ð½Ð°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼ Ð¾Ñ‚Ð½Ð¾ÑÐ¸Ñ‚ÑÑ Ðº ÑÐµÐ¼ÐµÐ¹Ð½Ð¾Ð¼Ñƒ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸."},{"localId":"cat-outdoor-time","semanticObjectKey":"outdoor_time","labelRu":"Ð’Ñ€ÐµÐ¼Ñ Ð½Ð° ÑÐ²ÐµÐ¶ÐµÐ¼ Ð²Ð¾Ð·Ð´ÑƒÑ…Ðµ","layer":"environment","confidence":0.62,"evidenceText":"Ñ„ÑƒÑ‚Ð±Ð¾Ð»","reason":"Ð¤ÑƒÑ‚Ð±Ð¾Ð» Ñ‡Ð°ÑÑ‚Ð¾ Ð¿Ñ€Ð¾Ð¸ÑÑ…Ð¾Ð´Ð¸Ñ‚ Ð½Ð° ÑƒÐ»Ð¸Ñ†Ðµ, Ð½Ð¾ ÑÑ‚Ð¾ Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½Ð¾ ÑÐ²Ð½Ð¾, Ð¿Ð¾ÑÑ‚Ð¾Ð¼Ñƒ ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ Ð¾ÑÑ‚Ð°Ñ‘Ñ‚ÑÑ Ð¼ÐµÐ½ÐµÐµ ÑƒÐ²ÐµÑ€ÐµÐ½Ð½Ð¾Ð¹."},{"localId":"cat-physical-activity","semanticObjectKey":"physical_activity","labelRu":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","layer":"physiology","confidence":0.86,"evidenceText":"Ñ„ÑƒÑ‚Ð±Ð¾Ð» 30 Ð¼Ð¸Ð½ÑƒÑ‚","reason":"Ð¤ÑƒÑ‚Ð±Ð¾Ð» Ð¿Ñ€ÐµÐ´Ð¿Ð¾Ð»Ð°Ð³Ð°ÐµÑ‚ Ð´Ð²Ð¸Ð³Ð°Ñ‚ÐµÐ»ÑŒÐ½ÑƒÑŽ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ."}],"valueObjectMatches":[{"semanticCategoryLocalId":"cat-play","matchStatus":"missing_candidate","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":null,"confidence":0.65,"reason":"Ð’ fixture Ð½Ðµ ÑÑ‡Ð¸Ñ‚Ð°ÐµÑ‚ÑÑ, Ñ‡Ñ‚Ð¾ Ð¾Ð±Ñ‰Ð¸Ð¹ Ð¾Ð±ÑŠÐµÐºÑ‚ 'Ð˜Ð³Ñ€Ð°' ÑƒÐ¶Ðµ ÑÑƒÑ‰ÐµÑÑ‚Ð²ÑƒÐµÑ‚."},{"semanticCategoryLocalId":"cat-football","matchStatus":"missing_candidate","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":null,"confidence":0.78,"reason":"ÐÑƒÐ¶Ð½Ð¾ Ð¿Ñ€Ð¾Ð²ÐµÑ€Ð¸Ñ‚ÑŒ ÑÑƒÑ‰ÐµÑÑ‚Ð²Ð¾Ð²Ð°Ð½Ð¸Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð° 'Ð¤ÑƒÑ‚Ð±Ð¾Ð»' Ð² Ñ€ÐµÐ°Ð»ÑŒÐ½Ñ‹Ñ… Value Objects."},{"semanticCategoryLocalId":"cat-child","matchStatus":"deferred","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":null,"confidence":0.5,"reason":"ÐŸÐµÑ€ÑÐ¾Ð½Ð°Ð»ÑŒÐ½Ñ‹Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ñ‹ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ° Ñ‚Ñ€ÐµÐ±ÑƒÑŽÑ‚ Ð¾Ñ‚Ð´ÐµÐ»ÑŒÐ½Ð¾Ð¹ privacy/relationship Ð¼Ð¾Ð´ÐµÐ»Ð¸; Ð² Ð¿ÐµÑ€Ð²Ð¾Ð¼ preview Ð»ÑƒÑ‡ÑˆÐµ Ð½Ðµ ÑÐ¾Ð·Ð´Ð°Ð²Ð°Ñ‚ÑŒ Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¸."},{"semanticCategoryLocalId":"cat-play-with-child","matchStatus":"missing_candidate","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":"Ð¡ÐµÐ¼ÑŒÑ","confidence":0.86,"reason":"Ð•ÑÐ»Ð¸ Ñ‚Ð°ÐºÐ¾Ð³Ð¾ VO Ð½ÐµÑ‚, ÑÐ¸ÑÑ‚ÐµÐ¼Ð° Ð´Ð¾Ð»Ð¶Ð½Ð° Ð¿Ñ€ÐµÐ´Ð»Ð¾Ð¶Ð¸Ñ‚ÑŒ ÑÐ¾Ð·Ð´Ð°Ñ‚ÑŒ 'Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼' Ð¿Ð¾Ð´ Ð²ÐµÑ‚ÐºÐ¾Ð¹ 'Ð¡ÐµÐ¼ÑŒÑ'."},{"semanticCategoryLocalId":"cat-family-time","matchStatus":"matched_existing","valueObjectId":"VO_DEMO_FAMILY_TIME","valueObjectTitle":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ","parentValueObjectId":"VO_DEMO_FAMILY","parentValueObjectTitle":"Ð¡ÐµÐ¼ÑŒÑ","confidence":0.92,"reason":"Ð”ÐµÐ¼Ð¾Ð½ÑÑ‚Ñ€Ð°Ñ†Ð¸Ð¾Ð½Ð½Ñ‹Ð¹ Ð¿Ñ€Ð¸Ð¼ÐµÑ€ Ð½Ð°Ð¹Ð´ÐµÐ½Ð½Ð¾Ð³Ð¾ Ð»Ð¸Ñ‡Ð½Ð¾Ð³Ð¾ Value Object."},{"semanticCategoryLocalId":"cat-outdoor-time","matchStatus":"missing_candidate","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":"Ð¡Ñ€ÐµÐ´Ð°","confidence":0.58,"reason":"ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ Ð¿Ð¾Ð»ÐµÐ·Ð½Ð°, Ð½Ð¾ Ñ‚Ñ€ÐµÐ±ÑƒÐµÑ‚ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¸Ñ, Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ ÑƒÐ»Ð¸Ñ†Ð° Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½Ð° ÑÐ²Ð½Ð¾."},{"semanticCategoryLocalId":"cat-physical-activity","matchStatus":"matched_existing","valueObjectId":"VO_DEMO_PHYSICAL_ACTIVITY","valueObjectTitle":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","parentValueObjectId":"VO_DEMO_ORGANISM","parentValueObjectTitle":"ÐžÑ€Ð³Ð°Ð½Ð¸Ð·Ð¼","confidence":0.83,"reason":"Ð”ÐµÐ¼Ð¾Ð½ÑÑ‚Ñ€Ð°Ñ†Ð¸Ð¾Ð½Ð½Ñ‹Ð¹ Ð¿Ñ€Ð¸Ð¼ÐµÑ€ Ð½Ð°Ð¹Ð´ÐµÐ½Ð½Ð¾Ð³Ð¾ ÑÐ¸ÑÑ‚ÐµÐ¼Ð½Ð¾Ð³Ð¾/Ñ„Ð¸Ð·Ð¸Ð¾Ð»Ð¾Ð³Ð¸Ñ‡ÐµÑÐºÐ¾Ð³Ð¾ Value Object."}],"missingValueObjectCandidates":[{"semanticCategoryLocalId":"cat-play","semanticObjectKey":"play","proposedTitleRu":"Ð˜Ð³Ñ€Ð°","proposedUsageScope":"private","proposedAuthorType":"user","proposedParentValueObjectId":null,"proposedParentTitleRu":null,"reason":"ÐœÐ¾Ð¶Ð½Ð¾ ÑÐ¾Ð·Ð´Ð°Ñ‚ÑŒ Ð¾Ð±Ñ‰Ð¸Ð¹ Ð»Ð¸Ñ‡Ð½Ñ‹Ð¹ Ð¾Ð±ÑŠÐµÐºÑ‚, ÐµÑÐ»Ð¸ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ Ñ…Ð¾Ñ‡ÐµÑ‚ Ð¾Ñ‚ÑÐ»ÐµÐ¶Ð¸Ð²Ð°Ñ‚ÑŒ Ð¸Ð³Ñ€Ñ‹ ÐºÐ°Ðº Ð¾Ñ‚Ð´ÐµÐ»ÑŒÐ½ÑƒÑŽ Ð²ÐµÑ‚ÐºÑƒ.","requiresUserConfirmation":true},{"semanticCategoryLocalId":"cat-football","semanticObjectKey":"football","proposedTitleRu":"Ð¤ÑƒÑ‚Ð±Ð¾Ð»","proposedUsageScope":"private","proposedAuthorType":"user","proposedParentValueObjectId":null,"proposedParentTitleRu":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","reason":"Ð¤ÑƒÑ‚Ð±Ð¾Ð» Ð¼Ð¾Ð¶ÐµÑ‚ Ð±Ñ‹Ñ‚ÑŒ Ð´Ð¾Ñ‡ÐµÑ€Ð½Ð¸Ð¼ Ð¾Ð±ÑŠÐµÐºÑ‚Ð¾Ð¼ Ñ„Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ¾Ð¹ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸ Ð¸Ð»Ð¸ Ð¾Ñ‚Ð´ÐµÐ»ÑŒÐ½Ñ‹Ð¼ ÑÐ¿Ð¾Ñ€Ñ‚Ð¸Ð²Ð½Ñ‹Ð¼ Ð½Ð°Ð²Ñ‹ÐºÐ¾Ð¼.","requiresUserConfirmation":true},{"semanticCategoryLocalId":"cat-play-with-child","semanticObjectKey":"play_with_child","proposedTitleRu":"Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","proposedUsageScope":"private","proposedAuthorType":"user","proposedParentValueObjectId":null,"proposedParentTitleRu":"Ð¡ÐµÐ¼ÑŒÑ","reason":"ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ Ð¾Ñ‚Ñ€Ð°Ð¶Ð°ÐµÑ‚ Ñ€Ð¾Ð´Ð¸Ñ‚ÐµÐ»ÑŒÑÐºÑƒÑŽ/ÑÐµÐ¼ÐµÐ¹Ð½ÑƒÑŽ Ñ„ÑƒÐ½ÐºÑ†Ð¸ÑŽ, Ð½Ðµ ÑÐ²Ð¾Ð´Ð¸Ð¼ÑƒÑŽ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ðº Ñ„ÑƒÑ‚Ð±Ð¾Ð»Ñƒ.","requiresUserConfirmation":true},{"semanticCategoryLocalId":"cat-outdoor-time","semanticObjectKey":"outdoor_time","proposedTitleRu":"Ð’Ñ€ÐµÐ¼Ñ Ð½Ð° ÑÐ²ÐµÐ¶ÐµÐ¼ Ð²Ð¾Ð·Ð´ÑƒÑ…Ðµ","proposedUsageScope":"private","proposedAuthorType":"user","proposedParentValueObjectId":null,"proposedParentTitleRu":"Ð¡Ñ€ÐµÐ´Ð°","reason":"Ð¡Ð¾Ð·Ð´Ð°Ð²Ð°Ñ‚ÑŒ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¿Ð¾ÑÐ»Ðµ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¸Ñ, Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ ÑÐ²ÐµÐ¶Ð¸Ð¹ Ð²Ð¾Ð·Ð´ÑƒÑ… Ð²Ñ‹Ð²ÐµÐ´ÐµÐ½ Ð¿Ñ€ÐµÐ´Ð¿Ð¾Ð»Ð¾Ð¶Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾.","requiresUserConfirmation":true}],"factPreviews":[{"localId":"fact-family-time-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-family-time","semanticObjectKey":"family_time","valueObjectId":"VO_DEMO_FAMILY_TIME","valueObjectTitle":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ","measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"ready_for_fact_write","confidence":0.92,"explanation":"ÐŸÐ¾ÑÐ»Ðµ save gate Ð±ÑƒÐ´ÐµÑ‚ ÑÐ¾Ð·Ð´Ð°Ð½ user-owned activity_object_fact Ð½Ð° 30 Ð¼Ð¸Ð½ÑƒÑ‚ ÑÐµÐ¼ÐµÐ¹Ð½Ð¾Ð³Ð¾ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸."},{"localId":"fact-physical-activity-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-physical-activity","semanticObjectKey":"physical_activity","valueObjectId":"VO_DEMO_PHYSICAL_ACTIVITY","valueObjectTitle":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"ready_for_fact_write","confidence":0.83,"explanation":"ÐžÐ´Ð½Ð° Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ð´Ð°Ñ‘Ñ‚ 30 Ð¼Ð¸Ð½ÑƒÑ‚ Ð²Ð¾Ð·Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ Ð½Ð° Ñ„Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÑƒÑŽ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ð±ÐµÐ· ÑƒÐ²ÐµÐ»Ð¸Ñ‡ÐµÐ½Ð¸Ñ Ð¾Ð±Ñ‰ÐµÐ³Ð¾ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸."},{"localId":"fact-football-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-football","semanticObjectKey":"football","valueObjectId":null,"valueObjectTitle":null,"measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"needs_value_object","confidence":0.78,"explanation":"Ð¤Ð°ÐºÑ‚ Ð¼Ð¾Ð¶Ð½Ð¾ Ð·Ð°Ð¿Ð¸ÑÐ°Ñ‚ÑŒ Ð¿Ð¾ semantic_object_key, Ð° value_object_id Ð´Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð¿Ð¾ÑÐ»Ðµ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ñ/ÑÐ¾Ð¿Ð¾ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð¸Ñ VO."},{"localId":"fact-play-with-child-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-play-with-child","semanticObjectKey":"play_with_child","valueObjectId":null,"valueObjectTitle":null,"measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"needs_user_confirmation","confidence":0.86,"explanation":"ÐÑƒÐ¶ÐµÐ½ Ð²Ð¾Ð¿Ñ€Ð¾Ñ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŽ: ÑÐ¾Ð·Ð´Ð°Ñ‚ÑŒ Value Object 'Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼' Ð² Ð²ÐµÑ‚ÐºÐµ 'Ð¡ÐµÐ¼ÑŒÑ'?"},{"localId":"fact-outdoor-time-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-outdoor-time","semanticObjectKey":"outdoor_time","valueObjectId":null,"valueObjectTitle":null,"measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"needs_user_confirmation","confidence":0.58,"explanation":"ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ Ð¼ÐµÐ½ÐµÐµ ÑƒÐ²ÐµÑ€ÐµÐ½Ð½Ð°Ñ, Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ Ð¼ÐµÑÑ‚Ð¾ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸ Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½Ð¾ ÑÐ²Ð½Ð¾."}],"safety":{"previewOnly":true,"dbWriteAllowed":false,"sqlAllowed":false,"openAiCallAllowed":false,"medicalDiagnosisAllowed":false,"notes":["Fixture is a deterministic preview contract, not a saved Activity Event.","ValueObject IDs with VO_DEMO_* are placeholders and must not be treated as DB IDs.","One activity can create several object facts, but chronological total time remains 30 minutes.","Missing Value Objects require user confirmation before creation.","Health/physiology categories are observation signals, not medical diagnosis."]},"counters":{"measureCount":1,"semanticCategoryCount":7,"matchedValueObjectCount":2,"missingValueObjectCandidateCount":4,"factPreviewCount":5}},"factDecisions":[{"factLocalId":"fact-family-time-30m","decision":"accept","reasonRu":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾ ÐºÐ°Ðº ÑÑƒÑ‰ÐµÑÑ‚Ð²ÑƒÑŽÑ‰Ð¸Ð¹ Value Object."},{"factLocalId":"fact-physical-activity-30m","decision":"accept","reasonRu":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ð½Ð°Ð¹Ð´ÐµÐ½Ð° ÐºÐ°Ðº ÑÑƒÑ‰ÐµÑÑ‚Ð²ÑƒÑŽÑ‰Ð¸Ð¹ Value Object."},{"factLocalId":"fact-football-30m","decision":"defer","reasonRu":"Ð¡Ð½Ð°Ñ‡Ð°Ð»Ð° Ð½ÑƒÐ¶Ð½Ð¾ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ñ‚ÑŒ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ Ð¸Ð»Ð¸ Ð²Ñ‹Ð±Ð¾Ñ€ Value Object 'Ð¤ÑƒÑ‚Ð±Ð¾Ð»'."},{"factLocalId":"fact-play-with-child-30m","decision":"defer","reasonRu":"Ð¡Ð½Ð°Ñ‡Ð°Ð»Ð° Ð½ÑƒÐ¶Ð½Ð¾ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ñ‚ÑŒ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ 'Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼'."},{"factLocalId":"fact-outdoor-time-30m","decision":"defer","reasonRu":"ÐÑƒÐ¶Ð½Ð¾ ÑƒÑ‚Ð¾Ñ‡Ð½Ð¸Ñ‚ÑŒ, Ð±Ñ‹Ð»Ð° Ð»Ð¸ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ Ð½Ð° ÑÐ²ÐµÐ¶ÐµÐ¼ Ð²Ð¾Ð·Ð´ÑƒÑ…Ðµ."}],"editedFactDecisions":[],"valueObjectCandidateDecisions":[{"semanticObjectKey":"football","proposedTitleRu":"Ð¤ÑƒÑ‚Ð±Ð¾Ð»","decision":"defer","selectedExistingValueObjectId":null,"selectedExistingValueObjectTitle":null,"proposedParentValueObjectId":"VO_DEMO_PHYSICAL_ACTIVITY","proposedParentTitleRu":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","reasonRu":"ÐŸÐ¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ ÐµÑ‰Ñ‘ Ð½Ðµ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ð» ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð° 'Ð¤ÑƒÑ‚Ð±Ð¾Ð»'."},{"semanticObjectKey":"play_with_child","proposedTitleRu":"Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","decision":"defer","selectedExistingValueObjectId":null,"selectedExistingValueObjectTitle":null,"proposedParentValueObjectId":"VO_DEMO_FAMILY_TIME","proposedParentTitleRu":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ","reasonRu":"ÐŸÐ¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ ÐµÑ‰Ñ‘ Ð½Ðµ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ð» ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð° 'Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼'."},{"semanticObjectKey":"outdoor_time","proposedTitleRu":"Ð’Ñ€ÐµÐ¼Ñ Ð½Ð° ÑÐ²ÐµÐ¶ÐµÐ¼ Ð²Ð¾Ð·Ð´ÑƒÑ…Ðµ","decision":"defer","selectedExistingValueObjectId":null,"selectedExistingValueObjectTitle":null,"proposedParentValueObjectId":"VO_DEMO_ORGANISM","proposedParentTitleRu":"ÐžÑ€Ð³Ð°Ð½Ð¸Ð·Ð¼","reasonRu":"ÐÑƒÐ¶Ð½Ð¾ ÑƒÑ‚Ð¾Ñ‡Ð½Ð¸Ñ‚ÑŒ ÐºÐ¾Ð½Ñ‚ÐµÐºÑÑ‚, Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ ÑƒÐ»Ð¸Ñ†Ð° Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½Ð° ÑÐ²Ð½Ð¾."}],"clientSafetyConfirmation":{"userReviewedPreview":true,"userConfirmedMissingValueObjectCreation":false,"userConfirmedFactWrite":false,"userUnderstandsPreviewIsNotDiagnosis":true}},"routePurpose":"activity_facts_save_gate_scaffold_no_write","routeLayer":"activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1","routeStatus":"guarded_persistence_contract_only_no_write","productionWriteEnabled":false,"requestSummary":{"sourcePackageId":null,"idempotencyKey":null,"routeMode":null,"factDecisionCount":0,"editedFactDecisionCount":0,"valueObjectCandidateDecisionCount":0,"writeIntentDetected":false,"writeIntentReasons":[],"validationErrorCount":10,"validationWarningCount":0},"validation":{"ok":false,"errors":[{"code":"ROUTE_MODE_REQUIRED","fieldPath":"routeMode","severity":"error","messageRu":"routeMode Ð¾Ð±ÑÐ·Ð°Ñ‚ÐµÐ»ÐµÐ½."},{"code":"REQUIRED_STRING_MISSING","fieldPath":"sourcePackageId","severity":"error","messageRu":"sourcePackageId: Ð¾Ð±ÑÐ·Ð°Ñ‚ÐµÐ»ÑŒÐ½Ð°Ñ ÑÑ‚Ñ€Ð¾ÐºÐ° Ð¾Ñ‚ÑÑƒÑ‚ÑÑ‚Ð²ÑƒÐµÑ‚."},{"code":"REQUIRED_STRING_MISSING","fieldPath":"idempotencyKey","severity":"error","messageRu":"idempotencyKey: Ð¾Ð±ÑÐ·Ð°Ñ‚ÐµÐ»ÑŒÐ½Ð°Ñ ÑÑ‚Ñ€Ð¾ÐºÐ° Ð¾Ñ‚ÑÑƒÑ‚ÑÑ‚Ð²ÑƒÐµÑ‚."},{"code":"FACT_DECISIONS_ARRAY_REQUIRED","fieldPath":"factDecisions","severity":"error","messageRu":"factDecisions Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±Ñ‹Ñ‚ÑŒ Ð¼Ð°ÑÑÐ¸Ð²Ð¾Ð¼."},{"code":"EDITED_FACT_DECISIONS_ARRAY_REQUIRED","fieldPath":"editedFactDecisions","severity":"error","messageRu":"editedFactDecisions Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±Ñ‹Ñ‚ÑŒ Ð¼Ð°ÑÑÐ¸Ð²Ð¾Ð¼."},{"code":"VALUE_OBJECT_CANDIDATE_DECISIONS_ARRAY_REQUIRED","fieldPath":"valueObjectCandidateDecisions","severity":"error","messageRu":"valueObjectCandidateDecisions Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±Ñ‹Ñ‚ÑŒ Ð¼Ð°ÑÑÐ¸Ð²Ð¾Ð¼."},{"code":"CLIENT_SAFETY_BOOLEAN_REQUIRED","fieldPath":"clientSafetyConfirmation.userReviewedPreview","severity":"error","messageRu":"clientSafetyConfirmation.userReviewedPreview Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±Ñ‹Ñ‚ÑŒ boolean."},{"code":"CLIENT_SAFETY_BOOLEAN_REQUIRED","fieldPath":"clientSafetyConfirmation.userConfirmedMissingValueObjectCreation","severity":"error","messageRu":"clientSafetyConfirmation.userConfirmedMissingValueObjectCreation Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±Ñ‹Ñ‚ÑŒ boolean."},{"code":"CLIENT_SAFETY_BOOLEAN_REQUIRED","fieldPath":"clientSafetyConfirmation.userConfirmedFactWrite","severity":"error","messageRu":"clientSafetyConfirmation.userConfirmedFactWrite Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±Ñ‹Ñ‚ÑŒ boolean."},{"code":"CLIENT_SAFETY_BOOLEAN_REQUIRED","fieldPath":"clientSafetyConfirmation.userUnderstandsPreviewIsNotDiagnosis","severity":"error","messageRu":"clientSafetyConfirmation.userUnderstandsPreviewIsNotDiagnosis Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±Ñ‹Ñ‚ÑŒ boolean."}],"warnings":[]},"noWriteExecutionPlan":{"ok":false,"planMode":"no_write_execution_plan_v1","planStatus":"preview_only_not_executed","sourcePackageId":null,"idempotencyKey":null,"acceptedFactLocalIds":[],"rejectedFactLocalIds":[],"deferredFactLocalIds":[],"editedFactLocalIds":[],"valueObjectCreateCandidateKeys":[],"valueObjectUseExistingCandidateKeys":[],"valueObjectSkippedCandidateKeys":[],"valueObjectDeferredCandidateKeys":[],"plannedWrites":[],"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"noWriteGuarantee":{"dbReadExecuted":false,"dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"rowsActuallyWritten":0}},"guardedPersistenceContract":{"contractMode":"activity_facts_guarded_persistence_contract_v1","persistenceMode":"server_mediated_write_disabled","sourcePackageId":null,"idempotencyKey":null,"actorScope":{"authenticatedUserId":null,"ownerActorId":null,"personId":null,"organizationId":null,"timezone":"Europe/Warsaw"},"noWritePlan":{"ok":false,"planMode":"no_write_execution_plan_v1","planStatus":"preview_only_not_executed","sourcePackageId":null,"idempotencyKey":null,"acceptedFactLocalIds":[],"rejectedFactLocalIds":[],"deferredFactLocalIds":[],"editedFactLocalIds":[],"valueObjectCreateCandidateKeys":[],"valueObjectUseExistingCandidateKeys":[],"valueObjectSkippedCandidateKeys":[],"valueObjectDeferredCandidateKeys":[],"plannedWrites":[],"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"noWriteGuarantee":{"dbReadExecuted":false,"dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"rowsActuallyWritten":0}},"draftIdMap":{"activityEventId":"draft_activity_event_activity","measureIdsByLocalMeasureId":{},"factIdsByLocalFactId":{},"reviewItemIdsByLocalFactId":{},"recalculationQueueItemIds":[],"valueObjectIdsBySemanticObjectKey":{}},"draftRows":{"activityEvent":null,"measures":[],"objectFacts":[],"reviewItems":[],"recalculationQueueItems":[]},"plannedWrites":[],"plannedTargetTables":[],"safety":{"dbReadExecuted":false,"dbWriteExecuted":false,"sqlExecuted":false,"externalAiCallExecuted":false,"rowsActuallyWritten":0,"productionWriteEnabled":false},"blockers":["validation_not_ok","no_activity_event_draft_row","no_accepted_or_edited_fact_decisions"],"warnings":["contract_only_no_persistence","draft_rows_are_not_database_rows","real_write_requires_separate_runtime_gate"]},"sideEffects":{"dbReadExecuted":false,"dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"valueObjectCreated":false,"activityEventCreated":false,"activityEventMeasureCreated":false,"activityObjectFactCreated":false,"activityFactReviewItemCreated":false,"recalculationQueueItemCreated":false,"rowsActuallyWritten":0},"rules":["This route is a no-write execution-plan scaffold for the future server-mediated save gate.","This route validates request shape and builds a planned-write preview.","This route does not persist anything.","This route must not insert, update, upsert or delete rows.","This route must not call Supabase directly in this step.","This route must not execute SQL.","This route must not call external AI providers.","This route blocks explicit write-intent requests until a later gated implementation step.","The future write flow must remain server-mediated and must preserve user-owned fact privacy."],"errorCode":"ACTIVITY_FACTS_SAVE_GATE_INVALID_JSON","errorMessage":"Request body must be valid JSON."}
+
+POST top-level keys: ok, routeMode, writeStatus, endpoint, dbWriteExecuted, sqlExecuted, openAiCallExecuted, createdIds, skipped, plannedWrites, safety, contractPreviewRequest, routePurpose, routeLayer, routeStatus, productionWriteEnabled, requestSummary, validation, noWriteExecutionPlan, guardedPersistenceContract, sideEffects, rules, errorCode, errorMessage
+
+POST validation full JSON:
+
+POST requestSummary full JSON:
+
+POST rules full JSON:
+
+==============================
+9. INVALID STRUCTURED FULL DIAGNOSTIC
+==============================
+Invalid structured status: 400
+Invalid structured raw length: 20269
+
+Invalid structured full raw response:
+{"ok":false,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[],"safety":{"serverMediatedOnly":true,"directBrowserSupabaseWriteAllowed":false,"duplicateChronologicalTimeAllowed":false,"medicalDiagnosisAllowed":false,"notes":["This response is a contract preview only.","No route was created in Step 07.","No database write was executed in Step 07.","The future stable endpoint should be /api/activity/facts/save-gate.","One activity can create several object facts, but total chronological time remains 30 minutes.","Facts linked to shared/system Value Objects remain private user-owned rows."]},"contractPreviewRequest":{"routeMode":"contract_preview_only","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","sourcePackageId":"fixture-football-with-child-30m-v1","activityProcessingPackage":{"packageId":"fixture-football-with-child-30m-v1","status":"preview_only","rawInput":{"text":"Ð˜Ð³Ñ€Ð°Ð» Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼ Ð² Ñ„ÑƒÑ‚Ð±Ð¾Ð» 30 Ð¼Ð¸Ð½ÑƒÑ‚.","locale":"ru","source":"manual_test_fixture","capturedAtIso":"2026-06-15T16:00:00+02:00"},"recognition":{"status":"obvious_activity","confidence":0.96,"reason":"Ð¤Ñ€Ð°Ð·Ð° ÑÐ¾Ð´ÐµÑ€Ð¶Ð¸Ñ‚ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ðµ Ð² Ð¿Ñ€Ð¾ÑˆÐµÐ´ÑˆÐµÐ¼ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸, ÑƒÑ‡Ð°ÑÑ‚Ð½Ð¸ÐºÐ°, Ð¾Ð±ÑŠÐµÐºÑ‚ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸ Ð¸ ÑÐ²Ð½ÑƒÑŽ Ð´Ð»Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ÑÑ‚ÑŒ.","detectedActivityTitle":"Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼ Ð² Ñ„ÑƒÑ‚Ð±Ð¾Ð»","shouldAskUserBeforeSaving":false},"measures":[{"localId":"measure-duration-30m","measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"confidence":0.99,"evidenceText":"30 Ð¼Ð¸Ð½ÑƒÑ‚","normalizedLabel":"30 minutes"}],"semanticCategories":[{"localId":"cat-play","semanticObjectKey":"play","labelRu":"Ð˜Ð³Ñ€Ð°","layer":"activity_type","confidence":0.9,"evidenceText":"Ð˜Ð³Ñ€Ð°Ð»","reason":"Ð“Ð»Ð°Ð³Ð¾Ð» ÑƒÐºÐ°Ð·Ñ‹Ð²Ð°ÐµÑ‚ Ð½Ð° Ð¸Ð³Ñ€Ð¾Ð²ÑƒÑŽ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ."},{"localId":"cat-football","semanticObjectKey":"football","labelRu":"Ð¤ÑƒÑ‚Ð±Ð¾Ð»","layer":"object","confidence":0.98,"evidenceText":"Ñ„ÑƒÑ‚Ð±Ð¾Ð»","reason":"ÐŸÑ€ÑÐ¼Ð¾ Ð½Ð°Ð·Ð²Ð°Ð½ Ð¾Ð±ÑŠÐµÐºÑ‚/Ð²Ð¸Ð´ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸."},{"localId":"cat-child","semanticObjectKey":"child","labelRu":"Ð ÐµÐ±Ñ‘Ð½Ð¾Ðº","layer":"relationship","confidence":0.96,"evidenceText":"Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","reason":"Ð£ÐºÐ°Ð·Ð°Ð½ ÑƒÑ‡Ð°ÑÑ‚Ð½Ð¸Ðº Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸."},{"localId":"cat-play-with-child","semanticObjectKey":"play_with_child","labelRu":"Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","layer":"care","confidence":0.94,"evidenceText":"Ð˜Ð³Ñ€Ð°Ð» Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","reason":"Ð¤Ñ€Ð°Ð·Ð° Ð¾Ð¿Ð¸ÑÑ‹Ð²Ð°ÐµÑ‚ Ð½Ðµ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¸Ð³Ñ€Ñƒ, Ð½Ð¾ Ð¸ Ñ€Ð¾Ð´Ð¸Ñ‚ÐµÐ»ÑŒÑÐºÑƒÑŽ/ÑÐµÐ¼ÐµÐ¹Ð½ÑƒÑŽ Ñ„ÑƒÐ½ÐºÑ†Ð¸ÑŽ Ð·Ð°Ð±Ð¾Ñ‚Ñ‹ Ð¸ ÑÐ¾Ð²Ð¼ÐµÑÑ‚Ð½Ð¾Ð³Ð¾ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸."},{"localId":"cat-family-time","semanticObjectKey":"family_time","labelRu":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ","layer":"purpose","confidence":0.88,"evidenceText":"Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","reason":"Ð¡Ð¾Ð²Ð¼ÐµÑÑ‚Ð½Ð°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼ Ð¾Ñ‚Ð½Ð¾ÑÐ¸Ñ‚ÑÑ Ðº ÑÐµÐ¼ÐµÐ¹Ð½Ð¾Ð¼Ñƒ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸."},{"localId":"cat-outdoor-time","semanticObjectKey":"outdoor_time","labelRu":"Ð’Ñ€ÐµÐ¼Ñ Ð½Ð° ÑÐ²ÐµÐ¶ÐµÐ¼ Ð²Ð¾Ð·Ð´ÑƒÑ…Ðµ","layer":"environment","confidence":0.62,"evidenceText":"Ñ„ÑƒÑ‚Ð±Ð¾Ð»","reason":"Ð¤ÑƒÑ‚Ð±Ð¾Ð» Ñ‡Ð°ÑÑ‚Ð¾ Ð¿Ñ€Ð¾Ð¸ÑÑ…Ð¾Ð´Ð¸Ñ‚ Ð½Ð° ÑƒÐ»Ð¸Ñ†Ðµ, Ð½Ð¾ ÑÑ‚Ð¾ Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½Ð¾ ÑÐ²Ð½Ð¾, Ð¿Ð¾ÑÑ‚Ð¾Ð¼Ñƒ ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ Ð¾ÑÑ‚Ð°Ñ‘Ñ‚ÑÑ Ð¼ÐµÐ½ÐµÐµ ÑƒÐ²ÐµÑ€ÐµÐ½Ð½Ð¾Ð¹."},{"localId":"cat-physical-activity","semanticObjectKey":"physical_activity","labelRu":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","layer":"physiology","confidence":0.86,"evidenceText":"Ñ„ÑƒÑ‚Ð±Ð¾Ð» 30 Ð¼Ð¸Ð½ÑƒÑ‚","reason":"Ð¤ÑƒÑ‚Ð±Ð¾Ð» Ð¿Ñ€ÐµÐ´Ð¿Ð¾Ð»Ð°Ð³Ð°ÐµÑ‚ Ð´Ð²Ð¸Ð³Ð°Ñ‚ÐµÐ»ÑŒÐ½ÑƒÑŽ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ."}],"valueObjectMatches":[{"semanticCategoryLocalId":"cat-play","matchStatus":"missing_candidate","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":null,"confidence":0.65,"reason":"Ð’ fixture Ð½Ðµ ÑÑ‡Ð¸Ñ‚Ð°ÐµÑ‚ÑÑ, Ñ‡Ñ‚Ð¾ Ð¾Ð±Ñ‰Ð¸Ð¹ Ð¾Ð±ÑŠÐµÐºÑ‚ 'Ð˜Ð³Ñ€Ð°' ÑƒÐ¶Ðµ ÑÑƒÑ‰ÐµÑÑ‚Ð²ÑƒÐµÑ‚."},{"semanticCategoryLocalId":"cat-football","matchStatus":"missing_candidate","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":null,"confidence":0.78,"reason":"ÐÑƒÐ¶Ð½Ð¾ Ð¿Ñ€Ð¾Ð²ÐµÑ€Ð¸Ñ‚ÑŒ ÑÑƒÑ‰ÐµÑÑ‚Ð²Ð¾Ð²Ð°Ð½Ð¸Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð° 'Ð¤ÑƒÑ‚Ð±Ð¾Ð»' Ð² Ñ€ÐµÐ°Ð»ÑŒÐ½Ñ‹Ñ… Value Objects."},{"semanticCategoryLocalId":"cat-child","matchStatus":"deferred","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":null,"confidence":0.5,"reason":"ÐŸÐµÑ€ÑÐ¾Ð½Ð°Ð»ÑŒÐ½Ñ‹Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ñ‹ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ° Ñ‚Ñ€ÐµÐ±ÑƒÑŽÑ‚ Ð¾Ñ‚Ð´ÐµÐ»ÑŒÐ½Ð¾Ð¹ privacy/relationship Ð¼Ð¾Ð´ÐµÐ»Ð¸; Ð² Ð¿ÐµÑ€Ð²Ð¾Ð¼ preview Ð»ÑƒÑ‡ÑˆÐµ Ð½Ðµ ÑÐ¾Ð·Ð´Ð°Ð²Ð°Ñ‚ÑŒ Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¸."},{"semanticCategoryLocalId":"cat-play-with-child","matchStatus":"missing_candidate","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":"Ð¡ÐµÐ¼ÑŒÑ","confidence":0.86,"reason":"Ð•ÑÐ»Ð¸ Ñ‚Ð°ÐºÐ¾Ð³Ð¾ VO Ð½ÐµÑ‚, ÑÐ¸ÑÑ‚ÐµÐ¼Ð° Ð´Ð¾Ð»Ð¶Ð½Ð° Ð¿Ñ€ÐµÐ´Ð»Ð¾Ð¶Ð¸Ñ‚ÑŒ ÑÐ¾Ð·Ð´Ð°Ñ‚ÑŒ 'Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼' Ð¿Ð¾Ð´ Ð²ÐµÑ‚ÐºÐ¾Ð¹ 'Ð¡ÐµÐ¼ÑŒÑ'."},{"semanticCategoryLocalId":"cat-family-time","matchStatus":"matched_existing","valueObjectId":"VO_DEMO_FAMILY_TIME","valueObjectTitle":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ","parentValueObjectId":"VO_DEMO_FAMILY","parentValueObjectTitle":"Ð¡ÐµÐ¼ÑŒÑ","confidence":0.92,"reason":"Ð”ÐµÐ¼Ð¾Ð½ÑÑ‚Ñ€Ð°Ñ†Ð¸Ð¾Ð½Ð½Ñ‹Ð¹ Ð¿Ñ€Ð¸Ð¼ÐµÑ€ Ð½Ð°Ð¹Ð´ÐµÐ½Ð½Ð¾Ð³Ð¾ Ð»Ð¸Ñ‡Ð½Ð¾Ð³Ð¾ Value Object."},{"semanticCategoryLocalId":"cat-outdoor-time","matchStatus":"missing_candidate","valueObjectId":null,"valueObjectTitle":null,"parentValueObjectId":null,"parentValueObjectTitle":"Ð¡Ñ€ÐµÐ´Ð°","confidence":0.58,"reason":"ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ Ð¿Ð¾Ð»ÐµÐ·Ð½Ð°, Ð½Ð¾ Ñ‚Ñ€ÐµÐ±ÑƒÐµÑ‚ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¸Ñ, Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ ÑƒÐ»Ð¸Ñ†Ð° Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½Ð° ÑÐ²Ð½Ð¾."},{"semanticCategoryLocalId":"cat-physical-activity","matchStatus":"matched_existing","valueObjectId":"VO_DEMO_PHYSICAL_ACTIVITY","valueObjectTitle":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","parentValueObjectId":"VO_DEMO_ORGANISM","parentValueObjectTitle":"ÐžÑ€Ð³Ð°Ð½Ð¸Ð·Ð¼","confidence":0.83,"reason":"Ð”ÐµÐ¼Ð¾Ð½ÑÑ‚Ñ€Ð°Ñ†Ð¸Ð¾Ð½Ð½Ñ‹Ð¹ Ð¿Ñ€Ð¸Ð¼ÐµÑ€ Ð½Ð°Ð¹Ð´ÐµÐ½Ð½Ð¾Ð³Ð¾ ÑÐ¸ÑÑ‚ÐµÐ¼Ð½Ð¾Ð³Ð¾/Ñ„Ð¸Ð·Ð¸Ð¾Ð»Ð¾Ð³Ð¸Ñ‡ÐµÑÐºÐ¾Ð³Ð¾ Value Object."}],"missingValueObjectCandidates":[{"semanticCategoryLocalId":"cat-play","semanticObjectKey":"play","proposedTitleRu":"Ð˜Ð³Ñ€Ð°","proposedUsageScope":"private","proposedAuthorType":"user","proposedParentValueObjectId":null,"proposedParentTitleRu":null,"reason":"ÐœÐ¾Ð¶Ð½Ð¾ ÑÐ¾Ð·Ð´Ð°Ñ‚ÑŒ Ð¾Ð±Ñ‰Ð¸Ð¹ Ð»Ð¸Ñ‡Ð½Ñ‹Ð¹ Ð¾Ð±ÑŠÐµÐºÑ‚, ÐµÑÐ»Ð¸ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ Ñ…Ð¾Ñ‡ÐµÑ‚ Ð¾Ñ‚ÑÐ»ÐµÐ¶Ð¸Ð²Ð°Ñ‚ÑŒ Ð¸Ð³Ñ€Ñ‹ ÐºÐ°Ðº Ð¾Ñ‚Ð´ÐµÐ»ÑŒÐ½ÑƒÑŽ Ð²ÐµÑ‚ÐºÑƒ.","requiresUserConfirmation":true},{"semanticCategoryLocalId":"cat-football","semanticObjectKey":"football","proposedTitleRu":"Ð¤ÑƒÑ‚Ð±Ð¾Ð»","proposedUsageScope":"private","proposedAuthorType":"user","proposedParentValueObjectId":null,"proposedParentTitleRu":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","reason":"Ð¤ÑƒÑ‚Ð±Ð¾Ð» Ð¼Ð¾Ð¶ÐµÑ‚ Ð±Ñ‹Ñ‚ÑŒ Ð´Ð¾Ñ‡ÐµÑ€Ð½Ð¸Ð¼ Ð¾Ð±ÑŠÐµÐºÑ‚Ð¾Ð¼ Ñ„Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ¾Ð¹ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸ Ð¸Ð»Ð¸ Ð¾Ñ‚Ð´ÐµÐ»ÑŒÐ½Ñ‹Ð¼ ÑÐ¿Ð¾Ñ€Ñ‚Ð¸Ð²Ð½Ñ‹Ð¼ Ð½Ð°Ð²Ñ‹ÐºÐ¾Ð¼.","requiresUserConfirmation":true},{"semanticCategoryLocalId":"cat-play-with-child","semanticObjectKey":"play_with_child","proposedTitleRu":"Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","proposedUsageScope":"private","proposedAuthorType":"user","proposedParentValueObjectId":null,"proposedParentTitleRu":"Ð¡ÐµÐ¼ÑŒÑ","reason":"ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ Ð¾Ñ‚Ñ€Ð°Ð¶Ð°ÐµÑ‚ Ñ€Ð¾Ð´Ð¸Ñ‚ÐµÐ»ÑŒÑÐºÑƒÑŽ/ÑÐµÐ¼ÐµÐ¹Ð½ÑƒÑŽ Ñ„ÑƒÐ½ÐºÑ†Ð¸ÑŽ, Ð½Ðµ ÑÐ²Ð¾Ð´Ð¸Ð¼ÑƒÑŽ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ðº Ñ„ÑƒÑ‚Ð±Ð¾Ð»Ñƒ.","requiresUserConfirmation":true},{"semanticCategoryLocalId":"cat-outdoor-time","semanticObjectKey":"outdoor_time","proposedTitleRu":"Ð’Ñ€ÐµÐ¼Ñ Ð½Ð° ÑÐ²ÐµÐ¶ÐµÐ¼ Ð²Ð¾Ð·Ð´ÑƒÑ…Ðµ","proposedUsageScope":"private","proposedAuthorType":"user","proposedParentValueObjectId":null,"proposedParentTitleRu":"Ð¡Ñ€ÐµÐ´Ð°","reason":"Ð¡Ð¾Ð·Ð´Ð°Ð²Ð°Ñ‚ÑŒ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¿Ð¾ÑÐ»Ðµ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¸Ñ, Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ ÑÐ²ÐµÐ¶Ð¸Ð¹ Ð²Ð¾Ð·Ð´ÑƒÑ… Ð²Ñ‹Ð²ÐµÐ´ÐµÐ½ Ð¿Ñ€ÐµÐ´Ð¿Ð¾Ð»Ð¾Ð¶Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾.","requiresUserConfirmation":true}],"factPreviews":[{"localId":"fact-family-time-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-family-time","semanticObjectKey":"family_time","valueObjectId":"VO_DEMO_FAMILY_TIME","valueObjectTitle":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ","measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"ready_for_fact_write","confidence":0.92,"explanation":"ÐŸÐ¾ÑÐ»Ðµ save gate Ð±ÑƒÐ´ÐµÑ‚ ÑÐ¾Ð·Ð´Ð°Ð½ user-owned activity_object_fact Ð½Ð° 30 Ð¼Ð¸Ð½ÑƒÑ‚ ÑÐµÐ¼ÐµÐ¹Ð½Ð¾Ð³Ð¾ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸."},{"localId":"fact-physical-activity-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-physical-activity","semanticObjectKey":"physical_activity","valueObjectId":"VO_DEMO_PHYSICAL_ACTIVITY","valueObjectTitle":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"ready_for_fact_write","confidence":0.83,"explanation":"ÐžÐ´Ð½Ð° Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ð´Ð°Ñ‘Ñ‚ 30 Ð¼Ð¸Ð½ÑƒÑ‚ Ð²Ð¾Ð·Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ Ð½Ð° Ñ„Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÑƒÑŽ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ð±ÐµÐ· ÑƒÐ²ÐµÐ»Ð¸Ñ‡ÐµÐ½Ð¸Ñ Ð¾Ð±Ñ‰ÐµÐ³Ð¾ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸."},{"localId":"fact-football-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-football","semanticObjectKey":"football","valueObjectId":null,"valueObjectTitle":null,"measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"needs_value_object","confidence":0.78,"explanation":"Ð¤Ð°ÐºÑ‚ Ð¼Ð¾Ð¶Ð½Ð¾ Ð·Ð°Ð¿Ð¸ÑÐ°Ñ‚ÑŒ Ð¿Ð¾ semantic_object_key, Ð° value_object_id Ð´Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð¿Ð¾ÑÐ»Ðµ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ñ/ÑÐ¾Ð¿Ð¾ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð¸Ñ VO."},{"localId":"fact-play-with-child-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-play-with-child","semanticObjectKey":"play_with_child","valueObjectId":null,"valueObjectTitle":null,"measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"needs_user_confirmation","confidence":0.86,"explanation":"ÐÑƒÐ¶ÐµÐ½ Ð²Ð¾Ð¿Ñ€Ð¾Ñ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŽ: ÑÐ¾Ð·Ð´Ð°Ñ‚ÑŒ Value Object 'Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼' Ð² Ð²ÐµÑ‚ÐºÐµ 'Ð¡ÐµÐ¼ÑŒÑ'?"},{"localId":"fact-outdoor-time-30m","activityEventId":null,"measureLocalId":"measure-duration-30m","semanticCategoryLocalId":"cat-outdoor-time","semanticObjectKey":"outdoor_time","valueObjectId":null,"valueObjectTitle":null,"measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"status":"needs_user_confirmation","confidence":0.58,"explanation":"ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ Ð¼ÐµÐ½ÐµÐµ ÑƒÐ²ÐµÑ€ÐµÐ½Ð½Ð°Ñ, Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ Ð¼ÐµÑÑ‚Ð¾ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸ Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½Ð¾ ÑÐ²Ð½Ð¾."}],"safety":{"previewOnly":true,"dbWriteAllowed":false,"sqlAllowed":false,"openAiCallAllowed":false,"medicalDiagnosisAllowed":false,"notes":["Fixture is a deterministic preview contract, not a saved Activity Event.","ValueObject IDs with VO_DEMO_* are placeholders and must not be treated as DB IDs.","One activity can create several object facts, but chronological total time remains 30 minutes.","Missing Value Objects require user confirmation before creation.","Health/physiology categories are observation signals, not medical diagnosis."]},"counters":{"measureCount":1,"semanticCategoryCount":7,"matchedValueObjectCount":2,"missingValueObjectCandidateCount":4,"factPreviewCount":5}},"factDecisions":[{"factLocalId":"fact-family-time-30m","decision":"accept","reasonRu":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾ ÐºÐ°Ðº ÑÑƒÑ‰ÐµÑÑ‚Ð²ÑƒÑŽÑ‰Ð¸Ð¹ Value Object."},{"factLocalId":"fact-physical-activity-30m","decision":"accept","reasonRu":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ð½Ð°Ð¹Ð´ÐµÐ½Ð° ÐºÐ°Ðº ÑÑƒÑ‰ÐµÑÑ‚Ð²ÑƒÑŽÑ‰Ð¸Ð¹ Value Object."},{"factLocalId":"fact-football-30m","decision":"defer","reasonRu":"Ð¡Ð½Ð°Ñ‡Ð°Ð»Ð° Ð½ÑƒÐ¶Ð½Ð¾ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ñ‚ÑŒ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ Ð¸Ð»Ð¸ Ð²Ñ‹Ð±Ð¾Ñ€ Value Object 'Ð¤ÑƒÑ‚Ð±Ð¾Ð»'."},{"factLocalId":"fact-play-with-child-30m","decision":"defer","reasonRu":"Ð¡Ð½Ð°Ñ‡Ð°Ð»Ð° Ð½ÑƒÐ¶Ð½Ð¾ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ñ‚ÑŒ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ 'Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼'."},{"factLocalId":"fact-outdoor-time-30m","decision":"defer","reasonRu":"ÐÑƒÐ¶Ð½Ð¾ ÑƒÑ‚Ð¾Ñ‡Ð½Ð¸Ñ‚ÑŒ, Ð±Ñ‹Ð»Ð° Ð»Ð¸ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ Ð½Ð° ÑÐ²ÐµÐ¶ÐµÐ¼ Ð²Ð¾Ð·Ð´ÑƒÑ…Ðµ."}],"editedFactDecisions":[],"valueObjectCandidateDecisions":[{"semanticObjectKey":"football","proposedTitleRu":"Ð¤ÑƒÑ‚Ð±Ð¾Ð»","decision":"defer","selectedExistingValueObjectId":null,"selectedExistingValueObjectTitle":null,"proposedParentValueObjectId":"VO_DEMO_PHYSICAL_ACTIVITY","proposedParentTitleRu":"Ð¤Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ","reasonRu":"ÐŸÐ¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ ÐµÑ‰Ñ‘ Ð½Ðµ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ð» ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð° 'Ð¤ÑƒÑ‚Ð±Ð¾Ð»'."},{"semanticObjectKey":"play_with_child","proposedTitleRu":"Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼","decision":"defer","selectedExistingValueObjectId":null,"selectedExistingValueObjectTitle":null,"proposedParentValueObjectId":"VO_DEMO_FAMILY_TIME","proposedParentTitleRu":"Ð¡ÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ","reasonRu":"ÐŸÐ¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ ÐµÑ‰Ñ‘ Ð½Ðµ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ð» ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð° 'Ð˜Ð³Ñ€Ð° Ñ Ñ€ÐµÐ±Ñ‘Ð½ÐºÐ¾Ð¼'."},{"semanticObjectKey":"outdoor_time","proposedTitleRu":"Ð’Ñ€ÐµÐ¼Ñ Ð½Ð° ÑÐ²ÐµÐ¶ÐµÐ¼ Ð²Ð¾Ð·Ð´ÑƒÑ…Ðµ","decision":"defer","selectedExistingValueObjectId":null,"selectedExistingValueObjectTitle":null,"proposedParentValueObjectId":"VO_DEMO_ORGANISM","proposedParentTitleRu":"ÐžÑ€Ð³Ð°Ð½Ð¸Ð·Ð¼","reasonRu":"ÐÑƒÐ¶Ð½Ð¾ ÑƒÑ‚Ð¾Ñ‡Ð½Ð¸Ñ‚ÑŒ ÐºÐ¾Ð½Ñ‚ÐµÐºÑÑ‚, Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ ÑƒÐ»Ð¸Ñ†Ð° Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½Ð° ÑÐ²Ð½Ð¾."}],"clientSafetyConfirmation":{"userReviewedPreview":true,"userConfirmedMissingValueObjectCreation":false,"userConfirmedFactWrite":false,"userUnderstandsPreviewIsNotDiagnosis":true}},"routePurpose":"activity_facts_save_gate_scaffold_no_write","routeLayer":"activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1","routeStatus":"guarded_persistence_contract_only_no_write","productionWriteEnabled":false,"requestSummary":{"sourcePackageId":null,"idempotencyKey":null,"routeMode":null,"factDecisionCount":0,"editedFactDecisionCount":0,"valueObjectCandidateDecisionCount":0,"writeIntentDetected":false,"writeIntentReasons":[],"validationErrorCount":10,"validationWarningCount":0},"validation":{"ok":false,"errors":[{"code":"ROUTE_MODE_REQUIRED","fieldPath":"routeMode","severity":"error","messageRu":"routeMode Ð¾Ð±ÑÐ·Ð°Ñ‚ÐµÐ»ÐµÐ½."},{"code":"REQUIRED_STRING_MISSING","fieldPath":"sourcePackageId","severity":"error","messageRu":"sourcePackageId: Ð¾Ð±ÑÐ·Ð°Ñ‚ÐµÐ»ÑŒÐ½Ð°Ñ ÑÑ‚Ñ€Ð¾ÐºÐ° Ð¾Ñ‚ÑÑƒÑ‚ÑÑ‚Ð²ÑƒÐµÑ‚."},{"code":"REQUIRED_STRING_MISSING","fieldPath":"idempotencyKey","severity":"error","messageRu":"idempotencyKey: Ð¾Ð±ÑÐ·Ð°Ñ‚ÐµÐ»ÑŒÐ½Ð°Ñ ÑÑ‚Ñ€Ð¾ÐºÐ° Ð¾Ñ‚ÑÑƒÑ‚ÑÑ‚Ð²ÑƒÐµÑ‚."},{"code":"FACT_DECISIONS_ARRAY_REQUIRED","fieldPath":"factDecisions","severity":"error","messageRu":"factDecisions Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±Ñ‹Ñ‚ÑŒ Ð¼Ð°ÑÑÐ¸Ð²Ð¾Ð¼."},{"code":"EDITED_FACT_DECISIONS_ARRAY_REQUIRED","fieldPath":"editedFactDecisions","severity":"error","messageRu":"editedFactDecisions Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±Ñ‹Ñ‚ÑŒ Ð¼Ð°ÑÑÐ¸Ð²Ð¾Ð¼."},{"code":"VALUE_OBJECT_CANDIDATE_DECISIONS_ARRAY_REQUIRED","fieldPath":"valueObjectCandidateDecisions","severity":"error","messageRu":"valueObjectCandidateDecisions Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±Ñ‹Ñ‚ÑŒ Ð¼Ð°ÑÑÐ¸Ð²Ð¾Ð¼."},{"code":"CLIENT_SAFETY_BOOLEAN_REQUIRED","fieldPath":"clientSafetyConfirmation.userReviewedPreview","severity":"error","messageRu":"clientSafetyConfirmation.userReviewedPreview Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±Ñ‹Ñ‚ÑŒ boolean."},{"code":"CLIENT_SAFETY_BOOLEAN_REQUIRED","fieldPath":"clientSafetyConfirmation.userConfirmedMissingValueObjectCreation","severity":"error","messageRu":"clientSafetyConfirmation.userConfirmedMissingValueObjectCreation Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±Ñ‹Ñ‚ÑŒ boolean."},{"code":"CLIENT_SAFETY_BOOLEAN_REQUIRED","fieldPath":"clientSafetyConfirmation.userConfirmedFactWrite","severity":"error","messageRu":"clientSafetyConfirmation.userConfirmedFactWrite Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±Ñ‹Ñ‚ÑŒ boolean."},{"code":"CLIENT_SAFETY_BOOLEAN_REQUIRED","fieldPath":"clientSafetyConfirmation.userUnderstandsPreviewIsNotDiagnosis","severity":"error","messageRu":"clientSafetyConfirmation.userUnderstandsPreviewIsNotDiagnosis Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±Ñ‹Ñ‚ÑŒ boolean."}],"warnings":[]},"noWriteExecutionPlan":{"ok":false,"planMode":"no_write_execution_plan_v1","planStatus":"preview_only_not_executed","sourcePackageId":null,"idempotencyKey":null,"acceptedFactLocalIds":[],"rejectedFactLocalIds":[],"deferredFactLocalIds":[],"editedFactLocalIds":[],"valueObjectCreateCandidateKeys":[],"valueObjectUseExistingCandidateKeys":[],"valueObjectSkippedCandidateKeys":[],"valueObjectDeferredCandidateKeys":[],"plannedWrites":[],"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"noWriteGuarantee":{"dbReadExecuted":false,"dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"rowsActuallyWritten":0}},"guardedPersistenceContract":{"contractMode":"activity_facts_guarded_persistence_contract_v1","persistenceMode":"server_mediated_write_disabled","sourcePackageId":null,"idempotencyKey":null,"actorScope":{"authenticatedUserId":null,"ownerActorId":null,"personId":null,"organizationId":null,"timezone":"Europe/Warsaw"},"noWritePlan":{"ok":false,"planMode":"no_write_execution_plan_v1","planStatus":"preview_only_not_executed","sourcePackageId":null,"idempotencyKey":null,"acceptedFactLocalIds":[],"rejectedFactLocalIds":[],"deferredFactLocalIds":[],"editedFactLocalIds":[],"valueObjectCreateCandidateKeys":[],"valueObjectUseExistingCandidateKeys":[],"valueObjectSkippedCandidateKeys":[],"valueObjectDeferredCandidateKeys":[],"plannedWrites":[],"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"noWriteGuarantee":{"dbReadExecuted":false,"dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"rowsActuallyWritten":0}},"draftIdMap":{"activityEventId":"draft_activity_event_activity","measureIdsByLocalMeasureId":{},"factIdsByLocalFactId":{},"reviewItemIdsByLocalFactId":{},"recalculationQueueItemIds":[],"valueObjectIdsBySemanticObjectKey":{}},"draftRows":{"activityEvent":null,"measures":[],"objectFacts":[],"reviewItems":[],"recalculationQueueItems":[]},"plannedWrites":[],"plannedTargetTables":[],"safety":{"dbReadExecuted":false,"dbWriteExecuted":false,"sqlExecuted":false,"externalAiCallExecuted":false,"rowsActuallyWritten":0,"productionWriteEnabled":false},"blockers":["validation_not_ok","no_activity_event_draft_row","no_accepted_or_edited_fact_decisions"],"warnings":["contract_only_no_persistence","draft_rows_are_not_database_rows","real_write_requires_separate_runtime_gate"]},"sideEffects":{"dbReadExecuted":false,"dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"valueObjectCreated":false,"activityEventCreated":false,"activityEventMeasureCreated":false,"activityObjectFactCreated":false,"activityFactReviewItemCreated":false,"recalculationQueueItemCreated":false,"rowsActuallyWritten":0},"rules":["This route is a no-write execution-plan scaffold for the future server-mediated save gate.","This route validates request shape and builds a planned-write preview.","This route does not persist anything.","This route must not insert, update, upsert or delete rows.","This route must not call Supabase directly in this step.","This route must not execute SQL.","This route must not call external AI providers.","This route blocks explicit write-intent requests until a later gated implementation step.","The future write flow must remain server-mediated and must preserve user-owned fact privacy."],"errorCode":"ACTIVITY_FACTS_SAVE_GATE_INVALID_JSON","errorMessage":"Request body must be valid JSON."}
+
+Invalid structured validation full JSON:
+
+==============================
+10. TARGETED LINT
+==============================
+Targeted lint exit code: 0
+
+==============================
+11. GIT STATUS
+==============================
+ M src/app/api/activity/facts/save-gate/route.ts
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY3_VALIDATION_DIAGNOSTIC_RESULT_20260615_203856.txt
+?? docs/activity-to-value-objects/facts-guarded-save-step01-preflight.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-persistence-contract.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-retry1-persistence-contract-audit-fix.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-retry1-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-retry2-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry1-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry2-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-route-smoke.md
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP01_PREFLIGHT_RESULT_20260615_184221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_PERSISTENCE_CONTRACT_RESULT_20260615_193130.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_RETRY1_PERSISTENCE_CONTRACT_AUDIT_FIX_RESULT_20260615_193325.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY1_ROUTE_CONTRACT_WIRING_RESULT_20260615_201146.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY2_ROUTE_CONTRACT_WIRING_RESULT_20260615_201350.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_ROUTE_CONTRACT_WIRING_RESULT_20260615_193558.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDERR_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDOUT_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY1_ROUTE_SMOKE_RESULT_20260615_201946.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY2_ROUTE_SMOKE_RESULT_20260615_202221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_ROUTE_SMOKE_RESULT_20260615_201604.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+?? src/lib/activity/facts/saveGate/persistenceContract.ts
+
+==============================
+12. STEP 04 RETRY 3 CONCLUSION
+==============================
+STEP 04 RETRY 3 RESULT: DIAGNOSTIC COMPLETE
+No code patch was applied in this retry.
+No DB write was executed.
+No SQL was executed.
+No external AI call was executed.
+No commit/push was executed.
+Next expected step: Step 04 Retry 4 — exact validation/contractPreviewRequest fix based on this diagnostic.

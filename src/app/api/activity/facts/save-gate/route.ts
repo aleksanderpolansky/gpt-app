@@ -5,6 +5,7 @@ import {
   saveGateContractPreviewResponse,
 } from "@/data/activity-to-value-objects/save-gate-contract-preview";
 import { buildNoWriteExecutionPlan } from "@/lib/activity/facts/saveGate/executionPlan";
+import { buildActivityFactsGuardedPersistenceContract } from "@/lib/activity/facts/saveGate/persistenceContract";
 import {
   validateActivityFactsSaveGateRequest,
   type ActivityFactsSaveGateValidationResult,
@@ -47,14 +48,20 @@ function buildNoWriteResponse(params: {
   ok: boolean;
 }) {
   const executionPlan = buildNoWriteExecutionPlan(params.validation);
+  const guardedPersistenceContract = buildActivityFactsGuardedPersistenceContract({
+    validation: params.validation,
+    noWritePlan: executionPlan,
+  });
 
   return {
     ...params.response,
+    contractPreviewRequest: saveGateContractPreviewRequest,
     ok: params.ok,
     endpoint: ENDPOINT,
     routeLayer: ROUTE_LAYER,
     routePurpose: "activity_facts_save_gate_scaffold_no_write",
-    routeStatus: "plan_scaffold_only_no_persistence",
+    routeLayer: "activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1",
+    routeStatus: "guarded_persistence_contract_only_no_write",
     productionWriteEnabled: false,
     requestSummary: params.validation.summary,
     validation: {
@@ -65,6 +72,7 @@ function buildNoWriteResponse(params: {
     plannedWrites: executionPlan.plannedWrites,
     skipped: executionPlan.skipped,
     noWriteExecutionPlan: executionPlan,
+    guardedPersistenceContract,
     sideEffects: SIDE_EFFECTS,
     rules: [
       "This route is a no-write execution-plan scaffold for the future server-mediated save gate.",
@@ -172,3 +180,5 @@ export async function POST(request: Request) {
     { status: 200 }
   );
 }
+
+

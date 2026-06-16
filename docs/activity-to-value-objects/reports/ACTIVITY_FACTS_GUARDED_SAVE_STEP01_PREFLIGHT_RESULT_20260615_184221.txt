@@ -1,0 +1,197 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_FACTS_SAVE_GATE_GUARDED_PERSISTENCE
+STEP 01 / 12 — PREFLIGHT / SOURCE MAP / NO-WRITE BASELINE LOCK
+Generated: 2026-06-15 18:42:23
+Mode: PREFLIGHT ONLY
+DB writes: NO
+SQL execution: NO
+External AI calls: NO
+Commit/push: NO
+Source plan: GPT_APP_General_Plan_Activity_to_ValueObjects_Facts_RU_20260615
+
+==============================
+1. CLEANUP / MOVE PREVIOUS ROOT REPORTS
+==============================
+Moved previous root report: ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt -> docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+Moved previous root report: ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt -> docs\activity-to-value-objects\reports\ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+
+==============================
+2. GIT / REMOTE BASELINE CHECK
+==============================
+git branch --show-current:
+main
+
+git log -1 --oneline:
+74d8ef9 Add activity facts save-gate preview
+
+git rev-parse HEAD:
+74d8ef9a0a7237031b2edced6f3d0d40833d5fd9
+
+git status --short:
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP01_PREFLIGHT_RESULT_20260615_184221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+
+git fetch origin main:
+git fetch exit code: 0
+git : From https://github.com/aleksanderpolansky/gpt-app
+At line:2 char:5
++     git fetch origin main > $fetchOutput 2>&1
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (From https://gi...olansky/gpt-app:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ * branch            main       -> FETCH_HEAD
+
+origin/main:
+74d8ef9a0a7237031b2edced6f3d0d40833d5fd9
+
+local HEAD == origin/main?
+[PASS] Local HEAD matches origin/main.
+
+==============================
+3. CURRENT SAVE-GATE FILES CHECK
+==============================
+[PASS] Exists: src\app\api\activity\facts\save-gate\route.ts
+[PASS] Exists: src\lib\activity\facts\saveGate\requestValidation.ts
+[PASS] Exists: src\lib\activity\facts\saveGate\executionPlan.ts
+[PASS] Exists: src\components\activity-to-value-objects\save-gate-plan-preview.tsx
+[PASS] Exists: src\app\activity-capture\save-gate-plan-preview\page.tsx
+Missing current save-gate files count: 0
+
+==============================
+4. ACTIVITY FACTS DB LAYER SOURCE MAP
+==============================
+Relevant migration files containing activity facts tables:
+[INFO] Migration source: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\012_activity_recording_backbone.sql
+[INFO] Migration source: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\014_activity_events_v2_template_link.sql
+[INFO] Migration source: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\019_activity_security_foundation.sql
+[INFO] Migration source: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\020_activity_raw_signals.sql
+[INFO] Migration source: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\021_activity_processing_logs.sql
+[INFO] Migration source: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\023_value_object_state_foundation_p4_7.sql
+[INFO] Migration source: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260524_p4_10_0_c8_i_d3_state_dimensions_initial_seed.sql
+[INFO] Migration source: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260609_service_log_activity_processing_service_log.sql
+[INFO] Migration source: C:\Users\Admin\Documents\projects\gpt-app\supabase\migrations\20260615135403_activity_facts_persistence_layer.sql
+
+----- SEARCH: activity_events table / references -----
+Path: supabase\migrations\*.sql
+Pattern: activity_events
+[WARN] Search path does not exist.
+
+----- SEARCH: activity_event_measures table -----
+Path: supabase\migrations\*.sql
+Pattern: activity_event_measures
+[WARN] Search path does not exist.
+
+----- SEARCH: activity_object_facts table -----
+Path: supabase\migrations\*.sql
+Pattern: activity_object_facts
+[WARN] Search path does not exist.
+
+----- SEARCH: activity_fact_review_items table -----
+Path: supabase\migrations\*.sql
+Pattern: activity_fact_review_items
+[WARN] Search path does not exist.
+
+----- SEARCH: activity_fact_recalculation_queue table -----
+Path: supabase\migrations\*.sql
+Pattern: activity_fact_recalculation_queue
+[WARN] Search path does not exist.
+
+----- SEARCH: RLS / GRANT in activity facts migrations -----
+Path: supabase\migrations\*.sql
+Pattern: row level security|policy|grant|revoke
+[WARN] Search path does not exist.
+
+==============================
+5. EXISTING SERVER / AUTH / SUPABASE PATTERN MAP
+==============================
+
+----- SEARCH: Supabase server/client imports in API routes -----
+Path: src\app\api\**\*.ts
+Pattern: supabase|createServer|createClient|cookies|auth\.getUser|getUser
+[WARN] Search path does not exist.
+
+----- SEARCH: Actor / person ownership patterns -----
+Path: src\**\*.ts
+Pattern: actor_id|owner_actor_id|created_by_actor_id|person_id|user_id|auth_user|profile
+[WARN] Search path does not exist.
+
+----- SEARCH: Existing activity API routes -----
+Path: src\app\api\activity\**\*.ts
+Pattern: export async function|activity_events|activity|supabase|user_id|actor_id
+[WARN] Search path does not exist.
+
+----- SEARCH: Existing value object API route patterns -----
+Path: src\app\api\value-objects\**\*.ts
+Pattern: export async function|supabase|actor_id|owner_actor_id|created_by_actor_id|parent_value_object_id|insert|update|select
+[WARN] Search path does not exist.
+
+==============================
+6. NO-WRITE SAVE-GATE CONTRACT STATIC SUMMARY
+==============================
+Route markers:
+[PASS] Route marker present: ACTIVITY_FACTS_SAVE_GATE_INVALID_JSON
+[PASS] Route marker present: ACTIVITY_FACTS_SAVE_GATE_VALIDATION_FAILED
+[PASS] Route marker present: ACTIVITY_FACTS_SAVE_GATE_WRITE_NOT_ENABLED
+[PASS] Route marker present: plan_scaffold_only_no_persistence
+[PASS] Route marker present: productionWriteEnabled: false
+[PASS] Route marker present: dbWriteExecuted: false
+[PASS] Route marker present: sqlExecuted: false
+[PASS] Route marker present: openAiCallExecuted: false
+[PASS] Route marker present: buildNoWriteExecutionPlan
+[PASS] Route marker present: noWriteExecutionPlan
+
+Validator markers:
+[PASS] Validator marker present: validateActivityFactsSaveGateRequest
+[PASS] Validator marker present: future_server_mediated_write
+[PASS] Validator marker present: contract_preview_only
+[PASS] Validator marker present: writeIntentDetected
+[PASS] Validator marker present: CLIENT_SAFETY_BOOLEAN_REQUIRED
+
+Execution plan markers:
+[PASS] Plan marker present: buildNoWriteExecutionPlan
+[PASS] Plan marker present: no_write_execution_plan_v1
+[PASS] Plan marker present: preview_only_not_executed
+[PASS] Plan marker present: activity_events
+[PASS] Plan marker present: activity_object_facts
+[PASS] Plan marker present: activity_fact_review_items
+[PASS] Plan marker present: activity_fact_recalculation_queue
+[PASS] Plan marker present: rowsActuallyWritten: 0
+
+==============================
+7. TARGETED LINT OF CURRENT SAVE-GATE FILES
+==============================
+Targeted lint exit code: 0
+
+==============================
+8. CREATE STEP01 PREFLIGHT DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\facts-guarded-save-step01-preflight.md
+
+==============================
+9. GIT STATUS AFTER PREFLIGHT DOC
+==============================
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP01_PREFLIGHT_RESULT_20260615_184221.txt
+?? docs/activity-to-value-objects/facts-guarded-save-step01-preflight.md
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+
+==============================
+10. STEP 01 CONCLUSION
+==============================
+Missing current save-gate files count: 0
+Targeted lint exit code: 0
+Fetch exit code: 0
+Local HEAD: 74d8ef9a0a7237031b2edced6f3d0d40833d5fd9
+Origin main: 74d8ef9a0a7237031b2edced6f3d0d40833d5fd9
+STEP 01 RESULT: PASS
+Preflight/source map completed.
+Remote-synced baseline confirmed.
+Current no-write save-gate files exist.
+Targeted lint passed.
+No DB write was executed.
+No SQL was executed.
+No external AI call was executed.
+No commit/push was executed.
+Next expected step: Step 02 / 12 — persistence service contract and row mapping.

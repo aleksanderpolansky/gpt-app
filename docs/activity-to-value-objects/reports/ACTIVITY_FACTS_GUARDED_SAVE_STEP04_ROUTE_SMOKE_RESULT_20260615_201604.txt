@@ -1,0 +1,150 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_FACTS_SAVE_GATE_GUARDED_PERSISTENCE
+STEP 04 / 12 — ROUTE SMOKE CHECKS FOR GUARDED PERSISTENCE CONTRACT
+Generated: 2026-06-15 20:16:07
+Mode: RUNTIME ROUTE SMOKE / NO-WRITE
+DB writes: NO
+SQL execution: NO
+External AI calls: NO
+Commit/push: NO
+
+==============================
+1. CLEANUP / MOVE STEP03 RETRY2 REPORTS
+==============================
+Moved Step03 Retry2 report: ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY2_ROUTE_CONTRACT_WIRING_RESULT_20260615_201350.txt -> docs\activity-to-value-objects\reports\ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY2_ROUTE_CONTRACT_WIRING_RESULT_20260615_201350.txt
+
+==============================
+2. DEV SERVER READINESS
+==============================
+Initial route ping status: 0
+Starting dev server with: npm run dev
+Dev server start command issued.
+Dev stdout log: ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDOUT_20260615_201604.log
+Dev stderr log: ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDERR_20260615_201604.log
+Readiness attempt 1/45: status 0
+Readiness attempt 2/45: status 0
+Readiness attempt 3/45: status 0
+Readiness attempt 4/45: status 0
+Readiness attempt 5/45: status 0
+Readiness attempt 6/45: status 0
+Readiness attempt 7/45: status 0
+Readiness attempt 8/45: status 0
+Readiness attempt 9/45: status 0
+Readiness attempt 10/45: status 0
+Readiness attempt 11/45: status 0
+Readiness attempt 12/45: status 0
+Readiness attempt 13/45: status 0
+Readiness attempt 14/45: status 0
+Readiness attempt 15/45: status 0
+Readiness attempt 16/45: status 0
+Readiness attempt 17/45: status 0
+Readiness attempt 18/45: status 0
+Readiness attempt 19/45: status 0
+Readiness attempt 20/45: status 0
+Readiness attempt 21/45: status 0
+Readiness attempt 22/45: status 0
+Readiness attempt 23/45: status 0
+Readiness attempt 24/45: status 0
+Readiness attempt 25/45: status 0
+Readiness attempt 26/45: status 0
+Readiness attempt 27/45: status 0
+Readiness attempt 28/45: status 0
+Readiness attempt 29/45: status 0
+Readiness attempt 30/45: status 0
+Readiness attempt 31/45: status 0
+Readiness attempt 32/45: status 0
+Readiness attempt 33/45: status 0
+Readiness attempt 34/45: status 0
+Readiness attempt 35/45: status 0
+Readiness attempt 36/45: status 0
+Readiness attempt 37/45: status 0
+Readiness attempt 38/45: status 0
+Readiness attempt 39/45: status 0
+Readiness attempt 40/45: status 0
+Readiness attempt 41/45: status 0
+Readiness attempt 42/45: status 0
+Readiness attempt 43/45: status 0
+Readiness attempt 44/45: status 0
+Server ready: False
+Server started by script: True
+
+==============================
+3. GET ROUTE SMOKE
+==============================
+GET status: 0
+[FAIL] GET did not return 200.
+GET error: Cannot send a content-body with this verb-type.
+GET body: 
+[FAIL] GET body did not parse as JSON.
+
+==============================
+4. VALID POST SMOKE
+==============================
+Candidate valid POST bodies count: 1
+
+Valid POST attempt 1
+Status: 400
+[INFO] Attempt did not return 200. Body preview: {"ok":false,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[],"safety":{"serverMediatedOnly":true,"directBrowserSupabaseWriteAllowed":false,"duplicateChronologicalTimeAllowed":false,"medicalDiagnosisAllowed":false,"notes":["This response is a contract preview only.","No route was created in Step 07.","No database write was executed
+[FAIL] No valid POST candidate returned 200.
+
+==============================
+5. WRITE-INTENT BLOCK SMOKE
+==============================
+[FAIL] Cannot test write-intent because no valid POST body was found.
+
+==============================
+6. INVALID REQUEST SMOKES
+==============================
+Invalid JSON POST status: 400
+Invalid JSON body preview: {"ok":false,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[],"safety":{"serverMediatedOnly":true,"directBrowserSupabaseWriteAllowed":false,"duplicateChronologicalTimeAllowed":false,"medicalDiagnosisAllowed":false,"notes":["This response is a contract preview only.","No route was created in Step 07.","No database write was executed
+[PASS] Invalid JSON returned 400 with expected error code.
+Invalid structured POST status: 400
+Invalid structured body preview: {"ok":false,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[],"safety":{"serverMediatedOnly":true,"directBrowserSupabaseWriteAllowed":false,"duplicateChronologicalTimeAllowed":false,"medicalDiagnosisAllowed":false,"notes":["This response is a contract preview only.","No route was created in Step 07.","No database write was executed
+[FAIL] Invalid structured body did not return expected 400/validation error.
+
+==============================
+7. CREATE STEP04 DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\facts-guarded-save-step04-route-smoke.md
+
+==============================
+8. TARGETED LINT AFTER SMOKE
+==============================
+Targeted lint exit code: 0
+
+==============================
+9. GIT STATUS
+==============================
+ M src/app/api/activity/facts/save-gate/route.ts
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDERR_20260615_201604.log
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDOUT_20260615_201604.log
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP04_ROUTE_SMOKE_RESULT_20260615_201604.txt
+?? docs/activity-to-value-objects/facts-guarded-save-step01-preflight.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-persistence-contract.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-retry1-persistence-contract-audit-fix.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-retry1-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-retry2-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-route-smoke.md
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP01_PREFLIGHT_RESULT_20260615_184221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_PERSISTENCE_CONTRACT_RESULT_20260615_193130.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_RETRY1_PERSISTENCE_CONTRACT_AUDIT_FIX_RESULT_20260615_193325.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY1_ROUTE_CONTRACT_WIRING_RESULT_20260615_201146.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY2_ROUTE_CONTRACT_WIRING_RESULT_20260615_201350.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_ROUTE_CONTRACT_WIRING_RESULT_20260615_193558.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+?? src/lib/activity/facts/saveGate/persistenceContract.ts
+
+==============================
+10. STEP 04 CONCLUSION
+==============================
+Server ready: False
+GET issues count: 2
+Valid POST issues count: 1
+Write-intent issues count: 1
+Invalid request issues count: 1
+Targeted lint exit code: 0
+Total blocking issues count: 6
+STEP 04 RESULT: NEEDS REVIEW
+Review route smoke output before continuing.

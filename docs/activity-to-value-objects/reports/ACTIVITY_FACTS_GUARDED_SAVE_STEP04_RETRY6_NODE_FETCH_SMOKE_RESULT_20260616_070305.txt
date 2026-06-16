@@ -1,0 +1,528 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_FACTS_SAVE_GATE_GUARDED_PERSISTENCE
+STEP 04 RETRY 6 / 12 — NODE FETCH ROUTE SMOKE
+Generated: 2026-06-16 07:03:08
+Mode: RUNTIME ROUTE SMOKE / NODE FETCH / NO-WRITE
+DB writes: NO
+SQL execution: NO
+External AI calls: NO
+Commit/push: NO
+
+==============================
+1. CLEANUP / MOVE STEP04 RETRY5 REPORTS
+==============================
+Moved Step04 Retry5 report: ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY5_MINIMAL_BODY_SMOKE_RESULT_20260616_070026.txt -> docs\activity-to-value-objects\reports\ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY5_MINIMAL_BODY_SMOKE_RESULT_20260616_070026.txt
+
+==============================
+2. STATIC SAFETY CHECKS
+==============================
+[PASS] Exists: src\app\api\activity\facts\save-gate\route.ts
+[PASS] Exists: src\lib\activity\facts\saveGate\persistenceContract.ts
+[PASS] Exists: src\lib\activity\facts\saveGate\executionPlan.ts
+[PASS] Exists: src\lib\activity\facts\saveGate\requestValidation.ts
+[PASS] Route marker found: contractPreviewRequest: saveGateContractPreviewRequest
+[PASS] Route marker found: guardedPersistenceContract
+[PASS] Route marker found: buildActivityFactsGuardedPersistenceContract
+[PASS] Route marker found: activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1
+[PASS] Route marker found: guarded_persistence_contract_only_no_write
+[PASS] Route marker found: productionWriteEnabled: false
+[PASS] Route marker found: dbWriteExecuted: false
+[PASS] Route marker found: sqlExecuted: false
+[PASS] Route marker found: openAiCallExecuted: false
+[PASS] Route marker found: ACTIVITY_FACTS_SAVE_GATE_WRITE_NOT_ENABLED
+[PASS] Route marker found: ACTIVITY_FACTS_SAVE_GATE_VALIDATION_FAILED
+[PASS] Route marker found: ACTIVITY_FACTS_SAVE_GATE_INVALID_JSON
+
+----- PRECISE FORBIDDEN CHECK: No Supabase import in guarded-save route/contract files -----
+Regex: import\s+\{?\s*supabase\b|from\s+["'][^"']*lib/supabase["']|from\s+["']@/lib/supabase["']
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No Supabase from/select calls in guarded-save route/contract files -----
+Regex: \.from\s*\(|\.select\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable DB write methods in guarded-save route/contract files -----
+Regex: \.(insert|upsert|update|delete)\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No external AI import/constructor/client call in guarded-save route/contract files -----
+Regex: from\s+["']openai["']|new\s+OpenAI\s*\(|\bopenai\s*\.
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable SQL calls in guarded-save route/contract files; ignore sqlExecuted safety flags -----
+Regex: (\bsupabase\s*\.\s*rpc\s*\(|\bdb\s*\.\s*execute\s*\(|\bclient\s*\.\s*query\s*\(|\bpool\s*\.\s*query\s*\(|\bexecuteSql\s*\(|\brawSql\s*\(|\bsql\s*`)
+[PASS] No precise forbidden hits.
+
+==============================
+3. CREATE NODE FETCH SMOKE SCRIPT
+==============================
+Created Node smoke script: ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY6_NODE_FETCH_SMOKE_20260616_070305.cjs
+
+==============================
+4. RUN NODE FETCH SMOKE
+==============================
+Node exit code: 0
+NODE FETCH SMOKE START
+Node version: v24.15.0
+
+==============================
+A. PORT AUTO-DETECT
+==============================
+Port 3000 GET status: 200
+Port 3000 body preview: {"ok":true,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":["fact-football-30m","fact-play-with-child-30m","fact-outdoor-time-30m"],"semanticObjectKeys":["football","play_with_child","outdoor_t
+[PASS] Selected port 3000
+[PASS] A usable route port was detected.
+
+==============================
+B. GET ROUTE SMOKE
+==============================
+Selected base URL: http://localhost:3000
+GET status: 200
+[PASS] GET returns 200.
+[PASS] GET response parses as JSON.
+
+----- GET: no-write markers -----
+[PASS] GET contains "productionWriteEnabled":false
+[PASS] GET contains "dbWriteExecuted":false
+[PASS] GET contains "sqlExecuted":false
+[PASS] GET contains "openAiCallExecuted":false
+[PASS] GET contains "rowsActuallyWritten":0
+[PASS] GET contains "guardedPersistenceContract"
+[PASS] GET contains "activity_facts_guarded_persistence_contract_v1"
+[PASS] GET contains "server_mediated_write_disabled"
+[PASS] GET contains "not_executed_contract_preview"
+[PASS] GET contains "real_write_requires_separate_runtime_gate"
+
+----- GET: important JSON fields -----
+{
+  "ok": true,
+  "routeMode": "contract_preview_only",
+  "writeStatus": "not_executed_contract_preview",
+  "requestSummary": {
+    "sourcePackageId": "fixture-football-with-child-30m-v1",
+    "idempotencyKey": "fixture-save-gate-football-with-child-30m-v1",
+    "routeMode": "contract_preview_only",
+    "factDecisionCount": 5,
+    "editedFactDecisionCount": 0,
+    "valueObjectCandidateDecisionCount": 3,
+    "writeIntentDetected": false,
+    "writeIntentReasons": [],
+    "validationErrorCount": 0,
+    "validationWarningCount": 0
+  },
+  "validationErrors": [],
+  "validationWarnings": [],
+  "guardedPersistenceContractBlockers": [
+    "no_accepted_or_edited_fact_decisions"
+  ],
+  "guardedPersistenceContractWarnings": [
+    "contract_only_no_persistence",
+    "draft_rows_are_not_database_rows",
+    "real_write_requires_separate_runtime_gate"
+  ]
+}
+
+==============================
+C. VALID POST SMOKE
+==============================
+Valid POST body:
+{
+  "routeMode": "contract_preview_only",
+  "sourcePackageId": "step04-retry6-minimal-valid-package",
+  "idempotencyKey": "step04-retry6-minimal-valid-idempotency",
+  "factDecisions": [
+    {
+      "factLocalId": "family_time",
+      "decision": "accept"
+    },
+    {
+      "factLocalId": "physical_activity",
+      "decision": "accept"
+    }
+  ],
+  "editedFactDecisions": [],
+  "valueObjectCandidateDecisions": [
+    {
+      "semanticObjectKey": "family_time",
+      "proposedTitleRu": "Family time",
+      "selectedExistingValueObjectId": "vo_family_time_preview",
+      "decision": "use_existing"
+    },
+    {
+      "semanticObjectKey": "physical_activity",
+      "proposedTitleRu": "Physical activity",
+      "selectedExistingValueObjectId": "vo_physical_activity_preview",
+      "decision": "use_existing"
+    }
+  ],
+  "clientSafetyConfirmation": {
+    "userReviewedPreview": true,
+    "userConfirmedMissingValueObjectCreation": false,
+    "userConfirmedFactWrite": false,
+    "userUnderstandsPreviewIsNotDiagnosis": true
+  }
+}
+Valid POST status: 200
+Valid POST raw response length: 23297
+Valid POST body preview: {"ok":true,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[{"targetTable":"activity_events","operation":"insert","localSourceId":"step04-retry6-minimal-valid-package","plannedDbId":null,"descriptionRu":"ðæÐâð┤ÐâÐëð©ð╣ save gate Ðüð¥ðÀð┤ð░ÐüÐé activity_event ð║ð░ð║ ÐàÐÇð¥ð¢ð¥ð╗ð¥ð│ð©ÐçðÁÐüð║ð©ð╣ ð©ÐüÐéð¥Ðçð¢ð©ð║ Ðäð░ð║Ðéð¥ð▓.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_object_facts","operation":"insert","localSourceId":"family_time","plannedDbId":null,"descriptionRu":"ðæÐâð┤ÐâÐëð©ð╣ save gate Ðüð¥ðÀð┤ð░ÐüÐé user-owned activity_object_fact ð┤ð╗ÐÅ family_time.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_review_items","operation":"insert","localSourceId":"review-family_time","plannedDbId":null,"descriptionRu":"ðæÐâð┤ÐâÐëð©ð╣ save gate Ðüð¥ðÀð┤ð░ÐüÐé review/audit item ð┤ð╗ÐÅ family_time.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_object_facts","operation":"insert","localSourceId":"physical_activity","plannedDbId":null,"descriptionRu":"ðæÐâð┤ÐâÐëð©ð╣ save gate Ðüð¥ðÀð┤ð░ÐüÐé user-owned activity_object_fact ð┤ð╗ÐÅ physical_activity.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_review_items","operation":"insert","localSourceId":"review-physical_activity","plannedDbId":null,"descriptionRu":"ðæÐâð┤ÐâÐëð©ð╣ save gate Ðüð¥ðÀð┤ð░ÐüÐé review/audit item ð┤ð╗ÐÅ physical_activity.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_recalculation_queue","operation":"insert","localSourceId":"step04-retry6-minimal-valid-idempotency","plannedDbId":null,"descriptionRu":"ðæÐâð┤ÐâÐëð©ð╣ save gate ð┐ð¥ÐüÐéð░ð▓ð©Ðé ðÀð░ÐéÐÇð¥ð¢ÐâÐéÐïðÁ user-owned facts ð▓ ð¥ÐçðÁÐÇðÁð┤Ðî ð┐ðÁÐÇðÁÐüÐçÐæÐéð░ ð░ð¢ð░ð╗ð©Ðéð©ð║ð©.","writeStatus":"not_executed_contrac
+
+----- VALID POST: important JSON fields -----
+{
+  "ok": true,
+  "routeMode": "contract_preview_only",
+  "writeStatus": "not_executed_contract_preview",
+  "requestSummary": {
+    "sourcePackageId": "step04-retry6-minimal-valid-package",
+    "idempotencyKey": "step04-retry6-minimal-valid-idempotency",
+    "routeMode": "contract_preview_only",
+    "factDecisionCount": 2,
+    "editedFactDecisionCount": 0,
+    "valueObjectCandidateDecisionCount": 2,
+    "writeIntentDetected": false,
+    "writeIntentReasons": [],
+    "validationErrorCount": 0,
+    "validationWarningCount": 0
+  },
+  "validationErrors": [],
+  "validationWarnings": [],
+  "guardedPersistenceContractBlockers": [
+    "no_accepted_or_edited_fact_decisions"
+  ],
+  "guardedPersistenceContractWarnings": [
+    "contract_only_no_persistence",
+    "draft_rows_are_not_database_rows",
+    "real_write_requires_separate_runtime_gate"
+  ]
+}
+[PASS] Valid POST returns 200.
+[PASS] Valid POST response parses as JSON.
+[PASS] Valid POST exposes guardedPersistenceContract.
+
+----- VALID POST: no-write markers -----
+[PASS] VALID POST contains "productionWriteEnabled":false
+[PASS] VALID POST contains "dbWriteExecuted":false
+[PASS] VALID POST contains "sqlExecuted":false
+[PASS] VALID POST contains "openAiCallExecuted":false
+[PASS] VALID POST contains "rowsActuallyWritten":0
+[PASS] VALID POST contains "guardedPersistenceContract"
+[PASS] VALID POST contains "activity_facts_guarded_persistence_contract_v1"
+[PASS] VALID POST contains "server_mediated_write_disabled"
+[PASS] VALID POST contains "not_executed_contract_preview"
+[PASS] VALID POST contains "real_write_requires_separate_runtime_gate"
+
+==============================
+D. WRITE-INTENT BLOCK SMOKE
+==============================
+Write-intent variants count: 3
+
+Write-intent attempt 1
+Status: 409
+Body preview: {"ok":false,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[{"targetTable":"activity_events","operation":"insert","localSourceId":"step04-retry6-minimal-valid-package","plannedDbId":null,"descriptionRu":"ðæÐâð┤ÐâÐëð©ð╣ save gate Ðüð¥ðÀð┤ð░ÐüÐé activity_event ð║ð░ð║ ÐàÐÇð¥ð¢ð¥ð╗ð¥ð│ð©ÐçðÁÐüð║ð©ð╣ ð©ÐüÐéð¥Ðçð¢ð©ð║ Ðäð░ð║Ðéð¥ð▓.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_object_facts","operation":"insert","localSourceId":"family_time","plannedDbId":null,"descriptionRu":"ðæÐâð┤ÐâÐëð©ð╣ save gate Ðüð¥ðÀð┤ð░ÐüÐé user-owned activity_object_fact ð┤ð╗ÐÅ family_time.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_review_items","operation":"insert","localSourceId":"review-family_time","plannedDbId":null,"descriptionRu":"ðæÐâð┤ÐâÐëð©ð╣ save gate Ðüð¥ðÀð┤ð░ÐüÐé review/audit item ð┤ð╗ÐÅ family_time.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_object_facts","operation":"insert","localSourceId":"physical_activity","plannedDbId":null,"descriptionRu":"ðæÐâð┤ÐâÐëð©ð╣ save gate Ðüð¥ðÀð┤ð░ÐüÐé user-owned activity_object_fact ð┤ð╗ÐÅ physical_activity.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_review_items","operation":"insert","localSourceId":"review-physical_activity","plannedDbId":null,"descriptionRu":"ðæÐâð┤ÐâÐëð©ð╣ save gate Ðüð¥ðÀð┤ð░ÐüÐé review/audit item ð┤ð╗ÐÅ physical_activity.","writeStatus":"not_executed_contract_preview"},{"targetTable":"activity_fact_recalculation_queue","operation":"insert","localSourceId":"step04-retry6-minimal-valid-idempotency","plannedDbId":null,"descriptionRu":"ðæÐâð┤ÐâÐëð©ð╣ save gate ð┐ð¥ÐüÐéð░ð▓ð©Ðé ðÀð░ÐéÐÇð¥ð¢ÐâÐéÐïðÁ user-owned facts ð▓ ð¥ÐçðÁÐÇðÁð┤Ðî ð┐ðÁÐÇðÁÐüÐçÐæÐéð░ ð░ð¢ð░ð╗ð©Ðéð©ð║ð©.","writeStatus":"not_executed_contra
+
+----- WRITE INTENT 1: important JSON fields -----
+{
+  "ok": false,
+  "errorCode": "ACTIVITY_FACTS_SAVE_GATE_WRITE_NOT_ENABLED",
+  "errorMessage": "The save-gate route exists only as a no-write execution-plan scaffold in this step. Write intent was detected and blocked.",
+  "routeMode": "contract_preview_only",
+  "writeStatus": "not_executed_contract_preview",
+  "requestSummary": {
+    "sourcePackageId": "step04-retry6-minimal-valid-package",
+    "idempotencyKey": "step04-retry6-minimal-valid-idempotency",
+    "routeMode": "future_server_mediated_write",
+    "factDecisionCount": 2,
+    "editedFactDecisionCount": 0,
+    "valueObjectCandidateDecisionCount": 2,
+    "writeIntentDetected": true,
+    "writeIntentReasons": [
+      "routeMode=future_server_mediated_write"
+    ],
+    "validationErrorCount": 0,
+    "validationWarningCount": 0
+  },
+  "validationErrors": [],
+  "validationWarnings": [],
+  "guardedPersistenceContractBlockers": [
+    "no_accepted_or_edited_fact_decisions"
+  ],
+  "guardedPersistenceContractWarnings": [
+    "contract_only_no_persistence",
+    "draft_rows_are_not_database_rows",
+    "real_write_requires_separate_runtime_gate"
+  ]
+}
+[PASS] Write-intent blocked with 409 and expected code.
+[PASS] At least one write-intent variant is blocked with 409.
+
+==============================
+E. INVALID REQUEST SMOKES
+==============================
+Invalid JSON status: 400
+Invalid JSON body preview: {"ok":false,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[],"safety":{"serverMediatedOnly":true,"directBrowserSupabaseWriteAllowed":false,"duplicateChronologicalTimeAllowed":false,"medicalDiagnosisAllowed":false,"notes":["This response is a contract preview only.","No route was created in Step 07.","No database write was executed in Step 07.","The future stable endpoint should be /api/activity/facts/save-gate.","One activity can create several object facts, but total chronological time remains 30 minutes.","Facts linked to shared/system Value Objects remain private user-owned rows."]},"contractPreviewRequest":{"routeMode":"contract_preview_only","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","sourcePackageId":"fixture-football-with-child-30m-v1","activityProcessingPackage":{"packageId":"fixture-football-with-child-30m-v1","status":"preview_only","rawInput":{"text":"ðÿð│ÐÇð░ð╗ Ðü ÐÇðÁð▒Ðæð¢ð║ð¥ð╝ ð▓ ÐäÐâÐéð▒ð¥ð╗ 30 ð╝ð©ð¢ÐâÐé.","locale":"ru","source":"manual_test_fixture","capturedAtIso":"2026-06-15T16:00:00+02:00"},"recognition":{"status":"obvious_activity","confidence":0.96,"reason":"ðñÐÇð░ðÀð░ Ðüð¥ð┤ðÁÐÇðÂð©Ðé ð┤ðÁð╣ÐüÐéð▓ð©ðÁ ð▓ ð┐ÐÇð¥ÐêðÁð┤ÐêðÁð╝ ð▓ÐÇðÁð╝ðÁð¢ð©, ÐâÐçð░ÐüÐéð¢ð©ð║ð░, ð¥ð▒ÐèðÁð║Ðé ð░ð║Ðéð©ð▓ð¢ð¥ÐüÐéð© ð© ÐÅð▓ð¢ÐâÐÄ ð┤ð╗ð©ÐéðÁð╗Ðîð¢ð¥ÐüÐéÐî.","detectedActivityTitle":"ðÿð│ÐÇð░ Ðü ÐÇðÁð▒Ðæð¢ð║ð¥ð╝ ð▓ ÐäÐâÐéð▒ð¥ð╗","shouldAskUserBeforeSaving":false},"measures":[{"localId":"measure-duration-30m","measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"confidence":0.99,"evidenceText":"30 ð╝ð©ð¢ÐâÐé","normalizedLabel":"30 minutes"}],"semanticCategories":[{"localId":"cat-play","semanticObjectKey":"play","labelRu":"ðÿð│ÐÇð░","layer":"activity_type","confidence":0.9,"evidenceText":"ðÿð│ÐÇð░ð╗","rea
+
+----- INVALID JSON: important JSON fields -----
+{
+  "ok": false,
+  "errorCode": "ACTIVITY_FACTS_SAVE_GATE_INVALID_JSON",
+  "errorMessage": "Request body must be valid JSON.",
+  "routeMode": "contract_preview_only",
+  "writeStatus": "not_executed_contract_preview",
+  "requestSummary": {
+    "sourcePackageId": null,
+    "idempotencyKey": null,
+    "routeMode": null,
+    "factDecisionCount": 0,
+    "editedFactDecisionCount": 0,
+    "valueObjectCandidateDecisionCount": 0,
+    "writeIntentDetected": false,
+    "writeIntentReasons": [],
+    "validationErrorCount": 10,
+    "validationWarningCount": 0
+  },
+  "validationErrors": [
+    {
+      "code": "ROUTE_MODE_REQUIRED",
+      "fieldPath": "routeMode",
+      "severity": "error",
+      "messageRu": "routeMode ð¥ð▒ÐÅðÀð░ÐéðÁð╗ðÁð¢."
+    },
+    {
+      "code": "REQUIRED_STRING_MISSING",
+      "fieldPath": "sourcePackageId",
+      "severity": "error",
+      "messageRu": "sourcePackageId: ð¥ð▒ÐÅðÀð░ÐéðÁð╗Ðîð¢ð░ÐÅ ÐüÐéÐÇð¥ð║ð░ ð¥ÐéÐüÐâÐéÐüÐéð▓ÐâðÁÐé."
+    },
+    {
+      "code": "REQUIRED_STRING_MISSING",
+      "fieldPath": "idempotencyKey",
+      "severity": "error",
+      "messageRu": "idempotencyKey: ð¥ð▒ÐÅðÀð░ÐéðÁð╗Ðîð¢ð░ÐÅ ÐüÐéÐÇð¥ð║ð░ ð¥ÐéÐüÐâÐéÐüÐéð▓ÐâðÁÐé."
+    },
+    {
+      "code": "FACT_DECISIONS_ARRAY_REQUIRED",
+      "fieldPath": "factDecisions",
+      "severity": "error",
+      "messageRu": "factDecisions ð┤ð¥ð╗ðÂðÁð¢ ð▒ÐïÐéÐî ð╝ð░ÐüÐüð©ð▓ð¥ð╝."
+    },
+    {
+      "code": "EDITED_FACT_DECISIONS_ARRAY_REQUIRED",
+      "fieldPath": "editedFactDecisions",
+      "severity": "error",
+      "messageRu": "editedFactDecisions ð┤ð¥ð╗ðÂðÁð¢ ð▒ÐïÐéÐî ð╝ð░ÐüÐüð©ð▓ð¥ð╝."
+    },
+    {
+      "code": "VALUE_OBJECT_CANDIDATE_DECISIONS_ARRAY_REQUIRED",
+      "fieldPath": "valueObjectCandidateDecisions",
+      "severity": "error",
+      "messageRu": "valueObjectCandidateDecisions ð┤ð¥ð╗ðÂðÁð¢ ð▒ÐïÐéÐî ð╝ð░ÐüÐüð©ð▓ð¥ð╝."
+    },
+    {
+      "code": "CLIENT_SAFETY_BOOLEAN_REQUIRED",
+      "fieldPath": "clientSafetyConfirmation.userReviewedPreview",
+      "severity": "error",
+      "messageRu": "clientSafetyConfirmation.userReviewedPreview ð┤ð¥ð╗ðÂðÁð¢ ð▒ÐïÐéÐî boolean."
+    },
+    {
+      "code": "CLIENT_SAFETY_BOOLEAN_REQUIRED",
+      "fieldPath": "clientSafetyConfirmation.userConfirmedMissingValueObjectCreation",
+      "severity": "error",
+      "messageRu": "clientSafetyConfirmation.userConfirmedMissingValueObjectCreation ð┤ð¥ð╗ðÂðÁð¢ ð▒ÐïÐéÐî boolean."
+    },
+    {
+      "code": "CLIENT_SAFETY_BOOLEAN_REQUIRED",
+      "fieldPath": "clientSafetyConfirmation.userConfirmedFactWrite",
+      "severity": "error",
+      "messageRu": "clientSafetyConfirmation.userConfirmedFactWrite ð┤ð¥ð╗ðÂðÁð¢ ð▒ÐïÐéÐî boolean."
+    },
+    {
+      "code": "CLIENT_SAFETY_BOOLEAN_REQUIRED",
+      "fieldPath": "clientSafetyConfirmation.userUnderstandsPreviewIsNotDiagnosis",
+      "severity": "error",
+      "messageRu": "clientSafetyConfirmation.userUnderstandsPreviewIsNotDiagnosis ð┤ð¥ð╗ðÂðÁð¢ ð▒ÐïÐéÐî boolean."
+    }
+  ],
+  "validationWarnings": [],
+  "guardedPersistenceContractBlockers": [
+    "validation_not_ok",
+    "no_activity_event_draft_row",
+    "no_accepted_or_edited_fact_decisions"
+  ],
+  "guardedPersistenceContractWarnings": [
+    "contract_only_no_persistence",
+    "draft_rows_are_not_database_rows",
+    "real_write_requires_separate_runtime_gate"
+  ]
+}
+[PASS] Invalid JSON returns 400.
+[PASS] Invalid JSON contains ACTIVITY_FACTS_SAVE_GATE_INVALID_JSON.
+Invalid structured status: 400
+Invalid structured body preview: {"ok":false,"routeMode":"contract_preview_only","writeStatus":"not_executed_contract_preview","endpoint":"/api/activity/facts/save-gate","dbWriteExecuted":false,"sqlExecuted":false,"openAiCallExecuted":false,"createdIds":{"activityEventId":null,"measureIds":[],"valueObjectIds":[],"factIds":[],"reviewItemIds":[],"recalculationQueueIds":[]},"skipped":{"factLocalIds":[],"semanticObjectKeys":[],"reasonsRu":[]},"plannedWrites":[],"safety":{"serverMediatedOnly":true,"directBrowserSupabaseWriteAllowed":false,"duplicateChronologicalTimeAllowed":false,"medicalDiagnosisAllowed":false,"notes":["This response is a contract preview only.","No route was created in Step 07.","No database write was executed in Step 07.","The future stable endpoint should be /api/activity/facts/save-gate.","One activity can create several object facts, but total chronological time remains 30 minutes.","Facts linked to shared/system Value Objects remain private user-owned rows."]},"contractPreviewRequest":{"routeMode":"contract_preview_only","idempotencyKey":"fixture-save-gate-football-with-child-30m-v1","sourcePackageId":"fixture-football-with-child-30m-v1","activityProcessingPackage":{"packageId":"fixture-football-with-child-30m-v1","status":"preview_only","rawInput":{"text":"ðÿð│ÐÇð░ð╗ Ðü ÐÇðÁð▒Ðæð¢ð║ð¥ð╝ ð▓ ÐäÐâÐéð▒ð¥ð╗ 30 ð╝ð©ð¢ÐâÐé.","locale":"ru","source":"manual_test_fixture","capturedAtIso":"2026-06-15T16:00:00+02:00"},"recognition":{"status":"obvious_activity","confidence":0.96,"reason":"ðñÐÇð░ðÀð░ Ðüð¥ð┤ðÁÐÇðÂð©Ðé ð┤ðÁð╣ÐüÐéð▓ð©ðÁ ð▓ ð┐ÐÇð¥ÐêðÁð┤ÐêðÁð╝ ð▓ÐÇðÁð╝ðÁð¢ð©, ÐâÐçð░ÐüÐéð¢ð©ð║ð░, ð¥ð▒ÐèðÁð║Ðé ð░ð║Ðéð©ð▓ð¢ð¥ÐüÐéð© ð© ÐÅð▓ð¢ÐâÐÄ ð┤ð╗ð©ÐéðÁð╗Ðîð¢ð¥ÐüÐéÐî.","detectedActivityTitle":"ðÿð│ÐÇð░ Ðü ÐÇðÁð▒Ðæð¢ð║ð¥ð╝ ð▓ ÐäÐâÐéð▒ð¥ð╗","shouldAskUserBeforeSaving":false},"measures":[{"localId":"measure-duration-30m","measureType":"duration","unit":"minute","numericValue":30,"textValue":null,"confidence":0.99,"evidenceText":"30 ð╝ð©ð¢ÐâÐé","normalizedLabel":"30 minutes"}],"semanticCategories":[{"localId":"cat-play","semanticObjectKey":"play","labelRu":"ðÿð│ÐÇð░","layer":"activity_type","confidence":0.9,"evidenceText":"ðÿð│ÐÇð░ð╗","rea
+
+----- INVALID STRUCTURED: important JSON fields -----
+{
+  "ok": false,
+  "errorCode": "ACTIVITY_FACTS_SAVE_GATE_VALIDATION_FAILED",
+  "errorMessage": "Request body did not pass save-gate validation.",
+  "routeMode": "contract_preview_only",
+  "writeStatus": "not_executed_contract_preview",
+  "requestSummary": {
+    "sourcePackageId": null,
+    "idempotencyKey": null,
+    "routeMode": null,
+    "factDecisionCount": 0,
+    "editedFactDecisionCount": 0,
+    "valueObjectCandidateDecisionCount": 0,
+    "writeIntentDetected": false,
+    "writeIntentReasons": [],
+    "validationErrorCount": 10,
+    "validationWarningCount": 0
+  },
+  "validationErrors": [
+    {
+      "code": "ROUTE_MODE_REQUIRED",
+      "fieldPath": "routeMode",
+      "severity": "error",
+      "messageRu": "routeMode ð¥ð▒ÐÅðÀð░ÐéðÁð╗ðÁð¢."
+    },
+    {
+      "code": "REQUIRED_STRING_MISSING",
+      "fieldPath": "sourcePackageId",
+      "severity": "error",
+      "messageRu": "sourcePackageId: ð¥ð▒ÐÅðÀð░ÐéðÁð╗Ðîð¢ð░ÐÅ ÐüÐéÐÇð¥ð║ð░ ð¥ÐéÐüÐâÐéÐüÐéð▓ÐâðÁÐé."
+    },
+    {
+      "code": "REQUIRED_STRING_MISSING",
+      "fieldPath": "idempotencyKey",
+      "severity": "error",
+      "messageRu": "idempotencyKey: ð¥ð▒ÐÅðÀð░ÐéðÁð╗Ðîð¢ð░ÐÅ ÐüÐéÐÇð¥ð║ð░ ð¥ÐéÐüÐâÐéÐüÐéð▓ÐâðÁÐé."
+    },
+    {
+      "code": "FACT_DECISIONS_ARRAY_REQUIRED",
+      "fieldPath": "factDecisions",
+      "severity": "error",
+      "messageRu": "factDecisions ð┤ð¥ð╗ðÂðÁð¢ ð▒ÐïÐéÐî ð╝ð░ÐüÐüð©ð▓ð¥ð╝."
+    },
+    {
+      "code": "EDITED_FACT_DECISIONS_ARRAY_REQUIRED",
+      "fieldPath": "editedFactDecisions",
+      "severity": "error",
+      "messageRu": "editedFactDecisions ð┤ð¥ð╗ðÂðÁð¢ ð▒ÐïÐéÐî ð╝ð░ÐüÐüð©ð▓ð¥ð╝."
+    },
+    {
+      "code": "VALUE_OBJECT_CANDIDATE_DECISIONS_ARRAY_REQUIRED",
+      "fieldPath": "valueObjectCandidateDecisions",
+      "severity": "error",
+      "messageRu": "valueObjectCandidateDecisions ð┤ð¥ð╗ðÂðÁð¢ ð▒ÐïÐéÐî ð╝ð░ÐüÐüð©ð▓ð¥ð╝."
+    },
+    {
+      "code": "CLIENT_SAFETY_BOOLEAN_REQUIRED",
+      "fieldPath": "clientSafetyConfirmation.userReviewedPreview",
+      "severity": "error",
+      "messageRu": "clientSafetyConfirmation.userReviewedPreview ð┤ð¥ð╗ðÂðÁð¢ ð▒ÐïÐéÐî boolean."
+    },
+    {
+      "code": "CLIENT_SAFETY_BOOLEAN_REQUIRED",
+      "fieldPath": "clientSafetyConfirmation.userConfirmedMissingValueObjectCreation",
+      "severity": "error",
+      "messageRu": "clientSafetyConfirmation.userConfirmedMissingValueObjectCreation ð┤ð¥ð╗ðÂðÁð¢ ð▒ÐïÐéÐî boolean."
+    },
+    {
+      "code": "CLIENT_SAFETY_BOOLEAN_REQUIRED",
+      "fieldPath": "clientSafetyConfirmation.userConfirmedFactWrite",
+      "severity": "error",
+      "messageRu": "clientSafetyConfirmation.userConfirmedFactWrite ð┤ð¥ð╗ðÂðÁð¢ ð▒ÐïÐéÐî boolean."
+    },
+    {
+      "code": "CLIENT_SAFETY_BOOLEAN_REQUIRED",
+      "fieldPath": "clientSafetyConfirmation.userUnderstandsPreviewIsNotDiagnosis",
+      "severity": "error",
+      "messageRu": "clientSafetyConfirmation.userUnderstandsPreviewIsNotDiagnosis ð┤ð¥ð╗ðÂðÁð¢ ð▒ÐïÐéÐî boolean."
+    }
+  ],
+  "validationWarnings": [],
+  "guardedPersistenceContractBlockers": [
+    "validation_not_ok",
+    "no_activity_event_draft_row",
+    "no_accepted_or_edited_fact_decisions"
+  ],
+  "guardedPersistenceContractWarnings": [
+    "contract_only_no_persistence",
+    "draft_rows_are_not_database_rows",
+    "real_write_requires_separate_runtime_gate"
+  ]
+}
+[PASS] Invalid structured body returns 400.
+[PASS] Invalid structured body contains ACTIVITY_FACTS_SAVE_GATE_VALIDATION_FAILED.
+
+==============================
+F. NODE CONCLUSION
+==============================
+NODE_TOTAL_ISSUES: 0
+NODE_RESULT: PASS
+Removed temporary Node smoke script: ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY6_NODE_FETCH_SMOKE_20260616_070305.cjs
+Node reported PASS: True
+
+==============================
+5. CREATE RETRY6 DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\facts-guarded-save-step04-retry6-node-fetch-smoke.md
+
+==============================
+6. TARGETED LINT
+==============================
+Targeted lint exit code: 0
+
+==============================
+7. GIT STATUS
+==============================
+ M src/app/api/activity/facts/save-gate/route.ts
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY6_NODE_FETCH_SMOKE_RESULT_20260616_070305.txt
+?? docs/activity-to-value-objects/facts-guarded-save-step01-preflight.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-persistence-contract.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-retry1-persistence-contract-audit-fix.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-retry1-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-retry2-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-route-contract-wiring.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry1-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry2-route-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry4-route-smoke-utf8-nobom.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry5-minimal-body-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-retry6-node-fetch-smoke.md
+?? docs/activity-to-value-objects/facts-guarded-save-step04-route-smoke.md
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP01_PREFLIGHT_RESULT_20260615_184221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_PERSISTENCE_CONTRACT_RESULT_20260615_193130.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_RETRY1_PERSISTENCE_CONTRACT_AUDIT_FIX_RESULT_20260615_193325.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY1_ROUTE_CONTRACT_WIRING_RESULT_20260615_201146.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_RETRY2_ROUTE_CONTRACT_WIRING_RESULT_20260615_201350.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP03_ROUTE_CONTRACT_WIRING_RESULT_20260615_193558.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDERR_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDOUT_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY1_ROUTE_SMOKE_RESULT_20260615_201946.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY2_ROUTE_SMOKE_RESULT_20260615_202221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY3_VALIDATION_DIAGNOSTIC_RESULT_20260615_203856.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY4_ROUTE_SMOKE_UTF8_NOBOM_RESULT_20260616_065717.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_RETRY5_MINIMAL_BODY_SMOKE_RESULT_20260616_070026.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_ROUTE_SMOKE_RESULT_20260615_201604.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+?? src/lib/activity/facts/saveGate/persistenceContract.ts
+
+==============================
+8. STEP 04 RETRY 6 CONCLUSION
+==============================
+Structure issues count: 0
+Forbidden hits count: 0
+Node exit code: 0
+Node reported PASS: True
+Targeted lint exit code: 0
+STEP 04 RETRY 6 RESULT: PASS
+Route smoke checks passed with Node fetch.
+GET and valid POST expose guardedPersistenceContract.
+Explicit write-intent remains blocked with 409.
+Invalid JSON/body remain blocked with 400.
+No-write flags remained false/zero.
+No DB write was executed.
+No SQL was executed.
+No external AI call was executed.
+No commit/push was executed.
+Next expected step: Step 05 / 12 — expose guarded persistence contract in read-only UI.

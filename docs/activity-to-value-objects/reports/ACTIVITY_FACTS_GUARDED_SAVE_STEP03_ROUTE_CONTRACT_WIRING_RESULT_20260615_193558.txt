@@ -1,0 +1,115 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_FACTS_SAVE_GATE_GUARDED_PERSISTENCE
+STEP 03 / 12 — WIRE PERSISTENCE CONTRACT INTO SAVE-GATE ROUTE RESPONSE
+Generated: 2026-06-15 19:36:02
+Mode: ROUTE CONTRACT WIRING ONLY
+DB writes: NO
+SQL execution: NO
+External AI calls: NO
+Commit/push: NO
+
+==============================
+1. CLEANUP / MOVE STEP02 RETRY REPORTS
+==============================
+Moved Step02 Retry1 report: ACTIVITY_FACTS_GUARDED_SAVE_STEP02_RETRY1_PERSISTENCE_CONTRACT_AUDIT_FIX_RESULT_20260615_193325.txt -> docs\activity-to-value-objects\reports\ACTIVITY_FACTS_GUARDED_SAVE_STEP02_RETRY1_PERSISTENCE_CONTRACT_AUDIT_FIX_RESULT_20260615_193325.txt
+
+==============================
+2. FILE CHECK
+==============================
+[PASS] Exists: src\app\api\activity\facts\save-gate\route.ts
+[PASS] Exists: src\lib\activity\facts\saveGate\persistenceContract.ts
+[PASS] Exists: src\lib\activity\facts\saveGate\executionPlan.ts
+[PASS] Exists: src\lib\activity\facts\saveGate\requestValidation.ts
+
+==============================
+3. PATCH ROUTE: ADD GUARDED PERSISTENCE CONTRACT
+==============================
+[PASS] Added persistence contract import after buildNoWriteExecutionPlan import.
+[FAIL] Could not find executionPlan builder anchor.
+[PASS] Added guardedPersistenceContract to JSON response object.
+[WARN] routeLayer exact marker not found; not blocking.
+[PASS] Updated routeStatus marker.
+Route patch had blocking issues; file not written.
+
+==============================
+4. CREATE STEP03 DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\facts-guarded-save-step03-route-contract-wiring.md
+
+==============================
+5. STATIC STRUCTURE CHECK
+==============================
+[FAIL] Route marker missing: buildActivityFactsGuardedPersistenceContract
+[FAIL] Route marker missing: guardedPersistenceContract
+[FAIL] Route marker missing: activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1
+[FAIL] Route marker missing: guarded_persistence_contract_only_no_write
+[PASS] Route marker found: noWriteExecutionPlan
+[PASS] Route marker found: productionWriteEnabled: false
+[PASS] Route marker found: dbWriteExecuted: false
+[PASS] Route marker found: sqlExecuted: false
+[PASS] Route marker found: openAiCallExecuted: false
+[PASS] Route marker found: ACTIVITY_FACTS_SAVE_GATE_WRITE_NOT_ENABLED
+[PASS] Contract marker found: activity_facts_guarded_persistence_contract_v1
+[PASS] Contract marker found: activity_events
+[PASS] Contract marker found: activity_event_measures
+[PASS] Contract marker found: activity_object_facts
+[PASS] Contract marker found: activity_fact_review_items
+[PASS] Contract marker found: activity_fact_recalculation_queue
+[PASS] Contract marker found: server_mediated_write_disabled
+[PASS] Contract marker found: not_executed_contract_preview
+[PASS] Contract marker found: rowsActuallyWritten: 0
+[PASS] Contract marker found: real_write_requires_separate_runtime_gate
+
+==============================
+6. PRECISE SAFETY CHECKS
+==============================
+
+----- PRECISE FORBIDDEN CHECK: No Supabase import in guarded-save route/contract files -----
+Regex: import\s+\{?\s*supabase\b|from\s+["'][^"']*lib/supabase["']|from\s+["']@/lib/supabase["']
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No Supabase from/select calls in guarded-save route/contract files -----
+Regex: \.from\s*\(|\.select\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable DB write methods in guarded-save route/contract files -----
+Regex: \.(insert|upsert|update|delete)\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No external AI import/constructor/client call in guarded-save route/contract files -----
+Regex: from\s+["']openai["']|new\s+OpenAI\s*\(|\bopenai\s*\.
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable SQL calls in guarded-save route/contract files; ignore sqlExecuted safety flags -----
+Regex: (\bsupabase\s*\.\s*rpc\s*\(|\bdb\s*\.\s*execute\s*\(|\bclient\s*\.\s*query\s*\(|\bpool\s*\.\s*query\s*\(|\bexecuteSql\s*\(|\brawSql\s*\(|\bsql\s*`)
+[PASS] No precise forbidden hits.
+
+==============================
+7. TARGETED LINT
+==============================
+Targeted lint exit code: 0
+
+==============================
+8. GIT STATUS
+==============================
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP03_ROUTE_CONTRACT_WIRING_RESULT_20260615_193558.txt
+?? docs/activity-to-value-objects/facts-guarded-save-step01-preflight.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-persistence-contract.md
+?? docs/activity-to-value-objects/facts-guarded-save-step02-retry1-persistence-contract-audit-fix.md
+?? docs/activity-to-value-objects/facts-guarded-save-step03-route-contract-wiring.md
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP01_PREFLIGHT_RESULT_20260615_184221.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_PERSISTENCE_CONTRACT_RESULT_20260615_193130.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP02_RETRY1_PERSISTENCE_CONTRACT_AUDIT_FIX_RESULT_20260615_193325.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+?? src/lib/activity/facts/saveGate/persistenceContract.ts
+
+==============================
+9. STEP 03 CONCLUSION
+==============================
+Patch issues count: 1
+Structure issues count: 4
+Precise forbidden code hits count: 0
+Targeted lint exit code: 0
+STEP 03 RESULT: NEEDS REVIEW
+Review patch, structure, safety or lint before continuing.
