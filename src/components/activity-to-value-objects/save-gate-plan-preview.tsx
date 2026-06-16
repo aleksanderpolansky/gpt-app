@@ -34,6 +34,7 @@ type SaveGateRequestSummary = {
   sourcePackageId?: string | null;
   idempotencyKey?: string | null;
   routeMode?: string | null;
+  futurePersistenceMode?: string | null;
   factDecisionCount?: number;
   editedFactDecisionCount?: number;
   valueObjectCandidateDecisionCount?: number;
@@ -96,6 +97,7 @@ type SaveGatePlanResponse = {
   sqlExecuted?: boolean;
   openAiCallExecuted?: boolean;
   requestSummary?: SaveGateRequestSummary;
+  futurePersistenceMode?: string | null;
   validation?: SaveGateValidation;
   plannedWrites?: SaveGatePlannedWrite[];
   skipped?: SaveGateSkipped;
@@ -144,7 +146,8 @@ const previewRequestBody = {
   },
 };
 
-const writeIntentRequestBody = {
+const confirmSaveIntentRequestBody = {
+  futurePersistenceMode: "confirm_save",
   routeMode: "future_server_mediated_write",
   idempotencyKey: "ui-write-intent-save-gate-plan-v1",
   sourcePackageId: "fixture-football-with-child-30m-v1",
@@ -371,7 +374,7 @@ export function SaveGatePlanPreview() {
               },
               body: JSON.stringify(
                 nextMode === "POST_WRITE_INTENT"
-                  ? writeIntentRequestBody
+                  ? confirmSaveIntentRequestBody
                   : previewRequestBody
               ),
             };
@@ -489,8 +492,8 @@ export function SaveGatePlanPreview() {
           <ModeButton
             mode="POST_WRITE_INTENT"
             currentMode={mode}
-            label="POST write-intent"
-            description="Должен вернуться 409 и блокировка."
+            label="POST confirm_save intent"
+            description="Проверка блокировки confirm_save intent: ожидается 409 и ACTIVITY_FACTS_SAVE_GATE_WRITE_NOT_ENABLED."
             onClick={(nextMode) => void loadPlan(nextMode)}
           />
         </div>
@@ -579,6 +582,14 @@ export function SaveGatePlanPreview() {
                 label="Route mode"
                 value={textLabel(response.requestSummary?.routeMode)}
               />
+
+            <KeyValueCard
+              label="Future persistence mode"
+              value={textLabel(
+                response.futurePersistenceMode ??
+                  response.requestSummary?.futurePersistenceMode
+              )}
+            />
               <KeyValueCard
                 label="Write intent"
                 value={boolLabel(response.requestSummary?.writeIntentDetected)}
@@ -684,4 +695,11 @@ export function SaveGatePlanPreview() {
     </section>
   );
 }
+
+
+
+
+
+
+
 

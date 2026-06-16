@@ -17,6 +17,7 @@ export type ActivityFactsSaveGateRequestSummary = {
   sourcePackageId: string | null;
   idempotencyKey: string | null;
   routeMode: ActivityFactsSaveGateRouteMode | null;
+  futurePersistenceMode: "preview" | "confirm_save" | null;
   factDecisionCount: number;
   editedFactDecisionCount: number;
   valueObjectCandidateDecisionCount: number;
@@ -439,6 +440,12 @@ export function validateActivityFactsSaveGateRequest(
     sourcePackageId,
     idempotencyKey,
     routeMode,
+    futurePersistenceMode:
+      routeMode === "future_server_mediated_write"
+        ? "confirm_save"
+        : routeMode === "contract_preview_only"
+          ? "preview"
+          : null,
     factDecisionCount: asArray(requestRecord.factDecisions).length,
     editedFactDecisionCount: asArray(requestRecord.editedFactDecisions).length,
     valueObjectCandidateDecisionCount: asArray(
@@ -475,3 +482,5 @@ export function isActivityFactsSaveGateValueObjectDecision(
 
   return Boolean(decision && ALLOWED_VALUE_OBJECT_DECISIONS.has(decision));
 }
+
+

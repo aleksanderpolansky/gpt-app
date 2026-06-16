@@ -64,6 +64,17 @@ function buildNoWriteResponse(params: {
     routeStatus: "guarded_persistence_contract_only_no_write",
     productionWriteEnabled: false,
     requestSummary: params.validation.summary,
+    futurePersistenceMode: params.validation.summary.futurePersistenceMode,
+    futurePersistenceContract: {
+      allowedModes: ["preview", "confirm_save"],
+      currentMode: params.validation.summary.futurePersistenceMode,
+      confirmSaveEnabled: false,
+      confirmSaveBlockedBy: "ACTIVITY_FACTS_SAVE_GATE_WRITE_NOT_ENABLED",
+      routeModeCompatibility: {
+        contract_preview_only: "preview",
+        future_server_mediated_write: "confirm_save",
+      },
+    },
     validation: {
       ok: params.validation.ok,
       errors: params.validation.errors,
@@ -83,6 +94,8 @@ function buildNoWriteResponse(params: {
       "This route must not execute SQL.",
       "This route must not call external AI providers.",
       "This route blocks explicit write-intent requests until a later gated implementation step.",
+      "futurePersistenceMode=preview is allowed as no-write preview.",
+      "futurePersistenceMode=confirm_save is contract vocabulary only and remains blocked.",
       "The future write flow must remain server-mediated and must preserve user-owned fact privacy.",
     ],
   };
@@ -180,6 +193,8 @@ export async function POST(request: Request) {
     { status: 200 }
   );
 }
+
+
 
 
 
