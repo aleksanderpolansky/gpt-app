@@ -35,6 +35,18 @@ type SaveGateRequestSummary = {
   idempotencyKey?: string | null;
   routeMode?: string | null;
   futurePersistenceMode?: string | null;
+  idempotencyContext?: {
+    mode?: string | null;
+    idempotencyKey?: string | null;
+    sourcePackageId?: string | null;
+    replaySafe?: boolean | null;
+    duplicateClickCreatesDuplicateFacts?: boolean | null;
+    duplicateRequestPolicy?: string | null;
+    conflictPolicy?: string | null;
+    uniquenessScope?: string | null;
+    requestHashRequiredForRealWrites?: boolean | null;
+    confirmSaveBlockedBy?: string | null;
+  } | null;
   ownershipContext?: {
     mode?: string | null;
     serverDerivedOwnership?: boolean | null;
@@ -107,6 +119,18 @@ type SaveGatePlanResponse = {
   openAiCallExecuted?: boolean;
   requestSummary?: SaveGateRequestSummary;
   futurePersistenceMode?: string | null;
+  idempotencyContext?: {
+    mode?: string | null;
+    idempotencyKey?: string | null;
+    sourcePackageId?: string | null;
+    replaySafe?: boolean | null;
+    duplicateClickCreatesDuplicateFacts?: boolean | null;
+    duplicateRequestPolicy?: string | null;
+    conflictPolicy?: string | null;
+    uniquenessScope?: string | null;
+    requestHashRequiredForRealWrites?: boolean | null;
+    confirmSaveBlockedBy?: string | null;
+  } | null;
   ownershipContext?: {
     mode?: string | null;
     serverDerivedOwnership?: boolean | null;
@@ -627,6 +651,26 @@ export function SaveGatePlanPreview() {
               <KeyValueCard
                 label="Ownership block code"
                 value={textLabel(response.ownershipContext?.confirmSaveBlockedBy)}
+              />
+              <KeyValueCard
+                label="Idempotency context"
+                value={textLabel(response.idempotencyContext?.mode)}
+              />
+              <KeyValueCard
+                label="Replay safe"
+                value={textLabel(String(response.idempotencyContext?.replaySafe ?? "—"))}
+              />
+              <KeyValueCard
+                label="Duplicate click creates duplicate facts"
+                value={textLabel(String(response.idempotencyContext?.duplicateClickCreatesDuplicateFacts ?? "—"))}
+              />
+              <KeyValueCard
+                label="Idempotency uniqueness scope"
+                value={textLabel(response.idempotencyContext?.uniquenessScope)}
+              />
+              <KeyValueCard
+                label="Idempotency block code"
+                value={textLabel(response.idempotencyContext?.confirmSaveBlockedBy)}
               />
               <KeyValueCard
                 label="Write intent"
