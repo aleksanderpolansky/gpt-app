@@ -8,6 +8,7 @@ import { buildNoWriteExecutionPlan } from "@/lib/activity/facts/saveGate/executi
 import { buildActivityFactsGuardedPersistenceContract } from "@/lib/activity/facts/saveGate/persistenceContract";
 import { buildNoWriteOwnershipContext } from "@/lib/activity/facts/saveGate/ownershipContext";
 import { buildNoWriteIdempotencyContext } from "@/lib/activity/facts/saveGate/idempotencyContext";
+import { buildNoWritePartialSaveContext } from "@/lib/activity/facts/saveGate/partialSaveContext";
 import {
   validateActivityFactsSaveGateRequest,
   type ActivityFactsSaveGateValidationResult,
@@ -72,6 +73,7 @@ function buildNoWriteResponse(params: {
       sourcePackageId: params.validation.summary.sourcePackageId,
       idempotencyKey: params.validation.summary.idempotencyKey,
     }),
+    partialSaveContext: buildNoWritePartialSaveContext(),
     futurePersistenceContract: {
       allowedModes: ["preview", "confirm_save"],
       currentMode: params.validation.summary.futurePersistenceMode,

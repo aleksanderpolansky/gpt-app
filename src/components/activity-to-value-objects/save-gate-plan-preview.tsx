@@ -35,6 +35,22 @@ type SaveGateRequestSummary = {
   idempotencyKey?: string | null;
   routeMode?: string | null;
   futurePersistenceMode?: string | null;
+  partialSaveContext?: {
+    contextKey?: string | null;
+    mode?: string | null;
+    partialReviewAllowed?: boolean | null;
+    acceptedFactsSaveable?: boolean | null;
+    editedFactsSaveable?: boolean | null;
+    rejectedFactsCreateFacts?: boolean | null;
+    deferredFactsCreateFacts?: boolean | null;
+    ignoredFactsCreateFacts?: boolean | null;
+    pendingFactsCreateFacts?: boolean | null;
+    missingValueObjectBlocksWholeSave?: boolean | null;
+    activityEventRequiresAcceptedOrEditedFact?: boolean | null;
+    zeroAcceptedOrEditedFactsBlockCode?: string | null;
+    legacyNoAcceptedOrEditedFactsCode?: string | null;
+    confirmSaveBlockedBy?: string | null;
+  } | null;
   idempotencyContext?: {
     mode?: string | null;
     idempotencyKey?: string | null;
@@ -119,6 +135,22 @@ type SaveGatePlanResponse = {
   openAiCallExecuted?: boolean;
   requestSummary?: SaveGateRequestSummary;
   futurePersistenceMode?: string | null;
+  partialSaveContext?: {
+    contextKey?: string | null;
+    mode?: string | null;
+    partialReviewAllowed?: boolean | null;
+    acceptedFactsSaveable?: boolean | null;
+    editedFactsSaveable?: boolean | null;
+    rejectedFactsCreateFacts?: boolean | null;
+    deferredFactsCreateFacts?: boolean | null;
+    ignoredFactsCreateFacts?: boolean | null;
+    pendingFactsCreateFacts?: boolean | null;
+    missingValueObjectBlocksWholeSave?: boolean | null;
+    activityEventRequiresAcceptedOrEditedFact?: boolean | null;
+    zeroAcceptedOrEditedFactsBlockCode?: string | null;
+    legacyNoAcceptedOrEditedFactsCode?: string | null;
+    confirmSaveBlockedBy?: string | null;
+  } | null;
   idempotencyContext?: {
     mode?: string | null;
     idempotencyKey?: string | null;
@@ -671,6 +703,38 @@ export function SaveGatePlanPreview() {
               <KeyValueCard
                 label="Idempotency block code"
                 value={textLabel(response.idempotencyContext?.confirmSaveBlockedBy)}
+              />
+              <KeyValueCard
+                label="Partial save context"
+                value={textLabel(response.partialSaveContext?.mode)}
+              />
+              <KeyValueCard
+                label="Partial review allowed"
+                value={textLabel(String(response.partialSaveContext?.partialReviewAllowed ?? "—"))}
+              />
+              <KeyValueCard
+                label="Accepted facts saveable"
+                value={textLabel(String(response.partialSaveContext?.acceptedFactsSaveable ?? "—"))}
+              />
+              <KeyValueCard
+                label="Edited facts saveable"
+                value={textLabel(String(response.partialSaveContext?.editedFactsSaveable ?? "—"))}
+              />
+              <KeyValueCard
+                label="Rejected facts create facts"
+                value={textLabel(String(response.partialSaveContext?.rejectedFactsCreateFacts ?? "—"))}
+              />
+              <KeyValueCard
+                label="Deferred facts create facts"
+                value={textLabel(String(response.partialSaveContext?.deferredFactsCreateFacts ?? "—"))}
+              />
+              <KeyValueCard
+                label="Missing VO blocks whole save"
+                value={textLabel(String(response.partialSaveContext?.missingValueObjectBlocksWholeSave ?? "—"))}
+              />
+              <KeyValueCard
+                label="Zero accepted/edited block code"
+                value={textLabel(response.partialSaveContext?.zeroAcceptedOrEditedFactsBlockCode)}
               />
               <KeyValueCard
                 label="Write intent"
