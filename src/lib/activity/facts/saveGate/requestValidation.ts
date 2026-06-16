@@ -27,6 +27,7 @@ export type ActivityFactsSaveGateRequestSummary = {
 };
 
 export type ActivityFactsSaveGateValidationResult = {
+  normalizedBody: Record<string, unknown>;
   ok: boolean;
   requestRecord: Record<string, unknown>;
   summary: ActivityFactsSaveGateRequestSummary;
@@ -450,6 +451,7 @@ export function validateActivityFactsSaveGateRequest(
   };
 
   return {
+    normalizedBody: requestRecord,
     ok: errors.length === 0,
     requestRecord,
     summary,

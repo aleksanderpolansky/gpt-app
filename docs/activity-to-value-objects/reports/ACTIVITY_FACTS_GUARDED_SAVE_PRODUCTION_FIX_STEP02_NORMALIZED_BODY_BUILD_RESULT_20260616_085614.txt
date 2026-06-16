@@ -1,0 +1,435 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_FACTS_GUARDED_SAVE_PRODUCTION_BUILD_FIX
+STEP 02 / 5 — ADD normalizedBody TO VALIDATION RESULT + BUILD VERIFY
+Generated: 2026-06-16 08:56:15
+Mode: PATCH + LOCAL BUILD VERIFY ONLY
+DB writes: NO
+SQL execution: NO
+External AI calls: NO
+Commit: NO
+Push: NO
+
+==============================
+1. CLEANUP / MOVE STEP01 REPORT
+==============================
+Moved Step01 report: ACTIVITY_FACTS_GUARDED_SAVE_PRODUCTION_FIX_STEP01_DUPLICATE_ROUTE_LAYER_RESULT_20260616_084904.txt -> docs\activity-to-value-objects\reports\ACTIVITY_FACTS_GUARDED_SAVE_PRODUCTION_FIX_STEP01_DUPLICATE_ROUTE_LAYER_RESULT_20260616_084904.txt
+
+==============================
+2. CURRENT GIT STATE
+==============================
+git status -sb:
+## main...origin/main
+ M src/app/api/activity/facts/save-gate/route.ts
+?? ACTIVITY_FACTS_GUARDED_SAVE_PRODUCTION_FIX_STEP02_NORMALIZED_BODY_BUILD_RESULT_20260616_085614.txt
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP12_PUSH_ONLY_RESULT_20260616_084359.txt
+?? docs/activity-to-value-objects/facts-guarded-save-step11-push-gate-prep.md
+?? docs/activity-to-value-objects/facts-guarded-save-step12-push-only.md
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_PRODUCTION_FIX_STEP01_DUPLICATE_ROUTE_LAYER_RESULT_20260616_084904.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDERR_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDOUT_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP10_COMMIT_ONLY_RESULT_20260616_083821.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP11_PUSH_GATE_PREP_RESULT_20260616_084039.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+
+git log -1 --oneline:
+00e9639 Add guarded activity facts persistence preview
+
+==============================
+3. PATCH requestValidation.ts
+==============================
+Patch script exit code: 0
+[PASS] Added normalizedBody to ActivityFactsSaveGateValidationResult type.
+[PASS] Added normalizedBody: requestRecord to validateActivityFactsSaveGateRequest return object.
+PATCH_CHANGES: 2
+PATCH_ISSUES: 0
+Removed temporary patch script: ACTIVITY_FACTS_GUARDED_SAVE_PRODUCTION_FIX_STEP02_PATCH_20260616_085614.cjs
+
+==============================
+4. STATIC VERIFICATION
+==============================
+[PASS] normalizedBody type field exists
+[PASS] normalizedBody return field exists
+[PASS] validateActivityFactsSaveGateRequest still exists
+[PASS] ActivityFactsSaveGateValidationResult still exists
+
+normalizedBody occurrences in requestValidation.ts:
+C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:30: normalizedBody: Record<string, unknown>;
+C:\Users\Admin\Documents\projects\gpt-app\src\lib\activity\facts\saveGate\requestValidation.ts:454: normalizedBody: requestRecord,
+[PASS] routeMarker fix from Step01 remains.
+[PASS] duplicate routeLayer marker remains removed.
+[PASS] persistenceContract still uses validation.normalizedBody and should now typecheck.
+
+==============================
+5. SAFETY FORBIDDEN RECHECK
+==============================
+
+----- PRECISE FORBIDDEN CHECK: No Supabase import in guarded-save UI/route/contract files -----
+Regex: import\s+\{?\s*supabase\b|from\s+["'][^"']*lib/supabase["']|from\s+["']@/lib/supabase["']
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No Supabase from/select calls in guarded-save UI/route/contract files -----
+Regex: \.from\s*\(|\.select\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable DB write methods in guarded-save UI/route/contract files -----
+Regex: \.(insert|upsert|update|delete)\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No external AI import/constructor/client call in guarded-save UI/route/contract files -----
+Regex: from\s+["']openai["']|new\s+OpenAI\s*\(|\bopenai\s*\.
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable SQL calls in guarded-save UI/route/contract files; ignore sqlExecuted safety flags -----
+Regex: (\bsupabase\s*\.\s*rpc\s*\(|\bdb\s*\.\s*execute\s*\(|\bclient\s*\.\s*query\s*\(|\bpool\s*\.\s*query\s*\(|\bexecuteSql\s*\(|\brawSql\s*\(|\bsql\s*`)
+[PASS] No precise forbidden hits.
+
+==============================
+6. TARGETED LINT
+==============================
+Targeted lint exit code: 0
+
+==============================
+7. TEMPORARILY QUARANTINE _local_artifacts FOR BUILD VERIFY
+==============================
+[PASS] Temporarily moved _local_artifacts outside repo: C:\Users\Admin\Documents\projects\gpt-app__local_artifacts_build_quarantine_20260616_085614
+
+==============================
+8. TYPESCRIPT CHECK WITHOUT LOCAL BACKUP ARTIFACTS
+==============================
+npx tsc --noEmit exit code: 0
+
+==============================
+9. PRODUCTION BUILD WITHOUT LOCAL BACKUP ARTIFACTS
+==============================
+npm run build exit code: 0
+
+> gpt-app@0.1.0 build
+> next build
+
+Ôû▓ Next.js 16.2.4 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Ô£ô Compiled successfully in 10.1s
+  Running TypeScript ...
+  Finished TypeScript in 21.4s ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/72) ...
+  Generating static pages using 11 workers (18/72) 
+  Generating static pages using 11 workers (36/72) 
+  Generating static pages using 11 workers (54/72) 
+Ô£ô Generating static pages using 11 workers (72/72) in 1134ms
+  Finalizing page optimization ...
+
+Route (app)
+Ôöî Ôùï /
+Ôö£ Ôùï /_not-found
+Ôö£ Ôùï /activities
+Ôö£ Ôùï /activities/new
+Ôö£ Ôùï /activity-capture
+Ôö£ Ôùï /activity-capture/controlled-flow-map
+Ôö£ Ôùï /activity-capture/facts-preview
+Ôö£ Ôùï /activity-capture/guarded-persistence-contract-preview
+Ôö£ Ôùï /activity-capture/save-gate-plan-preview
+Ôö£ Ôùï /activity-capture/save-gate-preview
+Ôö£ Ôùï /activity-today
+Ôö£ ãÆ /activity/debug/semantic-dry-run-review
+Ôö£ ãÆ /activity/debug/semantic-v3-review
+Ôö£ ãÆ /activity/debug/server-auth-readiness-review
+Ôö£ ãÆ /admin
+Ôö£ ãÆ /admin/object-action
+Ôö£ ãÆ /admin/object-action/categories
+Ôö£ ãÆ /admin/object-action/classifications
+Ôö£ ãÆ /admin/object-action/suggestions
+Ôö£ Ôùï /analytics
+Ôö£ ãÆ /api/activities
+Ôö£ ãÆ /api/activity/capture/detached-semantic-preview
+Ôö£ ãÆ /api/activity/complete
+Ôö£ ãÆ /api/activity/controlled-intake
+Ôö£ ãÆ /api/activity/day-summary
+Ôö£ ãÆ /api/activity/debug-known-template-registry
+Ôö£ ãÆ /api/activity/debug-rubricator-value-object-bridge
+Ôö£ ãÆ /api/activity/debug-trace
+Ôö£ ãÆ /api/activity/debug/activity-capture-semantic-integration-proof
+Ôö£ ãÆ /api/activity/debug/activity-semantic-orchestration-skeleton
+Ôö£ ãÆ /api/activity/debug/actor-bootstrap-controlled-write
+Ôö£ ãÆ /api/activity/debug/actor-bootstrap-link-inventory
+Ôö£ ãÆ /api/activity/debug/app-user-mapping-lookup-error-focused-test
+Ôö£ ãÆ /api/activity/debug/auth0-session-diagnostic
+Ôö£ ãÆ /api/activity/debug/c8-i-post-sql-api-verify
+Ôö£ ãÆ /api/activity/debug/category-derivation-complete-route-adapter-failure-test
+Ôö£ ãÆ /api/activity/debug/category-derivation-complete-route-adapter-idempotency-test
+Ôö£ ãÆ /api/activity/debug/category-derivation-controlled-production-persist-proof
+Ôö£ ãÆ /api/activity/debug/category-derivation-route-runner-test
+Ôö£ ãÆ /api/activity/debug/create-free-text-start-event
+Ôö£ ãÆ /api/activity/debug/external-concept-stub
+Ôö£ ãÆ /api/activity/debug/free-text-value-object-test
+Ôö£ ãÆ /api/activity/debug/internal-user-actor-mapping-readiness
+Ôö£ ãÆ /api/activity/debug/local-controlled-category-lookup
+Ôö£ ãÆ /api/activity/debug/ownership-context-column-contract-probe-read-only-test
+Ôö£ ãÆ /api/activity/debug/ownership-context-positive-auto-candidate-read-only-test
+Ôö£ ãÆ /api/activity/debug/ownership-context-resolution-read-only-test
+Ôö£ ãÆ /api/activity/debug/ownership-rls-verification-readiness
+Ôö£ ãÆ /api/activity/debug/primary-category-source-search-order-proof
+Ôö£ ãÆ /api/activity/debug/real-auth-session-runtime-read-test
+Ôö£ ãÆ /api/activity/debug/resolver-decision-contract
+Ôö£ ãÆ /api/activity/debug/semantic-actor-resolution-dry-run
+Ôö£ ãÆ /api/activity/debug/semantic-final-write-gate-contract
+Ôö£ ãÆ /api/activity/debug/semantic-next-action-preview
+Ôö£ ãÆ /api/activity/debug/semantic-v3-contract-invariants
+Ôö£ ãÆ /api/activity/debug/semantic-v3-persistence-route-gate
+Ôö£ ãÆ /api/activity/debug/semantic-v3-preview
+Ôö£ ãÆ /api/activity/debug/semantic-v3-regression-matrix
+Ôö£ ãÆ /api/activity/debug/server-side-app-user-mapping-read-only-test
+Ôö£ ãÆ /api/activity/debug/source-order-resolver-blocker-preview
+Ôö£ ãÆ /api/activity/debug/stable-bundle-persistence-gate-blocker
+Ôö£ ãÆ /api/activity/debug/stable-bundle-resolver-gate-integration
+Ôö£ ãÆ /api/activity/debug/stable-semantic-bundle-activity-event-reference-dry-run
+Ôö£ ãÆ /api/activity/debug/stable-semantic-bundle-explicit-sandbox-write-gate
+Ôö£ ãÆ /api/activity/debug/stable-semantic-bundle-persistence-service-dry-run-parity
+Ôö£ ãÆ /api/activity/debug/stable-semantic-bundle-persistence-service-sandbox-write-adapter
+Ôö£ ãÆ /api/activity/debug/stable-semantic-bundle-persistence-service-skeleton
+Ôö£ ãÆ /api/activity/debug/stable-semantic-bundle-post-schema-write-gate-readiness
+Ôö£ ãÆ /api/activity/debug/stable-semantic-bundle-post-write-verification
+Ôö£ ãÆ /api/activity/debug/stable-semantic-bundle-preview
+Ôö£ ãÆ /api/activity/debug/stable-semantic-bundle-schema-preflight
+Ôö£ ãÆ /api/activity/debug/stable-semantic-bundle-transaction-contract
+Ôö£ ãÆ /api/activity/debug/stable-semantic-bundle-write-contract
+Ôö£ ãÆ /api/activity/debug/stable-semantic-bundle-write-gate-dry-run
+Ôö£ ãÆ /api/activity/debug/state-fact-rollback-no-write-proof
+Ôö£ ãÆ /api/activity/debug/state-signal-candidate-shadow-test
+Ôö£ ãÆ /api/activity/debug/unknown-term-detector
+Ôö£ ãÆ /api/activity/debug/unresolved-stable-bundle-blocker
+Ôö£ ãÆ /api/activity/debug/value-object-bridge-proof
+Ôö£ ãÆ /api/activity/events
+Ôö£ ãÆ /api/activity/events/[id]
+Ôö£ ãÆ /api/activity/events/[id]/corrections
+Ôö£ ãÆ /api/activity/facts/save-gate
+Ôö£ ãÆ /api/activity/intake
+Ôö£ ãÆ /api/activity/intake/events
+Ôö£ ãÆ /api/activity/intake/events/[id]
+Ôö£ ãÆ /api/activity/intake/events/[id]/confirm
+Ôö£ ãÆ /api/activity/intake/events/[id]/reject
+Ôö£ ãÆ /api/activity/intake/signals
+Ôö£ ãÆ /api/activity/intake/signals/[id]/ignore
+Ôö£ ãÆ /api/activity/intake/signals/[id]/promote
+Ôö£ ãÆ /api/activity/record
+Ôö£ ãÆ /api/activity/semantic-orchestration-preview
+Ôö£ ãÆ /api/activity/semantic-review/new-concept-candidates-preview
+Ôö£ ãÆ /api/activity/semantic/first-activity-value-object-link-write
+Ôö£ ãÆ /api/activity/semantic/first-persistence-write
+Ôö£ ãÆ /api/activity/semantic/first-persistence-write/verify
+Ôö£ ãÆ /api/activity/semantic/first-value-object-write
+Ôö£ ãÆ /api/activity/semantic/persistence-dry-run
+Ôö£ ãÆ /api/activity/semantic/runtime-schema-proof
+Ôö£ ãÆ /api/activity/semantic/server-auth-readiness
+Ôö£ ãÆ /api/activity/semantic/stable-bundle-proof
+Ôö£ ãÆ /api/activity/semantic/value-object-link-readiness
+Ôö£ ãÆ /api/activity/semantic/value-object-scope-readiness
+Ôö£ ãÆ /api/activity/semantic/value-object-space-decision
+Ôö£ ãÆ /api/activity/start
+Ôö£ ãÆ /api/activity/state-facts/controlled-persist
+Ôö£ ãÆ /api/activity/state-hooks/preview
+Ôö£ ãÆ /api/activity/templates
+Ôö£ ãÆ /api/activity/value-objects/candidates-preview
+Ôö£ ãÆ /api/ai/semantic-intake/organization
+Ôö£ ãÆ /api/availability-rules
+Ôö£ ãÆ /api/bookings
+Ôö£ ãÆ /api/bookings/[id]/cancel
+Ôö£ ãÆ /api/bookings/[id]/complete
+Ôö£ ãÆ /api/bookings/[id]/confirm
+Ôö£ ãÆ /api/calendar/events
+Ôö£ ãÆ /api/certificates/cancel
+Ôö£ ãÆ /api/certificates/expire-due
+Ôö£ ãÆ /api/certificates/redeem
+Ôö£ ãÆ /api/certificates/request
+Ôö£ ãÆ /api/directory/filters
+Ôö£ ãÆ /api/directory/organizations
+Ôö£ ãÆ /api/directory/organizations/[slug]
+Ôö£ ãÆ /api/directory/organizations/[slug]/offers
+Ôö£ ãÆ /api/geo/areas
+Ôö£ ãÆ /api/geo/suggestions
+Ôö£ ãÆ /api/locations
+Ôö£ ãÆ /api/me
+Ôö£ ãÆ /api/messages
+Ôö£ ãÆ /api/my/purchase-confirmations
+Ôö£ ãÆ /api/object-action/categories
+Ôö£ ãÆ /api/object-action/categories/audit-verify
+Ôö£ ãÆ /api/object-action/suggestions
+Ôö£ ãÆ /api/object-action/suggestions/audit-verify
+Ôö£ ãÆ /api/offers
+Ôö£ ãÆ /api/offers/[id]/available-slots
+Ôö£ ãÆ /api/organizations
+Ôö£ ãÆ /api/organizations/[id]/category-review
+Ôö£ ãÆ /api/organizations/[id]/location
+Ôö£ ãÆ /api/points/transactions
+Ôö£ ãÆ /api/points/wallet
+Ôö£ ãÆ /api/public/purchase-history
+Ôö£ ãÆ /api/public/rewards
+Ôö£ ãÆ /api/purchase-confirmations
+Ôö£ ãÆ /api/purchase-confirmations/[id]/confirm
+Ôö£ ãÆ /api/purchase-confirmations/[id]/events
+Ôö£ ãÆ /api/purchase-confirmations/[id]/reject
+Ôö£ ãÆ /api/semantic-cloud/public
+Ôö£ ãÆ /api/service-log/runs
+Ôö£ ãÆ /api/service-log/runs/[id]
+Ôö£ ãÆ /api/sync-user
+Ôö£ ãÆ /api/test
+Ôö£ ãÆ /api/time-blocks
+Ôö£ ãÆ /api/value-objects
+Ôö£ ãÆ /api/value-objects/[id]
+Ôö£ ãÆ /api/value-objects/debug/cloud-profile
+Ôö£ Ôùï /availability-rules
+Ôö£ Ôùï /availability-rules/new
+Ôö£ Ôùï /bookings
+Ôö£ Ôùï /bookings/new
+Ôö£ Ôùï /businesses
+Ôö£ Ôùï /businesses/new
+Ôö£ Ôùï /calendar
+Ôö£ Ôùï /calendar/new
+Ôö£ Ôùï /certificates
+Ôö£ ãÆ /certificates/new
+Ôö£ ãÆ /certificates/redeem
+Ôö£ ãÆ /directory
+Ôö£ ãÆ /directory/[slug]
+Ôö£ Ôùï /locations
+Ôö£ Ôùï /locations/new
+Ôö£ ãÆ /m
+Ôö£ ãÆ /my-certificates
+Ôö£ ãÆ /my-purchase-confirmations
+Ôö£ Ôùï /next
+Ôö£ Ôùï /offers
+Ôö£ ãÆ /offers/[id]
+Ôö£ Ôùï /offers/available-slots
+Ôö£ Ôùï /offers/new
+Ôö£ Ôùï /organizations
+Ôö£ ãÆ /organizations/[id]
+Ôö£ Ôùï /organizations/new
+Ôö£ Ôùï /points
+Ôö£ Ôùï /privacy-audit
+Ôö£ Ôùï /public/purchases
+Ôö£ Ôùï /purchase-confirmations
+Ôö£ ãÆ /purchase-confirmations/[id]/events
+Ôö£ Ôùï /purchase-history
+Ôö£ ãÆ /rewards
+Ôö£ ãÆ /seller-certificates
+Ôö£ Ôùï /seller/purchase-confirmations
+Ôö£ Ôùï /semantic/review
+Ôö£ Ôùï /service-log
+Ôö£ ãÆ /service-log/[id]
+Ôö£ Ôùï /time-blocks
+Ôö£ Ôùï /time-blocks/new
+Ôö£ Ôùï /today
+Ôö£ Ôùï /value-objects
+Ôö£ ãÆ /value-objects/[id]
+Ôö£ ãÆ /value-objects/[id]/edit
+Ôö£ Ôùï /value-objects/characteristics-rollup-preview
+Ôö£ Ôùï /value-objects/debug/cloud-profile
+Ôö£ Ôùï /value-objects/new
+Ôö£ Ôùï /value-objects/tree-preview
+Ôöö Ôùï /workspace
+
+
+ãÆ Proxy (Middleware)
+
+Ôùï  (Static)   prerendered as static content
+ãÆ  (Dynamic)  server-rendered on demand
+
+
+==============================
+10. RESTORE _local_artifacts
+==============================
+[PASS] Restored _local_artifacts back into repo working folder.
+
+==============================
+11. CREATE STEP02 DOC LOCK
+==============================
+Created/updated: docs\activity-to-value-objects\facts-guarded-save-production-fix-step02-normalized-body-build.md
+
+==============================
+12. GIT DIFF / STATUS
+==============================
+git diff -- src/app/api/activity/facts/save-gate/route.ts:
+warning: in the working copy of 'src/app/api/activity/facts/save-gate/route.ts', LF will be replaced by CRLF the next time Git touches it
+diff --git a/src/app/api/activity/facts/save-gate/route.ts b/src/app/api/activity/facts/save-gate/route.ts
+index 1ba8e17..b1afa37 100644
+--- a/src/app/api/activity/facts/save-gate/route.ts
++++ b/src/app/api/activity/facts/save-gate/route.ts
+@@ -60,7 +60,7 @@ function buildNoWriteResponse(params: {
+     endpoint: ENDPOINT,
+     routeLayer: ROUTE_LAYER,
+     routePurpose: "activity_facts_save_gate_scaffold_no_write",
+-    routeLayer: "activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1",
++    routeMarker: "activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1",
+     routeStatus: "guarded_persistence_contract_only_no_write",
+     productionWriteEnabled: false,
+     requestSummary: params.validation.summary,
+@@ -182,3 +182,4 @@ export async function POST(request: Request) {
+ }
+ 
+ 
++
+
+git diff -- src/lib/activity/facts/saveGate/requestValidation.ts:
+warning: in the working copy of 'src/lib/activity/facts/saveGate/requestValidation.ts', LF will be replaced by CRLF the next time Git touches it
+diff --git a/src/lib/activity/facts/saveGate/requestValidation.ts b/src/lib/activity/facts/saveGate/requestValidation.ts
+index 61c47bd..02dfc48 100644
+--- a/src/lib/activity/facts/saveGate/requestValidation.ts
++++ b/src/lib/activity/facts/saveGate/requestValidation.ts
+@@ -27,6 +27,7 @@ export type ActivityFactsSaveGateRequestSummary = {
+ };
+ 
+ export type ActivityFactsSaveGateValidationResult = {
++  normalizedBody: Record<string, unknown>;
+   ok: boolean;
+   requestRecord: Record<string, unknown>;
+   summary: ActivityFactsSaveGateRequestSummary;
+@@ -450,6 +451,7 @@ export function validateActivityFactsSaveGateRequest(
+   };
+ 
+   return {
++    normalizedBody: requestRecord,
+     ok: errors.length === 0,
+     requestRecord,
+     summary,
+
+git status -sb:
+## main...origin/main
+ M src/app/api/activity/facts/save-gate/route.ts
+ M src/lib/activity/facts/saveGate/requestValidation.ts
+?? ACTIVITY_FACTS_GUARDED_SAVE_PRODUCTION_FIX_STEP02_NORMALIZED_BODY_BUILD_RESULT_20260616_085614.txt
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP12_PUSH_ONLY_RESULT_20260616_084359.txt
+?? docs/activity-to-value-objects/facts-guarded-save-production-fix-step02-normalized-body-build.md
+?? docs/activity-to-value-objects/facts-guarded-save-step11-push-gate-prep.md
+?? docs/activity-to-value-objects/facts-guarded-save-step12-push-only.md
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_PRODUCTION_FIX_STEP01_DUPLICATE_ROUTE_LAYER_RESULT_20260616_084904.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDERR_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDOUT_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP10_COMMIT_ONLY_RESULT_20260616_083821.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP11_PUSH_GATE_PREP_RESULT_20260616_084039.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+
+==============================
+13. STEP 02 CONCLUSION
+==============================
+Patch script exit code: 0
+Static issues count: 0
+Forbidden hits count: 0
+Targeted lint exit code: 0
+Typecheck exit code: 0
+Production build exit code: 0
+Restore issues count: 0
+Total blocking issues count: 0
+STEP 02 RESULT: PASS
+normalizedBody type/return contract was fixed.
+Duplicate routeLayer fix remains in place.
+Typecheck passed without local backup artifacts.
+Production build passed without local backup artifacts.
+_local_artifacts was restored after verification.
+No DB write was executed.
+No SQL was executed.
+No external AI call was executed.
+No commit/push was executed.
+Next expected step: Step 03 / 5 — commit gate preparation for production build fix.

@@ -60,7 +60,7 @@ function buildNoWriteResponse(params: {
     endpoint: ENDPOINT,
     routeLayer: ROUTE_LAYER,
     routePurpose: "activity_facts_save_gate_scaffold_no_write",
-    routeLayer: "activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1",
+    routeMarker: "activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1",
     routeStatus: "guarded_persistence_contract_only_no_write",
     productionWriteEnabled: false,
     requestSummary: params.validation.summary,
@@ -180,5 +180,6 @@ export async function POST(request: Request) {
     { status: 200 }
   );
 }
+
 
 

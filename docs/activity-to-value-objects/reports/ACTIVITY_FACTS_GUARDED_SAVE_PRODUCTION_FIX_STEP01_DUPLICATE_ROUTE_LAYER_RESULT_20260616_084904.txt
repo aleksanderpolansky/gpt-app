@@ -1,0 +1,210 @@
+﻿GPT-APP / AI-NAVIGATOR
+ACTIVITY_FACTS_GUARDED_SAVE_PRODUCTION_BUILD_FIX
+STEP 01 / 5 — FIX DUPLICATE routeLayer TYPECHECK ERROR
+Generated: 2026-06-16 08:49:05
+Mode: PATCH + LOCAL BUILD VERIFY ONLY
+DB writes: NO
+SQL execution: NO
+External AI calls: NO
+Commit: NO
+Push: NO
+
+==============================
+1. CURRENT GIT STATE
+==============================
+git status -sb:
+## main...origin/main
+?? ACTIVITY_FACTS_GUARDED_SAVE_PRODUCTION_FIX_STEP01_DUPLICATE_ROUTE_LAYER_RESULT_20260616_084904.txt
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP12_PUSH_ONLY_RESULT_20260616_084359.txt
+?? docs/activity-to-value-objects/facts-guarded-save-step11-push-gate-prep.md
+?? docs/activity-to-value-objects/facts-guarded-save-step12-push-only.md
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDERR_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDOUT_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP10_COMMIT_ONLY_RESULT_20260616_083821.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP11_PUSH_GATE_PREP_RESULT_20260616_084039.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+
+git log -1 --oneline:
+00e9639 Add guarded activity facts persistence preview
+
+git rev-parse HEAD:
+00e9639240a1aaac22c41212f96787bc5840a65e
+
+==============================
+2. PATCH route.ts DUPLICATE PROPERTY
+==============================
+[PASS] Replaced duplicate routeLayer marker property with routeMarker.
+
+==============================
+3. STATIC PATCH VERIFICATION
+==============================
+[PASS] canonical routeLayer remains
+[PASS] routePurpose remains
+[PASS] routeMarker exists
+[PASS] duplicate literal routeLayer marker removed
+[PASS] guardedPersistenceContract remains
+[PASS] no-write route status remains
+[PASS] productionWriteEnabled false remains
+[PASS] dbWriteExecuted false remains
+[PASS] sqlExecuted false remains
+[PASS] openAiCallExecuted false remains
+
+routeLayer occurrences after patch:
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:61: routeLayer: ROUTE_LAYER,
+
+routeMarker occurrences after patch:
+C:\Users\Admin\Documents\projects\gpt-app\src\app\api\activity\facts\save-gate\route.ts:63: routeMarker: "activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1",
+
+==============================
+4. SAFETY FORBIDDEN RECHECK
+==============================
+
+----- PRECISE FORBIDDEN CHECK: No Supabase import in guarded-save UI/route/contract files -----
+Regex: import\s+\{?\s*supabase\b|from\s+["'][^"']*lib/supabase["']|from\s+["']@/lib/supabase["']
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No Supabase from/select calls in guarded-save UI/route/contract files -----
+Regex: \.from\s*\(|\.select\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable DB write methods in guarded-save UI/route/contract files -----
+Regex: \.(insert|upsert|update|delete)\s*\(
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No external AI import/constructor/client call in guarded-save UI/route/contract files -----
+Regex: from\s+["']openai["']|new\s+OpenAI\s*\(|\bopenai\s*\.
+[PASS] No precise forbidden hits.
+
+----- PRECISE FORBIDDEN CHECK: No executable SQL calls in guarded-save UI/route/contract files; ignore sqlExecuted safety flags -----
+Regex: (\bsupabase\s*\.\s*rpc\s*\(|\bdb\s*\.\s*execute\s*\(|\bclient\s*\.\s*query\s*\(|\bpool\s*\.\s*query\s*\(|\bexecuteSql\s*\(|\brawSql\s*\(|\bsql\s*`)
+[PASS] No precise forbidden hits.
+
+==============================
+5. TARGETED LINT
+==============================
+Targeted lint exit code: 0
+
+==============================
+6. TYPESCRIPT CHECK
+==============================
+npx tsc --noEmit exit code: 2
+_local_artifacts/backup_edit_page_before_parent_editor_20260615_084729.tsx(3,43): error TS2307: Cannot find module '../../../../components/workspace/value-objects/value-object-draft-read-panel' or its corresponding type declarations.
+_local_artifacts/backup_edit_page_before_parent_editor_20260615_084729.tsx(4,45): error TS2307: Cannot find module '../../../../components/workspace/value-objects/value-object-draft-title-editor' or its corresponding type declarations.
+_local_artifacts/backup_edit_page_before_value_object_id_fix_20260615_085215.tsx(3,43): error TS2307: Cannot find module '../../../../components/workspace/value-objects/value-object-draft-read-panel' or its corresponding type declarations.
+_local_artifacts/backup_edit_page_before_value_object_id_fix_20260615_085215.tsx(4,45): error TS2307: Cannot find module '../../../../components/workspace/value-objects/value-object-draft-title-editor' or its corresponding type declarations.
+_local_artifacts/backup_edit_page_before_value_object_id_fix_20260615_085215.tsx(5,41): error TS2307: Cannot find module '../../../../components/workspace/value-objects/value-object-parent-editor' or its corresponding type declarations.
+_local_artifacts/backup_edit_page_before_value_object_id_fix_20260615_085215.tsx(116,49): error TS2304: Cannot find name 'valueObject'.
+_local_artifacts/backup_route_before_parent_allowed_key_fix_20260615_090454.ts(2,23): error TS2307: Cannot find module '../../../../../lib/auth0' or its corresponding type declarations.
+_local_artifacts/backup_route_before_parent_allowed_key_fix_20260615_090454.ts(3,26): error TS2307: Cannot find module '../../../../../lib/supabase' or its corresponding type declarations.
+_local_artifacts/backup_route_id_before_parent_value_object_call_fix_20260615_084446.ts(2,23): error TS2307: Cannot find module '../../../../../lib/auth0' or its corresponding type declarations.
+_local_artifacts/backup_route_id_before_parent_value_object_call_fix_20260615_084446.ts(3,26): error TS2307: Cannot find module '../../../../../lib/supabase' or its corresponding type declarations.
+_local_artifacts/backup_route_id_before_parent_value_object_patch_20260615_083918.ts(2,23): error TS2307: Cannot find module '../../../../../lib/auth0' or its corresponding type declarations.
+_local_artifacts/backup_route_id_before_parent_value_object_patch_20260615_083918.ts(3,26): error TS2307: Cannot find module '../../../../../lib/supabase' or its corresponding type declarations.
+_local_artifacts/VALUE_OBJECT_AUTHOR_TYPE_CLEANUP_BACKUP_20260614_102623/src/components/workspace/value-objects/value-object-card.tsx(8,8): error TS2307: Cannot find module './value-object-action-policy' or its corresponding type declarations.
+_local_artifacts/VALUE_OBJECT_AUTHOR_TYPE_CLEANUP_BACKUP_20260614_102623/src/components/workspace/value-objects/value-object-card.tsx(9,41): error TS2307: Cannot find module './value-object-progress-ring' or its corresponding type declarations.
+_local_artifacts/VALUE_OBJECT_AUTHOR_TYPE_CLEANUP_BACKUP_20260614_102623/src/components/workspace/value-objects/value-object-card.tsx(10,45): error TS2307: Cannot find module './value-object-status-badge' or its corresponding type declarations.
+_local_artifacts/VALUE_OBJECT_AUTHOR_TYPE_CLEANUP_BACKUP_20260614_102623/src/components/workspace/value-objects/value-object-card.tsx(105,28): error TS7006: Parameter 'action' implicitly has an 'any' type.
+_local_artifacts/VALUE_OBJECT_AUTHOR_TYPE_CLEANUP_BACKUP_20260614_102623/src/components/workspace/value-objects/value-object-card.tsx(114,19): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<"violet" | "cyan" | "indigo" | "slate" | "emerald" | "amber" | "rose", string>'.
+_local_artifacts/VALUE_OBJECT_AUTHOR_TYPE_CLEANUP_BACKUP_20260614_102623/src/components/workspace/value-objects/value-object-detail-panel.tsx(10,8): error TS2307: Cannot find module './value-object-action-policy' or its corresponding type declarations.
+_local_artifacts/VALUE_OBJECT_AUTHOR_TYPE_CLEANUP_BACKUP_20260614_102623/src/components/workspace/value-objects/value-object-detail-panel.tsx(16,46): error TS2307: Cannot find module './value-object-progress-ring' or its corresponding type declarations.
+_local_artifacts/VALUE_OBJECT_AUTHOR_TYPE_CLEANUP_BACKUP_20260614_102623/src/components/workspace/value-objects/value-object-detail-panel.tsx(17,45): error TS2307: Cannot find module './value-object-status-badge' or its corresponding type declarations.
+_local_artifacts/VALUE_OBJECT_AUTHOR_TYPE_CLEANUP_BACKUP_20260614_102623/src/components/workspace/value-objects/value-object-detail-panel.tsx(194,28): error TS7006: Parameter 'action' implicitly has an 'any' type.
+_local_artifacts/VALUE_OBJECT_AUTHOR_TYPE_CLEANUP_BACKUP_20260614_102623/src/components/workspace/value-objects/value-object-detail-panel.tsx(203,19): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<"violet" | "cyan" | "indigo" | "slate" | "emerald" | "amber" | "rose", string>'.
+_local_artifacts/VALUE_OBJECT_AUTHOR_TYPE_CLEANUP_BACKUP_20260614_102623/src/components/workspace/value-objects/value-object-tree.tsx(12,41): error TS2307: Cannot find module './value-object-progress-ring' or its corresponding type declarations.
+_local_artifacts/VALUE_OBJECT_AUTHOR_TYPE_CLEANUP_BACKUP_20260614_102623/src/components/workspace/value-objects/value-object-tree.tsx(13,40): error TS2307: Cannot find module './value-object-status-badge' or its corresponding type declarations.
+_local_artifacts/VALUE_OBJECT_AUTHOR_TYPE_CLEANUP_BACKUP_20260614_102623/src/components/workspace/value-objects/value-objects-panel.tsx(26,41): error TS2307: Cannot find module './value-object-summary-strip' or its corresponding type declarations.
+_local_artifacts/VALUE_OBJECT_AUTHOR_TYPE_CLEANUP_BACKUP_20260614_102623/src/components/workspace/value-objects/value-objects-panel.tsx(31,8): error TS2307: Cannot find module './value-object-view-switcher' or its corresponding type declarations.
+_local_artifacts/VALUE_OBJECT_DOMAIN_FILTER_QUARANTINE_20260614_102623/src/components/workspace/value-objects/value-object-domain-filter.tsx(8,8): error TS2307: Cannot find module './value-object-types' or its corresponding type declarations.
+_local_artifacts/VALUE_OBJECT_EDIT_TITLE_STEP1_BACKUP_20260614_114307/src/app/value-objects/[id]/edit/page.tsx(3,43): error TS2307: Cannot find module '../../../../components/workspace/value-objects/value-object-draft-read-panel' or its corresponding type declarations.
+src/lib/activity/facts/saveGate/persistenceContract.ts(227,36): error TS2339: Property 'normalizedBody' does not exist on type 'ActivityFactsSaveGateValidationResult'.
+src/lib/activity/facts/saveGate/persistenceContract.ts(234,36): error TS2339: Property 'normalizedBody' does not exist on type 'ActivityFactsSaveGateValidationResult'.
+src/lib/activity/facts/saveGate/persistenceContract.ts(251,36): error TS2339: Property 'normalizedBody' does not exist on type 'ActivityFactsSaveGateValidationResult'.
+
+==============================
+7. PRODUCTION BUILD
+==============================
+npm run build exit code: 1
+
+> gpt-app@0.1.0 build
+> next build
+
+Ôû▓ Next.js 16.2.4 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Ô£ô Compiled successfully in 9.7s
+  Running TypeScript ...
+cmd.exe : Failed to type check.
+At line:2 char:5
++     cmd.exe /d /c "npm run build" > $buildOutput 2>&1
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to type check.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./_local_artifacts/backup_edit_page_before_parent_editor_20260615_084729.tsx:3:43
+Type error: Cannot find module '../../../../components/workspace/value-objects/value-object-draft-read-panel' or its 
+corresponding type declarations.
+
+  [90m1 |[0m [36mimport[0m [33mLink[0m [36mfrom[0m [32m"next/link"[0m;
+  [90m2 |[0m
+[31m[1m>[0m [90m3 |[0m [36mimport[0m { [33mValueObjectDraftReadPanel[0m } [36mfrom[0m 
+[32m"../../../../components/workspace/value-objects/v...[0m
+  [90m  |[0m                                           [31m[1m^[0m
+  [90m4 |[0m [36mimport[0m { [33mValueObjectDraftTitleEditor[0m } [36mfrom[0m 
+[32m"../../../../components/workspace/value-objects...[0m
+  [90m5 |[0m
+  [90m6 |[0m [36mtype[0m [33mValueObjectEditPageProps[0m = {
+Next.js build worker exited with code: 1 and signal: null
+
+==============================
+8. GIT DIFF / STATUS
+==============================
+git diff -- src/app/api/activity/facts/save-gate/route.ts:
+warning: in the working copy of 'src/app/api/activity/facts/save-gate/route.ts', LF will be replaced by CRLF the next time Git touches it
+diff --git a/src/app/api/activity/facts/save-gate/route.ts b/src/app/api/activity/facts/save-gate/route.ts
+index 1ba8e17..b1afa37 100644
+--- a/src/app/api/activity/facts/save-gate/route.ts
++++ b/src/app/api/activity/facts/save-gate/route.ts
+@@ -60,7 +60,7 @@ function buildNoWriteResponse(params: {
+     endpoint: ENDPOINT,
+     routeLayer: ROUTE_LAYER,
+     routePurpose: "activity_facts_save_gate_scaffold_no_write",
+-    routeLayer: "activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1",
++    routeMarker: "activity-facts-save-gate-route-guarded-persistence-contract-no-write-v1",
+     routeStatus: "guarded_persistence_contract_only_no_write",
+     productionWriteEnabled: false,
+     requestSummary: params.validation.summary,
+@@ -182,3 +182,4 @@ export async function POST(request: Request) {
+ }
+ 
+ 
++
+
+git status -sb:
+## main...origin/main
+ M src/app/api/activity/facts/save-gate/route.ts
+?? ACTIVITY_FACTS_GUARDED_SAVE_PRODUCTION_FIX_STEP01_DUPLICATE_ROUTE_LAYER_RESULT_20260616_084904.txt
+?? ACTIVITY_FACTS_GUARDED_SAVE_STEP12_PUSH_ONLY_RESULT_20260616_084359.txt
+?? docs/activity-to-value-objects/facts-guarded-save-step11-push-gate-prep.md
+?? docs/activity-to-value-objects/facts-guarded-save-step12-push-only.md
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDERR_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP04_DEV_SERVER_STDOUT_20260615_201604.log
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP10_COMMIT_ONLY_RESULT_20260616_083821.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_GUARDED_SAVE_STEP11_PUSH_GATE_PREP_RESULT_20260616_084039.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP11_COMMIT_ONLY_RESULT_20260615_182224.txt
+?? docs/activity-to-value-objects/reports/ACTIVITY_FACTS_SAVE_GATE_STEP12_PUSH_ONLY_RESULT_20260615_182814.txt
+
+==============================
+9. STEP 01 CONCLUSION
+==============================
+Patch issues count: 0
+Static issues count: 0
+Forbidden hits count: 0
+Targeted lint exit code: 0
+Typecheck exit code: 2
+Production build exit code: 1
+Total blocking issues count: 2
+STEP 01 RESULT: NEEDS REVIEW
+Do not commit/push before resolving the remaining local build/typecheck issues.
