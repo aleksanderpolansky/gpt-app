@@ -79,6 +79,25 @@ type ActiveFilterBadge = {
   value: string;
 };
 
+type CorrectionActionKey = "confirm" | "reject" | "edit" | "supersede";
+
+type CorrectionPreview = {
+  action: CorrectionActionKey;
+  label: string;
+  targetStatus: string;
+  transitionHint: string;
+  noWritePayload: {
+    factId: string | null;
+    activityEventId: string | null;
+    valueObjectId: string | null;
+    semanticObjectKey: string | null;
+    currentStatus: string | null;
+    requestedAction: CorrectionActionKey;
+    intendedTargetStatus: string;
+    executionMode: "no_write_preview_only";
+  };
+};
+
 const DEFAULT_LIMIT = 50;
 
 const DEFAULT_FILTERS: ActivityFactsFilterState = {
@@ -96,6 +115,38 @@ const FACT_STATUS_OPTIONS = [
   { value: "confirmed", label: "confirmed" },
   { value: "rejected", label: "rejected" },
   { value: "superseded", label: "superseded" },
+];
+
+const CORRECTION_ACTIONS: Array<{
+  key: CorrectionActionKey;
+  label: string;
+  targetStatus: string;
+  tone: string;
+}> = [
+  {
+    key: "confirm",
+    label: "Подтвердить",
+    targetStatus: "confirmed",
+    tone: "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100",
+  },
+  {
+    key: "reject",
+    label: "Отклонить",
+    targetStatus: "rejected",
+    tone: "border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100",
+  },
+  {
+    key: "edit",
+    label: "Исправить",
+    targetStatus: "pending_review",
+    tone: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
+  },
+  {
+    key: "supersede",
+    label: "Supersede",
+    targetStatus: "superseded",
+    tone: "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+  },
 ];
 
 function compactId(value: string | null | undefined) {
@@ -264,12 +315,71 @@ function getErrorMessage(
   );
 }
 
+function getStatusTransitionHint(currentStatus: string | null, targetStatus: string) {
+  const current = currentStatus ?? "unknown";
+
+  if (current === targetStatus) {
+    return `Статус уже равен ${targetStatus}. Будущая write-модель должна либо блокировать дубль, либо создавать audit-only запись.`;
+  }
+
+  if (current === "superseded") {
+    return "Fact уже superseded. Будущая write-модель должна требовать отдельное подтверждение перед повторной сменой статуса.";
+  }
+
+  if (current === "rejected" && targetStatus === "confirmed") {
+    return "Переход rejected → confirmed возможен только после явного audit reason.";
+  }
+
+  if (targetStatus === "pending_review") {
+    return "Исправление должно сначала переводить fact в режим review, а не менять данные без проверки.";
+  }
+
+  return `Предпросмотр перехода ${current} → ${targetStatus}. Запись пока намеренно не выполняется.`;
+}
+
+function buildCorrectionPreview(
+  row: ActivityFactRow,
+  action: CorrectionActionKey
+): CorrectionPreview {
+  const actionConfig = CORRECTION_ACTIONS.find((item) => item.key === action);
+
+  const label = actionConfig?.label ?? action;
+  const targetStatus = actionConfig?.targetStatus ?? "pending_review";
+
+  return {
+    action,
+    label,
+    targetStatus,
+    transitionHint: getStatusTransitionHint(row.factStatus, targetStatus),
+    noWritePayload: {
+      factId: row.factId,
+      activityEventId: row.activityEventId,
+      valueObjectId: row.valueObjectId,
+      semanticObjectKey: row.semanticObjectKey,
+      currentStatus: row.factStatus,
+      requestedAction: action,
+      intendedTargetStatus: targetStatus,
+      executionMode: "no_write_preview_only",
+    },
+  };
+}
+
+function getActionButtonClass(tone: string) {
+  return [
+    "rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition",
+    tone,
+  ].join(" ");
+}
+
 export function ActivityFactsTable() {
   const [draftFilters, setDraftFilters] =
     useState<ActivityFactsFilterState>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] =
     useState<ActivityFactsFilterState>(DEFAULT_FILTERS);
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
+  const [selectedFact, setSelectedFact] = useState<ActivityFactRow | null>(null);
+  const [correctionPreview, setCorrectionPreview] =
+    useState<CorrectionPreview | null>(null);
 
   const requestUrl = useMemo(
     () => buildQueryUrl(appliedFilters),
@@ -373,12 +483,16 @@ export function ActivityFactsTable() {
 
     setDraftFilters(nextFilters);
     setAppliedFilters(nextFilters);
+    setSelectedFact(null);
+    setCorrectionPreview(null);
     void loadFacts(nextFilters);
   }, [draftFilters, loadFacts]);
 
   const clearFilters = useCallback(() => {
     setDraftFilters(DEFAULT_FILTERS);
     setAppliedFilters(DEFAULT_FILTERS);
+    setSelectedFact(null);
+    setCorrectionPreview(null);
     void loadFacts(DEFAULT_FILTERS);
   }, [loadFacts]);
 
@@ -406,6 +520,19 @@ export function ActivityFactsTable() {
     }));
   }, []);
 
+  const previewCorrectionAction = useCallback(
+    (row: ActivityFactRow, action: CorrectionActionKey) => {
+      setSelectedFact(row);
+      setCorrectionPreview(buildCorrectionPreview(row, action));
+    },
+    []
+  );
+
+  const selectFactForPreview = useCallback((row: ActivityFactRow) => {
+    setSelectedFact(row);
+    setCorrectionPreview(null);
+  }, []);
+
   const facts = loadState.status === "ready" ? loadState.data.facts ?? [] : [];
   const sideEffects =
     loadState.status === "ready"
@@ -419,15 +546,16 @@ export function ActivityFactsTable() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Step 55 / 76 · User-facing filters
+            Step 56 / 76 · Correction-ready UI
           </p>
           <h2 className="mt-2 text-2xl font-semibold text-slate-950">
             Activity Facts table
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Таблица читает только <code>GET /api/activity/facts</code>. Фильтры
-            применяются явно кнопкой, поэтому ввод в поля не запускает запрос на
-            каждый символ. UI не выполняет запись, SQL или OpenAI-вызовы.
+            Таблица читает только <code>GET /api/activity/facts</code>.
+            Correction actions в этом шаге работают как no-write preview:
+            кнопки показывают будущий action contract, но не отправляют mutation
+            request и не меняют данные.
           </p>
         </div>
 
@@ -581,6 +709,88 @@ export function ActivityFactsTable() {
         </div>
       </div>
 
+      <div className="mt-4 rounded-3xl border border-indigo-200 bg-indigo-50 p-4">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600">
+              Correction-ready panel · no-write
+            </p>
+            <h3 className="mt-1 text-lg font-semibold text-indigo-950">
+              Selected fact preview
+            </h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-indigo-900">
+              Выбери строку или нажми action-кнопку. На этом шаге action только
+              формирует preview будущего correction contract. Запись, SQL и
+              OpenAI-вызовы не выполняются.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-indigo-200 bg-white px-4 py-3 text-xs text-indigo-900">
+            Status transitions: pending_review → confirmed / rejected /
+            superseded
+          </div>
+        </div>
+
+        {selectedFact ? (
+          <div className="mt-4 grid gap-3 text-xs text-indigo-950 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border border-indigo-100 bg-white p-3">
+              <div className="font-semibold">factId</div>
+              <div className="mt-1 font-mono">{compactId(selectedFact.factId)}</div>
+            </div>
+            <div className="rounded-2xl border border-indigo-100 bg-white p-3">
+              <div className="font-semibold">activityEventId</div>
+              <div className="mt-1 font-mono">
+                {compactId(selectedFact.activityEventId)}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-indigo-100 bg-white p-3">
+              <div className="font-semibold">valueObjectId</div>
+              <div className="mt-1 font-mono">
+                {compactId(selectedFact.valueObjectId)}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-indigo-100 bg-white p-3">
+              <div className="font-semibold">semanticObjectKey</div>
+              <div className="mt-1">
+                {selectedFact.semanticObjectKey ?? "—"}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-2xl border border-dashed border-indigo-200 bg-white p-4 text-sm text-indigo-900">
+            Fact ещё не выбран. После появления строк в таблице нажми
+            <strong> Details</strong> или любую no-write action-кнопку.
+          </div>
+        )}
+
+        {correctionPreview ? (
+          <div className="mt-4 rounded-2xl border border-indigo-200 bg-white p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600">
+                  Action preview
+                </div>
+                <div className="mt-1 text-sm font-semibold text-indigo-950">
+                  {correctionPreview.label} → {correctionPreview.targetStatus}
+                </div>
+                <p className="mt-2 text-sm leading-6 text-indigo-900">
+                  {correctionPreview.transitionHint}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-900">
+                No-write preview only. Future write route is intentionally
+                deferred.
+              </div>
+            </div>
+
+            <pre className="mt-4 overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-50">
+              {JSON.stringify(correctionPreview.noWritePayload, null, 2)}
+            </pre>
+          </div>
+        ) : null}
+      </div>
+
       {loadState.status === "loading" ? (
         <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
           Загружаю facts…
@@ -623,6 +833,7 @@ export function ActivityFactsTable() {
                 <th className="px-4 py-3 font-semibold">status</th>
                 <th className="px-4 py-3 font-semibold">source</th>
                 <th className="px-4 py-3 font-semibold">created_at</th>
+                <th className="px-4 py-3 font-semibold">actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
@@ -656,6 +867,28 @@ export function ActivityFactsTable() {
                   </td>
                   <td className="px-4 py-3 text-slate-700">
                     {formatDateTime(row.createdAt)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex min-w-[360px] flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => selectFactForPreview(row)}
+                        className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                      >
+                        Details
+                      </button>
+                      {CORRECTION_ACTIONS.map((action) => (
+                        <button
+                          key={action.key}
+                          type="button"
+                          onClick={() => previewCorrectionAction(row, action.key)}
+                          className={getActionButtonClass(action.tone)}
+                          title={`No-write preview: ${action.targetStatus}`}
+                        >
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
                   </td>
                 </tr>
               ))}
