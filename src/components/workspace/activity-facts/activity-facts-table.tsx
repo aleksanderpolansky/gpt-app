@@ -59,13 +59,44 @@ type LoadState =
       data: ActivityFactsResponse | null;
     };
 
+type ActivityFactsFilterState = {
+  limit: number;
+  semanticObjectKey: string;
+  valueObjectId: string;
+  activityEventId: string;
+  factStatus: string;
+};
+
 type FetchFactsResult = {
   responseOk: boolean;
   statusCode: number;
   data: ActivityFactsResponse;
 };
 
+type ActiveFilterBadge = {
+  key: keyof ActivityFactsFilterState;
+  label: string;
+  value: string;
+};
+
 const DEFAULT_LIMIT = 50;
+
+const DEFAULT_FILTERS: ActivityFactsFilterState = {
+  limit: DEFAULT_LIMIT,
+  semanticObjectKey: "",
+  valueObjectId: "",
+  activityEventId: "",
+  factStatus: "",
+};
+
+const FACT_STATUS_OPTIONS = [
+  { value: "", label: "Все статусы" },
+  { value: "active", label: "active" },
+  { value: "pending_review", label: "pending_review" },
+  { value: "confirmed", label: "confirmed" },
+  { value: "rejected", label: "rejected" },
+  { value: "superseded", label: "superseded" },
+];
 
 function compactId(value: string | null | undefined) {
   if (!value) {
@@ -109,37 +140,104 @@ function formatMeasure(row: ActivityFactRow) {
   return parts.join(" · ");
 }
 
-function buildQueryUrl(params: {
-  limit: number;
-  semanticObjectKey: string;
-  valueObjectId: string;
-  activityEventId: string;
-  factStatus: string;
-}) {
+function normalizeFilters(filters: ActivityFactsFilterState): ActivityFactsFilterState {
+  return {
+    limit: filters.limit,
+    semanticObjectKey: filters.semanticObjectKey.trim(),
+    valueObjectId: filters.valueObjectId.trim(),
+    activityEventId: filters.activityEventId.trim(),
+    factStatus: filters.factStatus.trim(),
+  };
+}
+
+function areFiltersEqual(
+  left: ActivityFactsFilterState,
+  right: ActivityFactsFilterState
+) {
+  return (
+    left.limit === right.limit &&
+    left.semanticObjectKey === right.semanticObjectKey &&
+    left.valueObjectId === right.valueObjectId &&
+    left.activityEventId === right.activityEventId &&
+    left.factStatus === right.factStatus
+  );
+}
+
+function getActiveFilterBadges(filters: ActivityFactsFilterState): ActiveFilterBadge[] {
+  const badges: ActiveFilterBadge[] = [];
+
+  if (filters.limit !== DEFAULT_LIMIT) {
+    badges.push({
+      key: "limit",
+      label: "limit",
+      value: String(filters.limit),
+    });
+  }
+
+  if (filters.semanticObjectKey) {
+    badges.push({
+      key: "semanticObjectKey",
+      label: "semantic key",
+      value: filters.semanticObjectKey,
+    });
+  }
+
+  if (filters.valueObjectId) {
+    badges.push({
+      key: "valueObjectId",
+      label: "VO",
+      value: compactId(filters.valueObjectId),
+    });
+  }
+
+  if (filters.activityEventId) {
+    badges.push({
+      key: "activityEventId",
+      label: "activity",
+      value: compactId(filters.activityEventId),
+    });
+  }
+
+  if (filters.factStatus) {
+    badges.push({
+      key: "factStatus",
+      label: "status",
+      value: filters.factStatus,
+    });
+  }
+
+  return badges;
+}
+
+function buildQueryUrl(filters: ActivityFactsFilterState) {
+  const normalized = normalizeFilters(filters);
   const searchParams = new URLSearchParams();
-  searchParams.set("limit", String(params.limit));
 
-  if (params.semanticObjectKey.trim()) {
-    searchParams.set("semanticObjectKey", params.semanticObjectKey.trim());
+  searchParams.set("limit", String(normalized.limit));
+
+  if (normalized.semanticObjectKey) {
+    searchParams.set("semanticObjectKey", normalized.semanticObjectKey);
   }
 
-  if (params.valueObjectId.trim()) {
-    searchParams.set("valueObjectId", params.valueObjectId.trim());
+  if (normalized.valueObjectId) {
+    searchParams.set("valueObjectId", normalized.valueObjectId);
   }
 
-  if (params.activityEventId.trim()) {
-    searchParams.set("activityEventId", params.activityEventId.trim());
+  if (normalized.activityEventId) {
+    searchParams.set("activityEventId", normalized.activityEventId);
   }
 
-  if (params.factStatus.trim()) {
-    searchParams.set("factStatus", params.factStatus.trim());
+  if (normalized.factStatus) {
+    searchParams.set("factStatus", normalized.factStatus);
   }
 
   return `/api/activity/facts?${searchParams.toString()}`;
 }
 
-async function fetchActivityFacts(requestUrl: string): Promise<FetchFactsResult> {
-  const response = await fetch(requestUrl, {
+async function fetchActivityFacts(
+  filters: ActivityFactsFilterState
+): Promise<FetchFactsResult> {
+  const response = await fetch(buildQueryUrl(filters), {
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -167,30 +265,38 @@ function getErrorMessage(
 }
 
 export function ActivityFactsTable() {
-  const [limit, setLimit] = useState(DEFAULT_LIMIT);
-  const [semanticObjectKey, setSemanticObjectKey] = useState("");
-  const [valueObjectId, setValueObjectId] = useState("");
-  const [activityEventId, setActivityEventId] = useState("");
-  const [factStatus, setFactStatus] = useState("");
+  const [draftFilters, setDraftFilters] =
+    useState<ActivityFactsFilterState>(DEFAULT_FILTERS);
+  const [appliedFilters, setAppliedFilters] =
+    useState<ActivityFactsFilterState>(DEFAULT_FILTERS);
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
 
   const requestUrl = useMemo(
-    () =>
-      buildQueryUrl({
-        limit,
-        semanticObjectKey,
-        valueObjectId,
-        activityEventId,
-        factStatus,
-      }),
-    [activityEventId, factStatus, limit, semanticObjectKey, valueObjectId]
+    () => buildQueryUrl(appliedFilters),
+    [appliedFilters]
   );
 
-  const loadFacts = useCallback(async () => {
+  const activeFilterBadges = useMemo(
+    () => getActiveFilterBadges(appliedFilters),
+    [appliedFilters]
+  );
+
+  const normalizedDraftFilters = useMemo(
+    () => normalizeFilters(draftFilters),
+    [draftFilters]
+  );
+
+  const hasDraftChanges = useMemo(
+    () => !areFiltersEqual(normalizedDraftFilters, appliedFilters),
+    [appliedFilters, normalizedDraftFilters]
+  );
+
+  const loadFacts = useCallback(async (filters: ActivityFactsFilterState) => {
     setLoadState({ status: "loading" });
 
     try {
-      const result = await fetchActivityFacts(requestUrl);
+      const normalizedFilters = normalizeFilters(filters);
+      const result = await fetchActivityFacts(normalizedFilters);
 
       if (!result.responseOk || result.data.ok === false) {
         setLoadState({
@@ -214,14 +320,14 @@ export function ActivityFactsTable() {
         data: null,
       });
     }
-  }, [requestUrl]);
+  }, []);
 
   useEffect(() => {
     let isCurrent = true;
 
     async function loadInitialFacts() {
       try {
-        const result = await fetchActivityFacts(requestUrl);
+        const result = await fetchActivityFacts(DEFAULT_FILTERS);
 
         if (!isCurrent) {
           return;
@@ -260,7 +366,45 @@ export function ActivityFactsTable() {
     return () => {
       isCurrent = false;
     };
-  }, [requestUrl]);
+  }, []);
+
+  const applyFilters = useCallback(() => {
+    const nextFilters = normalizeFilters(draftFilters);
+
+    setDraftFilters(nextFilters);
+    setAppliedFilters(nextFilters);
+    void loadFacts(nextFilters);
+  }, [draftFilters, loadFacts]);
+
+  const clearFilters = useCallback(() => {
+    setDraftFilters(DEFAULT_FILTERS);
+    setAppliedFilters(DEFAULT_FILTERS);
+    void loadFacts(DEFAULT_FILTERS);
+  }, [loadFacts]);
+
+  const refreshCurrentView = useCallback(() => {
+    void loadFacts(appliedFilters);
+  }, [appliedFilters, loadFacts]);
+
+  const setDraftTextFilter = useCallback(
+    (
+      key: "semanticObjectKey" | "valueObjectId" | "activityEventId" | "factStatus",
+      value: string
+    ) => {
+      setDraftFilters((currentFilters) => ({
+        ...currentFilters,
+        [key]: value,
+      }));
+    },
+    []
+  );
+
+  const setDraftLimit = useCallback((value: number) => {
+    setDraftFilters((currentFilters) => ({
+      ...currentFilters,
+      limit: value,
+    }));
+  }, []);
 
   const facts = loadState.status === "ready" ? loadState.data.facts ?? [] : [];
   const sideEffects =
@@ -275,82 +419,156 @@ export function ActivityFactsTable() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Step 54 / 76 · Read-only UI
+            Step 55 / 76 · User-facing filters
           </p>
           <h2 className="mt-2 text-2xl font-semibold text-slate-950">
             Activity Facts table
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Таблица читает только <code>GET /api/activity/facts</code>. Этот UI
-            не выполняет запись, SQL или OpenAI-вызовы. Значение measure пока
-            отображается по текущему fact read-model; расширение join с
-            <code> activity_event_measures</code> остаётся для следующих шагов.
+            Таблица читает только <code>GET /api/activity/facts</code>. Фильтры
+            применяются явно кнопкой, поэтому ввод в поля не запускает запрос на
+            каждый символ. UI не выполняет запись, SQL или OpenAI-вызовы.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={() => void loadFacts()}
+          onClick={refreshCurrentView}
           className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
         >
-          Обновить таблицу
+          Обновить текущий вид
         </button>
       </div>
 
-      <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-          Limit
-          <select
-            value={limit}
-            onChange={(event) => setLimit(Number(event.target.value))}
-            className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800"
+      <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Фильтры
+            </h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Измени поля и нажми <strong>Применить фильтры</strong>. Кнопка
+              <strong> Сбросить</strong> возвращает полный список с limit 50.
+            </p>
+          </div>
+
+          {hasDraftChanges ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+              Есть неприменённые изменения фильтров
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">
+              Фильтры применены
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+            Limit
+            <select
+              value={draftFilters.limit}
+              onChange={(event) => setDraftLimit(Number(event.target.value))}
+              className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+            Semantic key
+            <input
+              value={draftFilters.semanticObjectKey}
+              onChange={(event) =>
+                setDraftTextFilter("semanticObjectKey", event.target.value)
+              }
+              placeholder="sleep / recovery / ..."
+              className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+            Value Object ID
+            <input
+              value={draftFilters.valueObjectId}
+              onChange={(event) =>
+                setDraftTextFilter("valueObjectId", event.target.value)
+              }
+              placeholder="uuid"
+              className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+            Activity ID
+            <input
+              value={draftFilters.activityEventId}
+              onChange={(event) =>
+                setDraftTextFilter("activityEventId", event.target.value)
+              }
+              placeholder="uuid"
+              className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+            Status
+            <select
+              value={draftFilters.factStatus}
+              onChange={(event) =>
+                setDraftTextFilter("factStatus", event.target.value)
+              }
+              className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800"
+            >
+              {FACT_STATUS_OPTIONS.map((option) => (
+                <option key={option.value || "all"} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={applyFilters}
+            className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-        </label>
+            Применить фильтры
+          </button>
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-white"
+          >
+            Сбросить
+          </button>
+        </div>
 
-        <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-          Semantic key
-          <input
-            value={semanticObjectKey}
-            onChange={(event) => setSemanticObjectKey(event.target.value)}
-            placeholder="sleep / recovery / ..."
-            className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-          Value Object ID
-          <input
-            value={valueObjectId}
-            onChange={(event) => setValueObjectId(event.target.value)}
-            placeholder="uuid"
-            className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-          Activity ID
-          <input
-            value={activityEventId}
-            onChange={(event) => setActivityEventId(event.target.value)}
-            placeholder="uuid"
-            className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-          Status
-          <input
-            value={factStatus}
-            onChange={(event) => setFactStatus(event.target.value)}
-            placeholder="active / confirmed / ..."
-            className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800"
-          />
-        </label>
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
+          <div className="font-semibold text-slate-700">Активные фильтры</div>
+          {activeFilterBadges.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {activeFilterBadges.map((filter) => (
+                <span
+                  key={`${filter.key}-${filter.value}`}
+                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-700"
+                >
+                  {filter.label}: {filter.value}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-1">
+              Нет дополнительных фильтров. Используется базовый limit{" "}
+              {DEFAULT_LIMIT}.
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
@@ -385,9 +603,9 @@ export function ActivityFactsTable() {
         <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
           <div className="font-semibold text-slate-800">Saved facts пока нет.</div>
           <p className="mt-2">
-            Endpoint работает, но для текущего пользователя вернул
-            <code> count: 0</code>. После реального сохранения facts через save
-            gate новые строки должны появляться здесь.
+            Endpoint работает, но для текущего пользователя и выбранных фильтров
+            вернул <code> count: 0</code>. После реального сохранения facts через
+            save gate новые строки должны появляться здесь.
           </p>
         </div>
       ) : null}
