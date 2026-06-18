@@ -128,7 +128,7 @@ export function validateValueObjectTargetStandardFixtures():
     const validation = validateValueObjectTargetStandard(standard);
 
     return {
-      standardId: standard.standardId ?? standard.valueObjectId,
+      standardId: standard.standardId,
       ...validation,
     };
   });

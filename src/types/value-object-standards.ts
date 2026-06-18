@@ -220,7 +220,7 @@ export function isValueObjectStandardStatus(
   return includesLiteral(VALUE_OBJECT_STANDARD_STATUSES, value);
 }
 
-function isFiniteNumber(value: number | undefined) {
+function isFiniteNumber(value: number | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
@@ -238,18 +238,21 @@ export function validateValueObjectTargetStandard(
   }
 
   if (standard.ruleType === "desired_range") {
-    if (!isFiniteNumber(standard.targetMin)) {
+    const targetMin = standard.targetMin;
+    const targetMax = standard.targetMax;
+
+    if (!isFiniteNumber(targetMin)) {
       errors.push("targetMin is required for desired_range.");
     }
 
-    if (!isFiniteNumber(standard.targetMax)) {
+    if (!isFiniteNumber(targetMax)) {
       errors.push("targetMax is required for desired_range.");
     }
 
     if (
-      isFiniteNumber(standard.targetMin) &&
-      isFiniteNumber(standard.targetMax) &&
-      standard.targetMin > standard.targetMax
+      isFiniteNumber(targetMin) &&
+      isFiniteNumber(targetMax) &&
+      targetMin > targetMax
     ) {
       errors.push("targetMin must be less than or equal to targetMax.");
     }
