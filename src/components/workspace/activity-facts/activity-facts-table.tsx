@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type ActivityFactRow = {
@@ -285,6 +286,44 @@ function buildQueryUrl(filters: ActivityFactsFilterState) {
   return `/api/activity/facts?${searchParams.toString()}`;
 }
 
+function buildActivityEventHref(activityEventId: string | null | undefined) {
+  if (!activityEventId) {
+    return null;
+  }
+
+  return `/activity-today?activityEventId=${encodeURIComponent(activityEventId)}`;
+}
+
+function buildValueObjectHref(valueObjectId: string | null | undefined) {
+  if (!valueObjectId) {
+    return null;
+  }
+
+  return `/value-objects/${encodeURIComponent(valueObjectId)}`;
+}
+
+function renderLinkedCompactId(
+  value: string | null | undefined,
+  href: string | null,
+  label: string
+) {
+  const displayValue = compactId(value);
+
+  if (!value || !href) {
+    return <span>{displayValue}</span>;
+  }
+
+  return (
+    <Link
+      href={href}
+      className="font-mono text-xs font-semibold text-indigo-700 underline decoration-indigo-200 underline-offset-4 transition hover:text-indigo-900 hover:decoration-indigo-500"
+      title={`${label}: ${value}`}
+    >
+      {displayValue}
+    </Link>
+  );
+}
+
 async function fetchActivityFacts(
   filters: ActivityFactsFilterState
 ): Promise<FetchFactsResult> {
@@ -399,6 +438,16 @@ export function ActivityFactsTable() {
   const hasDraftChanges = useMemo(
     () => !areFiltersEqual(normalizedDraftFilters, appliedFilters),
     [appliedFilters, normalizedDraftFilters]
+  );
+
+  const selectedActivityHref = useMemo(
+    () => buildActivityEventHref(selectedFact?.activityEventId),
+    [selectedFact?.activityEventId]
+  );
+
+  const selectedValueObjectHref = useMemo(
+    () => buildValueObjectHref(selectedFact?.valueObjectId),
+    [selectedFact?.valueObjectId]
   );
 
   const loadFacts = useCallback(async (filters: ActivityFactsFilterState) => {
@@ -546,16 +595,16 @@ export function ActivityFactsTable() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Step 56 / 76 · Correction-ready UI
+            Step 57 / 76 · Activity and Value Object links
           </p>
           <h2 className="mt-2 text-2xl font-semibold text-slate-950">
             Activity Facts table
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Таблица читает только <code>GET /api/activity/facts</code>.
-            Correction actions в этом шаге работают как no-write preview:
-            кнопки показывают будущий action contract, но не отправляют mutation
-            request и не меняют данные.
+            Activity ID ведёт на <code>/activity-today</code> с фильтром
+            activityEventId, а VO ID ведёт на карточку Value Object. Correction
+            actions остаются no-write preview.
           </p>
         </div>
 
@@ -713,21 +762,20 @@ export function ActivityFactsTable() {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600">
-              Correction-ready panel · no-write
+              Linked fact preview · no-write
             </p>
             <h3 className="mt-1 text-lg font-semibold text-indigo-950">
               Selected fact preview
             </h3>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-indigo-900">
-              Выбери строку или нажми action-кнопку. На этом шаге action только
-              формирует preview будущего correction contract. Запись, SQL и
-              OpenAI-вызовы не выполняются.
+              Выбери строку или нажми action-кнопку. Activity и Value Object
+              links открывают существующие страницы, а correction action только
+              формирует preview будущего contract.
             </p>
           </div>
 
           <div className="rounded-2xl border border-indigo-200 bg-white px-4 py-3 text-xs text-indigo-900">
-            Status transitions: pending_review → confirmed / rejected /
-            superseded
+            Links: activity → /activity-today, VO → /value-objects/{"{id}"}
           </div>
         </div>
 
@@ -739,14 +787,22 @@ export function ActivityFactsTable() {
             </div>
             <div className="rounded-2xl border border-indigo-100 bg-white p-3">
               <div className="font-semibold">activityEventId</div>
-              <div className="mt-1 font-mono">
-                {compactId(selectedFact.activityEventId)}
+              <div className="mt-1">
+                {renderLinkedCompactId(
+                  selectedFact.activityEventId,
+                  selectedActivityHref,
+                  "Open activity event"
+                )}
               </div>
             </div>
             <div className="rounded-2xl border border-indigo-100 bg-white p-3">
               <div className="font-semibold">valueObjectId</div>
-              <div className="mt-1 font-mono">
-                {compactId(selectedFact.valueObjectId)}
+              <div className="mt-1">
+                {renderLinkedCompactId(
+                  selectedFact.valueObjectId,
+                  selectedValueObjectHref,
+                  "Open Value Object"
+                )}
               </div>
             </div>
             <div className="rounded-2xl border border-indigo-100 bg-white p-3">
@@ -837,61 +893,74 @@ export function ActivityFactsTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
-              {facts.map((row, index) => (
-                <tr key={row.factId ?? `${row.activityEventId ?? "fact"}-${index}`}>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-700">
-                    {compactId(row.factId)}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-700">
-                    {compactId(row.activityEventId)}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-700">
-                    {compactId(row.valueObjectId)}
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">
-                    {row.semanticObjectKey ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">
-                    <div>{formatMeasure(row)}</div>
-                    {row.metricValueSource ? (
-                      <div className="mt-1 text-xs text-slate-400">
-                        {row.metricValueSource}
-                      </div>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">
-                    {row.factStatus ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">
-                    {row.sourceType ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">
-                    {formatDateTime(row.createdAt)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex min-w-[360px] flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => selectFactForPreview(row)}
-                        className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-                      >
-                        Details
-                      </button>
-                      {CORRECTION_ACTIONS.map((action) => (
+              {facts.map((row, index) => {
+                const activityHref = buildActivityEventHref(row.activityEventId);
+                const valueObjectHref = buildValueObjectHref(row.valueObjectId);
+
+                return (
+                  <tr key={row.factId ?? `${row.activityEventId ?? "fact"}-${index}`}>
+                    <td className="px-4 py-3 font-mono text-xs text-slate-700">
+                      {compactId(row.factId)}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {renderLinkedCompactId(
+                        row.activityEventId,
+                        activityHref,
+                        "Open activity event"
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {renderLinkedCompactId(
+                        row.valueObjectId,
+                        valueObjectHref,
+                        "Open Value Object"
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {row.semanticObjectKey ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      <div>{formatMeasure(row)}</div>
+                      {row.metricValueSource ? (
+                        <div className="mt-1 text-xs text-slate-400">
+                          {row.metricValueSource}
+                        </div>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {row.factStatus ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {row.sourceType ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {formatDateTime(row.createdAt)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex min-w-[360px] flex-wrap gap-2">
                         <button
-                          key={action.key}
                           type="button"
-                          onClick={() => previewCorrectionAction(row, action.key)}
-                          className={getActionButtonClass(action.tone)}
-                          title={`No-write preview: ${action.targetStatus}`}
+                          onClick={() => selectFactForPreview(row)}
+                          className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                         >
-                          {action.label}
+                          Details
                         </button>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {CORRECTION_ACTIONS.map((action) => (
+                          <button
+                            key={action.key}
+                            type="button"
+                            onClick={() => previewCorrectionAction(row, action.key)}
+                            className={getActionButtonClass(action.tone)}
+                            title={`No-write preview: ${action.targetStatus}`}
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
