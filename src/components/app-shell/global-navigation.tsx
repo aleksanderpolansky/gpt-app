@@ -382,6 +382,11 @@ export function GlobalSidebar() {
             actionHref="/activity-capture"
             actionTitle="Добавить активность"
           />
+          <TreeItem
+            label="Таблица фактов активности"
+            depth={2}
+            href="/activity-facts"
+          />
         </ExpandableSidebarItem>
 
         <ExpandableSidebarItem icon={Wallet} label="Деньги" defaultOpen>

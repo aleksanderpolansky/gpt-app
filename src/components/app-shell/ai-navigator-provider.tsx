@@ -1329,7 +1329,8 @@ function buildLocalActivityPreviewReply(classification: UnifiedMessageClassifica
     "Следующий gate: показать пользователю review-карточку и попросить подтверждение перед сохранением.",
     "",
     "Что можно написать дальше в этом же поле:",
-    "— подтверждаю активность",
+    "— сохранить факт активности",
+      "— подтверждаю активность",
     "— исправить: было 45 минут",
     "— отмена",
     "— показать review",
@@ -1798,6 +1799,7 @@ async function buildNoWriteSemanticActivityPreviewReply(
       "Service Log write НЕ выполнен.",
       "",
       "Что можно написать дальше в этом же поле:",
+      "— сохранить факт активности",
       "— подтверждаю активность",
       "— исправить: было 45 минут",
       "— отмена",
@@ -1817,6 +1819,353 @@ async function buildNoWriteSemanticActivityPreviewReply(
     ].join("\n");
   }
 }
+
+function isActivityFactsSaveGateWriteCommand(message: string): boolean {
+  const normalized = message.trim().toLowerCase();
+
+  return [
+    "сохранить факт активности",
+    "сохрани факт активности",
+    "записать факт активности",
+    "запиши факт активности",
+    "сохранить факт",
+    "записать факт",
+    "save activity fact",
+    "save fact",
+  ].some((marker) => normalized.includes(marker));
+}
+
+function isActivityFactsSaveGateRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readActivityFactsSaveGateString(
+  sourceValue: unknown,
+  keys: string[],
+): string | null {
+  if (!isActivityFactsSaveGateRecord(sourceValue)) {
+    return null;
+  }
+
+  for (const key of keys) {
+    const value = sourceValue[key];
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value);
+    }
+  }
+
+  return null;
+}
+
+function readActivityFactsSaveGateStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (typeof item === "string" && item.trim().length > 0) {
+        return item.trim();
+      }
+
+      if (typeof item === "number" && Number.isFinite(item)) {
+        return String(item);
+      }
+
+      return null;
+    })
+    .filter((item): item is string => Boolean(item));
+}
+
+function buildActivityFactsSaveGateRequestFromPackage(
+  pkg: Record<string, unknown>,
+): Record<string, unknown> | null {
+  const rawFactPreviews = Array.isArray(pkg.factPreviews)
+    ? pkg.factPreviews
+    : [];
+
+  const factDecisions = rawFactPreviews
+    .map((rawFact) => {
+      if (!isActivityFactsSaveGateRecord(rawFact)) {
+        return null;
+      }
+
+      const factLocalId = readActivityFactsSaveGateString(rawFact, ["localId"]);
+
+      if (!factLocalId) {
+        return null;
+      }
+
+      const status = readActivityFactsSaveGateString(rawFact, ["status"]);
+
+      if (
+        status &&
+        ![
+          "ready_for_fact_write",
+          "accepted",
+          "candidate",
+          "needs_user_confirmation",
+        ].includes(status)
+      ) {
+        return null;
+      }
+
+      return {
+        factLocalId,
+        decision: "accept",
+        reasonRu:
+          "Пользователь подтвердил запись факта через правую AI-колонку командой 'сохранить факт активности'.",
+      };
+    })
+    .filter(
+      (
+        item,
+      ): item is {
+        factLocalId: string;
+        decision: "accept";
+        reasonRu: string;
+      } => Boolean(item),
+    );
+
+  if (factDecisions.length === 0) {
+    return null;
+  }
+
+  const sourcePackageId =
+    readActivityFactsSaveGateString(pkg, ["packageId"]) ??
+    "right-ai-semantic-preview-package-" + Date.now();
+
+  const safety = isActivityFactsSaveGateRecord(pkg.safety) ? pkg.safety : {};
+  const safetyNotes = Array.isArray(safety.notes)
+    ? safety.notes.filter((note): note is string => typeof note === "string")
+    : [];
+
+  return {
+    routeMode: "future_server_mediated_write",
+    idempotencyKey: "right-ai-save-gate-" + sourcePackageId + "-" + Date.now(),
+    sourcePackageId,
+    activityProcessingPackage: {
+      ...pkg,
+      status: "ready_for_save_gate",
+      safety: {
+        ...safety,
+        previewOnly: false,
+        dbWriteAllowed: true,
+        sqlAllowed: false,
+        openAiCallAllowed: false,
+        medicalDiagnosisAllowed: false,
+        notes: [
+          ...safetyNotes,
+          "Right AI Step 09B-R6: user confirmed Activity Facts save-gate write.",
+          "This command re-fetches semantic preview package from existing pending activity text.",
+          "This command does not replace /api/activity/record confirmation flow.",
+          "Value Object substitution remains postponed.",
+        ],
+      },
+    },
+    factDecisions,
+    editedFactDecisions: [],
+    valueObjectCandidateDecisions: [],
+    clientSafetyConfirmation: {
+      userReviewedPreview: true,
+      userConfirmedMissingValueObjectCreation: false,
+      userConfirmedFactWrite: true,
+      userUnderstandsPreviewIsNotDiagnosis: true,
+    },
+  };
+}
+
+async function fetchActivityProcessingPackageForPendingPreview(): Promise<Record<string, unknown> | null> {
+  if (!latestLocalPendingPreview || latestLocalPendingPreview.kind !== "activity") {
+    return null;
+  }
+
+  const response = await fetch("/api/activity/semantic-orchestration-preview", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      mode: "preview_only",
+      rawText: latestLocalPendingPreview.text,
+      inputLanguage: "ru",
+      source: "chat_ai",
+    }),
+  });
+
+  const data: unknown = await response.json().catch(() => null);
+
+  if (!response.ok || !isActivityFactsSaveGateRecord(data)) {
+    return null;
+  }
+
+  return isActivityFactsSaveGateRecord(data.activityProcessingPackage)
+    ? data.activityProcessingPackage
+    : null;
+}
+
+async function executeActivityFactsSaveGateWriteFromPendingPreview(): Promise<string> {
+  if (!latestLocalPendingPreview || latestLocalPendingPreview.kind !== "activity") {
+    return [
+      "Не нашёл активность для сохранения.",
+      "",
+      "Сначала введи активность в нижнее поле правой AI-колонки, например:",
+      "смотрел рилс 30 минут",
+      "",
+      "Запись в Supabase НЕ выполнена.",
+    ].join("\n");
+  }
+
+  const pendingActivityText = latestLocalPendingPreview.text;
+  const pkg = await fetchActivityProcessingPackageForPendingPreview();
+
+  if (!pkg) {
+    return [
+      "Не удалось подготовить пакет факта для сохранения.",
+      "",
+      "Причина: semantic preview route не вернул ActivityProcessingPackage.",
+      "Активность: " + pendingActivityText,
+      "",
+      "Запись в Supabase НЕ выполнена.",
+      "",
+      "Попробуй ещё раз ввести активность, затем команду:",
+      "сохранить факт активности",
+    ].join("\n");
+  }
+
+  const rawFactPreviews = Array.isArray(pkg.factPreviews) ? pkg.factPreviews : [];
+  const firstFactPreview = rawFactPreviews.find((item): item is Record<string, unknown> =>
+    isActivityFactsSaveGateRecord(item),
+  );
+
+  const previewSemanticKey = readActivityFactsSaveGateString(firstFactPreview, [
+    "semanticObjectKey",
+  ]);
+  const previewMeasureType = readActivityFactsSaveGateString(firstFactPreview, [
+    "measureType",
+  ]);
+  const previewUnit = readActivityFactsSaveGateString(firstFactPreview, ["unit"]);
+  const previewNumericValue =
+    isActivityFactsSaveGateRecord(firstFactPreview) &&
+    typeof firstFactPreview.numericValue === "number" &&
+    Number.isFinite(firstFactPreview.numericValue)
+      ? String(firstFactPreview.numericValue)
+      : null;
+  const previewTextValue = readActivityFactsSaveGateString(firstFactPreview, [
+    "textValue",
+  ]);
+  const previewValue = previewNumericValue ?? previewTextValue ?? "не определено";
+
+  const requestBody = buildActivityFactsSaveGateRequestFromPackage(pkg);
+
+  if (!requestBody) {
+    return [
+      "Не удалось сохранить факт активности.",
+      "",
+      "Причина: ActivityProcessingPackage не содержит factPreviews, готовых к записи.",
+      "Активность: " + pendingActivityText,
+      "",
+      "Запись в Supabase НЕ выполнена.",
+    ].join("\n");
+  }
+
+  const response = await fetch("/api/activity/facts/save-gate", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  let data: unknown = null;
+
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  const writeStatus = readActivityFactsSaveGateString(data, ["writeStatus"]);
+  const routeStatus = readActivityFactsSaveGateString(data, ["routeStatus"]);
+  const errorCode = readActivityFactsSaveGateString(data, ["errorCode", "code"]);
+  const errorMessage = readActivityFactsSaveGateString(data, ["errorMessage", "message"]);
+  const createdIds =
+    isActivityFactsSaveGateRecord(data) && isActivityFactsSaveGateRecord(data.createdIds)
+      ? data.createdIds
+      : null;
+
+  const activityEventId = readActivityFactsSaveGateString(createdIds, ["activityEventId"]);
+  const measureIds = createdIds
+    ? readActivityFactsSaveGateStringArray(createdIds.measureIds)
+    : [];
+  const factIds = createdIds
+    ? readActivityFactsSaveGateStringArray(createdIds.factIds)
+    : [];
+  const recalculationQueueIds = createdIds
+    ? readActivityFactsSaveGateStringArray(createdIds.recalculationQueueIds)
+    : [];
+
+  const written = response.ok && writeStatus === "written";
+
+  if (written) {
+    clearLatestLocalPendingPreview();
+  }
+
+  if (!written) {
+    return [
+      "Факт активности НЕ был сохранён.",
+      "",
+      "Активность: " + pendingActivityText,
+      "HTTP status: " + response.status,
+      "routeStatus: " + (routeStatus ?? "не вернулся"),
+      "writeStatus: " + (writeStatus ?? "не вернулся"),
+      errorCode ? "errorCode: " + errorCode : null,
+      errorMessage ? "errorMessage: " + errorMessage : null,
+      "",
+      "Pending preview оставлен, чтобы можно было повторить попытку.",
+    ]
+      .filter((line): line is string => line !== null)
+      .join("\n");
+  }
+
+  return [
+    "Факт активности сохранён.",
+    "",
+    "Что записано:",
+    "Активность: " + pendingActivityText,
+    "Категория: " + (previewSemanticKey ?? "не определена"),
+    "Тип показателя: " + (previewMeasureType ?? "не определён"),
+    "Значение: " + previewValue,
+    "Единица: " + (previewUnit ?? "не определена"),
+    "",
+    "Статус записи:",
+    "writeStatus: " + (writeStatus ?? "written"),
+    "routeStatus: " + (routeStatus ?? "server_mediated_write_completed"),
+    "",
+    "Где смотреть:",
+    "Открой /activity-facts — новая строка должна быть в таблице TYPE / VALUE / UNIT.",
+    "",
+    "Технические ID:",
+    "activityEventId: " + (activityEventId ?? "не вернулся"),
+    "measureIds: " + (measureIds.length > 0 ? measureIds.join(", ") : "не вернулись"),
+    "factIds: " + (factIds.length > 0 ? factIds.join(", ") : "не вернулись"),
+    "recalculationQueueIds: " +
+      (recalculationQueueIds.length > 0
+        ? recalculationQueueIds.join(", ")
+        : "не вернулись"),
+    "",
+    "Важно:",
+    "Value Object пока не подставляется.",
+    "Старая команда 'подтверждаю активность' продолжает работать через прежний /api/activity/record flow.",
+  ].join("\n");
+}
+
 
 function isControlledActivityRecordWriteCommand(message: string): boolean {
   const normalized = message.trim().toLowerCase();
@@ -2024,6 +2373,12 @@ async function executeControlledActivityRecordWriteFromPendingPreview(): Promise
 }
 
 async function askLegacyAi(message: string): Promise<string> {
+
+
+  if (isActivityFactsSaveGateWriteCommand(message)) {
+    return await executeActivityFactsSaveGateWriteFromPendingPreview();
+  }
+
   if (isControlledActivityRecordWriteCommand(message)) {
     return await executeControlledActivityRecordWriteFromPendingPreview();
   }

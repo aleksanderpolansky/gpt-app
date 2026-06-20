@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
@@ -43,6 +43,48 @@ function asNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function asBoolean(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}
+
+function normalizeMetricValue(row: Row): number | string | boolean | null {
+  const numericValue = asNumber(row.value_numeric);
+
+  if (numericValue !== null) {
+    return numericValue;
+  }
+
+  const textValue = asString(row.value_text);
+
+  if (textValue !== null) {
+    return textValue;
+  }
+
+  const booleanValue = asBoolean(row.value_boolean);
+
+  if (booleanValue !== null) {
+    return booleanValue;
+  }
+
+  return null;
+}
+
+function normalizeMetricValueSource(row: Row): string | null {
+  if (asNumber(row.value_numeric) !== null) {
+    return "activity_object_facts.value_numeric";
+  }
+
+  if (asString(row.value_text) !== null) {
+    return "activity_object_facts.value_text";
+  }
+
+  if (asBoolean(row.value_boolean) !== null) {
+    return "activity_object_facts.value_boolean";
+  }
+
+  return "activity_object_facts.value_missing";
+}
+
 function parseLimit(searchParams: URLSearchParams): number {
   const rawLimit = searchParams.get("limit");
 
@@ -78,8 +120,8 @@ function normalizeFactRow(row: Row) {
     semanticObjectKey: asString(row.semantic_object_key),
     valueObjectId: asString(row.value_object_id),
     measureType: asString(row.measure_type),
-    metricValue: null,
-    metricValueSource: "activity_event_measures_join_pending_step54",
+    metricValue: normalizeMetricValue(row),
+    metricValueSource: normalizeMetricValueSource(row),
     unit: asString(row.unit),
     factStatus: asString(row.fact_status),
     sourceType: asString(row.source_type),
@@ -202,6 +244,9 @@ export async function GET(request: Request) {
         "semantic_object_key",
         "value_object_id",
         "measure_type",
+        "value_numeric",
+        "value_text",
+        "value_boolean",
         "unit",
         "fact_status",
         "source_type",
@@ -286,7 +331,7 @@ export async function GET(request: Request) {
         source: "activity_object_facts",
         strategy: "strict existing-column select",
         metricValueRule:
-          "Step 53 reads fact rows only; Step 54 may join measure rows for display.",
+          "metricValue is read directly from activity_object_facts.value_numeric/value_text/value_boolean.",
       },
       sideEffects: {
         dbWritesExecuted: false,
@@ -303,3 +348,4 @@ export async function GET(request: Request) {
     { status: 200 }
   );
 }
+
