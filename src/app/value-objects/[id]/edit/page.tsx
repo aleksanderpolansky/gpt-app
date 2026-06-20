@@ -1,8 +1,9 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 import { ValueObjectDraftReadPanel } from "../../../../components/workspace/value-objects/value-object-draft-read-panel";
 import { ValueObjectDraftTitleEditor } from "../../../../components/workspace/value-objects/value-object-draft-title-editor";
 import { ValueObjectParentEditor } from "../../../../components/workspace/value-objects/value-object-parent-editor";
+import { ValueObjectTargetStandardsEditor } from "../../../../components/workspace/value-objects/value-object-target-standards-editor";
 
 type ValueObjectEditPageProps = {
   params: Promise<{
@@ -114,6 +115,7 @@ export default async function ValueObjectEditPage({
 
         <ValueObjectDraftTitleEditor valueObjectId={id} />
         <ValueObjectParentEditor valueObjectId={id} />
+        <ValueObjectTargetStandardsEditor valueObjectId={id} />
 
         <ValueObjectDraftReadPanel valueObjectId={id} />
 
@@ -300,3 +302,4 @@ export default async function ValueObjectEditPage({
     </main>
   );
 }
+

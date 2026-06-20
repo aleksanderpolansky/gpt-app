@@ -12,25 +12,14 @@ import {
   type ValueObjectTargetStandard,
 } from "@/types/value-object-standards";
 
+import { auth0 } from "../../../../../../../lib/auth0";
+import { supabase } from "../../../../../../../lib/supabase";
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const ROUTE_MARKER =
-  "value-object-standards-save-gate-route-no-write-step61-v1" as const;
-
-const ROUTE_STATUS =
-  "guarded_persistence_contract_only_no_write" as const;
-
-const SIDE_EFFECTS = {
-  dbReadExecuted: false,
-  dbWriteExecuted: false,
-  sqlExecuted: false,
-  externalModelCallExecuted: false,
-  valueObjectTargetStandardCreated: false,
-  valueObjectTargetStandardUpdated: false,
-  valueObjectTargetStandardArchived: false,
-  rowsActuallyWritten: 0,
-} as const;
+  "value-object-standards-save-gate-route-server-mediated-real-write-step15g-v1" as const;
 
 type RouteContext = {
   params: Promise<{
@@ -64,6 +53,49 @@ type SaveGateValidationResult =
       warnings: string[];
     };
 
+type AppUserRow = {
+  id: string;
+  auth0_sub?: string | null;
+};
+
+type PersonRow = {
+  id: string;
+  user_id?: string | null;
+};
+
+type ActorRow = {
+  id: string;
+  person_id?: string | null;
+  actor_type?: string | null;
+};
+
+type ValueObjectRow = {
+  id: string;
+  owner_actor_id?: string | null;
+  created_by_actor_id?: string | null;
+  actor_id?: string | null;
+  app_user_id?: string | null;
+  owner_user_id?: string | null;
+  organization_id?: string | null;
+  usage_scope?: string | null;
+  title?: string | null;
+  status?: string | null;
+};
+
+type CurrentUserContext =
+  | {
+      ok: true;
+      appUser: AppUserRow;
+      person: PersonRow;
+      personActor: ActorRow;
+    }
+  | {
+      ok: false;
+      status: number;
+      errorCode: string;
+      errorMessage: string;
+    };
+
 function asRecord(value: unknown): Record<string, unknown> {
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {
     return value as Record<string, unknown>;
@@ -88,13 +120,7 @@ function asFiniteNumber(value: unknown): number | null {
   }
 
   if (typeof value === "string") {
-    const trimmed = value.trim();
-
-    if (!trimmed) {
-      return null;
-    }
-
-    const parsed = Number(trimmed);
+    const parsed = Number(value.trim());
 
     return Number.isFinite(parsed) ? parsed : null;
   }
@@ -107,14 +133,16 @@ function normalizeMode(value: unknown): SaveGateMode {
 }
 
 function normalizeOptionalString(value: unknown): string | undefined {
-  const normalized = asString(value);
+  return asString(value) ?? undefined;
+}
 
-  return normalized ?? undefined;
+function buildEndpoint(routeValueObjectId: string) {
+  return `/api/value-objects/${routeValueObjectId}/standards/save-gate`;
 }
 
 function validateStandardDraft(
   routeValueObjectId: string,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
 ): SaveGateValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -125,12 +153,16 @@ function validateStandardDraft(
   const bodyValueObjectId = asString(draft.valueObjectId);
   const writeIntentDetected = mode === "confirm_save";
 
-  if (body.mode !== undefined && body.mode !== "preview" && body.mode !== "confirm_save") {
+  if (
+    body.mode !== undefined &&
+    body.mode !== "preview" &&
+    body.mode !== "confirm_save"
+  ) {
     warnings.push("Unknown mode was normalized to preview.");
   }
 
   if (!idempotencyKey) {
-    warnings.push("idempotencyKey is missing; future writes will require it.");
+    warnings.push("idempotencyKey is missing; confirm_save requires it.");
   }
 
   if (!bodyValueObjectId) {
@@ -182,8 +214,16 @@ function validateStandardDraft(
     errors.push("standardDraft.status is invalid.");
   }
 
-  if (writeIntentDetected) {
-    errors.push("confirm_save is contract vocabulary only in Step 61C and remains blocked.");
+  if (writeIntentDetected && !idempotencyKey) {
+    errors.push("idempotencyKey is required for confirm_save.");
+  }
+
+  if (writeIntentDetected && source !== "user_defined") {
+    errors.push("confirm_save allows only user_defined source.");
+  }
+
+  if (writeIntentDetected && status === "archived") {
+    errors.push("confirm_save cannot create an archived standard.");
   }
 
   const summary: ValidationSummary = {
@@ -260,17 +300,18 @@ function validateStandardDraft(
   };
 }
 
-function buildNoWriteResponse(params: {
+function buildPreviewResponse(params: {
   routeValueObjectId: string;
   validation: SaveGateValidationResult;
 }) {
   return {
     ok: params.validation.ok,
-    endpoint: `/api/value-objects/${params.routeValueObjectId}/standards/save-gate`,
+    endpoint: buildEndpoint(params.routeValueObjectId),
     routeMarker: ROUTE_MARKER,
-    routeStatus: ROUTE_STATUS,
-    routePurpose: "value_object_target_standard_guarded_persistence_contract_no_write",
-    productionWriteEnabled: false,
+    routeStatus: "preview_ready_real_write_available_when_confirmed",
+    routePurpose:
+      "value_object_target_standard_guarded_persistence_preview_or_server_mediated_write",
+    productionWriteEnabled: true,
     requestSummary: params.validation.summary,
     validation: {
       ok: params.validation.ok,
@@ -283,41 +324,46 @@ function buildNoWriteResponse(params: {
             table: "value_object_target_standards",
             operation:
               params.validation.summary.mode === "confirm_save"
-                ? "blocked_create"
+                ? "create_when_confirmed"
                 : "planned_create",
-            status: "not_executed",
+            status: "not_executed_in_preview",
             valueObjectId: params.routeValueObjectId,
             metricType: params.validation.standard.metricType,
             period: params.validation.standard.period,
             ruleType: params.validation.standard.ruleType,
+            source: params.validation.standard.source,
           },
         ]
       : [],
-    skipped: [
-      {
-        reason: "STEP61C_NO_WRITE_ROUTE_SCAFFOLD",
-        detail:
-          "This route validates the future persistence contract but does not create, update, archive, or delete standards.",
-      },
-    ],
     futurePersistenceContract: {
       allowedModes: ["preview", "confirm_save"],
       currentMode: params.validation.summary.mode,
-      confirmSaveEnabled: false,
-      confirmSaveBlockedBy: "VALUE_OBJECT_STANDARDS_SAVE_GATE_WRITE_NOT_ENABLED",
+      confirmSaveEnabled: true,
+      confirmSaveBlockedBy: null,
       futureTable: "value_object_target_standards",
       serverMediatedOnly: true,
     },
-    sideEffects: SIDE_EFFECTS,
+    sideEffects: {
+      dbReadExecuted: false,
+      dbWriteExecuted: false,
+      sqlExecuted: false,
+      externalModelCallExecuted: false,
+      valueObjectReadExecuted: false,
+      valueObjectOwnershipChecked: false,
+      valueObjectTargetStandardCreated: false,
+      valueObjectTargetStandardUpdated: false,
+      valueObjectTargetStandardArchived: false,
+      rowsActuallyWritten: 0,
+    },
     rules: [
-      "This route is a no-write save-gate scaffold for ValueObjectTargetStandard.",
-      "This route validates request shape and returns planned-write preview data.",
-      "This route must not call Supabase directly in Step 61C.",
-      "This route must not insert, update, upsert, archive, or delete rows.",
-      "This route must not execute SQL.",
-      "This route must not call external model providers.",
-      "confirm_save remains blocked until a later gated implementation step.",
-      "Future persistence must remain server-mediated and must protect user-owned fact privacy.",
+      "Preview mode remains no-write.",
+      "confirm_save performs server-mediated write only after validation.",
+      "Ownership is derived from Auth0 session, app_users, persons, and actors.",
+      "Client-provided ownership fields are ignored.",
+      "Only user_defined target standards can be created through this user route.",
+      "Direct browser Supabase writes remain forbidden.",
+      "This route does not execute SQL.",
+      "This route does not call external model providers.",
     ],
   };
 }
@@ -331,14 +377,463 @@ function buildValidationErrorResponse(params: {
 }) {
   return NextResponse.json(
     {
-      ...buildNoWriteResponse({
+      ...buildPreviewResponse({
         routeValueObjectId: params.routeValueObjectId,
         validation: params.validation,
       }),
+      ok: false,
+      writeStatus: "not_written",
       errorCode: params.errorCode,
       errorMessage: params.errorMessage,
     },
-    { status: params.status }
+    { status: params.status },
+  );
+}
+
+function buildWriteErrorResponse(params: {
+  routeValueObjectId: string;
+  validation: Extract<SaveGateValidationResult, { ok: true }>;
+  status: number;
+  errorCode: string;
+  errorMessage: string;
+  dbReadExecuted?: boolean;
+  dbWriteExecuted?: boolean;
+}) {
+  return NextResponse.json(
+    {
+      ok: false,
+      endpoint: buildEndpoint(params.routeValueObjectId),
+      routeMarker: ROUTE_MARKER,
+      routeStatus: "server_mediated_write_failed",
+      productionWriteEnabled: true,
+      writeStatus: "failed",
+      requestSummary: params.validation.summary,
+      validation: {
+        ok: params.validation.ok,
+        errors: params.validation.errors,
+        warnings: params.validation.warnings,
+      },
+      errorCode: params.errorCode,
+      errorMessage: params.errorMessage,
+      dbReadExecuted: params.dbReadExecuted ?? true,
+      dbWriteExecuted: params.dbWriteExecuted ?? false,
+      sqlExecuted: false,
+      externalModelCallExecuted: false,
+      sideEffects: {
+        dbReadExecuted: params.dbReadExecuted ?? true,
+        dbWriteExecuted: params.dbWriteExecuted ?? false,
+        sqlExecuted: false,
+        externalModelCallExecuted: false,
+        valueObjectReadExecuted: true,
+        valueObjectOwnershipChecked: true,
+        valueObjectTargetStandardCreated: false,
+        valueObjectTargetStandardUpdated: false,
+        valueObjectTargetStandardArchived: false,
+        rowsActuallyWritten: 0,
+      },
+      safety: {
+        serverMediatedOnly: true,
+        directBrowserSupabaseWriteAllowed: false,
+        clientProvidedOwnershipTrusted: false,
+        medicalDiagnosisAllowed: false,
+      },
+    },
+    { status: params.status },
+  );
+}
+
+async function resolveCurrentUserContext(): Promise<CurrentUserContext> {
+  let session: Awaited<ReturnType<typeof auth0.getSession>> | null = null;
+
+  try {
+    session = await auth0.getSession();
+  } catch {
+    session = null;
+  }
+
+  const auth0Sub = asString(session?.user?.sub);
+
+  if (!auth0Sub) {
+    return {
+      ok: false,
+      status: 401,
+      errorCode: "VALUE_OBJECT_STANDARDS_SAVE_UNAUTHENTICATED",
+      errorMessage: "Authentication is required to save target standards.",
+    };
+  }
+
+  const { data: appUser, error: appUserError } = await supabase
+    .from("app_users")
+    .select("id, auth0_sub")
+    .eq("auth0_sub", auth0Sub)
+    .single();
+
+  if (appUserError || !appUser) {
+    return {
+      ok: false,
+      status: 500,
+      errorCode: "VALUE_OBJECT_STANDARDS_SAVE_APP_USER_NOT_FOUND",
+      errorMessage:
+        appUserError?.message ?? "Authenticated user is not linked to app_users.",
+    };
+  }
+
+  const { data: person, error: personError } = await supabase
+    .from("persons")
+    .select("id, user_id")
+    .eq("user_id", appUser.id)
+    .single();
+
+  if (personError || !person) {
+    return {
+      ok: false,
+      status: 500,
+      errorCode: "VALUE_OBJECT_STANDARDS_SAVE_PERSON_NOT_FOUND",
+      errorMessage:
+        personError?.message ?? "Authenticated app user is not linked to persons.",
+    };
+  }
+
+  const { data: personActor, error: personActorError } = await supabase
+    .from("actors")
+    .select("id, person_id, actor_type")
+    .eq("person_id", person.id)
+    .eq("actor_type", "person")
+    .single();
+
+  if (personActorError || !personActor) {
+    return {
+      ok: false,
+      status: 500,
+      errorCode: "VALUE_OBJECT_STANDARDS_SAVE_PERSON_ACTOR_NOT_FOUND",
+      errorMessage:
+        personActorError?.message ??
+        "Authenticated person is not linked to a person actor.",
+    };
+  }
+
+  return {
+    ok: true,
+    appUser: appUser as AppUserRow,
+    person: person as PersonRow,
+    personActor: personActor as ActorRow,
+  };
+}
+
+function isValueObjectOwnedByCurrentActor(params: {
+  valueObject: ValueObjectRow;
+  appUser: AppUserRow;
+  personActor: ActorRow;
+}) {
+  const currentActorIds = new Set(
+    [params.personActor.id].filter((value): value is string => Boolean(value)),
+  );
+
+  const currentUserIds = new Set(
+    [params.appUser.id].filter((value): value is string => Boolean(value)),
+  );
+
+  const valueObjectActorIds = [
+    params.valueObject.owner_actor_id,
+    params.valueObject.created_by_actor_id,
+    params.valueObject.actor_id,
+  ].filter((value): value is string => Boolean(value));
+
+  const valueObjectUserIds = [
+    params.valueObject.app_user_id,
+    params.valueObject.owner_user_id,
+  ].filter((value): value is string => Boolean(value));
+
+  const actorMatches = valueObjectActorIds.some((actorId) =>
+    currentActorIds.has(actorId),
+  );
+
+  const userMatches = valueObjectUserIds.some((userId) =>
+    currentUserIds.has(userId),
+  );
+
+  return actorMatches || userMatches;
+}
+
+async function readOwnedValueObject(params: {
+  valueObjectId: string;
+  appUser: AppUserRow;
+  personActor: ActorRow;
+}) {
+  const { data, error } = await supabase
+    .from("value_objects")
+    .select(
+      `
+      id,
+      owner_actor_id,
+      created_by_actor_id,
+      actor_id,
+      app_user_id,
+      owner_user_id,
+      organization_id,
+      usage_scope,
+      title,
+      status
+    `,
+    )
+    .eq("id", params.valueObjectId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      ok: false as const,
+      status: 500,
+      errorCode: "VALUE_OBJECT_STANDARDS_SAVE_VALUE_OBJECT_LOOKUP_FAILED",
+      errorMessage: error.message,
+      valueObject: null,
+    };
+  }
+
+  if (!data) {
+    return {
+      ok: false as const,
+      status: 404,
+      errorCode: "VALUE_OBJECT_STANDARDS_SAVE_VALUE_OBJECT_NOT_FOUND",
+      errorMessage: "Value Object not found.",
+      valueObject: null,
+    };
+  }
+
+  const valueObject = data as ValueObjectRow;
+
+  if (
+    !isValueObjectOwnedByCurrentActor({
+      valueObject,
+      appUser: params.appUser,
+      personActor: params.personActor,
+    })
+  ) {
+    return {
+      ok: false as const,
+      status: 403,
+      errorCode: "VALUE_OBJECT_STANDARDS_SAVE_VALUE_OBJECT_ACCESS_DENIED",
+      errorMessage: "Value Object access denied.",
+      valueObject: null,
+    };
+  }
+
+  return {
+    ok: true as const,
+    valueObject,
+  };
+}
+
+async function executeRealSave(params: {
+  routeValueObjectId: string;
+  validation: Extract<SaveGateValidationResult, { ok: true }>;
+}) {
+  const context = await resolveCurrentUserContext();
+
+  if (!context.ok) {
+    return buildWriteErrorResponse({
+      routeValueObjectId: params.routeValueObjectId,
+      validation: params.validation,
+      status: context.status,
+      errorCode: context.errorCode,
+      errorMessage: context.errorMessage,
+      dbReadExecuted: false,
+      dbWriteExecuted: false,
+    });
+  }
+
+  const ownedValueObject = await readOwnedValueObject({
+    valueObjectId: params.routeValueObjectId,
+    appUser: context.appUser,
+    personActor: context.personActor,
+  });
+
+  if (!ownedValueObject.ok) {
+    return buildWriteErrorResponse({
+      routeValueObjectId: params.routeValueObjectId,
+      validation: params.validation,
+      status: ownedValueObject.status,
+      errorCode: ownedValueObject.errorCode,
+      errorMessage: ownedValueObject.errorMessage,
+      dbReadExecuted: true,
+      dbWriteExecuted: false,
+    });
+  }
+
+  const idempotencyKey = params.validation.summary.idempotencyKey;
+
+  if (!idempotencyKey) {
+    return buildWriteErrorResponse({
+      routeValueObjectId: params.routeValueObjectId,
+      validation: params.validation,
+      status: 400,
+      errorCode: "VALUE_OBJECT_STANDARDS_SAVE_IDEMPOTENCY_REQUIRED",
+      errorMessage: "idempotencyKey is required for confirm_save.",
+      dbReadExecuted: true,
+      dbWriteExecuted: false,
+    });
+  }
+
+  const { data: existingStandard, error: existingError } = await supabase
+    .from("value_object_target_standards")
+    .select(
+      `
+      id,
+      value_object_id,
+      user_id,
+      owner_actor_id,
+      metric_type,
+      rule_type,
+      target_value,
+      target_min,
+      target_max,
+      unit,
+      period,
+      priority,
+      source,
+      status,
+      label,
+      created_at
+    `,
+    )
+    .eq("user_id", context.appUser.id)
+    .eq("value_object_id", params.routeValueObjectId)
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle();
+
+  if (existingError) {
+    return buildWriteErrorResponse({
+      routeValueObjectId: params.routeValueObjectId,
+      validation: params.validation,
+      status: 500,
+      errorCode: "VALUE_OBJECT_STANDARDS_SAVE_IDEMPOTENCY_CHECK_FAILED",
+      errorMessage: existingError.message,
+      dbReadExecuted: true,
+      dbWriteExecuted: false,
+    });
+  }
+
+  if (existingStandard) {
+    return NextResponse.json(
+      {
+        ok: true,
+        endpoint: buildEndpoint(params.routeValueObjectId),
+        routeMarker: ROUTE_MARKER,
+        routeStatus: "server_mediated_write_idempotent_replay",
+        productionWriteEnabled: true,
+        writeStatus: "written",
+        idempotentReplay: true,
+        createdStandard: existingStandard,
+        sideEffects: {
+          dbReadExecuted: true,
+          dbWriteExecuted: false,
+          sqlExecuted: false,
+          externalModelCallExecuted: false,
+          valueObjectReadExecuted: true,
+          valueObjectOwnershipChecked: true,
+          valueObjectTargetStandardCreated: false,
+          valueObjectTargetStandardUpdated: false,
+          valueObjectTargetStandardArchived: false,
+          rowsActuallyWritten: 0,
+        },
+      },
+      { status: 200 },
+    );
+  }
+
+  const standard = params.validation.standard;
+
+  const insertPayload = {
+    value_object_id: params.routeValueObjectId,
+    user_id: context.appUser.id,
+    owner_actor_id: context.personActor.id,
+    created_by_actor_id: context.personActor.id,
+    organization_id: ownedValueObject.valueObject.organization_id ?? null,
+    metric_type: standard.metricType,
+    rule_type: standard.ruleType,
+    target_value: standard.targetValue,
+    target_min: standard.targetMin ?? null,
+    target_max: standard.targetMax ?? null,
+    unit: standard.unit,
+    period: standard.period,
+    priority: standard.priority,
+    source: "user_defined",
+    status: standard.status,
+    label: standard.label ?? null,
+    description: standard.description ?? null,
+    safety_note:
+      standard.safetyNote ??
+      "User-defined target standard for analytics comparison. Not medical, legal, financial or productivity truth.",
+    idempotency_key: idempotencyKey,
+    metadata: {
+      routeMarker: ROUTE_MARKER,
+      routeMode: params.validation.summary.mode,
+      requestedSource: standard.source,
+      valueObjectTitle: ownedValueObject.valueObject.title ?? null,
+      valueObjectUsageScope: ownedValueObject.valueObject.usage_scope ?? null,
+    },
+  };
+
+  const { data: insertedStandard, error: insertError } = await supabase
+    .from("value_object_target_standards")
+    .insert(insertPayload)
+    .select(
+      `
+      id,
+      value_object_id,
+      user_id,
+      owner_actor_id,
+      metric_type,
+      rule_type,
+      target_value,
+      target_min,
+      target_max,
+      unit,
+      period,
+      priority,
+      source,
+      status,
+      label,
+      created_at
+    `,
+    )
+    .single();
+
+  if (insertError) {
+    return buildWriteErrorResponse({
+      routeValueObjectId: params.routeValueObjectId,
+      validation: params.validation,
+      status: 500,
+      errorCode: "VALUE_OBJECT_STANDARDS_SAVE_INSERT_FAILED",
+      errorMessage: insertError.message,
+      dbReadExecuted: true,
+      dbWriteExecuted: true,
+    });
+  }
+
+  return NextResponse.json(
+    {
+      ok: true,
+      endpoint: buildEndpoint(params.routeValueObjectId),
+      routeMarker: ROUTE_MARKER,
+      routeStatus: "server_mediated_write_completed",
+      productionWriteEnabled: true,
+      writeStatus: "written",
+      idempotentReplay: false,
+      createdStandard: insertedStandard,
+      sideEffects: {
+        dbReadExecuted: true,
+        dbWriteExecuted: true,
+        sqlExecuted: false,
+        externalModelCallExecuted: false,
+        valueObjectReadExecuted: true,
+        valueObjectOwnershipChecked: true,
+        valueObjectTargetStandardCreated: true,
+        valueObjectTargetStandardUpdated: false,
+        valueObjectTargetStandardArchived: false,
+        rowsActuallyWritten: 1,
+      },
+    },
+    { status: 200 },
   );
 }
 
@@ -361,16 +856,16 @@ export async function GET(_request: Request, context: RouteContext) {
       status: "draft",
       label: "Preview standard",
       description:
-        "No-write preview standard used to verify the save-gate contract route.",
+        "Preview standard used to verify the save-gate contract route without writing.",
     },
   });
 
   return NextResponse.json(
-    buildNoWriteResponse({
+    buildPreviewResponse({
       routeValueObjectId,
       validation,
     }),
-    { status: 200 }
+    { status: 200 },
   );
 }
 
@@ -404,21 +899,25 @@ export async function POST(request: Request, context: RouteContext) {
     return buildValidationErrorResponse({
       routeValueObjectId,
       validation,
-      status: validation.summary.writeIntentDetected ? 409 : 400,
-      errorCode: validation.summary.writeIntentDetected
-        ? "VALUE_OBJECT_STANDARDS_SAVE_GATE_WRITE_NOT_ENABLED"
-        : "VALUE_OBJECT_STANDARDS_SAVE_GATE_VALIDATION_FAILED",
-      errorMessage: validation.summary.writeIntentDetected
-        ? "confirm_save is contract vocabulary only in Step 61C. Persistence remains blocked."
-        : "Request body did not pass ValueObjectTargetStandard validation.",
+      status: 400,
+      errorCode: "VALUE_OBJECT_STANDARDS_SAVE_GATE_VALIDATION_FAILED",
+      errorMessage:
+        "Request body did not pass ValueObjectTargetStandard validation.",
     });
   }
 
-  return NextResponse.json(
-    buildNoWriteResponse({
-      routeValueObjectId,
-      validation,
-    }),
-    { status: 200 }
-  );
+  if (validation.summary.mode === "preview") {
+    return NextResponse.json(
+      buildPreviewResponse({
+        routeValueObjectId,
+        validation,
+      }),
+      { status: 200 },
+    );
+  }
+
+  return executeRealSave({
+    routeValueObjectId,
+    validation,
+  });
 }
