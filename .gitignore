@@ -53,3 +53,41 @@ _glossary_stage1_inventory_*.zip
 AVO_STEP*.txt
 AVO_STEP*.json
 _ai_work_reports/
+
+# GPT-APP local generated artifacts - added Step 18L
+# Local reports, logs, build outputs and patch backups generated during assisted development.
+# These files are not production source and must not appear in ordinary git status.
+
+# Generic local logs and temporary files
+*.log
+*.tmp
+*.old
+
+# Generated result/build/audit reports
+*_RESULT.txt
+*_RESULT_*.txt
+*_BUILD_OUTPUT_*.txt
+*BUILD_OUTPUT*.txt
+*_SOURCE_AUDIT_*.txt
+*_BUILD_VERIFY_*.txt
+*_COMMIT_ONLY_*.txt
+*_PUSH_ONLY_*.txt
+*_PARITY_FIX_*.txt
+
+# Patch backups created next to source files
+*.step*_backup_*
+*.step*backup*
+*.bak.*
+*.bak
+
+# Activity-to-ValueObjects generated report archive
+docs/activity-to-value-objects/reports/
+
+# Old local process reports that are already superseded by the main project log
+docs/activity-to-value-objects/facts-guarded-save-step11-push-gate-prep.md
+docs/activity-to-value-objects/facts-guarded-save-step12-push-only.md
+docs/activity-to-value-objects/no-overclaim-copy-audit-step66-v01.md
+
+# Root-level assisted-development server logs
+ACTIVITY_FACTS_LINKS_STEP*.log
+# End GPT-APP local generated artifacts - added Step 18L
