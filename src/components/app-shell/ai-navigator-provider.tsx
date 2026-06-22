@@ -37,6 +37,8 @@ type AiNavigatorContextValue = {
   messages: AiNavigatorMessage[];
   input: string;
   isSending: boolean;
+  selectedTier: "nano" | "standard" | "pro";
+  setSelectedTier: (value: "nano" | "standard" | "pro") => void;
   setInput: (value: string) => void;
   sendMessage: (message?: string) => Promise<void>;
   addActivityPreview: (text: string) => void;
@@ -2372,7 +2374,10 @@ async function executeControlledActivityRecordWriteFromPendingPreview(): Promise
   ].join("\n");
 }
 
-async function askLegacyAi(message: string): Promise<string> {
+async function askLegacyAi(
+  message: string,
+  selectedTier: "nano" | "standard" | "pro",
+): Promise<string> {
 
 
   if (isActivityFactsSaveGateWriteCommand(message)) {
@@ -2422,7 +2427,7 @@ async function askLegacyAi(message: string): Promise<string> {
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, selectedTier }),
   });
 
   let data: ApiTestResponse = {};
@@ -2456,6 +2461,7 @@ export function AiNavigatorProvider({
   const [messages, setMessages] = useState<AiNavigatorMessage[]>(DEFAULT_MESSAGES);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [selectedTier, setSelectedTier] = useState<"nano" | "standard" | "pro">("standard");
 
   useEffect(() => {
     if (session.isLoading) {
@@ -2548,7 +2554,7 @@ export function AiNavigatorProvider({
       setIsSending(true);
 
       try {
-        const reply = await askLegacyAi(trimmedInput);
+        const reply = await askLegacyAi(trimmedInput, selectedTier);
 
         setMessages((previousMessages) =>
           previousMessages.map((messageItem) =>
@@ -2582,7 +2588,7 @@ export function AiNavigatorProvider({
         setIsSending(false);
       }
     },
-    [input, isSending],
+    [input, isSending, selectedTier],
   );
 
   const clearHistory = useCallback(() => {
@@ -2600,6 +2606,8 @@ export function AiNavigatorProvider({
       messages,
       input,
       isSending,
+      selectedTier,
+      setSelectedTier,
       setInput,
       sendMessage,
       addActivityPreview,
@@ -2610,6 +2618,7 @@ export function AiNavigatorProvider({
       clearHistory,
       input,
       isSending,
+      selectedTier,
       messages,
       sendMessage,
       setInput,

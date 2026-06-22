@@ -28,6 +28,12 @@ const ACTIVITY_EXAMPLES = [
   "40 минут анализировал продажи одноразовой посуды",
 ];
 
+const AI_MODEL_TIERS = [
+  { code: "nano", label: "Nano", caption: "экономно" },
+  { code: "standard", label: "Standard", caption: "обычно" },
+  { code: "pro", label: "Pro", caption: "дорого" },
+] as const;
+
 export const UI_MINI_FIX_ACTIVITY_COMPOSER_ON_DEMAND_IN_GLOBAL_AI =
   "UI_MINI_FIX_ACTIVITY_COMPOSER_ON_DEMAND_IN_GLOBAL_AI" as const;
 
@@ -211,6 +217,8 @@ export function GlobalAiNavigator() {
     messages,
     input,
     isSending,
+    selectedTier,
+    setSelectedTier,
     setInput,
     sendMessage,
     clearHistory,
@@ -219,7 +227,10 @@ export function GlobalAiNavigator() {
   const [isActivityComposerOpen, setIsActivityComposerOpen] = useState(false);
 
   return (
-    <aside className="hidden w-[292px] flex-shrink-0 flex-col overflow-hidden border-l border-[rgba(0,0,0,0.07)] bg-white xl:flex">
+    <aside
+      className="hidden w-[292px] flex-shrink-0 flex-col overflow-hidden border-l border-[rgba(0,0,0,0.07)] bg-white xl:flex"
+      style={{ fontFamily: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}
+    >
       <div className="border-b border-[rgba(0,0,0,0.06)] px-4 pb-3 pt-4">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#8b5cf6] to-[#3b6ef8]">
@@ -249,49 +260,52 @@ export function GlobalAiNavigator() {
       </div>
 
       <div className="px-3 pb-2">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#b0b4c8]">
-            Быстрые команды
+        {/* GPT_APP_STEP18P_R11_HIFI_SELECTOR: visual-only selector; billing guard remains backend-only. */}
+        <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[#b0b4c8]">
+            Модель AI
           </p>
 
-          <button
-            type="button"
-            onClick={clearHistory}
-            className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-semibold text-[#9ca3b8] transition-colors hover:bg-red-50 hover:text-red-600"
-            title="Очистить локальную историю AI"
-          >
-            <Trash2 size={10} />
-            Очистить
-          </button>
-        </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {AI_MODEL_TIERS.map((tier) => {
+              const isSelected = selectedTier === tier.code;
 
-        <div className="grid grid-cols-2 gap-1.5">
-          {QUICK_COMMANDS.map(({ label, icon: Icon, prompt }) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => {
-                if (label === "Записать активность") {
-                  setIsActivityComposerOpen(true);
-                  return;
-                }
-
-                setInput(prompt);
-              }}
-              aria-pressed={label === "Записать активность" ? isActivityComposerOpen : undefined}
-              className={
-                label === "Записать активность" && isActivityComposerOpen
-                  ? "flex items-center gap-1.5 rounded-lg border border-[#3b6ef8]/25 bg-[#eef2ff] px-2.5 py-2 text-left text-[11px] font-semibold text-[#3b6ef8] transition-all"
-                  : "flex items-center gap-1.5 rounded-lg border border-transparent bg-[#f5f6fb] px-2.5 py-2 text-left text-[11px] font-medium text-[#5a5f7a] transition-all hover:border-[#3b6ef8]/15 hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
-              }
-            >
-              <Icon size={11} />
-              <span className="leading-tight">{label}</span>
-            </button>
-          ))}
+              return (
+                <button
+                  key={tier.code}
+                  type="button"
+                  onClick={() => setSelectedTier(tier.code)}
+                  aria-pressed={isSelected}
+                  className={
+                    isSelected
+                      ? "rounded-lg border border-[#3b6ef8]/25 bg-[#eef2ff] px-2 py-2 text-left shadow-[0_3px_10px_rgba(59,110,248,0.10)] transition-all"
+                      : "rounded-lg border border-transparent bg-[#f5f6fb] px-2 py-2 text-left transition-all hover:border-[#3b6ef8]/15 hover:bg-[#eef2ff]"
+                  }
+                >
+                  <span
+                    className={
+                      isSelected
+                        ? "block text-[12px] font-semibold leading-tight text-[#3b6ef8]"
+                        : "block text-[12px] font-semibold leading-tight text-[#2d3047]"
+                    }
+                  >
+                    {tier.label}
+                  </span>
+                  <span
+                    className={
+                      isSelected
+                        ? "mt-1 block text-[11px] font-medium leading-tight text-[#6f7fb8]"
+                        : "mt-1 block text-[11px] font-medium leading-tight text-[#7a8199]"
+                    }
+                  >
+                    {tier.caption}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
-
       <div className="px-3 pb-4 pt-1">
         <div className="flex items-center gap-2 rounded-xl border border-[rgba(0,0,0,0.07)] bg-[#f5f6fb] px-3 py-2.5 transition-all focus-within:border-[#3b6ef8] focus-within:bg-white">
           <input
