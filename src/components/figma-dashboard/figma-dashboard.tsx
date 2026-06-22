@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { useState, type ElementType, type ReactNode } from "react";
+import Link from "next/link";
+import { useEffect, useState, type ElementType, type ReactNode } from "react";
 import {
   Activity,
   Plus,
@@ -76,6 +77,117 @@ const FILTERS = [
   "Финансы",
 ];
 
+
+type PointsWalletResponse = {
+  readonly ok?: boolean;
+  readonly wallet?: {
+    readonly balance?: number | string | null;
+    readonly status?: string | null;
+  } | null;
+  readonly error?: string;
+};
+
+
+type AiTokenProjection = {
+  readonly tierCode?: string | null;
+  readonly displayName?: string | null;
+  readonly pricingStatus?: "ready" | "missing_active_price_snapshot" | string;
+  readonly approximateInputTokensForBalance?: number | null;
+  readonly approximateOutputTokensForBalance?: number | null;
+  readonly sourceNote?: string | null;
+};
+
+type AiTokenAvailabilityResponse = {
+  readonly ok?: boolean;
+  readonly projections?: readonly AiTokenProjection[];
+  readonly error?: string;
+  readonly errorMessage?: string;
+};
+
+function normalizePointsBalance(value: unknown): number {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+
+  return parsed;
+}
+
+function formatPointsBalance(value: number | null): string {
+  if (value === null) {
+    return "…";
+  }
+
+  return new Intl.NumberFormat("ru-RU", {
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+
+function normalizeTokenProjection(value: unknown): number | null {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return Math.floor(parsed);
+}
+
+function formatTokenAmount(value: number | null): string {
+  if (value === null) {
+    return "ожидаем цены";
+  }
+
+  return (
+    new Intl.NumberFormat("ru-RU", {
+      maximumFractionDigits: 0,
+    }).format(value) + " токенов"
+  );
+}
+
+function getProjectionTokens(projection: AiTokenProjection): number | null {
+  return normalizeTokenProjection(
+    projection.approximateOutputTokensForBalance ??
+      projection.approximateInputTokensForBalance,
+  );
+}
+
+function sortAiTokenProjections(
+  projections: readonly AiTokenProjection[],
+): AiTokenProjection[] {
+  const order = ["nano", "standard", "pro"];
+
+  return [...projections].sort((left, right) => {
+    const leftIndex = order.indexOf(String(left.tierCode ?? "").toLowerCase());
+    const rightIndex = order.indexOf(String(right.tierCode ?? "").toLowerCase());
+
+    return (
+      (leftIndex === -1 ? 99 : leftIndex) -
+      (rightIndex === -1 ? 99 : rightIndex)
+    );
+  });
+}
+
+function getTierDisplayName(projection: AiTokenProjection): string {
+  const tierCode = String(projection.tierCode ?? "").toLowerCase();
+
+  if (tierCode === "nano") {
+    return "Nano";
+  }
+
+  if (tierCode === "standard") {
+    return "Standard";
+  }
+
+  if (tierCode === "pro") {
+    return "Pro";
+  }
+
+  return projection.displayName ?? tierCode ?? "Модель";
+}
+
 function KpiCard({
   label,
   value,
@@ -83,6 +195,8 @@ function KpiCard({
   accent,
   icon: Icon,
   trend,
+  valueHref,
+  trendHref,
 }: {
   readonly label: string;
   readonly value: string;
@@ -90,6 +204,8 @@ function KpiCard({
   readonly accent: string;
   readonly icon: IconComponent;
   readonly trend?: string;
+  readonly valueHref?: string;
+  readonly trendHref?: string;
 }) {
   return (
     <div className="flex flex-col gap-2.5 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
@@ -106,17 +222,112 @@ function KpiCard({
       </div>
 
       <div>
-        <div className="text-[22px] font-bold leading-none text-[#1a1d2e]">
-          {value}
-        </div>
+        {valueHref ? (
+          <Link
+            href={valueHref}
+            className="block w-fit rounded-md text-[22px] font-bold leading-none text-[#1a1d2e] outline-none transition hover:text-[#3b6ef8] hover:underline focus:ring-4 focus:ring-[#3b6ef8]/15"
+            title="Открыть историю начисления и списания пунктов"
+          >
+            {value}
+          </Link>
+        ) : (
+          <div className="text-[22px] font-bold leading-none text-[#1a1d2e]">
+            {value}
+          </div>
+        )}
         {sub ? <div className="mt-1 text-[11px] text-[#9ca3b8]">{sub}</div> : null}
         {trend ? (
-          <div className="mt-1.5 flex items-center gap-1">
-            <TrendingUp size={11} className="text-[#22c55e]" />
-            <span className="text-[11px] font-medium text-[#22c55e]">
-              {trend}
-            </span>
-          </div>
+          trendHref ? (
+            <Link
+              href={trendHref}
+              className="mt-1.5 flex w-fit items-center gap-1 text-[#22c55e] underline-offset-2 transition hover:underline"
+              title="Открыть историю начисления и списания пунктов"
+            >
+              <TrendingUp size={11} />
+              <span className="text-[11px] font-medium">{trend}</span>
+            </Link>
+          ) : (
+            <div className="mt-1.5 flex items-center gap-1">
+              <TrendingUp size={11} className="text-[#22c55e]" />
+              <span className="text-[11px] font-medium text-[#22c55e]">
+                {trend}
+              </span>
+            </div>
+          )
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+
+function AiTokenProjectionsKpi({
+  projections,
+  status,
+  errorMessage,
+}: {
+  readonly projections: readonly AiTokenProjection[];
+  readonly status: "loading" | "ready" | "error" | "not_configured";
+  readonly errorMessage: string;
+}) {
+  const orderedProjections = sortAiTokenProjections(projections);
+  const visibleRows =
+    orderedProjections.length > 0
+      ? orderedProjections
+      : [
+          { tierCode: "nano", displayName: "Nano" },
+          { tierCode: "standard", displayName: "Standard" },
+          { tierCode: "pro", displayName: "Pro" },
+        ];
+
+  const subtitle =
+    status === "loading"
+      ? "Загрузка лимитов"
+      : status === "error"
+        ? "Лимиты временно недоступны"
+        : status === "not_configured"
+          ? "Цены моделей ещё не заданы"
+          : "по текущему пакету";
+
+  return (
+    <div className="flex flex-col gap-2.5 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
+          AI-пакет
+        </span>
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#f9731618]">
+          <Zap size={14} className="text-[#f97316]" />
+        </div>
+      </div>
+
+      <div>
+        <div className="text-[13px] font-semibold text-[#1a1d2e]">
+          Доступно примерно:
+        </div>
+        <div className="mt-2 flex flex-col gap-1">
+          {visibleRows.map((projection) => {
+            const tokens = getProjectionTokens(projection);
+
+            return (
+              <div
+                key={String(projection.tierCode ?? projection.displayName)}
+                className="flex items-center justify-between gap-2 text-[11px]"
+              >
+                <span className="font-semibold text-[#5a5f7a]">
+                  {getTierDisplayName(projection)}
+                </span>
+                <span className="text-right font-bold text-[#1a1d2e]">
+                  {formatTokenAmount(tokens)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-2 text-[11px] text-[#9ca3b8]">{subtitle}</div>
+
+        {errorMessage ? (
+          <div className="mt-1 text-[10px] text-[#ef4444]">{errorMessage}</div>
         ) : null}
       </div>
     </div>
@@ -245,8 +456,126 @@ function DirectionCard({
 
 export function FigmaDashboardContent() {
   const [activeFilter, setActiveFilter] = useState("Все направления");
+  const [pointsBalance, setPointsBalance] = useState<number | null>(null);
+  const [pointsWalletStatus, setPointsWalletStatus] = useState("loading");
+  const [pointsWalletError, setPointsWalletError] = useState("");
+  const [aiTokenProjections, setAiTokenProjections] = useState<
+    AiTokenProjection[]
+  >([]);
+  const [aiTokenStatus, setAiTokenStatus] = useState<
+    "loading" | "ready" | "error" | "not_configured"
+  >("loading");
+  const [aiTokenError, setAiTokenError] = useState("");
   const { displayName, isAuthenticated } = useUserSessionClient();
   const greetingName = isAuthenticated ? displayName : "гость";
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadPointsWallet() {
+      try {
+        setPointsWalletError("");
+        setPointsWalletStatus("loading");
+
+        const response = await fetch("/api/points/wallet", {
+          headers: {
+            Accept: "application/json",
+          },
+          cache: "no-store",
+        });
+
+        const data = (await response.json()) as PointsWalletResponse;
+
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error ?? "Не удалось загрузить баланс пунктов.");
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        setPointsBalance(normalizePointsBalance(data.wallet?.balance));
+        setPointsWalletStatus(data.wallet?.status ?? "active");
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setPointsBalance(0);
+        setPointsWalletStatus("error");
+        setPointsWalletError(
+          error instanceof Error ? error.message : "Баланс пунктов недоступен.",
+        );
+      }
+    }
+
+    async function loadAiTokenProjections() {
+      try {
+        setAiTokenError("");
+        setAiTokenStatus("loading");
+
+        const response = await fetch("/api/ai-billing/balance", {
+          headers: {
+            Accept: "application/json",
+          },
+          cache: "no-store",
+        });
+
+        const data = (await response.json()) as AiTokenAvailabilityResponse;
+
+        if (!response.ok || !data.ok) {
+          throw new Error(
+            data.errorMessage ??
+              data.error ??
+              "Не удалось загрузить AI-лимиты.",
+          );
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        const projections = data.projections ? [...data.projections] : [];
+        setAiTokenProjections(projections);
+        setAiTokenStatus(
+          projections.some(
+            (projection) => projection.pricingStatus === "ready",
+          )
+            ? "ready"
+            : "not_configured",
+        );
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setAiTokenProjections([]);
+        setAiTokenStatus("error");
+        setAiTokenError(
+          error instanceof Error ? error.message : "AI-лимиты недоступны.",
+        );
+      }
+    }
+
+    void loadPointsWallet();
+    void loadAiTokenProjections();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const pointsValue = formatPointsBalance(pointsBalance);
+  const pointsSub = pointsWalletError
+    ? "Баланс временно недоступен"
+    : pointsWalletStatus === "loading"
+      ? "Загрузка баланса"
+      : pointsWalletStatus === "not_created"
+        ? "Кошелёк ещё не создан"
+        : "Текущий баланс";
+  const pointsTrend = pointsWalletError
+    ? "открыть историю"
+    : "история начислений и списаний";
 
   return (
     <div className="p-5">
@@ -261,20 +590,19 @@ export function FigmaDashboardContent() {
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          label="Бонусные баллы"
-          value="12 450"
-          sub="+340 за неделю"
+          label="Пункты"
+          value={pointsValue}
+          sub={pointsSub}
           accent="#3b6ef8"
           icon={Star}
-          trend="+2.8% к прошлой"
+          trend={pointsTrend}
+          valueHref="/points/transactions"
+          trendHref="/points/transactions"
         />
-        <KpiCard
-          label="Токены"
-          value="3 280"
-          sub="186 использовано"
-          accent="#f97316"
-          icon={Zap}
-          trend="+12 сегодня"
+        <AiTokenProjectionsKpi
+          projections={aiTokenProjections}
+          status={aiTokenStatus}
+          errorMessage={aiTokenError}
         />
         <KpiCard
           label="Подписка"
