@@ -33,6 +33,14 @@ type PageData = {
 
 const ADMIN_CARDS: AdminCard[] = [
   {
+    title: "AI EUR Billing",
+    href: "/admin/ai-billing",
+    description:
+      "Manual admin grant UI for adding AI EUR balance through the server-side ledger route.",
+    badge: "AI Billing",
+  },
+
+  {
     title: "Object-Action Rubricator",
     href: "/admin/object-action",
     description:
