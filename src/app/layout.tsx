@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import { GlobalAppShell } from "../components/app-shell/global-app-shell";
 import "./globals.css";
+import { AppSessionHeartbeat } from "./app-session-heartbeat";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +28,8 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <GlobalAppShell>{children}</GlobalAppShell>
+        <GlobalAppShell><AppSessionHeartbeat />
+          {children}</GlobalAppShell>
       </body>
     </html>
   );

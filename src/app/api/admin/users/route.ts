@@ -21,6 +21,7 @@ type AppUserRow = {
   picture: string | null;
   created_at: string | null;
   updated_at: string | null;
+  last_seen_at: string | null;
 };
 
 type PlatformAdminRow = {
@@ -70,6 +71,16 @@ type AiUsageRow = {
 type TimestampRow = {
   user_id: string;
   created_at: string | null;
+};
+
+type AppUserSessionRow = {
+  app_user_id: string;
+  client_session_id_hash: string | null;
+  first_seen_at: string | null;
+  last_seen_at: string | null;
+  request_count: number | null;
+  status: string | null;
+  updated_at: string | null;
 };
 
 type PriceSnapshotRow = {
@@ -344,7 +355,7 @@ export async function GET() {
   try {
     const { data: appUsersData, error: appUsersError } = await supabase
       .from("app_users")
-      .select("id, auth0_sub, email, name, picture, created_at, updated_at")
+      .select("id, auth0_sub, email, name, picture, created_at, updated_at, last_seen_at")
       .order("created_at", { ascending: false })
       .limit(MAX_USERS);
 
@@ -379,6 +390,7 @@ export async function GET() {
       aiUsageResult,
       activityEventsResult,
       chatMessagesResult,
+      appUserSessionsResult,
       priceSnapshotsResult,
     ] = await Promise.all([
       readRowsByUserIds<PlatformAdminRow>(
@@ -420,6 +432,12 @@ export async function GET() {
         userIds,
         RECENT_ACTIVITY_LIMIT,
       ),
+      readRowsByUserIds<AppUserSessionRow>(
+        "app_user_sessions",
+        "app_user_id, client_session_id_hash, first_seen_at, last_seen_at, request_count, status, updated_at",
+        "app_user_id",
+        userIds,
+      ),
       supabase
         .from("ai_model_price_snapshots")
         .select(
@@ -437,6 +455,7 @@ export async function GET() {
       ["ai_usage_events", aiUsageResult.error],
       ["activity_events", activityEventsResult.error],
       ["chat_messages", chatMessagesResult.error],
+      ["app_user_sessions", appUserSessionsResult.error],
       ["ai_model_price_snapshots", priceSnapshotsResult.error?.message ?? null],
     ].filter(([, error]) => typeof error === "string" && error.length > 0);
 
@@ -477,6 +496,13 @@ export async function GET() {
     const aiUsageByUser = buildAiUsageSummary(aiUsageResult.rows);
     const activityByUser = buildLatestTimestampMap(activityEventsResult.rows);
     const chatByUser = buildLatestTimestampMap(chatMessagesResult.rows);
+    const sessionsByUser = buildManyByKey(
+      appUserSessionsResult.rows as unknown as Record<string, unknown>[],
+      "app_user_id",
+    ) as Map<string, AppUserSessionRow[]>;
+    const nowMs = Date.now();
+    const onlineCutoffMs = 5 * 60 * 1000;
+    const recentCutoffMs = 30 * 60 * 1000;
     const priceSnapshotsByTier = chooseLatestPriceSnapshots(
       (((priceSnapshotsResult.data ?? []) as unknown) as PriceSnapshotRow[]),
     );
@@ -497,8 +523,40 @@ export async function GET() {
       const aiReservedEur = aiWallet ? asNumber(aiWallet.reserved_eur, 0) : 0;
       const aiAvailableEur = Math.max(aiBalanceEur - aiReservedEur, 0);
 
+      const sessionRows = sessionsByUser.get(appUser.id) ?? [];
+      const lastSessionSeenAt = maxIsoTimestamp(
+        sessionRows.map((row) => row.last_seen_at),
+      );
+      const lastSeenAt = maxIsoTimestamp([
+        appUser.last_seen_at,
+        lastSessionSeenAt,
+      ]);
+      const lastSeenMs = lastSeenAt ? Date.parse(lastSeenAt) : NaN;
+      const activeSessionsCount = sessionRows.filter((row) => {
+        const sessionSeenMs = row.last_seen_at ? Date.parse(row.last_seen_at) : NaN;
+        return (
+          row.status === "active" &&
+          Number.isFinite(sessionSeenMs) &&
+          nowMs - sessionSeenMs <= onlineCutoffMs
+        );
+      }).length;
+      const totalSessionsCount = sessionRows.length;
+      const presenceStatus =
+        Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs <= onlineCutoffMs || activeSessionsCount > 0)
+          ? "online"
+          : Number.isFinite(lastSeenMs) && nowMs - lastSeenMs <= recentCutoffMs
+            ? "recent"
+            : Number.isFinite(lastSeenMs)
+              ? "offline"
+              : "unknown";
+      const presenceReason =
+        presenceStatus === "unknown"
+          ? "No heartbeat or session data recorded yet."
+          : "Derived from app_users.last_seen_at and app_user_sessions.last_seen_at.";
+
       const lastActivityAt = maxIsoTimestamp([
         appUser.updated_at,
+        appUser.last_seen_at,
         activityByUser.get(appUser.id) ?? null,
         chatByUser.get(appUser.id) ?? null,
         aiUsage.lastAiUsageAt,
@@ -531,14 +589,13 @@ export async function GET() {
         pointsWalletStatus: pointsWallet?.status ?? "not_created",
         pointsWalletUpdatedAt: pointsWallet?.updated_at ?? null,
 
-        lastSeenAt: null,
-        presenceStatus: "unknown",
-        presenceReason:
-          "app_users.last_seen_at and app_user_sessions are not present in the live schema yet.",
-        activeSessionsCount: 0,
-        totalSessionsCount: 0,
-        lastSessionSeenAt: null,
-        sessionsSource: "not_implemented",
+        lastSeenAt,
+        presenceStatus,
+        presenceReason,
+        activeSessionsCount,
+        totalSessionsCount,
+        lastSessionSeenAt,
+        sessionsSource: "app_user_sessions",
 
         lastActivityAt,
         lastAiUsageAt: aiUsage.lastAiUsageAt,
@@ -563,12 +620,12 @@ export async function GET() {
           aiUsageTable: "ai_usage_events",
           pointsWalletTable: "user_points_wallets",
           pointsTransactionsTable: "points_transactions",
-          lastSeenSource: "not_available_yet",
-          sessionsSource: "not_available_yet",
+          lastSeenSource: "app_users.last_seen_at",
+          sessionsSource: "app_user_sessions",
         },
         limitations: [
-          "Presence is placeholder because app_users.last_seen_at does not exist yet.",
-          "Session counters are placeholders because app_user_sessions/user_sessions/sessions tables do not exist yet.",
+          "Presence is derived from app_users.last_seen_at and app_user_sessions.last_seen_at.",
+          "Active sessions use a five-minute heartbeat window; recent presence uses a thirty-minute window.",
           "Points balance is read from user_points_wallets.user_id -> app_users.id.",
           "AI balance is internal/admin-facing EUR accounting; end-user UI should prefer usage projections, not raw EUR balance.",
         ],
