@@ -1,4 +1,8 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
@@ -155,6 +159,15 @@ async function assertEventOwnership(
 }
 
 export async function POST(request: NextRequest) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   const currentUser = await getCurrentAppUser();
 
   if (!currentUser.ok) {

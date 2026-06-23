@@ -1,4 +1,8 @@
-﻿import { NextResponse } from "next/server";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { NextResponse } from "next/server";
 
 import {
   STABLE_SEMANTIC_BUNDLE_SCHEMA_PREFLIGHT_MODE_V0,
@@ -16,6 +20,15 @@ const ROUTE_CONTRACT_VERSION =
   "stable_semantic_bundle_schema_preflight_route_v0";
 
 export async function GET() {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   return NextResponse.json({
     ...buildStableSemanticBundleSchemaPreflightReadinessV0(),
     endpoint: ENDPOINT,
@@ -49,6 +62,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   let body: StableSemanticBundleSchemaPreflightRawInputV0;
 
   try {

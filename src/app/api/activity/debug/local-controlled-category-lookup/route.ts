@@ -1,4 +1,8 @@
-﻿import { NextResponse } from "next/server";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { NextResponse } from "next/server";
 
 import {
   LOCAL_CONTROLLED_CATEGORY_LOOKUP_MODE_V0,
@@ -15,6 +19,15 @@ const ENDPOINT = "/api/activity/debug/local-controlled-category-lookup";
 const ROUTE_CONTRACT_VERSION = "local_controlled_category_lookup_route_v0";
 
 export async function GET() {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   return NextResponse.json({
     ...buildLocalControlledCategoryLookupReadinessV0(),
     endpoint: ENDPOINT,
@@ -29,6 +42,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   let body: LocalControlledCategoryLookupRawInputV0;
 
   try {

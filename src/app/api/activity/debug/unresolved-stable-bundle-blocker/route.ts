@@ -1,4 +1,8 @@
-﻿import { NextResponse } from "next/server";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { NextResponse } from "next/server";
 
 import {
   UNRESOLVED_STABLE_BUNDLE_BLOCKER_MODE_V0,
@@ -16,6 +20,15 @@ const ROUTE_CONTRACT_VERSION =
   "unresolved_stable_bundle_blocker_route_v0";
 
 export async function GET() {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   return NextResponse.json({
     ...buildUnresolvedStableBundleBlockerReadinessV0(),
     endpoint: ENDPOINT,
@@ -37,6 +50,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   let body: UnresolvedStableBundleBlockerRawInputV0;
 
   try {

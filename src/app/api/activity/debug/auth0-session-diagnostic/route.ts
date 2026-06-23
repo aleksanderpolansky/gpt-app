@@ -1,4 +1,8 @@
-﻿import crypto from "crypto";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 
 import { auth0 } from "../../../../../../lib/auth0";
@@ -102,6 +106,15 @@ function buildUserSummary(user: unknown): Auth0SessionDiagnosticUserSummaryV0 {
 }
 
 export async function GET() {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   let session: { user?: unknown } | null = null;
   let sessionReadOk = true;
   let sessionReadErrorName: string | null = null;

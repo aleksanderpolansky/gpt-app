@@ -1,4 +1,8 @@
-﻿import { NextResponse } from "next/server";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { NextResponse } from "next/server";
 
 import { rollbackStateFactControlled } from "../../../../../../lib/activity/stateFacts/controlledPersistence/rollback";
 import { supabase } from "../../../../../../lib/supabase";
@@ -100,6 +104,15 @@ function buildWrongPairPayload(now: string) {
 }
 
 export async function GET() {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   const before = await getCounts();
   const now = new Date().toISOString();
 

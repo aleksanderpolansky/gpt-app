@@ -1,4 +1,8 @@
-﻿import { NextResponse } from "next/server";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { NextResponse } from "next/server";
 
 import {
   STABLE_BUNDLE_RESOLVER_GATE_INTEGRATION_MODE_V0,
@@ -16,6 +20,15 @@ const ROUTE_CONTRACT_VERSION =
   "stable_bundle_resolver_gate_integration_route_v0";
 
 export async function GET() {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   return NextResponse.json({
     ...buildStableBundleResolverGateIntegrationReadinessV0(),
     endpoint: ENDPOINT,
@@ -45,6 +58,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   let body: StableBundleResolverGateIntegrationRawInputV0;
 
   try {

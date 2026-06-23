@@ -1,4 +1,8 @@
-﻿import { NextResponse } from "next/server";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { NextResponse } from "next/server";
 
 import { buildSemanticPersistenceDryRunRouteV0 } from "../../../../../../lib/activity/categoryDerivation/semanticPersistenceDryRunRouteContractV0";
 import { buildSemanticServerAuthReadinessGateV0 } from "../../../../../../lib/activity/categoryDerivation/semanticServerAuthReadinessGateV0";
@@ -736,9 +740,27 @@ function runRegressionMatrixV0() {
 }
 
 export async function GET() {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   return NextResponse.json(runRegressionMatrixV0());
 }
 
 export async function POST() {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   return NextResponse.json(runRegressionMatrixV0());
 }

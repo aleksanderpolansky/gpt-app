@@ -1,3 +1,7 @@
+import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
 import { NextResponse } from "next/server";
 
 import {
@@ -260,6 +264,15 @@ function buildAdapterActorId(scenario: SupportedScenario, personActorId: string)
 }
 
 export async function GET() {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   const config = getCategoryDerivationRouteRunnerConfig();
 
   return NextResponse.json({
@@ -285,6 +298,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   if (!ACTIVITY_RECORDING_ENABLED) {
     return NextResponse.json(
       {

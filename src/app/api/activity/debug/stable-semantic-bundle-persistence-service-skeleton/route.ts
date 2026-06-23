@@ -1,4 +1,8 @@
-﻿import { NextResponse } from "next/server";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { NextResponse } from "next/server";
 
 import {
   STABLE_SEMANTIC_BUNDLE_PERSISTENCE_SERVICE_MODE_V0,
@@ -35,12 +39,30 @@ function withRouteMetadata(payload: Record<string, unknown>, status = 200) {
 }
 
 export async function GET() {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   return withRouteMetadata({
     ...buildStableSemanticBundlePersistenceServiceReadinessV0(),
   });
 }
 
 export async function POST(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   let body: StableSemanticBundlePersistenceServiceInputV0;
 
   try {

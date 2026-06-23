@@ -1,3 +1,7 @@
+import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
 import { NextResponse } from "next/server";
 import { auth0 } from "../../../../../../lib/auth0";
 import { buildControlledActivityIntakeServerSideAuthSessionRuntimeBridge } from "../../../../../../lib/activity/controlledIntake/serverSideAuthSessionRuntimeBridge";
@@ -459,6 +463,15 @@ function statusForFailure(code: FirstRealAuthSessionRuntimeReadDiagnosticFailure
 }
 
 export async function GET(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   if (!hasDiagnosticHeader(request)) {
     const failure = buildFailure(
       "CONTROLLED_INTAKE_FIRST_REAL_SESSION_DEBUG_HEADER_REQUIRED",

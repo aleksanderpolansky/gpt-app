@@ -1,4 +1,8 @@
-﻿import { NextResponse } from "next/server";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { NextResponse } from "next/server";
 
 import {
   ALLOWED_MAPPING_STATUSES,
@@ -112,6 +116,15 @@ function buildNamedInvariantCodeCheck(params: {
 }
 
 export async function GET() {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   const normalizedUnknownResolution = safeInvoke(() =>
     normalizeResolutionStatus("totally_invalid_resolution_status", "unresolved")
   );

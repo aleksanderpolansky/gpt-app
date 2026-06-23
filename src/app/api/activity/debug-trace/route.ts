@@ -1,4 +1,8 @@
-﻿import { NextResponse } from "next/server";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { NextResponse } from "next/server";
 import {
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
   ACTIVITY_RECORDING_ENABLED,
@@ -1386,6 +1390,15 @@ function buildTraceCounts(trace: {
 }
 
 export async function GET(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   if (!ACTIVITY_RECORDING_ENABLED) {
     return NextResponse.json(
       {

@@ -1,4 +1,8 @@
-﻿import { NextResponse } from "next/server";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { NextResponse } from "next/server";
 
 import {
   PRIMARY_CATEGORY_SOURCE_SEARCH_ORDER_MODE_V0,
@@ -17,6 +21,15 @@ const ROUTE_CONTRACT_VERSION =
   "primary_category_source_search_order_proof_route_v0";
 
 export async function GET() {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   return NextResponse.json({
     ...buildPrimaryCategorySourceSearchOrderReadinessV0(),
     endpoint: ENDPOINT,
@@ -35,6 +48,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   let body: PrimaryCategorySourceSearchOrderRawInputV0;
 
   try {

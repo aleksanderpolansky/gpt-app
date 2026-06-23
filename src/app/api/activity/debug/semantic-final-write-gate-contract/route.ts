@@ -1,4 +1,8 @@
-﻿import { NextResponse } from "next/server";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { NextResponse } from "next/server";
 
 import { buildSemanticActorResolutionDryRunV0 } from "../../../../../../lib/activity/categoryDerivation/semanticActorResolutionDryRunV0";
 
@@ -112,6 +116,15 @@ function buildFinalSemanticWriteGateContract(params: {
 }
 
 export async function GET(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   const url = new URL(request.url);
   const selectedSpaceIdSha256Prefix = url.searchParams.get(
     "selectedSpaceIdSha256Prefix"

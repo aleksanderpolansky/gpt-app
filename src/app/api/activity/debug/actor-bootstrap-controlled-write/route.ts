@@ -1,4 +1,8 @@
-﻿import crypto from "crypto";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 
 import { auth0 } from "../../../../../../lib/auth0";
@@ -1209,6 +1213,15 @@ async function runActorBootstrapControlledWrite(params: {
 }
 
 export async function GET() {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   const result = await runActorBootstrapControlledWrite({
     executeControlledWrite: false,
     expectedPolicy: null,
@@ -1242,6 +1255,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   let body: unknown;
 
   try {

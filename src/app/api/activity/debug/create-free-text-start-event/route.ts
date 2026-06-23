@@ -1,3 +1,7 @@
+import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
 import { NextResponse } from "next/server";
 
 import {
@@ -137,6 +141,15 @@ function mapActivityEvent(event: ActivityEventRow) {
 }
 
 export async function POST(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   if (!ACTIVITY_RECORDING_ENABLED) {
     return NextResponse.json(
       {

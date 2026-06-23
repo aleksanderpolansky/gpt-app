@@ -1,4 +1,8 @@
-﻿import { NextResponse } from "next/server";
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { NextResponse } from "next/server";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
 import { getValueObjectCloudDebugAccess } from "../../../../../../lib/value-objects/objectCloudDebugGuard";
@@ -319,6 +323,15 @@ async function getCurrentUserContext(): Promise<CurrentUserContext> {
 }
 
 export async function GET(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   const endpoint = "/api/value-objects/debug/cloud-profile";
   const debugAccess = getValueObjectCloudDebugAccess();
 

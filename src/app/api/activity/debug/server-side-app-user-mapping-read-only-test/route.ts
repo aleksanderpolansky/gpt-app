@@ -1,3 +1,7 @@
+import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
 import { NextResponse } from 'next/server';
 
 import { auth0 } from '../../../../../../lib/auth0';
@@ -112,6 +116,15 @@ function jsonResponse(body: DiagnosticResponse, status: number): NextResponse<Di
 }
 
 export async function GET(request: Request): Promise<NextResponse<DiagnosticResponse>> {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   const diagnosticHeaderAccepted =
     request.headers.get(DIAGNOSTIC_HEADER_NAME) === DIAGNOSTIC_HEADER_VALUE;
 

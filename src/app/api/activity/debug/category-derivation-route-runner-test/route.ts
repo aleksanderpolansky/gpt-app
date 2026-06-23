@@ -1,3 +1,7 @@
+import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
 import { NextResponse } from "next/server";
 
 import {
@@ -136,6 +140,15 @@ function resolverOptionsFromBody(body: RouteRunnerDebugBody): CategoryResolverOp
 }
 
 export async function GET() {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   return NextResponse.json({
     ok: true,
     endpoint: "/api/activity/debug/category-derivation-route-runner-test",
@@ -161,6 +174,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   if (!ACTIVITY_RECORDING_ENABLED) {
     return NextResponse.json(
       {

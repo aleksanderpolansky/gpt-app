@@ -1,4 +1,8 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+﻿import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { NextRequest, NextResponse } from 'next/server';
 
 import { auth0 } from '../../../../../../lib/auth0';
 import { getSupabaseAdminClient } from '../../../../../../lib/supabase/admin';
@@ -432,6 +436,15 @@ async function findPositiveCandidate(mappedAppUserId: string): Promise<{
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse<DiagnosticResponseBody>> {
+  const platformAdminGuard = await requirePlatformAdmin();
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(
+      platformAdminGuard,
+      "debug-api-platform-admin-guard-v1",
+    );
+  }
+
   const headerValue = request.headers.get(REQUIRED_HEADER_NAME);
 
   if (headerValue !== REQUIRED_HEADER_VALUE) {
