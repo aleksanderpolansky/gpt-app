@@ -132,8 +132,8 @@ export type LocalizedTextResolution = {
   readonly fallbackUsed: boolean;
 };
 
-export const DEFAULT_INTERFACE_LOCALE: SupportedLocale = "ru";
-export const DEFAULT_CONTENT_LOCALE: SupportedLocale = "ru";
+export const DEFAULT_INTERFACE_LOCALE: SupportedLocale = "en";
+export const DEFAULT_CONTENT_LOCALE: SupportedLocale = "en";
 export const DEFAULT_FALLBACK_LOCALE: SupportedLocale = "en";
 export const DEFAULT_COUNTRY_CODE: SupportedCountryCode = "PL";
 
@@ -514,3 +514,4 @@ export function hasExistingGeoFilter(
 ): boolean {
   return Boolean(context.countryCode || context.city || context.district);
 }
+
