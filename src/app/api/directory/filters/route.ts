@@ -1,4 +1,5 @@
-﻿import { NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
+import { createLocalizationRuntimeContext } from "../../../../types/localization";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -301,8 +302,19 @@ function mapDistricts(
   return Array.from(districtMap.values()).sort(compareByLabel);
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const searchParams = request.nextUrl.searchParams;
+    const requestedLocale =
+      searchParams.get("locale") ?? searchParams.get("lang") ?? undefined;
+    const localizationRuntimeContext = createLocalizationRuntimeContext({
+      locale: {
+        contentLocale: requestedLocale,
+        interfaceLocale: requestedLocale,
+        source: requestedLocale ? "query" : "default",
+      },
+    });
+    const contentLocale = localizationRuntimeContext.locale.contentLocale;
     const organizationsResult = await supabase
       .from("organizations")
       .select("id")
@@ -372,7 +384,7 @@ export async function GET() {
 
         supabase.rpc("get_contextual_categories", {
           p_context_code: "business_directory",
-          p_language_code: "ru",
+          p_language_code: contentLocale,
         }),
 
         supabase
