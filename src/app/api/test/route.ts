@@ -1,6 +1,7 @@
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
-import { runAiJson } from "../../../../lib/ai/openaiClient";
+import { runAiJsonWithUsageMetadata } from "../../../../lib/ai/openaiClient";
+import type { RunAiJsonUsageMetadata } from "../../../../lib/ai/openaiClient";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,13 @@ type AiTierCode = "nano" | "standard" | "pro";
 
 type ChatAiResponse = {
   reply: string;
+};
+
+type AppUserRow = {
+  id: string;
+  auth0_sub?: string | null;
+  email?: string | null;
+  name?: string | null;
 };
 
 type AiModelTierRow = {
@@ -49,6 +57,27 @@ type BillingPreflight = {
   availableBalanceEur: number;
 };
 
+type UsageEventRow = {
+  id: string;
+};
+
+type UsageDebitSettlement = {
+  status: "wallet_debited" | "usage_debit_failed";
+  usageEventId: string | null;
+  walletId: string;
+  balanceBeforeEur: number | null;
+  balanceAfterEur: number | null;
+  actualCostEur: number | null;
+  walletDebitEur: number | null;
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  openaiResponseId: string | null;
+  errorCode?: string;
+  errorMessage?: string;
+};
+
 const ALLOWED_TIERS = new Set<AiTierCode>(["nano", "standard", "pro"]);
 const DEFAULT_TIER: AiTierCode = "standard";
 const CHAT_MAX_OUTPUT_TOKENS = 200;
@@ -81,8 +110,42 @@ function asNumber(value: string | number | null | undefined): number | null {
   return null;
 }
 
+function toFixedNumber(value: number, digits: number) {
+  return Number(value.toFixed(digits));
+}
+
 function estimateInputTokens(systemPrompt: string, userMessage: string) {
   return Math.max(1, Math.ceil((systemPrompt.length + userMessage.length) / 4));
+}
+
+function getCostPer1mTokensEur(
+  priceSnapshot: AiModelPriceSnapshotRow,
+  fieldName:
+    | "input_cost_per_1m_tokens"
+    | "cached_input_cost_per_1m_tokens"
+    | "output_cost_per_1m_tokens",
+) {
+  const rawCost = asNumber(priceSnapshot[fieldName]);
+
+  if (rawCost === null || rawCost < 0) {
+    return null;
+  }
+
+  const markup = asNumber(priceSnapshot.eur_markup_multiplier) ?? 1;
+  const pricingCurrency = (priceSnapshot.pricing_currency ?? "USD").toUpperCase();
+  const displayCurrency = (priceSnapshot.display_currency ?? "EUR").toUpperCase();
+
+  if (pricingCurrency === "EUR" && displayCurrency === "EUR") {
+    return rawCost * markup;
+  }
+
+  const usdToEurRate = asNumber(priceSnapshot.usd_to_eur_rate);
+
+  if (pricingCurrency === "USD" && displayCurrency === "EUR" && usdToEurRate !== null) {
+    return rawCost * usdToEurRate * markup;
+  }
+
+  return null;
 }
 
 function calculateEstimatedCostEur(params: {
@@ -90,24 +153,70 @@ function calculateEstimatedCostEur(params: {
   estimatedInputTokens: number;
   estimatedOutputTokens: number;
 }) {
-  const inputUsdPer1m = asNumber(params.priceSnapshot.input_cost_per_1m_tokens);
-  const outputUsdPer1m = asNumber(params.priceSnapshot.output_cost_per_1m_tokens);
-  const usdToEurRate = asNumber(params.priceSnapshot.usd_to_eur_rate);
-  const eurMarkupMultiplier = asNumber(params.priceSnapshot.eur_markup_multiplier) ?? 1;
+  const inputEurPer1m = getCostPer1mTokensEur(
+    params.priceSnapshot,
+    "input_cost_per_1m_tokens",
+  );
+  const outputEurPer1m = getCostPer1mTokensEur(
+    params.priceSnapshot,
+    "output_cost_per_1m_tokens",
+  );
 
-  if (inputUsdPer1m === null || outputUsdPer1m === null || usdToEurRate === null) {
+  if (inputEurPer1m === null || outputEurPer1m === null) {
     return null;
   }
 
-  const inputCostUsd = (params.estimatedInputTokens / 1_000_000) * inputUsdPer1m;
-  const outputCostUsd = (params.estimatedOutputTokens / 1_000_000) * outputUsdPer1m;
   const estimatedCostEur =
-    (inputCostUsd + outputCostUsd) *
-    usdToEurRate *
-    eurMarkupMultiplier *
-    PREFLIGHT_COST_SAFETY_MULTIPLIER;
+    (params.estimatedInputTokens / 1_000_000) * inputEurPer1m +
+    (params.estimatedOutputTokens / 1_000_000) * outputEurPer1m;
 
-  return Number(estimatedCostEur.toFixed(8));
+  return toFixedNumber(estimatedCostEur * PREFLIGHT_COST_SAFETY_MULTIPLIER, 8);
+}
+
+function calculateActualCostEur(params: {
+  priceSnapshot: AiModelPriceSnapshotRow;
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+}) {
+  const inputEurPer1m = getCostPer1mTokensEur(
+    params.priceSnapshot,
+    "input_cost_per_1m_tokens",
+  );
+  const cachedInputEurPer1m =
+    getCostPer1mTokensEur(params.priceSnapshot, "cached_input_cost_per_1m_tokens") ??
+    inputEurPer1m;
+  const outputEurPer1m = getCostPer1mTokensEur(
+    params.priceSnapshot,
+    "output_cost_per_1m_tokens",
+  );
+
+  if (inputEurPer1m === null || cachedInputEurPer1m === null || outputEurPer1m === null) {
+    return null;
+  }
+
+  const cachedInputTokens = Math.min(
+    Math.max(0, params.cachedInputTokens),
+    Math.max(0, params.inputTokens),
+  );
+  const uncachedInputTokens = Math.max(0, params.inputTokens - cachedInputTokens);
+
+  const actualCostEur =
+    (uncachedInputTokens / 1_000_000) * inputEurPer1m +
+    (cachedInputTokens / 1_000_000) * cachedInputEurPer1m +
+    (Math.max(0, params.outputTokens) / 1_000_000) * outputEurPer1m;
+
+  return toFixedNumber(actualCostEur, 8);
+}
+
+function toLedgerDebitAmountEur(actualCostEur: number) {
+  if (!Number.isFinite(actualCostEur) || actualCostEur <= 0) {
+    return 0;
+  }
+
+  const roundedUpToSixDecimals = Math.ceil(actualCostEur * 1_000_000) / 1_000_000;
+
+  return toFixedNumber(Math.max(0.000001, roundedUpToSixDecimals), 6);
 }
 
 function billingErrorResponse(params: {
@@ -227,7 +336,7 @@ async function buildBillingPreflight(params: {
     };
   }
 
-  const availableBalanceEur = Number(Math.max(0, balanceEur - reservedEur).toFixed(8));
+  const availableBalanceEur = toFixedNumber(Math.max(0, balanceEur - reservedEur), 8);
   const estimatedInputTokens = estimateInputTokens(params.systemPrompt, params.userMessage);
   const estimatedOutputTokens = CHAT_MAX_OUTPUT_TOKENS;
   const estimatedCostEur = calculateEstimatedCostEur({
@@ -279,6 +388,323 @@ async function buildBillingPreflight(params: {
   };
 }
 
+async function insertUsageEvent(params: {
+  appUserId: string;
+  preflight: BillingPreflight;
+  usage: RunAiJsonUsageMetadata;
+  actualCostEur: number | null;
+  walletDebitEur: number | null;
+  status: "openai_completed" | "debit_failed";
+  errorCode?: string;
+  errorMessage?: string;
+}) {
+  const { data, error } = await supabase
+    .from("ai_usage_events")
+    .insert({
+      app_user_id: params.appUserId,
+      wallet_id: params.preflight.wallet.id,
+      selected_tier_code: params.preflight.tierCode,
+      model_name: params.usage.model ?? params.preflight.modelName,
+      provider: "openai",
+      route_path: "/api/test",
+      operation_kind: "chat_message",
+      input_tokens: params.usage.inputTokens,
+      cached_input_tokens: params.usage.cachedInputTokens,
+      output_tokens: params.usage.outputTokens,
+      total_tokens: params.usage.totalTokens,
+      estimated_cost_eur: params.preflight.estimatedCostEur,
+      actual_cost_eur: params.actualCostEur,
+      wallet_debit_eur: params.walletDebitEur,
+      status: params.status,
+      error_code: params.errorCode ?? null,
+      error_message: params.errorMessage ?? null,
+      openai_response_id: params.usage.responseId,
+      request_metadata: {
+        selectedTier: params.preflight.tierCode,
+        estimatedInputTokens: params.preflight.estimatedInputTokens,
+        estimatedOutputTokens: params.preflight.estimatedOutputTokens,
+        preflightAvailableBalanceEur: params.preflight.availableBalanceEur,
+      },
+      response_metadata: {
+        usage: params.usage.rawUsage ?? null,
+      },
+      completed_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single<UsageEventRow>();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? "Failed to insert ai_usage_events row");
+  }
+
+  return data;
+}
+
+async function markUsageEventDebitFailed(params: {
+  usageEventId: string | null;
+  errorCode: string;
+  errorMessage: string;
+}) {
+  if (!params.usageEventId) {
+    return;
+  }
+
+  await supabase
+    .from("ai_usage_events")
+    .update({
+      status: "debit_failed",
+      error_code: params.errorCode,
+      error_message: params.errorMessage,
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", params.usageEventId);
+}
+
+async function settleAiUsageDebit(params: {
+  appUser: AppUserRow;
+  preflight: BillingPreflight;
+  usage: RunAiJsonUsageMetadata;
+}): Promise<UsageDebitSettlement> {
+  const actualCostEur = calculateActualCostEur({
+    priceSnapshot: params.preflight.priceSnapshot,
+    inputTokens: params.usage.inputTokens,
+    cachedInputTokens: params.usage.cachedInputTokens,
+    outputTokens: params.usage.outputTokens,
+  });
+
+  if (actualCostEur === null) {
+    let usageEventId: string | null = null;
+
+    try {
+      const usageEvent = await insertUsageEvent({
+        appUserId: params.appUser.id,
+        preflight: params.preflight,
+        usage: params.usage,
+        actualCostEur: null,
+        walletDebitEur: null,
+        status: "debit_failed",
+        errorCode: "actual_cost_calculation_failed",
+        errorMessage: "Could not calculate actual AI usage cost from price snapshot.",
+      });
+      usageEventId = usageEvent.id;
+    } catch {
+      // Keep the original billing failure visible even if audit row insertion fails.
+    }
+
+    return {
+      status: "usage_debit_failed",
+      usageEventId,
+      walletId: params.preflight.wallet.id,
+      balanceBeforeEur: null,
+      balanceAfterEur: null,
+      actualCostEur: null,
+      walletDebitEur: null,
+      inputTokens: params.usage.inputTokens,
+      cachedInputTokens: params.usage.cachedInputTokens,
+      outputTokens: params.usage.outputTokens,
+      totalTokens: params.usage.totalTokens,
+      openaiResponseId: params.usage.responseId,
+      errorCode: "actual_cost_calculation_failed",
+      errorMessage: "Could not calculate actual AI usage cost from price snapshot.",
+    };
+  }
+
+  const walletDebitEur = toLedgerDebitAmountEur(actualCostEur);
+
+  const { data: freshWallet, error: walletReadError } = await supabase
+    .from("ai_credit_wallets")
+    .select("id, app_user_id, balance_eur, reserved_eur, status")
+    .eq("id", params.preflight.wallet.id)
+    .eq("app_user_id", params.appUser.id)
+    .eq("status", "active")
+    .maybeSingle<AiCreditWalletRow>();
+
+  if (walletReadError || !freshWallet) {
+    return {
+      status: "usage_debit_failed",
+      usageEventId: null,
+      walletId: params.preflight.wallet.id,
+      balanceBeforeEur: null,
+      balanceAfterEur: null,
+      actualCostEur,
+      walletDebitEur,
+      inputTokens: params.usage.inputTokens,
+      cachedInputTokens: params.usage.cachedInputTokens,
+      outputTokens: params.usage.outputTokens,
+      totalTokens: params.usage.totalTokens,
+      openaiResponseId: params.usage.responseId,
+      errorCode: "wallet_recheck_failed",
+      errorMessage: walletReadError?.message ?? "Active AI wallet not found during debit.",
+    };
+  }
+
+  const balanceBeforeEur = asNumber(freshWallet.balance_eur);
+  const reservedEur = asNumber(freshWallet.reserved_eur) ?? 0;
+
+  if (balanceBeforeEur === null) {
+    return {
+      status: "usage_debit_failed",
+      usageEventId: null,
+      walletId: freshWallet.id,
+      balanceBeforeEur: null,
+      balanceAfterEur: null,
+      actualCostEur,
+      walletDebitEur,
+      inputTokens: params.usage.inputTokens,
+      cachedInputTokens: params.usage.cachedInputTokens,
+      outputTokens: params.usage.outputTokens,
+      totalTokens: params.usage.totalTokens,
+      openaiResponseId: params.usage.responseId,
+      errorCode: "invalid_wallet_balance_during_debit",
+      errorMessage: "AI wallet balance is not numeric during debit.",
+    };
+  }
+
+  const availableBeforeEur = toFixedNumber(Math.max(0, balanceBeforeEur - reservedEur), 8);
+
+  if (walletDebitEur <= 0 || availableBeforeEur < walletDebitEur) {
+    let usageEventId: string | null = null;
+    const errorCode = walletDebitEur <= 0 ? "zero_wallet_debit" : "post_call_insufficient_ai_balance";
+    const errorMessage =
+      walletDebitEur <= 0
+        ? "Calculated wallet debit is zero. No wallet debit was posted."
+        : "AI wallet balance became insufficient after OpenAI call.";
+
+    try {
+      const usageEvent = await insertUsageEvent({
+        appUserId: params.appUser.id,
+        preflight: params.preflight,
+        usage: params.usage,
+        actualCostEur,
+        walletDebitEur,
+        status: "debit_failed",
+        errorCode,
+        errorMessage,
+      });
+      usageEventId = usageEvent.id;
+    } catch {
+      // Do not hide the AI reply because of logging failure.
+    }
+
+    return {
+      status: "usage_debit_failed",
+      usageEventId,
+      walletId: freshWallet.id,
+      balanceBeforeEur,
+      balanceAfterEur: balanceBeforeEur,
+      actualCostEur,
+      walletDebitEur,
+      inputTokens: params.usage.inputTokens,
+      cachedInputTokens: params.usage.cachedInputTokens,
+      outputTokens: params.usage.outputTokens,
+      totalTokens: params.usage.totalTokens,
+      openaiResponseId: params.usage.responseId,
+      errorCode,
+      errorMessage,
+    };
+  }
+
+  const balanceAfterEur = toFixedNumber(balanceBeforeEur - walletDebitEur, 6);
+  let usageEventId: string | null = null;
+
+  try {
+    const usageEvent = await insertUsageEvent({
+      appUserId: params.appUser.id,
+      preflight: params.preflight,
+      usage: params.usage,
+      actualCostEur,
+      walletDebitEur,
+      status: "openai_completed",
+    });
+    usageEventId = usageEvent.id;
+
+    const { error: ledgerError } = await supabase.from("ai_credit_ledger").insert({
+      wallet_id: freshWallet.id,
+      app_user_id: params.appUser.id,
+      direction: "debit",
+      amount_eur: walletDebitEur,
+      balance_before_eur: toFixedNumber(balanceBeforeEur, 6),
+      balance_after_eur: balanceAfterEur,
+      source_type: "ai_usage",
+      source_id: usageEvent.id,
+      reason: "AI chat message usage debit",
+      idempotency_key: "ai_usage:" + usageEvent.id,
+      metadata: {
+        routePath: "/api/test",
+        selectedTier: params.preflight.tierCode,
+        modelName: params.usage.model ?? params.preflight.modelName,
+        openaiResponseId: params.usage.responseId,
+        actualCostEur,
+      },
+    });
+
+    if (ledgerError) {
+      throw new Error(ledgerError.message);
+    }
+
+    const { error: walletUpdateError } = await supabase
+      .from("ai_credit_wallets")
+      .update({
+        balance_eur: balanceAfterEur,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", freshWallet.id)
+      .eq("app_user_id", params.appUser.id);
+
+    if (walletUpdateError) {
+      throw new Error(walletUpdateError.message);
+    }
+
+    await supabase
+      .from("ai_usage_events")
+      .update({
+        status: "wallet_debited",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", usageEvent.id);
+
+    return {
+      status: "wallet_debited",
+      usageEventId: usageEvent.id,
+      walletId: freshWallet.id,
+      balanceBeforeEur,
+      balanceAfterEur,
+      actualCostEur,
+      walletDebitEur,
+      inputTokens: params.usage.inputTokens,
+      cachedInputTokens: params.usage.cachedInputTokens,
+      outputTokens: params.usage.outputTokens,
+      totalTokens: params.usage.totalTokens,
+      openaiResponseId: params.usage.responseId,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown debit error";
+
+    await markUsageEventDebitFailed({
+      usageEventId,
+      errorCode: "usage_debit_write_failed",
+      errorMessage,
+    });
+
+    return {
+      status: "usage_debit_failed",
+      usageEventId,
+      walletId: freshWallet.id,
+      balanceBeforeEur,
+      balanceAfterEur,
+      actualCostEur,
+      walletDebitEur,
+      inputTokens: params.usage.inputTokens,
+      cachedInputTokens: params.usage.cachedInputTokens,
+      outputTokens: params.usage.outputTokens,
+      totalTokens: params.usage.totalTokens,
+      openaiResponseId: params.usage.responseId,
+      errorCode: "usage_debit_write_failed",
+      errorMessage,
+    };
+  }
+}
+
 export async function POST(request: Request) {
   let selectedTier: AiTierCode = DEFAULT_TIER;
 
@@ -319,7 +745,7 @@ export async function POST(request: Request) {
         },
       )
       .select()
-      .single();
+      .single<AppUserRow>();
 
     if (userError) {
       return Response.json(
@@ -329,7 +755,7 @@ export async function POST(request: Request) {
     }
 
     const systemPrompt =
-      "You are a simple AI assistant inside a web platform that is currently in development. Return only valid compact JSON in this exact shape: {\"reply\":\"string\"}. Keep the reply short and practical.";
+      'You are a simple AI assistant inside a web platform that is currently in development. Return only valid compact JSON in this exact shape: {"reply":"string"}. Keep the reply short and practical.';
 
     const preflightResult = await buildBillingPreflight({
       appUserId: appUser.id,
@@ -348,7 +774,7 @@ export async function POST(request: Request) {
       content: userMessage,
     });
 
-    const aiResult = await runAiJson<ChatAiResponse>({
+    const aiCall = await runAiJsonWithUsageMetadata<ChatAiResponse>({
       system: systemPrompt,
       user: {
         message: userMessage,
@@ -357,6 +783,7 @@ export async function POST(request: Request) {
       maxOutputTokens: CHAT_MAX_OUTPUT_TOKENS,
     });
 
+    const aiResult = aiCall.parsed;
     const reply =
       typeof aiResult.reply === "string" && aiResult.reply.trim()
         ? aiResult.reply.trim()
@@ -368,19 +795,35 @@ export async function POST(request: Request) {
       content: reply,
     });
 
+    const settlement = await settleAiUsageDebit({
+      appUser,
+      preflight: preflightResult.preflight,
+      usage: aiCall.usage,
+    });
+
     return Response.json({
       success: true,
       model: preflightResult.preflight.modelName,
       selectedTier,
       reply,
       billing: {
-        status: "preflight_passed_no_debit_yet",
-        walletId: preflightResult.preflight.wallet.id,
+        status: settlement.status,
+        walletId: settlement.walletId,
+        usageEventId: settlement.usageEventId,
+        balanceBeforeEur: settlement.balanceBeforeEur,
+        balanceAfterEur: settlement.balanceAfterEur,
         availableBalanceEur: preflightResult.preflight.availableBalanceEur,
         estimatedCostEur: preflightResult.preflight.estimatedCostEur,
-        estimatedInputTokens: preflightResult.preflight.estimatedInputTokens,
-        estimatedOutputTokens: preflightResult.preflight.estimatedOutputTokens,
-        debitImplemented: false,
+        actualCostEur: settlement.actualCostEur,
+        walletDebitEur: settlement.walletDebitEur,
+        inputTokens: settlement.inputTokens,
+        cachedInputTokens: settlement.cachedInputTokens,
+        outputTokens: settlement.outputTokens,
+        totalTokens: settlement.totalTokens,
+        openaiResponseId: settlement.openaiResponseId,
+        debitImplemented: true,
+        errorCode: settlement.errorCode ?? null,
+        errorMessage: settlement.errorMessage ?? null,
       },
     });
   } catch (error) {
