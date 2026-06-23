@@ -1,4 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
+import { createLocalizationRuntimeContext } from "../../../../types/localization";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -1028,6 +1029,16 @@ function compareByDistance(firstItem: RowWithDistance, secondItem: RowWithDistan
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
+  const requestedLocale =
+    searchParams.get("locale") ?? searchParams.get("lang") ?? undefined;
+  const localizationRuntimeContext = createLocalizationRuntimeContext({
+    locale: {
+      contentLocale: requestedLocale,
+      interfaceLocale: requestedLocale,
+      source: requestedLocale ? "query" : "default",
+    },
+  });
+  const contentLocale = localizationRuntimeContext.locale.contentLocale;
 
   const q = normalizeSearchValue(searchParams.get("q"));
   const categorySlug = normalizeSearchValue(searchParams.get("category"));
@@ -1211,6 +1222,7 @@ export async function GET(request: NextRequest) {
       userLng,
       distanceSortingAvailable: canSortByDistance,
       limit,
+      locale: contentLocale,
     },
   });
 }
