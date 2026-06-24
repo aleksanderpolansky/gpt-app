@@ -1,4 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
+import { createLocalizationRuntimeContext } from "../../../../../types/localization";
 import { supabase } from "../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -447,7 +448,19 @@ function mapDirectoryOrganization(
   };
 }
 
-export async function GET(_request: NextRequest, { params }: RouteProps) {
+export async function GET(request: NextRequest, { params }: RouteProps) {
+  const searchParams = request.nextUrl.searchParams;
+  const requestedLocale =
+    searchParams.get("locale") ?? searchParams.get("lang") ?? undefined;
+  const localizationRuntimeContext = createLocalizationRuntimeContext({
+    locale: {
+      contentLocale: requestedLocale,
+      interfaceLocale: requestedLocale,
+      source: requestedLocale ? "query" : "default",
+    },
+  });
+  const contentLocale = localizationRuntimeContext.locale.contentLocale;
+
   const resolvedParams = await params;
   const slug = resolvedParams.slug?.trim();
 
@@ -551,6 +564,7 @@ export async function GET(_request: NextRequest, { params }: RouteProps) {
 
   return NextResponse.json({
     ok: true,
+    locale: contentLocale,
     organization: mapDirectoryOrganization(organizationRow, classifications),
   });
 }
