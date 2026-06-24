@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
 import {
@@ -20,6 +20,13 @@ import {
   Wallet,
 } from "lucide-react";
 
+import {
+  getLocaleSearchParam,
+  getNavigationMessage,
+  type LocaleCode,
+  type MessageParams,
+  type NavigationMessageKey,
+} from "@/i18n";
 import { UserSessionTopBarControls } from "../auth/user-session-client";
 import { WorkspaceSemanticCloudButton } from "../workspace/semantic-cloud/workspace-semantic-cloud-button";
 
@@ -45,11 +52,52 @@ type SidebarOrganizationsResponse = {
   organizations?: SidebarOrganization[];
 };
 
+type NavigationTranslate = (
+  key: NavigationMessageKey,
+  params?: MessageParams,
+) => string;
+
 export const UI_MINI_FIX_REAL_ORGANIZATIONS_IN_GLOBAL_NAV =
   "UI_MINI_FIX_REAL_ORGANIZATIONS_IN_GLOBAL_NAV" as const;
 
 export const UI_MINI_FIX_SEMANTIC_CLOUD_TOP_SEARCH_IN_GLOBAL_NAV =
   "UI_MINI_FIX_SEMANTIC_CLOUD_TOP_SEARCH_IN_GLOBAL_NAV" as const;
+
+export const UI_PHASE20C_04B_GLOBAL_NAVIGATION_I18N_WIRED =
+  "UI_PHASE20C_04B_GLOBAL_NAVIGATION_I18N_WIRED" as const;
+
+function useInterfaceLocale(): LocaleCode {
+  const [locale, setLocale] = useState<LocaleCode>("en");
+
+  useEffect(() => {
+    function readLocaleFromUrl() {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      setLocale(getLocaleSearchParam(new URLSearchParams(window.location.search)));
+    }
+
+    readLocaleFromUrl();
+    window.addEventListener("popstate", readLocaleFromUrl);
+
+    return () => {
+      window.removeEventListener("popstate", readLocaleFromUrl);
+    };
+  }, []);
+
+  return locale;
+}
+
+function useNavigationTranslator(): NavigationTranslate {
+  const locale = useInterfaceLocale();
+
+  return useMemo(
+    () => (key: NavigationMessageKey, params?: MessageParams) =>
+      getNavigationMessage(key, locale, params),
+    [locale],
+  );
+}
 
 function Badge({
   count,
@@ -187,8 +235,8 @@ function TreeItem({
       {actionHref ? (
         <a
           href={actionHref}
-          title={actionTitle ?? `Добавить: ${label}`}
-          aria-label={actionTitle ?? `Добавить: ${label}`}
+          title={actionTitle ?? `Add: ${label}`}
+          aria-label={actionTitle ?? `Add: ${label}`}
           className="mr-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border border-transparent text-[#b0b4c8] transition-all hover:border-[#dfe4ff] hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
         >
           <Plus size={12} strokeWidth={2.4} />
@@ -257,6 +305,7 @@ export function GlobalSidebar() {
   const [organizations, setOrganizations] = useState<SidebarOrganization[]>([]);
   const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(false);
   const [organizationsError, setOrganizationsError] = useState<string | null>(null);
+  const t = useNavigationTranslator();
 
   useEffect(() => {
     let isMounted = true;
@@ -275,7 +324,7 @@ export function GlobalSidebar() {
 
         if (!response.ok || !data.ok) {
           if (isMounted) {
-            setOrganizationsError(data.error ?? "Не удалось загрузить предприятия.");
+            setOrganizationsError(data.error ?? t("navigation.businessesLoadError"));
           }
 
           return;
@@ -286,7 +335,9 @@ export function GlobalSidebar() {
         }
       } catch (error) {
         if (isMounted) {
-          setOrganizationsError(error instanceof Error ? error.message : "Неизвестная ошибка загрузки предприятий.");
+          setOrganizationsError(
+            error instanceof Error ? error.message : t("navigation.businessesLoadError"),
+          );
         }
       } finally {
         if (isMounted) {
@@ -300,7 +351,7 @@ export function GlobalSidebar() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [t]);
 
   const visibleOrganizations = useMemo(() => organizations.slice(0, 8), [organizations]);
 
@@ -315,86 +366,86 @@ export function GlobalSidebar() {
             LifeOS
           </div>
           <div className="mt-0.5 text-[10px] leading-none text-[#9ca3b8]">
-            Всё важное — в одном месте
+            {t("navigation.everythingImportantInOnePlace")}
           </div>
         </div>
       </div>
 
       <nav className="scrollbar-hide flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
-        <SidebarMainItem icon={LayoutDashboard} label="Мой кабинет" active href="/" />
+        <SidebarMainItem icon={LayoutDashboard} label={t("navigation.dashboard")} active href="/" />
 
         <div className="pb-0.5 pt-1">
           <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#b0b4c8]">
-            Каталог и сервисы
+            {t("navigation.catalogAndServices")}
           </p>
         </div>
 
-        <ExpandableSidebarItem icon={ShoppingBag} label="Каталог" defaultOpen>
+        <ExpandableSidebarItem icon={ShoppingBag} label={t("navigation.catalog")} defaultOpen>
           <TreeItem
-            label="Предприятия"
+            label={t("navigation.businesses")}
             depth={1}
             href="/directory"
             actionHref="/organizations/new"
-            actionTitle="Создать предприятие"
+            actionTitle={t("navigation.createBusiness")}
           />
           <TreeItem
-            label="Предложения предприятий"
+            label={t("navigation.enterpriseOffers")}
             depth={1}
             href="/offers"
             actionHref="/offers/new"
-            actionTitle="Создать предложение предприятия"
+            actionTitle={t("navigation.createEnterpriseOffer")}
           />
           <TreeItem
-            label="Подарочные сертификаты"
+            label={t("navigation.giftCertificates")}
             depth={1}
             href="/certificates"
             actionHref="/certificates/new"
-            actionTitle="Создать подарочный сертификат"
+            actionTitle={t("navigation.createGiftCertificate")}
           />
-          <TreeItem label="Мероприятия" depth={1} href="/calendar" />
+          <TreeItem label={t("navigation.events")} depth={1} href="/calendar" />
         </ExpandableSidebarItem>
 
         <div className="pb-0.5 pt-1">
           <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#b0b4c8]">
-            Направления
+            {t("navigation.directions")}
           </p>
         </div>
 
-        <ExpandableSidebarItem icon={Clock} label="Время" defaultOpen>
+        <ExpandableSidebarItem icon={Clock} label={t("navigation.time")} defaultOpen>
           <TreeItem
-            label="Календарь"
+            label={t("navigation.calendar")}
             depth={1}
             href="/calendar"
             actionHref="/calendar/new"
-            actionTitle="Добавить ивент календаря"
+            actionTitle={t("navigation.addCalendarEvent")}
           />
           <TreeItem
-            label="Мои ценные объекты"
+            label={t("navigation.myValueObjects")}
             depth={1}
             href="/value-objects"
             actionHref="/value-objects/new"
-            actionTitle="Добавить частный ценный объект"
+            actionTitle={t("navigation.addPrivateValueObject")}
           />
           <TreeItem
-            label="Мой лог активностей"
+            label={t("navigation.myActivityLog")}
             depth={1}
             href="/activity-today"
             actionHref="/activity-capture"
-            actionTitle="Добавить активность"
+            actionTitle={t("navigation.addActivity")}
           />
           <TreeItem
-            label="Таблица фактов активности"
+            label={t("navigation.activityFactsTable")}
             depth={2}
             href="/activity-facts"
           />
         </ExpandableSidebarItem>
 
-        <ExpandableSidebarItem icon={Wallet} label="Деньги" defaultOpen>
-          <TreeItem label="Бизнес" depth={1} defaultOpen>
+        <ExpandableSidebarItem icon={Wallet} label={t("navigation.money")} defaultOpen>
+          <TreeItem label={t("navigation.business")} depth={1} defaultOpen>
             {isLoadingOrganizations ? (
-              <TreeItem label="Загружаю предприятия..." depth={2} href="/organizations" />
+              <TreeItem label={t("navigation.loadingBusinesses")} depth={2} href="/organizations" />
             ) : organizationsError ? (
-              <TreeItem label="Ошибка загрузки предприятий" depth={2} href="/organizations" />
+              <TreeItem label={t("navigation.businessesLoadError")} depth={2} href="/organizations" />
             ) : visibleOrganizations.length > 0 ? (
               <>
                 {visibleOrganizations.map((organization) => (
@@ -406,7 +457,9 @@ export function GlobalSidebar() {
 
                 {organizations.length > visibleOrganizations.length ? (
                   <TreeItem
-                    label={`Показать все предприятия: ${organizations.length}`}
+                    label={t("navigation.showAllBusinesses", {
+                      count: organizations.length,
+                    })}
                     depth={2}
                     href="/organizations"
                   />
@@ -414,41 +467,43 @@ export function GlobalSidebar() {
               </>
             ) : (
               <TreeItem
-                label="Пока нет предприятий — создать"
+                label={t("navigation.noBusinessesCreate")}
                 depth={2}
                 href="/organizations/new"
               />
             )}
           </TreeItem>
-          <TreeItem label="Карьера" depth={1} href="/next" />
-          <TreeItem label="Менеджер по продажам" depth={2} href="/next" />
-          <TreeItem label="Усиление карьерных возможностей" depth={2} defaultOpen>
-            <TreeItem label="Твёрдые навыки" depth={3} href="/value-objects" />
-            <TreeItem label="Немецкий язык" depth={3} href="/value-objects" />
-            <TreeItem label="Мягкие навыки" depth={3} href="/value-objects" />
+          <TreeItem label={t("navigation.career")} depth={1} href="/next" />
+          <TreeItem label={t("navigation.salesManager")} depth={2} href="/next" />
+          <TreeItem label={t("navigation.careerOpportunities")} depth={2} defaultOpen>
+            <TreeItem label={t("navigation.hardSkills")} depth={3} href="/value-objects" />
+            <TreeItem label={t("navigation.germanLanguage")} depth={3} href="/value-objects" />
+            <TreeItem label={t("navigation.softSkills")} depth={3} href="/value-objects" />
           </TreeItem>
         </ExpandableSidebarItem>
 
-        <SidebarMainItem icon={Heart} label="Здоровье" href="/analytics" />
-        <SidebarMainItem icon={Home} label="Личное пространство" href="/value-objects" />
+        <SidebarMainItem icon={Heart} label={t("navigation.health")} href="/analytics" />
+        <SidebarMainItem icon={Home} label={t("navigation.personalSpace")} href="/value-objects" />
 
         <div className="pb-0.5 pt-1">
           <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#b0b4c8]">
-            Прочее
+            {t("navigation.other")}
           </p>
         </div>
 
-        <SidebarMainItem icon={MessageSquare} label="Сообщения" badge={3} href="/workspace" />
-        <SidebarMainItem icon={Bell} label="Уведомления" badge={7} href="/workspace" />
-        <SidebarMainItem icon={Settings} label="Настройки" href="/privacy-audit" />
-        <SidebarMainItem icon={Bookmark} label="Избранное" href="/workspace" />
-        <SidebarMainItem icon={HelpCircle} label="Помощь" href="/project-knowledge" />
+        <SidebarMainItem icon={MessageSquare} label={t("navigation.messages")} badge={3} href="/workspace" />
+        <SidebarMainItem icon={Bell} label={t("navigation.notifications")} badge={7} href="/workspace" />
+        <SidebarMainItem icon={Settings} label={t("navigation.settings")} href="/privacy-audit" />
+        <SidebarMainItem icon={Bookmark} label={t("navigation.favorites")} href="/workspace" />
+        <SidebarMainItem icon={HelpCircle} label={t("navigation.help")} href="/project-knowledge" />
       </nav>
     </aside>
   );
 }
 
 export function GlobalTopBar() {
+  const t = useNavigationTranslator();
+
   return (
     <header className="flex h-[56px] flex-shrink-0 items-center gap-4 border-b border-[rgba(0,0,0,0.07)] bg-white px-5">
       <div className="flex flex-1 items-center gap-2">
@@ -459,7 +514,7 @@ export function GlobalTopBar() {
           />
           <input
             type="text"
-            placeholder="Поиск по платформе, людям, целям и возможностям"
+            placeholder={t("navigation.platformSearchPlaceholder")}
             className="w-full rounded-lg border border-transparent bg-[#f5f6fb] py-2 pl-9 pr-4 text-[12.5px] text-[#4a4f6a] placeholder-[#b0b4c8] transition-all focus:border-[#3b6ef8] focus:bg-white focus:outline-none"
           />
         </div>
@@ -473,7 +528,7 @@ export function GlobalTopBar() {
         <button
           type="button"
           className="relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-gray-50"
-          title="Уведомления"
+          title={t("navigation.notifications")}
         >
           <Bell size={16} className="text-[#7c8099]" />
           <span className="absolute right-1 top-1 h-[7px] w-[7px] rounded-full border-2 border-white bg-red-500" />
@@ -484,6 +539,3 @@ export function GlobalTopBar() {
     </header>
   );
 }
-
-
-
