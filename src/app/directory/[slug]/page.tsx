@@ -282,8 +282,39 @@ type DirectoryOrganizationPageProps = {
   params: Promise<{
     slug: string;
   }>;
+  searchParams?: Promise<{
+    locale?: string | string[];
+    lang?: string | string[];
+  }>;
 };
 
+function normalizeLocaleParam(value: string | string[] | undefined) {
+  if (!value) {
+    return "";
+  }
+
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+
+  return value;
+}
+
+function appendLocaleToHref(href: string, locale: string) {
+  if (!locale) {
+    return href;
+  }
+
+  const [withoutHash, hash = ""] = href.split("#");
+  const [pathname, queryString = ""] = withoutHash.split("?");
+  const searchParams = new URLSearchParams(queryString);
+  searchParams.set("locale", locale);
+
+  const nextQueryString = searchParams.toString();
+  const nextHash = hash ? `#${hash}` : "";
+
+  return `${pathname}?${nextQueryString}${nextHash}`;
+}
 const BUSINESS_DIRECTORY_CONTEXT_CODE = "business_directory";
 const ORGANIZATION_ENTITY_TYPE = "organization";
 
@@ -973,8 +1004,13 @@ async function getOffersWithCertificateAvailability(
 
 export default async function DirectoryOrganizationPage({
   params,
+  searchParams,
 }: DirectoryOrganizationPageProps) {
   const resolvedParams = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const selectedLocale =
+    normalizeLocaleParam(resolvedSearchParams?.locale) ||
+    normalizeLocaleParam(resolvedSearchParams?.lang);
   const slug = resolvedParams.slug;
 
   const { organization, errorMessage } = await getDirectoryOrganization(slug);
@@ -1130,7 +1166,7 @@ export default async function DirectoryOrganizationPage({
     <main className="min-h-full bg-[#f5f6fb] px-4 py-8 text-[#1a1d2e]">
       <div className="mx-auto grid w-full max-w-[1120px] gap-5">
         <Link
-          href="/directory"
+          href={appendLocaleToHref("/directory", selectedLocale)}
           className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] transition hover:bg-gray-50"
         >
           ← Назад в каталог
@@ -1423,7 +1459,7 @@ export default async function DirectoryOrganizationPage({
                         </div>
 
                         <Link
-                          href={`/offers/${offer.id}`}
+                          href={appendLocaleToHref(`/offers/${offer.id}`, selectedLocale)}
                           className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-center text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
                         >
                           Подробное описание
@@ -1431,7 +1467,7 @@ export default async function DirectoryOrganizationPage({
 
                         {offer.certificateAvailable ? (
                           <Link
-                            href={`/certificates/new?offerId=${offer.id}`}
+                            href={appendLocaleToHref(`/certificates/new?offerId=${offer.id}`, selectedLocale)}
                             className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-center text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.22)] transition hover:bg-[#2f5fe3]"
                           >
                             Заказать сертификат
@@ -1458,7 +1494,7 @@ export default async function DirectoryOrganizationPage({
 
             <section className="flex flex-wrap gap-2">
               <Link
-                href="/directory"
+                href={appendLocaleToHref("/directory", selectedLocale)}
                 className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
               >
                 Назад в каталог
@@ -1484,5 +1520,3 @@ export default async function DirectoryOrganizationPage({
     </main>
   );
 }
-
-
