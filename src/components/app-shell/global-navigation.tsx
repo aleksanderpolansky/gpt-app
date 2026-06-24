@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
 import {
@@ -29,6 +29,7 @@ import {
 } from "@/i18n";
 import { UserSessionTopBarControls } from "../auth/user-session-client";
 import { WorkspaceSemanticCloudButton } from "../workspace/semantic-cloud/workspace-semantic-cloud-button";
+import { InterfaceLanguageSwitcher } from "./interface-language-switcher";
 
 type IconComponent = ElementType;
 
@@ -525,6 +526,8 @@ export function GlobalTopBar() {
       </div>
 
       <div className="ml-auto flex items-center gap-3">
+        <InterfaceLanguageSwitcher />
+
         <button
           type="button"
           className="relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-gray-50"
