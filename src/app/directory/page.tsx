@@ -25,6 +25,8 @@ type DirectoryPageProps = {
     sort?: string | string[];
     userLat?: string | string[];
     userLng?: string | string[];
+    locale?: string | string[];
+    lang?: string | string[];
   }>;
 };
 
@@ -166,6 +168,7 @@ type DirectoryFilters = {
   sort: DirectorySortMode;
   userLat: string;
   userLng: string;
+  locale: string;
 };
 
 const DIRECTORY_ACTION_FILTERS: {
@@ -294,6 +297,10 @@ function buildDirectoryApiUrl(baseUrl: string, filters: DirectoryFilters) {
     searchParams.set("userLng", filters.userLng);
   }
 
+  if (filters.locale) {
+    searchParams.set("locale", filters.locale);
+  }
+
   searchParams.set("limit", "100");
 
   const queryString = searchParams.toString();
@@ -366,14 +373,25 @@ async function getDirectoryOrganizations(
   }
 }
 
-async function getDirectoryFilterOptions(): Promise<{
+async function getDirectoryFilterOptions(locale: string): Promise<{
   filterOptions: DirectoryFilterOptions;
   errorMessage: string | null;
 }> {
   const baseUrl = await getBaseUrl();
 
+  const filtersApiSearchParams = new URLSearchParams();
+
+  if (locale) {
+    filtersApiSearchParams.set("locale", locale);
+  }
+
+  const filtersApiQueryString = filtersApiSearchParams.toString();
+  const filtersApiUrl = filtersApiQueryString
+    ? `${baseUrl}/api/directory/filters?${filtersApiQueryString}`
+    : `${baseUrl}/api/directory/filters`;
+
   try {
-    const response = await fetch(`${baseUrl}/api/directory/filters`, {
+    const response = await fetch(filtersApiUrl, {
       method: "GET",
       cache: "no-store",
     });
@@ -499,12 +517,30 @@ function getOrganizationTypeLabel(type: string | null | undefined) {
   return type ?? "Предприятие";
 }
 
-function getDirectoryOrganizationHref(organization: DirectoryOrganization) {
-  if (organization.publicSlug) {
-    return `/directory/${organization.publicSlug}`;
+function appendDirectoryLocale(pathname: string, filters: DirectoryFilters) {
+  if (!filters.locale) {
+    return pathname;
   }
 
-  return "/directory";
+  const searchParams = new URLSearchParams();
+  searchParams.set("locale", filters.locale);
+
+  return `${pathname}?${searchParams.toString()}`;
+}
+
+function getDirectoryRootHref(filters: DirectoryFilters) {
+  return appendDirectoryLocale("/directory", filters);
+}
+
+function getDirectoryOrganizationHref(
+  organization: DirectoryOrganization,
+  filters: DirectoryFilters
+) {
+  if (organization.publicSlug) {
+    return appendDirectoryLocale(`/directory/${organization.publicSlug}`, filters);
+  }
+
+  return getDirectoryRootHref(filters);
 }
 
 function getActionStats(organization: DirectoryOrganization) {
@@ -691,6 +727,8 @@ export default async function DirectoryPage({
     sort: normalizeSortMode(resolvedSearchParams?.sort),
     userLat: normalizeFilterValue(resolvedSearchParams?.userLat),
     userLng: normalizeFilterValue(resolvedSearchParams?.userLng),
+    locale: normalizeFilterValue(resolvedSearchParams?.locale) ||
+      normalizeFilterValue(resolvedSearchParams?.lang),
   };
 
   const [
@@ -698,7 +736,7 @@ export default async function DirectoryPage({
     { filterOptions, errorMessage: filterOptionsErrorMessage },
   ] = await Promise.all([
     getDirectoryOrganizations(filters),
-    getDirectoryFilterOptions(),
+    getDirectoryFilterOptions(filters.locale),
   ]);
 
   const categoryOptions = filterOptions.categories;
@@ -829,6 +867,10 @@ export default async function DirectoryPage({
               alignItems: "end",
             }}
           >
+            {filters.locale ? (
+              <input type="hidden" name="locale" value={filters.locale} />
+            ) : null}
+
             <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
               Поиск
               <input
@@ -992,7 +1034,7 @@ export default async function DirectoryPage({
               </button>
 
               <Link
-                href="/directory"
+                href={getDirectoryRootHref(filters)}
                 style={{
                   display: "inline-block",
                   border: "1px solid #dddddd",
@@ -1018,6 +1060,7 @@ export default async function DirectoryPage({
                 district: filters.district,
                 countryCode: filters.countryCode,
                 action: filters.action,
+                locale: filters.locale,
               }}
             />
           </div>
@@ -1312,7 +1355,7 @@ export default async function DirectoryPage({
             >
               {organizations.map((organization) => {
                 const organizationHref =
-                  getDirectoryOrganizationHref(organization);
+                  getDirectoryOrganizationHref(organization, filters);
                 const actionStats = getActionStats(organization);
                 const formattedDistance = formatDistanceKm(
                   organization.distanceKm

@@ -12,6 +12,7 @@ type DirectoryUseLocationButtonProps = {
     district: string;
     countryCode: string;
     action: string;
+    locale: string;
   };
 };
 
@@ -44,6 +45,10 @@ function buildDirectoryUrlWithLocation(
 
   if (currentSearchParams.action && currentSearchParams.action !== "all") {
     searchParams.set("action", currentSearchParams.action);
+  }
+
+  if (currentSearchParams.locale) {
+    searchParams.set("locale", currentSearchParams.locale);
   }
 
   searchParams.set("sort", "distance");
