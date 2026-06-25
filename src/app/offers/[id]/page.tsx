@@ -879,11 +879,14 @@ export default async function OfferDetailPage({
                 }}
               >
                 <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  {getOptionalDetailText(t, "detailedDescriptionTitle", "Offer details")}
+                  {getOptionalDetailText(t, "certificateSectionTitle", "Certificate for this offer")}
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Ð—Ð´ÐµÑÑŒ Ð¿Ð¾ÐºÐ°Ð·Ð°Ð½Ñ‹ ÑƒÑÐ»Ð¾Ð²Ð¸Ñ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð°. ÐžÑ„Ð¾Ñ€Ð¼Ð»ÐµÐ½Ð¸Ðµ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð°
-                  Ð²Ñ‹Ð¿Ð¾Ð»Ð½ÑÐµÑ‚ÑÑ Ð½Ð° Ð¾Ñ‚Ð´ÐµÐ»ÑŒÐ½Ð¾Ð¹ ÑÑ‚Ñ€Ð°Ð½Ð¸Ñ†Ðµ Ð·Ð°ÐºÐ°Ð·Ð°.
+                  {getOptionalDetailText(
+                    t,
+                    "certificateSectionDescription",
+                    "The certificate terms are shown below. Certificate processing is completed in a separate order flow.",
+                  )}
                 </p>
               </div>
 
