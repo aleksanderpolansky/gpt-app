@@ -1,6 +1,15 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../../lib/supabase";
+
+import {
+  getOffersMessages,
+  type OffersMessages,
+} from "../../../i18n/messages/offers";
+import {
+  getOfferTypeLabel,
+  getSystemLabelsMessages,
+} from "../../../i18n/messages/system-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +17,40 @@ type OfferPageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams?: Promise<{
+    locale?: string | string[];
+    lang?: string | string[];
+  }>;
 };
+
+
+function normalizeLocaleParam(value: string | string[] | undefined) {
+  if (!value) {
+    return "";
+  }
+
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+
+  return value;
+}
+
+function appendLocaleToHref(href: string, locale: string) {
+  if (!locale) {
+    return href;
+  }
+
+  const [withoutHash, hash = ""] = href.split("#");
+  const [pathname, queryString = ""] = withoutHash.split("?");
+  const searchParams = new URLSearchParams(queryString);
+  searchParams.set("locale", locale);
+
+  const nextQueryString = searchParams.toString();
+  const nextHash = hash ? `#${hash}` : "";
+
+  return `${pathname}?${nextQueryString}${nextHash}`;
+}
 
 type OfferRow = {
   id: string;
@@ -293,7 +335,7 @@ function formatMoney(
   currency: string | null | undefined
 ) {
   if (typeof amount !== "number") {
-    return "—";
+    return "â€”";
   }
 
   return `${new Intl.NumberFormat("pl-PL", {
@@ -313,7 +355,7 @@ function formatPoints(value: number | null | undefined) {
 
 function formatDate(value: string | null | undefined) {
   if (!value) {
-    return "—";
+    return "â€”";
   }
 
   return new Intl.DateTimeFormat("pl-PL", {
@@ -325,45 +367,31 @@ function formatDate(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
-function getOfferTypeLabel(type: string | null | undefined) {
-  if (type === "bookable_service") {
-    return "Услуга с бронированием";
-  }
-
-  if (type === "product") {
-    return "Товар";
-  }
-
-  if (type === "service") {
-    return "Услуга";
-  }
-
-  if (type === "bundle") {
-    return "Набор / bundle";
-  }
-
-  if (type === "reward") {
-    return "Reward offer";
-  }
-
-  return type ?? "Предложение";
+function getPublicOfferTypeLabel(type: string | null | undefined, locale: string) {
+  return getOfferTypeLabel(type ?? "", locale);
 }
 
-function getBookingLabel(offer: PublicOffer) {
+function getBookingLabel(
+  offer: PublicOffer,
+  systemLabels: ReturnType<typeof getSystemLabelsMessages>,
+) {
   if (!offer.requiresBooking) {
-    return "Бронирование не требуется";
+    return systemLabels.booking.notRequired;
   }
 
   if (offer.defaultDurationMinutes) {
-    return `Требуется бронирование · ${offer.defaultDurationMinutes} мин.`;
+    return systemLabels.booking.requiredWithDuration(offer.defaultDurationMinutes);
   }
 
-  return "Требуется бронирование";
+  return systemLabels.booking.required;
 }
 
-function getCertificatePaymentLabel(offer: PublicOffer) {
+function getCertificatePaymentLabel(
+  offer: PublicOffer,
+  systemLabels: ReturnType<typeof getSystemLabelsMessages>,
+) {
   if (!offer.certificate.available) {
-    return "Сертификат недоступен";
+    return systemLabels.certificatePaymentModes.unavailable;
   }
 
   if (offer.certificate.paymentMode === "points_only") {
@@ -373,18 +401,18 @@ function getCertificatePaymentLabel(offer: PublicOffer) {
   if (offer.certificate.paymentMode === "money_only") {
     return formatMoney(
       offer.certificate.moneyPrice,
-      offer.certificate.currency ?? offer.currency
+      offer.certificate.currency ?? offer.currency,
     );
   }
 
   if (offer.certificate.paymentMode === "mixed") {
     return `${formatPoints(offer.certificate.pointsPrice)} POINTS + ${formatMoney(
       offer.certificate.moneyPrice,
-      offer.certificate.currency ?? offer.currency
+      offer.certificate.currency ?? offer.currency,
     )}`;
   }
 
-  return "Сертификат доступен";
+  return systemLabels.certificatePaymentModes.available;
 }
 
 function getDirectoryHref(organization: OrganizationRow | null) {
@@ -414,24 +442,37 @@ function getCertificateOrderHref(offerId: string) {
   return `/certificates/new?offerId=${offerId}`;
 }
 
-function getStatusLabel(status: string | null | undefined) {
+function getStatusLabel(status: string | null | undefined, t: OffersMessages) {
   if (status === "active") {
-    return "Активно";
+    return t.status.active;
   }
 
   if (status === "draft") {
-    return "Черновик";
+    return t.status.draft;
   }
 
   if (status === "archived") {
-    return "Архив";
+    return t.status.archived;
   }
 
-  return status ?? "—";
+  if (status === "inactive") {
+    return t.status.inactive;
+  }
+
+  return status ?? t.common.dash;
 }
 
-export default async function OfferDetailPage({ params }: OfferPageProps) {
+export default async function OfferDetailPage({
+  params,
+  searchParams,
+}: OfferPageProps) {
   const resolvedParams = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const selectedLocale =
+    normalizeLocaleParam(resolvedSearchParams?.locale) ||
+    normalizeLocaleParam(resolvedSearchParams?.lang);
+  const t = getOffersMessages(selectedLocale);
+  const systemLabels = getSystemLabelsMessages(selectedLocale);
   const offerId = resolvedParams.id;
 
   const { offer, organization, errorMessage } = await getOfferPageData(offerId);
@@ -440,11 +481,17 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
     notFound();
   }
 
-  const directoryHref = getDirectoryHref(organization);
-  const registerPurchaseHref = getRegisterPurchaseHref(organization);
+  const directoryHref = appendLocaleToHref(
+    getDirectoryHref(organization),
+    selectedLocale,
+  );
+  const registerPurchaseHref = appendLocaleToHref(
+    getRegisterPurchaseHref(organization),
+    selectedLocale,
+  );
   const certificateOrderHref = offer
-    ? getCertificateOrderHref(offer.id)
-    : "/certificates/new";
+    ? appendLocaleToHref(getCertificateOrderHref(offer.id), selectedLocale)
+    : appendLocaleToHref("/certificates/new", selectedLocale);
 
   return (
     <main
@@ -473,7 +520,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
               marginBottom: "16px",
             }}
           >
-            ← Назад к предприятию
+            â† ÐÐ°Ð·Ð°Ð´ Ðº Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸ÑŽ
           </Link>
 
           {errorMessage ? (
@@ -486,7 +533,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                   margin: "0 0 10px",
                 }}
               >
-                Ошибка загрузки предложения
+                ÐžÑˆÐ¸Ð±ÐºÐ° Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¸ Ð¿Ñ€ÐµÐ´Ð»Ð¾Ð¶ÐµÐ½Ð¸Ñ
               </h1>
 
               <p
@@ -511,7 +558,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                   marginBottom: "8px",
                 }}
               >
-                {getOfferTypeLabel(offer.offerType)}
+                {getPublicOfferTypeLabel(offer.offerType, selectedLocale)}
               </div>
 
               <h1
@@ -533,7 +580,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                   lineHeight: "1.5",
                 }}
               >
-                {offer.description ?? "Описание пока не добавлено."}
+                {offer.description ?? "ÐžÐ¿Ð¸ÑÐ°Ð½Ð¸Ðµ Ð¿Ð¾ÐºÐ° Ð½Ðµ Ð´Ð¾Ð±Ð°Ð²Ð»ÐµÐ½Ð¾."}
               </p>
 
               <div
@@ -556,7 +603,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                     fontWeight: 700,
                   }}
                 >
-                  Публичная карточка предприятия
+                  ÐŸÑƒÐ±Ð»Ð¸Ñ‡Ð½Ð°Ñ ÐºÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÐ° Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ñ
                 </Link>
 
                 <Link
@@ -572,7 +619,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                     fontWeight: 800,
                   }}
                 >
-                  Зарегистрировать покупку у предприятия
+                  Ð—Ð°Ñ€ÐµÐ³Ð¸ÑÑ‚Ñ€Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ Ð¿Ð¾ÐºÑƒÐ¿ÐºÑƒ Ñƒ Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ñ
                 </Link>
               </div>
             </>
@@ -599,11 +646,11 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "8px" }}>
-                  Цена offer
+                  Ð¦ÐµÐ½Ð° offer
                 </div>
                 <div style={{ fontSize: "20px", fontWeight: 700 }}>
                   {offer.isFree
-                    ? "Бесплатно"
+                    ? "Ð‘ÐµÑÐ¿Ð»Ð°Ñ‚Ð½Ð¾"
                     : formatMoney(offer.price, offer.currency)}
                 </div>
               </div>
@@ -618,10 +665,10 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "8px" }}>
-                  Бронирование
+                  Ð‘Ñ€Ð¾Ð½Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ðµ
                 </div>
                 <div style={{ fontSize: "20px", fontWeight: 700 }}>
-                  {getBookingLabel(offer)}
+                  {getBookingLabel(offer, systemLabels)}
                 </div>
               </div>
 
@@ -636,10 +683,10 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                 }}
               >
                 <div style={{ marginBottom: "8px" }}>
-                  Сертификат по offer
+                  Ð¡ÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚ Ð¿Ð¾ offer
                 </div>
                 <div style={{ fontSize: "20px", fontWeight: 800 }}>
-                  {offer.certificateAvailable ? "Доступен" : "Недоступен"}
+                  {offer.certificateAvailable ? "Ð”Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½" : "ÐÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½"}
                 </div>
               </div>
             </section>
@@ -655,14 +702,14 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
               }}
             >
               <h2 style={{ margin: "0 0 8px", fontSize: "20px" }}>
-                Offer, сертификат и регистрация покупки
+                Offer, ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚ Ð¸ Ñ€ÐµÐ³Ð¸ÑÑ‚Ñ€Ð°Ñ†Ð¸Ñ Ð¿Ð¾ÐºÑƒÐ¿ÐºÐ¸
               </h2>
               <p style={{ margin: 0, lineHeight: "1.5" }}>
-                Эта страница описывает конкретный offer. Сертификат создаётся по
-                этому offer. Регистрация покупки относится не к конкретному
-                offer, а к предприятию в целом: покупатель может купить любой
-                товар или услугу у предприятия, а продавец подтверждает факт
-                покупки.
+                Ð­Ñ‚Ð° ÑÑ‚Ñ€Ð°Ð½Ð¸Ñ†Ð° Ð¾Ð¿Ð¸ÑÑ‹Ð²Ð°ÐµÑ‚ ÐºÐ¾Ð½ÐºÑ€ÐµÑ‚Ð½Ñ‹Ð¹ offer. Ð¡ÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚ ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ÑÑ Ð¿Ð¾
+                ÑÑ‚Ð¾Ð¼Ñƒ offer. Ð ÐµÐ³Ð¸ÑÑ‚Ñ€Ð°Ñ†Ð¸Ñ Ð¿Ð¾ÐºÑƒÐ¿ÐºÐ¸ Ð¾Ñ‚Ð½Ð¾ÑÐ¸Ñ‚ÑÑ Ð½Ðµ Ðº ÐºÐ¾Ð½ÐºÑ€ÐµÑ‚Ð½Ð¾Ð¼Ñƒ
+                offer, Ð° Ðº Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸ÑŽ Ð² Ñ†ÐµÐ»Ð¾Ð¼: Ð¿Ð¾ÐºÑƒÐ¿Ð°Ñ‚ÐµÐ»ÑŒ Ð¼Ð¾Ð¶ÐµÑ‚ ÐºÑƒÐ¿Ð¸Ñ‚ÑŒ Ð»ÑŽÐ±Ð¾Ð¹
+                Ñ‚Ð¾Ð²Ð°Ñ€ Ð¸Ð»Ð¸ ÑƒÑÐ»ÑƒÐ³Ñƒ Ñƒ Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ñ, Ð° Ð¿Ñ€Ð¾Ð´Ð°Ð²ÐµÑ† Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´Ð°ÐµÑ‚ Ñ„Ð°ÐºÑ‚
+                Ð¿Ð¾ÐºÑƒÐ¿ÐºÐ¸.
               </p>
             </section>
 
@@ -683,10 +730,10 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                 }}
               >
                 <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  Подробное описание offer
+                  ÐŸÐ¾Ð´Ñ€Ð¾Ð±Ð½Ð¾Ðµ Ð¾Ð¿Ð¸ÑÐ°Ð½Ð¸Ðµ offer
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Публичная информация о выбранном предложении.
+                  ÐŸÑƒÐ±Ð»Ð¸Ñ‡Ð½Ð°Ñ Ð¸Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ð¸Ñ Ð¾ Ð²Ñ‹Ð±Ñ€Ð°Ð½Ð½Ð¾Ð¼ Ð¿Ñ€ÐµÐ´Ð»Ð¾Ð¶ÐµÐ½Ð¸Ð¸.
                 </p>
               </div>
 
@@ -698,36 +745,36 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                 }}
               >
                 <div>
-                  <strong>Предприятие:</strong>{" "}
-                  {organization?.organization_name ?? "Не указано"}
+                  <strong>ÐŸÑ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ðµ:</strong>{" "}
+                  {organization?.organization_name ?? "ÐÐµ ÑƒÐºÐ°Ð·Ð°Ð½Ð¾"}
                 </div>
 
                 <div>
-                  <strong>Тип предложения:</strong>{" "}
-                  {getOfferTypeLabel(offer.offerType)}
+                  <strong>Ð¢Ð¸Ð¿ Ð¿Ñ€ÐµÐ´Ð»Ð¾Ð¶ÐµÐ½Ð¸Ñ:</strong>{" "}
+                  {getPublicOfferTypeLabel(offer.offerType, selectedLocale)}
                 </div>
 
                 <div>
-                  <strong>Статус:</strong> {getStatusLabel(offer.status)}
+                  <strong>Ð¡Ñ‚Ð°Ñ‚ÑƒÑ:</strong> {getStatusLabel(offer.status, t)}
                 </div>
 
                 <div>
-                  <strong>Цена offer:</strong>{" "}
+                  <strong>Ð¦ÐµÐ½Ð° offer:</strong>{" "}
                   {offer.isFree
-                    ? "Бесплатно"
+                    ? "Ð‘ÐµÑÐ¿Ð»Ð°Ñ‚Ð½Ð¾"
                     : formatMoney(offer.price, offer.currency)}
                 </div>
 
                 {offer.regularPrice ? (
                   <div>
-                    <strong>Обычная цена:</strong>{" "}
+                    <strong>ÐžÐ±Ñ‹Ñ‡Ð½Ð°Ñ Ñ†ÐµÐ½Ð°:</strong>{" "}
                     {formatMoney(offer.regularPrice, offer.currency)}
                   </div>
                 ) : null}
 
                 {offer.isDiscountActive ? (
                   <div>
-                    <strong>Скидка:</strong>{" "}
+                    <strong>Ð¡ÐºÐ¸Ð´ÐºÐ°:</strong>{" "}
                     {offer.discountType ?? "discount"}{" "}
                     {offer.discountValue ?? ""}
                   </div>
@@ -735,7 +782,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
 
                 {offer.lowestPrice30Days ? (
                   <div>
-                    <strong>Самая низкая цена за 30 дней:</strong>{" "}
+                    <strong>Ð¡Ð°Ð¼Ð°Ñ Ð½Ð¸Ð·ÐºÐ°Ñ Ñ†ÐµÐ½Ð° Ð·Ð° 30 Ð´Ð½ÐµÐ¹:</strong>{" "}
                     {formatMoney(
                       offer.lowestPrice30Days,
                       offer.lowestPrice30DaysCurrency ?? offer.currency
@@ -745,40 +792,40 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
 
                 {offer.discountLegalNote ? (
                   <div>
-                    <strong>Примечание к скидке:</strong>{" "}
+                    <strong>ÐŸÑ€Ð¸Ð¼ÐµÑ‡Ð°Ð½Ð¸Ðµ Ðº ÑÐºÐ¸Ð´ÐºÐµ:</strong>{" "}
                     {offer.discountLegalNote}
                   </div>
                 ) : null}
 
                 <div>
-                  <strong>Бронирование:</strong> {getBookingLabel(offer)}
+                  <strong>Ð‘Ñ€Ð¾Ð½Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ðµ:</strong> {getBookingLabel(offer, systemLabels)}
                 </div>
 
                 {offer.minDurationMinutes || offer.maxDurationMinutes ? (
                   <div>
-                    <strong>Длительность:</strong>{" "}
+                    <strong>Ð”Ð»Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ÑÑ‚ÑŒ:</strong>{" "}
                     {offer.minDurationMinutes
-                      ? `${offer.minDurationMinutes} мин.`
-                      : "—"}{" "}
-                    —{" "}
+                      ? `${offer.minDurationMinutes} Ð¼Ð¸Ð½.`
+                      : "â€”"}{" "}
+                    â€”{" "}
                     {offer.maxDurationMinutes
-                      ? `${offer.maxDurationMinutes} мин.`
-                      : "—"}
+                      ? `${offer.maxDurationMinutes} Ð¼Ð¸Ð½.`
+                      : "â€”"}
                   </div>
                 ) : null}
 
                 {offer.quantityLimit ? (
                   <div>
-                    <strong>Лимит количества:</strong> {offer.quantityLimit}
+                    <strong>Ð›Ð¸Ð¼Ð¸Ñ‚ ÐºÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð°:</strong> {offer.quantityLimit}
                   </div>
                 ) : null}
 
                 <div>
-                  <strong>Действует с:</strong> {formatDate(offer.validFrom)}
+                  <strong>Ð”ÐµÐ¹ÑÑ‚Ð²ÑƒÐµÑ‚ Ñ:</strong> {formatDate(offer.validFrom)}
                 </div>
 
                 <div>
-                  <strong>Действует до:</strong>{" "}
+                  <strong>Ð”ÐµÐ¹ÑÑ‚Ð²ÑƒÐµÑ‚ Ð´Ð¾:</strong>{" "}
                   {formatDate(offer.validUntil)}
                 </div>
               </div>
@@ -805,11 +852,11 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                 }}
               >
                 <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  Сертификат по этому offer
+                  Ð¡ÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚ Ð¿Ð¾ ÑÑ‚Ð¾Ð¼Ñƒ offer
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Здесь показаны условия сертификата. Оформление сертификата
-                  выполняется на отдельной странице заказа.
+                  Ð—Ð´ÐµÑÑŒ Ð¿Ð¾ÐºÐ°Ð·Ð°Ð½Ñ‹ ÑƒÑÐ»Ð¾Ð²Ð¸Ñ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð°. ÐžÑ„Ð¾Ñ€Ð¼Ð»ÐµÐ½Ð¸Ðµ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð°
+                  Ð²Ñ‹Ð¿Ð¾Ð»Ð½ÑÐµÑ‚ÑÑ Ð½Ð° Ð¾Ñ‚Ð´ÐµÐ»ÑŒÐ½Ð¾Ð¹ ÑÑ‚Ñ€Ð°Ð½Ð¸Ñ†Ðµ Ð·Ð°ÐºÐ°Ð·Ð°.
                 </p>
               </div>
 
@@ -821,56 +868,56 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                 }}
               >
                 <div>
-                  <strong>Доступность:</strong>{" "}
-                  {offer.certificateAvailable ? "Доступен" : "Недоступен"}
+                  <strong>Ð”Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¾ÑÑ‚ÑŒ:</strong>{" "}
+                  {offer.certificateAvailable ? "Ð”Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½" : "ÐÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½"}
                 </div>
 
                 {offer.certificateAvailable ? (
                   <>
                     <div>
-                      <strong>Стоимость сертификата:</strong>{" "}
-                      {getCertificatePaymentLabel(offer)}
+                      <strong>Ð¡Ñ‚Ð¾Ð¸Ð¼Ð¾ÑÑ‚ÑŒ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð°:</strong>{" "}
+                      {getCertificatePaymentLabel(offer, systemLabels)}
                     </div>
 
                     <div>
-                      <strong>Срок действия:</strong>{" "}
+                      <strong>Ð¡Ñ€Ð¾Ðº Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ:</strong>{" "}
                       {offer.certificate.validityDays
-                        ? `${offer.certificate.validityDays} дней`
-                        : "Не указан"}
+                        ? `${offer.certificate.validityDays} Ð´Ð½ÐµÐ¹`
+                        : "ÐÐµ ÑƒÐºÐ°Ð·Ð°Ð½"}
                     </div>
 
                     <div>
-                      <strong>Требуется подтверждение продавца:</strong>{" "}
+                      <strong>Ð¢Ñ€ÐµÐ±ÑƒÐµÑ‚ÑÑ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¸Ðµ Ð¿Ñ€Ð¾Ð´Ð°Ð²Ñ†Ð°:</strong>{" "}
                       {offer.certificate.requiresSellerConfirmation
-                        ? "Да"
-                        : "Нет"}
+                        ? "Ð”Ð°"
+                        : "ÐÐµÑ‚"}
                     </div>
 
                     <div>
-                      <strong>Можно отменить:</strong>{" "}
-                      {offer.certificate.isCancellable ? "Да" : "Нет"}
+                      <strong>ÐœÐ¾Ð¶Ð½Ð¾ Ð¾Ñ‚Ð¼ÐµÐ½Ð¸Ñ‚ÑŒ:</strong>{" "}
+                      {offer.certificate.isCancellable ? "Ð”Ð°" : "ÐÐµÑ‚"}
                     </div>
 
                     <div>
-                      <strong>Можно передать:</strong>{" "}
-                      {offer.certificate.isTransferable ? "Да" : "Нет"}
+                      <strong>ÐœÐ¾Ð¶Ð½Ð¾ Ð¿ÐµÑ€ÐµÐ´Ð°Ñ‚ÑŒ:</strong>{" "}
+                      {offer.certificate.isTransferable ? "Ð”Ð°" : "ÐÐµÑ‚"}
                     </div>
 
                     <div>
-                      <strong>Политика возврата POINTS:</strong>{" "}
+                      <strong>ÐŸÐ¾Ð»Ð¸Ñ‚Ð¸ÐºÐ° Ð²Ð¾Ð·Ð²Ñ€Ð°Ñ‚Ð° POINTS:</strong>{" "}
                       {offer.certificate.pointsRefundPolicy}
                     </div>
 
                     {offer.certificate.maxCertificatesTotal ? (
                       <div>
-                        <strong>Максимум сертификатов:</strong>{" "}
+                        <strong>ÐœÐ°ÐºÑÐ¸Ð¼ÑƒÐ¼ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð¾Ð²:</strong>{" "}
                         {offer.certificate.maxCertificatesTotal}
                       </div>
                     ) : null}
 
                     {offer.certificate.terms ? (
                       <div>
-                        <strong>Условия сертификата:</strong>{" "}
+                        <strong>Ð£ÑÐ»Ð¾Ð²Ð¸Ñ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð°:</strong>{" "}
                         {offer.certificate.terms}
                       </div>
                     ) : null}
@@ -889,7 +936,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                           fontWeight: 800,
                         }}
                       >
-                        Перейти к заказу сертификата
+                        ÐŸÐµÑ€ÐµÐ¹Ñ‚Ð¸ Ðº Ð·Ð°ÐºÐ°Ð·Ñƒ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð°
                       </Link>
                     </div>
                   </>
@@ -917,7 +964,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                   fontWeight: 600,
                 }}
               >
-                Назад к предприятию
+                ÐÐ°Ð·Ð°Ð´ Ðº Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸ÑŽ
               </Link>
 
               {offer.certificateAvailable ? (
@@ -934,7 +981,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                     fontWeight: 800,
                   }}
                 >
-                  Перейти к заказу сертификата
+                  ÐŸÐµÑ€ÐµÐ¹Ñ‚Ð¸ Ðº Ð·Ð°ÐºÐ°Ð·Ñƒ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð°
                 </Link>
               ) : null}
 
@@ -951,7 +998,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                   fontWeight: 800,
                 }}
               >
-                Зарегистрировать покупку у предприятия
+                Ð—Ð°Ñ€ÐµÐ³Ð¸ÑÑ‚Ñ€Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ Ð¿Ð¾ÐºÑƒÐ¿ÐºÑƒ Ñƒ Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ñ
               </Link>
             </section>
           </>
