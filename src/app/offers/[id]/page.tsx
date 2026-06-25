@@ -330,12 +330,35 @@ async function getOfferPageData(offerId: string): Promise<OfferPageData> {
   };
 }
 
+function getOptionalDetailText(t: OffersMessages, key: string, fallback: string) {
+  const detailMessages = t.detail as unknown as Record<string, unknown>;
+  const value = detailMessages[key];
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value;
+  }
+
+  return fallback;
+}
+
+function getOptionalCommonText(t: OffersMessages, key: string, fallback: string) {
+  const commonMessages = t.common as unknown as Record<string, unknown>;
+  const value = commonMessages[key];
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value;
+  }
+
+  return fallback;
+}
+
+
 function formatMoney(
   amount: number | null | undefined,
   currency: string | null | undefined
 ) {
   if (typeof amount !== "number") {
-    return "â€”";
+    return "—";
   }
 
   return `${new Intl.NumberFormat("pl-PL", {
@@ -355,7 +378,7 @@ function formatPoints(value: number | null | undefined) {
 
 function formatDate(value: string | null | undefined) {
   if (!value) {
-    return "â€”";
+    return "—";
   }
 
   return new Intl.DateTimeFormat("pl-PL", {
@@ -646,11 +669,11 @@ export default async function OfferDetailPage({
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "8px" }}>
-                  Ð¦ÐµÐ½Ð° offer
+                  {getOptionalDetailText(t, "offerPrice", "Offer price")}
                 </div>
                 <div style={{ fontSize: "20px", fontWeight: 700 }}>
                   {offer.isFree
-                    ? "Ð‘ÐµÑÐ¿Ð»Ð°Ñ‚Ð½Ð¾"
+                    ? getOptionalCommonText(t, "free", "Free")
                     : formatMoney(offer.price, offer.currency)}
                 </div>
               </div>
@@ -665,7 +688,7 @@ export default async function OfferDetailPage({
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "8px" }}>
-                  Ð‘Ñ€Ð¾Ð½Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ðµ
+                  {getOptionalDetailText(t, "booking", "Booking")}
                 </div>
                 <div style={{ fontSize: "20px", fontWeight: 700 }}>
                   {getBookingLabel(offer, systemLabels)}
@@ -683,10 +706,10 @@ export default async function OfferDetailPage({
                 }}
               >
                 <div style={{ marginBottom: "8px" }}>
-                  Ð¡ÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚ Ð¿Ð¾ offer
+                  {getOptionalDetailText(t, "certificateAvailabilityLabel", "Certificate")}
                 </div>
                 <div style={{ fontSize: "20px", fontWeight: 800 }}>
-                  {offer.certificateAvailable ? "Ð”Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½" : "ÐÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½"}
+                  {getOptionalDetailText(t, "certificateAvailabilityLabel", "Certificate")}
                 </div>
               </div>
             </section>
@@ -702,14 +725,14 @@ export default async function OfferDetailPage({
               }}
             >
               <h2 style={{ margin: "0 0 8px", fontSize: "20px" }}>
-                Offer, ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚ Ð¸ Ñ€ÐµÐ³Ð¸ÑÑ‚Ñ€Ð°Ñ†Ð¸Ñ Ð¿Ð¾ÐºÑƒÐ¿ÐºÐ¸
+                {getOptionalDetailText(t, "offerFlowTitle", "Offer, certificate and purchase registration")}
               </h2>
               <p style={{ margin: 0, lineHeight: "1.5" }}>
-                Ð­Ñ‚Ð° ÑÑ‚Ñ€Ð°Ð½Ð¸Ñ†Ð° Ð¾Ð¿Ð¸ÑÑ‹Ð²Ð°ÐµÑ‚ ÐºÐ¾Ð½ÐºÑ€ÐµÑ‚Ð½Ñ‹Ð¹ offer. Ð¡ÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚ ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ÑÑ Ð¿Ð¾
-                ÑÑ‚Ð¾Ð¼Ñƒ offer. Ð ÐµÐ³Ð¸ÑÑ‚Ñ€Ð°Ñ†Ð¸Ñ Ð¿Ð¾ÐºÑƒÐ¿ÐºÐ¸ Ð¾Ñ‚Ð½Ð¾ÑÐ¸Ñ‚ÑÑ Ð½Ðµ Ðº ÐºÐ¾Ð½ÐºÑ€ÐµÑ‚Ð½Ð¾Ð¼Ñƒ
-                offer, Ð° Ðº Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸ÑŽ Ð² Ñ†ÐµÐ»Ð¾Ð¼: Ð¿Ð¾ÐºÑƒÐ¿Ð°Ñ‚ÐµÐ»ÑŒ Ð¼Ð¾Ð¶ÐµÑ‚ ÐºÑƒÐ¿Ð¸Ñ‚ÑŒ Ð»ÑŽÐ±Ð¾Ð¹
-                Ñ‚Ð¾Ð²Ð°Ñ€ Ð¸Ð»Ð¸ ÑƒÑÐ»ÑƒÐ³Ñƒ Ñƒ Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ñ, Ð° Ð¿Ñ€Ð¾Ð´Ð°Ð²ÐµÑ† Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´Ð°ÐµÑ‚ Ñ„Ð°ÐºÑ‚
-                Ð¿Ð¾ÐºÑƒÐ¿ÐºÐ¸.
+                {getOptionalDetailText(
+                  t,
+                  "offerFlowDescription",
+                  "This page explains the offer, certificate and external purchase registration flow.",
+                )}
               </p>
             </section>
 
@@ -730,10 +753,14 @@ export default async function OfferDetailPage({
                 }}
               >
                 <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  ÐŸÐ¾Ð´Ñ€Ð¾Ð±Ð½Ð¾Ðµ Ð¾Ð¿Ð¸ÑÐ°Ð½Ð¸Ðµ offer
+                  {getOptionalDetailText(t, "detailedDescriptionTitle", "Offer details")}
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  ÐŸÑƒÐ±Ð»Ð¸Ñ‡Ð½Ð°Ñ Ð¸Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ð¸Ñ Ð¾ Ð²Ñ‹Ð±Ñ€Ð°Ð½Ð½Ð¾Ð¼ Ð¿Ñ€ÐµÐ´Ð»Ð¾Ð¶ÐµÐ½Ð¸Ð¸.
+                  {getOptionalDetailText(
+                    t,
+                    "detailedDescriptionSubtitle",
+                    "Public information about the selected offer.",
+                  )}
                 </p>
               </div>
 
@@ -746,11 +773,11 @@ export default async function OfferDetailPage({
               >
                 <div>
                   <strong>{t.detail.enterpriseLabel}:</strong>{" "}
-                  {organization?.organization_name ?? "ÐÐµ ÑƒÐºÐ°Ð·Ð°Ð½Ð¾"}
+                  {organization?.organization_name ?? t.common.dash}
                 </div>
 
                 <div>
-                  <strong>Ð¢Ð¸Ð¿ Ð¿Ñ€ÐµÐ´Ð»Ð¾Ð¶ÐµÐ½Ð¸Ñ:</strong>{" "}
+                  <strong>{getOptionalDetailText(t, "offerTypeLabel", "Offer type")}:</strong>{" "}
                   {getPublicOfferTypeLabel(offer.offerType, selectedLocale)}
                 </div>
 
@@ -759,9 +786,9 @@ export default async function OfferDetailPage({
                 </div>
 
                 <div>
-                  <strong>Ð¦ÐµÐ½Ð° offer:</strong>{" "}
+                  {getOptionalDetailText(t, "offerPrice", "Offer price")}
                   {offer.isFree
-                    ? "Ð‘ÐµÑÐ¿Ð»Ð°Ñ‚Ð½Ð¾"
+                    ? getOptionalCommonText(t, "free", "Free")
                     : formatMoney(offer.price, offer.currency)}
                 </div>
 
@@ -792,7 +819,7 @@ export default async function OfferDetailPage({
 
                 {offer.discountLegalNote ? (
                   <div>
-                    <strong>ÐŸÑ€Ð¸Ð¼ÐµÑ‡Ð°Ð½Ð¸Ðµ Ðº ÑÐºÐ¸Ð´ÐºÐµ:</strong>{" "}
+                  {getOptionalDetailText(t, "booking", "Booking")}
                     {offer.discountLegalNote}
                   </div>
                 ) : null}
@@ -805,18 +832,18 @@ export default async function OfferDetailPage({
                   <div>
                     <strong>{t.detail.quantityLimit}:</strong>{" "}
                     {offer.minDurationMinutes
-                      ? `${offer.minDurationMinutes} Ð¼Ð¸Ð½.`
-                      : "â€”"}{" "}
-                    â€”{" "}
+                      ? `${offer.minDurationMinutes} min.`
+                      : "—"}{" "}
+                    —{" "}
                     {offer.maxDurationMinutes
-                      ? `${offer.maxDurationMinutes} Ð¼Ð¸Ð½.`
-                      : "â€”"}
+                      ? `${offer.maxDurationMinutes} min.`
+                      : "—"}
                   </div>
                 ) : null}
 
                 {offer.quantityLimit ? (
                   <div>
-                    <strong>Ð›Ð¸Ð¼Ð¸Ñ‚ ÐºÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð°:</strong> {offer.quantityLimit}
+                    <strong>{getOptionalDetailText(t, "quantityLimit", "Quantity limit")}:</strong> {offer.quantityLimit}
                   </div>
                 ) : null}
 
@@ -852,7 +879,7 @@ export default async function OfferDetailPage({
                 }}
               >
                 <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  Ð¡ÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚ Ð¿Ð¾ ÑÑ‚Ð¾Ð¼Ñƒ offer
+                  {getOptionalDetailText(t, "detailedDescriptionTitle", "Offer details")}
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
                   Ð—Ð´ÐµÑÑŒ Ð¿Ð¾ÐºÐ°Ð·Ð°Ð½Ñ‹ ÑƒÑÐ»Ð¾Ð²Ð¸Ñ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð°. ÐžÑ„Ð¾Ñ€Ð¼Ð»ÐµÐ½Ð¸Ðµ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð°
@@ -868,8 +895,8 @@ export default async function OfferDetailPage({
                 }}
               >
                 <div>
-                  <strong>Ð”Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¾ÑÑ‚ÑŒ:</strong>{" "}
-                  {offer.certificateAvailable ? "Ð”Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½" : "ÐÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½"}
+                    —{" "}
+                  {getOptionalDetailText(t, "certificateAvailabilityLabel", "Certificate")}
                 </div>
 
                 {offer.certificateAvailable ? (
@@ -882,8 +909,8 @@ export default async function OfferDetailPage({
                     <div>
                       <strong>{t.detail.certificateValidityLabel}:</strong>{" "}
                       {offer.certificate.validityDays
-                        ? `${offer.certificate.validityDays} Ð´Ð½ÐµÐ¹`
-                        : "ÐÐµ ÑƒÐºÐ°Ð·Ð°Ð½"}
+                        ? `${offer.certificate.validityDays} ${getOptionalCommonText(t, "days", "days")}`
+                        : t.common.dash}
                     </div>
 
                     <div>
@@ -915,7 +942,7 @@ export default async function OfferDetailPage({
 
                     {offer.certificate.terms ? (
                       <div>
-                        <strong>Ð£ÑÐ»Ð¾Ð²Ð¸Ñ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð°:</strong>{" "}
+                    —{" "}
                         {offer.certificate.terms}
                       </div>
                     ) : null}
@@ -962,7 +989,7 @@ export default async function OfferDetailPage({
                   fontWeight: 600,
                 }}
               >
-                ÐÐ°Ð·Ð°Ð´ Ðº Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸ÑŽ
+                {t.navigation.backToEnterprise}
               </Link>
 
               {offer.certificateAvailable ? (
