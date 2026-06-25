@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  getOffersMessages,
+  type OffersMessages,
+} from "../../../i18n/messages/offers";
 
 type Offer = {
   id: string;
@@ -16,21 +20,147 @@ type AvailableSlot = {
   durationMinutes: number;
 };
 
+function normalizeLocaleParam(value: string | null | undefined) {
+  if (!value) {
+    return "ru";
+  }
+
+  const normalized = value.toLowerCase();
+
+  if (
+    normalized === "ru" ||
+    normalized === "pl" ||
+    normalized === "en" ||
+    normalized === "es" ||
+    normalized === "uk" ||
+    normalized === "de" ||
+    normalized === "cs"
+  ) {
+    return normalized;
+  }
+
+  return "ru";
+}
+
+function getAvailableSlotsText(
+  messages: OffersMessages["availableSlots"],
+  key: string,
+  fallback: string
+) {
+  const value = (messages as unknown as Record<string, unknown>)[key];
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value;
+  }
+
+  return fallback;
+}
+
+function getAvailableSlotsResultMessage(
+  messages: OffersMessages["availableSlots"],
+  count: number,
+  date: string | null | undefined,
+  weekday: string | null | undefined
+) {
+  const value = (messages as unknown as Record<string, unknown>)["foundSlots"];
+
+  if (typeof value === "function") {
+    return (value as (count: number, date: string, weekday: string) => string)(
+      count,
+      date ?? "",
+      weekday ?? ""
+    );
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value
+      .replace("{count}", String(count))
+      .replace("{date}", date ?? "")
+      .replace("{weekday}", weekday ?? "");
+  }
+
+  return `Found ${count} slots for ${date ?? ""} ${weekday ? `(${weekday})` : ""}`.trim();
+}
+
+
+
 export default function AvailableSlotsPage() {
+  const [selectedLocale, setSelectedLocale] = useState("ru");
+  const t = getOffersMessages(selectedLocale);
+  const availableSlotsMessages = t.availableSlots;
   const [offers, setOffers] = useState<Offer[]>([]);
   const [offerId, setOfferId] = useState("");
   const [date, setDate] = useState("2026-04-25");
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
-  const [message, setMessage] = useState("Loading offers...");
+  const [message, setMessage] = useState("");
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
   useEffect(() => {
+
+
+    if (typeof window === "undefined") {
+
+
+      return;
+
+
+    }
+
+
+
+    const params = new URLSearchParams(window.location.search);
+
+
+    setSelectedLocale(
+
+
+      normalizeLocaleParam(params.get("locale") ?? params.get("lang"))
+
+
+    );
+
+
+  }, []);
+
+
+
+  useEffect(() => {
+
+
     async function loadOffers() {
+
+
+      setMessage(
+
+
+        getAvailableSlotsText(
+
+
+          availableSlotsMessages,
+
+
+          "loadingOffers",
+
+
+          "Loading offers..."
+
+
+        )
+
+
+      );
       const response = await fetch("/api/offers");
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data.error ?? "Failed to load offers");
+        setMessage(
+          data.error ??
+            getAvailableSlotsText(
+              availableSlotsMessages,
+              "failedToLoadOffers",
+              "Failed to load offers"
+            )
+        );
         return;
       }
 
@@ -45,13 +175,19 @@ export default function AvailableSlotsPage() {
     }
 
     loadOffers();
-  }, []);
+  }, [availableSlotsMessages]);
 
   async function loadAvailableSlots(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!offerId || !date) {
-      setMessage("Offer and date are required");
+      setMessage(
+        getAvailableSlotsText(
+          availableSlotsMessages,
+          "offerAndDateRequired",
+          "Offer and date are required"
+        )
+      );
       return;
     }
 
@@ -66,24 +202,40 @@ export default function AvailableSlotsPage() {
     const data = await response.json();
 
     if (!response.ok) {
-      setMessage(data.error ?? "Failed to load available slots");
+      setMessage(
+        data.error ??
+          getAvailableSlotsText(
+            availableSlotsMessages,
+            "failedToLoadAvailableSlots",
+            "Failed to load available slots"
+          )
+      );
       setIsLoadingSlots(false);
       return;
     }
 
     setAvailableSlots(data.availableSlots ?? []);
     setMessage(
-      `Found ${(data.availableSlots ?? []).length} slots for ${data.date} (${data.weekday})`
+      getAvailableSlotsResultMessage(
+        availableSlotsMessages,
+        (data.availableSlots ?? []).length,
+        data.date,
+        data.weekday
+      )
     );
     setIsLoadingSlots(false);
   }
 
   return (
     <main style={{ padding: "32px", maxWidth: "900px" }}>
-      <h1>Available slots</h1>
+      <h1>{getAvailableSlotsText(availableSlotsMessages, "title", "Available slots")}</h1>
 
       <p>
-        This page shows available booking slots for a selected offer and date.
+        {getAvailableSlotsText(
+          availableSlotsMessages,
+          "description",
+          "This page shows available booking slots for a selected offer and date."
+        )}
       </p>
 
       <form
@@ -91,14 +243,20 @@ export default function AvailableSlotsPage() {
         style={{ display: "grid", gap: "16px", maxWidth: "520px" }}
       >
         <label>
-          Offer
+          {getAvailableSlotsText(availableSlotsMessages, "offerLabel", "Offer")}
           <select
             value={offerId}
             onChange={(event) => setOfferId(event.target.value)}
             required
             style={{ display: "block", width: "100%", padding: "8px" }}
           >
-            <option value="">Select offer</option>
+            <option value="">
+              {getAvailableSlotsText(
+                availableSlotsMessages,
+                "selectOffer",
+                "Select offer"
+              )}
+            </option>
             {offers.map((offer) => (
               <option key={offer.id} value={offer.id}>
                 {offer.title} ({offer.offer_type})
@@ -108,7 +266,7 @@ export default function AvailableSlotsPage() {
         </label>
 
         <label>
-          Date
+          {getAvailableSlotsText(availableSlotsMessages, "dateLabel", "Date")}
           <input
             type="date"
             value={date}
@@ -123,7 +281,13 @@ export default function AvailableSlotsPage() {
           disabled={isLoadingSlots}
           style={{ padding: "10px 16px", cursor: "pointer" }}
         >
-          {isLoadingSlots ? "Loading..." : "Show available slots"}
+          {isLoadingSlots
+            ? getAvailableSlotsText(availableSlotsMessages, "loading", "Loading...")
+            : getAvailableSlotsText(
+                availableSlotsMessages,
+                "showSlots",
+                "Show available slots"
+              )}
         </button>
       </form>
 
@@ -141,17 +305,27 @@ export default function AvailableSlotsPage() {
               }}
             >
               <p>
-                <strong>Start:</strong>{" "}
-                {new Date(slot.startTime).toLocaleString()}
+                <strong>
+                  {getAvailableSlotsText(availableSlotsMessages, "startLabel", "Start")}:
+                </strong>{" "}
+                {new Date(slot.startTime).toLocaleString(selectedLocale)}
               </p>
 
               <p>
-                <strong>End:</strong>{" "}
-                {new Date(slot.endTime).toLocaleString()}
+                <strong>
+                  {getAvailableSlotsText(availableSlotsMessages, "endLabel", "End")}:
+                </strong>{" "}
+                {new Date(slot.endTime).toLocaleString(selectedLocale)}
               </p>
 
               <p>
-                <strong>Duration:</strong> {slot.durationMinutes} minutes
+                <strong>
+                  {getAvailableSlotsText(
+                    availableSlotsMessages,
+                    "durationLabel",
+                    "Duration"
+                  )}:
+                </strong> {slot.durationMinutes} minutes
               </p>
             </article>
           ))}
