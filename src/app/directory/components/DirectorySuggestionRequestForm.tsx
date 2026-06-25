@@ -1,7 +1,13 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useState } from "react";
 
+
+import {
+  getDirectoryListMessage,
+  type DirectoryListMessageKey,
+} from "@/i18n/messages/directory-list";
+import type { LocaleCode } from "@/i18n";
 type SuggestionSubmitStatus = "idle" | "submitting" | "success" | "error";
 
 type SuggestionApiResponse = {
@@ -31,7 +37,7 @@ type DirectorySuggestionRequestFormProps = {
   entityType?: "general" | "organization";
   entityId?: string | null;
   requestSource?: string;
-  locale?: string;
+  locale?: LocaleCode;
   contextCode?: string;
   initialText?: string;
   initialProposedCategoryText?: string;
@@ -44,16 +50,14 @@ const MIN_TEXT_LENGTH = 5;
 const MAX_TEXT_LENGTH = 4000;
 const MAX_PROPOSED_CATEGORY_LENGTH = 200;
 
-const DEFAULT_GENERAL_TITLE = "Missing business category?";
-const DEFAULT_ORGANIZATION_TITLE = "Suggest category change";
+const DEFAULT_GENERAL_TITLE_KEY: DirectoryListMessageKey = "directoryList.suggestion.generalTitle";
+const DEFAULT_ORGANIZATION_TITLE_KEY: DirectoryListMessageKey = "directoryList.suggestion.organizationTitle";
 
-const DEFAULT_GENERAL_DESCRIPTION =
-  "Describe in normal words what kind of business, service or activity is missing in the directory. The request will be saved for moderation. Nothing is published automatically.";
+const DEFAULT_GENERAL_DESCRIPTION_KEY: DirectoryListMessageKey = "directoryList.suggestion.generalDescription";
 
-const DEFAULT_ORGANIZATION_DESCRIPTION =
-  "Describe what this organization really does and, if needed, suggest a better category. The request will be saved for admin review. The public category changes only after approval.";
+const DEFAULT_ORGANIZATION_DESCRIPTION_KEY: DirectoryListMessageKey = "directoryList.suggestion.organizationDescription";
 
-const DEFAULT_TEXTAREA_LABEL = "Business activity description";
+const DEFAULT_TEXTAREA_LABEL_KEY: DirectoryListMessageKey = "directoryList.suggestion.textareaLabel";
 
 const DEFAULT_GENERAL_PLACEHOLDER =
   "Example: electric scooters / massage and injury recovery studio / coffee machine maintenance for offices.";
@@ -61,9 +65,8 @@ const DEFAULT_GENERAL_PLACEHOLDER =
 const DEFAULT_ORGANIZATION_PLACEHOLDER =
   "Example: This company provides massage, wellness and recovery services for clients.";
 
-const DEFAULT_PROPOSED_CATEGORY_LABEL = "Suggested category name";
-const DEFAULT_PROPOSED_CATEGORY_PLACEHOLDER =
-  "Example: Health and wellness / AI automation consulting";
+const DEFAULT_PROPOSED_CATEGORY_LABEL_KEY: DirectoryListMessageKey = "directoryList.suggestion.proposedCategoryLabel";
+const DEFAULT_PROPOSED_CATEGORY_PLACEHOLDER_KEY: DirectoryListMessageKey = "directoryList.suggestion.proposedCategoryPlaceholder";
 
 function normalizeTextValue(value: string | null | undefined) {
   return value?.trim() ?? "";
@@ -72,10 +75,10 @@ function normalizeTextValue(value: string | null | undefined) {
 export default function DirectorySuggestionRequestForm({
   title,
   description,
-  textareaLabel = DEFAULT_TEXTAREA_LABEL,
+  textareaLabel,
   textareaPlaceholder,
-  submitButtonLabel = "Send for review",
-  successTitle = "Request sent.",
+  submitButtonLabel,
+  successTitle,
   entityType = "general",
   entityId = null,
   requestSource = "directory_category_picker",
@@ -83,11 +86,13 @@ export default function DirectorySuggestionRequestForm({
   contextCode = "business_directory",
   initialText = "",
   initialProposedCategoryText = "",
-  proposedCategoryLabel = DEFAULT_PROPOSED_CATEGORY_LABEL,
-  proposedCategoryPlaceholder = DEFAULT_PROPOSED_CATEGORY_PLACEHOLDER,
+  proposedCategoryLabel,
+  proposedCategoryPlaceholder = DEFAULT_PROPOSED_CATEGORY_PLACEHOLDER_KEY,
   showProposedCategoryField,
 }: DirectorySuggestionRequestFormProps) {
-  const normalizedEntityType = entityType;
+    const t = (key: DirectoryListMessageKey) => getDirectoryListMessage(key, locale);
+
+const normalizedEntityType = entityType;
   const normalizedEntityId = normalizeTextValue(entityId);
   const shouldShowProposedCategoryField =
     showProposedCategoryField ?? normalizedEntityType === "organization";
@@ -116,21 +121,37 @@ export default function DirectorySuggestionRequestForm({
 
   const effectiveTitle =
     title ??
-    (normalizedEntityType === "organization"
-      ? DEFAULT_ORGANIZATION_TITLE
-      : DEFAULT_GENERAL_TITLE);
+    t(
+      normalizedEntityType === "organization"
+        ? DEFAULT_ORGANIZATION_TITLE_KEY
+        : DEFAULT_GENERAL_TITLE_KEY,
+    );
 
   const effectiveDescription =
     description ??
-    (normalizedEntityType === "organization"
-      ? DEFAULT_ORGANIZATION_DESCRIPTION
-      : DEFAULT_GENERAL_DESCRIPTION);
+    t(
+      normalizedEntityType === "organization"
+        ? DEFAULT_ORGANIZATION_DESCRIPTION_KEY
+        : DEFAULT_GENERAL_DESCRIPTION_KEY,
+    );
 
   const effectiveTextareaPlaceholder =
     textareaPlaceholder ??
     (normalizedEntityType === "organization"
       ? DEFAULT_ORGANIZATION_PLACEHOLDER
       : DEFAULT_GENERAL_PLACEHOLDER);
+  const effectiveTextareaLabel =
+    textareaLabel ?? t("directoryList.suggestion.textareaLabel");
+  const effectiveSubmitButtonLabel =
+    submitButtonLabel ?? t("directoryList.suggestion.submitButton");
+  const effectiveSuccessTitle =
+    successTitle ?? t("directoryList.suggestion.successTitle");
+  const effectiveProposedCategoryLabel =
+    proposedCategoryLabel ?? t("directoryList.suggestion.proposedCategoryLabel");
+
+
+
+
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -181,7 +202,7 @@ export default function DirectorySuggestionRequestForm({
       if (!response.ok || !json.ok || !json.suggestionRequest) {
         setSubmitStatus("error");
         setErrorMessage(
-          json.error ?? "Could not send the request. Please try again."
+          json.error ?? t("directoryList.suggestion.defaultError")
         );
         return;
       }
@@ -195,7 +216,7 @@ export default function DirectorySuggestionRequestForm({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Could not send the request. Please try again."
+          : t("directoryList.suggestion.defaultError")
       );
     }
   }
@@ -271,7 +292,7 @@ export default function DirectorySuggestionRequestForm({
             color: "#1e3a8a",
           }}
         >
-          {textareaLabel}
+          {effectiveTextareaLabel}
           <textarea
             value={userText}
             onChange={(event) => setUserText(event.target.value)}
@@ -302,7 +323,7 @@ export default function DirectorySuggestionRequestForm({
               color: "#1e3a8a",
             }}
           >
-            {proposedCategoryLabel}
+            {effectiveProposedCategoryLabel}
             <input
               type="text"
               value={proposedCategoryText}
@@ -345,7 +366,7 @@ export default function DirectorySuggestionRequestForm({
               lineHeight: "1.4",
             }}
           >
-            Description: {trimmedUserText.length}/{MAX_TEXT_LENGTH} characters.
+            {t("directoryList.suggestion.descriptionCounter")}: {trimmedUserText.length}/{MAX_TEXT_LENGTH} {t("directoryList.suggestion.characters")}.
             Minimum: {MIN_TEXT_LENGTH}.
             {shouldShowProposedCategoryField ? (
               <>
@@ -371,7 +392,7 @@ export default function DirectorySuggestionRequestForm({
               cursor: isSubmitDisabled ? "not-allowed" : "pointer",
             }}
           >
-            {isSubmitting ? "Sending..." : submitButtonLabel}
+            {isSubmitting ? t("directoryList.suggestion.sending") : effectiveSubmitButtonLabel}
           </button>
         </div>
       </form>
@@ -388,8 +409,8 @@ export default function DirectorySuggestionRequestForm({
             lineHeight: "1.5",
           }}
         >
-          <strong>{successTitle}</strong> It was saved with status{" "}
-          <strong>needs_review</strong> and will not be published without
+          <strong>{effectiveSuccessTitle}</strong> {t("directoryList.suggestion.savedWithStatus")}{" "}
+          <strong>needs_review</strong> {t("directoryList.suggestion.notPublishedWithoutApproval")}
           moderation.
           {createdRequestId ? (
             <div
@@ -417,8 +438,8 @@ export default function DirectorySuggestionRequestForm({
             lineHeight: "1.5",
           }}
         >
-          <strong>Submission error.</strong>{" "}
-          {errorMessage ?? "Please try again."}
+          <strong>{t("directoryList.suggestion.errorTitle")}</strong>{" "}
+          {errorMessage ?? t("directoryList.suggestion.pleaseTryAgain")}
         </div>
       ) : null}
     </section>

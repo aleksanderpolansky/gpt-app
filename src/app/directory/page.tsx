@@ -1239,7 +1239,8 @@ export default async function DirectoryPage({
           ) : null}
         </section>
 
-        <DirectorySuggestionRequestForm />
+        <DirectorySuggestionRequestForm
+              locale={filters.locale}/>
 
         <section
           style={{
