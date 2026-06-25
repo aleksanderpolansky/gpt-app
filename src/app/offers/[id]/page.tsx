@@ -520,7 +520,7 @@ export default async function OfferDetailPage({
               marginBottom: "16px",
             }}
           >
-            â† ÐÐ°Ð·Ð°Ð´ Ðº Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸ÑŽ
+            {t.navigation.backToEnterprise}
           </Link>
 
           {errorMessage ? (
@@ -533,7 +533,7 @@ export default async function OfferDetailPage({
                   margin: "0 0 10px",
                 }}
               >
-                ÐžÑˆÐ¸Ð±ÐºÐ° Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¸ Ð¿Ñ€ÐµÐ´Ð»Ð¾Ð¶ÐµÐ½Ð¸Ñ
+                {t.detail.errorTitle}
               </h1>
 
               <p
@@ -580,7 +580,7 @@ export default async function OfferDetailPage({
                   lineHeight: "1.5",
                 }}
               >
-                {offer.description ?? "ÐžÐ¿Ð¸ÑÐ°Ð½Ð¸Ðµ Ð¿Ð¾ÐºÐ° Ð½Ðµ Ð´Ð¾Ð±Ð°Ð²Ð»ÐµÐ½Ð¾."}
+                {offer.description ?? t.detail.descriptionFallback}
               </p>
 
               <div
@@ -603,7 +603,7 @@ export default async function OfferDetailPage({
                     fontWeight: 700,
                   }}
                 >
-                  ÐŸÑƒÐ±Ð»Ð¸Ñ‡Ð½Ð°Ñ ÐºÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÐ° Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ñ
+                  {t.detail.publicEnterpriseCard}
                 </Link>
 
                 <Link
@@ -619,7 +619,7 @@ export default async function OfferDetailPage({
                     fontWeight: 800,
                   }}
                 >
-                  Ð—Ð°Ñ€ÐµÐ³Ð¸ÑÑ‚Ñ€Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ Ð¿Ð¾ÐºÑƒÐ¿ÐºÑƒ Ñƒ Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ñ
+                  {t.navigation.registerPurchase}
                 </Link>
               </div>
             </>
@@ -745,7 +745,7 @@ export default async function OfferDetailPage({
                 }}
               >
                 <div>
-                  <strong>ÐŸÑ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ðµ:</strong>{" "}
+                  <strong>{t.detail.enterpriseLabel}:</strong>{" "}
                   {organization?.organization_name ?? "ÐÐµ ÑƒÐºÐ°Ð·Ð°Ð½Ð¾"}
                 </div>
 
@@ -755,7 +755,7 @@ export default async function OfferDetailPage({
                 </div>
 
                 <div>
-                  <strong>Ð¡Ñ‚Ð°Ñ‚ÑƒÑ:</strong> {getStatusLabel(offer.status, t)}
+                  <strong>{t.detail.statusLabel}:</strong> {getStatusLabel(offer.status, t)}
                 </div>
 
                 <div>
@@ -767,14 +767,14 @@ export default async function OfferDetailPage({
 
                 {offer.regularPrice ? (
                   <div>
-                    <strong>ÐžÐ±Ñ‹Ñ‡Ð½Ð°Ñ Ñ†ÐµÐ½Ð°:</strong>{" "}
+                    <strong>{t.detail.regularPrice}:</strong>{" "}
                     {formatMoney(offer.regularPrice, offer.currency)}
                   </div>
                 ) : null}
 
                 {offer.isDiscountActive ? (
                   <div>
-                    <strong>Ð¡ÐºÐ¸Ð´ÐºÐ°:</strong>{" "}
+                    <strong>{t.detail.lowestPrice30Days}:</strong>{" "}
                     {offer.discountType ?? "discount"}{" "}
                     {offer.discountValue ?? ""}
                   </div>
@@ -782,7 +782,7 @@ export default async function OfferDetailPage({
 
                 {offer.lowestPrice30Days ? (
                   <div>
-                    <strong>Ð¡Ð°Ð¼Ð°Ñ Ð½Ð¸Ð·ÐºÐ°Ñ Ñ†ÐµÐ½Ð° Ð·Ð° 30 Ð´Ð½ÐµÐ¹:</strong>{" "}
+                    <strong>{t.detail.discountLegalNote}:</strong>{" "}
                     {formatMoney(
                       offer.lowestPrice30Days,
                       offer.lowestPrice30DaysCurrency ?? offer.currency
@@ -798,12 +798,12 @@ export default async function OfferDetailPage({
                 ) : null}
 
                 <div>
-                  <strong>Ð‘Ñ€Ð¾Ð½Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ðµ:</strong> {getBookingLabel(offer, systemLabels)}
+                  <strong>{t.detail.duration}:</strong> {getBookingLabel(offer, systemLabels)}
                 </div>
 
                 {offer.minDurationMinutes || offer.maxDurationMinutes ? (
                   <div>
-                    <strong>Ð”Ð»Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ÑÑ‚ÑŒ:</strong>{" "}
+                    <strong>{t.detail.quantityLimit}:</strong>{" "}
                     {offer.minDurationMinutes
                       ? `${offer.minDurationMinutes} Ð¼Ð¸Ð½.`
                       : "â€”"}{" "}
@@ -821,11 +821,11 @@ export default async function OfferDetailPage({
                 ) : null}
 
                 <div>
-                  <strong>Ð”ÐµÐ¹ÑÑ‚Ð²ÑƒÐµÑ‚ Ñ:</strong> {formatDate(offer.validFrom)}
+                  <strong>{t.detail.validFrom}:</strong> {formatDate(offer.validFrom)}
                 </div>
 
                 <div>
-                  <strong>Ð”ÐµÐ¹ÑÑ‚Ð²ÑƒÐµÑ‚ Ð´Ð¾:</strong>{" "}
+                  <strong>{t.detail.validUntil}:</strong>{" "}
                   {formatDate(offer.validUntil)}
                 </div>
               </div>
@@ -875,42 +875,40 @@ export default async function OfferDetailPage({
                 {offer.certificateAvailable ? (
                   <>
                     <div>
-                      <strong>Ð¡Ñ‚Ð¾Ð¸Ð¼Ð¾ÑÑ‚ÑŒ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð°:</strong>{" "}
+                      <strong>{t.detail.certificateCostLabel}:</strong>{" "}
                       {getCertificatePaymentLabel(offer, systemLabels)}
                     </div>
 
                     <div>
-                      <strong>Ð¡Ñ€Ð¾Ðº Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ:</strong>{" "}
+                      <strong>{t.detail.certificateValidityLabel}:</strong>{" "}
                       {offer.certificate.validityDays
                         ? `${offer.certificate.validityDays} Ð´Ð½ÐµÐ¹`
                         : "ÐÐµ ÑƒÐºÐ°Ð·Ð°Ð½"}
                     </div>
 
                     <div>
-                      <strong>Ð¢Ñ€ÐµÐ±ÑƒÐµÑ‚ÑÑ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¸Ðµ Ð¿Ñ€Ð¾Ð´Ð°Ð²Ñ†Ð°:</strong>{" "}
-                      {offer.certificate.requiresSellerConfirmation
-                        ? "Ð”Ð°"
-                        : "ÐÐµÑ‚"}
+                      <strong>{t.detail.sellerConfirmationLabel}:</strong>{" "}
+                      {offer.certificate.requiresSellerConfirmation ? t.common.yes : t.common.no}
                     </div>
 
                     <div>
-                      <strong>ÐœÐ¾Ð¶Ð½Ð¾ Ð¾Ñ‚Ð¼ÐµÐ½Ð¸Ñ‚ÑŒ:</strong>{" "}
-                      {offer.certificate.isCancellable ? "Ð”Ð°" : "ÐÐµÑ‚"}
+                      <strong>{t.detail.cancellableLabel}:</strong>{" "}
+                      {offer.certificate.isCancellable ? t.common.yes : t.common.no}
                     </div>
 
                     <div>
-                      <strong>ÐœÐ¾Ð¶Ð½Ð¾ Ð¿ÐµÑ€ÐµÐ´Ð°Ñ‚ÑŒ:</strong>{" "}
-                      {offer.certificate.isTransferable ? "Ð”Ð°" : "ÐÐµÑ‚"}
+                      <strong>{t.detail.transferableLabel}:</strong>{" "}
+                      {offer.certificate.isTransferable ? t.common.yes : t.common.no}
                     </div>
 
                     <div>
-                      <strong>ÐŸÐ¾Ð»Ð¸Ñ‚Ð¸ÐºÐ° Ð²Ð¾Ð·Ð²Ñ€Ð°Ñ‚Ð° POINTS:</strong>{" "}
+                      <strong>{t.detail.maxCertificatesLabel}:</strong>{" "}
                       {offer.certificate.pointsRefundPolicy}
                     </div>
 
                     {offer.certificate.maxCertificatesTotal ? (
                       <div>
-                        <strong>ÐœÐ°ÐºÑÐ¸Ð¼ÑƒÐ¼ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð¾Ð²:</strong>{" "}
+                        <strong>{t.detail.certificateTermsLabel}:</strong>{" "}
                         {offer.certificate.maxCertificatesTotal}
                       </div>
                     ) : null}
@@ -936,8 +934,8 @@ export default async function OfferDetailPage({
                           fontWeight: 800,
                         }}
                       >
-                        ÐŸÐµÑ€ÐµÐ¹Ñ‚Ð¸ Ðº Ð·Ð°ÐºÐ°Ð·Ñƒ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð°
-                      </Link>
+                      {t.navigation.openCertificateOrder}
+                    </Link>
                     </div>
                   </>
                 ) : null}
@@ -981,8 +979,8 @@ export default async function OfferDetailPage({
                     fontWeight: 800,
                   }}
                 >
-                  ÐŸÐµÑ€ÐµÐ¹Ñ‚Ð¸ Ðº Ð·Ð°ÐºÐ°Ð·Ñƒ ÑÐµÑ€Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð°
-                </Link>
+                      {t.navigation.openCertificateOrder}
+                    </Link>
               ) : null}
 
               <Link
@@ -998,8 +996,8 @@ export default async function OfferDetailPage({
                   fontWeight: 800,
                 }}
               >
-                Ð—Ð°Ñ€ÐµÐ³Ð¸ÑÑ‚Ñ€Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ Ð¿Ð¾ÐºÑƒÐ¿ÐºÑƒ Ñƒ Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ñ
-              </Link>
+                  {t.navigation.registerPurchase}
+                </Link>
             </section>
           </>
         ) : null}
