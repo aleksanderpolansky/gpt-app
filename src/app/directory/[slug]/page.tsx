@@ -5,6 +5,12 @@ import {
   getDirectoryDetailMessages,
   type DirectoryDetailMessages,
 } from "../../../i18n/messages/directory-detail";
+import {
+  getOfferTypeLabel,
+  getOrganizationTypeLabel,
+  getSystemLabelsMessages,
+  getVerificationStatusLabel,
+} from "../../../i18n/messages/system-labels";
 import DirectoryPurchaseConfirmationForm from "./DirectoryPurchaseConfirmationForm";
 
 export const dynamic = "force-dynamic";
@@ -911,7 +917,7 @@ const CERTIFICATE_AVAILABILITY_EXCLUDED_STATUSES = new Set([
 function buildCertificateAvailability(
   offer: PublicDirectoryOffer,
   issuedCount: number,
-  messages: DirectoryDetailMessages,
+  messages: Pick<DirectoryDetailMessages, "certificateAvailability">,
 ): CertificateAvailabilityView {
   if (!offer.certificateAvailable) {
     return {
@@ -948,7 +954,7 @@ function buildCertificateAvailability(
 
 async function getOffersWithCertificateAvailability(
   offers: PublicDirectoryOffer[],
-  messages: DirectoryDetailMessages,
+  messages: Pick<DirectoryDetailMessages, "certificateAvailability">,
 ): Promise<PublicDirectoryOfferWithCertificateAvailability[]> {
   const certificateOfferIds = offers
     .filter((offer) => offer.certificateAvailable)
@@ -1022,6 +1028,7 @@ export default async function DirectoryOrganizationPage({
     normalizeLocaleParam(resolvedSearchParams?.lang);
   const slug = resolvedParams.slug;
   const t = getDirectoryDetailMessages(selectedLocale);
+  const systemLabels = getSystemLabelsMessages(selectedLocale);
 
   const { organization, errorMessage } = await getDirectoryOrganization(slug);
 
@@ -1033,7 +1040,10 @@ export default async function DirectoryOrganizationPage({
     ? await getDirectoryOrganizationOffers(organization.id)
     : { offers: [], errorMessage: null };
 
-  const offers = await getOffersWithCertificateAvailability(offersResult.offers, t);
+  const offers = await getOffersWithCertificateAvailability(
+    offersResult.offers,
+    systemLabels,
+  );
   const offersErrorMessage = offersResult.errorMessage;
 
   const firstOfferWithCertificate =
@@ -1063,50 +1073,15 @@ export default async function DirectoryOrganizationPage({
   };
 
   const getPublicOfferTypeLabel = (offerType: string) => {
-    switch (offerType) {
-      case "bookable_service":
-        return t.offerTypes.bookableService;
-      case "service":
-        return t.offerTypes.service;
-      case "product":
-        return t.offerTypes.product;
-      case "bundle":
-        return t.offerTypes.bundle;
-      case "consultation":
-        return t.offerTypes.consultation;
-      case "reward":
-        return t.offerTypes.reward;
-      default:
-        return offerType;
-    }
+    return getOfferTypeLabel(offerType, selectedLocale);
   };
 
   const getPublicOrganizationTypeLabel = (organizationType: string) => {
-    switch (organizationType) {
-      case "private_business":
-        return t.organizationTypes.privateBusiness;
-      case "company":
-        return t.organizationTypes.company;
-      case "non_profit":
-        return t.organizationTypes.nonProfit;
-      case "public_institution":
-        return t.organizationTypes.publicInstitution;
-      default:
-        return organizationType;
-    }
+    return getOrganizationTypeLabel(organizationType, selectedLocale);
   };
 
   const getPublicVerificationLabel = (verificationStatus: string) => {
-    switch (verificationStatus) {
-      case "verified":
-        return t.verification.verified;
-      case "pending":
-        return t.verification.pending;
-      case "rejected":
-        return t.verification.rejected;
-      default:
-        return t.verification.unverified;
-    }
+    return getVerificationStatusLabel(verificationStatus, selectedLocale);
   };
 
   const getPublicLocationLabel = () => {
@@ -1129,19 +1104,19 @@ export default async function DirectoryOrganizationPage({
 
   const getPublicBookingLabel = (offer: PublicDirectoryOffer) => {
     if (!offer.requiresBooking) {
-      return t.booking.notRequired;
+      return systemLabels.booking.notRequired;
     }
 
     if (offer.defaultDurationMinutes) {
-      return t.booking.requiredWithDuration(offer.defaultDurationMinutes);
+      return systemLabels.booking.requiredWithDuration(offer.defaultDurationMinutes);
     }
 
-    return t.booking.required;
+    return systemLabels.booking.required;
   };
 
   const getPublicCertificatePaymentLabel = (offer: PublicDirectoryOffer) => {
     if (!offer.certificateAvailable) {
-      return t.certificatePayment.unavailable;
+      return systemLabels.certificatePaymentModes.unavailable;
     }
 
     if (offer.certificate.paymentMode === "points_only") {
@@ -1164,7 +1139,7 @@ export default async function DirectoryOrganizationPage({
       )}`;
     }
 
-    return t.certificatePayment.available;
+    return systemLabels.certificatePaymentModes.available;
   };
 
   const organizationDescription =
