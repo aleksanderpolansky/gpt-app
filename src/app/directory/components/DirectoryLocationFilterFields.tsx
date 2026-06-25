@@ -2,6 +2,12 @@
 
 import { useMemo, useState } from "react";
 
+import {
+  getDirectoryListMessage,
+  type DirectoryListMessageKey,
+} from "@/i18n/messages/directory-list";
+import type { LocaleCode } from "@/i18n";
+
 type DirectoryFilterCity = {
   city: string;
   countryCode: string;
@@ -27,16 +33,12 @@ type DirectoryLocationFilterFieldsProps = {
   selectedCity: string;
   selectedDistrict: string;
   selectedCountryCode: string;
+  locale: LocaleCode;
 };
 
-const fieldStyle = {
-  border: "1px solid #cccccc",
-  borderRadius: "8px",
-  padding: "11px 12px",
-  fontSize: "15px",
-  fontWeight: 400,
-  background: "#ffffff",
-};
+function getMessage(locale: LocaleCode, key: DirectoryListMessageKey) {
+  return getDirectoryListMessage(key, locale);
+}
 
 export default function DirectoryLocationFilterFields({
   cities,
@@ -45,10 +47,13 @@ export default function DirectoryLocationFilterFields({
   selectedCity,
   selectedDistrict,
   selectedCountryCode,
+  locale,
 }: DirectoryLocationFilterFieldsProps) {
   const [city, setCity] = useState(selectedCity);
   const [district, setDistrict] = useState(selectedDistrict);
   const [countryCode, setCountryCode] = useState(selectedCountryCode);
+
+  const t = (key: DirectoryListMessageKey) => getMessage(locale, key);
 
   const visibleCities = useMemo(() => {
     if (!countryCode) {
@@ -80,22 +85,25 @@ export default function DirectoryLocationFilterFields({
 
   return (
     <>
-      <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
-        Город
+      <label className="grid gap-2 text-[13px] font-semibold text-[#111827]">
+        {t("directoryList.filters.city")}
         <select
           name="city"
           value={city}
           onChange={(event) => {
-            setCity(event.target.value);
+            const nextCity = event.target.value;
+            setCity(nextCity);
             setDistrict("");
           }}
-          style={fieldStyle}
+          className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8]"
         >
-          <option value="">Все города</option>
+          <option value="">{t("directoryList.filter.allCities")}</option>
 
           {city &&
           !visibleCities.some((cityOption) => cityOption.city === city) ? (
-            <option value={city}>{city} / временный URL-фильтр</option>
+            <option value={city}>
+              {city} / {t("directoryList.filters.temporaryUrlFilter")}
+            </option>
           ) : null}
 
           {visibleCities.map((cityOption) => (
@@ -109,57 +117,49 @@ export default function DirectoryLocationFilterFields({
         </select>
       </label>
 
-      <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
-        Район
+      <label className="grid gap-2 text-[13px] font-semibold text-[#111827]">
+        {t("directoryList.filters.district")}
         <select
           name="district"
           value={district}
           disabled={isDistrictSelectDisabled}
-          onChange={(event) => {
-            setDistrict(event.target.value);
-          }}
-          style={{
-            ...fieldStyle,
-            background: isDistrictSelectDisabled ? "#f3f4f6" : "#ffffff",
-            color: isDistrictSelectDisabled ? "#9ca3af" : "#111111",
-            cursor: isDistrictSelectDisabled ? "not-allowed" : "default",
-          }}
+          onChange={(event) => setDistrict(event.target.value)}
+          className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] disabled:bg-[#f3f4f6] disabled:text-[#9ca3af]"
         >
           <option value="">
-            {isDistrictSelectDisabled ? "Сначала выберите город" : "Все районы"}
+            {isDistrictSelectDisabled
+              ? t("directoryList.filter.selectCityFirst")
+              : t("directoryList.filter.allDistricts")}
           </option>
 
-          {!isDistrictSelectDisabled &&
-          district &&
+          {district &&
           !visibleDistricts.some(
-            (districtOption) => districtOption.district === district
+            (districtOption) => districtOption.district === district,
           ) ? (
-            <option value={district}>{district} / временный URL-фильтр</option>
+            <option value={district}>
+              {district} / {t("directoryList.filters.temporaryUrlFilter")}
+            </option>
           ) : null}
 
-          {!isDistrictSelectDisabled
-            ? visibleDistricts.map((districtOption) => (
-                <option
-                  key={`${districtOption.countryCode}-${districtOption.city}-${districtOption.district}`}
-                  value={districtOption.district}
-                >
-                  {districtOption.label}
-                </option>
-              ))
-            : null}
+          {visibleDistricts.map((districtOption) => (
+            <option
+              key={`${districtOption.countryCode}-${districtOption.city}-${districtOption.district}`}
+              value={districtOption.district}
+            >
+              {districtOption.label}
+            </option>
+          ))}
         </select>
       </label>
 
-      <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
-        Страна
+      <label className="grid gap-2 text-[13px] font-semibold text-[#111827]">
+        {t("directoryList.filters.country")}
         <select
           name="countryCode"
           value={countryCode}
           onChange={(event) => {
             const nextCountryCode = event.target.value;
-
             setCountryCode(nextCountryCode);
-            setDistrict("");
 
             if (
               nextCountryCode &&
@@ -167,22 +167,23 @@ export default function DirectoryLocationFilterFields({
               !cities.some(
                 (cityOption) =>
                   cityOption.city === city &&
-                  cityOption.countryCode === nextCountryCode
+                  cityOption.countryCode === nextCountryCode,
               )
             ) {
               setCity("");
+              setDistrict("");
             }
           }}
-          style={fieldStyle}
+          className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8]"
         >
-          <option value="">Все страны</option>
+          <option value="">{t("directoryList.filter.allCountries")}</option>
 
           {countryCode &&
           !countries.some(
-            (countryOption) => countryOption.countryCode === countryCode
+            (countryOption) => countryOption.countryCode === countryCode,
           ) ? (
             <option value={countryCode}>
-              {countryCode} / временный URL-фильтр
+              {countryCode} / {t("directoryList.filters.temporaryUrlFilter")}
             </option>
           ) : null}
 

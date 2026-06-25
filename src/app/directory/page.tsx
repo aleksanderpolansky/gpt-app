@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { headers } from "next/headers";
+import { getLocaleSearchParam, type LocaleCode } from "@/i18n";
+import {
+  getDirectoryListMessage,
+  type DirectoryListMessageKey,
+  type DirectoryListMessageParams,
+} from "@/i18n/messages/directory-list";
 import DirectoryLocationFilterFields from "./components/DirectoryLocationFilterFields";
 import DirectoryUseLocationButton from "./components/DirectoryUseLocationButton";
 import DirectorySuggestionRequestForm from "./components/DirectorySuggestionRequestForm";
@@ -168,28 +174,31 @@ type DirectoryFilters = {
   sort: DirectorySortMode;
   userLat: string;
   userLng: string;
-  locale: string;
+  locale: LocaleCode;
 };
 
 const DIRECTORY_ACTION_FILTERS: {
   value: DirectoryActionFilter;
-  label: string;
+  labelKey: DirectoryListMessageKey;
 }[] = [
-  { value: "all", label: "Все предприятия" },
-  { value: "hasOffers", label: "Есть предложения" },
-  { value: "hasCertificates", label: "Есть сертификаты" },
+  { value: "all", labelKey: "directoryList.action.all" },
+  { value: "hasOffers", labelKey: "directoryList.action.hasOffers" },
+  {
+    value: "hasCertificates",
+    labelKey: "directoryList.action.hasCertificates",
+  },
   {
     value: "canRegisterPurchase",
-    label: "Можно зарегистрировать покупку / POINTS",
+    labelKey: "directoryList.action.canRegisterPurchase",
   },
 ];
 
 const DIRECTORY_SORT_OPTIONS: {
   value: DirectorySortMode;
-  label: string;
+  labelKey: DirectoryListMessageKey;
 }[] = [
-  { value: "newest", label: "По новизне" },
-  { value: "distance", label: "По расстоянию" },
+  { value: "newest", labelKey: "directoryList.sort.newest" },
+  { value: "distance", labelKey: "directoryList.sort.distance" },
 ];
 
 async function getBaseUrl() {
@@ -230,6 +239,27 @@ function normalizeFilterValue(value: string | string[] | undefined) {
   return getFirstSearchParam(value).trim();
 }
 
+
+function normalizeDirectoryLocale(
+  locale: string | string[] | undefined,
+  lang: string | string[] | undefined,
+): LocaleCode {
+  const candidate = normalizeFilterValue(locale) || normalizeFilterValue(lang);
+  const params = new URLSearchParams();
+
+  if (candidate) {
+    params.set("locale", candidate);
+  }
+
+  return getLocaleSearchParam(params);
+}
+
+function createDirectoryListTranslator(locale: LocaleCode) {
+  return (
+    key: DirectoryListMessageKey,
+    params?: DirectoryListMessageParams,
+  ) => getDirectoryListMessage(key, locale, params);
+}
 function normalizeActionFilter(
   value: string | string[] | undefined
 ): DirectoryActionFilter {
@@ -435,13 +465,13 @@ async function getDirectoryFilterOptions(locale: string): Promise<{
   }
 }
 
-function getLocationLabel(location: DirectoryLocation | null) {
+function getLocationLabel(location: DirectoryLocation | null, locale: LocaleCode) {
   if (!location) {
-    return "Локация не указана";
+    return getDirectoryListMessage("directoryList.location.notSpecified", locale);
   }
 
   if (location.addressVisibility === "hidden") {
-    return "Адрес скрыт";
+    return getDirectoryListMessage("directoryList.location.hidden", locale);
   }
 
   const parts = [
@@ -451,70 +481,96 @@ function getLocationLabel(location: DirectoryLocation | null) {
   ].filter(Boolean);
 
   if (parts.length === 0) {
-    return "Локация не указана";
+    return getDirectoryListMessage("directoryList.location.notSpecified", locale);
   }
 
   if (location.addressVisibility === "approximate") {
-    return `${parts.join(", ")} · приблизительная локация`;
+    return getDirectoryListMessage("directoryList.location.approximate", locale, {
+      location: parts.join(", "),
+    });
   }
 
   return parts.join(", ");
 }
 
-function getDistanceExplanation(location: DirectoryLocation | null) {
+function getDistanceExplanation(
+  location: DirectoryLocation | null,
+  locale: LocaleCode,
+) {
   if (!location) {
-    return "Расстояние рассчитано приблизительно.";
+    return getDirectoryListMessage(
+      "directoryList.distance.explanation.default",
+      locale,
+    );
   }
 
   if (location.addressVisibility === "approximate") {
-    return "Расстояние рассчитано до приблизительной публичной локации, а не до точного адреса.";
+    return getDirectoryListMessage(
+      "directoryList.distance.explanation.approximate",
+      locale,
+    );
   }
 
   if (location.addressVisibility === "public") {
-    return "Расстояние рассчитано до публичной локации предприятия.";
+    return getDirectoryListMessage(
+      "directoryList.distance.explanation.public",
+      locale,
+    );
   }
 
-  return "Расстояние для скрытого адреса не показывается.";
+  return getDirectoryListMessage(
+    "directoryList.distance.explanation.hidden",
+    locale,
+  );
 }
 
 function canShowDistance(location: DirectoryLocation | null) {
   return Boolean(location && location.addressVisibility !== "hidden");
 }
 
-function getVerificationLabel(status: string | null | undefined) {
+function getVerificationLabel(
+  status: string | null | undefined,
+  locale: LocaleCode,
+) {
   if (status === "verified") {
-    return "Проверено";
+    return getDirectoryListMessage("directoryList.verification.verified", locale);
   }
 
   if (status === "pending") {
-    return "На проверке";
+    return getDirectoryListMessage("directoryList.verification.pending", locale);
   }
 
   if (status === "rejected") {
-    return "Проверка отклонена";
+    return getDirectoryListMessage("directoryList.verification.rejected", locale);
   }
 
   if (status === "revoked") {
-    return "Проверка отозвана";
+    return getDirectoryListMessage("directoryList.verification.revoked", locale);
   }
 
-  return "Не проверено";
+  return getDirectoryListMessage("directoryList.verification.notVerified", locale);
 }
 
-function getOrganizationTypeLabel(type: string | null | undefined) {
+function getOrganizationTypeLabel(
+  type: string | null | undefined,
+  locale: LocaleCode,
+) {
   if (type === "private_business") {
-    return "Частное предприятие";
+    return getDirectoryListMessage(
+      "directoryList.organizationType.privateBusiness",
+      locale,
+    );
   }
 
   if (type === "company") {
-    return "Компания";
+    return getDirectoryListMessage("directoryList.organizationType.company", locale);
   }
 
   if (type === "ngo") {
-    return "Организация";
+    return getDirectoryListMessage("directoryList.organizationType.ngo", locale);
   }
 
-  return type ?? "Предприятие";
+  return type ?? getDirectoryListMessage("directoryList.organizationType.default", locale);
 }
 
 function appendDirectoryLocale(pathname: string, filters: DirectoryFilters) {
@@ -569,18 +625,20 @@ function hasActiveFilters(filters: DirectoryFilters) {
   );
 }
 
-function getActionFilterLabel(action: DirectoryActionFilter) {
-  return (
-    DIRECTORY_ACTION_FILTERS.find((filter) => filter.value === action)?.label ??
-    "Все предприятия"
-  );
+function getActionFilterLabel(action: DirectoryActionFilter, locale: LocaleCode) {
+  const labelKey =
+    DIRECTORY_ACTION_FILTERS.find((filter) => filter.value === action)
+      ?.labelKey ?? ("directoryList.action.all" as DirectoryListMessageKey);
+
+  return getDirectoryListMessage(labelKey, locale);
 }
 
-function getSortModeLabel(sort: DirectorySortMode) {
-  return (
+function getSortModeLabel(sort: DirectorySortMode, locale: LocaleCode) {
+  const labelKey =
     DIRECTORY_SORT_OPTIONS.find((sortOption) => sortOption.value === sort)
-      ?.label ?? "По новизне"
-  );
+      ?.labelKey ?? ("directoryList.sort.newest" as DirectoryListMessageKey);
+
+  return getDirectoryListMessage(labelKey, locale);
 }
 
 function getCountryOptions(
@@ -647,10 +705,11 @@ function getDistrictOptions(
 
 function getDistrictLabel(
   district: string,
-  districtOptions: DirectoryFilterDistrict[]
+  districtOptions: DirectoryFilterDistrict[],
+  locale: LocaleCode,
 ) {
   if (!district) {
-    return "Все районы";
+    return getDirectoryListMessage("directoryList.filter.allDistricts", locale);
   }
 
   return (
@@ -659,9 +718,13 @@ function getDistrictLabel(
   );
 }
 
-function getCategoryLabel(categorySlug: string, categories: DirectoryCategory[]) {
+function getCategoryLabel(
+  categorySlug: string,
+  categories: DirectoryCategory[],
+  locale: LocaleCode,
+) {
   if (!categorySlug) {
-    return "Все";
+    return getDirectoryListMessage("directoryList.filter.all", locale);
   }
 
   return (
@@ -670,9 +733,9 @@ function getCategoryLabel(categorySlug: string, categories: DirectoryCategory[])
   );
 }
 
-function getCityLabel(city: string, cities: DirectoryFilterCity[]) {
+function getCityLabel(city: string, cities: DirectoryFilterCity[], locale: LocaleCode) {
   if (!city) {
-    return "Все города";
+    return getDirectoryListMessage("directoryList.filter.allCities", locale);
   }
 
   return cities.find((cityOption) => cityOption.city === city)?.label ?? city;
@@ -680,10 +743,11 @@ function getCityLabel(city: string, cities: DirectoryFilterCity[]) {
 
 function getCountryLabel(
   countryCode: string,
-  countries: DirectoryFilterCountry[]
+  countries: DirectoryFilterCountry[],
+  locale: LocaleCode,
 ) {
   if (!countryCode) {
-    return "Все страны";
+    return getDirectoryListMessage("directoryList.filter.allCountries", locale);
   }
 
   return (
@@ -727,8 +791,10 @@ export default async function DirectoryPage({
     sort: normalizeSortMode(resolvedSearchParams?.sort),
     userLat: normalizeFilterValue(resolvedSearchParams?.userLat),
     userLng: normalizeFilterValue(resolvedSearchParams?.userLng),
-    locale: normalizeFilterValue(resolvedSearchParams?.locale) ||
-      normalizeFilterValue(resolvedSearchParams?.lang),
+    locale: normalizeDirectoryLocale(
+      resolvedSearchParams?.locale,
+      resolvedSearchParams?.lang,
+    ),
   };
 
   const [
@@ -747,18 +813,23 @@ export default async function DirectoryPage({
   );
   const districtOptions = getDistrictOptions(filters, filterOptions.districts);
 
+  const t = createDirectoryListTranslator(filters.locale);
+
   const selectedCategoryLabel = getCategoryLabel(
     filters.category,
-    categoryOptions
+    categoryOptions,
+    filters.locale,
   );
-  const selectedCityLabel = getCityLabel(filters.city, cityOptions);
+  const selectedCityLabel = getCityLabel(filters.city, cityOptions, filters.locale);
   const selectedCountryLabel = getCountryLabel(
     filters.countryCode,
-    countryOptions
+    countryOptions,
+    filters.locale,
   );
   const selectedDistrictLabel = getDistrictLabel(
     filters.district,
-    districtOptions
+    districtOptions,
+    filters.locale,
   );
 
   const shouldShowDistanceCoordinateWarning =
@@ -790,7 +861,7 @@ export default async function DirectoryPage({
               margin: "0 0 10px",
             }}
           >
-            Каталог предприятий
+            {t("directoryList.header.title")}
           </h1>
 
           <p
@@ -801,8 +872,7 @@ export default async function DirectoryPage({
               lineHeight: "1.5",
             }}
           >
-            Здесь отображаются опубликованные предприятия, связанные с
-            предложениями, сертификатами и POINTS.
+            {t("directoryList.header.subtitle")}
           </p>
 
           <p
@@ -813,10 +883,7 @@ export default async function DirectoryPage({
               lineHeight: "1.5",
             }}
           >
-            В каталоге показываются только предприятия, которые включили
-            публичный профиль и были опубликованы в directory layer. Если адрес
-            скрыт или указан приблизительно, точный адрес и точные координаты не
-            раскрываются.
+            {t("directoryList.header.privacyNote")}
           </p>
         </header>
 
@@ -836,7 +903,7 @@ export default async function DirectoryPage({
               fontSize: "22px",
             }}
           >
-            Поиск и фильтры
+            {t("directoryList.filters.title")}
           </h2>
 
           {filterOptionsErrorMessage ? (
@@ -851,9 +918,9 @@ export default async function DirectoryPage({
                 lineHeight: "1.5",
               }}
             >
-              Не удалось загрузить динамические списки фильтров:{" "}
-              {filterOptionsErrorMessage}. Поиск по URL-параметрам всё ещё
-              доступен.
+              {t("directoryList.filters.dynamicLoadErrorPrefix")}{" "}
+              {filterOptionsErrorMessage}.{" "}
+              {t("directoryList.filters.dynamicLoadErrorSuffix")}
             </div>
           ) : null}
 
@@ -872,11 +939,11 @@ export default async function DirectoryPage({
             ) : null}
 
             <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
-              Поиск
+              {t("directoryList.filters.search")}
               <input
                 name="q"
                 defaultValue={filters.q}
-                placeholder="Название, описание, услуга..."
+                placeholder={t("directoryList.filters.searchPlaceholder")}
                 style={{
                   border: "1px solid #cccccc",
                   borderRadius: "8px",
@@ -889,7 +956,7 @@ export default async function DirectoryPage({
             </label>
 
             <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
-              Категория
+              {t("directoryList.filters.category")}
               <select
                 name="category"
                 defaultValue={filters.category}
@@ -902,14 +969,14 @@ export default async function DirectoryPage({
                   background: "#ffffff",
                 }}
               >
-                <option value="">Все категории</option>
+                <option value="">{t("directoryList.filter.allCategories")}</option>
 
                 {filters.category &&
                 !categoryOptions.some(
                   (category) => category.slug === filters.category
                 ) ? (
                   <option value={filters.category}>
-                    {filters.category} / временный URL-фильтр
+                    {filters.category} / {t("directoryList.filters.temporaryUrlFilter")}
                   </option>
                 ) : null}
 
@@ -928,10 +995,11 @@ export default async function DirectoryPage({
               selectedCity={filters.city}
               selectedDistrict={filters.district}
               selectedCountryCode={filters.countryCode}
+              locale={filters.locale}
             />
 
             <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
-              Действие пользователя
+              {t("directoryList.filters.userAction")}
               <select
                 name="action"
                 defaultValue={filters.action}
@@ -946,14 +1014,14 @@ export default async function DirectoryPage({
               >
                 {DIRECTORY_ACTION_FILTERS.map((filter) => (
                   <option key={filter.value} value={filter.value}>
-                    {filter.label}
+                    {getDirectoryListMessage(filter.labelKey, filters.locale)}
                   </option>
                 ))}
               </select>
             </label>
 
             <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
-              Сортировка
+              {t("directoryList.filters.sort")}
               <select
                 name="sort"
                 defaultValue={filters.sort}
@@ -968,14 +1036,14 @@ export default async function DirectoryPage({
               >
                 {DIRECTORY_SORT_OPTIONS.map((sortOption) => (
                   <option key={sortOption.value} value={sortOption.value}>
-                    {sortOption.label}
+                    {getDirectoryListMessage(sortOption.labelKey, filters.locale)}
                   </option>
                 ))}
               </select>
             </label>
 
             <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
-              Широта для расчёта расстояния
+              {t("directoryList.filters.latitude")}
               <input
                 name="userLat"
                 defaultValue={filters.userLat}
@@ -993,7 +1061,7 @@ export default async function DirectoryPage({
             </label>
 
             <label style={{ display: "grid", gap: "7px", fontWeight: 700 }}>
-              Долгота для расчёта расстояния
+              {t("directoryList.filters.longitude")}
               <input
                 name="userLng"
                 defaultValue={filters.userLng}
@@ -1030,7 +1098,7 @@ export default async function DirectoryPage({
                   cursor: "pointer",
                 }}
               >
-                Применить фильтры
+                {t("directoryList.filters.apply")}
               </button>
 
               <Link
@@ -1046,14 +1114,15 @@ export default async function DirectoryPage({
                   fontWeight: 700,
                 }}
               >
-                Сбросить
+                {t("directoryList.filters.reset")}
               </Link>
             </div>
           </form>
 
           <div style={{ marginTop: "16px" }}>
             <DirectoryUseLocationButton
-              currentSearchParams={{
+
+              locale={filters.locale}currentSearchParams={{
                 q: filters.q,
                 category: filters.category,
                 city: filters.city,
@@ -1077,10 +1146,8 @@ export default async function DirectoryPage({
               lineHeight: "1.5",
             }}
           >
-            <strong>Расстояние:</strong> сейчас можно вручную указать координаты
-            точки, от которой нужно сортировать предприятия, или нажать кнопку
-            “Использовать моё местоположение”. Координаты запрашиваются только
-            после явного действия пользователя.
+            <strong>{t("directoryList.distance.title")}</strong>{" "}
+            {t("directoryList.distance.infoBody")}
           </div>
 
           {shouldShowDistanceCoordinateWarning ? (
@@ -1095,9 +1162,7 @@ export default async function DirectoryPage({
                 lineHeight: "1.5",
               }}
             >
-              Для сортировки по расстоянию нужно указать обе координаты: широту
-              и долготу. Без координат каталог не может понять, от какой точки
-              считать расстояние.
+              {t("directoryList.distance.coordinateWarning")}
             </div>
           ) : null}
 
@@ -1114,56 +1179,56 @@ export default async function DirectoryPage({
                 gap: "6px",
               }}
             >
-              <strong>Активные фильтры:</strong>
+              <strong>{t("directoryList.active.title")}</strong>
 
               <div>
                 {filters.q ? (
                   <span>
-                    Поиск: <strong>{filters.q}</strong>{" "}
+                    {t("directoryList.active.search")}: <strong>{filters.q}</strong>{" "}
                   </span>
                 ) : null}
 
                 {filters.category ? (
                   <span>
-                    Категория: <strong>{selectedCategoryLabel}</strong>{" "}
+                    {t("directoryList.active.category")}: <strong>{selectedCategoryLabel}</strong>{" "}
                   </span>
                 ) : null}
 
                 {filters.city ? (
                   <span>
-                    Город: <strong>{selectedCityLabel}</strong>{" "}
+                    {t("directoryList.active.city")}: <strong>{selectedCityLabel}</strong>{" "}
                   </span>
                 ) : null}
 
                 {filters.district ? (
                   <span>
-                    Район: <strong>{selectedDistrictLabel}</strong>{" "}
+                    {t("directoryList.active.district")}: <strong>{selectedDistrictLabel}</strong>{" "}
                   </span>
                 ) : null}
 
                 {filters.countryCode ? (
                   <span>
-                    Страна: <strong>{selectedCountryLabel}</strong>{" "}
+                    {t("directoryList.active.country")}: <strong>{selectedCountryLabel}</strong>{" "}
                   </span>
                 ) : null}
 
                 {filters.action !== "all" ? (
                   <span>
-                    Действие:{" "}
-                    <strong>{getActionFilterLabel(filters.action)}</strong>{" "}
+                    {t("directoryList.active.action")}:{" "}
+                    <strong>{getActionFilterLabel(filters.action, filters.locale)}</strong>{" "}
                   </span>
                 ) : null}
 
                 {filters.sort !== "newest" ? (
                   <span>
-                    Сортировка:{" "}
-                    <strong>{getSortModeLabel(filters.sort)}</strong>{" "}
+                    {t("directoryList.active.sort")}:{" "}
+                    <strong>{getSortModeLabel(filters.sort, filters.locale)}</strong>{" "}
                   </span>
                 ) : null}
 
                 {hasDistanceCoordinates(filters) ? (
                   <span>
-                    Точка расчёта расстояния:{" "}
+                    {t("directoryList.active.distancePoint")}:{" "}
                     <strong>
                       {filters.userLat}, {filters.userLng}
                     </strong>{" "}
@@ -1194,7 +1259,7 @@ export default async function DirectoryPage({
             }}
           >
             <div style={{ color: "#666666", marginBottom: "8px" }}>
-              Найдено
+              {t("directoryList.stats.found")}
             </div>
             <div style={{ fontSize: "34px", fontWeight: 700 }}>
               {organizations.length}
@@ -1211,7 +1276,7 @@ export default async function DirectoryPage({
             }}
           >
             <div style={{ color: "#1e3a8a", marginBottom: "8px" }}>
-              Текущий город
+              {t("directoryList.stats.currentCity")}
             </div>
             <div style={{ fontSize: "24px", fontWeight: 700 }}>
               {selectedCityLabel}
@@ -1228,10 +1293,10 @@ export default async function DirectoryPage({
             }}
           >
             <div style={{ color: "#3730a3", marginBottom: "8px" }}>
-              Район
+              {t("directoryList.stats.district")}
             </div>
             <div style={{ fontSize: "24px", fontWeight: 700 }}>
-              {filters.district ? selectedDistrictLabel : "Все районы"}
+              {filters.district ? selectedDistrictLabel : t("directoryList.filter.allDistricts")}
             </div>
           </div>
 
@@ -1245,7 +1310,7 @@ export default async function DirectoryPage({
             }}
           >
             <div style={{ color: "#7a4b00", marginBottom: "8px" }}>
-              Категория
+              {t("directoryList.stats.category")}
             </div>
             <div style={{ fontSize: "24px", fontWeight: 700 }}>
               {selectedCategoryLabel}
@@ -1262,10 +1327,10 @@ export default async function DirectoryPage({
             }}
           >
             <div style={{ color: "#166534", marginBottom: "8px" }}>
-              Действие
+              {t("directoryList.stats.action")}
             </div>
             <div style={{ fontSize: "22px", fontWeight: 800 }}>
-              {getActionFilterLabel(filters.action)}
+              {getActionFilterLabel(filters.action, filters.locale)}
             </div>
           </div>
 
@@ -1279,10 +1344,10 @@ export default async function DirectoryPage({
             }}
           >
             <div style={{ color: "#9a3412", marginBottom: "8px" }}>
-              Сортировка
+              {t("directoryList.stats.sorting")}
             </div>
             <div style={{ fontSize: "22px", fontWeight: 800 }}>
-              {getSortModeLabel(filters.sort)}
+              {getSortModeLabel(filters.sort, filters.locale)}
             </div>
             {filters.sort === "distance" && hasDistanceCoordinates(filters) ? (
               <div
@@ -1293,7 +1358,7 @@ export default async function DirectoryPage({
                   lineHeight: "1.4",
                 }}
               >
-                От указанной точки: {filters.userLat}, {filters.userLng}
+                {t("directoryList.stats.fromPoint")} {filters.userLat}, {filters.userLng}
               </div>
             ) : null}
           </div>
@@ -1310,7 +1375,7 @@ export default async function DirectoryPage({
               marginBottom: "24px",
             }}
           >
-            <h2 style={{ marginTop: 0 }}>Ошибка загрузки каталога</h2>
+            <h2 style={{ marginTop: 0 }}>{t("directoryList.error.loadTitle")}</h2>
             <p>{organizationsErrorMessage}</p>
           </section>
         ) : null}
@@ -1331,18 +1396,16 @@ export default async function DirectoryPage({
             }}
           >
             <h2 style={{ margin: 0, fontSize: "22px" }}>
-              Опубликованные предприятия
+              {t("directoryList.published.title")}
             </h2>
             <p style={{ margin: "6px 0 0", color: "#666666" }}>
-              На этом этапе показывается только безопасная публичная информация:
-              название, категория, город, район, тип локации, публичные действия
-              и ссылка на карточку.
+              {t("directoryList.published.description")}
             </p>
           </div>
 
           {organizations.length === 0 ? (
             <div style={{ padding: "24px", color: "#666666" }}>
-              По выбранным фильтрам предприятия не найдены.
+              {t("directoryList.published.noResults")}
             </div>
           ) : (
             <div
@@ -1386,7 +1449,7 @@ export default async function DirectoryPage({
                         }}
                       >
                         {organization.primaryCategory?.name ??
-                          "Категория не указана"}
+                          t("directoryList.card.categoryMissing")}
                       </div>
 
                       <h3
@@ -1409,7 +1472,7 @@ export default async function DirectoryPage({
                     >
                       {organization.shortDescription ??
                         organization.description ??
-                        "Описание пока не добавлено."}
+                        t("directoryList.card.descriptionMissing")}
                     </p>
 
                     <div
@@ -1421,21 +1484,23 @@ export default async function DirectoryPage({
                       }}
                     >
                       <div>
-                        <strong>Тип:</strong>{" "}
-                        {getOrganizationTypeLabel(organization.type)}
+                        <strong>{t("directoryList.card.type")}</strong>{" "}
+                        {getOrganizationTypeLabel(organization.type, filters.locale)}
                       </div>
                       <div>
-                        <strong>Локация:</strong>{" "}
-                        {getLocationLabel(organization.primaryLocation)}
+                        <strong>{t("directoryList.card.location")}</strong>{" "}
+                        {getLocationLabel(organization.primaryLocation, filters.locale)}
                       </div>
                       <div>
-                        <strong>Район:</strong>{" "}
-                        {organization.primaryLocation?.district ?? "Не указан"}
+                        <strong>{t("directoryList.card.district")}</strong>{" "}
+                        {organization.primaryLocation?.district ??
+                          t("directoryList.card.districtMissing")}
                       </div>
 
                       {shouldShowDistance ? (
                         <div>
-                          <strong>Расстояние:</strong> примерно{" "}
+                          <strong>{t("directoryList.card.distance")}</strong>{" "}
+                          {t("directoryList.card.approximately")}{" "}
                           {formattedDistance}
                           <div
                             style={{
@@ -1446,15 +1511,19 @@ export default async function DirectoryPage({
                             }}
                           >
                             {getDistanceExplanation(
-                              organization.primaryLocation
+                              organization.primaryLocation,
+                              filters.locale,
                             )}
                           </div>
                         </div>
                       ) : null}
 
                       <div>
-                        <strong>Проверка:</strong>{" "}
-                        {getVerificationLabel(organization.verificationStatus)}
+                        <strong>{t("directoryList.card.verification")}</strong>{" "}
+                        {getVerificationLabel(
+                          organization.verificationStatus,
+                          filters.locale,
+                        )}
                       </div>
                     </div>
 
@@ -1470,7 +1539,7 @@ export default async function DirectoryPage({
                       }}
                     >
                       <div style={{ fontWeight: 800 }}>
-                        Доступные действия
+                        {t("directoryList.card.availableActions")}
                       </div>
 
                       <div
@@ -1531,8 +1600,8 @@ export default async function DirectoryPage({
                         >
                           POINTS:{" "}
                           {actionStats.canRegisterPurchase
-                            ? "можно"
-                            : "недоступно"}
+                            ? t("directoryList.card.pointsAvailable")
+                            : t("directoryList.card.pointsUnavailable")}
                         </span>
                       </div>
                     </section>
@@ -1558,7 +1627,7 @@ export default async function DirectoryPage({
                           fontWeight: 700,
                         }}
                       >
-                        Открыть карточку
+                        {t("directoryList.card.openCard")}
                       </Link>
 
                       {organization.publicSlug &&
@@ -1576,7 +1645,7 @@ export default async function DirectoryPage({
                             fontWeight: 800,
                           }}
                         >
-                          Зарегистрировать покупку
+                          {t("directoryList.card.registerPurchase")}
                         </Link>
                       ) : null}
                     </div>
