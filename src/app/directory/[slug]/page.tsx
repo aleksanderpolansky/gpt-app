@@ -1,6 +1,10 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../../lib/supabase";
+import {
+  getDirectoryDetailMessages,
+  type DirectoryDetailMessages,
+} from "../../../i18n/messages/directory-detail";
 import DirectoryPurchaseConfirmationForm from "./DirectoryPurchaseConfirmationForm";
 
 export const dynamic = "force-dynamic";
@@ -907,6 +911,7 @@ const CERTIFICATE_AVAILABILITY_EXCLUDED_STATUSES = new Set([
 function buildCertificateAvailability(
   offer: PublicDirectoryOffer,
   issuedCount: number,
+  messages: DirectoryDetailMessages,
 ): CertificateAvailabilityView {
   if (!offer.certificateAvailable) {
     return {
@@ -914,7 +919,7 @@ function buildCertificateAvailability(
       issuedCount: 0,
       remaining: null,
       isSoldOut: false,
-      label: "Сертификат недоступен",
+      label: messages.certificateAvailability.unavailable,
     };
   }
 
@@ -926,7 +931,7 @@ function buildCertificateAvailability(
       issuedCount,
       remaining: null,
       isSoldOut: false,
-      label: "Количество сертификатов не ограничено",
+      label: messages.certificateAvailability.unlimited,
     };
   }
 
@@ -937,12 +942,13 @@ function buildCertificateAvailability(
     issuedCount,
     remaining,
     isSoldOut: remaining <= 0,
-    label: `Доступно сертификатов: ${remaining} из ${maxTotal}`,
+    label: messages.certificateAvailability.available(remaining, maxTotal),
   };
 }
 
 async function getOffersWithCertificateAvailability(
   offers: PublicDirectoryOffer[],
+  messages: DirectoryDetailMessages,
 ): Promise<PublicDirectoryOfferWithCertificateAvailability[]> {
   const certificateOfferIds = offers
     .filter((offer) => offer.certificateAvailable)
@@ -951,7 +957,7 @@ async function getOffersWithCertificateAvailability(
   if (certificateOfferIds.length === 0) {
     return offers.map((offer) => ({
       ...offer,
-      certificateAvailability: buildCertificateAvailability(offer, 0),
+      certificateAvailability: buildCertificateAvailability(offer, 0, messages),
     }));
   }
 
@@ -964,12 +970,14 @@ async function getOffersWithCertificateAvailability(
     return offers.map((offer) => ({
       ...offer,
       certificateAvailability: {
-        ...buildCertificateAvailability(offer, 0),
+        ...buildCertificateAvailability(offer, 0, messages),
         label:
           typeof offer.certificate.maxCertificatesTotal === "number" &&
           offer.certificate.maxCertificatesTotal > 0
-            ? `Лимит сертификатов: ${offer.certificate.maxCertificatesTotal}; остаток не удалось проверить`
-            : "Количество сертификатов не ограничено",
+            ? messages.certificateAvailability.limitCheckFailed(
+                offer.certificate.maxCertificatesTotal,
+              )
+            : messages.certificateAvailability.unlimited,
       },
     }));
   }
@@ -998,6 +1006,7 @@ async function getOffersWithCertificateAvailability(
     certificateAvailability: buildCertificateAvailability(
       offer,
       issuedCountByOfferId.get(offer.id) ?? 0,
+      messages,
     ),
   }));
 }
@@ -1012,6 +1021,7 @@ export default async function DirectoryOrganizationPage({
     normalizeLocaleParam(resolvedSearchParams?.locale) ||
     normalizeLocaleParam(resolvedSearchParams?.lang);
   const slug = resolvedParams.slug;
+  const t = getDirectoryDetailMessages(selectedLocale);
 
   const { organization, errorMessage } = await getDirectoryOrganization(slug);
 
@@ -1023,7 +1033,7 @@ export default async function DirectoryOrganizationPage({
     ? await getDirectoryOrganizationOffers(organization.id)
     : { offers: [], errorMessage: null };
 
-  const offers = await getOffersWithCertificateAvailability(offersResult.offers);
+  const offers = await getOffersWithCertificateAvailability(offersResult.offers, t);
   const offersErrorMessage = offersResult.errorMessage;
 
   const firstOfferWithCertificate =
@@ -1055,17 +1065,17 @@ export default async function DirectoryOrganizationPage({
   const getPublicOfferTypeLabel = (offerType: string) => {
     switch (offerType) {
       case "bookable_service":
-        return "Услуга с записью";
+        return t.offerTypes.bookableService;
       case "service":
-        return "Услуга";
+        return t.offerTypes.service;
       case "product":
-        return "Товар";
+        return t.offerTypes.product;
       case "bundle":
-        return "Пакет";
+        return t.offerTypes.bundle;
       case "consultation":
-        return "Консультация";
+        return t.offerTypes.consultation;
       case "reward":
-        return "Сертификат / reward";
+        return t.offerTypes.reward;
       default:
         return offerType;
     }
@@ -1074,13 +1084,13 @@ export default async function DirectoryOrganizationPage({
   const getPublicOrganizationTypeLabel = (organizationType: string) => {
     switch (organizationType) {
       case "private_business":
-        return "Частный бизнес";
+        return t.organizationTypes.privateBusiness;
       case "company":
-        return "Компания";
+        return t.organizationTypes.company;
       case "non_profit":
-        return "Некоммерческая организация";
+        return t.organizationTypes.nonProfit;
       case "public_institution":
-        return "Публичная организация";
+        return t.organizationTypes.publicInstitution;
       default:
         return organizationType;
     }
@@ -1089,19 +1099,19 @@ export default async function DirectoryOrganizationPage({
   const getPublicVerificationLabel = (verificationStatus: string) => {
     switch (verificationStatus) {
       case "verified":
-        return "Проверено";
+        return t.verification.verified;
       case "pending":
-        return "На проверке";
+        return t.verification.pending;
       case "rejected":
-        return "Отклонено";
+        return t.verification.rejected;
       default:
-        return "Без верификации";
+        return t.verification.unverified;
     }
   };
 
   const getPublicLocationLabel = () => {
     if (!organization?.primaryLocation) {
-      return "Локация не указана";
+      return t.location.notSpecified;
     }
 
     const location = organization.primaryLocation;
@@ -1114,24 +1124,24 @@ export default async function DirectoryOrganizationPage({
       location.countryCode,
     ].filter(Boolean);
 
-    return parts.length > 0 ? parts.join(", ") : "Локация не указана";
+    return parts.length > 0 ? parts.join(", ") : t.location.notSpecified;
   };
 
   const getPublicBookingLabel = (offer: PublicDirectoryOffer) => {
     if (!offer.requiresBooking) {
-      return "Без обязательной записи";
+      return t.booking.notRequired;
     }
 
     if (offer.defaultDurationMinutes) {
-      return `Требуется запись · ${offer.defaultDurationMinutes} мин.`;
+      return t.booking.requiredWithDuration(offer.defaultDurationMinutes);
     }
 
-    return "Требуется запись";
+    return t.booking.required;
   };
 
   const getPublicCertificatePaymentLabel = (offer: PublicDirectoryOffer) => {
     if (!offer.certificateAvailable) {
-      return "Недоступен";
+      return t.certificatePayment.unavailable;
     }
 
     if (offer.certificate.paymentMode === "points_only") {
@@ -1154,13 +1164,13 @@ export default async function DirectoryOrganizationPage({
       )}`;
     }
 
-    return "Сертификат доступен";
+    return t.certificatePayment.available;
   };
 
   const organizationDescription =
     organization?.shortDescription ??
     organization?.description ??
-    "Описание пока не добавлено.";
+    t.fallbacks.descriptionMissing;
 
   return (
     <main className="min-h-full bg-[#f5f6fb] px-4 py-8 text-[#1a1d2e]">
@@ -1169,16 +1179,16 @@ export default async function DirectoryOrganizationPage({
           href={appendLocaleToHref("/directory", selectedLocale)}
           className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] transition hover:bg-gray-50"
         >
-          ← Назад в каталог
+          {t.navigation.backToDirectoryWithArrow}
         </Link>
 
         {errorMessage ? (
           <section className="rounded-[18px] border border-[#fecaca] bg-[#fff1f2] p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
             <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#b42318]">
-              Directory error
+              {t.error.kicker}
             </div>
             <h1 className="text-[28px] font-bold text-[#7f1d1d]">
-              Ошибка загрузки карточки
+              {t.error.title}
             </h1>
             <p className="mt-2 text-[14px] leading-6 text-[#b42318]">
               {errorMessage}
@@ -1194,7 +1204,7 @@ export default async function DirectoryOrganizationPage({
                   <div className="mb-3 flex flex-wrap gap-2">
                     <span className="rounded-full border border-[#dfe4ff] bg-[#eef2ff] px-3 py-1.5 text-[12px] font-semibold text-[#3b6ef8]">
                       {organization.primaryCategory?.name ??
-                        "Категория будет уточнена AI"}
+                        t.fallbacks.categoryAi}
                     </span>
                     <span className="rounded-full border border-[#e5e7eb] bg-[#f8f9fd] px-3 py-1.5 text-[12px] font-semibold text-[#4a4f6a]">
                       {getPublicLocationLabel()}
@@ -1202,7 +1212,7 @@ export default async function DirectoryOrganizationPage({
                   </div>
 
                   <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7c8099]">
-                    Public enterprise card
+                    {t.hero.kicker}
                   </div>
 
                   <h1 className="text-[32px] font-bold tracking-[-0.035em] text-[#111827]">
@@ -1214,10 +1224,7 @@ export default async function DirectoryOrganizationPage({
                   </p>
 
                   <p className="mt-3 max-w-[760px] text-[12.5px] leading-5 text-[#7c8099]">
-                    На публичной карточке показывается безопасная информация:
-                    предприятие, публичные предложения, сертификаты и форма
-                    регистрации внешней покупки. Точный адрес не раскрывается,
-                    если он скрыт или указан приблизительно.
+                    {t.hero.safetyNote}
                   </p>
 
                   <div className="mt-5 flex flex-wrap gap-2">
@@ -1225,14 +1232,14 @@ export default async function DirectoryOrganizationPage({
                       href="#public-offers"
                       className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.22)] transition hover:bg-[#2f5fe3]"
                     >
-                      Посмотреть предложения
+                      {t.navigation.viewOffers}
                     </a>
 
                     <a
                       href="#register-purchase"
                       className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
                     >
-                      Зарегистрировать покупку
+                      {t.navigation.registerPurchase}
                     </a>
                   </div>
                 </div>
@@ -1240,7 +1247,7 @@ export default async function DirectoryOrganizationPage({
                 <aside className="grid content-start gap-3 rounded-[18px] border border-[#edf0f7] bg-[#f8f9fd] p-5">
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                      Предприятие
+                      {t.hero.enterpriseLabel}
                     </div>
                     <div className="mt-1 text-[20px] font-bold text-[#111827]">
                       {getPublicOrganizationTypeLabel(organization.type)}
@@ -1249,20 +1256,20 @@ export default async function DirectoryOrganizationPage({
 
                   <div className="grid gap-2 text-[13px] leading-5 text-[#5a5f7a]">
                     <p className="m-0">
-                      <strong className="text-[#343854]">Проверка:</strong>{" "}
+                      <strong className="text-[#343854]">{t.hero.verificationLabel}:</strong>{" "}
                       {getPublicVerificationLabel(organization.verificationStatus)}
                     </p>
                     <p className="m-0">
-                      <strong className="text-[#343854]">Валюта:</strong>{" "}
+                      <strong className="text-[#343854]">{t.hero.currencyLabel}:</strong>{" "}
                       {organization.defaultCurrency ?? "PLN"}
                     </p>
                     <p className="m-0">
-                      <strong className="text-[#343854]">Предложений:</strong>{" "}
+                      <strong className="text-[#343854]">{t.hero.offersLabel}:</strong>{" "}
                       {offers.length}
                     </p>
                     <p className="m-0">
-                      <strong className="text-[#343854]">Сертификат:</strong>{" "}
-                      {firstOfferWithCertificate ? "доступен" : "нет"}
+                      <strong className="text-[#343854]">{t.hero.certificateLabel}:</strong>{" "}
+                      {firstOfferWithCertificate ? t.common.available : t.common.none}
                     </p>
                   </div>
                 </aside>
@@ -1272,7 +1279,7 @@ export default async function DirectoryOrganizationPage({
             <section className="grid gap-4 md:grid-cols-3">
               <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                  Тип
+                  {t.hero.typeLabel}
                 </div>
                 <div className="mt-2 text-[20px] font-bold text-[#111827]">
                   {getPublicOrganizationTypeLabel(organization.type)}
@@ -1281,7 +1288,7 @@ export default async function DirectoryOrganizationPage({
 
               <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                  Локация
+                  {t.hero.locationLabel}
                 </div>
                 <div className="mt-2 text-[20px] font-bold text-[#111827]">
                   {getPublicLocationLabel()}
@@ -1290,29 +1297,25 @@ export default async function DirectoryOrganizationPage({
 
               <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                  Публичный flow
+                  {t.hero.publicFlowLabel}
                 </div>
                 <div className="mt-2 text-[20px] font-bold text-[#3b6ef8]">
-                  Offer → Certificate
+                  {t.hero.publicFlowValue}
                 </div>
               </article>
             </section>
 
             <section className="rounded-[18px] border border-[#dbeafe] bg-[#eff6ff] p-6 text-[#1e3a8a] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
               <div className="text-[11px] font-semibold uppercase tracking-[0.22em]">
-                POINTS / money boundary
+                {t.points.kicker}
               </div>
 
               <h2 className="mt-2 text-[22px] font-bold">
-                Сертификаты и POINTS
+                {t.points.title}
               </h2>
 
               <p className="mt-2 max-w-[860px] text-[13px] leading-6">
-                POINTS — это бонусные единицы программы лояльности, а не
-                деньги, валюта или средство платежа. Если сертификат показывает
-                схему вроде “2.33 POINTS + 50 PLN”, это означает смешанную
-                оплату: часть стоимости покрывается POINTS, остаток оплачивается
-                деньгами.
+                {t.points.description}
               </p>
             </section>
 
@@ -1323,22 +1326,20 @@ export default async function DirectoryOrganizationPage({
               <div className="mb-5 flex flex-col gap-3 border-b border-[#edf0f7] pb-5 md:flex-row md:items-start md:justify-between">
                 <div>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7c8099]">
-                    Public offers
+                    {t.offers.kicker}
                   </div>
 
                   <h2 className="mt-2 text-[26px] font-bold tracking-[-0.03em] text-[#111827]">
-                    Публичные предложения
+                    {t.offers.title}
                   </h2>
 
                   <p className="mt-2 text-[14px] leading-6 text-[#5a5f7a]">
-                    Здесь показываются реальные предложения предприятия:
-                    услуга как Value Object, цена, запись и доступность
-                    подарочного сертификата.
+                    {t.offers.description}
                   </p>
                 </div>
 
                 <span className="w-fit rounded-full border border-[#dfe3f1] bg-[#f8f9fd] px-4 py-2 text-[13px] font-bold text-[#4a4f6a]">
-                  {offers.length} предложений
+                  {t.offers.count(offers.length)}
                 </span>
               </div>
 
@@ -1350,7 +1351,7 @@ export default async function DirectoryOrganizationPage({
 
               {offers.length === 0 ? (
                 <div className="rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-4 text-[14px] text-[#92400e]">
-                  У этого предприятия пока нет публичных предложений.
+                  {t.offers.empty}
                 </div>
               ) : (
                 <div className="grid gap-4">
@@ -1369,7 +1370,7 @@ export default async function DirectoryOrganizationPage({
                           </span>
                           {offer.certificateAvailable ? (
                             <span className="rounded-full border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-1.5 text-[12px] font-semibold text-[#15803d]">
-                              Сертификат доступен
+                              {t.offers.certificateAvailable}
                             </span>
                           ) : null}
                         </div>
@@ -1379,20 +1380,20 @@ export default async function DirectoryOrganizationPage({
                         </h3>
 
                         <p className="mt-3 max-w-[820px] text-[14px] leading-6 text-[#5a5f7a]">
-                          {offer.description ?? "Описание пока не добавлено."}
+                          {offer.description ?? t.fallbacks.descriptionMissing}
                         </p>
 
                         <div className="mt-4 grid gap-3 md:grid-cols-3">
                           <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
                             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                              Цена
+                              {t.offers.priceLabel}
                             </div>
                             <div className="mt-1 text-[20px] font-bold text-[#111827]">
                               {formatPublicMoney(offer.price, offer.currency)}
                             </div>
                             {offer.regularPrice ? (
                               <div className="mt-1 text-[12px] text-[#7c8099]">
-                                Обычная цена:{" "}
+                                {t.offers.regularPriceLabel}:{" "}
                                 {formatPublicMoney(
                                   offer.regularPrice,
                                   offer.currency,
@@ -1403,24 +1404,24 @@ export default async function DirectoryOrganizationPage({
 
                           <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
                             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                              Запись
+                              {t.offers.bookingLabel}
                             </div>
                             <div className="mt-1 text-[20px] font-bold text-[#111827]">
-                              {offer.requiresBooking ? "Нужна" : "Не нужна"}
+                              {offer.requiresBooking ? t.booking.needed : t.booking.notNeeded}
                             </div>
                             <div className="mt-1 text-[12px] text-[#7c8099]">
                               {offer.defaultDurationMinutes
-                                ? `${offer.defaultDurationMinutes} мин.`
-                                : "длительность не указана"}
+                                ? t.booking.durationShort(offer.defaultDurationMinutes)
+                                : t.booking.durationNotSpecified}
                             </div>
                           </div>
 
                           <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
                             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                              Сертификат
+                              {t.offers.certificateLabel}
                             </div>
                             <div className="mt-1 text-[20px] font-bold text-[#111827]">
-                              {offer.certificateAvailable ? "Да" : "Нет"}
+                              {offer.certificateAvailable ? t.common.yes : t.common.no}
                             </div>
                             <div className="mt-1 text-[12px] text-[#7c8099]">
                               
@@ -1434,7 +1435,7 @@ export default async function DirectoryOrganizationPage({
                         {offer.certificateAvailable ? (
                           <div className="mt-4 rounded-2xl border border-[#dbeafe] bg-[#eff6ff] p-4 text-[#1e3a8a]">
                             <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
-                              Certificate payment
+                              {t.offers.certificatePaymentLabel}
                             </div>
                             <div className="mt-1 text-[18px] font-bold">
                               {getPublicCertificatePaymentLabel(offer)}
@@ -1447,7 +1448,7 @@ export default async function DirectoryOrganizationPage({
                             </div>
                             <p className="mt-2 text-[12.5px] leading-5">
                               {offer.certificate.terms ??
-                                "Условия сертификата пока не добавлены."}
+                                t.offers.certificateTermsMissing}
                             </p>
                           </div>
                         ) : null}
@@ -1455,14 +1456,14 @@ export default async function DirectoryOrganizationPage({
 
                       <aside className="grid content-start gap-3 rounded-[18px] border border-[#edf0f7] bg-[#f8f9fd] p-4">
                         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                          Быстрые действия
+                          {t.offers.quickActions}
                         </div>
 
                         <Link
                           href={appendLocaleToHref(`/offers/${offer.id}`, selectedLocale)}
                           className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-center text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
                         >
-                          Подробное описание
+                          {t.offers.detailsAction}
                         </Link>
 
                         {offer.certificateAvailable ? (
@@ -1470,7 +1471,7 @@ export default async function DirectoryOrganizationPage({
                             href={appendLocaleToHref(`/certificates/new?offerId=${offer.id}`, selectedLocale)}
                             className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-center text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.22)] transition hover:bg-[#2f5fe3]"
                           >
-                            Заказать сертификат
+                            {t.offers.orderCertificateAction}
                           </Link>
                         ) : null}
 
@@ -1478,7 +1479,7 @@ export default async function DirectoryOrganizationPage({
                           href="#register-purchase"
                           className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-center text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
                         >
-                          Зарегистрировать покупку
+                          {t.navigation.registerPurchase}
                         </a>
                       </aside>
                     </article>
@@ -1497,21 +1498,21 @@ export default async function DirectoryOrganizationPage({
                 href={appendLocaleToHref("/directory", selectedLocale)}
                 className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
               >
-                Назад в каталог
+                {t.navigation.backToDirectory}
               </Link>
 
               <a
                 href="#public-offers"
                 className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white transition hover:bg-[#2f5fe3]"
               >
-                Посмотреть предложения
+                {t.navigation.viewOffers}
               </a>
 
               <a
                 href="#register-purchase"
                 className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
               >
-                Зарегистрировать покупку
+                {t.navigation.registerPurchase}
               </a>
             </section>
           </>
