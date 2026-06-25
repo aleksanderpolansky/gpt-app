@@ -2,6 +2,11 @@
 
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { getOffersMessages } from "../../../i18n/messages/offers";
+import {
+  getOfferTypeLabel as getSharedOfferTypeLabel,
+  getOrganizationTypeLabel as getSharedOrganizationTypeLabel,
+} from "../../../i18n/messages/system-labels";
 
 type Organization = {
   id: string;
@@ -76,38 +81,19 @@ function normalizeCurrency(value: string) {
   return trimmedValue.length > 0 ? trimmedValue : "PLN";
 }
 
-function getOrganizationTypeLabel(type: string | null | undefined) {
-  switch (type) {
-    case "private_business":
-      return "частный бизнес";
-    case "company":
-      return "компания";
-    case "non_profit":
-      return "некоммерческая организация";
-    case "public_institution":
-      return "публичная организация";
-    default:
-      return type ?? "тип не указан";
-  }
+function getOrganizationTypeLabel(
+  type: string | null | undefined,
+  locale: string
+) {
+  return getSharedOrganizationTypeLabel(type ?? "", locale);
 }
 
 function getValueTypeLabel(type: string | null | undefined) {
-  switch (type) {
-    case "service":
-      return "услуга";
-    case "bookable_service":
-      return "услуга с записью";
-    case "product":
-      return "товар";
-    case "consultation":
-      return "консультация";
-    case "access":
-      return "доступ";
-    case "content":
-      return "контент";
-    default:
-      return type ?? "ценный объект";
+  if (!type) {
+    return "Value Object";
   }
+
+  return type;
 }
 
 function formatMoney(value: string | number | null | undefined, currency: string) {
@@ -164,7 +150,110 @@ function buildCertificateTerms(valueObjectTitle: string) {
   return `Certyfikat uprawnia do skorzystania z jednej 30-minutowej usługi: ${valueObjectTitle} w Szczecinie. Termin realizacji należy uzgodnić wcześniej ze sprzedawcą. Certyfikat nie jest usługą medyczną i nie zastępuje konsultacji lekarskiej ani fizjoterapeutycznej.`;
 }
 
+
+function normalizeLocaleParam(value: string | null | undefined) {
+  if (!value) {
+    return "ru";
+  }
+
+  const normalized = value.toLowerCase();
+
+  if (
+    normalized === "ru" ||
+    normalized === "pl" ||
+    normalized === "en" ||
+    normalized === "es" ||
+    normalized === "uk" ||
+    normalized === "de" ||
+    normalized === "cs"
+  ) {
+    return normalized;
+  }
+
+  return "ru";
+}
+
+function appendLocaleToHref(href: string, locale: string) {
+  const separator = href.includes("?") ? "&" : "?";
+  return href + separator + "locale=" + encodeURIComponent(locale);
+}
+
+function getNewOfferText(messages: unknown, key: string, fallback: string) {
+  const value = (messages as Record<string, unknown>)[key];
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value;
+  }
+
+  return fallback;
+}
+
+function getCommonText(messages: unknown, key: string, fallback: string) {
+  const value = (messages as Record<string, unknown>)[key];
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value;
+  }
+
+  return fallback;
+}
+
+function getBookingModeText(value: string, messages: unknown) {
+  if (value === "seller_confirmed") {
+    return getNewOfferText(messages, "bookingModeSellerConfirmed", "Seller confirms");
+  }
+
+  if (value === "not_required") {
+    return getNewOfferText(messages, "bookingModeNotRequired", "Booking not required");
+  }
+
+  if (value === "manual") {
+    return getNewOfferText(messages, "bookingModeManual", "Manual coordination");
+  }
+
+  return value;
+}
+
+function getReceiverTypeText(value: string, messages: unknown) {
+  if (value === "person") {
+    return getNewOfferText(messages, "receiverPerson", "For a person");
+  }
+
+  if (value === "organization") {
+    return getNewOfferText(messages, "receiverOrganization", "For an organization");
+  }
+
+  if (value === "any") {
+    return getNewOfferText(messages, "receiverAny", "For any recipient");
+  }
+
+  return value;
+}
+
+function getRefundPolicyText(value: string, messages: unknown) {
+  if (value === "refund_until_seller_confirmation") {
+    return getNewOfferText(messages, "refundUntilSellerConfirmation", "Refund until seller confirmation");
+  }
+
+  if (value === "refund_until_delivery") {
+    return getNewOfferText(messages, "refundUntilDelivery", "Refund until delivery");
+  }
+
+  if (value === "manual_review") {
+    return getNewOfferText(messages, "refundManualReview", "Manual review");
+  }
+
+  if (value === "no_refund") {
+    return getNewOfferText(messages, "refundNoRefund", "No refund");
+  }
+
+  return value;
+}
 export default function NewOfferPage() {
+  const [selectedLocale, setSelectedLocale] = useState("ru");
+  const t = getOffersMessages(selectedLocale);
+  const newOfferMessages = t.newOffer;
+  const commonMessages = t.common;
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [valueObjects, setValueObjects] = useState<ValueObject[]>([]);
 
@@ -266,7 +355,7 @@ export default function NewOfferPage() {
         moneyToPay: 0,
         pointsPrice: 0,
         warning:
-          "Сумма покрытия POINTS не может быть больше цены предложения.",
+          "POINTS coverage cannot be higher than the offer price.",
       };
     }
 
@@ -287,7 +376,7 @@ export default function NewOfferPage() {
         mode: "invalid",
         moneyToPay: offerPrice,
         pointsPrice: 0,
-        warning: "Для расчёта POINTS нужен курс и ценность одного POINT.",
+        warning: "POINTS calculation requires an exchange rate and a POINT value.",
       };
     }
 
@@ -390,12 +479,12 @@ export default function NewOfferPage() {
         (await valueObjectsResponse.json()) as ValueObjectsResponse;
 
       if (!organizationsResponse.ok || !organizationsData.ok) {
-        setMessage(organizationsData.error ?? "Не удалось загрузить предприятия.");
+        setMessage(organizationsData.error ?? getNewOfferText(newOfferMessages, "loadOrganizationsError", "Could not load businesses."));
         return;
       }
 
       if (!valueObjectsResponse.ok || !valueObjectsData.ok) {
-        setMessage(valueObjectsData.error ?? "Не удалось загрузить услуги.");
+        setMessage(valueObjectsData.error ?? getNewOfferText(newOfferMessages, "loadValueObjectsError", "Could not load services."));
         return;
       }
 
@@ -437,13 +526,23 @@ export default function NewOfferPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : "Неизвестная ошибка загрузки данных.",
+          : getNewOfferText(newOfferMessages, "unknownLoadError", "Unknown data loading error."),
       );
     } finally {
       setIsLoadingData(false);
     }
   }, [applyValueObjectToOffer]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const searchParams = new URLSearchParams(window.location.search);
+    setSelectedLocale(
+      normalizeLocaleParam(searchParams.get("locale") ?? searchParams.get("lang"))
+    );
+  }, []);
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       void loadInitialData();
@@ -589,17 +688,17 @@ export default function NewOfferPage() {
       const data = (await response.json()) as CreateOfferResponse;
 
       if (!response.ok || !data.ok) {
-        setMessage(data.error ?? "Не удалось создать предложение.");
+        setMessage(data.error ?? getNewOfferText(newOfferMessages, "createOfferError", "Could not create offer."));
         return;
       }
 
       setCreatedOffer(data.offer ?? null);
-      setMessage("Предложение создано. Теперь можно проверить сертификат и каталог.");
+      setMessage(getNewOfferText(newOfferMessages, "createOfferSuccess", "Offer created. Now you can check the certificate and directory."));
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "Неизвестная ошибка создания предложения.",
+          : getNewOfferText(newOfferMessages, "unknownCreateError", "Unknown offer creation error."),
       );
     } finally {
       setIsSubmitting(false);
@@ -619,29 +718,31 @@ export default function NewOfferPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <h1 className="text-[30px] font-bold tracking-[-0.03em] text-[#111827]">
-                Создать предложение предприятия
+                {getNewOfferText(newOfferMessages, "title", "Create business offer")}
               </h1>
 
               <p className="mt-2 max-w-[820px] text-[14px] leading-6 text-[#5a5f7a]">
-                Предложение связывает предприятие, услугу как Value Object,
-                цену, условия записи и подарочный сертификат. Здесь мы создаём
-                реальное предложение для Szczecin.
+                {getNewOfferText(
+                  newOfferMessages,
+                  "description",
+                  "An offer connects a business, a service as a Value Object, price, booking rules and a gift certificate. This creates a real offer for Szczecin."
+                )}
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <Link
-                href="/organizations"
+                href={appendLocaleToHref("/organizations", selectedLocale)}
                 className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
               >
-                Мои предприятия
+                {getNewOfferText(newOfferMessages, "myOrganizations", "My businesses")}
               </Link>
 
               <Link
-                href="/offers"
+                href={appendLocaleToHref("/offers", selectedLocale)}
                 className="rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
               >
-                Список предложений
+                {getNewOfferText(newOfferMessages, "offersList", "Offers list")}
               </Link>
             </div>
           </div>
@@ -655,14 +756,17 @@ export default function NewOfferPage() {
             <div className="mb-5 flex flex-col gap-3 border-b border-[#edf0f7] pb-5 md:flex-row md:items-start md:justify-between">
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                  Шаг 2
+                  {getNewOfferText(newOfferMessages, "stepLabel", "Step 2")}
                 </div>
                 <h2 className="mt-1 text-[22px] font-bold text-[#111827]">
-                  Предложение на базе услуги
+                  {getNewOfferText(newOfferMessages, "serviceBasedOfferTitle", "Offer based on a service")}
                 </h2>
                 <p className="mt-1 text-[13px] leading-5 text-[#7c8099]">
-                  Услуга уже создана. Теперь оформляем offer и включаем
-                  подарочный сертификат.
+                  {getNewOfferText(
+                    newOfferMessages,
+                    "serviceBasedOfferDescription",
+                    "The service has already been created. Now we create the offer and enable the gift certificate."
+                  )}
                 </p>
               </div>
 
@@ -671,7 +775,7 @@ export default function NewOfferPage() {
                 onClick={applyMassageOfferPilot}
                 className="rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
               >
-                Заполнить offer массажа
+                {getNewOfferText(newOfferMessages, "fillMassageOffer", "Fill massage offer")}
               </button>
             </div>
 
@@ -679,14 +783,17 @@ export default function NewOfferPage() {
             !selectedOrganization &&
             !isLoadingData ? (
               <div className="mb-5 rounded-xl border border-[#facc15] bg-[#fefce8] px-4 py-3 text-[13px] leading-5 text-[#92400e]">
-                Предприятие из ссылки не найдено или доступ запрещён. Выберите
-                предприятие вручную.
+                {getNewOfferText(
+                  newOfferMessages,
+                  "organizationFromUrlNotFound",
+                  "The business from the link was not found or access is denied. Select the business manually."
+                )}
               </div>
             ) : null}
 
             {selectedOrganization ? (
               <div className="mb-5 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-[13px] leading-5 text-[#1d4ed8]">
-                <strong>Выбранное предприятие:</strong>{" "}
+                <strong>{getNewOfferText(newOfferMessages, "selectedOrganizationLabel", "Selected business")}:</strong>{" "}
                 {selectedOrganization.organization_name}
               </div>
             ) : null}
@@ -694,7 +801,7 @@ export default function NewOfferPage() {
             <div className="grid gap-5">
               <div className="grid gap-2">
                 <label className="text-[13px] font-semibold text-[#343854]">
-                  Предприятие
+                  {getNewOfferText(newOfferMessages, "organizationLabel", "Business")}
                 </label>
                 <select
                   value={organizationId}
@@ -704,13 +811,13 @@ export default function NewOfferPage() {
                   className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
                 >
                   {organizations.length === 0 ? (
-                    <option value="">Нет доступных предприятий</option>
+                    <option value="">{getNewOfferText(newOfferMessages, "noAvailableOrganizations", "No available businesses")}</option>
                   ) : null}
 
                   {organizations.map((organization) => (
                     <option key={organization.id} value={organization.id}>
                       {organization.organization_name} —{" "}
-                      {getOrganizationTypeLabel(organization.organization_type)}
+                      {getOrganizationTypeLabel(organization.organization_type, selectedLocale)}
                     </option>
                   ))}
                 </select>
@@ -718,7 +825,7 @@ export default function NewOfferPage() {
 
               <div className="grid gap-2">
                 <label className="text-[13px] font-semibold text-[#343854]">
-                  Услуга / основной Value Object
+                  {getNewOfferText(newOfferMessages, "valueObjectLabel", "Service / main Value Object")}
                 </label>
                 <select
                   value={valueObjectId}
@@ -728,8 +835,16 @@ export default function NewOfferPage() {
                 >
                   <option value="">
                     {filteredValueObjects.length === 0
-                      ? "Нет услуг для выбранного предприятия"
-                      : "Выберите услугу"}
+                      ? getNewOfferText(
+                          newOfferMessages,
+                          "noServicesForOrganization",
+                          "No services for the selected business"
+                        )
+                      : getNewOfferText(
+                          newOfferMessages,
+                          "selectService",
+                          "Select service"
+                        )}
                   </option>
 
                   {filteredValueObjects.map((valueObject) => (
@@ -741,17 +856,17 @@ export default function NewOfferPage() {
 
                 {organizationId && filteredValueObjects.length === 0 ? (
                   <Link
-                    href={`/value-objects/new?organizationId=${organizationId}`}
+                    href={appendLocaleToHref(`/value-objects/new?organizationId=${organizationId}`, selectedLocale)}
                     className="text-[12px] font-semibold text-[#3b6ef8] underline-offset-4 hover:underline"
                   >
-                    Сначала добавить услугу для этого предприятия
+                    {getNewOfferText(newOfferMessages, "addServiceFirst", "Add a service for this business first")}
                   </Link>
                 ) : null}
               </div>
 
               <div className="grid gap-2">
                 <label className="text-[13px] font-semibold text-[#343854]">
-                  Название предложения
+                  {getNewOfferText(newOfferMessages, "offerTitleLabel", "Offer title")}
                 </label>
                 <input
                   value={title}
@@ -764,7 +879,7 @@ export default function NewOfferPage() {
 
               <div className="grid gap-2">
                 <label className="text-[13px] font-semibold text-[#343854]">
-                  Описание предложения
+                  {getNewOfferText(newOfferMessages, "offerDescriptionLabel", "Offer description")}
                 </label>
                 <textarea
                   value={description}
@@ -778,25 +893,25 @@ export default function NewOfferPage() {
               <div className="grid gap-4 md:grid-cols-4">
                 <div className="grid gap-2">
                   <label className="text-[13px] font-semibold text-[#343854]">
-                    Тип offer
+                    {getNewOfferText(newOfferMessages, "offerTypeLabel", "Offer type")}
                   </label>
                   <select
                     value={offerType}
                     onChange={(event) => setOfferType(event.target.value)}
                     className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
                   >
-                    <option value="bookable_service">Услуга с записью</option>
-                    <option value="service">Услуга</option>
-                    <option value="product">Товар</option>
-                    <option value="bundle">Пакет / bundle</option>
-                    <option value="consultation">Консультация</option>
-                    <option value="reward">Reward / сертификат</option>
+                    <option value="bookable_service">{getSharedOfferTypeLabel("bookable_service", selectedLocale)}</option>
+                    <option value="service">{getSharedOfferTypeLabel("service", selectedLocale)}</option>
+                    <option value="product">{getSharedOfferTypeLabel("product", selectedLocale)}</option>
+                    <option value="bundle">{getSharedOfferTypeLabel("bundle", selectedLocale)}</option>
+                    <option value="consultation">{getSharedOfferTypeLabel("consultation", selectedLocale)}</option>
+                    <option value="reward">{getSharedOfferTypeLabel("reward", selectedLocale)}</option>
                   </select>
                 </div>
 
                 <div className="grid gap-2">
                   <label className="text-[13px] font-semibold text-[#343854]">
-                    Цена
+                    {getNewOfferText(newOfferMessages, "priceLabel", "Price")}
                   </label>
                   <input
                     value={price}
@@ -813,7 +928,7 @@ export default function NewOfferPage() {
 
                 <div className="grid gap-2">
                   <label className="text-[13px] font-semibold text-[#343854]">
-                    Валюта
+                    {getNewOfferText(newOfferMessages, "currencyLabel", "Currency")}
                   </label>
                   <input
                     value={currency}
@@ -830,7 +945,7 @@ export default function NewOfferPage() {
 
                 <div className="grid gap-2">
                   <label className="text-[13px] font-semibold text-[#343854]">
-                    Длительность, мин.
+                    {getNewOfferText(newOfferMessages, "durationMinutesLabel", "Duration, min.")}
                   </label>
                   <input
                     value={defaultDurationMinutes}
@@ -856,11 +971,10 @@ export default function NewOfferPage() {
                   />
                   <span>
                     <span className="block text-[13px] font-semibold text-[#343854]">
-                      Требуется согласование времени
+                      {getNewOfferText(newOfferMessages, "requiresBookingLabel", "Time coordination required")}
                     </span>
                     <span className="mt-1 block text-[12px] leading-5 text-[#7c8099]">
-                      Для массажа клиент должен договориться о времени со
-                      продавцом.
+                      {getNewOfferText(newOfferMessages, "requiresBookingHelp", "For massage, the client must agree the time with the seller.")}
                     </span>
                   </span>
                 </label>
@@ -868,22 +982,22 @@ export default function NewOfferPage() {
                 <div className="grid gap-2 md:grid-cols-2">
                   <div className="grid gap-2">
                     <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      Режим записи
+                      {getNewOfferText(newOfferMessages, "bookingModeLabel", "Booking mode")}
                     </label>
                     <select
                       value={bookingMode}
                       onChange={(event) => setBookingMode(event.target.value)}
                       className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
                     >
-                      <option value="seller_confirmed">Подтверждает продавец</option>
-                      <option value="not_required">Запись не требуется</option>
-                      <option value="manual">Ручное согласование</option>
+                      <option value="seller_confirmed">{getBookingModeText("seller_confirmed", newOfferMessages)}</option>
+                      <option value="not_required">{getBookingModeText("not_required", newOfferMessages)}</option>
+                      <option value="manual">{getBookingModeText("manual", newOfferMessages)}</option>
                     </select>
                   </div>
 
                   <div className="grid gap-2">
                     <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      Для кого
+                      {getNewOfferText(newOfferMessages, "targetReceiverLabel", "For whom")}
                     </label>
                     <select
                       value={targetReceiverType}
@@ -892,9 +1006,9 @@ export default function NewOfferPage() {
                       }
                       className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
                     >
-                      <option value="person">Для человека</option>
-                      <option value="organization">Для организации</option>
-                      <option value="any">Для любого получателя</option>
+                      <option value="person">{getReceiverTypeText("person", newOfferMessages)}</option>
+                      <option value="organization">{getReceiverTypeText("organization", newOfferMessages)}</option>
+                      <option value="any">{getReceiverTypeText("any", newOfferMessages)}</option>
                     </select>
                   </div>
                 </div>
@@ -904,15 +1018,13 @@ export default function NewOfferPage() {
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1d4ed8]">
-                      Подарочный сертификат
+                      {getNewOfferText(newOfferMessages, "certificateSectionTitle", "Gift certificate")}
                     </div>
                     <h3 className="mt-1 text-[18px] font-bold text-[#1e3a8a]">
-                      Включить сертификат на базе этого предложения
+                      {getNewOfferText(newOfferMessages, "certificateSectionToggle", "Enable certificate based on this offer")}
                     </h3>
                     <p className="mt-1 text-[12px] leading-5 text-[#1d4ed8]">
-                      Сертификат будет связан с offer и услугой. На этом этапе
-                      сертификат оплачивается деньгами, POINTS можно подключать
-                      позже.
+                      {getNewOfferText(newOfferMessages, "certificateSectionHelp", "The certificate will be connected to the offer and service. At this stage the certificate is paid with money; POINTS can be connected later.")}
                     </p>
                   </div>
 
@@ -924,7 +1036,7 @@ export default function NewOfferPage() {
                         setCertificateAvailable(event.target.checked)
                       }
                     />
-                    Сертификат доступен
+                    {getNewOfferText(newOfferMessages, "certificateAvailableLabel", "Certificate available")}
                   </label>
                 </div>
 
@@ -932,7 +1044,7 @@ export default function NewOfferPage() {
                   <div className="grid gap-4">
                     <div className="grid gap-2">
                       <label className="text-[13px] font-semibold text-[#1e3a8a]">
-                        Условия сертификата
+                        {getNewOfferText(newOfferMessages, "certificateTermsLabel", "Certificate terms")}
                       </label>
                       <textarea
                         value={certificateTerms}
@@ -947,7 +1059,7 @@ export default function NewOfferPage() {
                     <div className="grid gap-4 md:grid-cols-4">
                       <div className="grid gap-2">
                         <label className="text-[12px] font-semibold text-[#1e3a8a]">
-                          Срок, дней
+                          {getNewOfferText(newOfferMessages, "certificateValidityDaysLabel", "Validity, days")}
                         </label>
                         <input
                           value={certificateValidityDays}
@@ -962,7 +1074,7 @@ export default function NewOfferPage() {
 
                       <div className="grid gap-2">
                         <label className="text-[12px] font-semibold text-[#1e3a8a]">
-                          Валюта сертификата
+                          {getNewOfferText(newOfferMessages, "certificateCurrencyLabel", "Certificate currency")}
                         </label>
                         <input
                           value={certificateCurrency}
@@ -977,7 +1089,7 @@ export default function NewOfferPage() {
 
                       <div className="grid gap-2">
                         <label className="text-[12px] font-semibold text-[#1e3a8a]">
-                          Покрытие POINTS
+                          {getNewOfferText(newOfferMessages, "pointsCoverageLabel", "POINTS coverage")}
                         </label>
                         <input
                           value={certificatePointsCoveredAmount}
@@ -992,7 +1104,7 @@ export default function NewOfferPage() {
 
                       <div className="grid gap-2">
                         <label className="text-[12px] font-semibold text-[#1e3a8a]">
-                          Лимит сертификатов
+                          {getNewOfferText(newOfferMessages, "certificateLimitLabel", "Certificate limit")}
                         </label>
                         <input
                           value={maxCertificatesTotal}
@@ -1000,7 +1112,7 @@ export default function NewOfferPage() {
                             setMaxCertificatesTotal(event.target.value)
                           }
                           inputMode="numeric"
-                          placeholder="без лимита"
+                          placeholder={getNewOfferText(newOfferMessages, "noLimitPlaceholder", "no limit")}
                           className="w-full rounded-xl border border-[#bfdbfe] bg-white px-4 py-3 text-[13px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
                         />
                       </div>
@@ -1016,7 +1128,7 @@ export default function NewOfferPage() {
                           }
                           className="mt-0.5"
                         />
-                        Продавец подтверждает использование
+                        {getNewOfferText(newOfferMessages, "sellerConfirmationLabel", "Seller confirms usage")}
                       </label>
 
                       <label className="flex items-start gap-2 text-[12px] font-semibold text-[#1d4ed8]">
@@ -1028,7 +1140,7 @@ export default function NewOfferPage() {
                           }
                           className="mt-0.5"
                         />
-                        Можно передать другому человеку
+                        {getNewOfferText(newOfferMessages, "transferableLabel", "Can be transferred to another person")}
                       </label>
 
                       <label className="flex items-start gap-2 text-[12px] font-semibold text-[#1d4ed8]">
@@ -1040,7 +1152,7 @@ export default function NewOfferPage() {
                           }
                           className="mt-0.5"
                         />
-                        Можно отменить по правилам платформы
+                        {getNewOfferText(newOfferMessages, "cancellableLabel", "Can be cancelled under platform rules")}
                       </label>
                     </div>
                   </div>
@@ -1049,13 +1161,13 @@ export default function NewOfferPage() {
 
               <details className="rounded-2xl border border-[#edf0f7] bg-white p-4">
                 <summary className="cursor-pointer text-[13px] font-bold text-[#4a4f6a]">
-                  Дополнительные настройки POINTS и ограничений
+                  {getNewOfferText(newOfferMessages, "advancedPointsSettingsTitle", "Additional POINTS and limit settings")}
                 </summary>
 
                 <div className="mt-4 grid gap-4 md:grid-cols-3">
                   <div className="grid gap-2">
                     <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      Валюта баллов
+                      {getNewOfferText(newOfferMessages, "pointsCurrencyLabel", "POINTS currency")}
                     </label>
                     <input
                       value={pointsCurrencyCode}
@@ -1068,7 +1180,7 @@ export default function NewOfferPage() {
 
                   <div className="grid gap-2">
                     <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      Базовая валюта
+                      {getNewOfferText(newOfferMessages, "referenceCurrencyLabel", "Base currency")}
                     </label>
                     <input
                       value={referenceCurrency}
@@ -1081,7 +1193,7 @@ export default function NewOfferPage() {
 
                   <div className="grid gap-2">
                     <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      Курс 1 EUR к PLN
+                      {getNewOfferText(newOfferMessages, "referenceExchangeRateLabel", "1 EUR to PLN rate")}
                     </label>
                     <input
                       value={referenceExchangeRate}
@@ -1107,7 +1219,7 @@ export default function NewOfferPage() {
 
                   <div className="grid gap-2">
                     <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      Источник курса
+                      {getNewOfferText(newOfferMessages, "exchangeRateSourceLabel", "Exchange rate source")}
                     </label>
                     <input
                       value={referenceExchangeRateSource}
@@ -1120,7 +1232,7 @@ export default function NewOfferPage() {
 
                   <div className="grid gap-2">
                     <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      Дата курса
+                      {getNewOfferText(newOfferMessages, "exchangeRateDateLabel", "Exchange rate date")}
                     </label>
                     <input
                       type="date"
@@ -1134,33 +1246,33 @@ export default function NewOfferPage() {
 
                   <div className="grid gap-2">
                     <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      Лимит на пользователя
+                      {getNewOfferText(newOfferMessages, "certificatePerUserLimitLabel", "Limit per user")}
                     </label>
                     <input
                       value={maxCertificatesPerUser}
                       onChange={(event) =>
                         setMaxCertificatesPerUser(event.target.value)
                       }
-                      placeholder="без лимита"
+                      placeholder={getNewOfferText(newOfferMessages, "noLimitPlaceholder", "no limit")}
                       className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px]"
                     />
                   </div>
 
                   <div className="grid gap-2">
                     <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      Лимит количества услуг
+                      {getNewOfferText(newOfferMessages, "serviceLimitLabel", "Service quantity limit")}
                     </label>
                     <input
                       value={quantityLimit}
                       onChange={(event) => setQuantityLimit(event.target.value)}
-                      placeholder="без лимита"
+                      placeholder={getNewOfferText(newOfferMessages, "noLimitPlaceholder", "no limit")}
                       className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px]"
                     />
                   </div>
 
                   <div className="grid gap-2">
                     <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      Политика возврата
+                      {getNewOfferText(newOfferMessages, "refundPolicyLabel", "Refund policy")}
                     </label>
                     <select
                       value={pointsRefundPolicy}
@@ -1170,13 +1282,13 @@ export default function NewOfferPage() {
                       className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px]"
                     >
                       <option value="refund_until_seller_confirmation">
-                        Возврат до подтверждения продавца
+                        {getRefundPolicyText("refund_until_seller_confirmation", newOfferMessages)}
                       </option>
                       <option value="refund_until_delivery">
-                        Возврат до оказания услуги
+                        {getRefundPolicyText("refund_until_delivery", newOfferMessages)}
                       </option>
-                      <option value="manual_review">Ручное рассмотрение</option>
-                      <option value="no_refund">Без возврата</option>
+                      <option value="manual_review">{getRefundPolicyText("manual_review", newOfferMessages)}</option>
+                      <option value="no_refund">{getRefundPolicyText("no_refund", newOfferMessages)}</option>
                     </select>
                   </div>
 
@@ -1187,7 +1299,7 @@ export default function NewOfferPage() {
                       onChange={(event) => setIsPublicReward(event.target.checked)}
                       className="mt-0.5"
                     />
-                    Публичный reward / сертификат
+                    {getNewOfferText(newOfferMessages, "publicRewardLabel", "Public reward / certificate")}
                   </label>
                 </div>
               </details>
@@ -1209,7 +1321,7 @@ export default function NewOfferPage() {
                 disabled={!canSubmit}
                 className="rounded-xl bg-[#3b6ef8] px-5 py-3 text-[14px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.24)] transition hover:bg-[#2f5fe3] disabled:cursor-not-allowed disabled:bg-[#aeb6c8] disabled:shadow-none"
               >
-                {isSubmitting ? "Создаю предложение..." : "Создать предложение"}
+                {isSubmitting ? getNewOfferText(newOfferMessages, "createButtonLoading", "Creating offer...") : getNewOfferText(newOfferMessages, "createButton", "Create offer")}
               </button>
             </div>
           </form>
@@ -1217,7 +1329,7 @@ export default function NewOfferPage() {
           <aside className="grid content-start gap-4">
             <section className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
               <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                Связь данных
+                {getNewOfferText(newOfferMessages, "dataLinkTitle", "Data link")}
               </div>
 
               <h2 className="mt-2 text-[20px] font-bold text-[#111827]">
@@ -1226,20 +1338,20 @@ export default function NewOfferPage() {
 
               <div className="mt-3 grid gap-3 text-[13px] leading-5 text-[#5a5f7a]">
                 <p className="m-0">
-                  <strong className="text-[#343854]">Предприятие:</strong>{" "}
-                  {selectedOrganization?.organization_name ?? "не выбрано"}
+                  <strong className="text-[#343854]">{getNewOfferText(newOfferMessages, "organizationLabel", "Business")}:</strong>{" "}
+                  {selectedOrganization?.organization_name ?? getNewOfferText(newOfferMessages, "notSelected", "not selected")}
                 </p>
                 <p className="m-0">
-                  <strong className="text-[#343854]">Услуга:</strong>{" "}
-                  {selectedValueObject?.title ?? "не выбрана"}
+                  <strong className="text-[#343854]">{getNewOfferText(newOfferMessages, "valueObjectLabel", "Service / main Value Object")}:</strong>{" "}
+                  {selectedValueObject?.title ?? getNewOfferText(newOfferMessages, "notSelected", "not selected")}
                 </p>
                 <p className="m-0">
-                  <strong className="text-[#343854]">Цена:</strong>{" "}
+                  <strong className="text-[#343854]">{getNewOfferText(newOfferMessages, "priceLabel", "Price")}:</strong>{" "}
                   {formatMoney(price, normalizeCurrency(currency))}
                 </p>
                 <p className="m-0">
-                  <strong className="text-[#343854]">Сертификат:</strong>{" "}
-                  {certificateAvailable ? "включён" : "выключен"}
+                  <strong className="text-[#343854]">{getNewOfferText(newOfferMessages, "createdCertificateLabel", "Certificate")}:</strong>{" "}
+                  {certificateAvailable ? getCommonText(commonMessages, "yes", "yes") : getCommonText(commonMessages, "no", "no")}
                 </p>
               </div>
 
@@ -1264,18 +1376,26 @@ export default function NewOfferPage() {
 
             <section className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
               <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                Preview сертификата
+                {getNewOfferText(newOfferMessages, "previewTitle", "Certificate preview")}
               </div>
 
               <h2 className="mt-2 text-[20px] font-bold text-[#111827]">
                 {certificateAvailable
-                  ? "Подарочный сертификат будет доступен"
-                  : "Сертификат выключен"}
+                  ? getNewOfferText(
+                      newOfferMessages,
+                      "certificateWillBeAvailable",
+                      "Gift certificate will be available"
+                    )
+                  : getNewOfferText(
+                      newOfferMessages,
+                      "certificateDisabled",
+                      "Certificate disabled"
+                    )}
               </h2>
 
               <div className="mt-3 grid gap-2 text-[13px] leading-5 text-[#5a5f7a]">
                 <p className="m-0">
-                  <strong className="text-[#343854]">К оплате деньгами:</strong>{" "}
+                  <strong className="text-[#343854]">{getNewOfferText(newOfferMessages, "moneyToPayLabel", "Money to pay")}:</strong>{" "}
                   {formatMoney(
                     certificatePreview.moneyToPay,
                     normalizeCurrency(certificateCurrency || currency),
@@ -1286,8 +1406,8 @@ export default function NewOfferPage() {
                   {certificatePreview.pointsPrice}
                 </p>
                 <p className="m-0">
-                  <strong className="text-[#343854]">Срок:</strong>{" "}
-                  {certificateValidityDays || "180"} дней
+                  <strong className="text-[#343854]">{getNewOfferText(newOfferMessages, "validityLabel", "Validity")}:</strong>{" "}
+                  {certificateValidityDays || "180"} {getNewOfferText(newOfferMessages, "daysUnit", "days")}
                 </p>
               </div>
 
@@ -1300,24 +1420,24 @@ export default function NewOfferPage() {
 
             <section className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
               <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                Что дальше
+                {getNewOfferText(newOfferMessages, "nextStepsTitle", "What next")}
               </div>
 
               <ol className="mt-3 grid gap-3 text-[13px] leading-5 text-[#5a5f7a]">
                 <li>
-                  <strong className="text-[#343854]">1.</strong> Создать offer.
+                  <strong className="text-[#343854]">1.</strong>{" "}{getNewOfferText(newOfferMessages, "nextStepCreateOffer", "Create offer.")}
                 </li>
                 <li>
-                  <strong className="text-[#343854]">2.</strong> Открыть
-                  сертификат на базе offer.
+                  <strong className="text-[#343854]">2.</strong>{" "}
+                  {getNewOfferText(newOfferMessages, "nextStepOpenCertificate", "Open the certificate based on the offer.")}
                 </li>
                 <li>
-                  <strong className="text-[#343854]">3.</strong> Проверить
-                  появление в списке предложений.
+                  <strong className="text-[#343854]">3.</strong>{" "}
+                  {getNewOfferText(newOfferMessages, "nextStepCheckOfferList", "Check that it appears in the offers list.")}
                 </li>
                 <li>
-                  <strong className="text-[#343854]">4.</strong> Потом связать
-                  offer с динамическими категориями меню.
+                  <strong className="text-[#343854]">4.</strong>{" "}
+                  {getNewOfferText(newOfferMessages, "nextStepConnectCategories", "Then connect the offer with dynamic menu categories.")}
                 </li>
               </ol>
             </section>
@@ -1325,7 +1445,7 @@ export default function NewOfferPage() {
             {createdOffer ? (
               <section className="rounded-[18px] border border-[#bbf7d0] bg-[#f0fdf4] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#15803d]">
-                  Предложение создано
+                  {getNewOfferText(newOfferMessages, "createdTitle", "Offer created")}
                 </div>
 
                 <h2 className="mt-2 text-[20px] font-bold text-[#14532d]">
@@ -1334,42 +1454,42 @@ export default function NewOfferPage() {
 
                 <div className="mt-3 grid gap-2 text-[13px] leading-5 text-[#166534]">
                   <p className="m-0">
-                    <strong>Цена:</strong>{" "}
+                    <strong>{getNewOfferText(newOfferMessages, "createdPriceLabel", "Price")}:</strong>{" "}
                     {formatMoney(createdOffer.price ?? price, createdOffer.currency ?? currency)}
                   </p>
                   <p className="m-0">
-                    <strong>Сертификат:</strong>{" "}
-                    {createdOffer.certificate_available ?? certificateAvailable
-                      ? "доступен"
-                      : "выключен"}
+                    <strong>{getNewOfferText(newOfferMessages, "createdCertificateLabel", "Certificate")}:</strong>{" "}
+                    {(createdOffer.certificate_available ?? certificateAvailable)
+                      ? getCommonText(commonMessages, "available", "available")
+                      : getCommonText(commonMessages, "unavailable", "unavailable")}
                   </p>
                   <p className="m-0">
-                    <strong>Статус:</strong> {createdOffer.status ?? "active"}
+                    <strong>{getNewOfferText(newOfferMessages, "statusLabel", "Status")}:</strong> {createdOffer.status ?? "active"}
                   </p>
                 </div>
 
                 <div className="mt-4 grid gap-2">
                   {createdOfferId ? (
                     <Link
-                      href={`/certificates/new?offerId=${createdOfferId}`}
+                      href={appendLocaleToHref(`/certificates/new?offerId=${createdOfferId}`, selectedLocale)}
                       className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-center text-[13px] font-bold text-white transition hover:bg-[#2f5fe3]"
                     >
-                      Открыть сертификат на базе offer
+                      {getNewOfferText(newOfferMessages, "openCertificateFromOffer", "Open certificate based on offer")}
                     </Link>
                   ) : null}
 
                   <Link
-                    href="/offers"
+                    href={appendLocaleToHref("/offers", selectedLocale)}
                     className="rounded-xl border border-[#bbf7d0] bg-white px-4 py-3 text-center text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
                   >
-                    Перейти к списку предложений
+                    {getNewOfferText(newOfferMessages, "goToOffers", "Go to offers")}
                   </Link>
 
                   <Link
-                    href="/certificates"
+                    href={appendLocaleToHref("/certificates", selectedLocale)}
                     className="rounded-xl border border-[#bbf7d0] bg-white px-4 py-3 text-center text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
                   >
-                    Перейти к сертификатам
+                    {getNewOfferText(newOfferMessages, "goToCertificates", "Go to certificates")}
                   </Link>
                 </div>
               </section>
