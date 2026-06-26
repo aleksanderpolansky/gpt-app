@@ -142,7 +142,7 @@ function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
         </p>
         {message.text.includes("Нужно войти") ? (
           <a
-            href="/auth/login"
+            href="/auth/login?connection=google-oauth2&prompt=select_account"
             className="mt-2 inline-flex rounded-lg bg-red-600 px-3 py-1.5 text-[11.5px] font-semibold text-white transition-colors hover:bg-red-700"
           >
             Войти

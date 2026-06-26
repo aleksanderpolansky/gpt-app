@@ -333,7 +333,7 @@ export function ValueObjectDraftReadPanel({
             draft data.
           </p>
           <a
-            href="/auth/login"
+            href="/auth/login?connection=google-oauth2&prompt=select_account"
             className="mt-3 inline-flex rounded-xl bg-[#3b6ef8] px-4 py-2 text-[13px] font-bold text-white transition hover:bg-[#315bd0]"
           >
             Войти

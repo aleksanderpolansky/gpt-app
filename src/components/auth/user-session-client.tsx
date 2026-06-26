@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Settings } from "lucide-react";
@@ -265,7 +265,7 @@ export function UserSessionTopBarControls() {
     return (
       <>
         <a
-          href="/auth/login"
+          href="/auth/login?connection=google-oauth2&prompt=select_account"
           className="rounded-lg bg-[#3b6ef8] px-3 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#2c5df0]"
         >
           Войти
