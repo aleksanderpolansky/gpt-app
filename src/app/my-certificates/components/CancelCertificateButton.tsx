@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import {
+  getCertificatesMessages,
+  getCertificateText,
+} from "../../../i18n/messages/certificates";
 
 type CancelCertificateButtonProps = {
   certificateId: string;
@@ -9,6 +13,7 @@ type CancelCertificateButtonProps = {
   pointsStatus: string;
   pointsReserved: number;
   pointsCurrencyCode: string;
+  selectedLocale?: string;
 };
 
 type CancelCertificateResponse = {
@@ -40,7 +45,11 @@ export default function CancelCertificateButton({
   pointsStatus,
   pointsReserved,
   pointsCurrencyCode,
+  selectedLocale = "en",
 }: CancelCertificateButtonProps) {
+  const certificateMessages = getCertificatesMessages(selectedLocale);
+  const commonMessages = certificateMessages.common;
+  const actionsMessages = certificateMessages.actions;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [buyerComment, setBuyerComment] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -50,7 +59,7 @@ export default function CancelCertificateButton({
 
   async function handleCancelCertificate() {
     const confirmed = window.confirm(
-      "Cancel this certificate? Reserved points will be released back to your available balance if cancellation is allowed."
+      getCertificateText(actionsMessages, "cancelConfirm", "Cancel this certificate? Reserved points will be released back to your available balance if cancellation is allowed.")
     );
 
     if (!confirmed) {
@@ -77,13 +86,13 @@ export default function CancelCertificateButton({
       const json = (await response.json()) as CancelCertificateResponse;
 
       if (!response.ok || !json.ok) {
-        throw new Error(json.error ?? "Cannot cancel certificate");
+        throw new Error(json.error ?? getCertificateText(actionsMessages, "cancelError", "Could not cancel certificate."));
       }
 
       const cancelledCertificate = json.cancelledCertificate;
 
       if (!cancelledCertificate) {
-        throw new Error("Certificate was cancelled, but response is empty");
+        throw new Error(getCertificateText(actionsMessages, "cancelError", "Could not cancel certificate."));
       }
 
       setSuccessMessage(
@@ -94,7 +103,7 @@ export default function CancelCertificateButton({
       );
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Unknown cancellation error"
+        error instanceof Error ? error.message : getCertificateText(actionsMessages, "cancelError", "Could not cancel certificate.")
       );
     } finally {
       setIsSubmitting(false);
@@ -114,9 +123,9 @@ export default function CancelCertificateButton({
           gap: "6px",
         }}
       >
-        <strong>Cancellation unavailable</strong>
+        <strong>{getCertificateText(actionsMessages, "cancelUnavailable", "Cancellation unavailable")}</strong>
         <span>
-          Current status: {status} / points: {pointsStatus}
+          {getCertificateText(commonMessages, "status", "Status")}: {status} / {getCertificateText(commonMessages, "points", "POINTS")}: {pointsStatus}
         </span>
       </div>
     );
@@ -134,19 +143,19 @@ export default function CancelCertificateButton({
         minWidth: "260px",
       }}
     >
-      <strong>Cancel certificate</strong>
+      <strong>{getCertificateText(actionsMessages, "cancel", "Cancel certificate")}</strong>
 
       <div style={{ color: "#7a4b00", fontSize: "14px", lineHeight: "1.45" }}>
-        Certificate:{" "}
+        {getCertificateText(commonMessages, "certificate", "Certificate")}:{" "}
         <span style={{ fontFamily: "monospace" }}>{certificateCode}</span>
         <br />
-        Reserved to release: {formatPoints(pointsReserved, pointsCurrencyCode)}
+        {getCertificateText(actionsMessages, "reservedToRelease", "Reserved to release")}: {formatPoints(pointsReserved, pointsCurrencyCode)}
       </div>
 
       <input
         value={buyerComment}
         onChange={(event) => setBuyerComment(event.target.value)}
-        placeholder="Cancellation comment, optional"
+        placeholder={getCertificateText(commonMessages, "buyerComment", "Buyer comment")}
         style={{
           border: "1px solid #f0d28a",
           borderRadius: "8px",
@@ -169,7 +178,7 @@ export default function CancelCertificateButton({
           cursor: isSubmitting ? "not-allowed" : "pointer",
         }}
       >
-        {isSubmitting ? "Cancelling..." : "Cancel certificate"}
+        {isSubmitting ? getCertificateText(actionsMessages, "cancelLoading", "Cancelling...") : getCertificateText(actionsMessages, "cancel", "Cancel certificate")}
       </button>
 
       {successMessage ? (

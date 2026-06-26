@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  getCertificatesMessages,
+  getCertificateText,
+} from "../../../i18n/messages/certificates";
+
 import { useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -10,6 +15,7 @@ type ShowCertificateQrButtonProps = {
   qrToken: string | null;
   status: string;
   pointsStatus: string;
+  selectedLocale?: string;
 };
 
 function getBaseUrl() {
@@ -27,7 +33,11 @@ export default function ShowCertificateQrButton({
   qrToken,
   status,
   pointsStatus,
+  selectedLocale = "en",
 }: ShowCertificateQrButtonProps) {
+  const certificateMessages = getCertificatesMessages(selectedLocale);
+  const commonMessages = certificateMessages.common;
+  const actionsMessages = certificateMessages.actions;
   const [isOpen, setIsOpen] = useState(false);
 
   const canShow =
@@ -42,9 +52,7 @@ export default function ShowCertificateQrButton({
       return "";
     }
 
-    return `${getBaseUrl()}/certificates/redeem?token=${encodeURIComponent(
-      qrToken
-    )}`;
+    return `${getBaseUrl()}/certificates/redeem?token=${encodeURIComponent(qrToken)}&locale=${encodeURIComponent(selectedLocale)}`;
   }, [qrToken]);
 
   if (!canShow) {
@@ -52,7 +60,7 @@ export default function ShowCertificateQrButton({
       <button
         type="button"
         disabled
-        title="QR is available only for active reserved certificates"
+        title={getCertificateText(actionsMessages, "qrUnavailable", "QR is available only for active reserved certificates")}
         style={{
           border: "1px solid #9ca3af",
           borderRadius: "8px",
@@ -89,7 +97,7 @@ export default function ShowCertificateQrButton({
           cursor: "pointer",
         }}
       >
-        {isOpen ? "Hide QR" : "Show QR"}
+        {isOpen ? getCertificateText(actionsMessages, "hideQr", "Hide QR") : getCertificateText(actionsMessages, "showQr", "Show QR")}
       </button>
 
       {isOpen ? (
@@ -104,7 +112,7 @@ export default function ShowCertificateQrButton({
             maxWidth: "360px",
           }}
         >
-          <strong>Certificate QR code</strong>
+          <strong>{getCertificateText(actionsMessages, "certificateQrCode", "Certificate QR code")}</strong>
 
           <div
             style={{
@@ -127,7 +135,7 @@ export default function ShowCertificateQrButton({
 
           <div style={{ display: "grid", gap: "6px", fontSize: "14px" }}>
             <p style={{ margin: 0 }}>
-              <strong>Certificate code:</strong>{" "}
+              <strong>{getCertificateText(commonMessages, "certificateCode", "Certificate code")}:</strong>{" "}
               <span style={{ fontFamily: "monospace" }}>
                 {certificateCode}
               </span>
@@ -139,7 +147,7 @@ export default function ShowCertificateQrButton({
             </p>
 
             <p style={{ margin: 0 }}>
-              <strong>Redeem code:</strong>{" "}
+              <strong>{getCertificateText(commonMessages, "redeemCode", "Redeem code")}:</strong>{" "}
               <span style={{ fontFamily: "monospace" }}>{redeemCode}</span>
             </p>
           </div>
@@ -152,8 +160,7 @@ export default function ShowCertificateQrButton({
               lineHeight: "1.45",
             }}
           >
-            Show this QR code to the seller. After scanning, the seller will
-            confirm certificate usage.
+            {getCertificateText(actionsMessages, "qrExplanation", "Show this QR code to the seller. After scanning, the seller will confirm certificate usage.")}
           </p>
         </section>
       ) : null}
