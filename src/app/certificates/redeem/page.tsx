@@ -2,6 +2,10 @@ import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import LocalDateTime from "../../../components/LocalDateTime";
 import RedeemCertificateButton from "../../seller-certificates/components/RedeemCertificateButton";
+import {
+  getCertificatesMessages,
+  getCertificateText,
+} from "../../../i18n/messages/certificates";
 
 export const dynamic = "force-dynamic";
 
@@ -115,6 +119,21 @@ function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   return value;
 }
 
+
+
+function getFirstSearchParam(
+  value: string | string[] | undefined
+): string | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
+function appendLocaleToHref(href: string, locale: string) {
+  const separator = href.includes("?") ? "&" : "?";
+  return href + separator + "locale=" + encodeURIComponent(locale);
+}
 function formatMoney(
   value: number | string | null | undefined,
   currency: string | null | undefined
@@ -126,48 +145,54 @@ function formatMoney(
   return `${value} ${currency || ""}`.trim();
 }
 
-function getStatusLabel(status: string | null | undefined) {
+function getStatusLabel(
+  status: string | null | undefined,
+  commonMessages: Record<string, string> = {}
+) {
   if (status === "active") {
-    return "Active";
+    return getCertificateText(commonMessages, "active", "Active");
   }
 
   if (status === "redeemed") {
-    return "Redeemed";
+    return getCertificateText(commonMessages, "redeemed", "Redeemed");
   }
 
   if (status === "cancelled") {
-    return "Cancelled";
+    return getCertificateText(commonMessages, "cancelled", "Cancelled");
   }
 
   if (status === "rejected") {
-    return "Rejected";
+    return getCertificateText(commonMessages, "rejected", "Rejected");
   }
 
   if (status === "expired") {
-    return "Expired";
+    return getCertificateText(commonMessages, "expired", "Expired");
   }
 
-  return status ?? "—";
+  return status ?? getCertificateText(commonMessages, "dash", "—");
 }
 
-function getPointsStatusLabel(status: string | null | undefined) {
+function getPointsStatusLabel(
+  status: string | null | undefined,
+  commonMessages: Record<string, string> = {}
+) {
   if (status === "reserved") {
-    return "Reserved";
+    return getCertificateText(commonMessages, "reserved", "Reserved");
   }
 
   if (status === "charged") {
-    return "Charged";
+    return getCertificateText(commonMessages, "charged", "Charged");
   }
 
   if (status === "released") {
-    return "Released";
+    return getCertificateText(commonMessages, "released", "Released");
   }
 
   if (status === "none") {
-    return "None";
+    return getCertificateText(commonMessages, "none", "None");
   }
 
-  return status ?? "—";
+  return status ?? getCertificateText(commonMessages, "dash", "—");
 }
 
 function getStatusStyle(status: string | null | undefined) {
@@ -324,7 +349,7 @@ async function getRedeemPageData(token: string | null): Promise<PageData> {
     return {
       appUser,
       certificate: null,
-      errorMessage: certificateError?.message ?? "Certificate not found",
+      errorMessage: certificateError?.message ?? getCertificateText(getCertificatesMessages("en").common, "certificateNotFound", "Certificate not found"),
     };
   }
 
@@ -341,6 +366,20 @@ export default async function RedeemCertificatePage({
   const resolvedSearchParams = await searchParams;
   const token = resolvedSearchParams.token ?? null;
 
+  const localeSearchParams = resolvedSearchParams as Record<
+    string,
+    string | string[] | undefined
+  >;
+  const selectedLocale =
+    getFirstSearchParam(localeSearchParams.locale) ??
+    getFirstSearchParam(localeSearchParams.lang) ??
+    "en";
+  const certificateMessages = getCertificatesMessages(selectedLocale);
+  const commonMessages = certificateMessages.common;
+  const redeemMessages = certificateMessages.redeemPage;
+  const myCertificatesMessages = certificateMessages.myCertificates;
+  const sellerCertificatesMessages = certificateMessages.sellerCertificates;
+  const actionsMessages = certificateMessages.actions;
   const { appUser, certificate, errorMessage } = await getRedeemPageData(token);
 
   const organization = getFirstRelatedItem(certificate?.organizations);
@@ -384,7 +423,7 @@ export default async function RedeemCertificatePage({
               margin: "0 0 12px",
             }}
           >
-            Confirm certificate usage
+            {getCertificateText(actionsMessages, "redeem", "Confirm usage")}
           </h1>
 
           <p
@@ -407,16 +446,16 @@ export default async function RedeemCertificatePage({
               flexWrap: "wrap",
             }}
           >
-            <a href="/" style={{ color: "#2563eb" }}>
-              На главную
+            <a href={appendLocaleToHref("/", selectedLocale)} style={{ color: "#2563eb" }}>
+              {getCertificateText(redeemMessages, "home", "Home")}
             </a>
 
-            <a href="/seller-certificates" style={{ color: "#2563eb" }}>
-              Seller certificates
+            <a href={appendLocaleToHref("/seller-certificates", selectedLocale)} style={{ color: "#2563eb" }}>
+              {getCertificateText(sellerCertificatesMessages, "title", "Seller certificates")}
             </a>
 
-            <a href="/my-certificates" style={{ color: "#2563eb" }}>
-              My certificates
+            <a href={appendLocaleToHref("/my-certificates", selectedLocale)} style={{ color: "#2563eb" }}>
+              {getCertificateText(myCertificatesMessages, "title", "My certificates")}
             </a>
 
             <a href="/rewards" style={{ color: "#2563eb" }}>
@@ -435,7 +474,7 @@ export default async function RedeemCertificatePage({
               color: "#a40000",
             }}
           >
-            <strong>Error:</strong> {errorMessage}
+            <strong>{getCertificateText(commonMessages, "error", "Error")}:</strong> {errorMessage}
           </section>
         ) : null}
 
@@ -468,11 +507,11 @@ export default async function RedeemCertificatePage({
                     lineHeight: "1.25",
                   }}
                 >
-                  {offer?.title ?? "Certificate"}
+                  {offer?.title ?? getCertificateText(commonMessages, "certificate", "Certificate")}
                 </h2>
 
                 <p style={{ margin: 0, color: "#555555" }}>
-                  {organization?.organization_name ?? "Unknown organization"}
+                  {organization?.organization_name ?? getCertificateText(redeemMessages, "organizationNotFound", "Unknown organization")}
                 </p>
               </div>
 
@@ -487,8 +526,8 @@ export default async function RedeemCertificatePage({
                   ...statusStyle,
                 }}
               >
-                {getStatusLabel(certificate.status)} / points:{" "}
-                {getPointsStatusLabel(certificate.points_status)}
+                {getStatusLabel(certificate.status, commonMessages)} / points:{" "}
+                {getPointsStatusLabel(certificate.points_status, commonMessages)}
               </span>
             </div>
 
@@ -503,8 +542,7 @@ export default async function RedeemCertificatePage({
                   lineHeight: "1.45",
                 }}
               >
-                Only the organization owner can confirm usage of this
-                certificate.
+                {getCertificateText(redeemMessages, "sellerOnly", "Only the organization owner can confirm usage of this certificate.")}
               </section>
             ) : null}
 
@@ -543,7 +581,7 @@ export default async function RedeemCertificatePage({
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "6px" }}>
-                  Customer money payment
+                  {getCertificateText(redeemMessages, "customerMoneyPayment", "Customer money payment")}
                 </div>
                 <strong>
                   {formatMoney(certificate.money_price, certificate.currency)}
@@ -559,7 +597,7 @@ export default async function RedeemCertificatePage({
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "6px" }}>
-                  Value covered by points
+                  {getCertificateText(redeemMessages, "valueCoveredByPoints", "Value covered by points")}
                 </div>
                 <strong>
                   {formatMoney(
@@ -582,26 +620,26 @@ export default async function RedeemCertificatePage({
               }}
             >
               <p style={{ margin: 0 }}>
-                <strong>Public code:</strong>{" "}
+                <strong>{getCertificateText(commonMessages, "publicCode", "Public code")}:</strong>{" "}
                 <span style={{ fontFamily: "monospace" }}>
                   {certificate.public_code ?? "—"}
                 </span>
               </p>
 
               <p style={{ margin: 0 }}>
-                <strong>Redeem code:</strong>{" "}
+                <strong>{getCertificateText(commonMessages, "redeemCode", "Redeem code")}:</strong>{" "}
                 <span style={{ fontFamily: "monospace" }}>
                   {certificate.redeem_code ?? "—"}
                 </span>
               </p>
 
               <p style={{ margin: 0 }}>
-                <strong>Requested:</strong>{" "}
+                <strong>{getCertificateText(redeemMessages, "requested", "Requested")}:</strong>{" "}
                 <LocalDateTime value={certificate.requested_at} />
               </p>
 
               <p style={{ margin: 0 }}>
-                <strong>Buyer message:</strong> {certificate.message ?? "—"}
+                <strong>{getCertificateText(commonMessages, "buyerMessage", "Buyer message")}:</strong> {certificate.message ?? getCertificateText(commonMessages, "dash", "—")}
               </p>
             </section>
 
@@ -613,6 +651,7 @@ export default async function RedeemCertificatePage({
                 pointsStatus={certificate.points_status}
                 pointsReserved={Number(certificate.points_reserved) || 0}
                 pointsCurrencyCode={certificate.points_currency_code || "POINT"}
+                selectedLocale={selectedLocale}
               />
             ) : null}
 
@@ -626,7 +665,7 @@ export default async function RedeemCertificatePage({
                   color: "#555555",
                 }}
               >
-                Usage confirmation is not available for this certificate status.
+                {getCertificateText(redeemMessages, "confirmationUnavailable", "Usage confirmation is not available for this certificate status.")}
               </section>
             ) : null}
           </article>

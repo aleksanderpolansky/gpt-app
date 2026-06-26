@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import {
+  getCertificatesMessages,
+  getCertificateText,
+} from "../../../i18n/messages/certificates";
 
 type RedeemCertificateButtonProps = {
   certificateId: string;
@@ -9,6 +13,7 @@ type RedeemCertificateButtonProps = {
   pointsStatus: string;
   pointsReserved: number;
   pointsCurrencyCode: string;
+  selectedLocale?: string;
 };
 
 type RedeemCertificateResponse = {
@@ -40,7 +45,11 @@ export default function RedeemCertificateButton({
   pointsStatus,
   pointsReserved,
   pointsCurrencyCode,
+  selectedLocale = "en",
 }: RedeemCertificateButtonProps) {
+  const certificateMessages = getCertificatesMessages(selectedLocale);
+  const commonMessages = certificateMessages.common;
+  const actionsMessages = certificateMessages.actions;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sellerComment, setSellerComment] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -69,13 +78,13 @@ export default function RedeemCertificateButton({
       const json = (await response.json()) as RedeemCertificateResponse;
 
       if (!response.ok || !json.ok) {
-        throw new Error(json.error ?? "Cannot redeem certificate");
+        throw new Error(json.error ?? getCertificateText(actionsMessages, "redeemError", "Could not confirm certificate usage."));
       }
 
       const redeemedCertificate = json.redeemedCertificate;
 
       if (!redeemedCertificate) {
-        throw new Error("Certificate was redeemed, but response is empty");
+        throw new Error(getCertificateText(actionsMessages, "redeemError", "Could not confirm certificate usage."));
       }
 
       setSuccessMessage(
@@ -86,7 +95,7 @@ export default function RedeemCertificateButton({
       );
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Unknown redeem error"
+        error instanceof Error ? error.message : getCertificateText(actionsMessages, "redeemError", "Could not confirm certificate usage.")
       );
     } finally {
       setIsSubmitting(false);
@@ -106,9 +115,9 @@ export default function RedeemCertificateButton({
           gap: "6px",
         }}
       >
-        <strong>Redeem unavailable</strong>
+        <strong>{getCertificateText(actionsMessages, "redeemUnavailable", "Confirmation unavailable")}</strong>
         <span>
-          Current status: {status} / points: {pointsStatus}
+          {getCertificateText(commonMessages, "status", "Status")}: {status} / {getCertificateText(commonMessages, "points", "POINTS")}: {pointsStatus}
         </span>
       </div>
     );
@@ -126,19 +135,19 @@ export default function RedeemCertificateButton({
         minWidth: "260px",
       }}
     >
-      <strong>Confirm certificate usage</strong>
+      <strong>{getCertificateText(actionsMessages, "redeem", "Confirm usage")}</strong>
 
       <div style={{ color: "#176b2c", fontSize: "14px", lineHeight: "1.45" }}>
-        Certificate:{" "}
+        {getCertificateText(commonMessages, "certificate", "Certificate")}:{" "}
         <span style={{ fontFamily: "monospace" }}>{certificateCode}</span>
         <br />
-        Reserved to charge: {formatPoints(pointsReserved, pointsCurrencyCode)}
+        {getCertificateText(actionsMessages, "reservedToCharge", "Reserved to charge")}: {formatPoints(pointsReserved, pointsCurrencyCode)}
       </div>
 
       <input
         value={sellerComment}
         onChange={(event) => setSellerComment(event.target.value)}
-        placeholder="Seller comment, optional"
+        placeholder={getCertificateText(commonMessages, "sellerComment", "Seller comment")}
         style={{
           border: "1px solid #bfe5c8",
           borderRadius: "8px",
@@ -161,7 +170,7 @@ export default function RedeemCertificateButton({
           cursor: isSubmitting ? "not-allowed" : "pointer",
         }}
       >
-        {isSubmitting ? "Redeeming..." : "Confirm usage / Redeem"}
+        {isSubmitting ? getCertificateText(actionsMessages, "redeemLoading", "Confirming...") : getCertificateText(actionsMessages, "redeem", "Confirm usage")}
       </button>
 
       {successMessage ? (
