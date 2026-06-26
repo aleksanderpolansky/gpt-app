@@ -1,7 +1,11 @@
-import { auth0 } from "../../../lib/auth0";
+﻿import { auth0 } from "../../../lib/auth0";
 import { supabase } from "../../../lib/supabase";
 import LocalDateTime from "../../components/LocalDateTime";
 import RedeemCertificateButton from "./components/RedeemCertificateButton";
+import {
+  getCertificatesMessages,
+  getCertificateText,
+} from "../../i18n/messages/certificates";
 
 export const dynamic = "force-dynamic";
 
@@ -117,6 +121,28 @@ function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   return value;
 }
 
+
+type SellerCertificatesPageProps = {
+  searchParams?: Promise<{
+    locale?: string | string[];
+    lang?: string | string[];
+  }>;
+};
+
+function getFirstSearchParam(
+  value: string | string[] | undefined
+): string | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
+
+function appendLocaleToHref(href: string, locale: string) {
+  const separator = href.includes("?") ? "&" : "?";
+  return href + separator + "locale=" + encodeURIComponent(locale);
+}
 function formatNumber(value: number | string | null | undefined) {
   if (value === null || value === undefined || value === "") {
     return "0";
@@ -144,40 +170,43 @@ function formatMoney(
   return `${formatNumber(value)} ${currency || ""}`.trim();
 }
 
-function getStatusLabel(status: string | null | undefined) {
+function getStatusLabel(
+  status: string | null | undefined,
+  commonMessages: Record<string, string> = {}
+) {
   if (status === "requested") {
-    return "Requested";
+    return getCertificateText(commonMessages, "requested", "Requested");
   }
 
   if (status === "seller_confirmed") {
-    return "Seller confirmed";
+    return getCertificateText(commonMessages, "sellerConfirmed", "Seller confirmed");
   }
 
   if (status === "active") {
-    return "Active";
+    return getCertificateText(commonMessages, "active", "Active");
   }
 
   if (status === "delivered") {
-    return "Delivered";
+    return getCertificateText(commonMessages, "delivered", "Delivered");
   }
 
   if (status === "redeemed") {
-    return "Redeemed";
+    return getCertificateText(commonMessages, "redeemed", "Redeemed");
   }
 
   if (status === "cancelled") {
-    return "Cancelled";
+    return getCertificateText(commonMessages, "cancelled", "Cancelled");
   }
 
   if (status === "rejected") {
-    return "Rejected";
+    return getCertificateText(commonMessages, "rejected", "Rejected");
   }
 
   if (status === "expired") {
-    return "Expired";
+    return getCertificateText(commonMessages, "expired", "Expired");
   }
 
-  return status ?? "—";
+  return status ?? getCertificateText(commonMessages, "dash", "—");
 }
 
 function getStatusStyle(status: string | null | undefined) {
@@ -217,26 +246,28 @@ function getStatusStyle(status: string | null | undefined) {
   };
 }
 
-function getPointsStatusLabel(status: string | null | undefined) {
+function getPointsStatusLabel(
+  status: string | null | undefined,
+  commonMessages: Record<string, string> = {}
+) {
   if (status === "reserved") {
-    return "Reserved";
+    return getCertificateText(commonMessages, "reserved", "Reserved");
   }
 
   if (status === "charged") {
-    return "Charged";
+    return getCertificateText(commonMessages, "charged", "Charged");
   }
 
   if (status === "released") {
-    return "Released";
+    return getCertificateText(commonMessages, "released", "Released");
   }
 
   if (status === "none") {
-    return "None";
+    return getCertificateText(commonMessages, "none", "None");
   }
 
-  return status ?? "—";
+  return status ?? getCertificateText(commonMessages, "dash", "—");
 }
-
 function getTimelineToneStyle(tone: SellerTimelineItem["tone"]) {
   if (tone === "done") {
     return {
@@ -270,7 +301,9 @@ function getTimelineToneStyle(tone: SellerTimelineItem["tone"]) {
 }
 
 function buildSellerCertificateTimeline(
-  certificate: CertificateRecord
+  certificate: CertificateRecord,
+  sellerCertificatesMessages: Record<string, string>,
+  commonMessages: Record<string, string>
 ): SellerTimelineItem[] {
   const pointsCurrency = certificate.points_currency_code || "POINT";
   const reservedAmount = Number(certificate.points_price) || 0;
@@ -279,17 +312,25 @@ function buildSellerCertificateTimeline(
 
   const items: SellerTimelineItem[] = [
     {
-      title: "Покупатель заказал сертификат",
-      description: `Сертификат ${certificate.certificate_code} создан для вашего предприятия.`,
+      title: getCertificateText(sellerCertificatesMessages, "buyerOrderedTitle", "Buyer ordered a certificate"),
+      description: `${getCertificateText(
+        sellerCertificatesMessages,
+        "buyerOrderedDescription",
+        "Certificate created for your business."
+      )} ${certificate.certificate_code}.`,
       date: certificate.requested_at || certificate.created_at,
       tone: "done",
     },
     {
-      title: "POINTS покупателя зарезервированы",
+      title: getCertificateText(sellerCertificatesMessages, "buyerPointsReservedTitle", "Buyer POINTS reserved"),
       description: `${formatMoney(
         reservedAmount,
         pointsCurrency
-      )} уже заблокировано у покупателя под этот сертификат.`,
+      )} ${getCertificateText(
+        sellerCertificatesMessages,
+        "pointsReservedDescriptionSuffix",
+        "is already reserved from the buyer for this certificate."
+      )}`,
       date: certificate.requested_at || certificate.created_at,
       tone: "done",
     },
@@ -297,17 +338,23 @@ function buildSellerCertificateTimeline(
 
   if (certificate.status === "active") {
     items.push({
-      title: "Ожидается действие продавца",
-      description:
-        "Проверьте redeem code или QR-код клиента. Если услуга/товар предоставлены, нажмите Confirm usage / Redeem.",
+      title: getCertificateText(sellerCertificatesMessages, "sellerActionTitle", "Seller action required"),
+      description: getCertificateText(
+        sellerCertificatesMessages,
+        "sellerActionDescription",
+        "Check redeem code or client QR code. If the service or product was delivered, confirm usage."
+      ),
       date: certificate.delivered_at || certificate.requested_at,
       tone: "active",
     });
 
     items.push({
-      title: "После подтверждения",
-      description:
-        "Сертификат перейдёт в Redeemed, а зарезервированные POINTS будут окончательно списаны у покупателя.",
+      title: getCertificateText(sellerCertificatesMessages, "afterConfirmationTitle", "After confirmation"),
+      description: getCertificateText(
+        sellerCertificatesMessages,
+        "afterConfirmationDescription",
+        "The certificate becomes redeemed and reserved POINTS are finally charged from the buyer."
+      ),
       date: null,
       tone: "neutral",
     });
@@ -317,18 +364,26 @@ function buildSellerCertificateTimeline(
 
   if (certificate.status === "redeemed") {
     items.push({
-      title: "Продавец подтвердил использование",
-      description: "Сертификат был использован покупателем.",
+      title: getCertificateText(sellerCertificatesMessages, "redeemedTitle", "Seller confirmed usage"),
+      description: getCertificateText(
+        sellerCertificatesMessages,
+        "redeemedDescription",
+        "The certificate was used by the buyer."
+      ),
       date: certificate.redeemed_at,
       tone: "done",
     });
 
     items.push({
-      title: "POINTS окончательно списаны у покупателя",
+      title: getCertificateText(sellerCertificatesMessages, "pointsChargedTitle", "Buyer POINTS finally charged"),
       description: `${formatMoney(
         chargedAmount,
         pointsCurrency
-      )} списано после подтверждения использования сертификата.`,
+      )} ${getCertificateText(
+        sellerCertificatesMessages,
+        "pointsChargedDescriptionSuffix",
+        "charged after certificate usage confirmation."
+      )}`,
       date: certificate.redeemed_at,
       tone: "done",
     });
@@ -338,18 +393,26 @@ function buildSellerCertificateTimeline(
 
   if (certificate.status === "cancelled") {
     items.push({
-      title: "Покупатель отменил сертификат",
-      description: "Сертификат был отменён в разрешённое окно отмены.",
+      title: getCertificateText(sellerCertificatesMessages, "buyerCancelledTitle", "Buyer cancelled certificate"),
+      description: getCertificateText(
+        sellerCertificatesMessages,
+        "buyerCancelledDescription",
+        "Certificate was cancelled within the allowed cancellation window."
+      ),
       date: certificate.cancelled_at,
       tone: "warning",
     });
 
     items.push({
-      title: "POINTS возвращены покупателю",
+      title: getCertificateText(sellerCertificatesMessages, "pointsRefundedTitle", "POINTS returned to buyer"),
       description: `${formatMoney(
         releasedAmount,
         pointsCurrency
-      )} возвращено из резерва на баланс покупателя.`,
+      )} ${getCertificateText(
+        sellerCertificatesMessages,
+        "pointsReleasedDescriptionSuffix",
+        "returned from reserve to the buyer balance."
+      )}`,
       date: certificate.cancelled_at,
       tone: "done",
     });
@@ -359,19 +422,26 @@ function buildSellerCertificateTimeline(
 
   if (certificate.status === "expired") {
     items.push({
-      title: "Срок сертификата истёк",
-      description:
-        "Покупатель не использовал сертификат до окончания срока действия.",
+      title: getCertificateText(sellerCertificatesMessages, "expiredTitle", "Certificate expired"),
+      description: getCertificateText(
+        sellerCertificatesMessages,
+        "expiredDescription",
+        "The buyer did not use the certificate before the validity period ended."
+      ),
       date: certificate.expired_at,
       tone: "warning",
     });
 
     items.push({
-      title: "POINTS окончательно списаны у покупателя",
+      title: getCertificateText(sellerCertificatesMessages, "pointsChargedTitle", "Buyer POINTS finally charged"),
       description: `${formatMoney(
         chargedAmount,
         pointsCurrency
-      )} списано после истечения срока сертификата.`,
+      )} ${getCertificateText(
+        sellerCertificatesMessages,
+        "pointsExpiredDescriptionSuffix",
+        "charged after certificate expiration."
+      )}`,
       date: certificate.expired_at,
       tone: "done",
     });
@@ -381,9 +451,12 @@ function buildSellerCertificateTimeline(
 
   if (certificate.status === "rejected") {
     items.push({
-      title: "Сертификат отклонён",
-      description:
-        "Сертификат был отклонён. Проверьте комментарии и условия offer.",
+      title: getCertificateText(sellerCertificatesMessages, "rejectedTitle", "Certificate rejected"),
+      description: getCertificateText(
+        sellerCertificatesMessages,
+        "rejectedDescription",
+        "The certificate was rejected. Check comments and offer terms."
+      ),
       date: certificate.rejected_at,
       tone: "warning",
     });
@@ -392,10 +465,16 @@ function buildSellerCertificateTimeline(
   }
 
   items.push({
-    title: `Текущий статус: ${getStatusLabel(certificate.status)}`,
-    description: `POINTS status: ${getPointsStatusLabel(
-      certificate.points_status
-    )}.`,
+    title: `${getCertificateText(
+      sellerCertificatesMessages,
+      "currentStatus",
+      "Current status"
+    )}: ${getStatusLabel(certificate.status, commonMessages)}`,
+    description: `${getCertificateText(
+      commonMessages,
+      "pointsStatus",
+      "POINTS status"
+    )}: ${getPointsStatusLabel(certificate.points_status, commonMessages)}.`,
     date: certificate.updated_at,
     tone: "neutral",
   });
@@ -549,7 +628,16 @@ async function getSellerCertificates(): Promise<PageData> {
   };
 }
 
-export default async function SellerCertificatesPage() {
+export default async function SellerCertificatesPage({ searchParams }: SellerCertificatesPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const selectedLocale =
+    getFirstSearchParam(resolvedSearchParams?.locale) ??
+    getFirstSearchParam(resolvedSearchParams?.lang) ??
+    "en";
+  const certificateMessages = getCertificatesMessages(selectedLocale);
+  const commonMessages = certificateMessages.common;
+  const sellerCertificatesMessages = certificateMessages.sellerCertificates;
+  const actionsMessages = certificateMessages.actions;
   const { certificates, errorMessage } = await getSellerCertificates();
 
   const activeCount = certificates.filter(
@@ -594,7 +682,7 @@ export default async function SellerCertificatesPage() {
               margin: "0 0 12px",
             }}
           >
-            Seller certificates
+            {getCertificateText(sellerCertificatesMessages, "title", "Seller certificates")}
           </h1>
 
           <p
@@ -620,24 +708,24 @@ export default async function SellerCertificatesPage() {
               flexWrap: "wrap",
             }}
           >
-            <a href="/" style={{ color: "#2563eb" }}>
-              На главную
+            <a href={appendLocaleToHref("/", selectedLocale)} style={{ color: "#2563eb" }}>
+              {getCertificateText(sellerCertificatesMessages, "home", "Home")}
             </a>
 
-            <a href="/organizations" style={{ color: "#2563eb" }}>
-              Мои организации
+            <a href={appendLocaleToHref("/organizations", selectedLocale)} style={{ color: "#2563eb" }}>
+              {getCertificateText(sellerCertificatesMessages, "myOrganizations", "My organizations")}
             </a>
 
-            <a href="/rewards" style={{ color: "#2563eb" }}>
-              Rewards catalog
+            <a href={appendLocaleToHref("/rewards", selectedLocale)} style={{ color: "#2563eb" }}>
+              {getCertificateText(sellerCertificatesMessages, "rewardsCatalog", "Rewards catalog")}
             </a>
 
-            <a href="/my-certificates" style={{ color: "#2563eb" }}>
-              My certificates
+            <a href={appendLocaleToHref("/my-certificates", selectedLocale)} style={{ color: "#2563eb" }}>
+              {getCertificateText(sellerCertificatesMessages, "myCertificates", "My certificates")}
             </a>
 
-            <a href="/purchase-confirmations" style={{ color: "#2563eb" }}>
-              Seller purchase confirmations
+            <a href={appendLocaleToHref("/purchase-confirmations", selectedLocale)} style={{ color: "#2563eb" }}>
+              {getCertificateText(sellerCertificatesMessages, "sellerPurchaseConfirmations", "Seller purchase confirmations")}
             </a>
           </nav>
         </header>
@@ -676,7 +764,7 @@ export default async function SellerCertificatesPage() {
               }}
             >
               <div style={{ color: "#666666", marginBottom: "8px" }}>
-                Total certificates
+                {getCertificateText(sellerCertificatesMessages, "totalCertificates", "Total certificates")}
               </div>
               <div style={{ fontSize: "34px", fontWeight: 700 }}>
                 {certificates.length}
@@ -693,7 +781,7 @@ export default async function SellerCertificatesPage() {
               }}
             >
               <div style={{ color: "#1e3a8a", marginBottom: "8px" }}>
-                Active
+                {getCertificateText(commonMessages, "active", "Active")}
               </div>
               <div style={{ fontSize: "34px", fontWeight: 700 }}>
                 {activeCount}
@@ -710,7 +798,7 @@ export default async function SellerCertificatesPage() {
               }}
             >
               <div style={{ color: "#176b2c", marginBottom: "8px" }}>
-                Redeemed
+                {getCertificateText(commonMessages, "redeemed", "Redeemed")}
               </div>
               <div style={{ fontSize: "34px", fontWeight: 700 }}>
                 {redeemedCount}
@@ -727,7 +815,7 @@ export default async function SellerCertificatesPage() {
               }}
             >
               <div style={{ color: "#7a4b00", marginBottom: "8px" }}>
-                Expired
+                {getCertificateText(commonMessages, "expired", "Expired")}
               </div>
               <div style={{ fontSize: "34px", fontWeight: 700 }}>
                 {expiredCount}
@@ -744,7 +832,7 @@ export default async function SellerCertificatesPage() {
               }}
             >
               <div style={{ color: "#a40000", marginBottom: "8px" }}>
-                Cancelled
+                {getCertificateText(commonMessages, "cancelled", "Cancelled")}
               </div>
               <div style={{ fontSize: "34px", fontWeight: 700 }}>
                 {cancelledCount}
@@ -762,7 +850,7 @@ export default async function SellerCertificatesPage() {
               background: "#fefce8",
             }}
           >
-            No certificates have been ordered from your organizations yet.
+            {getCertificateText(sellerCertificatesMessages, "emptyState", "No certificates have been ordered from your organizations yet.")}
           </section>
         ) : null}
 
@@ -779,7 +867,7 @@ export default async function SellerCertificatesPage() {
               );
               const offer = getFirstRelatedItem(certificate.offers);
               const statusStyle = getStatusStyle(certificate.status);
-              const timeline = buildSellerCertificateTimeline(certificate);
+              const timeline = buildSellerCertificateTimeline(certificate, sellerCertificatesMessages, commonMessages);
 
               return (
                 <article
@@ -811,12 +899,12 @@ export default async function SellerCertificatesPage() {
                           lineHeight: "1.25",
                         }}
                       >
-                        {offer?.title ?? "Certificate"}
+                        {offer?.title ?? getCertificateText(commonMessages, "certificate", "Certificate")}
                       </h2>
 
                       <p style={{ margin: 0, color: "#555555" }}>
                         {organization?.organization_name ??
-                          "Unknown organization"}
+                          getCertificateText(sellerCertificatesMessages, "unknownOrganization", "Unknown organization")}
                       </p>
                     </div>
 
@@ -838,7 +926,7 @@ export default async function SellerCertificatesPage() {
                           ...statusStyle,
                         }}
                       >
-                        {getStatusLabel(certificate.status)}
+                        {getStatusLabel(certificate.status, commonMessages)}
                       </span>
 
                       <span
@@ -854,7 +942,7 @@ export default async function SellerCertificatesPage() {
                           border: "1px solid #f0d28a",
                         }}
                       >
-                        Points: {getPointsStatusLabel(certificate.points_status)}
+                        {getCertificateText(commonMessages, "points", "POINTS")}: {getPointsStatusLabel(certificate.points_status, commonMessages)}
                       </span>
                     </div>
                   </div>
@@ -876,7 +964,7 @@ export default async function SellerCertificatesPage() {
                       }}
                     >
                       <div style={{ color: "#1e3a8a", marginBottom: "6px" }}>
-                        Reserved
+                        {getCertificateText(sellerCertificatesMessages, "pointsReserved", "POINTS reserved")}
                       </div>
                       <strong>
                         {formatMoney(
@@ -895,7 +983,7 @@ export default async function SellerCertificatesPage() {
                       }}
                     >
                       <div style={{ color: "#666666", marginBottom: "6px" }}>
-                        Charged
+                        {getCertificateText(sellerCertificatesMessages, "pointsCharged", "POINTS charged")}
                       </div>
                       <strong>
                         {formatMoney(
@@ -914,7 +1002,7 @@ export default async function SellerCertificatesPage() {
                       }}
                     >
                       <div style={{ color: "#666666", marginBottom: "6px" }}>
-                        Money payment
+                        {getCertificateText(sellerCertificatesMessages, "moneyPayment", "Money payment")}
                       </div>
                       <strong>
                         {formatMoney(
@@ -933,7 +1021,7 @@ export default async function SellerCertificatesPage() {
                       }}
                     >
                       <div style={{ color: "#666666", marginBottom: "6px" }}>
-                        Covered value
+                        {getCertificateText(sellerCertificatesMessages, "valueCoveredByPoints", "Value covered by POINTS")}
                       </div>
                       <strong>
                         {formatMoney(
@@ -959,7 +1047,7 @@ export default async function SellerCertificatesPage() {
                         lineHeight: "1.3",
                       }}
                     >
-                      История для продавца
+                      {getCertificateText(sellerCertificatesMessages, "sellerHistory", "Seller history")}
                     </h3>
 
                     <div
@@ -1020,71 +1108,71 @@ export default async function SellerCertificatesPage() {
                     }}
                   >
                     <p style={{ margin: 0 }}>
-                      <strong>Certificate code:</strong>{" "}
+                      <strong>{getCertificateText(commonMessages, "certificateCode", "Certificate code")}:</strong>{" "}
                       <span style={{ fontFamily: "monospace" }}>
                         {certificate.certificate_code}
                       </span>
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Public code:</strong>{" "}
+                      <strong>{getCertificateText(commonMessages, "publicCode", "Public code")}:</strong>{" "}
                       <span style={{ fontFamily: "monospace" }}>
                         {certificate.public_code ?? "—"}
                       </span>
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Redeem code:</strong>{" "}
+                      <strong>{getCertificateText(commonMessages, "redeemCode", "Redeem code")}:</strong>{" "}
                       <span style={{ fontFamily: "monospace" }}>
                         {certificate.redeem_code ?? "—"}
                       </span>
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Buyer user ID:</strong>{" "}
+                      <strong>{getCertificateText(sellerCertificatesMessages, "buyerUserId", "Buyer user ID")}:</strong>{" "}
                       <span style={{ fontFamily: "monospace" }}>
                         {certificate.buyer_user_id}
                       </span>
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Receiver:</strong>{" "}
+                      <strong>{getCertificateText(sellerCertificatesMessages, "receiver", "Receiver")}:</strong>{" "}
                       {certificate.receiver_person_name ?? "—"} /{" "}
                       {certificate.receiver_email ?? "—"}
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Requested:</strong>{" "}
+                      <strong>{getCertificateText(commonMessages, "requested", "Requested")}:</strong>{" "}
                       <LocalDateTime value={certificate.requested_at} />
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Delivered:</strong>{" "}
+                      <strong>{getCertificateText(commonMessages, "delivered", "Delivered")}:</strong>{" "}
                       <LocalDateTime value={certificate.delivered_at} />
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Redeemed:</strong>{" "}
+                      <strong>{getCertificateText(commonMessages, "redeemed", "Redeemed")}:</strong>{" "}
                       <LocalDateTime value={certificate.redeemed_at} />
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Cancelled:</strong>{" "}
+                      <strong>{getCertificateText(commonMessages, "cancelled", "Cancelled")}:</strong>{" "}
                       <LocalDateTime value={certificate.cancelled_at} />
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Expired:</strong>{" "}
+                      <strong>{getCertificateText(commonMessages, "expired", "Expired")}:</strong>{" "}
                       <LocalDateTime value={certificate.expired_at} />
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Buyer message:</strong>{" "}
+                      <strong>{getCertificateText(commonMessages, "buyerMessage", "Buyer message")}:</strong>{" "}
                       {certificate.message ?? "—"}
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Seller comment:</strong>{" "}
+                      <strong>{getCertificateText(commonMessages, "sellerComment", "Seller comment")}:</strong>{" "}
                       {certificate.seller_comment ?? "—"}
                     </p>
                   </section>
@@ -1099,7 +1187,7 @@ export default async function SellerCertificatesPage() {
                   >
                     {organization?.id ? (
                       <a
-                        href={`/organizations/${organization.id}`}
+                        href={appendLocaleToHref(`/organizations/${organization.id}`, selectedLocale)}
                         style={{
                           display: "inline-block",
                           border: "1px solid #2563eb",
@@ -1111,7 +1199,7 @@ export default async function SellerCertificatesPage() {
                           fontWeight: 700,
                         }}
                       >
-                        Open organization
+                        {getCertificateText(sellerCertificatesMessages, "openOrganization", "Open organization")}
                       </a>
                     ) : null}
 
@@ -1121,9 +1209,8 @@ export default async function SellerCertificatesPage() {
                       status={certificate.status}
                       pointsStatus={certificate.points_status}
                       pointsReserved={Number(certificate.points_reserved) || 0}
-                      pointsCurrencyCode={
-                        certificate.points_currency_code || "POINT"
-                      }
+                      pointsCurrencyCode={certificate.points_currency_code || "POINT"}
+                      selectedLocale={selectedLocale}
                     />
                   </div>
                 </article>
@@ -1135,3 +1222,4 @@ export default async function SellerCertificatesPage() {
     </main>
   );
 }
+
