@@ -2,6 +2,14 @@
 
 import { supabase } from "../../../../lib/supabase";
 
+import {
+  getCertificatesMessages,
+  getCertificateText,
+} from "../../../i18n/messages/certificates";
+import {
+  getOfferTypeLabel as getSharedOfferTypeLabel,
+  getOrganizationTypeLabel as getSharedOrganizationTypeLabel,
+} from "../../../i18n/messages/system-labels";
 import CertificateOrderForm from "./CertificateOrderForm";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +17,8 @@ export const dynamic = "force-dynamic";
 type CertificateNewPageProps = {
   searchParams?: Promise<{
     offerId?: string | string[];
+    locale?: string | string[];
+    lang?: string | string[];
   }>;
 };
 
@@ -164,6 +174,11 @@ async function getCertificateOrderPageData(
   };
 }
 
+
+function appendLocaleToHref(href: string, locale: string) {
+  const separator = href.includes("?") ? "&" : "?";
+  return href + separator + "locale=" + encodeURIComponent(locale);
+}
 function formatMoney(
   amount: number | null | undefined,
   currency: string | null | undefined,
@@ -187,30 +202,24 @@ function formatPoints(value: number | null | undefined) {
   }).format(value);
 }
 
-function getOfferTypeLabel(type: string | null | undefined) {
-  switch (type) {
-    case "bookable_service":
-      return "Услуга с бронированием";
-    case "product":
-      return "Товар";
-    case "service":
-      return "Услуга";
-    case "bundle":
-      return "Набор / bundle";
-    case "reward":
-      return "Reward offer";
-    default:
-      return type ?? "Предложение";
-  }
+function getOfferTypeLabel(
+  type: string | null | undefined,
+  locale: string
+) {
+  return getSharedOfferTypeLabel(type ?? "", locale);
 }
 
-function getCertificatePaymentLabel(offer: OfferRow | null) {
+function getCertificatePaymentLabel(
+  offer: OfferRow | null,
+  messages: Record<string, string>,
+  commonMessages: Record<string, string>
+) {
   if (!offer) {
-    return "—";
+    return getCertificateText(commonMessages, "unavailable", "Unavailable");
   }
 
   if (!offer.certificate_available) {
-    return "Сертификат недоступен";
+    return getCertificateText(messages, "certificateUnavailable", "Certificate unavailable");
   }
 
   if (offer.certificate_payment_mode === "points_only") {
@@ -219,19 +228,19 @@ function getCertificatePaymentLabel(offer: OfferRow | null) {
 
   if (offer.certificate_payment_mode === "money_only") {
     return formatMoney(
-      offer.certificate_money_price,
+      offer.certificate_money_price ?? offer.price,
       offer.certificate_currency ?? offer.currency,
     );
   }
 
-  if (offer.certificate_payment_mode === "mixed") {
-    return `${formatPoints(offer.certificate_points_price)} POINTS + ${formatMoney(
+  if (offer.certificate_money_price !== null) {
+    return `${formatMoney(
       offer.certificate_money_price,
       offer.certificate_currency ?? offer.currency,
-    )}`;
+    )} + ${formatPoints(offer.certificate_points_price)} POINTS`;
   }
 
-  return "Сертификат доступен";
+  return getCertificateText(messages, "certificateAvailable", "Certificate available");
 }
 
 function getDirectoryHref(organization: OrganizationRow | null) {
@@ -255,34 +264,29 @@ function getOfferHref(offer: OfferRow | null) {
   return `/offers/${offer.id}`;
 }
 
-function getPolicyLabel(policy: string | null | undefined) {
+function getPolicyLabel(
+  policy: string | null | undefined,
+  messages: Record<string, string>
+) {
   switch (policy) {
     case "refund_until_seller_confirmation":
-      return "Возврат до подтверждения продавца";
+      return getCertificateText(messages, "refundUntilSellerConfirmation", "Refund until seller confirmation");
     case "refund_until_delivery":
-      return "Возврат до оказания услуги";
+      return getCertificateText(messages, "refundUntilDelivery", "Refund until delivery");
     case "manual_review":
-      return "Ручное рассмотрение";
+      return getCertificateText(messages, "manualReview", "Manual review");
     case "no_refund":
-      return "Без возврата";
+      return getCertificateText(messages, "noRefund", "No refund");
     default:
-      return policy ?? "не указано";
+      return policy ?? getCertificateText(messages, "policyNotSpecified", "not specified");
   }
 }
 
-function getOrganizationTypeLabel(type: string | null | undefined) {
-  switch (type) {
-    case "private_business":
-      return "частный бизнес";
-    case "company":
-      return "компания";
-    case "non_profit":
-      return "некоммерческая организация";
-    case "public_institution":
-      return "публичная организация";
-    default:
-      return type ?? "тип не указан";
-  }
+function getOrganizationTypeLabel(
+  type: string | null | undefined,
+  locale: string
+) {
+  return getSharedOrganizationTypeLabel(type ?? "", locale);
 }
 
 export default async function NewCertificatePage({
@@ -290,6 +294,13 @@ export default async function NewCertificatePage({
 }: CertificateNewPageProps) {
   const resolvedSearchParams = await searchParams;
   const offerId = getFirstSearchParam(resolvedSearchParams?.offerId);
+  const selectedLocale =
+    getFirstSearchParam(resolvedSearchParams?.locale) ??
+    getFirstSearchParam(resolvedSearchParams?.lang) ??
+    "en";
+  const certificateMessages = getCertificatesMessages(selectedLocale);
+  const commonMessages = certificateMessages.common;
+  const newPageMessages = certificateMessages.newPage;
   const { offer, organization, errorMessage } =
     await getCertificateOrderPageData(offerId);
 
@@ -297,8 +308,8 @@ export default async function NewCertificatePage({
     offer?.certificate_available && offer.status === "active",
   );
 
-  const organizationName = organization?.organization_name ?? "Предприятие не найдено";
-  const offerTitle = offer?.title ?? "Предложение не найдено";
+  const organizationName = organization?.organization_name ?? getCertificateText(newPageMessages, "organizationNotFound", "Business not found");
+  const offerTitle = offer?.title ?? getCertificateText(newPageMessages, "offerNotFound", "Offer not found");
   const directoryHref = getDirectoryHref(organization);
   const offerHref = getOfferHref(offer);
 
@@ -306,10 +317,10 @@ export default async function NewCertificatePage({
     <main className="min-h-full bg-[#f5f6fb] px-4 py-8 text-[#1a1d2e]">
       <div className="mx-auto grid w-full max-w-[1120px] gap-5">
         <Link
-          href={offerHref}
+          href={appendLocaleToHref(offerHref, selectedLocale)}
           className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] transition hover:bg-gray-50"
         >
-          ← Назад к предложению
+          {getCertificateText(newPageMessages, "backToOffer", "Back to offer")}
         </Link>
 
         <header className="rounded-[22px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
@@ -320,52 +331,56 @@ export default async function NewCertificatePage({
           <div className="grid gap-5 lg:grid-cols-[1.35fr_0.65fr]">
             <div>
               <h1 className="text-[32px] font-bold tracking-[-0.035em] text-[#111827]">
-                Получить подарочный сертификат
+                {getCertificateText(newPageMessages, "title", "Get a gift certificate")}
               </h1>
 
               <p className="mt-3 max-w-[820px] text-[14px] leading-6 text-[#5a5f7a]">
-                Сертификат создаётся на основании конкретного предложения
-                предприятия. Сейчас сертификат будет добавлен в список
-                заказанных сертификатов в личном кабинете. Email-уведомление
-                будет подключено позже.
+                {getCertificateText(
+                  newPageMessages,
+                  "description",
+                  "The certificate is created from a specific business offer. It will be added to the list of ordered certificates in the personal account. Email notification will be connected later."
+                )}
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2">
                 <Link
-                  href={offerHref}
+                  href={appendLocaleToHref(offerHref, selectedLocale)}
                   className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
                 >
-                  Подробное описание offer
+                  {getCertificateText(newPageMessages, "offerDetails", "Offer details")}
                 </Link>
 
                 <Link
-                  href={directoryHref}
+                  href={appendLocaleToHref(directoryHref, selectedLocale)}
                   className="rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
                 >
-                  Публичная карточка предприятия
+                  {getCertificateText(newPageMessages, "publicOrganizationCard", "Public business card")}
                 </Link>
 
                 <Link
-                  href="/my-certificates"
+                  href={appendLocaleToHref("/my-certificates", selectedLocale)}
                   className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
                 >
-                  Мои сертификаты
+                  {getCertificateText(newPageMessages, "myCertificates", "My certificates")}
                 </Link>
               </div>
             </div>
 
             <aside className="grid content-start gap-3 rounded-[18px] border border-[#dbeafe] bg-[#eff6ff] p-5 text-[#1e3a8a]">
               <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
-                Стоимость сертификата
+                {getCertificateText(newPageMessages, "certificateCost", "Certificate cost")}
               </div>
 
               <div className="text-[28px] font-bold tracking-[-0.03em]">
-                {getCertificatePaymentLabel(offer)}
+                {getCertificatePaymentLabel(offer, newPageMessages, commonMessages)}
               </div>
 
               <p className="text-[12px] leading-5">
-                POINTS — бонусные единицы программы лояльности, а не деньги,
-                валюта или средство платежа.
+                {getCertificateText(
+                  newPageMessages,
+                  "pointsDisclaimer",
+                  "POINTS are loyalty bonus units, not money, currency, or a payment instrument."
+                )}
               </p>
             </aside>
           </div>
@@ -374,10 +389,10 @@ export default async function NewCertificatePage({
         {errorMessage ? (
           <section className="rounded-[18px] border border-[#fecaca] bg-[#fff1f2] p-5 text-[#b42318] shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
-              Ошибка
+              {getCertificateText(commonMessages, "error", "Error")}
             </div>
             <h2 className="mt-2 text-[22px] font-bold">
-              Не удалось загрузить сертификат
+              {getCertificateText(newPageMessages, "loadErrorTitle", "Could not load certificate")}
             </h2>
             <p className="mt-2 text-[14px] leading-6">{errorMessage}</p>
           </section>
@@ -386,39 +401,41 @@ export default async function NewCertificatePage({
         <section className="grid gap-4 md:grid-cols-3">
           <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-              Предприятие
+              {getCertificateText(commonMessages, "organization", "Business")}
             </div>
             <div className="mt-2 text-[20px] font-bold text-[#111827]">
               {organizationName}
             </div>
             <div className="mt-1 text-[12px] text-[#7c8099]">
-              {getOrganizationTypeLabel(organization?.organization_type)}
+              {getOrganizationTypeLabel(organization?.organization_type, selectedLocale)}
             </div>
           </article>
 
           <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-              Предложение
+              {getCertificateText(commonMessages, "offer", "Offer")}
             </div>
             <div className="mt-2 text-[20px] font-bold text-[#111827]">
               {offerTitle}
             </div>
             <div className="mt-1 text-[12px] text-[#7c8099]">
-              {getOfferTypeLabel(offer?.offer_type)}
+              {getOfferTypeLabel(offer?.offer_type, selectedLocale)}
             </div>
           </article>
 
           <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-              Статус
+              {getCertificateText(commonMessages, "status", "Status")}
             </div>
             <div className="mt-2 text-[20px] font-bold text-[#111827]">
-              {canOrderCertificate ? "Доступен" : "Недоступен"}
+              {canOrderCertificate
+                ? getCertificateText(commonMessages, "available", "Available")
+                : getCertificateText(commonMessages, "unavailable", "Unavailable")}
             </div>
             <div className="mt-1 text-[12px] text-[#7c8099]">
               {offer?.certificate_validity_days
-                ? `${offer.certificate_validity_days} дней`
-                : "срок не указан"}
+                ? `${offer.certificate_validity_days} ${getCertificateText(commonMessages, "days", "days")}`
+                : getCertificateText(commonMessages, "notSpecified", "not specified")}
             </div>
           </article>
         </section>
@@ -429,22 +446,23 @@ export default async function NewCertificatePage({
           </div>
 
           <h2 className="mt-2 text-[22px] font-bold">
-            Что произойдёт после получения сертификата
+            {getCertificateText(newPageMessages, "afterOrderTitle", "What happens after getting the certificate")}
           </h2>
 
           <div className="mt-3 grid gap-2 text-[13px] leading-6">
             <p className="m-0">
-              <strong>Сертификат:</strong> будет создан через штатный API и
-              должен появиться в личном кабинете в разделе “Мои сертификаты”.
+              <strong>{getCertificateText(commonMessages, "certificate", "Certificate")}:</strong>{" "}
+              {getCertificateText(
+                newPageMessages,
+                "afterOrderCertificate",
+                "The certificate will be created through the standard API and should appear in the personal account under My certificates."
+              )}
             </p>
             <p className="m-0">
-              <strong>Email:</strong> пока не отправляем. TODO: добавить email
-              уведомление получателю сертификата.
+              <strong>{getCertificateText(commonMessages, "email", "Email")}:</strong>{" "}{getCertificateText(newPageMessages, "afterOrderEmail", "Email is not sent yet. Add email notification to the certificate recipient later.")}
             </p>
             <p className="m-0">
-              <strong>Доступное количество:</strong> на следующем шаге публичная
-              карточка предприятия должна показывать остаток: лимит минус уже
-              заказанные активные сертификаты.
+              <strong>{getCertificateText(commonMessages, "available", "Available")}:</strong>{" "}{getCertificateText(newPageMessages, "afterOrderQuantity", "Available quantity should be shown on the public business card in the next step: limit minus already ordered active certificates.")}
             </p>
           </div>
         </section>
@@ -453,7 +471,7 @@ export default async function NewCertificatePage({
           <section className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
             <div className="mb-4 border-b border-[#edf0f7] pb-4">
               <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7c8099]">
-                Данные сертификата
+                {getCertificateText(newPageMessages, "certificateData", "Certificate data")}
               </div>
 
               <h2 className="mt-2 text-[24px] font-bold text-[#111827]">
@@ -464,48 +482,48 @@ export default async function NewCertificatePage({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                  Оплата
+                  {getCertificateText(commonMessages, "payment", "Payment")}
                 </div>
                 <div className="mt-2 text-[20px] font-bold text-[#111827]">
-                  {getCertificatePaymentLabel(offer)}
+                  {getCertificatePaymentLabel(offer, newPageMessages, commonMessages)}
                 </div>
                 <div className="mt-1 text-[12px] text-[#7c8099]">
-                  Цена offer: {formatMoney(offer.price, offer.currency)}
+                  {getCertificateText(newPageMessages, "offerPrice", "Offer price")}: {formatMoney(offer.price, offer.currency)}
                 </div>
               </div>
 
               <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                  Условия
+                  {getCertificateText(commonMessages, "conditions", "Terms")}
                 </div>
                 <div className="mt-2 grid gap-1 text-[13px] leading-5 text-[#5a5f7a]">
                   <p className="m-0">
-                    Продавец подтверждает:{" "}
+                    {getCertificateText(newPageMessages, "sellerConfirms", "Seller confirms")}:{" "}
                     <strong className="text-[#343854]">
-                      {offer.requires_seller_confirmation ? "да" : "нет"}
+                      {offer.requires_seller_confirmation ? getCertificateText(commonMessages, "yes", "yes") : getCertificateText(commonMessages, "no", "no")}
                     </strong>
                   </p>
                   <p className="m-0">
-                    Можно передать:{" "}
+                    {getCertificateText(newPageMessages, "transferable", "Can be transferred")}:{" "}
                     <strong className="text-[#343854]">
-                      {offer.is_transferable ? "да" : "нет"}
+                      {offer.is_transferable ? getCertificateText(commonMessages, "yes", "yes") : getCertificateText(commonMessages, "no", "no")}
                     </strong>
                   </p>
                   <p className="m-0">
-                    Можно отменить:{" "}
+                    {getCertificateText(newPageMessages, "cancellable", "Can be cancelled")}:{" "}
                     <strong className="text-[#343854]">
-                      {offer.is_cancellable ? "да" : "нет"}
+                      {offer.is_cancellable ? getCertificateText(commonMessages, "yes", "yes") : getCertificateText(commonMessages, "no", "no")}
                     </strong>
                   </p>
                   <p className="m-0">
-                    Возврат:{" "}
+                    {getCertificateText(newPageMessages, "refund", "Refund")}:{" "}
                     <strong className="text-[#343854]">
-                      {getPolicyLabel(offer.points_refund_policy)}
+                      {getPolicyLabel(offer.points_refund_policy, newPageMessages)}
                     </strong>
                   </p>
                   {offer.max_certificates_total ? (
                     <p className="m-0">
-                      Лимит сертификатов:{" "}
+                      {getCertificateText(newPageMessages, "certificateLimit", "Certificate limit")}:{" "}
                       <strong className="text-[#343854]">
                         {offer.max_certificates_total}
                       </strong>
@@ -518,7 +536,7 @@ export default async function NewCertificatePage({
             {offer.certificate_terms ? (
               <div className="mt-4 rounded-2xl border border-[#dbeafe] bg-[#eff6ff] p-4 text-[#1e3a8a]">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
-                  Условия сертификата
+                  {getCertificateText(newPageMessages, "certificateTerms", "Certificate terms")}
                 </div>
                 <p className="mt-2 text-[13px] leading-6">
                   {offer.certificate_terms}
@@ -534,29 +552,30 @@ export default async function NewCertificatePage({
             offerTitle={offer.title}
             organizationName={organizationName}
             canOrderCertificate={canOrderCertificate}
+            selectedLocale={selectedLocale}
           />
         ) : null}
 
         <section className="flex flex-wrap gap-2">
           <Link
-            href={offerHref}
+            href={appendLocaleToHref(offerHref, selectedLocale)}
             className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
           >
-            Назад к offer
+            {getCertificateText(newPageMessages, "backToOfferBottom", "Back to offer")}
           </Link>
 
           <Link
-            href={directoryHref}
+            href={appendLocaleToHref(directoryHref, selectedLocale)}
             className="rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
           >
-            Публичная карточка предприятия
+            {getCertificateText(newPageMessages, "publicOrganizationCard", "Public business card")}
           </Link>
 
           <Link
-            href="/my-certificates"
+            href={appendLocaleToHref("/my-certificates", selectedLocale)}
             className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
           >
-            Мои сертификаты
+            {getCertificateText(newPageMessages, "myCertificates", "My certificates")}
           </Link>
         </section>
       </div>

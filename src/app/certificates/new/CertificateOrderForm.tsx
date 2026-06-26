@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  getCertificatesMessages,
+  getCertificateText,
+} from "../../../i18n/messages/certificates";
 
 type AuthUser = {
   readonly name?: unknown;
@@ -56,12 +60,18 @@ type CertificateOrderFormProps = {
   readonly offerTitle: string;
   readonly organizationName: string;
   readonly canOrderCertificate: boolean;
+  readonly selectedLocale?: string;
 };
 
 function getString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+
+function appendLocaleToHref(href: string, locale: string) {
+  const separator = href.includes("?") ? "&" : "?";
+  return href + separator + "locale=" + encodeURIComponent(locale);
+}
 function getNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
@@ -154,12 +164,16 @@ export default function CertificateOrderForm({
   offerTitle,
   organizationName,
   canOrderCertificate,
+  selectedLocale = "en",
 }: CertificateOrderFormProps) {
+  const certificateMessages = getCertificatesMessages(selectedLocale);
+  const commonMessages = certificateMessages.common;
+  const orderFormMessages = certificateMessages.orderForm;
   const [receiverName, setReceiverName] = useState("");
   const [receiverEmail, setReceiverEmail] = useState("");
   const [message, setMessage] = useState("");
   const [profileStatus, setProfileStatus] = useState(
-    "Пробую заполнить данные из вашего профиля...",
+    getCertificateText(orderFormMessages, "profileLoading", "Trying to fill data from your profile..."),
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -185,7 +199,7 @@ export default function CertificateOrderForm({
         if (!response.ok) {
           if (isMounted) {
             setProfileStatus(
-              "Не удалось автоматически загрузить профиль. Поля можно заполнить вручную.",
+              getCertificateText(orderFormMessages, "profileLoadFailed", "Could not automatically load the profile. You can fill the fields manually."),
             );
           }
 
@@ -211,17 +225,17 @@ export default function CertificateOrderForm({
 
         if (nextName || nextEmail) {
           setProfileStatus(
-            "Данные получателя заполнены из вашего профиля. Их можно изменить, если сертификат нужен другому человеку.",
+            getCertificateText(orderFormMessages, "profileLoaded", "Recipient data was filled from your profile. You can change it if the certificate is for another person."),
           );
         } else {
           setProfileStatus(
-            "В профиле не найдено имя или email. Заполните данные получателя вручную.",
+            getCertificateText(orderFormMessages, "profileMissing", "Name or email was not found in the profile. Fill recipient data manually."),
           );
         }
       } catch {
         if (isMounted) {
           setProfileStatus(
-            "Не удалось автоматически загрузить профиль. Поля можно заполнить вручную.",
+            getCertificateText(orderFormMessages, "profileLoadFailed", "Could not automatically load the profile. You can fill the fields manually."),
           );
         }
       }
@@ -252,17 +266,17 @@ export default function CertificateOrderForm({
     setCreatedCertificate(null);
 
     if (!canOrderCertificate) {
-      setSubmitError("Сертификат для этого предложения сейчас недоступен.");
+      setSubmitError(getCertificateText(orderFormMessages, "unavailableForOffer", "The certificate for this offer is currently unavailable."));
       return;
     }
 
     if (receiverName.trim().length < 2) {
-      setSubmitError("Введите имя получателя.");
+      setSubmitError(getCertificateText(orderFormMessages, "enterRecipientName", "Enter recipient name."));
       return;
     }
 
     if (!receiverEmail.trim().includes("@")) {
-      setSubmitError("Введите корректный email получателя.");
+      setSubmitError(getCertificateText(orderFormMessages, "enterRecipientEmail", "Enter a valid recipient email."));
       return;
     }
 
@@ -286,20 +300,20 @@ export default function CertificateOrderForm({
       const payload = (await response.json()) as CertificateRequestResponse;
 
       if (!response.ok || !payload.ok) {
-        throw new Error(payload.error ?? "Не удалось получить сертификат.");
+        throw new Error(payload.error ?? getCertificateText(orderFormMessages, "requestFailed", "Could not get the certificate."));
       }
 
       const certificate = extractCreatedCertificate(payload);
 
       setCreatedCertificate(certificate);
       setSubmitMessage(
-        "Сертификат создан. Он должен появиться в списке заказанных сертификатов в личном кабинете.",
+        getCertificateText(orderFormMessages, "createdSuccess", "Certificate created. It should appear in the list of ordered certificates in the personal account."),
       );
     } catch (error) {
       setSubmitError(
         error instanceof Error
           ? error.message
-          : "Неизвестная ошибка получения сертификата.",
+          : getCertificateText(orderFormMessages, "unknownCreateError", "Unknown certificate creation error."),
       );
     } finally {
       setIsSubmitting(false);
@@ -314,13 +328,15 @@ export default function CertificateOrderForm({
         </div>
 
         <h2 className="mt-2 text-[26px] font-bold tracking-[-0.03em] text-[#111827]">
-          Получить сертификат
+          {getCertificateText(orderFormMessages, "title", "Get certificate")}
         </h2>
 
         <p className="mt-2 max-w-[820px] text-[14px] leading-6 text-[#5a5f7a]">
-          Сертификат создаётся на базе выбранного предложения предприятия.
-          Получателем по умолчанию является залогиненный пользователь, но данные
-          можно изменить, если сертификат покупается в подарок.
+          {getCertificateText(
+            orderFormMessages,
+            "description",
+            "The certificate is created from the selected business offer. The default recipient is the logged-in user, but the data can be changed if it is a gift."
+          )}
         </p>
       </div>
 
@@ -328,7 +344,7 @@ export default function CertificateOrderForm({
         <section className="grid gap-4 rounded-2xl border border-[#dbeafe] bg-[#eff6ff] p-4">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1d4ed8]">
-              Получатель сертификата
+              {getCertificateText(orderFormMessages, "recipientSection", "Certificate recipient")}
             </div>
 
             <p className="mt-2 text-[13px] leading-5 text-[#1d4ed8]">
@@ -339,7 +355,7 @@ export default function CertificateOrderForm({
           <div className="grid gap-4 md:grid-cols-2">
             <label className="grid gap-2">
               <span className="text-[13px] font-semibold text-[#1e3a8a]">
-                Имя получателя
+                {getCertificateText(orderFormMessages, "recipientName", "Recipient name")}
               </span>
               <input
                 type="text"
@@ -349,7 +365,7 @@ export default function CertificateOrderForm({
                   userEditedNameRef.current = true;
                   setReceiverName(event.target.value);
                 }}
-                placeholder="Например: Anna Kowalska"
+                placeholder={getCertificateText(orderFormMessages, "recipientNamePlaceholder", "For example: Anna Kowalska")}
                 disabled={!canOrderCertificate || isSubmitting}
                 className="w-full rounded-xl border border-[#bfdbfe] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10 disabled:cursor-not-allowed disabled:bg-[#f1f5f9] disabled:text-[#94a3b8]"
               />
@@ -357,7 +373,7 @@ export default function CertificateOrderForm({
 
             <label className="grid gap-2">
               <span className="text-[13px] font-semibold text-[#1e3a8a]">
-                Email получателя
+                {getCertificateText(orderFormMessages, "recipientEmail", "Recipient email")}
               </span>
               <input
                 type="email"
@@ -375,20 +391,21 @@ export default function CertificateOrderForm({
           </div>
 
           <div className="rounded-xl border border-[#bfdbfe] bg-white px-4 py-3 text-[12px] leading-5 text-[#4a4f6a]">
-            Если сертификат покупается для вас — оставьте данные без изменений.
-            Если это подарок — замените имя и email на данные получателя.
+            {getCertificateText(orderFormMessages, "recipientHelpSelf", "If the certificate is for you, leave the data unchanged.")}
+{" "}
+{getCertificateText(orderFormMessages, "recipientHelpGift", "If it is a gift, replace name and email with recipient data.")}
           </div>
         </section>
 
         <label className="grid gap-2">
           <span className="text-[13px] font-semibold text-[#343854]">
-            Сообщение для получателя
+            {getCertificateText(orderFormMessages, "recipientMessage", "Message for recipient")}
           </span>
           <textarea
             name="message"
             value={message}
             onChange={(event) => setMessage(event.target.value)}
-            placeholder="Например: Życzę miłego odpoczynku i regeneracji."
+            placeholder={getCertificateText(orderFormMessages, "recipientMessagePlaceholder", "For example: I wish you rest and regeneration.")}
             disabled={!canOrderCertificate || isSubmitting}
             rows={4}
             className="w-full resize-y rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] leading-6 text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10 disabled:cursor-not-allowed disabled:bg-[#f1f5f9] disabled:text-[#94a3b8]"
@@ -397,22 +414,20 @@ export default function CertificateOrderForm({
 
         <section className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-            Что будет создано
+            {getCertificateText(orderFormMessages, "whatWillBeCreated", "What will be created")}
           </div>
 
           <div className="mt-2 grid gap-2 text-[13px] leading-5 text-[#5a5f7a]">
             <p className="m-0">
-              <strong className="text-[#343854]">Предприятие:</strong>{" "}
+              <strong className="text-[#343854]">{getCertificateText(commonMessages, "organization", "Business")}:</strong>{" "}
               {organizationName}
             </p>
             <p className="m-0">
-              <strong className="text-[#343854]">Предложение:</strong>{" "}
+              <strong className="text-[#343854]">{getCertificateText(commonMessages, "offer", "Offer")}:</strong>{" "}
               {offerTitle}
             </p>
             <p className="m-0">
-              <strong className="text-[#343854]">Email:</strong> пока не
-              отправляем. TODO: подключить email-уведомление после проверки
-              сертификатного flow.
+              <strong className="text-[#343854]">{getCertificateText(commonMessages, "email", "Email")}:</strong>{" "}{getCertificateText(orderFormMessages, "emailNotice", "Email is not sent yet. TODO: connect email notification after checking the certificate flow.")}
             </p>
           </div>
         </section>
@@ -432,20 +447,20 @@ export default function CertificateOrderForm({
         {createdCertificate ? (
           <section className="rounded-[18px] border border-[#bbf7d0] bg-[#f0fdf4] p-5 text-[#14532d]">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#15803d]">
-              Сертификат создан
+              {getCertificateText(orderFormMessages, "createdTitle", "Certificate created")}
             </div>
 
             <h3 className="mt-2 text-[22px] font-bold">
-              {createdCertificate.certificateCode || "Код будет доступен в кабинете"}
+              {createdCertificate.certificateCode || getCertificateText(orderFormMessages, "codeFallback", "The code will be available in the account")}
             </h3>
 
             <div className="mt-3 grid gap-2 text-[13px] leading-5 text-[#166534]">
               <p className="m-0">
                 <strong>ID:</strong>{" "}
-                {createdCertificate.certificateId || "не указан"}
+                {createdCertificate.certificateId || getCertificateText(orderFormMessages, "idFallback", "not specified")}
               </p>
               <p className="m-0">
-                <strong>Статус:</strong> {createdCertificate.status}
+                <strong>{getCertificateText(commonMessages, "status", "Status")}:</strong> {createdCertificate.status}
               </p>
               <p className="m-0">
                 <strong>POINTS:</strong> {createdCertificate.pointsStatus}; reserved{" "}
@@ -455,17 +470,17 @@ export default function CertificateOrderForm({
 
             <div className="mt-4 flex flex-wrap gap-2">
               <Link
-                href="/my-certificates"
+                href={appendLocaleToHref("/my-certificates", selectedLocale)}
                 className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white transition hover:bg-[#2f5fe3]"
               >
-                Мои сертификаты
+                {getCertificateText(orderFormMessages, "myCertificates", "My certificates")}
               </Link>
 
               <Link
-                href="/certificates"
+                href={appendLocaleToHref("/certificates", selectedLocale)}
                 className="rounded-xl border border-[#bbf7d0] bg-white px-4 py-3 text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
               >
-                Все сертификаты
+                {getCertificateText(orderFormMessages, "allCertificates", "All certificates")}
               </Link>
             </div>
           </section>
@@ -476,9 +491,10 @@ export default function CertificateOrderForm({
           disabled={!canSubmit}
           className="rounded-xl bg-[#3b6ef8] px-5 py-3 text-[14px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.24)] transition hover:bg-[#2f5fe3] disabled:cursor-not-allowed disabled:bg-[#aeb6c8] disabled:shadow-none"
         >
-          {isSubmitting ? "Создаю сертификат..." : "Получить сертификат"}
+          {isSubmitting ? getCertificateText(orderFormMessages, "submitLoading", "Creating certificate...") : getCertificateText(orderFormMessages, "submit", "Get certificate")}
         </button>
       </form>
     </section>
   );
 }
+
