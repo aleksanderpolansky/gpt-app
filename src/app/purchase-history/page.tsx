@@ -1,4 +1,7 @@
-﻿"use client";
+"use client";
+
+import { getPurchaseConfirmationText } from "../../i18n/messages/purchase-confirmations";
+const fallbackDash = getPurchaseConfirmationText("purchaseConfirmations.common.dash", "en");
 import { useEffect, useState } from "react";
 
 type PublicPurchaseHistoryItem = {
@@ -21,7 +24,7 @@ type PublicPurchaseHistoryApiResponse = {
 
 function formatDate(value: string | null | undefined) {
   if (!value) {
-    return "â€”";
+    return fallbackDash;
   }
 
   return new Intl.DateTimeFormat("pl-PL", {
@@ -31,6 +34,22 @@ function formatDate(value: string | null | undefined) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+
+function getSelectedLocale() {
+  if (typeof window === "undefined") {
+    return "en";
+  }
+
+  const searchParams = new URLSearchParams(window.location.search);
+
+  return (
+    searchParams.get("locale") ??
+    searchParams.get("lang") ??
+    navigator.language ??
+    "en"
+  );
 }
 
 function formatPoints(value: number | null | undefined) {
@@ -44,6 +63,12 @@ function formatPoints(value: number | null | undefined) {
 }
 
 export default function PurchaseHistoryPage() {
+  const selectedLocale = getSelectedLocale();
+  const purchaseText = (
+    key: Parameters<typeof getPurchaseConfirmationText>[0],
+    params?: Parameters<typeof getPurchaseConfirmationText>[2],
+  ) => getPurchaseConfirmationText(key, selectedLocale, params);
+
   const [purchaseHistory, setPurchaseHistory] = useState<
     PublicPurchaseHistoryItem[]
   >([]);
@@ -161,8 +186,8 @@ export default function PurchaseHistoryPage() {
                       lineHeight: "1.5",
                     }}
                   >
-                    Ð—Ð´ÐµÑÑŒ Ð¾Ñ‚Ð¾Ð±Ñ€Ð°Ð¶Ð°ÑŽÑ‚ÑÑ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´Ñ‘Ð½Ð½Ñ‹Ðµ Ð¿Ð¾ÐºÑƒÐ¿ÐºÐ¸. Ð¢Ð¾Ñ‡Ð½Ñ‹Ðµ ÑÑƒÐ¼Ð¼Ñ‹,
-                    Ñ‡ÐµÐºÐ¸, Ð²Ð½ÑƒÑ‚Ñ€ÐµÐ½Ð½Ð¸Ðµ ID Ð¸ ÐºÐ¾Ð¼Ð¼ÐµÐ½Ñ‚Ð°Ñ€Ð¸Ð¸ Ð¿Ñ€Ð¾Ð´Ð°Ð²Ñ†Ð° Ð½Ðµ Ð¿ÑƒÐ±Ð»Ð¸ÐºÑƒÑŽÑ‚ÑÑ.
+                    {purchaseText("purchaseConfirmations.history.description")}
+
                   </p>
                 </header>
         
@@ -183,7 +208,7 @@ export default function PurchaseHistoryPage() {
                     }}
                   >
                     <div>
-                      <strong>Ð¤Ð¸Ð»ÑŒÑ‚Ñ€ Ð¿Ð¾ Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸ÑŽ:</strong>{" "}
+                      <strong>{purchaseText("purchaseConfirmations.common.organization")}:</strong>{" "}
                       {activeOrganizationName ?? organizationIdFilter}
                     </div>
         
@@ -200,7 +225,7 @@ export default function PurchaseHistoryPage() {
                         fontWeight: 600,
                       }}
                     >
-                      ÐŸÐ¾ÐºÐ°Ð·Ð°Ñ‚ÑŒ Ð²ÑÐµ Ð¿Ð¾ÐºÑƒÐ¿ÐºÐ¸
+                      {purchaseText("purchaseConfirmations.common.closeFilter")}
                     </button>
                   </section>
                 )}
@@ -223,7 +248,7 @@ export default function PurchaseHistoryPage() {
                     }}
                   >
                     <div style={{ color: "#666666", marginBottom: "8px" }}>
-                      ÐŸÐ¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´Ñ‘Ð½Ð½Ñ‹Ñ… Ð¿Ð¾ÐºÑƒÐ¿Ð¾Ðº
+                      {purchaseText("purchaseConfirmations.history.confirmedPurchases")}
                     </div>
                     <div style={{ fontSize: "34px", fontWeight: 700 }}>
                       {purchaseHistory.length}
@@ -240,11 +265,11 @@ export default function PurchaseHistoryPage() {
                     }}
                   >
                     <div style={{ color: "#1e3a8a", marginBottom: "8px" }}>
-                      ÐŸÑƒÐ±Ð»Ð¸Ñ‡Ð½Ð°Ñ Ð±ÐµÐ·Ð¾Ð¿Ð°ÑÐ½Ð¾ÑÑ‚ÑŒ
+                      {purchaseText("purchaseConfirmations.history.publicCode")}
                     </div>
                     <div style={{ fontSize: "16px", lineHeight: "1.5" }}>
-                      Ð˜Ð¼Ñ Ð¸ Ñ„Ð°Ð¼Ð¸Ð»Ð¸Ñ Ð¿Ð¾ÐºÑƒÐ¿Ð°Ñ‚ÐµÐ»Ñ Ð¼Ð°ÑÐºÐ¸Ñ€ÑƒÑŽÑ‚ÑÑ, Ð° ÑÑƒÐ¼Ð¼Ð° Ð¿Ð¾ÐºÑƒÐ¿ÐºÐ¸ Ð½Ðµ
-                      Ñ€Ð°ÑÐºÑ€Ñ‹Ð²Ð°ÐµÑ‚ÑÑ.
+                      {purchaseText("purchaseConfirmations.history.buyerMaskedName")}
+
                     </div>
                   </div>
                 </section>
@@ -258,7 +283,7 @@ export default function PurchaseHistoryPage() {
                       background: "#f9fafb",
                     }}
                   >
-                    Ð—Ð°Ð³Ñ€ÑƒÐ·ÐºÐ° Ð¿ÑƒÐ±Ð»Ð¸Ñ‡Ð½Ð¾Ð¹ Ð¸ÑÑ‚Ð¾Ñ€Ð¸Ð¸ Ð¿Ð¾ÐºÑƒÐ¿Ð¾Ðº...
+                    {purchaseText("purchaseConfirmations.common.loading")}
                   </section>
                 ) : errorMessage ? (
                   <section
@@ -270,7 +295,7 @@ export default function PurchaseHistoryPage() {
                       color: "#a40000",
                     }}
                   >
-                    <h2 style={{ marginTop: 0 }}>ÐžÑˆÐ¸Ð±ÐºÐ° Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¸</h2>
+                    <h2 style={{ marginTop: 0 }}>{purchaseText("purchaseConfirmations.common.error")}</h2>
                     <p>{errorMessage}</p>
                     <button
                       type="button"
@@ -283,7 +308,7 @@ export default function PurchaseHistoryPage() {
                         cursor: "pointer",
                       }}
                     >
-                      ÐŸÐ¾Ð²Ñ‚Ð¾Ñ€Ð¸Ñ‚ÑŒ
+                      {purchaseText("purchaseConfirmations.common.retry")}
                     </button>
                   </section>
                 ) : (
@@ -312,8 +337,8 @@ export default function PurchaseHistoryPage() {
                           Confirmed purchases
                         </h2>
                         <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                          ÐŸÑƒÐ±Ð»Ð¸Ñ‡Ð½Ñ‹Ð¹ ÑÐ¿Ð¸ÑÐ¾Ðº Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´Ñ‘Ð½Ð½Ñ‹Ñ… Ð¿Ð¾ÐºÑƒÐ¿Ð¾Ðº Ð±ÐµÐ· Ñ€Ð°ÑÐºÑ€Ñ‹Ñ‚Ð¸Ñ Ñ‚Ð¾Ñ‡Ð½Ð¾Ð¹
-                          ÑÑƒÐ¼Ð¼Ñ‹.
+                          {purchaseText("purchaseConfirmations.history.description")}
+
                         </p>
                       </div>
         
@@ -329,13 +354,13 @@ export default function PurchaseHistoryPage() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        ÐžÐ±Ð½Ð¾Ð²Ð¸Ñ‚ÑŒ
+                        {purchaseText("purchaseConfirmations.common.refresh")}
                       </button>
                     </div>
         
                     {purchaseHistory.length === 0 ? (
                       <div style={{ padding: "24px", color: "#666666" }}>
-                        ÐŸÐ¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´Ñ‘Ð½Ð½Ñ‹Ñ… Ð¿ÑƒÐ±Ð»Ð¸Ñ‡Ð½Ñ‹Ñ… Ð¿Ð¾ÐºÑƒÐ¿Ð¾Ðº Ð¿Ð¾ÐºÐ° Ð½ÐµÑ‚.
+                        {purchaseText("purchaseConfirmations.history.emptyDescription")}
                       </div>
                     ) : (
                       <div style={{ overflowX: "auto" }}>
@@ -348,12 +373,12 @@ export default function PurchaseHistoryPage() {
                         >
                           <thead>
                             <tr style={{ background: "#f7f7f7", textAlign: "left" }}>
-                              <th style={{ padding: "12px 16px" }}>Ð”Ð°Ñ‚Ð°</th>
-                              <th style={{ padding: "12px 16px" }}>ÐŸÑ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ðµ</th>
-                              <th style={{ padding: "12px 16px" }}>ÐŸÐ¾ÐºÑƒÐ¿Ð°Ñ‚ÐµÐ»ÑŒ</th>
-                              <th style={{ padding: "12px 16px" }}>ÐŸÐ¾ÐºÑƒÐ¿ÐºÐ°</th>
-                              <th style={{ padding: "12px 16px" }}>Points</th>
-                              <th style={{ padding: "12px 16px" }}>ÐŸÑƒÐ±Ð»Ð¸Ñ‡Ð½Ñ‹Ð¹ ÐºÐ¾Ð´</th>
+                              <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.history.purchaseDate")}</th>
+                              <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.common.organization")}</th>
+                              <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.common.buyer")}</th>
+                              <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.history.purchaseLabel")}</th>
+                              <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.history.points")}</th>
+                              <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.history.publicCode")}</th>
                               <th style={{ padding: "12px 16px" }}>Hash</th>
                             </tr>
                           </thead>
@@ -398,7 +423,7 @@ export default function PurchaseHistoryPage() {
                                     whiteSpace: "nowrap",
                                   }}
                                 >
-                                  {formatPoints(item.pointsAwarded)} POINT
+                                  {formatPoints(item.pointsAwarded)} {purchaseText("purchaseConfirmations.common.points")}
                                 </td>
         
                                 <td

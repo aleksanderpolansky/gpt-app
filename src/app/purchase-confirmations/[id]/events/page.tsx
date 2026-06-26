@@ -1,6 +1,10 @@
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 import LocalDateTime from "../../../../components/LocalDateTime";
+import {
+  getPurchaseConfirmationText,
+  type PurchaseConfirmationMessageKey,
+} from "../../../../i18n/messages/purchase-confirmations";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +65,7 @@ type PurchaseConfirmationEventsPageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
@@ -75,9 +80,61 @@ function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   return value;
 }
 
-function getDateCell(value: string | null | undefined) {
+function getLocaleFromSearchParams(
+  searchParams: Record<string, string | string[] | undefined> | undefined
+) {
+  const rawLocale = Array.isArray(searchParams?.locale)
+    ? searchParams?.locale[0]
+    : searchParams?.locale;
+
+  if (
+    rawLocale === "ru" ||
+    rawLocale === "pl" ||
+    rawLocale === "en" ||
+    rawLocale === "es" ||
+    rawLocale === "uk" ||
+    rawLocale === "de" ||
+    rawLocale === "cs"
+  ) {
+    return rawLocale;
+  }
+
+  return "ru";
+}
+
+function getIntlLocale(locale: string) {
+  if (locale === "pl") {
+    return "pl-PL";
+  }
+  if (locale === "en") {
+    return "en-US";
+  }
+  if (locale === "es") {
+    return "es-ES";
+  }
+  if (locale === "uk") {
+    return "uk-UA";
+  }
+  if (locale === "de") {
+    return "de-DE";
+  }
+  if (locale === "cs") {
+    return "cs-CZ";
+  }
+  return "ru-RU";
+}
+
+function purchaseText(
+  key: PurchaseConfirmationMessageKey,
+  locale: string,
+  params?: Record<string, string | number>
+) {
+  return getPurchaseConfirmationText(key, locale, params);
+}
+
+function getDateCell(value: string | null | undefined, locale: string) {
   if (!value) {
-    return "—";
+    return purchaseText("purchaseConfirmations.common.dash", locale);
   }
 
   return <LocalDateTime value={value} />;
@@ -85,81 +142,84 @@ function getDateCell(value: string | null | undefined) {
 
 function formatMoney(
   amount: number | null | undefined,
-  currency: string | null | undefined
+  currency: string | null | undefined,
+  locale: string
 ) {
   if (typeof amount !== "number") {
-    return "—";
+    return purchaseText("purchaseConfirmations.common.dash", locale);
   }
 
-  return `${new Intl.NumberFormat("pl-PL", {
+  const amountText = new Intl.NumberFormat(getIntlLocale(locale), {
     maximumFractionDigits: 2,
-  }).format(amount)} ${currency ?? ""}`.trim();
+  }).format(amount);
+
+  return (amountText + " " + (currency ?? "")).trim();
 }
 
-function formatPoints(value: number | null | undefined) {
+function formatPoints(value: number | null | undefined, locale: string) {
   if (typeof value !== "number") {
     return "0";
   }
 
-  return new Intl.NumberFormat("pl-PL", {
+  return new Intl.NumberFormat(getIntlLocale(locale), {
     maximumFractionDigits: 2,
   }).format(value);
 }
 
-function getStatusLabel(status: string | null | undefined) {
+function getStatusLabel(status: string | null | undefined, locale: string) {
   if (status === "requested") {
-    return "Ожидает решения";
+    return purchaseText("purchaseConfirmations.status.requested", locale);
   }
 
   if (status === "confirmed") {
-    return "Покупка подтверждена";
+    return purchaseText("purchaseConfirmations.status.confirmed", locale);
   }
 
   if (status === "rejected") {
-    return "Покупка отклонена";
+    return purchaseText("purchaseConfirmations.status.rejected", locale);
   }
 
   if (status === "cancelled") {
-    return "Заявка отменена";
+    return purchaseText("purchaseConfirmations.status.cancelled", locale);
   }
 
-  return status ?? "—";
+  return status ?? purchaseText("purchaseConfirmations.common.dash", locale);
 }
 
-function getAccessRoleLabel(accessRole: "buyer" | "seller" | null) {
+function getAccessRoleLabel(accessRole: "buyer" | "seller" | null, locale: string) {
   if (accessRole === "buyer") {
-    return "Покупатель";
+    return purchaseText("purchaseConfirmations.role.buyer", locale);
   }
 
   if (accessRole === "seller") {
-    return "Продавец предприятия";
+    return purchaseText("purchaseConfirmations.role.seller", locale);
   }
 
-  return "—";
+  return purchaseText("purchaseConfirmations.common.dash", locale);
 }
 
-function getEventTypeLabel(eventType: string | null | undefined) {
+function getEventTypeLabel(eventType: string | null | undefined, locale: string) {
   if (eventType === "submitted") {
-    return "Заявка создана";
+    return purchaseText("purchaseConfirmations.event.created", locale);
   }
 
   if (eventType === "confirmed") {
-    return "Покупка подтверждена";
+    return purchaseText("purchaseConfirmations.event.confirmed", locale);
   }
 
   if (eventType === "rejected") {
-    return "Покупка отклонена";
+    return purchaseText("purchaseConfirmations.event.rejected", locale);
   }
 
   if (eventType === "corrected_to_confirmed") {
-    return "Исправление: отклонённая заявка подтверждена";
+    return purchaseText("purchaseConfirmations.event.correctedToConfirmed", locale);
   }
 
   if (eventType === "cancelled") {
-    return "Заявка отменена";
+    return purchaseText("purchaseConfirmations.event.cancelled", locale);
   }
 
-  return eventType ?? "—";
+  return eventType ?? purchaseText("purchaseConfirmations.event.unknown", locale);
 }
 
 function getEventStyle(eventType: string | null | undefined) {
@@ -194,16 +254,16 @@ function getEventStyle(eventType: string | null | undefined) {
   };
 }
 
-function shortHash(value: string | null | undefined) {
+function shortHash(value: string | null | undefined, locale: string) {
   if (!value) {
-    return "—";
+    return purchaseText("purchaseConfirmations.common.dash", locale);
   }
 
   if (value.length <= 18) {
     return value;
   }
 
-  return `${value.slice(0, 10)}...${value.slice(-8)}`;
+  return value.slice(0, 10) + "..." + value.slice(-8);
 }
 
 async function getCurrentAppUser(): Promise<{
@@ -267,21 +327,21 @@ async function getPurchaseConfirmationEventsPageData(
     await supabase
       .from("purchase_confirmations")
       .select(
-        `
-      id,
-      organization_id,
-      buyer_user_id,
-      buyer_public_code,
-      status,
-      purchase_amount,
-      purchase_currency,
-      created_at,
-      organizations (
-        id,
-        created_by_user_id,
-        organization_name
-      )
-    `
+        [
+          "id",
+          "organization_id",
+          "buyer_user_id",
+          "buyer_public_code",
+          "status",
+          "purchase_amount",
+          "purchase_currency",
+          "created_at",
+          "organizations (",
+          "  id,",
+          "  created_by_user_id,",
+          "  organization_name",
+          ")",
+        ].join("\\n")
       )
       .eq("id", purchaseConfirmationId)
       .single();
@@ -293,8 +353,7 @@ async function getPurchaseConfirmationEventsPageData(
       accessRole: null,
       events: [],
       errorMessage:
-        purchaseConfirmationError?.message ??
-        "Purchase confirmation not found",
+        purchaseConfirmationError?.message ?? "Purchase confirmation not found",
     };
   }
 
@@ -321,25 +380,25 @@ async function getPurchaseConfirmationEventsPageData(
   const { data: events, error: eventsError } = await supabase
     .from("purchase_confirmation_events")
     .select(
-      `
-      id,
-      purchase_confirmation_id,
-      organization_id,
-      buyer_user_id,
-      actor_user_id,
-      event_type,
-      status_before,
-      status_after,
-      purchase_amount,
-      purchase_currency,
-      points_awarded,
-      buyer_public_code,
-      user_comment,
-      seller_comment,
-      previous_hash,
-      record_hash,
-      created_at
-    `
+      [
+        "id",
+        "purchase_confirmation_id",
+        "organization_id",
+        "buyer_user_id",
+        "actor_user_id",
+        "event_type",
+        "status_before",
+        "status_after",
+        "purchase_amount",
+        "purchase_currency",
+        "points_awarded",
+        "buyer_public_code",
+        "user_comment",
+        "seller_comment",
+        "previous_hash",
+        "record_hash",
+        "created_at",
+      ].join("\\n")
     )
     .eq("purchase_confirmation_id", purchaseConfirmationId)
     .order("created_at", { ascending: true });
@@ -358,15 +417,18 @@ async function getPurchaseConfirmationEventsPageData(
     purchaseConfirmation: accessRecord,
     organizationName: relatedOrganization?.organization_name ?? null,
     accessRole: isSeller ? "seller" : "buyer",
-    events: (events as PurchaseConfirmationEvent[] | null) ?? [],
+    events: (events as unknown as PurchaseConfirmationEvent[] | null) ?? [],
     errorMessage: null,
   };
 }
 
 export default async function PurchaseConfirmationEventsPage({
   params,
+  searchParams,
 }: PurchaseConfirmationEventsPageProps) {
   const resolvedParams = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const locale = getLocaleFromSearchParams(resolvedSearchParams);
   const purchaseConfirmationId = resolvedParams.id;
 
   const {
@@ -377,8 +439,8 @@ export default async function PurchaseConfirmationEventsPage({
     errorMessage,
   } = await getPurchaseConfirmationEventsPageData(purchaseConfirmationId);
 
-  const backToSellerHref = "/purchase-confirmations";
-  const backToBuyerHref = "/my-purchase-confirmations";
+  const backToSellerHref = "/purchase-confirmations?locale=" + locale;
+  const backToBuyerHref = "/my-purchase-confirmations?locale=" + locale;
 
   return (
     <main
@@ -406,7 +468,7 @@ export default async function PurchaseConfirmationEventsPage({
               margin: "0 0 10px",
             }}
           >
-            Журнал событий заявки
+            {purchaseText("purchaseConfirmations.events.title", locale)}
           </h1>
 
           <p
@@ -417,22 +479,7 @@ export default async function PurchaseConfirmationEventsPage({
               lineHeight: "1.5",
             }}
           >
-            Здесь показана неизменяемая история заявки на подтверждение покупки:
-            создание, подтверждение, отклонение, исправление решения и
-            техническая hash-связь между событиями.
-          </p>
-
-          <p
-            style={{
-              margin: "0 0 16px",
-              color: "#666666",
-              fontSize: "14px",
-              lineHeight: "1.5",
-            }}
-          >
-            POINTS — это бонусные единицы программы лояльности. Они не являются
-            деньгами, валютой или средством платежа. Время показывается по
-            настройкам вашего устройства.
+            {purchaseText("purchaseConfirmations.events.description", locale)}
           </p>
 
           <nav
@@ -450,7 +497,7 @@ export default async function PurchaseConfirmationEventsPage({
                 textDecoration: "underline",
               }}
             >
-              Мои заявки
+              {purchaseText("purchaseConfirmations.events.backToBuyer", locale)}
             </a>
 
             <a
@@ -460,18 +507,21 @@ export default async function PurchaseConfirmationEventsPage({
                 textDecoration: "underline",
               }}
             >
-              Страница продавца
+              {purchaseText("purchaseConfirmations.events.backToSeller", locale)}
             </a>
 
             {purchaseConfirmation ? (
               <a
-                href={`/organizations/${purchaseConfirmation.organization_id}`}
+                href={
+                  "/organizations/" + purchaseConfirmation.organization_id +
+                  "?locale=" + locale
+                }
                 style={{
                   color: "#2563eb",
                   textDecoration: "underline",
                 }}
               >
-                Предприятие
+                {purchaseText("purchaseConfirmations.common.organization", locale)}
               </a>
             ) : null}
           </nav>
@@ -487,7 +537,9 @@ export default async function PurchaseConfirmationEventsPage({
               color: "#a40000",
             }}
           >
-            <h2 style={{ marginTop: 0 }}>Ошибка загрузки журнала событий</h2>
+            <h2 style={{ marginTop: 0 }}>
+              {purchaseText("purchaseConfirmations.common.error", locale)}
+            </h2>
             <p>{errorMessage}</p>
           </section>
         ) : null}
@@ -512,7 +564,7 @@ export default async function PurchaseConfirmationEventsPage({
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "8px" }}>
-                  Предприятие
+                  {purchaseText("purchaseConfirmations.common.organization", locale)}
                 </div>
                 <div style={{ fontSize: "18px", fontWeight: 700 }}>
                   {organizationName ?? purchaseConfirmation.organization_id}
@@ -529,10 +581,10 @@ export default async function PurchaseConfirmationEventsPage({
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "8px" }}>
-                  Ваша роль
+                  {purchaseText("purchaseConfirmations.events.accessRole", locale)}
                 </div>
                 <div style={{ fontSize: "18px", fontWeight: 700 }}>
-                  {getAccessRoleLabel(accessRole)}
+                  {getAccessRoleLabel(accessRole, locale)}
                 </div>
               </div>
 
@@ -546,10 +598,10 @@ export default async function PurchaseConfirmationEventsPage({
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "8px" }}>
-                  Текущий статус
+                  {purchaseText("purchaseConfirmations.common.status", locale)}
                 </div>
                 <div style={{ fontSize: "18px", fontWeight: 700 }}>
-                  {getStatusLabel(purchaseConfirmation.status)}
+                  {getStatusLabel(purchaseConfirmation.status, locale)}
                 </div>
               </div>
 
@@ -563,12 +615,13 @@ export default async function PurchaseConfirmationEventsPage({
                 }}
               >
                 <div style={{ color: "#666666", marginBottom: "8px" }}>
-                  Сумма покупки
+                  {purchaseText("purchaseConfirmations.common.amount", locale)}
                 </div>
                 <div style={{ fontSize: "18px", fontWeight: 700 }}>
                   {formatMoney(
                     purchaseConfirmation.purchase_amount,
-                    purchaseConfirmation.purchase_currency
+                    purchaseConfirmation.purchase_currency,
+                    locale
                   )}
                 </div>
               </div>
@@ -590,17 +643,24 @@ export default async function PurchaseConfirmationEventsPage({
                 }}
               >
                 <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  История событий
+                  {purchaseText("purchaseConfirmations.events.timeline", locale)}
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Каждая строка показывает одно событие заявки и его связь с
-                  предыдущей записью.
+                  {purchaseText("purchaseConfirmations.events.description", locale)}
                 </p>
               </div>
 
               {events.length === 0 ? (
                 <div style={{ padding: "24px", color: "#666666" }}>
-                  Для этой заявки пока нет записей в журнале событий.
+                  <strong>
+                    {purchaseText("purchaseConfirmations.events.emptyTitle", locale)}
+                  </strong>
+                  <p style={{ margin: "6px 0 0" }}>
+                    {purchaseText(
+                      "purchaseConfirmations.events.emptyDescription",
+                      locale
+                    )}
+                  </p>
                 </div>
               ) : (
                 <div style={{ overflowX: "auto" }}>
@@ -613,22 +673,32 @@ export default async function PurchaseConfirmationEventsPage({
                   >
                     <thead>
                       <tr style={{ background: "#f7f7f7", textAlign: "left" }}>
-                        <th style={{ padding: "12px 16px" }}>Дата</th>
-                        <th style={{ padding: "12px 16px" }}>Событие</th>
-                        <th style={{ padding: "12px 16px" }}>Статус</th>
-                        <th style={{ padding: "12px 16px" }}>Сумма покупки</th>
-                        <th style={{ padding: "12px 16px" }}>Бонус</th>
-                        <th style={{ padding: "12px 16px" }}>Покупатель</th>
                         <th style={{ padding: "12px 16px" }}>
-                          Комментарий покупателя
+                          {purchaseText("purchaseConfirmations.common.createdAt", locale)}
                         </th>
                         <th style={{ padding: "12px 16px" }}>
-                          Комментарий продавца
+                          {purchaseText("purchaseConfirmations.event.unknown", locale)}
                         </th>
                         <th style={{ padding: "12px 16px" }}>
-                          Предыдущий hash
+                          {purchaseText("purchaseConfirmations.common.status", locale)}
                         </th>
-                        <th style={{ padding: "12px 16px" }}>Hash записи</th>
+                        <th style={{ padding: "12px 16px" }}>
+                          {purchaseText("purchaseConfirmations.common.amount", locale)}
+                        </th>
+                        <th style={{ padding: "12px 16px" }}>
+                          {purchaseText("purchaseConfirmations.common.pointsAwarded", locale)}
+                        </th>
+                        <th style={{ padding: "12px 16px" }}>
+                          {purchaseText("purchaseConfirmations.common.buyer", locale)}
+                        </th>
+                        <th style={{ padding: "12px 16px" }}>
+                          {purchaseText("purchaseConfirmations.common.comment", locale)}
+                        </th>
+                        <th style={{ padding: "12px 16px" }}>
+                          {purchaseText("purchaseConfirmations.events.sellerComment", locale)}
+                        </th>
+                        <th style={{ padding: "12px 16px" }}>Previous hash</th>
+                        <th style={{ padding: "12px 16px" }}>Record hash</th>
                       </tr>
                     </thead>
 
@@ -647,7 +717,7 @@ export default async function PurchaseConfirmationEventsPage({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {getDateCell(event.created_at)}
+                              {getDateCell(event.created_at, locale)}
                             </td>
 
                             <td style={{ padding: "12px 16px" }}>
@@ -661,7 +731,7 @@ export default async function PurchaseConfirmationEventsPage({
                                   ...eventStyle,
                                 }}
                               >
-                                {getEventTypeLabel(event.event_type)}
+                                {getEventTypeLabel(event.event_type, locale)}
                               </span>
                             </td>
 
@@ -671,8 +741,8 @@ export default async function PurchaseConfirmationEventsPage({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {getStatusLabel(event.status_before)} →{" "}
-                              {getStatusLabel(event.status_after)}
+                              {getStatusLabel(event.status_before, locale)} -&gt; {" "}
+                              {getStatusLabel(event.status_after, locale)}
                             </td>
 
                             <td
@@ -683,7 +753,8 @@ export default async function PurchaseConfirmationEventsPage({
                             >
                               {formatMoney(
                                 event.purchase_amount,
-                                event.purchase_currency
+                                event.purchase_currency,
+                                locale
                               )}
                             </td>
 
@@ -694,7 +765,8 @@ export default async function PurchaseConfirmationEventsPage({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {formatPoints(event.points_awarded)} POINTS
+                              {formatPoints(event.points_awarded, locale)} {" "}
+                              {purchaseText("purchaseConfirmations.common.points", locale)}
                             </td>
 
                             <td
@@ -704,15 +776,18 @@ export default async function PurchaseConfirmationEventsPage({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {event.buyer_public_code ?? "—"}
+                              {event.buyer_public_code ??
+                                purchaseText("purchaseConfirmations.common.dash", locale)}
                             </td>
 
                             <td style={{ padding: "12px 16px" }}>
-                              {event.user_comment ?? "—"}
+                              {event.user_comment ??
+                                purchaseText("purchaseConfirmations.common.dash", locale)}
                             </td>
 
                             <td style={{ padding: "12px 16px" }}>
-                              {event.seller_comment ?? "—"}
+                              {event.seller_comment ??
+                                purchaseText("purchaseConfirmations.common.dash", locale)}
                             </td>
 
                             <td
@@ -723,7 +798,7 @@ export default async function PurchaseConfirmationEventsPage({
                               }}
                               title={event.previous_hash ?? ""}
                             >
-                              {shortHash(event.previous_hash)}
+                              {shortHash(event.previous_hash, locale)}
                             </td>
 
                             <td
@@ -734,7 +809,7 @@ export default async function PurchaseConfirmationEventsPage({
                               }}
                               title={event.record_hash ?? ""}
                             >
-                              {shortHash(event.record_hash)}
+                              {shortHash(event.record_hash, locale)}
                             </td>
                           </tr>
                         );

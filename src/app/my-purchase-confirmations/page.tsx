@@ -1,6 +1,10 @@
-﻿import { auth0 } from "../../../lib/auth0";
+import { auth0 } from "../../../lib/auth0";
 import { supabase } from "../../../lib/supabase";
 import LocalDateTime from "../../components/LocalDateTime";
+import {
+  getPurchaseConfirmationText,
+  type PurchaseConfirmationMessageKey,
+} from "../../i18n/messages/purchase-confirmations";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +48,19 @@ type PageData = {
   purchaseConfirmations: MyPurchaseConfirmation[];
   errorMessage: string | null;
 };
+
+type SearchParamsInput = Record<string, string | string[] | undefined>;
+
+type MyPurchaseConfirmationsPageProps = {
+  searchParams?: Promise<SearchParamsInput>;
+};
+
+type PurchaseTextParams = Record<string, string | number>;
+
+type PurchaseText = (
+  key: PurchaseConfirmationMessageKey,
+  params?: PurchaseTextParams,
+) => string;
 
 async function getCurrentAppUser(): Promise<{
   appUser: AppUser | null;
@@ -123,7 +140,7 @@ async function getMyPurchaseConfirmations(): Promise<PageData> {
           default_currency,
           status
         )
-      `
+      `,
       )
       .eq("buyer_user_id", appUser.id)
       .order("created_at", { ascending: false });
@@ -154,47 +171,109 @@ function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   return value;
 }
 
-function formatMoney(
-  amount: number | null | undefined,
-  currency: string | null | undefined
-) {
-  if (typeof amount !== "number") {
-    return "â€”";
+function getSearchParamValue(
+  searchParams: SearchParamsInput,
+  key: string,
+): string | undefined {
+  const value = searchParams[key];
+
+  if (Array.isArray(value)) {
+    return value[0];
   }
 
-  return `${new Intl.NumberFormat("pl-PL", {
+  return value;
+}
+
+function getPurchaseLocale(value: string | undefined) {
+  if (
+    value === "ru" ||
+    value === "pl" ||
+    value === "en" ||
+    value === "es" ||
+    value === "uk" ||
+    value === "de" ||
+    value === "cs"
+  ) {
+    return value;
+  }
+
+  return "ru";
+}
+
+function getIntlLocale(locale: string) {
+  if (locale === "pl") {
+    return "pl-PL";
+  }
+
+  if (locale === "en") {
+    return "en-US";
+  }
+
+  if (locale === "es") {
+    return "es-ES";
+  }
+
+  if (locale === "uk") {
+    return "uk-UA";
+  }
+
+  if (locale === "de") {
+    return "de-DE";
+  }
+
+  if (locale === "cs") {
+    return "cs-CZ";
+  }
+
+  return "ru-RU";
+}
+
+function formatMoney(
+  amount: number | null | undefined,
+  currency: string | null | undefined,
+  locale: string,
+  fallback: string,
+) {
+  if (typeof amount !== "number") {
+    return fallback;
+  }
+
+  return `${new Intl.NumberFormat(getIntlLocale(locale), {
     maximumFractionDigits: 2,
   }).format(amount)} ${currency ?? ""}`.trim();
 }
 
-function formatPoints(value: number | null | undefined) {
+function formatPoints(value: number | null | undefined, locale: string) {
   if (typeof value !== "number") {
     return "0";
   }
 
-  return new Intl.NumberFormat("pl-PL", {
+  return new Intl.NumberFormat(getIntlLocale(locale), {
     maximumFractionDigits: 2,
   }).format(value);
 }
 
-function getStatusLabel(status: string | null | undefined) {
+function getStatusLabel(
+  status: string | null | undefined,
+  purchaseText: PurchaseText,
+) {
   if (status === "requested") {
-    return "ÐžÐ¶Ð¸Ð´Ð°ÐµÑ‚ Ñ€ÐµÑˆÐµÐ½Ð¸Ñ Ð¿Ñ€Ð¾Ð´Ð°Ð²Ñ†Ð°";
+    return purchaseText("purchaseConfirmations.status.requested");
   }
 
   if (status === "confirmed") {
-    return "ÐŸÐ¾ÐºÑƒÐ¿ÐºÐ° Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð°";
+    return purchaseText("purchaseConfirmations.status.confirmed");
   }
 
   if (status === "rejected") {
-    return "ÐŸÐ¾ÐºÑƒÐ¿ÐºÐ° Ð¾Ñ‚ÐºÐ»Ð¾Ð½ÐµÐ½Ð°";
+    return purchaseText("purchaseConfirmations.status.rejected");
   }
 
   if (status === "cancelled") {
-    return "Ð—Ð°ÑÐ²ÐºÐ° Ð¾Ñ‚Ð¼ÐµÐ½ÐµÐ½Ð°";
+    return purchaseText("purchaseConfirmations.status.cancelled");
   }
 
-  return status ?? "â€”";
+  return status ?? purchaseText("purchaseConfirmations.common.dash");
 }
 
 function getStatusStyle(status: string | null | undefined) {
@@ -259,28 +338,38 @@ function getAuditLinkStyle() {
   };
 }
 
-function getDateCell(value: string | null | undefined) {
+function getDateCell(value: string | null | undefined, fallback: string) {
   if (!value) {
-    return "â€”";
+    return fallback;
   }
 
   return <LocalDateTime value={value} />;
 }
 
-export default async function MyPurchaseConfirmationsPage() {
+export default async function MyPurchaseConfirmationsPage({
+  searchParams,
+}: MyPurchaseConfirmationsPageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const pageLocale = getPurchaseLocale(
+    getSearchParamValue(resolvedSearchParams, "locale"),
+  );
+  const purchaseText: PurchaseText = (key, params) =>
+    getPurchaseConfirmationText(key, pageLocale, params);
+  const dashText = purchaseText("purchaseConfirmations.common.dash");
+
   const { purchaseConfirmations, errorMessage } =
     await getMyPurchaseConfirmations();
 
   const requestedCount = purchaseConfirmations.filter(
-    (item) => item.status === "requested"
+    (item) => item.status === "requested",
   ).length;
 
   const confirmedCount = purchaseConfirmations.filter(
-    (item) => item.status === "confirmed"
+    (item) => item.status === "confirmed",
   ).length;
 
   const rejectedCount = purchaseConfirmations.filter(
-    (item) => item.status === "rejected"
+    (item) => item.status === "rejected",
   ).length;
 
   const totalPointsAwarded = purchaseConfirmations.reduce((sum, item) => {
@@ -315,7 +404,7 @@ export default async function MyPurchaseConfirmationsPage() {
               margin: "0 0 10px",
             }}
           >
-            ÐœÐ¾Ð¸ Ð·Ð°ÑÐ²ÐºÐ¸ Ð½Ð° Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¸Ðµ Ð¿Ð¾ÐºÑƒÐ¿Ð¾Ðº
+            {purchaseText("purchaseConfirmations.buyer.title")}
           </h1>
 
           <p
@@ -326,22 +415,7 @@ export default async function MyPurchaseConfirmationsPage() {
               lineHeight: "1.5",
             }}
           >
-            Ð—Ð´ÐµÑÑŒ Ð¾Ñ‚Ð¾Ð±Ñ€Ð°Ð¶Ð°ÑŽÑ‚ÑÑ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð²Ð°ÑˆÐ¸ ÑÐ¾Ð±ÑÑ‚Ð²ÐµÐ½Ð½Ñ‹Ðµ Ð·Ð°ÑÐ²ÐºÐ¸ ÐºÐ°Ðº Ð¿Ð¾ÐºÑƒÐ¿Ð°Ñ‚ÐµÐ»Ñ:
-            Ð¾Ñ‚Ð¿Ñ€Ð°Ð²Ð»ÐµÐ½Ð½Ñ‹Ðµ, Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´Ñ‘Ð½Ð½Ñ‹Ðµ, Ð¾Ñ‚ÐºÐ»Ð¾Ð½Ñ‘Ð½Ð½Ñ‹Ðµ Ð¸ Ð·Ð°ÑÐ²ÐºÐ¸, Ð¿Ð¾ ÐºÐ¾Ñ‚Ð¾Ñ€Ñ‹Ð¼ Ð±Ñ‹Ð»Ð¸
-            Ð½Ð°Ñ‡Ð¸ÑÐ»ÐµÐ½Ñ‹ POINTS.
-          </p>
-
-          <p
-            style={{
-              margin: 0,
-              color: "#666666",
-              fontSize: "14px",
-              lineHeight: "1.5",
-            }}
-          >
-            POINTS â€” ÑÑ‚Ð¾ Ð±Ð¾Ð½ÑƒÑÐ½Ñ‹Ðµ ÐµÐ´Ð¸Ð½Ð¸Ñ†Ñ‹ Ð¿Ñ€Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ñ‹ Ð»Ð¾ÑÐ»ÑŒÐ½Ð¾ÑÑ‚Ð¸. ÐžÐ½Ð¸ Ð½Ðµ ÑÐ²Ð»ÑÑŽÑ‚ÑÑ
-            Ð´ÐµÐ½ÑŒÐ³Ð°Ð¼Ð¸, Ð²Ð°Ð»ÑŽÑ‚Ð¾Ð¹ Ð¸Ð»Ð¸ ÑÑ€ÐµÐ´ÑÑ‚Ð²Ð¾Ð¼ Ð¿Ð»Ð°Ñ‚ÐµÐ¶Ð°. Ð’Ñ€ÐµÐ¼Ñ Ð¿Ð¾ÐºÐ°Ð·Ñ‹Ð²Ð°ÐµÑ‚ÑÑ Ð¿Ð¾
-            Ð½Ð°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ°Ð¼ Ð²Ð°ÑˆÐµÐ³Ð¾ ÑƒÑÑ‚Ñ€Ð¾Ð¹ÑÑ‚Ð²Ð°.
+            {purchaseText("purchaseConfirmations.buyer.description")}
           </p>
         </header>
 
@@ -363,7 +437,7 @@ export default async function MyPurchaseConfirmationsPage() {
             }}
           >
             <div style={{ color: "#666666", marginBottom: "8px" }}>
-              Ð’ÑÐµÐ³Ð¾ Ð·Ð°ÑÐ²Ð¾Ðº
+              {purchaseText("purchaseConfirmations.buyer.title")}
             </div>
             <div style={{ fontSize: "34px", fontWeight: 700 }}>
               {purchaseConfirmations.length}
@@ -380,7 +454,7 @@ export default async function MyPurchaseConfirmationsPage() {
             }}
           >
             <div style={{ color: "#7a4b00", marginBottom: "8px" }}>
-              ÐžÐ¶Ð¸Ð´Ð°ÑŽÑ‚ Ñ€ÐµÑˆÐµÐ½Ð¸Ñ
+              {purchaseText("purchaseConfirmations.status.requested")}
             </div>
             <div style={{ fontSize: "34px", fontWeight: 700 }}>
               {requestedCount}
@@ -397,7 +471,7 @@ export default async function MyPurchaseConfirmationsPage() {
             }}
           >
             <div style={{ color: "#176b2c", marginBottom: "8px" }}>
-              ÐŸÐ¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ñ‹
+              {purchaseText("purchaseConfirmations.status.confirmed")}
             </div>
             <div style={{ fontSize: "34px", fontWeight: 700 }}>
               {confirmedCount}
@@ -414,7 +488,7 @@ export default async function MyPurchaseConfirmationsPage() {
             }}
           >
             <div style={{ color: "#a40000", marginBottom: "8px" }}>
-              ÐžÑ‚ÐºÐ»Ð¾Ð½ÐµÐ½Ñ‹
+              {purchaseText("purchaseConfirmations.status.rejected")}
             </div>
             <div style={{ fontSize: "34px", fontWeight: 700 }}>
               {rejectedCount}
@@ -431,10 +505,10 @@ export default async function MyPurchaseConfirmationsPage() {
             }}
           >
             <div style={{ color: "#1e3a8a", marginBottom: "8px" }}>
-              ÐÐ°Ñ‡Ð¸ÑÐ»ÐµÐ½Ð¾ POINTS
+              {purchaseText("purchaseConfirmations.common.pointsAwarded")}
             </div>
             <div style={{ fontSize: "34px", fontWeight: 700 }}>
-              {formatPoints(totalPointsAwarded)}
+              {formatPoints(totalPointsAwarded, pageLocale)}
             </div>
           </div>
         </section>
@@ -449,7 +523,9 @@ export default async function MyPurchaseConfirmationsPage() {
               color: "#a40000",
             }}
           >
-            <h2 style={{ marginTop: 0 }}>ÐžÑˆÐ¸Ð±ÐºÐ° Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¸</h2>
+            <h2 style={{ marginTop: 0 }}>
+              {purchaseText("purchaseConfirmations.common.error")}
+            </h2>
             <p>{errorMessage}</p>
           </section>
         ) : (
@@ -475,16 +551,15 @@ export default async function MyPurchaseConfirmationsPage() {
             >
               <div>
                 <h2 style={{ margin: 0, fontSize: "22px" }}>
-                  Ð˜ÑÑ‚Ð¾Ñ€Ð¸Ñ Ð¼Ð¾Ð¸Ñ… Ð·Ð°ÑÐ²Ð¾Ðº
+                  {purchaseText("purchaseConfirmations.buyer.title")}
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#666666" }}>
-                  Ð­Ñ‚Ð¾ Ð»Ð¸Ñ‡Ð½Ñ‹Ð¹ ÑÐ¿Ð¸ÑÐ¾Ðº Ð¿Ð¾ÐºÑƒÐ¿Ð°Ñ‚ÐµÐ»Ñ. Ð£Ð¿Ñ€Ð°Ð²Ð»ÑÑ‚ÑŒ Ñ€ÐµÑˆÐµÐ½Ð¸ÐµÐ¼ Ð¿Ð¾ Ð·Ð°ÑÐ²ÐºÐµ
-                  Ð¼Ð¾Ð¶ÐµÑ‚ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÑÐ¾Ð¾Ñ‚Ð²ÐµÑ‚ÑÑ‚Ð²ÑƒÑŽÑ‰Ð¸Ð¹ Ð¿Ñ€Ð¾Ð´Ð°Ð²ÐµÑ† Ð½Ð° ÑÐ²Ð¾ÐµÐ¹ ÑÑ‚Ñ€Ð°Ð½Ð¸Ñ†Ðµ.
+                  {purchaseText("purchaseConfirmations.buyer.description")}
                 </p>
               </div>
 
               <a
-                href="/my-purchase-confirmations"
+                href={`/my-purchase-confirmations?locale=${pageLocale}`}
                 style={{
                   padding: "10px 16px",
                   borderRadius: "8px",
@@ -495,13 +570,20 @@ export default async function MyPurchaseConfirmationsPage() {
                   whiteSpace: "nowrap",
                 }}
               >
-                ÐžÐ±Ð½Ð¾Ð²Ð¸Ñ‚ÑŒ
+                {purchaseText("purchaseConfirmations.common.refresh")}
               </a>
             </div>
 
             {purchaseConfirmations.length === 0 ? (
               <div style={{ padding: "24px", color: "#666666" }}>
-                Ð£ Ð²Ð°Ñ Ð¿Ð¾ÐºÐ° Ð½ÐµÑ‚ Ð·Ð°ÑÐ²Ð¾Ðº Ð½Ð° Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¸Ðµ Ð¿Ð¾ÐºÑƒÐ¿Ð¾Ðº.
+                <h2 style={{ marginTop: 0 }}>
+                  {purchaseText("purchaseConfirmations.buyer.emptyTitle")}
+                </h2>
+                <p>
+                  {purchaseText(
+                    "purchaseConfirmations.buyer.emptyDescription",
+                  )}
+                </p>
               </div>
             ) : (
               <div style={{ overflowX: "auto" }}>
@@ -514,152 +596,180 @@ export default async function MyPurchaseConfirmationsPage() {
                 >
                   <thead>
                     <tr style={{ background: "#f7f7f7", textAlign: "left" }}>
-                      <th style={{ padding: "12px 16px" }}>Ð”Ð°Ñ‚Ð° Ð·Ð°ÑÐ²ÐºÐ¸</th>
-                      <th style={{ padding: "12px 16px" }}>Ð¡Ñ‚Ð°Ñ‚ÑƒÑ</th>
-                      <th style={{ padding: "12px 16px" }}>ÐŸÑ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ðµ</th>
-                      <th style={{ padding: "12px 16px" }}>Ð¡ÑÑ‹Ð»ÐºÐ¸</th>
-                      <th style={{ padding: "12px 16px" }}>Ð–ÑƒÑ€Ð½Ð°Ð»</th>
-                      <th style={{ padding: "12px 16px" }}>Ð¡ÑƒÐ¼Ð¼Ð° Ð¿Ð¾ÐºÑƒÐ¿ÐºÐ¸</th>
-                      <th style={{ padding: "12px 16px" }}>Ð‘Ð¾Ð½ÑƒÑ</th>
-                      <th style={{ padding: "12px 16px" }}>ÐšÐ¾Ð¼Ð¼ÐµÐ½Ñ‚Ð°Ñ€Ð¸Ð¹</th>
-                      <th style={{ padding: "12px 16px" }}>ÐŸÐ¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð°</th>
-                      <th style={{ padding: "12px 16px" }}>ÐžÑ‚ÐºÐ»Ð¾Ð½ÐµÐ½Ð°</th>
-                      <th style={{ padding: "12px 16px" }}>ÐŸÑƒÐ±Ð»Ð¸Ñ‡Ð½Ñ‹Ð¹ ÐºÐ¾Ð´</th>
+                      <th style={{ padding: "12px 16px" }}>
+                        {purchaseText("purchaseConfirmations.common.createdAt")}
+                      </th>
+                      <th style={{ padding: "12px 16px" }}>
+                        {purchaseText("purchaseConfirmations.common.status")}
+                      </th>
+                      <th style={{ padding: "12px 16px" }}>
+                        {purchaseText(
+                          "purchaseConfirmations.common.organization",
+                        )}
+                      </th>
+                      <th style={{ padding: "12px 16px" }}>
+                        {purchaseText(
+                          "purchaseConfirmations.history.publicCode",
+                        )}
+                      </th>
+                      <th style={{ padding: "12px 16px" }}>
+                        {purchaseText("purchaseConfirmations.common.auditLog")}
+                      </th>
+                      <th style={{ padding: "12px 16px" }}>
+                        {purchaseText("purchaseConfirmations.common.amount")}
+                      </th>
+                      <th style={{ padding: "12px 16px" }}>
+                        {purchaseText(
+                          "purchaseConfirmations.common.pointsAwarded",
+                        )}
+                      </th>
+                      <th style={{ padding: "12px 16px" }}>
+                        {purchaseText("purchaseConfirmations.common.comment")}
+                      </th>
+                      <th style={{ padding: "12px 16px" }}>
+                        {purchaseText(
+                          "purchaseConfirmations.common.confirmedAt",
+                        )}
+                      </th>
+                      <th style={{ padding: "12px 16px" }}>
+                        {purchaseText(
+                          "purchaseConfirmations.common.rejectedAt",
+                        )}
+                      </th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {purchaseConfirmations.map((item, ui15ConfirmationKeyIndex) => {
+                    {purchaseConfirmations.map((item) => {
                       const organization = getFirstRelatedItem(
-                        item.organizations
+                        item.organizations,
                       );
                       const organizationId =
                         organization?.id ?? item.organization_id;
                       const organizationName =
-                        organization?.organization_name ?? "ÐŸÑ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ðµ";
+                        organization?.organization_name ??
+                        purchaseText(
+                          "purchaseConfirmations.common.organization",
+                        );
                       const statusStyle = getStatusStyle(item.status);
-                      const auditHref = `/purchase-confirmations/${item.id}/events`;
+                      const auditHref = `/purchase-confirmations/${item.id}/events?locale=${pageLocale}`;
+
                       return (
-                        <div key={ui15ConfirmationKeyIndex} className="min-h-0">
-                          <div className="min-w-0">
-                            <tr
-                                                      key={item.id}
-                                                      style={{ borderTop: "1px solid #eeeeee" }}
-                                                    >
-                                                      <td
-                                                        style={{
-                                                          padding: "12px 16px",
-                                                          whiteSpace: "nowrap",
-                                                        }}
-                                                      >
-                                                        {getDateCell(item.created_at)}
-                                                      </td>
-                            
-                                                      <td style={{ padding: "12px 16px" }}>
-                                                        <span
-                                                          style={{
-                                                            display: "inline-block",
-                                                            padding: "6px 10px",
-                                                            borderRadius: "999px",
-                                                            fontSize: "13px",
-                                                            whiteSpace: "nowrap",
-                                                            ...statusStyle,
-                                                          }}
-                                                        >
-                                                          {getStatusLabel(item.status)}
-                                                        </span>
-                                                      </td>
-                            
-                                                      <td style={{ padding: "12px 16px", fontWeight: 600 }}>
-                                                        {organizationName}
-                                                      </td>
-                            
-                                                      <td style={{ padding: "12px 16px" }}>
-                                                        <div
-                                                          style={{
-                                                            display: "flex",
-                                                            gap: "8px",
-                                                            flexWrap: "wrap",
-                                                          }}
-                                                        >
-                                                          <a
-                                                            href={`/organizations/${organizationId}`}
-                                                            style={getLinkStyle()}
-                                                          >
-                                                            ÐŸÑ€ÐµÐ´Ð¿Ñ€Ð¸ÑÑ‚Ð¸Ðµ
-                                                          </a>
-                            
-                                                          <a
-                                                            href={`/purchase-history?organizationId=${organizationId}`}
-                                                            style={getLinkStyle()}
-                                                          >
-                                                            ÐŸÑƒÐ±Ð»Ð¸Ñ‡Ð½Ð°Ñ Ð¸ÑÑ‚Ð¾Ñ€Ð¸Ñ
-                                                          </a>
-                                                        </div>
-                                                      </td>
-                            
-                                                      <td style={{ padding: "12px 16px" }}>
-                                                        <a href={auditHref} style={getAuditLinkStyle()}>
-                                                          Ð˜ÑÑ‚Ð¾Ñ€Ð¸Ñ
-                                                        </a>
-                                                      </td>
-                            
-                                                      <td
-                                                        style={{
-                                                          padding: "12px 16px",
-                                                          whiteSpace: "nowrap",
-                                                        }}
-                                                      >
-                                                        {formatMoney(
-                                                          item.purchase_amount,
-                                                          item.purchase_currency
-                                                        )}
-                                                      </td>
-                            
-                                                      <td
-                                                        style={{
-                                                          padding: "12px 16px",
-                                                          fontWeight: 700,
-                                                          whiteSpace: "nowrap",
-                                                        }}
-                                                      >
-                                                        {formatPoints(item.points_awarded)} POINTS
-                                                      </td>
-                            
-                                                      <td style={{ padding: "12px 16px" }}>
-                                                        {item.user_comment ?? "â€”"}
-                                                      </td>
-                            
-                                                      <td
-                                                        style={{
-                                                          padding: "12px 16px",
-                                                          whiteSpace: "nowrap",
-                                                        }}
-                                                      >
-                                                        {getDateCell(item.confirmed_at)}
-                                                      </td>
-                            
-                                                      <td
-                                                        style={{
-                                                          padding: "12px 16px",
-                                                          whiteSpace: "nowrap",
-                                                        }}
-                                                      >
-                                                        {getDateCell(item.rejected_at)}
-                                                      </td>
-                            
-                                                      <td
-                                                        style={{
-                                                          padding: "12px 16px",
-                                                          whiteSpace: "nowrap",
-                                                          fontFamily: "monospace",
-                                                        }}
-                                                      >
-                                                        {item.buyer_public_code ?? "â€”"}
-                                                      </td>
-                                                    </tr>
-                          </div>
-</div>
+                        <tr
+                          key={item.id}
+                          style={{ borderTop: "1px solid #eeeeee" }}
+                        >
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {getDateCell(item.created_at, dashText)}
+                          </td>
+
+                          <td style={{ padding: "12px 16px" }}>
+                            <span
+                              style={{
+                                display: "inline-block",
+                                padding: "6px 10px",
+                                borderRadius: "999px",
+                                fontSize: "13px",
+                                whiteSpace: "nowrap",
+                                ...statusStyle,
+                              }}
+                            >
+                              {getStatusLabel(item.status, purchaseText)}
+                            </span>
+                          </td>
+
+                          <td style={{ padding: "12px 16px", fontWeight: 600 }}>
+                            {organizationName}
+                          </td>
+
+                          <td style={{ padding: "12px 16px" }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: "8px",
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <a
+                                href={`/organizations/${organizationId}?locale=${pageLocale}`}
+                                style={getLinkStyle()}
+                              >
+                                {purchaseText(
+                                  "purchaseConfirmations.common.organization",
+                                )}
+                              </a>
+
+                              <a
+                                href={`/purchase-history?organizationId=${organizationId}&locale=${pageLocale}`}
+                                style={getLinkStyle()}
+                              >
+                                {purchaseText(
+                                  "purchaseConfirmations.history.title",
+                                )}
+                              </a>
+                            </div>
+                          </td>
+
+                          <td style={{ padding: "12px 16px" }}>
+                            <a href={auditHref} style={getAuditLinkStyle()}>
+                              {purchaseText(
+                                "purchaseConfirmations.buyer.viewAudit",
+                              )}
+                            </a>
+                          </td>
+
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {formatMoney(
+                              item.purchase_amount,
+                              item.purchase_currency,
+                              pageLocale,
+                              dashText,
+                            )}
+                          </td>
+
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              fontWeight: 700,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {formatPoints(item.points_awarded, pageLocale)}{" "}
+                            {purchaseText("purchaseConfirmations.common.points")}
+                          </td>
+
+                          <td style={{ padding: "12px 16px" }}>
+                            {item.user_comment ?? dashText}
+                          </td>
+
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {getDateCell(item.confirmed_at, dashText)}
+                          </td>
+
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {getDateCell(item.rejected_at, dashText)}
+                          </td>
+                        </tr>
                       );
                     })}
                   </tbody>
@@ -672,4 +782,3 @@ export default async function MyPurchaseConfirmationsPage() {
     </main>
   );
 }
-

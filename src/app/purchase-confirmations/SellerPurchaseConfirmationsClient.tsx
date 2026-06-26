@@ -1,3 +1,5 @@
+import { getPurchaseConfirmationText } from "../../i18n/messages/purchase-confirmations";
+const fallbackDash = getPurchaseConfirmationText("purchaseConfirmations.common.dash", "en");
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -69,18 +71,18 @@ function LocalDateTimeText({
 }: {
   value: string | null | undefined;
 }) {
-  const [formattedValue, setFormattedValue] = useState("—");
+  const [formattedValue, setFormattedValue] = useState(fallbackDash);
 
   useEffect(() => {
     if (!value) {
-      setFormattedValue("—");
+      setFormattedValue(fallbackDash);
       return;
     }
 
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-      setFormattedValue("—");
+      setFormattedValue(fallbackDash);
       return;
     }
 
@@ -108,12 +110,36 @@ function formatMoney(
   currency: string | null | undefined
 ) {
   if (typeof amount !== "number") {
-    return "—";
+    return fallbackDash;
   }
 
   return `${new Intl.NumberFormat("pl-PL", {
     maximumFractionDigits: 2,
   }).format(amount)} ${currency ?? ""}`.trim();
+}
+
+
+function getBrowserPurchaseConfirmationLocale() {
+  if (typeof window === "undefined") {
+    return "en";
+  }
+
+  const searchParams = new URLSearchParams(window.location.search);
+  return (
+    searchParams.get("locale") ??
+    searchParams.get("lang") ??
+    (typeof navigator !== "undefined" ? navigator.language : "en")
+  );
+}
+
+
+function getSelectedLocale() {
+  if (typeof window === "undefined") {
+    return "en";
+  }
+
+  const searchParams = new URLSearchParams(window.location.search);
+  return searchParams.get("locale") ?? searchParams.get("lang") ?? "en";
 }
 
 function formatPoints(value: number | null | undefined) {
@@ -126,24 +152,42 @@ function formatPoints(value: number | null | undefined) {
   }).format(value);
 }
 
-function getStatusLabel(status: string | null | undefined) {
+function getStatusLabel(
+  status: string | null | undefined,
+  locale: unknown = "en",
+) {
   if (status === "requested") {
-    return "Ожидает решения";
+    return getPurchaseConfirmationText(
+      "purchaseConfirmations.status.requested",
+      locale,
+    );
   }
 
   if (status === "confirmed") {
-    return "Покупка подтверждена";
+    return getPurchaseConfirmationText(
+      "purchaseConfirmations.status.confirmed",
+      locale,
+    );
   }
 
   if (status === "rejected") {
-    return "Покупка отклонена";
+    return getPurchaseConfirmationText(
+      "purchaseConfirmations.status.rejected",
+      locale,
+    );
   }
 
   if (status === "cancelled") {
-    return "Заявка отменена";
+    return getPurchaseConfirmationText(
+      "purchaseConfirmations.status.cancelled",
+      locale,
+    );
   }
 
-  return status ?? "—";
+  return (
+    status ??
+    getPurchaseConfirmationText("purchaseConfirmations.common.dash", locale)
+  );
 }
 
 function getStatusStyle(status: string | null | undefined) {
@@ -198,6 +242,13 @@ export default function SellerPurchaseConfirmationsClient({
   initialOrganizationIdFilter,
   initialErrorMessage,
 }: SellerPurchaseConfirmationsClientProps) {
+  const selectedLocale = getSelectedLocale();
+  const purchaseText = (
+    key: Parameters<typeof getPurchaseConfirmationText>[0],
+    params?: Parameters<typeof getPurchaseConfirmationText>[2],
+  ) => getPurchaseConfirmationText(key, selectedLocale, params);
+
+
   const [purchaseConfirmations, setPurchaseConfirmations] = useState<
     PurchaseConfirmation[]
   >(initialPurchaseConfirmations);
@@ -254,7 +305,7 @@ export default function SellerPurchaseConfirmationsClient({
       const json = (await response.json()) as PurchaseConfirmationsApiResponse;
 
       if (!response.ok || !json.ok) {
-        throw new Error(json.error ?? "Cannot load purchase confirmations");
+        throw new Error(json.error ?? purchaseText("purchaseConfirmations.seller.loadError"));
       }
 
       setPurchaseConfirmations(json.purchaseConfirmations ?? []);
@@ -297,13 +348,13 @@ export default function SellerPurchaseConfirmationsClient({
         (await response.json()) as PurchaseConfirmationActionResponse;
 
       if (!response.ok || !json.ok) {
-        throw new Error(json.error ?? `Cannot ${action} purchase confirmation`);
+        throw new Error(json.error ?? purchaseText("purchaseConfirmations.seller.actionError"));
       }
 
       setActionMessage(
         action === "confirm"
-          ? "Покупка подтверждена. Если эта заявка ранее была отклонена по ошибке, исправление сохранено в журнале событий."
-          : "Покупка отклонена. Решение сохранено в журнале событий."
+          ? purchaseText("purchaseConfirmations.seller.confirmedMessage")
+          : purchaseText("purchaseConfirmations.seller.rejectedMessage")
       );
 
       setSellerComments((currentComments) => ({
@@ -349,17 +400,15 @@ export default function SellerPurchaseConfirmationsClient({
   return (
     <main style={{ padding: "32px", maxWidth: "1300px", margin: "0 auto" }}>
       <div style={{ marginBottom: "28px" }}>
-        <h1 style={{ fontSize: "32px", marginBottom: "8px" }}>
-          Подтверждение покупок
-        </h1>
+        <h1 style={{ fontSize: "32px", marginBottom: "8px" }}>{purchaseText("purchaseConfirmations.seller.title")}</h1>
         <p style={{ color: "#666", fontSize: "16px", lineHeight: "1.5" }}>
-          Здесь продавец проверяет заявки покупателей и подтверждает только
-          реальные покупки. После подтверждения система может начислить
-          пользователю POINTS как бонусные единицы программы лояльности.
+          {purchaseText("purchaseConfirmations.seller.description")}
+
+
         </p>
         <p style={{ color: "#777", fontSize: "14px", lineHeight: "1.5" }}>
-          POINTS не являются деньгами, валютой или средством платежа. Время на
-          этой странице показывается по настройкам устройства пользователя.
+          {purchaseText("purchaseConfirmations.seller.kicker")}
+
         </p>
       </div>
 
@@ -380,7 +429,7 @@ export default function SellerPurchaseConfirmationsClient({
           }}
         >
           <div>
-            <strong>Фильтр по предприятию:</strong>{" "}
+            <strong>{purchaseText("purchaseConfirmations.seller.filterTitle")}</strong>{" "}
             {activeOrganizationName ?? organizationIdFilter}
           </div>
 
@@ -397,7 +446,7 @@ export default function SellerPurchaseConfirmationsClient({
               fontWeight: 600,
             }}
           >
-            Показать все заявки
+            {purchaseText("purchaseConfirmations.common.closeFilter")}
           </button>
         </section>
       ) : null}
@@ -413,7 +462,7 @@ export default function SellerPurchaseConfirmationsClient({
             marginBottom: "18px",
           }}
         >
-          <h2 style={{ marginTop: 0 }}>Ошибка загрузки</h2>
+          <h2 style={{ marginTop: 0 }}>{purchaseText("purchaseConfirmations.seller.loadError")}</h2>
           <p>{errorMessage}</p>
           <button
             type="button"
@@ -426,7 +475,7 @@ export default function SellerPurchaseConfirmationsClient({
               cursor: "pointer",
             }}
           >
-            Повторить
+            {purchaseText("purchaseConfirmations.common.retry")}
           </button>
         </section>
       ) : null}
@@ -448,7 +497,7 @@ export default function SellerPurchaseConfirmationsClient({
             boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
           }}
         >
-          <div style={{ color: "#666", marginBottom: "8px" }}>Всего заявок</div>
+          <div style={{ color: "#666", marginBottom: "8px" }}>{purchaseText("purchaseConfirmations.seller.title")}</div>
           <div style={{ fontSize: "32px", fontWeight: 700 }}>
             {visiblePurchaseConfirmations.length}
           </div>
@@ -463,9 +512,7 @@ export default function SellerPurchaseConfirmationsClient({
             boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
           }}
         >
-          <div style={{ color: "#666", marginBottom: "8px" }}>
-            Ожидают решения
-          </div>
+          <div style={{ color: "#666", marginBottom: "8px" }}>{purchaseText("purchaseConfirmations.seller.pendingCard")}</div>
           <div style={{ fontSize: "32px", fontWeight: 700 }}>
             {requestedCount}
           </div>
@@ -480,7 +527,7 @@ export default function SellerPurchaseConfirmationsClient({
             boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
           }}
         >
-          <div style={{ color: "#666", marginBottom: "8px" }}>Подтверждены</div>
+          <div style={{ color: "#666", marginBottom: "8px" }}>{purchaseText("purchaseConfirmations.seller.confirmedCard")}</div>
           <div style={{ fontSize: "32px", fontWeight: 700 }}>
             {confirmedCount}
           </div>
@@ -495,9 +542,7 @@ export default function SellerPurchaseConfirmationsClient({
             boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
           }}
         >
-          <div style={{ color: "#666", marginBottom: "8px" }}>
-            Начислено POINTS
-          </div>
+          <div style={{ color: "#666", marginBottom: "8px" }}>{purchaseText("purchaseConfirmations.seller.pointsCard")}</div>
           <div style={{ fontSize: "32px", fontWeight: 700 }}>
             {formatPoints(totalPointsAwarded)}
           </div>
@@ -554,12 +599,12 @@ export default function SellerPurchaseConfirmationsClient({
           }}
         >
           <div>
-            <h2 style={{ margin: 0, fontSize: "22px" }}>Журнал заявок</h2>
+            <h2 style={{ margin: 0, fontSize: "22px" }}>{purchaseText("purchaseConfirmations.seller.filterTitle")}</h2>
             <p style={{ margin: "6px 0 0", color: "#666", lineHeight: "1.5" }}>
-              Покупатель подаёт заявку, а продавец подтверждает или отклоняет
-              её после проверки. Если отказ был сделан по ошибке, отклонённую
-              заявку можно позже подтвердить — такое исправление сохраняется в
-              журнале событий.
+              {purchaseText("purchaseConfirmations.seller.filterDescription")}
+
+
+
             </p>
           </div>
 
@@ -576,13 +621,13 @@ export default function SellerPurchaseConfirmationsClient({
               whiteSpace: "nowrap",
             }}
           >
-            {isRefreshing ? "Обновление..." : "Обновить"}
+            {isRefreshing ? purchaseText("purchaseConfirmations.seller.processing") : purchaseText("purchaseConfirmations.common.refresh")}
           </button>
         </div>
 
         {visiblePurchaseConfirmations.length === 0 ? (
           <div style={{ padding: "24px", color: "#666" }}>
-            Заявок на подтверждение покупок пока нет.
+            {purchaseText("purchaseConfirmations.seller.emptyDescription")}
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
@@ -595,28 +640,28 @@ export default function SellerPurchaseConfirmationsClient({
             >
               <thead>
                 <tr style={{ background: "#f7f7f7", textAlign: "left" }}>
-                  <th style={{ padding: "12px 16px" }}>Дата заявки</th>
-                  <th style={{ padding: "12px 16px" }}>Статус</th>
-                  <th style={{ padding: "12px 16px" }}>Предприятие</th>
-                  <th style={{ padding: "12px 16px" }}>Покупатель</th>
-                  <th style={{ padding: "12px 16px" }}>Сумма покупки</th>
-                  <th style={{ padding: "12px 16px" }}>Бонус</th>
+                  <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.common.createdAt")}</th>
+                  <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.common.status")}</th>
+                  <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.common.organization")}</th>
+                  <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.common.buyer")}</th>
+                  <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.common.amount")}</th>
+                  <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.common.pointsAwarded")}</th>
                   <th style={{ padding: "12px 16px" }}>
-                    Комментарий покупателя
+                    {purchaseText("purchaseConfirmations.common.comment")}
                   </th>
                   <th style={{ padding: "12px 16px" }}>
-                    Комментарий продавца
+                    {purchaseText("purchaseConfirmations.events.sellerComment")}
                   </th>
-                  <th style={{ padding: "12px 16px" }}>Чек</th>
-                  <th style={{ padding: "12px 16px" }}>Журнал</th>
-                  <th style={{ padding: "12px 16px" }}>Действия</th>
+                  <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.history.purchaseLabel")}</th>
+                  <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.common.auditLog")}</th>
+                  <th style={{ padding: "12px 16px" }}>{purchaseText("purchaseConfirmations.seller.confirmAction")}</th>
                 </tr>
               </thead>
               <tbody>
                 {visiblePurchaseConfirmations.map((item) => {
                   const organization = getFirstRelatedItem(item.organizations);
                   const organizationName =
-                    organization?.organization_name ?? "—";
+                    organization?.organization_name ?? fallbackDash;
 
                   const statusStyle = getStatusStyle(item.status);
                   const canConfirmStandard = item.status === "requested";
@@ -648,14 +693,14 @@ export default function SellerPurchaseConfirmationsClient({
                             ...statusStyle,
                           }}
                         >
-                          {getStatusLabel(item.status)}
+                          {getStatusLabel(item.status, selectedLocale)}
                         </span>
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         {organizationName}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
-                        {item.buyer_public_code ?? "—"}
+                        {item.buyer_public_code ?? fallbackDash}
                       </td>
                       <td
                         style={{
@@ -678,11 +723,11 @@ export default function SellerPurchaseConfirmationsClient({
                         {formatPoints(item.points_awarded)} POINTS
                       </td>
                       <td style={{ padding: "12px 16px" }}>
-                        {item.user_comment ?? "—"}
+                        {item.user_comment ?? fallbackDash}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <div style={{ display: "grid", gap: "8px" }}>
-                          <div>{item.seller_comment ?? "—"}</div>
+                          <div>{item.seller_comment ?? fallbackDash}</div>
 
                           {canShowSellerCommentInput ? (
                             <input
@@ -694,11 +739,11 @@ export default function SellerPurchaseConfirmationsClient({
                                   [item.id]: event.target.value,
                                 }))
                               }
-                              placeholder={
-                                canCorrectRejected
-                                  ? "Причина исправления решения"
-                                  : "Комментарий к решению"
-                              }
+                              placeholder={purchaseText("purchaseConfirmations.seller.commentPlaceholder")}
+
+
+
+
                               style={{
                                 padding: "8px 10px",
                                 border: "1px solid #cbd5e1",
@@ -716,15 +761,15 @@ export default function SellerPurchaseConfirmationsClient({
                             target="_blank"
                             rel="noreferrer"
                           >
-                            Открыть
+                            Open
                           </a>
                         ) : (
-                          "—"
+                          fallbackDash
                         )}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <a href={auditHref} style={getAuditLinkStyle()}>
-                          История
+                          {purchaseText("purchaseConfirmations.common.auditLog")}
                         </a>
                       </td>
                       <td style={{ padding: "12px 16px" }}>
@@ -759,9 +804,7 @@ export default function SellerPurchaseConfirmationsClient({
                                 fontWeight: 600,
                                 whiteSpace: "nowrap",
                               }}
-                            >
-                              Подтвердить покупку
-                            </button>
+                            >{purchaseText("purchaseConfirmations.seller.confirmAction")}</button>
 
                             <button
                               type="button"
@@ -786,9 +829,7 @@ export default function SellerPurchaseConfirmationsClient({
                                 fontWeight: 600,
                                 whiteSpace: "nowrap",
                               }}
-                            >
-                              Отклонить заявку
-                            </button>
+                            >{purchaseText("purchaseConfirmations.seller.rejectAction")}</button>
                           </div>
                         ) : canCorrectRejected ? (
                           <div
@@ -809,8 +850,8 @@ export default function SellerPurchaseConfirmationsClient({
                                 lineHeight: "1.4",
                               }}
                             >
-                              Заявка отклонена. Подтверждайте её только если
-                              отказ был ошибочным.
+                              {purchaseText("purchaseConfirmations.status.rejected")}
+
                             </div>
 
                             <button
@@ -837,11 +878,11 @@ export default function SellerPurchaseConfirmationsClient({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              Исправить отказ и подтвердить
+                              {purchaseText("purchaseConfirmations.event.correctedToConfirmed")}
                             </button>
                           </div>
                         ) : (
-                          <span style={{ color: "#666" }}>—</span>
+                          <span style={{ color: "#666" }}>{fallbackDash}</span>
                         )}
                       </td>
                     </tr>
