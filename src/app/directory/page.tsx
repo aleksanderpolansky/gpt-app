@@ -766,14 +766,14 @@ function formatDistanceKm(distanceKm: number | null | undefined) {
   }
 
   if (distanceKm < 1) {
-    return `${distanceKm.toFixed(2)} км`;
+    return `${distanceKm.toFixed(2)} km`;
   }
 
   if (distanceKm < 10) {
-    return `${distanceKm.toFixed(1)} км`;
+    return `${distanceKm.toFixed(1)} km`;
   }
 
-  return `${Math.round(distanceKm)} км`;
+  return `${Math.round(distanceKm)} km`;
 }
 
 export default async function DirectoryPage({

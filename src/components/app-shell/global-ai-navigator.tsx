@@ -16,22 +16,22 @@ import { UserSessionMiniStatus } from "../auth/user-session-client";
 import { useAiNavigator, type AiNavigatorMessage } from "./ai-navigator-provider";
 
 const QUICK_COMMANDS = [
-  { label: "Записать активность", icon: Activity, prompt: "Хочу записать активность." },
-  { label: "Слабое направление", icon: Target, prompt: "Покажи моё слабое направление и объясни, что делать дальше." },
-  { label: "Добавить метрику", icon: Plus, prompt: "Помоги добавить новую метрику для отслеживания." },
-  { label: "Открыть аналитику", icon: TrendingUp, prompt: "Объясни текущую аналитику и что она значит." },
+  { label: "Log activity", icon: Activity, prompt: "I want to log an activity." },
+  { label: "Weak direction", icon: Target, prompt: "Show my weakest direction and explain what to do next." },
+  { label: "Add metric", icon: Plus, prompt: "Help me add a new metric to track." },
+  { label: "Open analytics", icon: TrendingUp, prompt: "Explain the current analytics and what it means." },
 ];
 
 const ACTIVITY_EXAMPLES = [
-  "25 минут немецкий: упражнения по B2B-переговорам",
-  "8 подтягиваний и 8 отжиманий на брусьях",
-  "40 минут анализировал продажи одноразовой посуды",
+  "25 minutes German: B2B negotiation drills",
+  "8 pull-ups and 8 dips",
+  "40 minutes analyzing disposable tableware sales",
 ];
 
 const AI_MODEL_TIERS = [
-  { code: "nano", label: "Nano", caption: "экономно" },
-  { code: "standard", label: "Standard", caption: "обычно" },
-  { code: "pro", label: "Pro", caption: "дорого" },
+  { code: "nano", label: "Nano", caption: "economy" },
+  { code: "standard", label: "Standard", caption: "standard" },
+  { code: "pro", label: "Pro", caption: "premium" },
 ] as const;
 
 export const UI_MINI_FIX_ACTIVITY_COMPOSER_ON_DEMAND_IN_GLOBAL_AI =
@@ -45,14 +45,14 @@ function ActivityComposer() {
       <div className="mb-2 flex items-center gap-1.5">
         <Activity size={12} className="text-[#3b6ef8]" />
         <span className="text-[10.5px] font-semibold uppercase tracking-wide text-[#3b6ef8]">
-          Единый ввод сообщений
+          Single message input
         </span>
       </div>
 
       <p className="mb-2 text-[12px] leading-relaxed text-[#3d3657]">
-        Все действия вводятся через нижнее поле “Напишите сообщение”. Быстрые
-        примеры ниже только подставляют текст в единый composer и не создают
-        отдельную точку входа.
+        All actions go through the bottom field “Write a message”. The quick
+        examples below only insert text into the single composer and do not create
+        a separate input point.
       </p>
 
       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -89,13 +89,13 @@ function FormattedMessageContent({ text }: { text: string }) {
         const lowerLine = line.toLowerCase();
         const isCommandLine = line.startsWith("—") || line.startsWith("-");
         const isImportantLine =
-          lowerLine.startsWith("текст:") ||
-          lowerLine.startsWith("длительность:") ||
+          lowerLine.startsWith("text:") ||
+          lowerLine.startsWith("duration:") ||
           lowerLine.startsWith("intent:") ||
           lowerLine.startsWith("confidence:") ||
           lowerLine.startsWith("category candidates:") ||
           lowerLine.startsWith("value object candidates:") ||
-          lowerLine.startsWith("статус:") ||
+          lowerLine.startsWith("status:") ||
           lowerLine.startsWith("db write") ||
           lowerLine.startsWith("service log");
 
@@ -134,18 +134,18 @@ function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
         <div className="mb-1.5 flex items-center gap-1.5">
           <HelpCircle size={11} className="text-red-600" />
           <span className="text-[10.5px] font-semibold uppercase tracking-wide text-red-600">
-            Ошибка ИИ
+            AI error
           </span>
         </div>
         <p className="text-[12px] leading-relaxed text-red-700">
           <FormattedMessageContent text={message.text} />
         </p>
-        {message.text.includes("Нужно войти") ? (
+        {message.text.includes("Need to sign in") ? (
           <a
             href="/auth/login?connection=google-oauth2&prompt=select_account"
             className="mt-2 inline-flex rounded-lg bg-red-600 px-3 py-1.5 text-[11.5px] font-semibold text-white transition-colors hover:bg-red-700"
           >
-            Войти
+            Sign in
           </a>
         ) : null}
       </div>
@@ -174,7 +174,7 @@ function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
         <div className="mb-1.5 flex items-center gap-1.5">
           <Sparkles size={11} className="text-[#8b5cf6]" />
           <span className="text-[10.5px] font-semibold uppercase tracking-wide text-[#8b5cf6]">
-            Контекст
+            Context
           </span>
         </div>
         <p className="whitespace-pre-line text-[12px] leading-relaxed text-[#3d3657]">
@@ -190,7 +190,7 @@ function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
         <div className="mb-1.5 flex items-center gap-1.5">
           <Target size={11} className="text-[#22c55e]" />
           <span className="text-[10.5px] font-semibold uppercase tracking-wide text-[#22c55e]">
-            Рекомендация
+            Recommendation
           </span>
         </div>
         <p className="whitespace-pre-line text-[12px] leading-relaxed text-[#1a3d2e]">
@@ -239,14 +239,14 @@ export function GlobalAiNavigator() {
 
           <div className="min-w-0">
             <div className="text-[14px] font-bold leading-none text-[#1a1d2e]">
-              AI-Навигатор
+              AI Navigator
             </div>
             <UserSessionMiniStatus className="mt-1" />
           </div>
 
           <div className="ml-auto flex items-center gap-1">
             <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
-            <span className="text-[10px] font-medium text-[#22c55e]">Онлайн</span>
+            <span className="text-[10px] font-medium text-[#22c55e]">Online</span>
           </div>
         </div>
       </div>
@@ -263,7 +263,7 @@ export function GlobalAiNavigator() {
         {/* GPT_APP_STEP18P_R11_HIFI_SELECTOR: visual-only selector; billing guard remains backend-only. */}
         <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[#b0b4c8]">
-            Модель AI
+            AI model
           </p>
 
           <div className="grid grid-cols-3 gap-1.5">
@@ -316,7 +316,7 @@ export function GlobalAiNavigator() {
                 void sendMessage();
               }
             }}
-            placeholder="Напишите сообщение..."
+            placeholder="Write a message..."
             className="flex-1 bg-transparent text-[12.5px] text-[#1a1d2e] placeholder-[#b0b4c8] focus:outline-none"
           />
           <button

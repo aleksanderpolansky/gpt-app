@@ -51,7 +51,7 @@ const DEFAULT_MESSAGES: AiNavigatorMessage[] = [
   {
     id: 1,
     role: "ai",
-    text: "Привет! Я AI-Навигатор. Могу помочь разобрать активность, подсказать следующий шаг или объяснить текущую страницу.",
+    text: "\u041f\u0440\u0438\u0432\u0435\u0442! \u042f AI-\u041d\u0430\u0432\u0438\u0433\u0430\u0442\u043e\u0440. \u041c\u043e\u0433\u0443 \u043f\u043e\u043c\u043e\u0447\u044c \u0440\u0430\u0437\u043e\u0431\u0440\u0430\u0442\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c, \u043f\u043e\u0434\u0441\u043a\u0430\u0437\u0430\u0442\u044c \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0439 \u0448\u0430\u0433 \u0438\u043b\u0438 \u043e\u0431\u044a\u044f\u0441\u043d\u0438\u0442\u044c \u0442\u0435\u043a\u0443\u0449\u0443\u044e \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0443.",
     createdAt: new Date(0).toISOString(),
   },
 ];
@@ -848,20 +848,20 @@ function inferActivityRecordPayloadDurationMinutes(
     return Number.parseInt(avoHourMatch[1], 10) * 60;
   }
 
-  if (source.includes("полчаса")) {
+  if (source.includes("\u043f\u043e\u043b\u0447\u0430\u0441\u0430")) {
     return 30;
   }
 
-  if (source.includes("полтора часа")) {
+  if (source.includes("\u043f\u043e\u043b\u0442\u043e\u0440\u0430 \u0447\u0430\u0441\u0430")) {
     return 90;
   }
 
-  const hourMatch = source.match(/(\d+)\s*(час|часа|часов|h)/i);
+  const hourMatch = source.match(/(\d+)\s*(\u0447\u0430\u0441|\u0447\u0430\u0441\u0430|\u0447\u0430\u0441\u043e\u0432|h)/i);
   if (hourMatch?.[1]) {
     return Number.parseInt(hourMatch[1], 10) * 60;
   }
 
-  const minuteMatch = source.match(/(\d+)\s*(мин|минут|min)/i);
+  const minuteMatch = source.match(/(\d+)\s*(\u043c\u0438\u043d|\u043c\u0438\u043d\u0443\u0442|min)/i);
   if (minuteMatch?.[1]) {
     return Number.parseInt(minuteMatch[1], 10);
   }
@@ -883,8 +883,8 @@ function inferActivityRecordPayloadTitle(preview: LocalPendingPreview): string {
     }
   }
 
-  if (text.includes("стоматолог")) {
-    return "Профилактический приём у стоматолога";
+  if (text.includes("\u0441\u0442\u043e\u043c\u0430\u0442\u043e\u043b\u043e\u0433")) {
+    return "\u041f\u0440\u043e\u0444\u0438\u043b\u0430\u043a\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u043f\u0440\u0438\u0451\u043c \u0443 \u0441\u0442\u043e\u043c\u0430\u0442\u043e\u043b\u043e\u0433\u0430";
   }
 
   return preview.text;
@@ -930,9 +930,9 @@ function buildControlledActivityRecordPayloadPreviewLines(): string[] {
 function formatLatestLocalPendingPreviewLines(): string[] {
   if (!latestLocalPendingPreview) {
     return [
-      "Pending preview: отсутствует.",
-      "Сейчас нечего подтверждать, отменять или показывать как review.",
-      "Сначала введите активность, команду по Value Object или исправление.",
+      "Pending preview: \u043e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442.",
+      "\u0421\u0435\u0439\u0447\u0430\u0441 \u043d\u0435\u0447\u0435\u0433\u043e \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0442\u044c, \u043e\u0442\u043c\u0435\u043d\u044f\u0442\u044c \u0438\u043b\u0438 \u043f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0442\u044c \u043a\u0430\u043a review.",
+      "\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c, \u043a\u043e\u043c\u0430\u043d\u0434\u0443 \u043f\u043e Value Object \u0438\u043b\u0438 \u0438\u0441\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435.",
     ];
   }
 
@@ -963,28 +963,28 @@ function formatLatestLocalPendingPreviewLines(): string[] {
   return lines;
 }
 const ACTIVITY_DURATION_PATTERNS = [
-  /(^|\s)\d+\s*(мин|минут|час|часа|часов|h|min)(\s|$|[.,;:!?])/i,
-  /(^|\s)полчаса(\s|$|[.,;:!?])/i,
-  /(^|\s)полтора\s+часа(\s|$|[.,;:!?])/i,
+  /(^|\s)\d+\s*(\u043c\u0438\u043d|\u043c\u0438\u043d\u0443\u0442|\u0447\u0430\u0441|\u0447\u0430\u0441\u0430|\u0447\u0430\u0441\u043e\u0432|h|min)(\s|$|[.,;:!?])/i,
+  /(^|\s)\u043f\u043e\u043b\u0447\u0430\u0441\u0430(\s|$|[.,;:!?])/i,
+  /(^|\s)\u043f\u043e\u043b\u0442\u043e\u0440\u0430\s+\u0447\u0430\u0441\u0430(\s|$|[.,;:!?])/i,
 ];
 
 const ACTIVITY_ACTION_PATTERNS = [
-  /был/i,
-  /была/i,
-  /делал/i,
-  /делала/i,
-  /занимался/i,
-  /занималась/i,
-  /учил/i,
-  /учила/i,
-  /работал/i,
-  /работала/i,
-  /тренировался/i,
-  /тренировалась/i,
-  /ходил/i,
-  /ходила/i,
-  /читал/i,
-  /читала/i,
+  /\u0431\u044b\u043b/i,
+  /\u0431\u044b\u043b\u0430/i,
+  /\u0434\u0435\u043b\u0430\u043b/i,
+  /\u0434\u0435\u043b\u0430\u043b\u0430/i,
+  /\u0437\u0430\u043d\u0438\u043c\u0430\u043b\u0441\u044f/i,
+  /\u0437\u0430\u043d\u0438\u043c\u0430\u043b\u0430\u0441\u044c/i,
+  /\u0443\u0447\u0438\u043b/i,
+  /\u0443\u0447\u0438\u043b\u0430/i,
+  /\u0440\u0430\u0431\u043e\u0442\u0430\u043b/i,
+  /\u0440\u0430\u0431\u043e\u0442\u0430\u043b\u0430/i,
+  /\u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u0430\u043b\u0441\u044f/i,
+  /\u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u0430\u043b\u0430\u0441\u044c/i,
+  /\u0445\u043e\u0434\u0438\u043b/i,
+  /\u0445\u043e\u0434\u0438\u043b\u0430/i,
+  /\u0447\u0438\u0442\u0430\u043b/i,
+  /\u0447\u0438\u0442\u0430\u043b\u0430/i,
 ];
 
 function includesAny(text: string, values: readonly string[]) {
@@ -1020,19 +1020,19 @@ function classifyUnifiedMessage(message: string): UnifiedMessageClassification {
   const hasQuestionMark = normalizedText.includes("?");
   const isQuestion =
     hasQuestionMark ||
-    lowerText.startsWith("как ") ||
-    lowerText.startsWith("что ") ||
-    lowerText.startsWith("почему ") ||
-    lowerText.startsWith("зачем ") ||
-    lowerText.startsWith("где ") ||
-    lowerText.startsWith("когда ");
+    lowerText.startsWith("\u043a\u0430\u043a ") ||
+    lowerText.startsWith("\u0447\u0442\u043e ") ||
+    lowerText.startsWith("\u043f\u043e\u0447\u0435\u043c\u0443 ") ||
+    lowerText.startsWith("\u0437\u0430\u0447\u0435\u043c ") ||
+    lowerText.startsWith("\u0433\u0434\u0435 ") ||
+    lowerText.startsWith("\u043a\u043e\u0433\u0434\u0430 ");
 
   const hasActivityPrefix =
-    lowerText.startsWith("запиши ") ||
-    lowerText.startsWith("записать ") ||
-    lowerText.startsWith("добавь активность") ||
-    lowerText.startsWith("добавить активность") ||
-    lowerText.startsWith("сохрани активность");
+    lowerText.startsWith("\u0437\u0430\u043f\u0438\u0448\u0438 ") ||
+    lowerText.startsWith("\u0437\u0430\u043f\u0438\u0441\u0430\u0442\u044c ") ||
+    lowerText.startsWith("\u0434\u043e\u0431\u0430\u0432\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c") ||
+    lowerText.startsWith("\u0434\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c") ||
+    lowerText.startsWith("\u0441\u043e\u0445\u0440\u0430\u043d\u0438 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c");
 
   const hasDuration = ACTIVITY_DURATION_PATTERNS.some((pattern) =>
     pattern.test(normalizedText),
@@ -1043,80 +1043,80 @@ function classifyUnifiedMessage(message: string): UnifiedMessageClassification {
   );
 
   const hasHealthOrWorkActivityContext = includesAny(normalizedText, [
-    "стоматолог",
-    "врач",
-    "прием",
-    "приём",
-    "тренировка",
-    "подтягив",
-    "отжиман",
-    "прогулка",
-    "немецк",
-    "испанск",
-    "английск",
-    "польск",
+    "\u0441\u0442\u043e\u043c\u0430\u0442\u043e\u043b\u043e\u0433",
+    "\u0432\u0440\u0430\u0447",
+    "\u043f\u0440\u0438\u0435\u043c",
+    "\u043f\u0440\u0438\u0451\u043c",
+    "\u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u043a\u0430",
+    "\u043f\u043e\u0434\u0442\u044f\u0433\u0438\u0432",
+    "\u043e\u0442\u0436\u0438\u043c\u0430\u043d",
+    "\u043f\u0440\u043e\u0433\u0443\u043b\u043a\u0430",
+    "\u043d\u0435\u043c\u0435\u0446\u043a",
+    "\u0438\u0441\u043f\u0430\u043d\u0441\u043a",
+    "\u0430\u043d\u0433\u043b\u0438\u0439\u0441\u043a",
+    "\u043f\u043e\u043b\u044c\u0441\u043a",
     "b2b",
-    "продаж",
-    "работ",
-    "учеб",
-    "занят",
-    "созвон",
-    "переговор",
+    "\u043f\u0440\u043e\u0434\u0430\u0436",
+    "\u0440\u0430\u0431\u043e\u0442",
+    "\u0443\u0447\u0435\u0431",
+    "\u0437\u0430\u043d\u044f\u0442",
+    "\u0441\u043e\u0437\u0432\u043e\u043d",
+    "\u043f\u0435\u0440\u0435\u0433\u043e\u0432\u043e\u0440",
   ]);
 
   const hasValueObjectCommand = includesAny(normalizedText, [
-    "ценный объект",
+    "\u0446\u0435\u043d\u043d\u044b\u0439 \u043e\u0431\u044a\u0435\u043a\u0442",
     "value object",
     "value objects",
     "vo ",
-    "создай объект",
-    "создать объект",
-    "архивируй объект",
-    "архивировать объект",
-    "утверди объект",
-    "утвердить объект",
+    "\u0441\u043e\u0437\u0434\u0430\u0439 \u043e\u0431\u044a\u0435\u043a\u0442",
+    "\u0441\u043e\u0437\u0434\u0430\u0442\u044c \u043e\u0431\u044a\u0435\u043a\u0442",
+    "\u0430\u0440\u0445\u0438\u0432\u0438\u0440\u0443\u0439 \u043e\u0431\u044a\u0435\u043a\u0442",
+    "\u0430\u0440\u0445\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043e\u0431\u044a\u0435\u043a\u0442",
+    "\u0443\u0442\u0432\u0435\u0440\u0434\u0438 \u043e\u0431\u044a\u0435\u043a\u0442",
+    "\u0443\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u043e\u0431\u044a\u0435\u043a\u0442",
   ]);
 
   const hasCorrectionCommand = includesAny(normalizedText, [
-    "исправь",
-    "исправить",
-    "ошибка",
-    "неправильно",
-    "измени последнюю",
-    "измени активность",
-    "удали последнюю",
-    "откати",
+    "\u0438\u0441\u043f\u0440\u0430\u0432\u044c",
+    "\u0438\u0441\u043f\u0440\u0430\u0432\u0438\u0442\u044c",
+    "\u043e\u0448\u0438\u0431\u043a\u0430",
+    "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e",
+    "\u0438\u0437\u043c\u0435\u043d\u0438 \u043f\u043e\u0441\u043b\u0435\u0434\u043d\u044e\u044e",
+    "\u0438\u0437\u043c\u0435\u043d\u0438 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
+    "\u0443\u0434\u0430\u043b\u0438 \u043f\u043e\u0441\u043b\u0435\u0434\u043d\u044e\u044e",
+    "\u043e\u0442\u043a\u0430\u0442\u0438",
     "rollback",
   ]);
 
   const hasConfirmationCommand = includesAny(normalizedText, [
-    "подтверждаю активность",
-    "подтвердить активность",
-    "сохрани активность",
-    "сохранить активность",
-    "подтверждаю value object",
-    "подтверждаю объект",
-    "подтвердить объект",
-    "подтверждаю исправление",
-    "подтвердить исправление",
+    "\u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u044e \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
+    "\u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
+    "\u0441\u043e\u0445\u0440\u0430\u043d\u0438 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
+    "\u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
+    "\u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u044e value object",
+    "\u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u044e \u043e\u0431\u044a\u0435\u043a\u0442",
+    "\u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u043e\u0431\u044a\u0435\u043a\u0442",
+    "\u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u044e \u0438\u0441\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
+    "\u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0438\u0441\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
   ]);
 
   const hasCancelCommand = includesAny(normalizedText, [
-    "отмена",
-    "отмени",
-    "отменить",
-    "не сохранять",
-    "не записывать",
+    "\u043e\u0442\u043c\u0435\u043d\u0430",
+    "\u043e\u0442\u043c\u0435\u043d\u0438",
+    "\u043e\u0442\u043c\u0435\u043d\u0438\u0442\u044c",
+    "\u043d\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u044f\u0442\u044c",
+    "\u043d\u0435 \u0437\u0430\u043f\u0438\u0441\u044b\u0432\u0430\u0442\u044c",
     "cancel",
   ]);
 
   const hasReviewRequest = includesAny(normalizedText, [
-    "показать review",
-    "покажи review",
-    "показать ревью",
-    "покажи ревью",
-    "показать diff",
-    "покажи diff",
+    "\u043f\u043e\u043a\u0430\u0437\u0430\u0442\u044c review",
+    "\u043f\u043e\u043a\u0430\u0436\u0438 review",
+    "\u043f\u043e\u043a\u0430\u0437\u0430\u0442\u044c \u0440\u0435\u0432\u044c\u044e",
+    "\u043f\u043e\u043a\u0430\u0436\u0438 \u0440\u0435\u0432\u044c\u044e",
+    "\u043f\u043e\u043a\u0430\u0437\u0430\u0442\u044c diff",
+    "\u043f\u043e\u043a\u0430\u0436\u0438 diff",
     "review",
   ]);
 
@@ -1124,7 +1124,7 @@ function classifyUnifiedMessage(message: string): UnifiedMessageClassification {
     return {
       intent: "confirmation",
       confidence: 0.92,
-      reason: "Найдена команда подтверждения. До подключения write gate её нельзя отправлять в обычный чат.",
+      reason: "\u041d\u0430\u0439\u0434\u0435\u043d\u0430 \u043a\u043e\u043c\u0430\u043d\u0434\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f. \u0414\u043e \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u044f write gate \u0435\u0451 \u043d\u0435\u043b\u044c\u0437\u044f \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0442\u044c \u0432 \u043e\u0431\u044b\u0447\u043d\u044b\u0439 \u0447\u0430\u0442.",
       normalizedText,
     };
   }
@@ -1133,7 +1133,7 @@ function classifyUnifiedMessage(message: string): UnifiedMessageClassification {
     return {
       intent: "cancel",
       confidence: 0.9,
-      reason: "Найдена команда отмены текущего preview/gate.",
+      reason: "\u041d\u0430\u0439\u0434\u0435\u043d\u0430 \u043a\u043e\u043c\u0430\u043d\u0434\u0430 \u043e\u0442\u043c\u0435\u043d\u044b \u0442\u0435\u043a\u0443\u0449\u0435\u0433\u043e preview/gate.",
       normalizedText,
     };
   }
@@ -1142,7 +1142,7 @@ function classifyUnifiedMessage(message: string): UnifiedMessageClassification {
     return {
       intent: "review_request",
       confidence: 0.88,
-      reason: "Найдена команда показать review/diff перед сохранением.",
+      reason: "\u041d\u0430\u0439\u0434\u0435\u043d\u0430 \u043a\u043e\u043c\u0430\u043d\u0434\u0430 \u043f\u043e\u043a\u0430\u0437\u0430\u0442\u044c review/diff \u043f\u0435\u0440\u0435\u0434 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435\u043c.",
       normalizedText,
     };
   }
@@ -1151,7 +1151,7 @@ function classifyUnifiedMessage(message: string): UnifiedMessageClassification {
     return {
       intent: "correction",
       confidence: 0.86,
-      reason: "Найдено намерение исправить, изменить, удалить или откатить прошлую запись.",
+      reason: "\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043d\u0430\u043c\u0435\u0440\u0435\u043d\u0438\u0435 \u0438\u0441\u043f\u0440\u0430\u0432\u0438\u0442\u044c, \u0438\u0437\u043c\u0435\u043d\u0438\u0442\u044c, \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0438\u043b\u0438 \u043e\u0442\u043a\u0430\u0442\u0438\u0442\u044c \u043f\u0440\u043e\u0448\u043b\u0443\u044e \u0437\u0430\u043f\u0438\u0441\u044c.",
       normalizedText,
     };
   }
@@ -1160,7 +1160,7 @@ function classifyUnifiedMessage(message: string): UnifiedMessageClassification {
     return {
       intent: "value_object_command",
       confidence: 0.84,
-      reason: "Найдена команда, связанная с созданием, утверждением или архивированием Value Object.",
+      reason: "\u041d\u0430\u0439\u0434\u0435\u043d\u0430 \u043a\u043e\u043c\u0430\u043d\u0434\u0430, \u0441\u0432\u044f\u0437\u0430\u043d\u043d\u0430\u044f \u0441 \u0441\u043e\u0437\u0434\u0430\u043d\u0438\u0435\u043c, \u0443\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435\u043c \u0438\u043b\u0438 \u0430\u0440\u0445\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435\u043c Value Object.",
       normalizedText,
     };
   }
@@ -1169,7 +1169,7 @@ function classifyUnifiedMessage(message: string): UnifiedMessageClassification {
     return {
       intent: "activity_preview",
       confidence: hasActivityPrefix ? 0.9 : 0.78,
-      reason: "Сообщение похоже на запись активности: есть длительность, действие или контекст активности.",
+      reason: "\u0421\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435 \u043f\u043e\u0445\u043e\u0436\u0435 \u043d\u0430 \u0437\u0430\u043f\u0438\u0441\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438: \u0435\u0441\u0442\u044c \u0434\u043b\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c, \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0438\u043b\u0438 \u043a\u043e\u043d\u0442\u0435\u043a\u0441\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438.",
       normalizedText,
     };
   }
@@ -1178,7 +1178,7 @@ function classifyUnifiedMessage(message: string): UnifiedMessageClassification {
     return {
       intent: "clarification",
       confidence: 0.58,
-      reason: "Сообщение похоже на активность, но не хватает длительности или явного намерения записать.",
+      reason: "\u0421\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435 \u043f\u043e\u0445\u043e\u0436\u0435 \u043d\u0430 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c, \u043d\u043e \u043d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0434\u043b\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u0438 \u0438\u043b\u0438 \u044f\u0432\u043d\u043e\u0433\u043e \u043d\u0430\u043c\u0435\u0440\u0435\u043d\u0438\u044f \u0437\u0430\u043f\u0438\u0441\u0430\u0442\u044c.",
       normalizedText,
     };
   }
@@ -1186,7 +1186,7 @@ function classifyUnifiedMessage(message: string): UnifiedMessageClassification {
   return {
     intent: "chat",
     confidence: isQuestion ? 0.82 : 0.62,
-    reason: "Сообщение похоже на обычный вопрос или диалог с AI.",
+    reason: "\u0421\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435 \u043f\u043e\u0445\u043e\u0436\u0435 \u043d\u0430 \u043e\u0431\u044b\u0447\u043d\u044b\u0439 \u0432\u043e\u043f\u0440\u043e\u0441 \u0438\u043b\u0438 \u0434\u0438\u0430\u043b\u043e\u0433 \u0441 AI.",
     normalizedText,
   };
 }
@@ -1194,60 +1194,60 @@ function classifyUnifiedMessage(message: string): UnifiedMessageClassification {
 function extractDurationSummary(text: string): string {
   const lowerText = text.toLowerCase();
 
-  if (lowerText.includes("полчаса")) {
-    return "примерно 30 минут";
+  if (lowerText.includes("\u043f\u043e\u043b\u0447\u0430\u0441\u0430")) {
+    return "\u043f\u0440\u0438\u043c\u0435\u0440\u043d\u043e 30 \u043c\u0438\u043d\u0443\u0442";
   }
 
-  if (lowerText.includes("полтора часа")) {
-    return "примерно 90 минут";
+  if (lowerText.includes("\u043f\u043e\u043b\u0442\u043e\u0440\u0430 \u0447\u0430\u0441\u0430")) {
+    return "\u043f\u0440\u0438\u043c\u0435\u0440\u043d\u043e 90 \u043c\u0438\u043d\u0443\u0442";
   }
 
-  const match = text.match(/(\d+)\s*(мин|минут|час|часа|часов|h|min)/i);
+  const match = text.match(/(\d+)\s*(\u043c\u0438\u043d|\u043c\u0438\u043d\u0443\u0442|\u0447\u0430\u0441|\u0447\u0430\u0441\u0430|\u0447\u0430\u0441\u043e\u0432|h|min)/i);
 
   if (!match) {
-    return "длительность не определена";
+    return "\u0434\u043b\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c \u043d\u0435 \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0435\u043d\u0430";
   }
 
   const amount = match[1];
   const unit = match[2].toLowerCase();
 
-  if (unit.startsWith("час") || unit === "h") {
-    return `${amount} ч.`;
+  if (unit.startsWith("\u0447\u0430\u0441") || unit === "h") {
+    return `${amount} \u0447.`;
   }
 
-  return `${amount} мин.`;
+  return `${amount} \u043c\u0438\u043d.`;
 }
 
 function guessCategoryCandidates(text: string): string[] {
   const categories = new Set<string>();
   const lowerText = text.toLowerCase();
 
-  if (includesAny(lowerText, ["стоматолог", "врач", "прием", "приём", "здоров"])) {
-    categories.add("Здоровье");
-    categories.add("Медицинская профилактика");
+  if (includesAny(lowerText, ["\u0441\u0442\u043e\u043c\u0430\u0442\u043e\u043b\u043e\u0433", "\u0432\u0440\u0430\u0447", "\u043f\u0440\u0438\u0435\u043c", "\u043f\u0440\u0438\u0451\u043c", "\u0437\u0434\u043e\u0440\u043e\u0432"])) {
+    categories.add("\u0417\u0434\u043e\u0440\u043e\u0432\u044c\u0435");
+    categories.add("\u041c\u0435\u0434\u0438\u0446\u0438\u043d\u0441\u043a\u0430\u044f \u043f\u0440\u043e\u0444\u0438\u043b\u0430\u043a\u0442\u0438\u043a\u0430");
   }
 
-  if (includesAny(lowerText, ["стоматолог", "зуб", "зубы"])) {
-    categories.add("Стоматология");
+  if (includesAny(lowerText, ["\u0441\u0442\u043e\u043c\u0430\u0442\u043e\u043b\u043e\u0433", "\u0437\u0443\u0431", "\u0437\u0443\u0431\u044b"])) {
+    categories.add("\u0421\u0442\u043e\u043c\u0430\u0442\u043e\u043b\u043e\u0433\u0438\u044f");
   }
 
-  if (includesAny(lowerText, ["немецк", "испанск", "английск", "польск", "учил", "учила"])) {
-    categories.add("Обучение");
-    categories.add("Языки");
+  if (includesAny(lowerText, ["\u043d\u0435\u043c\u0435\u0446\u043a", "\u0438\u0441\u043f\u0430\u043d\u0441\u043a", "\u0430\u043d\u0433\u043b\u0438\u0439\u0441\u043a", "\u043f\u043e\u043b\u044c\u0441\u043a", "\u0443\u0447\u0438\u043b", "\u0443\u0447\u0438\u043b\u0430"])) {
+    categories.add("\u041e\u0431\u0443\u0447\u0435\u043d\u0438\u0435");
+    categories.add("\u042f\u0437\u044b\u043a\u0438");
   }
 
-  if (includesAny(lowerText, ["подтягив", "отжиман", "трениров", "зал", "присед", "планка"])) {
-    categories.add("Физическая активность");
-    categories.add("Здоровье");
+  if (includesAny(lowerText, ["\u043f\u043e\u0434\u0442\u044f\u0433\u0438\u0432", "\u043e\u0442\u0436\u0438\u043c\u0430\u043d", "\u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432", "\u0437\u0430\u043b", "\u043f\u0440\u0438\u0441\u0435\u0434", "\u043f\u043b\u0430\u043d\u043a\u0430"])) {
+    categories.add("\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c");
+    categories.add("\u0417\u0434\u043e\u0440\u043e\u0432\u044c\u0435");
   }
 
-  if (includesAny(lowerText, ["b2b", "продаж", "клиент", "переговор", "созвон"])) {
-    categories.add("B2B продажи");
-    categories.add("Работа");
+  if (includesAny(lowerText, ["b2b", "\u043f\u0440\u043e\u0434\u0430\u0436", "\u043a\u043b\u0438\u0435\u043d\u0442", "\u043f\u0435\u0440\u0435\u0433\u043e\u0432\u043e\u0440", "\u0441\u043e\u0437\u0432\u043e\u043d"])) {
+    categories.add("B2B \u043f\u0440\u043e\u0434\u0430\u0436\u0438");
+    categories.add("\u0420\u0430\u0431\u043e\u0442\u0430");
   }
 
   if (categories.size === 0) {
-    categories.add("Личная активность");
+    categories.add("\u041b\u0438\u0447\u043d\u0430\u044f \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c");
   }
 
   return Array.from(categories).slice(0, 6);
@@ -1257,34 +1257,34 @@ function guessValueObjectCandidates(categories: readonly string[]): string[] {
   const valueObjects = new Set<string>();
 
   for (const category of categories) {
-    if (category === "Здоровье" || category === "Медицинская профилактика") {
-      valueObjects.add("Здоровье");
-      valueObjects.add("Профилактика здоровья");
+    if (category === "\u0417\u0434\u043e\u0440\u043e\u0432\u044c\u0435" || category === "\u041c\u0435\u0434\u0438\u0446\u0438\u043d\u0441\u043a\u0430\u044f \u043f\u0440\u043e\u0444\u0438\u043b\u0430\u043a\u0442\u0438\u043a\u0430") {
+      valueObjects.add("\u0417\u0434\u043e\u0440\u043e\u0432\u044c\u0435");
+      valueObjects.add("\u041f\u0440\u043e\u0444\u0438\u043b\u0430\u043a\u0442\u0438\u043a\u0430 \u0437\u0434\u043e\u0440\u043e\u0432\u044c\u044f");
     }
 
-    if (category === "Стоматология") {
-      valueObjects.add("Стоматология");
+    if (category === "\u0421\u0442\u043e\u043c\u0430\u0442\u043e\u043b\u043e\u0433\u0438\u044f") {
+      valueObjects.add("\u0421\u0442\u043e\u043c\u0430\u0442\u043e\u043b\u043e\u0433\u0438\u044f");
     }
 
-    if (category === "Обучение" || category === "Языки") {
-      valueObjects.add("Изучение языков");
+    if (category === "\u041e\u0431\u0443\u0447\u0435\u043d\u0438\u0435" || category === "\u042f\u0437\u044b\u043a\u0438") {
+      valueObjects.add("\u0418\u0437\u0443\u0447\u0435\u043d\u0438\u0435 \u044f\u0437\u044b\u043a\u043e\u0432");
     }
 
-    if (category === "Физическая активность") {
-      valueObjects.add("Физическая форма");
+    if (category === "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c") {
+      valueObjects.add("\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u0444\u043e\u0440\u043c\u0430");
     }
 
-    if (category === "B2B продажи") {
-      valueObjects.add("B2B продажи");
+    if (category === "B2B \u043f\u0440\u043e\u0434\u0430\u0436\u0438") {
+      valueObjects.add("B2B \u043f\u0440\u043e\u0434\u0430\u0436\u0438");
     }
 
-    if (category === "Работа") {
-      valueObjects.add("Карьера");
+    if (category === "\u0420\u0430\u0431\u043e\u0442\u0430") {
+      valueObjects.add("\u041a\u0430\u0440\u044c\u0435\u0440\u0430");
     }
   }
 
   if (valueObjects.size === 0) {
-    valueObjects.add("Личное развитие");
+    valueObjects.add("\u041b\u0438\u0447\u043d\u043e\u0435 \u0440\u0430\u0437\u0432\u0438\u0442\u0438\u0435");
   }
 
   return Array.from(valueObjects).slice(0, 6);
@@ -1306,36 +1306,36 @@ function buildLocalActivityPreviewReply(classification: UnifiedMessageClassifica
   });
 
   return [
-    "Я понял это как возможную активность.",
+    "\u042f \u043f\u043e\u043d\u044f\u043b \u044d\u0442\u043e \u043a\u0430\u043a \u0432\u043e\u0437\u043c\u043e\u0436\u043d\u0443\u044e \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c.",
     "",
-    `Текст: ${classification.normalizedText}`,
-    `Длительность: ${duration}`,
+    `\u0422\u0435\u043a\u0441\u0442: ${classification.normalizedText}`,
+    `\u0414\u043b\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c: ${duration}`,
     `Intent: ${classification.intent}`,
     `Confidence: ${Math.round(classification.confidence * 100)}%`,
-    `Причина распознавания: ${classification.reason}`,
+    `\u041f\u0440\u0438\u0447\u0438\u043d\u0430 \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u0432\u0430\u043d\u0438\u044f: ${classification.reason}`,
     "",
     `Category candidates: ${categories.join(", ")}`,
     `Value Object candidates: ${valueObjects.join(", ")}`,
     "",
     "Value Object bridge proof:",
-    "Это ещё не создание Value Object, а только кандидатная связь.",
+    "\u042d\u0442\u043e \u0435\u0449\u0451 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u0438\u0435 Value Object, \u0430 \u0442\u043e\u043b\u044c\u043a\u043e \u043a\u0430\u043d\u0434\u0438\u0434\u0430\u0442\u043d\u0430\u044f \u0441\u0432\u044f\u0437\u044c.",
     valueObjects.length > 0
-      ? `Кандидаты Value Object: ${valueObjects.join(", ")}`
-      : "Кандидаты Value Object: пока не найдены.",
-    "Открыть список текущих Value Objects: /value-objects",
-    "Следующий gated шаг: подтвердить активность, затем обработать category/VO candidates через review/write gate.",
+      ? `\u041a\u0430\u043d\u0434\u0438\u0434\u0430\u0442\u044b Value Object: ${valueObjects.join(", ")}`
+      : "\u041a\u0430\u043d\u0434\u0438\u0434\u0430\u0442\u044b Value Object: \u043f\u043e\u043a\u0430 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u044b.",
+    "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u043f\u0438\u0441\u043e\u043a \u0442\u0435\u043a\u0443\u0449\u0438\u0445 Value Objects: /value-objects",
+    "\u0421\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0439 gated \u0448\u0430\u0433: \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c, \u0437\u0430\u0442\u0435\u043c \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u0430\u0442\u044c category/VO candidates \u0447\u0435\u0440\u0435\u0437 review/write gate.",
     "",
-    "Статус: local preview only.",
-    "Пока не создан Activity Event, не созданы категории, не создан и не обновлён Value Object, нет DB write.",
+    "\u0421\u0442\u0430\u0442\u0443\u0441: local preview only.",
+    "\u041f\u043e\u043a\u0430 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d Activity Event, \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u044b \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u0438, \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d \u0438 \u043d\u0435 \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d Value Object, \u043d\u0435\u0442 DB write.",
     "",
-    "Следующий gate: показать пользователю review-карточку и попросить подтверждение перед сохранением.",
+    "\u0421\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0439 gate: \u043f\u043e\u043a\u0430\u0437\u0430\u0442\u044c \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044e review-\u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u0438 \u043f\u043e\u043f\u0440\u043e\u0441\u0438\u0442\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435 \u043f\u0435\u0440\u0435\u0434 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435\u043c.",
     "",
-    "Что можно написать дальше в этом же поле:",
-    "— сохранить факт активности",
-      "— подтверждаю активность",
-    "— исправить: было 45 минут",
-    "— отмена",
-    "— показать review",
+    "\u0427\u0442\u043e \u043c\u043e\u0436\u043d\u043e \u043d\u0430\u043f\u0438\u0441\u0430\u0442\u044c \u0434\u0430\u043b\u044c\u0448\u0435 \u0432 \u044d\u0442\u043e\u043c \u0436\u0435 \u043f\u043e\u043b\u0435:",
+    "— \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0444\u0430\u043a\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438",
+      "— \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u044e \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
+    "— \u0438\u0441\u043f\u0440\u0430\u0432\u0438\u0442\u044c: \u0431\u044b\u043b\u043e 45 \u043c\u0438\u043d\u0443\u0442",
+    "— \u043e\u0442\u043c\u0435\u043d\u0430",
+    "— \u043f\u043e\u043a\u0430\u0437\u0430\u0442\u044c review",
   ].join("\n");
 }
 function buildValueObjectCommandPreviewReply(classification: UnifiedMessageClassification): string {
@@ -1347,22 +1347,22 @@ function buildValueObjectCommandPreviewReply(classification: UnifiedMessageClass
   });
 
   return [
-    "Я понял это как команду по Value Object.",
+    "\u042f \u043f\u043e\u043d\u044f\u043b \u044d\u0442\u043e \u043a\u0430\u043a \u043a\u043e\u043c\u0430\u043d\u0434\u0443 \u043f\u043e Value Object.",
     "",
-    `Текст: ${classification.normalizedText}`,
+    `\u0422\u0435\u043a\u0441\u0442: ${classification.normalizedText}`,
     `Confidence: ${Math.round(classification.confidence * 100)}%`,
-    `Причина распознавания: ${classification.reason}`,
+    `\u041f\u0440\u0438\u0447\u0438\u043d\u0430 \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u0432\u0430\u043d\u0438\u044f: ${classification.reason}`,
     "",
-    "Статус: local preview only.",
-    "Пока не создан, не утверждён, не изменён и не архивирован ни один Value Object.",
+    "\u0421\u0442\u0430\u0442\u0443\u0441: local preview only.",
+    "\u041f\u043e\u043a\u0430 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d, \u043d\u0435 \u0443\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043d, \u043d\u0435 \u0438\u0437\u043c\u0435\u043d\u0451\u043d \u0438 \u043d\u0435 \u0430\u0440\u0445\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u043d \u043d\u0438 \u043e\u0434\u0438\u043d Value Object.",
     "",
-    "Следующий gate: показать preview действия с объектом и попросить явное подтверждение.",
+    "\u0421\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0439 gate: \u043f\u043e\u043a\u0430\u0437\u0430\u0442\u044c preview \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f \u0441 \u043e\u0431\u044a\u0435\u043a\u0442\u043e\u043c \u0438 \u043f\u043e\u043f\u0440\u043e\u0441\u0438\u0442\u044c \u044f\u0432\u043d\u043e\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435.",
     "",
-    "Что можно написать дальше в этом же поле:",
-    "— подтверждаю Value Object",
-    "— исправить объект: ...",
-    "— архивировать объект",
-    "— отмена",
+    "\u0427\u0442\u043e \u043c\u043e\u0436\u043d\u043e \u043d\u0430\u043f\u0438\u0441\u0430\u0442\u044c \u0434\u0430\u043b\u044c\u0448\u0435 \u0432 \u044d\u0442\u043e\u043c \u0436\u0435 \u043f\u043e\u043b\u0435:",
+    "— \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u044e Value Object",
+    "— \u0438\u0441\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0431\u044a\u0435\u043a\u0442: ...",
+    "— \u0430\u0440\u0445\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043e\u0431\u044a\u0435\u043a\u0442",
+    "— \u043e\u0442\u043c\u0435\u043d\u0430",
   ].join("\n");
 }
 function buildCorrectionPreviewReply(classification: UnifiedMessageClassification): string {
@@ -1374,47 +1374,47 @@ function buildCorrectionPreviewReply(classification: UnifiedMessageClassificatio
   });
 
   return [
-    "Я понял это как возможное исправление прошлой активности или объекта.",
+    "\u042f \u043f\u043e\u043d\u044f\u043b \u044d\u0442\u043e \u043a\u0430\u043a \u0432\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u0435 \u0438\u0441\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u043f\u0440\u043e\u0448\u043b\u043e\u0439 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438 \u0438\u043b\u0438 \u043e\u0431\u044a\u0435\u043a\u0442\u0430.",
     "",
-    `Текст: ${classification.normalizedText}`,
+    `\u0422\u0435\u043a\u0441\u0442: ${classification.normalizedText}`,
     `Confidence: ${Math.round(classification.confidence * 100)}%`,
-    `Причина распознавания: ${classification.reason}`,
+    `\u041f\u0440\u0438\u0447\u0438\u043d\u0430 \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u0432\u0430\u043d\u0438\u044f: ${classification.reason}`,
     "",
-    "Статус: local preview only.",
-    "Пока не изменена история, не создан correction row и не выполнен rollback.",
+    "\u0421\u0442\u0430\u0442\u0443\u0441: local preview only.",
+    "\u041f\u043e\u043a\u0430 \u043d\u0435 \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0430 \u0438\u0441\u0442\u043e\u0440\u0438\u044f, \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d correction row \u0438 \u043d\u0435 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d rollback.",
     "",
-    "Следующий gate: найти целевую запись, показать пользователю diff и попросить подтверждение.",
+    "\u0421\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0439 gate: \u043d\u0430\u0439\u0442\u0438 \u0446\u0435\u043b\u0435\u0432\u0443\u044e \u0437\u0430\u043f\u0438\u0441\u044c, \u043f\u043e\u043a\u0430\u0437\u0430\u0442\u044c \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044e diff \u0438 \u043f\u043e\u043f\u0440\u043e\u0441\u0438\u0442\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435.",
     "",
-    "Что можно написать дальше в этом же поле:",
-    "— подтверждаю исправление",
-    "— исправить: ...",
-    "— отмена",
-    "— показать diff",
+    "\u0427\u0442\u043e \u043c\u043e\u0436\u043d\u043e \u043d\u0430\u043f\u0438\u0441\u0430\u0442\u044c \u0434\u0430\u043b\u044c\u0448\u0435 \u0432 \u044d\u0442\u043e\u043c \u0436\u0435 \u043f\u043e\u043b\u0435:",
+    "— \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u044e \u0438\u0441\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
+    "— \u0438\u0441\u043f\u0440\u0430\u0432\u0438\u0442\u044c: ...",
+    "— \u043e\u0442\u043c\u0435\u043d\u0430",
+    "— \u043f\u043e\u043a\u0430\u0437\u0430\u0442\u044c diff",
   ].join("\n");
 }
 function buildConfirmationGuardReply(classification: UnifiedMessageClassification): string {
   const pendingLines = formatLatestLocalPendingPreviewLines();
 
   return [
-    "Подтверждение получено как намерение, но сохранение ещё не выполнено.",
+    "\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435 \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u043e \u043a\u0430\u043a \u043d\u0430\u043c\u0435\u0440\u0435\u043d\u0438\u0435, \u043d\u043e \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u0435\u0449\u0451 \u043d\u0435 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u043e.",
     "",
-    `Текст команды: ${classification.normalizedText}`,
+    `\u0422\u0435\u043a\u0441\u0442 \u043a\u043e\u043c\u0430\u043d\u0434\u044b: ${classification.normalizedText}`,
     `Intent: ${classification.intent}`,
     `Confidence: ${Math.round(classification.confidence * 100)}%`,
-    `Причина распознавания: ${classification.reason}`,
+    `\u041f\u0440\u0438\u0447\u0438\u043d\u0430 \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u0432\u0430\u043d\u0438\u044f: ${classification.reason}`,
     "",
-    "Связанный pending preview:",
+    "\u0421\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u0439 pending preview:",
     ...pendingLines,
     "",
-    "Статус: confirmation preview only.",
-    "Activity Event пока НЕ создан.",
-    "Категории пока НЕ сохранены.",
-    "Value Objects пока НЕ созданы и НЕ обновлены.",
-    "Correction row пока НЕ создан.",
-    "DB write НЕ выполнен.",
-    "Service Log write НЕ выполнен.",
+    "\u0421\u0442\u0430\u0442\u0443\u0441: confirmation preview only.",
+    "Activity Event \u043f\u043e\u043a\u0430 \u041d\u0415 \u0441\u043e\u0437\u0434\u0430\u043d.",
+    "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u0438 \u043f\u043e\u043a\u0430 \u041d\u0415 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u044b.",
+    "Value Objects \u043f\u043e\u043a\u0430 \u041d\u0415 \u0441\u043e\u0437\u0434\u0430\u043d\u044b \u0438 \u041d\u0415 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u044b.",
+    "Correction row \u043f\u043e\u043a\u0430 \u041d\u0415 \u0441\u043e\u0437\u0434\u0430\u043d.",
+    "DB write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d.",
+    "Service Log write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d.",
     "",
-    "Следующий технический gate: показать финальную review-карточку и только потом выполнить governed write.",
+    "\u0421\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0439 \u0442\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0438\u0439 gate: \u043f\u043e\u043a\u0430\u0437\u0430\u0442\u044c \u0444\u0438\u043d\u0430\u043b\u044c\u043d\u0443\u044e review-\u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u0438 \u0442\u043e\u043b\u044c\u043a\u043e \u043f\u043e\u0442\u043e\u043c \u0432\u044b\u043f\u043e\u043b\u043d\u0438\u0442\u044c governed write.",
   ].join("\n");
 }
 function buildCancelGuardReply(classification: UnifiedMessageClassification): string {
@@ -1422,55 +1422,55 @@ function buildCancelGuardReply(classification: UnifiedMessageClassification): st
   clearLatestLocalPendingPreview();
 
   return [
-    "Отмена принята как команда к текущему preview.",
+    "\u041e\u0442\u043c\u0435\u043d\u0430 \u043f\u0440\u0438\u043d\u044f\u0442\u0430 \u043a\u0430\u043a \u043a\u043e\u043c\u0430\u043d\u0434\u0430 \u043a \u0442\u0435\u043a\u0443\u0449\u0435\u043c\u0443 preview.",
     "",
-    `Текст команды: ${classification.normalizedText}`,
+    `\u0422\u0435\u043a\u0441\u0442 \u043a\u043e\u043c\u0430\u043d\u0434\u044b: ${classification.normalizedText}`,
     `Intent: ${classification.intent}`,
     `Confidence: ${Math.round(classification.confidence * 100)}%`,
     "",
-    "Отменённый pending preview:",
+    "\u041e\u0442\u043c\u0435\u043d\u0451\u043d\u043d\u044b\u0439 pending preview:",
     ...pendingLines,
     "",
-    "Статус: cancel preview only.",
-    "Никакая активность не создана.",
-    "Никакой Value Object не создан и не архивирован.",
-    "DB write НЕ выполнен.",
-    "Service Log write НЕ выполнен.",
+    "\u0421\u0442\u0430\u0442\u0443\u0441: cancel preview only.",
+    "\u041d\u0438\u043a\u0430\u043a\u0430\u044f \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u0430.",
+    "\u041d\u0438\u043a\u0430\u043a\u043e\u0439 Value Object \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d \u0438 \u043d\u0435 \u0430\u0440\u0445\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u043d.",
+    "DB write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d.",
+    "Service Log write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d.",
   ].join("\n");
 }
 function buildReviewRequestGuardReply(classification: UnifiedMessageClassification): string {
   const pendingLines = formatLatestLocalPendingPreviewLines();
 
   return [
-    "Запрос на review/diff принят.",
+    "\u0417\u0430\u043f\u0440\u043e\u0441 \u043d\u0430 review/diff \u043f\u0440\u0438\u043d\u044f\u0442.",
     "",
-    `Текст команды: ${classification.normalizedText}`,
+    `\u0422\u0435\u043a\u0441\u0442 \u043a\u043e\u043c\u0430\u043d\u0434\u044b: ${classification.normalizedText}`,
     `Intent: ${classification.intent}`,
     `Confidence: ${Math.round(classification.confidence * 100)}%`,
     "",
     "Review pending preview:",
     ...pendingLines,
     "",
-    "Статус: review request preview only.",
-    "DB write НЕ выполнен.",
-    "Service Log write НЕ выполнен.",
+    "\u0421\u0442\u0430\u0442\u0443\u0441: review request preview only.",
+    "DB write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d.",
+    "Service Log write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d.",
     "",
-    "Следующий технический gate: превратить этот pending preview в UI review-card перед governed write.",
+    "\u0421\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0439 \u0442\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0438\u0439 gate: \u043f\u0440\u0435\u0432\u0440\u0430\u0442\u0438\u0442\u044c \u044d\u0442\u043e\u0442 pending preview \u0432 UI review-card \u043f\u0435\u0440\u0435\u0434 governed write.",
   ].join("\n");
 }
 function buildClarificationReply(classification: UnifiedMessageClassification): string {
   return [
-    "Похоже, это может быть активность, но я не должен угадывать и записывать факт без подтверждения.",
+    "\u041f\u043e\u0445\u043e\u0436\u0435, \u044d\u0442\u043e \u043c\u043e\u0436\u0435\u0442 \u0431\u044b\u0442\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c, \u043d\u043e \u044f \u043d\u0435 \u0434\u043e\u043b\u0436\u0435\u043d \u0443\u0433\u0430\u0434\u044b\u0432\u0430\u0442\u044c \u0438 \u0437\u0430\u043f\u0438\u0441\u044b\u0432\u0430\u0442\u044c \u0444\u0430\u043a\u0442 \u0431\u0435\u0437 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f.",
     "",
-    `Текст: ${classification.normalizedText}`,
-    `Причина: ${classification.reason}`,
+    `\u0422\u0435\u043a\u0441\u0442: ${classification.normalizedText}`,
+    `\u041f\u0440\u0438\u0447\u0438\u043d\u0430: ${classification.reason}`,
     "",
-    "Ты хочешь:",
-    "1. Просто обсудить это в чате?",
-    "2. Записать это как активность?",
-    "3. Создать или обновить Value Object?",
+    "\u0422\u044b \u0445\u043e\u0447\u0435\u0448\u044c:",
+    "1. \u041f\u0440\u043e\u0441\u0442\u043e \u043e\u0431\u0441\u0443\u0434\u0438\u0442\u044c \u044d\u0442\u043e \u0432 \u0447\u0430\u0442\u0435?",
+    "2. \u0417\u0430\u043f\u0438\u0441\u0430\u0442\u044c \u044d\u0442\u043e \u043a\u0430\u043a \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c?",
+    "3. \u0421\u043e\u0437\u0434\u0430\u0442\u044c \u0438\u043b\u0438 \u043e\u0431\u043d\u043e\u0432\u0438\u0442\u044c Value Object?",
     "",
-    "Ответь, например: “запиши это как активность” или “это просто вопрос”.",
+    "\u041e\u0442\u0432\u0435\u0442\u044c, \u043d\u0430\u043f\u0440\u0438\u043c\u0435\u0440: “\u0437\u0430\u043f\u0438\u0448\u0438 \u044d\u0442\u043e \u043a\u0430\u043a \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c” \u0438\u043b\u0438 “\u044d\u0442\u043e \u043f\u0440\u043e\u0441\u0442\u043e \u0432\u043e\u043f\u0440\u043e\u0441”.",
   ].join("\n");
 }
 
@@ -1650,15 +1650,15 @@ function buildActivityReviewPackageLines(params: {
   routeMode: string;
 }): string[] {
   const normalizedTitle =
-    params.categories.includes("Стоматология") ||
-    params.rawText.toLowerCase().includes("стоматолог")
-      ? "Профилактический приём у стоматолога"
+    params.categories.includes("\u0421\u0442\u043e\u043c\u0430\u0442\u043e\u043b\u043e\u0433\u0438\u044f") ||
+    params.rawText.toLowerCase().includes("\u0441\u0442\u043e\u043c\u0430\u0442\u043e\u043b\u043e\u0433")
+      ? "\u041f\u0440\u043e\u0444\u0438\u043b\u0430\u043a\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u043f\u0440\u0438\u0451\u043c \u0443 \u0441\u0442\u043e\u043c\u0430\u0442\u043e\u043b\u043e\u0433\u0430"
       : params.rawText;
 
   const privacyMarker =
-    params.categories.includes("Стоматология") ||
-    params.categories.includes("Здоровье") ||
-    params.categories.includes("Медицинская профилактика")
+    params.categories.includes("\u0421\u0442\u043e\u043c\u0430\u0442\u043e\u043b\u043e\u0433\u0438\u044f") ||
+    params.categories.includes("\u0417\u0434\u043e\u0440\u043e\u0432\u044c\u0435") ||
+    params.categories.includes("\u041c\u0435\u0434\u0438\u0446\u0438\u043d\u0441\u043a\u0430\u044f \u043f\u0440\u043e\u0444\u0438\u043b\u0430\u043a\u0442\u0438\u043a\u0430")
       ? "private / sensitive candidate"
       : "private by default";
 
@@ -1685,7 +1685,7 @@ function buildActivityReviewPackageLines(params: {
     ...params.valueObjects.map((valueObject) => `— ${valueObject}`),
     "",
     "Review gate:",
-    "Пользователь должен подтвердить, исправить или отменить preview через это же поле.",
+    "\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c \u0434\u043e\u043b\u0436\u0435\u043d \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c, \u0438\u0441\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u0438\u043b\u0438 \u043e\u0442\u043c\u0435\u043d\u0438\u0442\u044c preview \u0447\u0435\u0440\u0435\u0437 \u044d\u0442\u043e \u0436\u0435 \u043f\u043e\u043b\u0435.",
   ];
 }
 
@@ -1770,7 +1770,7 @@ async function buildNoWriteSemanticActivityPreviewReply(
     });
 
     return [
-      "Я понял это как возможную активность.",
+      "\u042f \u043f\u043e\u043d\u044f\u043b \u044d\u0442\u043e \u043a\u0430\u043a \u0432\u043e\u0437\u043c\u043e\u0436\u043d\u0443\u044e \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c.",
       "",
       "Preview source: semantic no-write preview",
       "Route endpoint: /api/activity/semantic-orchestration-preview",
@@ -1778,34 +1778,34 @@ async function buildNoWriteSemanticActivityPreviewReply(
       "",
       `Intent: ${classification.intent}`,
       `Confidence: ${Math.round(classification.confidence * 100)}%`,
-      `Причина распознавания: ${classification.reason}`,
+      `\u041f\u0440\u0438\u0447\u0438\u043d\u0430 \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u0432\u0430\u043d\u0438\u044f: ${classification.reason}`,
       "",
       ...activityReviewPackageLines,
       "",
       "Value Object bridge proof:",
-      "Это ещё не создание Value Object, а только кандидатная связь.",
+      "\u042d\u0442\u043e \u0435\u0449\u0451 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u0438\u0435 Value Object, \u0430 \u0442\u043e\u043b\u044c\u043a\u043e \u043a\u0430\u043d\u0434\u0438\u0434\u0430\u0442\u043d\u0430\u044f \u0441\u0432\u044f\u0437\u044c.",
       valueObjects.length > 0
-        ? `Кандидаты Value Object: ${valueObjects.join(", ")}`
-        : "Кандидаты Value Object: пока не найдены.",
-      "Открыть список текущих Value Objects: /value-objects",
-      "Следующий gated шаг: подтвердить активность, затем обработать category/VO candidates через review/write gate.",
+        ? `\u041a\u0430\u043d\u0434\u0438\u0434\u0430\u0442\u044b Value Object: ${valueObjects.join(", ")}`
+        : "\u041a\u0430\u043d\u0434\u0438\u0434\u0430\u0442\u044b Value Object: \u043f\u043e\u043a\u0430 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u044b.",
+      "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u043f\u0438\u0441\u043e\u043a \u0442\u0435\u043a\u0443\u0449\u0438\u0445 Value Objects: /value-objects",
+      "\u0421\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0439 gated \u0448\u0430\u0433: \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c, \u0437\u0430\u0442\u0435\u043c \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u0430\u0442\u044c category/VO candidates \u0447\u0435\u0440\u0435\u0437 review/write gate.",
       "",
       "No-write safety check:",
       ...sideEffectLines,
       "",
-      "Статус: real semantic preview + local pending preview only.",
-      "Activity Event пока НЕ создан.",
-      "Категории пока НЕ сохранены.",
-      "Value Objects пока НЕ созданы и НЕ обновлены.",
-      "DB write НЕ выполнен.",
-      "Service Log write НЕ выполнен.",
+      "\u0421\u0442\u0430\u0442\u0443\u0441: real semantic preview + local pending preview only.",
+      "Activity Event \u043f\u043e\u043a\u0430 \u041d\u0415 \u0441\u043e\u0437\u0434\u0430\u043d.",
+      "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u0438 \u043f\u043e\u043a\u0430 \u041d\u0415 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u044b.",
+      "Value Objects \u043f\u043e\u043a\u0430 \u041d\u0415 \u0441\u043e\u0437\u0434\u0430\u043d\u044b \u0438 \u041d\u0415 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u044b.",
+      "DB write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d.",
+      "Service Log write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d.",
       "",
-      "Что можно написать дальше в этом же поле:",
-      "— сохранить факт активности",
-      "— подтверждаю активность",
-      "— исправить: было 45 минут",
-      "— отмена",
-      "— показать review",
+      "\u0427\u0442\u043e \u043c\u043e\u0436\u043d\u043e \u043d\u0430\u043f\u0438\u0441\u0430\u0442\u044c \u0434\u0430\u043b\u044c\u0448\u0435 \u0432 \u044d\u0442\u043e\u043c \u0436\u0435 \u043f\u043e\u043b\u0435:",
+      "— \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0444\u0430\u043a\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438",
+      "— \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u044e \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
+      "— \u0438\u0441\u043f\u0440\u0430\u0432\u0438\u0442\u044c: \u0431\u044b\u043b\u043e 45 \u043c\u0438\u043d\u0443\u0442",
+      "— \u043e\u0442\u043c\u0435\u043d\u0430",
+      "— \u043f\u043e\u043a\u0430\u0437\u0430\u0442\u044c review",
     ].join("\n");
   } catch (error) {
     const fallbackReply = buildLocalActivityPreviewReply(classification);
@@ -1816,8 +1816,8 @@ async function buildNoWriteSemanticActivityPreviewReply(
       "Semantic preview route status: unavailable.",
       `Reason: ${error instanceof Error ? error.message : "Unknown semantic preview error."}`,
       "Fallback: local preview only.",
-      "DB write НЕ выполнен.",
-      "Service Log write НЕ выполнен.",
+      "DB write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d.",
+      "Service Log write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d.",
     ].join("\n");
   }
 }
@@ -1826,12 +1826,12 @@ function isActivityFactsSaveGateWriteCommand(message: string): boolean {
   const normalized = message.trim().toLowerCase();
 
   return [
-    "сохранить факт активности",
-    "сохрани факт активности",
-    "записать факт активности",
-    "запиши факт активности",
-    "сохранить факт",
-    "записать факт",
+    "\u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0444\u0430\u043a\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438",
+    "\u0441\u043e\u0445\u0440\u0430\u043d\u0438 \u0444\u0430\u043a\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438",
+    "\u0437\u0430\u043f\u0438\u0441\u0430\u0442\u044c \u0444\u0430\u043a\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438",
+    "\u0437\u0430\u043f\u0438\u0448\u0438 \u0444\u0430\u043a\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438",
+    "\u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0444\u0430\u043a\u0442",
+    "\u0437\u0430\u043f\u0438\u0441\u0430\u0442\u044c \u0444\u0430\u043a\u0442",
     "save activity fact",
     "save fact",
   ].some((marker) => normalized.includes(marker));
@@ -1921,7 +1921,7 @@ function buildActivityFactsSaveGateRequestFromPackage(
         factLocalId,
         decision: "accept",
         reasonRu:
-          "Пользователь подтвердил запись факта через правую AI-колонку командой 'сохранить факт активности'.",
+          "\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043b \u0437\u0430\u043f\u0438\u0441\u044c \u0444\u0430\u043a\u0442\u0430 \u0447\u0435\u0440\u0435\u0437 \u043f\u0440\u0430\u0432\u0443\u044e AI-\u043a\u043e\u043b\u043e\u043d\u043a\u0443 \u043a\u043e\u043c\u0430\u043d\u0434\u043e\u0439 '\u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0444\u0430\u043a\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438'.",
       };
     })
     .filter(
@@ -2014,12 +2014,12 @@ async function fetchActivityProcessingPackageForPendingPreview(): Promise<Record
 async function executeActivityFactsSaveGateWriteFromPendingPreview(): Promise<string> {
   if (!latestLocalPendingPreview || latestLocalPendingPreview.kind !== "activity") {
     return [
-      "Не нашёл активность для сохранения.",
+      "\u041d\u0435 \u043d\u0430\u0448\u0451\u043b \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u0434\u043b\u044f \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u044f.",
       "",
-      "Сначала введи активность в нижнее поле правой AI-колонки, например:",
-      "смотрел рилс 30 минут",
+      "\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u0432\u0432\u0435\u0434\u0438 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u0432 \u043d\u0438\u0436\u043d\u0435\u0435 \u043f\u043e\u043b\u0435 \u043f\u0440\u0430\u0432\u043e\u0439 AI-\u043a\u043e\u043b\u043e\u043d\u043a\u0438, \u043d\u0430\u043f\u0440\u0438\u043c\u0435\u0440:",
+      "\u0441\u043c\u043e\u0442\u0440\u0435\u043b \u0440\u0438\u043b\u0441 30 \u043c\u0438\u043d\u0443\u0442",
       "",
-      "Запись в Supabase НЕ выполнена.",
+      "\u0417\u0430\u043f\u0438\u0441\u044c \u0432 Supabase \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0430.",
     ].join("\n");
   }
 
@@ -2028,15 +2028,15 @@ async function executeActivityFactsSaveGateWriteFromPendingPreview(): Promise<st
 
   if (!pkg) {
     return [
-      "Не удалось подготовить пакет факта для сохранения.",
+      "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u0438\u0442\u044c \u043f\u0430\u043a\u0435\u0442 \u0444\u0430\u043a\u0442\u0430 \u0434\u043b\u044f \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u044f.",
       "",
-      "Причина: semantic preview route не вернул ActivityProcessingPackage.",
-      "Активность: " + pendingActivityText,
+      "\u041f\u0440\u0438\u0447\u0438\u043d\u0430: semantic preview route \u043d\u0435 \u0432\u0435\u0440\u043d\u0443\u043b ActivityProcessingPackage.",
+      "\u0410\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c: " + pendingActivityText,
       "",
-      "Запись в Supabase НЕ выполнена.",
+      "\u0417\u0430\u043f\u0438\u0441\u044c \u0432 Supabase \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0430.",
       "",
-      "Попробуй ещё раз ввести активность, затем команду:",
-      "сохранить факт активности",
+      "\u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439 \u0435\u0449\u0451 \u0440\u0430\u0437 \u0432\u0432\u0435\u0441\u0442\u0438 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c, \u0437\u0430\u0442\u0435\u043c \u043a\u043e\u043c\u0430\u043d\u0434\u0443:",
+      "\u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0444\u0430\u043a\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438",
     ].join("\n");
   }
 
@@ -2061,18 +2061,18 @@ async function executeActivityFactsSaveGateWriteFromPendingPreview(): Promise<st
   const previewTextValue = readActivityFactsSaveGateString(firstFactPreview, [
     "textValue",
   ]);
-  const previewValue = previewNumericValue ?? previewTextValue ?? "не определено";
+  const previewValue = previewNumericValue ?? previewTextValue ?? "\u043d\u0435 \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0435\u043d\u043e";
 
   const requestBody = buildActivityFactsSaveGateRequestFromPackage(pkg);
 
   if (!requestBody) {
     return [
-      "Не удалось сохранить факт активности.",
+      "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0444\u0430\u043a\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438.",
       "",
-      "Причина: ActivityProcessingPackage не содержит factPreviews, готовых к записи.",
-      "Активность: " + pendingActivityText,
+      "\u041f\u0440\u0438\u0447\u0438\u043d\u0430: ActivityProcessingPackage \u043d\u0435 \u0441\u043e\u0434\u0435\u0440\u0436\u0438\u0442 factPreviews, \u0433\u043e\u0442\u043e\u0432\u044b\u0445 \u043a \u0437\u0430\u043f\u0438\u0441\u0438.",
+      "\u0410\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c: " + pendingActivityText,
       "",
-      "Запись в Supabase НЕ выполнена.",
+      "\u0417\u0430\u043f\u0438\u0441\u044c \u0432 Supabase \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0430.",
     ].join("\n");
   }
 
@@ -2121,50 +2121,50 @@ async function executeActivityFactsSaveGateWriteFromPendingPreview(): Promise<st
 
   if (!written) {
     return [
-      "Факт активности НЕ был сохранён.",
+      "\u0424\u0430\u043a\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438 \u041d\u0415 \u0431\u044b\u043b \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d.",
       "",
-      "Активность: " + pendingActivityText,
+      "\u0410\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c: " + pendingActivityText,
       "HTTP status: " + response.status,
-      "routeStatus: " + (routeStatus ?? "не вернулся"),
-      "writeStatus: " + (writeStatus ?? "не вернулся"),
+      "routeStatus: " + (routeStatus ?? "\u043d\u0435 \u0432\u0435\u0440\u043d\u0443\u043b\u0441\u044f"),
+      "writeStatus: " + (writeStatus ?? "\u043d\u0435 \u0432\u0435\u0440\u043d\u0443\u043b\u0441\u044f"),
       errorCode ? "errorCode: " + errorCode : null,
       errorMessage ? "errorMessage: " + errorMessage : null,
       "",
-      "Pending preview оставлен, чтобы можно было повторить попытку.",
+      "Pending preview \u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d, \u0447\u0442\u043e\u0431\u044b \u043c\u043e\u0436\u043d\u043e \u0431\u044b\u043b\u043e \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u043f\u043e\u043f\u044b\u0442\u043a\u0443.",
     ]
       .filter((line): line is string => line !== null)
       .join("\n");
   }
 
   return [
-    "Факт активности сохранён.",
+    "\u0424\u0430\u043a\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d.",
     "",
-    "Что записано:",
-    "Активность: " + pendingActivityText,
-    "Категория: " + (previewSemanticKey ?? "не определена"),
-    "Тип показателя: " + (previewMeasureType ?? "не определён"),
-    "Значение: " + previewValue,
-    "Единица: " + (previewUnit ?? "не определена"),
+    "\u0427\u0442\u043e \u0437\u0430\u043f\u0438\u0441\u0430\u043d\u043e:",
+    "\u0410\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c: " + pendingActivityText,
+    "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044f: " + (previewSemanticKey ?? "\u043d\u0435 \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0435\u043d\u0430"),
+    "\u0422\u0438\u043f \u043f\u043e\u043a\u0430\u0437\u0430\u0442\u0435\u043b\u044f: " + (previewMeasureType ?? "\u043d\u0435 \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0451\u043d"),
+    "\u0417\u043d\u0430\u0447\u0435\u043d\u0438\u0435: " + previewValue,
+    "\u0415\u0434\u0438\u043d\u0438\u0446\u0430: " + (previewUnit ?? "\u043d\u0435 \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0435\u043d\u0430"),
     "",
-    "Статус записи:",
+    "\u0421\u0442\u0430\u0442\u0443\u0441 \u0437\u0430\u043f\u0438\u0441\u0438:",
     "writeStatus: " + (writeStatus ?? "written"),
     "routeStatus: " + (routeStatus ?? "server_mediated_write_completed"),
     "",
-    "Где смотреть:",
-    "Открой /activity-facts — новая строка должна быть в таблице TYPE / VALUE / UNIT.",
+    "\u0413\u0434\u0435 \u0441\u043c\u043e\u0442\u0440\u0435\u0442\u044c:",
+    "\u041e\u0442\u043a\u0440\u043e\u0439 /activity-facts — \u043d\u043e\u0432\u0430\u044f \u0441\u0442\u0440\u043e\u043a\u0430 \u0434\u043e\u043b\u0436\u043d\u0430 \u0431\u044b\u0442\u044c \u0432 \u0442\u0430\u0431\u043b\u0438\u0446\u0435 TYPE / VALUE / UNIT.",
     "",
-    "Технические ID:",
-    "activityEventId: " + (activityEventId ?? "не вернулся"),
-    "measureIds: " + (measureIds.length > 0 ? measureIds.join(", ") : "не вернулись"),
-    "factIds: " + (factIds.length > 0 ? factIds.join(", ") : "не вернулись"),
+    "\u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0438\u0435 ID:",
+    "activityEventId: " + (activityEventId ?? "\u043d\u0435 \u0432\u0435\u0440\u043d\u0443\u043b\u0441\u044f"),
+    "measureIds: " + (measureIds.length > 0 ? measureIds.join(", ") : "\u043d\u0435 \u0432\u0435\u0440\u043d\u0443\u043b\u0438\u0441\u044c"),
+    "factIds: " + (factIds.length > 0 ? factIds.join(", ") : "\u043d\u0435 \u0432\u0435\u0440\u043d\u0443\u043b\u0438\u0441\u044c"),
     "recalculationQueueIds: " +
       (recalculationQueueIds.length > 0
         ? recalculationQueueIds.join(", ")
-        : "не вернулись"),
+        : "\u043d\u0435 \u0432\u0435\u0440\u043d\u0443\u043b\u0438\u0441\u044c"),
     "",
-    "Важно:",
-    "Value Object пока не подставляется.",
-    "Старая команда 'подтверждаю активность' продолжает работать через прежний /api/activity/record flow.",
+    "\u0412\u0430\u0436\u043d\u043e:",
+    "Value Object \u043f\u043e\u043a\u0430 \u043d\u0435 \u043f\u043e\u0434\u0441\u0442\u0430\u0432\u043b\u044f\u0435\u0442\u0441\u044f.",
+    "\u0421\u0442\u0430\u0440\u0430\u044f \u043a\u043e\u043c\u0430\u043d\u0434\u0430 '\u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u044e \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c' \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u0435\u0442 \u0440\u0430\u0431\u043e\u0442\u0430\u0442\u044c \u0447\u0435\u0440\u0435\u0437 \u043f\u0440\u0435\u0436\u043d\u0438\u0439 /api/activity/record flow.",
   ].join("\n");
 }
 
@@ -2178,10 +2178,10 @@ function isControlledActivityRecordWriteCommand(message: string): boolean {
   }
 
   return [
-    "выполнить запись активности",
-    "выполни запись активности",
-    "сохранить подтвержденную активность",
-    "сохранить подтверждённую активность",
+    "\u0432\u044b\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u0437\u0430\u043f\u0438\u0441\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438",
+    "\u0432\u044b\u043f\u043e\u043b\u043d\u0438 \u0437\u0430\u043f\u0438\u0441\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438",
+    "\u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u043d\u0443\u044e \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
+    "\u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043d\u043d\u0443\u044e \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
     "governed write activity",
   ].includes(normalized);
 }
@@ -2270,11 +2270,11 @@ async function executeControlledActivityRecordWriteFromPendingPreview(): Promise
       "Governed Activity Event write blocked.",
       "Reason: there is no pending activity preview.",
       "",
-      "Нужно сначала ввести активность, например:",
-      "полчаса был на профилактическом приеме у стоматолога",
+      "\u041d\u0443\u0436\u043d\u043e \u0441\u043d\u0430\u0447\u0430\u043b\u0430 \u0432\u0432\u0435\u0441\u0442\u0438 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c, \u043d\u0430\u043f\u0440\u0438\u043c\u0435\u0440:",
+      "\u043f\u043e\u043b\u0447\u0430\u0441\u0430 \u0431\u044b\u043b \u043d\u0430 \u043f\u0440\u043e\u0444\u0438\u043b\u0430\u043a\u0442\u0438\u0447\u0435\u0441\u043a\u043e\u043c \u043f\u0440\u0438\u0435\u043c\u0435 \u0443 \u0441\u0442\u043e\u043c\u0430\u0442\u043e\u043b\u043e\u0433\u0430",
       "",
-      "DB write НЕ выполнен.",
-      "Service Log write НЕ выполнен.",
+      "DB write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d.",
+      "Service Log write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d.",
     ].join("\n");
   }
 
@@ -2283,11 +2283,11 @@ async function executeControlledActivityRecordWriteFromPendingPreview(): Promise
       "Governed Activity Event write blocked.",
       "Reason: pending activity preview is incomplete.",
       "",
-      "Что не хватает:",
+      "\u0427\u0442\u043e \u043d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442:",
       "durationMinutes could not be safely inferred.",
       "",
-      "DB write НЕ выполнен.",
-      "Service Log write НЕ выполнен.",
+      "DB write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d.",
+      "Service Log write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d.",
     ].join("\n");
   }
 
@@ -2435,18 +2435,18 @@ async function askLegacyAi(
   try {
     data = (await response.json()) as ApiTestResponse;
   } catch {
-    throw new Error("Ответ сервера пришёл не в JSON-формате.");
+    throw new Error("\u041e\u0442\u0432\u0435\u0442 \u0441\u0435\u0440\u0432\u0435\u0440\u0430 \u043f\u0440\u0438\u0448\u0451\u043b \u043d\u0435 \u0432 JSON-\u0444\u043e\u0440\u043c\u0430\u0442\u0435.");
   }
 
   if (!response.ok) {
     if (data.error === "Not authenticated") {
-      throw new Error("Нужно войти в систему, чтобы получить ответ AI.");
+      throw new Error("\u041d\u0443\u0436\u043d\u043e \u0432\u043e\u0439\u0442\u0438 \u0432 \u0441\u0438\u0441\u0442\u0435\u043c\u0443, \u0447\u0442\u043e\u0431\u044b \u043f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u043e\u0442\u0432\u0435\u0442 AI.");
     }
 
-    throw new Error(data.error || "Ошибка ответа сервера.");
+    throw new Error(data.error || "\u041e\u0448\u0438\u0431\u043a\u0430 \u043e\u0442\u0432\u0435\u0442\u0430 \u0441\u0435\u0440\u0432\u0435\u0440\u0430.");
   }
 
-  return data.reply || data.error || "Ответ пустой.";
+  return data.reply || data.error || "\u041e\u0442\u0432\u0435\u0442 \u043f\u0443\u0441\u0442\u043e\u0439.";
 }
 
 export function AiNavigatorProvider({
@@ -2516,7 +2516,7 @@ export function AiNavigatorProvider({
       {
         id: baseId + 1,
         role: "ai",
-        text: "Активность принята как local preview. Следующий gate — подключение к Activity Capture review-flow.",
+        text: "\u0410\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u043f\u0440\u0438\u043d\u044f\u0442\u0430 \u043a\u0430\u043a local preview. \u0421\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0439 gate — \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435 \u043a Activity Capture review-flow.",
         createdAt: now,
       },
     ]);
@@ -2545,7 +2545,7 @@ export function AiNavigatorProvider({
         {
           id: assistantMessageId,
           role: "ai",
-          text: "Анализирую запрос...",
+          text: "\u0410\u043d\u0430\u043b\u0438\u0437\u0438\u0440\u0443\u044e \u0437\u0430\u043f\u0440\u043e\u0441...",
           createdAt: now,
         },
       ]);
@@ -2570,7 +2570,7 @@ export function AiNavigatorProvider({
         );
       } catch (error) {
         const errorMessage =
-          error instanceof Error ? error.message : "Не удалось получить ответ ИИ.";
+          error instanceof Error ? error.message : "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u043e\u0442\u0432\u0435\u0442 \u0418\u0418.";
 
         setMessages((previousMessages) =>
           previousMessages.map((messageItem) =>

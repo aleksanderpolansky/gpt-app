@@ -437,11 +437,11 @@ export default async function RewardsCatalogPage({
             }}
           >
             <a href="/" style={{ color: "#2563eb" }}>
-              На главную
+              Home
             </a>
 
             <a href="/directory" style={{ color: "#2563eb" }}>
-              Каталог предприятий
+              Business directory
             </a>
 
             <a href="/offers" style={{ color: "#2563eb" }}>
@@ -820,7 +820,7 @@ export default async function RewardsCatalogPage({
                         fontWeight: 700,
                       }}
                     >
-                      Открыть карточку предприятия
+                      Open business profile
                     </a>
 
                     <RequestCertificateButton
