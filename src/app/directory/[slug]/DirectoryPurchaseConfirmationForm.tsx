@@ -1,7 +1,10 @@
-﻿"use client";
+"use client";
 
 import { type FormEvent, useMemo, useState } from "react";
 
+import { getPurchaseConfirmationText } from "@/i18n/messages/purchase-confirmations";
+
+const purchaseText = (key: Parameters<typeof getPurchaseConfirmationText>[0]) => getPurchaseConfirmationText(key, "en");
 type PurchaseConfirmationCreateResponse = {
   ok?: boolean;
   purchaseConfirmation?: unknown;
@@ -95,10 +98,10 @@ export default function DirectoryPurchaseConfirmationForm({
     setPurchaseSubmitMessage("");
     setPurchaseSubmitError("");
 
-    const parsedPurchaseAmount = Number(purchaseAmount);
+      const parsedPurchaseAmount = Number.parseFloat(purchaseAmount.replace(",", "."));
 
     if (Number.isNaN(parsedPurchaseAmount) || parsedPurchaseAmount <= 0) {
-      setPurchaseSubmitError("Введите положительную сумму покупки.");
+      setPurchaseSubmitError(purchaseText("purchaseConfirmations.entry.invalidAmount"));
       return;
     }
 
@@ -128,10 +131,10 @@ export default function DirectoryPurchaseConfirmationForm({
       }
 
       setPurchaseAmount("");
-      setUserComment("");
+        purchaseText("purchaseConfirmations.entry.submittedMessage"),
       setReceiptUrl("");
       setPurchaseSubmitMessage(
-        "Заявка на подтверждение покупки создана. Продавец сможет подтвердить или отклонить её. После подтверждения система начислит POINTS по правилам предприятия.",
+        purchaseText("purchaseConfirmations.entry.submittedMessage"),
       );
     } catch (error) {
       setPurchaseSubmitError(
@@ -153,14 +156,11 @@ export default function DirectoryPurchaseConfirmationForm({
         </div>
 
         <h2 className="mt-2 text-[24px] font-bold tracking-[-0.02em] text-[#14532d]">
-          Зарегистрировать покупку
+          {purchaseText("purchaseConfirmations.entry.title")}
         </h2>
 
         <p className="mt-2 max-w-[820px] text-[14px] leading-6 text-[#166534]">
-          Если покупка была совершена вне платформы, клиент может отправить
-          заявку на подтверждение. Продавец проверит покупку, а после
-          подтверждения система начислит POINTS как бонусные единицы программы
-          лояльности.
+          {purchaseText("purchaseConfirmations.entry.description")}
         </p>
       </div>
 
@@ -170,7 +170,7 @@ export default function DirectoryPurchaseConfirmationForm({
       >
         {minimumPurchaseThreshold ? (
           <div className="rounded-xl border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-[13px] leading-5 text-[#1d4ed8]">
-            Минимальная сумма для начисления 10 POINTS: больше{" "}
+            {purchaseText("purchaseConfirmations.entry.minimumThresholdPrefix")}{" "}
             <strong>
               {minimumPurchaseThreshold.amount}{" "}
               {minimumPurchaseThreshold.currency}
@@ -179,15 +179,14 @@ export default function DirectoryPurchaseConfirmationForm({
           </div>
         ) : (
           <div className="rounded-xl border border-[#facc15] bg-[#fefce8] px-4 py-3 text-[13px] leading-5 text-[#713f12]">
-            Минимальный порог начисления POINTS пока не определён: проверьте
-            страну и валюту предприятия.
+            {purchaseText("purchaseConfirmations.entry.thresholdMissing")}
           </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           <label className="grid gap-2">
             <span className="text-[13px] font-semibold text-[#343854]">
-              Сумма покупки
+              {purchaseText("purchaseConfirmations.common.amount")}
             </span>
             <input
               type="number"
@@ -195,7 +194,7 @@ export default function DirectoryPurchaseConfirmationForm({
               step="0.01"
               value={purchaseAmount}
               onChange={(event) => setPurchaseAmount(event.target.value)}
-              placeholder="Например: 95"
+              placeholder={purchaseText("purchaseConfirmations.entry.amountPlaceholder")}
               required
               className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
             />
@@ -203,28 +202,27 @@ export default function DirectoryPurchaseConfirmationForm({
 
           <label className="grid gap-2">
             <span className="text-[13px] font-semibold text-[#343854]">
-              Валюта
+              {purchaseText("purchaseConfirmations.common.currency")}
             </span>
             <input
               type="text"
               value={purchaseCurrency}
-              onChange={(event) =>
-                setPurchaseCurrency(event.target.value.toUpperCase())
-              }
-              placeholder={organizationDefaultCurrency || "PLN"}
-              className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] uppercase text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+              onChange={(event) => setPurchaseCurrency(event.target.value)}
+              placeholder="PLN"
+              required
+              className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
             />
           </label>
         </div>
 
         <label className="grid gap-2">
           <span className="text-[13px] font-semibold text-[#343854]">
-            Комментарий
+            {purchaseText("purchaseConfirmations.entry.buyerComment")}
           </span>
           <textarea
             value={userComment}
             onChange={(event) => setUserComment(event.target.value)}
-            placeholder="Например: покупка сертификата / услуга массажа / номер заказа"
+            placeholder={purchaseText("purchaseConfirmations.entry.commentPlaceholder")}
             rows={3}
             className="w-full resize-y rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] leading-6 text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
           />
@@ -232,37 +230,37 @@ export default function DirectoryPurchaseConfirmationForm({
 
         <label className="grid gap-2">
           <span className="text-[13px] font-semibold text-[#343854]">
-            Ссылка на чек или подтверждение
+            {purchaseText("purchaseConfirmations.entry.receiptUrl")}
           </span>
           <input
             type="url"
             value={receiptUrl}
             onChange={(event) => setReceiptUrl(event.target.value)}
-            placeholder="https://..."
+            placeholder="https://"
             className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
           />
         </label>
 
-        {purchaseSubmitMessage ? (
-          <div className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[13px] font-medium text-[#166534]">
-            {purchaseSubmitMessage}
+        {purchaseSubmitError ? (
+          <div className="rounded-xl border border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-[13px] leading-5 text-[#991b1b]">
+            {purchaseSubmitError}
           </div>
         ) : null}
 
-        {purchaseSubmitError ? (
-          <div className="rounded-xl border border-[#fecaca] bg-[#fff1f2] px-4 py-3 text-[13px] font-medium text-[#b42318]">
-            {purchaseSubmitError}
+        {purchaseSubmitMessage ? (
+          <div className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[13px] leading-5 text-[#166534]">
+            {purchaseSubmitMessage}
           </div>
         ) : null}
 
         <button
           type="submit"
           disabled={isSubmittingPurchase}
-          className="rounded-xl bg-[#16a34a] px-5 py-3 text-[14px] font-bold text-white shadow-[0_10px_20px_rgba(22,163,74,0.22)] transition hover:bg-[#15803d] disabled:cursor-not-allowed disabled:bg-[#aeb6c8] disabled:shadow-none"
+          className="inline-flex w-fit items-center justify-center rounded-full bg-[#16a34a] px-5 py-3 text-[14px] font-semibold text-white shadow-[0_10px_22px_rgba(22,163,74,0.24)] transition hover:bg-[#15803d] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmittingPurchase
-            ? "Отправляю заявку..."
-            : "Зарегистрировать покупку"}
+            ? purchaseText("purchaseConfirmations.entry.submitting")
+            : purchaseText("purchaseConfirmations.entry.submit")}
         </button>
       </form>
     </section>

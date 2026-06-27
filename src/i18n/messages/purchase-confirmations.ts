@@ -86,7 +86,21 @@ export const purchaseConfirmationMessageKeys = [
   "purchaseConfirmations.shell.sellerTitle",
   "purchaseConfirmations.shell.sellerDescription",
   "purchaseConfirmations.shell.publicPurchasesTitle",
-  "purchaseConfirmations.shell.publicPurchasesDescription"
+  "purchaseConfirmations.shell.publicPurchasesDescription",
+  "purchaseConfirmations.entry.invalidAmount",
+  "purchaseConfirmations.entry.submittedMessage",
+  "purchaseConfirmations.entry.title",
+  "purchaseConfirmations.entry.description",
+  "purchaseConfirmations.entry.minimumThresholdPrefix",
+  "purchaseConfirmations.entry.thresholdMissing",
+  "purchaseConfirmations.entry.amountPlaceholder",
+  "purchaseConfirmations.entry.buyerComment",
+  "purchaseConfirmations.entry.commentPlaceholder",
+  "purchaseConfirmations.entry.receiptUrl",
+  "purchaseConfirmations.entry.submitting",
+  "purchaseConfirmations.entry.submit",
+  "purchaseConfirmations.entry.scopeNote",
+  "purchaseConfirmations.entry.viewMyRequests"
 ] as const;
 
 export type PurchaseConfirmationMessageKey =
@@ -851,6 +865,132 @@ export const purchaseConfirmationMessages: Record<
     "uk": "ÐŸÑƒÐ±Ð»Ñ–Ñ‡Ð½Ð° Ñ–ÑÑ‚Ð¾Ñ€Ñ–Ñ Ð¿Ñ–Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¶ÐµÐ½Ð¸Ñ… Ð·Ð¾Ð²Ð½Ñ–ÑˆÐ½Ñ–Ñ… Ð¿Ð¾ÐºÑƒÐ¿Ð¾Ðº Ñ–Ð· Ð¼Ð°ÑÐºÐ¾Ð²Ð°Ð½Ð¸Ð¼Ð¸ Ð¿Ð¾ÐºÑƒÐ¿Ñ†ÑÐ¼Ð¸.",
     "de": "Ã–ffentliche Historie bestÃ¤tigter externer KÃ¤ufe mit maskierten KÃ¤ufern.",
     "cs": "VeÅ™ejnÃ¡ historie potvrzenÃ½ch externÃ­ch nÃ¡kupÅ¯ s maskovanÃ½mi kupujÃ­cÃ­mi."
+  },
+  "purchaseConfirmations.entry.invalidAmount": {
+    "ru": "Введите положительную сумму покупки.",
+    "pl": "Wpisz dodatnią kwotę zakupu.",
+    "en": "Enter a positive purchase amount.",
+    "es": "Introduce un importe de compra positivo.",
+    "uk": "Введіть додатну суму покупки.",
+    "de": "Geben Sie einen positiven Kaufbetrag ein.",
+    "cs": "Zadejte kladnou částku nákupu."
+  },
+  "purchaseConfirmations.entry.submittedMessage": {
+    "ru": "Заявка на подтверждение покупки создана. Продавец сможет подтвердить или отклонить её.",
+    "pl": "Zgłoszenie potwierdzenia zakupu zostało utworzone. Sprzedawca będzie mógł je potwierdzić albo odrzucić.",
+    "en": "The purchase confirmation request has been created. The seller can confirm or reject it.",
+    "es": "La solicitud de confirmación de compra se ha creado. El vendedor puede confirmarla o rechazarla.",
+    "uk": "Заявку на підтвердження покупки створено. Продавець зможе підтвердити або відхилити її.",
+    "de": "Die Kaufbestätigungsanfrage wurde erstellt. Der Verkäufer kann sie bestätigen oder ablehnen.",
+    "cs": "Žádost o potvrzení nákupu byla vytvořena. Prodejce ji může potvrdit nebo odmítnout."
+  },
+  "purchaseConfirmations.entry.title": {
+    "ru": "Зарегистрировать покупку",
+    "pl": "Zarejestruj zakup",
+    "en": "Register purchase",
+    "es": "Registrar compra",
+    "uk": "Зареєструвати покупку",
+    "de": "Kauf registrieren",
+    "cs": "Registrovat nákup"
+  },
+  "purchaseConfirmations.entry.description": {
+    "ru": "Если покупка была совершена вне платформы, клиент может отправить заявку на подтверждение. Продавец проверит покупку, а после подтверждения система начислит POINTS как бонусные единицы программы лояльности.",
+    "pl": "Jeśli zakup został dokonany poza platformą, klient może wysłać zgłoszenie do potwierdzenia. Sprzedawca sprawdzi zakup, a po potwierdzeniu system naliczy POINTS jako jednostki bonusowe programu lojalnościowego.",
+    "en": "If the purchase was completed outside the platform, the client can send a confirmation request. The seller reviews the purchase, and after confirmation the system awards POINTS as loyalty bonus units.",
+    "es": "Si la compra se realizó fuera de la plataforma, el cliente puede enviar una solicitud de confirmación. El vendedor revisa la compra y, tras confirmarla, el sistema concede POINTS como unidades de bonificación del programa de fidelidad.",
+    "uk": "Якщо покупку здійснено поза платформою, клієнт може надіслати заявку на підтвердження. Продавець перевірить покупку, а після підтвердження система нарахує POINTS як бонусні одиниці програми лояльності.",
+    "de": "Wenn der Kauf außerhalb der Plattform abgeschlossen wurde, kann der Kunde eine Bestätigungsanfrage senden. Der Verkäufer prüft den Kauf und nach der Bestätigung vergibt das System POINTS als Bonuseinheiten des Treueprogramms.",
+    "cs": "Pokud byl nákup dokončen mimo platformu, klient může odeslat žádost o potvrzení. Prodejce nákup zkontroluje a po potvrzení systém připíše POINTS jako bonusové jednotky věrnostního programu."
+  },
+  "purchaseConfirmations.entry.minimumThresholdPrefix": {
+    "ru": "Минимальная сумма для начисления 10 POINTS:",
+    "pl": "Minimalna kwota do naliczenia 10 POINTS:",
+    "en": "Minimum amount for awarding 10 POINTS:",
+    "es": "Importe mínimo para conceder 10 POINTS:",
+    "uk": "Мінімальна сума для нарахування 10 POINTS:",
+    "de": "Mindestbetrag für die Gutschrift von 10 POINTS:",
+    "cs": "Minimální částka pro připsání 10 POINTS:"
+  },
+  "purchaseConfirmations.entry.thresholdMissing": {
+    "ru": "Минимальный порог начисления POINTS пока не определён: проверьте страну и валюту предприятия.",
+    "pl": "Minimalny próg naliczania POINTS nie jest jeszcze określony: sprawdź kraj i walutę firmy.",
+    "en": "The minimum POINTS threshold is not defined yet: check the business country and currency.",
+    "es": "El umbral mínimo para conceder POINTS aún no está definido: comprueba el país y la moneda de la empresa.",
+    "uk": "Мінімальний поріг нарахування POINTS ще не визначено: перевірте країну й валюту підприємства.",
+    "de": "Der Mindestschwellenwert für POINTS ist noch nicht festgelegt: prüfen Sie Land und Währung des Unternehmens.",
+    "cs": "Minimální práh pro připsání POINTS zatím není určen: zkontrolujte zemi a měnu podniku."
+  },
+  "purchaseConfirmations.entry.amountPlaceholder": {
+    "ru": "Например: 95",
+    "pl": "Na przykład: 95",
+    "en": "Example: 95",
+    "es": "Por ejemplo: 95",
+    "uk": "Наприклад: 95",
+    "de": "Zum Beispiel: 95",
+    "cs": "Například: 95"
+  },
+  "purchaseConfirmations.entry.buyerComment": {
+    "ru": "Комментарий покупателя",
+    "pl": "Komentarz kupującego",
+    "en": "Buyer comment",
+    "es": "Comentario del comprador",
+    "uk": "Коментар покупця",
+    "de": "Käuferkommentar",
+    "cs": "Komentář kupujícího"
+  },
+  "purchaseConfirmations.entry.commentPlaceholder": {
+    "ru": "Например: покупка сертификата, услуга, номер заказа или ссылка на чек.",
+    "pl": "Na przykład: zakup certyfikatu, usługa, numer zamówienia albo link do paragonu.",
+    "en": "Example: certificate purchase, service, order number or receipt link.",
+    "es": "Por ejemplo: compra de certificado, servicio, número de pedido o enlace al recibo.",
+    "uk": "Наприклад: покупка сертифіката, послуга, номер замовлення або посилання на чек.",
+    "de": "Zum Beispiel: Zertifikatskauf, Dienstleistung, Bestellnummer oder Link zum Beleg.",
+    "cs": "Například: nákup certifikátu, služba, číslo objednávky nebo odkaz na účtenku."
+  },
+  "purchaseConfirmations.entry.receiptUrl": {
+    "ru": "Ссылка на чек или подтверждение",
+    "pl": "Link do paragonu albo potwierdzenia",
+    "en": "Receipt or confirmation link",
+    "es": "Enlace al recibo o confirmación",
+    "uk": "Посилання на чек або підтвердження",
+    "de": "Link zum Beleg oder zur Bestätigung",
+    "cs": "Odkaz na účtenku nebo potvrzení"
+  },
+  "purchaseConfirmations.entry.submitting": {
+    "ru": "Отправляю заявку...",
+    "pl": "Wysyłam zgłoszenie...",
+    "en": "Sending request...",
+    "es": "Enviando solicitud...",
+    "uk": "Надсилаю заявку...",
+    "de": "Anfrage wird gesendet...",
+    "cs": "Odesílám žádost..."
+  },
+  "purchaseConfirmations.entry.submit": {
+    "ru": "Зарегистрировать покупку",
+    "pl": "Zarejestruj zakup",
+    "en": "Register purchase",
+    "es": "Registrar compra",
+    "uk": "Зареєструвати покупку",
+    "de": "Kauf registrieren",
+    "cs": "Registrovat nákup"
+  },
+  "purchaseConfirmations.entry.scopeNote": {
+    "ru": "Панель продавца доступна только владельцу предприятия. Покупатели видят только публичную историю подтверждённых покупок и личную страницу своих заявок.",
+    "pl": "Panel sprzedawcy jest dostępny tylko dla właściciela firmy. Kupujący widzą tylko publiczną historię potwierdzonych zakupów oraz własną stronę zgłoszeń.",
+    "en": "The seller panel is available only to the business owner. Buyers see only the public history of confirmed purchases and their personal request page.",
+    "es": "El panel del vendedor está disponible solo para el propietario de la empresa. Los compradores solo ven el historial público de compras confirmadas y su página personal de solicitudes.",
+    "uk": "Панель продавця доступна лише власнику підприємства. Покупці бачать тільки публічну історію підтверджених покупок і власну сторінку заявок.",
+    "de": "Das Verkäuferpanel ist nur für den Unternehmensinhaber verfügbar. Käufer sehen nur die öffentliche Historie bestätigter Käufe und ihre persönliche Anfrageseite.",
+    "cs": "Panel prodejce je dostupný pouze vlastníkovi podniku. Kupující vidí jen veřejnou historii potvrzených nákupů a svou osobní stránku žádostí."
+  },
+  "purchaseConfirmations.entry.viewMyRequests": {
+    "ru": "Посмотреть мои заявки",
+    "pl": "Zobacz moje zgłoszenia",
+    "en": "View my requests",
+    "es": "Ver mis solicitudes",
+    "uk": "Переглянути мої заявки",
+    "de": "Meine Anfragen anzeigen",
+    "cs": "Zobrazit moje žádosti"
   }
 };
 

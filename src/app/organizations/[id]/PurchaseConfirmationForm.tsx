@@ -2,6 +2,9 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
+import { getPurchaseConfirmationText } from "@/i18n/messages/purchase-confirmations";
+
+const purchaseText = (key: Parameters<typeof getPurchaseConfirmationText>[0]) => getPurchaseConfirmationText(key, "en");
 type PurchaseConfirmationCreateResponse = {
   ok: boolean;
   purchaseConfirmation?: unknown;
@@ -98,10 +101,10 @@ export default function PurchaseConfirmationForm({
     setPurchaseSubmitMessage("");
     setPurchaseSubmitError("");
 
-    const parsedPurchaseAmount = Number(purchaseAmount);
+      const parsedPurchaseAmount = Number.parseFloat(purchaseAmount.replace(",", "."));
 
     if (Number.isNaN(parsedPurchaseAmount) || parsedPurchaseAmount <= 0) {
-      setPurchaseSubmitError("Введите положительную сумму покупки.");
+      setPurchaseSubmitError(purchaseText("purchaseConfirmations.entry.invalidAmount"));
       return;
     }
 
@@ -131,10 +134,10 @@ export default function PurchaseConfirmationForm({
       }
 
       setPurchaseAmount("");
-      setUserComment("");
+        purchaseText("purchaseConfirmations.entry.submittedMessage"),
       setReceiptUrl("");
       setPurchaseSubmitMessage(
-        "Заявка на подтверждение покупки создана. Теперь продавец сможет подтвердить или отклонить её."
+        purchaseText("purchaseConfirmations.entry.submittedMessage"),
       );
     } catch (error) {
       setPurchaseSubmitError(
@@ -161,27 +164,22 @@ export default function PurchaseConfirmationForm({
       }}
     >
       <h2 style={{ margin: "0 0 10px", fontSize: "24px" }}>
-        Purchase confirmations & points
+        {purchaseText("purchaseConfirmations.entry.title")}
       </h2>
 
       <p style={{ margin: "0 0 12px", color: "#374151" }}>
-        Здесь покупатель может зарегистрировать покупку у этого предприятия.
-        Продавец позже подтвердит или отклонит заявку. После подтверждения
-        система начислит points по правилам предприятия.
+        {purchaseText("purchaseConfirmations.entry.description")}
       </p>
 
       <p
         style={{
           margin: "0 0 16px",
           color: "#1e3a8a",
-          fontSize: "14px",
+          fontSize: "13px",
           lineHeight: "1.5",
         }}
       >
-        Seller purchase confirmations — это закрытая панель продавца. Она
-        доступна только владельцу предприятия. Покупатели и другие пользователи
-        видят только публичную историю подтверждённых покупок. My purchase
-        confirmations — это личная страница покупателя со своими заявками.
+        {purchaseText("purchaseConfirmations.entry.scopeNote")}
       </p>
 
       <form
@@ -189,30 +187,21 @@ export default function PurchaseConfirmationForm({
         style={{
           display: "grid",
           gap: "14px",
-          padding: "16px",
-          border: "1px solid #93c5fd",
-          borderRadius: "12px",
-          background: "#ffffff",
-          marginBottom: "16px",
         }}
       >
-        <h3 style={{ margin: 0, fontSize: "20px" }}>
-          Зарегистрировать покупку
-        </h3>
-
         {minimumPurchaseThreshold ? (
           <div
             style={{
               border: "1px solid #bfdbfe",
-              borderRadius: "8px",
-              padding: "10px 12px",
-              background: "#eff6ff",
-              color: "#1e3a8a",
-              fontSize: "14px",
+              borderRadius: "10px",
+              padding: "12px",
+              background: "#ffffff",
+              color: "#1d4ed8",
+              fontSize: "13px",
               lineHeight: "1.5",
             }}
           >
-            Минимальная сумма для начисления 10 points: больше{" "}
+            {purchaseText("purchaseConfirmations.entry.minimumThresholdPrefix")}{" "}
             <strong>
               {minimumPurchaseThreshold.amount}{" "}
               {minimumPurchaseThreshold.currency}
@@ -223,16 +212,15 @@ export default function PurchaseConfirmationForm({
           <div
             style={{
               border: "1px solid #facc15",
-              borderRadius: "8px",
-              padding: "10px 12px",
+              borderRadius: "10px",
+              padding: "12px",
               background: "#fefce8",
               color: "#713f12",
-              fontSize: "14px",
+              fontSize: "13px",
               lineHeight: "1.5",
             }}
           >
-            Минимальный порог начисления points пока не определён: проверьте
-            страну и валюту предприятия.
+            {purchaseText("purchaseConfirmations.entry.thresholdMissing")}
           </div>
         )}
 
@@ -244,72 +232,75 @@ export default function PurchaseConfirmationForm({
           }}
         >
           <label style={{ display: "grid", gap: "6px" }}>
-            <span style={{ fontWeight: 600 }}>Сумма покупки</span>
+            <span style={{ fontWeight: 600 }}>
+              {purchaseText("purchaseConfirmations.common.amount")}
+            </span>
             <input
               type="number"
               min="0"
               step="0.01"
               value={purchaseAmount}
               onChange={(event) => setPurchaseAmount(event.target.value)}
-              placeholder="Например: 95"
+              placeholder={purchaseText("purchaseConfirmations.entry.amountPlaceholder")}
               required
               style={{
-                padding: "10px 12px",
-                border: "1px solid #cbd5e1",
+                border: "1px solid #d1d5db",
                 borderRadius: "8px",
-                fontSize: "15px",
+                padding: "10px 12px",
               }}
             />
           </label>
 
           <label style={{ display: "grid", gap: "6px" }}>
-            <span style={{ fontWeight: 600 }}>Валюта</span>
+            <span style={{ fontWeight: 600 }}>
+              {purchaseText("purchaseConfirmations.common.currency")}
+            </span>
             <input
               type="text"
               value={purchaseCurrency}
-              onChange={(event) =>
-                setPurchaseCurrency(event.target.value.toUpperCase())
-              }
-              placeholder={organizationDefaultCurrency || "PLN"}
+              onChange={(event) => setPurchaseCurrency(event.target.value)}
+              placeholder="PLN"
+              required
               style={{
-                padding: "10px 12px",
-                border: "1px solid #cbd5e1",
+                border: "1px solid #d1d5db",
                 borderRadius: "8px",
-                fontSize: "15px",
+                padding: "10px 12px",
               }}
             />
           </label>
         </div>
 
         <label style={{ display: "grid", gap: "6px" }}>
-          <span style={{ fontWeight: 600 }}>Комментарий покупателя</span>
+          <span style={{ fontWeight: 600 }}>
+            {purchaseText("purchaseConfirmations.entry.buyerComment")}
+          </span>
           <textarea
             value={userComment}
             onChange={(event) => setUserComment(event.target.value)}
-            placeholder="Например: покупка аксессуаров, чек приложен ссылкой."
+            placeholder={purchaseText("purchaseConfirmations.entry.commentPlaceholder")}
             rows={3}
             style={{
-              padding: "10px 12px",
-              border: "1px solid #cbd5e1",
+              border: "1px solid #d1d5db",
               borderRadius: "8px",
-              fontSize: "15px",
+              padding: "10px 12px",
               resize: "vertical",
             }}
           />
         </label>
 
         <label style={{ display: "grid", gap: "6px" }}>
-          <span style={{ fontWeight: 600 }}>Ссылка на чек</span>
+          <span style={{ fontWeight: 600 }}>
+            {purchaseText("purchaseConfirmations.entry.receiptUrl")}
+          </span>
           <input
             type="url"
             value={receiptUrl}
             onChange={(event) => setReceiptUrl(event.target.value)}
-            placeholder="https://..."
+            placeholder="https://"
             style={{
-              padding: "10px 12px",
-              border: "1px solid #cbd5e1",
+              border: "1px solid #d1d5db",
               borderRadius: "8px",
-              fontSize: "15px",
+              padding: "10px 12px",
             }}
           />
         </label>
@@ -317,11 +308,11 @@ export default function PurchaseConfirmationForm({
         {purchaseSubmitError ? (
           <div
             style={{
-              border: "1px solid #f2b8b5",
-              borderRadius: "8px",
-              padding: "10px 12px",
-              background: "#fff5f5",
-              color: "#a40000",
+              border: "1px solid #fecaca",
+              borderRadius: "10px",
+              padding: "12px",
+              background: "#fef2f2",
+              color: "#991b1b",
             }}
           >
             {purchaseSubmitError}
@@ -331,108 +322,51 @@ export default function PurchaseConfirmationForm({
         {purchaseSubmitMessage ? (
           <div
             style={{
-              border: "1px solid #bfe5c8",
-              borderRadius: "8px",
+              border: "1px solid #bbf7d0",
+              borderRadius: "10px",
               padding: "12px",
-              background: "#edf8f0",
-              color: "#176b2c",
-              display: "grid",
-              gap: "10px",
+              background: "#f0fdf4",
+              color: "#166534",
             }}
           >
-            <div>{purchaseSubmitMessage}</div>
-
-            <a
-              href={myPurchaseConfirmationsHref}
-              style={{
-                display: "inline-block",
-                width: "fit-content",
-                padding: "8px 12px",
-                borderRadius: "8px",
-                background: "#ffffff",
-                color: "#176b2c",
-                border: "1px solid #bfe5c8",
-                textDecoration: "none",
-                fontWeight: 700,
-              }}
-            >
-              Посмотреть мои заявки
-            </a>
+            {purchaseSubmitMessage}
           </div>
         ) : null}
 
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "12px",
-            alignItems: "center",
-          }}
-        >
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
           <button
             type="submit"
             disabled={isSubmittingPurchase}
             style={{
-              padding: "10px 14px",
-              borderRadius: "8px",
-              border: "1px solid #2563eb",
-              background: isSubmittingPurchase ? "#93c5fd" : "#2563eb",
+              border: 0,
+              borderRadius: "999px",
+              padding: "10px 16px",
+              background: "#1d4ed8",
               color: "#ffffff",
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: isSubmittingPurchase ? "not-allowed" : "pointer",
+              opacity: isSubmittingPurchase ? 0.65 : 1,
             }}
           >
             {isSubmittingPurchase
-              ? "Отправка..."
-              : "Зарегистрировать покупку"}
+              ? purchaseText("purchaseConfirmations.entry.submitting")
+              : purchaseText("purchaseConfirmations.entry.submit")}
           </button>
 
           <a
-            href={myPurchaseConfirmationsHref}
+            href="/my-purchase-confirmations"
             style={{
-              display: "inline-block",
-              padding: "10px 14px",
-              borderRadius: "8px",
-              background: "#ffffff",
-              color: "#2563eb",
-              border: "1px solid #93c5fd",
+              alignItems: "center",
+              border: "1px solid #bfdbfe",
+              borderRadius: "999px",
+              color: "#1d4ed8",
+              display: "inline-flex",
+              fontWeight: 700,
+              padding: "10px 16px",
               textDecoration: "none",
-              fontWeight: 600,
             }}
           >
-            My purchase confirmations
-          </a>
-
-          <a
-            href={purchaseConfirmationsHref}
-            style={{
-              display: "inline-block",
-              padding: "10px 14px",
-              borderRadius: "8px",
-              background: "#ffffff",
-              color: "#2563eb",
-              border: "1px solid #93c5fd",
-              textDecoration: "none",
-              fontWeight: 600,
-            }}
-          >
-            Seller purchase confirmations
-          </a>
-
-          <a
-            href={publicPurchaseHistoryHref}
-            style={{
-              display: "inline-block",
-              padding: "10px 14px",
-              borderRadius: "8px",
-              background: "#ffffff",
-              color: "#2563eb",
-              border: "1px solid #93c5fd",
-              textDecoration: "none",
-              fontWeight: 600,
-            }}
-          >
-            Public purchase history
+            {purchaseText("purchaseConfirmations.entry.viewMyRequests")}
           </a>
         </div>
       </form>
