@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { getPointsText } from "../../../i18n/messages";
+
+const pointsText = (key: Parameters<typeof getPointsText>[0]) => getPointsText(key, "en");
 
 type PointsTransaction = {
   readonly id?: string | null;
@@ -39,7 +42,7 @@ function formatPoints(value: unknown): string {
 
 function formatDate(value: string | null | undefined): string {
   if (!value) {
-    return "без даты";
+    return pointsText("points.transactions.noDate");
   }
 
   const parsed = new Date(value);
@@ -65,7 +68,7 @@ function getTransactionKind(transaction: PointsTransaction): string {
     type.includes("burn") ||
     type.includes("redeem")
   ) {
-    return "Списание";
+    return pointsText("points.transactions.kindRedeem");
   }
 
   if (
@@ -75,10 +78,10 @@ function getTransactionKind(transaction: PointsTransaction): string {
     type.includes("earn") ||
     type.includes("confirm")
   ) {
-    return "Начисление";
+    return pointsText("points.transactions.kindAccrual");
   }
 
-  return "Операция";
+  return pointsText("points.transactions.kindOperation");
 }
 
 export default function PointsTransactionsPage() {
@@ -101,7 +104,7 @@ export default function PointsTransactionsPage() {
       const data = (await response.json()) as PointsTransactionsResponse;
 
       if (!response.ok || !data.ok) {
-        throw new Error(data.error ?? "Не удалось загрузить историю пунктов.");
+        throw new Error(data.error ?? pointsText("points.transactions.loadError"));
       }
 
       setTransactions(Array.isArray(data.transactions) ? data.transactions : []);
@@ -109,7 +112,7 @@ export default function PointsTransactionsPage() {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "История пунктов временно недоступна.",
+          : pointsText("points.transactions.unavailableError"),
       );
     } finally {
       setIsLoading(false);
@@ -134,15 +137,15 @@ export default function PointsTransactionsPage() {
         <div className="mb-4 flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm md:flex-row md:items-start md:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
-              Points ledger
+              {pointsText("points.transactions.eyebrow")}
             </p>
             <h1 className="mt-2 text-[24px] font-bold">
-              История начисления и списания пунктов
+              {pointsText("points.transactions.title")}
             </h1>
             <p className="mt-2 max-w-2xl text-[14px] leading-6 text-[#5a5f7a]">
-              Здесь отображаются последние операции из points_transactions:
-              начисления, списания, источник операции, статус и баланс после
-              операции.
+              {pointsText("points.transactions.description")}
+
+
             </p>
           </div>
 
@@ -151,7 +154,7 @@ export default function PointsTransactionsPage() {
               href="/"
               className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe3f1] bg-white px-4 py-2 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
             >
-              Назад в кабинет
+              {pointsText("points.transactions.backToWorkspace")}
             </Link>
             <button
               type="button"
@@ -159,7 +162,7 @@ export default function PointsTransactionsPage() {
               disabled={isLoading}
               className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe3f1] bg-white px-4 py-2 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isLoading ? "Обновляем..." : "Обновить"}
+              {isLoading ? pointsText("points.transactions.refreshing") : pointsText("points.transactions.refresh")}
             </button>
           </div>
         </div>
@@ -167,7 +170,7 @@ export default function PointsTransactionsPage() {
         <section className="mb-4 grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl bg-white p-4 shadow-sm">
             <div className="text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
-              Операций
+              {pointsText("points.transactions.operationsLabel")}
             </div>
             <div className="mt-2 text-[24px] font-bold">
               {transactions.length}
@@ -176,7 +179,7 @@ export default function PointsTransactionsPage() {
 
           <div className="rounded-2xl bg-white p-4 shadow-sm">
             <div className="text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
-              Сумма видимых операций
+              {pointsText("points.transactions.visibleAmountLabel")}
             </div>
             <div className="mt-2 text-[24px] font-bold">
               {formatPoints(totalVisibleAmount)}
@@ -185,7 +188,7 @@ export default function PointsTransactionsPage() {
 
           <div className="rounded-2xl bg-white p-4 shadow-sm">
             <div className="text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
-              Источник данных
+              {pointsText("points.transactions.dataSourceLabel")}
             </div>
             <div className="mt-2 text-[14px] font-bold">
               /api/points/transactions
@@ -201,13 +204,13 @@ export default function PointsTransactionsPage() {
 
         {!errorMessage && isLoading ? (
           <div className="rounded-2xl bg-white p-5 text-[14px] font-semibold text-[#5a5f7a] shadow-sm">
-            Загружаем историю пунктов...
+            {pointsText("points.transactions.loading")}
           </div>
         ) : null}
 
         {!errorMessage && !isLoading && transactions.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[#cbd5e1] bg-white p-5 text-[14px] font-semibold text-[#64748b] shadow-sm">
-            Пока нет операций начисления или списания пунктов.
+            {pointsText("points.transactions.empty")}
           </div>
         ) : null}
 
@@ -222,24 +225,24 @@ export default function PointsTransactionsPage() {
                   <div>
                     <h2 className="text-[16px] font-bold">
                       {getTransactionKind(transaction)}:{" "}
-                      {formatPoints(transaction.amount)} пунктов
+                      {formatPoints(transaction.amount)} {pointsText("points.transactions.pointsUnit")}
                     </h2>
 
                     <p className="mt-1 text-[13px] leading-5 text-[#5a5f7a]">
                       {transaction.description ||
                         transaction.source_type ||
-                        "Операция без описания"}
+                        pointsText("points.transactions.noDescription")}
                     </p>
 
                     {transaction.organizations?.organization_name ? (
                       <p className="mt-1 text-[12px] font-semibold text-[#7c8099]">
-                        Предприятие: {transaction.organizations.organization_name}
+                        {pointsText("points.transactions.businessPrefix")} {transaction.organizations.organization_name}
                       </p>
                     ) : null}
                   </div>
 
                   <div className="rounded-xl bg-[#f8fafc] px-3 py-2 text-[12px] font-semibold text-[#4a4f6a]">
-                    {transaction.status ?? "status?"} ·{" "}
+                    {transaction.status ?? "status?"} {" | "}
                     {formatDate(transaction.created_at)}
                   </div>
                 </div>

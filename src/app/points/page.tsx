@@ -1,4 +1,7 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
+import { getPointsText } from "../../i18n/messages";
+
+const pointsText = (key: Parameters<typeof getPointsText>[0]) => getPointsText(key, "en");
 
 import type { CommercialCoreViewModel } from "../../components/workspace/commercial-core";
 import {
@@ -7,9 +10,8 @@ import {
 } from "../../components/workspace/commercial-core";
 
 export const metadata: Metadata = {
-  title: "Points | Commercial Core",
-  description:
-    "Read-only commercial points route with earned points, certificate burn rules and seller money separation.",
+  title: pointsText("points.page.metadataTitle"),
+  description: pointsText("points.page.metadataDescription"),
 };
 
 const pointsCommercialViewModel: CommercialCoreViewModel = {
@@ -18,8 +20,8 @@ const pointsCommercialViewModel: CommercialCoreViewModel = {
     ...commercialCoreFixture.header,
     activeRoute: "points",
     accessState: "read-only",
-    eyebrow: "Commercial core / Points",
-    title: "Points",
+    eyebrow: pointsText("points.page.eyebrow"),
+    title: pointsText("points.page.title"),
     description:
       "Read-only points wallet showing earned after seller confirmation, burned on certificates and not seller money boundaries.",
   },
