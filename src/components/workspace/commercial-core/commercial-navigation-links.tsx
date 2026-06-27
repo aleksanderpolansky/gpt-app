@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 
 import type {
   CommercialCoreNavigationLink,
@@ -9,11 +9,14 @@ type CommercialNavigationLinksProps = {
   readonly links: readonly CommercialCoreNavigationLink[];
   readonly activeRoute: CommercialCoreRouteKey;
   readonly title?: string;
+  readonly description?: string;
 };
 
+const defaultCommercialNavigationDescription =
+  "Seven fixture-first commercial routes. Links are safe navigation only.";
+
 function getCommercialNavigationLinkClassName(isActive: boolean): string {
-  const baseClassName =
-    "block rounded-xl border p-4 text-sm transition-colors";
+  const baseClassName = "block rounded-xl border p-4 text-sm transition-colors";
 
   if (isActive) {
     return (
@@ -32,6 +35,7 @@ export function CommercialNavigationLinks({
   links,
   activeRoute,
   title = "Commercial navigation",
+  description = defaultCommercialNavigationDescription,
 }: CommercialNavigationLinksProps) {
   return (
     <nav
@@ -43,7 +47,7 @@ export function CommercialNavigationLinks({
           {title}
         </p>
         <p className="text-sm leading-6 text-muted-foreground">
-          Seven fixture-first commercial routes. Links are safe navigation only.
+          {description}
         </p>
       </div>
 
@@ -78,4 +82,3 @@ export function CommercialNavigationLinks({
     </nav>
   );
 }
-

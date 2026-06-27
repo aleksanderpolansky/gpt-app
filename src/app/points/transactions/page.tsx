@@ -4,7 +4,27 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { getPointsText } from "../../../i18n/messages";
 
-const pointsText = (key: Parameters<typeof getPointsText>[0]) => getPointsText(key, "en");
+type PointsLocale = NonNullable<Parameters<typeof getPointsText>[1]>;
+
+const pointsSupportedLocales = ["ru", "pl", "en", "es", "uk", "de", "cs"] as const;
+
+function getPointsLocaleFromLocation(): PointsLocale {
+  if (typeof window === "undefined") {
+    return "en";
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const candidate = params.get("locale") ?? params.get("lang") ?? "en";
+
+  if (pointsSupportedLocales.includes(candidate as PointsLocale)) {
+    return candidate as PointsLocale;
+  }
+
+  return "en";
+}
+
+const pointsText = (key: Parameters<typeof getPointsText>[0]) =>
+  getPointsText(key, getPointsLocaleFromLocation());
 
 type PointsTransaction = {
   readonly id?: string | null;

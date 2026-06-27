@@ -1,4 +1,4 @@
-﻿import type { ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import type { CommercialCoreAccessState } from "./commercial-core.types";
 
@@ -9,6 +9,8 @@ type CommercialCoreShellProps = {
   readonly accessState: CommercialCoreAccessState;
   readonly children: ReactNode;
   readonly aside?: ReactNode;
+  readonly accessStateLabel?: string;
+  readonly notice?: string;
 };
 
 const accessStateLabelByState: Record<CommercialCoreAccessState, string> = {
@@ -18,6 +20,9 @@ const accessStateLabelByState: Record<CommercialCoreAccessState, string> = {
   "no-rights": "No commercial rights",
 };
 
+const defaultCommercialCoreShellNotice =
+  "UI-14 commercial core is fixture-first and read-only. Commercial write actions remain disabled until a future approved gate.";
+
 export function CommercialCoreShell({
   eyebrow,
   title,
@@ -25,14 +30,21 @@ export function CommercialCoreShell({
   accessState,
   children,
   aside,
+  accessStateLabel,
+  notice = defaultCommercialCoreShellNotice,
 }: CommercialCoreShellProps) {
+  const resolvedAccessStateLabel =
+    accessStateLabel ?? accessStateLabelByState[accessState];
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <header className="rounded-2xl border border-border bg-card p-6 shadow-sm">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
-              <p className="text-sm font-medium text-muted-foreground">{eyebrow}</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                {eyebrow}
+              </p>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                 {title}
               </h1>
@@ -41,11 +53,11 @@ export function CommercialCoreShell({
               </p>
             </div>
             <div className="rounded-full border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground">
-              {accessStateLabelByState[accessState]}
+              {resolvedAccessStateLabel}
             </div>
           </div>
           <div className="mt-6 rounded-xl border border-dashed border-border bg-secondary/40 p-4 text-sm leading-6 text-muted-foreground">
-            UI-14 commercial core is fixture-first and read-only. Commercial write actions remain disabled until a future approved gate.
+            {notice}
           </div>
         </header>
 
@@ -59,4 +71,3 @@ export function CommercialCoreShell({
     </main>
   );
 }
-

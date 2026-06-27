@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   CommercialCoreStatusTone,
   CommercialCoreViewModel,
 } from "./commercial-core.types";
@@ -21,6 +21,57 @@ type CommercialDashboardComposerProps = {
   readonly viewModel: CommercialCoreViewModel;
 };
 
+type CommercialDashboardComposerText = {
+  readonly metricOrganizationsLabel: string;
+  readonly metricOrganizationsDescription: string;
+  readonly metricOffersLabel: string;
+  readonly metricOffersDescription: string;
+  readonly metricCertificatesLabel: string;
+  readonly metricCertificatesDescription: string;
+  readonly metricPublicHistoryLabel: string;
+  readonly metricPublicHistoryDescription: string;
+  readonly navigationTitle: string;
+  readonly navigationDescription: string;
+  readonly readOnlyBoundaryTitle: string;
+  readonly shellNotice: string;
+  readonly notice: string;
+  readonly sectionEyebrow: string;
+  readonly sectionTitle: string;
+  readonly sectionDescription: string;
+  readonly accessStateLabel: string;
+};
+
+const defaultCommercialDashboardComposerText: CommercialDashboardComposerText = {
+  metricOrganizationsLabel: "Organizations",
+  metricOrganizationsDescription:
+    "Read-only organization records with derived currency context.",
+  metricOffersLabel: "Offers",
+  metricOffersDescription:
+    "Commercial offer fixtures without platform purchase flow.",
+  metricCertificatesLabel: "Certificates",
+  metricCertificatesDescription:
+    "Certificate previews with points burn and money boundary.",
+  metricPublicHistoryLabel: "Public history",
+  metricPublicHistoryDescription:
+    "Masked buyer history with open seller company names.",
+  navigationTitle: "Commercial navigation",
+  navigationDescription:
+    "Seven fixture-first commercial routes. Links are safe navigation only.",
+  readOnlyBoundaryTitle: "Read-only boundary",
+  shellNotice:
+    "UI-14 commercial core is fixture-first and read-only. Commercial write actions remain disabled until a future approved gate.",
+  notice: "Dashboard composer is fixture-first, read-only and contains no hidden writes.",
+  sectionEyebrow: "Commercial dashboard composer",
+  sectionTitle: "Fixture-first commercial overview",
+  sectionDescription:
+    "This read-only dashboard composer assembles organizations, offers, certificates, points, buyer confirmations, seller queue and public masked history.",
+  accessStateLabel: "Read-only",
+};
+
+type CommercialDashboardComposerViewModel = CommercialCoreViewModel & {
+  readonly composerText?: Partial<CommercialDashboardComposerText>;
+};
+
 type CommercialDashboardMetric = {
   readonly label: string;
   readonly value: string;
@@ -28,36 +79,46 @@ type CommercialDashboardMetric = {
   readonly tone: CommercialCoreStatusTone;
 };
 
+function getCommercialDashboardComposerText(
+  viewModel: CommercialCoreViewModel,
+): CommercialDashboardComposerText {
+  return {
+    ...defaultCommercialDashboardComposerText,
+    ...((viewModel as CommercialDashboardComposerViewModel).composerText ?? {}),
+  };
+}
+
 function getCountLabel(count: number): string {
   return count.toLocaleString("en-US");
 }
 
 function buildDashboardMetrics(
   viewModel: CommercialCoreViewModel,
+  composerText: CommercialDashboardComposerText,
 ): readonly CommercialDashboardMetric[] {
   return [
     {
-      label: "Organizations",
+      label: composerText.metricOrganizationsLabel,
       value: getCountLabel(viewModel.organizations.length),
-      description: "Read-only organization records with derived currency context.",
+      description: composerText.metricOrganizationsDescription,
       tone: "primary",
     },
     {
-      label: "Offers",
+      label: composerText.metricOffersLabel,
       value: getCountLabel(viewModel.offers.length),
-      description: "Commercial offer fixtures without platform purchase flow.",
+      description: composerText.metricOffersDescription,
       tone: "secondary",
     },
     {
-      label: "Certificates",
+      label: composerText.metricCertificatesLabel,
       value: getCountLabel(viewModel.certificates.length),
-      description: "Certificate previews with points burn and money boundary.",
+      description: composerText.metricCertificatesDescription,
       tone: "success",
     },
     {
-      label: "Public history",
+      label: composerText.metricPublicHistoryLabel,
       value: getCountLabel(viewModel.publicHistory.length),
-      description: "Masked buyer history with open seller company names.",
+      description: composerText.metricPublicHistoryDescription,
       tone: "muted",
     },
   ];
@@ -66,21 +127,24 @@ function buildDashboardMetrics(
 export function CommercialDashboardComposer({
   viewModel,
 }: CommercialDashboardComposerProps) {
-  const dashboardMetrics = buildDashboardMetrics(viewModel);
+  const composerText = getCommercialDashboardComposerText(viewModel);
+  const dashboardMetrics = buildDashboardMetrics(viewModel, composerText);
 
   return (
     <CommercialCoreShell
       accessState={viewModel.header.accessState}
+      accessStateLabel={composerText.accessStateLabel}
       aside={
         <div className="flex flex-col gap-4">
           <CommercialNavigationLinks
             activeRoute={viewModel.header.activeRoute}
+            description={composerText.navigationDescription}
             links={viewModel.navigationLinks}
-            title="Commercial navigation"
+            title={composerText.navigationTitle}
           />
           <CommercialReadOnlyBoundaryPanel
             boundary={viewModel.readOnlyBoundary}
-            title="Read-only boundary"
+            title={composerText.readOnlyBoundaryTitle}
           />
           <CommercialNoRightsStatePanel
             state={viewModel.noRightsState}
@@ -90,24 +154,26 @@ export function CommercialDashboardComposer({
       }
       description={viewModel.header.description}
       eyebrow={viewModel.header.eyebrow}
+      notice={composerText.shellNotice}
       title={viewModel.header.title}
     >
       <div className="flex flex-col gap-6">
         <CommercialSummaryHeader
+          accessStateLabel={composerText.accessStateLabel}
           header={viewModel.header}
           metrics={dashboardMetrics}
-          notice="Dashboard composer is fixture-first, read-only and contains no hidden writes."
+          notice={composerText.notice}
         />
 
         <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Commercial dashboard composer
+            {composerText.sectionEyebrow}
           </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
-            Fixture-first commercial overview
+            {composerText.sectionTitle}
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            This read-only dashboard composer assembles organizations, offers, certificates, points, buyer confirmations, seller queue and public masked history.
+            {composerText.sectionDescription}
           </p>
         </section>
 
@@ -130,4 +196,3 @@ export function CommercialDashboardComposer({
     </CommercialCoreShell>
   );
 }
-

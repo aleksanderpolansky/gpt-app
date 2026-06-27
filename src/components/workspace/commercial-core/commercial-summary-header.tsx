@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   CommercialCoreAccessState,
   CommercialCoreHeader,
   CommercialCoreStatusTone,
@@ -15,6 +15,7 @@ type CommercialSummaryHeaderProps = {
   readonly header: CommercialCoreHeader;
   readonly metrics: readonly CommercialSummaryMetric[];
   readonly notice: string;
+  readonly accessStateLabel?: string;
 };
 
 const accessStateLabelByState: Record<CommercialCoreAccessState, string> = {
@@ -38,7 +39,11 @@ export function CommercialSummaryHeader({
   header,
   metrics,
   notice,
+  accessStateLabel,
 }: CommercialSummaryHeaderProps) {
+  const resolvedAccessStateLabel =
+    accessStateLabel ?? accessStateLabelByState[header.accessState];
+
   return (
     <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -54,7 +59,7 @@ export function CommercialSummaryHeader({
           </p>
         </div>
         <div className="rounded-full border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground">
-          {accessStateLabelByState[header.accessState]}
+          {resolvedAccessStateLabel}
         </div>
       </div>
 
@@ -62,7 +67,8 @@ export function CommercialSummaryHeader({
         {metrics.map((metric) => (
           <article
             className={
-              "rounded-xl border p-4 shadow-sm " + toneClassNameByTone[metric.tone]
+              "rounded-xl border p-4 shadow-sm " +
+              toneClassNameByTone[metric.tone]
             }
             key={metric.label}
           >
@@ -85,4 +91,3 @@ export function CommercialSummaryHeader({
     </section>
   );
 }
-

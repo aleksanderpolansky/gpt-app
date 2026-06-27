@@ -1,4 +1,66 @@
 import { mobileShellRoutePath } from "./mobile-route-registry";
+
+type MobileGuardLocale = "ru" | "pl" | "en" | "es" | "uk" | "de" | "cs";
+
+const mobileGuardStatusLabels = {
+  ru: {
+    readOnly: "Только чтение",
+    previewOnly: "Только предпросмотр",
+    readOnlyCrossing: "Переход только для чтения",
+  },
+  pl: {
+    readOnly: "Tylko odczyt",
+    previewOnly: "Tylko podglad",
+    readOnlyCrossing: "Przejscie tylko do odczytu",
+  },
+  en: {
+    readOnly: "Read-only",
+    previewOnly: "Preview only",
+    readOnlyCrossing: "Read-only crossing",
+  },
+  es: {
+    readOnly: "Solo lectura",
+    previewOnly: "Solo vista previa",
+    readOnlyCrossing: "Paso de solo lectura",
+  },
+  uk: {
+    readOnly: "Тільки читання",
+    previewOnly: "Тільки попередній перегляд",
+    readOnlyCrossing: "Перехід тільки для читання",
+  },
+  de: {
+    readOnly: "Nur Lesen",
+    previewOnly: "Nur Vorschau",
+    readOnlyCrossing: "Nur-Lese-Ubergang",
+  },
+  cs: {
+    readOnly: "Pouze cteni",
+    previewOnly: "Pouze nahled",
+    readOnlyCrossing: "Prechod pouze pro cteni",
+  },
+} as const;
+
+function getMobileGuardLocale(): MobileGuardLocale {
+  if (typeof window === "undefined") {
+    return "en";
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const candidate = params.get("locale") ?? params.get("lang") ?? "en";
+
+  if (candidate === "ru" || candidate === "pl" || candidate === "en" || candidate === "es" || candidate === "uk" || candidate === "de" || candidate === "cs") {
+    return candidate;
+  }
+
+  return "en";
+}
+
+function getMobileGuardStatusLabel(
+  key: "readOnly" | "previewOnly" | "readOnlyCrossing",
+): string {
+  return mobileGuardStatusLabels[getMobileGuardLocale()][key];
+}
+
 import type {
   MobileBadge,
   MobilePreviewStatus,
@@ -45,7 +107,7 @@ export const mobileDesktopGuardItems = [
   },
   {
     id: "read-only-crossing",
-    title: "Read-only crossing",
+    title: getMobileGuardStatusLabel("readOnlyCrossing"),
     description:
       "Moving between mobile and desktop uses links only and does not transfer hidden state or run workflow effects.",
     badge: {
@@ -71,9 +133,9 @@ const defaultMobileRoute: MobileRouteTarget = {
 function getStatusLabel(status: MobilePreviewStatus): string {
   switch (status) {
     case "read_only":
-      return "Read-only";
+      return getMobileGuardStatusLabel("readOnly");
     case "preview_only":
-      return "Preview only";
+      return getMobileGuardStatusLabel("previewOnly");
     case "signal":
       return "Signal";
     case "needs_review":
