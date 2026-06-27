@@ -308,7 +308,7 @@ function getModerationSuccessMessage(
 
   return `Suggestion request ${getActionPastLabel(
     action
-  )}. New status: ${nextStatus ?? "â€”"}.`;
+  )}. New status: ${nextStatus ?? "—"}.`;
 }
 
 function getApproveNewCategorySuccessMessage(json: ModerationApiResponse) {
@@ -879,11 +879,11 @@ export default function SuggestionModerationButtons({
           review. Available only when AI status is{" "}
           <strong>new_category_suggested</strong> or{" "}
           <strong>low_confidence</strong>. Current AI status:{" "}
-          <strong>{aiStatus ?? "â€”"}</strong>. Current AI category:{" "}
-          <strong>{aiSuggestedCategoryText ?? "â€”"}</strong>. Confidence:{" "}
+          <strong>{aiStatus ?? "—"}</strong>. Current AI category:{" "}
+          <strong>{aiSuggestedCategoryText ?? "—"}</strong>. Confidence:{" "}
           <strong>
             {aiConfidence === null || aiConfidence === undefined
-              ? "â€”"
+              ? "—"
               : aiConfidence}
           </strong>
           .
@@ -1100,8 +1100,8 @@ export default function SuggestionModerationButtons({
           Approve match is available only when status is draft, suggested or
           needs_review, AI status is matched_existing, and a matched existing
           category id exists. Current AI status:{" "}
-          <strong>{aiStatus ?? "â€”"}</strong>. Current matched category:{" "}
-          <strong>{matchedExistingCategoryId ?? "â€”"}</strong>.
+          <strong>{aiStatus ?? "—"}</strong>. Current matched category:{" "}
+          <strong>{matchedExistingCategoryId ?? "—"}</strong>.
         </div>
       ) : null}
 
@@ -1120,7 +1120,7 @@ export default function SuggestionModerationButtons({
           Approve new category is available only when status is draft, suggested
           or needs_review and AI status is new_category_suggested or
           low_confidence. Current AI status:{" "}
-          <strong>{aiStatus ?? "â€”"}</strong>.
+          <strong>{aiStatus ?? "—"}</strong>.
         </div>
       ) : null}
     </section>

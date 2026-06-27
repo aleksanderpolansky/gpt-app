@@ -88,715 +88,715 @@ export type CommonMessageKey = (typeof commonMessageKeys)[number];
 
 export const commonMessages: Record<CommonMessageKey, Record<LocaleCode, string>> = {
   "common.save": {
-    "ru": "Ð¡Ð¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ",
+    "ru": "Сохранить",
     "pl": "Zapisz",
     "en": "Save",
     "es": "Guardar",
-    "uk": "Ð—Ð±ÐµÑ€ÐµÐ³Ñ‚Ð¸",
+    "uk": "Зберегти",
     "de": "Speichern",
-    "cs": "UloÅ¾it"
+    "cs": "Uložit"
   },
   "common.cancel": {
-    "ru": "ÐžÑ‚Ð¼ÐµÐ½Ð°",
+    "ru": "Отмена",
     "pl": "Anuluj",
     "en": "Cancel",
     "es": "Cancelar",
-    "uk": "Ð¡ÐºÐ°ÑÑƒÐ²Ð°Ñ‚Ð¸",
+    "uk": "Скасувати",
     "de": "Abbrechen",
-    "cs": "ZruÅ¡it"
+    "cs": "Zrušit"
   },
   "common.search": {
-    "ru": "ÐŸÐ¾Ð¸ÑÐº",
+    "ru": "Поиск",
     "pl": "Szukaj",
     "en": "Search",
     "es": "Buscar",
-    "uk": "ÐŸÐ¾ÑˆÑƒÐº",
+    "uk": "Пошук",
     "de": "Suchen",
     "cs": "Hledat"
   },
   "common.loading": {
-    "ru": "Ð—Ð°Ð³Ñ€ÑƒÐ·ÐºÐ°...",
-    "pl": "Åadowanie...",
+    "ru": "Загрузка...",
+    "pl": "Ładowanie...",
     "en": "Loading...",
     "es": "Cargando...",
-    "uk": "Ð—Ð°Ð²Ð°Ð½Ñ‚Ð°Ð¶ÐµÐ½Ð½Ñ...",
+    "uk": "Завантаження...",
     "de": "Wird geladen...",
-    "cs": "NaÄÃ­tÃ¡nÃ­..."
+    "cs": "Načítání..."
   },
   "common.error": {
-    "ru": "ÐžÑˆÐ¸Ð±ÐºÐ°",
-    "pl": "BÅ‚Ä…d",
+    "ru": "Ошибка",
+    "pl": "Błąd",
     "en": "Error",
     "es": "Error",
-    "uk": "ÐŸÐ¾Ð¼Ð¸Ð»ÐºÐ°",
+    "uk": "Помилка",
     "de": "Fehler",
     "cs": "Chyba"
   },
   "common.empty": {
-    "ru": "ÐŸÑƒÑÑ‚Ð¾",
+    "ru": "Пусто",
     "pl": "Pusto",
     "en": "Empty",
-    "es": "VacÃ­o",
-    "uk": "ÐŸÐ¾Ñ€Ð¾Ð¶Ð½ÑŒÐ¾",
+    "es": "Vacío",
+    "uk": "Порожньо",
     "de": "Leer",
-    "cs": "PrÃ¡zdnÃ©"
+    "cs": "Prázdné"
   },
   "common.back": {
-    "ru": "ÐÐ°Ð·Ð°Ð´",
+    "ru": "Назад",
     "pl": "Wstecz",
     "en": "Back",
-    "es": "AtrÃ¡s",
-    "uk": "ÐÐ°Ð·Ð°Ð´",
-    "de": "ZurÃ¼ck",
-    "cs": "ZpÄ›t"
+    "es": "Atrás",
+    "uk": "Назад",
+    "de": "Zurück",
+    "cs": "Zpět"
   },
   "common.next": {
-    "ru": "Ð”Ð°Ð»ÐµÐµ",
+    "ru": "Далее",
     "pl": "Dalej",
     "en": "Next",
     "es": "Siguiente",
-    "uk": "Ð”Ð°Ð»Ñ–",
+    "uk": "Далі",
     "de": "Weiter",
-    "cs": "DalÅ¡Ã­"
+    "cs": "Další"
   },
   "common.previous": {
-    "ru": "ÐŸÑ€ÐµÐ´Ñ‹Ð´ÑƒÑ‰Ð¸Ð¹",
+    "ru": "Предыдущий",
     "pl": "Poprzedni",
     "en": "Previous",
     "es": "Anterior",
-    "uk": "ÐŸÐ¾Ð¿ÐµÑ€ÐµÐ´Ð½Ñ–Ð¹",
+    "uk": "Попередній",
     "de": "Vorherige",
-    "cs": "PÅ™edchozÃ­"
+    "cs": "Předchozí"
   },
   "common.confirm": {
-    "ru": "ÐŸÐ¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ñ‚ÑŒ",
-    "pl": "PotwierdÅº",
+    "ru": "Подтвердить",
+    "pl": "Potwierdź",
     "en": "Confirm",
     "es": "Confirmar",
-    "uk": "ÐŸÑ–Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ñ‚Ð¸",
-    "de": "BestÃ¤tigen",
+    "uk": "Підтвердити",
+    "de": "Bestätigen",
     "cs": "Potvrdit"
   },
   "common.close": {
-    "ru": "Ð—Ð°ÐºÑ€Ñ‹Ñ‚ÑŒ",
+    "ru": "Закрыть",
     "pl": "Zamknij",
     "en": "Close",
     "es": "Cerrar",
-    "uk": "Ð—Ð°ÐºÑ€Ð¸Ñ‚Ð¸",
-    "de": "SchlieÃŸen",
-    "cs": "ZavÅ™Ã­t"
+    "uk": "Закрити",
+    "de": "Schließen",
+    "cs": "Zavřít"
   },
   "common.reset": {
-    "ru": "Ð¡Ð±Ñ€Ð¾ÑÐ¸Ñ‚ÑŒ",
+    "ru": "Сбросить",
     "pl": "Resetuj",
     "en": "Reset",
     "es": "Restablecer",
-    "uk": "Ð¡ÐºÐ¸Ð½ÑƒÑ‚Ð¸",
-    "de": "ZurÃ¼cksetzen",
+    "uk": "Скинути",
+    "de": "Zurücksetzen",
     "cs": "Resetovat"
   },
   "common.apply": {
-    "ru": "ÐŸÑ€Ð¸Ð¼ÐµÐ½Ð¸Ñ‚ÑŒ",
+    "ru": "Применить",
     "pl": "Zastosuj",
     "en": "Apply",
     "es": "Aplicar",
-    "uk": "Ð—Ð°ÑÑ‚Ð¾ÑÑƒÐ²Ð°Ñ‚Ð¸",
+    "uk": "Застосувати",
     "de": "Anwenden",
-    "cs": "PouÅ¾Ã­t"
+    "cs": "Použít"
   },
   "common.select": {
-    "ru": "Ð’Ñ‹Ð±Ñ€Ð°Ñ‚ÑŒ",
+    "ru": "Выбрать",
     "pl": "Wybierz",
     "en": "Select",
     "es": "Seleccionar",
-    "uk": "Ð’Ð¸Ð±Ñ€Ð°Ñ‚Ð¸",
-    "de": "AuswÃ¤hlen",
+    "uk": "Вибрати",
+    "de": "Auswählen",
     "cs": "Vybrat"
   },
   "common.all": {
-    "ru": "Ð’ÑÐµ",
+    "ru": "Все",
     "pl": "Wszystkie",
     "en": "All",
     "es": "Todo",
-    "uk": "Ð£ÑÑ–",
+    "uk": "Усі",
     "de": "Alle",
-    "cs": "VÅ¡e"
+    "cs": "Vše"
   },
   "common.none": {
-    "ru": "ÐÐµÑ‚",
+    "ru": "Нет",
     "pl": "Brak",
     "en": "None",
     "es": "Ninguno",
-    "uk": "ÐÐµÐ¼Ð°Ñ”",
+    "uk": "Немає",
     "de": "Keine",
-    "cs": "Å½Ã¡dnÃ©"
+    "cs": "Žádné"
   },
   "common.yes": {
-    "ru": "Ð”Ð°",
+    "ru": "Да",
     "pl": "Tak",
     "en": "Yes",
-    "es": "SÃ­",
-    "uk": "Ð¢Ð°Ðº",
+    "es": "Sí",
+    "uk": "Так",
     "de": "Ja",
     "cs": "Ano"
   },
   "common.no": {
-    "ru": "ÐÐµÑ‚",
+    "ru": "Нет",
     "pl": "Nie",
     "en": "No",
     "es": "No",
-    "uk": "ÐÑ–",
+    "uk": "Ні",
     "de": "Nein",
     "cs": "Ne"
   },
   "common.edit": {
-    "ru": "Ð ÐµÐ´Ð°ÐºÑ‚Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ",
+    "ru": "Редактировать",
     "pl": "Edytuj",
     "en": "Edit",
     "es": "Editar",
-    "uk": "Ð ÐµÐ´Ð°Ð³ÑƒÐ²Ð°Ñ‚Ð¸",
+    "uk": "Редагувати",
     "de": "Bearbeiten",
     "cs": "Upravit"
   },
   "common.delete": {
-    "ru": "Ð£Ð´Ð°Ð»Ð¸Ñ‚ÑŒ",
-    "pl": "UsuÅ„",
+    "ru": "Удалить",
+    "pl": "Usuń",
     "en": "Delete",
     "es": "Eliminar",
-    "uk": "Ð’Ð¸Ð´Ð°Ð»Ð¸Ñ‚Ð¸",
-    "de": "LÃ¶schen",
+    "uk": "Видалити",
+    "de": "Löschen",
     "cs": "Smazat"
   },
   "common.create": {
-    "ru": "Ð¡Ð¾Ð·Ð´Ð°Ñ‚ÑŒ",
-    "pl": "UtwÃ³rz",
+    "ru": "Создать",
+    "pl": "Utwórz",
     "en": "Create",
     "es": "Crear",
-    "uk": "Ð¡Ñ‚Ð²Ð¾Ñ€Ð¸Ñ‚Ð¸",
+    "uk": "Створити",
     "de": "Erstellen",
-    "cs": "VytvoÅ™it"
+    "cs": "Vytvořit"
   },
   "common.update": {
-    "ru": "ÐžÐ±Ð½Ð¾Ð²Ð¸Ñ‚ÑŒ",
+    "ru": "Обновить",
     "pl": "Zaktualizuj",
     "en": "Update",
     "es": "Actualizar",
-    "uk": "ÐžÐ½Ð¾Ð²Ð¸Ñ‚Ð¸",
+    "uk": "Оновити",
     "de": "Aktualisieren",
     "cs": "Aktualizovat"
   },
   "common.submit": {
-    "ru": "ÐžÑ‚Ð¿Ñ€Ð°Ð²Ð¸Ñ‚ÑŒ",
-    "pl": "WyÅ›lij",
+    "ru": "Отправить",
+    "pl": "Wyślij",
     "en": "Submit",
     "es": "Enviar",
-    "uk": "ÐÐ°Ð´Ñ–ÑÐ»Ð°Ñ‚Ð¸",
+    "uk": "Надіслати",
     "de": "Absenden",
     "cs": "Odeslat"
   },
   "common.send": {
-    "ru": "ÐžÑ‚Ð¿Ñ€Ð°Ð²Ð¸Ñ‚ÑŒ",
-    "pl": "WyÅ›lij",
+    "ru": "Отправить",
+    "pl": "Wyślij",
     "en": "Send",
     "es": "Enviar",
-    "uk": "ÐÐ°Ð´Ñ–ÑÐ»Ð°Ñ‚Ð¸",
+    "uk": "Надіслати",
     "de": "Senden",
     "cs": "Poslat"
   },
   "common.retry": {
-    "ru": "ÐŸÐ¾Ð²Ñ‚Ð¾Ñ€Ð¸Ñ‚ÑŒ",
-    "pl": "SprÃ³buj ponownie",
+    "ru": "Повторить",
+    "pl": "Spróbuj ponownie",
     "en": "Retry",
     "es": "Reintentar",
-    "uk": "ÐŸÐ¾Ð²Ñ‚Ð¾Ñ€Ð¸Ñ‚Ð¸",
+    "uk": "Повторити",
     "de": "Erneut versuchen",
     "cs": "Zkusit znovu"
   },
   "common.refresh": {
-    "ru": "ÐžÐ±Ð½Ð¾Ð²Ð¸Ñ‚ÑŒ",
-    "pl": "OdÅ›wieÅ¼",
+    "ru": "Обновить",
+    "pl": "Odśwież",
     "en": "Refresh",
     "es": "Actualizar",
-    "uk": "ÐžÐ½Ð¾Ð²Ð¸Ñ‚Ð¸",
+    "uk": "Оновити",
     "de": "Aktualisieren",
     "cs": "Obnovit"
   },
   "common.open": {
-    "ru": "ÐžÑ‚ÐºÑ€Ñ‹Ñ‚ÑŒ",
-    "pl": "OtwÃ³rz",
+    "ru": "Открыть",
+    "pl": "Otwórz",
     "en": "Open",
     "es": "Abrir",
-    "uk": "Ð’Ñ–Ð´ÐºÑ€Ð¸Ñ‚Ð¸",
-    "de": "Ã–ffnen",
-    "cs": "OtevÅ™Ã­t"
+    "uk": "Відкрити",
+    "de": "Öffnen",
+    "cs": "Otevřít"
   },
   "common.view": {
-    "ru": "ÐŸÐ¾ÑÐ¼Ð¾Ñ‚Ñ€ÐµÑ‚ÑŒ",
+    "ru": "Посмотреть",
     "pl": "Zobacz",
     "en": "View",
     "es": "Ver",
-    "uk": "ÐŸÐµÑ€ÐµÐ³Ð»ÑÐ½ÑƒÑ‚Ð¸",
+    "uk": "Переглянути",
     "de": "Ansehen",
     "cs": "Zobrazit"
   },
   "common.details": {
-    "ru": "Ð”ÐµÑ‚Ð°Ð»Ð¸",
-    "pl": "SzczegÃ³Å‚y",
+    "ru": "Детали",
+    "pl": "Szczegóły",
     "en": "Details",
     "es": "Detalles",
-    "uk": "Ð”ÐµÑ‚Ð°Ð»Ñ–",
+    "uk": "Деталі",
     "de": "Details",
     "cs": "Podrobnosti"
   },
   "common.settings": {
-    "ru": "ÐÐ°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ¸",
+    "ru": "Настройки",
     "pl": "Ustawienia",
     "en": "Settings",
-    "es": "ConfiguraciÃ³n",
-    "uk": "ÐÐ°Ð»Ð°ÑˆÑ‚ÑƒÐ²Ð°Ð½Ð½Ñ",
+    "es": "Configuración",
+    "uk": "Налаштування",
     "de": "Einstellungen",
-    "cs": "NastavenÃ­"
+    "cs": "Nastavení"
   },
   "common.status": {
-    "ru": "Ð¡Ñ‚Ð°Ñ‚ÑƒÑ",
+    "ru": "Статус",
     "pl": "Status",
     "en": "Status",
     "es": "Estado",
-    "uk": "Ð¡Ñ‚Ð°Ñ‚ÑƒÑ",
+    "uk": "Статус",
     "de": "Status",
     "cs": "Stav"
   },
   "common.active": {
-    "ru": "ÐÐºÑ‚Ð¸Ð²Ð½Ð¾",
+    "ru": "Активно",
     "pl": "Aktywne",
     "en": "Active",
     "es": "Activo",
-    "uk": "ÐÐºÑ‚Ð¸Ð²Ð½Ð¾",
+    "uk": "Активно",
     "de": "Aktiv",
-    "cs": "AktivnÃ­"
+    "cs": "Aktivní"
   },
   "common.inactive": {
-    "ru": "ÐÐµÐ°ÐºÑ‚Ð¸Ð²Ð½Ð¾",
+    "ru": "Неактивно",
     "pl": "Nieaktywne",
     "en": "Inactive",
     "es": "Inactivo",
-    "uk": "ÐÐµÐ°ÐºÑ‚Ð¸Ð²Ð½Ð¾",
+    "uk": "Неактивно",
     "de": "Inaktiv",
-    "cs": "NeaktivnÃ­"
+    "cs": "Neaktivní"
   },
   "common.draft": {
-    "ru": "Ð§ÐµÑ€Ð½Ð¾Ð²Ð¸Ðº",
+    "ru": "Черновик",
     "pl": "Szkic",
     "en": "Draft",
     "es": "Borrador",
-    "uk": "Ð§ÐµÑ€Ð½ÐµÑ‚ÐºÐ°",
+    "uk": "Чернетка",
     "de": "Entwurf",
     "cs": "Koncept"
   },
   "common.archived": {
-    "ru": "ÐÑ€Ñ…Ð¸Ð²",
+    "ru": "Архив",
     "pl": "Archiwum",
     "en": "Archived",
     "es": "Archivado",
-    "uk": "ÐÑ€Ñ…Ñ–Ð²",
+    "uk": "Архів",
     "de": "Archiviert",
-    "cs": "ArchivovÃ¡no"
+    "cs": "Archivováno"
   },
   "common.published": {
-    "ru": "ÐžÐ¿ÑƒÐ±Ð»Ð¸ÐºÐ¾Ð²Ð°Ð½Ð¾",
+    "ru": "Опубликовано",
     "pl": "Opublikowane",
     "en": "Published",
     "es": "Publicado",
-    "uk": "ÐžÐ¿ÑƒÐ±Ð»Ñ–ÐºÐ¾Ð²Ð°Ð½Ð¾",
-    "de": "VerÃ¶ffentlicht",
-    "cs": "PublikovÃ¡no"
+    "uk": "Опубліковано",
+    "de": "Veröffentlicht",
+    "cs": "Publikováno"
   },
   "common.unpublished": {
-    "ru": "ÐÐµ Ð¾Ð¿ÑƒÐ±Ð»Ð¸ÐºÐ¾Ð²Ð°Ð½Ð¾",
+    "ru": "Не опубликовано",
     "pl": "Nieopublikowane",
     "en": "Unpublished",
     "es": "No publicado",
-    "uk": "ÐÐµ Ð¾Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ¾Ð²Ð°Ð½Ð¾",
-    "de": "Nicht verÃ¶ffentlicht",
-    "cs": "NepublikovÃ¡no"
+    "uk": "Не опубліковано",
+    "de": "Nicht veröffentlicht",
+    "cs": "Nepublikováno"
   },
   "common.verified": {
-    "ru": "ÐŸÑ€Ð¾Ð²ÐµÑ€ÐµÐ½Ð¾",
+    "ru": "Проверено",
     "pl": "Zweryfikowane",
     "en": "Verified",
     "es": "Verificado",
-    "uk": "ÐŸÐµÑ€ÐµÐ²Ñ–Ñ€ÐµÐ½Ð¾",
+    "uk": "Перевірено",
     "de": "Verifiziert",
-    "cs": "OvÄ›Å™eno"
+    "cs": "Ověřeno"
   },
   "common.pending": {
-    "ru": "ÐÐ° Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐµ",
+    "ru": "На проверке",
     "pl": "W trakcie weryfikacji",
     "en": "Pending",
     "es": "Pendiente",
-    "uk": "ÐÐ° Ð¿ÐµÑ€ÐµÐ²Ñ–Ñ€Ñ†Ñ–",
+    "uk": "На перевірці",
     "de": "Ausstehend",
-    "cs": "ÄŒekÃ¡ na kontrolu"
+    "cs": "Čeká na kontrolu"
   },
   "common.rejected": {
-    "ru": "ÐžÑ‚ÐºÐ»Ð¾Ð½ÐµÐ½Ð¾",
+    "ru": "Отклонено",
     "pl": "Odrzucone",
     "en": "Rejected",
     "es": "Rechazado",
-    "uk": "Ð’Ñ–Ð´Ñ…Ð¸Ð»ÐµÐ½Ð¾",
+    "uk": "Відхилено",
     "de": "Abgelehnt",
-    "cs": "ZamÃ­tnuto"
+    "cs": "Zamítnuto"
   },
   "common.unknown": {
-    "ru": "ÐÐµÐ¸Ð·Ð²ÐµÑÑ‚Ð½Ð¾",
+    "ru": "Неизвестно",
     "pl": "Nieznane",
     "en": "Unknown",
     "es": "Desconocido",
-    "uk": "ÐÐµÐ²Ñ–Ð´Ð¾Ð¼Ð¾",
+    "uk": "Невідомо",
     "de": "Unbekannt",
-    "cs": "NeznÃ¡mÃ©"
+    "cs": "Neznámé"
   },
   "common.required": {
-    "ru": "ÐžÐ±ÑÐ·Ð°Ñ‚ÐµÐ»ÑŒÐ½Ð¾",
+    "ru": "Обязательно",
     "pl": "Wymagane",
     "en": "Required",
     "es": "Obligatorio",
-    "uk": "ÐžÐ±Ð¾Ð²â€™ÑÐ·ÐºÐ¾Ð²Ð¾",
+    "uk": "Обов’язково",
     "de": "Erforderlich",
-    "cs": "PovinnÃ©"
+    "cs": "Povinné"
   },
   "common.optional": {
-    "ru": "ÐÐµÐ¾Ð±ÑÐ·Ð°Ñ‚ÐµÐ»ÑŒÐ½Ð¾",
+    "ru": "Необязательно",
     "pl": "Opcjonalne",
     "en": "Optional",
     "es": "Opcional",
-    "uk": "ÐÐµÐ¾Ð±Ð¾Ð²â€™ÑÐ·ÐºÐ¾Ð²Ð¾",
+    "uk": "Необов’язково",
     "de": "Optional",
-    "cs": "VolitelnÃ©"
+    "cs": "Volitelné"
   },
   "common.name": {
-    "ru": "ÐÐ°Ð·Ð²Ð°Ð½Ð¸Ðµ",
+    "ru": "Название",
     "pl": "Nazwa",
     "en": "Name",
     "es": "Nombre",
-    "uk": "ÐÐ°Ð·Ð²Ð°",
+    "uk": "Назва",
     "de": "Name",
-    "cs": "NÃ¡zev"
+    "cs": "Název"
   },
   "common.title": {
-    "ru": "Ð—Ð°Ð³Ð¾Ð»Ð¾Ð²Ð¾Ðº",
-    "pl": "TytuÅ‚",
+    "ru": "Заголовок",
+    "pl": "Tytuł",
     "en": "Title",
-    "es": "TÃ­tulo",
-    "uk": "Ð—Ð°Ð³Ð¾Ð»Ð¾Ð²Ð¾Ðº",
+    "es": "Título",
+    "uk": "Заголовок",
     "de": "Titel",
     "cs": "Nadpis"
   },
   "common.description": {
-    "ru": "ÐžÐ¿Ð¸ÑÐ°Ð½Ð¸Ðµ",
+    "ru": "Описание",
     "pl": "Opis",
     "en": "Description",
-    "es": "DescripciÃ³n",
-    "uk": "ÐžÐ¿Ð¸Ñ",
+    "es": "Descripción",
+    "uk": "Опис",
     "de": "Beschreibung",
     "cs": "Popis"
   },
   "common.category": {
-    "ru": "ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ",
+    "ru": "Категория",
     "pl": "Kategoria",
     "en": "Category",
-    "es": "CategorÃ­a",
-    "uk": "ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ñ–Ñ",
+    "es": "Categoría",
+    "uk": "Категорія",
     "de": "Kategorie",
     "cs": "Kategorie"
   },
   "common.location": {
-    "ru": "Ð›Ð¾ÐºÐ°Ñ†Ð¸Ñ",
+    "ru": "Локация",
     "pl": "Lokalizacja",
     "en": "Location",
-    "es": "UbicaciÃ³n",
-    "uk": "Ð›Ð¾ÐºÐ°Ñ†Ñ–Ñ",
+    "es": "Ubicación",
+    "uk": "Локація",
     "de": "Standort",
     "cs": "Lokalita"
   },
   "common.city": {
-    "ru": "Ð“Ð¾Ñ€Ð¾Ð´",
+    "ru": "Город",
     "pl": "Miasto",
     "en": "City",
     "es": "Ciudad",
-    "uk": "ÐœÑ–ÑÑ‚Ð¾",
+    "uk": "Місто",
     "de": "Stadt",
-    "cs": "MÄ›sto"
+    "cs": "Město"
   },
   "common.district": {
-    "ru": "Ð Ð°Ð¹Ð¾Ð½",
+    "ru": "Район",
     "pl": "Dzielnica",
     "en": "District",
     "es": "Distrito",
-    "uk": "Ð Ð°Ð¹Ð¾Ð½",
+    "uk": "Район",
     "de": "Bezirk",
-    "cs": "ÄŒtvrÅ¥"
+    "cs": "Čtvrť"
   },
   "common.country": {
-    "ru": "Ð¡Ñ‚Ñ€Ð°Ð½Ð°",
+    "ru": "Страна",
     "pl": "Kraj",
     "en": "Country",
-    "es": "PaÃ­s",
-    "uk": "ÐšÑ€Ð°Ñ—Ð½Ð°",
+    "es": "País",
+    "uk": "Країна",
     "de": "Land",
-    "cs": "ZemÄ›"
+    "cs": "Země"
   },
   "common.address": {
-    "ru": "ÐÐ´Ñ€ÐµÑ",
+    "ru": "Адрес",
     "pl": "Adres",
     "en": "Address",
-    "es": "DirecciÃ³n",
-    "uk": "ÐÐ´Ñ€ÐµÑÐ°",
+    "es": "Dirección",
+    "uk": "Адреса",
     "de": "Adresse",
     "cs": "Adresa"
   },
   "common.currency": {
-    "ru": "Ð’Ð°Ð»ÑŽÑ‚Ð°",
+    "ru": "Валюта",
     "pl": "Waluta",
     "en": "Currency",
     "es": "Moneda",
-    "uk": "Ð’Ð°Ð»ÑŽÑ‚Ð°",
-    "de": "WÃ¤hrung",
-    "cs": "MÄ›na"
+    "uk": "Валюта",
+    "de": "Währung",
+    "cs": "Měna"
   },
   "common.price": {
-    "ru": "Ð¦ÐµÐ½Ð°",
+    "ru": "Цена",
     "pl": "Cena",
     "en": "Price",
     "es": "Precio",
-    "uk": "Ð¦Ñ–Ð½Ð°",
+    "uk": "Ціна",
     "de": "Preis",
     "cs": "Cena"
   },
   "common.amount": {
-    "ru": "Ð¡ÑƒÐ¼Ð¼Ð°",
+    "ru": "Сумма",
     "pl": "Kwota",
     "en": "Amount",
     "es": "Importe",
-    "uk": "Ð¡ÑƒÐ¼Ð°",
+    "uk": "Сума",
     "de": "Betrag",
-    "cs": "ÄŒÃ¡stka"
+    "cs": "Částka"
   },
   "common.date": {
-    "ru": "Ð”Ð°Ñ‚Ð°",
+    "ru": "Дата",
     "pl": "Data",
     "en": "Date",
     "es": "Fecha",
-    "uk": "Ð”Ð°Ñ‚Ð°",
+    "uk": "Дата",
     "de": "Datum",
     "cs": "Datum"
   },
   "common.time": {
-    "ru": "Ð’Ñ€ÐµÐ¼Ñ",
+    "ru": "Время",
     "pl": "Czas",
     "en": "Time",
     "es": "Hora",
-    "uk": "Ð§Ð°Ñ",
+    "uk": "Час",
     "de": "Zeit",
-    "cs": "ÄŒas"
+    "cs": "Čas"
   },
   "common.duration": {
-    "ru": "Ð”Ð»Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ÑÑ‚ÑŒ",
+    "ru": "Длительность",
     "pl": "Czas trwania",
     "en": "Duration",
-    "es": "DuraciÃ³n",
-    "uk": "Ð¢Ñ€Ð¸Ð²Ð°Ð»Ñ–ÑÑ‚ÑŒ",
+    "es": "Duración",
+    "uk": "Тривалість",
     "de": "Dauer",
-    "cs": "Doba trvÃ¡nÃ­"
+    "cs": "Doba trvání"
   },
   "common.minutes": {
-    "ru": "Ð¼Ð¸Ð½.",
+    "ru": "мин.",
     "pl": "min",
     "en": "min",
     "es": "min",
-    "uk": "Ñ…Ð²",
+    "uk": "хв",
     "de": "Min.",
     "cs": "min"
   },
   "common.hours": {
-    "ru": "Ñ‡.",
+    "ru": "ч.",
     "pl": "godz.",
     "en": "h",
     "es": "h",
-    "uk": "Ð³Ð¾Ð´",
+    "uk": "год",
     "de": "Std.",
     "cs": "h"
   },
   "common.actions": {
-    "ru": "Ð”ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ",
-    "pl": "DziaÅ‚ania",
+    "ru": "Действия",
+    "pl": "Działania",
     "en": "Actions",
     "es": "Acciones",
-    "uk": "Ð”Ñ–Ñ—",
+    "uk": "Дії",
     "de": "Aktionen",
     "cs": "Akce"
   },
   "common.filters": {
-    "ru": "Ð¤Ð¸Ð»ÑŒÑ‚Ñ€Ñ‹",
+    "ru": "Фильтры",
     "pl": "Filtry",
     "en": "Filters",
     "es": "Filtros",
-    "uk": "Ð¤Ñ–Ð»ÑŒÑ‚Ñ€Ð¸",
+    "uk": "Фільтри",
     "de": "Filter",
     "cs": "Filtry"
   },
   "common.sort": {
-    "ru": "Ð¡Ð¾Ñ€Ñ‚Ð¸Ñ€Ð¾Ð²ÐºÐ°",
+    "ru": "Сортировка",
     "pl": "Sortowanie",
     "en": "Sort",
     "es": "Ordenar",
-    "uk": "Ð¡Ð¾Ñ€Ñ‚ÑƒÐ²Ð°Ð½Ð½Ñ",
+    "uk": "Сортування",
     "de": "Sortieren",
-    "cs": "Å˜azenÃ­"
+    "cs": "Řazení"
   },
   "common.clearFilters": {
-    "ru": "ÐžÑ‡Ð¸ÑÑ‚Ð¸Ñ‚ÑŒ Ñ„Ð¸Ð»ÑŒÑ‚Ñ€Ñ‹",
-    "pl": "WyczyÅ›Ä‡ filtry",
+    "ru": "Очистить фильтры",
+    "pl": "Wyczyść filtry",
     "en": "Clear filters",
     "es": "Borrar filtros",
-    "uk": "ÐžÑ‡Ð¸ÑÑ‚Ð¸Ñ‚Ð¸ Ñ„Ñ–Ð»ÑŒÑ‚Ñ€Ð¸",
-    "de": "Filter lÃ¶schen",
+    "uk": "Очистити фільтри",
+    "de": "Filter löschen",
     "cs": "Vymazat filtry"
   },
   "common.searchPlaceholder": {
-    "ru": "ÐŸÐ¾Ð¸ÑÐº...",
+    "ru": "Поиск...",
     "pl": "Szukaj...",
     "en": "Search...",
     "es": "Buscar...",
-    "uk": "ÐŸÐ¾ÑˆÑƒÐº...",
+    "uk": "Пошук...",
     "de": "Suchen...",
     "cs": "Hledat..."
   },
   "common.loadingData": {
-    "ru": "Ð—Ð°Ð³Ñ€ÑƒÐ¶Ð°ÑŽ Ð´Ð°Ð½Ð½Ñ‹Ðµ...",
-    "pl": "ÅadujÄ™ dane...",
+    "ru": "Загружаю данные...",
+    "pl": "Ładuję dane...",
     "en": "Loading data...",
     "es": "Cargando datos...",
-    "uk": "Ð—Ð°Ð²Ð°Ð½Ñ‚Ð°Ð¶ÑƒÑŽ Ð´Ð°Ð½Ñ–...",
+    "uk": "Завантажую дані...",
     "de": "Daten werden geladen...",
-    "cs": "NaÄÃ­tÃ¡m data..."
+    "cs": "Načítám data..."
   },
   "common.errorLoadingData": {
-    "ru": "ÐÐµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ Ð·Ð°Ð³Ñ€ÑƒÐ·Ð¸Ñ‚ÑŒ Ð´Ð°Ð½Ð½Ñ‹Ðµ.",
-    "pl": "Nie udaÅ‚o siÄ™ zaÅ‚adowaÄ‡ danych.",
+    "ru": "Не удалось загрузить данные.",
+    "pl": "Nie udało się załadować danych.",
     "en": "Failed to load data.",
     "es": "No se pudieron cargar los datos.",
-    "uk": "ÐÐµ Ð²Ð´Ð°Ð»Ð¾ÑÑ Ð·Ð°Ð²Ð°Ð½Ñ‚Ð°Ð¶Ð¸Ñ‚Ð¸ Ð´Ð°Ð½Ñ–.",
+    "uk": "Не вдалося завантажити дані.",
     "de": "Daten konnten nicht geladen werden.",
-    "cs": "Data se nepodaÅ™ilo naÄÃ­st."
+    "cs": "Data se nepodařilo načíst."
   },
   "common.noResults": {
-    "ru": "ÐÐ¸Ñ‡ÐµÐ³Ð¾ Ð½Ðµ Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾.",
+    "ru": "Ничего не найдено.",
     "pl": "Nic nie znaleziono.",
     "en": "No results found.",
     "es": "No se encontraron resultados.",
-    "uk": "ÐÑ–Ñ‡Ð¾Ð³Ð¾ Ð½Ðµ Ð·Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾.",
+    "uk": "Нічого не знайдено.",
     "de": "Keine Ergebnisse gefunden.",
-    "cs": "Nebyly nalezeny Å¾Ã¡dnÃ© vÃ½sledky."
+    "cs": "Nebyly nalezeny žádné výsledky."
   },
   "common.notAvailable": {
-    "ru": "ÐÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¾",
-    "pl": "NiedostÄ™pne",
+    "ru": "Недоступно",
+    "pl": "Niedostępne",
     "en": "Not available",
     "es": "No disponible",
-    "uk": "ÐÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¾",
-    "de": "Nicht verfÃ¼gbar",
-    "cs": "NedostupnÃ©"
+    "uk": "Недоступно",
+    "de": "Nicht verfügbar",
+    "cs": "Nedostupné"
   },
   "common.notSpecified": {
-    "ru": "ÐÐµ ÑƒÐºÐ°Ð·Ð°Ð½Ð¾",
+    "ru": "Не указано",
     "pl": "Nie podano",
     "en": "Not specified",
     "es": "No especificado",
-    "uk": "ÐÐµ Ð²ÐºÐ°Ð·Ð°Ð½Ð¾",
+    "uk": "Не вказано",
     "de": "Nicht angegeben",
     "cs": "Neuvedeno"
   },
   "common.showMore": {
-    "ru": "ÐŸÐ¾ÐºÐ°Ð·Ð°Ñ‚ÑŒ Ð±Ð¾Ð»ÑŒÑˆÐµ",
-    "pl": "PokaÅ¼ wiÄ™cej",
+    "ru": "Показать больше",
+    "pl": "Pokaż więcej",
     "en": "Show more",
-    "es": "Mostrar mÃ¡s",
-    "uk": "ÐŸÐ¾ÐºÐ°Ð·Ð°Ñ‚Ð¸ Ð±Ñ–Ð»ÑŒÑˆÐµ",
+    "es": "Mostrar más",
+    "uk": "Показати більше",
     "de": "Mehr anzeigen",
-    "cs": "Zobrazit vÃ­ce"
+    "cs": "Zobrazit více"
   },
   "common.showLess": {
-    "ru": "ÐŸÐ¾ÐºÐ°Ð·Ð°Ñ‚ÑŒ Ð¼ÐµÐ½ÑŒÑˆÐµ",
-    "pl": "PokaÅ¼ mniej",
+    "ru": "Показать меньше",
+    "pl": "Pokaż mniej",
     "en": "Show less",
     "es": "Mostrar menos",
-    "uk": "ÐŸÐ¾ÐºÐ°Ð·Ð°Ñ‚Ð¸ Ð¼ÐµÐ½ÑˆÐµ",
+    "uk": "Показати менше",
     "de": "Weniger anzeigen",
-    "cs": "Zobrazit mÃ©nÄ›"
+    "cs": "Zobrazit méně"
   },
   "common.language": {
-    "ru": "Ð¯Ð·Ñ‹Ðº",
-    "pl": "JÄ™zyk",
+    "ru": "Язык",
+    "pl": "Język",
     "en": "Language",
     "es": "Idioma",
-    "uk": "ÐœÐ¾Ð²Ð°",
+    "uk": "Мова",
     "de": "Sprache",
     "cs": "Jazyk"
   },
   "common.interfaceLanguage": {
-    "ru": "Ð¯Ð·Ñ‹Ðº Ð¸Ð½Ñ‚ÐµÑ€Ñ„ÐµÐ¹ÑÐ°",
-    "pl": "JÄ™zyk interfejsu",
+    "ru": "Язык интерфейса",
+    "pl": "Język interfejsu",
     "en": "Interface language",
     "es": "Idioma de la interfaz",
-    "uk": "ÐœÐ¾Ð²Ð° Ñ–Ð½Ñ‚ÐµÑ€Ñ„ÐµÐ¹ÑÑƒ",
-    "de": "Sprache der OberflÃ¤che",
-    "cs": "Jazyk rozhranÃ­"
+    "uk": "Мова інтерфейсу",
+    "de": "Sprache der Oberfläche",
+    "cs": "Jazyk rozhraní"
   },
   "common.useCurrentLocation": {
-    "ru": "Ð˜ÑÐ¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÑŒ Ð¼Ð¾Ñ‘ Ð¼ÐµÑÑ‚Ð¾Ð¿Ð¾Ð»Ð¾Ð¶ÐµÐ½Ð¸Ðµ",
-    "pl": "UÅ¼yj mojej lokalizacji",
+    "ru": "Использовать моё местоположение",
+    "pl": "Użyj mojej lokalizacji",
     "en": "Use my location",
-    "es": "Usar mi ubicaciÃ³n",
-    "uk": "Ð’Ð¸ÐºÐ¾Ñ€Ð¸ÑÑ‚Ð°Ñ‚Ð¸ Ð¼Ð¾Ñ” Ð¼Ñ–ÑÑ†ÐµÐ·Ð½Ð°Ñ…Ð¾Ð´Ð¶ÐµÐ½Ð½Ñ",
+    "es": "Usar mi ubicación",
+    "uk": "Використати моє місцезнаходження",
     "de": "Meinen Standort verwenden",
-    "cs": "PouÅ¾Ã­t mou polohu"
+    "cs": "Použít mou polohu"
   },
   "common.continue": {
-    "ru": "ÐŸÑ€Ð¾Ð´Ð¾Ð»Ð¶Ð¸Ñ‚ÑŒ",
+    "ru": "Продолжить",
     "pl": "Kontynuuj",
     "en": "Continue",
     "es": "Continuar",
-    "uk": "ÐŸÑ€Ð¾Ð´Ð¾Ð²Ð¶Ð¸Ñ‚Ð¸",
+    "uk": "Продовжити",
     "de": "Fortfahren",
-    "cs": "PokraÄovat"
+    "cs": "Pokračovat"
   },
   "common.finish": {
-    "ru": "Ð—Ð°Ð²ÐµÑ€ÑˆÐ¸Ñ‚ÑŒ",
-    "pl": "ZakoÅ„cz",
+    "ru": "Завершить",
+    "pl": "Zakończ",
     "en": "Finish",
     "es": "Finalizar",
-    "uk": "Ð—Ð°Ð²ÐµÑ€ÑˆÐ¸Ñ‚Ð¸",
+    "uk": "Завершити",
     "de": "Fertigstellen",
-    "cs": "DokonÄit"
+    "cs": "Dokončit"
   },
   "common.copy": {
-    "ru": "ÐšÐ¾Ð¿Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ",
+    "ru": "Копировать",
     "pl": "Kopiuj",
     "en": "Copy",
     "es": "Copiar",
-    "uk": "ÐšÐ¾Ð¿Ñ–ÑŽÐ²Ð°Ñ‚Ð¸",
+    "uk": "Копіювати",
     "de": "Kopieren",
-    "cs": "KopÃ­rovat"
+    "cs": "Kopírovat"
   },
   "common.copied": {
-    "ru": "Ð¡ÐºÐ¾Ð¿Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¾",
+    "ru": "Скопировано",
     "pl": "Skopiowano",
     "en": "Copied",
     "es": "Copiado",
-    "uk": "Ð¡ÐºÐ¾Ð¿Ñ–Ð¹Ð¾Ð²Ð°Ð½Ð¾",
+    "uk": "Скопійовано",
     "de": "Kopiert",
-    "cs": "ZkopÃ­rovÃ¡no"
+    "cs": "Zkopírováno"
   }
 };
 

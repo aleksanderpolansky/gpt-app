@@ -538,23 +538,23 @@ function createGeoStatusLabel(input: {
   const parts: string[] = [];
 
   if (isOwnSuggestedGeoArea(input.cityGeoArea, input.appUserId)) {
-    parts.push("Ð³Ð¾Ñ€Ð¾Ð´ Ð¾Ð¶Ð¸Ð´Ð°ÐµÑ‚ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸");
+    parts.push("город ожидает проверки");
   } else if (
     input.cityGeoArea &&
     input.cityGeoArea.status &&
     input.cityGeoArea.status !== "approved"
   ) {
-    parts.push(`Ð³Ð¾Ñ€Ð¾Ð´: ${input.cityGeoArea.status}`);
+    parts.push(`город: ${input.cityGeoArea.status}`);
   }
 
   if (isOwnSuggestedGeoArea(input.districtGeoArea, input.appUserId)) {
-    parts.push("Ñ€Ð°Ð¹Ð¾Ð½ Ð¾Ð¶Ð¸Ð´Ð°ÐµÑ‚ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ¸");
+    parts.push("район ожидает проверки");
   } else if (
     input.districtGeoArea &&
     input.districtGeoArea.status &&
     input.districtGeoArea.status !== "approved"
   ) {
-    parts.push(`Ñ€Ð°Ð¹Ð¾Ð½: ${input.districtGeoArea.status}`);
+    parts.push(`район: ${input.districtGeoArea.status}`);
   }
 
   if (parts.length === 0) {

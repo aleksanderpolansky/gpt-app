@@ -22,7 +22,7 @@ export default function SemanticReviewRoutePage() {
               <div className="mx-auto max-w-7xl space-y-5">
                 <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
-                    UI-6 route Â· Semantic Review Â· Fixture smoke gate
+                    UI-6 route · Semantic Review · Fixture smoke gate
                   </p>
                   <h1 className="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
                     Semantic Review
