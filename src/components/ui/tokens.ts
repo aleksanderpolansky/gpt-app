@@ -1,8 +1,8 @@
-﻿/**
- * GPT-APP / AI-NAVIGATOR
+/**
+ * ARCTor.app / AI-NAVIGATOR
  * UI-2.4 — project-local design tokens
  *
- * Source: High-Fidelity Dashboard Design / LifeOS dashboard shell.
+ * Source: High-Fidelity Dashboard Design / ARCTor.app dashboard shell.
  *
  * Boundary:
  * - No runtime logic.

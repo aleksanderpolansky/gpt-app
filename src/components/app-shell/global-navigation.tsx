@@ -16,7 +16,6 @@ import {
   Search,
   Settings,
   ShoppingBag,
-  Sparkles,
   Wallet,
 } from "lucide-react";
 
@@ -359,12 +358,27 @@ export function GlobalSidebar() {
   return (
     <aside className="hidden w-[240px] flex-shrink-0 flex-col overflow-hidden border-r border-[rgba(0,0,0,0.07)] bg-white lg:flex">
       <div className="flex items-center gap-2.5 border-b border-[rgba(0,0,0,0.06)] px-4 py-4">
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#3b6ef8] to-[#6f42f5]">
-          <Sparkles size={14} className="text-white" />
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#f7f4ff]">
+          <img
+            src="/brand/arctor-logo.png"
+            alt=""
+            className="h-full w-full object-cover"
+          />
         </div>
         <div>
-          <div className="text-[15px] font-bold leading-none text-[#1a1d2e]">
-            LifeOS
+          <div
+            className="text-[15px] font-bold leading-none text-[#1a1d2e]"
+            aria-label="ARCTor.app"
+          >
+            <span aria-hidden="true">A</span>
+            <span
+              aria-hidden="true"
+              className="text-transparent"
+              style={{ WebkitTextStroke: "0.9px #6f42f5" }}
+            >
+              R
+            </span>
+            <span aria-hidden="true">CTor.app</span>
           </div>
           <div className="mt-0.5 text-[10px] leading-none text-[#9ca3b8]">
             {t("navigation.everythingImportantInOnePlace")}

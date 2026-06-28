@@ -10,7 +10,7 @@ const navigationLinks: readonly TodayTimelineNavigationLink[] = [
   {
     href: "/workspace",
     label: "Workspace",
-    description: "Return to the main LifeOS workspace.",
+    description: "Return to the main ARCTor.app workspace.",
   },
   {
     href: "/activity-today",

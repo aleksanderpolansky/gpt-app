@@ -1,4 +1,4 @@
-﻿import { checkDictionaryCompleteness } from "../dictionary-completeness";
+import { checkDictionaryCompleteness } from "../dictionary-completeness";
 import { getMessage, type MessageParams } from "../get-message";
 import { type LocaleCode } from "../locales";
 
@@ -73,13 +73,13 @@ export const navigationMessages: Record<NavigationMessageKey, Record<LocaleCode,
     cs: "Můj panel",
   },
   "navigation.everythingImportantInOnePlace": {
-    ru: "Всё важное — в одном месте",
-    pl: "Wszystko ważne w jednym miejscu",
-    en: "Everything important in one place",
-    es: "Todo lo importante en un solo lugar",
-    uk: "Усе важливе — в одному місці",
-    de: "Alles Wichtige an einem Ort",
-    cs: "Vše důležité na jednom místě",
+    ru: "Actio ex ratione",
+    pl: "Actio ex ratione",
+    en: "Actio ex ratione",
+    es: "Actio ex ratione",
+    uk: "Actio ex ratione",
+    de: "Actio ex ratione",
+    cs: "Actio ex ratione",
   },
   "navigation.catalogAndServices": {
     ru: "Каталог и сервисы",

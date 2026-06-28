@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { GlobalAppShell } from "../components/app-shell/global-app-shell";
@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GPT App / AI-NAVIGATOR",
-  description: "LifeOS workspace and AI navigator pilot shell",
+  title: "ARCTor.app / AI-NAVIGATOR",
+  description: "ARCTor.app workspace and AI navigator pilot shell",
 };
 
 export default function RootLayout({
