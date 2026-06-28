@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ProjectKnowledgeSubpageNav } from "./_components/ProjectKnowledgeUi";
 
 import {
   projectKnowledgeApiEndpoints,
@@ -228,6 +229,8 @@ export default function ProjectKnowledgePage() {
             </a>
           ))}
         </nav>
+
+        <ProjectKnowledgeSubpageNav />
 
         <section
           id="overview"
