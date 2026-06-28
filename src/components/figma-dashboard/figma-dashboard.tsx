@@ -1,7 +1,13 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ElementType, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ElementType,
+  type ReactNode,
+} from "react";
 import {
   Activity,
   Plus,
@@ -29,54 +35,86 @@ import {
   YAxis,
 } from "recharts";
 
+import {
+  getDashboardMessage,
+  getLocaleSearchParam,
+  type DashboardMessageKey,
+  type LocaleCode,
+} from "@/i18n";
+
 import { useUserSessionClient } from "../auth/user-session-client";
 
 type IconComponent = ElementType;
 
+type DashboardTranslate = (
+  key: DashboardMessageKey,
+  params?: Record<string, string | number | boolean | null | undefined>,
+) => string;
+
+type DayKey =
+  | "dashboard.day.monShort"
+  | "dashboard.day.tueShort"
+  | "dashboard.day.wedShort"
+  | "dashboard.day.thuShort"
+  | "dashboard.day.friShort"
+  | "dashboard.day.satShort"
+  | "dashboard.day.sunShort";
+
 const efficiencyData = [
-  { day: "Пн", value: 68, prev: 58 },
-  { day: "Вт", value: 75, prev: 62 },
-  { day: "Ср", value: 72, prev: 70 },
-  { day: "Чт", value: 82, prev: 65 },
-  { day: "Пт", value: 78, prev: 74 },
-  { day: "Сб", value: 85, prev: 60 },
-  { day: "Вс", value: 80, prev: 72 },
+  { dayKey: "dashboard.day.monShort" as DayKey, value: 68, prev: 58 },
+  { dayKey: "dashboard.day.tueShort" as DayKey, value: 75, prev: 62 },
+  { dayKey: "dashboard.day.wedShort" as DayKey, value: 72, prev: 70 },
+  { dayKey: "dashboard.day.thuShort" as DayKey, value: 82, prev: 65 },
+  { dayKey: "dashboard.day.friShort" as DayKey, value: 78, prev: 74 },
+  { dayKey: "dashboard.day.satShort" as DayKey, value: 85, prev: 60 },
+  { dayKey: "dashboard.day.sunShort" as DayKey, value: 80, prev: 72 },
 ];
 
 const habitsData = [
-  { day: "Пн", done: 5, total: 7 },
-  { day: "Вт", done: 6, total: 7 },
-  { day: "Ср", done: 4, total: 7 },
-  { day: "Чт", done: 7, total: 7 },
-  { day: "Пт", done: 6, total: 7 },
-  { day: "Сб", done: 5, total: 7 },
-  { day: "Вс", done: 3, total: 7 },
+  { dayKey: "dashboard.day.monShort" as DayKey, done: 5, total: 7 },
+  { dayKey: "dashboard.day.tueShort" as DayKey, done: 6, total: 7 },
+  { dayKey: "dashboard.day.wedShort" as DayKey, done: 4, total: 7 },
+  { dayKey: "dashboard.day.thuShort" as DayKey, done: 7, total: 7 },
+  { dayKey: "dashboard.day.friShort" as DayKey, done: 6, total: 7 },
+  { dayKey: "dashboard.day.satShort" as DayKey, done: 5, total: 7 },
+  { dayKey: "dashboard.day.sunShort" as DayKey, done: 3, total: 7 },
 ];
 
 const focusData = [
-  { name: "Работа", value: 38, color: "#3b6ef8" },
-  { name: "Здоровье", value: 22, color: "#22c55e" },
-  { name: "Личное", value: 18, color: "#8b5cf6" },
-  { name: "Обучение", value: 14, color: "#f97316" },
-  { name: "Отдых", value: 8, color: "#06b6d4" },
+  { nameKey: "dashboard.focus.work" as DashboardMessageKey, value: 38, color: "#3b6ef8" },
+  { nameKey: "dashboard.focus.health" as DashboardMessageKey, value: 22, color: "#22c55e" },
+  { nameKey: "dashboard.focus.personal" as DashboardMessageKey, value: 18, color: "#8b5cf6" },
+  { nameKey: "dashboard.focus.learning" as DashboardMessageKey, value: 14, color: "#f97316" },
+  { nameKey: "dashboard.focus.rest" as DashboardMessageKey, value: 8, color: "#06b6d4" },
 ];
 
 const radarData = [
-  { direction: "Время", value: 78, fullMark: 100 },
-  { direction: "Деньги", value: 72, fullMark: 100 },
-  { direction: "Здоровье", value: 75, fullMark: 100 },
-  { direction: "Личное", value: 79, fullMark: 100 },
-  { direction: "Карьера", value: 68, fullMark: 100 },
+  { directionKey: "dashboard.direction.time" as DashboardMessageKey, value: 78, fullMark: 100 },
+  { directionKey: "dashboard.direction.money" as DashboardMessageKey, value: 72, fullMark: 100 },
+  { directionKey: "dashboard.direction.health" as DashboardMessageKey, value: 75, fullMark: 100 },
+  { directionKey: "dashboard.direction.personal" as DashboardMessageKey, value: 79, fullMark: 100 },
+  { directionKey: "dashboard.direction.career" as DashboardMessageKey, value: 68, fullMark: 100 },
 ];
 
-const FILTERS = [
-  "Все направления",
-  "Эффективность",
-  "Прогресс",
-  "Привычки",
-  "Финансы",
-];
+const FILTER_KEYS = [
+  "dashboard.filter.all",
+  "dashboard.filter.efficiency",
+  "dashboard.filter.progress",
+  "dashboard.filter.habits",
+  "dashboard.filter.finances",
+] as const;
 
+type FilterKey = (typeof FILTER_KEYS)[number];
+
+const NUMBER_LOCALE_MAP: Record<LocaleCode, string> = {
+  ru: "ru-RU",
+  pl: "pl-PL",
+  en: "en-US",
+  es: "es-ES",
+  uk: "uk-UA",
+  de: "de-DE",
+  cs: "cs-CZ",
+};
 
 type PointsWalletResponse = {
   readonly ok?: boolean;
@@ -86,7 +124,6 @@ type PointsWalletResponse = {
   } | null;
   readonly error?: string;
 };
-
 
 type AiTokenProjection = {
   readonly tierCode?: string | null;
@@ -104,6 +141,29 @@ type AiTokenAvailabilityResponse = {
   readonly errorMessage?: string;
 };
 
+function useInterfaceLocale(): LocaleCode {
+  const [locale, setLocale] = useState<LocaleCode>("en");
+
+  useEffect(() => {
+    function readLocaleFromUrl() {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      setLocale(getLocaleSearchParam(new URLSearchParams(window.location.search)));
+    }
+
+    readLocaleFromUrl();
+    window.addEventListener("popstate", readLocaleFromUrl);
+
+    return () => {
+      window.removeEventListener("popstate", readLocaleFromUrl);
+    };
+  }, []);
+
+  return locale;
+}
+
 function normalizePointsBalance(value: unknown): number {
   const parsed = Number(value);
 
@@ -114,16 +174,15 @@ function normalizePointsBalance(value: unknown): number {
   return parsed;
 }
 
-function formatPointsBalance(value: number | null): string {
+function formatPointsBalance(value: number | null, locale: LocaleCode): string {
   if (value === null) {
-    return "…";
+    return "...";
   }
 
-  return new Intl.NumberFormat("ru-RU", {
+  return new Intl.NumberFormat(NUMBER_LOCALE_MAP[locale], {
     maximumFractionDigits: 0,
   }).format(value);
 }
-
 
 function normalizeTokenProjection(value: unknown): number | null {
   const parsed = Number(value);
@@ -135,16 +194,20 @@ function normalizeTokenProjection(value: unknown): number | null {
   return Math.floor(parsed);
 }
 
-function formatTokenAmount(value: number | null): string {
+function formatTokenAmount(
+  value: number | null,
+  locale: LocaleCode,
+  t: DashboardTranslate,
+): string {
   if (value === null) {
-    return "ожидаем цены";
+    return t("dashboard.pendingPrices");
   }
 
-  return (
-    new Intl.NumberFormat("ru-RU", {
-      maximumFractionDigits: 0,
-    }).format(value) + " токенов"
-  );
+  const formattedValue = new Intl.NumberFormat(NUMBER_LOCALE_MAP[locale], {
+    maximumFractionDigits: 0,
+  }).format(value);
+
+  return t("dashboard.tokenAmount", { value: formattedValue });
 }
 
 function getProjectionTokens(projection: AiTokenProjection): number | null {
@@ -170,7 +233,10 @@ function sortAiTokenProjections(
   });
 }
 
-function getTierDisplayName(projection: AiTokenProjection): string {
+function getTierDisplayName(
+  projection: AiTokenProjection,
+  t: DashboardTranslate,
+): string {
   const tierCode = String(projection.tierCode ?? "").toLowerCase();
 
   if (tierCode === "nano") {
@@ -185,7 +251,7 @@ function getTierDisplayName(projection: AiTokenProjection): string {
     return "Pro";
   }
 
-  return projection.displayName ?? tierCode ?? "Модель";
+  return projection.displayName ?? tierCode ?? t("dashboard.model");
 }
 
 function KpiCard({
@@ -197,6 +263,7 @@ function KpiCard({
   trend,
   valueHref,
   trendHref,
+  historyTitle,
 }: {
   readonly label: string;
   readonly value: string;
@@ -206,7 +273,21 @@ function KpiCard({
   readonly trend?: string;
   readonly valueHref?: string;
   readonly trendHref?: string;
+  readonly historyTitle?: string;
 }) {
+  const valueNode = (
+    <div className="text-[24px] font-bold leading-none text-[#1a1d2e]">
+      {value}
+    </div>
+  );
+
+  const trendNode = trend ? (
+    <div className="flex items-center gap-1">
+      <TrendingUp size={11} className="text-[#22c55e]" />
+      <span className="text-[11px] font-semibold text-[#22c55e]">{trend}</span>
+    </div>
+  ) : null;
+
   return (
     <div className="flex flex-col gap-2.5 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
@@ -221,79 +302,80 @@ function KpiCard({
         </div>
       </div>
 
-      <div>
+      <div className="mt-auto flex flex-col gap-2">
         {valueHref ? (
           <Link
             href={valueHref}
-            className="block w-fit rounded-md text-[22px] font-bold leading-none text-[#1a1d2e] outline-none transition hover:text-[#3b6ef8] hover:underline focus:ring-4 focus:ring-[#3b6ef8]/15"
-            title="Открыть историю начисления и списания пунктов"
+            title={historyTitle}
+            className="inline-flex w-fit rounded-md transition hover:text-[#3b6ef8] focus:outline-none focus:ring-2 focus:ring-[#3b6ef8]/30"
           >
-            {value}
+            {valueNode}
           </Link>
         ) : (
-          <div className="text-[22px] font-bold leading-none text-[#1a1d2e]">
-            {value}
-          </div>
+          valueNode
         )}
-        {sub ? <div className="mt-1 text-[11px] text-[#9ca3b8]">{sub}</div> : null}
-        {trend ? (
-          trendHref ? (
-            <Link
-              href={trendHref}
-              className="mt-1.5 flex w-fit items-center gap-1 text-[#22c55e] underline-offset-2 transition hover:underline"
-              title="Открыть историю начисления и списания пунктов"
-            >
-              <TrendingUp size={11} />
-              <span className="text-[11px] font-medium">{trend}</span>
-            </Link>
-          ) : (
-            <div className="mt-1.5 flex items-center gap-1">
-              <TrendingUp size={11} className="text-[#22c55e]" />
-              <span className="text-[11px] font-medium text-[#22c55e]">
-                {trend}
-              </span>
-            </div>
-          )
-        ) : null}
+
+        {sub ? <div className="text-[11px] text-[#9ca3b8]">{sub}</div> : null}
+
+        {trendHref && trendNode ? (
+          <Link
+            href={trendHref}
+            title={historyTitle}
+            className="inline-flex w-fit rounded-md transition hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-[#3b6ef8]/30"
+          >
+            {trendNode}
+          </Link>
+        ) : (
+          trendNode
+        )}
       </div>
     </div>
   );
 }
 
-
 function AiTokenProjectionsKpi({
   projections,
   status,
   errorMessage,
+  locale,
+  t,
 }: {
   readonly projections: readonly AiTokenProjection[];
   readonly status: "loading" | "ready" | "error" | "not_configured";
   readonly errorMessage: string;
+  readonly locale: LocaleCode;
+  readonly t: DashboardTranslate;
 }) {
-  const orderedProjections = sortAiTokenProjections(projections);
+  const sortedRows = sortAiTokenProjections(projections).filter(
+    (projection) =>
+      ["nano", "standard", "pro"].includes(
+        String(projection.tierCode ?? "").toLowerCase(),
+      ),
+  );
+
   const visibleRows =
-    orderedProjections.length > 0
-      ? orderedProjections
+    sortedRows.length > 0
+      ? sortedRows
       : [
-          { tierCode: "nano", displayName: "Nano" },
-          { tierCode: "standard", displayName: "Standard" },
-          { tierCode: "pro", displayName: "Pro" },
+          { tierCode: "nano" },
+          { tierCode: "standard" },
+          { tierCode: "pro" },
         ];
 
   const subtitle =
     status === "loading"
-      ? "Загрузка лимитов"
+      ? t("dashboard.loadingLimits")
       : status === "error"
-        ? "Лимиты временно недоступны"
+        ? t("dashboard.limitsUnavailable")
         : status === "not_configured"
-          ? "Цены моделей ещё не заданы"
-          : "по текущему пакету";
+          ? t("dashboard.modelPricesNotConfigured")
+          : t("dashboard.currentPackage");
 
   return (
     <div className="flex flex-col gap-2.5 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
-          AI-пакет
+          {t("dashboard.aiPackage")}
         </span>
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#f9731618]">
           <Zap size={14} className="text-[#f97316]" />
@@ -302,7 +384,7 @@ function AiTokenProjectionsKpi({
 
       <div>
         <div className="text-[13px] font-semibold text-[#1a1d2e]">
-          Доступно примерно:
+          {t("dashboard.availableApprox")}
         </div>
         <div className="mt-2 flex flex-col gap-1">
           {visibleRows.map((projection) => {
@@ -314,10 +396,10 @@ function AiTokenProjectionsKpi({
                 className="flex items-center justify-between gap-2 text-[11px]"
               >
                 <span className="font-semibold text-[#5a5f7a]">
-                  {getTierDisplayName(projection)}
+                  {getTierDisplayName(projection, t)}
                 </span>
                 <span className="text-right font-bold text-[#1a1d2e]">
-                  {formatTokenAmount(tokens)}
+                  {formatTokenAmount(tokens, locale, t)}
                 </span>
               </div>
             );
@@ -334,7 +416,7 @@ function AiTokenProjectionsKpi({
   );
 }
 
-function ProgressKpi() {
+function ProgressKpi({ t }: { readonly t: DashboardTranslate }) {
   const pct = 76;
   const r = 28;
   const circ = 2 * Math.PI * r;
@@ -344,7 +426,7 @@ function ProgressKpi() {
     <div className="flex flex-col gap-2.5 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
-          Общий прогресс
+          {t("dashboard.progressOverall")}
         </span>
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#8b5cf618]">
           <Target size={14} className="text-[#8b5cf6]" />
@@ -352,7 +434,12 @@ function ProgressKpi() {
       </div>
 
       <div className="flex items-center gap-3">
-        <svg width="64" height="64" viewBox="0 0 64 64" aria-label="Общий прогресс 76%">
+        <svg
+          width="64"
+          height="64"
+          viewBox="0 0 64 64"
+          aria-label={t("dashboard.progressAria", { value: pct })}
+        >
           <circle cx="32" cy="32" r={r} fill="none" stroke="#f0f2f7" strokeWidth="6" />
           <circle
             cx="32"
@@ -381,11 +468,11 @@ function ProgressKpi() {
           <div className="text-[22px] font-bold leading-none text-[#1a1d2e]">
             {pct}%
           </div>
-          <div className="mt-1 text-[11px] text-[#9ca3b8]">По всем целям</div>
+          <div className="mt-1 text-[11px] text-[#9ca3b8]">{t("dashboard.allGoals")}</div>
           <div className="mt-1.5 flex items-center gap-1">
             <TrendingUp size={11} className="text-[#22c55e]" />
             <span className="text-[11px] font-medium text-[#22c55e]">
-              +4% за неделю
+              {t("dashboard.weeklyGrowth")}
             </span>
           </div>
         </div>
@@ -396,9 +483,11 @@ function ProgressKpi() {
 
 function AnalyticsCard({
   title,
+  detailsLabel,
   children,
 }: {
   readonly title: string;
+  readonly detailsLabel: string;
   readonly children: ReactNode;
 }) {
   return (
@@ -406,7 +495,7 @@ function AnalyticsCard({
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-[13px] font-semibold text-[#1a1d2e]">{title}</h3>
         <button type="button" className="text-[11px] text-[#3b6ef8] hover:underline">
-          Подробнее
+          {detailsLabel}
         </button>
       </div>
       {children}
@@ -455,7 +544,13 @@ function DirectionCard({
 }
 
 export function FigmaDashboardContent() {
-  const [activeFilter, setActiveFilter] = useState("Все направления");
+  const locale = useInterfaceLocale();
+  const t = useMemo<DashboardTranslate>(
+    () => (key, params) => getDashboardMessage(key, locale, params),
+    [locale],
+  );
+
+  const [activeFilter, setActiveFilter] = useState<FilterKey>("dashboard.filter.all");
   const [pointsBalance, setPointsBalance] = useState<number | null>(null);
   const [pointsWalletStatus, setPointsWalletStatus] = useState("loading");
   const [pointsWalletError, setPointsWalletError] = useState("");
@@ -467,7 +562,43 @@ export function FigmaDashboardContent() {
   >("loading");
   const [aiTokenError, setAiTokenError] = useState("");
   const { displayName, isAuthenticated } = useUserSessionClient();
-  const greetingName = isAuthenticated ? displayName : "гость";
+  const greetingName = isAuthenticated ? displayName : t("dashboard.guest");
+
+  const localizedEfficiencyData = useMemo(
+    () =>
+      efficiencyData.map((item) => ({
+        ...item,
+        day: t(item.dayKey),
+      })),
+    [t],
+  );
+
+  const localizedHabitsData = useMemo(
+    () =>
+      habitsData.map((item) => ({
+        ...item,
+        day: t(item.dayKey),
+      })),
+    [t],
+  );
+
+  const localizedFocusData = useMemo(
+    () =>
+      focusData.map((item) => ({
+        ...item,
+        name: t(item.nameKey),
+      })),
+    [t],
+  );
+
+  const localizedRadarData = useMemo(
+    () =>
+      radarData.map((item) => ({
+        ...item,
+        direction: t(item.directionKey),
+      })),
+    [t],
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -487,7 +618,7 @@ export function FigmaDashboardContent() {
         const data = (await response.json()) as PointsWalletResponse;
 
         if (!response.ok || !data.ok) {
-          throw new Error(data.error ?? "Не удалось загрузить баланс пунктов.");
+          throw new Error(data.error ?? t("dashboard.pointsBalanceLoadError"));
         }
 
         if (!isMounted) {
@@ -504,7 +635,7 @@ export function FigmaDashboardContent() {
         setPointsBalance(0);
         setPointsWalletStatus("error");
         setPointsWalletError(
-          error instanceof Error ? error.message : "Баланс пунктов недоступен.",
+          error instanceof Error ? error.message : t("dashboard.pointsBalanceUnavailable"),
         );
       }
     }
@@ -527,7 +658,7 @@ export function FigmaDashboardContent() {
           throw new Error(
             data.errorMessage ??
               data.error ??
-              "Не удалось загрузить AI-лимиты.",
+              t("dashboard.limitsUnavailable"),
           );
         }
 
@@ -552,7 +683,7 @@ export function FigmaDashboardContent() {
         setAiTokenProjections([]);
         setAiTokenStatus("error");
         setAiTokenError(
-          error instanceof Error ? error.message : "AI-лимиты недоступны.",
+          error instanceof Error ? error.message : t("dashboard.limitsUnavailable"),
         );
       }
     }
@@ -563,34 +694,34 @@ export function FigmaDashboardContent() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [t]);
 
-  const pointsValue = formatPointsBalance(pointsBalance);
+  const pointsValue = formatPointsBalance(pointsBalance, locale);
   const pointsSub = pointsWalletError
-    ? "Баланс временно недоступен"
+    ? t("dashboard.pointsBalanceUnavailable")
     : pointsWalletStatus === "loading"
-      ? "Загрузка баланса"
+      ? t("dashboard.loadingBalance")
       : pointsWalletStatus === "not_created"
-        ? "Кошелёк ещё не создан"
-        : "Текущий баланс";
+        ? t("dashboard.walletNotCreated")
+        : t("dashboard.currentBalance");
   const pointsTrend = pointsWalletError
-    ? "открыть историю"
-    : "история начислений и списаний";
+    ? t("dashboard.openHistory")
+    : t("dashboard.pointsHistory");
 
   return (
     <div className="p-5">
       <div className="mb-5">
         <h1 className="text-[20px] font-bold leading-tight text-[#1a1d2e]">
-          Доброе утро, {greetingName}! 👋
+          {t("dashboard.greetingMorning", { name: greetingName })}
         </h1>
         <p className="mt-0.5 text-[13px] text-[#7c8099]">
-          Отличный день, чтобы стать ещё лучше.
+          {t("dashboard.greetingSub")}
         </p>
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          label="Пункты"
+          label={t("dashboard.points")}
           value={pointsValue}
           sub={pointsSub}
           accent="#3b6ef8"
@@ -598,35 +729,38 @@ export function FigmaDashboardContent() {
           trend={pointsTrend}
           valueHref="/points/transactions"
           trendHref="/points/transactions"
+          historyTitle={t("dashboard.pointsHistoryTitle")}
         />
         <AiTokenProjectionsKpi
           projections={aiTokenProjections}
           status={aiTokenStatus}
           errorMessage={aiTokenError}
+          locale={locale}
+          t={t}
         />
         <KpiCard
-          label="Подписка"
+          label={t("dashboard.subscription")}
           value="Premium Pro"
-          sub="Активна до 28.06.25"
+          sub={t("dashboard.activeUntil", { date: "28.06.25" })}
           accent="#22c55e"
           icon={Activity}
         />
-        <ProgressKpi />
+        <ProgressKpi t={t} />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        {FILTERS.map((filter) => (
+        {FILTER_KEYS.map((filterKey) => (
           <button
-            key={filter}
+            key={filterKey}
             type="button"
-            onClick={() => setActiveFilter(filter)}
+            onClick={() => setActiveFilter(filterKey)}
             className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all ${
-              activeFilter === filter
+              activeFilter === filterKey
                 ? "bg-[#3b6ef8] text-white shadow-sm"
                 : "border border-[rgba(0,0,0,0.08)] bg-white text-[#5a5f7a] hover:bg-[#f5f6fb]"
             }`}
           >
-            {filter}
+            {t(filterKey)}
           </button>
         ))}
 
@@ -634,7 +768,7 @@ export function FigmaDashboardContent() {
           type="button"
           className="rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 py-1.5 text-[12px] font-medium text-[#5a5f7a] transition-all hover:bg-[#f5f6fb]"
         >
-          + Ещё фильтры
+          {t("dashboard.moreFilters")}
         </button>
 
         <button
@@ -642,14 +776,17 @@ export function FigmaDashboardContent() {
           className="ml-auto flex items-center gap-1 rounded-lg border border-[#3b6ef8]/30 bg-white px-3 py-1.5 text-[12px] font-medium text-[#3b6ef8] transition-all hover:bg-[#eef2ff]"
         >
           <Plus size={12} />
-          Добавить аналитический блок
+          {t("dashboard.addAnalyticsBlock")}
         </button>
       </div>
 
       <div className="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
-        <AnalyticsCard title="Динамика эффективности">
+        <AnalyticsCard
+          title={t("dashboard.efficiencyDynamics")}
+          detailsLabel={t("dashboard.details")}
+        >
           <ResponsiveContainer width="100%" height={140}>
-            <LineChart data={efficiencyData}>
+            <LineChart data={localizedEfficiencyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f2f7" />
               <XAxis
                 dataKey="day"
@@ -677,7 +814,7 @@ export function FigmaDashboardContent() {
                 stroke="#3b6ef8"
                 strokeWidth={2.5}
                 dot={{ r: 3, fill: "#3b6ef8" }}
-                name="Текущая"
+                name={t("dashboard.current")}
               />
               <Line
                 type="monotone"
@@ -685,15 +822,18 @@ export function FigmaDashboardContent() {
                 stroke="#e5e7ef"
                 strokeWidth={2}
                 dot={false}
-                name="Прошлая"
+                name={t("dashboard.previous")}
               />
             </LineChart>
           </ResponsiveContainer>
         </AnalyticsCard>
 
-        <AnalyticsCard title="Привычки по дням">
+        <AnalyticsCard
+          title={t("dashboard.habitsByDay")}
+          detailsLabel={t("dashboard.details")}
+        >
           <ResponsiveContainer width="100%" height={140}>
-            <BarChart data={habitsData} barSize={18}>
+            <BarChart data={localizedHabitsData} barSize={18}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f2f7" vertical={false} />
               <XAxis
                 dataKey="day"
@@ -714,20 +854,23 @@ export function FigmaDashboardContent() {
                   boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                 }}
               />
-              <Bar dataKey="total" fill="#f0f2f7" radius={[4, 4, 0, 0]} name="Всего" />
-              <Bar dataKey="done" fill="#22c55e" radius={[4, 4, 0, 0]} name="Выполнено" />
+              <Bar dataKey="total" fill="#f0f2f7" radius={[4, 4, 0, 0]} name={t("dashboard.total")} />
+              <Bar dataKey="done" fill="#22c55e" radius={[4, 4, 0, 0]} name={t("dashboard.done")} />
             </BarChart>
           </ResponsiveContainer>
         </AnalyticsCard>
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-3 xl:grid-cols-2">
-        <AnalyticsCard title="Распределение фокуса">
+        <AnalyticsCard
+          title={t("dashboard.focusDistribution")}
+          detailsLabel={t("dashboard.details")}
+        >
           <div className="flex items-center gap-4">
             <ResponsiveContainer width={130} height={130}>
               <PieChart>
                 <Pie
-                  data={focusData}
+                  data={localizedFocusData}
                   cx="50%"
                   cy="50%"
                   innerRadius={38}
@@ -735,7 +878,7 @@ export function FigmaDashboardContent() {
                   dataKey="value"
                   paddingAngle={3}
                 >
-                  {focusData.map((entry) => (
+                  {localizedFocusData.map((entry) => (
                     <Cell key={entry.name} fill={entry.color} />
                   ))}
                 </Pie>
@@ -750,7 +893,7 @@ export function FigmaDashboardContent() {
             </ResponsiveContainer>
 
             <div className="flex flex-1 flex-col gap-1.5">
-              {focusData.map((item) => (
+              {localizedFocusData.map((item) => (
                 <div key={item.name} className="flex items-center gap-2">
                   <div
                     className="h-2 w-2 flex-shrink-0 rounded-full"
@@ -766,9 +909,12 @@ export function FigmaDashboardContent() {
           </div>
         </AnalyticsCard>
 
-        <AnalyticsCard title="Эффективность по направлениям">
+        <AnalyticsCard
+          title={t("dashboard.efficiencyByDirection")}
+          detailsLabel={t("dashboard.details")}
+        >
           <ResponsiveContainer width="100%" height={130}>
-            <RadarChart data={radarData}>
+            <RadarChart data={localizedRadarData}>
               <PolarGrid stroke="#f0f2f7" />
               <PolarAngleAxis
                 dataKey="direction"
@@ -788,17 +934,40 @@ export function FigmaDashboardContent() {
 
       <div className="mb-2">
         <h2 className="mb-3 text-[13px] font-semibold text-[#1a1d2e]">
-          Направления
+          {t("dashboard.directions")}
         </h2>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <DirectionCard label="Время" pct={78} color="#3b6ef8" sub="32 из 40 задач" trend="+3%" />
-          <DirectionCard label="Деньги" pct={72} color="#f97316" sub="18 из 25 целей" trend="+1.5%" />
-          <DirectionCard label="Здоровье" pct={75} color="#22c55e" sub="6 из 8 привычек" trend="+5%" />
-          <DirectionCard label="Личное" pct={79} color="#8b5cf6" sub="Высокий индекс" trend="+2%" />
+          <DirectionCard
+            label={t("dashboard.direction.time")}
+            pct={78}
+            color="#3b6ef8"
+            sub={t("dashboard.directionTimeSub")}
+            trend="+3%"
+          />
+          <DirectionCard
+            label={t("dashboard.direction.money")}
+            pct={72}
+            color="#f97316"
+            sub={t("dashboard.directionMoneySub")}
+            trend="+1.5%"
+          />
+          <DirectionCard
+            label={t("dashboard.direction.health")}
+            pct={75}
+            color="#22c55e"
+            sub={t("dashboard.directionHealthSub")}
+            trend="+5%"
+          />
+          <DirectionCard
+            label={t("dashboard.direction.personal")}
+            pct={79}
+            color="#8b5cf6"
+            sub={t("dashboard.directionPersonalSub")}
+            trend="+2%"
+          />
         </div>
       </div>
     </div>
   );
 }
-
