@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Activity,
   HelpCircle,
@@ -11,6 +11,15 @@ import {
   Trash2,
   TrendingUp,
 } from "lucide-react";
+
+import {
+  getLocaleSearchParam,
+  getMessage,
+  getNavigationMessage,
+  type LocaleCode,
+  type MessageParams,
+  type NavigationMessageKey,
+} from "@/i18n";
 
 import { UserSessionMiniStatus } from "../auth/user-session-client";
 import { useAiNavigator, type AiNavigatorMessage } from "./ai-navigator-provider";
@@ -29,15 +38,114 @@ const ACTIVITY_EXAMPLES = [
 ];
 
 const AI_MODEL_TIERS = [
-  { code: "nano", label: "Nano", caption: "economy" },
-  { code: "standard", label: "Standard", caption: "standard" },
-  { code: "pro", label: "Pro", caption: "premium" },
+  { code: "nano", label: "Nano", captionKey: "aiNavigator.modelNanoCaption" },
+  { code: "standard", label: "Standard", captionKey: "aiNavigator.modelStandardCaption" },
+  { code: "pro", label: "Pro", captionKey: "aiNavigator.modelProCaption" },
 ] as const;
+
+type AiNavigatorMessageKey =
+  | "aiNavigator.activityPreview"
+  | "aiNavigator.defaultGreeting"
+  | "aiNavigator.modelNanoCaption"
+  | "aiNavigator.modelProCaption"
+  | "aiNavigator.modelStandardCaption"
+  | "aiNavigator.placeholder"
+  | "aiNavigator.send"
+  | "aiNavigator.singleInputDescription"
+  | "aiNavigator.singleInputTitle";
+
+type AiNavigatorTranslate = (
+  key: AiNavigatorMessageKey,
+  params?: MessageParams,
+) => string;
+
+const aiNavigatorMessages: Record<AiNavigatorMessageKey, Record<LocaleCode, string>> = {
+  "aiNavigator.activityPreview": {
+    ru: "Предпросмотр активности",
+    pl: "Podgląd aktywności",
+    en: "Activity preview",
+    es: "Vista previa de actividad",
+    uk: "Попередній перегляд активності",
+    de: "Aktivitätsvorschau",
+    cs: "Náhled aktivity",
+  },
+  "aiNavigator.defaultGreeting": {
+    ru: "Привет! Я AI-Навигатор. Могу помочь разобрать активность, подсказать следующий шаг или объяснить текущую страницу.",
+    pl: "Cześć! Jestem AI-Nawigatorem. Mogę pomóc przeanalizować aktywność, podpowiedzieć następny krok albo wyjaśnić bieżącą stronę.",
+    en: "Hi! I am the AI Navigator. I can help analyze an activity, suggest the next step, or explain the current page.",
+    es: "¡Hola! Soy el Navegador AI. Puedo ayudar a analizar una actividad, sugerir el siguiente paso o explicar la página actual.",
+    uk: "Привіт! Я AI-Навігатор. Можу допомогти розібрати активність, підказати наступний крок або пояснити поточну сторінку.",
+    de: "Hallo! Ich bin der AI-Navigator. Ich kann helfen, eine Aktivität zu analysieren, den nächsten Schritt vorzuschlagen oder die aktuelle Seite zu erklären.",
+    cs: "Ahoj! Jsem AI Navigátor. Pomohu analyzovat aktivitu, navrhnout další krok nebo vysvětlit aktuální stránku.",
+  },
+  "aiNavigator.modelNanoCaption": { ru: "эконом", pl: "ekonomia", en: "economy", es: "económico", uk: "економ", de: "sparsam", cs: "úsporný" },
+  "aiNavigator.modelStandardCaption": { ru: "стандарт", pl: "standard", en: "standard", es: "estándar", uk: "стандарт", de: "standard", cs: "standard" },
+  "aiNavigator.modelProCaption": { ru: "премиум", pl: "premium", en: "premium", es: "premium", uk: "преміум", de: "Premium", cs: "premium" },
+  "aiNavigator.placeholder": {
+    ru: "Напишите сообщение...",
+    pl: "Napisz wiadomość...",
+    en: "Write a message...",
+    es: "Escribe un mensaje...",
+    uk: "Напишіть повідомлення...",
+    de: "Nachricht schreiben...",
+    cs: "Napište zprávu...",
+  },
+  "aiNavigator.send": { ru: "Отправить", pl: "Wyślij", en: "Send", es: "Enviar", uk: "Надіслати", de: "Senden", cs: "Odeslat" },
+  "aiNavigator.singleInputTitle": {
+    ru: "Единое поле сообщения",
+    pl: "Jedno pole wiadomości",
+    en: "Single message input",
+    es: "Un solo campo de mensaje",
+    uk: "Єдине поле повідомлення",
+    de: "Ein einziges Nachrichtenfeld",
+    cs: "Jedno pole zprávy",
+  },
+  "aiNavigator.singleInputDescription": {
+    ru: "Все действия проходят через нижнее поле «Написать сообщение». Быстрые примеры ниже только вставляют текст в единый composer и не создают отдельную точку ввода.",
+    pl: "Wszystkie działania przechodzą przez dolne pole „Napisz wiadomość”. Szybkie przykłady poniżej tylko wstawiają tekst do jednego composera i nie tworzą osobnego punktu wejścia.",
+    en: "All actions go through the bottom field “Write a message”. The quick examples below only insert text into the single composer and do not create a separate input point.",
+    es: "Todas las acciones pasan por el campo inferior «Escribe un mensaje». Los ejemplos rápidos de abajo solo insertan texto en el compositor único y no crean otro punto de entrada.",
+    uk: "Усі дії проходять через нижнє поле «Напишіть повідомлення». Швидкі приклади нижче лише вставляють текст у єдиний composer і не створюють окремої точки введення.",
+    de: "Alle Aktionen laufen über das untere Feld „Nachricht schreiben“. Die Schnellbeispiele unten fügen nur Text in den einzigen Composer ein und erzeugen keinen zweiten Eingabepunkt.",
+    cs: "Všechny akce procházejí spodním polem „Napište zprávu“. Rychlé příklady níže pouze vloží text do jediného composeru a nevytvářejí další vstupní místo.",
+  },
+};
+
+function useInterfaceLocale(): LocaleCode {
+  const [locale, setLocale] = useState<LocaleCode>("en");
+
+  useEffect(() => {
+    function readLocaleFromUrl() {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      setLocale(getLocaleSearchParam(new URLSearchParams(window.location.search)));
+    }
+
+    readLocaleFromUrl();
+    window.addEventListener("popstate", readLocaleFromUrl);
+
+    return () => {
+      window.removeEventListener("popstate", readLocaleFromUrl);
+    };
+  }, []);
+
+  return locale;
+}
+
+function useAiNavigatorTranslator(locale: LocaleCode): AiNavigatorTranslate {
+  return (key, params) => getMessage(aiNavigatorMessages, key, locale, params);
+}
+
+function useNavigationTranslator(locale: LocaleCode) {
+  return (key: NavigationMessageKey) => getNavigationMessage(key, locale);
+}
 
 export const UI_MINI_FIX_ACTIVITY_COMPOSER_ON_DEMAND_IN_GLOBAL_AI =
   "UI_MINI_FIX_ACTIVITY_COMPOSER_ON_DEMAND_IN_GLOBAL_AI" as const;
 
-function ActivityComposer() {
+function ActivityComposer({ t }: { readonly t: AiNavigatorTranslate }) {
   const { setInput } = useAiNavigator();
 
   return (
@@ -45,14 +153,12 @@ function ActivityComposer() {
       <div className="mb-2 flex items-center gap-1.5">
         <Activity size={12} className="text-[#3b6ef8]" />
         <span className="text-[10.5px] font-semibold uppercase tracking-wide text-[#3b6ef8]">
-          Single message input
+          {t("aiNavigator.singleInputTitle")}
         </span>
       </div>
 
       <p className="mb-2 text-[12px] leading-relaxed text-[#3d3657]">
-        All actions go through the bottom field “Write a message”. The quick
-        examples below only insert text into the single composer and do not create
-        a separate input point.
+        {t("aiNavigator.singleInputDescription")}
       </p>
 
       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -117,7 +223,15 @@ function FormattedMessageContent({ text }: { text: string }) {
     </span>
   );
 }
-function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
+function MessageBubble({
+  message,
+  t,
+  navigationT,
+}: {
+  readonly message: AiNavigatorMessage;
+  readonly t: AiNavigatorTranslate;
+  readonly navigationT: (key: NavigationMessageKey) => string;
+}) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
@@ -134,7 +248,7 @@ function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
         <div className="mb-1.5 flex items-center gap-1.5">
           <HelpCircle size={11} className="text-red-600" />
           <span className="text-[10.5px] font-semibold uppercase tracking-wide text-red-600">
-            AI error
+            {navigationT("navigation.aiError")}
           </span>
         </div>
         <p className="text-[12px] leading-relaxed text-red-700">
@@ -145,7 +259,7 @@ function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
             href="/auth/login?connection=google-oauth2&prompt=select_account"
             className="mt-2 inline-flex rounded-lg bg-red-600 px-3 py-1.5 text-[11.5px] font-semibold text-white transition-colors hover:bg-red-700"
           >
-            Sign in
+            {navigationT("navigation.signIn")}
           </a>
         ) : null}
       </div>
@@ -158,7 +272,7 @@ function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
         <div className="mb-1.5 flex items-center gap-1.5">
           <Activity size={11} className="text-[#3b6ef8]" />
           <span className="text-[10.5px] font-semibold uppercase tracking-wide text-[#3b6ef8]">
-            Activity preview
+            {t("aiNavigator.activityPreview")}
           </span>
         </div>
         <p className="whitespace-pre-line text-[12px] leading-relaxed text-[#2d3047]">
@@ -174,7 +288,7 @@ function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
         <div className="mb-1.5 flex items-center gap-1.5">
           <Sparkles size={11} className="text-[#8b5cf6]" />
           <span className="text-[10.5px] font-semibold uppercase tracking-wide text-[#8b5cf6]">
-            Context
+            {navigationT("navigation.context")}
           </span>
         </div>
         <p className="whitespace-pre-line text-[12px] leading-relaxed text-[#3d3657]">
@@ -190,7 +304,7 @@ function MessageBubble({ message }: { readonly message: AiNavigatorMessage }) {
         <div className="mb-1.5 flex items-center gap-1.5">
           <Target size={11} className="text-[#22c55e]" />
           <span className="text-[10.5px] font-semibold uppercase tracking-wide text-[#22c55e]">
-            Recommendation
+            {navigationT("navigation.recommendation")}
           </span>
         </div>
         <p className="whitespace-pre-line text-[12px] leading-relaxed text-[#1a3d2e]">
@@ -225,6 +339,16 @@ export function GlobalAiNavigator() {
   } = useAiNavigator();
 
   const [isActivityComposerOpen, setIsActivityComposerOpen] = useState(false);
+  const locale = useInterfaceLocale();
+  const t = useAiNavigatorTranslator(locale);
+  const navigationT = useNavigationTranslator(locale);
+  const initialGreetingCreatedAt = new Date(0).toISOString();
+
+  const displayMessages = messages.map((message) =>
+    message.id === 1 && message.createdAt === initialGreetingCreatedAt
+      ? { ...message, text: t("aiNavigator.defaultGreeting") }
+      : message,
+  );
 
   return (
     <aside
@@ -239,23 +363,30 @@ export function GlobalAiNavigator() {
 
           <div className="min-w-0">
             <div className="text-[14px] font-bold leading-none text-[#1a1d2e]">
-              AI Navigator
+              {navigationT("navigation.aiNavigator")}
             </div>
             <UserSessionMiniStatus className="mt-1" />
           </div>
 
           <div className="ml-auto flex items-center gap-1">
             <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
-            <span className="text-[10px] font-medium text-[#22c55e]">Online</span>
+            <span className="text-[10px] font-medium text-[#22c55e]">
+              {navigationT("navigation.online")}
+            </span>
           </div>
         </div>
       </div>
 
       <div className="scrollbar-hide flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
-        {isActivityComposerOpen ? <ActivityComposer /> : null}
+        {isActivityComposerOpen ? <ActivityComposer t={t} /> : null}
 
-        {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
+        {displayMessages.map((message) => (
+          <MessageBubble
+            key={message.id}
+            message={message}
+            t={t}
+            navigationT={navigationT}
+          />
         ))}
       </div>
 
@@ -263,7 +394,7 @@ export function GlobalAiNavigator() {
         {/* GPT_APP_STEP18P_R11_HIFI_SELECTOR: visual-only selector; billing guard remains backend-only. */}
         <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[#b0b4c8]">
-            AI model
+            {navigationT("navigation.aiModel")}
           </p>
 
           <div className="grid grid-cols-3 gap-1.5">
@@ -298,7 +429,7 @@ export function GlobalAiNavigator() {
                         : "mt-1 block text-[11px] font-medium leading-tight text-[#7a8199]"
                     }
                   >
-                    {tier.caption}
+                    {t(tier.captionKey)}
                   </span>
                 </button>
               );
@@ -316,7 +447,7 @@ export function GlobalAiNavigator() {
                 void sendMessage();
               }
             }}
-            placeholder="Write a message..."
+            placeholder={t("aiNavigator.placeholder")}
             className="flex-1 bg-transparent text-[12.5px] text-[#1a1d2e] placeholder-[#b0b4c8] focus:outline-none"
           />
           <button
@@ -328,6 +459,7 @@ export function GlobalAiNavigator() {
             className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-[#3b6ef8] transition-colors hover:bg-[#2c5df0] disabled:opacity-50"
           >
             <Send size={11} className="text-white" />
+            <span className="sr-only">{t("aiNavigator.send")}</span>
           </button>
         </div>
       </div>

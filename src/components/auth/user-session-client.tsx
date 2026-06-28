@@ -3,6 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Settings } from "lucide-react";
 
+import {
+  getLocaleSearchParam,
+  getNavigationMessage,
+  type LocaleCode,
+  type NavigationMessageKey,
+} from "@/i18n";
+
 type UserProfile = {
   name?: string;
   email?: string;
@@ -62,7 +69,7 @@ function buildDisplayName(
     person?.short_name ||
     person?.full_name ||
     user?.email ||
-    "Пользователь"
+    "User"
   );
 }
 
@@ -99,9 +106,9 @@ async function loadUserSessionSnapshot(): Promise<
         person: null,
         actor: null,
         isAuthenticated: false,
-        error: "Не удалось прочитать ответ /api/me.",
-        syncStatus: "Сессия не определена.",
-        displayName: "Гость",
+        error: "Could not read /api/me response.",
+        syncStatus: "Session is not defined.",
+        displayName: "Guest",
         email: null,
         initials: "G",
       };
@@ -113,9 +120,9 @@ async function loadUserSessionSnapshot(): Promise<
         person: null,
         actor: null,
         isAuthenticated: false,
-        error: meData.error || "Ошибка проверки пользователя.",
-        syncStatus: "Пользователь не вошёл.",
-        displayName: "Гость",
+        error: meData.error || "User check error.",
+        syncStatus: "User is not signed in.",
+        displayName: "Guest",
         email: null,
         initials: "G",
       };
@@ -130,8 +137,8 @@ async function loadUserSessionSnapshot(): Promise<
         actor: null,
         isAuthenticated: false,
         error: null,
-        syncStatus: "Пользователь не вошёл.",
-        displayName: "Гость",
+        syncStatus: "User is not signed in.",
+        displayName: "Guest",
         email: null,
         initials: "G",
       };
@@ -139,7 +146,7 @@ async function loadUserSessionSnapshot(): Promise<
 
     let person: SyncedPerson | null = null;
     let actor: SyncedActor | null = null;
-    let syncStatus = "Пользователь вошёл. Синхронизация person/actor не выполнялась.";
+    let syncStatus = "User signed in. person/actor sync was not executed.";
 
     try {
       const syncResponse = await fetch("/api/sync-user", {
@@ -151,12 +158,12 @@ async function loadUserSessionSnapshot(): Promise<
       if (syncResponse.ok) {
         person = syncData.person || null;
         actor = syncData.actor || null;
-        syncStatus = "Пользователь, person и actor синхронизированы.";
+        syncStatus = "User, person and actor are synchronized.";
       } else {
-        syncStatus = syncData.error || "Ошибка синхронизации пользователя.";
+        syncStatus = syncData.error || "User synchronization error.";
       }
     } catch {
-      syncStatus = "Не удалось выполнить /api/sync-user.";
+      syncStatus = "Could not run /api/sync-user.";
     }
 
     const email = user.email || null;
@@ -179,9 +186,9 @@ async function loadUserSessionSnapshot(): Promise<
       person: null,
       actor: null,
       isAuthenticated: false,
-      error: "Не удалось проверить сессию пользователя.",
-      syncStatus: "Сессия не определена.",
-      displayName: "Гость",
+      error: "Could not check user session.",
+      syncStatus: "Session is not defined.",
+      displayName: "Guest",
       email: null,
       initials: "G",
     };
@@ -196,6 +203,35 @@ function getCachedSessionPromise() {
   return cachedSessionPromise;
 }
 
+function useInterfaceLocale(): LocaleCode {
+  const [locale, setLocale] = useState<LocaleCode>("en");
+
+  useEffect(() => {
+    function readLocaleFromUrl() {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      setLocale(getLocaleSearchParam(new URLSearchParams(window.location.search)));
+    }
+
+    readLocaleFromUrl();
+    window.addEventListener("popstate", readLocaleFromUrl);
+
+    return () => {
+      window.removeEventListener("popstate", readLocaleFromUrl);
+    };
+  }, []);
+
+  return locale;
+}
+
+function useNavigationLabel(key: NavigationMessageKey) {
+  const locale = useInterfaceLocale();
+
+  return getNavigationMessage(key, locale);
+}
+
 export function useUserSessionClient(): UserSessionSnapshot {
   const [snapshot, setSnapshot] = useState<UserSessionSnapshot>({
     user: null,
@@ -204,8 +240,8 @@ export function useUserSessionClient(): UserSessionSnapshot {
     isAuthenticated: false,
     isLoading: true,
     error: null,
-    syncStatus: "Проверяю вход пользователя...",
-    displayName: "Пользователь",
+    syncStatus: "Checking user sign-in...",
+    displayName: "User",
     email: null,
     initials: "U",
   });
@@ -234,29 +270,37 @@ export function useUserSessionClient(): UserSessionSnapshot {
 
 export function UserSessionTopBarControls() {
   const session = useUserSessionClient();
+  const checkingSignInLabel = useNavigationLabel("navigation.checkingSignIn");
+  const guestLabel = useNavigationLabel("navigation.guest");
+  const loggedInLabel = useNavigationLabel("navigation.loggedIn");
+  const signInLabel = useNavigationLabel("navigation.signIn");
+  const signOutLabel = useNavigationLabel("navigation.signOut");
+  const settingsLabel = useNavigationLabel("navigation.settings");
 
   const subtitle = useMemo(() => {
     if (session.isLoading) {
-      return "Проверка входа...";
+      return checkingSignInLabel;
     }
 
     if (!session.isAuthenticated) {
-      return "Гость";
+      return guestLabel;
     }
 
-    return session.email || session.syncStatus;
+    return session.email || loggedInLabel;
   }, [
+    checkingSignInLabel,
+    guestLabel,
+    loggedInLabel,
     session.email,
     session.isAuthenticated,
     session.isLoading,
-    session.syncStatus,
   ]);
 
   if (session.isLoading) {
     return (
       <div className="flex items-center gap-2 rounded-lg bg-[#f5f6fb] px-3 py-2 text-[12px] font-semibold text-[#7c8099]">
         <span className="h-2 w-2 animate-pulse rounded-full bg-[#9ca3b8]" />
-        Проверяю вход...
+        {checkingSignInLabel}
       </div>
     );
   }
@@ -268,12 +312,12 @@ export function UserSessionTopBarControls() {
           href="/auth/login?connection=google-oauth2&prompt=select_account"
           className="rounded-lg bg-[#3b6ef8] px-3 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#2c5df0]"
         >
-          Войти
+          {signInLabel}
         </a>
 
         <div className="hidden items-center gap-2 rounded-lg bg-[#f5f6fb] px-3 py-2 text-[12px] font-semibold text-[#7c8099] md:flex">
           <span className="h-2 w-2 rounded-full bg-[#9ca3b8]" />
-          Гость
+          {guestLabel}
         </div>
       </>
     );
@@ -283,13 +327,13 @@ export function UserSessionTopBarControls() {
     <>
       <div className="hidden items-center gap-2 rounded-lg border border-[#bbf7d0] bg-[#f0fff4] px-3 py-2 text-[12px] font-semibold text-[#15803d] md:flex">
         <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
-        Вы вошли
+        {loggedInLabel}
       </div>
 
       <a
         href="/auth/profile"
         className="flex items-center gap-2 rounded-lg py-1.5 pl-2 pr-2 transition-colors hover:bg-gray-50"
-        title={session.syncStatus}
+        title={loggedInLabel}
       >
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#3b6ef8] to-[#6f42f5] text-[11px] font-bold text-white">
           {session.initials}
@@ -308,7 +352,7 @@ export function UserSessionTopBarControls() {
       <a
         href="/privacy-audit"
         className="flex h-9 w-9 items-center justify-center rounded-lg border border-[rgba(0,0,0,0.08)] bg-white text-[#5a5f7a] transition-colors hover:bg-[#f5f6fb] hover:text-[#3b6ef8]"
-        title="Настройки"
+        title={settingsLabel}
       >
         <Settings size={15} />
       </a>
@@ -317,7 +361,7 @@ export function UserSessionTopBarControls() {
         href="/auth/logout"
         className="hidden rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 py-2 text-[12px] font-semibold text-[#5a5f7a] transition-colors hover:bg-[#f5f6fb] md:inline-flex"
       >
-        Выйти
+        {signOutLabel}
       </a>
     </>
   );
@@ -329,11 +373,14 @@ export function UserSessionMiniStatus({
   readonly className?: string;
 }) {
   const session = useUserSessionClient();
+  const checkingSignInLabel = useNavigationLabel("navigation.checkingSignIn");
+  const notSignedInLabel = useNavigationLabel("navigation.notSignedIn");
+  const loggedInLabel = useNavigationLabel("navigation.loggedIn");
 
   if (session.isLoading) {
     return (
       <div className={`text-[10.5px] leading-none text-[#9ca3b8] ${className}`}>
-        Проверяю вход...
+        {checkingSignInLabel}
       </div>
     );
   }
@@ -341,14 +388,14 @@ export function UserSessionMiniStatus({
   if (!session.isAuthenticated) {
     return (
       <div className={`text-[10.5px] leading-none text-[#ef4444] ${className}`}>
-        Не выполнен вход
+        {notSignedInLabel}
       </div>
     );
   }
 
   return (
     <div className={`text-[10.5px] leading-none text-[#22a652] ${className}`}>
-      Вы вошли как: {session.displayName}
+      {loggedInLabel}: {session.displayName}
     </div>
   );
 }

@@ -1,3 +1,10 @@
+import {
+  getMessage,
+  normalizeLocale,
+  type LocaleCode,
+  type MessageParams,
+} from "@/i18n";
+
 import { supabase } from "../../../lib/supabase";
 import RequestCertificateButton from "./components/RequestCertificateButton";
 
@@ -115,8 +122,129 @@ type RewardsCatalogPageProps = {
   searchParams?: Promise<{
     q?: string;
     paymentMode?: string;
+    locale?: string;
   }>;
 };
+
+type RewardsMessageKey =
+  | "rewards.afterExpiry"
+  | "rewards.allRewards"
+  | "rewards.apply"
+  | "rewards.booking"
+  | "rewards.businessDirectory"
+  | "rewards.cancellable"
+  | "rewards.cancellationWindow"
+  | "rewards.cooldownAfterCancellation"
+  | "rewards.coveredByPoints"
+  | "rewards.currentPrice"
+  | "rewards.days"
+  | "rewards.description"
+  | "rewards.home"
+  | "rewards.important"
+  | "rewards.importantText"
+  | "rewards.moneyPayment"
+  | "rewards.moneyPlusPoints"
+  | "rewards.myCertificates"
+  | "rewards.myPurchaseConfirmations"
+  | "rewards.noDescription"
+  | "rewards.noResults"
+  | "rewards.notSpecified"
+  | "rewards.offers"
+  | "rewards.openBusinessProfile"
+  | "rewards.paymentMode"
+  | "rewards.pointAfterUsageConfirmation"
+  | "rewards.pointsOnly"
+  | "rewards.reference"
+  | "rewards.regularPrice"
+  | "rewards.search"
+  | "rewards.searchPlaceholder"
+  | "rewards.terms"
+  | "rewards.title"
+  | "rewards.transferable"
+  | "rewards.unknownOrganization"
+  | "rewards.untitled"
+  | "rewards.usageConfirmation"
+  | "rewards.validity"
+  | "rewards.yes"
+  | "rewards.no"
+  | "rewards.oneHour"
+  | "rewards.hours"
+  | "rewards.minutes";
+
+type RewardsTranslate = (
+  key: RewardsMessageKey,
+  params?: MessageParams,
+) => string;
+
+const rewardsMessages: Record<RewardsMessageKey, Record<LocaleCode, string>> = {
+  "rewards.title": {
+    ru: "Каталог наград и сертификатов",
+    pl: "Katalog nagród i certyfikatów",
+    en: "Rewards / certificates catalog",
+    es: "Catálogo de recompensas y certificados",
+    uk: "Каталог винагород і сертифікатів",
+    de: "Katalog der Prämien und Zertifikate",
+    cs: "Katalog odměn a certifikátů",
+  },
+  "rewards.description": {
+    ru: "Публичный список активных наград и сертификатов, где POINTS используются как полная или частичная оплата.",
+    pl: "Publiczna lista aktywnych nagród i certyfikatów, w których POINTS są używane jako pełna lub częściowa płatność.",
+    en: "Public list of active rewards and certificates where points are used as full or partial payment.",
+    es: "Lista pública de recompensas y certificados activos donde POINTS se usan como pago total o parcial.",
+    uk: "Публічний список активних винагород і сертифікатів, де POINTS використовуються як повна або часткова оплата.",
+    de: "Öffentliche Liste aktiver Prämien und Zertifikate, bei denen POINTS als vollständige oder teilweise Zahlung verwendet werden.",
+    cs: "Veřejný seznam aktivních odměn a certifikátů, kde se POINTS používají jako úplná nebo částečná platba.",
+  },
+  "rewards.home": { ru: "Главная", pl: "Strona główna", en: "Home", es: "Inicio", uk: "Головна", de: "Startseite", cs: "Domů" },
+  "rewards.businessDirectory": { ru: "Каталог предприятий", pl: "Katalog firm", en: "Business directory", es: "Directorio de empresas", uk: "Каталог підприємств", de: "Unternehmensverzeichnis", cs: "Katalog firem" },
+  "rewards.offers": { ru: "Предложения", pl: "Oferty", en: "Offers", es: "Ofertas", uk: "Пропозиції", de: "Angebote", cs: "Nabídky" },
+  "rewards.myPurchaseConfirmations": { ru: "Мои подтверждения покупок", pl: "Moje potwierdzenia zakupów", en: "My purchase confirmations", es: "Mis confirmaciones de compra", uk: "Мої підтвердження покупок", de: "Meine Kaufbestätigungen", cs: "Moje potvrzení nákupů" },
+  "rewards.myCertificates": { ru: "Мои сертификаты", pl: "Moje certyfikaty", en: "My certificates", es: "Mis certificados", uk: "Мої сертифікати", de: "Meine Zertifikate", cs: "Moje certifikáty" },
+  "rewards.search": { ru: "Поиск", pl: "Szukaj", en: "Search", es: "Buscar", uk: "Пошук", de: "Suche", cs: "Hledat" },
+  "rewards.searchPlaceholder": { ru: "Искать по награде, сертификату, описанию или организации", pl: "Szukaj po nagrodzie, certyfikacie, opisie lub organizacji", en: "Search by reward, certificate, description or organization", es: "Buscar por recompensa, certificado, descripción u organización", uk: "Шукати за винагородою, сертифікатом, описом або організацією", de: "Nach Prämie, Zertifikat, Beschreibung oder Organisation suchen", cs: "Hledat podle odměny, certifikátu, popisu nebo organizace" },
+  "rewards.paymentMode": { ru: "Способ оплаты", pl: "Sposób płatności", en: "Payment mode", es: "Modo de pago", uk: "Спосіб оплати", de: "Zahlungsart", cs: "Způsob platby" },
+  "rewards.allRewards": { ru: "Все награды", pl: "Wszystkie nagrody", en: "All rewards", es: "Todas las recompensas", uk: "Усі винагороди", de: "Alle Prämien", cs: "Všechny odměny" },
+  "rewards.pointsOnly": { ru: "Только POINTS", pl: "Tylko POINTS", en: "Points only", es: "Solo POINTS", uk: "Лише POINTS", de: "Nur POINTS", cs: "Pouze POINTS" },
+  "rewards.moneyPlusPoints": { ru: "Деньги + POINTS", pl: "Pieniądze + POINTS", en: "Money + points", es: "Dinero + POINTS", uk: "Гроші + POINTS", de: "Geld + POINTS", cs: "Peníze + POINTS" },
+  "rewards.apply": { ru: "Применить", pl: "Zastosuj", en: "Apply", es: "Aplicar", uk: "Застосувати", de: "Anwenden", cs: "Použít" },
+  "rewards.noResults": { ru: "Публичные награды или сертификаты не найдены.", pl: "Nie znaleziono publicznych nagród ani certyfikatów.", en: "No public rewards or certificates found.", es: "No se encontraron recompensas ni certificados públicos.", uk: "Публічні винагороди або сертифікати не знайдені.", de: "Keine öffentlichen Prämien oder Zertifikate gefunden.", cs: "Nebyly nalezeny žádné veřejné odměny ani certifikáty." },
+  "rewards.untitled": { ru: "Награда без названия", pl: "Nagroda bez tytułu", en: "Untitled reward", es: "Recompensa sin título", uk: "Винагорода без назви", de: "Prämie ohne Titel", cs: "Odměna bez názvu" },
+  "rewards.unknownOrganization": { ru: "Неизвестная организация", pl: "Nieznana organizacja", en: "Unknown organization", es: "Organización desconocida", uk: "Невідома організація", de: "Unbekannte Organisation", cs: "Neznámá organizace" },
+  "rewards.noDescription": { ru: "Описание не указано.", pl: "Brak opisu.", en: "No description provided.", es: "No se proporcionó descripción.", uk: "Опис не вказано.", de: "Keine Beschreibung vorhanden.", cs: "Popis není uveden." },
+  "rewards.currentPrice": { ru: "Текущая цена", pl: "Aktualna cena", en: "Current price", es: "Precio actual", uk: "Поточна ціна", de: "Aktueller Preis", cs: "Aktuální cena" },
+  "rewards.regularPrice": { ru: "Обычная цена", pl: "Cena regularna", en: "Regular price", es: "Precio regular", uk: "Звичайна ціна", de: "Regulärer Preis", cs: "Běžná cena" },
+  "rewards.pointAfterUsageConfirmation": { ru: "POINT после подтверждения использования", pl: "POINT po potwierdzeniu użycia", en: "POINT after usage confirmation", es: "POINT tras confirmar el uso", uk: "POINT після підтвердження використання", de: "POINT nach Nutzungsbestätigung", cs: "POINT po potvrzení použití" },
+  "rewards.moneyPayment": { ru: "Оплата деньгами", pl: "Płatność pieniędzmi", en: "Money payment", es: "Pago con dinero", uk: "Оплата грошима", de: "Geldzahlung", cs: "Platba penězi" },
+  "rewards.coveredByPoints": { ru: "Покрывается POINTS", pl: "Pokryte przez POINTS", en: "Covered by points", es: "Cubierto por POINTS", uk: "Покривається POINTS", de: "Durch POINTS gedeckt", cs: "Kryto pomocí POINTS" },
+  "rewards.validity": { ru: "Срок действия", pl: "Ważność", en: "Validity", es: "Validez", uk: "Строк дії", de: "Gültigkeit", cs: "Platnost" },
+  "rewards.days": { ru: "{count} дн.", pl: "{count} dni", en: "{count} days", es: "{count} días", uk: "{count} дн.", de: "{count} Tage", cs: "{count} dní" },
+  "rewards.cancellationWindow": { ru: "Окно отмены", pl: "Okno anulowania", en: "Cancellation window", es: "Ventana de cancelación", uk: "Вікно скасування", de: "Stornierungsfenster", cs: "Okno pro zrušení" },
+  "rewards.cooldownAfterCancellation": { ru: "Пауза после отмены", pl: "Przerwa po anulowaniu", en: "Cooldown after cancellation", es: "Pausa tras cancelación", uk: "Пауза після скасування", de: "Sperrzeit nach Stornierung", cs: "Pauza po zrušení" },
+  "rewards.afterExpiry": { ru: "После истечения срока зарезервированные {pointsCurrency} будут списаны после окончания действия сертификата.", pl: "Po wygaśnięciu zarezerwowane {pointsCurrency} zostaną pobrane po zakończeniu ważności certyfikatu.", en: "After expiry, reserved {pointsCurrency} will be charged after certificate expiration.", es: "Tras el vencimiento, los {pointsCurrency} reservados se cobrarán después de que expire el certificado.", uk: "Після завершення строку зарезервовані {pointsCurrency} будуть списані після закінчення дії сертифіката.", de: "Nach Ablauf werden reservierte {pointsCurrency} nach Ablauf des Zertifikats belastet.", cs: "Po vypršení budou rezervované {pointsCurrency} strženy po vypršení certifikátu." },
+  "rewards.booking": { ru: "Бронирование", pl: "Rezerwacja", en: "Booking", es: "Reserva", uk: "Бронювання", de: "Buchung", cs: "Rezervace" },
+  "rewards.usageConfirmation": { ru: "Подтверждение использования", pl: "Potwierdzenie użycia", en: "Usage confirmation", es: "Confirmación de uso", uk: "Підтвердження використання", de: "Nutzungsbestätigung", cs: "Potvrzení použití" },
+  "rewards.transferable": { ru: "Можно передать", pl: "Można przekazać", en: "Transferable", es: "Transferible", uk: "Можна передати", de: "Übertragbar", cs: "Přenosné" },
+  "rewards.cancellable": { ru: "Можно отменить", pl: "Można anulować", en: "Cancellable", es: "Cancelable", uk: "Можна скасувати", de: "Stornierbar", cs: "Lze zrušit" },
+  "rewards.reference": { ru: "Справочно", pl: "Odniesienie", en: "Reference", es: "Referencia", uk: "Довідково", de: "Referenz", cs: "Reference" },
+  "rewards.important": { ru: "Важно", pl: "Ważne", en: "Important", es: "Importante", uk: "Важливо", de: "Wichtig", cs: "Důležité" },
+  "rewards.importantText": { ru: "Вы можете отменить этот сертификат только в течение окна отмены. Если вы не используете его до конца срока действия, зарезервированные POINTS будут списаны после истечения срока и не вернутся на доступный баланс.", pl: "Możesz anulować ten certyfikat tylko w oknie anulowania. Jeśli nie wykorzystasz go przed końcem ważności, zarezerwowane POINTS zostaną pobrane po wygaśnięciu i nie wrócą do dostępnego salda.", en: "You can cancel this certificate only during the cancellation window. If you do not use it before the validity period ends, reserved POINTS will be charged after expiration and will not return to your available balance.", es: "Puedes cancelar este certificado solo durante la ventana de cancelación. Si no lo usas antes de que termine la validez, los POINTS reservados se cobrarán después del vencimiento y no volverán a tu saldo disponible.", uk: "Ви можете скасувати цей сертифікат лише протягом вікна скасування. Якщо ви не використаєте його до завершення строку дії, зарезервовані POINTS будуть списані після завершення строку й не повернуться на доступний баланс.", de: "Du kannst dieses Zertifikat nur innerhalb des Stornierungsfensters stornieren. Wenn du es vor Ablauf der Gültigkeit nicht nutzt, werden reservierte POINTS nach Ablauf belastet und kehren nicht zum verfügbaren Guthaben zurück.", cs: "Tento certifikát můžeš zrušit pouze během okna pro zrušení. Pokud ho nevyužiješ před koncem platnosti, rezervované POINTS budou po vypršení strženy a nevrátí se do dostupného zůstatku." },
+  "rewards.terms": { ru: "Условия", pl: "Warunki", en: "Terms", es: "Condiciones", uk: "Умови", de: "Bedingungen", cs: "Podmínky" },
+  "rewards.openBusinessProfile": { ru: "Открыть профиль предприятия", pl: "Otwórz profil firmy", en: "Open business profile", es: "Abrir perfil de empresa", uk: "Відкрити профіль підприємства", de: "Unternehmensprofil öffnen", cs: "Otevřít profil firmy" },
+  "rewards.notSpecified": { ru: "Не указано", pl: "Nie podano", en: "Not specified", es: "No especificado", uk: "Не вказано", de: "Nicht angegeben", cs: "Neuvedeno" },
+  "rewards.yes": { ru: "Да", pl: "Tak", en: "Yes", es: "Sí", uk: "Так", de: "Ja", cs: "Ano" },
+  "rewards.no": { ru: "Нет", pl: "Nie", en: "No", es: "No", uk: "Ні", de: "Nein", cs: "Ne" },
+  "rewards.minutes": { ru: "{count} мин.", pl: "{count} min", en: "{count} minutes", es: "{count} min", uk: "{count} хв", de: "{count} Min.", cs: "{count} min" },
+  "rewards.oneHour": { ru: "1 час", pl: "1 godzina", en: "1 hour", es: "1 hora", uk: "1 година", de: "1 Stunde", cs: "1 hodina" },
+  "rewards.hours": { ru: "{count} ч", pl: "{count} godz.", en: "{count} hours", es: "{count} horas", uk: "{count} год", de: "{count} Stunden", cs: "{count} hodin" },
+};
+
+function getRewardsMessage(
+  key: RewardsMessageKey,
+  locale: LocaleCode,
+  params?: MessageParams,
+): string {
+  return getMessage(rewardsMessages, key, locale, params);
+}
 
 function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   if (!value) {
@@ -132,45 +260,49 @@ function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
 
 function formatMoney(
   value: number | string | null | undefined,
-  currency: string | null | undefined
+  currency: string | null | undefined,
+  t: RewardsTranslate,
 ) {
   if (value === null || value === undefined || value === "") {
-    return "Not specified";
+    return t("rewards.notSpecified");
   }
 
   return `${value} ${currency || ""}`.trim();
 }
 
-function formatMinutes(value: number | null | undefined) {
+function formatMinutes(value: number | null | undefined, t: RewardsTranslate) {
   if (value === null || value === undefined) {
-    return "Not specified";
+    return t("rewards.notSpecified");
   }
 
   if (value < 60) {
-    return `${value} minutes`;
+    return t("rewards.minutes", { count: value });
   }
 
   if (value === 60) {
-    return "1 hour";
+    return t("rewards.oneHour");
   }
 
   if (value % 60 === 0) {
-    return `${value / 60} hours`;
+    return t("rewards.hours", { count: value / 60 });
   }
 
-  return `${value} minutes`;
+  return t("rewards.minutes", { count: value });
 }
 
-function getPaymentModeLabel(paymentMode: string | null | undefined) {
+function getPaymentModeLabel(
+  paymentMode: string | null | undefined,
+  t: RewardsTranslate,
+) {
   if (paymentMode === "points_only") {
-    return "Points only";
+    return t("rewards.pointsOnly");
   }
 
   if (paymentMode === "mixed") {
-    return "Money + points";
+    return t("rewards.moneyPlusPoints");
   }
 
-  return paymentMode || "Not specified";
+  return paymentMode || t("rewards.notSpecified");
 }
 
 function getPaymentModeStyle(paymentMode: string | null | undefined) {
@@ -197,8 +329,8 @@ function getPaymentModeStyle(paymentMode: string | null | undefined) {
   };
 }
 
-function getBooleanLabel(value: boolean | null | undefined) {
-  return value ? "Yes" : "No";
+function getBooleanLabel(value: boolean | null | undefined, t: RewardsTranslate) {
+  return value ? t("rewards.yes") : t("rewards.no");
 }
 
 function getDirectoryHref(offer: RewardOffer) {
@@ -212,6 +344,12 @@ function getDirectoryHref(offer: RewardOffer) {
   }
 
   return "/directory";
+}
+
+function withLocaleHref(href: string, locale: LocaleCode) {
+  const separator = href.includes("?") ? "&" : "?";
+
+  return `${href}${separator}locale=${locale}`;
 }
 
 async function getRewardOffers(): Promise<{
@@ -359,6 +497,9 @@ export default async function RewardsCatalogPage({
 
   const searchText = resolvedSearchParams?.q?.trim() ?? "";
   const paymentModeFilter = resolvedSearchParams?.paymentMode ?? "all";
+  const locale = normalizeLocale(resolvedSearchParams?.locale);
+  const t: RewardsTranslate = (key, params) =>
+    getRewardsMessage(key, locale, params);
 
   const { rewardOffers, errorMessage } = await getRewardOffers();
 
@@ -411,7 +552,7 @@ export default async function RewardsCatalogPage({
               margin: "0 0 12px",
             }}
           >
-            Rewards / certificates catalog
+            {t("rewards.title")}
           </h1>
 
           <p
@@ -423,8 +564,7 @@ export default async function RewardsCatalogPage({
               lineHeight: "1.5",
             }}
           >
-            Public list of active rewards and certificates where points are used
-            as full or partial payment.
+            {t("rewards.description")}
           </p>
 
           <nav
@@ -436,24 +576,30 @@ export default async function RewardsCatalogPage({
               flexWrap: "wrap",
             }}
           >
-            <a href="/" style={{ color: "#2563eb" }}>
-              Home
+            <a href={withLocaleHref("/", locale)} style={{ color: "#2563eb" }}>
+              {t("rewards.home")}
             </a>
 
-            <a href="/directory" style={{ color: "#2563eb" }}>
-              Business directory
+            <a href={withLocaleHref("/directory", locale)} style={{ color: "#2563eb" }}>
+              {t("rewards.businessDirectory")}
             </a>
 
-            <a href="/offers" style={{ color: "#2563eb" }}>
-              Offers
+            <a href={withLocaleHref("/offers", locale)} style={{ color: "#2563eb" }}>
+              {t("rewards.offers")}
             </a>
 
-            <a href="/my-purchase-confirmations" style={{ color: "#2563eb" }}>
-              My purchase confirmations
+            <a
+              href={withLocaleHref("/my-purchase-confirmations", locale)}
+              style={{ color: "#2563eb" }}
+            >
+              {t("rewards.myPurchaseConfirmations")}
             </a>
 
-            <a href="/my-certificates" style={{ color: "#2563eb" }}>
-              My certificates
+            <a
+              href={withLocaleHref("/my-certificates", locale)}
+              style={{ color: "#2563eb" }}
+            >
+              {t("rewards.myCertificates")}
             </a>
           </nav>
         </header>
@@ -473,12 +619,14 @@ export default async function RewardsCatalogPage({
             alignItems: "end",
           }}
         >
+          <input type="hidden" name="locale" value={locale} />
+
           <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-            Search
+            {t("rewards.search")}
             <input
               name="q"
               defaultValue={searchText}
-              placeholder="Search by reward, certificate, description or organization"
+              placeholder={t("rewards.searchPlaceholder")}
               style={{
                 border: "1px solid #cccccc",
                 borderRadius: "8px",
@@ -490,7 +638,7 @@ export default async function RewardsCatalogPage({
           </label>
 
           <label style={{ display: "grid", gap: "8px", fontWeight: 700 }}>
-            Payment mode
+            {t("rewards.paymentMode")}
             <select
               name="paymentMode"
               defaultValue={paymentModeFilter}
@@ -502,9 +650,9 @@ export default async function RewardsCatalogPage({
                 fontWeight: 400,
               }}
             >
-              <option value="all">All rewards</option>
-              <option value="points_only">Points only</option>
-              <option value="mixed">Money + points</option>
+              <option value="all">{t("rewards.allRewards")}</option>
+              <option value="points_only">{t("rewards.pointsOnly")}</option>
+              <option value="mixed">{t("rewards.moneyPlusPoints")}</option>
             </select>
           </label>
 
@@ -520,7 +668,7 @@ export default async function RewardsCatalogPage({
               cursor: "pointer",
             }}
           >
-            Apply
+            {t("rewards.apply")}
           </button>
         </form>
 
@@ -547,7 +695,7 @@ export default async function RewardsCatalogPage({
               background: "#fefce8",
             }}
           >
-            No public rewards or certificates found.
+            {t("rewards.noResults")}
           </section>
         ) : null}
 
@@ -564,7 +712,7 @@ export default async function RewardsCatalogPage({
                 offer.certificatePaymentMode
               );
 
-              const directoryHref = getDirectoryHref(offer);
+              const directoryHref = withLocaleHref(getDirectoryHref(offer), locale);
 
               return (
                 <article
@@ -595,11 +743,11 @@ export default async function RewardsCatalogPage({
                           lineHeight: "1.25",
                         }}
                       >
-                        {offer.title ?? "Untitled reward"}
+                        {offer.title ?? t("rewards.untitled")}
                       </h2>
 
                       <p style={{ margin: 0, color: "#555555" }}>
-                        {offer.organizationName ?? "Unknown organization"}
+                        {offer.organizationName ?? t("rewards.unknownOrganization")}
                       </p>
                     </div>
 
@@ -614,12 +762,12 @@ export default async function RewardsCatalogPage({
                         ...paymentModeStyle,
                       }}
                     >
-                      {getPaymentModeLabel(offer.certificatePaymentMode)}
+                      {getPaymentModeLabel(offer.certificatePaymentMode, t)}
                     </span>
                   </div>
 
                   <p style={{ margin: 0, color: "#333333", lineHeight: "1.5" }}>
-                    {offer.description || "No description provided."}
+                    {offer.description || t("rewards.noDescription")}
                   </p>
 
                   <section
@@ -638,9 +786,9 @@ export default async function RewardsCatalogPage({
                       }}
                     >
                       <div style={{ color: "#666666", marginBottom: "6px" }}>
-                        Current price
+                        {t("rewards.currentPrice")}
                       </div>
-                      <strong>{formatMoney(offer.price, offer.currency)}</strong>
+                      <strong>{formatMoney(offer.price, offer.currency, t)}</strong>
                     </div>
 
                     <div
@@ -652,10 +800,10 @@ export default async function RewardsCatalogPage({
                       }}
                     >
                       <div style={{ color: "#666666", marginBottom: "6px" }}>
-                        Regular price
+                        {t("rewards.regularPrice")}
                       </div>
                       <strong>
-                        {formatMoney(offer.regularPrice, offer.currency)}
+                        {formatMoney(offer.regularPrice, offer.currency, t)}
                       </strong>
                     </div>
 
@@ -668,12 +816,13 @@ export default async function RewardsCatalogPage({
                       }}
                     >
                       <div style={{ color: "#1e3a8a", marginBottom: "6px" }}>
-                        POINT after usage confirmation
+                        {t("rewards.pointAfterUsageConfirmation")}
                       </div>
                       <strong>
                         {formatMoney(
                           offer.certificatePointsPrice ?? 0,
-                          offer.pointsCurrencyCode ?? "POINT"
+                          offer.pointsCurrencyCode ?? "POINT",
+                          t,
                         )}
                       </strong>
                     </div>
@@ -687,12 +836,13 @@ export default async function RewardsCatalogPage({
                       }}
                     >
                       <div style={{ color: "#666666", marginBottom: "6px" }}>
-                        Money payment
+                        {t("rewards.moneyPayment")}
                       </div>
                       <strong>
                         {formatMoney(
                           offer.certificateMoneyPrice,
-                          offer.certificateCurrency ?? offer.currency
+                          offer.certificateCurrency ?? offer.currency,
+                          t,
                         )}
                       </strong>
                     </div>
@@ -710,54 +860,60 @@ export default async function RewardsCatalogPage({
                     }}
                   >
                     <p style={{ margin: 0 }}>
-                      <strong>Covered by points:</strong>{" "}
+                      <strong>{t("rewards.coveredByPoints")}:</strong>{" "}
                       {formatMoney(
                         offer.certificatePointsCoveredAmount,
-                        offer.certificateCurrency ?? offer.currency
+                        offer.certificateCurrency ?? offer.currency,
+                        t,
                       )}
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Validity:</strong>{" "}
-                      {offer.certificateValidityDays ?? "Not specified"} days
+                      <strong>{t("rewards.validity")}:</strong>{" "}
+                      {offer.certificateValidityDays === null ||
+                      offer.certificateValidityDays === undefined
+                        ? t("rewards.notSpecified")
+                        : t("rewards.days", {
+                            count: offer.certificateValidityDays,
+                          })}
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Cancellation window:</strong>{" "}
-                      {formatMinutes(offer.cancellationWindowMinutes)}
+                      <strong>{t("rewards.cancellationWindow")}:</strong>{" "}
+                      {formatMinutes(offer.cancellationWindowMinutes, t)}
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Cooldown after cancellation:</strong>{" "}
-                      {formatMinutes(offer.cooldownAfterCancellationMinutes)}
+                      <strong>{t("rewards.cooldownAfterCancellation")}:</strong>{" "}
+                      {formatMinutes(offer.cooldownAfterCancellationMinutes, t)}
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>After expiry:</strong> reserved{" "}
-                      {offer.pointsCurrencyCode ?? "POINT"} will be charged
-                      after certificate expiration.
+                      {t("rewards.afterExpiry", {
+                        pointsCurrency: offer.pointsCurrencyCode ?? "POINT",
+                      })}
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Booking:</strong>{" "}
-                      {getBooleanLabel(offer.requiresBooking)} /{" "}
-                      {offer.bookingMode ?? "not specified"}
+                      <strong>{t("rewards.booking")}:</strong>{" "}
+                      {getBooleanLabel(offer.requiresBooking, t)} /{" "}
+                      {offer.bookingMode ?? t("rewards.notSpecified")}
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Usage confirmation:</strong>{" "}
-                      {getBooleanLabel(offer.requiresSellerConfirmation)}
+                      <strong>{t("rewards.usageConfirmation")}:</strong>{" "}
+                      {getBooleanLabel(offer.requiresSellerConfirmation, t)}
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Transferable:</strong>{" "}
-                      {getBooleanLabel(offer.isTransferable)} /{" "}
-                      <strong>Cancellable:</strong>{" "}
-                      {getBooleanLabel(offer.isCancellable)}
+                      <strong>{t("rewards.transferable")}:</strong>{" "}
+                      {getBooleanLabel(offer.isTransferable, t)} /{" "}
+                      <strong>{t("rewards.cancellable")}:</strong>{" "}
+                      {getBooleanLabel(offer.isCancellable, t)}
                     </p>
 
                     <p style={{ margin: 0 }}>
-                      <strong>Reference:</strong> 1{" "}
+                      <strong>{t("rewards.reference")}:</strong> 1{" "}
                       {offer.pointsCurrencyCode ?? "POINT"} ={" "}
                       {offer.referenceValuePerPoint ?? 1}{" "}
                       {offer.referenceCurrency ?? "EUR"}
@@ -774,11 +930,8 @@ export default async function RewardsCatalogPage({
                       lineHeight: "1.45",
                     }}
                   >
-                    <strong>Important:</strong> You can cancel this certificate
-                    only during the cancellation window. If you do not use it
-                    before the validity period ends, reserved points will be
-                    charged after expiration and will not return to your
-                    available balance.
+                    <strong>{t("rewards.important")}:</strong>{" "}
+                    {t("rewards.importantText")}
                   </section>
 
                   {offer.certificateTerms ? (
@@ -791,7 +944,7 @@ export default async function RewardsCatalogPage({
                         lineHeight: "1.5",
                       }}
                     >
-                      <strong>Terms:</strong>
+                      <strong>{t("rewards.terms")}:</strong>
                       <p style={{ margin: "6px 0 0" }}>
                         {offer.certificateTerms}
                       </p>
@@ -820,7 +973,7 @@ export default async function RewardsCatalogPage({
                         fontWeight: 700,
                       }}
                     >
-                      Open business profile
+                      {t("rewards.openBusinessProfile")}
                     </a>
 
                     <RequestCertificateButton
@@ -829,6 +982,7 @@ export default async function RewardsCatalogPage({
                       pointsCurrencyCode={offer.pointsCurrencyCode}
                       moneyPrice={offer.certificateMoneyPrice}
                       currency={offer.certificateCurrency ?? offer.currency}
+                      locale={locale}
                     />
                   </div>
                 </article>
