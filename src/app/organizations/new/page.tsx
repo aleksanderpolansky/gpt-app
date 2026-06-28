@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+
+import {
+  getLocaleSearchParam,
+  getOrganizationsMessage,
+  type LocaleCode,
+  type OrganizationsMessageKey,
+} from "@/i18n";
 
 type SemanticIntakeCandidate = {
   label?: string;
@@ -87,38 +94,95 @@ type CreateOrganizationResponse = {
   };
 };
 
+type OrganizationsTranslate = (key: OrganizationsMessageKey) => string;
+
 const ORGANIZATION_TYPES = [
-  {
-    value: "private_business",
-    label: "Индивидуальный предприниматель / частный бизнес",
-  },
-  {
-    value: "company",
-    label: "Компания",
-  },
-  {
-    value: "non_profit",
-    label: "Некоммерческая организация",
-  },
-  {
-    value: "public_institution",
-    label: "Публичная / муниципальная организация",
-  },
-];
+  "private_business",
+  "company",
+  "non_profit",
+  "public_institution",
+] as const;
+
+type OrganizationTypeValue = (typeof ORGANIZATION_TYPES)[number];
+
+function useInterfaceLocale(): LocaleCode {
+  const [locale, setLocale] = useState<LocaleCode>("en");
+
+  useEffect(() => {
+    function readLocaleFromUrl() {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      setLocale(getLocaleSearchParam(new URLSearchParams(window.location.search)));
+    }
+
+    readLocaleFromUrl();
+    window.addEventListener("popstate", readLocaleFromUrl);
+
+    return () => {
+      window.removeEventListener("popstate", readLocaleFromUrl);
+    };
+  }, []);
+
+  return locale;
+}
 
 function normalizeCountryCode(value: string) {
   return value.trim().toUpperCase();
 }
 
-function formatOptional(value: string | null | undefined, fallback = "не указано") {
+function formatOptional(
+  value: string | null | undefined,
+  fallback: string,
+) {
   const trimmedValue = value?.trim();
 
   return trimmedValue && trimmedValue.length > 0 ? trimmedValue : fallback;
 }
 
+function getOrganizationTypeLabel(
+  type: OrganizationTypeValue,
+  t: OrganizationsTranslate,
+) {
+  switch (type) {
+    case "private_business":
+      return t("organizations.organizationType.privateBusiness");
+    case "company":
+      return t("organizations.organizationType.company");
+    case "non_profit":
+      return t("organizations.organizationType.nonProfit");
+    case "public_institution":
+      return t("organizations.organizationType.publicInstitution");
+  }
+}
+
+function getSemanticIntakeStatusLabel(
+  status: SemanticIntakeStatus,
+  t: OrganizationsTranslate,
+) {
+  switch (status) {
+    case "idle":
+      return t("organizations.aiCategory.waiting");
+    case "running":
+      return t("organizations.aiCategory.running");
+    case "done":
+      return t("organizations.aiCategory.assigned");
+    case "failed":
+      return t("organizations.aiCategory.notAssigned");
+  }
+}
+
 export default function NewOrganizationPage() {
+  const locale = useInterfaceLocale();
+  const t = useMemo<OrganizationsTranslate>(
+    () => (key) => getOrganizationsMessage(key, locale),
+    [locale],
+  );
+
   const [organizationName, setOrganizationName] = useState("");
-  const [organizationType, setOrganizationType] = useState("private_business");
+  const [organizationType, setOrganizationType] =
+    useState<OrganizationTypeValue>("private_business");
   const [description, setDescription] = useState("");
 
   const [includeLocation, setIncludeLocation] = useState(true);
@@ -142,7 +206,7 @@ export default function NewOrganizationPage() {
 
   const locationPreview = useMemo(() => {
     if (!includeLocation) {
-      return "Локация не указана. Её можно добавить или уточнить позже в карточке предприятия.";
+      return t("organizations.location.missingLong");
     }
 
     const parts = [
@@ -152,11 +216,11 @@ export default function NewOrganizationPage() {
     ].filter(Boolean);
 
     if (parts.length === 0) {
-      return "Локация включена, но пока не заполнена.";
+      return t("organizations.location.enabledEmpty");
     }
 
     return parts.join(", ");
-  }, [city, countryCode, district, includeLocation]);
+  }, [city, countryCode, district, includeLocation, t]);
 
   const canSubmit =
     !isSubmitting &&
@@ -198,7 +262,7 @@ export default function NewOrganizationPage() {
       const data = (await response.json()) as CreateOrganizationResponse;
 
       if (!response.ok || !data.ok) {
-        setErrorMessage(data.error ?? "Не удалось создать предприятие.");
+        setErrorMessage(data.error ?? t("organizations.error.createFailed"));
         return;
       }
 
@@ -213,17 +277,15 @@ export default function NewOrganizationPage() {
         setSemanticIntakeStatus("failed");
         setSemanticIntakeError(
           serverSemanticIntake.error ??
-            "Серверная AI-категоризация предприятия не выполнена.",
+            t("organizations.aiCategory.serverFailed"),
         );
       } else {
         setSemanticIntakeStatus("failed");
-        setSemanticIntakeError(
-          "Сервер не вернул результат AI-категоризации предприятия.",
-        );
+        setSemanticIntakeError(t("organizations.aiCategory.notReturned"));
       }
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Неизвестная ошибка создания предприятия.",
+        error instanceof Error ? error.message : t("organizations.error.createUnknown"),
       );
     } finally {
       setIsSubmitting(false);
@@ -235,17 +297,15 @@ export default function NewOrganizationPage() {
       <div className="mx-auto grid w-full max-w-[980px] gap-5">
         <header className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
           <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7c8099]">
-            Commercial core / Enterprise setup
+            {t("organizations.create.kicker")}
           </div>
 
           <h1 className="text-[30px] font-bold tracking-[-0.03em] text-[#111827]">
-            Создать предприятие
+            {t("organizations.create.heading")}
           </h1>
 
           <p className="mt-2 max-w-[760px] text-[14px] leading-6 text-[#5a5f7a]">
-            Предприятие — это коммерческий actor на платформе. После создания
-            можно добавить услугу как enterprise-owned Value Object, затем
-            создать предложение и подарочный сертификат на базе этой услуги.
+            {t("organizations.create.description")}
           </p>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -253,19 +313,19 @@ export default function NewOrganizationPage() {
               href="/organizations"
               className="rounded-full border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[12px] font-semibold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
             >
-              Мои предприятия
+              {t("organizations.nav.myOrganizations")}
             </Link>
             <Link
               href="/directory"
               className="rounded-full border border-[#e5e7eb] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] transition hover:bg-gray-50"
             >
-              Публичный каталог
+              {t("organizations.nav.publicDirectory")}
             </Link>
             <Link
               href="/value-objects/new"
               className="rounded-full border border-[#e5e7eb] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] transition hover:bg-gray-50"
             >
-              Добавить услугу
+              {t("organizations.actions.addService")}
             </Link>
           </div>
         </header>
@@ -274,12 +334,12 @@ export default function NewOrganizationPage() {
           <form className="grid gap-5" onSubmit={handleSubmit}>
             <div className="grid gap-2">
               <label className="text-[13px] font-semibold text-[#343854]">
-                Название предприятия
+                {t("organizations.form.name")}
               </label>
               <input
                 value={organizationName}
                 onChange={(event) => setOrganizationName(event.target.value)}
-                placeholder="Например: Aleksander Polański — masaż"
+                placeholder={t("organizations.form.namePlaceholder")}
                 className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
                 required
               />
@@ -287,16 +347,18 @@ export default function NewOrganizationPage() {
 
             <div className="grid gap-2">
               <label className="text-[13px] font-semibold text-[#343854]">
-                Тип предприятия
+                {t("organizations.form.organizationType")}
               </label>
               <select
                 value={organizationType}
-                onChange={(event) => setOrganizationType(event.target.value)}
+                onChange={(event) =>
+                  setOrganizationType(event.target.value as OrganizationTypeValue)
+                }
                 className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
               >
                 {ORGANIZATION_TYPES.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
+                  <option key={type} value={type}>
+                    {getOrganizationTypeLabel(type, t)}
                   </option>
                 ))}
               </select>
@@ -304,12 +366,12 @@ export default function NewOrganizationPage() {
 
             <div className="grid gap-2">
               <label className="text-[13px] font-semibold text-[#343854]">
-                Описание
+                {t("organizations.form.description")}
               </label>
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="Например: Relaksacyjny masaż w Szczecinie. Usługi masażu relaksacyjnego i regeneracyjnego."
+                placeholder={t("organizations.form.descriptionPlaceholder")}
                 rows={4}
                 className="w-full resize-y rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] leading-6 text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
               />
@@ -325,11 +387,10 @@ export default function NewOrganizationPage() {
                 />
                 <span>
                   <span className="block text-[13px] font-semibold text-[#343854]">
-                    Добавить базовую локацию
+                    {t("organizations.form.addBaseLocation")}
                   </span>
                   <span className="mt-1 block text-[12px] leading-5 text-[#7c8099]">
-                    Это не обязательный шаг. Если локация не указана, предприятие
-                    всё равно создаётся, а адрес можно уточнить позже.
+                    {t("organizations.form.baseLocationDescription")}
                   </span>
                 </span>
               </label>
@@ -338,7 +399,7 @@ export default function NewOrganizationPage() {
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
                   <div className="grid gap-2">
                     <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      Страна
+                      {t("organizations.form.country")}
                     </label>
                     <input
                       value={countryCode}
@@ -351,7 +412,7 @@ export default function NewOrganizationPage() {
 
                   <div className="grid gap-2">
                     <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      Город
+                      {t("organizations.form.city")}
                     </label>
                     <input
                       value={city}
@@ -363,12 +424,12 @@ export default function NewOrganizationPage() {
 
                   <div className="grid gap-2">
                     <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      Район
+                      {t("organizations.form.district")}
                     </label>
                     <input
                       value={district}
                       onChange={(event) => setDistrict(event.target.value)}
-                      placeholder="необязательно"
+                      placeholder={t("organizations.form.optional")}
                       className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
                     />
                   </div>
@@ -376,7 +437,9 @@ export default function NewOrganizationPage() {
               ) : null}
 
               <div className="mt-4 rounded-xl border border-[#e5e7eb] bg-white px-4 py-3 text-[12px] leading-5 text-[#5a5f7a]">
-                <strong className="text-[#343854]">Как будет записано:</strong>{" "}
+                <strong className="text-[#343854]">
+                  {t("organizations.form.locationPreview")}
+                </strong>{" "}
                 {locationPreview}
               </div>
             </div>
@@ -392,7 +455,9 @@ export default function NewOrganizationPage() {
               disabled={!canSubmit}
               className="rounded-xl bg-[#3b6ef8] px-5 py-3 text-[14px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.24)] transition hover:bg-[#2f5fe3] disabled:cursor-not-allowed disabled:bg-[#aeb6c8] disabled:shadow-none"
             >
-              {isSubmitting ? "Создаю предприятие..." : "Создать предприятие"}
+              {isSubmitting
+                ? t("organizations.form.submitCreating")
+                : t("organizations.actions.createOrganization")}
             </button>
           </form>
         </section>
@@ -400,7 +465,7 @@ export default function NewOrganizationPage() {
         {result?.organization ? (
           <section className="rounded-[18px] border border-[#c7f2d4] bg-[#f0fdf4] p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#15803d]">
-              Предприятие создано
+              {t("organizations.create.successHeading")}
             </div>
 
             <h2 className="text-[24px] font-bold text-[#14532d]">
@@ -408,8 +473,7 @@ export default function NewOrganizationPage() {
             </h2>
 
             <p className="mt-2 text-[14px] leading-6 text-[#166534]">
-              Теперь можно добавить услугу как ценный объект предприятия, создать
-              предложение и затем сертификат на базе этого предложения.
+              {t("organizations.create.successDescription")}
             </p>
 
             <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -419,28 +483,28 @@ export default function NewOrganizationPage() {
                     href={`/value-objects/new?organizationId=${organizationId}`}
                     className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-center text-[13px] font-bold text-white transition hover:bg-[#2f5fe3]"
                   >
-                    Добавить услугу
+                    {t("organizations.actions.addService")}
                   </Link>
 
                   <Link
                     href={`/offers/new?organizationId=${organizationId}`}
                     className="rounded-xl border border-[#3b6ef8] bg-white px-4 py-3 text-center text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#eef2ff]"
                   >
-                    Создать предложение
+                    {t("organizations.actions.createOffer")}
                   </Link>
 
                   <Link
                     href={`/organizations/${organizationId}`}
                     className="rounded-xl border border-[#bbf7d0] bg-white px-4 py-3 text-center text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
                   >
-                    Открыть карточку предприятия
+                    {t("organizations.actions.openOrganization")}
                   </Link>
 
                   <Link
                     href="/organizations"
                     className="rounded-xl border border-[#bbf7d0] bg-white px-4 py-3 text-center text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
                   >
-                    Мои предприятия
+                    {t("organizations.nav.myOrganizations")}
                   </Link>
                 </>
               ) : null}
@@ -448,18 +512,18 @@ export default function NewOrganizationPage() {
 
             <div className="mt-5 grid gap-3 rounded-2xl border border-[#bbf7d0] bg-white p-4 text-[13px] text-[#166534]">
               <p className="m-0">
-                <strong>Статус:</strong>{" "}
+                <strong>{t("organizations.result.status")}</strong>{" "}
                 {formatOptional(result.organization.status, "active")}
               </p>
               <p className="m-0">
-                <strong>Публичный каталог:</strong>{" "}
+                <strong>{t("organizations.result.directory")}</strong>{" "}
                 {result.directory?.isPublicProfileEnabled ||
                 result.organization.is_public_profile_enabled
-                  ? "профиль включён"
-                  : "профиль пока не включён"}
+                  ? t("organizations.result.profileEnabled")
+                  : t("organizations.result.profileDisabled")}
               </p>
               <p className="m-0">
-                <strong>Локация:</strong>{" "}
+                <strong>{t("organizations.result.location")}</strong>{" "}
                 {result.organizationLocation
                   ? [
                       result.organizationLocation.country_code,
@@ -468,24 +532,18 @@ export default function NewOrganizationPage() {
                     ]
                       .filter(Boolean)
                       .join(", ")
-                  : "не указана"}
+                  : t("organizations.notSpecified")}
               </p>
             </div>
 
             <div className="mt-4 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-4 text-[12px] leading-5 text-[#1e3a8a]">
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2563eb]">
-                AI-категоризация предприятия
+                {t("organizations.aiCategory.heading")}
               </div>
 
               <p className="m-0">
-                <strong>Статус:</strong>{" "}
-                {semanticIntakeStatus === "idle"
-                  ? "ожидает результата серверной AI-категоризации"
-                  : semanticIntakeStatus === "running"
-                    ? "AI-категоризация выполняется..."
-                    : semanticIntakeStatus === "done"
-                      ? "AI-категория назначена"
-                      : "AI-категория не назначена"}
+                <strong>{t("organizations.aiCategory.status")}</strong>{" "}
+                {getSemanticIntakeStatusLabel(semanticIntakeStatus, t)}
               </p>
 
               {semanticIntakeError ? (
@@ -496,7 +554,7 @@ export default function NewOrganizationPage() {
 
               {semanticIntake?.analysis?.shortSummary ? (
                 <p className="mt-2">
-                  <strong>Краткое описание:</strong>{" "}
+                  <strong>{t("organizations.aiCategory.shortSummary")}</strong>{" "}
                   {semanticIntake.analysis.shortSummary}
                 </p>
               ) : null}
@@ -521,7 +579,7 @@ export default function NewOrganizationPage() {
 
               {semanticIntake?.analysis?.categoryCandidates?.length ? (
                 <div className="mt-3">
-                  <strong>AI-категории:</strong>
+                  <strong>{t("organizations.aiCategory.heading")}:</strong>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {semanticIntake.analysis.categoryCandidates.map((candidate) => (
                       <span
@@ -540,35 +598,32 @@ export default function NewOrganizationPage() {
 
               {semanticIntake?.persistence ? (
                 <p className="mt-3 text-[#475569]">
-                  Запись категории:{" "}
+                  {t("organizations.aiCategory.persistence")}{" "}
                   {semanticIntake.persistence.wroteToDatabase
-                    ? "категория записана в базу данных"
-                    : "категория не записана в базу данных"}
+                    ? t("organizations.aiCategory.recorded")
+                    : t("organizations.aiCategory.notAssigned")}
                 </p>
               ) : null}
             </div>
             <details className="mt-4 rounded-xl border border-[#d1fae5] bg-white p-4 text-[12px] text-[#5a5f7a]">
               <summary className="cursor-pointer font-semibold text-[#166534]">
-                Служебная информация для разработчика
+                {t("organizations.dev.summary")}
               </summary>
 
               <div className="mt-3 grid gap-2">
                 <p className="m-0">
                   <strong>Actor:</strong>{" "}
-                  {result.organizationActor?.display_name ?? "не создан"}{" "}
+                  {result.organizationActor?.display_name ??
+                    t("organizations.dev.actorNotCreated")}{" "}
                   {result.organizationActor?.actor_type
                     ? `(${result.organizationActor.actor_type})`
                     : ""}
                 </p>
                 <p className="m-0">
-                  <strong>Рабочее пространство предприятия:</strong>{" "}
-                  {result.businessSpace?.title ?? "не создано"}
+                  <strong>{t("organizations.dev.businessSpace")}</strong>{" "}
+                  {result.businessSpace?.title ?? t("organizations.dev.notCreated")}
                 </p>
-                <p className="m-0">
-                  Это внутренние связи платформы. Пользователь работает с
-                  предприятием, услугами, предложениями и сертификатами; слова
-                  Actor/Space в обычном интерфейсе показывать не нужно.
-                </p>
+                <p className="m-0">{t("organizations.dev.note")}</p>
               </div>
             </details>
           </section>

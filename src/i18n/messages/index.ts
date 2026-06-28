@@ -4,3 +4,4 @@ export * from "./directory-list";
 export * from "./purchase-confirmations";
 export * from "./points";
 export * from "./dashboard";
+export * from "./organizations";
