@@ -58,6 +58,37 @@ type AppUserRow = {
   auth0_sub: string;
 };
 
+
+const HIDDEN_ORGANIZATION_STATUSES = new Set([
+  "archived",
+  "deleted",
+  "hidden",
+  "inactive",
+]);
+
+const HIDDEN_DIRECTORY_STATUSES = new Set([
+  "archived",
+  "deleted",
+  "hidden",
+  "unpublished",
+]);
+
+function normalizeStatusValue(value: unknown) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function isHiddenOrganization(organization: Record<string, unknown>) {
+  const status = normalizeStatusValue(organization.status);
+  const directoryStatus = normalizeStatusValue(organization.directory_status);
+
+  return (
+    HIDDEN_ORGANIZATION_STATUSES.has(status) ||
+    HIDDEN_DIRECTORY_STATUSES.has(directoryStatus) ||
+    organization.is_public_profile_enabled === false ||
+    organization.is_listed_in_directory === false
+  );
+}
+
 async function getCurrentAppUser() {
   const session = await auth0.getSession();
 
@@ -602,7 +633,7 @@ async function enrichLocationWithGeoStatus(input: {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const { appUser, errorResponse } = await getCurrentAppUser();
 
   if (errorResponse) {
@@ -629,8 +660,19 @@ export async function GET() {
     );
   }
 
+  const requestUrl = new URL(request.url);
+  const scope = requestUrl.searchParams.get("scope");
+  const includeHidden = scope === "deleted";
+
+  const filteredOrganizations =
+    organizations?.filter((organization) =>
+      includeHidden
+        ? isHiddenOrganization(organization)
+        : !isHiddenOrganization(organization)
+    ) ?? [];
+
   const organizationIds =
-    organizations?.map((organization) => organization.id) ?? [];
+    filteredOrganizations.map((organization) => organization.id);
 
   if (organizationIds.length === 0) {
     return NextResponse.json({
@@ -668,13 +710,13 @@ export async function GET() {
   );
 
   const organizationsWithLocations =
-    organizations?.map((organization) => ({
+    filteredOrganizations.map((organization) => ({
       ...organization,
       primaryLocation: getPrimaryLocationForOrganization(
         organization.id,
         enrichedLocationRows
       ),
-    })) ?? [];
+    }));
 
   return NextResponse.json({
     ok: true,

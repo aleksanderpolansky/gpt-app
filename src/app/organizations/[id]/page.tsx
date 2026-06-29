@@ -1,12 +1,20 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import {
+  getLocaleSearchParam,
+  getOrganizationsMessage,
+  type LocaleCode,
+  type OrganizationsMessageKey,
+} from "@/i18n";
+
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import PurchaseConfirmationForm from "./PurchaseConfirmationForm";
 import OrganizationLocationEditForm from "./OrganizationLocationEditForm";
 import OrganizationCategoryReviewActions from "./OrganizationCategoryReviewActions";
 import DirectorySuggestionRequestForm from "../../directory/components/DirectorySuggestionRequestForm";
+import OrganizationHideButton from "./OrganizationHideButton";
 
 export const dynamic = "force-dynamic";
 
@@ -221,7 +229,27 @@ type OrganizationDetailsPageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
+
+type OrganizationsTranslate = (key: OrganizationsMessageKey) => string;
+
+function getSingleSearchParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function getOrganizationDetailLocale(
+  searchParams: Record<string, string | string[] | undefined>
+): LocaleCode {
+  const localeValue = getSingleSearchParam(searchParams.locale);
+  const params = new URLSearchParams();
+
+  if (localeValue) {
+    params.set("locale", localeValue);
+  }
+
+  return getLocaleSearchParam(params);
+}
 
 type TabItem = {
   id:
@@ -1137,8 +1165,13 @@ function TabPanel({
 
 export default async function OrganizationDetailsPage({
   params,
+  searchParams,
 }: OrganizationDetailsPageProps) {
   const resolvedParams = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const locale = getOrganizationDetailLocale(resolvedSearchParams);
+  const t: OrganizationsTranslate = (key) => getOrganizationsMessage(key, locale);
+  const localeSuffix = `?locale=${locale}`;
   const organizationId = resolvedParams.id;
 
   const createValueObjectHref = `/value-objects/new?organizationId=${encodeURIComponent(
@@ -1154,6 +1187,8 @@ export default async function OrganizationDetailsPage({
     organizationId
   )}`;
   const myPurchaseConfirmationsHref = "/my-purchase-confirmations";
+  const organizationsHref = `/organizations${localeSuffix}`;
+  const deletedOrganizationsHref = `/organizations/deleted${localeSuffix}`;
 
   const {
     organization,
@@ -1339,10 +1374,10 @@ export default async function OrganizationDetailsPage({
 
               <div className="flex flex-wrap gap-2 lg:justify-end">
                 <Link
-                  href="/organizations"
+                  href={organizationsHref}
                   className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
                 >
-                  Мои организации
+                  {t("organizations.nav.myOrganizations")}
                 </Link>
 
                 {organization ? (
@@ -1351,14 +1386,25 @@ export default async function OrganizationDetailsPage({
                       href={createValueObjectHref}
                       className="rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
                     >
-                      Create value object
+                      {t("organizations.actions.addService")}
                     </Link>
                     <Link
                       href={createOfferHref}
                       className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.24)] transition hover:bg-[#2f5fe3]"
                     >
-                      Create offer
+                      {t("organizations.actions.createOffer")}
                     </Link>
+                    <OrganizationHideButton
+                      organizationId={organization.id}
+                      organizationName={organization.organization_name}
+                      redirectHref={deletedOrganizationsHref}
+                      labels={{
+                        hide: t("organizations.actions.hideOrganization"),
+                        hiding: t("organizations.actions.hidingOrganization"),
+                        confirm: t("organizations.hide.confirm"),
+                        error: t("organizations.hide.error"),
+                      }}
+                    />
                   </>
                 ) : null}
               </div>

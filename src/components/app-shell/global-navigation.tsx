@@ -424,6 +424,7 @@ export function GlobalSidebar({
             actionTitle={t("navigation.createGiftCertificate")}
           />
           <TreeItem label={t("navigation.events")} depth={2} href="/calendar" />
+
         </ExpandableSidebarItem>
 
         <div className="pb-0.5 pt-1">
@@ -493,6 +494,12 @@ export function GlobalSidebar({
                 href="/organizations/new"
               />
             )}
+          <TreeItem
+            label={t("navigation.deletedBusinesses")}
+            depth={2}
+            href="/organizations/deleted"
+          />
+
           </TreeItem>
           <TreeItem label={t("navigation.career")} depth={1} href="/next" />
           <TreeItem label={t("navigation.salesManager")} depth={2} href="/next" />
