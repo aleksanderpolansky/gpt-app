@@ -1,20 +1,15 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
 import {
-  Bell,
-  Bookmark,
   ChevronDown,
   ChevronRight,
   Clock,
   Heart,
-  HelpCircle,
   Home,
   LayoutDashboard,
-  MessageSquare,
   Menu,
   Plus,
-  Settings,
   ShoppingBag,
   Wallet,
 } from "lucide-react";
@@ -96,6 +91,14 @@ function useNavigationTranslator(): NavigationTranslate {
       getNavigationMessage(key, locale, params),
     [locale],
   );
+}
+
+function buildLocaleAwareHref(pathname: string, locale: LocaleCode): string {
+  if (locale === "en") {
+    return pathname;
+  }
+
+  return `${pathname}?locale=${encodeURIComponent(locale)}`;
 }
 
 function Badge({
@@ -408,19 +411,19 @@ export function GlobalSidebar({
           />
           <TreeItem
             label={t("navigation.enterpriseOffers")}
-            depth={1}
+            depth={2}
             href="/offers"
             actionHref="/offers/new"
             actionTitle={t("navigation.createEnterpriseOffer")}
           />
           <TreeItem
             label={t("navigation.giftCertificates")}
-            depth={1}
+            depth={2}
             href="/certificates"
             actionHref="/certificates/new"
             actionTitle={t("navigation.createGiftCertificate")}
           />
-          <TreeItem label={t("navigation.events")} depth={1} href="/calendar" />
+          <TreeItem label={t("navigation.events")} depth={2} href="/calendar" />
         </ExpandableSidebarItem>
 
         <div className="pb-0.5 pt-1">
@@ -503,17 +506,6 @@ export function GlobalSidebar({
         <SidebarMainItem icon={Heart} label={t("navigation.health")} href="/analytics" />
         <SidebarMainItem icon={Home} label={t("navigation.personalSpace")} href="/value-objects" />
 
-        <div className="pb-0.5 pt-1">
-          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#b0b4c8]">
-            {t("navigation.other")}
-          </p>
-        </div>
-
-        <SidebarMainItem icon={MessageSquare} label={t("navigation.messages")} badge={3} href="/workspace" />
-        <SidebarMainItem icon={Bell} label={t("navigation.notifications")} badge={7} href="/workspace" />
-        <SidebarMainItem icon={Settings} label={t("navigation.settings")} href="/privacy-audit" />
-        <SidebarMainItem icon={Bookmark} label={t("navigation.favorites")} href="/workspace" />
-        <SidebarMainItem icon={HelpCircle} label={t("navigation.help")} href="/project-knowledge" />
       </nav>
     </aside>
   );
@@ -524,10 +516,13 @@ export function GlobalTopBar({
 }: {
   readonly onOpenMobileNavigation?: () => void;
 }) {
+  const locale = useInterfaceLocale();
   const t = useNavigationTranslator();
+  const homeHref = buildLocaleAwareHref("/", locale);
+  const betaNoticeHref = buildLocaleAwareHref("/beta-notice", locale);
 
   return (
-    <header className="flex h-[56px] flex-shrink-0 items-center border-b border-[rgba(0,0,0,0.07)] bg-white px-3 sm:px-5">
+    <header className="flex h-[60px] flex-shrink-0 items-center border-b border-[rgba(0,0,0,0.07)] bg-white px-3 sm:px-5">
       <button
         type="button"
         onClick={onOpenMobileNavigation}
@@ -537,20 +532,34 @@ export function GlobalTopBar({
         <Menu size={18} />
       </button>
 
-      <div className="ml-auto flex items-center gap-2.5 sm:gap-3">
+      <a
+        href={homeHref}
+        aria-label="ARCTor.app"
+        className="mr-2 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl transition-colors hover:bg-[#f5f6fb] sm:mr-3"
+      >
+        <img
+          src="/brand/arctor-logo.png"
+          alt=""
+          className="h-9 w-9 flex-shrink-0 rounded-xl object-contain"
+        />
+
+      </a>
+
+      <div className="ml-auto flex items-center gap-2 sm:gap-3">
         <InterfaceLanguageSwitcher />
 
-        <button
-          type="button"
-          className="relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-gray-50"
-          title={t("navigation.notifications")}
+        <a
+          href={betaNoticeHref}
+          aria-label={t("navigation.betaNotice")}
+          title={t("navigation.betaNotice")}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-red-600 text-[17px] font-black leading-none text-white shadow-sm transition-colors hover:bg-red-700"
         >
-          <Bell size={16} className="text-[#7c8099]" />
-          <span className="absolute right-1 top-1 h-[7px] w-[7px] rounded-full border-2 border-white bg-red-500" />
-        </button>
+          !
+        </a>
 
         <UserSessionTopBarControls />
       </div>
     </header>
   );
 }
+

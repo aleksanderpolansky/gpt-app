@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Settings } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 import {
   getLocaleSearchParam,
@@ -275,7 +275,6 @@ export function UserSessionTopBarControls() {
   const loggedInLabel = useNavigationLabel("navigation.loggedIn");
   const signInLabel = useNavigationLabel("navigation.signIn");
   const signOutLabel = useNavigationLabel("navigation.signOut");
-  const settingsLabel = useNavigationLabel("navigation.settings");
 
   const subtitle = useMemo(() => {
     if (session.isLoading) {
@@ -330,9 +329,8 @@ export function UserSessionTopBarControls() {
         {loggedInLabel}
       </div>
 
-      <a
-        href="/auth/profile"
-        className="flex items-center gap-2 rounded-lg py-1.5 pl-2 pr-2 transition-colors hover:bg-gray-50"
+      <div
+        className="flex items-center gap-2 rounded-lg py-1.5 pl-2 pr-1"
         title={loggedInLabel}
       >
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#3b6ef8] to-[#6f42f5] text-[11px] font-bold text-white">
@@ -347,21 +345,16 @@ export function UserSessionTopBarControls() {
             {subtitle}
           </div>
         </div>
-      </a>
-
-      <a
-        href="/privacy-audit"
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-[rgba(0,0,0,0.08)] bg-white text-[#5a5f7a] transition-colors hover:bg-[#f5f6fb] hover:text-[#3b6ef8]"
-        title={settingsLabel}
-      >
-        <Settings size={15} />
-      </a>
+      </div>
 
       <a
         href="/auth/logout"
-        className="hidden rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 py-2 text-[12px] font-semibold text-[#5a5f7a] transition-colors hover:bg-[#f5f6fb] md:inline-flex"
+        aria-label={signOutLabel}
+        title={signOutLabel}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[rgba(0,0,0,0.08)] bg-white text-[#5a5f7a] transition-colors hover:bg-[#f5f6fb] hover:text-[#3b6ef8] md:w-auto md:px-3 md:py-2 md:text-[12px] md:font-semibold"
       >
-        {signOutLabel}
+        <LogOut size={15} />
+        <span className="hidden md:ml-1.5 md:inline">{signOutLabel}</span>
       </a>
     </>
   );

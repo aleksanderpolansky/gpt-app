@@ -740,8 +740,8 @@ export function FigmaDashboardContent() {
         />
         <KpiCard
           label={t("dashboard.subscription")}
-          value="Premium Pro"
-          sub={t("dashboard.activeUntil", { date: "28.06.25" })}
+          value="Free"
+          sub={t("dashboard.currentPackage")}
           accent="#22c55e"
           icon={Activity}
         />
