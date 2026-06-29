@@ -12,8 +12,8 @@ import {
   Home,
   LayoutDashboard,
   MessageSquare,
+  Menu,
   Plus,
-  Search,
   Settings,
   ShoppingBag,
   Wallet,
@@ -27,7 +27,6 @@ import {
   type NavigationMessageKey,
 } from "@/i18n";
 import { UserSessionTopBarControls } from "../auth/user-session-client";
-import { WorkspaceSemanticCloudButton } from "../workspace/semantic-cloud/workspace-semantic-cloud-button";
 import { InterfaceLanguageSwitcher } from "./interface-language-switcher";
 
 type IconComponent = ElementType;
@@ -301,7 +300,11 @@ function getOrganizationLocationLabel(organization: SidebarOrganization) {
   return parts.length > 0 ? parts.join(", ") : null;
 }
 
-export function GlobalSidebar() {
+export function GlobalSidebar({
+  className = "hidden w-[240px] flex-shrink-0 flex-col overflow-hidden border-r border-[rgba(0,0,0,0.07)] bg-white lg:flex",
+}: {
+  readonly className?: string;
+}) {
   const [organizations, setOrganizations] = useState<SidebarOrganization[]>([]);
   const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(false);
   const [organizationsError, setOrganizationsError] = useState<string | null>(null);
@@ -356,7 +359,7 @@ export function GlobalSidebar() {
   const visibleOrganizations = useMemo(() => organizations.slice(0, 8), [organizations]);
 
   return (
-    <aside className="hidden w-[240px] flex-shrink-0 flex-col overflow-hidden border-r border-[rgba(0,0,0,0.07)] bg-white lg:flex">
+    <aside className={className}>
       <div className="flex items-center gap-2.5 border-b border-[rgba(0,0,0,0.06)] px-4 py-4">
         <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#f7f4ff]">
           <img
@@ -516,30 +519,25 @@ export function GlobalSidebar() {
   );
 }
 
-export function GlobalTopBar() {
+export function GlobalTopBar({
+  onOpenMobileNavigation,
+}: {
+  readonly onOpenMobileNavigation?: () => void;
+}) {
   const t = useNavigationTranslator();
 
   return (
-    <header className="flex h-[56px] flex-shrink-0 items-center gap-4 border-b border-[rgba(0,0,0,0.07)] bg-white px-5">
-      <div className="flex flex-1 items-center gap-2">
-        <div className="relative w-[430px] max-w-[46vw] flex-shrink-0">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#b0b4c8]"
-          />
-          <input
-            type="text"
-            placeholder={t("navigation.platformSearchPlaceholder")}
-            className="w-full rounded-lg border border-transparent bg-[#f5f6fb] py-2 pl-9 pr-4 text-[12.5px] text-[#4a4f6a] placeholder-[#b0b4c8] transition-all focus:border-[#3b6ef8] focus:bg-white focus:outline-none"
-          />
-        </div>
+    <header className="flex h-[56px] flex-shrink-0 items-center border-b border-[rgba(0,0,0,0.07)] bg-white px-3 sm:px-5">
+      <button
+        type="button"
+        onClick={onOpenMobileNavigation}
+        aria-label="Open navigation"
+        className="mr-2 flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(0,0,0,0.07)] bg-white text-[#3b6ef8] shadow-sm transition-colors hover:bg-[#f5f6fb] lg:hidden"
+      >
+        <Menu size={18} />
+      </button>
 
-        <div className="flex-shrink-0">
-          <WorkspaceSemanticCloudButton />
-        </div>
-      </div>
-
-      <div className="ml-auto flex items-center gap-3">
+      <div className="ml-auto flex items-center gap-2.5 sm:gap-3">
         <InterfaceLanguageSwitcher />
 
         <button

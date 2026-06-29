@@ -326,7 +326,11 @@ function MessageBubble({
   );
 }
 
-export function GlobalAiNavigator() {
+export function GlobalAiNavigator({
+  className = "hidden w-[292px] flex-shrink-0 flex-col overflow-hidden border-l border-[rgba(0,0,0,0.07)] bg-white xl:flex",
+}: {
+  readonly className?: string;
+}) {
   const {
     messages,
     input,
@@ -352,7 +356,7 @@ export function GlobalAiNavigator() {
 
   return (
     <aside
-      className="hidden w-[292px] flex-shrink-0 flex-col overflow-hidden border-l border-[rgba(0,0,0,0.07)] bg-white xl:flex"
+      className={className}
       style={{ fontFamily: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}
     >
       <div className="border-b border-[rgba(0,0,0,0.06)] px-4 pb-3 pt-4">
