@@ -1,7 +1,26 @@
-﻿"use client";
+"use client";
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+
+type AddressVisibility = "public" | "approximate" | "hidden";
+
+type OrganizationLocationEditFormLabels = {
+  title: string;
+  description: string;
+  countryCode: string;
+  city: string;
+  district: string;
+  addressVisibility: string;
+  latitude: string;
+  longitude: string;
+  save: string;
+  saving: string;
+  updateFailed: string;
+  updateSuccess: string;
+  unknownError: string;
+  visibilityOptions: Record<AddressVisibility, string>;
+};
 
 type OrganizationLocationEditFormProps = {
   organizationId: string;
@@ -11,6 +30,7 @@ type OrganizationLocationEditFormProps = {
   initialAddressVisibility: string | null;
   initialLatitude: number | null;
   initialLongitude: number | null;
+  labels: OrganizationLocationEditFormLabels;
 };
 
 type SubmitState = {
@@ -25,26 +45,17 @@ const INITIAL_SUBMIT_STATE: SubmitState = {
   error: null,
 };
 
-const ADDRESS_VISIBILITY_OPTIONS = [
-  {
-    value: "public",
-    label: "Public address",
-  },
-  {
-    value: "approximate",
-    label: "Approximate location",
-  },
-  {
-    value: "hidden",
-    label: "Hidden address",
-  },
+const ADDRESS_VISIBILITY_OPTIONS: AddressVisibility[] = [
+  "public",
+  "approximate",
+  "hidden",
 ];
 
 function normalizeInitialText(value: string | null) {
   return value ?? "";
 }
 
-function normalizeInitialAddressVisibility(value: string | null) {
+function normalizeInitialAddressVisibility(value: string | null): AddressVisibility {
   if (
     value === "public" ||
     value === "approximate" ||
@@ -72,6 +83,7 @@ export default function OrganizationLocationEditForm({
   initialAddressVisibility,
   initialLatitude,
   initialLongitude,
+  labels,
 }: OrganizationLocationEditFormProps) {
   const router = useRouter();
 
@@ -131,7 +143,7 @@ export default function OrganizationLocationEditForm({
         setSubmitState({
           isSubmitting: false,
           message: null,
-          error: result.error ?? "Location update failed.",
+          error: result.error ?? labels.updateFailed,
         });
 
         return;
@@ -139,8 +151,7 @@ export default function OrganizationLocationEditForm({
 
       setSubmitState({
         isSubmitting: false,
-        message:
-          "Location updated. Organization country and default currency were recalculated on the backend.",
+        message: labels.updateSuccess,
         error: null,
       });
 
@@ -152,7 +163,7 @@ export default function OrganizationLocationEditForm({
         error:
           error instanceof Error
             ? error.message
-            : "Unknown location update error.",
+            : labels.unknownError,
       });
     }
   }
@@ -173,7 +184,7 @@ export default function OrganizationLocationEditForm({
           margin: "0 0 8px",
         }}
       >
-        Edit organization location
+        {labels.title}
       </h2>
 
       <p
@@ -183,8 +194,7 @@ export default function OrganizationLocationEditForm({
           lineHeight: "1.5",
         }}
       >
-        Changing the country also recalculates the organization default
-        currency on the backend.
+        {labels.description}
       </p>
 
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: "14px" }}>
@@ -196,7 +206,7 @@ export default function OrganizationLocationEditForm({
           }}
         >
           <label style={{ display: "grid", gap: "6px", fontWeight: 700 }}>
-            Country code
+            {labels.countryCode}
             <input
               value={countryCode}
               onChange={(event) => setCountryCode(event.target.value)}
@@ -211,7 +221,7 @@ export default function OrganizationLocationEditForm({
           </label>
 
           <label style={{ display: "grid", gap: "6px", fontWeight: 700 }}>
-            City
+            {labels.city}
             <input
               value={city}
               onChange={(event) => setCity(event.target.value)}
@@ -225,7 +235,7 @@ export default function OrganizationLocationEditForm({
           </label>
 
           <label style={{ display: "grid", gap: "6px", fontWeight: 700 }}>
-            District
+            {labels.district}
             <input
               value={district}
               onChange={(event) => setDistrict(event.target.value)}
@@ -247,10 +257,14 @@ export default function OrganizationLocationEditForm({
           }}
         >
           <label style={{ display: "grid", gap: "6px", fontWeight: 700 }}>
-            Address visibility
+            {labels.addressVisibility}
             <select
               value={addressVisibility}
-              onChange={(event) => setAddressVisibility(event.target.value)}
+              onChange={(event) =>
+                setAddressVisibility(
+                  normalizeInitialAddressVisibility(event.target.value),
+                )
+              }
               style={{
                 padding: "10px 12px",
                 borderRadius: "8px",
@@ -259,15 +273,15 @@ export default function OrganizationLocationEditForm({
               }}
             >
               {ADDRESS_VISIBILITY_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+                <option key={option} value={option}>
+                  {labels.visibilityOptions[option]}
                 </option>
               ))}
             </select>
           </label>
 
           <label style={{ display: "grid", gap: "6px", fontWeight: 700 }}>
-            Latitude
+            {labels.latitude}
             <input
               value={latitude}
               onChange={(event) => setLatitude(event.target.value)}
@@ -282,7 +296,7 @@ export default function OrganizationLocationEditForm({
           </label>
 
           <label style={{ display: "grid", gap: "6px", fontWeight: 700 }}>
-            Longitude
+            {labels.longitude}
             <input
               value={longitude}
               onChange={(event) => setLongitude(event.target.value)}
@@ -341,7 +355,7 @@ export default function OrganizationLocationEditForm({
             cursor: submitState.isSubmitting ? "not-allowed" : "pointer",
           }}
         >
-          {submitState.isSubmitting ? "Saving..." : "Save location"}
+          {submitState.isSubmitting ? labels.saving : labels.save}
         </button>
       </form>
     </section>

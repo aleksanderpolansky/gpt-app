@@ -7,3 +7,4 @@ export * from "./dashboard";
 export * from "./organizations";
 export * from "./time";
 export * from "./value-objects";
+export * from "./organization-detail";

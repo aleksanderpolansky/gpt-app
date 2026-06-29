@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { getPurchaseConfirmationText } from "@/i18n/messages/purchase-confirmations";
 
-const purchaseText = (key: Parameters<typeof getPurchaseConfirmationText>[0]) => getPurchaseConfirmationText(key, "en");
+type PurchaseConfirmationTextKey = Parameters<typeof getPurchaseConfirmationText>[0];
 type PurchaseConfirmationCreateResponse = {
   ok: boolean;
   purchaseConfirmation?: unknown;
@@ -22,6 +22,7 @@ type PurchaseConfirmationFormProps = {
   myPurchaseConfirmationsHref: string;
   purchaseConfirmationsHref: string;
   publicPurchaseHistoryHref: string;
+  locale?: string;
 };
 
 const MINIMUM_PURCHASE_THRESHOLDS: Record<string, MinimumPurchaseThreshold> = {
@@ -77,7 +78,10 @@ export default function PurchaseConfirmationForm({
   myPurchaseConfirmationsHref,
   purchaseConfirmationsHref,
   publicPurchaseHistoryHref,
+  locale = "en",
 }: PurchaseConfirmationFormProps) {
+  const purchaseText = (key: PurchaseConfirmationTextKey) =>
+    getPurchaseConfirmationText(key, locale);
   const [purchaseAmount, setPurchaseAmount] = useState("");
   const [purchaseCurrency, setPurchaseCurrency] = useState("");
   const [userComment, setUserComment] = useState("");
@@ -134,7 +138,6 @@ export default function PurchaseConfirmationForm({
       }
 
       setPurchaseAmount("");
-        purchaseText("purchaseConfirmations.entry.submittedMessage"),
       setReceiptUrl("");
       setPurchaseSubmitMessage(
         purchaseText("purchaseConfirmations.entry.submittedMessage"),

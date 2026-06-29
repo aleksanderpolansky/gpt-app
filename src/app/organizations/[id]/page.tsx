@@ -8,6 +8,15 @@ import {
   type OrganizationsMessageKey,
 } from "@/i18n";
 
+import {
+  getOrganizationDetailMessage,
+  type OrganizationDetailMessageKey,
+} from "@/i18n/messages/organization-detail";
+import {
+  getOfferTypeLabel,
+  getOrganizationTypeLabel,
+} from "@/i18n/messages/system-labels";
+
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import PurchaseConfirmationForm from "./PurchaseConfirmationForm";
@@ -233,6 +242,7 @@ type OrganizationDetailsPageProps = {
 };
 
 type OrganizationsTranslate = (key: OrganizationsMessageKey) => string;
+type OrganizationDetailTranslate = (key: OrganizationDetailMessageKey) => string;
 
 function getSingleSearchParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -280,49 +290,70 @@ function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
 
 function formatMoney(
   value: number | string | null | undefined,
-  currency: string | null | undefined
+  currency: string | null | undefined,
+  fallbackLabel = "Not specified",
 ) {
   if (value === null || value === undefined || value === "") {
-    return "Not specified";
+    return fallbackLabel;
   }
 
   return `${value} ${currency || ""}`.trim();
 }
 
-function formatNumber(value: number | string | null | undefined) {
+function formatNumber(
+  value: number | string | null | undefined,
+  fallbackLabel = "Not specified",
+) {
   if (value === null || value === undefined || value === "") {
-    return "Not specified";
+    return fallbackLabel;
   }
 
   return String(value);
 }
 
-function formatDate(value: string | null | undefined) {
+function formatDate(
+  value: string | null | undefined,
+  fallbackLabel = "Not specified",
+) {
   if (!value) {
-    return "Not specified";
+    return fallbackLabel;
   }
 
   return new Date(value).toLocaleString();
 }
 
-function getBooleanLabel(value: boolean | null | undefined) {
-  return value ? "Yes" : "No";
+function getBooleanLabel(
+  value: boolean | null | undefined,
+  yesLabel = "Yes",
+  noLabel = "No",
+) {
+  return value ? yesLabel : noLabel;
 }
 
-function getPaymentModeLabel(paymentMode: string | null | undefined) {
+type PaymentModeLabels = {
+  moneyOnly: string;
+  pointsOnly: string;
+  mixed: string;
+  notSpecified: string;
+};
+
+function getPaymentModeLabel(
+  paymentMode: string | null | undefined,
+  labels?: PaymentModeLabels,
+) {
   if (paymentMode === "money_only") {
-    return "Money only";
+    return labels?.moneyOnly ?? "Money only";
   }
 
   if (paymentMode === "points_only") {
-    return "Points only";
+    return labels?.pointsOnly ?? "Points only";
   }
 
   if (paymentMode === "mixed") {
-    return "Mixed: money + points";
+    return labels?.mixed ?? "Mixed: money + points";
   }
 
-  return paymentMode || "Not specified";
+  return paymentMode || labels?.notSpecified || "Not specified";
 }
 
 function getPaymentModeClassName(paymentMode: string | null | undefined) {
@@ -337,69 +368,96 @@ function getPaymentModeClassName(paymentMode: string | null | undefined) {
   return "border-[#dfe3f1] bg-[#f8f9fd] text-[#4a4f6a]";
 }
 
-function getDiscountTypeLabel(discountType: string | null | undefined) {
+type DiscountTypeLabels = {
+  manualPrice: string;
+  percent: string;
+  fixedAmount: string;
+  notSpecified: string;
+};
+
+function getDiscountTypeLabel(
+  discountType: string | null | undefined,
+  labels?: DiscountTypeLabels,
+) {
   if (discountType === "manual_price") {
-    return "Manual reduced price";
+    return labels?.manualPrice ?? "Manual reduced price";
   }
 
   if (discountType === "percent") {
-    return "Percent";
+    return labels?.percent ?? "Percent";
   }
 
   if (discountType === "fixed_amount") {
-    return "Fixed amount";
+    return labels?.fixedAmount ?? "Fixed amount";
   }
 
-  return discountType || "Not specified";
+  return discountType || labels?.notSpecified || "Not specified";
 }
 
-function getLocationLabel(location: OrganizationLocation | null) {
+function getLocationLabel(
+  location: OrganizationLocation | null,
+  fallbackLabel = "Not specified",
+  addressHiddenLabel = "Address hidden",
+) {
   if (!location) {
-    return "Not specified";
+    return fallbackLabel;
   }
 
   if (location.address_visibility === "hidden") {
-    return "Address hidden";
+    return addressHiddenLabel;
   }
 
   const parts = [location.country_code, location.city, location.district].filter(
-    Boolean
+    Boolean,
   );
 
   if (parts.length === 0) {
-    return "Not specified";
+    return fallbackLabel;
   }
 
   return parts.join(" → ");
 }
 
-function getLocationVisibilityLabel(location: OrganizationLocation | null) {
+type LocationVisibilityLabels = {
+  notSpecified: string;
+  approximate: string;
+  public: string;
+  hidden: string;
+};
+
+function getLocationVisibilityLabel(
+  location: OrganizationLocation | null,
+  labels?: LocationVisibilityLabels,
+) {
   if (!location) {
-    return "Not specified";
+    return labels?.notSpecified ?? "Not specified";
   }
 
   if (location.address_visibility === "approximate") {
-    return "Approximate public location";
+    return labels?.approximate ?? "Approximate public location";
   }
 
   if (location.address_visibility === "public") {
-    return "Public exact location";
+    return labels?.public ?? "Public exact location";
   }
 
   if (location.address_visibility === "hidden") {
-    return "Hidden location";
+    return labels?.hidden ?? "Hidden location";
   }
 
-  return location.address_visibility || "Not specified";
+  return location.address_visibility || labels?.notSpecified || "Not specified";
 }
 
-function getCoordinatesLabel(location: OrganizationLocation | null) {
+function getCoordinatesLabel(
+  location: OrganizationLocation | null,
+  fallbackLabel = "Not specified",
+) {
   if (!location) {
-    return "Not specified";
+    return fallbackLabel;
   }
 
   if (location.latitude === null || location.longitude === null) {
-    return "Not specified";
+    return fallbackLabel;
   }
 
   return `${location.latitude}, ${location.longitude}`;
@@ -1171,6 +1229,8 @@ export default async function OrganizationDetailsPage({
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const locale = getOrganizationDetailLocale(resolvedSearchParams);
   const t: OrganizationsTranslate = (key) => getOrganizationsMessage(key, locale);
+  const td: OrganizationDetailTranslate = (key) =>
+    getOrganizationDetailMessage(key, locale);
   const localeSuffix = `?locale=${locale}`;
   const organizationId = resolvedParams.id;
 
@@ -1211,54 +1271,93 @@ export default async function OrganizationDetailsPage({
       request.status === "needs_review"
   );
 
+  const notSpecifiedLabel = td("common.notSpecified");
+  const yesLabel = td("common.yes");
+  const noLabel = td("common.no");
+  const statusLabels: Record<string, string> = {
+    active: td("status.active"),
+    archived: td("status.archived"),
+    draft: td("status.draft"),
+    hidden: td("status.hidden"),
+  };
+  const getStatusLabel = (value: string | null | undefined) =>
+    value ? statusLabels[value] ?? value : notSpecifiedLabel;
+  const paymentModeLabels: PaymentModeLabels = {
+    moneyOnly: td("paymentMode.moneyOnly"),
+    pointsOnly: td("paymentMode.pointsOnly"),
+    mixed: td("paymentMode.mixed"),
+    notSpecified: notSpecifiedLabel,
+  };
+  const discountTypeLabels: DiscountTypeLabels = {
+    manualPrice: td("discountType.manualPrice"),
+    percent: td("discountType.percent"),
+    fixedAmount: td("discountType.fixedAmount"),
+    notSpecified: notSpecifiedLabel,
+  };
+  const locationVisibilityLabels: LocationVisibilityLabels = {
+    notSpecified: notSpecifiedLabel,
+    approximate: td("location.visibility.approximate"),
+    public: td("location.visibility.public"),
+    hidden: td("location.visibility.hidden"),
+  };
+  const formatMoneyValue = (
+    value: number | string | null | undefined,
+    currency: string | null | undefined,
+  ) => formatMoney(value, currency, notSpecifiedLabel);
+  const formatNumberValue = (value: number | string | null | undefined) =>
+    formatNumber(value, notSpecifiedLabel);
+  const formatDateValue = (value: string | null | undefined) =>
+    formatDate(value, notSpecifiedLabel);
+  const formatMinutesValue = (value: number | null | undefined) =>
+    value ? `${value} ${td("common.minutesShort")}` : notSpecifiedLabel;
+
   const tabs: TabItem[] = [
     {
       id: "overview",
-      label: "Overview",
-      description: "Главная информация",
+      label: td("tabs.overview"),
+      description: td("tabs.overviewDescription"),
     },
     {
       id: "location",
-      label: "Location",
-      description: "Город, район, координаты",
+      label: td("tabs.location"),
+      description: td("tabs.locationDescription"),
     },
     {
       id: "semantic",
-      label: "Semantic / AI",
-      description: "AI-категория и уточнения",
+      label: td("tabs.semantic"),
+      description: td("tabs.semanticDescription"),
       badge: activeCategorySuggestionRequests.length
         ? String(activeCategorySuggestionRequests.length)
         : undefined,
     },
     {
       id: "value-objects",
-      label: "Value Objects",
-      description: "Товары и услуги",
+      label: td("tabs.valueObjects"),
+      description: td("tabs.valueObjectsDescription"),
       badge: String(valueObjects.length),
     },
     {
       id: "offers",
-      label: "Offers",
-      description: "Коммерческие условия",
+      label: td("tabs.offers"),
+      description: td("tabs.offersDescription"),
       badge: String(offers.length),
     },
     {
       id: "purchases",
-      label: "Purchases",
-      description: "Подтверждения покупок",
+      label: td("tabs.purchases"),
+      description: td("tabs.purchasesDescription"),
     },
     {
       id: "settings",
-      label: "Settings",
-      description: "Настройки карточки",
+      label: td("tabs.settings"),
+      description: td("tabs.settingsDescription"),
     },
     {
       id: "danger",
-      label: "Danger zone",
-      description: "Архивирование / удаление",
+      label: td("tabs.danger"),
+      description: td("tabs.dangerDescription"),
     },
   ];
-
   return (
     <main className="min-h-full bg-[#f5f6fb] px-4 py-6 text-[#1a1d2e]">
       <style>{`
@@ -1354,21 +1453,20 @@ export default async function OrganizationDetailsPage({
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.22em] text-[#8b91aa]">
-                  Commercial core / Organization workspace
+                  {td("header.eyebrow")}
                 </div>
 
                 <h1 className="text-[32px] font-bold tracking-[-0.04em] text-[#111827]">
-                  {organization?.organization_name ?? "Organization details"}
+                  {organization?.organization_name ?? td("header.fallbackTitle")}
                 </h1>
 
                 <p className="mt-2 max-w-[780px] text-[14px] leading-6 text-[#5a5f7a]">
                   {organization?.description ??
-                    "Карточка предприятия объединяет профиль, локацию, публичную категорию, товары/услуги, offers, подтверждения покупок и настройки."}
+                    td("header.summary")}
                 </p>
 
                 <p className="mt-4 max-w-[760px] text-[12px] font-medium leading-5 text-[#8b91aa]">
-                  Подробности профиля, статус, локация, валюта и публичная категория
-                  находятся во вкладках Overview, Location и Semantic / AI.
+                  {td("header.detailHint")}
                 </p>
               </div>
 
@@ -1414,7 +1512,7 @@ export default async function OrganizationDetailsPage({
           {errorMessage ? (
             <Card className="border-[#fecaca] bg-[#fff1f2]">
               <h2 className="text-[22px] font-bold text-[#b42318]">
-                Не удалось загрузить предприятие
+                {td("error.loadTitle")}
               </h2>
               <p className="mt-2 text-[14px] leading-6 text-[#b42318]">
                 {errorMessage}
@@ -1428,13 +1526,13 @@ export default async function OrganizationDetailsPage({
                 Organization not found or access denied
               </h2>
               <p className="mt-2 text-[14px] leading-6 text-[#92400e]">
-                Проверьте ссылку или вернитесь к списку ваших предприятий.
+                {td("error.loadDescription")}
               </p>
               <Link
                 href="/organizations"
                 className="mt-4 inline-flex rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white transition hover:bg-[#2f5fe3]"
               >
-                Вернуться к организациям
+                {td("error.backToOrganizations")}
               </Link>
             </Card>
           ) : null}
@@ -1444,10 +1542,10 @@ export default async function OrganizationDetailsPage({
               <aside className="org-detail-tabs-sidebar rounded-[24px] border border-[rgba(0,0,0,0.07)] bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                 <div className="px-3 pb-3 pt-2">
                   <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#8b91aa]">
-                    Разделы
+                    {td("sections.title")}
                   </div>
                   <p className="mt-1 text-[12px] leading-5 text-[#7c8099]">
-                    Нажмите вкладку, чтобы открыть нужный блок карточки.
+                    {td("sections.description")}
                   </p>
                 </div>
 
@@ -1462,53 +1560,53 @@ export default async function OrganizationDetailsPage({
                 <TabPanel id="overview">
                   <Card>
                     <SectionHeader
-                      eyebrow="Overview"
-                      title="Краткая карточка предприятия"
-                      description="Основная информация, которая нужна владельцу, маркетологу, QA и будущему каталогу."
+                      eyebrow={td("tabs.overview")}
+                      title={td("overview.title")}
+                      description={td("overview.description")}
                     />
 
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                      <DetailRow label="Type" value={organization.organization_type} />
-                      <DetailRow label="Status" value={organization.status} />
+                      <DetailRow label={td("field.type")} value={getOrganizationTypeLabel(organization.organization_type, locale)} />
+                      <DetailRow label={td("field.status")} value={getStatusLabel(organization.status)} />
                       <DetailRow
-                        label="Location"
-                        value={getLocationLabel(primaryLocation)}
+                        label={td("field.location")}
+                        value={getLocationLabel(primaryLocation, notSpecifiedLabel, td("common.addressHidden"))}
                       />
                       <DetailRow
-                        label="Address visibility"
-                        value={getLocationVisibilityLabel(primaryLocation)}
+                        label={td("field.addressVisibility")}
+                        value={getLocationVisibilityLabel(primaryLocation, locationVisibilityLabels)}
                       />
                       <DetailRow
-                        label="Country"
-                        value={organization.country_code || "Not specified"}
+                        label={td("field.country")}
+                        value={organization.country_code || notSpecifiedLabel}
                       />
                       <DetailRow
-                        label="Default currency"
-                        value={organization.default_currency || "Not specified"}
+                        label={td("field.defaultCurrency")}
+                        value={organization.default_currency || notSpecifiedLabel}
                       />
                       <DetailRow
-                        label="Value Objects"
+                        label={td("field.valueObjects")}
                         value={String(valueObjects.length)}
                       />
-                      <DetailRow label="Offers" value={String(offers.length)} />
+                      <DetailRow label={td("field.offers")} value={String(offers.length)} />
                       <DetailRow
-                        label="Category requests"
+                        label={td("field.categoryRequests")}
                         value={String(categorySuggestionRequests.length)}
                       />
                     </div>
 
                     <div className="mt-5 rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-5">
                       <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8b91aa]">
-                        Description
+                        {td("field.description")}
                       </div>
                       <p className="mt-2 text-[14px] leading-6 text-[#343854]">
-                        {organization.description || "Not specified"}
+                        {organization.description || notSpecifiedLabel}
                       </p>
                     </div>
 
                     <div className="mt-5 rounded-2xl border border-[#edf0f7] bg-white p-5">
                       <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8b91aa]">
-                        Technical ID
+                        {td("field.technicalId")}
                       </div>
                       <p className="mt-2 break-all font-mono text-[12px] text-[#5a5f7a]">
                         {organization.id}
@@ -1520,27 +1618,27 @@ export default async function OrganizationDetailsPage({
                 <TabPanel id="location">
                   <Card>
                     <SectionHeader
-                      eyebrow="Location"
-                      title="Локация предприятия"
-                      description="Здесь отображается публичная или приблизительная локация, координаты и статус geo-suggestion."
+                      eyebrow={td("tabs.location")}
+                      title={td("location.title")}
+                      description={td("location.description")}
                     />
 
                     <div className="grid gap-3 md:grid-cols-2">
                       <DetailRow
-                        label="Location"
-                        value={getLocationLabel(primaryLocation)}
+                        label={td("field.location")}
+                        value={getLocationLabel(primaryLocation, notSpecifiedLabel, td("common.addressHidden"))}
                       />
                       <DetailRow
-                        label="Address visibility"
-                        value={getLocationVisibilityLabel(primaryLocation)}
+                        label={td("field.addressVisibility")}
+                        value={getLocationVisibilityLabel(primaryLocation, locationVisibilityLabels)}
                       />
                       <DetailRow
-                        label="Coordinates"
-                        value={getCoordinatesLabel(primaryLocation)}
+                        label={td("field.coordinates")}
+                        value={getCoordinatesLabel(primaryLocation, notSpecifiedLabel)}
                       />
                       <DetailRow
-                        label="Location status"
-                        value={locationGeoStatusLabel ?? "No review flags"}
+                        label={td("field.locationStatus")}
+                        value={locationGeoStatusLabel ?? td("location.noReviewFlags")}
                       />
                     </div>
 
@@ -1560,12 +1658,32 @@ export default async function OrganizationDetailsPage({
                           }
                           initialLatitude={primaryLocation?.latitude ?? null}
                           initialLongitude={primaryLocation?.longitude ?? null}
+                          labels={{
+                            title: td("locationForm.title"),
+                            description: td("locationForm.description"),
+                            countryCode: td("locationForm.countryCode"),
+                            city: td("locationForm.city"),
+                            district: td("locationForm.district"),
+                            addressVisibility: td("locationForm.addressVisibility"),
+                            latitude: td("locationForm.latitude"),
+                            longitude: td("locationForm.longitude"),
+                            save: td("locationForm.save"),
+                            saving: td("locationForm.saving"),
+                            updateFailed: td("locationForm.updateFailed"),
+                            updateSuccess: td("locationForm.updateSuccess"),
+                            unknownError: td("locationForm.unknownError"),
+                            visibilityOptions: {
+                              public: td("locationForm.visibilityPublic"),
+                              approximate: td("locationForm.visibilityApproximate"),
+                              hidden: td("locationForm.visibilityHidden"),
+                            },
+                          }}
                         />
                       </div>
                     ) : (
                       <EmptyState
-                        title="Редактирование недоступно"
-                        description="Текущий пользователь не является владельцем предприятия или не имеет прав на изменение локации."
+                        title={td("location.editUnavailableTitle")}
+                        description={td("location.editUnavailableDescription")}
                       />
                     )}
                   </Card>
@@ -1575,52 +1693,50 @@ export default async function OrganizationDetailsPage({
                   <div className="grid gap-5">
                     <Card>
                       <SectionHeader
-                        eyebrow="Semantic / AI"
-                        title="AI-категория предприятия и заявки на уточнение"
-                        description="AI может назначить рабочую публичную категорию сразу. Если источник ai_suggested, это AI candidate: категория уже записана и видна в Semantic Cloud, но её можно подтвердить, заменить или убрать."
+                        eyebrow={td("tabs.semantic")}
+                        title={td("semantic.title")}
+                        description={td("semantic.description")}
                       />
 
                       <div className="rounded-[20px] border border-[#bbf7d0] bg-[#f0fdf4] p-5">
                         <h3 className="text-[18px] font-bold text-[#166534]">
-                          Текущая категория предприятия
+                          {td("semantic.currentCategory")}
                         </h3>
 
                         {currentCategory ? (
                           <div className="mt-4 grid gap-3 md:grid-cols-2">
                             <DetailRow
-                              label="Category"
+                              label={td("field.category")}
                               value={currentCategory.categoryName}
                             />
                             <DetailRow
-                              label="Slug"
+                              label={td("field.slug")}
                               value={currentCategory.categorySlug}
                             />
                             <DetailRow
-                              label="Status"
+                              label={td("field.status")}
                               value={currentCategory.classificationStatus}
                             />
                             <DetailRow
-                              label="Role"
+                              label={td("field.role")}
                               value={currentCategory.classificationRole}
                             />
                             <DetailRow
-                              label="Source"
-                              value={currentCategory.sourceType ?? "not specified"}
+                              label={td("field.source")}
+                              value={currentCategory.sourceType ?? notSpecifiedLabel}
                             />
                             <DetailRow
-                              label="Review state"
-                              value={currentCategory.reviewState ?? "not specified"}
+                              label={td("field.reviewState")}
+                              value={currentCategory.reviewState ?? notSpecifiedLabel}
                             />
                             <DetailRow
-                              label="Updated"
-                              value={currentCategory.updatedAt ?? "not specified"}
+                              label={td("field.updated")}
+                              value={currentCategory.updatedAt ?? notSpecifiedLabel}
                             />
                           </div>
                         ) : (
                           <p className="mt-2 text-[14px] leading-6 text-[#166534]">
-                            Категория предприятия ещё не назначена. После создания
-                            предприятия серверная AI-категоризация должна добавить
-                            primary category как AI candidate.
+                            {td("semantic.noCurrentCategory")}
                           </p>
                         )}
                       </div>
@@ -1630,6 +1746,31 @@ export default async function OrganizationDetailsPage({
                           organizationId={organization.id}
                           currentCategory={currentCategory}
                           categoryOptions={categoryOptions}
+                          labels={{
+                            ownerActionsTitle: td("categoryReview.ownerActionsTitle"),
+                            ownerActionsDescription: td("categoryReview.ownerActionsDescription"),
+                            confirmAiCategory: td("categoryReview.confirmAiCategory"),
+                            removeCurrentCategory: td("categoryReview.removeCurrentCategory"),
+                            replaceCurrentCategory: td("categoryReview.replaceCurrentCategory"),
+                            confirming: td("categoryReview.confirming"),
+                            removing: td("categoryReview.removing"),
+                            replacing: td("categoryReview.replacing"),
+                            confirmCurrentAiCategory: td("categoryReview.confirmCurrentAiCategory"),
+                            removeFromSemanticCloud: td("categoryReview.removeFromSemanticCloud"),
+                            replaceWithApprovedCategory: td("categoryReview.replaceWithApprovedCategory"),
+                            noReplacementCategories: td("categoryReview.noReplacementCategories"),
+                            optionalOwnerNote: td("categoryReview.optionalOwnerNote"),
+                            notePlaceholder: td("categoryReview.notePlaceholder"),
+                            replaceCategory: td("categoryReview.replaceCategory"),
+                            chooseTargetCategory: td("categoryReview.chooseTargetCategory"),
+                            unknownSource: td("categoryReview.unknownSource"),
+                            unknownReviewState: td("categoryReview.unknownReviewState"),
+                            hiddenFromSemanticCloud: td("categoryReview.hiddenFromSemanticCloud"),
+                            visibleInSemanticCloud: td("categoryReview.visibleInSemanticCloud"),
+                            completed: td("categoryReview.completed"),
+                            reviewState: td("categoryReview.reviewState"),
+                            unknownError: td("categoryReview.unknownError"),
+                          }}
                         />
                       ) : null}
 
@@ -1638,27 +1779,26 @@ export default async function OrganizationDetailsPage({
                           {activeCategorySuggestionRequests.length > 0 ? (
                             <div className="mb-4 rounded-2xl border border-[#fde68a] bg-[#fffbeb] p-4 text-[13px] leading-6 text-[#92400e]">
                               <strong>
-                                There is already an active category correction request.
+                                {td("semantic.activeCorrectionHeading")}
                               </strong>{" "}
-                              Active requests:{" "}
+                              {td("semantic.activeCorrectionCount")}{" "}
                               <strong>{activeCategorySuggestionRequests.length}</strong>.
-                              You can still send another request, but it may duplicate
-                              an existing pending review.
+                              {td("semantic.activeCorrectionDescription")}
                             </div>
                           ) : null}
 
                           <div className="rounded-[20px] border border-[#edf0f7] bg-white p-5">
                             <DirectorySuggestionRequestForm
-                              title="Suggest organization category correction"
-                              description="Describe what this organization really does and suggest a better category. The current AI category can be confirmed, corrected or removed through governance/review flow."
-                              textareaLabel="Organization activity description"
-                              textareaPlaceholder="Example: This company provides AI automation consulting, workflow optimization and business process improvement for small companies."
-                              submitButtonLabel="Send category correction request"
-                              successTitle="Category correction request sent."
+                              title={td("semantic.suggestion.title")}
+                              description={td("semantic.suggestion.description")}
+                              textareaLabel={td("semantic.suggestion.textareaLabel")}
+                              textareaPlaceholder={td("semantic.suggestion.placeholder")}
+                              submitButtonLabel={td("semantic.suggestion.submit")}
+                              successTitle={td("semantic.suggestion.success")}
                               entityType="organization"
                               entityId={organization.id}
                               requestSource="organization_category_change"
-                              locale="en"
+                              locale={locale}
                               contextCode="business_directory"
                               initialText={organization.description ?? ""}
                               showProposedCategoryField={true}
@@ -1670,15 +1810,15 @@ export default async function OrganizationDetailsPage({
 
                     <Card>
                       <SectionHeader
-                        eyebrow="Semantic request history"
-                        title="Recent category correction requests"
-                        description="Last requests submitted for this organization. AI-assigned category is already attached as candidate; requests help confirm, replace or remove it."
+                        eyebrow={td("semantic.history.eyebrow")}
+                        title={td("semantic.history.title")}
+                        description={td("semantic.history.description")}
                       />
 
                       {categorySuggestionRequests.length === 0 ? (
                         <EmptyState
-                          title="No category correction requests yet"
-                          description="Заявки на уточнение категории пока не отправлялись."
+                          title={td("semantic.history.emptyTitle")}
+                          description={td("semantic.history.emptyDescription")}
                         />
                       ) : (
                         <div className="grid gap-3">
@@ -1691,11 +1831,11 @@ export default async function OrganizationDetailsPage({
                                 <h3 className="text-[16px] font-bold text-[#111827]">
                                   {request.proposed_category_text ??
                                     request.ai_suggested_category_text ??
-                                    "Category not specified"}
+                                    td("semantic.history.categoryNotSpecified")}
                                 </h3>
                                 <StatusPill tone="blue">{request.status}</StatusPill>
                                 <StatusPill>
-                                  AI: {request.ai_status ?? "not_requested"}
+                                  AI: {request.ai_status ?? td("semantic.history.notRequested")}
                                 </StatusPill>
                               </div>
 
@@ -1705,16 +1845,16 @@ export default async function OrganizationDetailsPage({
 
                               <div className="mt-3 grid gap-2 text-[12px] text-[#6b7280] md:grid-cols-2">
                                 <span>ID: {request.id}</span>
-                                <span>Source: {request.request_source}</span>
-                                <span>Created: {request.created_at}</span>
-                                <span>Updated: {request.updated_at}</span>
+                                <span>{td("field.source")}: {request.request_source}</span>
+                                <span>{td("field.created")}: {request.created_at}</span>
+                                <span>{td("field.updated")}: {request.updated_at}</span>
                                 {request.admin_decision ? (
                                   <span>
-                                    Admin decision: {request.admin_decision}
+                                    {td("semantic.history.adminDecision")}: {request.admin_decision}
                                   </span>
                                 ) : null}
                                 {request.reviewed_at ? (
-                                  <span>Reviewed: {request.reviewed_at}</span>
+                                  <span>{td("semantic.history.reviewed")}: {request.reviewed_at}</span>
                                 ) : null}
                               </div>
                             </article>
@@ -1728,29 +1868,29 @@ export default async function OrganizationDetailsPage({
                 <TabPanel id="value-objects">
                   <Card>
                     <SectionHeader
-                      eyebrow="Value Objects"
-                      title="Товары и услуги предприятия"
-                      description="Value Object является базой для offer и сертификата, а также самостоятельным информационным объектом."
+                      eyebrow={td("tabs.valueObjects")}
+                      title={td("valueObjects.title")}
+                      description={td("valueObjects.description")}
                       action={
                         <Link
                           href={createValueObjectHref}
                           className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.24)] transition hover:bg-[#2f5fe3]"
                         >
-                          Create value object
+                          {td("valueObjects.createAction")}
                         </Link>
                       }
                     />
 
                     {valueObjects.length === 0 ? (
                       <EmptyState
-                        title="No value objects connected"
-                        description="Добавьте первый товар или услугу предприятия как enterprise-owned Value Object."
+                        title={td("valueObjects.emptyTitle")}
+                        description={td("valueObjects.emptyDescription")}
                         action={
                           <Link
                             href={createValueObjectHref}
                             className="inline-flex rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white transition hover:bg-[#2f5fe3]"
                           >
-                            Create value object
+                            {td("valueObjects.createAction")}
                           </Link>
                         }
                       />
@@ -1767,31 +1907,31 @@ export default async function OrganizationDetailsPage({
                                   {valueObject.title}
                                 </h3>
                                 <p className="mt-2 text-[14px] leading-6 text-[#5a5f7a]">
-                                  {valueObject.description ?? "No description"}
+                                  {valueObject.description ?? td("common.noDescription")}
                                 </p>
                               </div>
                               <StatusPill
                                 tone={valueObject.status === "active" ? "green" : "neutral"}
                               >
-                                {valueObject.status}
+                                {getStatusLabel(valueObject.status)}
                               </StatusPill>
                             </div>
 
                             <div className="mt-4 grid gap-3 md:grid-cols-3">
-                              <DetailRow label="Type" value={valueObject.value_type} />
+                              <DetailRow label={td("field.type")} value={valueObject.value_type} />
                               <DetailRow
-                                label="Price"
-                                value={formatMoney(
+                                label={td("field.price")}
+                                value={formatMoneyValue(
                                   valueObject.default_price,
                                   valueObject.default_currency
                                 )}
                               />
                               <DetailRow
-                                label="Duration"
+                                label={td("field.duration")}
                                 value={
                                   valueObject.default_duration_minutes
-                                    ? `${valueObject.default_duration_minutes} min`
-                                    : "Not specified"
+                                    ? `${valueObject.default_duration_minutes} ${td("common.minutesShort")}`
+                                    : notSpecifiedLabel
                                 }
                               />
                             </div>
@@ -1805,29 +1945,29 @@ export default async function OrganizationDetailsPage({
                 <TabPanel id="offers">
                   <Card>
                     <SectionHeader
-                      eyebrow="Offers"
-                      title="Коммерческие условия и сертификаты"
-                      description="Offer в текущей логике является базой/коммерческими условиями для создания сертификатов, а не универсальной корзиной."
+                      eyebrow={td("tabs.offers")}
+                      title={td("offers.title")}
+                      description={td("offers.description")}
                       action={
                         <Link
                           href={createOfferHref}
                           className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.24)] transition hover:bg-[#2f5fe3]"
                         >
-                          Create offer
+                          {td("offers.createAction")}
                         </Link>
                       }
                     />
 
                     {offers.length === 0 ? (
                       <EmptyState
-                        title="No offers connected"
-                        description="Создайте offer после добавления хотя бы одного Value Object."
+                        title={td("offers.emptyTitle")}
+                        description={td("offers.emptyDescription")}
                         action={
                           <Link
                             href={createOfferHref}
                             className="inline-flex rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white transition hover:bg-[#2f5fe3]"
                           >
-                            Create offer
+                            {td("offers.createAction")}
                           </Link>
                         }
                       />
@@ -1844,14 +1984,14 @@ export default async function OrganizationDetailsPage({
                                   {offer.title}
                                 </h3>
                                 <p className="mt-2 text-[14px] leading-6 text-[#5a5f7a]">
-                                  {offer.description || "Not specified"}
+                                  {offer.description || notSpecifiedLabel}
                                 </p>
                                 <div className="mt-3 flex flex-wrap gap-2">
-                                  <StatusPill>{offer.offer_type}</StatusPill>
+                                  <StatusPill>{getOfferTypeLabel(offer.offer_type, locale)}</StatusPill>
                                   <StatusPill
                                     tone={offer.status === "active" ? "green" : "neutral"}
                                   >
-                                    {offer.status}
+                                    {getStatusLabel(offer.status)}
                                   </StatusPill>
                                   <span
                                     className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[12px] font-bold ${getPaymentModeClassName(
@@ -1859,7 +1999,8 @@ export default async function OrganizationDetailsPage({
                                     )}`}
                                   >
                                     {getPaymentModeLabel(
-                                      offer.certificate_payment_mode
+                                      offer.certificate_payment_mode,
+                                      paymentModeLabels
                                     )}
                                   </span>
                                 </div>
@@ -1868,23 +2009,23 @@ export default async function OrganizationDetailsPage({
 
                             <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                               <DetailRow
-                                label="Current price"
-                                value={formatMoney(offer.price, offer.currency)}
+                                label={td("field.currentPrice")}
+                                value={formatMoneyValue(offer.price, offer.currency)}
                               />
                               <DetailRow
-                                label="Regular price"
-                                value={formatMoney(offer.regular_price, offer.currency)}
+                                label={td("field.regularPrice")}
+                                value={formatMoneyValue(offer.regular_price, offer.currency)}
                               />
                               <DetailRow
-                                label="Buyer pays POINT"
-                                value={formatMoney(
+                                label={td("field.buyerPaysPoint")}
+                                value={formatMoneyValue(
                                   offer.certificate_points_price ?? 0,
                                   offer.points_currency_code ?? "POINT"
                                 )}
                               />
                               <DetailRow
-                                label="Buyer pays money"
-                                value={formatMoney(
+                                label={td("field.buyerPaysMoney")}
+                                value={formatMoneyValue(
                                   offer.certificate_money_price,
                                   offer.certificate_currency ?? offer.currency
                                 )}
@@ -1894,22 +2035,22 @@ export default async function OrganizationDetailsPage({
                             <div className="mt-5 grid gap-4 xl:grid-cols-2">
                               <div className="rounded-2xl border border-[#dbeafe] bg-[#eff6ff] p-4">
                                 <h4 className="text-[16px] font-bold text-[#1e3a8a]">
-                                  Certificate / reward commercial rules
+                                  {td("certificate.rulesTitle")}
                                 </h4>
                                 <div className="mt-3 grid gap-2 text-[13px] leading-6 text-[#1e3a8a]">
                                   <p>
-                                    <strong>Certificate available:</strong>{" "}
-                                    {getBooleanLabel(offer.certificate_available)}
+                                    <strong>{td("certificate.available")}:</strong>{" "}
+                                    {getBooleanLabel(offer.certificate_available, yesLabel, noLabel)}
                                   </p>
                                   <p>
-                                    <strong>Amount covered by points:</strong>{" "}
-                                    {formatMoney(
+                                    <strong>{td("certificate.amountCoveredByPoints")}:</strong>{" "}
+                                    {formatMoneyValue(
                                       offer.certificate_points_covered_amount,
                                       offer.certificate_currency ?? offer.currency
                                     )}
                                   </p>
                                   <p>
-                                    <strong>Reference:</strong> 1{" "}
+                                    <strong>{td("certificate.reference")}:</strong> 1{" "}
                                     {offer.points_currency_code ?? "POINT"} ={" "}
                                     {formatNumber(
                                       offer.reference_value_per_point ?? 1
@@ -1917,66 +2058,68 @@ export default async function OrganizationDetailsPage({
                                     {offer.reference_currency ?? "EUR"}
                                   </p>
                                   <p>
-                                    <strong>Terms:</strong>{" "}
-                                    {offer.certificate_terms || "Not specified"}
+                                    <strong>{td("certificate.terms")}:</strong>{" "}
+                                    {offer.certificate_terms || notSpecifiedLabel}
                                   </p>
                                   <p>
-                                    <strong>Validity days:</strong>{" "}
+                                    <strong>{td("certificate.validityDays")}:</strong>{" "}
                                     {offer.certificate_validity_days ??
-                                      "Not specified"}
+                                      notSpecifiedLabel}
                                   </p>
                                   <p>
-                                    <strong>Seller confirmation:</strong>{" "}
+                                    <strong>{td("certificate.sellerConfirmation")}:</strong>{" "}
                                     {getBooleanLabel(
-                                      offer.requires_seller_confirmation
+                                      offer.requires_seller_confirmation,
+                                      yesLabel,
+                                      noLabel
                                     )}
                                   </p>
                                   <p>
-                                    <strong>Transferable:</strong>{" "}
-                                    {getBooleanLabel(offer.is_transferable)} /{" "}
-                                    <strong>Cancellable:</strong>{" "}
-                                    {getBooleanLabel(offer.is_cancellable)}
+                                    <strong>{td("certificate.transferable")}:</strong>{" "}
+                                    {getBooleanLabel(offer.is_transferable, yesLabel, noLabel)} /{" "}
+                                    <strong>{td("certificate.cancellable")}:</strong>{" "}
+                                    {getBooleanLabel(offer.is_cancellable, yesLabel, noLabel)}
                                   </p>
                                   <p>
-                                    <strong>Refund policy:</strong>{" "}
-                                    {offer.points_refund_policy ?? "Not specified"}
+                                    <strong>{td("certificate.refundPolicy")}:</strong>{" "}
+                                    {offer.points_refund_policy ?? notSpecifiedLabel}
                                   </p>
                                 </div>
                               </div>
 
                               <div className="rounded-2xl border border-[#fde68a] bg-[#fffbeb] p-4">
                                 <h4 className="text-[16px] font-bold text-[#92400e]">
-                                  Discount and legal price info
+                                  {td("discount.title")}
                                 </h4>
                                 <div className="mt-3 grid gap-2 text-[13px] leading-6 text-[#92400e]">
                                   <p>
-                                    <strong>Discount active:</strong>{" "}
-                                    {getBooleanLabel(offer.is_discount_active)}
+                                    <strong>{td("discount.active")}:</strong>{" "}
+                                    {getBooleanLabel(offer.is_discount_active, yesLabel, noLabel)}
                                   </p>
                                   <p>
-                                    <strong>Discount type:</strong>{" "}
-                                    {getDiscountTypeLabel(offer.discount_type)}
+                                    <strong>{td("discount.type")}:</strong>{" "}
+                                    {getDiscountTypeLabel(offer.discount_type, discountTypeLabels)}
                                   </p>
                                   <p>
-                                    <strong>Discount value:</strong>{" "}
-                                    {formatNumber(offer.discount_value)}
+                                    <strong>{td("discount.value")}:</strong>{" "}
+                                    {formatNumberValue(offer.discount_value)}
                                   </p>
                                   <p>
-                                    <strong>Discount period:</strong>{" "}
-                                    {formatDate(offer.discount_starts_at)} →{" "}
-                                    {formatDate(offer.discount_ends_at)}
+                                    <strong>{td("discount.period")}:</strong>{" "}
+                                    {formatDateValue(offer.discount_starts_at)} →{" "}
+                                    {formatDateValue(offer.discount_ends_at)}
                                   </p>
                                   <p>
-                                    <strong>Lowest price 30 days:</strong>{" "}
-                                    {formatMoney(
+                                    <strong>{td("discount.lowestPrice30Days")}:</strong>{" "}
+                                    {formatMoneyValue(
                                       offer.lowest_price_30_days,
                                       offer.lowest_price_30_days_currency ??
                                         offer.currency
                                     )}
                                   </p>
                                   <p>
-                                    <strong>Legal note:</strong>{" "}
-                                    {offer.discount_legal_note || "Not specified"}
+                                    <strong>{td("discount.legalNote")}:</strong>{" "}
+                                    {offer.discount_legal_note || notSpecifiedLabel}
                                   </p>
                                 </div>
                               </div>
@@ -1984,12 +2127,12 @@ export default async function OrganizationDetailsPage({
 
                             <div className="mt-5 rounded-2xl border border-[#edf0f7] bg-white p-4">
                               <h4 className="text-[16px] font-bold text-[#343854]">
-                                Items
+                                {td("offerItems.title")}
                               </h4>
 
                               {!offer.offer_items || offer.offer_items.length === 0 ? (
                                 <p className="mt-2 text-[14px] text-[#7c8099]">
-                                  No offer items.
+                                  {td("offerItems.empty")}
                                 </p>
                               ) : (
                                 <ul className="mt-3 grid gap-2 text-[14px] text-[#4a4f6a]">
@@ -2003,7 +2146,7 @@ export default async function OrganizationDetailsPage({
                                         {relatedValueObject?.title ??
                                           item.value_object_id}{" "}
                                         × {item.quantity} —{" "}
-                                        {formatMoney(item.total_price, item.currency)}
+                                        {formatMoneyValue(item.total_price, item.currency)}
                                       </li>
                                     );
                                   })}
@@ -2013,47 +2156,47 @@ export default async function OrganizationDetailsPage({
 
                             <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                               <DetailRow
-                                label="Requires booking"
-                                value={getBooleanLabel(offer.requires_booking)}
+                                label={td("field.requiresBooking")}
+                                value={getBooleanLabel(offer.requires_booking, yesLabel, noLabel)}
                               />
-                              <DetailRow label="Booking mode" value={offer.booking_mode} />
+                              <DetailRow label={td("field.bookingMode")} value={offer.booking_mode} />
                               <DetailRow
-                                label="Default duration"
+                                label={td("field.defaultDuration")}
                                 value={
                                   offer.default_duration_minutes
-                                    ? `${offer.default_duration_minutes} minutes`
-                                    : "Not specified"
+                                    ? `${offer.default_duration_minutes} ${td("common.minutes")}`
+                                    : notSpecifiedLabel
                                 }
                               />
                               <DetailRow
-                                label="Min duration"
+                                label={td("field.minDuration")}
                                 value={
                                   offer.min_duration_minutes
-                                    ? `${offer.min_duration_minutes} minutes`
-                                    : "Not specified"
+                                    ? `${offer.min_duration_minutes} ${td("common.minutes")}`
+                                    : notSpecifiedLabel
                                 }
                               />
                               <DetailRow
-                                label="Max duration"
+                                label={td("field.maxDuration")}
                                 value={
                                   offer.max_duration_minutes
-                                    ? `${offer.max_duration_minutes} minutes`
-                                    : "Not specified"
+                                    ? `${offer.max_duration_minutes} ${td("common.minutes")}`
+                                    : notSpecifiedLabel
                                 }
                               />
                               <DetailRow
-                                label="Quantity limit"
-                                value={offer.quantity_limit ?? "Not specified"}
+                                label={td("field.quantityLimit")}
+                                value={offer.quantity_limit ?? notSpecifiedLabel}
                               />
                               <DetailRow
-                                label="Target receiver"
-                                value={offer.target_receiver_type || "Not specified"}
+                                label={td("field.targetReceiver")}
+                                value={offer.target_receiver_type || notSpecifiedLabel}
                               />
                               <DetailRow
-                                label="Created at"
+                                label={td("field.createdAt")}
                                 value={new Date(offer.created_at).toLocaleString()}
                               />
-                              <DetailRow label="Offer ID" value={offer.id} />
+                              <DetailRow label={td("field.offerId")} value={offer.id} />
                             </div>
                           </article>
                         ))}
@@ -2066,9 +2209,9 @@ export default async function OrganizationDetailsPage({
                   <div className="grid gap-5">
                     <Card>
                       <SectionHeader
-                        eyebrow="Purchases"
-                        title="Подтверждения покупок"
-                        description="Покупатель может зарегистрировать внешнюю покупку, а продавец позже подтверждает или отклоняет её."
+                        eyebrow={td("tabs.purchases")}
+                        title={td("purchases.title")}
+                        description={td("purchases.description")}
                       />
                       <PurchaseConfirmationForm
                         organizationId={organizationId}
@@ -2078,14 +2221,15 @@ export default async function OrganizationDetailsPage({
                         myPurchaseConfirmationsHref={myPurchaseConfirmationsHref}
                         purchaseConfirmationsHref={purchaseConfirmationsHref}
                         publicPurchaseHistoryHref={publicPurchaseHistoryHref}
+                        locale={locale}
                       />
                     </Card>
 
                     <Card>
                       <SectionHeader
-                        eyebrow="Purchase links"
-                        title="Связанные журналы покупок"
-                        description="Быстрые переходы к текущим страницам коммерческого ядра."
+                        eyebrow={td("purchases.linksEyebrow")}
+                        title={td("purchases.linksTitle")}
+                        description={td("purchases.linksDescription")}
                       />
 
                       <div className="grid gap-3 md:grid-cols-3">
@@ -2093,19 +2237,19 @@ export default async function OrganizationDetailsPage({
                           href={myPurchaseConfirmationsHref}
                           className="rounded-2xl border border-[#dfe3f1] bg-[#f8f9fd] p-4 text-[14px] font-bold text-[#343854] transition hover:border-[#dfe4ff] hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
                         >
-                          My purchase confirmations
+                          {td("purchases.myConfirmations")}
                         </Link>
                         <Link
                           href={purchaseConfirmationsHref}
                           className="rounded-2xl border border-[#dfe3f1] bg-[#f8f9fd] p-4 text-[14px] font-bold text-[#343854] transition hover:border-[#dfe4ff] hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
                         >
-                          Seller purchase confirmations
+                          {td("purchases.sellerConfirmations")}
                         </Link>
                         <Link
                           href={publicPurchaseHistoryHref}
                           className="rounded-2xl border border-[#dfe3f1] bg-[#f8f9fd] p-4 text-[14px] font-bold text-[#343854] transition hover:border-[#dfe4ff] hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
                         >
-                          Public purchase history
+                          {td("purchases.publicHistory")}
                         </Link>
                       </div>
                     </Card>
@@ -2115,45 +2259,40 @@ export default async function OrganizationDetailsPage({
                 <TabPanel id="settings">
                   <Card>
                     <SectionHeader
-                      eyebrow="Settings"
-                      title="Настройки предприятия"
-                      description="Этот раздел пока не открывает новых write-flow. Он показывает безопасную карту будущих настроек."
+                      eyebrow={td("tabs.settings")}
+                      title={td("settings.title")}
+                      description={td("settings.description")}
                     />
 
                     <div className="grid gap-3">
                       <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-5">
                         <h3 className="text-[17px] font-bold text-[#343854]">
-                          Public profile settings
+                          {td("settings.publicProfileTitle")}
                         </h3>
                         <p className="mt-2 text-[14px] leading-6 text-[#7c8099]">
-                          Будущая настройка публичности профиля, логотипа,
-                          фото, описания и карточки каталога. Сейчас не изменяется
-                          этим UI-only блоком.
+                          {td("settings.publicProfileDescription")}
                         </p>
                       </div>
 
                       <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-5">
                         <h3 className="text-[17px] font-bold text-[#343854]">
-                          Access and owner checks
+                          {td("settings.accessTitle")}
                         </h3>
                         <p className="mt-2 text-[14px] leading-6 text-[#7c8099]">
-                          Текущий canEdit marker:{" "}
+                          {td("settings.currentCanEditMarker")}:{" "}
                           <strong>
-                            {canEditOrganizationLocation ? "owner/edit allowed" : "read only"}
+                            {canEditOrganizationLocation ? td("settings.ownerEditAllowed") : td("settings.readOnly")}
                           </strong>
-                          . Отдельный audit доступа для /organizations/[id] нужен
-                          позже перед delete/archive.
+                          . {td("settings.accessDescription")}
                         </p>
                       </div>
 
                       <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-5">
                         <h3 className="text-[17px] font-bold text-[#343854]">
-                          Media / logo
+                          {td("settings.mediaTitle")}
                         </h3>
                         <p className="mt-2 text-[14px] leading-6 text-[#7c8099]">
-                          Фото и логотип предприятия остаются будущим шагом после
-                          проверки schema/API на logo_url, image_url, avatar_url
-                          или отдельную media/storage model.
+                          {td("settings.mediaDescription")}
                         </p>
                       </div>
                     </div>
@@ -2163,20 +2302,17 @@ export default async function OrganizationDetailsPage({
                 <TabPanel id="danger">
                   <Card className="border-[#fecaca]">
                     <SectionHeader
-                      eyebrow="Danger zone"
-                      title="Архивирование или удаление предприятия"
-                      description="Этот раздел намеренно не выполняет DB write. Реальное удаление будет только после отдельного backend/schema gate."
+                      eyebrow={td("tabs.danger")}
+                      title={td("danger.title")}
+                      description={td("danger.description")}
                     />
 
                     <div className="rounded-[20px] border border-[#fecaca] bg-[#fff1f2] p-5">
                       <h3 className="text-[18px] font-bold text-[#b42318]">
-                        Delete flow is not enabled in this UI-only step
+                        {td("danger.disabledTitle")}
                       </h3>
                       <p className="mt-2 text-[14px] leading-6 text-[#b42318]">
-                        Безопасный следующий вариант — soft delete / archive,
-                        потому что предприятие может быть связано с Value Objects,
-                        offers, certificates, purchase confirmations, public semantic
-                        cloud и category classifications.
+                        {td("danger.disabledDescription")}
                       </p>
 
                       <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -2185,21 +2321,19 @@ export default async function OrganizationDetailsPage({
                           disabled
                           className="cursor-not-allowed rounded-xl border border-[#fecaca] bg-white px-4 py-3 text-[13px] font-bold text-[#b42318] opacity-60"
                         >
-                          Archive organization — future gate
+                          {td("danger.archiveFutureGate")}
                         </button>
                         <button
                           type="button"
                           disabled
                           className="cursor-not-allowed rounded-xl bg-[#b42318] px-4 py-3 text-[13px] font-bold text-white opacity-50"
                         >
-                          Hard delete disabled
+                          {td("danger.hardDeleteDisabled")}
                         </button>
                       </div>
 
                       <p className="mt-4 text-[12px] leading-5 text-[#b42318]">
-                        Required future approval phrase: ORGANIZATION_DELETE_GATE_APPROVED.
-                        Перед этим нужно проверить API, schema, dependencies,
-                        access policy, RLS/GRANT and audit behavior.
+                        {td("danger.futureApproval")}
                       </p>
                     </div>
                   </Card>

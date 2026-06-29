@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -24,10 +24,37 @@ type OrganizationCategoryOption = {
   sortOrder: number | null;
 };
 
+type OrganizationCategoryReviewActionLabels = {
+  ownerActionsTitle: string;
+  ownerActionsDescription: string;
+  confirmAiCategory: string;
+  removeCurrentCategory: string;
+  replaceCurrentCategory: string;
+  confirming: string;
+  removing: string;
+  replacing: string;
+  confirmCurrentAiCategory: string;
+  removeFromSemanticCloud: string;
+  replaceWithApprovedCategory: string;
+  noReplacementCategories: string;
+  optionalOwnerNote: string;
+  notePlaceholder: string;
+  replaceCategory: string;
+  chooseTargetCategory: string;
+  unknownSource: string;
+  unknownReviewState: string;
+  hiddenFromSemanticCloud: string;
+  visibleInSemanticCloud: string;
+  completed: string;
+  reviewState: string;
+  unknownError: string;
+};
+
 type OrganizationCategoryReviewActionsProps = {
   organizationId: string;
   currentCategory: OrganizationCurrentCategory | null;
   categoryOptions: OrganizationCategoryOption[];
+  labels: OrganizationCategoryReviewActionLabels;
 };
 
 type CategoryReviewApiResponse = {
@@ -41,22 +68,26 @@ type CategoryReviewApiResponse = {
   };
 };
 
-function getActionLabel(action: CategoryReviewAction) {
+function getActionLabel(
+  action: CategoryReviewAction,
+  labels: OrganizationCategoryReviewActionLabels,
+) {
   if (action === "confirm_ai_candidate") {
-    return "Confirm AI category";
+    return labels.confirmAiCategory;
   }
 
   if (action === "remove_current_category") {
-    return "Remove current category";
+    return labels.removeCurrentCategory;
   }
 
-  return "Replace current category";
+  return labels.replaceCurrentCategory;
 }
 
 export default function OrganizationCategoryReviewActions({
   organizationId,
   currentCategory,
   categoryOptions,
+  labels,
 }: OrganizationCategoryReviewActionsProps) {
   const router = useRouter();
 
@@ -111,7 +142,7 @@ export default function OrganizationCategoryReviewActions({
       if (!response.ok || !data.ok) {
         setErrorMessage(
           data.error ??
-            `Category review action failed: ${getActionLabel(action)}`,
+            `Category review action failed: ${getActionLabel(action, labels)}`,
         );
         return;
       }
@@ -119,11 +150,11 @@ export default function OrganizationCategoryReviewActions({
       const reviewState = data.categoryReview?.reviewState ?? "updated";
       const cloudLabel =
         data.categoryReview?.semanticCloudVisible === false
-          ? "hidden from Semantic Cloud"
-          : "visible in Semantic Cloud";
+          ? labels.hiddenFromSemanticCloud
+          : labels.visibleInSemanticCloud;
 
       setStatusMessage(
-        `${getActionLabel(action)} completed. Review state: ${reviewState}; ${cloudLabel}.`,
+        `${getActionLabel(action, labels)} ${labels.completed}. ${labels.reviewState}: ${reviewState}; ${cloudLabel}.`,
       );
 
       router.refresh();
@@ -131,7 +162,7 @@ export default function OrganizationCategoryReviewActions({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Unknown category review UI error.",
+          : labels.unknownError,
       );
     } finally {
       setPendingAction(null);
@@ -142,7 +173,7 @@ export default function OrganizationCategoryReviewActions({
     event.preventDefault();
 
     if (!replacementCategoryId) {
-      setErrorMessage("Choose a target category before replacement.");
+      setErrorMessage(labels.chooseTargetCategory);
       return;
     }
 
@@ -157,12 +188,10 @@ export default function OrganizationCategoryReviewActions({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h3 className="text-[18px] font-bold text-[#1d4ed8]">
-            Owner review actions
+            {labels.ownerActionsTitle}
           </h3>
           <p className="mt-2 max-w-[780px] text-[13px] leading-6 text-[#1e40af]">
-            Owner can confirm the AI category, remove it from the public
-            Semantic Cloud, or replace it with another approved business
-            directory category.
+            {labels.ownerActionsDescription}
           </p>
         </div>
 
@@ -170,8 +199,8 @@ export default function OrganizationCategoryReviewActions({
           <div className="rounded-2xl border border-[#bfdbfe] bg-white px-4 py-3 text-[12px] text-[#1e3a8a]">
             <div className="font-bold">{currentCategory.categoryName}</div>
             <div className="mt-1">
-              {currentCategory.sourceType ?? "unknown source"} /{" "}
-              {currentCategory.reviewState ?? "unknown review state"}
+              {currentCategory.sourceType ?? labels.unknownSource} /{" "}
+              {currentCategory.reviewState ?? labels.unknownReviewState}
             </div>
           </div>
         ) : null}
@@ -187,8 +216,8 @@ export default function OrganizationCategoryReviewActions({
           className="rounded-xl bg-[#166534] px-4 py-3 text-[13px] font-bold text-white transition hover:bg-[#14532d] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pendingAction === "confirm_ai_candidate"
-            ? "Confirming..."
-            : "Confirm current AI category"}
+            ? labels.confirming
+            : labels.confirmCurrentAiCategory}
         </button>
 
         <button
@@ -200,8 +229,8 @@ export default function OrganizationCategoryReviewActions({
           className="rounded-xl border border-[#fecaca] bg-[#fff1f2] px-4 py-3 text-[13px] font-bold text-[#b42318] transition hover:bg-[#ffe4e6] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pendingAction === "remove_current_category"
-            ? "Removing..."
-            : "Remove from Semantic Cloud"}
+            ? labels.removing
+            : labels.removeFromSemanticCloud}
         </button>
       </div>
 
@@ -210,7 +239,7 @@ export default function OrganizationCategoryReviewActions({
         className="mt-5 rounded-2xl border border-[#bfdbfe] bg-white p-4"
       >
         <label className="grid gap-2 text-[13px] font-bold text-[#1e3a8a]">
-          Replace with approved category
+          {labels.replaceWithApprovedCategory}
           <select
             value={replacementCategoryId}
             onChange={(event) => setReplacementCategoryId(event.target.value)}
@@ -218,7 +247,7 @@ export default function OrganizationCategoryReviewActions({
             className="rounded-xl border border-[#dbeafe] bg-white px-3 py-3 text-[13px] font-semibold text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#dbeafe] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {replacementOptions.length === 0 ? (
-              <option value="">No replacement categories available</option>
+              <option value="">{labels.noReplacementCategories}</option>
             ) : (
               replacementOptions.map((category) => (
                 <option key={category.id} value={category.id}>
@@ -230,14 +259,14 @@ export default function OrganizationCategoryReviewActions({
         </label>
 
         <label className="mt-4 grid gap-2 text-[13px] font-bold text-[#1e3a8a]">
-          Optional owner note
+          {labels.optionalOwnerNote}
           <textarea
             value={note}
             onChange={(event) => setNote(event.target.value)}
             disabled={isPending}
             rows={3}
             maxLength={1000}
-            placeholder="Example: confirmed after checking the real business activity."
+            placeholder={labels.notePlaceholder}
             className="rounded-xl border border-[#dbeafe] bg-white px-3 py-3 text-[13px] font-medium text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#dbeafe] disabled:cursor-not-allowed disabled:opacity-50"
           />
         </label>
@@ -248,8 +277,8 @@ export default function OrganizationCategoryReviewActions({
           className="mt-4 rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.24)] transition hover:bg-[#2f5fe3] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pendingAction === "replace_current_category"
-            ? "Replacing..."
-            : "Replace category"}
+            ? labels.replacing
+            : labels.replaceCategory}
         </button>
       </form>
 
