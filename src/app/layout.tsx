@@ -1,3 +1,4 @@
+import VercelAnalytics from "@/components/analytics/vercel-analytics";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
@@ -30,6 +31,8 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <GlobalAppShell><AppSessionHeartbeat />
           {children}</GlobalAppShell>
+        <VercelAnalytics />
+
       </body>
     </html>
   );
