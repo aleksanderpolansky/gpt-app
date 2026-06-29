@@ -1,21 +1,98 @@
 "use client";
 
-import { useState } from "react";
+import type { FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import {
+  getLocaleSearchParam,
+  getTimeMessage,
+  type LocaleCode,
+  type TimeMessageKey,
+} from "@/i18n";
+
+const EVENT_TYPE_OPTIONS: Array<{
+  readonly value: string;
+  readonly labelKey: TimeMessageKey;
+}> = [
+  { value: "work", labelKey: "time.option.work" },
+  { value: "sleep", labelKey: "time.option.sleep" },
+  { value: "meal", labelKey: "time.calendarNew.option.meal" },
+  { value: "meeting", labelKey: "time.calendarNew.option.meeting" },
+  { value: "school", labelKey: "time.calendarNew.option.school" },
+  { value: "childcare", labelKey: "time.calendarNew.option.childcare" },
+  { value: "travel", labelKey: "time.option.travel" },
+  { value: "exercise", labelKey: "time.option.exercise" },
+  { value: "study", labelKey: "time.option.study" },
+  { value: "rest", labelKey: "time.option.rest" },
+  { value: "business", labelKey: "time.calendarNew.option.business" },
+  { value: "purchase", labelKey: "time.calendarNew.option.purchase" },
+  { value: "family", labelKey: "time.calendarNew.option.family" },
+  { value: "free_time", labelKey: "time.option.freeTime" },
+  { value: "blocked_time", labelKey: "time.option.blockedTime" },
+  { value: "service_booking", labelKey: "time.calendarNew.option.serviceBooking" },
+  {
+    value: "certificate_redemption",
+    labelKey: "time.calendarNew.option.certificateRedemption",
+  },
+];
+
+const EVENT_STATUS_OPTIONS: Array<{
+  readonly value: string;
+  readonly labelKey: TimeMessageKey;
+}> = [
+  { value: "planned", labelKey: "time.calendarNew.status.planned" },
+  { value: "confirmed", labelKey: "time.calendarNew.status.confirmed" },
+  { value: "completed", labelKey: "time.calendarNew.status.completed" },
+  { value: "cancelled", labelKey: "time.calendarNew.status.cancelled" },
+  { value: "missed", labelKey: "time.calendarNew.status.missed" },
+  { value: "rescheduled", labelKey: "time.calendarNew.status.rescheduled" },
+];
+
+function useInterfaceLocale(): LocaleCode {
+  const [locale, setLocale] = useState<LocaleCode>("en");
+
+  useEffect(() => {
+    function readLocaleFromUrl() {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      setLocale(getLocaleSearchParam(new URLSearchParams(window.location.search)));
+    }
+
+    readLocaleFromUrl();
+    window.addEventListener("popstate", readLocaleFromUrl);
+
+    return () => {
+      window.removeEventListener("popstate", readLocaleFromUrl);
+    };
+  }, []);
+
+  return locale;
+}
 
 export default function NewCalendarEventPage() {
+  const locale = useInterfaceLocale();
+  const t = useMemo(
+    () => (key: TimeMessageKey) => getTimeMessage(key, locale),
+    [locale],
+  );
+
   const [eventType, setEventType] = useState("meeting");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [status, setStatus] = useState("planned");
-  const [message, setMessage] = useState("");
+  const [messageKey, setMessageKey] = useState<TimeMessageKey | null>(null);
+  const [fallbackMessage, setFallbackMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setMessage("");
+    setMessageKey(null);
+    setFallbackMessage("");
     setIsSubmitting(true);
 
     const response = await fetch("/api/calendar/events", {
@@ -36,12 +113,14 @@ export default function NewCalendarEventPage() {
     const data = await response.json();
 
     if (!response.ok) {
-      setMessage(data.error ?? "Failed to create calendar event");
+      setMessageKey("time.calendarNew.failed");
+      setFallbackMessage(data.error ?? "");
       setIsSubmitting(false);
       return;
     }
 
-    setMessage("Calendar event created successfully");
+    setMessageKey("time.calendarNew.success");
+    setFallbackMessage("");
 
     setEventType("meeting");
     setTitle("");
@@ -52,69 +131,55 @@ export default function NewCalendarEventPage() {
     setIsSubmitting(false);
   }
 
+  const message = messageKey ? fallbackMessage || t(messageKey) : "";
+
   return (
     <main style={{ padding: "32px", maxWidth: "720px" }}>
-      <h1>Create calendar event</h1>
+      <h1>{t("time.calendarNew.title")}</h1>
 
-      <p>
-        This page creates a simple calendar event for your personal actor.
-      </p>
+      <p>{t("time.calendarNew.subtitle")}</p>
 
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: "16px" }}>
         <label>
-          Event type
+          {t("time.calendarNew.eventType")}
           <select
             value={eventType}
             onChange={(event) => setEventType(event.target.value)}
             required
             style={{ display: "block", width: "100%", padding: "8px" }}
           >
-            <option value="work">Work</option>
-            <option value="sleep">Sleep</option>
-            <option value="meal">Meal</option>
-            <option value="meeting">Meeting</option>
-            <option value="school">School</option>
-            <option value="childcare">Childcare</option>
-            <option value="travel">Travel</option>
-            <option value="exercise">Exercise</option>
-            <option value="study">Study</option>
-            <option value="rest">Rest</option>
-            <option value="business">Business</option>
-            <option value="purchase">Purchase</option>
-            <option value="family">Family</option>
-            <option value="free_time">Free time</option>
-            <option value="blocked_time">Blocked time</option>
-            <option value="service_booking">Service booking</option>
-            <option value="certificate_redemption">
-              Certificate redemption
-            </option>
+            {EVENT_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {t(option.labelKey)}
+              </option>
+            ))}
           </select>
         </label>
 
         <label>
-          Title
+          {t("time.calendarNew.titleLabel")}
           <input
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            placeholder="Morning work block, Sleep, Meeting with client"
+            placeholder={t("time.calendarNew.titlePlaceholder")}
             required
             style={{ display: "block", width: "100%", padding: "8px" }}
           />
         </label>
 
         <label>
-          Description
+          {t("time.calendarNew.description")}
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            placeholder="Optional details"
+            placeholder={t("time.calendarNew.descriptionPlaceholder")}
             rows={4}
             style={{ display: "block", width: "100%", padding: "8px" }}
           />
         </label>
 
         <label>
-          Start time
+          {t("time.calendarNew.startTime")}
           <input
             type="datetime-local"
             value={startTime}
@@ -125,7 +190,7 @@ export default function NewCalendarEventPage() {
         </label>
 
         <label>
-          End time
+          {t("time.calendarNew.endTime")}
           <input
             type="datetime-local"
             value={endTime}
@@ -136,19 +201,18 @@ export default function NewCalendarEventPage() {
         </label>
 
         <label>
-          Status
+          {t("time.calendarNew.status")}
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value)}
             required
             style={{ display: "block", width: "100%", padding: "8px" }}
           >
-            <option value="planned">Planned</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="missed">Missed</option>
-            <option value="rescheduled">Rescheduled</option>
+            {EVENT_STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {t(option.labelKey)}
+              </option>
+            ))}
           </select>
         </label>
 
@@ -157,7 +221,7 @@ export default function NewCalendarEventPage() {
           disabled={isSubmitting}
           style={{ padding: "10px 16px", cursor: "pointer" }}
         >
-          {isSubmitting ? "Creating..." : "Create calendar event"}
+          {isSubmitting ? t("time.calendarNew.creating") : t("time.calendarNew.create")}
         </button>
       </form>
 

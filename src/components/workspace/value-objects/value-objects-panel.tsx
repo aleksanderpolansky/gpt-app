@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import type { ChangeEvent } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   DEFAULT_SELECTED_VALUE_OBJECT_ID,
   VALUE_OBJECT_DOMAIN_GROUPS,
@@ -29,6 +29,12 @@ import {
   ValueObjectViewSwitcher,
   type ValueObjectViewMode,
 } from "./value-object-view-switcher";
+import {
+  getLocaleSearchParam,
+  getValueObjectsMessage,
+  type LocaleCode,
+  type ValueObjectsMessageKey,
+} from "@/i18n";
 
 const DEFAULT_FILTER_STATE: ValueObjectFilterState = {
   searchQuery: "",
@@ -76,7 +82,37 @@ const getSelectedObjectId = (
   selectedObject: ValueObjectUiNode | undefined,
 ): string | undefined => selectedObject?.id;
 
+
+function useInterfaceLocale(): LocaleCode {
+  const [locale, setLocale] = useState<LocaleCode>("en");
+
+  useEffect(() => {
+    function readLocaleFromUrl() {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      setLocale(getLocaleSearchParam(new URLSearchParams(window.location.search)));
+    }
+
+    readLocaleFromUrl();
+    window.addEventListener("popstate", readLocaleFromUrl);
+
+    return () => {
+      window.removeEventListener("popstate", readLocaleFromUrl);
+    };
+  }, []);
+
+  return locale;
+}
+
 export function ValueObjectsPanel() {
+  const locale = useInterfaceLocale();
+  const t = useMemo(
+    () => (key: ValueObjectsMessageKey) => getValueObjectsMessage(key, locale),
+    [locale],
+  );
+
   const [filterState, setFilterState] =
     useState<ValueObjectFilterState>(DEFAULT_FILTER_STATE);
   const [activeView, setActiveView] = useState<ValueObjectViewMode>("list");
@@ -197,21 +233,19 @@ export function ValueObjectsPanel() {
   return (
     <main className={PANEL_CLASSES}>
       <div className={SHELL_CLASSES}>
-        <section className={HERO_CLASSES} aria-label="Value Objects overview">
+        <section className={HERO_CLASSES} aria-label={t("valueObjects.panel.title")}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-3">
-              <p className={HERO_LABEL_CLASSES}>UI-7</p>
-              <h1 className={HERO_TITLE_CLASSES}>Value Objects</h1>
+              <p className={HERO_LABEL_CLASSES}>{t("valueObjects.panel.eyebrow")}</p>
+              <h1 className={HERO_TITLE_CLASSES}>{t("valueObjects.panel.title")}</h1>
               <p className={HERO_TEXT_CLASSES}>
-                Read-only fixture implementation for list, tree, cloud, and
-                detail inspection. This block previews Value Objects without
-                changing stored records.
+                {t("valueObjects.panel.description")}
               </p>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right">
               <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
-                Current view
+                {t("valueObjects.panel.currentView")}
               </p>
               <p className="text-lg font-semibold capitalize text-slate-950">
                 {activeView}
@@ -222,9 +256,9 @@ export function ValueObjectsPanel() {
 
         <ValueObjectSummaryStrip summary={normalizedModel.summary} />
 
-        <section className={SEARCH_CARD_CLASSES} aria-label="Value Object search">
+        <section className={SEARCH_CARD_CLASSES} aria-label={t("valueObjects.panel.searchLabel")}>
           <label className={SEARCH_LABEL_CLASSES} htmlFor="value-object-search">
-            Search
+            {t("valueObjects.panel.searchLabel")}
           </label>
           <input
             id="value-object-search"
@@ -232,7 +266,7 @@ export function ValueObjectsPanel() {
             type="search"
             value={filterState.searchQuery}
             onChange={handleSearchChange}
-            placeholder="Search title, category, source, tag, note, or review signal"
+            placeholder={t("valueObjects.panel.searchPlaceholder")}
           />
         </section>
 
@@ -254,9 +288,7 @@ export function ValueObjectsPanel() {
         />
 
         <div className={READ_ONLY_NOTICE_CLASSES}>
-          UI-7 is fixture-first and read-only. It does not create, edit, merge,
-          archive, or remove Value Objects. Links and actions are preview
-          signals only.
+          {t("valueObjects.panel.readOnlyNotice")}
         </div>
 
         <div className={MAIN_GRID_CLASSES}>

@@ -1,8 +1,79 @@
 "use client";
 
-import { useState } from "react";
+import type { FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import {
+  getLocaleSearchParam,
+  getTimeMessage,
+  type LocaleCode,
+  type TimeMessageKey,
+} from "@/i18n";
+
+const BLOCK_TYPE_OPTIONS: Array<{
+  readonly value: string;
+  readonly labelKey: TimeMessageKey;
+}> = [
+  { value: "work", labelKey: "time.option.work" },
+  { value: "sleep", labelKey: "time.option.sleep" },
+  { value: "travel", labelKey: "time.option.travel" },
+  { value: "family_obligation", labelKey: "time.option.familyObligation" },
+  { value: "recovery", labelKey: "time.option.recovery" },
+  { value: "free_time", labelKey: "time.option.freeTime" },
+  { value: "blocked_time", labelKey: "time.option.blockedTime" },
+  { value: "service_available", labelKey: "time.option.serviceAvailable" },
+  { value: "study", labelKey: "time.option.study" },
+  { value: "exercise", labelKey: "time.option.exercise" },
+  { value: "rest", labelKey: "time.option.rest" },
+  { value: "other", labelKey: "time.option.other" },
+];
+
+const AVAILABILITY_STATUS_OPTIONS: Array<{
+  readonly value: string;
+  readonly labelKey: TimeMessageKey;
+}> = [
+  { value: "busy", labelKey: "time.option.busy" },
+  { value: "free", labelKey: "time.option.free" },
+  { value: "partially_free", labelKey: "time.option.partiallyFree" },
+  { value: "blocked", labelKey: "time.option.blocked" },
+  { value: "sleep", labelKey: "time.option.sleep" },
+  { value: "work", labelKey: "time.option.work" },
+  { value: "travel", labelKey: "time.option.travel" },
+  { value: "family_obligation", labelKey: "time.option.familyObligation" },
+  { value: "recovery", labelKey: "time.option.recovery" },
+  { value: "service_available", labelKey: "time.option.serviceAvailable" },
+];
+
+function useInterfaceLocale(): LocaleCode {
+  const [locale, setLocale] = useState<LocaleCode>("en");
+
+  useEffect(() => {
+    function readLocaleFromUrl() {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      setLocale(getLocaleSearchParam(new URLSearchParams(window.location.search)));
+    }
+
+    readLocaleFromUrl();
+    window.addEventListener("popstate", readLocaleFromUrl);
+
+    return () => {
+      window.removeEventListener("popstate", readLocaleFromUrl);
+    };
+  }, []);
+
+  return locale;
+}
 
 export default function NewTimeBlockPage() {
+  const locale = useInterfaceLocale();
+  const t = useMemo(
+    () => (key: TimeMessageKey) => getTimeMessage(key, locale),
+    [locale],
+  );
+
   const [blockType, setBlockType] = useState("work");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -10,13 +81,15 @@ export default function NewTimeBlockPage() {
   const [energyExpectation, setEnergyExpectation] = useState("");
   const [attentionRequirement, setAttentionRequirement] = useState("");
   const [canMultitask, setCanMultitask] = useState(false);
-  const [message, setMessage] = useState("");
+  const [messageKey, setMessageKey] = useState<TimeMessageKey | null>(null);
+  const [fallbackMessage, setFallbackMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setMessage("");
+    setMessageKey(null);
+    setFallbackMessage("");
     setIsSubmitting(true);
 
     const response = await fetch("/api/time-blocks", {
@@ -38,12 +111,14 @@ export default function NewTimeBlockPage() {
     const data = await response.json();
 
     if (!response.ok) {
-      setMessage(data.error ?? "Failed to create time block");
+      setMessageKey("time.new.failed");
+      setFallbackMessage(data.error ?? "");
       setIsSubmitting(false);
       return;
     }
 
-    setMessage("Time block created successfully");
+    setMessageKey("time.new.success");
+    setFallbackMessage("");
 
     setBlockType("work");
     setStartTime("");
@@ -55,41 +130,33 @@ export default function NewTimeBlockPage() {
     setIsSubmitting(false);
   }
 
+  const message = messageKey ? fallbackMessage || t(messageKey) : "";
+
   return (
     <main style={{ padding: "32px", maxWidth: "720px" }}>
-      <h1>Create time block</h1>
+      <h1>{t("time.new.title")}</h1>
 
-      <p>
-        This page creates a time block for availability, work, sleep, travel,
-        recovery, or free time analysis.
-      </p>
+      <p>{t("time.new.subtitle")}</p>
 
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: "16px" }}>
         <label>
-          Block type
+          {t("time.new.blockType")}
           <select
             value={blockType}
             onChange={(event) => setBlockType(event.target.value)}
             required
             style={{ display: "block", width: "100%", padding: "8px" }}
           >
-            <option value="work">Work</option>
-            <option value="sleep">Sleep</option>
-            <option value="travel">Travel</option>
-            <option value="family_obligation">Family obligation</option>
-            <option value="recovery">Recovery</option>
-            <option value="free_time">Free time</option>
-            <option value="blocked_time">Blocked time</option>
-            <option value="service_available">Service available</option>
-            <option value="study">Study</option>
-            <option value="exercise">Exercise</option>
-            <option value="rest">Rest</option>
-            <option value="other">Other</option>
+            {BLOCK_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {t(option.labelKey)}
+              </option>
+            ))}
           </select>
         </label>
 
         <label>
-          Start time
+          {t("time.new.startTime")}
           <input
             type="datetime-local"
             value={startTime}
@@ -100,7 +167,7 @@ export default function NewTimeBlockPage() {
         </label>
 
         <label>
-          End time
+          {t("time.new.endTime")}
           <input
             type="datetime-local"
             value={endTime}
@@ -111,42 +178,37 @@ export default function NewTimeBlockPage() {
         </label>
 
         <label>
-          Availability status
+          {t("time.new.availabilityStatus")}
           <select
             value={availabilityStatus}
             onChange={(event) => setAvailabilityStatus(event.target.value)}
             required
             style={{ display: "block", width: "100%", padding: "8px" }}
           >
-            <option value="busy">Busy</option>
-            <option value="free">Free</option>
-            <option value="partially_free">Partially free</option>
-            <option value="blocked">Blocked</option>
-            <option value="sleep">Sleep</option>
-            <option value="work">Work</option>
-            <option value="travel">Travel</option>
-            <option value="family_obligation">Family obligation</option>
-            <option value="recovery">Recovery</option>
-            <option value="service_available">Service available</option>
+            {AVAILABILITY_STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {t(option.labelKey)}
+              </option>
+            ))}
           </select>
         </label>
 
         <label>
-          Energy expectation
+          {t("time.new.energyExpectation")}
           <input
             value={energyExpectation}
             onChange={(event) => setEnergyExpectation(event.target.value)}
-            placeholder="low, medium, high, recovery needed"
+            placeholder={t("time.new.energyPlaceholder")}
             style={{ display: "block", width: "100%", padding: "8px" }}
           />
         </label>
 
         <label>
-          Attention requirement
+          {t("time.new.attentionRequirement")}
           <input
             value={attentionRequirement}
             onChange={(event) => setAttentionRequirement(event.target.value)}
-            placeholder="low, medium, high, no multitasking"
+            placeholder={t("time.new.attentionPlaceholder")}
             style={{ display: "block", width: "100%", padding: "8px" }}
           />
         </label>
@@ -157,7 +219,7 @@ export default function NewTimeBlockPage() {
             checked={canMultitask}
             onChange={(event) => setCanMultitask(event.target.checked)}
           />{" "}
-          Can multitask
+          {t("time.new.canMultitask")}
         </label>
 
         <button
@@ -165,7 +227,7 @@ export default function NewTimeBlockPage() {
           disabled={isSubmitting}
           style={{ padding: "10px 16px", cursor: "pointer" }}
         >
-          {isSubmitting ? "Creating..." : "Create time block"}
+          {isSubmitting ? t("time.new.creating") : t("time.new.create")}
         </button>
       </form>
 

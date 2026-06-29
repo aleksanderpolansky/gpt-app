@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import {
+  getLocaleSearchParam,
+  getTimeMessage,
+  type LocaleCode,
+  type TimeMessageKey,
+} from "@/i18n";
 
 type TimeBlock = {
   id: string;
@@ -16,9 +23,55 @@ type TimeBlock = {
   created_at: string;
 };
 
+function useInterfaceLocale(): LocaleCode {
+  const [locale, setLocale] = useState<LocaleCode>("en");
+
+  useEffect(() => {
+    function readLocaleFromUrl() {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      setLocale(getLocaleSearchParam(new URLSearchParams(window.location.search)));
+    }
+
+    readLocaleFromUrl();
+    window.addEventListener("popstate", readLocaleFromUrl);
+
+    return () => {
+      window.removeEventListener("popstate", readLocaleFromUrl);
+    };
+  }, []);
+
+  return locale;
+}
+
+function getDateLocale(locale: LocaleCode) {
+  const dateLocales: Record<LocaleCode, string> = {
+    ru: "ru-RU",
+    pl: "pl-PL",
+    en: "en-US",
+    es: "es-ES",
+    uk: "uk-UA",
+    de: "de-DE",
+    cs: "cs-CZ",
+  };
+
+  return dateLocales[locale] ?? "en-US";
+}
+
 export default function TimeBlocksPage() {
+  const locale = useInterfaceLocale();
+  const t = useMemo(
+    () => (key: TimeMessageKey) => getTimeMessage(key, locale),
+    [locale],
+  );
+
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
-  const [message, setMessage] = useState("Loading time blocks...");
+  const [messageKey, setMessageKey] = useState<TimeMessageKey | null>(
+    "time.blocks.loading",
+  );
+  const [fallbackMessage, setFallbackMessage] = useState("");
 
   useEffect(() => {
     async function loadTimeBlocks() {
@@ -26,33 +79,35 @@ export default function TimeBlocksPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data.error ?? "Failed to load time blocks");
+        setMessageKey("time.blocks.loadError");
+        setFallbackMessage(data.error ?? "");
         return;
       }
 
       setTimeBlocks(data.timeBlocks ?? []);
-      setMessage("");
+      setMessageKey(null);
+      setFallbackMessage("");
     }
 
     loadTimeBlocks();
   }, []);
 
+  const dateLocale = getDateLocale(locale);
+  const message = messageKey ? fallbackMessage || t(messageKey) : "";
+
   return (
     <main style={{ padding: "32px", maxWidth: "900px" }}>
-      <h1>Time blocks</h1>
+      <h1>{t("time.blocks.title")}</h1>
+
+      <p>{t("time.blocks.subtitle")}</p>
 
       <p>
-        This page shows time blocks for availability, work, sleep, travel,
-        recovery, free time and service availability analysis.
-      </p>
-
-      <p>
-        <a href="/time-blocks/new">Create new time block</a>
+        <a href="/time-blocks/new">{t("time.blocks.createLink")}</a>
       </p>
 
       {message && <p>{message}</p>}
 
-      {!message && timeBlocks.length === 0 && <p>No time blocks yet.</p>}
+      {!message && timeBlocks.length === 0 && <p>{t("time.blocks.empty")}</p>}
 
       {timeBlocks.length > 0 && (
         <div style={{ display: "grid", gap: "16px" }}>
@@ -68,47 +123,49 @@ export default function TimeBlocksPage() {
               <h2>{timeBlock.block_type}</h2>
 
               <p>
-                <strong>Start:</strong>{" "}
-                {new Date(timeBlock.start_time).toLocaleString()}
+                <strong>{t("time.blocks.start")}:</strong>{" "}
+                {new Date(timeBlock.start_time).toLocaleString(dateLocale)}
               </p>
 
               <p>
-                <strong>End:</strong>{" "}
-                {new Date(timeBlock.end_time).toLocaleString()}
+                <strong>{t("time.blocks.end")}:</strong>{" "}
+                {new Date(timeBlock.end_time).toLocaleString(dateLocale)}
               </p>
 
               <p>
-                <strong>Duration:</strong>{" "}
-                {timeBlock.duration_minutes ?? "Not calculated"} minutes
+                <strong>{t("time.blocks.duration")}:</strong>{" "}
+                {timeBlock.duration_minutes ?? t("time.blocks.notCalculated")}
               </p>
 
               <p>
-                <strong>Availability:</strong>{" "}
+                <strong>{t("time.blocks.availabilityStatus")}:</strong>{" "}
                 {timeBlock.availability_status}
               </p>
 
               <p>
-                <strong>Energy expectation:</strong>{" "}
-                {timeBlock.energy_expectation || "Not specified"}
+                <strong>{t("time.blocks.energyExpectation")}:</strong>{" "}
+                {timeBlock.energy_expectation ?? t("time.blocks.notSpecified")}
               </p>
 
               <p>
-                <strong>Attention requirement:</strong>{" "}
-                {timeBlock.attention_requirement || "Not specified"}
+                <strong>{t("time.blocks.attentionRequirement")}:</strong>{" "}
+                {timeBlock.attention_requirement ?? t("time.blocks.notSpecified")}
               </p>
 
               <p>
-                <strong>Can multitask:</strong>{" "}
-                {timeBlock.can_multitask ? "Yes" : "No"}
+                <strong>{t("time.blocks.canMultitask")}:</strong>{" "}
+                {timeBlock.can_multitask
+                  ? t("time.blocks.yes")
+                  : t("time.blocks.no")}
               </p>
 
               <p>
-                <strong>Source:</strong> {timeBlock.source}
+                <strong>{t("time.blocks.source")}:</strong> {timeBlock.source}
               </p>
 
               <p>
-                <strong>Created at:</strong>{" "}
-                {new Date(timeBlock.created_at).toLocaleString()}
+                <strong>{t("time.blocks.createdAt")}:</strong>{" "}
+                {new Date(timeBlock.created_at).toLocaleString(dateLocale)}
               </p>
             </article>
           ))}
