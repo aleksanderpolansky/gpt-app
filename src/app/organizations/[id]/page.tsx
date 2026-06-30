@@ -68,6 +68,7 @@ type Organization = {
   created_by_user_id?: string | null;
   organization_name: string;
   organization_type: string;
+  public_slug?: string | null;
   description?: string | null;
   status: string;
   country_code?: string | null;
@@ -695,6 +696,7 @@ async function getOrganizationPageData(
         created_by_user_id,
         organization_name,
         organization_type,
+        public_slug,
         description,
         status,
         country_code,
@@ -1099,6 +1101,188 @@ function StatusPill({
   );
 }
 
+type OwnerPublicPreviewMessageKey =
+  | "eyebrow"
+  | "title"
+  | "description"
+  | "openPublic"
+  | "edit"
+  | "manage"
+  | "category"
+  | "location"
+  | "descriptionLabel"
+  | "type"
+  | "offers"
+  | "certificates"
+  | "noCategory"
+  | "adminBelow"
+  | "visibleToGuests"
+  | "ownerOnly"
+  | "noOffers"
+  | "createOffer"
+;
+
+const OWNER_PUBLIC_PREVIEW_MESSAGES: Record<
+  LocaleCode,
+  Record<OwnerPublicPreviewMessageKey, string>
+> = {
+  en: {
+    eyebrow: "Public profile preview",
+    title: "Guest view first",
+    description: "This owner page now starts with the same kind of public profile preview a visitor should see. Edit controls are visible only in owner mode.",
+    openPublic: "Open public page",
+    edit: "Edit",
+    manage: "Manage",
+    category: "Category",
+    location: "Location",
+    descriptionLabel: "Description",
+    type: "Type",
+    offers: "Offers",
+    certificates: "Certificates",
+    noCategory: "Category not confirmed",
+    adminBelow: "Owner/admin settings continue below this preview.",
+    visibleToGuests: "Visible to guests",
+    ownerOnly: "Owner-only controls",
+    noOffers: "No offers yet",
+    createOffer: "Create offer",
+  },
+  ru: {
+    eyebrow: "\u041f\u0440\u0435\u0434\u043f\u0440\u043e\u0441\u043c\u043e\u0442\u0440 \u043f\u0443\u0431\u043b\u0438\u0447\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f",
+    title: "\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u0432\u0438\u0434 \u0433\u043e\u0441\u0442\u044f",
+    description: "\u0421\u0442\u0440\u0430\u043d\u0438\u0446\u0430 \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430 \u043d\u0430\u0447\u0438\u043d\u0430\u0435\u0442\u0441\u044f \u0441 \u043f\u0443\u0431\u043b\u0438\u0447\u043d\u043e\u0433\u043e \u0432\u0438\u0434\u0430 \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u044f. \u041a\u043d\u043e\u043f\u043a\u0438 \u0440\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f \u0432\u0438\u0434\u0438\u0442 \u0442\u043e\u043b\u044c\u043a\u043e \u0432\u043b\u0430\u0434\u0435\u043b\u0435\u0446.",
+    openPublic: "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043f\u0443\u0431\u043b\u0438\u0447\u043d\u0443\u044e \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0443",
+    edit: "\u0420\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c",
+    manage: "\u0423\u043f\u0440\u0430\u0432\u043b\u044f\u0442\u044c",
+    category: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044f",
+    location: "\u041b\u043e\u043a\u0430\u0446\u0438\u044f",
+    descriptionLabel: "\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435",
+    type: "\u0422\u0438\u043f",
+    offers: "\u041e\u0444\u0444\u0435\u0440\u044b",
+    certificates: "\u0421\u0435\u0440\u0442\u0438\u0444\u0438\u043a\u0430\u0442\u044b",
+    noCategory: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044f \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430",
+    adminBelow: "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430 \u0438 \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u0430 \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u044e\u0442\u0441\u044f \u043d\u0438\u0436\u0435.",
+    visibleToGuests: "\u0412\u0438\u0434\u043d\u043e \u0433\u043e\u0441\u0442\u044f\u043c",
+    ownerOnly: "\u0422\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430",
+    noOffers: "\u041e\u0444\u0444\u0435\u0440\u043e\u0432 \u043f\u043e\u043a\u0430 \u043d\u0435\u0442",
+    createOffer: "\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u043e\u0444\u0444\u0435\u0440",
+  },
+  uk: {
+    eyebrow: "\u041f\u043e\u043f\u0435\u0440\u0435\u0434\u043d\u0456\u0439 \u043f\u0435\u0440\u0435\u0433\u043b\u044f\u0434 \u043f\u0443\u0431\u043b\u0456\u0447\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u0444\u0456\u043b\u044e",
+    title: "\u0421\u043f\u043e\u0447\u0430\u0442\u043a\u0443 \u0432\u0438\u0433\u043b\u044f\u0434 \u0433\u043e\u0441\u0442\u044f",
+    description: "\u0421\u0442\u043e\u0440\u0456\u043d\u043a\u0430 \u0432\u043b\u0430\u0441\u043d\u0438\u043a\u0430 \u043f\u043e\u0447\u0438\u043d\u0430\u0454\u0442\u044c\u0441\u044f \u0437 \u043f\u0443\u0431\u043b\u0456\u0447\u043d\u043e\u0433\u043e \u0432\u0438\u0433\u043b\u044f\u0434\u0443 \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u0430. \u041a\u043d\u043e\u043f\u043a\u0438 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043d\u043d\u044f \u0431\u0430\u0447\u0438\u0442\u044c \u0442\u0456\u043b\u044c\u043a\u0438 \u0432\u043b\u0430\u0441\u043d\u0438\u043a.",
+    openPublic: "\u0412\u0456\u0434\u043a\u0440\u0438\u0442\u0438 \u043f\u0443\u0431\u043b\u0456\u0447\u043d\u0443 \u0441\u0442\u043e\u0440\u0456\u043d\u043a\u0443",
+    edit: "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438",
+    manage: "\u041a\u0435\u0440\u0443\u0432\u0430\u0442\u0438",
+    category: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u044f",
+    location: "\u041b\u043e\u043a\u0430\u0446\u0456\u044f",
+    descriptionLabel: "\u041e\u043f\u0438\u0441",
+    type: "\u0422\u0438\u043f",
+    offers: "\u041f\u0440\u043e\u043f\u043e\u0437\u0438\u0446\u0456\u0457",
+    certificates: "\u0421\u0435\u0440\u0442\u0438\u0444\u0456\u043a\u0430\u0442\u0438",
+    noCategory: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u044e \u043d\u0435 \u043f\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043d\u043e",
+    adminBelow: "\u041d\u0430\u043b\u0430\u0448\u0442\u0443\u0432\u0430\u043d\u043d\u044f \u0432\u043b\u0430\u0441\u043d\u0438\u043a\u0430 \u0439 \u0430\u0434\u043c\u0456\u043d\u0456\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u0430 \u043f\u0440\u043e\u0434\u043e\u0432\u0436\u0443\u044e\u0442\u044c\u0441\u044f \u043d\u0438\u0436\u0447\u0435.",
+    visibleToGuests: "\u0412\u0438\u0434\u043d\u043e \u0433\u043e\u0441\u0442\u044f\u043c",
+    ownerOnly: "\u0422\u0456\u043b\u044c\u043a\u0438 \u0434\u043b\u044f \u0432\u043b\u0430\u0441\u043d\u0438\u043a\u0430",
+    noOffers: "\u041f\u0440\u043e\u043f\u043e\u0437\u0438\u0446\u0456\u0439 \u043f\u043e\u043a\u0438 \u043d\u0435\u043c\u0430\u0454",
+    createOffer: "\u0421\u0442\u0432\u043e\u0440\u0438\u0442\u0438 \u043f\u0440\u043e\u043f\u043e\u0437\u0438\u0446\u0456\u044e",
+  },
+  pl: {
+    eyebrow: "Podgl\u0105d profilu publicznego",
+    title: "Najpierw widok go\u015bcia",
+    description: "Strona w\u0142a\u015bciciela zaczyna si\u0119 od publicznego podgl\u0105du firmy. Przyciski edycji s\u0105 widoczne tylko dla w\u0142a\u015bciciela.",
+    openPublic: "Otw\u00f3rz stron\u0119 publiczn\u0105",
+    edit: "Edytuj",
+    manage: "Zarz\u0105dzaj",
+    category: "Kategoria",
+    location: "Lokalizacja",
+    descriptionLabel: "Opis",
+    type: "Typ",
+    offers: "Oferty",
+    certificates: "Certyfikaty",
+    noCategory: "Kategoria niepotwierdzona",
+    adminBelow: "Ustawienia w\u0142a\u015bciciela i administratora s\u0105 ni\u017cej.",
+    visibleToGuests: "Widoczne dla go\u015bci",
+    ownerOnly: "Tylko dla w\u0142a\u015bciciela",
+    noOffers: "Nie ma jeszcze ofert",
+    createOffer: "Utw\u00f3rz ofert\u0119",
+  },
+  es: {
+    eyebrow: "Vista previa del perfil p\u00fablico",
+    title: "Primero la vista del visitante",
+    description: "La p\u00e1gina del propietario empieza con una vista p\u00fablica de la empresa. Los controles de edici\u00f3n solo los ve el propietario.",
+    openPublic: "Abrir p\u00e1gina p\u00fablica",
+    edit: "Editar",
+    manage: "Gestionar",
+    category: "Categor\u00eda",
+    location: "Ubicaci\u00f3n",
+    descriptionLabel: "Descripci\u00f3n",
+    type: "Tipo",
+    offers: "Ofertas",
+    certificates: "Certificados",
+    noCategory: "Categor\u00eda no confirmada",
+    adminBelow: "Los ajustes del propietario y del administrador contin\u00faan abajo.",
+    visibleToGuests: "Visible para visitantes",
+    ownerOnly: "Solo propietario",
+    noOffers: "A\u00fan no hay ofertas",
+    createOffer: "Crear oferta",
+  },
+  de: {
+    eyebrow: "Vorschau des \u00f6ffentlichen Profils",
+    title: "Zuerst die G\u00e4steansicht",
+    description: "Die Inhaberseite beginnt mit der \u00f6ffentlichen Vorschau des Unternehmens. Bearbeitungssteuerungen sind nur f\u00fcr den Inhaber sichtbar.",
+    openPublic: "\u00d6ffentliche Seite \u00f6ffnen",
+    edit: "Bearbeiten",
+    manage: "Verwalten",
+    category: "Kategorie",
+    location: "Standort",
+    descriptionLabel: "Beschreibung",
+    type: "Typ",
+    offers: "Angebote",
+    certificates: "Gutscheine",
+    noCategory: "Kategorie nicht best\u00e4tigt",
+    adminBelow: "Inhaber- und Admin-Einstellungen folgen darunter.",
+    visibleToGuests: "F\u00fcr G\u00e4ste sichtbar",
+    ownerOnly: "Nur f\u00fcr Inhaber",
+    noOffers: "Noch keine Angebote",
+    createOffer: "Angebot erstellen",
+  },
+  cs: {
+    eyebrow: "N\u00e1hled ve\u0159ejn\u00e9ho profilu",
+    title: "Nejd\u0159\u00edv pohled hosta",
+    description: "Str\u00e1nka vlastn\u00edka za\u010d\u00edn\u00e1 ve\u0159ejn\u00fdm n\u00e1hledem podniku. Ovl\u00e1dac\u00ed prvky \u00faprav vid\u00ed jen vlastn\u00edk.",
+    openPublic: "Otev\u0159\u00edt ve\u0159ejnou str\u00e1nku",
+    edit: "Upravit",
+    manage: "Spravovat",
+    category: "Kategorie",
+    location: "Lokalita",
+    descriptionLabel: "Popis",
+    type: "Typ",
+    offers: "Nab\u00eddky",
+    certificates: "Certifik\u00e1ty",
+    noCategory: "Kategorie nepotvrzena",
+    adminBelow: "Nastaven\u00ed vlastn\u00edka a administr\u00e1tora pokra\u010duj\u00ed n\u00ed\u017ee.",
+    visibleToGuests: "Viditeln\u00e9 pro hosty",
+    ownerOnly: "Pouze vlastn\u00edk",
+    noOffers: "Zat\u00edm \u017e\u00e1dn\u00e9 nab\u00eddky",
+    createOffer: "Vytvo\u0159it nab\u00eddku",
+  },
+};
+
+function getOwnerPublicPreviewMessage(
+  locale: LocaleCode,
+  key: OwnerPublicPreviewMessageKey,
+) {
+  return OWNER_PUBLIC_PREVIEW_MESSAGES[locale]?.[key] ?? OWNER_PUBLIC_PREVIEW_MESSAGES.en[key];
+}
+
+function buildPublicOrganizationSlug(organization: Organization) {
+  if (organization.public_slug) {
+    return organization.public_slug;
+  }
+
+  return `organization-${organization.id.slice(0, 8)}`;
+}
+
 function SectionHeader({
   eyebrow,
   title,
@@ -1311,6 +1495,20 @@ export default async function OrganizationDetailsPage({
   const formatMinutesValue = (value: number | null | undefined) =>
     value ? `${value} ${td("common.minutesShort")}` : notSpecifiedLabel;
 
+  const publicProfileHref = organization
+    ? `/directory/${buildPublicOrganizationSlug(organization)}${localeSuffix}`
+    : `/directory${localeSuffix}`;
+  const ownerPreviewText = (key: OwnerPublicPreviewMessageKey) =>
+    getOwnerPublicPreviewMessage(locale, key);
+  const ownerPreviewCategoryLabel =
+    currentCategory?.categoryName ?? ownerPreviewText("noCategory");
+  const ownerPreviewLocationLabel = getLocationLabel(
+    primaryLocation,
+    notSpecifiedLabel,
+    td("common.addressHidden"),
+  );
+  const ownerPreviewOffers = offers.slice(0, 3);
+
   const tabs: TabItem[] = [
     {
       id: "overview",
@@ -1449,7 +1647,189 @@ export default async function OrganizationDetailsPage({
         ))}
 
         <div className="org-detail-shell grid gap-5">
-          <header className="rounded-[24px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+          {!errorMessage && organization ? (
+            <section
+              id="owner-public-preview"
+              className="rounded-[24px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
+            >
+              <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#8b91aa]">
+                    {ownerPreviewText("eyebrow")}
+                  </div>
+                  <h2 className="text-[28px] font-bold tracking-[-0.035em] text-[#111827]">
+                    {ownerPreviewText("title")}
+                  </h2>
+                  <p className="mt-2 max-w-[780px] text-[14px] leading-6 text-[#5a5f7a]">
+                    {ownerPreviewText("description")}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2 lg:justify-end">
+                  <Link
+                    href={publicProfileHref}
+                    className="rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
+                  >
+                    {ownerPreviewText("openPublic")}
+                  </Link>
+                  <a
+                    href="#owner-admin-workspace"
+                    className="rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-[13px] font-bold text-[#92400e] transition hover:bg-[#fef3c7]"
+                  >
+                    {ownerPreviewText("adminBelow")}
+                  </a>
+                </div>
+              </div>
+
+              <div className="grid gap-5 lg:grid-cols-[1.35fr_0.65fr]">
+                <article className="rounded-[22px] border border-[#edf0f7] bg-[#f8f9fd] p-5">
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-[#dfe4ff] bg-[#eef2ff] px-3 py-1.5 text-[12px] font-semibold text-[#3b6ef8]">
+                      {ownerPreviewCategoryLabel}
+                    </span>
+                    <a
+                      href="#owner-admin-workspace"
+                      className="rounded-full border border-[#fde68a] bg-[#fffbeb] px-3 py-1.5 text-[12px] font-bold text-[#92400e]"
+                    >
+                      {ownerPreviewText("edit")}
+                    </a>
+                    <span className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#4a4f6a]">
+                      {ownerPreviewLocationLabel}
+                    </span>
+                    <a
+                      href="#owner-admin-workspace"
+                      className="rounded-full border border-[#fde68a] bg-[#fffbeb] px-3 py-1.5 text-[12px] font-bold text-[#92400e]"
+                    >
+                      {ownerPreviewText("edit")}
+                    </a>
+                  </div>
+
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <h3 className="text-[24px] font-bold tracking-[-0.03em] text-[#111827]">
+                      {organization.organization_name}
+                    </h3>
+                    <a
+                      href="#owner-admin-workspace"
+                      className="w-fit rounded-xl border border-[#fde68a] bg-[#fffbeb] px-3 py-2 text-[12px] font-bold text-[#92400e]"
+                    >
+                      {ownerPreviewText("edit")}
+                    </a>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-[#edf0f7] bg-white p-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8b91aa]">
+                          {ownerPreviewText("descriptionLabel")}
+                        </div>
+                        <p className="mt-2 text-[14px] leading-6 text-[#343854]">
+                          {organization.description || notSpecifiedLabel}
+                        </p>
+                      </div>
+                      <a
+                        href="#owner-admin-workspace"
+                        className="w-fit rounded-xl border border-[#fde68a] bg-[#fffbeb] px-3 py-2 text-[12px] font-bold text-[#92400e]"
+                      >
+                        {ownerPreviewText("edit")}
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <DetailRow
+                      label={ownerPreviewText("type")}
+                      value={getOrganizationTypeLabel(organization.organization_type, locale)}
+                    />
+                    <DetailRow
+                      label={ownerPreviewText("offers")}
+                      value={String(offers.length)}
+                    />
+                    <DetailRow
+                      label={ownerPreviewText("certificates")}
+                      value={String(
+                        offers.filter((offer) => offer.certificate_available).length,
+                      )}
+                    />
+                  </div>
+                </article>
+
+                <aside className="grid content-start gap-3 rounded-[22px] border border-[#edf0f7] bg-[#f8f9fd] p-5">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8b91aa]">
+                    {ownerPreviewText("ownerOnly")}
+                  </div>
+                  <Link
+                    href={createOfferHref}
+                    className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-center text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.22)] transition hover:bg-[#2f5fe3]"
+                  >
+                    {ownerPreviewText("createOffer")}
+                  </Link>
+                  <Link
+                    href={createValueObjectHref}
+                    className="rounded-xl border border-[#dfe4ff] bg-white px-4 py-3 text-center text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#eef2ff]"
+                  >
+                    {ownerPreviewText("manage")}
+                  </Link>
+                  <a
+                    href="#owner-admin-workspace"
+                    className="rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-center text-[13px] font-bold text-[#92400e] transition hover:bg-[#fef3c7]"
+                  >
+                    {ownerPreviewText("adminBelow")}
+                  </a>
+                </aside>
+              </div>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-3">
+                {ownerPreviewOffers.length === 0 ? (
+                  <div className="rounded-[18px] border border-dashed border-[#dfe3f1] bg-[#f8f9fd] p-5">
+                    <h3 className="text-[18px] font-bold text-[#343854]">
+                      {ownerPreviewText("noOffers")}
+                    </h3>
+                    <p className="mt-2 text-[13px] leading-5 text-[#7c8099]">
+                      {ownerPreviewText("visibleToGuests")}
+                    </p>
+                  </div>
+                ) : (
+                  ownerPreviewOffers.map((offer) => (
+                    <article
+                      key={offer.id}
+                      className="rounded-[18px] border border-[#edf0f7] bg-[#f8f9fd] p-5"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="text-[17px] font-bold text-[#111827]">
+                          {offer.title}
+                        </h3>
+                        <Link
+                          href={`/offers/${offer.id}${localeSuffix}`}
+                          className="text-[12px] font-bold text-[#3b6ef8]"
+                        >
+                          {ownerPreviewText("manage")}
+                        </Link>
+                      </div>
+                      <p className="mt-3 line-clamp-2 text-[13px] leading-5 text-[#5a5f7a]">
+                        {offer.description || notSpecifiedLabel}
+                      </p>
+                      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                        <DetailRow
+                          label={td("field.currentPrice")}
+                          value={formatMoneyValue(offer.price, offer.currency)}
+                        />
+                        <DetailRow
+                          label={td("field.defaultDuration")}
+                          value={formatMinutesValue(offer.default_duration_minutes)}
+                        />
+                        <DetailRow
+                          label={td("field.status")}
+                          value={getStatusLabel(offer.status)}
+                        />
+                      </div>
+                    </article>
+                  ))
+                )}
+              </div>
+            </section>
+          ) : null}
+
+          <header id="owner-admin-workspace" className="rounded-[24px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.22em] text-[#8b91aa]">
