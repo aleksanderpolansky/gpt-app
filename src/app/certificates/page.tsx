@@ -1,39 +1,37 @@
-﻿import type { Metadata } from "next";
+import { getLocaleSearchParam } from "@/i18n";
+import { CommercialListDashboardContent } from "../../components/figma-dashboard/commercial-list-dashboard";
 
-import type { CommercialCoreViewModel } from "../../components/workspace/commercial-core";
-import {
-  CommercialDashboardComposer,
-  commercialCoreFixture,
-} from "../../components/workspace/commercial-core";
+export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Certificates | Commercial Core",
-  description:
-    "Read-only commercial certificates route with face value, points spending, money boundary and seller payout preview.",
+type CertificatesPageSearchParams = Record<string, string | string[] | undefined>;
+
+type CertificatesPageProps = {
+  readonly searchParams?: Promise<CertificatesPageSearchParams>;
 };
 
-const certificatesCommercialViewModel: CommercialCoreViewModel = {
-  ...commercialCoreFixture,
-  header: {
-    ...commercialCoreFixture.header,
-    activeRoute: "certificates",
-    accessState: "read-only",
-    eyebrow: "Commercial core / Certificates",
-    title: "Certificates",
-    description:
-      "Read-only certificate catalogue with face value, points spending, money boundary and seller payout preview.",
-  },
-};
-
-export default function CertificatesPage() {
-  return (
-    <div className="min-h-0">
-      <div className="min-w-0">
-        <CommercialDashboardComposer viewModel={certificatesCommercialViewModel} />
-      </div>
-</div>
-  );
+function getFirstSearchParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
 }
 
+export default async function CertificatesPage({ searchParams }: CertificatesPageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const localeSearchParams = new URLSearchParams();
 
+  const locale = getFirstSearchParam(resolvedSearchParams?.locale);
+  const lang = getFirstSearchParam(resolvedSearchParams?.lang);
 
+  if (locale) {
+    localeSearchParams.set("locale", locale);
+  }
+
+  if (lang) {
+    localeSearchParams.set("lang", lang);
+  }
+
+  return (
+    <CommercialListDashboardContent
+      mode="certificates"
+      initialLocale={getLocaleSearchParam(localeSearchParams)}
+    />
+  );
+}
