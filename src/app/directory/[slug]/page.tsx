@@ -1,5 +1,17 @@
 import Link from "next/link";
+import { type ElementType, type ReactNode } from "react";
 import { notFound } from "next/navigation";
+import {
+  Activity,
+  Globe,
+  MapPin,
+  MessageCircle,
+  Phone,
+  Star,
+  Target,
+  TrendingUp,
+  Zap,
+} from "lucide-react";
 import { supabase } from "../../../../lib/supabase";
 import {
   getDirectoryDetailMessages,
@@ -1017,6 +1029,503 @@ async function getOffersWithCertificateAvailability(
   }));
 }
 
+type PublicDashboardIconComponent = ElementType;
+
+type PublicDashboardCardProps = {
+  readonly label: string;
+  readonly accent: string;
+  readonly icon: PublicDashboardIconComponent;
+  readonly children: ReactNode;
+};
+
+type PublicDashboardAnalyticsCardProps = {
+  readonly title: string;
+  readonly detailsLabel: string;
+  readonly children: ReactNode;
+};
+
+type PublicDashboardDirectionCardProps = {
+  readonly label: string;
+  readonly pct: number;
+  readonly color: string;
+  readonly sub: string;
+  readonly trend: string;
+};
+
+type PublicDashboardActionButtonProps = {
+  readonly href?: string | null;
+  readonly icon: PublicDashboardIconComponent;
+  readonly children: ReactNode;
+  readonly disabled?: boolean;
+};
+
+type PublicOrganizationDashboardLabelKey =
+  | "logo"
+  | "address"
+  | "contact"
+  | "phone"
+  | "website"
+  | "messenger"
+  | "description"
+  | "offers"
+  | "certificates"
+  | "category"
+  | "publicInfo"
+  | "serviceArea"
+  | "publicActions"
+  | "notProvided"
+  | "details"
+  | "thisWeek";
+
+type PublicOrganizationDashboardLocaleKey =
+  | "en"
+  | "pl"
+  | "uk"
+  | "ru"
+  | "de"
+  | "es"
+  | "cs";
+
+const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
+  PublicOrganizationDashboardLocaleKey,
+  Record<PublicOrganizationDashboardLabelKey, string>
+> = {
+  en: {
+    logo: "Logo",
+    address: "Address",
+    contact: "Contact",
+    phone: "Phone",
+    website: "Website",
+    messenger: "Messenger",
+    description: "Description",
+    offers: "Offers",
+    certificates: "Gift certificates",
+    category: "Category",
+    publicInfo: "Public information",
+    serviceArea: "Service area",
+    publicActions: "Public actions",
+    notProvided: "Not provided",
+    details: "Details",
+    thisWeek: "this week",
+  },
+  pl: {
+    logo: "Logo",
+    address: "Adres",
+    contact: "Kontakt",
+    phone: "Telefon",
+    website: "Strona",
+    messenger: "Komunikator",
+    description: "Opis",
+    offers: "Oferty",
+    certificates: "Bony podarunkowe",
+    category: "Kategoria",
+    publicInfo: "Informacje publiczne",
+    serviceArea: "Obszar obs\u0142ugi",
+    publicActions: "Dzia\u0142ania publiczne",
+    notProvided: "Nie podano",
+    details: "Szczeg\u00f3\u0142y",
+    thisWeek: "w tym tygodniu",
+  },
+  uk: {
+    logo: "\u041b\u043e\u0433\u043e\u0442\u0438\u043f",
+    address: "\u0410\u0434\u0440\u0435\u0441\u0430",
+    contact: "\u041a\u043e\u043d\u0442\u0430\u043a\u0442",
+    phone: "\u0422\u0435\u043b\u0435\u0444\u043e\u043d",
+    website: "\u0421\u0430\u0439\u0442",
+    messenger: "\u041c\u0435\u0441\u0435\u043d\u0434\u0436\u0435\u0440",
+    description: "\u041e\u043f\u0438\u0441",
+    offers: "\u041f\u0440\u043e\u043f\u043e\u0437\u0438\u0446\u0456\u0457",
+    certificates: "\u041f\u043e\u0434\u0430\u0440\u0443\u043d\u043a\u043e\u0432\u0456 \u0441\u0435\u0440\u0442\u0438\u0444\u0456\u043a\u0430\u0442\u0438",
+    category: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u044f",
+    publicInfo: "\u041f\u0443\u0431\u043b\u0456\u0447\u043d\u0430 \u0456\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0456\u044f",
+    serviceArea: "\u0417\u043e\u043d\u0430 \u043e\u0431\u0441\u043b\u0443\u0433\u043e\u0432\u0443\u0432\u0430\u043d\u043d\u044f",
+    publicActions: "\u041f\u0443\u0431\u043b\u0456\u0447\u043d\u0456 \u0434\u0456\u0457",
+    notProvided: "\u041d\u0435 \u0432\u043a\u0430\u0437\u0430\u043d\u043e",
+    details: "\u0414\u043e\u043a\u043b\u0430\u0434\u043d\u0456\u0448\u0435",
+    thisWeek: "\u0446\u044c\u043e\u0433\u043e \u0442\u0438\u0436\u043d\u044f",
+  },
+  ru: {
+    logo: "\u041b\u043e\u0433\u043e\u0442\u0438\u043f",
+    address: "\u0410\u0434\u0440\u0435\u0441",
+    contact: "\u041a\u043e\u043d\u0442\u0430\u043a\u0442",
+    phone: "\u0422\u0435\u043b\u0435\u0444\u043e\u043d",
+    website: "\u0421\u0430\u0439\u0442",
+    messenger: "\u041c\u0435\u0441\u0441\u0435\u043d\u0434\u0436\u0435\u0440",
+    description: "\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435",
+    offers: "\u041f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u044f",
+    certificates: "\u041f\u043e\u0434\u0430\u0440\u043e\u0447\u043d\u044b\u0435 \u0441\u0435\u0440\u0442\u0438\u0444\u0438\u043a\u0430\u0442\u044b",
+    category: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044f",
+    publicInfo: "\u041f\u0443\u0431\u043b\u0438\u0447\u043d\u0430\u044f \u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044f",
+    serviceArea: "\u0417\u043e\u043d\u0430 \u043e\u0431\u0441\u043b\u0443\u0436\u0438\u0432\u0430\u043d\u0438\u044f",
+    publicActions: "\u041f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f",
+    notProvided: "\u041d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d\u043e",
+    details: "\u041f\u043e\u0434\u0440\u043e\u0431\u043d\u0435\u0435",
+    thisWeek: "\u043d\u0430 \u044d\u0442\u043e\u0439 \u043d\u0435\u0434\u0435\u043b\u0435",
+  },
+  de: {
+    logo: "Logo",
+    address: "Adresse",
+    contact: "Kontakt",
+    phone: "Telefon",
+    website: "Website",
+    messenger: "Messenger",
+    description: "Beschreibung",
+    offers: "Angebote",
+    certificates: "Geschenkgutscheine",
+    category: "Kategorie",
+    publicInfo: "\u00d6ffentliche Informationen",
+    serviceArea: "Servicegebiet",
+    publicActions: "\u00d6ffentliche Aktionen",
+    notProvided: "Nicht angegeben",
+    details: "Details",
+    thisWeek: "diese Woche",
+  },
+  es: {
+    logo: "Logotipo",
+    address: "Direcci\u00f3n",
+    contact: "Contacto",
+    phone: "Tel\u00e9fono",
+    website: "Sitio web",
+    messenger: "Mensajer\u00eda",
+    description: "Descripci\u00f3n",
+    offers: "Ofertas",
+    certificates: "Certificados regalo",
+    category: "Categor\u00eda",
+    publicInfo: "Informaci\u00f3n p\u00fablica",
+    serviceArea: "\u00c1rea de servicio",
+    publicActions: "Acciones p\u00fablicas",
+    notProvided: "No indicado",
+    details: "Detalles",
+    thisWeek: "esta semana",
+  },
+  cs: {
+    logo: "Logo",
+    address: "Adresa",
+    contact: "Kontakt",
+    phone: "Telefon",
+    website: "Web",
+    messenger: "Messenger",
+    description: "Popis",
+    offers: "Nab\u00eddky",
+    certificates: "D\u00e1rkov\u00e9 poukazy",
+    category: "Kategorie",
+    publicInfo: "Ve\u0159ejn\u00e9 informace",
+    serviceArea: "Oblast slu\u017eeb",
+    publicActions: "Ve\u0159ejn\u00e9 akce",
+    notProvided: "Neuvedeno",
+    details: "Podrobnosti",
+    thisWeek: "tento t\u00fdden",
+  },
+};
+
+function getPublicOrganizationDashboardLocale(
+  locale?: string,
+): PublicOrganizationDashboardLocaleKey {
+  if (
+    locale === "pl" ||
+    locale === "uk" ||
+    locale === "ru" ||
+    locale === "de" ||
+    locale === "es" ||
+    locale === "cs"
+  ) {
+    return locale;
+  }
+
+  return "en";
+}
+
+function getPublicOrganizationDashboardLabel(
+  key: PublicOrganizationDashboardLabelKey,
+  locale?: string,
+) {
+  const labelLocale = getPublicOrganizationDashboardLocale(locale);
+
+  if (key === "messenger" && labelLocale === "cs") {
+    return "Komunik\u00e1tor";
+  }
+
+  return (
+    PUBLIC_ORGANIZATION_DASHBOARD_LABELS[labelLocale][key] ??
+    PUBLIC_ORGANIZATION_DASHBOARD_LABELS.en[key]
+  );
+}
+
+function getPublicOrganizationPublicProfileLabel(locale?: string) {
+  const labelLocale = getPublicOrganizationDashboardLocale(locale);
+
+  const labels: Record<PublicOrganizationDashboardLocaleKey, string> = {
+    en: "Public profile",
+    pl: "Profil publiczny",
+    uk: "\u041f\u0443\u0431\u043b\u0456\u0447\u043d\u0438\u0439 \u043f\u0440\u043e\u0444\u0456\u043b\u044c",
+    ru: "\u041f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044c",
+    de: "\u00d6ffentliches Profil",
+    es: "Perfil p\u00fablico",
+    cs: "Ve\u0159ejn\u00fd profil",
+  };
+
+  return labels[labelLocale] ?? labels.en;
+}
+function normalizePublicExternalHref(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return null;
+  }
+
+  if (
+    trimmedValue.startsWith("http://") ||
+    trimmedValue.startsWith("https://") ||
+    trimmedValue.startsWith("mailto:") ||
+    trimmedValue.startsWith("tel:")
+  ) {
+    return trimmedValue;
+  }
+
+  return `https://${trimmedValue}`;
+}
+
+function getPublicMessengerUrl(organization: DirectoryOrganization) {
+  const socialLinks = organization.socialLinks ?? {};
+  const candidateKeys = [
+    "messenger",
+    "facebook",
+    "whatsapp",
+    "telegram",
+    "instagram",
+  ];
+
+  for (const key of candidateKeys) {
+    const value = socialLinks[key];
+
+    if (typeof value === "string" && value.trim()) {
+      return normalizePublicExternalHref(value);
+    }
+  }
+
+  return null;
+}
+
+function PublicDashboardTopCard({
+  label,
+  accent,
+  icon: Icon,
+  children,
+}: PublicDashboardCardProps) {
+  return (
+    <div className="flex flex-col gap-2.5 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
+          {label}
+        </span>
+        <div
+          className="flex h-7 w-7 items-center justify-center rounded-lg"
+          style={{ backgroundColor: `${accent}18` }}
+        >
+          <Icon size={14} style={{ color: accent }} />
+        </div>
+      </div>
+
+      <div className="mt-auto flex flex-col gap-2">{children}</div>
+    </div>
+  );
+}
+
+function PublicDashboardProgressCard({
+  sub,
+  trendLabel,
+}: {
+  readonly sub: string;
+  readonly trendLabel: string;
+}) {
+  const pct = 76;
+  const r = 28;
+  const circ = 2 * Math.PI * r;
+  const dash = (pct / 100) * circ;
+
+  return (
+    <div className="flex flex-col gap-2.5 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
+          POINTS
+        </span>
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#8b5cf618]">
+          <Target size={14} className="text-[#8b5cf6]" />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
+          <circle cx="32" cy="32" r={r} fill="none" stroke="#f0f2f7" strokeWidth="6" />
+          <circle
+            cx="32"
+            cy="32"
+            r={r}
+            fill="none"
+            stroke="#8b5cf6"
+            strokeWidth="6"
+            strokeDasharray={`${dash} ${circ - dash}`}
+            strokeLinecap="round"
+            transform="rotate(-90 32 32)"
+          />
+          <text
+            x="32"
+            y="36"
+            textAnchor="middle"
+            fontSize="13"
+            fontWeight="700"
+            fill="#1a1d2e"
+          >
+            {pct}%
+          </text>
+        </svg>
+
+        <div>
+          <div className="text-[22px] font-bold leading-none text-[#1a1d2e]">
+            {pct}%
+          </div>
+          <div className="mt-1 text-[11px] text-[#9ca3b8]">{sub}</div>
+          <div className="mt-1.5 flex items-center gap-1">
+            <TrendingUp size={11} className="text-[#22c55e]" />
+            <span className="text-[11px] font-medium text-[#22c55e]">
+              +4% {trendLabel}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PublicDashboardAnalyticsCard({
+  title,
+  detailsLabel,
+  children,
+}: PublicDashboardAnalyticsCardProps) {
+  return (
+    <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="min-w-0 line-clamp-1 pr-2 text-[13px] font-semibold text-[#1a1d2e]">
+          {title}
+        </h3>
+        <button type="button" className="text-[11px] text-[#3b6ef8] hover:underline">
+          {detailsLabel}
+        </button>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function PublicDashboardDirectionCard({
+  label,
+  pct,
+  color,
+  sub,
+  trend,
+}: PublicDashboardDirectionCardProps) {
+  return (
+    <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span className="text-[13px] font-semibold text-[#1a1d2e]">{label}</span>
+        <span className="text-[13px] font-bold" style={{ color }}>
+          {pct}%
+        </span>
+      </div>
+
+      <div className="mb-2 h-1.5 w-full rounded-full bg-[#f0f2f7]">
+        <div
+          className="h-1.5 rounded-full transition-all"
+          style={{ width: `${pct}%`, backgroundColor: color }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] text-[#9ca3b8]">{sub}</span>
+        <div className="flex items-center gap-0.5">
+          <TrendingUp size={10} className="text-[#22c55e]" />
+          <span className="text-[10px] font-medium text-[#22c55e]">{trend}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PublicOrganizationLogoPreview({
+  organization,
+  categoryFallback,
+}: {
+  readonly organization: DirectoryOrganization;
+  readonly categoryFallback: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex h-[74px] w-[74px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#eef2ff] text-[22px] font-bold text-[#3b6ef8]">
+        {organization.logoUrl || organization.coverImageUrl ? (
+          <img
+            src={organization.logoUrl ?? organization.coverImageUrl ?? ""}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          organization.name.slice(0, 2).toUpperCase()
+        )}
+      </div>
+
+      <div className="min-w-0">
+        <div className="line-clamp-2 text-[13px] font-semibold text-[#1a1d2e]">
+          {organization.name}
+        </div>
+        <div className="mt-1 text-[11px] text-[#9ca3b8]">
+          {organization.primaryCategory?.name ?? categoryFallback}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PublicDashboardActionButton({
+  href,
+  icon: Icon,
+  children,
+  disabled,
+}: PublicDashboardActionButtonProps) {
+  const className =
+    "flex items-center gap-1 rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 py-1.5 text-[12px] font-medium text-[#5a5f7a] transition-all hover:bg-[#f5f6fb] disabled:cursor-not-allowed disabled:opacity-50";
+
+  if (!href || disabled) {
+    return (
+      <button type="button" disabled className={className}>
+        <Icon size={12} />
+        {children}
+      </button>
+    );
+  }
+
+  return (
+    <a href={href} className={className}>
+      <Icon size={12} />
+      {children}
+    </a>
+  );
+}
+
+function PublicDashboardPlaceholder({
+  label,
+}: {
+  readonly label: string;
+}) {
+  return (
+    <div className="flex h-[140px] items-center justify-center rounded-xl bg-[#f8f9fd] text-[12px] text-[#9ca3b8]">
+      {label}
+    </div>
+  );
+}
+
 export default async function DirectoryOrganizationPage({
   params,
   searchParams,
@@ -1147,25 +1656,38 @@ export default async function DirectoryOrganizationPage({
     organization?.description ??
     t.fallbacks.descriptionMissing;
 
+  const certificateOffersCount = offers.filter(
+    (offer) => offer.certificateAvailable,
+  ).length;
+  const publicMessengerUrl = organization
+    ? getPublicMessengerUrl(organization)
+    : null;
+  const publicWebsiteUrl = normalizePublicExternalHref(organization?.websiteUrl);
+  const publicPhoneUrl = organization?.publicPhone
+    ? `tel:${organization.publicPhone}`
+    : null;
+
   return (
-    <main className="min-h-full bg-[#f5f6fb] px-4 py-8 text-[#1a1d2e]">
-      <div className="mx-auto grid w-full max-w-[1120px] gap-5">
-        <Link
-          href={appendLocaleToHref("/directory", selectedLocale)}
-          className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] transition hover:bg-gray-50"
-        >
-          {t.navigation.backToDirectoryWithArrow}
-        </Link>
+    <main className="min-h-full bg-[#f5f6fb] text-[#1a1d2e]">
+      <div className="p-5">
+        <div className="mb-4">
+          <Link
+            href={appendLocaleToHref("/directory", selectedLocale)}
+            className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] transition hover:bg-gray-50"
+          >
+            {t.navigation.backToDirectoryWithArrow}
+          </Link>
+        </div>
 
         {errorMessage ? (
-          <section className="rounded-[18px] border border-[#fecaca] bg-[#fff1f2] p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
-            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#b42318]">
+          <section className="mb-5 rounded-xl border border-[rgba(239,68,68,0.2)] bg-white p-4 text-[13px] text-[#b91c1c] shadow-sm">
+            <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-[#b91c1c]">
               {t.error.kicker}
             </div>
-            <h1 className="text-[28px] font-bold text-[#7f1d1d]">
+            <div className="text-[20px] font-bold leading-tight text-[#7f1d1d]">
               {t.error.title}
-            </h1>
-            <p className="mt-2 text-[14px] leading-6 text-[#b42318]">
+            </div>
+            <p className="mt-2 text-[13px] leading-6 text-[#b42318]">
               {errorMessage}
             </p>
           </section>
@@ -1173,323 +1695,226 @@ export default async function DirectoryOrganizationPage({
 
         {organization ? (
           <>
-            <header className="overflow-hidden rounded-[22px] border border-[rgba(0,0,0,0.07)] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
-              <div className="grid gap-6 p-6 lg:grid-cols-[1.4fr_0.6fr]">
-                <div>
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    <span className="rounded-full border border-[#dfe4ff] bg-[#eef2ff] px-3 py-1.5 text-[12px] font-semibold text-[#3b6ef8]">
-                      {organization.primaryCategory?.name ??
-                        t.fallbacks.categoryAi}
-                    </span>
-                    <span className="rounded-full border border-[#e5e7eb] bg-[#f8f9fd] px-3 py-1.5 text-[12px] font-semibold text-[#4a4f6a]">
-                      {getPublicLocationLabel()}
-                    </span>
-                  </div>
-
-                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7c8099]">
-                    {t.hero.kicker}
-                  </div>
-
-                  <h1 className="text-[32px] font-bold tracking-[-0.035em] text-[#111827]">
-                    {organization.name}
-                  </h1>
-
-                  <p className="mt-3 max-w-[780px] text-[14px] leading-6 text-[#5a5f7a]">
-                    {organizationDescription}
-                  </p>
-
-                  <p className="mt-3 max-w-[760px] text-[12.5px] leading-5 text-[#7c8099]">
-                    {t.hero.safetyNote}
-                  </p>
-
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    <a
-                      href="#public-offers"
-                      className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.22)] transition hover:bg-[#2f5fe3]"
-                    >
-                      {t.navigation.viewOffers}
-                    </a>
-
-                    <a
-                      href="#register-purchase"
-                      className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
-                    >
-                      {t.navigation.registerPurchase}
-                    </a>
-                  </div>
-                </div>
-
-                <aside className="grid content-start gap-3 rounded-[18px] border border-[#edf0f7] bg-[#f8f9fd] p-5">
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                      {t.hero.enterpriseLabel}
-                    </div>
-                    <div className="mt-1 text-[20px] font-bold text-[#111827]">
-                      {getPublicOrganizationTypeLabel(organization.type)}
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2 text-[13px] leading-5 text-[#5a5f7a]">
-                    <p className="m-0">
-                      <strong className="text-[#343854]">{t.hero.verificationLabel}:</strong>{" "}
-                      {getPublicVerificationLabel(organization.verificationStatus)}
-                    </p>
-                    <p className="m-0">
-                      <strong className="text-[#343854]">{t.hero.currencyLabel}:</strong>{" "}
-                      {organization.defaultCurrency ?? "PLN"}
-                    </p>
-                    <p className="m-0">
-                      <strong className="text-[#343854]">{t.hero.offersLabel}:</strong>{" "}
-                      {offers.length}
-                    </p>
-                    <p className="m-0">
-                      <strong className="text-[#343854]">{t.hero.certificateLabel}:</strong>{" "}
-                      {firstOfferWithCertificate ? t.common.available : t.common.none}
-                    </p>
-                  </div>
-                </aside>
-              </div>
-            </header>
-
-            <section className="grid gap-4 md:grid-cols-3">
-              <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                  {t.hero.typeLabel}
-                </div>
-                <div className="mt-2 text-[20px] font-bold text-[#111827]">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h1 className="text-[20px] font-bold leading-tight text-[#1a1d2e]">
+                  {organization.name}
+                </h1>
+                <p className="mt-0.5 text-[13px] text-[#7c8099]">
                   {getPublicOrganizationTypeLabel(organization.type)}
-                </div>
-              </article>
+                </p>
+              </div>
+            </div>
 
-              <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                  {t.hero.locationLabel}
-                </div>
-                <div className="mt-2 text-[20px] font-bold text-[#111827]">
+            <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <PublicDashboardTopCard
+                label={getPublicOrganizationDashboardLabel("logo", selectedLocale)}
+                accent="#3b6ef8"
+                icon={Star}
+              >
+                <PublicOrganizationLogoPreview
+                  organization={organization}
+                  categoryFallback={getPublicOrganizationDashboardLabel(
+                    "category",
+                    selectedLocale,
+                  )}
+                />
+              </PublicDashboardTopCard>
+
+              <PublicDashboardTopCard
+                label={getPublicOrganizationDashboardLabel("address", selectedLocale)}
+                accent="#f97316"
+                icon={MapPin}
+              >
+                <div className="text-[20px] font-bold leading-tight text-[#1a1d2e]">
                   {getPublicLocationLabel()}
                 </div>
-              </article>
-
-              <article className="rounded-[16px] border border-[rgba(0,0,0,0.07)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                  {t.hero.publicFlowLabel}
+                <div className="text-[11px] text-[#9ca3b8]">
+                  {t.hero.locationLabel}
                 </div>
-                <div className="mt-2 text-[20px] font-bold text-[#3b6ef8]">
+              </PublicDashboardTopCard>
+
+              <PublicDashboardTopCard
+                label={getPublicOrganizationPublicProfileLabel(selectedLocale)}
+                accent="#22c55e"
+                icon={Activity}
+              >
+                <div className="text-[13px] font-semibold text-[#1a1d2e]">
                   {t.hero.publicFlowValue}
                 </div>
-              </article>
-            </section>
-
-            <section className="rounded-[18px] border border-[#dbeafe] bg-[#eff6ff] p-6 text-[#1e3a8a] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.22em]">
-                {t.points.kicker}
-              </div>
-
-              <h2 className="mt-2 text-[22px] font-bold">
-                {t.points.title}
-              </h2>
-
-              <p className="mt-2 max-w-[860px] text-[13px] leading-6">
-                {t.points.description}
-              </p>
-            </section>
-
-            <section
-              id="public-offers"
-              className="rounded-[18px] border border-[rgba(0,0,0,0.07)] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
-            >
-              <div className="mb-5 flex flex-col gap-3 border-b border-[#edf0f7] pb-5 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7c8099]">
-                    {t.offers.kicker}
+                <div className="mt-2 flex flex-col gap-1">
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="font-semibold text-[#5a5f7a]">
+                      {t.hero.offersLabel}
+                    </span>
+                    <span className="text-right font-bold text-[#1a1d2e]">
+                      {offers.length}
+                    </span>
                   </div>
-
-                  <h2 className="mt-2 text-[26px] font-bold tracking-[-0.03em] text-[#111827]">
-                    {t.offers.title}
-                  </h2>
-
-                  <p className="mt-2 text-[14px] leading-6 text-[#5a5f7a]">
-                    {t.offers.description}
-                  </p>
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="font-semibold text-[#5a5f7a]">
+                      {t.hero.certificateLabel}
+                    </span>
+                    <span className="text-right font-bold text-[#1a1d2e]">
+                      {certificateOffersCount}
+                    </span>
+                  </div>
                 </div>
+              </PublicDashboardTopCard>
 
-                <span className="w-fit rounded-full border border-[#dfe3f1] bg-[#f8f9fd] px-4 py-2 text-[13px] font-bold text-[#4a4f6a]">
-                  {t.offers.count(offers.length)}
-                </span>
-              </div>
+              <PublicDashboardProgressCard
+                sub={t.points.title}
+                trendLabel={getPublicOrganizationDashboardLabel(
+                  "thisWeek",
+                  selectedLocale,
+                )}
+              />
+            </div>
 
-              {offersErrorMessage ? (
-                <div className="mb-4 rounded-xl border border-[#fecaca] bg-[#fff1f2] px-4 py-3 text-[13px] font-medium text-[#b42318]">
-                  {offersErrorMessage}
-                </div>
-              ) : null}
-
-              {offers.length === 0 ? (
-                <div className="rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-4 text-[14px] text-[#92400e]">
-                  {t.offers.empty}
-                </div>
-              ) : (
-                <div className="grid gap-4">
-                  {offers.map((offer) => (
-                    <article
-                      key={offer.id}
-                      className="grid gap-5 rounded-[18px] border border-[#edf0f7] bg-[#ffffff] p-5 shadow-[0_8px_22px_rgba(15,23,42,0.05)] lg:grid-cols-[1.35fr_0.65fr]"
-                    >
-                      <div>
-                        <div className="mb-2 flex flex-wrap gap-2">
-                          <span className="rounded-full border border-[#dfe4ff] bg-[#eef2ff] px-3 py-1.5 text-[12px] font-semibold text-[#3b6ef8]">
-                            {getPublicOfferTypeLabel(offer.offerType)}
-                          </span>
-                          <span className="rounded-full border border-[#e5e7eb] bg-[#f8f9fd] px-3 py-1.5 text-[12px] font-semibold text-[#4a4f6a]">
-                            {getPublicBookingLabel(offer)}
-                          </span>
-                          {offer.certificateAvailable ? (
-                            <span className="rounded-full border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-1.5 text-[12px] font-semibold text-[#15803d]">
-                              {t.offers.certificateAvailable}
-                            </span>
-                          ) : null}
-                        </div>
-
-                        <h3 className="text-[24px] font-bold tracking-[-0.03em] text-[#111827]">
-                          {offer.title}
-                        </h3>
-
-                        <p className="mt-3 max-w-[820px] text-[14px] leading-6 text-[#5a5f7a]">
-                          {offer.description ?? t.fallbacks.descriptionMissing}
-                        </p>
-
-                        <div className="mt-4 grid gap-3 md:grid-cols-3">
-                          <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                              {t.offers.priceLabel}
-                            </div>
-                            <div className="mt-1 text-[20px] font-bold text-[#111827]">
-                              {formatPublicMoney(offer.price, offer.currency)}
-                            </div>
-                            {offer.regularPrice ? (
-                              <div className="mt-1 text-[12px] text-[#7c8099]">
-                                {t.offers.regularPriceLabel}:{" "}
-                                {formatPublicMoney(
-                                  offer.regularPrice,
-                                  offer.currency,
-                                )}
-                              </div>
-                            ) : null}
-                          </div>
-
-                          <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                              {t.offers.bookingLabel}
-                            </div>
-                            <div className="mt-1 text-[20px] font-bold text-[#111827]">
-                              {offer.requiresBooking ? t.booking.needed : t.booking.notNeeded}
-                            </div>
-                            <div className="mt-1 text-[12px] text-[#7c8099]">
-                              {offer.defaultDurationMinutes
-                                ? t.booking.durationShort(offer.defaultDurationMinutes)
-                                : t.booking.durationNotSpecified}
-                            </div>
-                          </div>
-
-                          <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                              {t.offers.certificateLabel}
-                            </div>
-                            <div className="mt-1 text-[20px] font-bold text-[#111827]">
-                              {offer.certificateAvailable ? t.common.yes : t.common.no}
-                            </div>
-                            <div className="mt-1 text-[12px] text-[#7c8099]">
-                              
-                              <span data-check="certificate-availability-card-visible">
-                                {offer.certificateAvailability.label}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {offer.certificateAvailable ? (
-                          <div className="mt-4 rounded-2xl border border-[#dbeafe] bg-[#eff6ff] p-4 text-[#1e3a8a]">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
-                              {t.offers.certificatePaymentLabel}
-                            </div>
-                            <div className="mt-1 text-[18px] font-bold">
-                              {getPublicCertificatePaymentLabel(offer)}
-                            </div>
-                            <div
-                              data-check="certificate-availability-payment-visible"
-                              className="mt-2 rounded-xl border border-[#bfdbfe] bg-white px-3 py-2 text-[12.5px] font-semibold text-[#1d4ed8]"
-                            >
-                              {offer.certificateAvailability.label}
-                            </div>
-                            <p className="mt-2 text-[12.5px] leading-5">
-                              {offer.certificate.terms ??
-                                t.offers.certificateTermsMissing}
-                            </p>
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <aside className="grid content-start gap-3 rounded-[18px] border border-[#edf0f7] bg-[#f8f9fd] p-4">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-                          {t.offers.quickActions}
-                        </div>
-
-                        <Link
-                          href={appendLocaleToHref(`/offers/${offer.id}`, selectedLocale)}
-                          className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-center text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
-                        >
-                          {t.offers.detailsAction}
-                        </Link>
-
-                        {offer.certificateAvailable ? (
-                          <Link
-                            href={appendLocaleToHref(`/certificates/new?offerId=${offer.id}`, selectedLocale)}
-                            className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-center text-[13px] font-bold text-white shadow-[0_10px_20px_rgba(59,110,248,0.22)] transition hover:bg-[#2f5fe3]"
-                          >
-                            {t.offers.orderCertificateAction}
-                          </Link>
-                        ) : null}
-
-                        <a
-                          href="#register-purchase"
-                          className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-center text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
-                        >
-                          {t.navigation.registerPurchase}
-                        </a>
-                      </aside>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <DirectoryPurchaseConfirmationForm
-              organizationId={organization.id}
-              organizationDefaultCurrency={organization.defaultCurrency}
-            />
-
-            <section className="flex flex-wrap gap-2">
-              <Link
-                href={appendLocaleToHref("/directory", selectedLocale)}
-                className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <PublicDashboardActionButton
+                href={publicPhoneUrl}
+                icon={Phone}
+                disabled={!publicPhoneUrl}
               >
-                {t.navigation.backToDirectory}
-              </Link>
+                {organization.publicPhone ??
+                  getPublicOrganizationDashboardLabel("phone", selectedLocale)}
+              </PublicDashboardActionButton>
+
+              <PublicDashboardActionButton
+                href={publicWebsiteUrl}
+                icon={Globe}
+                disabled={!publicWebsiteUrl}
+              >
+                {getPublicOrganizationDashboardLabel("website", selectedLocale)}
+              </PublicDashboardActionButton>
+
+              <PublicDashboardActionButton
+                href={publicMessengerUrl}
+                icon={MessageCircle}
+                disabled={!publicMessengerUrl}
+              >
+                {getPublicOrganizationDashboardLabel("messenger", selectedLocale)}
+              </PublicDashboardActionButton>
+
+              <a
+                href="#public-description"
+                className="rounded-lg bg-[#3b6ef8] px-3 py-1.5 text-[12px] font-medium text-white shadow-sm transition-all hover:bg-[#2f5fe3]"
+              >
+                {getPublicOrganizationDashboardLabel("description", selectedLocale)}
+              </a>
 
               <a
                 href="#public-offers"
-                className="rounded-xl bg-[#3b6ef8] px-4 py-3 text-[13px] font-bold text-white transition hover:bg-[#2f5fe3]"
+                className="rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 py-1.5 text-[12px] font-medium text-[#5a5f7a] transition-all hover:bg-[#f5f6fb]"
               >
                 {t.navigation.viewOffers}
               </a>
 
               <a
                 href="#register-purchase"
-                className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[13px] font-bold text-[#15803d] transition hover:bg-[#dcfce7]"
+                className="rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 py-1.5 text-[12px] font-medium text-[#5a5f7a] transition-all hover:bg-[#f5f6fb]"
               >
-                {t.navigation.registerPurchase}
+                POINTS
               </a>
-            </section>
+            </div>
+
+            <div className="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
+              <PublicDashboardAnalyticsCard
+                title={getPublicOrganizationDashboardLabel("description", selectedLocale)}
+                detailsLabel={getPublicOrganizationDashboardLabel("details", selectedLocale)}
+              >
+                <div
+                  id="public-description"
+                  className="min-h-[140px] text-[13px] leading-6 text-[#5a5f7a]"
+                >
+                  <p className="line-clamp-6">
+                    {organizationDescription}
+                  </p>
+                  <p className="mt-3 text-[12px] leading-5 text-[#9ca3b8]">
+                    {t.hero.safetyNote}
+                  </p>
+                </div>
+              </PublicDashboardAnalyticsCard>
+
+              <PublicDashboardAnalyticsCard
+                title={t.offers.title}
+                detailsLabel={getPublicOrganizationDashboardLabel("details", selectedLocale)}
+              >
+                <PublicDashboardPlaceholder
+                  label={getPublicOrganizationDashboardLabel(
+                    "publicInfo",
+                    selectedLocale,
+                  )}
+                />
+              </PublicDashboardAnalyticsCard>
+            </div>
+
+            <div className="mb-5 grid grid-cols-1 gap-3 xl:grid-cols-2">
+              <PublicDashboardAnalyticsCard
+                title={t.points.title}
+                detailsLabel={getPublicOrganizationDashboardLabel("details", selectedLocale)}
+              >
+                <PublicDashboardPlaceholder
+                  label={getPublicOrganizationDashboardLabel(
+                    "publicInfo",
+                    selectedLocale,
+                  )}
+                />
+              </PublicDashboardAnalyticsCard>
+
+              <PublicDashboardAnalyticsCard
+                title={getPublicOrganizationDashboardLabel("publicActions", selectedLocale)}
+                detailsLabel={getPublicOrganizationDashboardLabel("details", selectedLocale)}
+              >
+                <PublicDashboardPlaceholder
+                  label={getPublicOrganizationDashboardLabel(
+                    "publicInfo",
+                    selectedLocale,
+                  )}
+                />
+              </PublicDashboardAnalyticsCard>
+            </div>
+
+            <div className="mb-2" id="public-offers">
+              <h2 className="mb-3 text-[13px] font-semibold text-[#1a1d2e]">
+                {getPublicOrganizationPublicProfileLabel(selectedLocale)}
+              </h2>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <PublicDashboardDirectionCard
+                  label={t.hero.offersLabel}
+                  pct={78}
+                  color="#3b6ef8"
+                  sub={`${offers.length} ${t.hero.offersLabel}`}
+                  trend="+3%"
+                />
+                <PublicDashboardDirectionCard
+                  label={t.hero.certificateLabel}
+                  pct={72}
+                  color="#f97316"
+                  sub={`${certificateOffersCount} ${t.hero.certificateLabel}`}
+                  trend="+1.5%"
+                />
+                <PublicDashboardDirectionCard
+                  label="POINTS"
+                  pct={75}
+                  color="#22c55e"
+                  sub={t.points.title}
+                  trend="+5%"
+                />
+                <PublicDashboardDirectionCard
+                  label={getPublicOrganizationDashboardLabel("category", selectedLocale)}
+                  pct={79}
+                  color="#8b5cf6"
+                  sub={
+                    organization.primaryCategory?.name ??
+                    getPublicOrganizationDashboardLabel("notProvided", selectedLocale)
+                  }
+                  trend="+2%"
+                />
+              </div>
+            </div>
           </>
         ) : null}
       </div>
