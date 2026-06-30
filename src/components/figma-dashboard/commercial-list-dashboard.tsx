@@ -685,14 +685,14 @@ function AnalyticsCard({
   readonly children: ReactNode;
 }) {
   const detailsNode = (
-    <span className="text-[11px] text-[#3b6ef8] hover:underline">{detailsLabel}</span>
+    <span className="whitespace-nowrap text-[11px] text-[#3b6ef8] hover:underline">{detailsLabel}</span>
   );
 
   return (
     <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-[13px] font-semibold text-[#1a1d2e]">{title}</h3>
-        {detailsHref ? <Link href={detailsHref}>{detailsNode}</Link> : detailsNode}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="min-w-0 line-clamp-1 pr-2 text-[13px] font-semibold text-[#1a1d2e]">{title}</h3>
+        {detailsHref ? <Link href={detailsHref} className="shrink-0">{detailsNode}</Link> : <span className="shrink-0">{detailsNode}</span>}
       </div>
       {children}
     </div>
@@ -714,7 +714,7 @@ function DirectionCard({
 }) {
   return (
     <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-[13px] font-semibold text-[#1a1d2e]">{label}</span>
         <span className="text-[13px] font-bold" style={{ color }}>
           {pct}%
@@ -772,13 +772,13 @@ function PreviewBlock({
       : "0";
 
   return (
-    <div className="flex h-[140px] items-center gap-4">
-      <div className="flex h-[110px] w-[110px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#eef2ff] text-[26px] font-bold text-[#3b6ef8]">
+    <div className="flex min-h-[140px] items-center gap-3 sm:h-[140px] sm:gap-4">
+      <div className="flex h-[92px] w-[92px] sm:h-[110px] sm:w-[110px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#eef2ff] text-[26px] font-bold text-[#3b6ef8]">
         {(offer.title ?? labels.offer).slice(0, 2).toUpperCase()}
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="line-clamp-2 text-[13px] leading-5 text-[#5a5f7a]">
+        <p className="line-clamp-1 text-[13px] leading-5 text-[#5a5f7a]">
           {offer.description ?? getOrganizationName(offer, labels)}
         </p>
 
@@ -791,8 +791,8 @@ function PreviewBlock({
           </span>
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-lg bg-[#f8fafc] px-2 py-1.5">
+        <div className="mt-3 grid min-w-0 grid-cols-3 gap-2 text-center">
+          <div className="min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5">
             <div className="truncate text-[12px] font-bold text-[#1a1d2e]">
               {primaryPrice}
             </div>
@@ -800,7 +800,7 @@ function PreviewBlock({
               {isCertificates ? labels.certificate : labels.price}
             </div>
           </div>
-          <div className="rounded-lg bg-[#f8fafc] px-2 py-1.5">
+          <div className="min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5">
             <div className="truncate text-[12px] font-bold text-[#1a1d2e]">
               {secondaryValue}
             </div>
@@ -808,7 +808,7 @@ function PreviewBlock({
               {isCertificates ? labels.validity : labels.status}
             </div>
           </div>
-          <div className="rounded-lg bg-[#f8fafc] px-2 py-1.5">
+          <div className="min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5">
             <div className="truncate text-[12px] font-bold text-[#1a1d2e]">
               {thirdValue}
             </div>
