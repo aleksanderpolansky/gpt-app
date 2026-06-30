@@ -443,6 +443,61 @@ function getShowMoreLabel(locale: LocaleCode, nextCount: number) {
   return `Show ${nextCount} more`;
 }
 
+function getCommercialRequestActionLabel(mode: DashboardMode, locale: LocaleCode) {
+  if (mode === "certificates") {
+    if (locale === "ru") {
+      return "\u041d\u0430\u0439\u0442\u0438 \u043f\u043e\u0434\u0430\u0440\u043e\u043a";
+    }
+
+    if (locale === "uk") {
+      return "\u0417\u043d\u0430\u0439\u0442\u0438 \u043f\u043e\u0434\u0430\u0440\u0443\u043d\u043e\u043a";
+    }
+
+    if (locale === "pl") {
+      return "Znajd\u017a prezent";
+    }
+
+    if (locale === "es") {
+      return "Encontrar regalo";
+    }
+
+    if (locale === "de") {
+      return "Geschenk finden";
+    }
+
+    if (locale === "cs") {
+      return "Naj\u00edt d\u00e1rek";
+    }
+
+    return "Find gift";
+  }
+
+  if (locale === "ru") {
+    return "\u0417\u0430\u043f\u0440\u043e\u0441\u0438\u0442\u044c \u043e\u0444\u0444\u0435\u0440";
+  }
+
+  if (locale === "uk") {
+    return "\u0417\u0430\u043f\u0440\u043e\u0441\u0438\u0442\u0438 \u043f\u0440\u043e\u043f\u043e\u0437\u0438\u0446\u0456\u044e";
+  }
+
+  if (locale === "pl") {
+    return "Zapytaj o ofert\u0119";
+  }
+
+  if (locale === "es") {
+    return "Solicitar oferta";
+  }
+
+  if (locale === "de") {
+    return "Angebot anfragen";
+  }
+
+  if (locale === "cs") {
+    return "Po\u017e\u00e1dat o nab\u00eddku";
+  }
+
+  return "Request offer";
+}
 function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
     return value[0] ?? null;
@@ -1048,9 +1103,19 @@ export function CommercialListDashboardContent({
 
   return (
     <div className="p-5">
-      <div className="mb-5">
-        <h1 className="text-[20px] font-bold leading-tight text-[#1a1d2e]">{title}</h1>
-        <p className="mt-0.5 text-[13px] text-[#7c8099]">{subtitle}</p>
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-[20px] font-bold leading-tight text-[#1a1d2e]">{title}</h1>
+          <p className="mt-0.5 text-[13px] text-[#7c8099]">{subtitle}</p>
+        </div>
+
+        <Link
+          href={createHref}
+          className="flex w-fit items-center gap-1 rounded-lg border border-[#22c55e]/30 bg-[#ecfdf3] px-3 py-1.5 text-[12px] font-medium text-[#16a34a] transition-all hover:bg-[#dcfce7]"
+        >
+          <Plus size={12} />
+          {createLabel}
+        </Link>
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -1098,13 +1163,13 @@ export function CommercialListDashboardContent({
           {labels.searchFilters}
         </button>
 
-        <Link
-          href={createHref}
-          className="ml-auto flex items-center gap-1 rounded-lg border border-[#3b6ef8]/30 bg-white px-3 py-1.5 text-[12px] font-medium text-[#3b6ef8] transition-all hover:bg-[#eef2ff]"
+        <button
+          type="button"
+          className="ml-auto flex items-center gap-1 rounded-lg border border-[#f97316]/30 bg-[#fff7ed] px-3 py-1.5 text-[12px] font-medium text-[#ea580c] transition-all hover:bg-[#ffedd5]"
         >
           <Plus size={12} />
-          {createLabel}
-        </Link>
+          {getCommercialRequestActionLabel(mode, locale)}
+        </button>
       </div>
 
       {status === "error" ? (

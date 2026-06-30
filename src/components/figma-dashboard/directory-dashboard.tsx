@@ -202,6 +202,61 @@ function getShowMoreLabel(locale: LocaleCode, nextCount: number) {
 
   return `Show ${nextCount} more`;
 }
+function getDirectoryAddBusinessLabel(locale: LocaleCode) {
+  if (locale === "ru") {
+    return "\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u0435";
+  }
+
+  if (locale === "uk") {
+    return "\u0414\u043e\u0434\u0430\u0442\u0438 \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u043e";
+  }
+
+  if (locale === "pl") {
+    return "Dodaj przedsi\u0119biorstwo";
+  }
+
+  if (locale === "es") {
+    return "A\u00f1adir empresa";
+  }
+
+  if (locale === "de") {
+    return "Unternehmen hinzuf\u00fcgen";
+  }
+
+  if (locale === "cs") {
+    return "P\u0159idat podnik";
+  }
+
+  return "Add business";
+}
+
+function getDirectoryFindProviderLabel(locale: LocaleCode) {
+  if (locale === "ru") {
+    return "\u041d\u0430\u0439\u0442\u0438 \u0438\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044f";
+  }
+
+  if (locale === "uk") {
+    return "\u0417\u043d\u0430\u0439\u0442\u0438 \u0432\u0438\u043a\u043e\u043d\u0430\u0432\u0446\u044f";
+  }
+
+  if (locale === "pl") {
+    return "Znajd\u017a wykonawc\u0119";
+  }
+
+  if (locale === "es") {
+    return "Encontrar proveedor";
+  }
+
+  if (locale === "de") {
+    return "Anbieter finden";
+  }
+
+  if (locale === "cs") {
+    return "Naj\u00edt dodavatele";
+  }
+
+  return "Find provider";
+}
 function buildDirectoryProfileHref(
   organization: DirectoryOrganization | null | undefined,
   locale: LocaleCode,
@@ -732,13 +787,23 @@ export function DirectoryDashboardContent({
 
   return (
     <div className="p-5">
-      <div className="mb-5">
-        <h1 className="text-[20px] font-bold leading-tight text-[#1a1d2e]">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-[20px] font-bold leading-tight text-[#1a1d2e]">
           {getDirectoryListMessage("directoryList.header.title", locale)}
         </h1>
-        <p className="mt-0.5 text-[13px] text-[#7c8099]">
+          <p className="mt-0.5 text-[13px] text-[#7c8099]">
           {getDirectoryListMessage("directoryList.header.subtitle", locale)}
         </p>
+        </div>
+
+        <Link
+          href={`/organizations/new?locale=${encodeURIComponent(locale)}`}
+          className="flex w-fit items-center gap-1 rounded-lg border border-[#22c55e]/30 bg-[#ecfdf3] px-3 py-1.5 text-[12px] font-medium text-[#16a34a] transition-all hover:bg-[#dcfce7]"
+        >
+          <Plus size={12} />
+          {getDirectoryAddBusinessLabel(locale)}
+        </Link>
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -791,13 +856,13 @@ export function DirectoryDashboardContent({
           {getDirectoryListMessage("directoryList.filters.title", locale)}
         </button>
 
-        <Link
-          href="/organizations/new"
-          className="ml-auto flex items-center gap-1 rounded-lg border border-[#3b6ef8]/30 bg-white px-3 py-1.5 text-[12px] font-medium text-[#3b6ef8] transition-all hover:bg-[#eef2ff]"
+        <button
+          type="button"
+          className="ml-auto flex items-center gap-1 rounded-lg border border-[#f97316]/30 bg-[#fff7ed] px-3 py-1.5 text-[12px] font-medium text-[#ea580c] transition-all hover:bg-[#ffedd5]"
         >
           <Plus size={12} />
-          {getDirectoryListMessage("directoryList.suggestion.submitButton", locale)}
-        </Link>
+          {getDirectoryFindProviderLabel(locale)}
+        </button>
       </div>
 
       {status === "error" ? (
