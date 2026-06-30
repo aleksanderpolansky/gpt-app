@@ -147,6 +147,61 @@ function getFilterLabel(filterKey: DirectoryFilterKey, locale: LocaleCode) {
   return getDirectoryListMessage("directoryList.sort.newest", locale);
 }
 
+function getShownOfLabel(locale: LocaleCode, shown: number, total: number) {
+  if (locale === "ru") {
+    return `\u041f\u043e\u043a\u0430\u0437\u0430\u043d\u043e ${shown} \u0438\u0437 ${total}`;
+  }
+
+  if (locale === "uk") {
+    return `\u041f\u043e\u043a\u0430\u0437\u0430\u043d\u043e ${shown} \u0437 ${total}`;
+  }
+
+  if (locale === "pl") {
+    return `Pokazano ${shown} z ${total}`;
+  }
+
+  if (locale === "es") {
+    return `Mostrado ${shown} de ${total}`;
+  }
+
+  if (locale === "de") {
+    return `${shown} von ${total} angezeigt`;
+  }
+
+  if (locale === "cs") {
+    return `Zobrazeno ${shown} z ${total}`;
+  }
+
+  return `Shown ${shown} of ${total}`;
+}
+
+function getShowMoreLabel(locale: LocaleCode, nextCount: number) {
+  if (locale === "ru") {
+    return `\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c \u0435\u0449\u0451 ${nextCount}`;
+  }
+
+  if (locale === "uk") {
+    return `\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u0438 \u0449\u0435 ${nextCount}`;
+  }
+
+  if (locale === "pl") {
+    return `Poka\u017c jeszcze ${nextCount}`;
+  }
+
+  if (locale === "es") {
+    return `Mostrar ${nextCount} m\u00e1s`;
+  }
+
+  if (locale === "de") {
+    return `${nextCount} weitere anzeigen`;
+  }
+
+  if (locale === "cs") {
+    return `Zobrazit dal\u0161\u00ed ${nextCount}`;
+  }
+
+  return `Show ${nextCount} more`;
+}
 function buildDirectoryProfileHref(
   organization: DirectoryOrganization | null | undefined,
   locale: LocaleCode,
@@ -585,6 +640,7 @@ export function DirectoryDashboardContent({
 }) {
   const locale = initialLocale;
   const [activeFilter, setActiveFilter] = useState<DirectoryFilterKey>("all");
+  const [visibleCount, setVisibleCount] = useState(4);
   const [organizations, setOrganizations] = useState<DirectoryOrganization[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
@@ -649,6 +705,10 @@ export function DirectoryDashboardContent({
     });
   }, [activeFilter, organizations]);
 
+  useEffect(() => {
+    setVisibleCount(4);
+  }, [activeFilter, organizations.length]);
+
   const totalOffers = organizations.reduce(
     (sum, organization) => sum + getActionStats(organization).activeOffersCount,
     0,
@@ -662,8 +722,13 @@ export function DirectoryDashboardContent({
     (organization) => getActionStats(organization).canRegisterPurchase,
   ).length;
 
-  const [firstOrganization, secondOrganization, thirdOrganization, fourthOrganization] =
-    filteredOrganizations.slice(0, 4);
+  const displayedOrganizations = filteredOrganizations.slice(0, visibleCount);
+  const shownOrganizationsCount = displayedOrganizations.length;
+  const hasMoreOrganizations = visibleCount < filteredOrganizations.length;
+  const nextOrganizationsCount = Math.min(
+    4,
+    Math.max(0, filteredOrganizations.length - visibleCount),
+  );
 
   return (
     <div className="p-5">
@@ -741,85 +806,61 @@ export function DirectoryDashboardContent({
         </section>
       ) : null}
 
-      <div className="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
-        <AnalyticsCard
-          title={
-            firstOrganization?.name ??
-            getDirectoryListMessage("directoryList.published.noResults", locale)
-          }
-          detailsLabel={getDirectoryListMessage("directoryList.card.openCard", locale)}
-          detailsHref={buildDirectoryProfileHref(firstOrganization, locale)}
-        >
-          {firstOrganization ? (
-            <BusinessPreview organization={firstOrganization} locale={locale} />
-          ) : (
+      {filteredOrganizations.length === 0 ? (
+        <div className="mb-5 grid grid-cols-1 gap-3 xl:grid-cols-2">
+          <AnalyticsCard
+            title={getDirectoryListMessage("directoryList.published.noResults", locale)}
+            detailsLabel="\u00a0"
+          >
             <EmptyBusinessSlot />
-          )}
-        </AnalyticsCard>
+          </AnalyticsCard>
+        </div>
+      ) : (
+        <div className="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
+          {displayedOrganizations.map((organization) => (
+            <AnalyticsCard
+              key={organization.id}
+              title={organization.name}
+              detailsLabel={getDirectoryListMessage(
+                "directoryList.card.openCard",
+                locale,
+              )}
+              detailsHref={buildDirectoryProfileHref(organization, locale)}
+            >
+              <BusinessPreview organization={organization} locale={locale} />
+            </AnalyticsCard>
+          ))}
+        </div>
+      )}
 
-        <AnalyticsCard
-          title={secondOrganization?.name ?? "\u00a0"}
-          detailsLabel={
-            secondOrganization
-              ? getDirectoryListMessage("directoryList.card.openCard", locale)
-              : "\u00a0"
-          }
-          detailsHref={
-            secondOrganization
-              ? buildDirectoryProfileHref(secondOrganization, locale)
-              : undefined
-          }
-        >
-          {secondOrganization ? (
-            <BusinessPreview organization={secondOrganization} locale={locale} />
-          ) : (
-            <EmptyBusinessSlot />
-          )}
-        </AnalyticsCard>
-      </div>
+      {filteredOrganizations.length > 0 ? (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+          <span className="text-[12px] text-[#7c8099]">
+            {getShownOfLabel(
+              locale,
+              shownOrganizationsCount,
+              filteredOrganizations.length,
+            )}
+          </span>
 
-      <div className="mb-5 grid grid-cols-1 gap-3 xl:grid-cols-2">
-        <AnalyticsCard
-          title={thirdOrganization?.name ?? "\u00a0"}
-          detailsLabel={
-            thirdOrganization
-              ? getDirectoryListMessage("directoryList.card.openCard", locale)
-              : "\u00a0"
-          }
-          detailsHref={
-            thirdOrganization
-              ? buildDirectoryProfileHref(thirdOrganization, locale)
-              : undefined
-          }
-        >
-          {thirdOrganization ? (
-            <BusinessPreview organization={thirdOrganization} locale={locale} />
-          ) : (
-            <EmptyBusinessSlot />
-          )}
-        </AnalyticsCard>
-
-        <AnalyticsCard
-          title={fourthOrganization?.name ?? "\u00a0"}
-          detailsLabel={
-            fourthOrganization
-              ? getDirectoryListMessage("directoryList.card.openCard", locale)
-              : "\u00a0"
-          }
-          detailsHref={
-            fourthOrganization
-              ? buildDirectoryProfileHref(fourthOrganization, locale)
-              : undefined
-          }
-        >
-          {fourthOrganization ? (
-            <BusinessPreview organization={fourthOrganization} locale={locale} />
-          ) : (
-            <EmptyBusinessSlot />
-          )}
-        </AnalyticsCard>
-      </div>
-
+          {hasMoreOrganizations ? (
+            <button
+              type="button"
+              onClick={() =>
+                setVisibleCount((currentVisibleCount) =>
+                  Math.min(
+                    currentVisibleCount + 4,
+                    filteredOrganizations.length,
+                  ),
+                )
+              }
+              className="rounded-lg border border-[#3b6ef8]/30 bg-white px-3 py-1.5 text-[12px] font-medium text-[#3b6ef8] transition-all hover:bg-[#eef2ff]"
+            >
+              {getShowMoreLabel(locale, nextOrganizationsCount)}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <div className="mb-2">
         <h2 className="mb-3 text-[13px] font-semibold text-[#1a1d2e]">
           {getDirectoryListMessage("directoryList.filters.title", locale)}
