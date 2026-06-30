@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
 import {
@@ -254,11 +254,16 @@ function getOrganizationInitial(organization: SidebarOrganization) {
 
 function BusinessOrganizationTreeItem({
   organization,
+  locale,
 }: {
   readonly organization: SidebarOrganization;
+  readonly locale: LocaleCode;
 }) {
   const locationLabel = getOrganizationLocationLabel(organization);
-  const href = `/organizations/${encodeURIComponent(organization.id)}`;
+  const href = buildLocaleAwareHref(
+    `/organizations/${encodeURIComponent(organization.id)}`,
+    locale,
+  );
 
   return (
     <a
@@ -312,6 +317,8 @@ export function GlobalSidebar({
   const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(false);
   const [organizationsError, setOrganizationsError] = useState<string | null>(null);
   const t = useNavigationTranslator();
+  const locale = useInterfaceLocale();
+  const localeHref = (pathname: string) => buildLocaleAwareHref(pathname, locale);
 
   useEffect(() => {
     let isMounted = true;
@@ -393,7 +400,7 @@ export function GlobalSidebar({
       </div>
 
       <nav className="scrollbar-hide flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
-        <SidebarMainItem icon={LayoutDashboard} label={t("navigation.dashboard")} active href="/" />
+        <SidebarMainItem icon={LayoutDashboard} label={t("navigation.dashboard")} active href={localeHref("/")} />
 
         <div className="pb-0.5 pt-1">
           <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#b0b4c8]">
@@ -405,25 +412,25 @@ export function GlobalSidebar({
           <TreeItem
             label={t("navigation.businesses")}
             depth={1}
-            href="/directory"
-            actionHref="/organizations/new"
+            href={localeHref("/directory")}
+            actionHref={localeHref("/organizations/new")}
             actionTitle={t("navigation.createBusiness")}
           />
           <TreeItem
             label={t("navigation.enterpriseOffers")}
             depth={2}
-            href="/offers"
-            actionHref="/offers/new"
+            href={localeHref("/offers")}
+            actionHref={localeHref("/offers/new")}
             actionTitle={t("navigation.createEnterpriseOffer")}
           />
           <TreeItem
             label={t("navigation.giftCertificates")}
             depth={2}
-            href="/certificates"
-            actionHref="/certificates/new"
+            href={localeHref("/certificates")}
+            actionHref={localeHref("/certificates/new")}
             actionTitle={t("navigation.createGiftCertificate")}
           />
-          <TreeItem label={t("navigation.events")} depth={2} href="/calendar" />
+          <TreeItem label={t("navigation.events")} depth={2} href={localeHref("/calendar")} />
 
         </ExpandableSidebarItem>
 
@@ -437,43 +444,44 @@ export function GlobalSidebar({
           <TreeItem
             label={t("navigation.calendar")}
             depth={1}
-            href="/calendar"
-            actionHref="/calendar/new"
+            href={localeHref("/calendar")}
+            actionHref={localeHref("/calendar/new")}
             actionTitle={t("navigation.addCalendarEvent")}
           />
           <TreeItem
             label={t("navigation.myValueObjects")}
             depth={1}
-            href="/value-objects"
-            actionHref="/value-objects/new"
+            href={localeHref("/value-objects")}
+            actionHref={localeHref("/value-objects/new")}
             actionTitle={t("navigation.addPrivateValueObject")}
           />
           <TreeItem
             label={t("navigation.myActivityLog")}
             depth={1}
-            href="/activity-today"
-            actionHref="/activity-capture"
+            href={localeHref("/activity-today")}
+            actionHref={localeHref("/activity-capture")}
             actionTitle={t("navigation.addActivity")}
           />
           <TreeItem
             label={t("navigation.activityFactsTable")}
             depth={2}
-            href="/activity-facts"
+            href={localeHref("/activity-facts")}
           />
         </ExpandableSidebarItem>
 
         <ExpandableSidebarItem icon={Wallet} label={t("navigation.money")} defaultOpen>
           <TreeItem label={t("navigation.business")} depth={1} defaultOpen>
             {isLoadingOrganizations ? (
-              <TreeItem label={t("navigation.loadingBusinesses")} depth={2} href="/organizations" />
+              <TreeItem label={t("navigation.loadingBusinesses")} depth={2} href={localeHref("/organizations")} />
             ) : organizationsError ? (
-              <TreeItem label={t("navigation.businessesLoadError")} depth={2} href="/organizations" />
+              <TreeItem label={t("navigation.businessesLoadError")} depth={2} href={localeHref("/organizations")} />
             ) : visibleOrganizations.length > 0 ? (
               <>
                 {visibleOrganizations.map((organization) => (
                   <BusinessOrganizationTreeItem
                     key={organization.id}
                     organization={organization}
+                    locale={locale}
                   />
                 ))}
 
@@ -483,7 +491,7 @@ export function GlobalSidebar({
                       count: organizations.length,
                     })}
                     depth={2}
-                    href="/organizations"
+                    href={localeHref("/organizations")}
                   />
                 ) : null}
               </>
@@ -491,27 +499,27 @@ export function GlobalSidebar({
               <TreeItem
                 label={t("navigation.noBusinessesCreate")}
                 depth={2}
-                href="/organizations/new"
+                href={localeHref("/organizations/new")}
               />
             )}
           <TreeItem
             label={t("navigation.deletedBusinesses")}
             depth={2}
-            href="/organizations/deleted"
+            href={localeHref("/organizations/deleted")}
           />
 
           </TreeItem>
-          <TreeItem label={t("navigation.career")} depth={1} href="/next" />
-          <TreeItem label={t("navigation.salesManager")} depth={2} href="/next" />
+          <TreeItem label={t("navigation.career")} depth={1} href={localeHref("/next")} />
+          <TreeItem label={t("navigation.salesManager")} depth={2} href={localeHref("/next")} />
           <TreeItem label={t("navigation.careerOpportunities")} depth={2} defaultOpen>
-            <TreeItem label={t("navigation.hardSkills")} depth={3} href="/value-objects" />
-            <TreeItem label={t("navigation.germanLanguage")} depth={3} href="/value-objects" />
-            <TreeItem label={t("navigation.softSkills")} depth={3} href="/value-objects" />
+            <TreeItem label={t("navigation.hardSkills")} depth={3} href={localeHref("/value-objects")} />
+            <TreeItem label={t("navigation.germanLanguage")} depth={3} href={localeHref("/value-objects")} />
+            <TreeItem label={t("navigation.softSkills")} depth={3} href={localeHref("/value-objects")} />
           </TreeItem>
         </ExpandableSidebarItem>
 
-        <SidebarMainItem icon={Heart} label={t("navigation.health")} href="/analytics" />
-        <SidebarMainItem icon={Home} label={t("navigation.personalSpace")} href="/value-objects" />
+        <SidebarMainItem icon={Heart} label={t("navigation.health")} href={localeHref("/analytics")} />
+        <SidebarMainItem icon={Home} label={t("navigation.personalSpace")} href={localeHref("/value-objects")} />
 
       </nav>
     </aside>
