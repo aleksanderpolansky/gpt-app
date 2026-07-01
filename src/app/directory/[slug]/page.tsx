@@ -9,9 +9,7 @@ import {
   Navigation,
   Phone,
   Star,
-  Target,
   TrendingUp,
-  Zap,
 } from "lucide-react";
 import { supabase } from "../../../../lib/supabase";
 import {
@@ -24,7 +22,7 @@ import {
   getSystemLabelsMessages,
   getVerificationStatusLabel,
 } from "../../../i18n/messages/system-labels";
-import DirectoryPurchaseConfirmationForm from "./DirectoryPurchaseConfirmationForm";
+import PurchaseConfirmationRequestCard from "@/components/commercial/PurchaseConfirmationRequestCard";
 
 export const dynamic = "force-dynamic";
 
@@ -1318,7 +1316,7 @@ function PublicDashboardTopCard({
   children,
 }: PublicDashboardCardProps) {
   return (
-    <div className="flex flex-col gap-2.5 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+    <div className="flex h-full min-h-0 flex-col gap-2.5 overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
           {label}
@@ -1331,73 +1329,7 @@ function PublicDashboardTopCard({
         </div>
       </div>
 
-      <div className="mt-auto flex flex-col gap-2">{children}</div>
-    </div>
-  );
-}
-
-function PublicDashboardProgressCard({
-  sub,
-  trendLabel,
-}: {
-  readonly sub: string;
-  readonly trendLabel: string;
-}) {
-  const pct = 76;
-  const r = 28;
-  const circ = 2 * Math.PI * r;
-  const dash = (pct / 100) * circ;
-
-  return (
-    <div className="flex flex-col gap-2.5 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
-          POINTS
-        </span>
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#8b5cf618]">
-          <Target size={14} className="text-[#8b5cf6]" />
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
-          <circle cx="32" cy="32" r={r} fill="none" stroke="#f0f2f7" strokeWidth="6" />
-          <circle
-            cx="32"
-            cy="32"
-            r={r}
-            fill="none"
-            stroke="#8b5cf6"
-            strokeWidth="6"
-            strokeDasharray={`${dash} ${circ - dash}`}
-            strokeLinecap="round"
-            transform="rotate(-90 32 32)"
-          />
-          <text
-            x="32"
-            y="36"
-            textAnchor="middle"
-            fontSize="13"
-            fontWeight="700"
-            fill="#1a1d2e"
-          >
-            {pct}%
-          </text>
-        </svg>
-
-        <div>
-          <div className="text-[22px] font-bold leading-none text-[#1a1d2e]">
-            {pct}%
-          </div>
-          <div className="mt-1 text-[11px] text-[#9ca3b8]">{sub}</div>
-          <div className="mt-1.5 flex items-center gap-1">
-            <TrendingUp size={11} className="text-[#22c55e]" />
-            <span className="text-[11px] font-medium text-[#22c55e]">
-              +4% {trendLabel}
-            </span>
-          </div>
-        </div>
-      </div>
+      <div className="mt-0 flex flex-1 flex-col gap-2">{children}</div>
     </div>
   );
 }
@@ -1464,8 +1396,8 @@ function PublicOrganizationLogoPreview({
   readonly categoryFallback: string;
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex h-[74px] w-[74px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#eef2ff] text-[22px] font-bold text-[#3b6ef8]">
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <div className="flex min-h-0 w-full flex-1 basis-0 items-center justify-center overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#eef2ff] text-[46px] font-bold text-[#3b6ef8]">
         {organization.logoUrl || organization.coverImageUrl ? (
           <img
             src={organization.logoUrl ?? organization.coverImageUrl ?? ""}
@@ -1488,7 +1420,6 @@ function PublicOrganizationLogoPreview({
     </div>
   );
 }
-
 function getPublicOrganizationStringField(
   organization: DirectoryOrganization,
   keys: readonly string[],
@@ -1552,7 +1483,7 @@ function PublicOrganizationAddressSummary({
   readonly serviceAreaValue: string;
 }) {
   return (
-    <div className="flex min-h-[74px] flex-col justify-end gap-1.5">
+    <div className="flex min-h-[74px] flex-col justify-start gap-1.5">
       <div className="line-clamp-1 text-[20px] font-bold leading-tight text-[#1a1d2e]">
         {locationLabel}
       </div>
@@ -1646,7 +1577,7 @@ function PublicOrganizationMapPreview({
   readonly distanceLabel: string;
 }) {
   return (
-    <div className="group relative min-h-[146px] overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#dbeafe] shadow-sm">
+    <div className="group relative h-full min-h-0 flex-1 basis-0 overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#dbeafe] shadow-sm">
       <svg
         aria-hidden="true"
         className="absolute inset-0 h-full w-full"
@@ -1962,7 +1893,7 @@ export default async function DirectoryOrganizationPage({
               </div>
             </div>
 
-            <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mb-5 grid auto-rows-[420px] grid-cols-1 items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <PublicDashboardTopCard
                 label={getPublicOrganizationDashboardLabel("logo", selectedLocale)}
                 accent="#3b6ef8"
@@ -1993,18 +1924,24 @@ export default async function DirectoryOrganizationPage({
                     selectedLocale,
                   )}
                 />
-              </PublicDashboardTopCard>              <PublicOrganizationMapPreview
+                              <div className="mt-3 flex min-h-0 flex-1">
+                  <PublicOrganizationMapPreview
                 mapsHref={getPublicOrganizationTestMapsHref()}
                 actionLabel={getPublicOrganizationOpenMapLabel(selectedLocale)}
                 distanceLabel={getPublicOrganizationTestDistanceLabel(
                   selectedLocale,
                 )}
-              />              <PublicDashboardProgressCard
-                sub={t.points.title}
-                trendLabel={getPublicOrganizationDashboardLabel(
-                  "thisWeek",
-                  selectedLocale,
-                )}
+              />
+                </div>
+              </PublicDashboardTopCard>
+              <div
+                aria-label="reserved-public-profile-block"
+                className="h-full min-h-0 overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm"
+              />
+              <PurchaseConfirmationRequestCard
+                organizationId={organization.id}
+                organizationDefaultCurrency={organization.defaultCurrency}
+                locale={selectedLocale}
               />
             </div>
 

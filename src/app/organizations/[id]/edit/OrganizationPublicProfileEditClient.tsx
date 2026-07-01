@@ -12,7 +12,6 @@ import {
   RotateCcw,
   Save,
   Star,
-  Target,
   TrendingUp,
 } from "lucide-react";
 import {
@@ -22,6 +21,8 @@ import {
   useMemo,
   useState,
 } from "react";
+import PurchaseConfirmationRequestCard from "@/components/commercial/PurchaseConfirmationRequestCard";
+
 
 export type OrganizationPublicProfileEditInitialData = {
   locale: string;
@@ -549,7 +550,7 @@ function TopCard({
   children: ReactNode;
 }) {
   return (
-    <div className="relative min-h-[146px] overflow-hidden rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.08)]">
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.08)]">
       <div className="flex items-start justify-between gap-3">
         <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6f7494]">
           {label}
@@ -561,7 +562,7 @@ function TopCard({
           <Icon size={15} />
         </div>
       </div>
-      <div className="mt-5">{children}</div>
+      <div className="mt-5 flex flex-1 flex-col">{children}</div>
     </div>
   );
 }
@@ -672,7 +673,7 @@ function MapPreview({
   distanceLabel: string;
 }) {
   return (
-    <div className="group relative min-h-[146px] overflow-hidden rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[#dbeafe] shadow-[0_2px_8px_rgba(15,23,42,0.08)]">
+    <div className="group relative h-full min-h-0 flex-1 basis-0 overflow-hidden rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[#dbeafe] shadow-[0_2px_8px_rgba(15,23,42,0.08)]">
       <svg
         aria-hidden="true"
         className="absolute inset-0 h-full w-full"
@@ -948,10 +949,10 @@ export default function OrganizationPublicProfileEditClient({
           </p>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-4">
+        <section className="grid auto-rows-[420px] items-stretch gap-4 lg:grid-cols-4">
           <TopCard label={messages.logo} icon={Star} accent="#3b6ef8">
-            <div className="flex items-center gap-4">
-              <div className="flex h-[74px] w-[74px] shrink-0 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] text-[24px] font-bold text-[#3b6ef8]">
+            <div className="flex h-full min-h-0 flex-col gap-3">
+              <div className="flex min-h-0 w-full flex-1 basis-0 shrink items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] text-[46px] font-bold text-[#3b6ef8]">
                 {getInitials(organizationName)}
               </div>
               <div className="min-w-0 flex-1">
@@ -1040,38 +1041,23 @@ export default function OrganizationPublicProfileEditClient({
                 />
               </EditableShell>
             </div>
-          </TopCard>
-
-          <MapPreview
+                      <div className="flex min-h-0 flex-1 pt-1">
+              <MapPreview
             mapsHref={mapsHref}
             actionLabel={messages.openPublic}
             distanceLabel={messages.fromYou}
           />
-
-          <div className="min-h-[146px] rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.08)]">
-            <div className="flex items-start justify-between">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6f7494]">
-                {messages.points}
-              </div>
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#8b5cf6]/10 text-[#8b5cf6]">
-                <Target size={15} />
-              </div>
             </div>
-            <div className="mt-5 flex items-center gap-4">
-              <div className="relative flex h-[72px] w-[72px] items-center justify-center rounded-full border-[7px] border-[#8b5cf6] text-[13px] font-bold text-[#111827]">
-                76%
-              </div>
-              <div>
-                <div className="text-[24px] font-bold text-[#111827]">76%</div>
-                <div className="text-[12px] text-[#9ca3b8]">
-                  {messages.certificatesAndPoints}
-                </div>
-                <div className="mt-1 text-[12px] font-semibold text-[#22c55e]">
-                  â†— +4% this week
-                </div>
-              </div>
-            </div>
-          </div>
+          </TopCard>
+          <div
+            aria-label="reserved-owner-profile-block"
+            className="h-full min-h-0 overflow-hidden rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.08)]"
+          />
+          <PurchaseConfirmationRequestCard
+            organizationId={initialData.organization.id}
+            organizationDefaultCurrency={initialData.organization.defaultCurrency}
+            locale={locale}
+          />
         </section>
 
         <section className="mt-4 flex flex-wrap gap-2">
@@ -1115,7 +1101,7 @@ export default function OrganizationPublicProfileEditClient({
           <h2 className="mb-3 text-[14px] font-bold text-[#111827]">
             {messages.flow}
           </h2>
-          <div className="grid gap-4 lg:grid-cols-4">
+          <div className="grid items-stretch gap-4 lg:auto-rows-fr lg:grid-cols-4">
             <DirectionCard
               label={messages.offers}
               pct={78}
