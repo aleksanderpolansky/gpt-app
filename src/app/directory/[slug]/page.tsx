@@ -28,6 +28,8 @@ import OrganizationLocationMapPreview from "@/components/commercial/Organization
 
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 type DirectoryCategory = {
   id: string;
@@ -1416,6 +1418,13 @@ function PublicDashboardDirectionCard({
   );
 }
 
+
+function getPublicProfileCategoryLabel(organization: DirectoryOrganization) {
+  const label = organization.socialLinks?.public_profile_category_label;
+
+  return typeof label === "string" && label.trim() ? label.trim() : null;
+}
+
 function PublicOrganizationLogoPreview({
   organization,
   categoryFallback,
@@ -1442,7 +1451,9 @@ function PublicOrganizationLogoPreview({
           {organization.name}
         </div>
         <div className="mt-1 text-[11px] text-[#9ca3b8]">
-          {organization.primaryCategory?.name ?? categoryFallback}
+          {getPublicProfileCategoryLabel(organization) ??
+            organization.primaryCategory?.name ??
+            categoryFallback}
         </div>
       </div>
     </div>
@@ -2139,6 +2150,7 @@ export default async function DirectoryOrganizationPage({
                   pct={79}
                   color="#8b5cf6"
                   sub={
+                    getPublicProfileCategoryLabel(organization) ??
                     organization.primaryCategory?.name ??
                     getPublicOrganizationDashboardLabel("notProvided", selectedLocale)
                   }

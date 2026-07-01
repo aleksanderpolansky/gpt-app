@@ -41,6 +41,7 @@ type OrganizationRow = {
   booking_url: string | null;
   logo_url: string | null;
   cover_image_url: string | null;
+  social_links_json: Record<string, unknown> | null;
   directory_published_at: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -70,6 +71,15 @@ type CategoryRow = {
   name: string;
   slug: string;
 };
+
+
+function getProfileCategoryLabelFromSocialLinks(
+  value: Record<string, unknown> | null,
+) {
+  const label = value?.public_profile_category_label;
+
+  return typeof label === "string" && label.trim() ? label.trim() : null;
+}
 
 function getLocaleValue(
   searchParams: Record<string, string | string[] | undefined>,
@@ -199,6 +209,7 @@ export default async function OrganizationEditPage({
       booking_url,
       logo_url,
       cover_image_url,
+      social_links_json,
       directory_published_at,
       created_at,
       updated_at
@@ -306,7 +317,9 @@ export default async function OrganizationEditPage({
           longitude: primaryLocation.longitude,
         }
       : null,
-    categoryName,
+    categoryName:
+      getProfileCategoryLabelFromSocialLinks(organization.social_links_json) ??
+      categoryName,
     publicProfileHref,
     counts: {
       offersCount,

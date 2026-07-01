@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { auth0 } from "../../../../../../lib/auth0";
@@ -19,6 +20,8 @@ type AppUserRow = {
 type OrganizationRow = {
   id: string;
   created_by_user_id: string | null;
+  public_slug: string | null;
+  social_links_json: Record<string, unknown> | null;
 };
 
 type LocationPayload = {
@@ -43,6 +46,25 @@ function parseNullableText(value: unknown) {
   const trimmedValue = value.trim();
 
   return trimmedValue.length === 0 ? null : trimmedValue;
+}
+
+
+function getNextSocialLinksJson(
+  currentValue: Record<string, unknown> | null,
+  categoryLabel: string | null,
+) {
+  const nextValue =
+    currentValue && typeof currentValue === "object" && !Array.isArray(currentValue)
+      ? { ...currentValue }
+      : {};
+
+  if (categoryLabel) {
+    nextValue.public_profile_category_label = categoryLabel;
+  } else {
+    delete nextValue.public_profile_category_label;
+  }
+
+  return nextValue;
 }
 
 function parseRequiredText(value: unknown, fieldName: string) {
@@ -133,7 +155,7 @@ async function getOwnedOrganization(input: {
 }) {
   const { data, error } = await supabase
     .from("organizations")
-    .select("id, created_by_user_id")
+    .select("id, created_by_user_id, public_slug, social_links_json")
     .eq("id", input.organizationId)
     .limit(1);
 
@@ -236,6 +258,12 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     );
   }
 
+  const categoryLabel = parseNullableText(body.categoryLabel);
+  const logoUrl = parseNullableText(body.logoUrl);
+  const nextSocialLinksJson = getNextSocialLinksJson(
+    organization.social_links_json,
+    categoryLabel,
+  );
   const now = new Date().toISOString();
 
   const { data: updatedOrganization, error: updateOrganizationError } =
@@ -244,6 +272,8 @@ export async function PATCH(request: Request, { params }: RouteProps) {
       .update({
         organization_name: organizationName,
         organization_type: organizationType,
+        logo_url: logoUrl,
+        social_links_json: nextSocialLinksJson,
         description: parseNullableText(body.description),
         short_description: parseNullableText(body.shortDescription),
         public_phone: parseNullableText(body.publicPhone),
@@ -272,16 +302,21 @@ export async function PATCH(request: Request, { params }: RouteProps) {
   let updatedLocation = null;
 
   if (locationPayload) {
+    const streetAddress = parseNullableText(locationPayload.streetAddress);
+    const addressVisibility = streetAddress
+      ? "public"
+      : parseAddressVisibility(locationPayload.addressVisibility);
+
     const locationUpdate = {
       country_code: parseNullableText(locationPayload.countryCode),
       city: parseNullableText(locationPayload.city),
       district: parseNullableText(locationPayload.district),
-      street_address: parseNullableText(locationPayload.streetAddress),
+      street_address: streetAddress,
       postal_code: parseNullableText(locationPayload.postalCode),
       label: parseNullableText(locationPayload.label),
       latitude: parseNullableCoordinate(locationPayload.latitude, -90, 90),
       longitude: parseNullableCoordinate(locationPayload.longitude, -180, 180),
-      address_visibility: parseAddressVisibility(locationPayload.addressVisibility),
+      address_visibility: addressVisibility,
       is_primary: true,
       is_active: true,
     };
@@ -343,6 +378,12 @@ export async function PATCH(request: Request, { params }: RouteProps) {
 
       updatedLocation = data;
     }
+  }
+
+  revalidatePath(`/organizations/${organizationId}/edit`);
+
+  if (organization.public_slug) {
+    revalidatePath(`/directory/${organization.public_slug}`);
   }
 
   return NextResponse.json({

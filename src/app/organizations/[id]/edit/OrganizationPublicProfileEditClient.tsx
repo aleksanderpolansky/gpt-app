@@ -835,6 +835,7 @@ export default function OrganizationPublicProfileEditClient({
             logoUrl: values.logoUrl,
             organizationName: values.organizationName,
             organizationType: values.organizationType,
+            categoryLabel: values.categoryLabel,
             description: values.description,
             shortDescription: values.shortDescription,
             publicPhone: values.publicPhone,
@@ -847,9 +848,12 @@ export default function OrganizationPublicProfileEditClient({
               district: values.district,
               streetAddress: values.streetAddress,
               postalCode: values.postalCode,
+              label: values.serviceArea,
               latitude: values.latitude,
               longitude: values.longitude,
-              addressVisibility: values.addressVisibility,
+              addressVisibility: values.streetAddress.trim()
+                ? "public"
+                : values.addressVisibility,
             },
           }),
         },
