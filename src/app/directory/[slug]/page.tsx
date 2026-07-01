@@ -6,6 +6,7 @@ import {
   Globe,
   MapPin,
   MessageCircle,
+  Navigation,
   Phone,
   Star,
   Target,
@@ -1488,7 +1489,262 @@ function PublicOrganizationLogoPreview({
   );
 }
 
-function PublicDashboardActionButton({
+function getPublicOrganizationStringField(
+  organization: DirectoryOrganization,
+  keys: readonly string[],
+) {
+  const record = organization as unknown as Record<string, unknown>;
+
+  for (const key of keys) {
+    const value = record[key];
+
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}
+
+function getPublicOrganizationServiceAreaValue(
+  organization: DirectoryOrganization,
+  fallbackLocation: string,
+) {
+  return (
+    getPublicOrganizationStringField(organization, [
+      "serviceAreaDescription",
+      "service_area_description",
+      "serviceArea",
+      "service_area",
+      "serviceAreaLabel",
+      "service_area_label",
+      "coverageArea",
+      "coverage_area",
+    ]) ?? fallbackLocation
+  );
+}
+
+function getPublicOrganizationApproximateMapLabel(locale?: string) {
+  const labelLocale = getPublicOrganizationDashboardLocale(locale);
+
+  const labels: Record<PublicOrganizationDashboardLocaleKey, string> = {
+    en: "Approximate service area",
+    pl: "Przybli\u017cona strefa obs\u0142ugi",
+    uk: "\u041f\u0440\u0438\u0431\u043b\u0438\u0437\u043d\u0430 \u0437\u043e\u043d\u0430 \u043e\u0431\u0441\u043b\u0443\u0433\u043e\u0432\u0443\u0432\u0430\u043d\u043d\u044f",
+    ru: "\u041f\u0440\u0438\u043c\u0435\u0440\u043d\u0430\u044f \u0437\u043e\u043d\u0430 \u043e\u0431\u0441\u043b\u0443\u0436\u0438\u0432\u0430\u043d\u0438\u044f",
+    de: "Ungef\u00e4hres Servicegebiet",
+    es: "\u00c1rea de servicio aproximada",
+    cs: "P\u0159ibli\u017en\u00e1 oblast slu\u017eeb",
+  };
+
+  return labels[labelLocale] ?? labels.en;
+}
+
+function PublicOrganizationAddressSummary({
+  locationLabel,
+  locationCaption,
+  serviceAreaLabel,
+  serviceAreaValue,
+}: {
+  readonly locationLabel: string;
+  readonly locationCaption: string;
+  readonly serviceAreaLabel: string;
+  readonly serviceAreaValue: string;
+}) {
+  return (
+    <div className="flex min-h-[74px] flex-col justify-end gap-1.5">
+      <div className="line-clamp-1 text-[20px] font-bold leading-tight text-[#1a1d2e]">
+        {locationLabel}
+      </div>
+
+      <div className="text-[11px] text-[#9ca3b8]">{locationCaption}</div>
+
+      <div className="mt-1 rounded-lg bg-[#f8f9fd] px-2.5 py-1.5 text-[11px] text-[#5a5f7a]">
+        <span className="font-semibold text-[#1a1d2e]">{serviceAreaLabel}:</span>{" "}
+        <span className="line-clamp-1">{serviceAreaValue}</span>
+      </div>
+    </div>
+  );
+}
+
+function getPublicOrganizationTestAddressLabel(locale?: string) {
+  const labelLocale = getPublicOrganizationDashboardLocale(locale);
+
+  const labels: Record<PublicOrganizationDashboardLocaleKey, string> = {
+    en: "Szczecin, Tkacka 11, PL",
+    pl: "Szczecin, ul. Tkacka 11, PL",
+    uk: "\u0429\u0435\u0446\u0438\u043d, \u0432\u0443\u043b. Tkacka 11, PL",
+    ru: "\u0429\u0435\u0446\u0438\u043d, \u0443\u043b. Tkacka 11, PL",
+    de: "Szczecin, Tkacka 11, PL",
+    es: "Szczecin, Tkacka 11, PL",
+    cs: "\u0160t\u011bt\u00edn, ul. Tkacka 11, PL",
+  };
+
+  return labels[labelLocale] ?? labels.en;
+}
+
+function getPublicOrganizationTestServiceAreaLabel(locale?: string) {
+  const labelLocale = getPublicOrganizationDashboardLocale(locale);
+
+  const labels: Record<PublicOrganizationDashboardLocaleKey, string> = {
+    en: "Szczecin city center and nearby area",
+    pl: "Centrum Szczecina i najbli\u017csza okolica",
+    uk: "\u0426\u0435\u043d\u0442\u0440 \u0429\u0435\u0446\u0438\u043d\u0430 \u0442\u0430 \u043d\u0430\u0439\u0431\u043b\u0438\u0436\u0447\u0456 \u0440\u0430\u0439\u043e\u043d\u0438",
+    ru: "\u0426\u0435\u043d\u0442\u0440 \u0429\u0435\u0446\u0438\u043d\u0430 \u0438 \u0431\u043b\u0438\u0436\u0430\u0439\u0448\u0438\u0435 \u0440\u0430\u0439\u043e\u043d\u044b",
+    de: "Stadtzentrum Szczecin und Umgebung",
+    es: "Centro de Szczecin y zona cercana",
+    cs: "Centrum \u0160t\u011bt\u00edna a nejbli\u017e\u0161\u00ed okol\u00ed",
+  };
+
+  return labels[labelLocale] ?? labels.en;
+}
+
+function getPublicOrganizationTestDistanceLabel(locale?: string) {
+  const labelLocale = getPublicOrganizationDashboardLocale(locale);
+
+  const labels: Record<PublicOrganizationDashboardLocaleKey, string> = {
+    en: "3,500 m from you",
+    pl: "3 500 m od Ciebie",
+    uk: "3 500 \u043c \u0432\u0456\u0434 \u0432\u0430\u0441",
+    ru: "3 500 \u043c \u043e\u0442 \u0432\u0430\u0441",
+    de: "3.500 m von dir",
+    es: "3.500 m desde ti",
+    cs: "3 500 m od v\u00e1s",
+  };
+
+  return labels[labelLocale] ?? labels.en;
+}
+
+function getPublicOrganizationTestMapsHref() {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    "Tkacka 11, Szczecin, Poland",
+  )}`;
+}
+
+function getPublicOrganizationOpenMapLabel(locale?: string) {
+  const labelLocale = getPublicOrganizationDashboardLocale(locale);
+
+  const labels: Record<PublicOrganizationDashboardLocaleKey, string> = {
+    en: "Open in maps",
+    pl: "Otw\u00f3rz map\u0119",
+    uk: "\u0412\u0456\u0434\u043a\u0440\u0438\u0442\u0438 \u043a\u0430\u0440\u0442\u0443",
+    ru: "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043a\u0430\u0440\u0442\u0443",
+    de: "Karte \u00f6ffnen",
+    es: "Abrir mapa",
+    cs: "Otev\u0159\u00edt mapu",
+  };
+
+  return labels[labelLocale] ?? labels.en;
+}
+function PublicOrganizationMapPreview({
+  mapsHref,
+  actionLabel,
+  distanceLabel,
+}: {
+  readonly mapsHref: string;
+  readonly actionLabel: string;
+  readonly distanceLabel: string;
+}) {
+  return (
+    <div className="group relative min-h-[146px] overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#dbeafe] shadow-sm">
+      <svg
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full"
+        preserveAspectRatio="none"
+        viewBox="0 0 420 170"
+      >
+        <defs>
+          <linearGradient id="org-map-bg" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#dbeafe" />
+            <stop offset="54%" stopColor="#e0f2fe" />
+            <stop offset="100%" stopColor="#dcfce7" />
+          </linearGradient>
+          <filter id="org-map-soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" floodColor="#2563eb" floodOpacity="0.22" stdDeviation="2" />
+          </filter>
+        </defs>
+
+        <rect width="420" height="170" fill="url(#org-map-bg)" />
+
+        <path
+          d="M-20 148 C62 119 118 141 196 114 C264 91 331 97 446 64 L446 190 L-20 190 Z"
+          fill="#bbf7d0"
+          opacity="0.72"
+        />
+        <path
+          d="M-24 34 C42 20 92 30 145 20 C230 4 281 16 452 -12 L452 25 C319 50 235 41 152 54 C87 64 40 52 -24 72 Z"
+          fill="#bfdbfe"
+          opacity="0.76"
+        />
+        <path
+          d="M292 -14 C321 33 319 87 342 178"
+          fill="none"
+          stroke="#93c5fd"
+          strokeLinecap="round"
+          strokeWidth="24"
+          opacity="0.58"
+        />
+
+        <path d="M-18 54 L440 138" stroke="#c7d2fe" strokeWidth="18" opacity="0.78" />
+        <path d="M-18 54 L440 138" stroke="#ffffff" strokeWidth="12" opacity="0.96" />
+        <path d="M-18 54 L440 138" stroke="#cbd5e1" strokeWidth="1.5" opacity="0.75" />
+
+        <path d="M-22 126 C80 98 147 87 239 62 C309 43 354 23 442 9" stroke="#bfdbfe" strokeWidth="14" opacity="0.8" />
+        <path d="M-22 126 C80 98 147 87 239 62 C309 43 354 23 442 9" stroke="#ffffff" strokeWidth="9" opacity="0.95" />
+        <path d="M-22 126 C80 98 147 87 239 62 C309 43 354 23 442 9" stroke="#cbd5e1" strokeWidth="1.2" opacity="0.65" />
+
+        <path d="M64 -20 L98 192" stroke="#ffffff" strokeWidth="6" opacity="0.86" />
+        <path d="M150 -16 L110 194" stroke="#ffffff" strokeWidth="5" opacity="0.82" />
+        <path d="M238 -18 L263 196" stroke="#ffffff" strokeWidth="6" opacity="0.86" />
+        <path d="M360 -20 L326 194" stroke="#ffffff" strokeWidth="5" opacity="0.82" />
+
+        <path d="M-18 92 L440 42" stroke="#ffffff" strokeWidth="4" opacity="0.78" />
+        <path d="M-18 162 L440 112" stroke="#ffffff" strokeWidth="4" opacity="0.76" />
+
+        <path
+          d="M70 113 C129 91 186 95 227 74 C258 58 281 55 307 52"
+          fill="none"
+          stroke="#f97316"
+          strokeDasharray="6 5"
+          strokeLinecap="round"
+          strokeWidth="4"
+          opacity="0.78"
+        />
+
+        <circle cx="230" cy="84" r="61" fill="#3b82f6" opacity="0.16" />
+        <circle cx="230" cy="84" r="43" fill="#3b82f6" opacity="0.2" />
+        <circle cx="230" cy="84" r="24" fill="#3b82f6" opacity="0.28" />
+        <circle cx="230" cy="84" r="12" fill="#ffffff" filter="url(#org-map-soft-shadow)" />
+        <circle cx="230" cy="84" r="6" fill="#2563eb" />
+
+        <text x="20" y="28" fill="#475569" fontSize="11" fontWeight="700" opacity="0.72">
+          Centrum
+        </text>
+        <text x="32" y="143" fill="#64748b" fontSize="10" fontWeight="600" opacity="0.72">
+          Tkacka
+        </text>
+        <text x="314" y="31" fill="#64748b" fontSize="10" fontWeight="600" opacity="0.66">
+          Odra
+        </text>
+      </svg>
+
+      <div className="absolute bottom-3 left-3 rounded-full border border-white/80 bg-white/92 px-3 py-1.5 text-[11px] font-semibold text-[#1a1d2e] shadow-sm backdrop-blur">
+        {distanceLabel}
+      </div>
+
+      <a
+        href={mapsHref}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={actionLabel}
+        title={actionLabel}
+        className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/90 bg-white/95 text-[#2563eb] shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#2563eb]/40"
+      >
+        <Navigation size={16} />
+      </a>
+    </div>
+  );
+}function PublicDashboardActionButton({
   href,
   icon: Icon,
   children,
@@ -1726,43 +1982,24 @@ export default async function DirectoryOrganizationPage({
                 accent="#f97316"
                 icon={MapPin}
               >
-                <div className="text-[20px] font-bold leading-tight text-[#1a1d2e]">
-                  {getPublicLocationLabel()}
-                </div>
-                <div className="text-[11px] text-[#9ca3b8]">
-                  {t.hero.locationLabel}
-                </div>
-              </PublicDashboardTopCard>
-
-              <PublicDashboardTopCard
-                label={getPublicOrganizationPublicProfileLabel(selectedLocale)}
-                accent="#22c55e"
-                icon={Activity}
-              >
-                <div className="text-[13px] font-semibold text-[#1a1d2e]">
-                  {t.hero.publicFlowValue}
-                </div>
-                <div className="mt-2 flex flex-col gap-1">
-                  <div className="flex items-center justify-between gap-2 text-[11px]">
-                    <span className="font-semibold text-[#5a5f7a]">
-                      {t.hero.offersLabel}
-                    </span>
-                    <span className="text-right font-bold text-[#1a1d2e]">
-                      {offers.length}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2 text-[11px]">
-                    <span className="font-semibold text-[#5a5f7a]">
-                      {t.hero.certificateLabel}
-                    </span>
-                    <span className="text-right font-bold text-[#1a1d2e]">
-                      {certificateOffersCount}
-                    </span>
-                  </div>
-                </div>
-              </PublicDashboardTopCard>
-
-              <PublicDashboardProgressCard
+                <PublicOrganizationAddressSummary
+                  locationLabel={getPublicOrganizationTestAddressLabel(selectedLocale)}
+                  locationCaption={t.hero.locationLabel}
+                  serviceAreaLabel={getPublicOrganizationDashboardLabel(
+                    "serviceArea",
+                    selectedLocale,
+                  )}
+                  serviceAreaValue={getPublicOrganizationTestServiceAreaLabel(
+                    selectedLocale,
+                  )}
+                />
+              </PublicDashboardTopCard>              <PublicOrganizationMapPreview
+                mapsHref={getPublicOrganizationTestMapsHref()}
+                actionLabel={getPublicOrganizationOpenMapLabel(selectedLocale)}
+                distanceLabel={getPublicOrganizationTestDistanceLabel(
+                  selectedLocale,
+                )}
+              />              <PublicDashboardProgressCard
                 sub={t.points.title}
                 trendLabel={getPublicOrganizationDashboardLabel(
                   "thisWeek",
