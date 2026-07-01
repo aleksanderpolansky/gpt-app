@@ -23,6 +23,9 @@ import {
   getVerificationStatusLabel,
 } from "../../../i18n/messages/system-labels";
 import PurchaseConfirmationRequestCard from "@/components/commercial/PurchaseConfirmationRequestCard";
+import OrganizationLocationMapPreview from "@/components/commercial/OrganizationLocationMapPreview";
+
+
 
 export const dynamic = "force-dynamic";
 
@@ -1314,25 +1317,50 @@ function PublicDashboardTopCard({
   accent,
   icon: Icon,
   children,
-}: PublicDashboardCardProps) {
+  footerIconOnly = false,
+}: PublicDashboardCardProps & { readonly footerIconOnly?: boolean }) {
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2.5 overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
-          {label}
-        </span>
-        <div
-          className="flex h-7 w-7 items-center justify-center rounded-lg"
-          style={{ backgroundColor: `${accent}18` }}
-        >
-          <Icon size={14} style={{ color: accent }} />
+    <div className="flex h-full min-h-[390px] flex-col overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+      {footerIconOnly ? null : (
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
+            {label}
+          </span>
+          <div
+            className="flex h-7 w-7 items-center justify-center rounded-lg"
+            style={{ backgroundColor: `${accent}18` }}
+          >
+            <Icon size={14} style={{ color: accent }} />
+          </div>
         </div>
+      )}
+
+      <div
+        className={
+          footerIconOnly
+            ? "flex min-h-0 flex-1 flex-col gap-2"
+            : "mt-auto flex min-h-0 flex-1 flex-col gap-2"
+        }
+      >
+        {children}
       </div>
 
-      <div className="mt-0 flex flex-1 flex-col gap-2">{children}</div>
+      {footerIconOnly ? (
+        <div className="mt-auto flex items-center justify-end pt-3">
+          <div
+            className="flex h-7 w-7 items-center justify-center rounded-lg"
+            style={{ backgroundColor: `${accent}18` }}
+            aria-label={label}
+            title={label}
+          >
+            <Icon size={14} style={{ color: accent }} />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
+
 
 function PublicDashboardAnalyticsCard({
   title,
@@ -1474,29 +1502,21 @@ function getPublicOrganizationApproximateMapLabel(locale?: string) {
 function PublicOrganizationAddressSummary({
   locationLabel,
   locationCaption,
-  serviceAreaLabel,
-  serviceAreaValue,
 }: {
   readonly locationLabel: string;
   readonly locationCaption: string;
-  readonly serviceAreaLabel: string;
-  readonly serviceAreaValue: string;
 }) {
   return (
     <div className="flex min-h-[74px] flex-col justify-start gap-1.5">
-      <div className="line-clamp-1 text-[20px] font-bold leading-tight text-[#1a1d2e]">
+      <div className="line-clamp-2 text-[20px] font-bold leading-tight text-[#1a1d2e]">
         {locationLabel}
       </div>
 
       <div className="text-[11px] text-[#9ca3b8]">{locationCaption}</div>
-
-      <div className="mt-1 rounded-lg bg-[#f8f9fd] px-2.5 py-1.5 text-[11px] text-[#5a5f7a]">
-        <span className="font-semibold text-[#1a1d2e]">{serviceAreaLabel}:</span>{" "}
-        <span className="line-clamp-1">{serviceAreaValue}</span>
-      </div>
     </div>
   );
 }
+
 
 function getPublicOrganizationTestAddressLabel(locale?: string) {
   const labelLocale = getPublicOrganizationDashboardLocale(locale);
@@ -1552,6 +1572,46 @@ function getPublicOrganizationTestMapsHref() {
   )}`;
 }
 
+function getPublicOrganizationLocationLabel(
+  organization: DirectoryOrganization,
+  locale?: string,
+) {
+  const location = organization.primaryLocation;
+
+  if (!location) {
+    return getPublicOrganizationTestAddressLabel(locale);
+  }
+
+  const parts = [
+    location.city,
+    location.streetAddress,
+    location.countryCode ?? organization.countryCode,
+  ].filter((part): part is string => Boolean(part && part.trim()));
+
+  if (parts.length === 0) {
+    return getPublicOrganizationTestAddressLabel(locale);
+  }
+
+  return parts.join(", ");
+}
+
+function getPublicOrganizationMapServiceAreaValue(
+  organization: DirectoryOrganization,
+  locale?: string,
+) {
+  const location = organization.primaryLocation;
+  const serviceArea = location?.label?.trim();
+
+  if (serviceArea) {
+    return serviceArea;
+  }
+
+  if (location?.city) {
+    return location.city;
+  }
+
+  return getPublicOrganizationTestServiceAreaLabel(locale);
+}
 function getPublicOrganizationOpenMapLabel(locale?: string) {
   const labelLocale = getPublicOrganizationDashboardLocale(locale);
 
@@ -1893,11 +1953,12 @@ export default async function DirectoryOrganizationPage({
               </div>
             </div>
 
-            <div className="mb-5 grid auto-rows-[420px] grid-cols-1 items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mb-5 grid auto-rows-[390px] grid-cols-1 items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <PublicDashboardTopCard
                 label={getPublicOrganizationDashboardLabel("logo", selectedLocale)}
                 accent="#3b6ef8"
                 icon={Star}
+              footerIconOnly
               >
                 <PublicOrganizationLogoPreview
                   organization={organization}
@@ -1914,24 +1975,20 @@ export default async function DirectoryOrganizationPage({
                 icon={MapPin}
               >
                 <PublicOrganizationAddressSummary
-                  locationLabel={getPublicOrganizationTestAddressLabel(selectedLocale)}
+                  locationLabel={getPublicOrganizationLocationLabel(organization, selectedLocale)}
                   locationCaption={t.hero.locationLabel}
-                  serviceAreaLabel={getPublicOrganizationDashboardLabel(
-                    "serviceArea",
-                    selectedLocale,
-                  )}
-                  serviceAreaValue={getPublicOrganizationTestServiceAreaLabel(
-                    selectedLocale,
-                  )}
                 />
                               <div className="mt-3 flex min-h-0 flex-1">
-                  <PublicOrganizationMapPreview
-                mapsHref={getPublicOrganizationTestMapsHref()}
-                actionLabel={getPublicOrganizationOpenMapLabel(selectedLocale)}
-                distanceLabel={getPublicOrganizationTestDistanceLabel(
-                  selectedLocale,
-                )}
-              />
+                  <OrganizationLocationMapPreview
+                    location={organization.primaryLocation}
+                    organizationName={organization.name}
+                    locale={selectedLocale}
+                    actionLabel={getPublicOrganizationOpenMapLabel(selectedLocale)}
+                    distanceLabel={getPublicOrganizationTestDistanceLabel(
+                      selectedLocale,
+                    )}
+                    className="rounded-xl shadow-sm"
+                  />
                 </div>
               </PublicDashboardTopCard>
               <div

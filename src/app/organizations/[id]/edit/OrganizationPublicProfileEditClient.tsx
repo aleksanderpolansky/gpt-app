@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  Camera,
   Activity,
   Check,
   Globe,
@@ -15,13 +16,18 @@ import {
   TrendingUp,
 } from "lucide-react";
 import {
+  useRef,
   type ChangeEvent,
   type ElementType,
   type ReactNode,
   useMemo,
   useState,
 } from "react";
+import { getOrganizationTypeLabel } from "../../../../i18n/messages/system-labels";
 import PurchaseConfirmationRequestCard from "@/components/commercial/PurchaseConfirmationRequestCard";
+import OrganizationLocationMapPreview from "@/components/commercial/OrganizationLocationMapPreview";
+
+
 
 
 export type OrganizationPublicProfileEditInitialData = {
@@ -70,6 +76,8 @@ export type OrganizationPublicProfileEditInitialData = {
 };
 
 type EditValues = {
+
+  logoUrl: string;
   organizationName: string;
   organizationType: string;
   description: string;
@@ -420,6 +428,7 @@ function getInitialValues(data: OrganizationPublicProfileEditInitialData): EditV
   const location = data.primaryLocation;
 
   return {
+    logoUrl: data.organization.logoUrl ?? "",
     organizationName: data.organization.name,
     organizationType: data.organization.type || "private_business",
     description: text(data.organization.description),
@@ -462,6 +471,7 @@ function EditableShell({
   resetLabel: string;
   children: ReactNode;
 }) {
+
   return (
     <div className="relative">
       <div
@@ -543,29 +553,56 @@ function TopCard({
   icon: Icon,
   accent,
   children,
+  footerIconOnly = false,
 }: {
   label: string;
   icon: ElementType;
   accent: string;
   children: ReactNode;
+  footerIconOnly?: boolean;
 }) {
   return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.08)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6f7494]">
-          {label}
+    <div className="relative flex h-full min-h-[390px] flex-col overflow-hidden rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.08)]">
+      {footerIconOnly ? null : (
+        <div className="flex items-start justify-between gap-3">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6f7494]">
+            {label}
+          </div>
+          <div
+            className="flex h-7 w-7 items-center justify-center rounded-full"
+            style={{ backgroundColor: `${accent}14`, color: accent }}
+          >
+            <Icon size={15} />
+          </div>
         </div>
-        <div
-          className="flex h-7 w-7 items-center justify-center rounded-full"
-          style={{ backgroundColor: `${accent}14`, color: accent }}
-        >
-          <Icon size={15} />
-        </div>
+      )}
+
+      <div
+        className={
+          footerIconOnly
+            ? "flex min-h-0 flex-1 flex-col gap-3"
+            : "mt-5 flex min-h-0 flex-1 flex-col gap-3"
+        }
+      >
+        {children}
       </div>
-      <div className="mt-5 flex flex-1 flex-col">{children}</div>
+
+      {footerIconOnly ? (
+        <div className="mt-auto flex items-center justify-end pt-3">
+          <div
+            className="flex h-7 w-7 items-center justify-center rounded-full"
+            style={{ backgroundColor: `${accent}14`, color: accent }}
+            aria-label={label}
+            title={label}
+          >
+            <Icon size={15} />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
+
 
 function MiniActionButton({
   active,
@@ -795,6 +832,7 @@ export default function OrganizationPublicProfileEditClient({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            logoUrl: values.logoUrl,
             organizationName: values.organizationName,
             organizationType: values.organizationType,
             description: values.description,
@@ -809,7 +847,6 @@ export default function OrganizationPublicProfileEditClient({
               district: values.district,
               streetAddress: values.streetAddress,
               postalCode: values.postalCode,
-              label: values.serviceArea,
               latitude: values.latitude,
               longitude: values.longitude,
               addressVisibility: values.addressVisibility,
@@ -819,14 +856,57 @@ export default function OrganizationPublicProfileEditClient({
       );
 
       const payload = (await response.json().catch(() => null)) as
-        | { ok?: boolean; error?: string }
+        | {
+            ok?: boolean;
+            error?: string;
+            primaryLocation?: {
+              country_code?: string | null;
+              city?: string | null;
+              district?: string | null;
+              street_address?: string | null;
+              postal_code?: string | null;
+              label?: string | null;
+              latitude?: number | null;
+              longitude?: number | null;
+              address_visibility?: string | null;
+            } | null;
+          }
         | null;
 
       if (!response.ok || !payload?.ok) {
         throw new Error(payload?.error ?? messages.saveError);
       }
 
-      setSavedValues(values);
+      const nextValues: EditValues = payload.primaryLocation
+        ? {
+            ...values,
+            countryCode:
+              payload.primaryLocation.country_code ?? values.countryCode,
+            city: payload.primaryLocation.city ?? values.city,
+            district: payload.primaryLocation.district ?? values.district,
+            streetAddress:
+              payload.primaryLocation.street_address ?? values.streetAddress,
+            postalCode:
+              payload.primaryLocation.postal_code ?? values.postalCode,
+            serviceArea: payload.primaryLocation.label ?? values.serviceArea,
+            latitude:
+              payload.primaryLocation.latitude === null ||
+              payload.primaryLocation.latitude === undefined
+                ? values.latitude
+                : String(payload.primaryLocation.latitude),
+            longitude:
+              payload.primaryLocation.longitude === null ||
+              payload.primaryLocation.longitude === undefined
+                ? values.longitude
+                : String(payload.primaryLocation.longitude),
+            addressVisibility:
+              payload.primaryLocation.address_visibility ??
+              values.addressVisibility,
+          }
+        : values;
+
+      setValues(nextValues);
+      setSavedValues(nextValues);
       setSaveState("saved");
     } catch (error) {
       const nextMessage =
@@ -846,6 +926,43 @@ export default function OrganizationPublicProfileEditClient({
   const serviceArea =
     values.serviceArea.trim() || "Centrum Szczecina i najblizsza okolica";
   const mapsHref = buildMapsHref(values, organizationName);
+
+
+  const logoFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  function handleLogoFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      event.currentTarget.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+
+      if (!result) {
+        return;
+      }
+
+      setValues((current) => ({
+        ...current,
+        logoUrl: result,
+      }));
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  function handleLogoPickerOpen() {
+    logoFileInputRef.current?.click();
+  }
 
   return (
     <main className="min-h-screen bg-[#eef1f7]">
@@ -937,7 +1054,7 @@ export default function OrganizationPublicProfileEditClient({
               >
                 {ORGANIZATION_TYPE_OPTIONS.map((option) => (
                   <option key={option} value={option}>
-                    {option}
+                    {getOrganizationTypeLabel(option, locale)}
                   </option>
                 ))}
               </select>
@@ -949,12 +1066,39 @@ export default function OrganizationPublicProfileEditClient({
           </p>
         </section>
 
-        <section className="grid auto-rows-[420px] items-stretch gap-4 lg:grid-cols-4">
-          <TopCard label={messages.logo} icon={Star} accent="#3b6ef8">
+        <section className="grid auto-rows-[390px] items-stretch gap-4 lg:grid-cols-4">
+          <TopCard label={messages.logo} icon={Star} accent="#3b6ef8" footerIconOnly
+          >
             <div className="flex h-full min-h-0 flex-col gap-3">
-              <div className="flex min-h-0 w-full flex-1 basis-0 shrink items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] text-[46px] font-bold text-[#3b6ef8]">
-                {getInitials(organizationName)}
-              </div>
+              <button
+                type="button"
+                onClick={handleLogoPickerOpen}
+                className="group relative mx-auto aspect-square w-full max-w-[220px] overflow-hidden rounded-2xl border border-[#dfe4ff] bg-[#eef2ff] text-[#3b6ef8] transition hover:border-[#3b6ef8]/40 hover:shadow-[0_12px_28px_rgba(59,110,248,0.18)] focus:outline-none focus:ring-2 focus:ring-[#3b6ef8]/30"
+                aria-label={messages.logo}
+                title={messages.logo}
+              >
+                {values.logoUrl ? (
+                  <img
+                    src={values.logoUrl}
+                    alt={organizationName}
+                    className="h-full w-full object-cover object-center"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[46px] font-bold">
+                    {getInitials(organizationName)}
+                  </div>
+                )}
+                <span className="pointer-events-none absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-white/92 text-[#3b6ef8] shadow-[0_8px_20px_rgba(59,110,248,0.22)] transition group-hover:scale-105">
+                  <Camera size={18} />
+                </span>
+              </button>
+              <input
+                ref={logoFileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoFileChange}
+              />
               <div className="min-w-0 flex-1">
                 <EditableShell
                   dirty={isDirty("organizationName")}
@@ -1028,25 +1172,22 @@ export default function OrganizationPublicProfileEditClient({
                 </EditableShell>
               </div>
 
-              <EditableShell
-                dirty={isDirty("serviceArea")}
-                onReset={() => resetField("serviceArea")}
-                resetLabel={messages.undo}
-              >
-                <TextInput
-                  value={values.serviceArea}
-                  onChange={(value) => setField("serviceArea", value)}
-                  className="text-[12px] text-[#4d536f]"
-                  placeholder={messages.serviceArea}
-                />
-              </EditableShell>
             </div>
                       <div className="flex min-h-0 flex-1 pt-1">
-              <MapPreview
-            mapsHref={mapsHref}
-            actionLabel={messages.openPublic}
-            distanceLabel={messages.fromYou}
-          />
+              <OrganizationLocationMapPreview
+                location={{
+                  streetAddress: values.streetAddress,
+                  city: values.city,
+                  district: values.district,
+                  countryCode: values.countryCode,
+                  latitude: values.latitude,
+                  longitude: values.longitude,
+}}
+                organizationName={organizationName}
+                locale={locale}
+                actionLabel={messages.openPublic}
+                distanceLabel={messages.fromYou}
+              />
             </div>
           </TopCard>
           <div

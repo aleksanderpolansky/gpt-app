@@ -171,6 +171,133 @@ function pointsAboutHref(locale: string) {
   return `/points/about?${searchParams.toString()}`;
 }
 
+
+const PURCHASE_REQUEST_ERROR_MESSAGES = {
+  en: {
+    unknown: "The request could not be created.",
+    ownerSelf: "Request not created. The business owner cannot register a purchase at their own business. The real buyer must send the request from their own account.",
+    missingThreshold: "Request not created. This business does not yet have a minimum POINTS threshold. Set the country or currency in business settings.",
+    minimumGeneric: "Request not created. The purchase amount is too low for awarding POINTS.",
+    minimumWithAmount: "Request not created. To award 10 POINTS, the purchase amount must be greater than {amount} {currency}.",
+  },
+  pl: {
+    unknown: "Nie udalo sie utworzyc zgloszenia.",
+    ownerSelf: "Zgloszenie nie zostalo utworzone. Wlasciciel firmy nie moze rejestrowac zakupu we wlasnej firmie. Zakup powinien zglosic realny kupujacy ze swojego konta.",
+    missingThreshold: "Zgloszenie nie zostalo utworzone. Dla tej firmy nie ustawiono jeszcze minimalnego progu naliczania POINTS. Ustaw kraj albo walute w ustawieniach firmy.",
+    minimumGeneric: "Zgloszenie nie zostalo utworzone. Kwota zakupu jest za niska do naliczenia POINTS.",
+    minimumWithAmount: "Zgloszenie nie zostalo utworzone. Aby naliczyc 10 POINTS, kwota zakupu musi byc wieksza niz {amount} {currency}.",
+  },
+  uk: {
+    unknown: "\u0417\u0430\u044f\u0432\u043a\u0443 \u043d\u0435 \u0441\u0442\u0432\u043e\u0440\u0435\u043d\u043e.",
+    ownerSelf: "\u0417\u0430\u044f\u0432\u043a\u0443 \u043d\u0435 \u0441\u0442\u0432\u043e\u0440\u0435\u043d\u043e. \u0412\u043b\u0430\u0441\u043d\u0438\u043a \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u0430 \u043d\u0435 \u043c\u043e\u0436\u0435 \u0440\u0435\u0454\u0441\u0442\u0440\u0443\u0432\u0430\u0442\u0438 \u043f\u043e\u043a\u0443\u043f\u043a\u0443 \u0443 \u0432\u043b\u0430\u0441\u043d\u043e\u043c\u0443 \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u0456. \u041f\u043e\u043a\u0443\u043f\u043a\u0443 \u043c\u0430\u0454 \u0437\u0430\u0440\u0435\u0454\u0441\u0442\u0440\u0443\u0432\u0430\u0442\u0438 \u0440\u0435\u0430\u043b\u044c\u043d\u0438\u0439 \u043f\u043e\u043a\u0443\u043f\u0435\u0446\u044c \u0437\u0456 \u0441\u0432\u043e\u0433\u043e \u0430\u043a\u0430\u0443\u043d\u0442\u0430.",
+    missingThreshold: "\u0417\u0430\u044f\u0432\u043a\u0443 \u043d\u0435 \u0441\u0442\u0432\u043e\u0440\u0435\u043d\u043e. \u0414\u043b\u044f \u0446\u044c\u043e\u0433\u043e \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u0430 \u0449\u0435 \u043d\u0435 \u0437\u0430\u0434\u0430\u043d\u043e \u043c\u0456\u043d\u0456\u043c\u0430\u043b\u044c\u043d\u0438\u0439 \u043f\u043e\u0440\u0456\u0433 \u043d\u0430\u0440\u0430\u0445\u0443\u0432\u0430\u043d\u043d\u044f POINTS. \u0412\u043a\u0430\u0436\u0456\u0442\u044c \u043a\u0440\u0430\u0457\u043d\u0443 \u0430\u0431\u043e \u0432\u0430\u043b\u044e\u0442\u0443 \u0432 \u043d\u0430\u043b\u0430\u0448\u0442\u0443\u0432\u0430\u043d\u043d\u044f\u0445 \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u0430.",
+    minimumGeneric: "\u0417\u0430\u044f\u0432\u043a\u0443 \u043d\u0435 \u0441\u0442\u0432\u043e\u0440\u0435\u043d\u043e. \u0421\u0443\u043c\u0430 \u043f\u043e\u043a\u0443\u043f\u043a\u0438 \u0437\u0430\u043c\u0430\u043b\u0430 \u0434\u043b\u044f \u043d\u0430\u0440\u0430\u0445\u0443\u0432\u0430\u043d\u043d\u044f POINTS.",
+    minimumWithAmount: "\u0417\u0430\u044f\u0432\u043a\u0443 \u043d\u0435 \u0441\u0442\u0432\u043e\u0440\u0435\u043d\u043e. \u0429\u043e\u0431 \u043d\u0430\u0440\u0430\u0445\u0443\u0432\u0430\u0442\u0438 10 POINTS, \u0441\u0443\u043c\u0430 \u043f\u043e\u043a\u0443\u043f\u043a\u0438 \u043c\u0430\u0454 \u0431\u0443\u0442\u0438 \u0431\u0456\u043b\u044c\u0448\u043e\u044e \u0437\u0430 {amount} {currency}.",
+  },
+  ru: {
+    unknown: "\u0417\u0430\u044f\u0432\u043a\u0430 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u0430.",
+    ownerSelf: "\u0417\u0430\u044f\u0432\u043a\u0430 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u0430. \u0412\u043b\u0430\u0434\u0435\u043b\u0435\u0446 \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u044f \u043d\u0435 \u043c\u043e\u0436\u0435\u0442 \u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043f\u043e\u043a\u0443\u043f\u043a\u0443 \u0443 \u0441\u0432\u043e\u0435\u0433\u043e \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u044f. \u041f\u043e\u043a\u0443\u043f\u043a\u0443 \u0434\u043e\u043b\u0436\u0435\u043d \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0440\u0435\u0430\u043b\u044c\u043d\u044b\u0439 \u043f\u043e\u043a\u0443\u043f\u0430\u0442\u0435\u043b\u044c \u0441\u043e \u0441\u0432\u043e\u0435\u0433\u043e \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430.",
+    missingThreshold: "\u0417\u0430\u044f\u0432\u043a\u0430 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u0430. \u0414\u043b\u044f \u044d\u0442\u043e\u0433\u043e \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u044f \u043f\u043e\u043a\u0430 \u043d\u0435 \u0437\u0430\u0434\u0430\u043d \u043c\u0438\u043d\u0438\u043c\u0430\u043b\u044c\u043d\u044b\u0439 \u043f\u043e\u0440\u043e\u0433 \u043d\u0430\u0447\u0438\u0441\u043b\u0435\u043d\u0438\u044f POINTS. \u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u0441\u0442\u0440\u0430\u043d\u0443 \u0438\u043b\u0438 \u0432\u0430\u043b\u044e\u0442\u0443 \u0432 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430\u0445 \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u044f.",
+    minimumGeneric: "\u0417\u0430\u044f\u0432\u043a\u0430 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u0430. \u0421\u0443\u043c\u043c\u0430 \u043f\u043e\u043a\u0443\u043f\u043a\u0438 \u0441\u043b\u0438\u0448\u043a\u043e\u043c \u043c\u0430\u043b\u0430 \u0434\u043b\u044f \u043d\u0430\u0447\u0438\u0441\u043b\u0435\u043d\u0438\u044f POINTS.",
+    minimumWithAmount: "\u0417\u0430\u044f\u0432\u043a\u0430 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u0430. \u0414\u043b\u044f \u043d\u0430\u0447\u0438\u0441\u043b\u0435\u043d\u0438\u044f 10 POINTS \u0441\u0443\u043c\u043c\u0430 \u043f\u043e\u043a\u0443\u043f\u043a\u0438 \u0434\u043e\u043b\u0436\u043d\u0430 \u0431\u044b\u0442\u044c \u0431\u043e\u043b\u044c\u0448\u0435 {amount} {currency}.",
+  },
+  es: {
+    unknown: "No se pudo crear la solicitud.",
+    ownerSelf: "Solicitud no creada. El propietario de la empresa no puede registrar una compra en su propia empresa. El comprador real debe enviar la solicitud desde su propia cuenta.",
+    missingThreshold: "Solicitud no creada. Esta empresa todavia no tiene un umbral minimo para POINTS. Define el pais o la moneda en la configuracion de la empresa.",
+    minimumGeneric: "Solicitud no creada. El importe de la compra es demasiado bajo para POINTS.",
+    minimumWithAmount: "Solicitud no creada. Para conceder 10 POINTS, el importe de la compra debe ser superior a {amount} {currency}.",
+  },
+  de: {
+    unknown: "Die Anfrage konnte nicht erstellt werden.",
+    ownerSelf: "Anfrage nicht erstellt. Der Unternehmensinhaber kann keinen Kauf im eigenen Unternehmen registrieren. Der echte Kaeufer muss die Anfrage von seinem eigenen Konto senden.",
+    missingThreshold: "Anfrage nicht erstellt. Fuer dieses Unternehmen ist noch kein Mindestbetrag fuer POINTS festgelegt. Land oder Waehrung in den Unternehmenseinstellungen setzen.",
+    minimumGeneric: "Anfrage nicht erstellt. Der Kaufbetrag ist zu niedrig fuer POINTS.",
+    minimumWithAmount: "Anfrage nicht erstellt. Fuer 10 POINTS muss der Kaufbetrag groesser als {amount} {currency} sein.",
+  },
+  cs: {
+    unknown: "Zadost se nepodarilo vytvorit.",
+    ownerSelf: "Zadost nebyla vytvorena. Vlastnik podniku nemuze registrovat nakup ve vlastnim podniku. Skutecny kupujici musi zadost odeslat ze sveho uctu.",
+    missingThreshold: "Zadost nebyla vytvorena. Pro tento podnik jeste neni nastaven minimalni limit pro POINTS. Nastavte zemi nebo menu v nastaveni podniku.",
+    minimumGeneric: "Zadost nebyla vytvorena. Castka nakupu je prilis nizka pro pripis POINTS.",
+    minimumWithAmount: "Zadost nebyla vytvorena. Pro pripis 10 POINTS musi byt castka nakupu vyssi nez {amount} {currency}.",
+  },
+} as const;
+
+function getPurchaseRequestErrorLocale(
+  locale?: string | null,
+): keyof typeof PURCHASE_REQUEST_ERROR_MESSAGES {
+  const normalized = (locale ?? "").trim().toLowerCase();
+
+  if (
+    normalized === "pl" ||
+    normalized === "uk" ||
+    normalized === "ru" ||
+    normalized === "es" ||
+    normalized === "de" ||
+    normalized === "cs"
+  ) {
+    return normalized;
+  }
+
+  return "en";
+}
+
+function containsCyrillic(value: string) {
+  return /[\u0400-\u04FF]/.test(value);
+}
+
+function localizePurchaseRequestError(
+  error: string | null | undefined,
+  locale?: string | null,
+) {
+  const raw = (error ?? "").trim();
+  const messages =
+    PURCHASE_REQUEST_ERROR_MESSAGES[getPurchaseRequestErrorLocale(locale)];
+
+  if (!raw) {
+    return messages.unknown;
+  }
+
+  const normalized = raw.toLowerCase();
+
+  if (
+    normalized.includes("\u0432\u043b\u0430\u0434\u0435\u043b\u0435\u0446 \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u044f") ||
+    normalized.includes("\u0441\u0432\u043e\u0435\u0433\u043e \u0436\u0435 \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u044f") ||
+    normalized.includes("\u0432\u043b\u0430\u0441\u043d\u0438\u043a \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u0430")
+  ) {
+    return messages.ownerSelf;
+  }
+
+  if (
+    normalized.includes("\u043c\u0438\u043d\u0438\u043c\u0430\u043b\u044c\u043d\u044b\u0439 \u043f\u043e\u0440\u043e\u0433 \u043d\u0430\u0447\u0438\u0441\u043b\u0435\u043d\u0438\u044f points") ||
+    normalized.includes("\u043c\u0456\u043d\u0456\u043c\u0430\u043b\u044c\u043d\u0438\u0439 \u043f\u043e\u0440\u0456\u0433 \u043d\u0430\u0440\u0430\u0445\u0443\u0432\u0430\u043d\u043d\u044f points")
+  ) {
+    return messages.missingThreshold;
+  }
+
+  if (
+    normalized.includes("\u0434\u043b\u044f \u043d\u0430\u0447\u0438\u0441\u043b\u0435\u043d\u0438\u044f 10 points") ||
+    normalized.includes("\u0449\u043e\u0431 \u043d\u0430\u0440\u0430\u0445\u0443\u0432\u0430\u0442\u0438 10 points")
+  ) {
+    const thresholdMatch = raw.match(/([0-9]+(?:[.,][0-9]+)?)\s+([A-Z]{3})/);
+
+    if (thresholdMatch) {
+      return messages.minimumWithAmount
+        .replace("{amount}", thresholdMatch[1])
+        .replace("{currency}", thresholdMatch[2]);
+    }
+
+    return messages.minimumGeneric;
+  }
+
+  if (getPurchaseRequestErrorLocale(locale) !== "ru" && containsCyrillic(raw)) {
+    return messages.unknown;
+  }
+
+  return raw;
+}
+
 export default function PurchaseConfirmationRequestCard({
   organizationId,
   organizationDefaultCurrency,
@@ -252,7 +379,11 @@ export default function PurchaseConfirmationRequestCard({
         message.toLowerCase().includes("not authenticated") ||
         message.toLowerCase().includes("unauthorized");
 
-      setPurchaseSubmitError(isAuthError ? localCopy.authHint : message);
+      setPurchaseSubmitError(
+        isAuthError
+          ? localCopy.authHint
+          : localizePurchaseRequestError(message, normalizedLocale),
+      );
     } finally {
       setIsSubmittingPurchase(false);
     }
@@ -265,9 +396,6 @@ export default function PurchaseConfirmationRequestCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#15803d]">
-            {localCopy.eyebrow}
-          </div>
           <h3 className="mt-1 text-[18px] font-bold leading-tight text-[#111827]">
             {t("purchaseConfirmations.entry.title")}
           </h3>
