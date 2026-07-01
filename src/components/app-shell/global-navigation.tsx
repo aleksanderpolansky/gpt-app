@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ElementType,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -44,6 +51,14 @@ type SidebarOrganizationsResponse = {
   ok?: boolean;
   error?: string;
   organizations?: SidebarOrganization[];
+};
+
+type OrganizationCreateResponse = {
+  ok?: boolean;
+  error?: string;
+  organization?: {
+    id?: string | null;
+  } | null;
 };
 
 type NavigationTranslate = (
@@ -99,6 +114,26 @@ function buildLocaleAwareHref(pathname: string, locale: LocaleCode): string {
   }
 
   return `${pathname}?locale=${encodeURIComponent(locale)}`;
+}
+
+function getDraftOrganizationName(locale: LocaleCode) {
+  switch (locale) {
+    case "ru":
+      return "\u041d\u043e\u0432\u043e\u0435 \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u0435";
+    case "pl":
+      return "Nowe przedsi\u0119biorstwo";
+    case "es":
+      return "Nueva empresa";
+    case "uk":
+      return "\u041d\u043e\u0432\u0435 \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u043e";
+    case "de":
+      return "Neues Unternehmen";
+    case "cs":
+      return "Nov\u00fd podnik";
+    case "en":
+    default:
+      return "New business";
+  }
 }
 
 function Badge({
@@ -190,6 +225,9 @@ function TreeItem({
   href = "#",
   actionHref,
   actionTitle,
+  actionOnClick,
+  actionDisabled,
+  onClick,
 }: {
   readonly label: string;
   readonly depth?: number;
@@ -198,6 +236,9 @@ function TreeItem({
   readonly href?: string;
   readonly actionHref?: string;
   readonly actionTitle?: string;
+  readonly actionOnClick?: (event: MouseEvent<HTMLButtonElement>) => void;
+  readonly actionDisabled?: boolean;
+  readonly onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
   const pl = depth === 1 ? "pl-9" : depth === 2 ? "pl-12" : "pl-[60px]";
@@ -229,20 +270,38 @@ function TreeItem({
     <div className="group flex w-full items-center rounded-md pr-2 transition-all hover:bg-gray-50">
       <a
         href={href}
+        onClick={onClick}
         className={`flex min-w-0 flex-1 items-center py-1.5 pr-2 ${pl} ${textSize} ${textColor} transition-all group-hover:text-[#1a1d2e]`}
       >
         <span className="flex-1 truncate text-left leading-tight">{label}</span>
       </a>
 
-      {actionHref ? (
-        <a
-          href={actionHref}
-          title={actionTitle ?? `Add: ${label}`}
-          aria-label={actionTitle ?? `Add: ${label}`}
-          className="mr-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border border-transparent text-[#b0b4c8] transition-all hover:border-[#dfe4ff] hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
-        >
-          <Plus size={12} strokeWidth={2.4} />
-        </a>
+      {actionHref || actionOnClick ? (
+        actionOnClick ? (
+          <button
+            type="button"
+            onClick={actionOnClick}
+            disabled={actionDisabled}
+            title={actionTitle ?? `Add: ${label}`}
+            aria-label={actionTitle ?? `Add: ${label}`}
+            className={`mr-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border border-transparent text-[#b0b4c8] transition-all ${
+              actionDisabled
+                ? "cursor-not-allowed opacity-50"
+                : "hover:border-[#dfe4ff] hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
+            }`}
+          >
+            <Plus size={12} strokeWidth={2.4} />
+          </button>
+        ) : (
+          <a
+            href={actionHref ?? "#"}
+            title={actionTitle ?? `Add: ${label}`}
+            aria-label={actionTitle ?? `Add: ${label}`}
+            className="mr-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border border-transparent text-[#b0b4c8] transition-all hover:border-[#dfe4ff] hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
+          >
+            <Plus size={12} strokeWidth={2.4} />
+          </a>
+        )
       ) : null}
     </div>
   );
@@ -316,9 +375,61 @@ export function GlobalSidebar({
   const [organizations, setOrganizations] = useState<SidebarOrganization[]>([]);
   const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(false);
   const [organizationsError, setOrganizationsError] = useState<string | null>(null);
+  const [isCreatingBusiness, setIsCreatingBusiness] = useState(false);
   const t = useNavigationTranslator();
   const locale = useInterfaceLocale();
   const localeHref = (pathname: string) => buildLocaleAwareHref(pathname, locale);
+
+  async function createBusinessAndOpenEditor() {
+    if (isCreatingBusiness) {
+      return;
+    }
+
+    setIsCreatingBusiness(true);
+
+    try {
+      const response = await fetch("/api/organizations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          organizationName: getDraftOrganizationName(locale),
+          organizationType: "private_business",
+        }),
+      });
+
+      const data = (await response.json()) as OrganizationCreateResponse;
+
+      if (!response.ok || !data.ok || !data.organization?.id) {
+        throw new Error(data.error ?? t("navigation.businessesLoadError"));
+      }
+
+      window.location.href = buildLocaleAwareHref(
+        `/organizations/${encodeURIComponent(data.organization.id)}/edit`,
+        locale,
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error && error.message
+          ? error.message
+          : t("navigation.businessesLoadError");
+
+      window.alert(errorMessage);
+      setIsCreatingBusiness(false);
+    }
+  }
+
+  function handleCreateBusinessAction(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    void createBusinessAndOpenEditor();
+  }
+
+  function handleCreateBusinessLink(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    void createBusinessAndOpenEditor();
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -413,7 +524,8 @@ export function GlobalSidebar({
             label={t("navigation.businesses")}
             depth={1}
             href={localeHref("/directory")}
-            actionHref={localeHref("/organizations/new")}
+            actionOnClick={handleCreateBusinessAction}
+            actionDisabled={isCreatingBusiness}
             actionTitle={t("navigation.createBusiness")}
           />
           <TreeItem
@@ -500,6 +612,7 @@ export function GlobalSidebar({
                 label={t("navigation.noBusinessesCreate")}
                 depth={2}
                 href={localeHref("/organizations/new")}
+                onClick={handleCreateBusinessLink}
               />
             )}
           <TreeItem

@@ -12,6 +12,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { supabase } from "../../../../lib/supabase";
+import { auth0 } from "../../../../lib/auth0";
 import {
   getDirectoryDetailMessages,
   type DirectoryDetailMessages,
@@ -68,6 +69,7 @@ type DirectoryLocation = {
 
 type DirectoryOrganization = {
   id: string;
+  createdByUserId: string | null;
   name: string;
   type: string;
   description: string | null;
@@ -204,6 +206,7 @@ type RelatedStats = {
 
 type DirectoryOrganizationRow = {
   id: string;
+  created_by_user_id: string | null;
   organization_name: string;
   organization_type: string;
   description: string | null;
@@ -304,6 +307,11 @@ type DirectoryObjectActionClassification = {
   category: DirectoryContextualCategoryRow;
 };
 
+type DirectoryAppUserRow = {
+  id: string;
+  auth0_sub: string;
+};
+
 type DirectoryOrganizationPageProps = {
   params: Promise<{
     slug: string;
@@ -340,6 +348,26 @@ function appendLocaleToHref(href: string, locale: string) {
   const nextHash = hash ? `#${hash}` : "";
 
   return `${pathname}?${nextQueryString}${nextHash}`;
+}
+
+async function getCurrentDirectoryAppUser() {
+  const session = await auth0.getSession();
+
+  if (!session?.user?.sub) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("app_users")
+    .select("id, auth0_sub")
+    .eq("auth0_sub", session.user.sub)
+    .limit(1);
+
+  if (error) {
+    return null;
+  }
+
+  return ((data ?? [])[0] as DirectoryAppUserRow | undefined) ?? null;
 }
 const BUSINESS_DIRECTORY_CONTEXT_CODE = "business_directory";
 const ORGANIZATION_ENTITY_TYPE = "organization";
@@ -636,6 +664,7 @@ function mapDirectoryOrganization(
 
   return {
     id: row.id,
+    createdByUserId: row.created_by_user_id,
     name: row.organization_name,
     type: row.organization_type,
     description: row.description,
@@ -725,6 +754,7 @@ async function getDirectoryOrganization(slug: string): Promise<{
     .select(
       `
       id,
+      created_by_user_id,
       organization_name,
       organization_type,
       description,
@@ -1270,6 +1300,22 @@ function getPublicOrganizationPublicProfileLabel(locale?: string) {
 
   return labels[labelLocale] ?? labels.en;
 }
+
+function getPublicOrganizationEditModeLabel(locale?: string) {
+  const labelLocale = getPublicOrganizationDashboardLocale(locale);
+
+  const labels: Record<PublicOrganizationDashboardLocaleKey, string> = {
+    en: "Edit mode",
+    pl: "Tryb edycji",
+    uk: "\u0420\u0435\u0436\u0438\u043c \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043d\u043d\u044f",
+    ru: "\u0420\u0435\u0436\u0438\u043c \u0440\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f",
+    de: "Bearbeitungsmodus",
+    es: "Modo de edici\u00f3n",
+    cs: "Re\u017eim \u00faprav",
+  };
+
+  return labels[labelLocale] ?? labels.en;
+}
 function normalizePublicExternalHref(value: string | null | undefined) {
   if (!value) {
     return null;
@@ -1590,7 +1636,7 @@ function getPublicOrganizationLocationLabel(
   const location = organization.primaryLocation;
 
   if (!location) {
-    return getPublicOrganizationTestAddressLabel(locale);
+    return getPublicOrganizationDashboardLabel("notProvided", locale);
   }
 
   const parts = [
@@ -1600,7 +1646,7 @@ function getPublicOrganizationLocationLabel(
   ].filter((part): part is string => Boolean(part && part.trim()));
 
   if (parts.length === 0) {
-    return getPublicOrganizationTestAddressLabel(locale);
+    return getPublicOrganizationDashboardLabel("notProvided", locale);
   }
 
   return parts.join(", ");
@@ -1924,17 +1970,34 @@ export default async function DirectoryOrganizationPage({
   const publicPhoneUrl = organization?.publicPhone
     ? `tel:${organization.publicPhone}`
     : null;
+  const currentAppUser = await getCurrentDirectoryAppUser();
+  const isOrganizationOwner = Boolean(
+    organization?.createdByUserId &&
+      currentAppUser?.id === organization.createdByUserId,
+  );
+  const editProfileHref = organization
+    ? appendLocaleToHref(`/organizations/${organization.id}/edit`, selectedLocale)
+    : null;
 
   return (
     <main className="min-h-full bg-[#f5f6fb] text-[#1a1d2e]">
       <div className="p-5">
-        <div className="mb-4">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <Link
             href={appendLocaleToHref("/directory", selectedLocale)}
             className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] transition hover:bg-gray-50"
           >
             {t.navigation.backToDirectoryWithArrow}
           </Link>
+
+          {isOrganizationOwner && editProfileHref ? (
+            <Link
+              href={editProfileHref}
+              className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
+            >
+              {getPublicOrganizationEditModeLabel(selectedLocale)}
+            </Link>
+          ) : null}
         </div>
 
         {errorMessage ? (

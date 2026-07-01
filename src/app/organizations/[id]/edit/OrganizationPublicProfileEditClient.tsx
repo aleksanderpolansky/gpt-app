@@ -26,6 +26,7 @@ import {
 import { getOrganizationTypeLabel } from "../../../../i18n/messages/system-labels";
 import PurchaseConfirmationRequestCard from "@/components/commercial/PurchaseConfirmationRequestCard";
 import OrganizationLocationMapPreview from "@/components/commercial/OrganizationLocationMapPreview";
+import OrganizationHideButton from "../OrganizationHideButton";
 
 
 
@@ -135,12 +136,16 @@ type EditMessages = {
   editHint: string;
   undo: string;
   fromYou: string;
+  hideOrganization: string;
+  hidingOrganization: string;
+  hideConfirm: string;
+  hideError: string;
 };
 
 const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
   en: {
     back: "Back to business page",
-    openPublic: "Open public page",
+    openPublic: "View mode",
     titleBadge: "Public profile editor",
     titleFallback: "Organization",
     typeFallback: "Private business",
@@ -173,10 +178,14 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
     editHint: "Edit the public profile directly in the same layout visitors will see.",
     undo: "Undo changes",
     fromYou: "3,500 m from you",
+    hideOrganization: "Hide enterprise",
+    hidingOrganization: "Hiding...",
+    hideConfirm: "Hide \"{name}\"? It will disappear from the public directory and move to your deleted enterprises list.",
+    hideError: "Could not hide enterprise",
   },
   pl: {
     back: "Wr\u00f3\u0107 do strony firmy",
-    openPublic: "Otw\u00f3rz stron\u0119 publiczn\u0105",
+    openPublic: "Tryb podgl\u0105du",
     titleBadge: "Edytor profilu publicznego",
     titleFallback: "Firma",
     typeFallback: "Dzia\u0142alno\u015b\u0107 prywatna",
@@ -209,10 +218,14 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
     editHint: "Edytujesz profil publiczny bezpo\u015brednio w uk\u0142adzie widocznym dla odwiedzaj\u0105cych.",
     undo: "Cofnij zmiany",
     fromYou: "3 500 m od Ciebie",
+    hideOrganization: "Ukryj przedsi\u0119biorstwo",
+    hidingOrganization: "Ukrywanie...",
+    hideConfirm: "Ukry\u0107 \"{name}\"? Przedsi\u0119biorstwo zniknie z katalogu publicznego i trafi do listy usuni\u0119tych firm.",
+    hideError: "Nie uda\u0142o si\u0119 ukry\u0107 przedsi\u0119biorstwa",
   },
   uk: {
     back: "\u041d\u0430\u0437\u0430\u0434 \u0434\u043e \u0441\u0442\u043e\u0440\u0456\u043d\u043a\u0438 \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u0430",
-    openPublic: "\u0412\u0456\u0434\u043a\u0440\u0438\u0442\u0438 \u043f\u0443\u0431\u043b\u0456\u0447\u043d\u0443 \u0441\u0442\u043e\u0440\u0456\u043d\u043a\u0443",
+    openPublic: "\u0420\u0435\u0436\u0438\u043c \u043f\u0435\u0440\u0435\u0433\u043b\u044f\u0434\u0443",
     titleBadge: "\u0420\u0435\u0434\u0430\u043a\u0442\u043e\u0440 \u043f\u0443\u0431\u043b\u0456\u0447\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u0444\u0456\u043b\u044e",
     titleFallback: "\u041f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u043e",
     typeFallback: "\u041f\u0440\u0438\u0432\u0430\u0442\u043d\u0438\u0439 \u0431\u0456\u0437\u043d\u0435\u0441",
@@ -245,10 +258,14 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
     editHint: "\u0420\u0435\u0434\u0430\u0433\u0443\u0439\u0442\u0435 \u043f\u0443\u0431\u043b\u0456\u0447\u043d\u0438\u0439 \u043f\u0440\u043e\u0444\u0456\u043b\u044c \u043f\u0440\u044f\u043c\u043e \u0432 \u0442\u043e\u043c\u0443 \u0432\u0438\u0433\u043b\u044f\u0434\u0456, \u044f\u043a\u0438\u0439 \u0431\u0430\u0447\u0430\u0442\u044c \u0432\u0456\u0434\u0432\u0456\u0434\u0443\u0432\u0430\u0447\u0456.",
     undo: "\u0421\u043a\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0437\u043c\u0456\u043d\u0438",
     fromYou: "3 500 \u043c \u0432\u0456\u0434 \u0432\u0430\u0441",
+    hideOrganization: "\u041f\u0440\u0438\u0445\u043e\u0432\u0430\u0442\u0438 \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u043e",
+    hidingOrganization: "\u041f\u0440\u0438\u0445\u043e\u0432\u0443\u044e...",
+    hideConfirm: "\u041f\u0440\u0438\u0445\u043e\u0432\u0430\u0442\u0438 \"{name}\"? \u041f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u043e \u0437\u043d\u0438\u043a\u043d\u0435 \u0437 \u043f\u0443\u0431\u043b\u0456\u0447\u043d\u043e\u0433\u043e \u043a\u0430\u0442\u0430\u043b\u043e\u0433\u0443 \u0439 \u043f\u0435\u0440\u0435\u0439\u0434\u0435 \u0434\u043e \u0441\u043f\u0438\u0441\u043a\u0443 \u0432\u0438\u0434\u0430\u043b\u0435\u043d\u0438\u0445 \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432.",
+    hideError: "\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u043f\u0440\u0438\u0445\u043e\u0432\u0430\u0442\u0438 \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u043e",
   },
   ru: {
     back: "\u041d\u0430\u0437\u0430\u0434 \u043a \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435 \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u044f",
-    openPublic: "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043f\u0443\u0431\u043b\u0438\u0447\u043d\u0443\u044e \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0443",
+    openPublic: "\u0420\u0435\u0436\u0438\u043c \u043f\u0440\u043e\u0441\u043c\u043e\u0442\u0440\u0430",
     titleBadge: "\u0420\u0435\u0434\u0430\u043a\u0442\u043e\u0440 \u043f\u0443\u0431\u043b\u0438\u0447\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f",
     titleFallback: "\u041f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u0435",
     typeFallback: "\u0427\u0430\u0441\u0442\u043d\u044b\u0439 \u0431\u0438\u0437\u043d\u0435\u0441",
@@ -281,10 +298,14 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
     editHint: "\u0420\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u0443\u0439\u0442\u0435 \u043f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044c \u043f\u0440\u044f\u043c\u043e \u0432 \u0442\u043e\u043c \u0432\u0438\u0434\u0435, \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u0432\u0438\u0434\u044f\u0442 \u0433\u043e\u0441\u0442\u0438.",
     undo: "\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c",
     fromYou: "3 500 \u043c \u043e\u0442 \u0432\u0430\u0441",
+    hideOrganization: "\u0421\u043a\u0440\u044b\u0442\u044c \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u0435",
+    hidingOrganization: "\u0421\u043a\u0440\u044b\u0432\u0430\u044e...",
+    hideConfirm: "\u0421\u043a\u0440\u044b\u0442\u044c \"{name}\"? \u041f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u0435 \u0438\u0441\u0447\u0435\u0437\u043d\u0435\u0442 \u0438\u0437 \u043f\u0443\u0431\u043b\u0438\u0447\u043d\u043e\u0433\u043e \u043a\u0430\u0442\u0430\u043b\u043e\u0433\u0430 \u0438 \u043f\u0435\u0440\u0435\u0439\u0434\u0451\u0442 \u0432 \u0441\u043f\u0438\u0441\u043e\u043a \u0443\u0434\u0430\u043b\u0451\u043d\u043d\u044b\u0445 \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u0439.",
+    hideError: "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043a\u0440\u044b\u0442\u044c \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u0435",
   },
   de: {
     back: "Zur Unternehmensseite",
-    openPublic: "\u00d6ffentliche Seite \u00f6ffnen",
+    openPublic: "Ansichtsmodus",
     titleBadge: "Editor f\u00fcr \u00f6ffentliches Profil",
     titleFallback: "Unternehmen",
     typeFallback: "Privates Unternehmen",
@@ -317,10 +338,14 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
     editHint: "Bearbeiten Sie das \u00f6ffentliche Profil direkt im Besucherlayout.",
     undo: "\u00c4nderungen r\u00fcckg\u00e4ngig machen",
     fromYou: "3.500 m von dir",
+    hideOrganization: "Unternehmen ausblenden",
+    hidingOrganization: "Wird ausgeblendet...",
+    hideConfirm: "\u201e{name}\u201c ausblenden? Das Unternehmen verschwindet aus dem \u00f6ffentlichen Verzeichnis und wird in die Liste gel\u00f6schter Unternehmen verschoben.",
+    hideError: "Unternehmen konnte nicht ausgeblendet werden",
   },
   es: {
     back: "Volver a la empresa",
-    openPublic: "Abrir p\u00e1gina p\u00fablica",
+    openPublic: "Modo de vista",
     titleBadge: "Editor del perfil p\u00fablico",
     titleFallback: "Empresa",
     typeFallback: "Negocio privado",
@@ -353,10 +378,14 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
     editHint: "Edita el perfil p\u00fablico directamente en el dise\u00f1o que ver\u00e1n los visitantes.",
     undo: "Deshacer cambios",
     fromYou: "3.500 m desde ti",
+    hideOrganization: "Ocultar empresa",
+    hidingOrganization: "Ocultando...",
+    hideConfirm: "\u00bfOcultar \"{name}\"? La empresa desaparecer\u00e1 del directorio p\u00fablico y pasar\u00e1 a la lista de empresas eliminadas.",
+    hideError: "No se pudo ocultar la empresa",
   },
   cs: {
     back: "Zp\u011bt na str\u00e1nku podniku",
-    openPublic: "Otev\u0159\u00edt ve\u0159ejnou str\u00e1nku",
+    openPublic: "Re\u017eim zobrazen\u00ed",
     titleBadge: "Editor ve\u0159ejn\u00e9ho profilu",
     titleFallback: "Podnik",
     typeFallback: "Soukrom\u00e9 podnik\u00e1n\u00ed",
@@ -389,6 +418,10 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
     editHint: "Upravujte ve\u0159ejn\u00fd profil p\u0159\u00edmo ve vzhledu pro n\u00e1v\u0161t\u011bvn\u00edky.",
     undo: "Vr\u00e1tit zm\u011bny",
     fromYou: "3 500 m od v\u00e1s",
+    hideOrganization: "Skr\u00fdt podnik",
+    hidingOrganization: "Skr\u00fdv\u00e1m...",
+    hideConfirm: "Skr\u00fdt \u201e{name}\u201c? Podnik zmiz\u00ed z ve\u0159ejn\u00e9ho katalogu a p\u0159esune se do seznamu odstran\u011bn\u00fdch podnik\u016f.",
+    hideError: "Podnik se nepoda\u0159ilo skr\u00fdt",
   },
 };
 
@@ -925,11 +958,10 @@ export default function OrganizationPublicProfileEditClient({
   const organizationType =
     values.organizationType.trim() || messages.typeFallback;
   const categoryLabel = values.categoryLabel.trim() || messages.notProvided;
-  const locationLine =
-    getLocationLine(values) || "Szczecin, ul. Tkacka 11, PL";
-  const serviceArea =
-    values.serviceArea.trim() || "Centrum Szczecina i najblizsza okolica";
+  const locationLine = getLocationLine(values);
+  const serviceArea = values.serviceArea.trim();
   const mapsHref = buildMapsHref(values, organizationName);
+  const deletedOrganizationsHref = `/organizations/deleted?locale=${encodeURIComponent(locale)}`;
 
 
   const logoFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -976,11 +1008,23 @@ export default function OrganizationPublicProfileEditClient({
 {initialData.publicProfileHref ? (
               <Link
                 href={initialData.publicProfileHref}
-                className="inline-flex min-h-[32px] items-center rounded-full border border-[#d7e3ff] bg-white px-4 text-[13px] font-medium text-[#3b6ef8] shadow-sm"
+                className="inline-flex w-fit items-center rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
               >
                 {messages.openPublic}
               </Link>
             ) : null}
+
+            <OrganizationHideButton
+              organizationId={initialData.organization.id}
+              organizationName={organizationName}
+              redirectHref={deletedOrganizationsHref}
+              labels={{
+                hide: messages.hideOrganization,
+                hiding: messages.hidingOrganization,
+                confirm: messages.hideConfirm,
+                error: messages.hideError,
+              }}
+            />
           </div>
 
           <div className="flex items-center gap-3">
@@ -1145,7 +1189,7 @@ export default function OrganizationPublicProfileEditClient({
                   value={values.streetAddress}
                   onChange={(value) => setField("streetAddress", value)}
                   className="text-[18px] font-bold text-[#111827]"
-                  placeholder="ul. Tkacka 11"
+                  placeholder=""
                 />
               </EditableShell>
 
@@ -1159,7 +1203,7 @@ export default function OrganizationPublicProfileEditClient({
                     value={values.city}
                     onChange={(value) => setField("city", value)}
                     className="text-[13px] text-[#4d536f]"
-                    placeholder="Szczecin"
+                    placeholder=""
                   />
                 </EditableShell>
                 <EditableShell
@@ -1171,7 +1215,7 @@ export default function OrganizationPublicProfileEditClient({
                     value={values.countryCode}
                     onChange={(value) => setField("countryCode", value)}
                     className="text-[13px] text-[#4d536f]"
-                    placeholder="PL"
+                    placeholder=""
                   />
                 </EditableShell>
               </div>
