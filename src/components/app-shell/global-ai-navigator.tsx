@@ -1,8 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import {
   Activity,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
   HelpCircle,
   Plus,
   Send,
@@ -177,6 +180,226 @@ function ActivityComposer({ t }: { readonly t: AiNavigatorTranslate }) {
   );
 }
 
+type ActivityReviewFieldStatus = "ready" | "warning" | "missing";
+
+type ParsedActivityReviewPackage = {
+  containerTitle: string;
+  containerSubtitle: string;
+  mode: string;
+  status: string;
+  fields: Array<{
+    key: string;
+    label: string;
+    value: string;
+    status: ActivityReviewFieldStatus;
+  }>;
+};
+
+const ACTIVITY_REVIEW_UI_MARKER = "ACTIVITY_REVIEW_PACKAGE_UI_V1";
+
+const ACTIVITY_REVIEW_FIELD_LABELS: Record<string, string> = {
+  rawText: "\u0418\u0441\u0445\u043e\u0434\u043d\u044b\u0439 \u0442\u0435\u043a\u0441\u0442",
+  activityTitle: "\u0417\u0430\u0433\u043e\u043b\u043e\u0432\u043e\u043a \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438",
+  recognizedType: "\u0420\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u043d\u043d\u044b\u0439 \u0442\u0438\u043f",
+  dateTime: "\u0414\u0430\u0442\u0430 / \u0432\u0440\u0435\u043c\u044f",
+  duration: "\u0414\u043b\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c",
+  categoriesReady: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u0438: ready",
+  categoriesDoubtful: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u0438: candidate",
+  valueObjectCandidatesReady: "VO candidates",
+  valueObjectExistingLookup: "\u041f\u043e\u0438\u0441\u043a existing VO",
+  factPreviewsReady: "Fact previews",
+  plannedFactBoundary: "Plan / fact boundary",
+  plannedWrite: "\u0417\u0430\u043f\u043b\u0430\u043d\u0438\u0440\u043e\u0432\u0430\u0442\u044c",
+  factWrite: "\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043a\u0430\u043a \u0444\u0430\u043a\u0442",
+  valueObjectCreate: "\u0421\u043e\u0437\u0434\u0430\u0442\u044c VO",
+  actionsReady: "\u0414\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f",
+  actionsMissing: "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u044f \u0435\u0449\u0451 \u043d\u0435 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u044b",
+  noWriteSafety: "No-write safety",
+  nextGate: "Next code gate",
+};
+
+function getActivityReviewFieldStatus(key: string, value: string): ActivityReviewFieldStatus {
+  if (value.startsWith("NOT_IMPLEMENTED:") || key.toLowerCase().includes("missing")) {
+    return "missing";
+  }
+
+  if (
+    key.toLowerCase().includes("doubtful") ||
+    key.toLowerCase().includes("boundary") ||
+    value.toLowerCase().includes("candidate") ||
+    value.toLowerCase().includes("requires")
+  ) {
+    return "warning";
+  }
+
+  return "ready";
+}
+
+function parseActivityReviewPackage(text: string): ParsedActivityReviewPackage | null {
+  if (!text.includes(ACTIVITY_REVIEW_UI_MARKER)) {
+    return null;
+  }
+
+  const lines = text
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines[0] !== ACTIVITY_REVIEW_UI_MARKER) {
+    return null;
+  }
+
+  let containerTitle = "\u041a\u043e\u043d\u0442\u0435\u0439\u043d\u0435\u0440 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438";
+  let containerSubtitle = "Activities Container / Semantic Preview";
+  let mode = "preview";
+  let status = "preview_only";
+  const fields: ParsedActivityReviewPackage["fields"] = [];
+
+  for (const line of lines.slice(1)) {
+    if (line === `${ACTIVITY_REVIEW_UI_MARKER}_END`) {
+      break;
+    }
+
+    const separatorIndex = line.indexOf(":");
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const key = line.slice(0, separatorIndex).trim();
+    const value = line.slice(separatorIndex + 1).trim();
+
+    if (key === "containerTitle") {
+      containerTitle = value;
+      continue;
+    }
+
+    if (key === "containerSubtitle") {
+      containerSubtitle = value;
+      continue;
+    }
+
+    if (key === "mode") {
+      mode = value;
+      continue;
+    }
+
+    if (key === "status") {
+      status = value;
+      continue;
+    }
+
+    fields.push({
+      key,
+      label: ACTIVITY_REVIEW_FIELD_LABELS[key] ?? key,
+      value,
+      status: getActivityReviewFieldStatus(key, value),
+    });
+  }
+
+  return {
+    containerTitle,
+    containerSubtitle,
+    mode,
+    status,
+    fields,
+  };
+}
+
+function ActivityReviewStatusBadge({ status }: { readonly status: ActivityReviewFieldStatus }) {
+  const statusClassName =
+    status === "missing"
+      ? "border-red-200 bg-red-50 text-red-700"
+      : status === "warning"
+        ? "border-amber-200 bg-amber-50 text-amber-700"
+        : "border-emerald-200 bg-emerald-50 text-emerald-700";
+
+  const label = status === "missing" ? "not implemented" : status === "warning" ? "candidate" : "ready";
+
+  return (
+    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${statusClassName}`}>
+      {label}
+    </span>
+  );
+}
+
+function ActivityReviewPackageCard({ review }: { readonly review: ParsedActivityReviewPackage }) {
+  const readyCount = review.fields.filter((field) => field.status === "ready").length;
+  const warningCount = review.fields.filter((field) => field.status === "warning").length;
+  const missingCount = review.fields.filter((field) => field.status === "missing").length;
+
+  return (
+    <div className="rounded-2xl border border-[#3b6ef8]/15 bg-gradient-to-br from-white via-[#f7f9ff] to-[#fff7fb] p-3 shadow-sm">
+      <div className="mb-3 rounded-2xl border border-[#3b6ef8]/10 bg-white/85 p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-[#3b6ef8]">
+              Semantic Preview / Activity Review Package
+            </div>
+            <h3 className="mt-1 text-[14px] font-bold leading-tight text-[#202844]">
+              {review.containerTitle}
+            </h3>
+            <p className="mt-1 text-[11px] leading-relaxed text-[#68708b]">
+              {review.containerSubtitle}
+            </p>
+          </div>
+          <span className="rounded-full border border-[#3b6ef8]/15 bg-[#eef3ff] px-2 py-1 text-[9px] font-semibold uppercase text-[#3b6ef8]">
+            {review.mode}
+          </span>
+        </div>
+      </div>
+
+      <div className="mb-3 grid grid-cols-3 gap-1.5">
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-2 py-1.5 text-center">
+          <div className="text-[14px] font-bold text-emerald-700">{readyCount}</div>
+          <div className="text-[9px] font-semibold uppercase tracking-wide text-emerald-700/75">ready</div>
+        </div>
+        <div className="rounded-xl border border-amber-100 bg-amber-50/90 px-2 py-1.5 text-center">
+          <div className="text-[14px] font-bold text-amber-700">{warningCount}</div>
+          <div className="text-[9px] font-semibold uppercase tracking-wide text-amber-700/75">candidate</div>
+        </div>
+        <div className="rounded-xl border border-red-100 bg-red-50/90 px-2 py-1.5 text-center">
+          <div className="text-[14px] font-bold text-red-600">{missingCount}</div>
+          <div className="text-[9px] font-semibold uppercase tracking-wide text-red-600/75">missing</div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {review.fields.map((field) => {
+          const statusClasses =
+            field.status === "missing"
+              ? "border-red-200 bg-red-50/90 text-red-800"
+              : field.status === "warning"
+                ? "border-amber-200 bg-amber-50/90 text-amber-900"
+                : "border-[rgba(59,110,248,0.12)] bg-white/90 text-[#28314d]";
+
+          return (
+            <div key={field.key} className={`rounded-xl border px-2.5 py-2 ${statusClasses}`}>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wide opacity-75">
+                  {field.label}
+                </span>
+                <ActivityReviewStatusBadge status={field.status} />
+              </div>
+              <div className="whitespace-pre-wrap break-words text-[12px] font-medium leading-relaxed">
+                {field.value.replace(/^NOT_IMPLEMENTED:\s*/i, "")}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 rounded-xl border border-[#3b6ef8]/10 bg-white/80 p-2">
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-[#3b6ef8]">
+          Semantic preview only
+        </div>
+        <p className="mt-1 text-[11px] leading-relaxed text-[#5a6077]">
+          \u042d\u0442\u0430 \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0430 \u043d\u0438\u0447\u0435\u0433\u043e \u043d\u0435 \u0437\u0430\u043f\u0438\u0441\u044b\u0432\u0430\u0435\u0442 \u0432 \u0431\u0430\u0437\u0443. \u041a\u0440\u0430\u0441\u043d\u044b\u0435 \u0441\u0442\u0440\u043e\u043a\u0438 \u043f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u044e\u0442 \u043f\u043e\u043b\u044f \u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f, \u043a\u043e\u0442\u043e\u0440\u044b\u0435 \u0435\u0449\u0451 \u043d\u0435 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u044b \u043a real write-gate.
+        </p>
+      </div>
+    </div>
+  );
+}
 function FormattedMessageContent({ text }: { text: string }) {
   const normalizedText = text.replace(/\r\n/g, "\n").trim();
 
@@ -232,6 +455,12 @@ function MessageBubble({
   readonly t: AiNavigatorTranslate;
   readonly navigationT: (key: NavigationMessageKey) => string;
 }) {
+  const activityReview = parseActivityReviewPackage(message.text);
+
+  if (activityReview && message.role !== "user" && message.role !== "error") {
+    return <ActivityReviewPackageCard review={activityReview} />;
+  }
+
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
@@ -470,4 +699,6 @@ export function GlobalAiNavigator({
     </aside>
   );
 }
+
+
 

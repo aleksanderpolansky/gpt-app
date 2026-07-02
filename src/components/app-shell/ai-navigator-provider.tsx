@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   createContext,
@@ -100,7 +100,7 @@ type UnifiedMessageClassification = {
   normalizedText: string;
 };
 
-type LocalPendingPreviewKind = "activity" | "value_object" | "correction";
+type LocalPendingPreviewKind = "activity" | "planned_activity" | "value_object" | "correction";
 
 type LocalPendingPreview = {
   kind: LocalPendingPreviewKind;
@@ -2374,11 +2374,227 @@ async function executeControlledActivityRecordWriteFromPendingPreview(): Promise
   ].join("\n");
 }
 
+const CALENDAR_ACTIVITY_REVIEW_UI_MARKER = "ACTIVITY_REVIEW_PACKAGE_UI_V1" as const;
+
+const CALENDAR_PLANNED_TIME_MARKERS: readonly string[] = [
+  "\u0437\u0430\u0432\u0442\u0440\u0430",
+  "\u0441 \u0443\u0442\u0440\u0430",
+  "\u0441\u0443\u0442\u0440\u0430",
+  "\u0443\u0442\u0440\u043e\u043c",
+  "\u0432\u0435\u0447\u0435\u0440\u043e\u043c",
+  "\u0434\u043d\u0435\u043c",
+  "\u0434\u043d\u0451\u043c",
+  "\u043f\u043b\u0430\u043d\u0438\u0440\u0443\u044e",
+  "\u0441\u043e\u0431\u0438\u0440\u0430\u044e\u0441\u044c",
+  "\u0431\u0443\u0434\u0443",
+  "\u0445\u043e\u0447\u0443",
+  "\u043d\u0430\u0434\u043e",
+  "\u043d\u0443\u0436\u043d\u043e",
+  "tomorrow",
+  "morning",
+  "evening",
+  "planning",
+  "going to",
+  "i will",
+  "jutro",
+  "rano",
+  "wieczorem",
+  "planuje",
+  "planuj\u0119",
+  "morgen",
+];
+
+const CALENDAR_PLANNED_ACTIVITY_MARKERS: readonly string[] = [
+  "\u0431\u0435\u0433",
+  "\u0431\u0435\u0433\u0430\u0442\u044c",
+  "\u043f\u043e\u0431\u0435\u0433\u0430\u0442\u044c",
+  "\u043f\u0440\u043e\u0431\u0435\u0436",
+  "\u043f\u0440\u043e\u0431\u0435\u0436\u043a\u0430",
+  "\u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432",
+  "\u0441\u043f\u043e\u0440\u0442",
+  "\u0437\u0430\u043b",
+  "\u043f\u043b\u0430\u0432",
+  "\u043f\u0440\u043e\u0433\u0443\u043b",
+  "\u0443\u0447\u0438\u0442\u044c",
+  "\u0437\u0430\u043d\u0438\u043c\u0430\u0442\u044c\u0441\u044f",
+  "\u0437\u0430\u043d\u044f\u0442\u0438\u0435",
+  "\u0440\u0430\u0431\u043e\u0442\u0430\u0442\u044c",
+  "\u0441\u043e\u0437\u0432\u043e\u043d",
+  "\u0432\u0441\u0442\u0440\u0435\u0447",
+  "run",
+  "running",
+  "jog",
+  "jogging",
+  "train",
+  "workout",
+  "study",
+  "meeting",
+  "call",
+  "bieg",
+  "biegac",
+  "pobiegac",
+  "trening",
+  "spotkanie",
+  "laufen",
+  "joggen",
+  "training",
+];
+
+function isCalendarPlannedActivityCandidateMessage(message: string): boolean {
+  const normalizedText = normalizeAvoGeneralSearchText(message.trim());
+
+  if (!normalizedText) {
+    return false;
+  }
+
+  if (hasAvoGeneralMarker(normalizedText, AVO_GENERAL_NO_SAVE_MARKERS)) {
+    return false;
+  }
+
+  const hasPlanTime = hasAvoGeneralMarker(normalizedText, CALENDAR_PLANNED_TIME_MARKERS);
+  const hasDuration = hasAvoGeneralDurationSignal(normalizedText);
+  const hasActivity = hasAvoGeneralMarker(normalizedText, CALENDAR_PLANNED_ACTIVITY_MARKERS);
+
+  return hasPlanTime && hasDuration && hasActivity;
+}
+
+function inferCalendarActivityTitle(text: string): string {
+  const lowerText = normalizeAvoGeneralSearchText(text);
+
+  if (hasAvoGeneralMarker(lowerText, ["\u0431\u0435\u0433", "\u0431\u0435\u0433\u0430\u0442\u044c", "\u043f\u043e\u0431\u0435\u0433\u0430\u0442\u044c", "\u043f\u0440\u043e\u0431\u0435\u0436", "\u043f\u0440\u043e\u0431\u0435\u0436\u043a\u0430", "run", "running", "jog", "jogging", "bieg", "pobiegac", "laufen", "joggen"])) {
+    return "\u041f\u0440\u043e\u0431\u0435\u0436\u043a\u0430";
+  }
+
+  if (hasAvoGeneralMarker(lowerText, ["\u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432", "\u0441\u043f\u043e\u0440\u0442", "\u0437\u0430\u043b", "workout", "train", "trening", "training"])) {
+    return "\u0422\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u043a\u0430";
+  }
+
+  if (hasAvoGeneralMarker(lowerText, ["\u0443\u0447\u0438\u0442\u044c", "\u0437\u0430\u043d\u0438\u043c\u0430\u0442\u044c\u0441\u044f", "study", "learn", "nauka", "uczyc", "lernen"])) {
+    return "\u041e\u0431\u0443\u0447\u0435\u043d\u0438\u0435";
+  }
+
+  if (hasAvoGeneralMarker(lowerText, ["\u0441\u043e\u0437\u0432\u043e\u043d", "\u0432\u0441\u0442\u0440\u0435\u0447", "meeting", "call", "spotkanie"])) {
+    return "\u0412\u0441\u0442\u0440\u0435\u0447\u0430 / \u0441\u043e\u0437\u0432\u043e\u043d";
+  }
+
+  return inferAvoGeneralActivityTitle(text) ?? "\u041f\u043b\u0430\u043d\u043e\u0432\u0430\u044f \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c";
+}
+
+function inferCalendarDateTimeSummary(text: string): string {
+  const lowerText = normalizeAvoGeneralSearchText(text);
+  const parts: string[] = [];
+
+  if (hasAvoGeneralMarker(lowerText, ["\u0437\u0430\u0432\u0442\u0440\u0430", "tomorrow", "jutro", "morgen"])) {
+    parts.push("\u0437\u0430\u0432\u0442\u0440\u0430");
+  }
+
+  if (hasAvoGeneralMarker(lowerText, ["\u0441 \u0443\u0442\u0440\u0430", "\u0441\u0443\u0442\u0440\u0430", "\u0443\u0442\u0440\u043e\u043c", "morning", "rano"])) {
+    parts.push("\u0443\u0442\u0440\u043e\u043c");
+  } else if (hasAvoGeneralMarker(lowerText, ["\u0432\u0435\u0447\u0435\u0440\u043e\u043c", "evening", "wieczorem"])) {
+    parts.push("\u0432\u0435\u0447\u0435\u0440\u043e\u043c");
+  } else if (hasAvoGeneralMarker(lowerText, ["\u0434\u043d\u0435\u043c", "\u0434\u043d\u0451\u043c"])) {
+    parts.push("\u0434\u043d\u0451\u043c");
+  }
+
+  const exactTimeMatch = lowerText.match(/\b(\d{1,2})[:.](\d{2})\b/);
+  if (exactTimeMatch) {
+    parts.push(`${exactTimeMatch[1]}:${exactTimeMatch[2]}`);
+  }
+
+  return parts.length > 0 ? parts.join(" \u00b7 ") : "\u0432\u0440\u0435\u043c\u044f \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u0443\u0442\u043e\u0447\u043d\u0435\u043d\u0438\u044f";
+}
+
+function inferCalendarActivityCategories(text: string): string[] {
+  const categories = new Set<string>(guessCategoryCandidates(text));
+  const lowerText = normalizeAvoGeneralSearchText(text);
+
+  if (hasAvoGeneralMarker(lowerText, ["\u0431\u0435\u0433", "\u0431\u0435\u0433\u0430\u0442\u044c", "\u043f\u043e\u0431\u0435\u0433\u0430\u0442\u044c", "\u043f\u0440\u043e\u0431\u0435\u0436", "\u043f\u0440\u043e\u0431\u0435\u0436\u043a\u0430", "run", "running", "jog", "jogging", "bieg", "pobiegac", "laufen", "joggen"])) {
+    categories.delete("\u041b\u0438\u0447\u043d\u0430\u044f \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c");
+    categories.add("\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c");
+    categories.add("\u0417\u0434\u043e\u0440\u043e\u0432\u044c\u0435");
+    categories.add("\u041a\u0430\u0440\u0434\u0438\u043e / \u0431\u0435\u0433");
+  }
+
+  return Array.from(categories).slice(0, 6);
+}
+
+function inferCalendarFactPreviewLines(params: {
+  title: string;
+  duration: string;
+  durationMinutes: number | null;
+}): string[] {
+  const factLines = [
+    `duration: ${params.duration}`,
+    `activity_kind: ${params.title}`,
+  ];
+
+  if (params.durationMinutes !== null) {
+    factLines.push(`measure: activity.duration_minutes / ${params.durationMinutes} / min`);
+  }
+
+  factLines.push("status: preview_only_planned_not_actual");
+
+  return factLines;
+}
+
+function buildCalendarActivityReviewPackageReply(message: string): string {
+  const normalizedText = message.trim();
+  const duration = extractDurationSummary(normalizedText);
+  const durationMinutes = inferAvoGeneralDurationMinutes(normalizedText);
+  const activityTitle = inferCalendarActivityTitle(normalizedText);
+  const dateTime = inferCalendarDateTimeSummary(normalizedText);
+  const categories = inferCalendarActivityCategories(normalizedText);
+  const valueObjects = guessValueObjectCandidates(categories);
+  const factPreviewLines = inferCalendarFactPreviewLines({
+    title: activityTitle,
+    duration,
+    durationMinutes,
+  });
+
+  setLatestLocalPendingPreview({
+    kind: "planned_activity",
+    text: normalizedText,
+    createdAtIso: new Date().toISOString(),
+    duration,
+    categories,
+    valueObjects,
+    note: "Calendar planned activity semantic preview. This is not an actual fact and no governed write has been executed yet.",
+  });
+
+  return [
+    CALENDAR_ACTIVITY_REVIEW_UI_MARKER,
+    "containerTitle: \u041a\u043e\u043d\u0442\u0435\u0439\u043d\u0435\u0440 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438",
+    "containerSubtitle: Activities Container / Semantic Preview / Activity Review Package",
+    "mode: planned_activity",
+    "status: preview_only",
+    `rawText: ${normalizedText}`,
+    `activityTitle: ${activityTitle}`,
+    "recognizedType: \u041f\u043b\u0430\u043d\u043e\u0432\u0430\u044f \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
+    `dateTime: ${dateTime}`,
+    `duration: ${duration}`,
+    `categoriesReady: ${categories.join("; ")}`,
+    "categoriesDoubtful: \u041a\u0430\u0440\u0434\u0438\u043e / \u0431\u0435\u0433 - candidate; \u0442\u043e\u0447\u043d\u0430\u044f \u0438\u043d\u0442\u0435\u043d\u0441\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u043d\u0435 \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0435\u043d\u0430",
+    `valueObjectCandidatesReady: ${valueObjects.join("; ")}`,
+    "valueObjectExistingLookup: NOT_IMPLEMENTED: \u0440\u0435\u0430\u043b\u044c\u043d\u044b\u0439 \u043f\u043e\u0438\u0441\u043a \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u044e\u0449\u0438\u0445 VO \u043f\u043e \u0431\u0430\u0437\u0435 \u0435\u0449\u0451 \u043d\u0435 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0451\u043d \u043a \u044d\u0442\u043e\u0439 preview-\u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0435",
+    `factPreviewsReady: ${factPreviewLines.join("; ")}`,
+    "plannedFactBoundary: \u041f\u043b\u0430\u043d\u043e\u0432\u0430\u044f \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u041d\u0415 \u044f\u0432\u043b\u044f\u0435\u0442\u0441\u044f \u0444\u0430\u043a\u0442\u043e\u043c. \u0424\u0430\u043a\u0442\u044b \u0431\u0443\u0434\u0443\u0442 \u0437\u0430\u043f\u0438\u0441\u0430\u043d\u044b \u0442\u043e\u043b\u044c\u043a\u043e \u043f\u043e\u0441\u043b\u0435 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0438\u044f \u0438\u043b\u0438 \u044f\u0432\u043d\u043e\u0433\u043e \u0432\u044b\u0431\u043e\u0440\u0430 \u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043a\u0430\u043a \u0444\u0430\u043a\u0442.",
+    "plannedWrite: NOT_IMPLEMENTED: \u043a\u043d\u043e\u043f\u043a\u0430 \u0417\u0430\u043f\u043b\u0430\u043d\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0438 \u0437\u0430\u043f\u0438\u0441\u044c \u0432 /api/time-blocks \u0435\u0449\u0451 \u043d\u0435 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u044b \u0432 \u044d\u0442\u043e\u043c \u0448\u0430\u0433\u0435",
+    "factWrite: NOT_IMPLEMENTED: \u043f\u043b\u0430\u043d\u043e\u0432\u0430\u044f \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u043d\u0435 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0435\u0442\u0441\u044f \u0432 /api/activity/facts/save-gate \u0431\u0435\u0437 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0438\u044f",
+    "valueObjectCreate: NOT_IMPLEMENTED: \u0441\u043e\u0437\u0434\u0430\u043d\u0438\u0435 \u043d\u043e\u0432\u043e\u0433\u043e VO \u0438\u0437 preview \u043d\u0435 \u0432\u044b\u043f\u043e\u043b\u043d\u044f\u0435\u0442\u0441\u044f; \u043c\u043e\u0436\u043d\u043e \u0442\u043e\u043b\u044c\u043a\u043e \u043f\u043e\u043a\u0430\u0437\u0430\u0442\u044c \u043a\u0430\u043d\u0434\u0438\u0434\u0430\u0442\u0430",
+    "actionsReady: \u0418\u0437\u043c\u0435\u043d\u0438\u0442\u044c \u0442\u0435\u043a\u0441\u0442; \u041e\u0442\u043c\u0435\u043d\u0430; \u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c review",
+    "actionsMissing: NOT_IMPLEMENTED: \u0417\u0430\u043f\u043b\u0430\u043d\u0438\u0440\u043e\u0432\u0430\u0442\u044c; \u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043a\u0430\u043a \u0444\u0430\u043a\u0442; \u0421\u0432\u044f\u0437\u0430\u0442\u044c \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u044e\u0449\u0438\u0439 VO; \u0421\u043e\u0437\u0434\u0430\u0442\u044c VO-\u043a\u0430\u043d\u0434\u0438\u0434\u0430\u0442",
+    "noWriteSafety: DB write \u041d\u0415 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d; Activity Event \u041d\u0415 \u0441\u043e\u0437\u0434\u0430\u043d; Time Block \u041d\u0415 \u0441\u043e\u0437\u0434\u0430\u043d; Value Object \u041d\u0415 \u0441\u043e\u0437\u0434\u0430\u043d; Activity Fact \u041d\u0415 \u0441\u043e\u0437\u0434\u0430\u043d",
+    "nextGate: \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0438\u0442\u044c UI-\u043a\u043d\u043e\u043f\u043a\u0443 \u0417\u0430\u043f\u043b\u0430\u043d\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043a \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u044e\u0449\u0435\u043c\u0443 \u043f\u043b\u0430\u043d\u043e\u0432\u043e\u043c\u0443 write-layer \u043f\u043e\u0441\u043b\u0435 \u043e\u0442\u0434\u0435\u043b\u044c\u043d\u043e\u0433\u043e code gate",
+    `${CALENDAR_ACTIVITY_REVIEW_UI_MARKER}_END`,
+  ].join("\n");
+}
 async function askLegacyAi(
   message: string,
   selectedTier: "nano" | "standard" | "pro",
 ): Promise<string> {
-
+  if (isCalendarPlannedActivityCandidateMessage(message)) {
+    return buildCalendarActivityReviewPackageReply(message);
+  }
 
   if (isActivityFactsSaveGateWriteCommand(message)) {
     return await executeActivityFactsSaveGateWriteFromPendingPreview();
@@ -2641,4 +2857,6 @@ export function useAiNavigator() {
 
   return context;
 }
+
+
 
