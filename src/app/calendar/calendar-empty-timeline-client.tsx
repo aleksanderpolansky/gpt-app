@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -316,10 +316,10 @@ const DICT: Record<Locale, Dictionary> = {
 };
 
 function readLocale(): Locale {
-  if (typeof window === "undefined") return "pl";
+  if (typeof window === "undefined") return "en";
   const raw = new URLSearchParams(window.location.search).get("locale");
   if (raw === "en" || raw === "pl" || raw === "ru" || raw === "uk" || raw === "de" || raw === "es" || raw === "cs") return raw;
-  return "pl";
+  return "en";
 }
 
 function sameLocaleHref(path: string, locale: Locale) {
@@ -335,7 +335,7 @@ function cn(...values: Array<string | false | null | undefined>) {
 }
 
 export default function CalendarEmptyTimelineClient() {
-  const [locale, setLocale] = useState<Locale>("pl");
+  const [locale, setLocale] = useState<Locale>("en");
   const [view, setView] = useState<ViewMode>("day");
   const [mode, setMode] = useState<FactMode>("both");
   const [selected, setSelected] = useState<string>("");
@@ -344,7 +344,7 @@ export default function CalendarEmptyTimelineClient() {
     setLocale(readLocale());
   }, []);
 
-  const t = DICT[locale] ?? DICT.pl;
+  const t = DICT[locale] ?? DICT.en;
   const addHref = useMemo(() => sameLocaleHref("/calendar/add", locale), [locale]);
 
   const ViewButton = ({ id, label }: { id: ViewMode; label: string }) => (

@@ -1,5 +1,5 @@
-export type CalendarLocale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
-export function loc(raw: string | null | undefined): CalendarLocale { const v=String(raw||"").toLowerCase(); return (v==="en"||v==="pl"||v==="ru"||v==="uk"||v==="de"||v==="es"||v==="cs") ? v : "pl"; }
+﻿export type CalendarLocale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
+export function loc(raw: string | null | undefined): CalendarLocale { const v=String(raw||"").toLowerCase(); return (v==="en"||v==="pl"||v==="ru"||v==="uk"||v==="de"||v==="es"||v==="cs") ? v : "en"; }
 export const opts = [
 { code: "pl", label: "Polski" },
 { code: "en", label: "English" },

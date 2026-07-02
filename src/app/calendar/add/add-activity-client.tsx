@@ -131,7 +131,7 @@ function normalizeLocale(value: string | null): Locale {
   if (value && LOCALES.includes(value as Locale)) {
     return value as Locale;
   }
-  return "pl";
+  return "en";
 }
 
 export default function AddActivityClient() {
@@ -234,4 +234,5 @@ export default function AddActivityClient() {
     </main>
   );
 }
+
 
