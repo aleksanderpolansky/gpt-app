@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
   type ElementType,
+  type MouseEvent,
   type ReactNode,
 } from "react";
 import {
@@ -19,6 +20,12 @@ import {
 
 import { type LocaleCode } from "@/i18n";
 import { getDirectoryListMessage } from "@/i18n/messages/directory-list";
+
+export const UI_FIX_GREEN_ADD_BUSINESS_BUTTON_FAST_DRAFT =
+  "UI_FIX_GREEN_ADD_BUSINESS_BUTTON_FAST_DRAFT" as const;
+
+export const UI_FIX_FAST_BUSINESS_DRAFT_CREATE_FROM_DIRECTORY =
+  "UI_FIX_FAST_BUSINESS_DRAFT_CREATE_FROM_DIRECTORY" as const;
 
 type IconComponent = ElementType;
 
@@ -97,6 +104,14 @@ type DirectoryApiResponse = {
   ok: boolean;
   organizations?: DirectoryOrganization[];
   count?: number;
+  error?: string;
+};
+
+type OrganizationDraftCreateResponse = {
+  ok: boolean;
+  organization?: {
+    id: string;
+  };
   error?: string;
 };
 
@@ -230,6 +245,33 @@ function getDirectoryAddBusinessLabel(locale: LocaleCode) {
   return "Add business";
 }
 
+function getDirectoryCreatingBusinessLabel(locale: LocaleCode) {
+  if (locale === "ru") {
+    return "\u0421\u043e\u0437\u0434\u0430\u044e...";
+  }
+
+  if (locale === "uk") {
+    return "\u0421\u0442\u0432\u043e\u0440\u044e\u044e...";
+  }
+
+  if (locale === "pl") {
+    return "Tworz\u0119...";
+  }
+
+  if (locale === "es") {
+    return "Creando...";
+  }
+
+  if (locale === "de") {
+    return "Wird erstellt...";
+  }
+
+  if (locale === "cs") {
+    return "Vytv\u00e1\u0159\u00edm...";
+  }
+
+  return "Creating...";
+}
 function getDirectoryFindProviderLabel(locale: LocaleCode) {
   if (locale === "ru") {
     return "\u041d\u0430\u0439\u0442\u0438 \u0438\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044f";
@@ -699,6 +741,7 @@ export function DirectoryDashboardContent({
   const [organizations, setOrganizations] = useState<DirectoryOrganization[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isCreatingBusiness, setIsCreatingBusiness] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -735,6 +778,61 @@ export function DirectoryDashboardContent({
       isMounted = false;
     };
   }, [locale]);
+
+  async function createBusinessDraftAndOpenEditor() {
+    if (isCreatingBusiness) {
+      return;
+    }
+
+    setIsCreatingBusiness(true);
+
+    try {
+      const response = await fetch("/api/organizations/draft", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        credentials: "same-origin",
+        body: JSON.stringify({
+          organizationType: "private_business",
+          locale,
+        }),
+      });
+
+      const data = (await response.json()) as OrganizationDraftCreateResponse;
+
+      if (!response.ok || !data.ok || !data.organization?.id) {
+        throw new Error(data.error ?? "Cannot create business draft");
+      }
+
+      const searchParams = new URLSearchParams();
+
+      if (locale) {
+        searchParams.set("locale", locale);
+      }
+
+      const queryString = searchParams.toString();
+      const suffix = queryString ? `?${queryString}` : "";
+
+      window.location.href = `/organizations/${encodeURIComponent(
+        data.organization.id,
+      )}/edit${suffix}`;
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Cannot create business draft";
+
+      window.alert(message);
+      setIsCreatingBusiness(false);
+    }
+  }
+
+  function handleCreateBusinessDraftClick(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    void createBusinessDraftAndOpenEditor();
+  }
 
   const filteredOrganizations = useMemo(() => {
     if (activeFilter === "all" || activeFilter === "newest") {
@@ -797,13 +895,19 @@ export function DirectoryDashboardContent({
         </p>
         </div>
 
-        <Link
-          href={`/organizations/new?locale=${encodeURIComponent(locale)}`}
-          className="flex w-fit items-center gap-1 rounded-lg border border-[#22c55e]/30 bg-[#ecfdf3] px-3 py-1.5 text-[12px] font-medium text-[#16a34a] transition-all hover:bg-[#dcfce7]"
+        <button
+          type="button"
+          onClick={handleCreateBusinessDraftClick}
+          disabled={isCreatingBusiness}
+          className={`flex w-fit items-center gap-1 rounded-lg border border-[#22c55e]/30 bg-[#ecfdf3] px-3 py-1.5 text-[12px] font-medium text-[#16a34a] transition-all hover:bg-[#dcfce7] ${
+            isCreatingBusiness ? "cursor-wait opacity-60" : ""
+          }`}
         >
           <Plus size={12} />
-          {getDirectoryAddBusinessLabel(locale)}
-        </Link>
+          {isCreatingBusiness
+            ? getDirectoryCreatingBusinessLabel(locale)
+            : getDirectoryAddBusinessLabel(locale)}
+        </button>
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

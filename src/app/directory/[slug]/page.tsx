@@ -1867,7 +1867,7 @@ export default async function DirectoryOrganizationPage({
     currency: string | null | undefined,
   ) => {
     if (amount === null || amount === undefined) {
-      return "—";
+      return "\u2014";
     }
 
     return `${new Intl.NumberFormat("pl-PL", {
@@ -2027,7 +2027,7 @@ export default async function DirectoryOrganizationPage({
               </div>
             </div>
 
-            <div className="mb-5 grid auto-rows-[390px] grid-cols-1 items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mb-5 grid auto-rows-auto grid-cols-1 items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <PublicDashboardTopCard
                 label={getPublicOrganizationDashboardLabel("logo", selectedLocale)}
                 accent="#3b6ef8"

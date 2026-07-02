@@ -72,8 +72,17 @@ export const UI_MINI_FIX_REAL_ORGANIZATIONS_IN_GLOBAL_NAV =
 export const UI_MINI_FIX_SEMANTIC_CLOUD_TOP_SEARCH_IN_GLOBAL_NAV =
   "UI_MINI_FIX_SEMANTIC_CLOUD_TOP_SEARCH_IN_GLOBAL_NAV" as const;
 
+export const UI_FIX_NAV_PURCHASES_AND_SALES_GROUP =
+  "UI_FIX_NAV_PURCHASES_AND_SALES_GROUP" as const;
+
+export const UI_FIX_NAV_MY_PURCHASES_GROUP =
+  "UI_FIX_NAV_MY_PURCHASES_GROUP" as const;
+
 export const UI_PHASE20C_04B_GLOBAL_NAVIGATION_I18N_WIRED =
   "UI_PHASE20C_04B_GLOBAL_NAVIGATION_I18N_WIRED" as const;
+
+export const UI_FIX_FAST_BUSINESS_DRAFT_CREATE_FROM_NAV =
+  "UI_FIX_FAST_BUSINESS_DRAFT_CREATE_FROM_NAV" as const;
 
 function useInterfaceLocale(): LocaleCode {
   const [locale, setLocale] = useState<LocaleCode>("en");
@@ -308,7 +317,7 @@ function TreeItem({
 }
 
 function getOrganizationInitial(organization: SidebarOrganization) {
-  return organization.organization_name.trim().charAt(0).toUpperCase() || "•";
+  return organization.organization_name.trim().charAt(0).toUpperCase() || "\u2022";
 }
 
 function BusinessOrganizationTreeItem({
@@ -388,14 +397,16 @@ export function GlobalSidebar({
     setIsCreatingBusiness(true);
 
     try {
-      const response = await fetch("/api/organizations", {
+      const response = await fetch("/api/organizations/draft", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        cache: "no-store",
         body: JSON.stringify({
           organizationName: getDraftOrganizationName(locale),
           organizationType: "private_business",
+          locale,
         }),
       });
 
@@ -582,6 +593,31 @@ export function GlobalSidebar({
         </ExpandableSidebarItem>
 
         <ExpandableSidebarItem icon={Wallet} label={t("navigation.money")} defaultOpen>
+                    <TreeItem
+            label={t("navigation.myPurchases")}
+            depth={1}
+            href={localeHref("/my-purchase-confirmations")}
+          />
+          <TreeItem
+            label={t("navigation.myPurchaseRequests")}
+            depth={2}
+            href={localeHref("/my-purchase-confirmations")}
+          />
+          <TreeItem
+            label={t("navigation.myCertificates")}
+            depth={2}
+            href={localeHref("/my-certificates")}
+          />
+          <TreeItem
+            label={t("navigation.purchaseConfirmationsInbox")}
+            depth={2}
+            href={localeHref("/purchase-confirmations")}
+          />
+          <TreeItem
+            label={t("navigation.sellerCertificates")}
+            depth={2}
+            href={localeHref("/seller-certificates")}
+          />
           <TreeItem label={t("navigation.business")} depth={1} defaultOpen>
             {isLoadingOrganizations ? (
               <TreeItem label={t("navigation.loadingBusinesses")} depth={2} href={localeHref("/organizations")} />
@@ -690,4 +726,3 @@ export function GlobalTopBar({
     </header>
   );
 }
-

@@ -727,7 +727,7 @@ function DirectionCard({
       </div>
       <div className="mt-3 flex items-center justify-between text-[12px]">
         <span className="text-[#9ca3b8]">{sub}</span>
-        <span className="text-[#22c55e]">â†— {trend}</span>
+        <span className="text-[#22c55e]">\u2197 {trend}</span>
       </div>
     </div>
   );
@@ -1114,7 +1114,7 @@ export default function OrganizationPublicProfileEditClient({
           </p>
         </section>
 
-        <section className="grid auto-rows-[390px] items-stretch gap-4 lg:grid-cols-4">
+        <section className="grid auto-rows-auto items-stretch gap-4 lg:grid-cols-4">
           <TopCard label={messages.logo} icon={Star} accent="#3b6ef8" footerIconOnly
           >
             <div className="flex h-full min-h-0 flex-col gap-3">
