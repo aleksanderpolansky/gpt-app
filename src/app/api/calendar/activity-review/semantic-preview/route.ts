@@ -286,6 +286,39 @@ function extractDuration(raw: string): string | null {
   return null;
 }
 
+
+function defaultDurationText(locale: Locale) {
+  return locale === "pl"
+    ? "30 min"
+    : locale === "en"
+      ? "30 min"
+      : locale === "es"
+        ? "30 min"
+        : locale === "de"
+          ? "30 Min."
+          : locale === "cs"
+            ? "30 min"
+            : locale === "uk"
+              ? "30 хв"
+              : "30 мин";
+}
+
+function defaultTimeText(locale: Locale) {
+  return locale === "pl"
+    ? "08:00"
+    : locale === "en"
+      ? "08:00"
+      : locale === "es"
+        ? "08:00"
+        : locale === "de"
+          ? "08:00"
+          : locale === "cs"
+            ? "08:00"
+            : locale === "uk"
+              ? "08:00"
+              : "08:00";
+}
+
 function inferIntent(lower: string): IntentValue {
   if (
     includesAny(lower, [
@@ -359,41 +392,50 @@ function inferActivityTitle(raw: string, locale: Locale): string {
 function inferTemporal(raw: string, locale: Locale) {
   const lower = raw.toLowerCase();
 
-  const date =
-    includesAny(lower, ["завтра", "jutro", "tomorrow", "mañana", "manana", "morgen", "zítra", "zitra"])
-      ? locale === "pl"
-        ? "Jutro"
-        : locale === "en"
-          ? "Tomorrow"
-          : locale === "es"
-            ? "Mañana"
-            : locale === "de"
-              ? "Morgen"
-              : locale === "cs"
-                ? "Zítra"
-                : locale === "uk"
-                  ? "Завтра"
-                  : "Завтра"
-      : includesAny(lower, ["сегодня", "сьогодні", "dzis", "dziś", "today", "hoy", "heute", "dnes", "через", "за pół", "za pol", "in half", "in 30"])
-        ? locale === "pl"
-          ? "Dziś"
-          : locale === "en"
-            ? "Today"
-            : locale === "es"
-              ? "Hoy"
-              : locale === "de"
-                ? "Heute"
-                : locale === "cs"
-                  ? "Dnes"
-                  : locale === "uk"
-                    ? "Сьогодні"
-                    : "Сегодня"
-        : null;
+  const todayText =
+    locale === "pl"
+      ? "Dzi\u015b"
+      : locale === "en"
+        ? "Today"
+        : locale === "es"
+          ? "Hoy"
+          : locale === "de"
+            ? "Heute"
+            : locale === "cs"
+              ? "Dnes"
+              : locale === "uk"
+                ? "\u0421\u044c\u043e\u0433\u043e\u0434\u043d\u0456"
+                : "\u0421\u0435\u0433\u043e\u0434\u043d\u044f";
 
-  const time =
-    includesAny(lower, ["через полчас", "через 30", "за pół godz", "za pol godz", "in half an hour", "in 30"])
-      ? locale === "pl"
-        ? "Za około 30 minut"
+  const tomorrowText =
+    locale === "pl"
+      ? "Jutro"
+      : locale === "en"
+        ? "Tomorrow"
+        : locale === "es"
+          ? "Ma\u00f1ana"
+          : locale === "de"
+            ? "Morgen"
+            : locale === "cs"
+              ? "Z\u00edtra"
+              : locale === "uk"
+                ? "\u0417\u0430\u0432\u0442\u0440\u0430"
+                : "\u0417\u0430\u0432\u0442\u0440\u0430";
+
+  const isRelativeSoon = includesAny(lower, ["\u0447\u0435\u0440\u0435\u0437 \u043f\u043e\u043b\u0447\u0430\u0441", "\u0447\u0435\u0440\u0435\u0437 30", "za p\u00f3\u0142 godz", "za pol godz", "in half an hour", "in 30"]);
+  const isToday = includesAny(lower, ["\u0441\u0435\u0433\u043e\u0434\u043d\u044f", "\u0441\u044c\u043e\u0433\u043e\u0434\u043d\u0456", "dzis", "dzi\u015b", "today", "hoy", "heute", "dnes"]);
+  const isEvening = includesAny(lower, ["\u0432\u0435\u0447\u0435\u0440", "\u0432\u0435\u0447\u0435\u0440\u043e\u043c", "wiecz", "evening", "abend", "tarde", "ve\u010der"]);
+  const isAfternoon = includesAny(lower, ["\u0434\u043d\u0435\u043c", "po po\u0142udniu", "afternoon", "nachmittag", "por la tarde"]);
+  const explicitClock = lower.match(/(?:^|\s)(?:\u0432|o|at|um|a las)?\s*(\d{1,2})[:.](\d{2})(?:\s|$)/i);
+  const explicitHour = lower.match(/(?:^|\s)(?:\u0432|o|at|um)\s+(\d{1,2})(?:\s|$)/i);
+
+  const date = isRelativeSoon || isToday ? todayText : tomorrowText;
+  let time: string;
+
+  if (isRelativeSoon) {
+    time =
+      locale === "pl"
+        ? "Za oko\u0142o 30 minut"
         : locale === "en"
           ? "In about 30 minutes"
           : locale === "es"
@@ -403,27 +445,22 @@ function inferTemporal(raw: string, locale: Locale) {
               : locale === "cs"
                 ? "Asi za 30 minut"
                 : locale === "uk"
-                  ? "Приблизно через 30 хвилин"
-                  : "Примерно через 30 минут"
-      : includesAny(lower, ["утром", "вранці", "rano", "morning", "por la mañana", "por la manana", "morgens"])
-        ? locale === "pl"
-          ? "Rano"
-          : locale === "en"
-            ? "Morning"
-            : locale === "es"
-              ? "Por la mañana"
-              : locale === "de"
-                ? "Morgens"
-                : locale === "cs"
-                  ? "Ráno"
-                  : locale === "uk"
-                    ? "Вранці"
-                    : "Утром"
-        : null;
+                  ? "\u041f\u0440\u0438\u0431\u043b\u0438\u0437\u043d\u043e \u0447\u0435\u0440\u0435\u0437 30 \u0445\u0432\u0438\u043b\u0438\u043d"
+                  : "\u041f\u0440\u0438\u043c\u0435\u0440\u043d\u043e \u0447\u0435\u0440\u0435\u0437 30 \u043c\u0438\u043d\u0443\u0442";
+  } else if (explicitClock) {
+    time = `${explicitClock[1].padStart(2, "0")}:${explicitClock[2]}`;
+  } else if (explicitHour) {
+    time = `${explicitHour[1].padStart(2, "0")}:00`;
+  } else if (isEvening) {
+    time = "19:00";
+  } else if (isAfternoon) {
+    time = "13:00";
+  } else {
+    time = defaultTimeText(locale);
+  }
 
   return { date, time };
 }
-
 function inferCategories(raw: string, locale: Locale): string[] {
   const lower = raw.toLowerCase();
 
@@ -500,7 +537,7 @@ function buildFallbackPackage(rawText: string, locale: Locale, modelError: strin
   const intent = inferIntent(lower);
   const title = inferActivityTitle(raw, locale);
   const temporal = inferTemporal(raw, locale);
-  const duration = extractDuration(raw);
+  const duration = extractDuration(raw) ?? defaultDurationText(locale);
   const categories = inferCategories(raw, locale);
   const voCandidates = categories.slice(0, 3);
   const factPreview = intent === "ordinary_chat" ? "ordinary_chat / preview only" : `${intent} / event / candidate`;
@@ -511,7 +548,7 @@ function buildFallbackPackage(rawText: string, locale: Locale, modelError: strin
     field("intent", labels.intent, intent, "ready", "planned/fact/ambiguous decision", 0.7),
     field("date", labels.date, temporal.date ?? labels.noDate, temporal.date ? "candidate" : "missing", "temporal marker", temporal.date ? 0.65 : 0.1),
     field("time", labels.time, temporal.time ?? labels.noExactTime, temporal.time ? "candidate" : "missing", "time marker", temporal.time ? 0.65 : 0.1),
-    field("duration", labels.duration, duration ?? labels.noDuration, duration ? "candidate" : "missing", "duration parser", duration ? 0.75 : 0.1),
+    field("duration", labels.duration, duration, "candidate", "duration parser with default 30 minutes", 0.75),
     field("categories", labels.categories, categories.join(" / "), "candidate", "semantic category candidates", 0.65),
     field("vo", labels.vo, voCandidates.join(" / "), "candidate", labels.noVoLookup, 0.55),
     field("facts", labels.facts, factPreview, "candidate", labels.previewOnly, 0.6),
@@ -614,13 +651,17 @@ function normalizeModelPackage(rawText: string, locale: Locale, modelName: strin
 
   const activityTitle = asText(model.activityTitle?.value) || fallback.activityTitle;
 
+  const fallbackDate = fallback.fields.find((item) => item.key === "date");
+  const fallbackTime = fallback.fields.find((item) => item.key === "time");
+  const fallbackDuration = fallback.fields.find((item) => item.key === "duration");
+
   const fields = [
     field("sourceText", labels.sourceText, rawText, "ready", "calendar input", 1),
     toModelField("activityTitle", labels.activityTitle, model.activityTitle, activityTitle, "ready", "model semantic title"),
     toModelField("intent", labels.intent, model.intent ? { value: intentValue, status: model.intent.status, confidence: model.intent.confidence, note: model.intent.note } : undefined, intentValue, "ready", "model intent decision"),
-    toModelField("date", labels.date, model.date, labels.noDate, "missing", "model temporal extraction"),
-    toModelField("time", labels.time, model.time, labels.noExactTime, "missing", "model time extraction"),
-    toModelField("duration", labels.duration, model.duration, labels.noDuration, "missing", "model duration extraction"),
+    toModelField("date", labels.date, model.date, fallbackDate?.value ?? labels.noDate, "candidate", "model temporal extraction; default policy applies when missing"),
+    toModelField("time", labels.time, model.time, fallbackTime?.value ?? defaultTimeText(locale), "candidate", "model time extraction; default policy applies when missing"),
+    toModelField("duration", labels.duration, model.duration, fallbackDuration?.value ?? defaultDurationText(locale), "candidate", "model duration extraction; default policy applies when missing"),
     field("categories", labels.categories, categories.length ? categories.join(" / ") : fallback.fields.find((item) => item.key === "categories")?.value ?? "", categories.length ? "candidate" : "missing", "model semantic category candidates", categories.length ? 0.82 : 0.2),
     field("vo", labels.vo, voCandidates.length ? voCandidates.join(" / ") : labels.noVoLookup, voCandidates.length ? "candidate" : "missing", "model VO candidates only; real lookup is not connected", voCandidates.length ? 0.72 : 0.2),
     field("facts", labels.facts, factPreviews.length ? factPreviews.join("; ") : `${intentValue} / candidate`, "candidate", labels.previewOnly, 0.72),
@@ -688,7 +729,7 @@ async function runModelPreview(rawText: string, locale: Locale): Promise<ReviewP
         {
           role: "system",
           content:
-            "You are an activity semantic parser for a calendar activity review screen. Return only valid JSON. Do not provide advice. Do not create events, facts, value objects, time blocks, database rows, or write actions. Your task is to propose structured fields for a preview-only Activity Review Package.",
+            "You are an activity semantic parser for a calendar activity review screen. Return only valid JSON. Do not provide advice. Do not create events, facts, value objects, time blocks, database rows, or write actions. Your task is to propose structured fields for a preview-only Activity Review Package. Default policy: if a planned activity has no explicit date/time, use tomorrow 08:00. If the user says tomorrow without time or tomorrow morning, use tomorrow 08:00. If duration is missing, use 30 minutes.",
         },
         {
           role: "user",

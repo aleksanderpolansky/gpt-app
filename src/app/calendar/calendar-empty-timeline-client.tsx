@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -6,6 +6,20 @@ import { useEffect, useMemo, useState } from "react";
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 type ViewMode = "day" | "week" | "month";
 type FactMode = "plan" | "fact" | "both";
+
+type CalendarEvent = {
+  id?: string;
+  title?: string | null;
+  description?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  status?: string | null;
+  event_type?: string | null;
+  eventType?: string | null;
+};
+
 
 type Dictionary = {
   eyebrow: string;
@@ -51,7 +65,7 @@ const DICT: Record<Locale, Dictionary> = {
     eyebrow: "ARCTOR_EMPTY_CALENDAR_STYLE_V3 / CALENDAR CORE / EMPTY VIEW",
     title: "Calendar",
     subtitle: "A clean calendar surface before entries are added.",
-    add: "+ Add activity",
+    add: "+ Add",
     today: "Today",
     dayName: "Thursday",
     dateLine: "02 July",
@@ -79,7 +93,7 @@ const DICT: Record<Locale, Dictionary> = {
     hiddenText: "This empty calendar does not create activities, facts, VO objects or time blocks.",
     semanticTitle: "Semantic Preview link",
     semanticText: "The Add activity button opens text input first, then Activity Review Package. Calendar stays empty until a protected write gate exists.",
-    previewRules: "preview != write Â· candidate != saved fact Â· plan != fact",
+    previewRules: "preview != write - candidate != saved fact - plan != fact",
     entries: "Entries",
     cleanSurface: "Empty day",
     weekEmpty: "Empty week",
@@ -89,7 +103,7 @@ const DICT: Record<Locale, Dictionary> = {
     eyebrow: "ARCTOR_EMPTY_CALENDAR_STYLE_V3 / CALENDAR CORE / PUSTY WIDOK",
     title: "Kalendarz",
     subtitle: "Czysta powierzchnia kalendarza przed dodaniem wpisow.",
-    add: "+ Dodaj aktywno\u015b\u0107",
+    add: "+ Dodaj",
     today: "Dzisiaj",
     dayName: "czwartek",
     dateLine: "02 lipca",
@@ -117,7 +131,7 @@ const DICT: Record<Locale, Dictionary> = {
     hiddenText: "Ten pusty kalendarz nie tworzy aktywnosci, faktow, obiektow VO ani blokow czasu.",
     semanticTitle: "Powiazanie z Semantic Preview",
     semanticText: "Przycisk dodawania aktywnosci najpierw otwiera tekstowy wpis, potem Activity Review Package. Kalendarz pozostaje pusty do czasu chronionej bramki zapisu.",
-    previewRules: "preview != write Â· candidate != saved fact Â· plan != fact",
+    previewRules: "preview != write - candidate != saved fact - plan != fact",
     entries: "Wpisy",
     cleanSurface: "Pusty dzien",
     weekEmpty: "Pusty tydzien",
@@ -127,7 +141,7 @@ const DICT: Record<Locale, Dictionary> = {
     eyebrow: "ARCTOR_EMPTY_CALENDAR_STYLE_V3 / CALENDAR CORE / EMPTY VIEW",
     title: "\u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c",
     subtitle: "\u0427\u0438\u0441\u0442\u0430\u044f \u043f\u043e\u0432\u0435\u0440\u0445\u043d\u043e\u0441\u0442\u044c \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044f \u0434\u043e \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d\u0438\u044f \u0437\u0430\u043f\u0438\u0441\u0435\u0439.",
-    add: "+ \u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
+    add: "+ \u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c",
     today: "\u0421\u0435\u0433\u043e\u0434\u043d\u044f",
     dayName: "\u0447\u0435\u0442\u0432\u0435\u0440\u0433",
     dateLine: "02 \u0438\u044e\u043b\u044f",
@@ -155,7 +169,7 @@ const DICT: Record<Locale, Dictionary> = {
     hiddenText: "\u042d\u0442\u043e\u0442 \u043f\u0443\u0441\u0442\u043e\u0439 \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438, \u0444\u0430\u043a\u0442\u044b, VO \u0438\u043b\u0438 \u0431\u043b\u043e\u043a\u0438 \u0432\u0440\u0435\u043c\u0435\u043d\u0438.",
     semanticTitle: "\u0421\u0432\u044f\u0437\u044c \u0441 Semantic Preview",
     semanticText: "\u041a\u043d\u043e\u043f\u043a\u0430 \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d\u0438\u044f \u0441\u043d\u0430\u0447\u0430\u043b\u0430 \u043e\u0442\u043a\u0440\u044b\u0432\u0430\u0435\u0442 \u0442\u0435\u043a\u0441\u0442\u043e\u0432\u044b\u0439 \u0432\u0432\u043e\u0434, \u0437\u0430\u0442\u0435\u043c Activity Review Package. \u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c \u043e\u0441\u0442\u0430\u0451\u0442\u0441\u044f \u043f\u0443\u0441\u0442\u044b\u043c \u0434\u043e \u0437\u0430\u0449\u0438\u0449\u0451\u043d\u043d\u043e\u0439 \u0437\u0430\u043f\u0438\u0441\u0438.",
-    previewRules: "preview != write Â· candidate != saved fact Â· plan != fact",
+    previewRules: "preview != write - candidate != saved fact - plan != fact",
     entries: "\u0417\u0430\u043f\u0438\u0441\u0438",
     cleanSurface: "\u041f\u0443\u0441\u0442\u043e\u0439 \u0434\u0435\u043d\u044c",
     weekEmpty: "\u041f\u0443\u0441\u0442\u0430\u044f \u043d\u0435\u0434\u0435\u043b\u044f",
@@ -165,7 +179,7 @@ const DICT: Record<Locale, Dictionary> = {
     eyebrow: "ARCTOR_EMPTY_CALENDAR_STYLE_V3 / CALENDAR CORE / EMPTY VIEW",
     title: "\u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440",
     subtitle: "\u0427\u0438\u0441\u0442\u0430 \u043f\u043e\u0432\u0435\u0440\u0445\u043d\u044f \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044f \u0434\u043e \u0434\u043e\u0434\u0430\u0432\u0430\u043d\u043d\u044f \u0437\u0430\u043f\u0438\u0441\u0456\u0432.",
-    add: "+ \u0414\u043e\u0434\u0430\u0442\u0438 \u0430\u043a\u0442\u0438\u0432\u043d\u0456\u0441\u0442\u044c",
+    add: "+ \u0414\u043e\u0434\u0430\u0442\u0438",
     today: "\u0421\u044c\u043e\u0433\u043e\u0434\u043d\u0456",
     dayName: "\u0447\u0435\u0442\u0432\u0435\u0440",
     dateLine: "02 \u043b\u0438\u043f\u043d\u044f",
@@ -193,7 +207,7 @@ const DICT: Record<Locale, Dictionary> = {
     hiddenText: "\u0426\u0435\u0439 \u043f\u0443\u0441\u0442\u0438\u0439 \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440 \u043d\u0435 \u0441\u0442\u0432\u043e\u0440\u044e\u0454 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0456, \u0444\u0430\u043a\u0442\u0438, VO \u0430\u0431\u043e \u0431\u043b\u043e\u043a\u0438 \u0447\u0430\u0441\u0443.",
     semanticTitle: "\u0417\u0432'\u044f\u0437\u043e\u043a \u0456\u0437 Semantic Preview",
     semanticText: "\u041a\u043d\u043e\u043f\u043a\u0430 \u0434\u043e\u0434\u0430\u0432\u0430\u043d\u043d\u044f \u0441\u043f\u043e\u0447\u0430\u0442\u043a\u0443 \u0432\u0456\u0434\u043a\u0440\u0438\u0432\u0430\u0454 \u0442\u0435\u043a\u0441\u0442\u043e\u0432\u0438\u0439 \u0432\u0432\u0456\u0434, \u043f\u043e\u0442\u0456\u043c Activity Review Package. \u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440 \u0437\u0430\u043b\u0438\u0448\u0430\u0454\u0442\u044c\u0441\u044f \u043f\u0443\u0441\u0442\u0438\u043c \u0434\u043e \u0437\u0430\u0445\u0438\u0449\u0435\u043d\u043e\u0433\u043e \u0437\u0430\u043f\u0438\u0441\u0443.",
-    previewRules: "preview != write Â· candidate != saved fact Â· plan != fact",
+    previewRules: "preview != write - candidate != saved fact - plan != fact",
     entries: "\u0417\u0430\u043f\u0438\u0441\u0438",
     cleanSurface: "\u041f\u0443\u0441\u0442\u0438\u0439 \u0434\u0435\u043d\u044c",
     weekEmpty: "\u041f\u0443\u0441\u0442\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043d\u044c",
@@ -203,7 +217,7 @@ const DICT: Record<Locale, Dictionary> = {
     eyebrow: "ARCTOR_EMPTY_CALENDAR_STYLE_V3 / CALENDAR CORE / EMPTY VIEW",
     title: "Kalender",
     subtitle: "Eine leere Kalenderflache vor dem Hinzufugen von Eintragen.",
-    add: "+ Aktivit\u00e4t hinzuf\u00fcgen",
+    add: "+ Hinzuf\u00fcgen",
     today: "Heute",
     dayName: "Donnerstag",
     dateLine: "02 Juli",
@@ -231,7 +245,7 @@ const DICT: Record<Locale, Dictionary> = {
     hiddenText: "Dieser leere Kalender erstellt keine Aktivitaten, Fakten, VO-Objekte oder Zeitblocke.",
     semanticTitle: "Verbindung zu Semantic Preview",
     semanticText: "Die Schaltflache zum Hinzufugen offnet zuerst die Texteingabe, danach Activity Review Package. Der Kalender bleibt leer, bis ein geschutztes Schreib-Gate existiert.",
-    previewRules: "preview != write Â· candidate != saved fact Â· plan != fact",
+    previewRules: "preview != write - candidate != saved fact - plan != fact",
     entries: "Eintrage",
     cleanSurface: "Leerer Tag",
     weekEmpty: "Leere Woche",
@@ -241,7 +255,7 @@ const DICT: Record<Locale, Dictionary> = {
     eyebrow: "ARCTOR_EMPTY_CALENDAR_STYLE_V3 / CALENDAR CORE / EMPTY VIEW",
     title: "Calendario",
     subtitle: "Superficie limpia del calendario antes de agregar entradas.",
-    add: "+ A\u00f1adir actividad",
+    add: "+ A\u00f1adir",
     today: "Hoy",
     dayName: "jueves",
     dateLine: "02 julio",
@@ -269,7 +283,7 @@ const DICT: Record<Locale, Dictionary> = {
     hiddenText: "Este calendario vacio no crea actividades, hechos, objetos VO ni bloques de tiempo.",
     semanticTitle: "Conexion con Semantic Preview",
     semanticText: "El boton de anadir actividad abre primero una entrada de texto y luego Activity Review Package. El calendario permanece vacio hasta que exista una puerta de escritura protegida.",
-    previewRules: "preview != write Â· candidate != saved fact Â· plan != fact",
+    previewRules: "preview != write - candidate != saved fact - plan != fact",
     entries: "Entradas",
     cleanSurface: "Dia vacio",
     weekEmpty: "Semana vacia",
@@ -279,7 +293,7 @@ const DICT: Record<Locale, Dictionary> = {
     eyebrow: "ARCTOR_EMPTY_CALENDAR_STYLE_V3 / CALENDAR CORE / EMPTY VIEW",
     title: "Kalend\u00e1\u0159",
     subtitle: "\u010cist\u00e1 plocha kalend\u00e1\u0159e p\u0159ed p\u0159id\u00e1n\u00edm z\u00e1znam\u016f.",
-    add: "+ P\u0159idat aktivitu",
+    add: "+ P\u0159idat",
     today: "Dnes",
     dayName: "\u010dtvrtek",
     dateLine: "02 \u010dervence",
@@ -307,7 +321,7 @@ const DICT: Record<Locale, Dictionary> = {
     hiddenText: "Tento pr\u00e1zdn\u00fd kalend\u00e1\u0159 nevytv\u00e1\u0159\u00ed aktivity, fakta, VO objekty ani \u010dasov\u00e9 bloky.",
     semanticTitle: "Vazba na Semantic Preview",
     semanticText: "Tla\u010d\u00edtko pro p\u0159id\u00e1n\u00ed aktivity nejprve otev\u0159e textov\u00fd vstup a pot\u00e9 Activity Review Package. Kalend\u00e1\u0159 z\u016fst\u00e1v\u00e1 pr\u00e1zdn\u00fd, dokud neexistuje chr\u00e1n\u011bn\u00e1 zapisovac\u00ed br\u00e1na.",
-    previewRules: "preview != write Â· candidate != saved fact Â· plan != fact",
+    previewRules: "preview != write - candidate != saved fact - plan != fact",
     entries: "Z\u00e1znamy",
     cleanSurface: "Pr\u00e1zdn\u00fd den",
     weekEmpty: "Pr\u00e1zdn\u00fd t\u00fdden",
@@ -326,6 +340,103 @@ function sameLocaleHref(path: string, locale: Locale) {
   return `${path}?locale=${locale}`;
 }
 
+function readFocusDate(): Date {
+  if (typeof window === "undefined") {
+    return new Date();
+  }
+
+  const value = new URLSearchParams(window.location.search).get("focusDate");
+
+  if (!value) {
+    return new Date();
+  }
+
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (!match) {
+    return new Date();
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const date = new Date(year, month, day, 12, 0, 0, 0);
+
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function dateKey(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function eventStartDate(event: CalendarEvent): Date | null {
+  const raw = event.start_time ?? event.startTime ?? null;
+
+  if (!raw) {
+    return null;
+  }
+
+  const date = new Date(raw);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function eventEndDate(event: CalendarEvent): Date | null {
+  const raw = event.end_time ?? event.endTime ?? null;
+
+  if (!raw) {
+    return null;
+  }
+
+  const date = new Date(raw);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function eventDateKey(event: CalendarEvent): string | null {
+  const start = eventStartDate(event);
+
+  return start ? dateKey(start) : null;
+}
+
+function formatCalendarDate(value: Date, locale: Locale) {
+  const localeTag: Record<Locale, string> = {
+    en: "en-GB",
+    pl: "pl-PL",
+    ru: "ru-RU",
+    uk: "uk-UA",
+    de: "de-DE",
+    es: "es-ES",
+    cs: "cs-CZ",
+  };
+
+  const tag = localeTag[locale] ?? "en-GB";
+  const dayName = new Intl.DateTimeFormat(tag, { weekday: "long" }).format(value);
+  const dateLine = new Intl.DateTimeFormat(tag, { day: "2-digit", month: "long" }).format(value);
+
+  return {
+    dayName: dayName.charAt(0).toUpperCase() + dayName.slice(1),
+    dateLine,
+  };
+}
+
+function formatEventTime(event: CalendarEvent) {
+  const start = eventStartDate(event);
+  const end = eventEndDate(event);
+
+  if (!start || !end) {
+    return "";
+  }
+
+  const startLabel = `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`;
+  const endLabel = `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
+
+  return `${startLabel} - ${endLabel}`;
+}
+
 const HOURS = Array.from({ length: 17 }, (_, i) => `${String(i + 6).padStart(2, "0")}:00`);
 const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_CELLS = Array.from({ length: 35 }, (_, i) => i + 1);
@@ -339,13 +450,117 @@ export default function CalendarEmptyTimelineClient() {
   const [view, setView] = useState<ViewMode>("day");
   const [mode, setMode] = useState<FactMode>("both");
   const [selected, setSelected] = useState<string>("");
+  const [focusDate, setFocusDate] = useState<Date>(() => new Date());
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventsError, setEventsError] = useState<string | null>(null);
 
   useEffect(() => {
     setLocale(readLocale());
+    setFocusDate(readFocusDate());
+
+    let cancelled = false;
+
+    async function loadEvents() {
+      setEventsLoading(true);
+      setEventsError(null);
+
+      try {
+        const response = await fetch("/api/calendar/events", {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        const payload = await response.json().catch(() => null) as { calendarEvents?: CalendarEvent[]; error?: string } | null;
+
+        if (!response.ok) {
+          throw new Error(payload?.error || `Calendar events request failed: ${response.status}`);
+        }
+
+        if (!cancelled) {
+          setEvents(Array.isArray(payload?.calendarEvents) ? payload.calendarEvents : []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setEvents([]);
+          setEventsError(error instanceof Error ? error.message : "Calendar events request failed.");
+        }
+      } finally {
+        if (!cancelled) {
+          setEventsLoading(false);
+        }
+      }
+    }
+
+    loadEvents();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const t = DICT[locale] ?? DICT.en;
   const addHref = useMemo(() => sameLocaleHref("/calendar/add", locale), [locale]);
+  const focusDateKey = useMemo(() => dateKey(focusDate), [focusDate]);
+  const dateParts = useMemo(() => formatCalendarDate(focusDate, locale), [focusDate, locale]);
+  const visibleEvents = useMemo(
+    () => events.filter((event) => eventDateKey(event) === focusDateKey),
+    [events, focusDateKey]
+  );
+  const plannedEvents = useMemo(
+    () => visibleEvents.filter((event) => (event.status ?? "planned") === "planned"),
+    [visibleEvents]
+  );
+  const eventsByHour = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+
+    for (const event of visibleEvents) {
+      const start = eventStartDate(event);
+      if (!start) continue;
+      const hour = `${String(start.getHours()).padStart(2, "0")}:00`;
+      const current = map.get(hour) ?? [];
+      current.push(event);
+      map.set(hour, current);
+    }
+
+    return map;
+  }, [visibleEvents]);
+
+  const renderDaySlot = (hour: string) => {
+    const slotEvents = eventsByHour.get(hour) ?? [];
+
+    return (
+      <button
+        type="button"
+        key={hour}
+        onClick={() => setSelected(slotEvents[0]?.title || hour)}
+        className="grid w-full grid-cols-[70px_1fr] border-b border-[#eef1f7] text-left last:border-b-0 hover:bg-[#f8faff]"
+      >
+        <div className="border-r border-[#eef1f7] bg-[#fbfcff] px-3 py-3 text-[11px] font-semibold text-[#9ca3b8]">{hour}</div>
+        <div className="px-3 py-2">
+          {slotEvents.length > 0 ? (
+            <div className="space-y-2">
+              {slotEvents.map((event, index) => (
+                <div
+                  key={event.id ?? `${hour}-${index}`}
+                  className="rounded-lg border border-[#3b6ef8]/25 bg-[#eef2ff] px-3 py-2 text-[11.5px] text-[#1d4ed8]"
+                >
+                  <div className="font-bold text-[#1a1d2e]">{event.title || t.noEntries}</div>
+                  <div className="mt-1 text-[#52607a]">{formatEventTime(event)}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="min-h-[34px] rounded-lg border border-dashed border-[#d8deef] bg-white px-3 py-2 text-[11.5px] text-[#b0b4c8]">
+              {t.emptySlot}
+            </div>
+          )}
+        </div>
+      </button>
+    );
+  };
 
   const ViewButton = ({ id, label }: { id: ViewMode; label: string }) => (
     <button
@@ -407,7 +622,7 @@ export default function CalendarEmptyTimelineClient() {
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="text-[10.5px] font-semibold uppercase tracking-[0.20em] text-[#9ca3b8]">{t.today}</div>
-                <div className="mt-1 text-[18px] font-bold leading-tight text-[#1a1d2e]">{t.dayName}, {t.dateLine}</div>
+                <div className="mt-1 text-[18px] font-bold leading-tight text-[#1a1d2e]">{dateParts.dayName}, {dateParts.dateLine}</div>
               </div>
               <div className="flex flex-wrap gap-2">
                 <ViewButton id="day" label={t.day} />
@@ -441,8 +656,8 @@ export default function CalendarEmptyTimelineClient() {
             <h2 className="mt-1 text-[18px] font-bold text-[#1a1d2e]">{selected || t.selectedDefault}</h2>
             <p className="mt-2 text-[12.5px] leading-relaxed text-[#5a5f7a]">{t.selectedHint}</p>
             <div className="mt-4 rounded-lg border border-dashed border-[#d8deef] bg-[#f8faff] px-3 py-3">
-              <div className="text-[12px] font-semibold text-[#1a1d2e]">{t.noEntries}</div>
-              <div className="mt-1 text-[11.5px] text-[#7c8099]">{t.emptySlot}</div>
+              <div className="text-[12px] font-semibold text-[#1a1d2e]">{visibleEvents.length ? `${visibleEvents.length} ${t.entries}` : t.noEntries}</div>
+              <div className="mt-1 text-[11.5px] text-[#7c8099]">{eventsLoading ? "Loading..." : eventsError ? eventsError : t.emptySlot}</div>
             </div>
           </aside>
         </section>
@@ -450,7 +665,7 @@ export default function CalendarEmptyTimelineClient() {
         <section className="grid gap-3 sm:grid-cols-4">
           <div className="rounded-xl border border-[#3b6ef8]/18 bg-white p-4 shadow-sm">
             <div className="text-[10.5px] font-semibold uppercase tracking-[0.20em] text-[#3b6ef8]">{t.plan}</div>
-            <div className="mt-4 text-[24px] font-bold text-[#1a1d2e]">0</div>
+            <div className="mt-4 text-[24px] font-bold text-[#1a1d2e]">{plannedEvents.length}</div>
           </div>
           <div className="rounded-xl border border-[#22c55e]/20 bg-white p-4 shadow-sm">
             <div className="text-[10.5px] font-semibold uppercase tracking-[0.20em] text-[#22c55e]">{t.fact}</div>
@@ -462,7 +677,7 @@ export default function CalendarEmptyTimelineClient() {
           </div>
           <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
             <div className="text-[10.5px] font-semibold uppercase tracking-[0.20em] text-[#7c8099]">{t.entries}</div>
-            <div className="mt-4 text-[24px] font-bold text-[#1a1d2e]">0</div>
+            <div className="mt-4 text-[24px] font-bold text-[#1a1d2e]">{visibleEvents.length}</div>
           </div>
         </section>
 
@@ -472,7 +687,7 @@ export default function CalendarEmptyTimelineClient() {
               <div>
                 <div className="text-[10.5px] font-semibold uppercase tracking-[0.20em] text-[#3b6ef8]">{t.timeline}</div>
                 <h2 className="mt-1 text-[15px] font-bold text-[#1a1d2e]">
-                  {view === "day" ? t.noEntries : view === "week" ? t.weekEmpty : t.monthEmpty}
+                  {view === "day" ? (visibleEvents.length ? t.entries : t.noEntries) : view === "week" ? t.weekEmpty : t.monthEmpty}
                 </h2>
               </div>
               <span className="rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-2.5 py-1 text-[10.5px] font-medium text-[#7c8099]">{t.cleanSurface}</span>
@@ -480,21 +695,7 @@ export default function CalendarEmptyTimelineClient() {
 
             {view === "day" && (
               <div className="overflow-hidden rounded-xl border border-[#e7eaf3]">
-                {HOURS.map((hour) => (
-                  <button
-                    type="button"
-                    key={hour}
-                    onClick={() => setSelected(hour)}
-                    className="grid w-full grid-cols-[70px_1fr] border-b border-[#eef1f7] text-left last:border-b-0 hover:bg-[#f8faff]"
-                  >
-                    <div className="border-r border-[#eef1f7] bg-[#fbfcff] px-3 py-3 text-[11px] font-semibold text-[#9ca3b8]">{hour}</div>
-                    <div className="px-3 py-2">
-                      <div className="min-h-[34px] rounded-lg border border-dashed border-[#d8deef] bg-white px-3 py-2 text-[11.5px] text-[#b0b4c8]">
-                        {t.emptySlot}
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                {HOURS.map(renderDaySlot)}
               </div>
             )}
 

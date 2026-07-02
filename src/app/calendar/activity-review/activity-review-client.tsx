@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 // CALENDAR_REAL_ACTIVITY_SEMANTIC_PREVIEW_V3
 // CALENDAR_ACTIVITY_REVIEW_MODEL_BACKED_NO_WRITE_V1
@@ -6,7 +6,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 type FieldStatus = "ready" | "candidate" | "missing";
@@ -48,6 +48,18 @@ type ReviewPayload = {
   warnings: string[];
 };
 
+type SaveStatus = "idle" | "saving" | "error";
+
+type PlannedSchedule = {
+  start: Date;
+  end: Date;
+  startTime: string;
+  endTime: string;
+  focusDate: string;
+  durationMinutes: number;
+  label: string;
+};
+
 const LOCALES: Locale[] = ["en", "pl", "ru", "uk", "de", "es", "cs"];
 
 const UI = {
@@ -67,7 +79,7 @@ const UI = {
     redTitle: "Czerwone pola",
     redBody: "Czerwone pola oznaczają brak write-gate albo potrzebę doprecyzowania, a nie błąd.",
     actions: "Działania",
-    actionPlan: "Zaplanuj - nie zaimplementowano",
+    actionPlan: "Dodaj",
     actionFact: "Zapisz jako fakt - nie zaimplementowano",
     actionVo: "Połącz istniejący VO - nie zaimplementowano",
     safety: "Granice bezpieczeństwa",
@@ -95,7 +107,7 @@ const UI = {
     redTitle: "Red fields",
     redBody: "Red fields mean missing write-gates or fields that need clarification, not an error.",
     actions: "Actions",
-    actionPlan: "Schedule - not implemented",
+    actionPlan: "Add",
     actionFact: "Save as fact - not implemented",
     actionVo: "Link existing VO - not implemented",
     safety: "Safety boundaries",
@@ -123,9 +135,9 @@ const UI = {
     redTitle: "Красные поля",
     redBody: "Красные поля означают отсутствие write-gate или необходимость уточнения, а не ошибку.",
     actions: "Действия",
-    actionPlan: "Запланировать — не реализовано",
-    actionFact: "Сохранить как факт — не реализовано",
-    actionVo: "Связать существующий VO — не реализовано",
+    actionPlan: "Добавить",
+    actionFact: "Подтверждение факта — позже",
+    actionVo: "Связь с VO — позже",
     safety: "Границы безопасности",
     previewOnly: "preview != write",
     candidateRule: "candidate != saved fact",
@@ -151,9 +163,9 @@ const UI = {
     redTitle: "Червоні поля",
     redBody: "Червоні поля означають відсутній write-gate або потребу уточнення, а не помилку.",
     actions: "Дії",
-    actionPlan: "Запланувати — не реалізовано",
-    actionFact: "Зберегти як факт — не реалізовано",
-    actionVo: "Повʼязати існуючий VO — не реалізовано",
+    actionPlan: "Додати",
+    actionFact: "Підтвердження факту — пізніше",
+    actionVo: "Зв’язок з VO — пізніше",
     safety: "Межі безпеки",
     previewOnly: "preview != write",
     candidateRule: "candidate != saved fact",
@@ -179,7 +191,7 @@ const UI = {
     redTitle: "Rote Felder",
     redBody: "Rote Felder bedeuten fehlende Write-Gates oder Klärungsbedarf, keinen Fehler.",
     actions: "Aktionen",
-    actionPlan: "Planen - nicht implementiert",
+    actionPlan: "Hinzufügen",
     actionFact: "Als Fakt speichern - nicht implementiert",
     actionVo: "Bestehenden VO verknüpfen - nicht implementiert",
     safety: "Sicherheitsgrenzen",
@@ -235,7 +247,7 @@ const UI = {
     redTitle: "Červená pole",
     redBody: "Červená pole znamenají chybějící write-gate nebo potřebu upřesnění, ne chybu.",
     actions: "Akce",
-    actionPlan: "Naplánovat - neimplementováno",
+    actionPlan: "Přidat",
     actionFact: "Uložit jako fakt - neimplementováno",
     actionVo: "Propojit existující VO - neimplementováno",
     safety: "Bezpečnostní hranice",
@@ -248,6 +260,81 @@ const UI = {
     error: "Chyba/fallback",
   },
 } as const;
+
+
+const ACTION_UI: Record<Locale, {
+  add: string;
+  saving: string;
+  addError: string;
+  factLater: string;
+  voLater: string;
+  scheduleLabel: string;
+  defaultPolicy: string;
+}> = {
+  en: {
+    add: "Add",
+    saving: "Adding...",
+    addError: "Could not add the calendar entry.",
+    factLater: "Fact confirmation - later",
+    voLater: "VO link - later",
+    scheduleLabel: "Planned calendar entry",
+    defaultPolicy: "Default policy: missing date/time => tomorrow 08:00; missing duration => 30 minutes.",
+  },
+  pl: {
+    add: "Dodaj",
+    saving: "Dodawanie...",
+    addError: "Nie uda\u0142o si\u0119 doda\u0107 wpisu do kalendarza.",
+    factLater: "Potwierdzenie faktu - p\u00f3\u017aniej",
+    voLater: "Po\u0142\u0105czenie VO - p\u00f3\u017aniej",
+    scheduleLabel: "Planowany wpis kalendarza",
+    defaultPolicy: "Domy\u015blnie: brak daty/czasu => jutro 08:00; brak czasu trwania => 30 minut.",
+  },
+  ru: {
+    add: "\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c",
+    saving: "\u0414\u043e\u0431\u0430\u0432\u043b\u044f\u044e...",
+    addError: "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0434\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0437\u0430\u043f\u0438\u0441\u044c \u0432 \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c.",
+    factLater: "\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435 \u0444\u0430\u043a\u0442\u0430 - \u043f\u043e\u0437\u0436\u0435",
+    voLater: "\u0421\u0432\u044f\u0437\u044c \u0441 VO - \u043f\u043e\u0437\u0436\u0435",
+    scheduleLabel: "\u041f\u043b\u0430\u043d\u043e\u0432\u0430\u044f \u0437\u0430\u043f\u0438\u0441\u044c \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044f",
+    defaultPolicy: "\u041f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e: \u043d\u0435\u0442 \u0434\u0430\u0442\u044b/\u0432\u0440\u0435\u043c\u0435\u043d\u0438 => \u0437\u0430\u0432\u0442\u0440\u0430 08:00; \u043d\u0435\u0442 \u0434\u043b\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u0438 => 30 \u043c\u0438\u043d\u0443\u0442.",
+  },
+  uk: {
+    add: "\u0414\u043e\u0434\u0430\u0442\u0438",
+    saving: "\u0414\u043e\u0434\u0430\u044e...",
+    addError: "\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0434\u043e\u0434\u0430\u0442\u0438 \u0437\u0430\u043f\u0438\u0441 \u0434\u043e \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044f.",
+    factLater: "\u041f\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043d\u043d\u044f \u0444\u0430\u043a\u0442\u0443 - \u043f\u0456\u0437\u043d\u0456\u0448\u0435",
+    voLater: "\u0417\u0432'\u044f\u0437\u043e\u043a \u0437 VO - \u043f\u0456\u0437\u043d\u0456\u0448\u0435",
+    scheduleLabel: "\u041f\u043b\u0430\u043d\u043e\u0432\u0438\u0439 \u0437\u0430\u043f\u0438\u0441 \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044f",
+    defaultPolicy: "\u0417\u0430 \u0437\u0430\u043c\u043e\u0432\u0447\u0443\u0432\u0430\u043d\u043d\u044f\u043c: \u043d\u0435\u043c\u0430\u0454 \u0434\u0430\u0442\u0438/\u0447\u0430\u0441\u0443 => \u0437\u0430\u0432\u0442\u0440\u0430 08:00; \u043d\u0435\u043c\u0430\u0454 \u0442\u0440\u0438\u0432\u0430\u043b\u043e\u0441\u0442\u0456 => 30 \u0445\u0432\u0438\u043b\u0438\u043d.",
+  },
+  de: {
+    add: "Hinzuf\u00fcgen",
+    saving: "Wird hinzugef\u00fcgt...",
+    addError: "Kalendereintrag konnte nicht hinzugef\u00fcgt werden.",
+    factLater: "Fakt-Best\u00e4tigung - sp\u00e4ter",
+    voLater: "VO-Verkn\u00fcpfung - sp\u00e4ter",
+    scheduleLabel: "Geplanter Kalendereintrag",
+    defaultPolicy: "Standard: fehlendes Datum/Zeit => morgen 08:00; fehlende Dauer => 30 Minuten.",
+  },
+  es: {
+    add: "A\u00f1adir",
+    saving: "A\u00f1adiendo...",
+    addError: "No se pudo a\u00f1adir la entrada al calendario.",
+    factLater: "Confirmaci\u00f3n de hecho - m\u00e1s tarde",
+    voLater: "Vincular VO - m\u00e1s tarde",
+    scheduleLabel: "Entrada planificada del calendario",
+    defaultPolicy: "Por defecto: sin fecha/hora => ma\u00f1ana 08:00; sin duraci\u00f3n => 30 minutos.",
+  },
+  cs: {
+    add: "P\u0159idat",
+    saving: "P\u0159id\u00e1v\u00e1m...",
+    addError: "Nepoda\u0159ilo se p\u0159idat z\u00e1znam do kalend\u00e1\u0159e.",
+    factLater: "Potvrzen\u00ed faktu - pozd\u011bji",
+    voLater: "Propojen\u00ed VO - pozd\u011bji",
+    scheduleLabel: "Pl\u00e1novan\u00fd z\u00e1znam kalend\u00e1\u0159e",
+    defaultPolicy: "V\u00fdchoz\u00ed: chyb\u00ed datum/\u010das => z\u00edtra 08:00; chyb\u00ed trv\u00e1n\u00ed => 30 minut.",
+  },
+};
 
 function normalizeLocale(value: string | null): Locale {
   if (value && LOCALES.includes(value as Locale)) {
@@ -355,26 +442,133 @@ function FieldCard({ field, statusText }: { field: ReviewField; statusText: stri
 }
 
 
+
+function pad2(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function dateKey(value: Date) {
+  return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`;
+}
+
+function includesAnyText(value: string, markers: string[]) {
+  return markers.some((marker) => value.includes(marker));
+}
+
+function extractDurationMinutes(rawText: string) {
+  const lower = rawText.toLowerCase();
+
+  if (includesAnyText(lower, ["полчас", "p\u00f3\u0142 godz", "pol godz", "half an hour", "half hour", "media hora", "halbe stunde", "p\u016fl hod"])) {
+    return 30;
+  }
+
+  const minuteMatch = lower.match(/(\d{1,3})\s*(минут|мин|хвилин|хв|minute|minutes|minut|minuty|minuta|min|minutos|minuten)/i);
+  if (minuteMatch) {
+    const minutes = Number(minuteMatch[1]);
+    return Number.isFinite(minutes) && minutes > 0 ? minutes : 30;
+  }
+
+  const hourMatch = lower.match(/(\d{1,2})\s*(час|часа|часов|годин|hour|hours|godz|hora|horas|stunde|stunden)/i);
+  if (hourMatch) {
+    const hours = Number(hourMatch[1]);
+    return Number.isFinite(hours) && hours > 0 ? hours * 60 : 30;
+  }
+
+  return 30;
+}
+
+function extractExplicitClock(rawText: string): { hour: number; minute: number } | null {
+  const lower = rawText.toLowerCase();
+  const clock = lower.match(/(?:^|\s)(?:в|o|at|um|a las|às)?\s*(\d{1,2})[:.](\d{2})(?:\s|$)/i);
+
+  if (clock) {
+    const hour = Number(clock[1]);
+    const minute = Number(clock[2]);
+
+    if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+      return { hour, minute };
+    }
+  }
+
+  const hourOnly = lower.match(/(?:^|\s)(?:в|o|at|um)\s+(\d{1,2})(?:\s|$)/i);
+
+  if (hourOnly) {
+    const hour = Number(hourOnly[1]);
+
+    if (hour >= 0 && hour <= 23) {
+      return { hour, minute: 0 };
+    }
+  }
+
+  return null;
+}
+
+function buildPlannedSchedule(rawText: string, locale: Locale): PlannedSchedule {
+  const lower = rawText.toLowerCase();
+  const now = new Date();
+  const durationMinutes = extractDurationMinutes(rawText);
+  let start: Date;
+
+  if (includesAnyText(lower, ["через полчас", "через 30", "za p\u00f3\u0142 godz", "za pol godz", "in half an hour", "in 30"])) {
+    start = new Date(now.getTime() + 30 * 60000);
+  } else {
+    const hasToday = includesAnyText(lower, ["сегодня", "сьогодні", "dzis", "dzi\u015b", "today", "hoy", "heute", "dnes"]);
+    const dayOffset = hasToday ? 0 : 1;
+    const explicit = extractExplicitClock(rawText);
+    const isEvening = includesAnyText(lower, ["вечер", "вечером", "wiecz", "evening", "abend", "tarde", "ve\u010der"]);
+    const isAfternoon = includesAnyText(lower, ["днем", "днём", "po po\u0142udniu", "afternoon", "nachmittag", "por la tarde"]);
+    const hour = explicit?.hour ?? (isEvening ? 19 : isAfternoon ? 13 : 8);
+    const minute = explicit?.minute ?? 0;
+
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, hour, minute, 0, 0);
+  }
+
+  const end = new Date(start.getTime() + durationMinutes * 60000);
+  const localeTag: Record<Locale, string> = {
+    en: "en-GB",
+    pl: "pl-PL",
+    ru: "ru-RU",
+    uk: "uk-UA",
+    de: "de-DE",
+    es: "es-ES",
+    cs: "cs-CZ",
+  };
+  const tag = localeTag[locale] ?? "en-GB";
+  const dateLabel = new Intl.DateTimeFormat(tag, { weekday: "short", day: "2-digit", month: "short" }).format(start);
+  const timeLabel = `${pad2(start.getHours())}:${pad2(start.getMinutes())}-${pad2(end.getHours())}:${pad2(end.getMinutes())}`;
+
+  return {
+    start,
+    end,
+    startTime: start.toISOString(),
+    endTime: end.toISOString(),
+    focusDate: dateKey(start),
+    durationMinutes,
+    label: `${dateLabel}, ${timeLabel}`,
+  };
+}
+
+
 function AnalysisLoadingPanel({ locale, loadingText }: { locale: Locale; loadingText: string }) {
   // CALENDAR_ACTIVITY_REVIEW_LOADING_PROGRESS_V6
   const stepText: Record<Locale, string[]> = {
     en: ["Reading the phrase", "Extracting time", "Suggesting categories", "Preparing preview package"],
-    pl: ["Czytam frazÄ™", "WyodrÄ™bniam czas", "ProponujÄ™ kategorie", "PrzygotowujÄ™ pakiet preview"],
-    ru: ["Ð§Ð¸Ñ‚Ð°ÑŽ Ñ„Ñ€Ð°Ð·Ñƒ", "Ð˜Ð·Ð²Ð»ÐµÐºÐ°ÑŽ Ð²Ñ€ÐµÐ¼Ñ", "ÐŸÑ€ÐµÐ´Ð»Ð°Ð³Ð°ÑŽ ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ð¸", "Ð“Ð¾Ñ‚Ð¾Ð²Ð»ÑŽ Ð¿Ð°ÐºÐµÑ‚ Ð¿Ñ€ÐµÐ´Ð¿Ñ€Ð¾ÑÐ¼Ð¾Ñ‚Ñ€Ð°"],
-    uk: ["Ð§Ð¸Ñ‚Ð°ÑŽ Ñ„Ñ€Ð°Ð·Ñƒ", "Ð’Ð¸Ð´Ñ–Ð»ÑÑŽ Ñ‡Ð°Ñ", "ÐŸÑ€Ð¾Ð¿Ð¾Ð½ÑƒÑŽ ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ñ–Ñ—", "Ð“Ð¾Ñ‚ÑƒÑŽ Ð¿Ð°ÐºÐµÑ‚ preview"],
+    pl: ["Czytam fraz\u0119", "Wyodr\u0119bniam czas", "Proponuj\u0119 kategorie", "Przygotowuj\u0119 pakiet preview"],
+    ru: ["\u0427\u0438\u0442\u0430\u044e \u0444\u0440\u0430\u0437\u0443", "\u0418\u0437\u0432\u043b\u0435\u043a\u0430\u044e \u0432\u0440\u0435\u043c\u044f", "\u041f\u0440\u0435\u0434\u043b\u0430\u0433\u0430\u044e \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u0438", "\u0413\u043e\u0442\u043e\u0432\u043b\u044e \u043f\u0430\u043a\u0435\u0442 preview"],
+    uk: ["\u0427\u0438\u0442\u0430\u044e \u0444\u0440\u0430\u0437\u0443", "\u0412\u0438\u0434\u0456\u043b\u044f\u044e \u0447\u0430\u0441", "\u041f\u0440\u043e\u043f\u043e\u043d\u0443\u044e \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u0457", "\u0413\u043e\u0442\u0443\u044e \u043f\u0430\u043a\u0435\u0442 preview"],
     de: ["Satz wird gelesen", "Zeit wird erkannt", "Kategorien werden vorgeschlagen", "Preview-Paket wird vorbereitet"],
-    es: ["Leo la frase", "Extraigo el tiempo", "Propongo categorÃ­as", "Preparo el paquete preview"],
-    cs: ["ÄŒtu vÄ›tu", "ZjiÅ¡Å¥uji Äas", "Navrhuji kategorie", "PÅ™ipravuji preview balÃ­Äek"],
+    es: ["Leo la frase", "Extraigo el tiempo", "Propongo categor\u00edas", "Preparo el paquete preview"],
+    cs: ["\u010ctu v\u011btu", "Zji\u0161\u0165uji \u010das", "Navrhuji kategorie", "P\u0159ipravuji preview bal\u00ed\u010dek"],
   };
 
   const safetyText: Record<Locale, string> = {
     en: "preview only - no fact - no plan - no VO - no time block",
     pl: "tylko preview - bez faktu - bez planu - bez VO - bez bloku czasu",
-    ru: "Ñ‚Ð¾Ð»ÑŒÐºÐ¾ preview - Ð±ÐµÐ· Ñ„Ð°ÐºÑ‚Ð° - Ð±ÐµÐ· Ð¿Ð»Ð°Ð½Ð° - Ð±ÐµÐ· VO - Ð±ÐµÐ· Ð±Ð»Ð¾ÐºÐ° Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸",
-    uk: "Ñ‚Ñ–Ð»ÑŒÐºÐ¸ preview - Ð±ÐµÐ· Ñ„Ð°ÐºÑ‚Ñƒ - Ð±ÐµÐ· Ð¿Ð»Ð°Ð½Ñƒ - Ð±ÐµÐ· VO - Ð±ÐµÐ· Ð±Ð»Ð¾ÐºÑƒ Ñ‡Ð°ÑÑƒ",
+    ru: "\u0442\u043e\u043b\u044c\u043a\u043e preview - \u0431\u0435\u0437 \u0444\u0430\u043a\u0442\u0430 - \u0431\u0435\u0437 \u043f\u043b\u0430\u043d\u0430 - \u0431\u0435\u0437 VO - \u0431\u0435\u0437 \u0431\u043b\u043e\u043a\u0430 \u0432\u0440\u0435\u043c\u0435\u043d\u0438",
+    uk: "\u0442\u0456\u043b\u044c\u043a\u0438 preview - \u0431\u0435\u0437 \u0444\u0430\u043a\u0442\u0443 - \u0431\u0435\u0437 \u043f\u043b\u0430\u043d\u0443 - \u0431\u0435\u0437 VO - \u0431\u0435\u0437 \u0431\u043b\u043e\u043a\u0443 \u0447\u0430\u0441\u0443",
     de: "nur preview - kein Fakt - kein Plan - kein VO - kein Zeitblock",
     es: "solo preview - sin hecho - sin plan - sin VO - sin bloque de tiempo",
-    cs: "pouze preview - bez faktu - bez plÃ¡nu - bez VO - bez ÄasovÃ©ho bloku",
+    cs: "pouze preview - bez faktu - bez pl\u00e1nu - bez VO - bez \u010dasov\u00e9ho bloku",
   };
 
   const steps = stepText[locale] ?? stepText.en;
@@ -418,13 +612,17 @@ function AnalysisLoadingPanel({ locale, loadingText }: { locale: Locale; loading
   );
 }
 export default function ActivityReviewClient() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const locale = normalizeLocale(searchParams.get("locale"));
   const t = UI[locale];
+  const actionText = ACTION_UI[locale];
   const rawText = searchParams.get("text") ?? "";
 
   const [review, setReview] = useState<ReviewPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -472,9 +670,81 @@ export default function ActivityReviewClient() {
     };
   }, [rawText, locale]);
 
-  const counters = review?.counters ?? { ready: 0, candidate: 0, missing: 0 };
-  const fields = useMemo(() => review?.fields ?? [], [review?.fields]);
+  const plannedSchedule = useMemo(() => buildPlannedSchedule(rawText, locale), [rawText, locale]);
+  const fields = useMemo(() => {
+    const base = review?.fields ?? [];
+
+    if (!review || isLoading || !rawText.trim()) {
+      return base;
+    }
+
+    return [
+      ...base,
+      {
+        key: "plannedCalendarEvent",
+        label: actionText.scheduleLabel,
+        value: plannedSchedule.label,
+        status: "candidate" as FieldStatus,
+        note: actionText.defaultPolicy,
+        confidence: 0.82,
+      },
+    ];
+  }, [review, isLoading, rawText, plannedSchedule.label, actionText.scheduleLabel, actionText.defaultPolicy]);
+  const counters = useMemo(
+    () => ({
+      ready: fields.filter((field) => field.status === "ready").length,
+      candidate: fields.filter((field) => field.status === "candidate").length,
+      missing: fields.filter((field) => field.status === "missing").length,
+    }),
+    [fields]
+  );
   const sourceLabel = review?.modelBacked ? t.model : t.fallback;
+
+  async function handleAdd() {
+    if (!review || !rawText.trim() || saveStatus === "saving") {
+      return;
+    }
+
+    setSaveStatus("saving");
+    setSaveError(null);
+
+    try {
+      const response = await fetch("/api/calendar/events", {
+        credentials: "include",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          eventType: "planned_activity",
+          title: review.activityTitle || rawText.trim(),
+          description: [
+            `Source: calendar_activity_review`,
+            `Raw text: ${rawText.trim()}`,
+            `Preview summary: ${review.summary}`,
+            `Policy: ${actionText.defaultPolicy}`,
+          ].join("\n"),
+          startTime: plannedSchedule.startTime,
+          endTime: plannedSchedule.endTime,
+          status: "planned",
+          source: "calendar_activity_review_add_gate_v1",
+        }),
+      });
+
+      const payload = await response.json().catch(() => null) as { error?: string } | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.error || `Calendar event write failed: ${response.status}`);
+      }
+
+      router.push(`/calendar?locale=${locale}&focusDate=${plannedSchedule.focusDate}`);
+    } catch (error) {
+      setSaveStatus("error");
+      setSaveError(error instanceof Error ? error.message : actionText.addError);
+      // CALENDAR_ADD_GATE_V4_AUTH_TIP
+    }
+  }
 
   return (
     <main className="min-h-[calc(100vh-5rem)] bg-[#f0f2f7] px-4 py-6 text-[#1a1d2e] sm:px-6 lg:px-10">
@@ -569,7 +839,31 @@ export default function ActivityReviewClient() {
             <div className="rounded-[24px] border border-black/[0.06] bg-white p-5 shadow-sm">
               <p className="mb-4 text-xs font-extrabold uppercase tracking-[0.24em] text-[#9ca3b8]">{t.actions}</p>
               <div className="space-y-3">
-                {[t.actionPlan, t.actionFact, t.actionVo].map((label) => (
+                {/* CALENDAR_ADD_GATE_V4_VISIBLE_SCHEDULE_CARD */}
+                <div className="rounded-[18px] border border-[#dfe5f1] bg-[#f8fafc] px-4 py-3">
+                  <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#7c8099]">
+                    {actionText.scheduleLabel}
+                  </p>
+                  <p className="mt-1 text-base font-extrabold text-[#1a1d2e]">{plannedSchedule.label}</p>
+                  <p className="mt-1 text-xs leading-5 text-[#52607a]">{actionText.defaultPolicy}</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAdd}
+                  disabled={isLoading || !review || saveStatus === "saving" || !rawText.trim()}
+                  className="w-full rounded-[18px] border border-[#3b6ef8]/30 bg-[#3b6ef8] px-4 py-3 text-left text-sm font-semibold text-white shadow-sm shadow-[#3b6ef8]/20 disabled:cursor-not-allowed disabled:border-[#dfe5f1] disabled:bg-[#eef2ff] disabled:text-[#7c8099]"
+                >
+                  {saveStatus === "saving" ? actionText.saving : actionText.add}
+                </button>
+
+                {saveError ? (
+                  <div className="rounded-[18px] border border-[#fecaca] bg-[#fff1f2] px-4 py-3 text-sm font-semibold text-[#be123c]">
+                    {actionText.addError} {saveError}
+                  </div>
+                ) : null}
+
+                {[actionText.factLater, actionText.voLater].map((label) => (
                   <button
                     key={label}
                     type="button"
@@ -598,4 +892,3 @@ export default function ActivityReviewClient() {
     </main>
   );
 }
-

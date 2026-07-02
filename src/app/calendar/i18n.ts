@@ -1,4 +1,4 @@
-﻿export type CalendarLocale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
+export type CalendarLocale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 export function loc(raw: string | null | undefined): CalendarLocale { const v=String(raw||"").toLowerCase(); return (v==="en"||v==="pl"||v==="ru"||v==="uk"||v==="de"||v==="es"||v==="cs") ? v : "en"; }
 export const opts = [
 { code: "pl", label: "Polski" },
@@ -13,7 +13,7 @@ export const T: Record<CalendarLocale, Record<string,string>> = {
 en: {
 name: "English",
 calendar: "Calendar",
-add: "Add activity",
+add: "Add",
 back: "Back to calendar",
 step1: "Step 1 / activity text",
 step2: "Step 2 / Semantic Preview",
@@ -50,7 +50,7 @@ layers: "Layers",
 pl: {
 name: "Polski",
 calendar: "Kalendarz",
-add: "Dodaj aktywno\u015b\u0107",
+add: "Dodaj",
 back: "Wr\u00f3\u0107 do kalendarza",
 step1: "Krok 1 / tekst aktywno\u015bci",
 step2: "Krok 2 / Semantic Preview",
@@ -87,7 +87,7 @@ layers: "Warstwy",
 ru: {
 name: "\u0420\u0443\u0441\u0441\u043a\u0438\u0439",
 calendar: "\u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c",
-add: "\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
+add: "\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c",
 back: "\u0412\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u0432 \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c",
 step1: "\u0428\u0430\u0433 1 / \u0442\u0435\u043a\u0441\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438",
 step2: "\u0428\u0430\u0433 2 / Semantic Preview",
@@ -124,7 +124,7 @@ layers: "\u0421\u043b\u043e\u0438",
 uk: {
 name: "\u0423\u043a\u0440\u0430\u0457\u043d\u0441\u044c\u043a\u0430",
 calendar: "\u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440",
-add: "\u0414\u043e\u0434\u0430\u0442\u0438 \u0430\u043a\u0442\u0438\u0432\u043d\u0456\u0441\u0442\u044c",
+add: "\u0414\u043e\u0434\u0430\u0442\u0438",
 back: "\u041f\u043e\u0432\u0435\u0440\u043d\u0443\u0442\u0438\u0441\u044f \u0434\u043e \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044f",
 step1: "\u041a\u0440\u043e\u043a 1 / \u0442\u0435\u043a\u0441\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0456",
 step2: "\u041a\u0440\u043e\u043a 2 / Semantic Preview",
@@ -161,7 +161,7 @@ layers: "\u0428\u0430\u0440\u0438",
 de: {
 name: "Deutsch",
 calendar: "Kalender",
-add: "Aktivit\u00e4t hinzuf\u00fcgen",
+add: "Hinzuf\u00fcgen",
 back: "Zur\u00fcck zum Kalender",
 step1: "Schritt 1 / Aktivit\u00e4tstext",
 step2: "Schritt 2 / Semantic Preview",
@@ -198,7 +198,7 @@ layers: "Ebenen",
 es: {
 name: "Espa\u00f1ol",
 calendar: "Calendario",
-add: "A\u00f1adir actividad",
+add: "A\u00f1adir",
 back: "Volver al calendario",
 step1: "Paso 1 / texto de actividad",
 step2: "Paso 2 / Semantic Preview",
@@ -235,7 +235,7 @@ layers: "Capas",
 cs: {
 name: "\u010ce\u0161tina",
 calendar: "Kalend\u00e1\u0159",
-add: "P\u0159idat aktivitu",
+add: "P\u0159idat",
 back: "Zp\u011bt do kalend\u00e1\u0159e",
 step1: "Krok 1 / text aktivity",
 step2: "Krok 2 / Semantic Preview",
