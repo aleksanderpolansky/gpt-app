@@ -224,6 +224,80 @@ const UI: Record<UiLocale, UiLabels> = {
   },
 };
 
+const DETAIL_UI: Record<UiLocale, {
+  time: string;
+  description: string;
+  status: string;
+  privacy: string;
+  privateLabel: string;
+  publicLabel: string;
+  noDescription: string;
+}> = {
+  en: {
+    time: "Time",
+    description: "Description",
+    status: "Status",
+    privacy: "Privacy",
+    privateLabel: "Private",
+    publicLabel: "Public",
+    noDescription: "No description",
+  },
+  pl: {
+    time: "Czas",
+    description: "Opis",
+    status: "Status",
+    privacy: "Prywatnosc",
+    privateLabel: "Prywatne",
+    publicLabel: "Publiczne",
+    noDescription: "Brak opisu",
+  },
+  ru: {
+    time: "\u0412\u0440\u0435\u043c\u044f",
+    description: "\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435",
+    status: "\u0421\u0442\u0430\u0442\u0443\u0441",
+    privacy: "\u041f\u0440\u0438\u0432\u0430\u0442\u043d\u043e\u0441\u0442\u044c",
+    privateLabel: "\u041f\u0440\u0438\u0432\u0430\u0442\u043d\u043e",
+    publicLabel: "\u041f\u0443\u0431\u043b\u0438\u0447\u043d\u043e",
+    noDescription: "\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 \u043d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d\u043e",
+  },
+  uk: {
+    time: "\u0427\u0430\u0441",
+    description: "\u041e\u043f\u0438\u0441",
+    status: "\u0421\u0442\u0430\u0442\u0443\u0441",
+    privacy: "\u041f\u0440\u0438\u0432\u0430\u0442\u043d\u0456\u0441\u0442\u044c",
+    privateLabel: "\u041f\u0440\u0438\u0432\u0430\u0442\u043d\u043e",
+    publicLabel: "\u041f\u0443\u0431\u043b\u0456\u0447\u043d\u043e",
+    noDescription: "\u041e\u043f\u0438\u0441 \u043d\u0435 \u0432\u043a\u0430\u0437\u0430\u043d\u043e",
+  },
+  de: {
+    time: "Zeit",
+    description: "Beschreibung",
+    status: "Status",
+    privacy: "Privatsphaere",
+    privateLabel: "Privat",
+    publicLabel: "Oeffentlich",
+    noDescription: "Keine Beschreibung",
+  },
+  es: {
+    time: "Hora",
+    description: "Descripcion",
+    status: "Estado",
+    privacy: "Privacidad",
+    privateLabel: "Privado",
+    publicLabel: "Publico",
+    noDescription: "Sin descripcion",
+  },
+  cs: {
+    time: "Cas",
+    description: "Popis",
+    status: "Status",
+    privacy: "Soukromi",
+    privateLabel: "Soukrome",
+    publicLabel: "Verejne",
+    noDescription: "Bez popisu",
+  },
+};
+
 const hourStart = 6;
 const hourEnd = 23;
 const hourHeight = 64;
@@ -334,6 +408,29 @@ function EventLabel({ event }: { event: CalendarEvent }) {
   return <span className="block max-w-full truncate">{buildCompactEventLabel(event)}</span>;
 }
 
+function formatEventDateTimeRange(event: CalendarEvent, locale: UiLocale) {
+  const start = eventStartDate(event);
+  const end = new Date(event.endAt);
+
+  const formatter = new Intl.DateTimeFormat(intlLocale(locale), {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return `${formatter.format(start)} - ${formatter.format(end)}`;
+}
+
+function getEventDescription(event: CalendarEvent) {
+  const record = event as CalendarEvent & Record<string, unknown>;
+
+  return typeof record.description === "string" && record.description.trim().length > 0
+    ? record.description.trim()
+    : "";
+}
+
 function getTimelineHeight() {
   return (hourEnd - hourStart) * hourHeight;
 }
@@ -387,6 +484,7 @@ export default function CalendarRebuildClient({
 }: CalendarRebuildClientProps) {
   const locale = normalizeLocale(initialLocale);
   const ui = UI[locale];
+  const detailUi = DETAIL_UI[locale];
 
   const [view, setView] = useState<CalendarViewMode>("week");
   const [focusDate, setFocusDate] = useState(() => parseDateKey(initialFocusDateKey));
@@ -602,13 +700,34 @@ export default function CalendarRebuildClient({
               {ui.selectedEvent}
             </div>
             {selectedEvent ? (
-              <div className="mt-3">
-                <div className="font-bold">{selectedEvent.title}</div>
-                <div className="mt-1 text-sm text-[#667085]">{formatTimeRange(selectedEvent)}</div>
-                <div className="mt-3 rounded-xl border border-[#e5e7eb] bg-[#f8faff] p-3 text-xs text-[#667085]">
+              <div className="mt-3 space-y-3">
+                <div>
+                  <div className="text-base font-bold">
+                    {getEventDisplayTitle(selectedEvent) || selectedEvent.title}
+                  </div>
+                  <div className="mt-1 text-sm font-medium text-[#667085]">
+                    {formatEventDateTimeRange(selectedEvent, locale)}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-[#e5e7eb] bg-[#f8faff] p-3 text-xs text-[#667085]">
+                  <div className="font-bold text-[#111827]">{detailUi.time}</div>
+                  <div className="mt-1">{formatTimeRange(selectedEvent)}</div>
+                </div>
+
+                <div className="rounded-xl border border-[#e5e7eb] bg-white p-3 text-xs text-[#667085]">
+                  <div className="font-bold text-[#111827]">{detailUi.description}</div>
+                  <div className="mt-2 whitespace-pre-wrap leading-relaxed">
+                    {getEventDescription(selectedEvent) || detailUi.noDescription}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-[#e5e7eb] bg-[#fbfcff] p-3 text-xs text-[#667085]">
+                  {detailUi.status}: {selectedEvent.status}<br />
                   {ui.source}: {selectedEvent.source}<br />
                   {ui.kind}: {selectedEvent.kind}<br />
-                  {ui.layer}: {selectedEvent.layer}
+                  {ui.layer}: {selectedEvent.layer}<br />
+                  {detailUi.privacy}: {selectedEvent.isPrivate ? detailUi.privateLabel : detailUi.publicLabel}
                 </div>
               </div>
             ) : (
@@ -683,6 +802,7 @@ export default function CalendarRebuildClient({
                   className={cn(
                     "absolute z-10 overflow-hidden rounded-lg px-3 py-2 text-left text-xs font-bold text-[#111827] shadow-sm",
                     getLayerAccentClass(event),
+                    selectedEventId === event.id && "ring-2 ring-[#4169f5] ring-offset-1",
                   )}
                   style={{
                     top: `${top}px`,
@@ -762,6 +882,7 @@ export default function CalendarRebuildClient({
                             className={cn(
                               "absolute left-1 right-1 z-10 overflow-hidden rounded-lg px-2 py-1 text-left text-[11px] font-bold leading-tight text-[#111827] shadow-sm",
                               getLayerAccentClass(event),
+                    selectedEventId === event.id && "ring-2 ring-[#4169f5] ring-offset-1",
                             )}
                             style={{
                               top: `${top}px`,
@@ -805,6 +926,7 @@ export default function CalendarRebuildClient({
                           className={cn(
                             "truncate rounded-md border px-2 py-1 text-[11px] font-bold text-[#111827]",
                             getLayerAccentClass(event),
+                    selectedEventId === event.id && "ring-2 ring-[#4169f5] ring-offset-1",
                           )}
                         >
                           <EventLabel event={event} />
