@@ -565,6 +565,22 @@ export default function CalendarRebuildClient({
     [selectedEventId, visibleEvents],
   );
 
+  useEffect(() => {
+    if (!selectedEvent) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedEventId(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedEvent]);
+
   const weekDates = useMemo(() => getWeekDates(focusDate), [focusDate]);
   const monthDates = useMemo(() => getMonthGridDates(focusDate), [focusDate]);
 
@@ -944,6 +960,65 @@ export default function CalendarRebuildClient({
             </div>
           ) : null}
         </section>
+        {/* Step 6B event details modal */}
+        {selectedEvent ? (
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-[90] flex items-center justify-center bg-black/35 px-3 py-4"
+            onClick={() => setSelectedEventId(null)}
+          >
+            <div
+              className="max-h-[88vh] w-full max-w-[560px] overflow-y-auto rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#4169f5]">
+                    {ui.selectedEvent}
+                  </div>
+                  <h3 className="mt-2 text-xl font-bold">
+                    {getEventDisplayTitle(selectedEvent) || selectedEvent.title}
+                  </h3>
+                  <div className="mt-1 text-sm font-medium text-[#667085]">
+                    {formatEventDateTimeRange(selectedEvent, locale)}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="rounded-xl border border-[#e5e7eb] px-3 py-1.5 text-lg font-bold leading-none text-[#667085] hover:bg-[#f8faff]"
+                  onClick={() => setSelectedEventId(null)}
+                  aria-label="Close"
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="mt-4 grid gap-3">
+                <div className="rounded-xl border border-[#e5e7eb] bg-[#f8faff] p-3 text-sm text-[#667085]">
+                  <div className="font-bold text-[#111827]">{detailUi.time}</div>
+                  <div className="mt-1">{formatTimeRange(selectedEvent)}</div>
+                </div>
+
+                <div className="rounded-xl border border-[#e5e7eb] bg-white p-3 text-sm text-[#667085]">
+                  <div className="font-bold text-[#111827]">{detailUi.description}</div>
+                  <div className="mt-2 whitespace-pre-wrap leading-relaxed">
+                    {getEventDescription(selectedEvent) || detailUi.noDescription}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-[#e5e7eb] bg-[#fbfcff] p-3 text-xs leading-relaxed text-[#667085]">
+                  {detailUi.status}: {selectedEvent.status}<br />
+                  {ui.source}: {selectedEvent.source}<br />
+                  {ui.kind}: {selectedEvent.kind}<br />
+                  {ui.layer}: {selectedEvent.layer}<br />
+                  {detailUi.privacy}: {selectedEvent.isPrivate ? detailUi.privateLabel : detailUi.publicLabel}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </main>
   );
