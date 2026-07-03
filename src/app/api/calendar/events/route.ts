@@ -2,6 +2,51 @@ import { NextResponse } from "next/server";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 
+/* Step 9A calendar create log helper */
+function optionalText(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function actorDisplayName(appUser: Record<string, any>) {
+  return (
+    optionalText(appUser.display_name) ??
+    optionalText(appUser.full_name) ??
+    optionalText(appUser.name) ??
+    optionalText(appUser.email) ??
+    "User"
+  );
+}
+
+async function insertCalendarEventCreatedLog(
+  appUser: Record<string, any>,
+  personActor: Record<string, any>,
+  calendarEvent: Record<string, any>,
+) {
+  const { error } = await supabase
+    .from("calendar_event_logs")
+    .insert({
+      user_id: appUser.id,
+      calendar_event_id: calendarEvent.id,
+      actor_id: personActor.id,
+      actor_name: actorDisplayName(appUser),
+      actor_email: optionalText(appUser.email),
+      action: "created",
+      event_title: optionalText(calendarEvent.title) ?? "Calendar event",
+      event_start_time: calendarEvent.start_time ?? null,
+      event_end_time: calendarEvent.end_time ?? null,
+      event_status: optionalText(calendarEvent.status) ?? "planned",
+      event_snapshot: calendarEvent,
+      metadata_json: {
+        source_route: "/api/calendar/events",
+      },
+    });
+
+  if (error) {
+    return null;
+  }
+
+  return true;
+}
 async function getCurrentUserContext() {
   const session = await auth0.getSession();
 
@@ -197,6 +242,8 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+
+  await insertCalendarEventCreatedLog(appUser, personActor, calendarEvent);
 
   return NextResponse.json({
     ok: true,

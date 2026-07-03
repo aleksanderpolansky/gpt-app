@@ -30,10 +30,30 @@ type CalendarRebuildClientProps = {
 
 type UiLocale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
+type CalendarEventLogAction = "created" | "updated" | "cancelled" | "restored";
+
+type CalendarEventLogEntry = {
+  id: string;
+  eventId: string | null;
+  eventTitle: string;
+  action: CalendarEventLogAction;
+  actorName: string;
+  actorEmail: string | null;
+  occurredAt: string;
+  eventStartAt: string | null;
+  eventEndAt: string | null;
+  eventStatus: string | null;
+  canEdit: boolean;
+  canCancel: boolean;
+  canRestore: boolean;
+};
+
 type CalendarEventsResponse = {
   ok?: boolean;
   events?: CalendarEvent[];
   event?: CalendarEvent;
+  log?: CalendarEventLogEntry | null;
+  logs?: CalendarEventLogEntry[];
   error?: string;
   sources?: {
     calendarEvents?: number;
@@ -670,6 +690,35 @@ function fromDatetimeLocalValue(value: string) {
   return date.toISOString();
 }
 
+function formatCalendarLogDateTime(value: string, locale: UiLocale) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function formatCalendarLogEventTime(entry: CalendarEventLogEntry, locale: UiLocale) {
+  if (!entry.eventStartAt) {
+    return "";
+  }
+
+  const start = new Date(entry.eventStartAt);
+
+  if (Number.isNaN(start.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(start);
+}
 function getTimelineHeight() {
   return (hourEnd - hourStart) * hourHeight;
 }
@@ -732,6 +781,10 @@ export default function CalendarRebuildClient({
 
   const [view, setView] = useState<CalendarViewMode>("week");
   const [calendarPresentation, setCalendarPresentation] = useState<"grid" | "list">("grid");
+  const [activeCalendarTab, setActiveCalendarTab] = useState<"calendar" | "log">("calendar");
+  const [eventLogs, setEventLogs] = useState<CalendarEventLogEntry[]>([]);
+  const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
+  const [autoEditEventId, setAutoEditEventId] = useState<string | null>(null);
   const [focusDate, setFocusDate] = useState(() => parseDateKey(initialFocusDateKey));
 
   useEffect(() => {
@@ -773,6 +826,7 @@ export default function CalendarRebuildClient({
       const params = new URLSearchParams({
         start: rangeStart,
         end: rangeEnd,
+        includeLog: "1",
       });
 
       try {
@@ -787,6 +841,7 @@ export default function CalendarRebuildClient({
         }
 
         setEvents(payload.events ?? []);
+        setEventLogs(payload.logs ?? []);
         setSourceCounts({
           calendarEvents: payload.sources?.calendarEvents ?? 0,
           timeBlocks: payload.sources?.timeBlocks ?? 0,
@@ -797,6 +852,7 @@ export default function CalendarRebuildClient({
         }
 
         setEvents([]);
+        setEventLogs([]);
         setSourceCounts({ calendarEvents: 0, timeBlocks: 0 });
         setEventsError(error instanceof Error ? error.message : "Unknown calendar events error");
       } finally {
@@ -809,7 +865,7 @@ export default function CalendarRebuildClient({
     void loadEvents();
 
     return () => abortController.abort();
-  }, [rangeEnd, rangeStart]);
+  }, [eventsRefreshKey, rangeEnd, rangeStart]);
 
   const visibleEvents = useMemo(
     () => events.filter((event) => eventIntersectsRange(event, range)),
@@ -829,13 +885,16 @@ export default function CalendarRebuildClient({
       return;
     }
 
-    setIsEditingEvent(false);
+    setIsEditingEvent(autoEditEventId === selectedEvent.id);
+    if (autoEditEventId === selectedEvent.id) {
+      setAutoEditEventId(null);
+    }
     setEventActionError(null);
     setEditTitle(getEventDisplayTitle(selectedEvent) || selectedEvent.title);
     setEditDescription(getEventDescription(selectedEvent));
     setEditStartAt(toDatetimeLocalValue(selectedEvent.startAt));
     setEditEndAt(toDatetimeLocalValue(selectedEvent.endAt));
-  }, [selectedEvent?.id]);
+  }, [autoEditEventId, selectedEvent?.id]);
 
   useEffect(() => {
     if (!selectedEvent) {
@@ -894,6 +953,7 @@ export default function CalendarRebuildClient({
       );
       setSelectedEventId(payload.event.id);
       setIsEditingEvent(false);
+      setEventsRefreshKey((value) => value + 1);
     } catch (error) {
       setEventActionError(error instanceof Error ? error.message : "Unknown calendar event update error");
     } finally {
@@ -929,6 +989,7 @@ export default function CalendarRebuildClient({
       setEvents((currentEvents) => currentEvents.filter((event) => event.id !== selectedEvent.id));
       setSelectedEventId(null);
       setIsEditingEvent(false);
+      setEventsRefreshKey((value) => value + 1);
     } catch (error) {
       setEventActionError(error instanceof Error ? error.message : "Unknown calendar event cancel error");
     } finally {
@@ -949,6 +1010,100 @@ export default function CalendarRebuildClient({
     window.history.replaceState(null, "", `${routeBasePath}?${params.toString()}`);
   };
 
+  /* Step 9A calendar log action handlers */
+  const openLogEntry = (entry: CalendarEventLogEntry, edit = false) => {
+    if (entry.eventStartAt) {
+      updateFocusDate(new Date(entry.eventStartAt));
+    }
+
+    setActiveCalendarTab("calendar");
+
+    if (entry.eventId) {
+      if (edit) {
+        setAutoEditEventId(entry.eventId);
+      }
+
+      setSelectedEventId(entry.eventId);
+    }
+  };
+
+  const cancelEventFromLog = async (entry: CalendarEventLogEntry) => {
+    if (!entry.eventId || !entry.canCancel) {
+      return;
+    }
+
+    if (!window.confirm(eventActionUi.confirmCancel)) {
+      return;
+    }
+
+    setIsSavingEvent(true);
+    setEventActionError(null);
+
+    try {
+      const response = await fetch("/api/calendar-rebuild/events", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: entry.eventId }),
+      });
+
+      const payload = (await response.json()) as CalendarEventsResponse;
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error ?? `Calendar event cancel failed: ${response.status}`);
+      }
+
+      setEvents((currentEvents) => currentEvents.filter((event) => event.id !== entry.eventId));
+      setEventsRefreshKey((value) => value + 1);
+    } catch (error) {
+      setEventActionError(error instanceof Error ? error.message : "Unknown calendar event cancel error");
+    } finally {
+      setIsSavingEvent(false);
+    }
+  };
+
+  const restoreEventFromLog = async (entry: CalendarEventLogEntry) => {
+    if (!entry.eventId || !entry.canRestore) {
+      return;
+    }
+
+    setIsSavingEvent(true);
+    setEventActionError(null);
+
+    try {
+      const response = await fetch("/api/calendar-rebuild/events", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: entry.eventId,
+          status: "planned",
+        }),
+      });
+
+      const payload = (await response.json()) as CalendarEventsResponse;
+
+      if (!response.ok || !payload.ok || !payload.event) {
+        throw new Error(payload.error ?? `Calendar event restore failed: ${response.status}`);
+      }
+
+      const restoredEvent = payload.event;
+
+      setEvents((currentEvents) => {
+        const nextEvents = currentEvents.some((event) => event.id === restoredEvent.id)
+          ? currentEvents.map((event) => (event.id === restoredEvent.id ? restoredEvent : event))
+          : [...currentEvents, restoredEvent];
+
+        return nextEvents.sort((left, right) => new Date(left.startAt).getTime() - new Date(right.startAt).getTime());
+      });
+      setFocusDate(eventStartDate(restoredEvent));
+      setSelectedEventId(restoredEvent.id);
+      setActiveCalendarTab("calendar");
+      setEventsRefreshKey((value) => value + 1);
+    } catch (error) {
+      setEventActionError(error instanceof Error ? error.message : "Unknown calendar event restore error");
+    } finally {
+      setIsSavingEvent(false);
+    }
+  };
   const shiftDate = (amount: number) => {
     if (view === "month") {
       updateFocusDate(addMonths(focusDate, amount));
@@ -1080,6 +1235,99 @@ export default function CalendarRebuildClient({
     };
   }, [locale]);
 
+  /* Step 9A calendar log labels */
+  const calendarLogUi = useMemo(() => {
+    if (locale === "ru") {
+      return {
+        calendarTab: "Календарь",
+        logTab: "Лог календаря",
+        title: "Лог календаря",
+        subtitle: "Хронология действий с календарными записями.",
+        empty: "Пока нет действий календаря.",
+        created: "добавил событие",
+        updated: "изменил событие",
+        cancelled: "отменил событие",
+        restored: "восстановил событие",
+        open: "Открыть",
+        edit: "Изменить",
+        cancel: "Отменить",
+        restore: "Восстановить",
+        eventTime: "Время события",
+      };
+    }
+
+    if (locale === "uk") {
+      return {
+        calendarTab: "Календар",
+        logTab: "Лог календаря",
+        title: "Лог календаря",
+        subtitle: "Хронологія дій з календарними записами.",
+        empty: "Поки немає дій календаря.",
+        created: "додав подію",
+        updated: "змінив подію",
+        cancelled: "скасував подію",
+        restored: "відновив подію",
+        open: "Відкрити",
+        edit: "Змінити",
+        cancel: "Скасувати",
+        restore: "Відновити",
+        eventTime: "Час події",
+      };
+    }
+
+    if (locale === "pl") {
+      return {
+        calendarTab: "Kalendarz",
+        logTab: "Dziennik kalendarza",
+        title: "Dziennik kalendarza",
+        subtitle: "Chronologia działań na wpisach kalendarza.",
+        empty: "Brak działań kalendarza.",
+        created: "dodał wydarzenie",
+        updated: "zmienił wydarzenie",
+        cancelled: "anulował wydarzenie",
+        restored: "przywrócił wydarzenie",
+        open: "Otwórz",
+        edit: "Zmień",
+        cancel: "Anuluj",
+        restore: "Przywróć",
+        eventTime: "Czas wydarzenia",
+      };
+    }
+
+    return {
+      calendarTab: "Calendar",
+      logTab: "Calendar log",
+      title: "Calendar log",
+      subtitle: "Chronological history of calendar actions.",
+      empty: "No calendar actions yet.",
+      created: "added event",
+      updated: "changed event",
+      cancelled: "cancelled event",
+      restored: "restored event",
+      open: "Open",
+      edit: "Edit",
+      cancel: "Cancel",
+      restore: "Restore",
+      eventTime: "Event time",
+    };
+  }, [locale]);
+
+  const calendarLogActionLabel = (action: CalendarEventLogAction) => {
+    if (action === "updated") {
+      return calendarLogUi.updated;
+    }
+
+    if (action === "cancelled") {
+      return calendarLogUi.cancelled;
+    }
+
+    if (action === "restored") {
+      return calendarLogUi.restored;
+    }
+
+    return calendarLogUi.created;
+  };
+
   return (
     <main style={{ fontFamily: "Inter, system-ui, sans-serif" }} className="min-h-screen px-3 py-5 text-[#1a1d2e] bg-[#f0f2f7]">
       <div className="mx-auto max-w-[1520px] space-y-4">
@@ -1101,7 +1349,129 @@ export default function CalendarRebuildClient({
           </div>
         </section>
 
-        <div className="space-y-4">
+        {/* Step 9A calendar/log top tabs */}
+        <section className="flex flex-wrap gap-2">
+          {(["calendar", "log"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveCalendarTab(tab)}
+              className={cn(
+                "rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition",
+                activeCalendarTab === tab
+                  ? "border-[#3b6ef8] bg-[#3b6ef8] text-white"
+                  : "border-[#d8deef] bg-white text-[#667091] hover:bg-[#f4f6fb]",
+              )}
+            >
+              {tab === "calendar" ? calendarLogUi.calendarTab : calendarLogUi.logTab}
+            </button>
+          ))}
+        </section>
+
+        {activeCalendarTab === "log" ? (
+          <section className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#3b6ef8]">
+                  {calendarLogUi.logTab}
+                </div>
+                <h2 className="mt-1 text-xl font-bold text-[#1a1d2e]">{calendarLogUi.title}</h2>
+                <p className="mt-1 text-sm font-medium text-[#7c8099]">{calendarLogUi.subtitle}</p>
+              </div>
+            </div>
+
+            {eventActionError ? (
+              <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">
+                {eventActionError}
+              </div>
+            ) : null}
+
+            {eventLogs.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-[#d8deef] bg-[#fbfcff] p-5 text-sm font-semibold text-[#7c8099]">
+                {calendarLogUi.empty}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {eventLogs.map((entry) => (
+                  <article
+                    key={entry.id}
+                    className="rounded-xl border border-[#e2e6f2] bg-[#fbfcff] p-4 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+                          {formatCalendarLogDateTime(entry.occurredAt, locale)}
+                        </div>
+                        <div className="mt-1 text-sm font-semibold leading-relaxed text-[#1a1d2e]">
+                          {entry.actorName} {calendarLogActionLabel(entry.action)}{" "}
+                          <button
+                            type="button"
+                            onClick={() => openLogEntry(entry)}
+                            className="font-bold text-[#3b6ef8] underline-offset-4 hover:underline"
+                          >
+                            “{entry.eventTitle}”
+                          </button>
+                        </div>
+                        {entry.eventStartAt ? (
+                          <div className="mt-1 text-xs font-medium text-[#7c8099]">
+                            {calendarLogUi.eventTime}: {formatCalendarLogEventTime(entry, locale)}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {entry.eventId ? (
+                          <button
+                            type="button"
+                            onClick={() => openLogEntry(entry)}
+                            className="rounded-lg border border-[#d8deef] bg-white px-3 py-1.5 text-xs font-bold text-[#667091]"
+                          >
+                            {calendarLogUi.open}
+                          </button>
+                        ) : null}
+
+                        {entry.canEdit ? (
+                          <button
+                            type="button"
+                            onClick={() => openLogEntry(entry, true)}
+                            disabled={isSavingEvent}
+                            className="rounded-lg bg-[#3b6ef8] px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+                          >
+                            {calendarLogUi.edit}
+                          </button>
+                        ) : null}
+
+                        {entry.canCancel ? (
+                          <button
+                            type="button"
+                            onClick={() => cancelEventFromLog(entry)}
+                            disabled={isSavingEvent}
+                            className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 disabled:opacity-50"
+                          >
+                            {calendarLogUi.cancel}
+                          </button>
+                        ) : null}
+
+                        {entry.canRestore ? (
+                          <button
+                            type="button"
+                            onClick={() => restoreEventFromLog(entry)}
+                            disabled={isSavingEvent}
+                            className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 disabled:opacity-50"
+                          >
+                            {calendarLogUi.restore}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        <div className={activeCalendarTab === "calendar" ? "space-y-4" : "hidden"}>
         {/* Step 6F dashboard KPI layout */}
         {/* Step 7B mobile KPI order: stats first on narrow screens, date controls fourth */}
         <section className="grid grid-cols-1 gap-3 xl:grid-cols-4">

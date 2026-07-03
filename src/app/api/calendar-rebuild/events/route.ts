@@ -20,6 +20,209 @@ type UserContext =
       errorResponse: Response;
     };
 
+
+/* Step 9A calendar event log types and helpers */
+type CalendarEventLogAction = "created" | "updated" | "cancelled" | "restored";
+
+type CalendarEventLogEntry = {
+  id: string;
+  eventId: string | null;
+  eventTitle: string;
+  action: CalendarEventLogAction;
+  actorName: string;
+  actorEmail: string | null;
+  occurredAt: string;
+  eventStartAt: string | null;
+  eventEndAt: string | null;
+  eventStatus: string | null;
+  canEdit: boolean;
+  canCancel: boolean;
+  canRestore: boolean;
+};
+
+function normalizeLogAction(value: unknown): CalendarEventLogAction {
+  const text = String(value ?? "").toLowerCase();
+
+  if (text === "restored") {
+    return "restored";
+  }
+
+  if (text === "cancelled" || text === "canceled") {
+    return "cancelled";
+  }
+
+  if (text === "updated" || text === "edited") {
+    return "updated";
+  }
+
+  return "created";
+}
+
+function getActorDisplayName(appUser: Record<string, any>) {
+  return (
+    asText(appUser.display_name) ??
+    asText(appUser.full_name) ??
+    asText(appUser.name) ??
+    asText(appUser.email) ??
+    "User"
+  );
+}
+
+function getActorEmail(appUser: Record<string, any>) {
+  return asText(appUser.email);
+}
+
+function isInactiveStatusValue(value: unknown) {
+  const status = String(value ?? "").toLowerCase();
+
+  return ["cancelled", "canceled", "rejected", "hidden", "archived"].includes(status);
+}
+
+function mapCalendarEventLogRow(row: Record<string, any>): CalendarEventLogEntry | null {
+  if (!row.id) {
+    return null;
+  }
+
+  const action = normalizeLogAction(row.action);
+  const status = asText(row.event_status);
+  const isInactive = isInactiveStatusValue(status);
+
+  return {
+    id: String(row.id),
+    eventId: row.calendar_event_id ? `calendar:${String(row.calendar_event_id)}` : null,
+    eventTitle: asText(row.event_title) ?? "Calendar event",
+    action,
+    actorName: asText(row.actor_name) ?? "User",
+    actorEmail: asText(row.actor_email),
+    occurredAt: asText(row.created_at) ?? new Date().toISOString(),
+    eventStartAt: asText(row.event_start_time),
+    eventEndAt: asText(row.event_end_time),
+    eventStatus: status,
+    canEdit: Boolean(row.calendar_event_id) && !isInactive,
+    canCancel: Boolean(row.calendar_event_id) && !isInactive,
+    canRestore: Boolean(row.calendar_event_id) && isInactive,
+  };
+}
+
+function buildDerivedCalendarEventLogs(
+  calendarRows: Record<string, any>[],
+  appUser: Record<string, any>,
+): CalendarEventLogEntry[] {
+  const actorName = getActorDisplayName(appUser);
+  const actorEmail = getActorEmail(appUser);
+  const entries: CalendarEventLogEntry[] = [];
+
+  for (const row of calendarRows) {
+    if (!row.id) {
+      continue;
+    }
+
+    const event = mapCalendarEvent(row);
+    const createdAt = asText(row.created_at) ?? asText(row.start_time) ?? new Date().toISOString();
+    const updatedAt = asText(row.updated_at);
+    const title = event?.title ?? asText(row.title) ?? "Calendar event";
+    const status = asText(row.status) ?? event?.status ?? null;
+    const inactive = isInactiveStatusValue(status);
+
+    entries.push({
+      id: `derived-created:${String(row.id)}`,
+      eventId: `calendar:${String(row.id)}`,
+      eventTitle: title,
+      action: "created",
+      actorName,
+      actorEmail,
+      occurredAt: createdAt,
+      eventStartAt: asText(row.start_time),
+      eventEndAt: asText(row.end_time),
+      eventStatus: status,
+      canEdit: !inactive,
+      canCancel: !inactive,
+      canRestore: inactive,
+    });
+
+    if (updatedAt && Math.abs(new Date(updatedAt).getTime() - new Date(createdAt).getTime()) > 1000) {
+      entries.push({
+        id: `derived-updated:${String(row.id)}`,
+        eventId: `calendar:${String(row.id)}`,
+        eventTitle: title,
+        action: inactive ? "cancelled" : "updated",
+        actorName,
+        actorEmail,
+        occurredAt: updatedAt,
+        eventStartAt: asText(row.start_time),
+        eventEndAt: asText(row.end_time),
+        eventStatus: status,
+        canEdit: !inactive,
+        canCancel: !inactive,
+        canRestore: inactive,
+      });
+    }
+  }
+
+  return entries.sort((left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime());
+}
+
+async function insertCalendarEventLog(
+  action: CalendarEventLogAction,
+  appUser: Record<string, any>,
+  calendarEvent: Record<string, any>,
+  metadata: Record<string, unknown> = {},
+) {
+  const event = mapCalendarEvent(calendarEvent);
+
+  if (!event) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("calendar_event_logs")
+    .insert({
+      user_id: appUser.id,
+      calendar_event_id: calendarEvent.id,
+      actor_id: calendarEvent.actor_id ?? null,
+      actor_name: getActorDisplayName(appUser),
+      actor_email: getActorEmail(appUser),
+      action,
+      event_title: event.title,
+      event_start_time: event.startAt,
+      event_end_time: event.endAt,
+      event_status: asText(calendarEvent.status) ?? event.status,
+      event_snapshot: calendarEvent,
+      metadata_json: metadata,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    return null;
+  }
+
+  return data ? mapCalendarEventLogRow(data) : null;
+}
+
+async function readCalendarEventLogs(
+  appUser: Record<string, any>,
+  calendarRows: Record<string, any>[],
+) {
+  const { data, error } = await supabase
+    .from("calendar_event_logs")
+    .select("*")
+    .eq("user_id", appUser.id)
+    .order("created_at", { ascending: false })
+    .limit(120);
+
+  if (error) {
+    return buildDerivedCalendarEventLogs(calendarRows, appUser);
+  }
+
+  const storedLogs = (data ?? []).map(mapCalendarEventLogRow).filter(Boolean) as CalendarEventLogEntry[];
+
+  if (storedLogs.length > 0) {
+    return storedLogs;
+  }
+
+  return buildDerivedCalendarEventLogs(calendarRows, appUser);
+}
 function asText(value: unknown) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
@@ -253,6 +456,7 @@ export async function GET(request: Request) {
   const start = url.searchParams.get("start");
   const end = url.searchParams.get("end");
   const hasRange = isValidDate(start) && isValidDate(end);
+  const includeLog = url.searchParams.get("includeLog") === "1";
 
   let calendarEventsQuery = supabase
     .from("calendar_events")
@@ -293,9 +497,12 @@ export async function GET(request: Request) {
     ...(activeTimeBlockRows.map(mapTimeBlock).filter(Boolean) as CalendarEvent[]),
   ].sort((left, right) => new Date(left.startAt).getTime() - new Date(right.startAt).getTime());
 
+  const logs = includeLog ? await readCalendarEventLogs(appUser, calendarRows ?? []) : undefined;
+
   return NextResponse.json({
     ok: true,
     events,
+    logs,
     sources: {
       calendarEvents: activeCalendarRows.length,
       timeBlocks: activeTimeBlockRows.length,
@@ -356,6 +563,13 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "No editable fields provided" }, { status: 400 });
   }
 
+  const { data: previousCalendarEvent } = await supabase
+    .from("calendar_events")
+    .select("*")
+    .eq("id", storageId)
+    .eq("user_id", appUser.id)
+    .single();
+
   const { data: calendarEvent, error: updateError } = await supabase
     .from("calendar_events")
     .update(updates)
@@ -369,10 +583,18 @@ export async function PATCH(request: Request) {
   }
 
   const event = mapCalendarEvent(calendarEvent);
+  const previousActive = previousCalendarEvent ? isActiveCalendarRow(previousCalendarEvent) : true;
+  const nextActive = isActiveCalendarRow(calendarEvent);
+  const logAction: CalendarEventLogAction = !previousActive && nextActive ? "restored" : "updated";
+  const log = await insertCalendarEventLog(logAction, appUser, calendarEvent, {
+    previous: previousCalendarEvent ?? null,
+    updates,
+  });
 
   return NextResponse.json({
     ok: true,
     event,
+    log,
   });
 }
 
@@ -402,8 +624,11 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: cancelError.message }, { status: 500 });
   }
 
+  const log = await insertCalendarEventLog("cancelled", appUser, calendarEvent);
+
   return NextResponse.json({
     ok: true,
     event: mapCalendarEvent(calendarEvent),
+    log,
   });
 }
