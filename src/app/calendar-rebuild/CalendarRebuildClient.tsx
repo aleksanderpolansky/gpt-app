@@ -33,6 +33,7 @@ type UiLocale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 type CalendarEventsResponse = {
   ok?: boolean;
   events?: CalendarEvent[];
+  event?: CalendarEvent;
   error?: string;
   sources?: {
     calendarEvents?: number;
@@ -638,6 +639,37 @@ function getEventDescription(event: CalendarEvent) {
     : "";
 }
 
+/* Step 8B event management datetime helpers */
+function isEditableCalendarEvent(event: CalendarEvent) {
+  return event.id.startsWith("calendar:");
+}
+
+function toDatetimeLocalValue(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+
+  return localDate.toISOString().slice(0, 16);
+}
+
+function fromDatetimeLocalValue(value: string) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
+}
+
 function getTimelineHeight() {
   return (hourEnd - hourStart) * hourHeight;
 }
@@ -706,6 +738,13 @@ export default function CalendarRebuildClient({
     setCalendarPresentation("grid");
   }, [view]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [isEditingEvent, setIsEditingEvent] = useState(false);
+  const [isSavingEvent, setIsSavingEvent] = useState(false);
+  const [eventActionError, setEventActionError] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editStartAt, setEditStartAt] = useState("");
+  const [editEndAt, setEditEndAt] = useState("");
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
@@ -782,6 +821,22 @@ export default function CalendarRebuildClient({
     [selectedEventId, visibleEvents],
   );
 
+  /* Step 8B event edit form state sync */
+  useEffect(() => {
+    if (!selectedEvent) {
+      setIsEditingEvent(false);
+      setEventActionError(null);
+      return;
+    }
+
+    setIsEditingEvent(false);
+    setEventActionError(null);
+    setEditTitle(getEventDisplayTitle(selectedEvent) || selectedEvent.title);
+    setEditDescription(getEventDescription(selectedEvent));
+    setEditStartAt(toDatetimeLocalValue(selectedEvent.startAt));
+    setEditEndAt(toDatetimeLocalValue(selectedEvent.endAt));
+  }, [selectedEvent?.id]);
+
   useEffect(() => {
     if (!selectedEvent) {
       return;
@@ -798,6 +853,88 @@ export default function CalendarRebuildClient({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedEvent]);
 
+  /* Step 8B event management handlers */
+  const saveSelectedEvent = async () => {
+    if (!selectedEvent || !isEditableCalendarEvent(selectedEvent)) {
+      return;
+    }
+
+    const startAt = fromDatetimeLocalValue(editStartAt);
+    const endAt = fromDatetimeLocalValue(editEndAt);
+
+    if (!editTitle.trim() || !startAt || !endAt) {
+      setEventActionError(eventActionUi.validationError);
+      return;
+    }
+
+    setIsSavingEvent(true);
+    setEventActionError(null);
+
+    try {
+      const response = await fetch("/api/calendar-rebuild/events", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedEvent.id,
+          title: editTitle.trim(),
+          description: editDescription.trim() || null,
+          startAt,
+          endAt,
+        }),
+      });
+
+      const payload = (await response.json()) as CalendarEventsResponse;
+
+      if (!response.ok || !payload.ok || !payload.event) {
+        throw new Error(payload.error ?? `Calendar event update failed: ${response.status}`);
+      }
+
+      setEvents((currentEvents) =>
+        currentEvents.map((event) => (event.id === payload.event?.id ? payload.event : event)),
+      );
+      setSelectedEventId(payload.event.id);
+      setIsEditingEvent(false);
+    } catch (error) {
+      setEventActionError(error instanceof Error ? error.message : "Unknown calendar event update error");
+    } finally {
+      setIsSavingEvent(false);
+    }
+  };
+
+  const cancelSelectedEvent = async () => {
+    if (!selectedEvent || !isEditableCalendarEvent(selectedEvent)) {
+      return;
+    }
+
+    if (!window.confirm(eventActionUi.confirmCancel)) {
+      return;
+    }
+
+    setIsSavingEvent(true);
+    setEventActionError(null);
+
+    try {
+      const response = await fetch("/api/calendar-rebuild/events", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedEvent.id }),
+      });
+
+      const payload = (await response.json()) as CalendarEventsResponse;
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error ?? `Calendar event cancel failed: ${response.status}`);
+      }
+
+      setEvents((currentEvents) => currentEvents.filter((event) => event.id !== selectedEvent.id));
+      setSelectedEventId(null);
+      setIsEditingEvent(false);
+    } catch (error) {
+      setEventActionError(error instanceof Error ? error.message : "Unknown calendar event cancel error");
+    } finally {
+      setIsSavingEvent(false);
+    }
+  };
   const weekDates = useMemo(() => getWeekDates(focusDate), [focusDate]);
   const monthDates = useMemo(() => getMonthGridDates(focusDate), [focusDate]);
 
@@ -876,6 +1013,71 @@ export default function CalendarRebuildClient({
     }
 
     return { grid: "Grid", list: "List" };
+  }, [locale]);
+
+  /* Step 8B event action labels */
+  const eventActionUi = useMemo(() => {
+    if (locale === "ru") {
+      return {
+        edit: "Редактировать",
+        save: "Сохранить",
+        back: "Назад",
+        cancelEvent: "Отменить запись",
+        title: "Название",
+        description: "Описание",
+        start: "Начало",
+        end: "Окончание",
+        readOnly: "Эта запись пока доступна только для просмотра.",
+        validationError: "Заполните название, начало и окончание.",
+        confirmCancel: "Отменить эту календарную запись?",
+      };
+    }
+
+    if (locale === "uk") {
+      return {
+        edit: "Редагувати",
+        save: "Зберегти",
+        back: "Назад",
+        cancelEvent: "Скасувати запис",
+        title: "Назва",
+        description: "Опис",
+        start: "Початок",
+        end: "Завершення",
+        readOnly: "Цей запис поки доступний лише для перегляду.",
+        validationError: "Заповніть назву, початок і завершення.",
+        confirmCancel: "Скасувати цей календарний запис?",
+      };
+    }
+
+    if (locale === "pl") {
+      return {
+        edit: "Edytuj",
+        save: "Zapisz",
+        back: "Wstecz",
+        cancelEvent: "Anuluj wpis",
+        title: "Tytul",
+        description: "Opis",
+        start: "Poczatek",
+        end: "Koniec",
+        readOnly: "Ten wpis jest teraz tylko do odczytu.",
+        validationError: "Uzupelnij tytul, poczatek i koniec.",
+        confirmCancel: "Anulowac ten wpis kalendarza?",
+      };
+    }
+
+    return {
+      edit: "Edit",
+      save: "Save",
+      back: "Back",
+      cancelEvent: "Cancel event",
+      title: "Title",
+      description: "Description",
+      start: "Start",
+      end: "End",
+      readOnly: "This record is read-only for now.",
+      validationError: "Fill title, start and end.",
+      confirmCancel: "Cancel this calendar event?",
+    };
   }, [locale]);
 
   return (
@@ -1339,26 +1541,126 @@ export default function CalendarRebuildClient({
                 </button>
               </div>
 
+              {/* Step 8B event management modal actions */}
               <div className="mt-4 grid gap-3">
-                <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#f5f6fb] p-3 text-sm text-[#7c8099]">
-                  <div className="font-bold text-[#1a1d2e]">{detailUi.time}</div>
-                  <div className="mt-1">{formatTimeRange(selectedEvent)}</div>
-                </div>
+                {isEditingEvent ? (
+                  <div className="grid gap-3 rounded-xl border border-[#d8deef] bg-[#fbfcff] p-3">
+                    <label className="grid gap-1 text-sm font-semibold text-[#1a1d2e]">
+                      {eventActionUi.title}
+                      <input
+                        value={editTitle}
+                        onChange={(event) => setEditTitle(event.target.value)}
+                        className="rounded-xl border border-[#d8deef] bg-white px-3 py-2 text-sm font-medium outline-none focus:border-[#3b6ef8]"
+                      />
+                    </label>
 
-                <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-3 text-sm text-[#7c8099]">
-                  <div className="font-bold text-[#1a1d2e]">{detailUi.description}</div>
-                  <div className="mt-2 whitespace-pre-wrap leading-relaxed">
-                    {getEventDescription(selectedEvent) || detailUi.noDescription}
+                    <label className="grid gap-1 text-sm font-semibold text-[#1a1d2e]">
+                      {eventActionUi.description}
+                      <textarea
+                        value={editDescription}
+                        onChange={(event) => setEditDescription(event.target.value)}
+                        rows={3}
+                        className="rounded-xl border border-[#d8deef] bg-white px-3 py-2 text-sm font-medium outline-none focus:border-[#3b6ef8]"
+                      />
+                    </label>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="grid gap-1 text-sm font-semibold text-[#1a1d2e]">
+                        {eventActionUi.start}
+                        <input
+                          type="datetime-local"
+                          value={editStartAt}
+                          onChange={(event) => setEditStartAt(event.target.value)}
+                          className="rounded-xl border border-[#d8deef] bg-white px-3 py-2 text-sm font-medium outline-none focus:border-[#3b6ef8]"
+                        />
+                      </label>
+
+                      <label className="grid gap-1 text-sm font-semibold text-[#1a1d2e]">
+                        {eventActionUi.end}
+                        <input
+                          type="datetime-local"
+                          value={editEndAt}
+                          onChange={(event) => setEditEndAt(event.target.value)}
+                          className="rounded-xl border border-[#d8deef] bg-white px-3 py-2 text-sm font-medium outline-none focus:border-[#3b6ef8]"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={saveSelectedEvent}
+                        disabled={isSavingEvent}
+                        className="rounded-xl bg-[#3b6ef8] px-4 py-2 text-sm font-bold text-white shadow-sm disabled:opacity-50"
+                      >
+                        {eventActionUi.save}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingEvent(false)}
+                        disabled={isSavingEvent}
+                        className="rounded-xl border border-[#d8deef] bg-white px-4 py-2 text-sm font-bold text-[#667091] disabled:opacity-50"
+                      >
+                        {eventActionUi.back}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#f5f6fb] p-3 text-sm text-[#7c8099]">
+                      <div className="font-bold text-[#1a1d2e]">{detailUi.time}</div>
+                      <div className="mt-1">{formatTimeRange(selectedEvent)}</div>
+                    </div>
 
-                <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#fbfcff] p-3 text-xs leading-relaxed text-[#7c8099]">
-                  {detailUi.status}: {selectedEvent.status}<br />
-                  {ui.source}: {selectedEvent.source}<br />
-                  {ui.kind}: {selectedEvent.kind}<br />
-                  {ui.layer}: {selectedEvent.layer}<br />
-                  {detailUi.privacy}: {selectedEvent.isPrivate ? detailUi.privateLabel : detailUi.publicLabel}
-                </div>
+                    <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-3 text-sm text-[#7c8099]">
+                      <div className="font-bold text-[#1a1d2e]">{detailUi.description}</div>
+                      <div className="mt-2 whitespace-pre-wrap leading-relaxed">
+                        {getEventDescription(selectedEvent) || detailUi.noDescription}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#fbfcff] p-3 text-xs leading-relaxed text-[#7c8099]">
+                      {detailUi.status}: {selectedEvent.status}<br />
+                      {ui.source}: {selectedEvent.source}<br />
+                      {ui.kind}: {selectedEvent.kind}<br />
+                      {ui.layer}: {selectedEvent.layer}<br />
+                      {detailUi.privacy}: {selectedEvent.isPrivate ? detailUi.privateLabel : detailUi.publicLabel}
+                    </div>
+
+                    {isEditableCalendarEvent(selectedEvent) ? (
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingEvent(true)}
+                          disabled={isSavingEvent}
+                          className="rounded-xl bg-[#3b6ef8] px-4 py-2 text-sm font-bold text-white shadow-sm disabled:opacity-50"
+                        >
+                          {eventActionUi.edit}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={cancelSelectedEvent}
+                          disabled={isSavingEvent}
+                          className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 disabled:opacity-50"
+                        >
+                          {eventActionUi.cancelEvent}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-[#d8deef] bg-white p-3 text-sm font-semibold text-[#7c8099]">
+                        {eventActionUi.readOnly}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {eventActionError ? (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">
+                    {eventActionError}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

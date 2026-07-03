@@ -175,6 +175,41 @@ function mapTimeBlock(row: Record<string, any>): CalendarEvent | null {
   };
 }
 
+/* Step 8A event management helpers */
+function parseCalendarEventStorageId(value: unknown) {
+  const text = asText(value);
+
+  if (!text) {
+    return null;
+  }
+
+  if (text.startsWith("calendar:")) {
+    return text.slice("calendar:".length);
+  }
+
+  if (text.includes(":")) {
+    return null;
+  }
+
+  return text;
+}
+
+function calculateDurationMinutes(startTime: string, endTime: string) {
+  const start = new Date(startTime).getTime();
+  const end = new Date(endTime).getTime();
+
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+    return null;
+  }
+
+  return Math.round((end - start) / 60000);
+}
+
+function isActiveCalendarRow(row: Record<string, any>) {
+  const status = String(row.status ?? "").toLowerCase();
+
+  return !["cancelled", "canceled", "rejected", "hidden", "archived"].includes(status);
+}
 async function getCurrentUserContext(): Promise<UserContext> {
   const session = await auth0.getSession();
 
@@ -249,17 +284,126 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: timeBlockError.message }, { status: 500 });
   }
 
+  /* Step 8A active rows filter */
+  const activeCalendarRows = (calendarRows ?? []).filter(isActiveCalendarRow);
+  const activeTimeBlockRows = (timeBlockRows ?? []).filter(isActiveCalendarRow);
+
   const events = [
-    ...((calendarRows ?? []).map(mapCalendarEvent).filter(Boolean) as CalendarEvent[]),
-    ...((timeBlockRows ?? []).map(mapTimeBlock).filter(Boolean) as CalendarEvent[]),
+    ...(activeCalendarRows.map(mapCalendarEvent).filter(Boolean) as CalendarEvent[]),
+    ...(activeTimeBlockRows.map(mapTimeBlock).filter(Boolean) as CalendarEvent[]),
   ].sort((left, right) => new Date(left.startAt).getTime() - new Date(right.startAt).getTime());
 
   return NextResponse.json({
     ok: true,
     events,
     sources: {
-      calendarEvents: calendarRows?.length ?? 0,
-      timeBlocks: timeBlockRows?.length ?? 0,
+      calendarEvents: activeCalendarRows.length,
+      timeBlocks: activeTimeBlockRows.length,
     },
+  });
+}
+export async function PATCH(request: Request) {
+  const { appUser, errorResponse } = await getCurrentUserContext();
+
+  if (errorResponse) {
+    return errorResponse;
+  }
+
+  const body = await request.json();
+  const storageId = parseCalendarEventStorageId(body.id);
+
+  if (!storageId) {
+    return NextResponse.json({ error: "Editable calendar event id is required" }, { status: 400 });
+  }
+
+  const updates: Record<string, unknown> = {};
+
+  const title = asText(body.title);
+  if (title) {
+    updates.title = title;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, "description")) {
+    updates.description = asText(body.description);
+  }
+
+  const startAt = asText(body.startAt);
+  const endAt = asText(body.endAt);
+
+  if (startAt || endAt) {
+    if (!isValidDate(startAt) || !isValidDate(endAt) || !startAt || !endAt) {
+      return NextResponse.json({ error: "Valid startAt and endAt are required" }, { status: 400 });
+    }
+
+    const durationMinutes = calculateDurationMinutes(startAt, endAt);
+
+    if (durationMinutes === null) {
+      return NextResponse.json({ error: "endAt must be after startAt" }, { status: 400 });
+    }
+
+    updates.start_time = startAt;
+    updates.end_time = endAt;
+    updates.duration_minutes = durationMinutes;
+  }
+
+  const requestedStatus = asText(body.status);
+  if (requestedStatus) {
+    const normalizedStatus = normalizeStatus(requestedStatus);
+    updates.status = normalizedStatus === "done" ? "completed" : normalizedStatus;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "No editable fields provided" }, { status: 400 });
+  }
+
+  const { data: calendarEvent, error: updateError } = await supabase
+    .from("calendar_events")
+    .update(updates)
+    .eq("id", storageId)
+    .eq("user_id", appUser.id)
+    .select("*")
+    .single();
+
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+
+  const event = mapCalendarEvent(calendarEvent);
+
+  return NextResponse.json({
+    ok: true,
+    event,
+  });
+}
+
+export async function DELETE(request: Request) {
+  const { appUser, errorResponse } = await getCurrentUserContext();
+
+  if (errorResponse) {
+    return errorResponse;
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const storageId = parseCalendarEventStorageId(body.id);
+
+  if (!storageId) {
+    return NextResponse.json({ error: "Editable calendar event id is required" }, { status: 400 });
+  }
+
+  const { data: calendarEvent, error: cancelError } = await supabase
+    .from("calendar_events")
+    .update({ status: "cancelled" })
+    .eq("id", storageId)
+    .eq("user_id", appUser.id)
+    .select("*")
+    .single();
+
+  if (cancelError) {
+    return NextResponse.json({ error: cancelError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    event: mapCalendarEvent(calendarEvent),
   });
 }
