@@ -298,6 +298,145 @@ const DETAIL_UI: Record<UiLocale, {
   },
 };
 
+function arctorAddMonthsSafe(date: Date, delta: number) {
+  const next = new Date(date);
+  const day = next.getDate();
+
+  next.setDate(1);
+  next.setMonth(next.getMonth() + delta);
+
+  const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+  next.setDate(Math.min(day, lastDay));
+
+  return next;
+}
+
+function arctorShiftFocusDate(date: Date, viewMode: string, direction: -1 | 1) {
+  const next = new Date(date);
+
+  if (viewMode === "month") {
+    return arctorAddMonthsSafe(next, direction);
+  }
+
+  next.setDate(next.getDate() + (viewMode === "week" ? direction * 7 : direction));
+
+  return next;
+}
+
+function arctorFormatIsoDay(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function arctorFormatPeriodLabel(viewMode: string, focusDate: Date, locale: UiLocale) {
+  if (viewMode === "week") {
+    const week = getWeekDates(focusDate);
+
+    return `${arctorFormatIsoDay(week[0])} - ${arctorFormatIsoDay(week[6])}`;
+  }
+
+  if (viewMode === "month") {
+    return new Intl.DateTimeFormat(intlLocale(locale), {
+      month: "long",
+      year: "numeric",
+    }).format(focusDate);
+  }
+
+  return new Intl.DateTimeFormat(intlLocale(locale), {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(focusDate);
+}
+
+function arctorPeriodKicker(viewMode: string, ui: { day: string; week: string; month: string }) {
+  if (viewMode === "month") {
+    return ui.month;
+  }
+
+  if (viewMode === "week") {
+    return ui.week;
+  }
+
+  return ui.day;
+}
+
+const CALENDAR_FILTERS_UI: Record<UiLocale, string[]> = {
+  en: ["All areas", "Efficiency", "Progress", "Habits", "Finance", "+ More filters"],
+  pl: ["Wszystkie obszary", "Efektywnosc", "Postep", "Nawyki", "Finanse", "+ Wiecej filtrow"],
+  ru: ["\u0412\u0441\u0435 \u043e\u0431\u043b\u0430\u0441\u0442\u0438", "\u042d\u0444\u0444\u0435\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c", "\u041f\u0440\u043e\u0433\u0440\u0435\u0441\u0441", "\u041f\u0440\u0438\u0432\u044b\u0447\u043a\u0438", "\u0424\u0438\u043d\u0430\u043d\u0441\u044b", "+ \u0415\u0449\u0451 \u0444\u0438\u043b\u044c\u0442\u0440\u044b"],
+  uk: ["\u0423\u0441\u0456 \u043e\u0431\u043b\u0430\u0441\u0442\u0456", "\u0415\u0444\u0435\u043a\u0442\u0438\u0432\u043d\u0456\u0441\u0442\u044c", "\u041f\u0440\u043e\u0433\u0440\u0435\u0441", "\u0417\u0432\u0438\u0447\u043a\u0438", "\u0424\u0456\u043d\u0430\u043d\u0441\u0438", "+ \u0411\u0456\u043b\u044c\u0448\u0435 \u0444\u0456\u043b\u044c\u0442\u0440\u0456\u0432"],
+  de: ["Alle Bereiche", "Effizienz", "Fortschritt", "Gewohnheiten", "Finanzen", "+ Mehr Filter"],
+  es: ["Todas las areas", "Eficiencia", "Progreso", "Habitos", "Finanzas", "+ Mas filtros"],
+  cs: ["Vsechny oblasti", "Efektivita", "Pokrok", "Navyky", "Finance", "+ Vice filtru"],
+};
+
+const CALENDAR_STATS_UI: Record<UiLocale, {
+  visibleEvents: string;
+  calendarEvents: string;
+  timeBlocks: string;
+  visibleSub: string;
+  calendarSub: string;
+  blocksSub: string;
+}> = {
+  en: {
+    visibleEvents: "Visible events",
+    calendarEvents: "Calendar records",
+    timeBlocks: "Time blocks",
+    visibleSub: "in selected period",
+    calendarSub: "from calendar_events",
+    blocksSub: "from time_blocks",
+  },
+  pl: {
+    visibleEvents: "Widoczne zapisy",
+    calendarEvents: "Zapisy kalendarza",
+    timeBlocks: "Bloki czasu",
+    visibleSub: "w wybranym okresie",
+    calendarSub: "z calendar_events",
+    blocksSub: "z time_blocks",
+  },
+  ru: {
+    visibleEvents: "\u0412\u0438\u0434\u0438\u043c\u044b\u0435 \u0437\u0430\u043f\u0438\u0441\u0438",
+    calendarEvents: "\u0417\u0430\u043f\u0438\u0441\u0438 \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044f",
+    timeBlocks: "\u0411\u043b\u043e\u043a\u0438 \u0432\u0440\u0435\u043c\u0435\u043d\u0438",
+    visibleSub: "\u0432 \u0432\u044b\u0431\u0440\u0430\u043d\u043d\u043e\u043c \u043f\u0435\u0440\u0438\u043e\u0434\u0435",
+    calendarSub: "\u0438\u0437 calendar_events",
+    blocksSub: "\u0438\u0437 time_blocks",
+  },
+  uk: {
+    visibleEvents: "\u0412\u0438\u0434\u0438\u043c\u0456 \u0437\u0430\u043f\u0438\u0441\u0438",
+    calendarEvents: "\u0417\u0430\u043f\u0438\u0441\u0438 \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044f",
+    timeBlocks: "\u0411\u043b\u043e\u043a\u0438 \u0447\u0430\u0441\u0443",
+    visibleSub: "\u0443 \u0432\u0438\u0431\u0440\u0430\u043d\u043e\u043c\u0443 \u043f\u0435\u0440\u0456\u043e\u0434\u0456",
+    calendarSub: "\u0437 calendar_events",
+    blocksSub: "\u0437 time_blocks",
+  },
+  de: {
+    visibleEvents: "Sichtbare Eintraege",
+    calendarEvents: "Kalendereintraege",
+    timeBlocks: "Zeitbloecke",
+    visibleSub: "im gewaehlten Zeitraum",
+    calendarSub: "aus calendar_events",
+    blocksSub: "aus time_blocks",
+  },
+  es: {
+    visibleEvents: "Eventos visibles",
+    calendarEvents: "Registros de calendario",
+    timeBlocks: "Bloques de tiempo",
+    visibleSub: "en el periodo seleccionado",
+    calendarSub: "de calendar_events",
+    blocksSub: "de time_blocks",
+  },
+  cs: {
+    visibleEvents: "Viditelne zaznamy",
+    calendarEvents: "Zaznamy kalendare",
+    timeBlocks: "Casove bloky",
+    visibleSub: "ve vybranem obdobi",
+    calendarSub: "z calendar_events",
+    blocksSub: "z time_blocks",
+  },
+};
+
 const ANALYTICS_PLACEHOLDER_UI: Record<UiLocale, {
   title: string;
   heading: string;
@@ -541,7 +680,7 @@ function getLayerAccentClass(event: CalendarEvent) {
     return "border-amber-300 bg-amber-50";
   }
 
-  return "border-[#4169f5]/30 bg-[#eef2ff]";
+  return "border-[#3b6ef8]/30 bg-[#eef2ff]";
 }
 
 export default function CalendarRebuildClient({
@@ -552,6 +691,8 @@ export default function CalendarRebuildClient({
   const ui = UI[locale];
   const detailUi = DETAIL_UI[locale];
   const analyticsUi = ANALYTICS_PLACEHOLDER_UI[locale];
+  const statsUi = CALENDAR_STATS_UI[locale];
+  const filterLabels = CALENDAR_FILTERS_UI[locale];
 
   const [view, setView] = useState<CalendarViewMode>("week");
   const [focusDate, setFocusDate] = useState(() => parseDateKey(initialFocusDateKey));
@@ -702,94 +843,190 @@ export default function CalendarRebuildClient({
   const gridTitle = view === "day" ? ui.day : view === "week" ? ui.week : ui.month;
 
   return (
-    <main className="min-h-screen bg-[#f3f5fb] px-3 py-5 text-[#111827]">
+    <main style={{ fontFamily: "Inter, system-ui, sans-serif" }} className="min-h-screen px-3 py-5 text-[#1a1d2e] bg-[#f0f2f7]">
       <div className="mx-auto max-w-[1520px] space-y-4">
-        <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-[rgba(0,0,0,0.06)] bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold">{ui.title}</h1>
-              <p className="mt-1 max-w-3xl text-sm text-[#667085]">
+              <p className="mt-1 max-w-3xl text-sm text-[#7c8099]">
                 {ui.subtitle}
               </p>
             </div>
 
             <Link
               href={addFlowHref}
-              className="rounded-xl bg-[#4169f5] px-4 py-2 text-sm font-bold text-white shadow"
+              className="rounded-xl bg-[#3b6ef8] px-4 py-2 text-sm font-bold text-white shadow"
             >
               {ui.add}
             </Link>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
-          {/* Step 6C analytics placeholder */}
-          <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#98a2b3]">
-            {analyticsUi.title}
-          </div>
-          <div className="mt-2 text-lg font-bold">{analyticsUi.heading}</div>
-          <p className="mt-2 text-sm leading-relaxed text-[#667085]">{analyticsUi.subtitle}</p>
+        <div className="space-y-4">
+        {/* Step 6F dashboard KPI layout */}
+        <section className="grid grid-cols-1 gap-3 xl:grid-cols-4">
+          <div className="min-h-[150px] rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
+              {arctorPeriodKicker(view, ui)}
+            </div>
+            <div className="mt-2 text-[22px] font-bold leading-tight text-[#1a1d2e]">
+              {arctorFormatPeriodLabel(view, focusDate, locale)}
+            </div>
 
-          <div className="mt-4 rounded-xl border border-dashed border-[#d6e0ff] bg-[#f8faff] p-3">
-            <div className="flex h-24 items-end gap-2">
-              <div className="w-full rounded-t-lg bg-[#dbe4ff]" style={{ height: "34%" }} />
-              <div className="w-full rounded-t-lg bg-[#c9d7ff]" style={{ height: "58%" }} />
-              <div className="w-full rounded-t-lg bg-[#b6c9ff]" style={{ height: "44%" }} />
-              <div className="w-full rounded-t-lg bg-[#a8bfff]" style={{ height: "72%" }} />
-              <div className="w-full rounded-t-lg bg-[#dbe4ff]" style={{ height: "40%" }} />
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 py-1.5 text-[12px] font-medium text-[#5a5f7a] transition-all hover:bg-[#f5f6fb]"
+                onClick={() => setFocusDate(arctorShiftFocusDate(focusDate, view, -1))}
+              >
+                &lt;
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-[#3b6ef8]/30 bg-white px-3 py-1.5 text-[12px] font-medium text-[#3b6ef8] transition-all hover:bg-[#eef2ff]"
+                onClick={() => setFocusDate(new Date())}
+              >
+                {ui.today}
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 py-1.5 text-[12px] font-medium text-[#5a5f7a] transition-all hover:bg-[#f5f6fb]"
+                onClick={() => setFocusDate(arctorShiftFocusDate(focusDate, view, 1))}
+              >
+                &gt;
+              </button>
             </div>
-            <div className="mt-2 text-xs font-bold uppercase tracking-[0.18em] text-[#4169f5]">
-              {analyticsUi.futureMetric}
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {(["day", "week", "month"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={cn(
+                    "rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all",
+                    view === mode
+                      ? "bg-[#3b6ef8] text-white shadow-sm"
+                      : "border border-[rgba(0,0,0,0.08)] bg-white text-[#5a5f7a] hover:bg-[#f5f6fb]",
+                  )}
+                  onClick={() => setView(mode)}
+                >
+                  {mode === "day" ? ui.day : mode === "week" ? ui.week : ui.month}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[#667085]">
-            <div className="rounded-xl border border-[#e5e7eb] bg-[#fbfcff] p-3">
-              <div className="text-lg font-bold text-[#111827]">{visibleEvents.length}</div>
-              <div>{analyticsUi.visibleEvents}</div>
+          <div className="min-h-[150px] rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
+                {statsUi.visibleEvents}
+              </div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#3b6ef8]/10">
+                <span className="h-2 w-2 rounded-full bg-[#3b6ef8]" />
+              </div>
             </div>
-            <div className="rounded-xl border border-[#e5e7eb] bg-[#fbfcff] p-3">
-              <div className="text-lg font-bold text-[#111827]">{sourceCounts.timeBlocks}</div>
-              <div>{analyticsUi.timeBlocks}</div>
+            <div className="mt-7 flex items-end justify-between gap-4">
+              <div>
+                <div className="text-[28px] font-bold leading-none text-[#1a1d2e]">{visibleEvents.length}</div>
+                <div className="mt-2 text-[11px] text-[#9ca3b8]">{statsUi.visibleSub}</div>
+              </div>
+              <svg viewBox="0 0 120 48" className="h-12 w-32 overflow-visible" aria-hidden="true">
+                <path d="M2 34 C 22 26, 34 30, 50 22 S 82 20, 118 12" fill="none" stroke="#e6eaf5" strokeWidth="3" />
+                <path d="M2 30 C 22 20, 36 24, 52 18 S 84 16, 118 8" fill="none" stroke="#3b6ef8" strokeWidth="3" />
+                <circle cx="52" cy="18" r="3.5" fill="#3b6ef8" />
+                <circle cx="88" cy="14" r="3.5" fill="#3b6ef8" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="min-h-[150px] rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
+                {statsUi.calendarEvents}
+              </div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#22c55e]/10">
+                <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-[auto_1fr] items-center gap-4">
+              <div>
+                <div className="text-[28px] font-bold leading-none text-[#1a1d2e]">{sourceCounts.calendarEvents}</div>
+                <div className="mt-2 text-[11px] text-[#9ca3b8]">{statsUi.calendarSub}</div>
+              </div>
+              <svg viewBox="0 0 86 86" className="h-20 w-20" aria-hidden="true">
+                <circle cx="43" cy="43" r="30" fill="none" stroke="#eef2ff" strokeWidth="12" />
+                <circle cx="43" cy="43" r="30" fill="none" stroke="#3b6ef8" strokeWidth="12" strokeDasharray="92 188" strokeLinecap="round" transform="rotate(-90 43 43)" />
+                <circle cx="43" cy="43" r="30" fill="none" stroke="#22c55e" strokeWidth="12" strokeDasharray="44 188" strokeDashoffset="-98" strokeLinecap="round" transform="rotate(-90 43 43)" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="min-h-[150px] rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
+                {statsUi.timeBlocks}
+              </div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#8b5cf6]/10">
+                <span className="h-2 w-2 rounded-full bg-[#8b5cf6]" />
+              </div>
+            </div>
+            <div className="mt-7 flex items-end justify-between gap-4">
+              <div>
+                <div className="text-[28px] font-bold leading-none text-[#1a1d2e]">{sourceCounts.timeBlocks}</div>
+                <div className="mt-2 text-[11px] text-[#9ca3b8]">{statsUi.blocksSub}</div>
+              </div>
+              <div className="flex h-14 w-28 items-end gap-1.5">
+                <div className="w-full rounded-t bg-[#dbe4ff]" style={{ height: "26%" }} />
+                <div className="w-full rounded-t bg-[#c9d7ff]" style={{ height: "48%" }} />
+                <div className="w-full rounded-t bg-[#b6c9ff]" style={{ height: "40%" }} />
+                <div className="w-full rounded-t bg-[#3b6ef8]" style={{ height: "68%" }} />
+                <div className="w-full rounded-t bg-[#dbe4ff]" style={{ height: "34%" }} />
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#4169f5]">
-              {gridTitle}
+        <section className="flex flex-wrap gap-2">
+          {filterLabels.map((label, index) => (
+            <button
+              key={label}
+              type="button"
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all",
+                index === 0
+                  ? "bg-[#3b6ef8] text-white shadow-sm"
+                  : "border border-[rgba(0,0,0,0.08)] bg-white text-[#5a5f7a] hover:bg-[#f5f6fb]",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </section>
+      </div>
+
+      <section className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+        {/* Step 6F calendar grid shell */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-medium uppercase tracking-wide text-[#3b6ef8]">
+              {arctorPeriodKicker(view, ui)}
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="rounded-lg border px-3 py-1.5 text-sm font-bold"
-                onClick={() => shiftDate(-1)}
-              >
-                {"<"}
-              </button>
-              <div className="min-w-[180px] text-center text-sm font-bold capitalize">
-                {periodTitle}
-              </div>
-              <button
-                type="button"
-                className="rounded-lg border px-3 py-1.5 text-sm font-bold"
-                onClick={() => shiftDate(1)}
-              >
-                {">"}
-              </button>
+            <div className="mt-1 text-[14px] font-semibold text-[#1a1d2e]">
+              {arctorFormatPeriodLabel(view, focusDate, locale)}
             </div>
           </div>
+        </div>
 
-          {view === "day" ? (
-            <div className="relative overflow-hidden rounded-xl border border-[#e5e7eb]">
+        {view === "day" ? (
+            <div className="relative overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)]">
               {hours.map((hour) => (
                 <div
                   key={hour}
                   className="grid grid-cols-[76px_1fr] border-b border-[#eef1f7] last:border-b-0"
                   style={{ height: `${hourHeight}px` }}
                 >
-                  <div className="border-r border-[#eef1f7] bg-[#fbfcff] px-3 py-2 text-xs font-bold text-[#98a2b3]">
+                  <div className="border-r border-[#eef1f7] bg-[#fbfcff] px-3 py-2 text-xs font-bold text-[#7c8099]">
                     {String(hour).padStart(2, "0")}:00
                   </div>
                   <div className="px-3 py-2">
@@ -804,9 +1041,9 @@ export default function CalendarRebuildClient({
                   type="button"
                   onClick={() => setSelectedEventId(event.id)}
                   className={cn(
-                    "absolute z-10 overflow-hidden rounded-lg px-3 py-2 text-left text-xs font-bold text-[#111827] shadow-sm",
+                    "absolute z-10 overflow-hidden rounded-lg px-3 py-2 text-left text-xs font-bold text-[#1a1d2e] shadow-sm",
                     getLayerAccentClass(event),
-                    selectedEventId === event.id && "ring-2 ring-[#4169f5] ring-offset-1",
+                    selectedEventId === event.id && "ring-2 ring-[#3b6ef8] ring-offset-1",
                   )}
                   style={{
                     top: `${top}px`,
@@ -822,10 +1059,10 @@ export default function CalendarRebuildClient({
           ) : null}
 
           {view === "week" ? (
-            <div className="overflow-x-auto rounded-xl border border-[#e5e7eb]">
+            <div className="overflow-x-auto rounded-xl border border-[rgba(0,0,0,0.06)]">
               <div className="min-w-[1080px]">
                 <div className="grid border-b border-[#eef1f7]" style={{ gridTemplateColumns: `${timeGutterWidth}px repeat(7, minmax(132px, 1fr))` }}>
-                  <div className="border-r border-[#eef1f7] bg-[#fbfcff] p-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#98a2b3]">
+                  <div className="border-r border-[#eef1f7] bg-[#fbfcff] p-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
                     {ui.time}
                   </div>
                   {weekDates.map((day) => (
@@ -834,11 +1071,11 @@ export default function CalendarRebuildClient({
                       type="button"
                       onClick={() => updateFocusDate(day)}
                       className={cn(
-                        "border-r border-[#eef1f7] p-3 text-left last:border-r-0 hover:bg-[#f8faff]",
+                        "border-r border-[#eef1f7] p-3 text-left last:border-r-0 hover:bg-[#f5f6fb]",
                         isSameDate(day, focusDate) && "bg-[#eef2ff]",
                       )}
                     >
-                      <div className="text-xs font-bold uppercase text-[#98a2b3]">{formatShortDay(day, locale)}</div>
+                      <div className="text-xs font-bold uppercase text-[#7c8099]">{formatShortDay(day, locale)}</div>
                       <div className="mt-1 text-xl font-bold">{day.getDate()}</div>
                     </button>
                   ))}
@@ -850,7 +1087,7 @@ export default function CalendarRebuildClient({
                       {hours.map((hour) => (
                         <div
                           key={hour}
-                          className="border-b border-[#eef1f7] px-3 py-2 text-xs font-bold text-[#98a2b3]"
+                          className="border-b border-[#eef1f7] px-3 py-2 text-xs font-bold text-[#7c8099]"
                           style={{ height: `${hourHeight}px` }}
                         >
                           {String(hour).padStart(2, "0")}:00
@@ -884,9 +1121,9 @@ export default function CalendarRebuildClient({
                               setFocusDate(day);
                             }}
                             className={cn(
-                              "absolute left-1 right-1 z-10 overflow-hidden rounded-lg px-2 py-1 text-left text-[11px] font-bold leading-tight text-[#111827] shadow-sm",
+                              "absolute left-1 right-1 z-10 overflow-hidden rounded-lg px-2 py-1 text-left text-[11px] font-bold leading-tight text-[#1a1d2e] shadow-sm",
                               getLayerAccentClass(event),
-                    selectedEventId === event.id && "ring-2 ring-[#4169f5] ring-offset-1",
+                    selectedEventId === event.id && "ring-2 ring-[#3b6ef8] ring-offset-1",
                             )}
                             style={{
                               top: `${top}px`,
@@ -906,7 +1143,7 @@ export default function CalendarRebuildClient({
           ) : null}
 
           {view === "month" ? (
-            <div className="grid grid-cols-7 overflow-hidden rounded-xl border border-[#e5e7eb]">
+            <div className="grid grid-cols-7 overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)]">
               {monthDates.map((day) => {
                 const dayEvents = getEventsForDate(visibleEvents, day);
 
@@ -916,7 +1153,7 @@ export default function CalendarRebuildClient({
                     type="button"
                     onClick={() => updateFocusDate(day)}
                     className={cn(
-                      "min-h-[120px] border-b border-r border-[#eef1f7] p-2 text-left hover:bg-[#f8faff]",
+                      "min-h-[120px] border-b border-r border-[#eef1f7] p-2 text-left hover:bg-[#f5f6fb]",
                       !isSameMonth(day, focusDate) && "bg-[#fbfcff] text-[#b0b4c8]",
                       isSameDate(day, focusDate) && "bg-[#eef2ff]",
                     )}
@@ -928,16 +1165,16 @@ export default function CalendarRebuildClient({
                           key={event.id}
                           title={buildEventLabel(event)}
                           className={cn(
-                            "truncate rounded-md border px-2 py-1 text-[11px] font-bold text-[#111827]",
+                            "truncate rounded-md border px-2 py-1 text-[11px] font-bold text-[#1a1d2e]",
                             getLayerAccentClass(event),
-                    selectedEventId === event.id && "ring-2 ring-[#4169f5] ring-offset-1",
+                    selectedEventId === event.id && "ring-2 ring-[#3b6ef8] ring-offset-1",
                           )}
                         >
                           <EventLabel event={event} />
                         </div>
                       ))}
                       {dayEvents.length > 3 ? (
-                        <div className="text-[10px] font-bold text-[#4169f5]">
+                        <div className="text-[10px] font-bold text-[#3b6ef8]">
                           +{dayEvents.length - 3}
                         </div>
                       ) : null}
@@ -957,25 +1194,25 @@ export default function CalendarRebuildClient({
             onClick={() => setSelectedEventId(null)}
           >
             <div
-              className="max-h-[88vh] w-full max-w-[560px] overflow-y-auto rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-2xl"
+              className="max-h-[88vh] w-full max-w-[560px] overflow-y-auto rounded-2xl border border-[rgba(0,0,0,0.06)] bg-white p-5 shadow-2xl"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#4169f5]">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#3b6ef8]">
                     {ui.selectedEvent}
                   </div>
                   <h3 className="mt-2 text-xl font-bold">
                     {getEventDisplayTitle(selectedEvent) || selectedEvent.title}
                   </h3>
-                  <div className="mt-1 text-sm font-medium text-[#667085]">
+                  <div className="mt-1 text-sm font-medium text-[#7c8099]">
                     {formatEventDateTimeRange(selectedEvent, locale)}
                   </div>
                 </div>
 
                 <button
                   type="button"
-                  className="rounded-xl border border-[#e5e7eb] px-3 py-1.5 text-lg font-bold leading-none text-[#667085] hover:bg-[#f8faff]"
+                  className="rounded-xl border border-[rgba(0,0,0,0.06)] px-3 py-1.5 text-lg font-bold leading-none text-[#7c8099] hover:bg-[#f5f6fb]"
                   onClick={() => setSelectedEventId(null)}
                   aria-label="Close"
                 >
@@ -984,19 +1221,19 @@ export default function CalendarRebuildClient({
               </div>
 
               <div className="mt-4 grid gap-3">
-                <div className="rounded-xl border border-[#e5e7eb] bg-[#f8faff] p-3 text-sm text-[#667085]">
-                  <div className="font-bold text-[#111827]">{detailUi.time}</div>
+                <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#f5f6fb] p-3 text-sm text-[#7c8099]">
+                  <div className="font-bold text-[#1a1d2e]">{detailUi.time}</div>
                   <div className="mt-1">{formatTimeRange(selectedEvent)}</div>
                 </div>
 
-                <div className="rounded-xl border border-[#e5e7eb] bg-white p-3 text-sm text-[#667085]">
-                  <div className="font-bold text-[#111827]">{detailUi.description}</div>
+                <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-3 text-sm text-[#7c8099]">
+                  <div className="font-bold text-[#1a1d2e]">{detailUi.description}</div>
                   <div className="mt-2 whitespace-pre-wrap leading-relaxed">
                     {getEventDescription(selectedEvent) || detailUi.noDescription}
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-[#e5e7eb] bg-[#fbfcff] p-3 text-xs leading-relaxed text-[#667085]">
+                <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#fbfcff] p-3 text-xs leading-relaxed text-[#7c8099]">
                   {detailUi.status}: {selectedEvent.status}<br />
                   {ui.source}: {selectedEvent.source}<br />
                   {ui.kind}: {selectedEvent.kind}<br />
