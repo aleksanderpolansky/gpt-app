@@ -1022,8 +1022,71 @@ export default function CalendarRebuildClient({
           </div>
         </div>
 
+        {/* Step 7A mobile agenda surface */}
+        <div className="mb-4 space-y-2 md:hidden">
+          <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#fbfcff] p-3">
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#3b6ef8]">
+              {gridTitle}
+            </div>
+            <div className="mt-1 text-sm font-semibold text-[#1a1d2e]">
+              {periodTitle}
+            </div>
+            <div className="mt-2 text-xs font-medium text-[#7c8099]">
+              {visibleEvents.length} {ui.visibleEvents}
+            </div>
+          </div>
+
+          {eventsError ? (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-medium text-rose-700">
+              {eventsError}
+            </div>
+          ) : null}
+
+          {isLoadingEvents ? (
+            <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-3 text-sm font-medium text-[#7c8099]">
+              {ui.loadingEvents}
+            </div>
+          ) : null}
+
+          {!isLoadingEvents && !eventsError && visibleEvents.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-[#d8deef] bg-white p-4 text-sm font-medium text-[#7c8099]">
+              0 {ui.visibleEvents}
+            </div>
+          ) : null}
+
+          {!isLoadingEvents && !eventsError
+            ? visibleEvents.slice(0, 8).map((event) => (
+                <button
+                  key={event.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedEventId(event.id);
+                    setFocusDate(eventStartDate(event));
+                  }}
+                  className={cn(
+                    "w-full rounded-xl border p-3 text-left shadow-sm",
+                    getLayerAccentClass(event),
+                    selectedEventId === event.id && "ring-2 ring-[#3b6ef8] ring-offset-1",
+                  )}
+                >
+                  <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
+                    {formatEventDateTimeRange(event, locale)}
+                  </div>
+                  <div className="mt-1 truncate text-sm font-bold text-[#1a1d2e]">
+                    {getEventDisplayTitle(event) || buildCompactEventLabel(event)}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7c8099]">
+                    <span className="rounded-full bg-white/70 px-2 py-1">{event.kind}</span>
+                    <span className="rounded-full bg-white/70 px-2 py-1">{event.layer}</span>
+                    <span className="rounded-full bg-white/70 px-2 py-1">{event.source}</span>
+                  </div>
+                </button>
+              ))
+            : null}
+        </div>
+
         {view === "day" ? (
-            <div className="relative overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)]">
+            <div className="relative hidden overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] md:block">
               {hours.map((hour) => (
                 <div
                   key={hour}
@@ -1063,7 +1126,7 @@ export default function CalendarRebuildClient({
           ) : null}
 
           {view === "week" ? (
-            <div className="overflow-x-auto rounded-xl border border-[rgba(0,0,0,0.06)]">
+            <div className="hidden overflow-x-auto rounded-xl border border-[rgba(0,0,0,0.06)] md:block">
               <div className="min-w-[1080px]">
                 <div className="grid border-b border-[#eef1f7]" style={{ gridTemplateColumns: `${timeGutterWidth}px repeat(7, minmax(132px, 1fr))` }}>
                   <div className="border-r border-[#eef1f7] bg-[#fbfcff] p-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
@@ -1147,7 +1210,7 @@ export default function CalendarRebuildClient({
           ) : null}
 
           {view === "month" ? (
-            <div className="grid grid-cols-7 overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)]">
+            <div className="hidden grid-cols-7 overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] md:grid">
               {monthDates.map((day) => {
                 const dayEvents = getEventsForDate(visibleEvents, day);
 
