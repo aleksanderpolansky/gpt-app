@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -22,6 +23,7 @@ import type { CalendarEvent, CalendarViewMode } from "../../features/calendar-co
 
 type CalendarRebuildClientProps = {
   initialFocusDateKey: string | null;
+  initialLocale: string | null;
 };
 
 type CalendarEventsResponse = {
@@ -74,6 +76,7 @@ function buildEventLabel(event: CalendarEvent) {
 
 export default function CalendarRebuildClient({
   initialFocusDateKey,
+  initialLocale,
 }: CalendarRebuildClientProps) {
   const [view, setView] = useState<CalendarViewMode>("week");
   const [focusDate, setFocusDate] = useState(() => parseDateKey(initialFocusDateKey));
@@ -82,6 +85,16 @@ export default function CalendarRebuildClient({
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [sourceCounts, setSourceCounts] = useState({ calendarEvents: 0, timeBlocks: 0 });
+
+  const addFlowLocale = initialLocale && initialLocale.trim().length > 0 ? initialLocale : "en";
+  const addFlowHref = {
+    pathname: "/calendar/add",
+    query: {
+      locale: addFlowLocale,
+      returnTo: "calendar-rebuild",
+      focusDate: dateKey(focusDate),
+    },
+  };
 
   const range = useMemo(() => getRangeForView(view, focusDate), [view, focusDate]);
   const rangeStart = range.start.toISOString();
@@ -204,12 +217,12 @@ export default function CalendarRebuildClient({
               </p>
             </div>
 
-            <button
-              type="button"
+            <Link
+              href={addFlowHref}
               className="rounded-xl bg-[#4169f5] px-4 py-2 text-sm font-bold text-white shadow"
             >
               + Add
-            </button>
+            </Link>
           </div>
         </section>
 

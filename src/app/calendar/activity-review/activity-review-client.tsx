@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
+type CalendarReturnTarget = "calendar" | "calendar-rebuild";
 type FieldStatus = "ready" | "candidate" | "missing";
 
 type ReviewField = {
@@ -261,7 +262,6 @@ const UI = {
   },
 } as const;
 
-
 const ACTION_UI: Record<Locale, {
   add: string;
   saving: string;
@@ -342,6 +342,23 @@ function normalizeLocale(value: string | null): Locale {
   }
 
   return "en";
+}
+
+function normalizeReturnTo(value: string | null): CalendarReturnTarget {
+  return value === "calendar-rebuild" ? "calendar-rebuild" : "calendar";
+}
+
+function normalizeFocusDate(value: string | null): string | null {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
+function buildCalendarUrl(target: CalendarReturnTarget, locale: Locale, focusDate: string) {
+  const params = new URLSearchParams({
+    locale,
+    focusDate,
+  });
+
+  return `${target === "calendar-rebuild" ? "/calendar-rebuild" : "/calendar"}?${params.toString()}`;
 }
 
 function statusLabel(status: FieldStatus, labels: typeof UI[Locale]): string {
@@ -440,8 +457,6 @@ function FieldCard({ field, statusText }: { field: ReviewField; statusText: stri
     </div>
   );
 }
-
-
 
 function pad2(value: number) {
   return String(value).padStart(2, "0");
@@ -548,7 +563,6 @@ function buildPlannedSchedule(rawText: string, locale: Locale): PlannedSchedule 
   };
 }
 
-
 function AnalysisLoadingPanel({ locale, loadingText }: { locale: Locale; loadingText: string }) {
   // CALENDAR_ACTIVITY_REVIEW_LOADING_PROGRESS_V6
   const stepText: Record<Locale, string[]> = {
@@ -615,9 +629,19 @@ export default function ActivityReviewClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const locale = normalizeLocale(searchParams.get("locale"));
+  const returnTo = normalizeReturnTo(searchParams.get("returnTo"));
+  const sourceFocusDate = normalizeFocusDate(searchParams.get("focusDate"));
   const t = UI[locale];
   const actionText = ACTION_UI[locale];
   const rawText = searchParams.get("text") ?? "";
+  const calendarHref = {
+    pathname: returnTo === "calendar-rebuild" ? "/calendar-rebuild" : "/calendar",
+    query: sourceFocusDate ? { locale, focusDate: sourceFocusDate } : { locale },
+  };
+  const addHref = {
+    pathname: "/calendar/add",
+    query: sourceFocusDate ? { locale, returnTo, focusDate: sourceFocusDate } : { locale, returnTo },
+  };
 
   const [review, setReview] = useState<ReviewPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -738,7 +762,7 @@ export default function ActivityReviewClient() {
         throw new Error(payload?.error || `Calendar event write failed: ${response.status}`);
       }
 
-      router.push(`/calendar?locale=${locale}&focusDate=${plannedSchedule.focusDate}`);
+      router.push(buildCalendarUrl(returnTo, locale, plannedSchedule.focusDate));
     } catch (error) {
       setSaveStatus("error");
       setSaveError(error instanceof Error ? error.message : actionText.addError);
@@ -754,13 +778,13 @@ export default function ActivityReviewClient() {
             <div>
               <div className="mb-8 flex flex-wrap gap-3">
                 <Link
-                  href={{ pathname: "/calendar/add", query: { locale } }}
+                  href={addHref}
                   className="inline-flex h-10 items-center rounded-full border border-[#dfe5f1] bg-white px-4 text-sm font-semibold text-[#52607a] shadow-sm transition hover:border-[#3b6ef8] hover:text-[#3b6ef8]"
                 >
                   {t.back}
                 </Link>
                 <Link
-                  href={{ pathname: "/calendar", query: { locale } }}
+                  href={calendarHref}
                   className="inline-flex h-10 items-center rounded-full border border-[#dfe5f1] bg-[#f7f9fd] px-4 text-sm font-semibold text-[#52607a] shadow-sm transition hover:border-[#3b6ef8] hover:text-[#3b6ef8]"
                 >
                   {t.calendar}

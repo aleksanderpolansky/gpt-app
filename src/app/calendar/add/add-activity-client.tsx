@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 // CALENDAR_ADD_REVIEW_HIFI_STYLE_V1
 // CALENDAR_ADD_ACTIVITY_STEP1_HIFI_V1
@@ -9,6 +9,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
+type CalendarReturnTarget = "calendar" | "calendar-rebuild";
 
 const LOCALES: Locale[] = ["en", "pl", "ru", "uk", "de", "es", "cs"];
 
@@ -134,20 +135,45 @@ function normalizeLocale(value: string | null): Locale {
   return "en";
 }
 
+function normalizeReturnTo(value: string | null): CalendarReturnTarget {
+  return value === "calendar-rebuild" ? "calendar-rebuild" : "calendar";
+}
+
+function normalizeFocusDate(value: string | null): string | null {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
 export default function AddActivityClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const locale = normalizeLocale(searchParams.get("locale"));
+  const returnTo = normalizeReturnTo(searchParams.get("returnTo"));
+  const sourceFocusDate = normalizeFocusDate(searchParams.get("focusDate"));
   const t = UI[locale];
   const [text, setText] = useState("");
 
   const canSubmit = text.trim().length > 0;
   const charCountLabel = useMemo(() => `${text.trim().length}`, [text]);
+  const backHref = {
+    pathname: returnTo === "calendar-rebuild" ? "/calendar-rebuild" : "/calendar",
+    query: sourceFocusDate ? { locale, focusDate: sourceFocusDate } : { locale },
+  };
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canSubmit) return;
-    router.push(`/calendar/activity-review?locale=${locale}&text=${encodeURIComponent(text.trim())}`);
+
+    const params = new URLSearchParams({
+      locale,
+      text: text.trim(),
+      returnTo,
+    });
+
+    if (sourceFocusDate) {
+      params.set("focusDate", sourceFocusDate);
+    }
+
+    router.push(`/calendar/activity-review?${params.toString()}`);
   }
 
   return (
@@ -156,7 +182,7 @@ export default function AddActivityClient() {
         <div className="rounded-[28px] border border-black/[0.06] bg-white p-5 shadow-sm sm:p-7 lg:p-8">
           <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
             <Link
-              href={{ pathname: "/calendar", query: { locale } }}
+              href={backHref}
               className="inline-flex h-10 items-center rounded-full border border-[#dfe5f1] bg-white px-4 text-sm font-semibold text-[#52607a] shadow-sm transition hover:border-[#3b6ef8] hover:text-[#3b6ef8]"
             >
               {t.back}
@@ -234,5 +260,3 @@ export default function AddActivityClient() {
     </main>
   );
 }
-
-

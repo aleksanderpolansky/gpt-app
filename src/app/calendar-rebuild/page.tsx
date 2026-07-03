@@ -25,6 +25,7 @@ export default async function CalendarRebuildPage({
 }: CalendarRebuildPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
   const focusDate = getSearchParam(resolvedSearchParams, "focusDate") ?? null;
+  const locale = getSearchParam(resolvedSearchParams, "locale") ?? null;
 
-  return <CalendarRebuildClient initialFocusDateKey={focusDate} />;
+  return <CalendarRebuildClient initialFocusDateKey={focusDate} initialLocale={locale} />;
 }
