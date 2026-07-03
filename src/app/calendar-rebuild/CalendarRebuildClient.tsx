@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { calendarRebuildDemoEvents } from "../../features/calendar-core/demo-events";
 import {
   addDays,
   addMonths,
@@ -23,6 +22,16 @@ import type { CalendarEvent, CalendarViewMode } from "../../features/calendar-co
 
 type CalendarRebuildClientProps = {
   initialFocusDateKey: string | null;
+};
+
+type CalendarEventsResponse = {
+  ok?: boolean;
+  events?: CalendarEvent[];
+  error?: string;
+  sources?: {
+    calendarEvents?: number;
+    timeBlocks?: number;
+  };
 };
 
 const hourStart = 6;
@@ -69,12 +78,66 @@ export default function CalendarRebuildClient({
   const [view, setView] = useState<CalendarViewMode>("week");
   const [focusDate, setFocusDate] = useState(() => parseDateKey(initialFocusDateKey));
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+  const [sourceCounts, setSourceCounts] = useState({ calendarEvents: 0, timeBlocks: 0 });
 
   const range = useMemo(() => getRangeForView(view, focusDate), [view, focusDate]);
+  const rangeStart = range.start.toISOString();
+  const rangeEnd = range.end.toISOString();
+
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    async function loadEvents() {
+      setIsLoadingEvents(true);
+      setEventsError(null);
+
+      const params = new URLSearchParams({
+        start: rangeStart,
+        end: rangeEnd,
+      });
+
+      try {
+        const response = await fetch(`/api/calendar-rebuild/events?${params.toString()}`, {
+          signal: abortController.signal,
+        });
+
+        const payload = (await response.json()) as CalendarEventsResponse;
+
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.error ?? `Calendar events request failed: ${response.status}`);
+        }
+
+        setEvents(payload.events ?? []);
+        setSourceCounts({
+          calendarEvents: payload.sources?.calendarEvents ?? 0,
+          timeBlocks: payload.sources?.timeBlocks ?? 0,
+        });
+      } catch (error) {
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        setEvents([]);
+        setSourceCounts({ calendarEvents: 0, timeBlocks: 0 });
+        setEventsError(error instanceof Error ? error.message : "Unknown calendar events error");
+      } finally {
+        if (!abortController.signal.aborted) {
+          setIsLoadingEvents(false);
+        }
+      }
+    }
+
+    void loadEvents();
+
+    return () => abortController.abort();
+  }, [rangeEnd, rangeStart]);
 
   const visibleEvents = useMemo(
-    () => calendarRebuildDemoEvents.filter((event) => eventIntersectsRange(event, range)),
-    [range],
+    () => events.filter((event) => eventIntersectsRange(event, range)),
+    [events, range],
   );
 
   const selectedEvent = useMemo(
@@ -87,6 +150,7 @@ export default function CalendarRebuildClient({
 
   const updateFocusDate = (nextDate: Date) => {
     setFocusDate(nextDate);
+    setSelectedEventId(null);
 
     const params = new URLSearchParams(window.location.search);
     params.set("focusDate", dateKey(nextDate));
@@ -110,13 +174,16 @@ export default function CalendarRebuildClient({
 
   const dayTimelineEvents = useMemo(() => {
     const dayEvents = getEventsForDate(visibleEvents, focusDate);
+    const totalTimelineHeight = (hourEnd - hourStart + 1) * hourHeight;
 
     return dayEvents.map((event) => {
       const start = eventStartDate(event);
-      const top =
+      const rawTop =
         (((start.getHours() - hourStart) * 60 + start.getMinutes()) / 60) *
         hourHeight;
-      const height = Math.max(32, (eventDurationMinutes(event) / 60) * hourHeight);
+      const top = Math.max(0, rawTop);
+      const rawHeight = Math.max(32, (eventDurationMinutes(event) / 60) * hourHeight);
+      const height = Math.min(rawHeight, Math.max(32, totalTimelineHeight - top));
 
       return { event, top, height };
     });
@@ -129,11 +196,11 @@ export default function CalendarRebuildClient({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#4f6df5]">
-                Calendar Rebuild / Core Preview
+                Calendar Rebuild / Real Read Model
               </div>
               <h1 className="mt-2 text-3xl font-bold">{"\u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c"}</h1>
               <p className="mt-1 text-sm text-[#667085]">
-                New calendar service foundation: day / week / month, events, duration, AI planned activity pipeline.
+                Read-only calendar service foundation connected to calendar_events and time_blocks.
               </p>
             </div>
 
@@ -221,6 +288,19 @@ export default function CalendarRebuildClient({
                 Click an event in the calendar.
               </p>
             )}
+
+            <div className="mt-4 rounded-xl border border-[#e5e7eb] bg-[#fbfcff] p-3 text-xs text-[#667085]">
+              {isLoadingEvents ? "Loading events..." : `${visibleEvents.length} visible events`}
+              <br />
+              calendar_events: {sourceCounts.calendarEvents}
+              <br />
+              time_blocks: {sourceCounts.timeBlocks}
+              {eventsError ? (
+                <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-2 text-red-700">
+                  {eventsError}
+                </div>
+              ) : null}
+            </div>
           </aside>
         </section>
 
@@ -258,7 +338,7 @@ export default function CalendarRebuildClient({
                     key={event.id}
                     type="button"
                     onClick={() => setSelectedEventId(event.id)}
-                    className="absolute z-10 rounded-lg border border-[#4169f5]/25 bg-[#eef2ff] px-3 py-2 text-left text-xs font-bold text-[#111827] shadow-sm"
+                    className="absolute z-10 overflow-hidden rounded-lg border border-[#4169f5]/25 bg-[#eef2ff] px-3 py-2 text-left text-xs font-bold text-[#111827] shadow-sm"
                     style={{
                       top: `${top}px`,
                       height: `${height}px`,
@@ -350,6 +430,11 @@ export default function CalendarRebuildClient({
                             {buildEventLabel(event)}
                           </div>
                         ))}
+                        {dayEvents.length > 3 ? (
+                          <div className="text-[10px] font-bold text-[#4169f5]">
+                            +{dayEvents.length - 3}
+                          </div>
+                        ) : null}
                       </div>
                     </button>
                   );
