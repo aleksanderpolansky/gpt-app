@@ -41,6 +41,7 @@ export const purchaseConfirmationMessageKeys = [
   "purchaseConfirmations.seller.pendingCard",
   "purchaseConfirmations.seller.confirmedCard",
   "purchaseConfirmations.seller.pointsCard",
+  "purchaseConfirmations.seller.pointsCurrentMonthCard",
   "purchaseConfirmations.seller.filterTitle",
   "purchaseConfirmations.seller.filterDescription",
   "purchaseConfirmations.seller.allOrganizations",
@@ -444,13 +445,22 @@ export const purchaseConfirmationMessages: Record<
     "cs": "Potvrzeno"
   },
   "purchaseConfirmations.seller.pointsCard": {
-    "ru": "Начислено POINTS",
-    "pl": "Przyznane POINTS",
-    "en": "POINTS awarded",
-    "es": "POINTS concedidos",
-    "uk": "Нараховано POINTS",
-    "de": "Gutgeschriebene POINTS",
-    "cs": "Připsané POINTS"
+    "ru": "\u041d\u0430\u0447\u0438\u0441\u043b\u0435\u043d\u043e \u043f\u043e\u043a\u0443\u043f\u0430\u0442\u0435\u043b\u044f\u043c \u0432\u0441\u0435\u0433\u043e",
+    "pl": "Przyznane kupuj\u0105cym \u0142\u0105cznie",
+    "en": "Awarded to buyers total",
+    "es": "Concedidos a compradores en total",
+    "uk": "\u041d\u0430\u0440\u0430\u0445\u043e\u0432\u0430\u043d\u043e \u043f\u043e\u043a\u0443\u043f\u0446\u044f\u043c \u0432\u0441\u044c\u043e\u0433\u043e",
+    "de": "Insgesamt an K\u00e4ufer vergeben",
+    "cs": "Celkem p\u0159ips\u00e1no kupuj\u00edc\u00edm"
+  },
+  "purchaseConfirmations.seller.pointsCurrentMonthCard": {
+    "ru": "\u041d\u0430\u0447\u0438\u0441\u043b\u0435\u043d\u043e \u043f\u043e\u043a\u0443\u043f\u0430\u0442\u0435\u043b\u044f\u043c \u0432 \u0442\u0435\u043a\u0443\u0449\u0435\u043c \u043c\u0435\u0441\u044f\u0446\u0435",
+    "pl": "Przyznane kupuj\u0105cym w bie\u017c\u0105cym miesi\u0105cu",
+    "en": "Awarded to buyers this month",
+    "es": "Concedidos a compradores este mes",
+    "uk": "\u041d\u0430\u0440\u0430\u0445\u043e\u0432\u0430\u043d\u043e \u043f\u043e\u043a\u0443\u043f\u0446\u044f\u043c \u0443 \u043f\u043e\u0442\u043e\u0447\u043d\u043e\u043c\u0443 \u043c\u0456\u0441\u044f\u0446\u0456",
+    "de": "In diesem Monat an K\u00e4ufer vergeben",
+    "cs": "P\u0159ips\u00e1no kupuj\u00edc\u00edm v tomto m\u011bs\u00edci"
   },
   "purchaseConfirmations.seller.filterTitle": {
     "ru": "Фильтр по предприятию",

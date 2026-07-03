@@ -1,9 +1,12 @@
-import { getPurchaseConfirmationText } from "../../i18n/messages/purchase-confirmations";
-const fallbackDash = getPurchaseConfirmationText("purchaseConfirmations.common.dash", "en");
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { getPurchaseConfirmationText } from "../../i18n/messages/purchase-confirmations";
 
+const fallbackDash = getPurchaseConfirmationText(
+  "purchaseConfirmations.common.dash",
+  "en",
+);
 type Organization = {
   id: string;
   organization_name: string | null;

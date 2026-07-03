@@ -7,6 +7,9 @@ import { supabase } from "../../../../../lib/supabase";
 export const API_FIX_FAST_ORGANIZATION_DRAFT_CREATE =
   "API_FIX_FAST_ORGANIZATION_DRAFT_CREATE" as const;
 
+export const API_FIX_DRAFT_ORGANIZATION_DEFAULT_REWARD_RULE =
+  "API_FIX_DRAFT_ORGANIZATION_DEFAULT_REWARD_RULE" as const;
+
 type AppUserRow = {
   id: string;
   auth0_sub: string;
@@ -15,6 +18,22 @@ type AppUserRow = {
 type PersonRow = {
   id: string;
 };
+
+type RewardRuleRow = {
+  id: string;
+  organization_id: string;
+  purchase_currency: string;
+  min_purchase_amount: number;
+  points_per_confirmed_purchase: number;
+};
+
+const DEFAULT_PURCHASE_REWARD_RULE = {
+  minPurchaseAmount: 45,
+  purchaseCurrency: "PLN",
+  pointsPerConfirmedPurchase: 10,
+  maxPointsPerUserPerMonth: 2000,
+  maxConfirmationsPerOrganizationPerMonth: 5,
+} as const;
 
 function parseOptionalText(value: unknown) {
   if (typeof value !== "string") {
@@ -39,17 +58,17 @@ function normalizeOrganizationType(value: unknown) {
 function getDraftOrganizationName(locale: string | null) {
   switch (locale) {
     case "ru":
-      return "ÃÂÃÂ¾ÃÂ²ÃÂ¾ÃÂµ ÃÂ¿Ã‘â‚¬ÃÂµÃÂ´ÃÂ¿Ã‘â‚¬ÃÂ¸Ã‘ÂÃ‘â€šÃÂ¸ÃÂµ";
+      return "\u041d\u043e\u0432\u043e\u0435 \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u0435";
     case "pl":
-      return "Nowe przedsiÃ„â„¢biorstwo";
+      return "Nowe przedsi\u0119biorstwo";
     case "es":
       return "Nueva empresa";
     case "uk":
-      return "ÃÂÃÂ¾ÃÂ²ÃÂµ ÃÂ¿Ã‘â€“ÃÂ´ÃÂ¿Ã‘â‚¬ÃÂ¸Ã‘â€ÃÂ¼Ã‘ÂÃ‘â€šÃÂ²ÃÂ¾";
+      return "\u041d\u043e\u0432\u0435 \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u043e";
     case "de":
       return "Neues Unternehmen";
     case "cs":
-      return "NovÃƒÂ½ podnik";
+      return "Nov\u00fd podnik";
     case "en":
     default:
       return "New business";
@@ -107,6 +126,80 @@ async function getOwnerPersonId(appUserId: string) {
   return person?.id ?? null;
 }
 
+async function ensureDefaultRewardRuleForOrganization({
+  organizationId,
+  organizationName,
+  now,
+}: {
+  organizationId: string;
+  organizationName: string;
+  now: string;
+}) {
+  const { data: existingRewardRule, error: existingRewardRuleError } =
+    await supabase
+      .from("points_reward_rules")
+      .select(
+        `
+        id,
+        organization_id,
+        purchase_currency,
+        min_purchase_amount,
+        points_per_confirmed_purchase
+      `,
+      )
+      .eq("organization_id", organizationId)
+      .eq("purchase_currency", DEFAULT_PURCHASE_REWARD_RULE.purchaseCurrency)
+      .eq("is_active", true)
+      .eq("status", "active")
+      .maybeSingle();
+
+  if (existingRewardRuleError) {
+    throw new Error(existingRewardRuleError.message);
+  }
+
+  if (existingRewardRule) {
+    return existingRewardRule as RewardRuleRow;
+  }
+
+  const { data: rewardRule, error: rewardRuleError } = await supabase
+    .from("points_reward_rules")
+    .insert({
+      id: randomUUID(),
+      organization_id: organizationId,
+      rule_name: `${organizationName} default purchase reward`,
+      min_purchase_amount: DEFAULT_PURCHASE_REWARD_RULE.minPurchaseAmount,
+      purchase_currency: DEFAULT_PURCHASE_REWARD_RULE.purchaseCurrency,
+      points_per_confirmed_purchase:
+        DEFAULT_PURCHASE_REWARD_RULE.pointsPerConfirmedPurchase,
+      max_points_per_user_per_month:
+        DEFAULT_PURCHASE_REWARD_RULE.maxPointsPerUserPerMonth,
+      max_confirmations_per_organization_per_month:
+        DEFAULT_PURCHASE_REWARD_RULE.maxConfirmationsPerOrganizationPerMonth,
+      is_active: true,
+      status: "active",
+      created_at: now,
+      updated_at: now,
+    })
+    .select(
+      `
+      id,
+      organization_id,
+      purchase_currency,
+      min_purchase_amount,
+      points_per_confirmed_purchase
+    `,
+    )
+    .single();
+
+  if (rewardRuleError || !rewardRule) {
+    throw new Error(
+      rewardRuleError?.message ?? "Default reward rule was not created",
+    );
+  }
+
+  return rewardRule as RewardRuleRow;
+}
+
 export async function POST(request: Request) {
   const { appUser, errorResponse } = await getCurrentAppUser();
 
@@ -162,7 +255,7 @@ export async function POST(request: Request) {
       organization_type: organizationType,
       description: null,
       country_code: null,
-      default_currency: "PLN",
+      default_currency: DEFAULT_PURCHASE_REWARD_RULE.purchaseCurrency,
       status: "active",
       directory_status: "published",
       is_public_profile_enabled: true,
@@ -193,15 +286,41 @@ export async function POST(request: Request) {
     );
   }
 
+  let rewardRule: RewardRuleRow | null = null;
+
+  try {
+    rewardRule = await ensureDefaultRewardRuleForOrganization({
+      organizationId,
+      organizationName,
+      now,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Default reward rule was not created",
+        organization,
+      },
+      { status: 500 },
+    );
+  }
+
   return NextResponse.json({
     ok: true,
     mode: "fast_draft_create",
     organization,
+    rewardRule,
     safety: {
       semanticIntakeSkipped: true,
       openaiCalls: false,
       spacesAndRolesSkipped: true,
       locationSkipped: true,
+      defaultRewardRuleCreated: true,
+      pointsWalletTouched: false,
+      pointsTransactionsTouched: false,
     },
   });
 }
