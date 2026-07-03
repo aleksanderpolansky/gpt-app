@@ -201,6 +201,11 @@ export default async function PurchaseConfirmationsPage({
   searchParams,
 }: PurchaseConfirmationsPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
+  const selectedLocale =
+    getSearchParamValue(resolvedSearchParams, "locale") ??
+    getSearchParamValue(resolvedSearchParams, "lang") ??
+    "en";
+  const currentMonthKey = new Date().toISOString().slice(0, 7);
   const requestedOrganizationIdFilter =
     getSearchParamValue(resolvedSearchParams, "organizationId") ??
     getSearchParamValue(resolvedSearchParams, "organization");
@@ -218,6 +223,8 @@ export default async function PurchaseConfirmationsPage({
       initialPurchaseConfirmations={purchaseConfirmations}
       initialOrganizationIdFilter={initialOrganizationIdFilter}
       initialErrorMessage={errorMessage}
+      initialLocale={selectedLocale}
+      initialCurrentMonthKey={currentMonthKey}
     />
   );
 }

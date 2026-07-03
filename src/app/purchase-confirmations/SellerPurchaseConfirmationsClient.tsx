@@ -55,6 +55,8 @@ type SellerPurchaseConfirmationsClientProps = {
   initialPurchaseConfirmations: PurchaseConfirmation[];
   initialOrganizationIdFilter: string | null;
   initialErrorMessage: string | null;
+  initialLocale: string;
+  initialCurrentMonthKey: string;
 };
 
 function getFirstRelatedItem<T>(value: T | T[] | null | undefined) {
@@ -121,7 +123,6 @@ function formatMoney(
   }).format(amount)} ${currency ?? ""}`.trim();
 }
 
-
 function getBrowserPurchaseConfirmationLocale() {
   if (typeof window === "undefined") {
     return "en";
@@ -134,7 +135,6 @@ function getBrowserPurchaseConfirmationLocale() {
     (typeof navigator !== "undefined" ? navigator.language : "en")
   );
 }
-
 
 function getSelectedLocale() {
   if (typeof window === "undefined") {
@@ -153,6 +153,20 @@ function formatPoints(value: number | null | undefined) {
   return new Intl.NumberFormat("pl-PL", {
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function getMonthKeyFromIsoDate(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString().slice(0, 7);
 }
 
 function getStatusLabel(
@@ -244,13 +258,14 @@ export default function SellerPurchaseConfirmationsClient({
   initialPurchaseConfirmations,
   initialOrganizationIdFilter,
   initialErrorMessage,
+  initialLocale,
+  initialCurrentMonthKey,
 }: SellerPurchaseConfirmationsClientProps) {
-  const selectedLocale = getSelectedLocale();
+  const selectedLocale = initialLocale;
   const purchaseText = (
     key: Parameters<typeof getPurchaseConfirmationText>[0],
     params?: Parameters<typeof getPurchaseConfirmationText>[2],
   ) => getPurchaseConfirmationText(key, selectedLocale, params);
-
 
   const [purchaseConfirmations, setPurchaseConfirmations] = useState<
     PurchaseConfirmation[]
@@ -379,7 +394,21 @@ export default function SellerPurchaseConfirmationsClient({
     setOrganizationIdFilter(null);
 
     if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", "/purchase-confirmations");
+      const searchParams = new URLSearchParams();
+
+      if (selectedLocale) {
+        searchParams.set("locale", selectedLocale);
+      }
+
+      const queryString = searchParams.toString();
+
+      window.history.replaceState(
+        null,
+        "",
+        queryString
+          ? `/purchase-confirmations?${queryString}`
+          : "/purchase-confirmations",
+      );
     }
   }
 
@@ -393,6 +422,34 @@ export default function SellerPurchaseConfirmationsClient({
 
   const totalPointsAwarded = visiblePurchaseConfirmations.reduce(
     (sum, item) => {
+      if (item.status !== "confirmed") {
+        return sum;
+      }
+
+      return (
+        sum + (typeof item.points_awarded === "number" ? item.points_awarded : 0)
+      );
+    },
+    0
+  );
+
+  const currentMonthPointsAwarded = visiblePurchaseConfirmations.reduce(
+    (sum, item) => {
+      if (item.status !== "confirmed") {
+        return sum;
+      }
+
+      const decisionMonthKey = getMonthKeyFromIsoDate(
+        item.confirmed_at ??
+          item.last_decision_at ??
+          item.updated_at ??
+          item.created_at,
+      );
+
+      if (decisionMonthKey !== initialCurrentMonthKey) {
+        return sum;
+      }
+
       return (
         sum + (typeof item.points_awarded === "number" ? item.points_awarded : 0)
       );
@@ -406,7 +463,6 @@ export default function SellerPurchaseConfirmationsClient({
         <h1 style={{ fontSize: "32px", marginBottom: "8px" }}>{purchaseText("purchaseConfirmations.seller.title")}</h1>
         <p style={{ color: "#666", fontSize: "16px", lineHeight: "1.5" }}>
           {purchaseText("purchaseConfirmations.seller.description")}
-
 
         </p>
         <p style={{ color: "#777", fontSize: "14px", lineHeight: "1.5" }}>
@@ -550,6 +606,21 @@ export default function SellerPurchaseConfirmationsClient({
             {formatPoints(totalPointsAwarded)}
           </div>
         </div>
+
+        <div
+          style={{
+            border: "1px solid #ddd",
+            borderRadius: "16px",
+            padding: "24px",
+            background: "#fff",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+          }}
+        >
+          <div style={{ color: "#666", marginBottom: "8px" }}>{purchaseText("purchaseConfirmations.seller.pointsCurrentMonthCard")}</div>
+          <div style={{ fontSize: "32px", fontWeight: 700 }}>
+            {formatPoints(currentMonthPointsAwarded)}
+          </div>
+        </div>
       </section>
 
       {actionError ? (
@@ -605,8 +676,6 @@ export default function SellerPurchaseConfirmationsClient({
             <h2 style={{ margin: 0, fontSize: "22px" }}>{purchaseText("purchaseConfirmations.seller.filterTitle")}</h2>
             <p style={{ margin: "6px 0 0", color: "#666", lineHeight: "1.5" }}>
               {purchaseText("purchaseConfirmations.seller.filterDescription")}
-
-
 
             </p>
           </div>
@@ -743,9 +812,6 @@ export default function SellerPurchaseConfirmationsClient({
                                 }))
                               }
                               placeholder={purchaseText("purchaseConfirmations.seller.commentPlaceholder")}
-
-
-
 
                               style={{
                                 padding: "8px 10px",
