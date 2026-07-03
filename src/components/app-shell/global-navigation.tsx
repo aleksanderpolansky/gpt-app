@@ -568,7 +568,7 @@ export function GlobalSidebar({
             label={t("navigation.calendar")}
             depth={1}
             href={localeHref("/calendar")}
-            actionHref={localeHref("/calendar/new")}
+            actionHref={localeHref("/calendar/add")}
             actionTitle={t("navigation.addCalendarEvent")}
           />
           <TreeItem

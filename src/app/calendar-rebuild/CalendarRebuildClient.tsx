@@ -24,6 +24,8 @@ import type { CalendarEvent, CalendarViewMode } from "../../features/calendar-co
 type CalendarRebuildClientProps = {
   initialFocusDateKey: string | null;
   initialLocale: string | null;
+  routeBasePath?: "/calendar" | "/calendar-rebuild";
+  returnToTarget?: "calendar" | "calendar-rebuild";
 };
 
 type UiLocale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
@@ -686,6 +688,8 @@ function getLayerAccentClass(event: CalendarEvent) {
 export default function CalendarRebuildClient({
   initialFocusDateKey,
   initialLocale,
+  routeBasePath = "/calendar-rebuild",
+  returnToTarget = "calendar-rebuild",
 }: CalendarRebuildClientProps) {
   const locale = normalizeLocale(initialLocale);
   const ui = UI[locale];
@@ -706,7 +710,7 @@ export default function CalendarRebuildClient({
     pathname: "/calendar/add",
     query: {
       locale,
-      returnTo: "calendar-rebuild",
+      returnTo: returnToTarget,
       focusDate: dateKey(focusDate),
     },
   };
@@ -800,7 +804,7 @@ export default function CalendarRebuildClient({
     params.set("focusDate", dateKey(nextDate));
     params.set("locale", locale);
 
-    window.history.replaceState(null, "", `/calendar-rebuild?${params.toString()}`);
+    window.history.replaceState(null, "", `${routeBasePath}?${params.toString()}`);
   };
 
   const shiftDate = (amount: number) => {
