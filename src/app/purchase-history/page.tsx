@@ -4,6 +4,9 @@ import { getPurchaseConfirmationText } from "../../i18n/messages/purchase-confir
 const fallbackDash = getPurchaseConfirmationText("purchaseConfirmations.common.dash", "en");
 import { useEffect, useState } from "react";
 
+export const UI_FIX_PURCHASE_HISTORY_HYDRATION_STABLE_LOCALE =
+  "UI_FIX_PURCHASE_HISTORY_HYDRATION_STABLE_LOCALE" as const;
+
 type PublicPurchaseHistoryItem = {
   publicCode: string;
   publicHash: string;
@@ -36,7 +39,6 @@ function formatDate(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
-
 function getSelectedLocale() {
   if (typeof window === "undefined") {
     return "en";
@@ -63,7 +65,11 @@ function formatPoints(value: number | null | undefined) {
 }
 
 export default function PurchaseHistoryPage() {
-  const selectedLocale = getSelectedLocale();
+  const [selectedLocale, setSelectedLocale] = useState("en");
+
+  useEffect(() => {
+    setSelectedLocale(getSelectedLocale());
+  }, []);
   const purchaseText = (
     key: Parameters<typeof getPurchaseConfirmationText>[0],
     params?: Parameters<typeof getPurchaseConfirmationText>[2],
@@ -177,7 +183,7 @@ export default function PurchaseHistoryPage() {
                   >
                     Public purchase history
                   </h1>
-        
+
                   <p
                     style={{
                       margin: 0,
@@ -190,7 +196,7 @@ export default function PurchaseHistoryPage() {
 
                   </p>
                 </header>
-        
+
                 {organizationIdFilter && (
                   <section
                     style={{
@@ -211,7 +217,7 @@ export default function PurchaseHistoryPage() {
                       <strong>{purchaseText("purchaseConfirmations.common.organization")}:</strong>{" "}
                       {activeOrganizationName ?? organizationIdFilter}
                     </div>
-        
+
                     <button
                       type="button"
                       onClick={clearOrganizationFilter}
@@ -229,7 +235,7 @@ export default function PurchaseHistoryPage() {
                     </button>
                   </section>
                 )}
-        
+
                 <section
                   style={{
                     display: "grid",
@@ -254,7 +260,7 @@ export default function PurchaseHistoryPage() {
                       {purchaseHistory.length}
                     </div>
                   </div>
-        
+
                   <div
                     style={{
                       border: "1px solid #bfdbfe",
@@ -273,7 +279,7 @@ export default function PurchaseHistoryPage() {
                     </div>
                   </div>
                 </section>
-        
+
                 {isLoading ? (
                   <section
                     style={{
@@ -341,7 +347,7 @@ export default function PurchaseHistoryPage() {
 
                         </p>
                       </div>
-        
+
                       <button
                         type="button"
                         onClick={() => void loadPurchaseHistory()}
@@ -357,7 +363,7 @@ export default function PurchaseHistoryPage() {
                         {purchaseText("purchaseConfirmations.common.refresh")}
                       </button>
                     </div>
-        
+
                     {purchaseHistory.length === 0 ? (
                       <div style={{ padding: "24px", color: "#666666" }}>
                         {purchaseText("purchaseConfirmations.history.emptyDescription")}
@@ -382,7 +388,7 @@ export default function PurchaseHistoryPage() {
                               <th style={{ padding: "12px 16px" }}>Hash</th>
                             </tr>
                           </thead>
-        
+
                           <tbody>
                             {purchaseHistory.map((item) => (
                               <tr
@@ -397,11 +403,11 @@ export default function PurchaseHistoryPage() {
                                 >
                                   {formatDate(item.purchaseDate)}
                                 </td>
-        
+
                                 <td style={{ padding: "12px 16px", fontWeight: 600 }}>
                                   {item.organizationName}
                                 </td>
-        
+
                                 <td
                                   style={{
                                     padding: "12px 16px",
@@ -411,11 +417,11 @@ export default function PurchaseHistoryPage() {
                                 >
                                   {item.buyerMaskedName}
                                 </td>
-        
+
                                 <td style={{ padding: "12px 16px" }}>
                                   {item.purchaseLabel}
                                 </td>
-        
+
                                 <td
                                   style={{
                                     padding: "12px 16px",
@@ -425,7 +431,7 @@ export default function PurchaseHistoryPage() {
                                 >
                                   {formatPoints(item.pointsAwarded)} {purchaseText("purchaseConfirmations.common.points")}
                                 </td>
-        
+
                                 <td
                                   style={{
                                     padding: "12px 16px",
@@ -435,7 +441,7 @@ export default function PurchaseHistoryPage() {
                                 >
                                   {item.publicCode}
                                 </td>
-        
+
                                 <td
                                   style={{
                                     padding: "12px 16px",
@@ -459,6 +465,3 @@ export default function PurchaseHistoryPage() {
 </div>
   );
 }
-
-
-
