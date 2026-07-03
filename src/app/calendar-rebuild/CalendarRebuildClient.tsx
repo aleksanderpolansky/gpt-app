@@ -699,7 +699,12 @@ export default function CalendarRebuildClient({
   const filterLabels = CALENDAR_FILTERS_UI[locale];
 
   const [view, setView] = useState<CalendarViewMode>("week");
+  const [calendarPresentation, setCalendarPresentation] = useState<"grid" | "list">("grid");
   const [focusDate, setFocusDate] = useState(() => parseDateKey(initialFocusDateKey));
+
+  useEffect(() => {
+    setCalendarPresentation("grid");
+  }, [view]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
@@ -845,6 +850,33 @@ export default function CalendarRebuildClient({
         ? `${dateKey(weekDates[0])} - ${dateKey(weekDates[6])}`
         : formatMonthTitle(focusDate, locale);
   const gridTitle = view === "day" ? ui.day : view === "week" ? ui.week : ui.month;
+  const calendarPresentationCopy = useMemo(() => {
+    if (locale === "ru") {
+      return { grid: "Сетка", list: "Список" };
+    }
+
+    if (locale === "uk") {
+      return { grid: "Сітка", list: "Список" };
+    }
+
+    if (locale === "pl") {
+      return { grid: "Siatka", list: "Lista" };
+    }
+
+    if (locale === "de") {
+      return { grid: "Raster", list: "Liste" };
+    }
+
+    if (locale === "es") {
+      return { grid: "Cuadrícula", list: "Lista" };
+    }
+
+    if (locale === "cs") {
+      return { grid: "Mřížka", list: "Seznam" };
+    }
+
+    return { grid: "Grid", list: "List" };
+  }, [locale]);
 
   return (
     <main style={{ fontFamily: "Inter, system-ui, sans-serif" }} className="min-h-screen px-3 py-5 text-[#1a1d2e] bg-[#f0f2f7]">
@@ -869,8 +901,9 @@ export default function CalendarRebuildClient({
 
         <div className="space-y-4">
         {/* Step 6F dashboard KPI layout */}
+        {/* Step 7B mobile KPI order: stats first on narrow screens, date controls fourth */}
         <section className="grid grid-cols-1 gap-3 xl:grid-cols-4">
-          <div className="min-h-[150px] rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+          <div className="order-4 xl:order-1 min-h-[150px] rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
             <div className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
               {arctorPeriodKicker(view, ui)}
             </div>
@@ -921,7 +954,7 @@ export default function CalendarRebuildClient({
             </div>
           </div>
 
-          <div className="min-h-[150px] rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+          <div className="order-1 xl:order-2 min-h-[150px] rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
             <div className="flex items-start justify-between">
               <div className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
                 {statsUi.visibleEvents}
@@ -944,7 +977,7 @@ export default function CalendarRebuildClient({
             </div>
           </div>
 
-          <div className="min-h-[150px] rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+          <div className="order-2 xl:order-3 min-h-[150px] rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
             <div className="flex items-start justify-between">
               <div className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
                 {statsUi.calendarEvents}
@@ -966,7 +999,7 @@ export default function CalendarRebuildClient({
             </div>
           </div>
 
-          <div className="min-h-[150px] rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+          <div className="order-3 xl:order-4 min-h-[150px] rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
             <div className="flex items-start justify-between">
               <div className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
                 {statsUi.timeBlocks}
@@ -1011,6 +1044,7 @@ export default function CalendarRebuildClient({
 
       <section className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
         {/* Step 6F calendar grid shell */}
+        {/* Step 7C grid/list presentation switch */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-[11px] font-medium uppercase tracking-wide text-[#3b6ef8]">
@@ -1020,10 +1054,28 @@ export default function CalendarRebuildClient({
               {arctorFormatPeriodLabel(view, focusDate, locale)}
             </div>
           </div>
+
+          <div className="inline-flex rounded-full border border-[#d8deef] bg-white p-1 shadow-sm">
+            {(["grid", "list"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setCalendarPresentation(mode)}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-xs font-bold transition",
+                  calendarPresentation === mode
+                    ? "bg-[#3b6ef8] text-white shadow-sm"
+                    : "text-[#667091] hover:bg-[#f4f6fb]",
+                )}
+              >
+                {calendarPresentationCopy[mode]}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Step 7A mobile agenda surface */}
-        <div className="mb-4 space-y-2 md:hidden">
+        <div className={cn("mb-4 space-y-2", calendarPresentation === "list" ? "block" : "hidden")}>
           <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#fbfcff] p-3">
             <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#3b6ef8]">
               {gridTitle}
@@ -1086,7 +1138,7 @@ export default function CalendarRebuildClient({
         </div>
 
         {view === "day" ? (
-            <div className="relative hidden overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] md:block">
+            <div className={cn("relative overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)]", calendarPresentation === "grid" ? "block" : "hidden")}>
               {hours.map((hour) => (
                 <div
                   key={hour}
@@ -1126,7 +1178,7 @@ export default function CalendarRebuildClient({
           ) : null}
 
           {view === "week" ? (
-            <div className="hidden overflow-x-auto rounded-xl border border-[rgba(0,0,0,0.06)] md:block">
+            <div className={cn("overflow-x-auto rounded-xl border border-[rgba(0,0,0,0.06)]", calendarPresentation === "grid" ? "block" : "hidden")}>
               <div className="min-w-[1080px]">
                 <div className="grid border-b border-[#eef1f7]" style={{ gridTemplateColumns: `${timeGutterWidth}px repeat(7, minmax(132px, 1fr))` }}>
                   <div className="border-r border-[#eef1f7] bg-[#fbfcff] p-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
@@ -1210,7 +1262,7 @@ export default function CalendarRebuildClient({
           ) : null}
 
           {view === "month" ? (
-            <div className="hidden grid-cols-7 overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] md:grid">
+            <div className={cn("overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)]", calendarPresentation === "grid" ? "grid grid-cols-7" : "hidden")}>
               {monthDates.map((day) => {
                 const dayEvents = getEventsForDate(visibleEvents, day);
 
