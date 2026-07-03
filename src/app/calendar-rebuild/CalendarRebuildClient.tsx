@@ -298,6 +298,72 @@ const DETAIL_UI: Record<UiLocale, {
   },
 };
 
+const ANALYTICS_PLACEHOLDER_UI: Record<UiLocale, {
+  title: string;
+  heading: string;
+  subtitle: string;
+  visibleEvents: string;
+  timeBlocks: string;
+  futureMetric: string;
+}> = {
+  en: {
+    title: "Analytics",
+    heading: "Future analytics block",
+    subtitle: "A time, workload and activity-context diagram will appear here later.",
+    visibleEvents: "visible events",
+    timeBlocks: "time blocks",
+    futureMetric: "time balance",
+  },
+  pl: {
+    title: "Analityka",
+    heading: "Przyszly blok analityczny",
+    subtitle: "Pozniej pojawi sie tutaj diagram czasu, obciazenia i kontekstu aktywnosci.",
+    visibleEvents: "widoczne zapisy",
+    timeBlocks: "bloki czasu",
+    futureMetric: "bilans czasu",
+  },
+  ru: {
+    title: "\u0410\u043d\u0430\u043b\u0438\u0442\u0438\u043a\u0430",
+    heading: "\u0411\u0443\u0434\u0443\u0449\u0438\u0439 \u0430\u043d\u0430\u043b\u0438\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u0431\u043b\u043e\u043a",
+    subtitle: "\u0417\u0434\u0435\u0441\u044c \u043f\u043e\u0437\u0436\u0435 \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f \u0434\u0438\u0430\u0433\u0440\u0430\u043c\u043c\u0430 \u0432\u0440\u0435\u043c\u0435\u043d\u0438, \u043d\u0430\u0433\u0440\u0443\u0437\u043a\u0438 \u0438 \u0441\u0432\u044f\u0437\u0435\u0439 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438.",
+    visibleEvents: "\u0432\u0438\u0434\u0438\u043c\u044b\u0435 \u0437\u0430\u043f\u0438\u0441\u0438",
+    timeBlocks: "\u0431\u043b\u043e\u043a\u0438 \u0432\u0440\u0435\u043c\u0435\u043d\u0438",
+    futureMetric: "\u0431\u0430\u043b\u0430\u043d\u0441 \u0432\u0440\u0435\u043c\u0435\u043d\u0438",
+  },
+  uk: {
+    title: "\u0410\u043d\u0430\u043b\u0456\u0442\u0438\u043a\u0430",
+    heading: "\u041c\u0430\u0439\u0431\u0443\u0442\u043d\u0456\u0439 \u0430\u043d\u0430\u043b\u0456\u0442\u0438\u0447\u043d\u0438\u0439 \u0431\u043b\u043e\u043a",
+    subtitle: "\u0422\u0443\u0442 \u043f\u0456\u0437\u043d\u0456\u0448\u0435 \u0437\u0027\u044f\u0432\u0438\u0442\u044c\u0441\u044f \u0434\u0456\u0430\u0433\u0440\u0430\u043c\u0430 \u0447\u0430\u0441\u0443, \u043d\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0435\u043d\u043d\u044f \u0456 \u0437\u0432\u0027\u044f\u0437\u043a\u0456\u0432 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0456.",
+    visibleEvents: "\u0432\u0438\u0434\u0438\u043c\u0456 \u0437\u0430\u043f\u0438\u0441\u0438",
+    timeBlocks: "\u0431\u043b\u043e\u043a\u0438 \u0447\u0430\u0441\u0443",
+    futureMetric: "\u0431\u0430\u043b\u0430\u043d\u0441 \u0447\u0430\u0441\u0443",
+  },
+  de: {
+    title: "Analyse",
+    heading: "Zukuenftiger Analyseblock",
+    subtitle: "Hier erscheint spaeter ein Diagramm zu Zeit, Belastung und Aktivitaetskontext.",
+    visibleEvents: "sichtbare Eintraege",
+    timeBlocks: "Zeitbloecke",
+    futureMetric: "Zeitbilanz",
+  },
+  es: {
+    title: "Analitica",
+    heading: "Bloque analitico futuro",
+    subtitle: "Mas adelante aparecera aqui un diagrama de tiempo, carga y contexto de actividad.",
+    visibleEvents: "eventos visibles",
+    timeBlocks: "bloques de tiempo",
+    futureMetric: "balance de tiempo",
+  },
+  cs: {
+    title: "Analytika",
+    heading: "Budouci analyticky blok",
+    subtitle: "Pozdeji se zde objevi diagram casu, zateze a kontextu aktivit.",
+    visibleEvents: "viditelne zaznamy",
+    timeBlocks: "casove bloky",
+    futureMetric: "casova bilance",
+  },
+};
+
 const hourStart = 6;
 const hourEnd = 23;
 const hourHeight = 64;
@@ -485,6 +551,7 @@ export default function CalendarRebuildClient({
   const locale = normalizeLocale(initialLocale);
   const ui = UI[locale];
   const detailUi = DETAIL_UI[locale];
+  const analyticsUi = ANALYTICS_PLACEHOLDER_UI[locale];
 
   const [view, setView] = useState<CalendarViewMode>("week");
   const [focusDate, setFocusDate] = useState(() => parseDateKey(initialFocusDateKey));
@@ -655,116 +722,37 @@ export default function CalendarRebuildClient({
           </div>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[1fr_340px]">
-          <div className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#9ca3af]">
-                  {periodLabel}
-                </div>
-                <h2 className="mt-1 text-xl font-bold capitalize">
-                  {periodTitle}
-                </h2>
+        <section className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+          {/* Step 6C analytics placeholder */}
+          <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#98a2b3]">
+            {analyticsUi.title}
+          </div>
+          <div className="mt-2 text-lg font-bold">{analyticsUi.heading}</div>
+          <p className="mt-2 text-sm leading-relaxed text-[#667085]">{analyticsUi.subtitle}</p>
 
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className="rounded-lg border px-3 py-1.5 text-sm font-bold"
-                    onClick={() => shiftDate(-1)}
-                  >
-                    {"<"}
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-lg border border-[#4169f5]/30 bg-[#eef2ff] px-3 py-1.5 text-sm font-bold text-[#4169f5]"
-                    onClick={() => updateFocusDate(new Date())}
-                  >
-                    {ui.today}
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-lg border px-3 py-1.5 text-sm font-bold"
-                    onClick={() => shiftDate(1)}
-                  >
-                    {">"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                {(["day", "week", "month"] as CalendarViewMode[]).map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => setView(item)}
-                    className={cn(
-                      "rounded-lg border px-3 py-1.5 text-sm font-bold",
-                      view === item
-                        ? "border-[#4169f5] bg-[#4169f5] text-white"
-                        : "border-[#e5e7eb] bg-white text-[#667085]",
-                    )}
-                  >
-                    {item === "day" ? ui.day : item === "week" ? ui.week : ui.month}
-                  </button>
-                ))}
-              </div>
+          <div className="mt-4 rounded-xl border border-dashed border-[#d6e0ff] bg-[#f8faff] p-3">
+            <div className="flex h-24 items-end gap-2">
+              <div className="w-full rounded-t-lg bg-[#dbe4ff]" style={{ height: "34%" }} />
+              <div className="w-full rounded-t-lg bg-[#c9d7ff]" style={{ height: "58%" }} />
+              <div className="w-full rounded-t-lg bg-[#b6c9ff]" style={{ height: "44%" }} />
+              <div className="w-full rounded-t-lg bg-[#a8bfff]" style={{ height: "72%" }} />
+              <div className="w-full rounded-t-lg bg-[#dbe4ff]" style={{ height: "40%" }} />
+            </div>
+            <div className="mt-2 text-xs font-bold uppercase tracking-[0.18em] text-[#4169f5]">
+              {analyticsUi.futureMetric}
             </div>
           </div>
 
-          <aside className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#9ca3af]">
-              {ui.selectedEvent}
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[#667085]">
+            <div className="rounded-xl border border-[#e5e7eb] bg-[#fbfcff] p-3">
+              <div className="text-lg font-bold text-[#111827]">{visibleEvents.length}</div>
+              <div>{analyticsUi.visibleEvents}</div>
             </div>
-            {selectedEvent ? (
-              <div className="mt-3 space-y-3">
-                <div>
-                  <div className="text-base font-bold">
-                    {getEventDisplayTitle(selectedEvent) || selectedEvent.title}
-                  </div>
-                  <div className="mt-1 text-sm font-medium text-[#667085]">
-                    {formatEventDateTimeRange(selectedEvent, locale)}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-[#e5e7eb] bg-[#f8faff] p-3 text-xs text-[#667085]">
-                  <div className="font-bold text-[#111827]">{detailUi.time}</div>
-                  <div className="mt-1">{formatTimeRange(selectedEvent)}</div>
-                </div>
-
-                <div className="rounded-xl border border-[#e5e7eb] bg-white p-3 text-xs text-[#667085]">
-                  <div className="font-bold text-[#111827]">{detailUi.description}</div>
-                  <div className="mt-2 whitespace-pre-wrap leading-relaxed">
-                    {getEventDescription(selectedEvent) || detailUi.noDescription}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-[#e5e7eb] bg-[#fbfcff] p-3 text-xs text-[#667085]">
-                  {detailUi.status}: {selectedEvent.status}<br />
-                  {ui.source}: {selectedEvent.source}<br />
-                  {ui.kind}: {selectedEvent.kind}<br />
-                  {ui.layer}: {selectedEvent.layer}<br />
-                  {detailUi.privacy}: {selectedEvent.isPrivate ? detailUi.privateLabel : detailUi.publicLabel}
-                </div>
-              </div>
-            ) : (
-              <p className="mt-3 text-sm text-[#667085]">
-                {ui.clickEvent}
-              </p>
-            )}
-
-            <div className="mt-4 rounded-xl border border-[#e5e7eb] bg-[#fbfcff] p-3 text-xs text-[#667085]">
-              {isLoadingEvents ? ui.loadingEvents : `${visibleEvents.length} ${ui.visibleEvents}`}
-              <br />
-              {ui.calendarEvents}: {sourceCounts.calendarEvents}
-              <br />
-              {ui.timeBlocks}: {sourceCounts.timeBlocks}
-              {eventsError ? (
-                <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-2 text-red-700">
-                  {eventsError}
-                </div>
-              ) : null}
+            <div className="rounded-xl border border-[#e5e7eb] bg-[#fbfcff] p-3">
+              <div className="text-lg font-bold text-[#111827]">{sourceCounts.timeBlocks}</div>
+              <div>{analyticsUi.timeBlocks}</div>
             </div>
-          </aside>
+          </div>
         </section>
 
         <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
