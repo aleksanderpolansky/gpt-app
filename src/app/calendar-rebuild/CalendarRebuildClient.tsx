@@ -36,14 +36,19 @@ type CalendarEventsResponse = {
   };
 };
 
-const hourStart = 6;
-const hourEnd = 22;
-const hourHeight = 64;
+type PositionedEvent = {
+  event: CalendarEvent;
+  top: number;
+  height: number;
+};
 
-const hours = Array.from(
-  { length: hourEnd - hourStart + 1 },
-  (_, index) => hourStart + index,
-);
+const hourStart = 6;
+const hourEnd = 23;
+const hourHeight = 64;
+const timeGutterWidth = 76;
+const minEventHeight = 32;
+
+const hours = Array.from({ length: hourEnd - hourStart }, (_, index) => hourStart + index);
 
 function cn(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -72,6 +77,53 @@ function getEventsForDate(events: CalendarEvent[], value: Date) {
 
 function buildEventLabel(event: CalendarEvent) {
   return `${formatTimeRange(event)}, ${event.title}`;
+}
+
+function getTimelineHeight() {
+  return (hourEnd - hourStart) * hourHeight;
+}
+
+function getEventTop(event: CalendarEvent) {
+  const start = eventStartDate(event);
+  const minutesFromStart = (start.getHours() - hourStart) * 60 + start.getMinutes();
+
+  return Math.max(0, (minutesFromStart / 60) * hourHeight);
+}
+
+function getEventHeight(event: CalendarEvent, top: number) {
+  const rawHeight = Math.max(minEventHeight, (eventDurationMinutes(event) / 60) * hourHeight);
+  const maxHeight = Math.max(minEventHeight, getTimelineHeight() - top);
+
+  return Math.min(rawHeight, maxHeight);
+}
+
+function positionEvents(events: CalendarEvent[]) {
+  return events.map((event): PositionedEvent => {
+    const top = getEventTop(event);
+    const height = getEventHeight(event, top);
+
+    return { event, top, height };
+  });
+}
+
+function getLayerAccentClass(event: CalendarEvent) {
+  if (event.layer === "work") {
+    return "border-emerald-300 bg-emerald-50";
+  }
+
+  if (event.layer === "business") {
+    return "border-orange-300 bg-orange-50";
+  }
+
+  if (event.layer === "health") {
+    return "border-rose-300 bg-rose-50";
+  }
+
+  if (event.kind === "candidate") {
+    return "border-amber-300 bg-amber-50";
+  }
+
+  return "border-[#4169f5]/30 bg-[#eef2ff]";
 }
 
 export default function CalendarRebuildClient({
@@ -185,22 +237,20 @@ export default function CalendarRebuildClient({
     updateFocusDate(addDays(focusDate, amount));
   };
 
-  const dayTimelineEvents = useMemo(() => {
-    const dayEvents = getEventsForDate(visibleEvents, focusDate);
-    const totalTimelineHeight = (hourEnd - hourStart + 1) * hourHeight;
+  const dayTimelineEvents = useMemo(
+    () => positionEvents(getEventsForDate(visibleEvents, focusDate)),
+    [focusDate, visibleEvents],
+  );
 
-    return dayEvents.map((event) => {
-      const start = eventStartDate(event);
-      const rawTop =
-        (((start.getHours() - hourStart) * 60 + start.getMinutes()) / 60) *
-        hourHeight;
-      const top = Math.max(0, rawTop);
-      const rawHeight = Math.max(32, (eventDurationMinutes(event) / 60) * hourHeight);
-      const height = Math.min(rawHeight, Math.max(32, totalTimelineHeight - top));
+  const weekTimelineEventsByDay = useMemo(() => {
+    const grouped = new Map<string, PositionedEvent[]>();
 
-      return { event, top, height };
-    });
-  }, [focusDate, visibleEvents]);
+    for (const day of weekDates) {
+      grouped.set(dateKey(day), positionEvents(getEventsForDate(visibleEvents, day)));
+    }
+
+    return grouped;
+  }, [visibleEvents, weekDates]);
 
   return (
     <main className="min-h-screen bg-[#f3f5fb] px-4 py-6 text-[#111827]">
@@ -209,11 +259,11 @@ export default function CalendarRebuildClient({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#4f6df5]">
-                Calendar Rebuild / Real Read Model
+                Calendar Rebuild / Time Grid Model
               </div>
               <h1 className="mt-2 text-3xl font-bold">{"\u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c"}</h1>
               <p className="mt-1 text-sm text-[#667085]">
-                Read-only calendar service foundation connected to calendar_events and time_blocks.
+                Duration-based day and week calendar connected to calendar_events and time_blocks.
               </p>
             </div>
 
@@ -332,7 +382,7 @@ export default function CalendarRebuildClient({
                 {hours.map((hour) => (
                   <div
                     key={hour}
-                    className="grid grid-cols-[80px_1fr] border-b border-[#eef1f7] last:border-b-0"
+                    className="grid grid-cols-[76px_1fr] border-b border-[#eef1f7] last:border-b-0"
                     style={{ height: `${hourHeight}px` }}
                   >
                     <div className="border-r border-[#eef1f7] bg-[#fbfcff] px-3 py-2 text-xs font-bold text-[#98a2b3]">
@@ -351,11 +401,14 @@ export default function CalendarRebuildClient({
                     key={event.id}
                     type="button"
                     onClick={() => setSelectedEventId(event.id)}
-                    className="absolute z-10 overflow-hidden rounded-lg border border-[#4169f5]/25 bg-[#eef2ff] px-3 py-2 text-left text-xs font-bold text-[#111827] shadow-sm"
+                    className={cn(
+                      "absolute z-10 overflow-hidden rounded-lg px-3 py-2 text-left text-xs font-bold text-[#111827] shadow-sm",
+                      getLayerAccentClass(event),
+                    )}
                     style={{
                       top: `${top}px`,
                       height: `${height}px`,
-                      left: "92px",
+                      left: `${timeGutterWidth + 12}px`,
                       right: "12px",
                     }}
                   >
@@ -371,40 +424,92 @@ export default function CalendarRebuildClient({
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#4f6df5]">week</div>
-                  <h3 className="font-bold">Working week</h3>
+                  <h3 className="font-bold">Working week time grid</h3>
                 </div>
                 <div className="text-sm font-bold">
                   {dateKey(weekDates[0])} - {dateKey(weekDates[6])}
                 </div>
               </div>
 
-              <div className="grid grid-cols-7 overflow-hidden rounded-xl border border-[#e5e7eb]">
-                {weekDates.map((day) => {
-                  const dayEvents = getEventsForDate(visibleEvents, day);
+              <div className="overflow-x-auto rounded-xl border border-[#e5e7eb]">
+                <div className="min-w-[960px]">
+                  <div className="grid border-b border-[#eef1f7]" style={{ gridTemplateColumns: `${timeGutterWidth}px repeat(7, minmax(120px, 1fr))` }}>
+                    <div className="border-r border-[#eef1f7] bg-[#fbfcff] p-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#98a2b3]">
+                      Time
+                    </div>
+                    {weekDates.map((day) => (
+                      <button
+                        key={dateKey(day)}
+                        type="button"
+                        onClick={() => updateFocusDate(day)}
+                        className={cn(
+                          "border-r border-[#eef1f7] p-3 text-left last:border-r-0 hover:bg-[#f8faff]",
+                          isSameDate(day, focusDate) && "bg-[#eef2ff]",
+                        )}
+                      >
+                        <div className="text-xs font-bold uppercase text-[#98a2b3]">{formatShortDay(day)}</div>
+                        <div className="mt-1 text-xl font-bold">{day.getDate()}</div>
+                      </button>
+                    ))}
+                  </div>
 
-                  return (
-                    <button
-                      key={dateKey(day)}
-                      type="button"
-                      onClick={() => updateFocusDate(day)}
-                      className={cn(
-                        "min-h-[280px] border-r border-[#eef1f7] p-3 text-left last:border-r-0 hover:bg-[#f8faff]",
-                        isSameDate(day, focusDate) && "bg-[#eef2ff]",
-                      )}
-                    >
-                      <div className="text-xs font-bold uppercase text-[#98a2b3]">{formatShortDay(day)}</div>
-                      <div className="mt-1 text-2xl font-bold">{day.getDate()}</div>
-
-                      <div className="mt-4 space-y-2">
-                        {dayEvents.map((event) => (
-                          <div key={event.id} className="rounded-lg border border-[#4169f5]/25 bg-white px-2 py-2 text-xs font-bold">
-                            {buildEventLabel(event)}
+                  <div className="relative" style={{ height: `${getTimelineHeight()}px` }}>
+                    <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `${timeGutterWidth}px repeat(7, minmax(120px, 1fr))` }}>
+                      <div className="border-r border-[#eef1f7] bg-[#fbfcff]">
+                        {hours.map((hour) => (
+                          <div
+                            key={hour}
+                            className="border-b border-[#eef1f7] px-3 py-2 text-xs font-bold text-[#98a2b3]"
+                            style={{ height: `${hourHeight}px` }}
+                          >
+                            {String(hour).padStart(2, "0")}:00
                           </div>
                         ))}
                       </div>
-                    </button>
-                  );
-                })}
+
+                      {weekDates.map((day) => (
+                        <div
+                          key={dateKey(day)}
+                          className={cn(
+                            "relative border-r border-[#eef1f7] last:border-r-0",
+                            isSameDate(day, focusDate) && "bg-[#f1f4ff]",
+                          )}
+                        >
+                          {hours.map((hour) => (
+                            <div
+                              key={hour}
+                              className="border-b border-[#eef1f7]"
+                              style={{ height: `${hourHeight}px` }}
+                            />
+                          ))}
+
+                          {(weekTimelineEventsByDay.get(dateKey(day)) ?? []).map(({ event, top, height }) => (
+                            <button
+                              key={event.id}
+                              type="button"
+                              onClick={(clickEvent) => {
+                                clickEvent.stopPropagation();
+                                setSelectedEventId(event.id);
+                                setFocusDate(day);
+                              }}
+                              className={cn(
+                                "absolute left-1 right-1 z-10 overflow-hidden rounded-lg px-2 py-1 text-left text-[11px] font-bold leading-tight text-[#111827] shadow-sm",
+                                getLayerAccentClass(event),
+                              )}
+                              style={{
+                                top: `${top}px`,
+                                height: `${height}px`,
+                              }}
+                              title={buildEventLabel(event)}
+                            >
+                              {buildEventLabel(event)}
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           ) : null}
@@ -439,7 +544,13 @@ export default function CalendarRebuildClient({
                       <div className="text-xs font-bold">{day.getDate()}</div>
                       <div className="mt-2 space-y-1">
                         {dayEvents.slice(0, 3).map((event) => (
-                          <div key={event.id} className="truncate rounded-md bg-[#eef2ff] px-2 py-1 text-[11px] font-bold text-[#111827]">
+                          <div
+                            key={event.id}
+                            className={cn(
+                              "truncate rounded-md border px-2 py-1 text-[11px] font-bold text-[#111827]",
+                              getLayerAccentClass(event),
+                            )}
+                          >
                             {buildEventLabel(event)}
                           </div>
                         ))}
