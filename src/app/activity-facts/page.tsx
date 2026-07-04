@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { CSSProperties } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+
+type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
 type FactMetricValue = number | string | boolean | null;
 
@@ -29,181 +31,450 @@ type ActivityFact = {
 
 type FactsApiResponse = {
   ok?: boolean;
-  endpoint?: string;
-  readStatus?: string;
   facts?: ActivityFact[];
   count?: number;
-  filters?: Record<string, unknown>;
-  ownership?: Record<string, unknown>;
-  schemaMode?: Record<string, unknown>;
-  sideEffects?: Record<string, unknown>;
-  errorCode?: string;
   errorMessage?: string;
 };
 
-type LoadState =
-  | {
-      status: "idle" | "loading";
-      message: string;
-      response: FactsApiResponse | null;
-    }
-  | {
-      status: "success" | "error";
-      message: string;
-      response: FactsApiResponse | null;
-    };
-
-const pageStyle: CSSProperties = {
-  minHeight: "100vh",
-  background: "#f1f5f9",
-  padding: "24px",
+type LoadState = {
+  status: "idle" | "loading" | "success" | "error";
+  message: string;
+  response: FactsApiResponse | null;
 };
 
-const shellStyle: CSSProperties = {
-  maxWidth: "1160px",
-  margin: "0 auto",
-  display: "flex",
-  flexDirection: "column",
-  gap: "18px",
+type ActivityFactsCopy = {
+  pageTitle: string;
+  pageSubtitle: string;
+  refresh: string;
+  filters: string;
+  filtersSubtitle: string;
+  limit: string;
+  semanticKey: string;
+  valueObjectId: string;
+  activityId: string;
+  status: string;
+  allStatuses: string;
+  apply: string;
+  reset: string;
+  loading: string;
+  loaded: string;
+  empty: string;
+  errorLoad: string;
+  summaryAll: string;
+  summaryConfirmed: string;
+  summaryProposed: string;
+  summaryOther: string;
+  confirmedTitle: string;
+  confirmedSubtitle: string;
+  proposedTitle: string;
+  proposedSubtitle: string;
+  otherTitle: string;
+  otherSubtitle: string;
+  noFactsInGroup: string;
+  ids: string;
+  semantic: string;
+  measure: string;
+  actions: string;
+  details: string;
+  factActivity: string;
+  valueObject: string;
+  selectedFact: string;
+  selectedHint: string;
+  type: string;
+  value: string;
+  unit: string;
+  createdAt: string;
+  source: string;
+  confidence: string;
+  factStatusLabels: Record<string, string>;
 };
 
-const cardStyle: CSSProperties = {
-  border: "1px solid #e2e8f0",
-  borderRadius: "24px",
-  background: "#ffffff",
-  boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
+const SUPPORTED_LOCALES: Locale[] = ["en", "pl", "ru", "uk", "de", "es", "cs"];
+
+const COPY: Record<Locale, ActivityFactsCopy> = {
+  en: {
+    pageTitle: "Activity facts",
+    pageSubtitle: "Saved facts extracted from past and planned activity containers.",
+    refresh: "Refresh",
+    filters: "Filters",
+    filtersSubtitle: "Narrow the list by semantic key, value object, activity, or status.",
+    limit: "Limit",
+    semanticKey: "Semantic key",
+    valueObjectId: "Value object ID",
+    activityId: "Activity ID",
+    status: "Status",
+    allStatuses: "All statuses",
+    apply: "Apply filters",
+    reset: "Reset",
+    loading: "Loading facts...",
+    loaded: "Facts loaded.",
+    empty: "No facts match the current filters.",
+    errorLoad: "Could not load activity facts.",
+    summaryAll: "All facts",
+    summaryConfirmed: "Past confirmed",
+    summaryProposed: "Planned facts",
+    summaryOther: "Other",
+    confirmedTitle: "Past confirmed facts",
+    confirmedSubtitle: "Facts from completed activity containers.",
+    proposedTitle: "Planned and prognostic facts",
+    proposedSubtitle: "Facts from future calendar activity containers.",
+    otherTitle: "Other facts",
+    otherSubtitle: "Facts waiting for review, rejected, superseded, or using another status.",
+    noFactsInGroup: "No facts in this group.",
+    ids: "IDs",
+    semantic: "Semantic",
+    measure: "Measure",
+    actions: "Actions",
+    details: "Details",
+    factActivity: "Fact / activity",
+    valueObject: "Value object",
+    selectedFact: "Selected fact",
+    selectedHint: "Select a row to see the fact details.",
+    type: "Type",
+    value: "Value",
+    unit: "Unit",
+    createdAt: "Created at",
+    source: "Source",
+    confidence: "Confidence",
+    factStatusLabels: {
+      confirmed: "confirmed",
+      proposed: "proposed",
+      pending_review: "pending review",
+      rejected: "rejected",
+      superseded: "superseded",
+    },
+  },
+  pl: {
+    pageTitle: "Tabela faktów aktywności",
+    pageSubtitle: "Zapisane fakty wyodrębnione z wykonanych i planowanych kontenerów aktywności.",
+    refresh: "Odśwież",
+    filters: "Filtry",
+    filtersSubtitle: "Zawęź listę według klucza semantycznego, obiektu wartości, aktywności albo statusu.",
+    limit: "Limit",
+    semanticKey: "Klucz semantyczny",
+    valueObjectId: "ID obiektu wartości",
+    activityId: "ID aktywności",
+    status: "Status",
+    allStatuses: "Wszystkie statusy",
+    apply: "Zastosuj filtry",
+    reset: "Wyczyść",
+    loading: "Ładuję fakty...",
+    loaded: "Fakty załadowane.",
+    empty: "Brak faktów dla bieżących filtrów.",
+    errorLoad: "Nie udało się załadować faktów aktywności.",
+    summaryAll: "Wszystkie fakty",
+    summaryConfirmed: "Potwierdzone z przeszłości",
+    summaryProposed: "Planowane fakty",
+    summaryOther: "Inne",
+    confirmedTitle: "Potwierdzone fakty z przeszłości",
+    confirmedSubtitle: "Fakty z wykonanych kontenerów aktywności.",
+    proposedTitle: "Planowane i prognostyczne fakty",
+    proposedSubtitle: "Fakty z przyszłych kontenerów aktywności w kalendarzu.",
+    otherTitle: "Inne fakty",
+    otherSubtitle: "Fakty oczekujące na przegląd, odrzucone, zastąpione albo z innym statusem.",
+    noFactsInGroup: "Brak faktów w tej grupie.",
+    ids: "ID",
+    semantic: "Semantyka",
+    measure: "Miara",
+    actions: "Akcje",
+    details: "Szczegóły",
+    factActivity: "Fakt / aktywność",
+    valueObject: "Obiekt wartości",
+    selectedFact: "Wybrany fakt",
+    selectedHint: "Wybierz wiersz, aby zobaczyć szczegóły faktu.",
+    type: "Typ",
+    value: "Wartość",
+    unit: "Jednostka",
+    createdAt: "Utworzono",
+    source: "Źródło",
+    confidence: "Pewność",
+    factStatusLabels: {
+      confirmed: "potwierdzony",
+      proposed: "planowany",
+      pending_review: "do przeglądu",
+      rejected: "odrzucony",
+      superseded: "zastąpiony",
+    },
+  },
+  ru: {
+    pageTitle: "Таблица фактов активности",
+    pageSubtitle: "Сохранённые факты, извлечённые из выполненных и плановых контейнеров активности.",
+    refresh: "Обновить",
+    filters: "Фильтры",
+    filtersSubtitle: "Сузь список по семантическому ключу, ценному объекту, активности или статусу.",
+    limit: "Лимит",
+    semanticKey: "Семантический ключ",
+    valueObjectId: "ID ценного объекта",
+    activityId: "ID активности",
+    status: "Статус",
+    allStatuses: "Все статусы",
+    apply: "Применить фильтры",
+    reset: "Сбросить",
+    loading: "Загружаю факты...",
+    loaded: "Факты загружены.",
+    empty: "Для текущих фильтров фактов нет.",
+    errorLoad: "Не удалось загрузить факты активности.",
+    summaryAll: "Все факты",
+    summaryConfirmed: "Подтверждённые прошлые",
+    summaryProposed: "Плановые факты",
+    summaryOther: "Прочие",
+    confirmedTitle: "Подтверждённые факты прошлого",
+    confirmedSubtitle: "Факты из выполненных контейнеров активности.",
+    proposedTitle: "Плановые и прогнозные факты",
+    proposedSubtitle: "Факты из будущих календарных контейнеров активности.",
+    otherTitle: "Прочие факты",
+    otherSubtitle: "Факты на проверке, отклонённые, заменённые или с другим статусом.",
+    noFactsInGroup: "В этой группе фактов нет.",
+    ids: "ID",
+    semantic: "Семантика",
+    measure: "Измерение",
+    actions: "Действия",
+    details: "Детали",
+    factActivity: "Факт / активность",
+    valueObject: "Ценный объект",
+    selectedFact: "Выбранный факт",
+    selectedHint: "Выбери строку, чтобы увидеть детали факта.",
+    type: "Тип",
+    value: "Значение",
+    unit: "Единица",
+    createdAt: "Создано",
+    source: "Источник",
+    confidence: "Уверенность",
+    factStatusLabels: {
+      confirmed: "подтверждён",
+      proposed: "плановый",
+      pending_review: "на проверке",
+      rejected: "отклонён",
+      superseded: "заменён",
+    },
+  },
+  uk: {
+    pageTitle: "Таблиця фактів активності",
+    pageSubtitle: "Збережені факти, витягнуті з виконаних і планових контейнерів активності.",
+    refresh: "Оновити",
+    filters: "Фільтри",
+    filtersSubtitle: "Звузь список за семантичним ключем, цінним об’єктом, активністю або статусом.",
+    limit: "Ліміт",
+    semanticKey: "Семантичний ключ",
+    valueObjectId: "ID цінного об’єкта",
+    activityId: "ID активності",
+    status: "Статус",
+    allStatuses: "Усі статуси",
+    apply: "Застосувати фільтри",
+    reset: "Скинути",
+    loading: "Завантажую факти...",
+    loaded: "Факти завантажено.",
+    empty: "Для поточних фільтрів фактів немає.",
+    errorLoad: "Не вдалося завантажити факти активності.",
+    summaryAll: "Усі факти",
+    summaryConfirmed: "Підтверджені минулі",
+    summaryProposed: "Планові факти",
+    summaryOther: "Інші",
+    confirmedTitle: "Підтверджені факти минулого",
+    confirmedSubtitle: "Факти з виконаних контейнерів активності.",
+    proposedTitle: "Планові та прогнозні факти",
+    proposedSubtitle: "Факти з майбутніх календарних контейнерів активності.",
+    otherTitle: "Інші факти",
+    otherSubtitle: "Факти на перевірці, відхилені, замінені або з іншим статусом.",
+    noFactsInGroup: "У цій групі фактів немає.",
+    ids: "ID",
+    semantic: "Семантика",
+    measure: "Вимір",
+    actions: "Дії",
+    details: "Деталі",
+    factActivity: "Факт / активність",
+    valueObject: "Цінний об’єкт",
+    selectedFact: "Вибраний факт",
+    selectedHint: "Вибери рядок, щоб побачити деталі факту.",
+    type: "Тип",
+    value: "Значення",
+    unit: "Одиниця",
+    createdAt: "Створено",
+    source: "Джерело",
+    confidence: "Впевненість",
+    factStatusLabels: {
+      confirmed: "підтверджено",
+      proposed: "плановий",
+      pending_review: "на перевірці",
+      rejected: "відхилено",
+      superseded: "замінено",
+    },
+  },
+  de: {
+    pageTitle: "Aktivitätsfakten",
+    pageSubtitle: "Gespeicherte Fakten aus erledigten und geplanten Aktivitätscontainern.",
+    refresh: "Aktualisieren",
+    filters: "Filter",
+    filtersSubtitle: "Liste nach semantischem Schlüssel, Wertobjekt, Aktivität oder Status eingrenzen.",
+    limit: "Limit",
+    semanticKey: "Semantischer Schlüssel",
+    valueObjectId: "Wertobjekt-ID",
+    activityId: "Aktivitäts-ID",
+    status: "Status",
+    allStatuses: "Alle Status",
+    apply: "Filter anwenden",
+    reset: "Zurücksetzen",
+    loading: "Fakten werden geladen...",
+    loaded: "Fakten geladen.",
+    empty: "Keine Fakten für die aktuellen Filter.",
+    errorLoad: "Aktivitätsfakten konnten nicht geladen werden.",
+    summaryAll: "Alle Fakten",
+    summaryConfirmed: "Bestätigte Vergangenheit",
+    summaryProposed: "Geplante Fakten",
+    summaryOther: "Andere",
+    confirmedTitle: "Bestätigte Fakten aus der Vergangenheit",
+    confirmedSubtitle: "Fakten aus erledigten Aktivitätscontainern.",
+    proposedTitle: "Geplante und prognostische Fakten",
+    proposedSubtitle: "Fakten aus zukünftigen Kalender-Aktivitätscontainern.",
+    otherTitle: "Andere Fakten",
+    otherSubtitle: "Fakten in Prüfung, abgelehnt, ersetzt oder mit anderem Status.",
+    noFactsInGroup: "Keine Fakten in dieser Gruppe.",
+    ids: "IDs",
+    semantic: "Semantik",
+    measure: "Messwert",
+    actions: "Aktionen",
+    details: "Details",
+    factActivity: "Fakt / Aktivität",
+    valueObject: "Wertobjekt",
+    selectedFact: "Ausgewählter Fakt",
+    selectedHint: "Wähle eine Zeile aus, um Details zu sehen.",
+    type: "Typ",
+    value: "Wert",
+    unit: "Einheit",
+    createdAt: "Erstellt",
+    source: "Quelle",
+    confidence: "Sicherheit",
+    factStatusLabels: {
+      confirmed: "bestätigt",
+      proposed: "geplant",
+      pending_review: "in Prüfung",
+      rejected: "abgelehnt",
+      superseded: "ersetzt",
+    },
+  },
+  es: {
+    pageTitle: "Hechos de actividad",
+    pageSubtitle: "Hechos guardados extraídos de contenedores de actividad realizados y planificados.",
+    refresh: "Actualizar",
+    filters: "Filtros",
+    filtersSubtitle: "Filtra por clave semántica, objeto de valor, actividad o estado.",
+    limit: "Límite",
+    semanticKey: "Clave semántica",
+    valueObjectId: "ID del objeto de valor",
+    activityId: "ID de actividad",
+    status: "Estado",
+    allStatuses: "Todos los estados",
+    apply: "Aplicar filtros",
+    reset: "Restablecer",
+    loading: "Cargando hechos...",
+    loaded: "Hechos cargados.",
+    empty: "No hay hechos para los filtros actuales.",
+    errorLoad: "No se pudieron cargar los hechos de actividad.",
+    summaryAll: "Todos los hechos",
+    summaryConfirmed: "Pasado confirmado",
+    summaryProposed: "Hechos planificados",
+    summaryOther: "Otros",
+    confirmedTitle: "Hechos confirmados del pasado",
+    confirmedSubtitle: "Hechos de contenedores de actividad completados.",
+    proposedTitle: "Hechos planificados y pronosticados",
+    proposedSubtitle: "Hechos de futuros contenedores de actividad del calendario.",
+    otherTitle: "Otros hechos",
+    otherSubtitle: "Hechos en revisión, rechazados, reemplazados o con otro estado.",
+    noFactsInGroup: "No hay hechos en este grupo.",
+    ids: "IDs",
+    semantic: "Semántica",
+    measure: "Medida",
+    actions: "Acciones",
+    details: "Detalles",
+    factActivity: "Hecho / actividad",
+    valueObject: "Objeto de valor",
+    selectedFact: "Hecho seleccionado",
+    selectedHint: "Selecciona una fila para ver detalles.",
+    type: "Tipo",
+    value: "Valor",
+    unit: "Unidad",
+    createdAt: "Creado",
+    source: "Fuente",
+    confidence: "Confianza",
+    factStatusLabels: {
+      confirmed: "confirmado",
+      proposed: "planificado",
+      pending_review: "en revisión",
+      rejected: "rechazado",
+      superseded: "reemplazado",
+    },
+  },
+  cs: {
+    pageTitle: "Fakta aktivit",
+    pageSubtitle: "Uložená fakta získaná z dokončených a plánovaných kontejnerů aktivit.",
+    refresh: "Obnovit",
+    filters: "Filtry",
+    filtersSubtitle: "Zúž seznam podle sémantického klíče, hodnotového objektu, aktivity nebo stavu.",
+    limit: "Limit",
+    semanticKey: "Sémantický klíč",
+    valueObjectId: "ID hodnotového objektu",
+    activityId: "ID aktivity",
+    status: "Stav",
+    allStatuses: "Všechny stavy",
+    apply: "Použít filtry",
+    reset: "Resetovat",
+    loading: "Načítám fakta...",
+    loaded: "Fakta načtena.",
+    empty: "Pro aktuální filtry nejsou žádná fakta.",
+    errorLoad: "Nepodařilo se načíst fakta aktivit.",
+    summaryAll: "Všechna fakta",
+    summaryConfirmed: "Potvrzená minulost",
+    summaryProposed: "Plánovaná fakta",
+    summaryOther: "Ostatní",
+    confirmedTitle: "Potvrzená fakta z minulosti",
+    confirmedSubtitle: "Fakta z dokončených kontejnerů aktivit.",
+    proposedTitle: "Plánovaná a prognostická fakta",
+    proposedSubtitle: "Fakta z budoucích kalendářových kontejnerů aktivit.",
+    otherTitle: "Ostatní fakta",
+    otherSubtitle: "Fakta čekající na kontrolu, odmítnutá, nahrazená nebo s jiným stavem.",
+    noFactsInGroup: "V této skupině nejsou žádná fakta.",
+    ids: "ID",
+    semantic: "Sémantika",
+    measure: "Míra",
+    actions: "Akce",
+    details: "Detaily",
+    factActivity: "Fakt / aktivita",
+    valueObject: "Hodnotový objekt",
+    selectedFact: "Vybraný fakt",
+    selectedHint: "Vyber řádek pro zobrazení detailů faktu.",
+    type: "Typ",
+    value: "Hodnota",
+    unit: "Jednotka",
+    createdAt: "Vytvořeno",
+    source: "Zdroj",
+    confidence: "Jistota",
+    factStatusLabels: {
+      confirmed: "potvrzeno",
+      proposed: "plánováno",
+      pending_review: "ke kontrole",
+      rejected: "odmítnuto",
+      superseded: "nahrazeno",
+    },
+  },
 };
 
-const sectionPaddingStyle: CSSProperties = {
-  padding: "20px",
-};
+function normalizeLocale(value: string | null): Locale {
+  return SUPPORTED_LOCALES.includes(value as Locale) ? (value as Locale) : "en";
+}
 
-const labelStyle: CSSProperties = {
-  display: "block",
-  marginBottom: "6px",
-  fontSize: "11px",
-  fontWeight: 850,
-  letterSpacing: "0.12em",
-  color: "#64748b",
-  textTransform: "uppercase",
-};
+function localeToIntl(locale: Locale) {
+  const map: Record<Locale, string> = {
+    en: "en-US",
+    pl: "pl-PL",
+    ru: "ru-RU",
+    uk: "uk-UA",
+    de: "de-DE",
+    es: "es-ES",
+    cs: "cs-CZ",
+  };
 
-const inputStyle: CSSProperties = {
-  width: "100%",
-  minHeight: "40px",
-  border: "1px solid #cbd5e1",
-  borderRadius: "14px",
-  padding: "0 12px",
-  background: "#ffffff",
-  color: "#0f172a",
-  fontSize: "13px",
-  outline: "none",
-};
-
-const primaryButtonStyle: CSSProperties = {
-  minHeight: "40px",
-  border: "1px solid #020617",
-  borderRadius: "14px",
-  padding: "0 16px",
-  background: "#020617",
-  color: "#ffffff",
-  fontSize: "13px",
-  fontWeight: 800,
-  cursor: "pointer",
-};
-
-const secondaryButtonStyle: CSSProperties = {
-  minHeight: "40px",
-  border: "1px solid #cbd5e1",
-  borderRadius: "14px",
-  padding: "0 14px",
-  background: "#ffffff",
-  color: "#0f172a",
-  fontSize: "13px",
-  fontWeight: 750,
-  cursor: "pointer",
-  textDecoration: "none",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
-const subtleButtonStyle: CSSProperties = {
-  minHeight: "32px",
-  border: "1px solid #e2e8f0",
-  borderRadius: "12px",
-  padding: "0 10px",
-  background: "#ffffff",
-  color: "#334155",
-  fontSize: "12px",
-  fontWeight: 750,
-  cursor: "pointer",
-  textDecoration: "none",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
-const monospaceStyle: CSSProperties = {
-  fontFamily:
-    'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-};
-
-const factListStyle: CSSProperties = {
-  display: "grid",
-  gap: "10px",
-};
-
-const factRowStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns:
-    "minmax(170px, 1.15fr) minmax(135px, 0.9fr) minmax(130px, 0.72fr) minmax(120px, 0.62fr) minmax(108px, 0.55fr)",
-  gap: "10px",
-  alignItems: "center",
-  border: "1px solid #e2e8f0",
-  borderRadius: "18px",
-  background: "#ffffff",
-  padding: "12px",
-};
-
-const factRowSelectedStyle: CSSProperties = {
-  ...factRowStyle,
-  borderColor: "#bfdbfe",
-  background: "#eff6ff",
-};
-
-const factRowHeaderStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns:
-    "minmax(170px, 1.15fr) minmax(135px, 0.9fr) minmax(130px, 0.72fr) minmax(120px, 0.62fr) minmax(108px, 0.55fr)",
-  gap: "10px",
-  padding: "0 12px",
-  color: "#64748b",
-  fontSize: "10px",
-  fontWeight: 900,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-};
-
-const compactMetaStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "4px",
-  minWidth: 0,
-};
-
-const valueBadgeStyle: CSSProperties = {
-  display: "inline-flex",
-  minWidth: "42px",
-  alignItems: "center",
-  justifyContent: "center",
-  borderRadius: "14px",
-  background: "#eef2ff",
-  color: "#1d4ed8",
-  padding: "7px 10px",
-  fontSize: "18px",
-  fontWeight: 950,
-};
+  return map[locale];
+}
 
 function truncateMiddle(value: string | null, left = 8, right = 6) {
   if (!value) {
@@ -229,7 +500,7 @@ function formatMetricValue(value: FactMetricValue) {
   return String(value);
 }
 
-function formatDate(value: string | null) {
+function formatDate(value: string | null, locale: Locale) {
   if (!value) {
     return "—";
   }
@@ -240,7 +511,7 @@ function formatDate(value: string | null) {
     return value;
   }
 
-  return date.toLocaleString("ru-RU", {
+  return date.toLocaleString(localeToIntl(locale), {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -279,123 +550,124 @@ function buildQuery(params: {
   return `/api/activity/facts?${search.toString()}`;
 }
 
-function getStatusPillStyle(status: string | null): CSSProperties {
+function getStatusTone(status: string | null) {
   if (status === "confirmed") {
-    return {
-      display: "inline-flex",
-      width: "fit-content",
-      alignItems: "center",
-      borderRadius: "999px",
-      background: "#dcfce7",
-      color: "#166534",
-      padding: "5px 9px",
-      fontSize: "12px",
-      fontWeight: 850,
-    };
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  if (status === "proposed") {
+    return "border-blue-200 bg-blue-50 text-blue-700";
   }
 
   if (status === "rejected") {
-    return {
-      display: "inline-flex",
-      width: "fit-content",
-      alignItems: "center",
-      borderRadius: "999px",
-      background: "#fee2e2",
-      color: "#991b1b",
-      padding: "5px 9px",
-      fontSize: "12px",
-      fontWeight: 850,
-    };
+    return "border-rose-200 bg-rose-50 text-rose-700";
   }
 
+  if (status === "pending_review") {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+
+  return "border-slate-200 bg-slate-50 text-slate-600";
+}
+
+function getStatusLabel(status: string | null, copy: ActivityFactsCopy) {
+  if (!status) {
+    return "—";
+  }
+
+  return copy.factStatusLabels[status] ?? status;
+}
+
+function groupFacts(facts: ActivityFact[]) {
   return {
-    display: "inline-flex",
-    width: "fit-content",
-    alignItems: "center",
-    borderRadius: "999px",
-    background: "#f1f5f9",
-    color: "#334155",
-    padding: "5px 9px",
-    fontSize: "12px",
-    fontWeight: 850,
+    confirmed: facts.filter((fact) => fact.factStatus === "confirmed"),
+    proposed: facts.filter((fact) => fact.factStatus === "proposed"),
+    other: facts.filter(
+      (fact) => fact.factStatus !== "confirmed" && fact.factStatus !== "proposed"
+    ),
   };
+}
+
+function SummaryCard({
+  label,
+  value,
+  tone,
+}: {
+  readonly label: string;
+  readonly value: number;
+  readonly tone: string;
+}) {
+  return (
+    <div className="rounded-[24px] border border-black/[0.06] bg-white p-5 shadow-sm">
+      <div className="text-[11px] font-black uppercase tracking-[0.16em] text-[#747da0]">
+        {label}
+      </div>
+      <div className={`mt-3 text-4xl font-black ${tone}`}>{value}</div>
+    </div>
+  );
 }
 
 function FactRow({
   fact,
+  locale,
+  copy,
   selected,
   onSelect,
 }: {
   readonly fact: ActivityFact;
+  readonly locale: Locale;
+  readonly copy: ActivityFactsCopy;
   readonly selected: boolean;
   readonly onSelect: () => void;
 }) {
   return (
-    <article style={selected ? factRowSelectedStyle : factRowStyle}>
-      <div style={compactMetaStyle}>
-        <div style={{ color: "#64748b", fontSize: "11px", fontWeight: 800 }}>
-          Fact / Activity
+    <article
+      className={[
+        "grid gap-4 rounded-[22px] border p-4 transition sm:grid-cols-[1.2fr_1fr_0.8fr_0.75fr_auto]",
+        selected ? "border-blue-300 bg-blue-50/70" : "border-black/[0.07] bg-white hover:bg-slate-50",
+      ].join(" ")}
+    >
+      <div className="min-w-0">
+        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+          {copy.factActivity}
         </div>
-
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-          <span
-            title={fact.factId ?? undefined}
-            style={{ ...monospaceStyle, color: "#0f172a", fontSize: "12px", fontWeight: 800 }}
-          >
+        <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold">
+          <span className="font-mono text-slate-800" title={fact.factId ?? undefined}>
             F: {truncateMiddle(fact.factId, 6, 6)}
           </span>
-
           {fact.activityEventId ? (
             <Link
-              href={`/activity-today?activityEventId=${encodeURIComponent(fact.activityEventId)}`}
+              href={`/activity-today?locale=${locale}&activityEventId=${encodeURIComponent(
+                fact.activityEventId
+              )}`}
+              className="font-mono text-blue-700 no-underline"
               title={fact.activityEventId}
-              style={{
-                ...monospaceStyle,
-                color: "#1d4ed8",
-                fontSize: "12px",
-                fontWeight: 850,
-                textDecoration: "none",
-              }}
             >
               A: {truncateMiddle(fact.activityEventId, 6, 6)}
             </Link>
           ) : (
-            <span style={{ ...monospaceStyle, color: "#94a3b8", fontSize: "12px" }}>
-              A: —
-            </span>
+            <span className="font-mono text-slate-400">A: —</span>
           )}
         </div>
-
-        <div style={{ color: "#64748b", fontSize: "12px" }}>
-          {formatDate(fact.createdAt)}
+        <div className="mt-2 text-xs font-semibold text-slate-500">
+          {formatDate(fact.createdAt, locale)}
         </div>
       </div>
 
-      <div style={compactMetaStyle}>
-        <div style={{ color: "#64748b", fontSize: "11px", fontWeight: 800 }}>
-          Semantic
+      <div className="min-w-0">
+        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+          {copy.semantic}
         </div>
-
-        <div
-          title={fact.semanticObjectKey ?? undefined}
-          style={{
-            ...monospaceStyle,
-            color: "#0f172a",
-            fontSize: "13px",
-            fontWeight: 850,
-            overflowWrap: "anywhere",
-          }}
-        >
+        <div className="mt-2 break-words font-mono text-sm font-black text-slate-900">
           {fact.semanticObjectKey ?? "—"}
         </div>
-
-        <div style={{ color: "#64748b", fontSize: "12px" }}>
-          VO:{" "}
+        <div className="mt-2 text-xs font-semibold text-slate-500">
+          {copy.valueObject}:{" "}
           {fact.valueObjectId ? (
             <Link
-              href={`/value-objects/${encodeURIComponent(fact.valueObjectId)}`}
+              href={`/value-objects/${encodeURIComponent(fact.valueObjectId)}?locale=${locale}`}
+              className="font-bold text-blue-700 no-underline"
               title={fact.valueObjectId}
-              style={{ color: "#1d4ed8", fontWeight: 800, textDecoration: "none" }}
             >
               {truncateMiddle(fact.valueObjectId, 6, 6)}
             </Link>
@@ -405,71 +677,111 @@ function FactRow({
         </div>
       </div>
 
-      <div style={compactMetaStyle}>
-        <div style={{ color: "#64748b", fontSize: "11px", fontWeight: 800 }}>
-          Measure
+      <div>
+        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+          {copy.measure}
         </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <span style={valueBadgeStyle}>{formatMetricValue(fact.metricValue)}</span>
-          <span style={{ color: "#0f172a", fontSize: "13px", fontWeight: 850 }}>
-            {fact.unit ?? "—"}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="inline-flex min-w-12 items-center justify-center rounded-2xl bg-indigo-50 px-3 py-2 text-xl font-black text-blue-700">
+            {formatMetricValue(fact.metricValue)}
           </span>
+          <span className="text-sm font-black text-slate-900">{fact.unit ?? "—"}</span>
         </div>
-
-        <div style={{ color: "#64748b", fontSize: "12px", fontWeight: 750 }}>
-          {fact.measureType ?? "—"}
-        </div>
+        <div className="mt-2 text-xs font-bold text-slate-500">{fact.measureType ?? "—"}</div>
       </div>
 
-      <div style={compactMetaStyle}>
-        <div style={{ color: "#64748b", fontSize: "11px", fontWeight: 800 }}>
-          Status
+      <div>
+        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+          {copy.status}
         </div>
-
-        <span style={getStatusPillStyle(fact.factStatus)}>
-          {fact.factStatus ?? "—"}
+        <span
+          className={[
+            "mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-black",
+            getStatusTone(fact.factStatus),
+          ].join(" ")}
+        >
+          {getStatusLabel(fact.factStatus, copy)}
         </span>
-
-        <div style={{ color: "#64748b", fontSize: "12px" }}>
-          {fact.sourceType ?? "—"}
-        </div>
+        <div className="mt-2 text-xs font-semibold text-slate-500">{fact.sourceType ?? "—"}</div>
       </div>
 
-      <div style={{ display: "grid", gap: "7px" }}>
-        <button type="button" onClick={onSelect} style={subtleButtonStyle}>
-          Details
-        </button>
-
+      <div className="flex items-center sm:justify-end">
         <button
           type="button"
           onClick={onSelect}
-          style={{
-            ...subtleButtonStyle,
-            borderColor: "#bbf7d0",
-            color: "#166534",
-          }}
+          className="min-h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-300 hover:text-blue-700"
         >
-          Подтвердить
-        </button>
-
-        <button
-          type="button"
-          onClick={onSelect}
-          style={{
-            ...subtleButtonStyle,
-            borderColor: "#fde68a",
-            color: "#92400e",
-          }}
-        >
-          Исправить
+          {copy.details}
         </button>
       </div>
     </article>
   );
 }
 
-export default function ActivityFactsPage() {
+function FactGroup({
+  title,
+  subtitle,
+  facts,
+  locale,
+  copy,
+  selectedFact,
+  onSelect,
+}: {
+  readonly title: string;
+  readonly subtitle: string;
+  readonly facts: ActivityFact[];
+  readonly locale: Locale;
+  readonly copy: ActivityFactsCopy;
+  readonly selectedFact: ActivityFact | null;
+  readonly onSelect: (factId: string | null) => void;
+}) {
+  return (
+    <section className="rounded-[28px] border border-black/[0.06] bg-white p-4 shadow-sm sm:p-5">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-black text-[#101632]">{title}</h2>
+          <p className="mt-1 text-sm font-medium text-[#69708f]">{subtitle}</p>
+        </div>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-black text-slate-700">
+          {facts.length}
+        </span>
+      </div>
+
+      {facts.length === 0 ? (
+        <div className="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm font-bold text-slate-500">
+          {copy.noFactsInGroup}
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          <div className="hidden grid-cols-[1.2fr_1fr_0.8fr_0.75fr_auto] gap-4 px-4 text-[10px] font-black uppercase tracking-[0.16em] text-[#747da0] sm:grid">
+            <span>{copy.ids}</span>
+            <span>{copy.semantic}</span>
+            <span>{copy.measure}</span>
+            <span>{copy.status}</span>
+            <span>{copy.actions}</span>
+          </div>
+
+          {facts.map((fact) => (
+            <FactRow
+              key={fact.factId ?? `${fact.activityEventId}-${fact.semanticObjectKey}`}
+              fact={fact}
+              locale={locale}
+              copy={copy}
+              selected={selectedFact?.factId === fact.factId}
+              onSelect={() => onSelect(fact.factId)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ActivityFactsPageContent() {
+  const searchParams = useSearchParams();
+  const locale = normalizeLocale(searchParams.get("locale"));
+  const copy = COPY[locale];
+
   const [limit, setLimit] = useState("50");
   const [semanticObjectKey, setSemanticObjectKey] = useState("");
   const [valueObjectId, setValueObjectId] = useState("");
@@ -478,7 +790,7 @@ export default function ActivityFactsPage() {
   const [selectedFactId, setSelectedFactId] = useState<string | null>(null);
   const [state, setState] = useState<LoadState>({
     status: "idle",
-    message: "Факты ещё не загружены.",
+    message: copy.loading,
     response: null,
   });
 
@@ -493,14 +805,15 @@ export default function ActivityFactsPage() {
   }, [limit, semanticObjectKey, valueObjectId, activityEventId, factStatus]);
 
   const facts = state.response?.facts ?? [];
+  const groupedFacts = useMemo(() => groupFacts(facts), [facts]);
   const selectedFact =
     facts.find((fact) => fact.factId === selectedFactId) ?? facts[0] ?? null;
 
   const loadFacts = useCallback(async () => {
     setState({
       status: "loading",
-      message: "Загружаю факты активности...",
-      response: state.response,
+      message: copy.loading,
+      response: null,
     });
 
     try {
@@ -512,7 +825,6 @@ export default function ActivityFactsPage() {
       const json = (await response.json().catch(() => {
         return {
           ok: false,
-          errorCode: "ACTIVITY_FACTS_RESPONSE_NOT_JSON",
           errorMessage: "Response was not valid JSON.",
         };
       })) as FactsApiResponse;
@@ -520,25 +832,20 @@ export default function ActivityFactsPage() {
       if (!response.ok || json.ok !== true) {
         setState({
           status: "error",
-          message:
-            json.errorMessage ??
-            `Не удалось загрузить факты. HTTP status: ${response.status}`,
+          message: json.errorMessage ?? `${copy.errorLoad} HTTP ${response.status}`,
           response: json,
         });
 
         return;
       }
 
+      const nextFacts = json.facts ?? [];
+
       setState({
         status: "success",
-        message:
-          (json.count ?? json.facts?.length ?? 0) > 0
-            ? "Факты загружены."
-            : "Фактов для текущих фильтров пока нет.",
+        message: nextFacts.length > 0 ? copy.loaded : copy.empty,
         response: json,
       });
-
-      const nextFacts = json.facts ?? [];
 
       if (nextFacts.length > 0) {
         setSelectedFactId((current) => {
@@ -554,11 +861,11 @@ export default function ActivityFactsPage() {
     } catch (error) {
       setState({
         status: "error",
-        message: error instanceof Error ? error.message : String(error),
+        message: error instanceof Error ? error.message : copy.errorLoad,
         response: null,
       });
     }
-  }, [queryUrl, state.response]);
+  }, [copy.empty, copy.errorLoad, copy.loaded, copy.loading, queryUrl]);
 
   function resetFilters() {
     setLimit("50");
@@ -570,363 +877,292 @@ export default function ActivityFactsPage() {
 
   useEffect(() => {
     void loadFacts();
-    // The first load intentionally runs once after page mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadFacts]);
 
   return (
-    <main style={pageStyle}>
-      <div style={shellStyle}>
-        <section style={cardStyle}>
-          <div style={sectionPaddingStyle}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: "16px",
-                alignItems: "flex-start",
-                flexWrap: "wrap",
-              }}
-            >
-              <div style={{ minWidth: 0, flex: "1 1 560px" }}>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "12px",
-                    fontWeight: 900,
-                    letterSpacing: "0.18em",
-                    textTransform: "uppercase",
-                    color: "#2563eb",
-                  }}
-                >
-                  Activity facts · Step 13 / 81
-                </p>
-
-                <h1 style={{ margin: "10px 0 0 0", fontSize: "28px", color: "#020617" }}>
-                  Таблица фактов активности
-                </h1>
-
-                <p
-                  style={{
-                    margin: "12px 0 0 0",
-                    maxWidth: "820px",
-                    color: "#475569",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  Страница читает реальные сохранённые факты через{" "}
-                  <code>GET /api/activity/facts</code>. Основная таблица заменена на
-                  компактный список без горизонтальной прокрутки.
-                </p>
-              </div>
-
-              <div style={{ display: "flex", gap: "10px", alignItems: "flex-start", flexWrap: "wrap" }}>
-                <Link href="/activity-facts/save-test" style={secondaryButtonStyle}>
-                  Save Test
-                </Link>
-                <Link href="/workspace" style={secondaryButtonStyle}>
-                  Workspace
-                </Link>
-              </div>
+    <main className="min-h-[calc(100vh-5rem)] bg-[#eef2f7] px-4 py-6 text-[#101632] sm:px-6 lg:px-10">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+        <section className="rounded-[32px] border border-black/[0.06] bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex flex-wrap items-start justify-between gap-5">
+            <div className="max-w-3xl">
+              <p className="text-[12px] font-black uppercase tracking-[0.18em] text-blue-600">
+                Activity facts
+              </p>
+              <h1 className="mt-3 text-3xl font-black tracking-[-0.03em] text-[#101632] sm:text-4xl">
+                {copy.pageTitle}
+              </h1>
+              <p className="mt-3 text-base font-medium leading-7 text-[#69708f]">
+                {copy.pageSubtitle}
+              </p>
             </div>
+
+            <button
+              type="button"
+              onClick={loadFacts}
+              className="min-h-11 rounded-2xl border border-blue-200 bg-blue-50 px-5 text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-100"
+            >
+              {copy.refresh}
+            </button>
           </div>
         </section>
 
-        <section style={cardStyle}>
-          <div style={sectionPaddingStyle}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: "21px", color: "#020617" }}>
-                  Фильтры
-                </h2>
-                <p style={{ margin: "8px 0 0 0", color: "#475569" }}>
-                  Измени поля и нажми <strong>Применить фильтры</strong>.
-                </p>
-              </div>
-
-              <div
-                style={{
-                  alignSelf: "flex-start",
-                  border: "1px solid #86efac",
-                  borderRadius: "999px",
-                  background: "#dcfce7",
-                  color: "#166534",
-                  padding: "8px 12px",
-                  fontSize: "13px",
-                  fontWeight: 800,
-                }}
-              >
-                {state.status === "loading" ? "Загрузка..." : "Фильтры применены"}
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                gap: "12px",
-                marginTop: "18px",
-              }}
-            >
-              <label>
-                <span style={labelStyle}>Limit</span>
-                <select
-                  value={limit}
-                  onChange={(event) => setLimit(event.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="10">10</option>
-                  <option value="25">25</option>
-                  <option value="50">50</option>
-                  <option value="100">100</option>
-                </select>
-              </label>
-
-              <label>
-                <span style={labelStyle}>Semantic key</span>
-                <input
-                  value={semanticObjectKey}
-                  onChange={(event) => setSemanticObjectKey(event.target.value)}
-                  placeholder="watching_reels"
-                  style={inputStyle}
-                />
-              </label>
-
-              <label>
-                <span style={labelStyle}>Value Object ID</span>
-                <input
-                  value={valueObjectId}
-                  onChange={(event) => setValueObjectId(event.target.value)}
-                  placeholder="uuid"
-                  style={inputStyle}
-                />
-              </label>
-
-              <label>
-                <span style={labelStyle}>Activity ID</span>
-                <input
-                  value={activityEventId}
-                  onChange={(event) => setActivityEventId(event.target.value)}
-                  placeholder="uuid"
-                  style={inputStyle}
-                />
-              </label>
-
-              <label>
-                <span style={labelStyle}>Status</span>
-                <select
-                  value={factStatus}
-                  onChange={(event) => setFactStatus(event.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="">Все статусы</option>
-                  <option value="confirmed">confirmed</option>
-                  <option value="pending_review">pending_review</option>
-                  <option value="rejected">rejected</option>
-                  <option value="superseded">superseded</option>
-                </select>
-              </label>
-            </div>
-
-            <div style={{ display: "flex", gap: "10px", marginTop: "16px", flexWrap: "wrap" }}>
-              <button type="button" onClick={loadFacts} style={primaryButtonStyle}>
-                Применить фильтры
-              </button>
-              <button type="button" onClick={resetFilters} style={secondaryButtonStyle}>
-                Сбросить
-              </button>
-            </div>
-
-            <div
-              style={{
-                marginTop: "16px",
-                border: "1px solid #e2e8f0",
-                borderRadius: "18px",
-                background: "#f8fafc",
-                padding: "12px",
-                color: "#334155",
-                fontSize: "13px",
-                overflowWrap: "anywhere",
-              }}
-            >
-              <strong>GET</strong>{" "}
-              <span style={monospaceStyle}>{queryUrl}</span>
-              <br />
-              <span>
-                sideEffects: dbWritesExecuted=false, sqlExecuted=false,
-                openAiCallExecuted=false
-              </span>
-            </div>
-          </div>
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard label={copy.summaryAll} value={facts.length} tone="text-slate-900" />
+          <SummaryCard
+            label={copy.summaryConfirmed}
+            value={groupedFacts.confirmed.length}
+            tone="text-emerald-600"
+          />
+          <SummaryCard
+            label={copy.summaryProposed}
+            value={groupedFacts.proposed.length}
+            tone="text-blue-600"
+          />
+          <SummaryCard label={copy.summaryOther} value={groupedFacts.other.length} tone="text-amber-600" />
         </section>
 
-        <section
-          style={{
-            ...cardStyle,
-            borderColor:
-              state.status === "error"
-                ? "#fecdd3"
-                : state.status === "success"
-                  ? "#bbf7d0"
-                  : "#e2e8f0",
-          }}
-        >
-          <div style={sectionPaddingStyle}>
-            <h2 style={{ margin: 0, fontSize: "18px", color: "#020617" }}>
-              Status
-            </h2>
-            <p
-              style={{
-                margin: "10px 0 0 0",
-                color:
-                  state.status === "error"
-                    ? "#be123c"
-                    : state.status === "success"
-                      ? "#166534"
-                      : "#475569",
-                fontWeight: 800,
-              }}
+        <section className="rounded-[28px] border border-black/[0.06] bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-black text-[#101632]">{copy.filters}</h2>
+              <p className="mt-1 text-sm font-medium text-[#69708f]">{copy.filtersSubtitle}</p>
+            </div>
+
+            <span
+              className={[
+                "rounded-full border px-3 py-2 text-xs font-black",
+                state.status === "error"
+                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                  : state.status === "loading"
+                    ? "border-blue-200 bg-blue-50 text-blue-700"
+                    : "border-emerald-200 bg-emerald-50 text-emerald-700",
+              ].join(" ")}
             >
               {state.message}
-            </p>
-          </div>
-        </section>
-
-        <section style={{ ...cardStyle, padding: "14px" }}>
-          <div style={factRowHeaderStyle}>
-            <span>IDs</span>
-            <span>Semantic</span>
-            <span>Measure</span>
-            <span>Status</span>
-            <span>Actions</span>
+            </span>
           </div>
 
-          <div style={{ height: "10px" }} />
-
-          <div style={factListStyle}>
-            {facts.length === 0 ? (
-              <div
-                style={{
-                  border: "1px dashed #cbd5e1",
-                  borderRadius: "18px",
-                  padding: "24px",
-                  textAlign: "center",
-                  color: "#64748b",
-                  background: "#f8fafc",
-                }}
+          <div className="mt-5 grid gap-3 md:grid-cols-5">
+            <label className="grid gap-2">
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                {copy.limit}
+              </span>
+              <select
+                value={limit}
+                onChange={(event) => setLimit(event.target.value)}
+                className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
               >
-                Сохранённых фактов для текущих фильтров нет.
-              </div>
-            ) : (
-              facts.map((fact) => (
-                <FactRow
-                  key={fact.factId ?? `${fact.activityEventId}-${fact.semanticObjectKey}`}
-                  fact={fact}
-                  selected={selectedFact?.factId === fact.factId}
-                  onSelect={() => setSelectedFactId(fact.factId)}
-                />
-              ))
-            )}
-          </div>
-        </section>
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </label>
 
-        <section style={cardStyle}>
-          <div style={sectionPaddingStyle}>
-            <p
-              style={{
-                margin: 0,
-                fontSize: "12px",
-                fontWeight: 900,
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                color: "#4f46e5",
-              }}
+            <label className="grid gap-2">
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                {copy.semanticKey}
+              </span>
+              <input
+                value={semanticObjectKey}
+                onChange={(event) => setSemanticObjectKey(event.target.value)}
+                placeholder="walk"
+                className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+              />
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                {copy.valueObjectId}
+              </span>
+              <input
+                value={valueObjectId}
+                onChange={(event) => setValueObjectId(event.target.value)}
+                placeholder="uuid"
+                className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+              />
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                {copy.activityId}
+              </span>
+              <input
+                value={activityEventId}
+                onChange={(event) => setActivityEventId(event.target.value)}
+                placeholder="uuid"
+                className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+              />
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                {copy.status}
+              </span>
+              <select
+                value={factStatus}
+                onChange={(event) => setFactStatus(event.target.value)}
+                className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+              >
+                <option value="">{copy.allStatuses}</option>
+                <option value="confirmed">{getStatusLabel("confirmed", copy)}</option>
+                <option value="proposed">{getStatusLabel("proposed", copy)}</option>
+                <option value="pending_review">{getStatusLabel("pending_review", copy)}</option>
+                <option value="rejected">{getStatusLabel("rejected", copy)}</option>
+                <option value="superseded">{getStatusLabel("superseded", copy)}</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={loadFacts}
+              className="min-h-11 rounded-2xl bg-[#101632] px-5 text-sm font-black text-white shadow-sm transition hover:bg-[#1b2345]"
             >
-              Linked fact preview · read-only actions
-            </p>
+              {copy.apply}
+            </button>
 
-            <h2 style={{ margin: "10px 0 0 0", fontSize: "22px", color: "#020617" }}>
-              Selected fact preview
-            </h2>
-
-            {selectedFact ? (
-              <div
-                style={{
-                  marginTop: "16px",
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                  gap: "12px",
-                }}
-              >
-                <div style={{ border: "1px solid #e2e8f0", borderRadius: "16px", padding: "14px" }}>
-                  <div style={labelStyle}>Type</div>
-                  <strong>{selectedFact.measureType ?? "—"}</strong>
-                </div>
-
-                <div style={{ border: "1px solid #e2e8f0", borderRadius: "16px", padding: "14px" }}>
-                  <div style={labelStyle}>Value</div>
-                  <strong>{formatMetricValue(selectedFact.metricValue)}</strong>
-                  <div style={{ marginTop: "4px", color: "#64748b", fontSize: "12px" }}>
-                    {selectedFact.metricValueSource ?? "value source unknown"}
-                  </div>
-                </div>
-
-                <div style={{ border: "1px solid #e2e8f0", borderRadius: "16px", padding: "14px" }}>
-                  <div style={labelStyle}>Unit</div>
-                  <strong>{selectedFact.unit ?? "—"}</strong>
-                </div>
-
-                <div style={{ border: "1px solid #e2e8f0", borderRadius: "16px", padding: "14px" }}>
-                  <div style={labelStyle}>Semantic key</div>
-                  <span style={{ ...monospaceStyle, overflowWrap: "anywhere" }}>
-                    {selectedFact.semanticObjectKey ?? "—"}
-                  </span>
-                </div>
-
-                <div style={{ border: "1px solid #e2e8f0", borderRadius: "16px", padding: "14px" }}>
-                  <div style={labelStyle}>Status</div>
-                  <strong>{selectedFact.factStatus ?? "—"}</strong>
-                </div>
-
-                <div style={{ border: "1px solid #e2e8f0", borderRadius: "16px", padding: "14px" }}>
-                  <div style={labelStyle}>Created at</div>
-                  <strong>{formatDate(selectedFact.createdAt)}</strong>
-                </div>
-              </div>
-            ) : (
-              <p style={{ marginTop: "16px", color: "#64748b" }}>
-                Fact ещё не выбран. После появления строк нажми Details.
-              </p>
-            )}
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="min-h-11 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-300 hover:text-blue-700"
+            >
+              {copy.reset}
+            </button>
           </div>
         </section>
 
-        <section style={cardStyle}>
-          <div
-            style={{
-              ...sectionPaddingStyle,
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: "14px",
-            }}
-          >
-            <div style={{ border: "1px solid #e2e8f0", borderRadius: "16px", padding: "14px" }}>
-              <div style={labelStyle}>Rows</div>
-              <strong>{state.response?.count ?? facts.length}</strong>
-            </div>
+        <FactGroup
+          title={copy.proposedTitle}
+          subtitle={copy.proposedSubtitle}
+          facts={groupedFacts.proposed}
+          locale={locale}
+          copy={copy}
+          selectedFact={selectedFact}
+          onSelect={setSelectedFactId}
+        />
 
-            <div style={{ border: "1px solid #e2e8f0", borderRadius: "16px", padding: "14px" }}>
-              <div style={labelStyle}>Ownership rule</div>
-              <span>activity_object_facts.user_id equals authenticated app_users.id</span>
-            </div>
+        <FactGroup
+          title={copy.confirmedTitle}
+          subtitle={copy.confirmedSubtitle}
+          facts={groupedFacts.confirmed}
+          locale={locale}
+          copy={copy}
+          selectedFact={selectedFact}
+          onSelect={setSelectedFactId}
+        />
 
-            <div style={{ border: "1px solid #e2e8f0", borderRadius: "16px", padding: "14px" }}>
-              <div style={labelStyle}>Schema mode</div>
-              <span>value is read from value_numeric/value_text/value_boolean</span>
+        <FactGroup
+          title={copy.otherTitle}
+          subtitle={copy.otherSubtitle}
+          facts={groupedFacts.other}
+          locale={locale}
+          copy={copy}
+          selectedFact={selectedFact}
+          onSelect={setSelectedFactId}
+        />
+
+        <section className="rounded-[28px] border border-black/[0.06] bg-white p-5 shadow-sm sm:p-6">
+          <p className="text-[12px] font-black uppercase tracking-[0.18em] text-blue-600">
+            {copy.details}
+          </p>
+          <h2 className="mt-2 text-2xl font-black text-[#101632]">{copy.selectedFact}</h2>
+
+          {selectedFact ? (
+            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-[22px] border border-slate-200 p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {copy.type}
+                </div>
+                <strong className="mt-2 block">{selectedFact.measureType ?? "—"}</strong>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {copy.value}
+                </div>
+                <strong className="mt-2 block">{formatMetricValue(selectedFact.metricValue)}</strong>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {copy.unit}
+                </div>
+                <strong className="mt-2 block">{selectedFact.unit ?? "—"}</strong>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {copy.status}
+                </div>
+                <span
+                  className={[
+                    "mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-black",
+                    getStatusTone(selectedFact.factStatus),
+                  ].join(" ")}
+                >
+                  {getStatusLabel(selectedFact.factStatus, copy)}
+                </span>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 p-4 md:col-span-2">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {copy.semantic}
+                </div>
+                <strong className="mt-2 block break-words font-mono">
+                  {selectedFact.semanticObjectKey ?? "—"}
+                </strong>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {copy.createdAt}
+                </div>
+                <strong className="mt-2 block">{formatDate(selectedFact.createdAt, locale)}</strong>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {copy.source}
+                </div>
+                <strong className="mt-2 block">{selectedFact.sourceType ?? "—"}</strong>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {copy.confidence}
+                </div>
+                <strong className="mt-2 block">
+                  {typeof selectedFact.confidence === "number"
+                    ? `${Math.round(selectedFact.confidence * 100)}%`
+                    : "—"}
+                </strong>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 p-4 md:col-span-2">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {copy.factActivity}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-3 text-sm font-bold">
+                  <span className="font-mono">F: {truncateMiddle(selectedFact.factId, 10, 8)}</span>
+                  <span className="font-mono">A: {truncateMiddle(selectedFact.activityEventId, 10, 8)}</span>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <p className="mt-4 text-sm font-bold text-slate-500">{copy.selectedHint}</p>
+          )}
         </section>
       </div>
     </main>
+  );
+}
+
+export default function ActivityFactsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ActivityFactsPageContent />
+    </Suspense>
   );
 }
