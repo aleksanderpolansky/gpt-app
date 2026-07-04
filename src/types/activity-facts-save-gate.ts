@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   ActivityObjectFactPreview,
   ActivityProcessingPackage,
 } from "@/types/activity-to-value-objects";
@@ -66,6 +66,9 @@ export interface ActivityFactsSaveGateRequest {
   idempotencyKey: string;
   sourcePackageId: string;
   activityProcessingPackage: ActivityProcessingPackage;
+  temporalDirection?: "past" | "future";
+  existingActivityEventId?: string | null;
+  calendarEventId?: string | null;
   factDecisions: ActivityFactsSaveGateAcceptedFactDecision[];
   editedFactDecisions: ActivityFactsSaveGateEditedFactDecision[];
   valueObjectCandidateDecisions: ActivityFactsSaveGateValueObjectCandidateDecision[];

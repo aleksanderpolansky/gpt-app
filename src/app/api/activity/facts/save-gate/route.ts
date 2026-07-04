@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import {
   saveGateContractPreviewRequest,
@@ -860,7 +860,40 @@ async function findExistingActivityEvent(params: {
   };
 }
 
+function normalizeRequestTemporalDirection(body: UnknownRecord): "past" | "future" {
+  const direct = asString(body.temporalDirection) ?? asString(body.temporal_direction);
+
+  if (direct === "future") {
+    return "future";
+  }
+
+  if (direct === "past") {
+    return "past";
+  }
+
+  const metadata = asRecord(body.metadata);
+  const metadataValue =
+    asString(metadata.temporalDirection) ?? asString(metadata.temporal_direction);
+
+  return metadataValue === "future" ? "future" : "past";
+}
+
+function normalizeRequestCalendarEventId(body: UnknownRecord) {
+  const value = asString(body.calendarEventId) ?? asString(body.calendar_event_id);
+
+  return isUuid(value) ? value : null;
+}
+
+function normalizeRequestExistingActivityEventId(body: UnknownRecord) {
+  const value =
+    asString(body.existingActivityEventId) ??
+    asString(body.activityEventId) ??
+    asString(body.activity_event_id);
+
+  return isUuid(value) ? value : null;
+}
 async function executeRealSave(params: {
+
   body: UnknownRecord;
   validation: ActivityFactsSaveGateValidationResult;
   context: Extract<AuthenticatedSaveContext, { ok: true }>;
@@ -870,6 +903,9 @@ async function executeRealSave(params: {
   const pkg = getActivityProcessingPackage(bodyRecord);
   const sourcePackageId = params.validation.summary.sourcePackageId;
   const idempotencyKey = params.validation.summary.idempotencyKey;
+  const temporalDirection = normalizeRequestTemporalDirection(bodyRecord);
+  const calendarEventId = normalizeRequestCalendarEventId(bodyRecord);
+  const existingActivityEventId = normalizeRequestExistingActivityEventId(bodyRecord);
 
   const acceptedOrEditedFactInputs = collectAcceptedOrEditedFactIds(bodyRecord);
 
@@ -999,8 +1035,9 @@ async function executeRealSave(params: {
     started_at: timing.startedAtIso,
     ended_at: timing.endedAtIso,
     duration_minutes: timing.durationMinutes,
-    source: "chat_ai",
-    status: "completed",
+    source: temporalDirection === "future" ? "calendar_import" : "chat_ai",
+    temporal_direction: temporalDirection,
+    status: temporalDirection === "future" ? "planned" : "completed",
     privacy_scope: "private",
     processing_status: "processed",
     metadata_json: {
@@ -1009,6 +1046,9 @@ async function executeRealSave(params: {
       routeLayer: ROUTE_LAYER,
       rawInput: pkg?.rawInput ?? null,
       recognition: pkg?.recognition ?? null,
+      temporalDirection,
+      calendarEventId,
+      existingActivityEventId,
     },
   };
 
@@ -1067,6 +1107,9 @@ async function executeRealSave(params: {
         sourcePackageId,
         idempotencyKey,
         routeLayer: ROUTE_LAYER,
+        temporalDirection,
+        calendarEventId,
+        existingActivityEventId,
       },
     };
 
@@ -1120,18 +1163,21 @@ async function executeRealSave(params: {
       unit: fact.unit,
       period_start: timing.startedAtIso,
       period_end: timing.endedAtIso,
-      fact_status: "confirmed",
+      fact_status: temporalDirection === "future" ? "proposed" : "confirmed",
       confidence: fact.confidence,
       source_type: fact.decision === "edit" ? "user_edit" : "user_text",
       is_chronological_primary:
         index === 0 && fact.measureType === "duration" && fact.unit === "minute",
       is_exposure_fact: true,
-      is_user_confirmed: true,
+      is_user_confirmed: temporalDirection === "past",
       metadata: {
         localFactId: fact.localFactId,
         sourcePackageId,
         idempotencyKey,
         routeLayer: ROUTE_LAYER,
+        temporalDirection,
+        calendarEventId,
+        existingActivityEventId,
       },
     };
 
@@ -1193,6 +1239,9 @@ async function executeRealSave(params: {
         sourcePackageId,
         idempotencyKey,
         routeLayer: ROUTE_LAYER,
+        temporalDirection,
+        calendarEventId,
+        existingActivityEventId,
       },
     };
 
@@ -1237,6 +1286,9 @@ async function executeRealSave(params: {
         sourcePackageId,
         idempotencyKey,
         routeLayer: ROUTE_LAYER,
+        temporalDirection,
+        calendarEventId,
+        existingActivityEventId,
       },
     };
 
@@ -1294,6 +1346,8 @@ async function executeRealSave(params: {
         openAiCallExecuted: false,
         valueObjectCreated: createdIds.valueObjectIds.length > 0,
         activityEventCreated: Boolean(createdIds.activityEventId),
+        temporalDirection,
+        calendarEventId,
         activityEventMeasureCreated: createdIds.measureIds.length > 0,
         activityObjectFactCreated: createdIds.factIds.length > 0,
         activityFactReviewItemCreated: createdIds.reviewItemIds.length > 0,

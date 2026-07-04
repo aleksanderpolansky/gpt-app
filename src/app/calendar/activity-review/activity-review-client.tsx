@@ -50,6 +50,52 @@ type ReviewPayload = {
   warnings: string[];
 };
 
+type ActivityProcessingPackageForSaveGate = Record<string, unknown> & {
+  packageId?: string;
+  status?: string;
+  rawInput?: Record<string, unknown>;
+  recognition?: Record<string, unknown>;
+  measures?: Array<Record<string, unknown>>;
+  semanticCategories?: Array<Record<string, unknown>>;
+  valueObjectMatches?: Array<Record<string, unknown>>;
+  factPreviews?: Array<Record<string, unknown> & {
+    localId?: string;
+    status?: string;
+  }>;
+  missingValueObjectCandidates?: Array<Record<string, unknown> & {
+    semanticObjectKey?: string;
+    proposedTitleRu?: string;
+    proposedParentValueObjectId?: string | null;
+    proposedParentTitleRu?: string | null;
+  }>;
+  counters?: Record<string, unknown>;
+};
+
+type SemanticOrchestrationPreviewResponse = {
+  ok?: boolean;
+  activityProcessingPackage?: ActivityProcessingPackageForSaveGate | null;
+  saveGateBridge?: {
+    available?: boolean;
+    factPreviewCount?: number;
+  };
+  error?: string;
+  errors?: string[];
+};
+
+type ActivityFactsSaveGateResponse = {
+  ok?: boolean;
+  errorCode?: string;
+  errorMessage?: string;
+  createdIds?: {
+    activityEventId?: string | null;
+    measureIds?: string[];
+    factIds?: string[];
+    reviewItemIds?: string[];
+    recalculationQueueIds?: string[];
+  };
+  sideEffects?: Record<string, unknown>;
+};
+
 type SaveStatus = "idle" | "saving" | "error";
 
 type PlannedSchedule = {
@@ -385,7 +431,329 @@ function buildReturnUrl(target: CalendarReturnTarget, locale: Locale, focusDate:
   return `${target === "calendar-rebuild" ? "/calendar-rebuild" : "/calendar"}?${params.toString()}`;
 }
 
+function normalizeFactsInputLanguage(locale: Locale) {
+  return locale === "uk" ? "ru" : locale;
+}
+
+function buildSafeSaveGateId(raw: string) {
+  const safe = raw
+    .normalize("NFKD")
+    .replace(/[^a-zA-Z0-9._:-]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 220);
+
+  return safe.length >= 8 ? safe : `activity_${safe}_${Date.now()}`;
+}
+
+function getFactLocalIds(pkg: ActivityProcessingPackageForSaveGate) {
+  return (pkg.factPreviews ?? [])
+    .map((fact) => typeof fact.localId === "string" ? fact.localId.trim() : "")
+    .filter(Boolean)
+    .slice(0, 20);
+}
+function normalizeSemanticObjectKeyForFacts(value: string, fallback: string) {
+  const knownMapped = value
+    .toLowerCase()
+    .replace(/сьогодні|сегодня|завтра|вчора|вчера/g, " ")
+    .replace(/гуляв|гуляла|гуляти|прогулянка|прогулка|гулять/g, " walk ")
+    .replace(/побігати|побегать|біг|бег|бегать|run|running/g, " run ")
+    .replace(/плавання|плавать|плавал|плавати|swim|swimming/g, " swim ")
+    .replace(/робота|работа|працював|работал|work|working/g, " work ")
+    .replace(/німецька|немецкий|deutsch|german/g, " german ")
+    .replace(/сон|спав|спала|спать|sleep/g, " sleep ")
+    .replace(/стоматолог|врач|лікар|здоров|health/g, " health ");
+
+  const normalized = knownMapped
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 80);
+
+  return normalized.length > 0 ? normalized : fallback;
+}
+
+function buildFallbackActivityProcessingPackageForSaveGate(params: {
+  rawText: string;
+  locale: Locale;
+  temporalDirection: TemporalDirection;
+  title: string;
+  durationMinutes: number;
+  startTime: string;
+}): ActivityProcessingPackageForSaveGate | null {
+  const durationMinutes =
+    Number.isFinite(params.durationMinutes) && params.durationMinutes > 0
+      ? Math.round(params.durationMinutes)
+      : null;
+
+  if (!durationMinutes) {
+    return null;
+  }
+
+  const semanticObjectKey = normalizeSemanticObjectKeyForFacts(
+    `${params.title} ${params.rawText}`,
+    "activity_duration"
+  );
+
+  const localIdSafe = buildSafeSaveGateId(semanticObjectKey);
+  const capturedAtIso = params.startTime || new Date().toISOString();
+
+  const measure = {
+    localId: "measure-duration-minutes",
+    measureType: "duration",
+    unit: "minute",
+    numericValue: durationMinutes,
+    textValue: null,
+    confidence: 0.78,
+    evidenceText: params.rawText,
+    normalizedLabel: `${durationMinutes} minute`,
+  };
+
+  const category = {
+    localId: `cat-${localIdSafe}`,
+    semanticObjectKey,
+    labelRu: params.title || params.rawText,
+    layer: "activity_type",
+    confidence: 0.64,
+    evidenceText: params.rawText,
+    reason:
+      "Fallback semantic category created from Activity Review Container when semantic package bridge returned no fact previews.",
+  };
+
+  const factPreview = {
+    localId: `fact-${localIdSafe}-duration-1`,
+    activityEventId: null,
+    measureLocalId: measure.localId,
+    semanticCategoryLocalId: category.localId,
+    semanticObjectKey,
+    valueObjectId: null,
+    valueObjectTitle: null,
+    measureType: "duration",
+    unit: "minute",
+    numericValue: durationMinutes,
+    textValue: null,
+    status: "ready_for_fact_write",
+    confidence: 0.64,
+    explanation: `Fallback fact from Activity Review Container: ${params.title}, ${durationMinutes} minute.`,
+  };
+
+  return {
+    packageId: `activity-container-fallback-${params.temporalDirection}-${Date.now()}-${localIdSafe}`,
+    status: "ready_for_save_gate",
+    rawInput: {
+      text: params.rawText,
+      locale: params.locale,
+      source: params.temporalDirection === "future" ? "calendar" : "manual",
+      capturedAtIso,
+    },
+    recognition: {
+      status: "obvious_activity",
+      confidence: 0.64,
+      reason:
+        "Activity Review Container already resolved this as an addable activity; fallback package preserves facts write when bridge preview is empty.",
+      detectedActivityTitle: params.title,
+      shouldAskUserBeforeSaving: false,
+    },
+    measures: [measure],
+    semanticCategories: [category],
+    valueObjectMatches: [{
+      semanticCategoryLocalId: category.localId,
+      matchStatus: "missing_candidate",
+      valueObjectId: null,
+      valueObjectTitle: null,
+      parentValueObjectId: null,
+      parentValueObjectTitle: null,
+      confidence: 0.54,
+      reason: "Value Object substitution is deferred to a later block.",
+    }],
+    missingValueObjectCandidates: [{
+      semanticCategoryLocalId: category.localId,
+      semanticObjectKey,
+      proposedTitleRu: params.title || semanticObjectKey,
+      proposedUsageScope: "private",
+      proposedAuthorType: "user",
+      proposedParentValueObjectId: null,
+      proposedParentTitleRu: null,
+      reason: "Candidate shown for future Value Object review; not created in this block.",
+      requiresUserConfirmation: true,
+    }],
+    factPreviews: [factPreview],
+    safety: {
+      previewOnly: false,
+      dbWriteAllowed: true,
+      sqlAllowed: false,
+      openAiCallAllowed: false,
+      medicalDiagnosisAllowed: false,
+      notes: [
+        "Fallback package is created from Activity Review Container after user pressed Add.",
+        "It only writes duration facts through the server-mediated save-gate.",
+        "Value Object creation remains skipped.",
+      ],
+    },
+    counters: {
+      measureCount: 1,
+      semanticCategoryCount: 1,
+      valueObjectMatchCount: 1,
+      missingValueObjectCandidateCount: 1,
+      factPreviewCount: 1,
+      saveableFactPreviewCount: 1,
+    },
+  };
+}
+
+function ensureSaveGatePackage(params: {
+  pkg: ActivityProcessingPackageForSaveGate | null | undefined;
+  rawText: string;
+  locale: Locale;
+  temporalDirection: TemporalDirection;
+  title: string;
+  durationMinutes: number;
+  startTime: string;
+}) {
+  if (params.pkg && getFactLocalIds(params.pkg).length > 0) {
+    return params.pkg;
+  }
+
+  return buildFallbackActivityProcessingPackageForSaveGate({
+    rawText: params.rawText,
+    locale: params.locale,
+    temporalDirection: params.temporalDirection,
+    title: params.title,
+    durationMinutes: params.durationMinutes,
+    startTime: params.startTime,
+  });
+}
+
+async function saveFactsForActivityContainer(params: {
+  rawText: string;
+  locale: Locale;
+  temporalDirection: TemporalDirection;
+  title: string;
+  existingActivityEventId: string | null;
+  calendarEventId: string | null;
+  startTime: string;
+  durationMinutes: number;
+}) {
+  const semanticResponse = await fetch("/api/activity/semantic-orchestration-preview", {
+    credentials: "include",
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      rawText: params.rawText,
+      inputLanguage: normalizeFactsInputLanguage(params.locale),
+      source: params.temporalDirection === "future" ? "calendar" : "manual",
+      mode: "preview_only",
+    }),
+  });
+
+  const semanticPayload = await semanticResponse.json().catch(() => null) as SemanticOrchestrationPreviewResponse | null;
+
+  if (!semanticResponse.ok) {
+    throw new Error(
+      semanticPayload?.error ||
+      semanticPayload?.errors?.join("; ") ||
+      `Semantic facts preview failed: ${semanticResponse.status}`
+    );
+  }
+
+  const pkg = ensureSaveGatePackage({
+    pkg: semanticPayload?.activityProcessingPackage ?? null,
+    rawText: params.rawText,
+    locale: params.locale,
+    temporalDirection: params.temporalDirection,
+    title: params.title,
+    durationMinutes: params.durationMinutes,
+    startTime: params.startTime,
+  });
+
+  if (!pkg) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: "No ActivityProcessingPackage or fallback package could be created.",
+    };
+  }
+
+  const factLocalIds = getFactLocalIds(pkg);
+
+  if (factLocalIds.length === 0) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: "No fact previews returned by semantic preview.",
+    };
+  }
+
+  const idSource =
+    params.existingActivityEventId ||
+    params.calendarEventId ||
+    `${params.temporalDirection}:${params.startTime}:${params.title}`;
+
+  const saveGateResponse = await fetch("/api/activity/facts/save-gate", {
+    credentials: "include",
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      routeMode: "future_server_mediated_write",
+      idempotencyKey: buildSafeSaveGateId(`activity-container-facts:${idSource}`),
+      sourcePackageId: buildSafeSaveGateId(pkg.packageId || `activity-container-package:${idSource}`),
+      temporalDirection: params.temporalDirection,
+      existingActivityEventId: params.existingActivityEventId,
+      calendarEventId: params.calendarEventId,
+      activityProcessingPackage: pkg,
+      factDecisions: factLocalIds.map((factLocalId) => ({
+        factLocalId,
+        decision: "accept",
+        reasonRu:
+          params.temporalDirection === "future"
+            ? "Плановый факт принят автоматически из контейнера будущей активности."
+            : "Факт прошлого принят автоматически из контейнера активности.",
+      })),
+      editedFactDecisions: [],
+      valueObjectCandidateDecisions: (pkg.missingValueObjectCandidates ?? []).map((candidate) => ({
+        semanticObjectKey: candidate.semanticObjectKey || "activity_fact",
+        proposedTitleRu: candidate.proposedTitleRu || candidate.semanticObjectKey || "Activity fact",
+        decision: "skip",
+        selectedExistingValueObjectId: null,
+        selectedExistingValueObjectTitle: null,
+        proposedParentValueObjectId: candidate.proposedParentValueObjectId ?? null,
+        proposedParentTitleRu: candidate.proposedParentTitleRu ?? null,
+        reasonRu: "Связь с ценным объектом будет подтверждаться отдельным следующим блоком.",
+      })),
+      clientSafetyConfirmation: {
+        userReviewedPreview: true,
+        userConfirmedMissingValueObjectCreation: false,
+        userConfirmedFactWrite: true,
+        userUnderstandsPreviewIsNotDiagnosis: true,
+      },
+    }),
+  });
+
+  const saveGatePayload = await saveGateResponse.json().catch(() => null) as ActivityFactsSaveGateResponse | null;
+
+  if (!saveGateResponse.ok || saveGatePayload?.ok !== true) {
+    throw new Error(
+      saveGatePayload?.errorMessage ||
+      saveGatePayload?.errorCode ||
+      `Facts save-gate failed: ${saveGateResponse.status}`
+    );
+  }
+
+  return {
+    ok: true,
+    skipped: false,
+    factCount: saveGatePayload.createdIds?.factIds?.length ?? factLocalIds.length,
+    measureCount: saveGatePayload.createdIds?.measureIds?.length ?? 0,
+    activityEventId: saveGatePayload.createdIds?.activityEventId ?? null,
+  };
+}
 function getTemporalDirectionCopy(locale: Locale) {
+
   const copy = {
     en: {
       label: "Time",
@@ -921,11 +1289,27 @@ export default function ActivityReviewClient() {
           }),
         });
 
-        const payload = await response.json().catch(() => null) as { error?: string } | null;
+        const payload = await response.json().catch(() => null) as {
+          error?: string;
+          event?: {
+            id?: string | null;
+          };
+        } | null;
 
         if (!response.ok) {
           throw new Error(payload?.error || `Activity event write failed: ${response.status}`);
         }
+
+        await saveFactsForActivityContainer({
+          rawText: rawText.trim(),
+          locale,
+          temporalDirection: "past",
+          title: review.activityTitle || rawText.trim(),
+          existingActivityEventId: payload?.event?.id ?? null,
+          calendarEventId: null,
+          startTime: plannedSchedule.startTime,
+          durationMinutes: plannedSchedule.durationMinutes,
+        });
 
         router.push(buildReturnUrl("activity-journal", locale, plannedSchedule.focusDate));
         return;
@@ -954,11 +1338,27 @@ export default function ActivityReviewClient() {
         }),
       });
 
-      const payload = await response.json().catch(() => null) as { error?: string } | null;
+      const payload = await response.json().catch(() => null) as {
+        error?: string;
+        calendarEvent?: {
+          id?: string | null;
+        };
+      } | null;
 
       if (!response.ok) {
         throw new Error(payload?.error || `Calendar event write failed: ${response.status}`);
       }
+
+      await saveFactsForActivityContainer({
+        rawText: rawText.trim(),
+        locale,
+        temporalDirection: "future",
+        title: review.activityTitle || rawText.trim(),
+        existingActivityEventId: null,
+        calendarEventId: payload?.calendarEvent?.id ?? null,
+        startTime: plannedSchedule.startTime,
+        durationMinutes: plannedSchedule.durationMinutes,
+      });
 
       router.push(buildReturnUrl(returnTo, locale, plannedSchedule.focusDate));
     } catch (error) {
@@ -967,7 +1367,6 @@ export default function ActivityReviewClient() {
       // CALENDAR_ADD_GATE_V4_AUTH_TIP
     }
   }
-
   return (
     <main className="min-h-[calc(100vh-5rem)] bg-[#f0f2f7] px-4 py-6 text-[#1a1d2e] sm:px-6 lg:px-10">
       <section className="mx-auto w-full max-w-7xl">
