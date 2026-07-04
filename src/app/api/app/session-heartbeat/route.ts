@@ -14,6 +14,9 @@ const MAX_SESSION_ID_LENGTH = 256;
 type AppUserRow = {
   id: string;
   auth0_sub: string;
+  access_status: string | null;
+  access_blocked_at: string | null;
+  access_block_reason: string | null;
 };
 
 type AppUserSessionRow = {
@@ -104,7 +107,7 @@ export async function POST(request: Request) {
 
   const { data: appUsers, error: appUserError } = await supabase
     .from("app_users")
-    .select("id, auth0_sub")
+    .select("id, auth0_sub, access_status, access_blocked_at, access_block_reason")
     .eq("auth0_sub", auth0Sub)
     .limit(2);
 
@@ -149,6 +152,27 @@ export async function POST(request: Request) {
   }
 
   const appUser = rows[0];
+
+  if (appUser.access_status === "blocked") {
+    return NextResponse.json(
+      {
+        ok: false,
+        routeMarker: ROUTE_MARKER,
+        errorCode: "APP_SESSION_HEARTBEAT_USER_BLOCKED",
+        errorMessage: "This account has been blocked by a platform administrator.",
+        blockedAt: appUser.access_blocked_at,
+        blockedReason: appUser.access_block_reason,
+        sideEffects: {
+          dbReadExecuted: true,
+          dbWriteExecuted: false,
+          openAiCallExecuted: false,
+          rowsActuallyWritten: 0,
+        },
+      },
+      { status: 403 },
+    );
+  }
+
   const now = new Date().toISOString();
   const userAgent = request.headers.get("user-agent") ?? "";
   const clientSessionIdHash = sha256(`${appUser.id}:${clientSessionId}`);

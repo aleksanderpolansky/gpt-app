@@ -15,6 +15,11 @@ type AdminUserRow = {
   name: string | null;
   displayName: string;
   auth0Sub: string | null;
+  accessStatus: "active" | "blocked" | string;
+  accessBlockedAt: string | null;
+  accessBlockReason: string | null;
+  accessUnblockedAt: string | null;
+  isProtectedOwnerAccount: boolean;
   createdAt: string | null;
   updatedAt: string | null;
   adminRole: string | null;
@@ -120,6 +125,26 @@ function getAdminRoleLabel(row: AdminUserRow): string {
   return row.adminRole ?? "user";
 }
 
+function getAccessStatusLabel(row: AdminUserRow): string {
+  if (row.isProtectedOwnerAccount) {
+    return "protected owner";
+  }
+
+  return row.accessStatus === "blocked" ? "blocked" : "active";
+}
+
+function getAccessStatusClassName(row: AdminUserRow): string {
+  if (row.isProtectedOwnerAccount) {
+    return "border-cyan-600/70 bg-cyan-950/40 text-cyan-100";
+  }
+
+  if (row.accessStatus === "blocked") {
+    return "border-red-700/70 bg-red-950/50 text-red-100";
+  }
+
+  return "border-emerald-700/70 bg-emerald-950/40 text-emerald-100";
+}
+
 function getTierInputTokens(row: AdminUserRow, tierCode: string): string {
   return formatTokens(
     row.aiAvailableApproxByTier?.[tierCode]?.approximateInputTokensForAvailableBalance,
@@ -131,6 +156,8 @@ export default function AdminUsersPage() {
   const [rows, setRows] = useState<AdminUserRow[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [limitations, setLimitations] = useState<string[]>([]);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const [onlyAdmins, setOnlyAdmins] = useState(false);
   const [onlyOnline, setOnlyOnline] = useState(false);
@@ -168,9 +195,71 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function toggleUserAccess(row: AdminUserRow) {
+    const nextAction = row.accessStatus === "blocked" ? "unblock" : "block";
+
+    if (nextAction === "block" && row.isProtectedOwnerAccount) {
+      setActionMessage("Protected owner accounts cannot be blocked.");
+      return;
+    }
+
+    const confirmationText =
+      nextAction === "block"
+        ? `Заблокировать вход для ${row.email ?? row.displayName}?`
+        : `Снять блокировку для ${row.email ?? row.displayName}?`;
+
+    if (!window.confirm(confirmationText)) {
+      return;
+    }
+
+    const reason =
+      nextAction === "block"
+        ? window.prompt("Причина блокировки:", "Blocked by platform admin.") ??
+          "Blocked by platform admin."
+        : null;
+
+    setPendingUserId(row.userId);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          userId: row.userId,
+          action: nextAction,
+          reason,
+        }),
+      });
+
+      const json = (await response.json().catch(() => null)) as
+        | { ok?: boolean; errorMessage?: string; routeStatus?: string }
+        | null;
+
+      if (!response.ok || json?.ok !== true) {
+        throw new Error(json?.errorMessage ?? `Access update failed: ${response.status}`);
+      }
+
+      setActionMessage(
+        nextAction === "block"
+          ? "Пользователь заблокирован."
+          : "Блокировка пользователя снята.",
+      );
+      await refreshUsers();
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : "Unknown access update error.");
+    } finally {
+      setPendingUserId(null);
+    }
+  }
   useEffect(() => {
     void refreshUsers();
   }, []);
+
 
   const filteredRows = useMemo(() => {
     const query = searchText.trim().toLowerCase();
@@ -196,6 +285,7 @@ export default function AdminUsersPage() {
           row.auth0Sub,
           row.userId,
           row.adminRole,
+          row.accessStatus,
         ]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(query));
@@ -227,6 +317,11 @@ export default function AdminUsersPage() {
 
   const totalPoints = useMemo(
     () => rows.reduce((sum, row) => sum + row.pointsBalance, 0),
+    [rows],
+  );
+
+  const blockedUsersCount = useMemo(
+    () => rows.filter((row) => row.accessStatus === "blocked").length,
     [rows],
   );
 
@@ -268,7 +363,7 @@ export default function AdminUsersPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-5">
           <article className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
             <p className="text-sm text-slate-400">Пользователи</p>
             <p className="mt-2 text-2xl font-semibold text-white">{rows.length}</p>
@@ -277,6 +372,12 @@ export default function AdminUsersPage() {
             <p className="text-sm text-slate-400">Админы</p>
             <p className="mt-2 text-2xl font-semibold text-white">
               {rows.filter((row) => row.adminRole).length}
+            </p>
+          </article>
+          <article className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+            <p className="text-sm text-slate-400">Заблокированы</p>
+            <p className="mt-2 text-2xl font-semibold text-white">
+              {blockedUsersCount}
             </p>
           </article>
           <article className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
@@ -334,6 +435,12 @@ export default function AdminUsersPage() {
             </label>
           </div>
 
+          {actionMessage ? (
+            <div className="mt-4 rounded-2xl border border-cyan-900/60 bg-cyan-950/30 p-4 text-sm leading-6 text-cyan-100">
+              {actionMessage}
+            </div>
+          ) : null}
+
           {limitations.length > 0 ? (
             <div className="mt-4 rounded-2xl border border-amber-900/60 bg-amber-950/30 p-4 text-sm leading-6 text-amber-100">
               <p className="font-semibold">Ограничения текущего MVP:</p>
@@ -362,17 +469,19 @@ export default function AdminUsersPage() {
         {loadState === "success" ? (
           <section className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl">
             <div className="overflow-x-auto">
-              <table className="min-w-[1280px] w-full border-collapse text-left text-sm">
+              <table className="min-w-[1520px] w-full border-collapse text-left text-sm">
                 <thead className="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-400">
                   <tr>
                     <th className="px-4 py-4">Пользователь</th>
                     <th className="px-4 py-4">Роль</th>
+                    <th className="px-4 py-4">Доступ</th>
                     <th className="px-4 py-4">AI EUR</th>
                     <th className="px-4 py-4">Nano / Standard / Pro</th>
                     <th className="px-4 py-4">Points</th>
                     <th className="px-4 py-4">Активность</th>
                     <th className="px-4 py-4">Сессии</th>
                     <th className="px-4 py-4">AI usage</th>
+                    <th className="px-4 py-4">Модерация</th>
                   </tr>
                 </thead>
 
@@ -394,6 +503,22 @@ export default function AdminUsersPage() {
                         <span className="rounded-full border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-200">
                           {getAdminRoleLabel(row)}
                         </span>
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getAccessStatusClassName(row)}`}>
+                          {getAccessStatusLabel(row)}
+                        </span>
+                        {row.accessBlockedAt ? (
+                          <p className="mt-2 text-xs text-slate-400">
+                            blocked: {formatDateTime(row.accessBlockedAt)}
+                          </p>
+                        ) : null}
+                        {row.accessBlockReason ? (
+                          <p className="mt-1 max-w-[220px] text-xs text-slate-500">
+                            {row.accessBlockReason}
+                          </p>
+                        ) : null}
                       </td>
 
                       <td className="px-4 py-4">
@@ -471,6 +596,31 @@ export default function AdminUsersPage() {
                         <p className="mt-1 text-xs text-slate-400">
                           last: {formatDateTime(row.lastAiUsageAt)}
                         </p>
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <button
+                          type="button"
+                          onClick={() => void toggleUserAccess(row)}
+                          disabled={
+                            pendingUserId === row.userId ||
+                            (row.accessStatus !== "blocked" && row.isProtectedOwnerAccount)
+                          }
+                          className={[
+                            "rounded-xl px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50",
+                            row.accessStatus === "blocked"
+                              ? "border border-emerald-700 bg-emerald-950/40 text-emerald-100 hover:bg-emerald-900/50"
+                              : "border border-red-700 bg-red-950/40 text-red-100 hover:bg-red-900/50",
+                          ].join(" ")}
+                        >
+                          {pendingUserId === row.userId
+                            ? "Сохраняю..."
+                            : row.accessStatus === "blocked"
+                              ? "Разблокировать"
+                              : row.isProtectedOwnerAccount
+                                ? "Защищён"
+                                : "Заблокировать"}
+                        </button>
                       </td>
                     </tr>
                   ))}

@@ -38,6 +38,28 @@ export async function POST() {
     );
   }
 
+  const accessStatus =
+    typeof appUser?.access_status === "string" ? appUser.access_status : "active";
+
+  if (accessStatus === "blocked") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "USER_ACCESS_BLOCKED",
+        errorMessage: "This account has been blocked by a platform administrator.",
+        blockedAt:
+          typeof appUser?.access_blocked_at === "string"
+            ? appUser.access_blocked_at
+            : null,
+        blockedReason:
+          typeof appUser?.access_block_reason === "string"
+            ? appUser.access_block_reason
+            : null,
+      },
+      { status: 403 }
+    );
+  }
+
   const { data: existingPerson, error: existingPersonError } = await supabase
     .from("persons")
     .select("*")

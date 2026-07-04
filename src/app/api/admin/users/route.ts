@@ -12,6 +12,10 @@ export const runtime = "nodejs";
 const ROUTE_MARKER = "admin-users-list-route-step19h-v1" as const;
 const MAX_USERS = 250;
 const RECENT_ACTIVITY_LIMIT = 2000;
+const PROTECTED_OWNER_EMAILS = new Set([
+  "alexanderpolansky@gmail.com",
+  "aleksanderpolansky@gmail.com",
+]);
 
 type AppUserRow = {
   id: string;
@@ -22,6 +26,12 @@ type AppUserRow = {
   created_at: string | null;
   updated_at: string | null;
   last_seen_at: string | null;
+  access_status: string | null;
+  access_blocked_at: string | null;
+  access_blocked_by_admin_user_id: string | null;
+  access_block_reason: string | null;
+  access_unblocked_at: string | null;
+  access_unblocked_by_admin_user_id: string | null;
 };
 
 type PlatformAdminRow = {
@@ -123,8 +133,31 @@ function asNumber(value: unknown, fallback = 0): number {
 
 function asNullableString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0
-    ? value
+    ? value.trim()
     : null;
+}
+
+function normalizeEmail(value: string | null): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function isProtectedOwnerEmail(value: string | null): boolean {
+  return PROTECTED_OWNER_EMAILS.has(normalizeEmail(value));
+}
+
+function normalizeAccessStatus(value: string | null): "active" | "blocked" {
+  return value === "blocked" ? "blocked" : "active";
+}
+
+async function readJsonBody(request: Request): Promise<Record<string, unknown>> {
+  try {
+    const body = await request.json();
+    return body && typeof body === "object" && !Array.isArray(body)
+      ? (body as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
 }
 
 function maxIsoTimestamp(values: readonly (string | null | undefined)[]): string | null {
@@ -342,7 +375,200 @@ async function readRowsByUserIds<T>(
   };
 }
 
+export async function PATCH(request: Request) {
+  const platformAdminGuard = await requirePlatformAdmin({
+    allowedRoles: ["owner", "admin"],
+  });
+
+  if (!platformAdminGuard.ok) {
+    return platformAdminErrorResponse(platformAdminGuard, ROUTE_MARKER);
+  }
+
+  const body = await readJsonBody(request);
+  const targetUserId = asNullableString(body.userId);
+  const action = asNullableString(body.action);
+  const reason = asNullableString(body.reason);
+
+  if (!targetUserId || (action !== "block" && action !== "unblock")) {
+    return NextResponse.json(
+      {
+        ok: false,
+        routeMarker: ROUTE_MARKER,
+        errorCode: "ADMIN_USERS_INVALID_ACCESS_ACTION",
+        errorMessage: "userId and action=block|unblock are required.",
+        sideEffects: {
+          dbReadExecuted: false,
+          dbWriteExecuted: false,
+          openAiCallExecuted: false,
+          rowsActuallyWritten: 0,
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const { data: targetRows, error: targetReadError } = await supabase
+    .from("app_users")
+    .select(
+      "id, auth0_sub, email, name, access_status, access_blocked_at, access_block_reason",
+    )
+    .eq("id", targetUserId)
+    .limit(1);
+
+  if (targetReadError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        routeMarker: ROUTE_MARKER,
+        errorCode: "ADMIN_USERS_TARGET_READ_FAILED",
+        errorMessage: targetReadError.message,
+        sideEffects: {
+          dbReadExecuted: true,
+          dbWriteExecuted: false,
+          openAiCallExecuted: false,
+          rowsActuallyWritten: 0,
+        },
+      },
+      { status: 500 },
+    );
+  }
+
+  const targetUser =
+    (((targetRows ?? []) as unknown) as Array<{
+      id: string;
+      auth0_sub: string | null;
+      email: string | null;
+      name: string | null;
+      access_status: string | null;
+      access_blocked_at: string | null;
+      access_block_reason: string | null;
+    }>)[0] ?? null;
+
+  if (!targetUser) {
+    return NextResponse.json(
+      {
+        ok: false,
+        routeMarker: ROUTE_MARKER,
+        errorCode: "ADMIN_USERS_TARGET_NOT_FOUND",
+        errorMessage: "Target user was not found.",
+        sideEffects: {
+          dbReadExecuted: true,
+          dbWriteExecuted: false,
+          openAiCallExecuted: false,
+          rowsActuallyWritten: 0,
+        },
+      },
+      { status: 404 },
+    );
+  }
+
+  if (action === "block" && isProtectedOwnerEmail(targetUser.email)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        routeMarker: ROUTE_MARKER,
+        errorCode: "ADMIN_USERS_PROTECTED_OWNER_BLOCK_DENIED",
+        errorMessage: "Protected owner accounts cannot be blocked.",
+        protectedEmails: [...PROTECTED_OWNER_EMAILS],
+        sideEffects: {
+          dbReadExecuted: true,
+          dbWriteExecuted: false,
+          openAiCallExecuted: false,
+          rowsActuallyWritten: 0,
+        },
+      },
+      { status: 403 },
+    );
+  }
+
+  if (action === "block" && targetUser.id === platformAdminGuard.appUser.id) {
+    return NextResponse.json(
+      {
+        ok: false,
+        routeMarker: ROUTE_MARKER,
+        errorCode: "ADMIN_USERS_SELF_BLOCK_DENIED",
+        errorMessage: "The current admin session cannot block itself.",
+        sideEffects: {
+          dbReadExecuted: true,
+          dbWriteExecuted: false,
+          openAiCallExecuted: false,
+          rowsActuallyWritten: 0,
+        },
+      },
+      { status: 403 },
+    );
+  }
+
+  const now = new Date().toISOString();
+  const update =
+    action === "block"
+      ? {
+          access_status: "blocked",
+          access_blocked_at: now,
+          access_blocked_by_admin_user_id: platformAdminGuard.appUser.id,
+          access_block_reason: reason ?? "Blocked by platform admin.",
+          access_unblocked_at: null,
+          access_unblocked_by_admin_user_id: null,
+          updated_at: now,
+        }
+      : {
+          access_status: "active",
+          access_blocked_at: null,
+          access_blocked_by_admin_user_id: null,
+          access_block_reason: null,
+          access_unblocked_at: now,
+          access_unblocked_by_admin_user_id: platformAdminGuard.appUser.id,
+          updated_at: now,
+        };
+
+  const { data: updatedRows, error: updateError } = await supabase
+    .from("app_users")
+    .update(update)
+    .eq("id", targetUser.id)
+    .select(
+      "id, auth0_sub, email, name, access_status, access_blocked_at, access_block_reason, access_unblocked_at",
+    )
+    .limit(1);
+
+  if (updateError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        routeMarker: ROUTE_MARKER,
+        errorCode: "ADMIN_USERS_ACCESS_UPDATE_FAILED",
+        errorMessage: updateError.message,
+        sideEffects: {
+          dbReadExecuted: true,
+          dbWriteExecuted: true,
+          openAiCallExecuted: false,
+          rowsActuallyWritten: 0,
+        },
+      },
+      { status: 500 },
+    );
+  }
+
+  const updatedUser = (((updatedRows ?? []) as unknown) as unknown[])[0] ?? null;
+
+  return NextResponse.json({
+    ok: true,
+    routeMarker: ROUTE_MARKER,
+    routeStatus:
+      action === "block"
+        ? "admin_user_access_blocked"
+        : "admin_user_access_unblocked",
+    targetUser: updatedUser,
+    protectedOwnerAccount: isProtectedOwnerEmail(targetUser.email),
+    sideEffects: {
+      dbReadExecuted: true,
+      dbWriteExecuted: true,
+      openAiCallExecuted: false,
+      rowsActuallyWritten: updatedUser ? 1 : 0,
+    },
+  });
+}
 export async function GET() {
+
   const platformAdminGuard = await requirePlatformAdmin();
 
   if (!platformAdminGuard.ok) {
@@ -355,7 +581,7 @@ export async function GET() {
   try {
     const { data: appUsersData, error: appUsersError } = await supabase
       .from("app_users")
-      .select("id, auth0_sub, email, name, picture, created_at, updated_at, last_seen_at")
+      .select("id, auth0_sub, email, name, picture, created_at, updated_at, last_seen_at, access_status, access_blocked_at, access_blocked_by_admin_user_id, access_block_reason, access_unblocked_at, access_unblocked_by_admin_user_id")
       .order("created_at", { ascending: false })
       .limit(MAX_USERS);
 
@@ -571,6 +797,13 @@ export async function GET() {
         auth0Sub: appUser.auth0_sub,
         createdAt: appUser.created_at,
         updatedAt: appUser.updated_at,
+        accessStatus: normalizeAccessStatus(appUser.access_status),
+        accessBlockedAt: appUser.access_blocked_at,
+        accessBlockedByAdminUserId: appUser.access_blocked_by_admin_user_id,
+        accessBlockReason: appUser.access_block_reason,
+        accessUnblockedAt: appUser.access_unblocked_at,
+        accessUnblockedByAdminUserId: appUser.access_unblocked_by_admin_user_id,
+        isProtectedOwnerAccount: isProtectedOwnerEmail(appUser.email),
 
         adminRole,
         adminStatus: adminRole ? "active" : "none",
@@ -628,6 +861,7 @@ export async function GET() {
           "Active sessions use a five-minute heartbeat window; recent presence uses a thirty-minute window.",
           "Points balance is read from user_points_wallets.user_id -> app_users.id.",
           "AI balance is internal/admin-facing EUR accounting; end-user UI should prefer usage projections, not raw EUR balance.",
+          "Access moderation blocks are admin-only and protected owner accounts cannot be blocked.",
         ],
       },
       sideEffects: {
