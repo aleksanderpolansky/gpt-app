@@ -1,299 +1,356 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-const DEFAULT_TIMEZONE = "Europe/Warsaw";
+type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
-const EXCLUDED_ACTIVITY_STATUSES = new Set([
-  "cancelled",
-  "missed",
-  "archived",
-  "corrected",
-  "status_corrected",
-]);
-
-type DaySummaryEvent = {
-  id: string;
+type ActivityEventSummary = {
+  id: string | null;
   title: string | null;
+  status: string | null;
+  source: string | null;
+  temporalDirection?: string | null;
+  processingStatus?: string | null;
+  startedAt?: string | null;
+  endedAt?: string | null;
+  durationMinutes?: number | null;
+  comment?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+type CalendarLogSummary = {
+  id?: string | null;
+  eventId?: string | null;
+  eventTitle?: string | null;
+  action?: "created" | "updated" | "cancelled" | "restored" | string | null;
+  actorName?: string | null;
+  actorEmail?: string | null;
+  occurredAt?: string | null;
+  eventStartAt?: string | null;
+  eventEndAt?: string | null;
+  eventStatus?: string | null;
+  canEdit?: boolean | null;
+  canCancel?: boolean | null;
+  canRestore?: boolean | null;
+};
+
+type JournalItem = {
+  id: string;
+  kind: "activity" | "calendar-log";
+  sourceId: string | null;
+  occurredAt: string | null;
+  title: string;
+  action: string;
+  actorName: string;
+  eventTime: string | null;
+  source: string;
   status: string;
-  source: string;
-  privacyScope: string;
-  processingStatus: string;
-  startedAt: string | null;
-  endedAt: string | null;
-  durationMinutes: number | null;
-  comment: string | null;
-  activityTypeId: string | null;
-  activityTemplateId: string | null;
-  legacyTemplateId: string | null;
-  createdAt: string;
-  updatedAt: string;
-  isEffectiveForDuration?: boolean;
-  isExcludedFromEffectiveDuration?: boolean;
+  description: string;
+  canEdit: boolean;
+  canCancel: boolean;
+  canRestore: boolean;
+  containerHref: string;
+  raw: ActivityEventSummary | CalendarLogSummary;
 };
 
-type DaySummaryAggregate = {
-  id: string;
-  aggregateDate: string;
-  aggregateType: string;
-  aggregateKey: string;
-  metricKey: string;
-  metricValueNumeric: number;
-  metricValueText: string | null;
-  metricUnit: string | null;
-  source: string;
-  lastEventId: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type DaySummarySnapshot = {
-  id: string;
-  snapshotEntityType: string;
-  snapshotEntityKey: string;
-  metricKey: string;
-  metricValueNumeric: number | null;
-  metricValueText: string | null;
-  metricUnit: string | null;
-  lastEventId: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type DaySummaryResponse = {
-  ok: boolean;
-  error?: string;
-  date?: string;
-  timezone?: string;
-  timezoneMode?: string;
-  dayRange?: {
-    from: string;
-    to: string;
-    timezone?: string;
-    localDate?: string;
-  };
-  filters?: {
-    limit: number;
-    timezone?: string;
-  };
-  summary?: {
-    events: {
-      totalEvents: number;
-      completedEvents: number;
-      openEvents: number;
-      cancelledEvents?: number;
-      missedEvents?: number;
-      archivedEvents?: number;
-      correctedEvents?: number;
-      effectiveEvents?: number;
-      excludedEvents?: number;
-      totalDurationMinutes: number;
-      effectiveDurationMinutes?: number;
-      rawDurationMinutes?: number;
-      excludedDurationMinutes?: number;
-      cancelledDurationMinutes?: number;
-      missedDurationMinutes?: number;
-      archivedDurationMinutes?: number;
-      correctedDurationMinutes?: number;
-      durationPolicy?: {
-        totalDurationMinutesMeans?: string;
-        effectiveStatuses?: string[];
-        excludedStatuses?: string[];
-        failedProcessingStatusExcluded?: boolean;
-      };
-      byStatus: Record<string, number>;
-      byProcessingStatus: Record<string, number>;
-      bySource: Record<string, number>;
-    };
-    dailyAggregates: {
-      totalRows: number;
-      totalsByAggregateType: Array<{
-        aggregateType: string;
-        totalNumericValue: number;
-        itemsCount: number;
-      }>;
-    };
-    currentSnapshots: {
-      totalRows: number;
-    };
-  };
-  latestEvents?: DaySummaryEvent[];
-  openEvents?: DaySummaryEvent[];
-  dailyAggregates?: DaySummaryAggregate[];
-  currentSnapshots?: DaySummarySnapshot[];
-  note?: string;
-};
-
-type CorrectionDraft = {
+type EditDraft = {
+  description: string;
+  startedAtLocal: string;
+  endedAtLocal: string;
   durationMinutes: string;
-  comment: string;
-  reason: string;
-  startedAtLocal: string;
-  endedAtLocal: string;
-  advancedDurationMinutes: string;
 };
 
-type CorrectionState = {
-  loading: boolean;
-  error: string | null;
-  result: unknown | null;
-};
+const LOCALES: Locale[] = ["en", "pl", "ru", "uk", "de", "es", "cs"];
 
-type CorrectionMode = "duration_comment" | "advanced_timing" | "cancelled";
-
-type TimelineConflictSeverity = "info" | "warning" | "blocking";
-
-type TimelineConflictCandidate = {
-  eventId: string;
-  title: string | null;
+const UI: Record<Locale, {
+  pageTitle: string;
+  pageSubtitle: string;
+  add: string;
+  logTab: string;
+  title: string;
+  subtitle: string;
+  empty: string;
+  open: string;
+  edit: string;
+  save: string;
+  back: string;
+  cancel: string;
+  restore: string;
+  container: string;
+  eventTime: string;
   status: string;
-  processingStatus: string | null;
-  source: string | null;
-  currentStartedAt: string | null;
-  currentEndedAt: string | null;
-  currentDurationMinutes: number | null;
-  suggestedStartedAt: string | null;
-  suggestedEndedAt: string | null;
-  suggestedDurationMinutes: number | null;
-  conflictTypes: string[];
-  severity: TimelineConflictSeverity;
-  isSuggestedChange: boolean;
-  explanation: string;
+  source: string;
+  loadError: string;
+  createdActivity: string;
+  updatedActivity: string;
+  cancelledActivity: string;
+  restoredActivity: string;
+  createdCalendar: string;
+  updatedCalendar: string;
+  cancelledCalendar: string;
+  restoredCalendar: string;
+  actor: string;
+  selectedEntry: string;
+  description: string;
+  start: string;
+  end: string;
+  duration: string;
+  confirmCancel: string;
+}> = {
+  en: {
+    pageTitle: "My Activity Journal",
+    pageSubtitle: "Chronological log of activity containers.",
+    add: "Add",
+    logTab: "Activity log",
+    title: "Activity log",
+    subtitle: "Chronological actions with activity containers.",
+    empty: "No activity actions yet.",
+    open: "Open",
+    edit: "Edit",
+    save: "Save",
+    back: "Back",
+    cancel: "Delete",
+    restore: "Restore",
+    container: "Container",
+    eventTime: "Activity time",
+    status: "Status",
+    source: "Source",
+    loadError: "Could not load the activity journal.",
+    createdActivity: "added activity",
+    updatedActivity: "changed activity",
+    cancelledActivity: "deleted activity",
+    restoredActivity: "restored activity",
+    createdCalendar: "added event",
+    updatedCalendar: "changed event",
+    cancelledCalendar: "cancelled event",
+    restoredCalendar: "restored event",
+    actor: "User",
+    selectedEntry: "Entry",
+    description: "Description",
+    start: "Start",
+    end: "End",
+    duration: "Duration",
+    confirmCancel: "Delete this activity entry?",
+  },
+  pl: {
+    pageTitle: "Mój dziennik aktywności",
+    pageSubtitle: "Chronologiczny log kontenerów aktywności.",
+    add: "Dodaj",
+    logTab: "Dziennik aktywności",
+    title: "Dziennik aktywności",
+    subtitle: "Chronologia działań na kontenerach aktywności.",
+    empty: "Brak działań aktywności.",
+    open: "Otwórz",
+    edit: "Zmień",
+    save: "Zapisz",
+    back: "Wstecz",
+    cancel: "Usuń",
+    restore: "Przywróć",
+    container: "Kontener",
+    eventTime: "Czas aktywności",
+    status: "Status",
+    source: "Źródło",
+    loadError: "Nie udało się załadować dziennika aktywności.",
+    createdActivity: "dodał aktywność",
+    updatedActivity: "zmienił aktywność",
+    cancelledActivity: "usunął aktywność",
+    restoredActivity: "przywrócił aktywność",
+    createdCalendar: "dodał wydarzenie",
+    updatedCalendar: "zmienił wydarzenie",
+    cancelledCalendar: "anulował wydarzenie",
+    restoredCalendar: "przywrócił wydarzenie",
+    actor: "Użytkownik",
+    selectedEntry: "Wpis",
+    description: "Opis",
+    start: "Początek",
+    end: "Koniec",
+    duration: "Czas trwania",
+    confirmCancel: "Usunąć ten wpis aktywności?",
+  },
+  ru: {
+    pageTitle: "Мой журнал активностей",
+    pageSubtitle: "Хронологический лог контейнеров активности.",
+    add: "Добавить",
+    logTab: "Журнал активностей",
+    title: "Журнал активностей",
+    subtitle: "Хронология действий с контейнерами активности.",
+    empty: "Пока нет действий активности.",
+    open: "Открыть",
+    edit: "Изменить",
+    save: "Сохранить",
+    back: "Назад",
+    cancel: "Удалить",
+    restore: "Восстановить",
+    container: "Контейнер",
+    eventTime: "Время активности",
+    status: "Статус",
+    source: "Источник",
+    loadError: "Не удалось загрузить журнал активностей.",
+    createdActivity: "добавил активность",
+    updatedActivity: "изменил активность",
+    cancelledActivity: "удалил активность",
+    restoredActivity: "восстановил активность",
+    createdCalendar: "добавил событие",
+    updatedCalendar: "изменил событие",
+    cancelledCalendar: "отменил событие",
+    restoredCalendar: "восстановил событие",
+    actor: "Пользователь",
+    selectedEntry: "Запись",
+    description: "Описание",
+    start: "Начало",
+    end: "Завершение",
+    duration: "Длительность",
+    confirmCancel: "Удалить эту запись активности?",
+  },
+  uk: {
+    pageTitle: "Мій журнал активностей",
+    pageSubtitle: "Хронологічний лог контейнерів активності.",
+    add: "Додати",
+    logTab: "Журнал активностей",
+    title: "Журнал активностей",
+    subtitle: "Хронологія дій з контейнерами активності.",
+    empty: "Поки немає дій активності.",
+    open: "Відкрити",
+    edit: "Змінити",
+    save: "Зберегти",
+    back: "Назад",
+    cancel: "Видалити",
+    restore: "Відновити",
+    container: "Контейнер",
+    eventTime: "Час активності",
+    status: "Статус",
+    source: "Джерело",
+    loadError: "Не вдалося завантажити журнал активностей.",
+    createdActivity: "додав активність",
+    updatedActivity: "змінив активність",
+    cancelledActivity: "видалив активність",
+    restoredActivity: "відновив активність",
+    createdCalendar: "додав подію",
+    updatedCalendar: "змінив подію",
+    cancelledCalendar: "скасував подію",
+    restoredCalendar: "відновив подію",
+    actor: "Користувач",
+    selectedEntry: "Запис",
+    description: "Опис",
+    start: "Початок",
+    end: "Завершення",
+    duration: "Тривалість",
+    confirmCancel: "Видалити цей запис активності?",
+  },
+  de: {
+    pageTitle: "Mein Aktivitätsjournal",
+    pageSubtitle: "Chronologisches Log der Aktivitätscontainer.",
+    add: "Hinzufügen",
+    logTab: "Aktivitätslog",
+    title: "Aktivitätslog",
+    subtitle: "Chronologie der Aktionen mit Aktivitätscontainern.",
+    empty: "Noch keine Aktivitätsaktionen.",
+    open: "Öffnen",
+    edit: "Ändern",
+    save: "Speichern",
+    back: "Zurück",
+    cancel: "Löschen",
+    restore: "Wiederherstellen",
+    container: "Container",
+    eventTime: "Aktivitätszeit",
+    status: "Status",
+    source: "Quelle",
+    loadError: "Aktivitätsjournal konnte nicht geladen werden.",
+    createdActivity: "hat Aktivität hinzugefügt",
+    updatedActivity: "hat Aktivität geändert",
+    cancelledActivity: "hat Aktivität gelöscht",
+    restoredActivity: "hat Aktivität wiederhergestellt",
+    createdCalendar: "hat Ereignis hinzugefügt",
+    updatedCalendar: "hat Ereignis geändert",
+    cancelledCalendar: "hat Ereignis storniert",
+    restoredCalendar: "hat Ereignis wiederhergestellt",
+    actor: "Benutzer",
+    selectedEntry: "Eintrag",
+    description: "Beschreibung",
+    start: "Start",
+    end: "Ende",
+    duration: "Dauer",
+    confirmCancel: "Diesen Aktivitätseintrag löschen?",
+  },
+  es: {
+    pageTitle: "Mi diario de actividades",
+    pageSubtitle: "Log cronológico de contenedores de actividad.",
+    add: "Añadir",
+    logTab: "Log de actividad",
+    title: "Log de actividad",
+    subtitle: "Cronología de acciones con contenedores de actividad.",
+    empty: "Todavía no hay acciones de actividad.",
+    open: "Abrir",
+    edit: "Cambiar",
+    save: "Guardar",
+    back: "Atrás",
+    cancel: "Eliminar",
+    restore: "Restaurar",
+    container: "Contenedor",
+    eventTime: "Tiempo de actividad",
+    status: "Estado",
+    source: "Fuente",
+    loadError: "No se pudo cargar el diario de actividad.",
+    createdActivity: "añadió actividad",
+    updatedActivity: "cambió actividad",
+    cancelledActivity: "eliminó actividad",
+    restoredActivity: "restauró actividad",
+    createdCalendar: "añadió evento",
+    updatedCalendar: "cambió evento",
+    cancelledCalendar: "canceló evento",
+    restoredCalendar: "restauró evento",
+    actor: "Usuario",
+    selectedEntry: "Entrada",
+    description: "Descripción",
+    start: "Inicio",
+    end: "Fin",
+    duration: "Duración",
+    confirmCancel: "¿Eliminar esta entrada de actividad?",
+  },
+  cs: {
+    pageTitle: "Můj deník aktivit",
+    pageSubtitle: "Chronologický log kontejnerů aktivit.",
+    add: "Přidat",
+    logTab: "Log aktivit",
+    title: "Log aktivit",
+    subtitle: "Chronologie akcí s kontejnery aktivit.",
+    empty: "Zatím žádné akce aktivit.",
+    open: "Otevřít",
+    edit: "Změnit",
+    save: "Uložit",
+    back: "Zpět",
+    cancel: "Smazat",
+    restore: "Obnovit",
+    container: "Kontejner",
+    eventTime: "Čas aktivity",
+    status: "Stav",
+    source: "Zdroj",
+    loadError: "Deník aktivit se nepodařilo načíst.",
+    createdActivity: "přidal aktivitu",
+    updatedActivity: "změnil aktivitu",
+    cancelledActivity: "smazal aktivitu",
+    restoredActivity: "obnovil aktivitu",
+    createdCalendar: "přidal událost",
+    updatedCalendar: "změnil událost",
+    cancelledCalendar: "zrušil událost",
+    restoredCalendar: "obnovil událost",
+    actor: "Uživatel",
+    selectedEntry: "Záznam",
+    description: "Popis",
+    start: "Začátek",
+    end: "Konec",
+    duration: "Trvání",
+    confirmCancel: "Smazat tento záznam aktivity?",
+  },
 };
 
-type TimelineConflictDetectionResult = {
-  ok: boolean;
-  skipped?: boolean;
-  reason?: string;
-  error?: string;
-  correctedEventId: string;
-  previousInterval: {
-    startedAt: string | null;
-    endedAt: string | null;
-    durationMinutes: number | null;
-  };
-  newInterval: {
-    startedAt: string | null;
-    endedAt: string | null;
-    durationMinutes: number | null;
-  };
-  searchRange?: {
-    from: string;
-    to: string;
-  };
-  summary: {
-    candidatesCount: number;
-    suggestedChangesCount: number;
-    blockingCandidatesCount: number;
-  };
-  candidates: TimelineConflictCandidate[];
-};
-
-type CorrectionPatchResponse = {
-  ok: boolean;
-  status?: string;
-  error?: string;
-  warning?: string;
-  changedFields?: string[];
-  event?: Record<string, unknown>;
-  correction?: Record<string, unknown>;
-  recalculation?: unknown;
-  rollback?: unknown;
-  timeline?: TimelineConflictDetectionResult;
-  audit?: Record<string, unknown>;
-  recovery?: unknown;
-};
-
-type CorrectionHistoryItem = {
-  id: string;
-  eventId: string;
-  correctionType: string;
-  correctionStatus: string;
-  changedFields: string[];
-  reason: string | null;
-  source: string | null;
-  createdAt: string;
-  previousEvent: unknown;
-  newEvent: unknown;
-  previousImpactEvents: unknown;
-  previousDailyAggregates: unknown;
-  previousCurrentSnapshots: unknown;
-  recalculationResult: unknown;
-};
-
-type CorrectionHistoryResponse = {
-  ok: boolean;
-  error?: string;
-  endpoint?: string;
-  eventId?: string;
-  filters?: {
-    limit: number;
-  };
-  summary?: {
-    totalCorrectionsReturned: number;
-  };
-  corrections?: CorrectionHistoryItem[];
-};
-
-type CorrectionHistoryState = {
-  loading: boolean;
-  error: string | null;
-  response: CorrectionHistoryResponse | null;
-};
-
-type TimelineAdjustmentDraft = {
-  startedAtLocal: string;
-  endedAtLocal: string;
-  reason: string;
-};
-
-type TimelineAdjustmentApplyState = {
-  loading: boolean;
-  error: string | null;
-  appliedCount: number;
-  appliedEventIds: string[];
-  results: Record<string, CorrectionPatchResponse> | null;
-};
-
-type TimelineAdjustmentStatus = {
-  startedAtIso: string | null;
-  endedAtIso: string | null;
-  durationMinutes: number | null;
-  isChanged: boolean;
-  isValid: boolean;
-  validationMessage: string | null;
-};
-
-type AdvancedTimingCorrectionStatus = {
-  startedAtIso: string | null;
-  endedAtIso: string | null;
-  durationMinutes: number | null;
-  isChanged: boolean;
-  isValid: boolean;
-  validationMessage: string | null;
-};
-
-function getTodayDateForTimezone(timezone: string) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-
-  const year = parts.find((part) => part.type === "year")?.value;
-  const month = parts.find((part) => part.type === "month")?.value;
-  const day = parts.find((part) => part.type === "day")?.value;
-
-  if (!year || !month || !day) {
-    return new Date().toISOString().slice(0, 10);
-  }
-
-  return `${year}-${month}-${day}`;
+function normalizeLocale(value: string | null): Locale {
+  return value && LOCALES.includes(value as Locale) ? value as Locale : "en";
 }
 
-function formatDateTime(value: string | null | undefined) {
+function formatDateTime(value: string | null, locale: Locale) {
   if (!value) {
     return "—";
   }
@@ -304,12 +361,13 @@ function formatDateTime(value: string | null | undefined) {
     return value;
   }
 
-  return date.toLocaleString(undefined, {
-    timeZone: DEFAULT_TIMEZONE,
-  });
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
-function formatDateTimeInputValue(value: string | null | undefined) {
+function formatDatetimeLocal(value: string | null) {
   if (!value) {
     return "";
   }
@@ -320,33 +378,11 @@ function formatDateTimeInputValue(value: string | null | undefined) {
     return "";
   }
 
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: DEFAULT_TIMEZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    hourCycle: "h23",
-  }).formatToParts(date);
-
-  const year = parts.find((part) => part.type === "year")?.value;
-  const month = parts.find((part) => part.type === "month")?.value;
-  const day = parts.find((part) => part.type === "day")?.value;
-  const hour = parts.find((part) => part.type === "hour")?.value;
-  const minute = parts.find((part) => part.type === "minute")?.value;
-  const second = parts.find((part) => part.type === "second")?.value;
-
-  if (!year || !month || !day || !hour || !minute || !second) {
-    return "";
-  }
-
-  return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
 }
 
-function parseDateTimeInputValue(value: string) {
+function parseDatetimeLocal(value: string) {
   if (!value.trim()) {
     return null;
   }
@@ -360,2283 +396,693 @@ function parseDateTimeInputValue(value: string) {
   return date.toISOString();
 }
 
-function addMinutesToDateTimeInputValue(
-  startedAtLocal: string,
-  durationMinutes: number
-) {
-  const startedAtIso = parseDateTimeInputValue(startedAtLocal);
-
-  if (!startedAtIso) {
-    return "";
-  }
-
-  const startedDate = new Date(startedAtIso);
-
-  if (Number.isNaN(startedDate.getTime())) {
-    return "";
-  }
-
-  return formatDateTimeInputValue(
-    new Date(startedDate.getTime() + durationMinutes * 60000).toISOString()
-  );
-}
-
-function getInstantValue(value: string | null | undefined) {
-  if (!value) {
-    return null;
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date.getTime();
-}
-
-function dateValuesDiffer(
-  left: string | null | undefined,
-  right: string | null | undefined
-) {
-  if (!left && !right) {
-    return false;
-  }
-
-  if (!left || !right) {
+function isNewActivityContainer(event: ActivityEventSummary) {
+  if (event.temporalDirection === "past") {
     return true;
   }
 
-  const leftValue = getInstantValue(left);
-  const rightValue = getInstantValue(right);
-
-  if (leftValue === null || rightValue === null) {
-    return String(left ?? "") !== String(right ?? "");
-  }
-
-  return leftValue !== rightValue;
-}
-
-function calculateDurationMinutes(
-  startedAtIso: string | null,
-  endedAtIso: string | null
-) {
-  const startedValue = getInstantValue(startedAtIso);
-  const endedValue = getInstantValue(endedAtIso);
-
-  if (startedValue === null || endedValue === null) {
-    return null;
-  }
-
-  return Math.round((endedValue - startedValue) / 60000);
-}
-
-function formatMetricValue(
-  value: number | null | undefined,
-  unit: string | null | undefined
-) {
-  if (value === null || value === undefined) {
-    return "—";
-  }
-
-  return unit ? `${value} ${unit}` : String(value);
-}
-
-function formatMinutes(value: number | null | undefined) {
-  if (value === null || value === undefined) {
-    return "—";
-  }
-
-  return `${value} min`;
-}
-
-function humanizeKey(value: string) {
-  return value.replaceAll("_", " ");
-}
-
-function getDefaultCorrectionDraft(event: DaySummaryEvent): CorrectionDraft {
-  return {
-    durationMinutes: String(event.durationMinutes ?? 0),
-    comment: event.comment ?? "",
-    reason: "Manual correction from Activity Today UI",
-    startedAtLocal: formatDateTimeInputValue(event.startedAt),
-    endedAtLocal: formatDateTimeInputValue(event.endedAt),
-    advancedDurationMinutes: String(event.durationMinutes ?? 0),
-  };
-}
-
-function parseDurationInput(value: string) {
-  const parsed = Number.parseInt(value, 10);
-
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    return null;
-  }
-
-  return parsed;
-}
-
-function isExcludedActivityRecord(event: DaySummaryEvent) {
-  return (
-    event.isExcludedFromEffectiveDuration === true ||
-    EXCLUDED_ACTIVITY_STATUSES.has(event.status) ||
-    event.processingStatus === "failed"
-  );
-}
-
-function isCountedActivityRecord(event: DaySummaryEvent) {
-  if (isExcludedActivityRecord(event)) {
+  if (event.temporalDirection === "future") {
     return false;
   }
 
-  return event.isEffectiveForDuration === true || event.status === "completed";
+  const source = event.source ?? "";
+  const comment = event.comment ?? "";
+
+  return (
+    source === "manual_form" &&
+    (
+      comment.includes("Source: activity_journal_review") ||
+      comment.includes("activity_journal_review") ||
+      comment.includes("activity_container_review_v1")
+    )
+  );
 }
 
-function getExcludedRecordReason(event: DaySummaryEvent) {
-  if (event.isExcludedFromEffectiveDuration) {
-    return "Excluded from effective duration by day-summary policy.";
+function calendarAction(action: CalendarLogSummary["action"], ui: typeof UI[Locale]) {
+  if (action === "updated") {
+    return ui.updatedCalendar;
   }
 
-  if (event.processingStatus === "failed") {
-    return "Processing failed, so this record is kept for audit and excluded from effective progress.";
+  if (action === "cancelled") {
+    return ui.cancelledCalendar;
   }
 
-  if (EXCLUDED_ACTIVITY_STATUSES.has(event.status)) {
-    return `Status "${event.status}" is treated as audit/history, not as effective activity.`;
+  if (action === "restored") {
+    return ui.restoredCalendar;
   }
 
-  return "This record is kept for audit and does not affect effective duration.";
+  return ui.createdCalendar;
 }
 
-function getTimelineSeverityClasses(severity: TimelineConflictSeverity) {
-  if (severity === "blocking") {
-    return "border-red-900/70 bg-red-950/30 text-red-100";
+function activityAction(status: string | null, ui: typeof UI[Locale]) {
+  if (status === "cancelled" || status === "archived") {
+    return ui.cancelledActivity;
   }
 
-  if (severity === "warning") {
-    return "border-amber-900/70 bg-amber-950/20 text-amber-100";
-  }
-
-  return "border-zinc-800 bg-zinc-950 text-zinc-200";
+  return ui.createdActivity;
 }
 
-function getTimelineBadgeClasses(severity: TimelineConflictSeverity) {
-  if (severity === "blocking") {
-    return "bg-red-950 text-red-200";
-  }
+function mapActivityEvent(event: ActivityEventSummary, index: number, locale: Locale): JournalItem {
+  const ui = UI[locale];
+  const title = event.title ?? "Activity";
+  const sourceId = event.id;
+  const start = event.startedAt ?? event.createdAt ?? event.updatedAt ?? null;
+  const end = event.endedAt ?? null;
+  const eventTime = start
+    ? `${formatDateTime(start, locale)}${end ? ` - ${formatDateTime(end, locale)}` : ""}`
+    : null;
 
-  if (severity === "warning") {
-    return "bg-amber-950 text-amber-200";
-  }
-
-  return "bg-zinc-800 text-zinc-300";
-}
-
-function getDefaultTimelineAdjustmentDraft(
-  candidate: TimelineConflictCandidate
-): TimelineAdjustmentDraft {
   return {
-    startedAtLocal: formatDateTimeInputValue(
-      candidate.suggestedStartedAt ?? candidate.currentStartedAt
-    ),
-    endedAtLocal: formatDateTimeInputValue(
-      candidate.suggestedEndedAt ?? candidate.currentEndedAt
-    ),
-    reason: "Timeline adjustment after corrected activity duration change",
+    id: `activity:${sourceId ?? index}`,
+    kind: "activity",
+    sourceId,
+    occurredAt: event.updatedAt ?? event.createdAt ?? start,
+    title,
+    action: activityAction(event.status, ui),
+    actorName: ui.actor,
+    eventTime,
+    source: event.source ?? "activity_events",
+    status: event.temporalDirection ? `${event.status ?? "unknown"} / ${event.temporalDirection}` : event.status ?? "unknown",
+    description: event.comment ?? "",
+    canEdit: Boolean(sourceId) && event.status !== "cancelled" && event.status !== "archived",
+    canCancel: Boolean(sourceId) && event.status !== "cancelled" && event.status !== "archived",
+    canRestore: Boolean(sourceId) && (event.status === "cancelled" || event.status === "archived"),
+    containerHref: `/calendar/activity-review?${new URLSearchParams({
+      locale,
+      text: title,
+      returnTo: "activity-journal",
+      temporalDirection: "past",
+    }).toString()}`,
+    raw: event,
   };
 }
 
-function getTimelineAdjustmentStatus(
-  candidate: TimelineConflictCandidate,
-  draft: TimelineAdjustmentDraft
-): TimelineAdjustmentStatus {
-  const startedAtIso = parseDateTimeInputValue(draft.startedAtLocal);
-  const endedAtIso = parseDateTimeInputValue(draft.endedAtLocal);
-  const durationMinutes = calculateDurationMinutes(startedAtIso, endedAtIso);
-
-  const isChanged =
-    dateValuesDiffer(startedAtIso, candidate.currentStartedAt) ||
-    dateValuesDiffer(endedAtIso, candidate.currentEndedAt);
-
-  if (!startedAtIso || !endedAtIso) {
-    return {
-      startedAtIso,
-      endedAtIso,
-      durationMinutes,
-      isChanged,
-      isValid: false,
-      validationMessage: "Start and end must be valid date/time values.",
-    };
-  }
-
-  if (durationMinutes === null) {
-    return {
-      startedAtIso,
-      endedAtIso,
-      durationMinutes,
-      isChanged,
-      isValid: false,
-      validationMessage: "Could not calculate duration.",
-    };
-  }
-
-  if (durationMinutes <= 0) {
-    return {
-      startedAtIso,
-      endedAtIso,
-      durationMinutes,
-      isChanged,
-      isValid: false,
-      validationMessage: "Duration must be greater than 0 minutes.",
-    };
-  }
-
-  if (candidate.status !== "completed") {
-    return {
-      startedAtIso,
-      endedAtIso,
-      durationMinutes,
-      isChanged,
-      isValid: false,
-      validationMessage:
-        "This row is not completed. The current PATCH correction route supports timeline adjustment only for completed events.",
-    };
-  }
+function mapCalendarLog(log: CalendarLogSummary, index: number, locale: Locale): JournalItem {
+  const ui = UI[locale];
+  const title = log.eventTitle ?? "Calendar event";
 
   return {
-    startedAtIso,
-    endedAtIso,
-    durationMinutes,
-    isChanged,
-    isValid: true,
-    validationMessage: null,
+    id: `calendar-log:${log.id ?? index}`,
+    kind: "calendar-log",
+    sourceId: log.eventId ?? null,
+    occurredAt: log.occurredAt ?? null,
+    title,
+    action: calendarAction(log.action, ui),
+    actorName: log.actorName ?? log.actorEmail ?? ui.actor,
+    eventTime: log.eventStartAt
+      ? `${formatDateTime(log.eventStartAt, locale)}${log.eventEndAt ? ` - ${formatDateTime(log.eventEndAt, locale)}` : ""}`
+      : null,
+    source: "calendar_event_logs",
+    status: log.eventStatus ?? log.action ?? "unknown",
+    description: "",
+    canEdit: Boolean(log.eventId && log.canEdit),
+    canCancel: Boolean(log.eventId && log.canCancel),
+    canRestore: Boolean(log.eventId && log.canRestore),
+    containerHref: `/calendar/activity-review?${new URLSearchParams({
+      locale,
+      text: title,
+      returnTo: "calendar",
+      temporalDirection: "future",
+    }).toString()}`,
+    raw: log,
   };
 }
 
-function getAdvancedTimingCorrectionStatus(
-  event: DaySummaryEvent,
-  draft: CorrectionDraft
-): AdvancedTimingCorrectionStatus {
-  const startedAtIso = parseDateTimeInputValue(draft.startedAtLocal);
-  const endedAtIso = parseDateTimeInputValue(draft.endedAtLocal);
-  const durationMinutes = calculateDurationMinutes(startedAtIso, endedAtIso);
-
-  const isChanged =
-    dateValuesDiffer(startedAtIso, event.startedAt) ||
-    dateValuesDiffer(endedAtIso, event.endedAt);
-
-  if (!startedAtIso || !endedAtIso) {
-    return {
-      startedAtIso,
-      endedAtIso,
-      durationMinutes,
-      isChanged,
-      isValid: false,
-      validationMessage: "Started at and ended at must be valid date/time values.",
-    };
-  }
-
-  if (durationMinutes === null) {
-    return {
-      startedAtIso,
-      endedAtIso,
-      durationMinutes,
-      isChanged,
-      isValid: false,
-      validationMessage: "Could not calculate duration from started at and ended at.",
-    };
-  }
-
-  if (durationMinutes <= 0) {
-    return {
-      startedAtIso,
-      endedAtIso,
-      durationMinutes,
-      isChanged,
-      isValid: false,
-      validationMessage: "Duration must be greater than 0 minutes.",
-    };
-  }
-
-  if (event.status !== "completed") {
-    return {
-      startedAtIso,
-      endedAtIso,
-      durationMinutes,
-      isChanged,
-      isValid: false,
-      validationMessage:
-        "Advanced timing correction is currently available only for completed events.",
-    };
-  }
-
-  return {
-    startedAtIso,
-    endedAtIso,
-    durationMinutes,
-    isChanged,
-    isValid: true,
-    validationMessage: null,
-  };
-}
-
-function JsonBlock({ value }: { value: unknown }) {
-  return (
-    <pre className="max-h-[620px] overflow-auto rounded-2xl border border-zinc-800 bg-black p-4 text-xs leading-relaxed text-zinc-200">
-      {JSON.stringify(value, null, 2)}
-    </pre>
-  );
-}
-
-function EmptyState({ text }: { text: string }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950 p-6 text-sm text-zinc-500">
-      {text}
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string | number;
-  hint?: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-zinc-800 bg-black/50 p-5">
-      <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
-        {label}
-      </p>
-      <p className="mt-3 text-3xl font-semibold text-white">{value}</p>
-      {hint ? <p className="mt-2 text-sm text-zinc-500">{hint}</p> : null}
-    </div>
-  );
-}
-
-function TechnicalCounters({
-  summary,
-}: {
-  summary: DaySummaryResponse | null;
-}) {
-  const eventSummary = summary?.summary?.events;
-
-  if (!eventSummary) {
-    return <EmptyState text="Load a day summary first." />;
-  }
-
-  return (
-    <details className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
-      <summary className="cursor-pointer text-sm font-semibold text-zinc-300 hover:text-emerald-300">
-        Technical counters for debugging
-      </summary>
-
-      <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-xl border border-zinc-900 bg-zinc-950 p-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-zinc-600">
-            Raw activity records
-          </p>
-          <p className="mt-2 text-xl font-semibold text-white">
-            {eventSummary.totalEvents}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-zinc-900 bg-zinc-950 p-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-zinc-600">
-            Excluded records
-          </p>
-          <p className="mt-2 text-xl font-semibold text-white">
-            {eventSummary.excludedEvents ?? 0}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-zinc-900 bg-zinc-950 p-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-zinc-600">
-            Raw duration
-          </p>
-          <p className="mt-2 text-xl font-semibold text-white">
-            {formatMinutes(eventSummary.rawDurationMinutes)}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-zinc-900 bg-zinc-950 p-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-zinc-600">
-            Excluded duration
-          </p>
-          <p className="mt-2 text-xl font-semibold text-white">
-            {formatMinutes(eventSummary.excludedDurationMinutes)}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-2 text-xs text-zinc-500 md:grid-cols-2">
-        <p>Cancelled: {eventSummary.cancelledEvents ?? 0}</p>
-        <p>Missed: {eventSummary.missedEvents ?? 0}</p>
-        <p>Archived: {eventSummary.archivedEvents ?? 0}</p>
-        <p>Corrected records: {eventSummary.correctedEvents ?? 0}</p>
-      </div>
-    </details>
-  );
-}
-
-function TimelineCheckPanel({
-  timeline,
-  onApplied,
-}: {
-  timeline: TimelineConflictDetectionResult | undefined;
-  onApplied?: () => Promise<void> | void;
-}) {
-  const [drafts, setDrafts] = useState<Record<string, TimelineAdjustmentDraft>>(
-    {}
-  );
-  const [applyState, setApplyState] = useState<TimelineAdjustmentApplyState>({
-    loading: false,
-    error: null,
-    appliedCount: 0,
-    appliedEventIds: [],
-    results: null,
-  });
-
-  const timelineSignature = useMemo(() => {
-    if (!timeline) {
-      return "no-timeline";
-    }
-
-    return JSON.stringify({
-      correctedEventId: timeline.correctedEventId,
-      newInterval: timeline.newInterval,
-      candidates: timeline.candidates.map((candidate) => ({
-        eventId: candidate.eventId,
-        currentStartedAt: candidate.currentStartedAt,
-        currentEndedAt: candidate.currentEndedAt,
-        suggestedStartedAt: candidate.suggestedStartedAt,
-        suggestedEndedAt: candidate.suggestedEndedAt,
-      })),
-    });
-  }, [timeline]);
-
-  useEffect(() => {
-    if (!timeline?.candidates) {
-      setDrafts({});
-      setApplyState({
-        loading: false,
-        error: null,
-        appliedCount: 0,
-        appliedEventIds: [],
-        results: null,
-      });
-      return;
-    }
-
-    const nextDrafts: Record<string, TimelineAdjustmentDraft> = {};
-
-    for (const candidate of timeline.candidates) {
-      nextDrafts[candidate.eventId] = getDefaultTimelineAdjustmentDraft(
-        candidate
-      );
-    }
-
-    setDrafts(nextDrafts);
-    setApplyState({
-      loading: false,
-      error: null,
-      appliedCount: 0,
-      appliedEventIds: [],
-      results: null,
-    });
-  }, [timelineSignature, timeline]);
-
-  if (!timeline) {
-    return null;
-  }
-
-  if (!timeline.ok) {
-    return (
-      <div className="mt-4 rounded-2xl border border-red-900/70 bg-red-950/30 p-4 text-xs leading-5 text-red-100">
-        <p className="font-semibold">Timeline check failed.</p>
-        <p className="mt-1">{timeline.error ?? "Unknown timeline error."}</p>
-      </div>
-    );
-  }
-
-  const candidates = timeline.candidates ?? [];
-  const hasCandidates = candidates.length > 0;
-  const appliedEventIds = new Set(applyState.appliedEventIds);
-
-  const candidateStatuses = candidates.map((candidate) => {
-    const draft =
-      drafts[candidate.eventId] ?? getDefaultTimelineAdjustmentDraft(candidate);
-
-    return {
-      candidate,
-      draft,
-      isApplied: appliedEventIds.has(candidate.eventId),
-      status: getTimelineAdjustmentStatus(candidate, draft),
-    };
-  });
-
-  const changedRows = candidateStatuses.filter(
-    (item) => !item.isApplied && item.status.isChanged
-  );
-  const validChangedRows = changedRows.filter((item) => item.status.isValid);
-  const invalidChangedRows = changedRows.filter((item) => !item.status.isValid);
-
-  async function applyTimelineAdjustments() {
-    if (validChangedRows.length === 0) {
-      setApplyState((current) => ({
-        ...current,
-        loading: false,
-        error: "No valid changed timeline rows to apply.",
-      }));
-      return;
-    }
-
-    if (invalidChangedRows.length > 0) {
-      setApplyState((current) => ({
-        ...current,
-        loading: false,
-        error: "Fix invalid changed rows before applying timeline adjustments.",
-      }));
-      return;
-    }
-
-    setApplyState((current) => ({
-      ...current,
-      loading: true,
-      error: null,
-    }));
-
-    const results: Record<string, CorrectionPatchResponse> = {};
-
-    try {
-      for (const item of validChangedRows) {
-        if (!item.status.startedAtIso || !item.status.endedAtIso) {
-          throw new Error(
-            `Invalid timeline adjustment for ${item.candidate.eventId}.`
-          );
-        }
-
-        const response = await fetch(
-          `/api/activity/events/${encodeURIComponent(
-            item.candidate.eventId
-          )}`,
-          {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            body: JSON.stringify({
-              startedAt: item.status.startedAtIso,
-              endedAt: item.status.endedAtIso,
-              reason:
-                item.draft.reason.trim() ||
-                "Timeline adjustment after corrected activity duration change",
-            }),
-          }
-        );
-
-        const result = (await response.json()) as CorrectionPatchResponse;
-
-        if (!response.ok || !result.ok) {
-          throw new Error(
-            result.error ??
-              `Failed to apply timeline adjustment for ${item.candidate.eventId}.`
-          );
-        }
-
-        results[item.candidate.eventId] = result;
-      }
-
-      const newlyAppliedEventIds = validChangedRows.map(
-        (item) => item.candidate.eventId
-      );
-
-      setApplyState((current) => ({
-        loading: false,
-        error: null,
-        appliedCount: current.appliedCount + newlyAppliedEventIds.length,
-        appliedEventIds: Array.from(
-          new Set([...current.appliedEventIds, ...newlyAppliedEventIds])
-        ),
-        results: {
-          ...(current.results ?? {}),
-          ...results,
-        },
-      }));
-
-      await onApplied?.();
-    } catch (requestError) {
-      setApplyState((current) => ({
-        ...current,
-        loading: false,
-        error:
-          requestError instanceof Error
-            ? requestError.message
-            : "Unknown timeline adjustment error.",
-        results: Object.keys(results).length > 0 ? results : current.results,
-      }));
-    }
-  }
-
-  return (
-    <details
-      className={[
-        "mt-4 rounded-2xl border p-4",
-        hasCandidates
-          ? "border-amber-900/60 bg-amber-950/10"
-          : "border-emerald-900/60 bg-emerald-950/10",
-      ].join(" ")}
-      open={hasCandidates}
-    >
-      <summary
-        className={[
-          "cursor-pointer text-xs font-semibold uppercase tracking-[0.18em]",
-          hasCandidates ? "text-amber-200" : "text-emerald-300",
-        ].join(" ")}
-      >
-        Timeline check
-      </summary>
-
-      <div className="mt-4 grid gap-3">
-        <div className="grid gap-3 text-xs md:grid-cols-3">
-          <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
-            <p className="uppercase tracking-[0.16em] text-zinc-600">
-              Candidates
-            </p>
-            <p className="mt-2 text-lg font-semibold text-white">
-              {timeline.summary.candidatesCount}
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
-            <p className="uppercase tracking-[0.16em] text-zinc-600">
-              Suggested changes
-            </p>
-            <p className="mt-2 text-lg font-semibold text-white">
-              {timeline.summary.suggestedChangesCount}
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
-            <p className="uppercase tracking-[0.16em] text-zinc-600">
-              Blocking
-            </p>
-            <p className="mt-2 text-lg font-semibold text-white">
-              {timeline.summary.blockingCandidatesCount}
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-zinc-800 bg-black/30 p-3 text-xs leading-5 text-zinc-400">
-          <p>
-            Corrected interval: {formatDateTime(timeline.previousInterval.endedAt)}{" "}
-            → {formatDateTime(timeline.newInterval.endedAt)}
-          </p>
-          <p className="mt-1">
-            Duration: {formatMinutes(timeline.previousInterval.durationMinutes)}{" "}
-            → {formatMinutes(timeline.newInterval.durationMinutes)}
-          </p>
-          {timeline.skipped ? (
-            <p className="mt-2 text-zinc-500">
-              Timeline detection skipped: {timeline.reason ?? "no reason"}
-            </p>
-          ) : null}
-        </div>
-
-        {!hasCandidates && !timeline.skipped ? (
-          <div className="rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-3 text-xs leading-5 text-emerald-200">
-            No affected activities detected.
-          </div>
-        ) : null}
-
-        {hasCandidates ? (
-          <div className="rounded-xl border border-zinc-800 bg-black/30 p-3 text-xs leading-5 text-zinc-400">
-            Edit start/end directly. Rows whose new start/end differ from the
-            current values will be applied. Already applied rows are locked to
-            prevent duplicate corrections.
-          </div>
-        ) : null}
-
-        {candidateStatuses.map(({ candidate, draft, isApplied, status }) => {
-          const rowStatusLabel = isApplied
-            ? "applied"
-            : !status.isChanged
-              ? "unchanged"
-              : status.isValid
-                ? "will be updated"
-                : "invalid";
-
-          const rowStatusClasses = isApplied
-            ? "bg-emerald-950 text-emerald-200"
-            : !status.isChanged
-              ? "bg-zinc-800 text-zinc-300"
-              : status.isValid
-                ? "bg-emerald-950 text-emerald-200"
-                : "bg-red-950 text-red-200";
-
-          return (
-            <div
-              className={[
-                "rounded-xl border p-3 text-xs leading-5",
-                isApplied
-                  ? "border-emerald-900/70 bg-emerald-950/10 text-emerald-100"
-                  : getTimelineSeverityClasses(candidate.severity),
-              ].join(" ")}
-              key={candidate.eventId}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-white">
-                    {candidate.title ?? "Untitled activity"}
-                  </p>
-                  <p className="mt-1 text-zinc-500">
-                    {candidate.source ?? "unknown source"} · {candidate.status} /{" "}
-                    {candidate.processingStatus ?? "unknown"}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <span
-                    className={[
-                      "rounded-full px-2.5 py-1 text-xs",
-                      getTimelineBadgeClasses(candidate.severity),
-                    ].join(" ")}
-                  >
-                    {candidate.severity}
-                  </span>
-                  <span
-                    className={[
-                      "rounded-full px-2.5 py-1 text-xs",
-                      rowStatusClasses,
-                    ].join(" ")}
-                  >
-                    {rowStatusLabel}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-3 grid gap-2 md:grid-cols-2">
-                <div className="rounded-lg border border-zinc-800 bg-black/30 p-2">
-                  <p className="uppercase tracking-[0.16em] text-zinc-600">
-                    Current before apply
-                  </p>
-                  <p className="mt-1 text-zinc-200">
-                    {formatDateTime(candidate.currentStartedAt)} →{" "}
-                    {formatDateTime(candidate.currentEndedAt)}
-                  </p>
-                  <p className="mt-1 text-zinc-500">
-                    {formatMinutes(candidate.currentDurationMinutes)}
-                  </p>
-                </div>
-
-                <div className="rounded-lg border border-zinc-800 bg-black/30 p-2">
-                  <p className="uppercase tracking-[0.16em] text-zinc-600">
-                    Suggested baseline
-                  </p>
-                  <p className="mt-1 text-zinc-200">
-                    {formatDateTime(candidate.suggestedStartedAt)} →{" "}
-                    {formatDateTime(candidate.suggestedEndedAt)}
-                  </p>
-                  <p className="mt-1 text-zinc-500">
-                    {formatMinutes(candidate.suggestedDurationMinutes)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <div>
-                  <label
-                    className="mb-2 block text-xs uppercase tracking-[0.16em] text-zinc-600"
-                    htmlFor={`timeline-start-${candidate.eventId}`}
-                  >
-                    New start
-                  </label>
-                  <input
-                    className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={applyState.loading || isApplied}
-                    id={`timeline-start-${candidate.eventId}`}
-                    onChange={(event) =>
-                      setDrafts((current) => ({
-                        ...current,
-                        [candidate.eventId]: {
-                          ...draft,
-                          startedAtLocal: event.target.value,
-                        },
-                      }))
-                    }
-                    step={1}
-                    type="datetime-local"
-                    value={draft.startedAtLocal}
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="mb-2 block text-xs uppercase tracking-[0.16em] text-zinc-600"
-                    htmlFor={`timeline-end-${candidate.eventId}`}
-                  >
-                    New end
-                  </label>
-                  <input
-                    className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={applyState.loading || isApplied}
-                    id={`timeline-end-${candidate.eventId}`}
-                    onChange={(event) =>
-                      setDrafts((current) => ({
-                        ...current,
-                        [candidate.eventId]: {
-                          ...draft,
-                          endedAtLocal: event.target.value,
-                        },
-                      }))
-                    }
-                    step={1}
-                    type="datetime-local"
-                    value={draft.endedAtLocal}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-3">
-                <label
-                  className="mb-2 block text-xs uppercase tracking-[0.16em] text-zinc-600"
-                  htmlFor={`timeline-reason-${candidate.eventId}`}
-                >
-                  Reason
-                </label>
-                <input
-                  className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={applyState.loading || isApplied}
-                  id={`timeline-reason-${candidate.eventId}`}
-                  onChange={(event) =>
-                    setDrafts((current) => ({
-                      ...current,
-                      [candidate.eventId]: {
-                        ...draft,
-                        reason: event.target.value,
-                      },
-                    }))
-                  }
-                  value={draft.reason}
-                />
-              </div>
-
-              <div className="mt-3 rounded-lg border border-zinc-800 bg-black/30 p-2">
-                <p className="text-zinc-400">
-                  New duration: {formatMinutes(status.durationMinutes)}
-                </p>
-                <p className="mt-1 text-zinc-500">
-                  Conflict types:{" "}
-                  {candidate.conflictTypes.length > 0
-                    ? candidate.conflictTypes.join(", ")
-                    : "—"}
-                </p>
-                <p className="mt-1 text-zinc-500">
-                  Suggested change from detector:{" "}
-                  {candidate.isSuggestedChange ? "yes" : "no"}
-                </p>
-                {isApplied ? (
-                  <p className="mt-2 text-emerald-200">
-                    This timeline row has already been applied. Inputs are
-                    locked to prevent a duplicate correction from the same
-                    preview.
-                  </p>
-                ) : null}
-                {status.validationMessage && !isApplied ? (
-                  <p className="mt-2 text-red-200">
-                    {status.validationMessage}
-                  </p>
-                ) : null}
-              </div>
-
-              <p className="mt-3 text-zinc-400">{candidate.explanation}</p>
-            </div>
-          );
-        })}
-
-        {hasCandidates ? (
-          <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="text-xs leading-5 text-zinc-500">
-                <p>Changed rows not yet applied: {changedRows.length}</p>
-                <p>Valid rows to apply: {validChangedRows.length}</p>
-                <p>Invalid changed rows: {invalidChangedRows.length}</p>
-                <p>Applied rows: {applyState.appliedEventIds.length}</p>
-              </div>
-
-              <button
-                className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-semibold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={
-                  applyState.loading ||
-                  validChangedRows.length === 0 ||
-                  invalidChangedRows.length > 0
-                }
-                onClick={() => void applyTimelineAdjustments()}
-                type="button"
-              >
-                {applyState.loading
-                  ? "Applying..."
-                  : applyState.appliedEventIds.length > 0 &&
-                      validChangedRows.length === 0
-                    ? "Applied"
-                    : "Apply changed timeline rows"}
-              </button>
-            </div>
-
-            {applyState.error ? (
-              <div className="mt-3 rounded-lg border border-red-900/70 bg-red-950/30 p-3 text-xs leading-5 text-red-100">
-                {applyState.error}
-              </div>
-            ) : null}
-
-            {applyState.appliedCount > 0 ? (
-              <div className="mt-3 rounded-lg border border-emerald-900/70 bg-emerald-950/30 p-3 text-xs leading-5 text-emerald-200">
-                Applied timeline adjustments: {applyState.appliedCount}. The
-                applied rows are locked and the day summary has been reloaded.
-              </div>
-            ) : null}
-
-            {applyState.results ? (
-              <details className="mt-3">
-                <summary className="cursor-pointer text-xs text-zinc-500 hover:text-zinc-300">
-                  Timeline adjustment results JSON
-                </summary>
-                <div className="mt-3">
-                  <JsonBlock value={applyState.results} />
-                </div>
-              </details>
-            ) : null}
-          </div>
-        ) : null}
-
-        <details>
-          <summary className="cursor-pointer text-xs text-zinc-500 hover:text-zinc-300">
-            Timeline JSON
-          </summary>
-          <div className="mt-3">
-            <JsonBlock value={timeline} />
-          </div>
-        </details>
-      </div>
-    </details>
-  );
-}
-
-function CorrectionHistoryPanel({
-  eventId,
-  state,
-  onLoad,
-}: {
-  eventId: string;
-  state: CorrectionHistoryState | undefined;
-  onLoad: () => void;
-}) {
-  const corrections = state?.response?.corrections ?? [];
-  const hasLoaded = Boolean(state?.response || state?.error);
-
-  return (
-    <details className="mt-4 rounded-2xl border border-zinc-800 bg-black/30 p-4">
-      <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 hover:text-emerald-300">
-        Correction history
-      </summary>
-
-      <div className="mt-4 grid gap-3">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <p className="text-xs leading-5 text-zinc-500">
-            Read-only audit history from activity_corrections. It is loaded on
-            demand and stays outside the main activity interpretation.
-          </p>
-
-          <button
-            className="rounded-xl border border-zinc-700 px-3 py-2 text-xs font-semibold text-zinc-200 hover:border-emerald-500 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={state?.loading ?? false}
-            onClick={onLoad}
-            type="button"
-          >
-            {state?.loading
-              ? "Loading..."
-              : hasLoaded
-                ? "Refresh history"
-                : "Load history"}
-          </button>
-        </div>
-
-        {state?.error ? (
-          <div className="rounded-xl border border-red-900/70 bg-red-950/40 p-3 text-xs leading-5 text-red-200">
-            {state.error}
-          </div>
-        ) : null}
-
-        {!hasLoaded && !state?.loading ? (
-          <EmptyState text="Correction history is not loaded yet." />
-        ) : null}
-
-        {state?.response?.ok && corrections.length === 0 ? (
-          <EmptyState text="No correction history for this event." />
-        ) : null}
-
-        {corrections.map((correction) => (
-          <div
-            className="rounded-xl border border-zinc-800 bg-zinc-950 p-3"
-            key={correction.id}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  {humanizeKey(correction.correctionType)}
-                </p>
-                <p className="mt-1 text-xs text-zinc-500">
-                  {formatDateTime(correction.createdAt)} ·{" "}
-                  {correction.source ?? "unknown source"}
-                </p>
-              </div>
-
-              <span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300">
-                {correction.correctionStatus}
-              </span>
-            </div>
-
-            <p className="mt-3 text-xs text-zinc-400">
-              Changed fields:{" "}
-              {correction.changedFields.length > 0
-                ? correction.changedFields.join(", ")
-                : "—"}
-            </p>
-
-            <p className="mt-2 text-xs text-zinc-500">
-              Reason: {correction.reason ?? "—"}
-            </p>
-
-            <details className="mt-3">
-              <summary className="cursor-pointer text-xs text-zinc-500 hover:text-zinc-300">
-                Correction audit JSON
-              </summary>
-              <div className="mt-3">
-                <JsonBlock value={correction} />
-              </div>
-            </details>
-          </div>
-        ))}
-
-        {state?.response?.ok ? (
-          <p className="text-xs text-zinc-600">
-            Returned corrections:{" "}
-            {state.response.summary?.totalCorrectionsReturned ??
-              corrections.length}{" "}
-            · event: {eventId}
-          </p>
-        ) : null}
-      </div>
-    </details>
-  );
-}
-
-function EventCorrectionControls({
-  event,
-  draft,
-  state,
-  onDraftChange,
-  onSubmit,
-  onTimelineAdjustmentsApplied,
-}: {
-  event: DaySummaryEvent;
-  draft: CorrectionDraft;
-  state: CorrectionState | undefined;
-  onDraftChange: (patch: Partial<CorrectionDraft>) => void;
-  onSubmit: (mode: CorrectionMode) => void;
-  onTimelineAdjustmentsApplied?: () => Promise<void> | void;
-}) {
-  const isCompleted = event.status === "completed";
-  const isLoading = state?.loading ?? false;
-  const result = state?.result as CorrectionPatchResponse | null | undefined;
-  const advancedTimingStatus = getAdvancedTimingCorrectionStatus(event, draft);
-
-  function handleAdvancedStartedAtChange(value: string) {
-    const endedAtIso = parseDateTimeInputValue(draft.endedAtLocal);
-    const startedAtIso = parseDateTimeInputValue(value);
-    const nextDurationMinutes = calculateDurationMinutes(
-      startedAtIso,
-      endedAtIso
-    );
-
-    onDraftChange({
-      startedAtLocal: value,
-      advancedDurationMinutes:
-        nextDurationMinutes !== null && nextDurationMinutes >= 0
-          ? String(nextDurationMinutes)
-          : draft.advancedDurationMinutes,
-    });
-  }
-
-  function handleAdvancedEndedAtChange(value: string) {
-    const startedAtIso = parseDateTimeInputValue(draft.startedAtLocal);
-    const endedAtIso = parseDateTimeInputValue(value);
-    const nextDurationMinutes = calculateDurationMinutes(
-      startedAtIso,
-      endedAtIso
-    );
-
-    onDraftChange({
-      endedAtLocal: value,
-      advancedDurationMinutes:
-        nextDurationMinutes !== null && nextDurationMinutes >= 0
-          ? String(nextDurationMinutes)
-          : draft.advancedDurationMinutes,
-    });
-  }
-
-  function handleAdvancedDurationChange(value: string) {
-    const durationMinutes = parseDurationInput(value);
-    const patch: Partial<CorrectionDraft> = {
-      advancedDurationMinutes: value,
-    };
-
-    if (durationMinutes !== null) {
-      const recalculatedEndedAtLocal = addMinutesToDateTimeInputValue(
-        draft.startedAtLocal,
-        durationMinutes
-      );
-
-      if (recalculatedEndedAtLocal) {
-        patch.endedAtLocal = recalculatedEndedAtLocal;
-      }
-    }
-
-    onDraftChange(patch);
-  }
-
-  return (
-    <div className="mt-4 rounded-2xl border border-zinc-900 bg-zinc-950/70 p-4">
-      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-            Correction
-          </p>
-          <p className="mt-1 text-xs leading-5 text-zinc-500">
-            Duration/comment corrections recalculate impacts. Cancelled status
-            uses rollback-only correction.
-          </p>
-        </div>
-
-        <span
-          className={[
-            "rounded-full px-2.5 py-1 text-xs",
-            isCompleted
-              ? "bg-emerald-950 text-emerald-200"
-              : "bg-zinc-900 text-zinc-500",
-          ].join(" ")}
-        >
-          {isCompleted ? "editable" : "read-only"}
-        </span>
-      </div>
-
-      {!isCompleted ? (
-        <div className="mt-4 rounded-xl border border-zinc-800 bg-black/40 p-3 text-xs text-zinc-500">
-          Corrections are available only for completed events. Current status:{" "}
-          <span className="text-zinc-300">{event.status}</span>.
-        </div>
-      ) : (
-        <div className="mt-4 grid gap-3">
-          <div className="grid gap-3 md:grid-cols-[0.35fr_0.65fr]">
-            <div>
-              <label
-                className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-600"
-                htmlFor={`duration-${event.id}`}
-              >
-                Duration
-              </label>
-              <input
-                className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500"
-                disabled={isLoading}
-                id={`duration-${event.id}`}
-                min={0}
-                onChange={(inputEvent) =>
-                  onDraftChange({ durationMinutes: inputEvent.target.value })
-                }
-                type="number"
-                value={draft.durationMinutes}
-              />
-            </div>
-
-            <div>
-              <label
-                className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-600"
-                htmlFor={`reason-${event.id}`}
-              >
-                Reason
-              </label>
-              <input
-                className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500"
-                disabled={isLoading}
-                id={`reason-${event.id}`}
-                onChange={(inputEvent) =>
-                  onDraftChange({ reason: inputEvent.target.value })
-                }
-                value={draft.reason}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label
-              className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-600"
-              htmlFor={`comment-${event.id}`}
-            >
-              Comment
-            </label>
-            <textarea
-              className="min-h-20 w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-emerald-500"
-              disabled={isLoading}
-              id={`comment-${event.id}`}
-              onChange={(inputEvent) =>
-                onDraftChange({ comment: inputEvent.target.value })
-              }
-              value={draft.comment}
-            />
-          </div>
-
-          <div className="grid gap-2 md:grid-cols-2">
-            <button
-              className="rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={isLoading}
-              onClick={() => onSubmit("duration_comment")}
-              type="button"
-            >
-              {isLoading ? "Saving..." : "Save duration/comment"}
-            </button>
-
-            <button
-              className="rounded-xl border border-red-700 bg-red-950/40 px-3 py-2 text-xs font-semibold text-red-100 hover:bg-red-900/40 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={isLoading}
-              onClick={() => onSubmit("cancelled")}
-              type="button"
-            >
-              {isLoading ? "Rolling back..." : "Mark cancelled + rollback"}
-            </button>
-          </div>
-
-          <details className="rounded-2xl border border-zinc-800 bg-black/30 p-4">
-            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 hover:text-emerald-300">
-              Advanced timing correction
-            </summary>
-
-            <div className="mt-4 grid gap-3">
-              <p className="text-xs leading-5 text-zinc-500">
-                Edit started at / ended at directly. Duration is recalculated
-                from start and end. If you change duration here, ended at is
-                recalculated from started at.
-              </p>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <label
-                    className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-600"
-                    htmlFor={`advanced-start-${event.id}`}
-                  >
-                    Started at
-                  </label>
-                  <input
-                    className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={isLoading}
-                    id={`advanced-start-${event.id}`}
-                    onChange={(inputEvent) =>
-                      handleAdvancedStartedAtChange(inputEvent.target.value)
-                    }
-                    step={1}
-                    type="datetime-local"
-                    value={draft.startedAtLocal}
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-600"
-                    htmlFor={`advanced-end-${event.id}`}
-                  >
-                    Ended at
-                  </label>
-                  <input
-                    className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={isLoading}
-                    id={`advanced-end-${event.id}`}
-                    onChange={(inputEvent) =>
-                      handleAdvancedEndedAtChange(inputEvent.target.value)
-                    }
-                    step={1}
-                    type="datetime-local"
-                    value={draft.endedAtLocal}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-[0.35fr_0.65fr]">
-                <div>
-                  <label
-                    className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-600"
-                    htmlFor={`advanced-duration-${event.id}`}
-                  >
-                    Duration
-                  </label>
-                  <input
-                    className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={isLoading}
-                    id={`advanced-duration-${event.id}`}
-                    min={0}
-                    onChange={(inputEvent) =>
-                      handleAdvancedDurationChange(inputEvent.target.value)
-                    }
-                    type="number"
-                    value={draft.advancedDurationMinutes}
-                  />
-                </div>
-
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-xs leading-5 text-zinc-400">
-                  <p>
-                    Current event interval: {formatDateTime(event.startedAt)} →{" "}
-                    {formatDateTime(event.endedAt)}
-                  </p>
-                  <p className="mt-1">
-                    New interval: {formatDateTime(advancedTimingStatus.startedAtIso)}{" "}
-                    → {formatDateTime(advancedTimingStatus.endedAtIso)}
-                  </p>
-                  <p className="mt-1">
-                    New calculated duration:{" "}
-                    {formatMinutes(advancedTimingStatus.durationMinutes)}
-                  </p>
-                  <p className="mt-1">
-                    Changed: {advancedTimingStatus.isChanged ? "yes" : "no"}
-                  </p>
-                </div>
-              </div>
-
-              {advancedTimingStatus.validationMessage ? (
-                <div className="rounded-xl border border-red-900/70 bg-red-950/30 p-3 text-xs leading-5 text-red-100">
-                  {advancedTimingStatus.validationMessage}
-                </div>
-              ) : null}
-
-              {!advancedTimingStatus.isChanged &&
-              advancedTimingStatus.isValid ? (
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-xs leading-5 text-zinc-500">
-                  Advanced timing values match the current event interval.
-                  Change started at, ended at, or duration before applying.
-                </div>
-              ) : null}
-
-              <button
-                className="rounded-xl border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={
-                  isLoading ||
-                  !advancedTimingStatus.isValid ||
-                  !advancedTimingStatus.isChanged
-                }
-                onClick={() => onSubmit("advanced_timing")}
-                type="button"
-              >
-                {isLoading ? "Saving advanced timing..." : "Save advanced timing"}
-              </button>
-            </div>
-          </details>
-        </div>
-      )}
-
-      {state?.error ? (
-        <div className="mt-4 rounded-xl border border-red-900/70 bg-red-950/40 p-3 text-xs leading-5 text-red-200">
-          {state.error}
-        </div>
-      ) : null}
-
-      {result?.ok ? (
-        <div className="mt-4 rounded-xl border border-emerald-900/70 bg-emerald-950/30 p-3 text-xs leading-5 text-emerald-200">
-          <p className="font-semibold">Correction applied.</p>
-          <p className="mt-1">
-            Status: {result.status ?? "ok"} · changed fields:{" "}
-            {result.changedFields?.join(", ") ?? "—"}
-          </p>
-          {result.warning ? <p className="mt-1">{result.warning}</p> : null}
-        </div>
-      ) : null}
-
-      {result?.ok ? (
-        <TimelineCheckPanel
-          onApplied={onTimelineAdjustmentsApplied}
-          timeline={result.timeline}
-        />
-      ) : null}
-
-      {state?.result ? (
-        <details className="mt-4">
-          <summary className="cursor-pointer text-xs text-zinc-500 hover:text-zinc-300">
-            Correction response JSON
-          </summary>
-          <div className="mt-3">
-            <JsonBlock value={state.result} />
-          </div>
-        </details>
-      ) : null}
-    </div>
-  );
-}
-
-function CountedActivityCard({
-  event,
-  draft,
-  state,
-  historyState,
-  onDraftChange,
-  onSubmit,
-  onLoadHistory,
-  onTimelineAdjustmentsApplied,
-}: {
-  event: DaySummaryEvent;
-  draft: CorrectionDraft;
-  state: CorrectionState | undefined;
-  historyState: CorrectionHistoryState | undefined;
-  onDraftChange: (patch: Partial<CorrectionDraft>) => void;
-  onSubmit: (mode: CorrectionMode) => void;
-  onLoadHistory: () => void;
-  onTimelineAdjustmentsApplied: () => Promise<void> | void;
-}) {
-  return (
-    <div className="rounded-2xl border border-emerald-900/50 bg-emerald-950/10 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium text-white">
-          {event.title ?? "Untitled activity"}
-        </p>
-        <span className="rounded-full bg-emerald-950 px-2.5 py-1 text-xs text-emerald-200">
-          counted · {event.status} / {event.processingStatus}
-        </span>
-      </div>
-
-      <p className="mt-2 text-xs text-zinc-500">
-        {event.durationMinutes ?? 0} min · {event.source} · started{" "}
-        {formatDateTime(event.startedAt)}
-      </p>
-
-      <p className="mt-2 text-xs text-zinc-400">
-        {event.comment ?? "no comment"}
-      </p>
-
-      <EventCorrectionControls
-        draft={draft}
-        event={event}
-        onDraftChange={onDraftChange}
-        onSubmit={onSubmit}
-        onTimelineAdjustmentsApplied={onTimelineAdjustmentsApplied}
-        state={state}
-      />
-
-      <CorrectionHistoryPanel
-        eventId={event.id}
-        onLoad={onLoadHistory}
-        state={historyState}
-      />
-    </div>
-  );
-}
-
-function ExcludedActivityCard({ event }: { event: DaySummaryEvent }) {
-  return (
-    <div className="rounded-2xl border border-amber-900/50 bg-amber-950/10 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium text-white">
-          {event.title ?? "Untitled activity"}
-        </p>
-        <span className="rounded-full bg-amber-950 px-2.5 py-1 text-xs text-amber-200">
-          excluded · {event.status} / {event.processingStatus}
-        </span>
-      </div>
-
-      <p className="mt-2 text-xs text-zinc-500">
-        {event.durationMinutes ?? 0} min · {event.source} · started{" "}
-        {formatDateTime(event.startedAt)}
-      </p>
-
-      <p className="mt-2 text-xs text-amber-300">
-        {getExcludedRecordReason(event)}
-      </p>
-
-      <p className="mt-2 text-xs text-zinc-400">
-        {event.comment ?? "no comment"}
-      </p>
-
-      <div className="mt-4 rounded-xl border border-zinc-800 bg-black/30 p-3 text-xs leading-5 text-zinc-500">
-        Read-only audit record. Correction controls are hidden because this
-        record is not counted as effective activity.
-      </div>
-    </div>
-  );
+function sortJournalItems(left: JournalItem, right: JournalItem) {
+  const leftTime = left.occurredAt ? new Date(left.occurredAt).getTime() : 0;
+  const rightTime = right.occurredAt ? new Date(right.occurredAt).getTime() : 0;
+
+  return rightTime - leftTime;
 }
 
 export default function ActivityTodayPage() {
-  const [date, setDate] = useState(getTodayDateForTimezone(DEFAULT_TIMEZONE));
-  const [summary, setSummary] = useState<DaySummaryResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [locale, setLocale] = useState<Locale>("en");
+  const [activityEvents, setActivityEvents] = useState<ActivityEventSummary[]>([]);
+  const [calendarLogs, setCalendarLogs] = useState<CalendarLogSummary[]>([]);
+  const [selectedItem, setSelectedItem] = useState<JournalItem | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState<EditDraft>({
+    description: "",
+    startedAtLocal: "",
+    endedAtLocal: "",
+    durationMinutes: "30",
+  });
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showRawSummary, setShowRawSummary] = useState(false);
-  const [correctionDrafts, setCorrectionDrafts] = useState<
-    Record<string, CorrectionDraft>
-  >({});
-  const [correctionStates, setCorrectionStates] = useState<
-    Record<string, CorrectionState>
-  >({});
-  const [correctionHistoryStates, setCorrectionHistoryStates] = useState<
-    Record<string, CorrectionHistoryState>
-  >({});
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const dailyAggregates = summary?.dailyAggregates ?? [];
-  const currentSnapshots = summary?.currentSnapshots ?? [];
-  const latestEvents = summary?.latestEvents ?? [];
-  const openEvents = summary?.openEvents ?? [];
-
-  const countedEvents = useMemo(
-    () => latestEvents.filter((event) => isCountedActivityRecord(event)),
-    [latestEvents]
-  );
-
-  const excludedEvents = useMemo(
-    () => latestEvents.filter((event) => isExcludedActivityRecord(event)),
-    [latestEvents]
-  );
-
-  const otherLatestRecords = useMemo(
-    () =>
-      latestEvents.filter(
-        (event) =>
-          !isCountedActivityRecord(event) && !isExcludedActivityRecord(event)
-      ),
-    [latestEvents]
-  );
-
-  const aggregatesByType = useMemo(() => {
-    const result = new Map<string, DaySummaryAggregate[]>();
-
-    for (const aggregate of dailyAggregates) {
-      const current = result.get(aggregate.aggregateType) ?? [];
-      current.push(aggregate);
-      result.set(aggregate.aggregateType, current);
-    }
-
-    return Array.from(result.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [dailyAggregates]);
-
-  const snapshotsByEntityType = useMemo(() => {
-    const result = new Map<string, DaySummarySnapshot[]>();
-
-    for (const snapshot of currentSnapshots) {
-      const current = result.get(snapshot.snapshotEntityType) ?? [];
-      current.push(snapshot);
-      result.set(snapshot.snapshotEntityType, current);
-    }
-
-    return Array.from(result.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [currentSnapshots]);
-
-  async function loadSummary(targetDate = date) {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(
-        `/api/activity/day-summary?date=${encodeURIComponent(
-          targetDate
-        )}&timezone=${encodeURIComponent(DEFAULT_TIMEZONE)}&limit=20`,
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
-
-      const body = (await response.json()) as DaySummaryResponse;
-
-      if (!response.ok || !body.ok) {
-        throw new Error(body.error ?? "Failed to load day summary");
-      }
-
-      setSummary(body);
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unknown day summary error"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function getCorrectionDraft(event: DaySummaryEvent) {
-    return correctionDrafts[event.id] ?? getDefaultCorrectionDraft(event);
-  }
-
-  function updateCorrectionDraft(
-    event: DaySummaryEvent,
-    patch: Partial<CorrectionDraft>
-  ) {
-    setCorrectionDrafts((current) => ({
-      ...current,
-      [event.id]: {
-        ...getDefaultCorrectionDraft(event),
-        ...(current[event.id] ?? {}),
-        ...patch,
-      },
-    }));
-  }
-
-  function setCorrectionState(eventId: string, state: CorrectionState) {
-    setCorrectionStates((current) => ({
-      ...current,
-      [eventId]: state,
-    }));
-  }
-
-  function setCorrectionHistoryState(
-    eventId: string,
-    state: CorrectionHistoryState
-  ) {
-    setCorrectionHistoryStates((current) => ({
-      ...current,
-      [eventId]: state,
-    }));
-  }
-
-  async function loadCorrectionHistory(eventId: string) {
-    setCorrectionHistoryState(eventId, {
-      loading: true,
-      error: null,
-      response: correctionHistoryStates[eventId]?.response ?? null,
-    });
-
-    try {
-      const response = await fetch(
-        `/api/activity/events/${encodeURIComponent(
-          eventId
-        )}/corrections?limit=20`,
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
-
-      const body = (await response.json()) as CorrectionHistoryResponse;
-
-      if (!response.ok || !body.ok) {
-        throw new Error(body.error ?? "Failed to load correction history");
-      }
-
-      setCorrectionHistoryState(eventId, {
-        loading: false,
-        error: null,
-        response: body,
-      });
-    } catch (requestError) {
-      setCorrectionHistoryState(eventId, {
-        loading: false,
-        error:
-          requestError instanceof Error
-            ? requestError.message
-            : "Unknown correction history error",
-        response: null,
-      });
-    }
-  }
-
-  async function submitCorrection(event: DaySummaryEvent, mode: CorrectionMode) {
-    const draft = getCorrectionDraft(event);
-
-    if (event.status !== "completed") {
-      setCorrectionState(event.id, {
-        loading: false,
-        error: "Only completed events can be corrected from this panel.",
-        result: null,
-      });
+  useEffect(() => {
+    if (typeof window === "undefined") {
       return;
     }
 
-    const reason =
-      draft.reason.trim() ||
-      (mode === "cancelled"
-        ? "Cancelled from Activity Today UI"
-        : mode === "advanced_timing"
-          ? "Advanced timing correction from Activity Today UI"
-          : "Duration/comment correction from Activity Today UI");
+    setLocale(normalizeLocale(new URLSearchParams(window.location.search).get("locale")));
+  }, []);
 
-    const body: Record<string, unknown> = {
-      comment: draft.comment,
-      reason,
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadJournal() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const [activityResponse, calendarResponse] = await Promise.all([
+          fetch("/api/activity/events?limit=50", {
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          }),
+          fetch("/api/calendar-rebuild/events?includeLog=1", {
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          }),
+        ]);
+
+        const activityPayload = await activityResponse.json().catch(() => null) as {
+          events?: ActivityEventSummary[];
+          error?: string;
+        } | null;
+
+        const calendarPayload = await calendarResponse.json().catch(() => null) as {
+          logs?: CalendarLogSummary[];
+          error?: string;
+        } | null;
+
+        if (!activityResponse.ok) {
+          throw new Error(activityPayload?.error || `Activity events request failed: ${activityResponse.status}`);
+        }
+
+        if (!calendarResponse.ok) {
+          throw new Error(calendarPayload?.error || `Calendar log request failed: ${calendarResponse.status}`);
+        }
+
+        if (!cancelled) {
+          const containerEvents = Array.isArray(activityPayload?.events)
+            ? activityPayload.events.filter(isNewActivityContainer)
+            : [];
+
+          setActivityEvents(containerEvents);
+          setCalendarLogs(Array.isArray(calendarPayload?.logs) ? calendarPayload.logs : []);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setActivityEvents([]);
+          setCalendarLogs([]);
+          setError(loadError instanceof Error ? loadError.message : "Unknown journal load error");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadJournal();
+
+    return () => {
+      cancelled = true;
     };
+  }, [refreshKey]);
 
-    if (mode === "duration_comment") {
-      const durationMinutes = parseDurationInput(draft.durationMinutes);
+  const ui = UI[locale];
 
-      if (durationMinutes === null) {
-        setCorrectionState(event.id, {
-          loading: false,
-          error: "Duration must be a valid non-negative number.",
-          result: null,
-        });
-        return;
-      }
+  const addHref = `/calendar/add?${new URLSearchParams({
+    locale,
+    returnTo: "activity-journal",
+    temporalDirection: "past",
+  }).toString()}`;
 
-      body.durationMinutes = durationMinutes;
-    }
+  const journalItems = useMemo(
+    () => [
+      ...activityEvents.map((event, index) => mapActivityEvent(event, index, locale)),
+      ...calendarLogs.map((log, index) => mapCalendarLog(log, index, locale)),
+    ].sort(sortJournalItems),
+    [activityEvents, calendarLogs, locale]
+  );
 
-    if (mode === "advanced_timing") {
-      const startedAt = parseDateTimeInputValue(draft.startedAtLocal);
-      const endedAt = parseDateTimeInputValue(draft.endedAtLocal);
-      const durationMinutes = calculateDurationMinutes(startedAt, endedAt);
+  function openItem(item: JournalItem, edit = false) {
+    setSelectedItem(item);
+    setIsEditing(edit);
 
-      if (!startedAt || !endedAt) {
-        setCorrectionState(event.id, {
-          loading: false,
-          error: "Started at and ended at must be valid date/time values.",
-          result: null,
-        });
-        return;
-      }
+    const activity = item.kind === "activity" ? item.raw as ActivityEventSummary : null;
 
-      if (durationMinutes === null || durationMinutes <= 0) {
-        setCorrectionState(event.id, {
-          loading: false,
-          error: "Advanced timing duration must be greater than 0 minutes.",
-          result: null,
-        });
-        return;
-      }
-
-      if (
-        !dateValuesDiffer(startedAt, event.startedAt) &&
-        !dateValuesDiffer(endedAt, event.endedAt)
-      ) {
-        setCorrectionState(event.id, {
-          loading: false,
-          error: "Advanced timing fields are unchanged.",
-          result: null,
-        });
-        return;
-      }
-
-      body.startedAt = startedAt;
-      body.endedAt = endedAt;
-    }
-
-    if (mode === "cancelled") {
-      body.status = "cancelled";
-    }
-
-    setCorrectionState(event.id, {
-      loading: true,
-      error: null,
-      result: null,
+    setEditDraft({
+      description: item.description,
+      startedAtLocal: formatDatetimeLocal(activity?.startedAt ?? null),
+      endedAtLocal: formatDatetimeLocal(activity?.endedAt ?? null),
+      durationMinutes: String(activity?.durationMinutes ?? 30),
     });
+  }
+
+  async function saveSelectedActivity() {
+    if (!selectedItem || selectedItem.kind !== "activity" || !selectedItem.sourceId) {
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
 
     try {
-      const response = await fetch(
-        `/api/activity/events/${encodeURIComponent(event.id)}`,
-        {
+      const response = await fetch(`/api/activity/events/${encodeURIComponent(selectedItem.sourceId)}`, {
+        credentials: "include",
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          comment: editDraft.description,
+          startedAt: parseDatetimeLocal(editDraft.startedAtLocal),
+          endedAt: parseDatetimeLocal(editDraft.endedAtLocal),
+          durationMinutes: editDraft.durationMinutes,
+          reason: "Activity Journal edit",
+        }),
+      });
+
+      const payload = await response.json().catch(() => null) as { error?: string } | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.error || `Activity update failed: ${response.status}`);
+      }
+
+      setSelectedItem(null);
+      setIsEditing(false);
+      setRefreshKey((current) => current + 1);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unknown save error");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function cancelItem(item: JournalItem) {
+    if (!item.sourceId || !window.confirm(ui.confirmCancel)) {
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      if (item.kind === "activity") {
+        const response = await fetch(`/api/activity/events/${encodeURIComponent(item.sourceId)}`, {
+          credentials: "include",
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
           },
-          body: JSON.stringify(body),
+          body: JSON.stringify({
+            status: "cancelled",
+            reason: "Activity Journal delete",
+          }),
+        });
+
+        const payload = await response.json().catch(() => null) as { error?: string } | null;
+
+        if (!response.ok) {
+          throw new Error(payload?.error || `Activity delete failed: ${response.status}`);
         }
-      );
+      } else {
+        const response = await fetch("/api/calendar-rebuild/events", {
+          credentials: "include",
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ id: item.sourceId }),
+        });
 
-      const result = (await response.json()) as CorrectionPatchResponse;
+        const payload = await response.json().catch(() => null) as { error?: string } | null;
 
-      if (!response.ok || !result.ok) {
-        throw new Error(result.error ?? "Failed to apply correction");
+        if (!response.ok) {
+          throw new Error(payload?.error || `Calendar cancel failed: ${response.status}`);
+        }
       }
 
-      setCorrectionState(event.id, {
-        loading: false,
-        error: null,
-        result,
-      });
-
-      await loadSummary(date);
-      await loadCorrectionHistory(event.id);
-    } catch (requestError) {
-      setCorrectionState(event.id, {
-        loading: false,
-        error:
-          requestError instanceof Error
-            ? requestError.message
-            : "Unknown correction error",
-        result: null,
-      });
+      setSelectedItem(null);
+      setRefreshKey((current) => current + 1);
+    } catch (cancelError) {
+      setError(cancelError instanceof Error ? cancelError.message : "Unknown cancel error");
+    } finally {
+      setIsSaving(false);
     }
   }
 
-  useEffect(() => {
-    void loadSummary(date);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  async function restoreItem(item: JournalItem) {
+    if (!item.sourceId) {
+      return;
+    }
 
-  const eventSummary = summary?.summary?.events;
-  const aggregateSummary = summary?.summary?.dailyAggregates;
-  const snapshotSummary = summary?.summary?.currentSnapshots;
-  const activeTimezone = summary?.timezone ?? DEFAULT_TIMEZONE;
-  const timezoneMode = summary?.timezoneMode ?? "local";
+    setIsSaving(true);
+    setError(null);
 
-  const effectiveDurationMinutes =
-    eventSummary?.effectiveDurationMinutes ?? eventSummary?.totalDurationMinutes;
+    try {
+      if (item.kind === "activity") {
+        const response = await fetch(`/api/activity/events/${encodeURIComponent(item.sourceId)}`, {
+          credentials: "include",
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            status: "completed",
+            reason: "Activity Journal restore",
+          }),
+        });
 
-  const rawDurationMinutes = eventSummary?.rawDurationMinutes;
-  const excludedDurationMinutes = eventSummary?.excludedDurationMinutes;
+        const payload = await response.json().catch(() => null) as { error?: string } | null;
+
+        if (!response.ok) {
+          throw new Error(payload?.error || `Activity restore failed: ${response.status}`);
+        }
+      } else {
+        const response = await fetch("/api/calendar-rebuild/events", {
+          credentials: "include",
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ id: item.sourceId, status: "planned" }),
+        });
+
+        const payload = await response.json().catch(() => null) as { error?: string } | null;
+
+        if (!response.ok) {
+          throw new Error(payload?.error || `Calendar restore failed: ${response.status}`);
+        }
+      }
+
+      setSelectedItem(null);
+      setRefreshKey((current) => current + 1);
+    } catch (restoreError) {
+      setError(restoreError instanceof Error ? restoreError.message : "Unknown restore error");
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-5 py-6 text-zinc-100 md:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        <header className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-5 shadow-2xl shadow-black/40">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+    <main className="min-h-screen bg-[#f0f2f7] px-3 py-5 text-[#1a1d2e]">
+      <div className="mx-auto max-w-[1520px] space-y-4">
+        <section className="rounded-2xl border border-[rgba(0,0,0,0.06)] bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="mb-2 text-xs uppercase tracking-[0.3em] text-emerald-400">
-                Activity Recording Layer v2
+              <h1 className="text-3xl font-bold">{ui.pageTitle}</h1>
+              <p className="mt-1 max-w-3xl text-sm text-[#7c8099]">
+                {ui.pageSubtitle}
               </p>
-              <h1 className="text-2xl font-semibold text-white md:text-3xl">
-                Today Activity Panel
-              </h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
-                Dev dashboard based on the day-summary API. The main cards show
-                useful completed work, productive time, open activities and
-                tracked progress metrics. Technical records stay in debug.
-              </p>
-              <p className="mt-2 text-xs text-zinc-600">
-                Current date mode: {activeTimezone} local day. API timezone
-                mode: {timezoneMode}.
-              </p>
-              {summary?.dayRange ? (
-                <p className="mt-2 text-xs text-zinc-700">
-                  UTC range: {summary.dayRange.from} → {summary.dayRange.to}
-                </p>
-              ) : null}
             </div>
 
-            <div className="flex flex-wrap gap-2 text-sm">
-              <Link
-                className="rounded-full border border-zinc-700 px-4 py-2 text-zinc-200 hover:border-emerald-500 hover:text-emerald-300"
-                href="/activity-capture"
-              >
-                Capture UI
-              </Link>
-              <Link
-                className="rounded-full border border-zinc-700 px-4 py-2 text-zinc-200 hover:border-emerald-500 hover:text-emerald-300"
-                href={`/api/activity/day-summary?date=${encodeURIComponent(
-                  date
-                )}&timezone=${encodeURIComponent(DEFAULT_TIMEZONE)}`}
-                target="_blank"
-              >
-                Day Summary API
-              </Link>
-              <Link
-                className="rounded-full border border-zinc-700 px-4 py-2 text-zinc-200 hover:border-emerald-500 hover:text-emerald-300"
-                href="/api/activity/events?limit=10"
-                target="_blank"
-              >
-                Events API
-              </Link>
-            </div>
+            <Link
+              href={addHref}
+              className="rounded-xl bg-[#3b6ef8] px-4 py-2 text-sm font-bold text-white shadow"
+            >
+              + {ui.add}
+            </Link>
           </div>
-        </header>
+        </section>
 
-        <section className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
-          <div className="grid gap-4 lg:grid-cols-[1fr_auto_auto] lg:items-end">
-            <div>
-              <label
-                className="mb-2 block text-xs uppercase tracking-[0.22em] text-zinc-500"
-                htmlFor="summary-date"
-              >
-                Summary date ({DEFAULT_TIMEZONE})
-              </label>
-              <input
-                className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
-                id="summary-date"
-                onChange={(event) => setDate(event.target.value)}
-                type="date"
-                value={date}
-              />
+        <section className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+          <div className="mb-4">
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#3b6ef8]">
+              {ui.logTab}
             </div>
-
-            <button
-              className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={loading}
-              onClick={() => void loadSummary(date)}
-              type="button"
-            >
-              {loading ? "Loading..." : "Load summary"}
-            </button>
-
-            <button
-              className="rounded-2xl border border-zinc-700 px-5 py-3 text-sm font-semibold text-zinc-200 hover:border-emerald-500 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={loading}
-              onClick={() => {
-                const today = getTodayDateForTimezone(DEFAULT_TIMEZONE);
-                setDate(today);
-                void loadSummary(today);
-              }}
-              type="button"
-            >
-              Today Warsaw
-            </button>
+            <h2 className="mt-1 text-xl font-bold text-[#1a1d2e]">{ui.title}</h2>
+            <p className="mt-1 text-sm font-medium text-[#7c8099]">{ui.subtitle}</p>
           </div>
 
           {error ? (
-            <div className="mt-4 rounded-2xl border border-red-900/70 bg-red-950/40 p-4 text-sm text-red-200">
-              {error}
+            <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">
+              {ui.loadError} {error}
             </div>
           ) : null}
-        </section>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            label="Completed activities"
-            value={eventSummary?.completedEvents ?? "—"}
-            hint="Useful completed activities counted for this day"
-          />
-          <StatCard
-            label="Effective duration"
-            value={
-              effectiveDurationMinutes !== undefined
-                ? `${effectiveDurationMinutes} min`
-                : "—"
-            }
-            hint={
-              rawDurationMinutes !== undefined &&
-              excludedDurationMinutes !== undefined
-                ? `Raw: ${rawDurationMinutes} min · excluded: ${excludedDurationMinutes} min`
-                : "Productive time after corrections and rollbacks"
-            }
-          />
-          <StatCard
-            label="Open activities"
-            value={eventSummary?.openEvents ?? "—"}
-            hint="Started or pending activities"
-          />
-          <StatCard
-            label="Progress metrics"
-            value={aggregateSummary?.totalRows ?? "—"}
-            hint={`Snapshots: ${snapshotSummary?.totalRows ?? "—"}`}
-          />
-        </section>
-
-        <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
-            <h2 className="text-lg font-semibold text-white">
-              Daily aggregate totals
-            </h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              Grouped summary from daily_aggregates.
-            </p>
-
-            <div className="mt-4 grid gap-3">
-              {summary?.summary?.dailyAggregates.totalsByAggregateType.map(
-                (item) => (
-                  <div
-                    className="rounded-2xl border border-zinc-800 bg-black/50 p-4"
-                    key={item.aggregateType}
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-semibold text-white">
-                          {humanizeKey(item.aggregateType)}
-                        </p>
-                        <p className="mt-1 text-xs text-zinc-500">
-                          {item.itemsCount} metric rows
-                        </p>
-                      </div>
-                      <p className="text-xl font-semibold text-emerald-300">
-                        {item.totalNumericValue}
-                      </p>
-                    </div>
-                  </div>
-                )
-              )}
-
-              {summary && summary.summary?.dailyAggregates.totalRows === 0 ? (
-                <EmptyState text="No daily aggregates for this date." />
-              ) : null}
-
-              {!summary ? <EmptyState text="Load a day summary first." /> : null}
+          {loading ? (
+            <div className="rounded-xl border border-dashed border-[#d8deef] bg-[#fbfcff] p-5 text-sm font-semibold text-[#7c8099]">
+              ...
             </div>
-          </div>
-
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
-            <h2 className="text-lg font-semibold text-white">
-              Daily aggregate details
-            </h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              Exact rows used for daily progress and future rings.
-            </p>
-
-            <div className="mt-4 grid gap-4">
-              {aggregatesByType.map(([aggregateType, rows]) => (
-                <div
-                  className="rounded-2xl border border-zinc-800 bg-black/50 p-4"
-                  key={aggregateType}
+          ) : journalItems.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-[#d8deef] bg-[#fbfcff] p-5 text-sm font-semibold text-[#7c8099]">
+              {ui.empty}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {journalItems.map((item) => (
+                <article
+                  key={item.id}
+                  className="rounded-xl border border-[#e2e6f2] bg-[#fbfcff] p-4 shadow-sm"
                 >
-                  <h3 className="text-sm font-semibold text-white">
-                    {humanizeKey(aggregateType)}
-                  </h3>
-
-                  <div className="mt-3 grid gap-2">
-                    {rows.map((row) => (
-                      <div
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-900 bg-zinc-950 px-3 py-2 text-sm"
-                        key={row.id}
-                      >
-                        <div>
-                          <p className="text-zinc-200">
-                            {humanizeKey(row.aggregateKey)}
-                          </p>
-                          <p className="mt-1 text-xs text-zinc-600">
-                            metric: {row.metricKey} · source: {row.source}
-                          </p>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+                        {formatDateTime(item.occurredAt, locale)}
+                      </div>
+                      <div className="mt-1 text-sm font-semibold leading-relaxed text-[#1a1d2e]">
+                        {item.actorName} {item.action}{" "}
+                        <button
+                          type="button"
+                          onClick={() => openItem(item)}
+                          className="font-bold text-[#3b6ef8] underline-offset-4 hover:underline"
+                        >
+                          “{item.title}”
+                        </button>
+                      </div>
+                      {item.eventTime ? (
+                        <div className="mt-1 text-xs font-medium text-[#7c8099]">
+                          {ui.eventTime}: {item.eventTime}
                         </div>
-                        <p className="font-semibold text-emerald-300">
-                          {formatMetricValue(
-                            row.metricValueNumeric,
-                            row.metricUnit
-                          )}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-
-              {dailyAggregates.length === 0 ? (
-                <EmptyState text="No aggregate rows for this date." />
-              ) : null}
-            </div>
-          </div>
-        </section>
-
-        <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
-            <h2 className="text-lg font-semibold text-white">
-              Counted activities
-            </h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              Completed and effective records counted in the selected{" "}
-              {DEFAULT_TIMEZONE} day. Correction controls are available only
-              here.
-            </p>
-
-            <div className="mt-4 grid gap-3">
-              {countedEvents.map((event) => (
-                <CountedActivityCard
-                  draft={getCorrectionDraft(event)}
-                  event={event}
-                  historyState={correctionHistoryStates[event.id]}
-                  key={event.id}
-                  onDraftChange={(patch) =>
-                    updateCorrectionDraft(event, patch)
-                  }
-                  onLoadHistory={() => void loadCorrectionHistory(event.id)}
-                  onSubmit={(mode) => void submitCorrection(event, mode)}
-                  onTimelineAdjustmentsApplied={() => loadSummary(date)}
-                  state={correctionStates[event.id]}
-                />
-              ))}
-
-              {summary && countedEvents.length === 0 ? (
-                <EmptyState text="No counted activities for this date." />
-              ) : null}
-
-              {!summary ? <EmptyState text="Load a day summary first." /> : null}
-            </div>
-
-            {excludedEvents.length > 0 ? (
-              <details className="mt-5 rounded-2xl border border-amber-900/50 bg-black/30 p-4">
-                <summary className="cursor-pointer text-sm font-semibold text-amber-200 hover:text-amber-100">
-                  Excluded records ({excludedEvents.length})
-                </summary>
-
-                <p className="mt-3 text-xs leading-5 text-zinc-500">
-                  Excluded records are kept for audit/history but do not affect
-                  effective duration or the main completed-work interpretation.
-                </p>
-
-                <div className="mt-4 grid gap-3">
-                  {excludedEvents.map((event) => (
-                    <ExcludedActivityCard event={event} key={event.id} />
-                  ))}
-                </div>
-              </details>
-            ) : null}
-
-            {otherLatestRecords.length > 0 ? (
-              <details className="mt-5 rounded-2xl border border-zinc-800 bg-black/30 p-4">
-                <summary className="cursor-pointer text-sm font-semibold text-zinc-300 hover:text-zinc-100">
-                  Other technical records ({otherLatestRecords.length})
-                </summary>
-
-                <p className="mt-3 text-xs leading-5 text-zinc-500">
-                  These records are neither counted as effective completed
-                  activities nor explicitly excluded by the current day-summary
-                  policy.
-                </p>
-
-                <div className="mt-4 grid gap-3">
-                  {otherLatestRecords.map((event) => (
-                    <div
-                      className="rounded-2xl border border-zinc-800 bg-black/50 p-4"
-                      key={event.id}
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-medium text-white">
-                          {event.title ?? "Untitled activity"}
-                        </p>
-                        <span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300">
-                          {event.status} / {event.processingStatus}
-                        </span>
-                      </div>
-
-                      <p className="mt-2 text-xs text-zinc-500">
-                        {event.durationMinutes ?? 0} min · {event.source} ·
-                        started {formatDateTime(event.startedAt)}
-                      </p>
-
-                      <p className="mt-2 text-xs text-zinc-400">
-                        {event.comment ?? "no comment"}
-                      </p>
+                      ) : null}
                     </div>
-                  ))}
-                </div>
-              </details>
-            ) : null}
-          </div>
 
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
-            <h2 className="text-lg font-semibold text-white">Open sessions</h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              Started or pending activities detected by day-summary.
-            </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openItem(item)}
+                        className="rounded-lg border border-[#d8deef] bg-white px-3 py-1.5 text-xs font-bold text-[#667091]"
+                      >
+                        {ui.open}
+                      </button>
 
-            <div className="mt-4 grid gap-3">
-              {openEvents.map((event) => (
-                <div
-                  className="rounded-2xl border border-blue-900/70 bg-blue-950/20 p-4"
-                  key={event.id}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-white">
-                      {event.title ?? "Untitled activity"}
-                    </p>
-                    <span className="rounded-full bg-blue-900 px-2.5 py-1 text-xs text-blue-100">
-                      {event.status} / {event.processingStatus}
-                    </span>
-                  </div>
+                      <Link
+                        href={item.containerHref}
+                        className="rounded-lg border border-[#d8deef] bg-white px-3 py-1.5 text-xs font-bold text-[#667091]"
+                      >
+                        {ui.container}
+                      </Link>
 
-                  <p className="mt-2 text-xs text-zinc-500">
-                    started: {formatDateTime(event.startedAt)}
-                  </p>
+                      {item.canEdit ? (
+                        <button
+                          type="button"
+                          onClick={() => openItem(item, true)}
+                          disabled={isSaving}
+                          className="rounded-lg bg-[#3b6ef8] px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+                        >
+                          {ui.edit}
+                        </button>
+                      ) : null}
 
-                  <p className="mt-2 text-xs text-zinc-400">
-                    {event.comment ?? "no comment"}
-                  </p>
-                </div>
-              ))}
+                      {item.canCancel ? (
+                        <button
+                          type="button"
+                          onClick={() => void cancelItem(item)}
+                          disabled={isSaving}
+                          className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 disabled:opacity-50"
+                        >
+                          {ui.cancel}
+                        </button>
+                      ) : null}
 
-              {openEvents.length === 0 ? (
-                <EmptyState text="No open sessions for this date." />
-              ) : null}
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
-          <h2 className="text-lg font-semibold text-white">
-            Current snapshots
-          </h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Current accumulated state from current_snapshots. This is global
-            current state, not a pure daily table.
-          </p>
-
-          <div className="mt-4 grid gap-4">
-            {snapshotsByEntityType.map(([entityType, rows]) => (
-              <div
-                className="rounded-2xl border border-zinc-800 bg-black/50 p-4"
-                key={entityType}
-              >
-                <h3 className="text-sm font-semibold text-white">
-                  {humanizeKey(entityType)}
-                </h3>
-
-                <div className="mt-3 grid gap-2 md:grid-cols-2">
-                  {rows.map((row) => (
-                    <div
-                      className="rounded-xl border border-zinc-900 bg-zinc-950 px-3 py-2"
-                      key={row.id}
-                    >
-                      <p className="text-sm text-zinc-200">
-                        {humanizeKey(row.snapshotEntityKey)}
-                      </p>
-                      <p className="mt-1 text-xs text-zinc-500">
-                        {humanizeKey(row.metricKey)}
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-emerald-300">
-                        {row.metricValueText ??
-                          formatMetricValue(
-                            row.metricValueNumeric,
-                            row.metricUnit
-                          )}
-                      </p>
+                      {item.canRestore ? (
+                        <button
+                          type="button"
+                          onClick={() => void restoreItem(item)}
+                          disabled={isSaving}
+                          className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 disabled:opacity-50"
+                        >
+                          {ui.restore}
+                        </button>
+                      ) : null}
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-
-            {currentSnapshots.length === 0 ? (
-              <EmptyState text="No current snapshots found." />
-            ) : null}
-          </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
-        <section className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-white">
-                Debug and technical details
-              </h2>
-              <p className="mt-1 text-sm text-zinc-500">
-                User-facing cards above hide raw technical counters. Open this
-                section when debugging records, rollbacks, timezone ranges or
-                aggregate rows.
-              </p>
-            </div>
-
-            <button
-              className="rounded-full border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:border-emerald-500 hover:text-emerald-300"
-              onClick={() => setShowRawSummary((current) => !current)}
-              type="button"
+        {selectedItem ? (
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-[90] flex items-center justify-center bg-black/35 px-3 py-4"
+            onClick={() => {
+              setSelectedItem(null);
+              setIsEditing(false);
+            }}
+          >
+            <div
+              className="max-h-[88vh] w-full max-w-[560px] overflow-y-auto rounded-2xl border border-[rgba(0,0,0,0.06)] bg-white p-5 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
             >
-              {showRawSummary ? "Hide raw JSON" : "Show raw JSON"}
-            </button>
-          </div>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#3b6ef8]">
+                    {ui.selectedEntry}
+                  </div>
+                  <h3 className="mt-2 text-xl font-bold">{selectedItem.title}</h3>
+                  <div className="mt-1 text-sm font-medium text-[#7c8099]">
+                    {selectedItem.eventTime ?? formatDateTime(selectedItem.occurredAt, locale)}
+                  </div>
+                </div>
 
-          <div className="mt-4 grid gap-4">
-            <TechnicalCounters summary={summary} />
+                <button
+                  type="button"
+                  className="rounded-xl border border-[rgba(0,0,0,0.06)] px-3 py-1.5 text-lg font-bold leading-none text-[#7c8099] hover:bg-[#f5f6fb]"
+                  onClick={() => {
+                    setSelectedItem(null);
+                    setIsEditing(false);
+                  }}
+                  aria-label="Close"
+                >
+                  x
+                </button>
+              </div>
 
-            {showRawSummary && summary ? (
-              <JsonBlock value={summary} />
-            ) : showRawSummary ? (
-              <EmptyState text="No raw response loaded yet." />
-            ) : (
-              <EmptyState text="Raw JSON is hidden. Use the debug button to inspect the full day-summary response." />
-            )}
+              <div className="mt-4 grid gap-3">
+                {isEditing && selectedItem.kind === "activity" ? (
+                  <div className="grid gap-3 rounded-xl border border-[#d8deef] bg-[#fbfcff] p-3">
+                    <label className="grid gap-1 text-sm font-semibold text-[#1a1d2e]">
+                      {ui.description}
+                      <textarea
+                        value={editDraft.description}
+                        onChange={(event) => setEditDraft((current) => ({ ...current, description: event.target.value }))}
+                        rows={4}
+                        className="rounded-xl border border-[#d8deef] bg-white px-3 py-2 text-sm font-medium outline-none focus:border-[#3b6ef8]"
+                      />
+                    </label>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="grid gap-1 text-sm font-semibold text-[#1a1d2e]">
+                        {ui.start}
+                        <input
+                          type="datetime-local"
+                          value={editDraft.startedAtLocal}
+                          onChange={(event) => setEditDraft((current) => ({ ...current, startedAtLocal: event.target.value }))}
+                          className="rounded-xl border border-[#d8deef] bg-white px-3 py-2 text-sm font-medium outline-none focus:border-[#3b6ef8]"
+                        />
+                      </label>
+
+                      <label className="grid gap-1 text-sm font-semibold text-[#1a1d2e]">
+                        {ui.end}
+                        <input
+                          type="datetime-local"
+                          value={editDraft.endedAtLocal}
+                          onChange={(event) => setEditDraft((current) => ({ ...current, endedAtLocal: event.target.value }))}
+                          className="rounded-xl border border-[#d8deef] bg-white px-3 py-2 text-sm font-medium outline-none focus:border-[#3b6ef8]"
+                        />
+                      </label>
+                    </div>
+
+                    <label className="grid gap-1 text-sm font-semibold text-[#1a1d2e]">
+                      {ui.duration}
+                      <input
+                        value={editDraft.durationMinutes}
+                        onChange={(event) => setEditDraft((current) => ({ ...current, durationMinutes: event.target.value }))}
+                        className="rounded-xl border border-[#d8deef] bg-white px-3 py-2 text-sm font-medium outline-none focus:border-[#3b6ef8]"
+                      />
+                    </label>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void saveSelectedActivity()}
+                        disabled={isSaving}
+                        className="rounded-xl bg-[#3b6ef8] px-4 py-2 text-sm font-bold text-white shadow-sm disabled:opacity-50"
+                      >
+                        {ui.save}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsEditing(false)}
+                        disabled={isSaving}
+                        className="rounded-xl border border-[#d8deef] bg-white px-4 py-2 text-sm font-bold text-[#667091] disabled:opacity-50"
+                      >
+                        {ui.back}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#f5f6fb] p-3 text-sm text-[#7c8099]">
+                      <div className="font-bold text-[#1a1d2e]">{ui.eventTime}</div>
+                      <div className="mt-1">{selectedItem.eventTime ?? "—"}</div>
+                    </div>
+
+                    <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-3 text-sm text-[#7c8099]">
+                      <div className="font-bold text-[#1a1d2e]">{ui.description}</div>
+                      <div className="mt-2 whitespace-pre-wrap leading-relaxed">
+                        {selectedItem.description || "—"}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#fbfcff] p-3 text-xs leading-relaxed text-[#7c8099]">
+                      {ui.status}: {selectedItem.status}<br />
+                      {ui.source}: {selectedItem.source}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={selectedItem.containerHref}
+                        className="rounded-xl border border-[#d8deef] bg-white px-4 py-2 text-sm font-bold text-[#667091] shadow-sm hover:border-[#3b6ef8] hover:text-[#3b6ef8]"
+                      >
+                        {ui.container}
+                      </Link>
+
+                      {selectedItem.canEdit ? (
+                        <button
+                          type="button"
+                          onClick={() => setIsEditing(true)}
+                          disabled={isSaving || selectedItem.kind !== "activity"}
+                          className="rounded-xl bg-[#3b6ef8] px-4 py-2 text-sm font-bold text-white shadow-sm disabled:opacity-50"
+                        >
+                          {ui.edit}
+                        </button>
+                      ) : null}
+
+                      {selectedItem.canCancel ? (
+                        <button
+                          type="button"
+                          onClick={() => void cancelItem(selectedItem)}
+                          disabled={isSaving}
+                          className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 disabled:opacity-50"
+                        >
+                          {ui.cancel}
+                        </button>
+                      ) : null}
+
+                      {selectedItem.canRestore ? (
+                        <button
+                          type="button"
+                          onClick={() => void restoreItem(selectedItem)}
+                          disabled={isSaving}
+                          className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 disabled:opacity-50"
+                        >
+                          {ui.restore}
+                        </button>
+                      ) : null}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-        </section>
+        ) : null}
       </div>
     </main>
   );

@@ -1235,6 +1235,40 @@ export default function CalendarRebuildClient({
     };
   }, [locale]);
 
+  const activityContainerButtonLabel = useMemo(() => {
+    if (locale === "pl") {
+      return "Kontener";
+    }
+
+    if (locale === "ru" || locale === "uk") {
+      return "Контейнер";
+    }
+
+    if (locale === "de") {
+      return "Container";
+    }
+
+    if (locale === "es") {
+      return "Contenedor";
+    }
+
+    if (locale === "cs") {
+      return "Kontejner";
+    }
+
+    return "Container";
+  }, [locale]);
+
+  function buildFutureActivityContainerHref(event: CalendarEvent) {
+    return `/calendar/activity-review?${new URLSearchParams({
+      locale,
+      text: getEventDisplayTitle(event) || event.title,
+      returnTo: returnToTarget,
+      focusDate: dateKey(eventStartDate(event)),
+      temporalDirection: "future",
+    }).toString()}`;
+  }
+
   /* Step 9A calendar log labels */
   const calendarLogUi = useMemo(() => {
     if (locale === "ru") {
@@ -1998,31 +2032,42 @@ export default function CalendarRebuildClient({
                       {detailUi.privacy}: {selectedEvent.isPrivate ? detailUi.privateLabel : detailUi.publicLabel}
                     </div>
 
-                    {isEditableCalendarEvent(selectedEvent) ? (
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setIsEditingEvent(true)}
-                          disabled={isSavingEvent}
-                          className="rounded-xl bg-[#3b6ef8] px-4 py-2 text-sm font-bold text-white shadow-sm disabled:opacity-50"
-                        >
-                          {eventActionUi.edit}
-                        </button>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={buildFutureActivityContainerHref(selectedEvent)}
+                        className="rounded-xl border border-[#d8deef] bg-white px-4 py-2 text-sm font-bold text-[#667091] shadow-sm hover:border-[#3b6ef8] hover:text-[#3b6ef8]"
+                      >
+                        {activityContainerButtonLabel}
+                      </Link>
 
-                        <button
-                          type="button"
-                          onClick={cancelSelectedEvent}
-                          disabled={isSavingEvent}
-                          className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 disabled:opacity-50"
-                        >
-                          {eventActionUi.cancelEvent}
-                        </button>
-                      </div>
-                    ) : (
+                      {isEditableCalendarEvent(selectedEvent) ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingEvent(true)}
+                            disabled={isSavingEvent}
+                            className="rounded-xl bg-[#3b6ef8] px-4 py-2 text-sm font-bold text-white shadow-sm disabled:opacity-50"
+                          >
+                            {eventActionUi.edit}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={cancelSelectedEvent}
+                            disabled={isSavingEvent}
+                            className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 disabled:opacity-50"
+                          >
+                            {eventActionUi.cancelEvent}
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+
+                    {!isEditableCalendarEvent(selectedEvent) ? (
                       <div className="rounded-xl border border-dashed border-[#d8deef] bg-white p-3 text-sm font-semibold text-[#7c8099]">
                         {eventActionUi.readOnly}
                       </div>
-                    )}
+                    ) : null}
                   </>
                 )}
 

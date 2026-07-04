@@ -224,6 +224,7 @@ export async function POST(request: Request) {
       actor_id: personActor.id,
       space_id: spaceId,
       event_type: eventType,
+      temporal_direction: eventType === "planned_activity" ? "future" : null,
       title,
       description,
       start_time: startTime,

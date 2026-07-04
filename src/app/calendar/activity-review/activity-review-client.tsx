@@ -9,7 +9,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
-type CalendarReturnTarget = "calendar" | "calendar-rebuild";
+type CalendarReturnTarget = "calendar" | "calendar-rebuild" | "activity-journal";
+type TemporalDirection = "future" | "past";
 type FieldStatus = "ready" | "candidate" | "missing";
 
 type ReviewField = {
@@ -345,20 +346,134 @@ function normalizeLocale(value: string | null): Locale {
 }
 
 function normalizeReturnTo(value: string | null): CalendarReturnTarget {
-  return value === "calendar-rebuild" ? "calendar-rebuild" : "calendar";
+  if (value === "calendar-rebuild") {
+    return "calendar-rebuild";
+  }
+
+  if (value === "activity-journal") {
+    return "activity-journal";
+  }
+
+  return "calendar";
+}
+
+function normalizeTemporalDirection(
+  value: string | null,
+  returnTo: CalendarReturnTarget
+): TemporalDirection {
+  if (value === "past" || returnTo === "activity-journal") {
+    return "past";
+  }
+
+  return "future";
 }
 
 function normalizeFocusDate(value: string | null): string | null {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
-function buildCalendarUrl(target: CalendarReturnTarget, locale: Locale, focusDate: string) {
+function buildReturnUrl(target: CalendarReturnTarget, locale: Locale, focusDate: string) {
+  if (target === "activity-journal") {
+    return `/activity-today?${new URLSearchParams({ locale }).toString()}`;
+  }
+
   const params = new URLSearchParams({
     locale,
     focusDate,
   });
 
   return `${target === "calendar-rebuild" ? "/calendar-rebuild" : "/calendar"}?${params.toString()}`;
+}
+
+function getTemporalDirectionCopy(locale: Locale) {
+  const copy = {
+    en: {
+      label: "Time",
+      future: "Future / planned activity",
+      past: "Past / completed activity",
+      futureNote: "Opened from Calendar. After gate this container is saved as a planned calendar event.",
+      pastNote: "Opened from My Activity Journal. After gate this container is saved as an activity event.",
+      journalLabel: "Activity journal entry",
+      journalPolicy: "Past activity: missing date/time => today 08:00; missing duration => 30 minutes.",
+      journalAdd: "Add to activity journal",
+      journalSaving: "Adding...",
+      journalError: "Could not add the activity journal entry.",
+    },
+    pl: {
+      label: "Czas",
+      future: "Przyszłość / aktywność planowana",
+      past: "Przeszłość / aktywność wykonana",
+      futureNote: "Otwarte z Kalendarza. Po gate kontener zostanie zapisany jako planowany wpis kalendarza.",
+      pastNote: "Otwarte z Mojego dziennika aktywności. Po gate kontener zostanie zapisany jako aktywność.",
+      journalLabel: "Wpis dziennika aktywności",
+      journalPolicy: "Aktywność z przeszłości: brak daty/czasu => dziś 08:00; brak czasu trwania => 30 minut.",
+      journalAdd: "Dodaj do dziennika aktywności",
+      journalSaving: "Dodawanie...",
+      journalError: "Nie udało się dodać wpisu dziennika aktywności.",
+    },
+    ru: {
+      label: "Время",
+      future: "Будущее / плановая активность",
+      past: "Прошлое / произошедшая активность",
+      futureNote: "Открыто из календаря. После gate контейнер сохраняется как плановая календарная запись.",
+      pastNote: "Открыто из Моего журнала активностей. После gate контейнер сохраняется как произошедшая активность.",
+      journalLabel: "Запись журнала активностей",
+      journalPolicy: "Прошлая активность: нет даты/времени => сегодня 08:00; нет длительности => 30 минут.",
+      journalAdd: "Добавить в журнал активностей",
+      journalSaving: "Добавляю...",
+      journalError: "Не удалось добавить запись журнала активностей.",
+    },
+    uk: {
+      label: "Час",
+      future: "Майбутнє / планова активність",
+      past: "Минуле / виконана активність",
+      futureNote: "Відкрито з календаря. Після gate контейнер зберігається як плановий запис календаря.",
+      pastNote: "Відкрито з Мого журналу активностей. Після gate контейнер зберігається як виконана активність.",
+      journalLabel: "Запис журналу активностей",
+      journalPolicy: "Минуле: немає дати/часу => сьогодні 08:00; немає тривалості => 30 хвилин.",
+      journalAdd: "Додати до журналу активностей",
+      journalSaving: "Додаю...",
+      journalError: "Не вдалося додати запис журналу активностей.",
+    },
+    de: {
+      label: "Zeit",
+      future: "Zukunft / geplante Aktivität",
+      past: "Vergangenheit / erledigte Aktivität",
+      futureNote: "Aus dem Kalender geöffnet. Nach dem Gate wird der Container als geplanter Kalendereintrag gespeichert.",
+      pastNote: "Aus meinem Aktivitätsjournal geöffnet. Nach dem Gate wird der Container als Aktivität gespeichert.",
+      journalLabel: "Aktivitätsjournal-Eintrag",
+      journalPolicy: "Vergangene Aktivität: fehlendes Datum/Zeit => heute 08:00; fehlende Dauer => 30 Minuten.",
+      journalAdd: "Zum Aktivitätsjournal hinzufügen",
+      journalSaving: "Wird hinzugefügt...",
+      journalError: "Aktivitätsjournal-Eintrag konnte nicht hinzugefügt werden.",
+    },
+    es: {
+      label: "Tiempo",
+      future: "Futuro / actividad planificada",
+      past: "Pasado / actividad realizada",
+      futureNote: "Abierto desde Calendario. Después del gate se guarda como entrada planificada del calendario.",
+      pastNote: "Abierto desde Mi diario de actividades. Después del gate se guarda como actividad realizada.",
+      journalLabel: "Entrada del diario de actividad",
+      journalPolicy: "Actividad pasada: sin fecha/hora => hoy 08:00; sin duración => 30 minutos.",
+      journalAdd: "Añadir al diario de actividad",
+      journalSaving: "Añadiendo...",
+      journalError: "No se pudo añadir la entrada del diario de actividad.",
+    },
+    cs: {
+      label: "Čas",
+      future: "Budoucnost / plánovaná aktivita",
+      past: "Minulost / dokončená aktivita",
+      futureNote: "Otevřeno z Kalendáře. Po gate se kontejner uloží jako plánovaný záznam kalendáře.",
+      pastNote: "Otevřeno z mého deníku aktivit. Po gate se kontejner uloží jako aktivita.",
+      journalLabel: "Záznam deníku aktivit",
+      journalPolicy: "Minulá aktivita: chybí datum/čas => dnes 08:00; chybí trvání => 30 minut.",
+      journalAdd: "Přidat do deníku aktivit",
+      journalSaving: "Přidávám...",
+      journalError: "Nepodařilo se přidat záznam deníku aktivit.",
+    },
+  } as const;
+
+  return copy[locale] ?? copy.en;
 }
 
 function statusLabel(status: FieldStatus, labels: typeof UI[Locale]): string {
@@ -518,7 +633,11 @@ function extractExplicitClock(rawText: string): { hour: number; minute: number }
   return null;
 }
 
-function buildPlannedSchedule(rawText: string, locale: Locale): PlannedSchedule {
+function buildPlannedSchedule(
+  rawText: string,
+  locale: Locale,
+  temporalDirection: TemporalDirection = "future"
+): PlannedSchedule {
   const lower = rawText.toLowerCase();
   const now = new Date();
   const durationMinutes = extractDurationMinutes(rawText);
@@ -528,7 +647,8 @@ function buildPlannedSchedule(rawText: string, locale: Locale): PlannedSchedule 
     start = new Date(now.getTime() + 30 * 60000);
   } else {
     const hasToday = includesAnyText(lower, ["сегодня", "сьогодні", "dzis", "dzi\u015b", "today", "hoy", "heute", "dnes"]);
-    const dayOffset = hasToday ? 0 : 1;
+    const hasYesterday = includesAnyText(lower, ["вчера", "учора", "wczoraj", "yesterday", "ayer", "gestern", "včera"]);
+    const dayOffset = hasToday ? 0 : hasYesterday ? -1 : temporalDirection === "past" ? 0 : 1;
     const explicit = extractExplicitClock(rawText);
     const isEvening = includesAnyText(lower, ["вечер", "вечером", "wiecz", "evening", "abend", "tarde", "ve\u010der"]);
     const isAfternoon = includesAnyText(lower, ["днем", "днём", "po po\u0142udniu", "afternoon", "nachmittag", "por la tarde"]);
@@ -631,16 +751,25 @@ export default function ActivityReviewClient() {
   const locale = normalizeLocale(searchParams.get("locale"));
   const returnTo = normalizeReturnTo(searchParams.get("returnTo"));
   const sourceFocusDate = normalizeFocusDate(searchParams.get("focusDate"));
+  const temporalDirection = normalizeTemporalDirection(searchParams.get("temporalDirection"), returnTo);
   const t = UI[locale];
   const actionText = ACTION_UI[locale];
   const rawText = searchParams.get("text") ?? "";
-  const calendarHref = {
-    pathname: returnTo === "calendar-rebuild" ? "/calendar-rebuild" : "/calendar",
-    query: sourceFocusDate ? { locale, focusDate: sourceFocusDate } : { locale },
-  };
+  const calendarHref =
+    returnTo === "activity-journal"
+      ? {
+          pathname: "/activity-today",
+          query: { locale },
+        }
+      : {
+          pathname: returnTo === "calendar-rebuild" ? "/calendar-rebuild" : "/calendar",
+          query: sourceFocusDate ? { locale, focusDate: sourceFocusDate } : { locale },
+        };
   const addHref = {
     pathname: "/calendar/add",
-    query: sourceFocusDate ? { locale, returnTo, focusDate: sourceFocusDate } : { locale, returnTo },
+    query: sourceFocusDate
+      ? { locale, returnTo, focusDate: sourceFocusDate, temporalDirection }
+      : { locale, returnTo, temporalDirection },
   };
 
   const [review, setReview] = useState<ReviewPayload | null>(null);
@@ -694,7 +823,23 @@ export default function ActivityReviewClient() {
     };
   }, [rawText, locale]);
 
-  const plannedSchedule = useMemo(() => buildPlannedSchedule(rawText, locale), [rawText, locale]);
+  const plannedSchedule = useMemo(
+    () => buildPlannedSchedule(rawText, locale, temporalDirection),
+    [rawText, locale, temporalDirection]
+  );
+  const temporalCopy = getTemporalDirectionCopy(locale);
+  const activeActionText =
+    temporalDirection === "past"
+      ? {
+          ...actionText,
+          add: temporalCopy.journalAdd,
+          saving: temporalCopy.journalSaving,
+          addError: temporalCopy.journalError,
+          scheduleLabel: temporalCopy.journalLabel,
+          defaultPolicy: temporalCopy.journalPolicy,
+        }
+      : actionText;
+
   const fields = useMemo(() => {
     const base = review?.fields ?? [];
 
@@ -705,15 +850,32 @@ export default function ActivityReviewClient() {
     return [
       ...base,
       {
-        key: "plannedCalendarEvent",
-        label: actionText.scheduleLabel,
+        key: "temporalDirection",
+        label: temporalCopy.label,
+        value: temporalDirection === "past" ? temporalCopy.past : temporalCopy.future,
+        status: "ready" as FieldStatus,
+        note: temporalDirection === "past" ? temporalCopy.pastNote : temporalCopy.futureNote,
+        confidence: 1,
+      },
+      {
+        key: temporalDirection === "past" ? "activityJournalEntry" : "plannedCalendarEvent",
+        label: activeActionText.scheduleLabel,
         value: plannedSchedule.label,
         status: "candidate" as FieldStatus,
-        note: actionText.defaultPolicy,
+        note: activeActionText.defaultPolicy,
         confidence: 0.82,
       },
     ];
-  }, [review, isLoading, rawText, plannedSchedule.label, actionText.scheduleLabel, actionText.defaultPolicy]);
+  }, [
+    review,
+    isLoading,
+    rawText,
+    plannedSchedule.label,
+    temporalDirection,
+    temporalCopy,
+    activeActionText.scheduleLabel,
+    activeActionText.defaultPolicy,
+  ]);
   const counters = useMemo(
     () => ({
       ready: fields.filter((field) => field.status === "ready").length,
@@ -733,6 +895,42 @@ export default function ActivityReviewClient() {
     setSaveError(null);
 
     try {
+      if (temporalDirection === "past") {
+        const response = await fetch("/api/activity/events", {
+          credentials: "include",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            title: review.activityTitle || rawText.trim(),
+            rawText: rawText.trim(),
+            description: [
+              `Source: activity_journal_review`,
+              `Raw text: ${rawText.trim()}`,
+              `Preview summary: ${review.summary}`,
+              `Policy: ${activeActionText.defaultPolicy}`,
+            ].join("\n"),
+            startTime: plannedSchedule.startTime,
+            endTime: plannedSchedule.endTime,
+            durationMinutes: plannedSchedule.durationMinutes,
+            status: "completed",
+            source: "manual_form",
+            temporalDirection,
+          }),
+        });
+
+        const payload = await response.json().catch(() => null) as { error?: string } | null;
+
+        if (!response.ok) {
+          throw new Error(payload?.error || `Activity event write failed: ${response.status}`);
+        }
+
+        router.push(buildReturnUrl("activity-journal", locale, plannedSchedule.focusDate));
+        return;
+      }
+
       const response = await fetch("/api/calendar/events", {
         credentials: "include",
         method: "POST",
@@ -747,7 +945,7 @@ export default function ActivityReviewClient() {
             `Source: calendar_activity_review`,
             `Raw text: ${rawText.trim()}`,
             `Preview summary: ${review.summary}`,
-            `Policy: ${actionText.defaultPolicy}`,
+            `Policy: ${activeActionText.defaultPolicy}`,
           ].join("\n"),
           startTime: plannedSchedule.startTime,
           endTime: plannedSchedule.endTime,
@@ -762,10 +960,10 @@ export default function ActivityReviewClient() {
         throw new Error(payload?.error || `Calendar event write failed: ${response.status}`);
       }
 
-      router.push(buildCalendarUrl(returnTo, locale, plannedSchedule.focusDate));
+      router.push(buildReturnUrl(returnTo, locale, plannedSchedule.focusDate));
     } catch (error) {
       setSaveStatus("error");
-      setSaveError(error instanceof Error ? error.message : actionText.addError);
+      setSaveError(error instanceof Error ? error.message : activeActionText.addError);
       // CALENDAR_ADD_GATE_V4_AUTH_TIP
     }
   }
@@ -878,12 +1076,12 @@ export default function ActivityReviewClient() {
                   disabled={isLoading || !review || saveStatus === "saving" || !rawText.trim()}
                   className="w-full rounded-[18px] border border-[#3b6ef8]/30 bg-[#3b6ef8] px-4 py-3 text-left text-sm font-semibold text-white shadow-sm shadow-[#3b6ef8]/20 disabled:cursor-not-allowed disabled:border-[#dfe5f1] disabled:bg-[#eef2ff] disabled:text-[#7c8099]"
                 >
-                  {saveStatus === "saving" ? actionText.saving : actionText.add}
+                  {saveStatus === "saving" ? activeActionText.saving : activeActionText.add}
                 </button>
 
                 {saveError ? (
                   <div className="rounded-[18px] border border-[#fecaca] bg-[#fff1f2] px-4 py-3 text-sm font-semibold text-[#be123c]">
-                    {actionText.addError} {saveError}
+                    {activeActionText.addError} {saveError}
                   </div>
                 ) : null}
 

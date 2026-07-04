@@ -9,7 +9,8 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
-type CalendarReturnTarget = "calendar" | "calendar-rebuild";
+type CalendarReturnTarget = "calendar" | "calendar-rebuild" | "activity-journal";
+type TemporalDirection = "future" | "past";
 
 const LOCALES: Locale[] = ["en", "pl", "ru", "uk", "de", "es", "cs"];
 
@@ -136,7 +137,26 @@ function normalizeLocale(value: string | null): Locale {
 }
 
 function normalizeReturnTo(value: string | null): CalendarReturnTarget {
-  return value === "calendar-rebuild" ? "calendar-rebuild" : "calendar";
+  if (value === "calendar-rebuild") {
+    return "calendar-rebuild";
+  }
+
+  if (value === "activity-journal") {
+    return "activity-journal";
+  }
+
+  return "calendar";
+}
+
+function normalizeTemporalDirection(
+  value: string | null,
+  returnTo: CalendarReturnTarget
+): TemporalDirection {
+  if (value === "past" || returnTo === "activity-journal") {
+    return "past";
+  }
+
+  return "future";
 }
 
 function normalizeFocusDate(value: string | null): string | null {
@@ -149,15 +169,22 @@ export default function AddActivityClient() {
   const locale = normalizeLocale(searchParams.get("locale"));
   const returnTo = normalizeReturnTo(searchParams.get("returnTo"));
   const sourceFocusDate = normalizeFocusDate(searchParams.get("focusDate"));
+  const temporalDirection = normalizeTemporalDirection(searchParams.get("temporalDirection"), returnTo);
   const t = UI[locale];
   const [text, setText] = useState("");
 
   const canSubmit = text.trim().length > 0;
   const charCountLabel = useMemo(() => `${text.trim().length}`, [text]);
-  const backHref = {
-    pathname: returnTo === "calendar-rebuild" ? "/calendar-rebuild" : "/calendar",
-    query: sourceFocusDate ? { locale, focusDate: sourceFocusDate } : { locale },
-  };
+  const backHref =
+    returnTo === "activity-journal"
+      ? {
+          pathname: "/activity-today",
+          query: { locale },
+        }
+      : {
+          pathname: returnTo === "calendar-rebuild" ? "/calendar-rebuild" : "/calendar",
+          query: sourceFocusDate ? { locale, focusDate: sourceFocusDate } : { locale },
+        };
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -167,6 +194,7 @@ export default function AddActivityClient() {
       locale,
       text: text.trim(),
       returnTo,
+      temporalDirection,
     });
 
     if (sourceFocusDate) {

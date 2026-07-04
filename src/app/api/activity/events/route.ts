@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import {
   ACTIVITY_RECORDING_DEFAULT_LIMIT,
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
@@ -105,6 +105,23 @@ function asNumber(value: unknown): number | null {
   }
 
   return null;
+}
+
+function asRecord(value: unknown): Row {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return value as Row;
+}
+
+function getActivityTemporalDirection(row: Row) {
+  const metadata = asRecord(row.metadata_json);
+
+  return (
+    asString(row.temporal_direction) ??
+    asString(metadata.temporal_direction)
+  );
 }
 
 function asBoolean(value: unknown): boolean | null {
@@ -253,6 +270,109 @@ function normalizeActivityType(row: Row | null) {
   };
 }
 
+
+/* Step 10A Activity Journal container write helpers */
+type ActivityJournalContainerBody = {
+  title?: unknown;
+  rawText?: unknown;
+  inputText?: unknown;
+  description?: unknown;
+  startTime?: unknown;
+  startedAt?: unknown;
+  endTime?: unknown;
+  endedAt?: unknown;
+  durationMinutes?: unknown;
+  status?: unknown;
+  source?: unknown;
+  temporalDirection?: unknown;
+};
+
+function parseIsoDate(value: unknown): string | null {
+  const text = asString(value);
+
+  if (!text) {
+    return null;
+  }
+
+  const date = new Date(text);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
+}
+
+function calculateDurationFromIso(startedAt: string | null, endedAt: string | null) {
+  if (!startedAt || !endedAt) {
+    return null;
+  }
+
+  const start = new Date(startedAt).getTime();
+  const end = new Date(endedAt).getTime();
+
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+    return null;
+  }
+
+  return Math.round((end - start) / 60000);
+}
+
+function normalizeActivityJournalStatus(value: unknown) {
+  const text = asString(value)?.toLowerCase();
+
+  if (text === "cancelled" || text === "canceled") {
+    return "cancelled";
+  }
+
+  if (text === "started" || text === "running") {
+    return "started";
+  }
+
+  return "completed";
+}
+
+function normalizeActivityJournalSource(value: unknown) {
+  const text = asString(value);
+
+  if (
+    text === "manual_chat" ||
+    text === "manual_form" ||
+    text === "voice_input" ||
+    text === "app_action" ||
+    text === "system_event" ||
+    text === "api_webhook" ||
+    text === "nfc_sensor" ||
+    text === "wearable_import" ||
+    text === "calendar_import" ||
+    text === "ai_suggested" ||
+    text === "file_import" ||
+    text === "external_import" ||
+    text === "unknown"
+  ) {
+    return text;
+  }
+
+  return "manual_form";
+}
+
+function summarizeActivityJournalEvent(row: Row) {
+  return {
+    id: asString(row.id),
+    title: asString(row.title),
+    status: asString(row.status),
+    source: asString(row.source),
+    temporalDirection: getActivityTemporalDirection(row),
+    privacyScope: asString(row.privacy_scope),
+    processingStatus: asString(row.processing_status),
+    startedAt: asString(row.started_at),
+    endedAt: asString(row.ended_at),
+    durationMinutes: asNumber(row.duration_minutes),
+    comment: asString(row.description) ?? asString(row.input_text),
+    createdAt: asString(row.created_at),
+    updatedAt: asString(row.updated_at),
+  };
+}
 export async function GET(request: Request) {
   if (!ACTIVITY_RECORDING_ENABLED) {
     return NextResponse.json(
@@ -412,6 +532,7 @@ export async function GET(request: Request) {
         activityTypeId: asString(event.activity_type_id),
         activityTemplateId: asString(event.activity_template_id),
         legacyTemplateId: asString(event.template_id),
+        temporalDirection: getActivityTemporalDirection(event),
         createdAt: asString(event.created_at),
         updatedAt: asString(event.updated_at),
         eventLinksCount: eventId
@@ -575,5 +696,130 @@ export async function GET(request: Request) {
     filters,
     count: events.length,
     events,
+  });
+}
+export async function POST(request: Request) {
+  if (!ACTIVITY_RECORDING_ENABLED) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
+      },
+      { status: 503 }
+    );
+  }
+
+  const { appUser, personActor, errorResponse } =
+    await getActivityUserContext();
+
+  if (errorResponse) {
+    return errorResponse;
+  }
+
+  if (!appUser) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "User context not found",
+      },
+      { status: 500 }
+    );
+  }
+
+  let body: ActivityJournalContainerBody;
+
+  try {
+    body = (await request.json()) as ActivityJournalContainerBody;
+  } catch {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Invalid JSON body",
+      },
+      { status: 400 }
+    );
+  }
+
+  const rawText = asString(body.rawText) ?? asString(body.inputText);
+  const title = asString(body.title) ?? rawText ?? "Activity";
+  const description = asString(body.description) ?? rawText;
+  const startedAt = parseIsoDate(body.startedAt) ?? parseIsoDate(body.startTime);
+
+  if (!startedAt) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Valid startTime or startedAt is required.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const durationMinutes = asNumber(body.durationMinutes) ?? 30;
+  const endedAt =
+    parseIsoDate(body.endedAt) ??
+    parseIsoDate(body.endTime) ??
+    new Date(new Date(startedAt).getTime() + durationMinutes * 60000).toISOString();
+
+  const finalDurationMinutes =
+    asNumber(body.durationMinutes) ??
+    calculateDurationFromIso(startedAt, endedAt) ??
+    durationMinutes;
+
+  const status = normalizeActivityJournalStatus(body.status);
+  const source = normalizeActivityJournalSource(body.source);
+
+  const { data: createdEvent, error: insertError } = await supabase
+    .from("activity_events")
+    .insert({
+      user_id: appUser.id,
+      performed_by_actor_id: personActor?.id ?? null,
+      acting_as_actor_id: personActor?.id ?? null,
+      acting_for_actor_id: personActor?.id ?? null,
+      input_text: rawText ?? title,
+      title,
+      description,
+      started_at: startedAt,
+      ended_at: endedAt,
+      duration_minutes: finalDurationMinutes,
+      source,
+      temporal_direction: "past",
+      status,
+      privacy_scope: "private",
+      processing_status: "pending",
+      metadata_json: {
+        parser: "activity_container_review_v1",
+        temporal_direction: "past",
+        source_entry_point: "activity_journal",
+        save_gate: "activity_journal_review_add_gate_v1",
+        requested_source: asString(body.source),
+        facts_created: false,
+        value_objects_linked: false,
+        plan_metrics_created: false,
+        analytics_zones_created: false,
+      },
+    })
+    .select("*")
+    .single();
+
+  if (insertError || !createdEvent) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: insertError?.message ?? "Failed to create activity event.",
+      },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    event: summarizeActivityJournalEvent(createdEvent as Row),
+    container: {
+      temporalDirection: "past",
+      persistenceTarget: "activity_events",
+      factsCreated: false,
+      valueObjectsLinked: false,
+    },
   });
 }
