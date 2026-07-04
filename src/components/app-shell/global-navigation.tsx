@@ -163,31 +163,64 @@ function Badge({
   );
 }
 
+const COMING_SOON_SUFFIX = " (скоро)";
+
+function getComingSoonLabel(label: string, comingSoon?: boolean) {
+  return comingSoon ? `${label}${COMING_SOON_SUFFIX}` : label;
+}
+
 function SidebarMainItem({
   icon: Icon,
   label,
   active,
   badge,
   href = "#",
+  comingSoon,
 }: {
   readonly icon: IconComponent;
   readonly label: string;
   readonly active?: boolean;
   readonly badge?: number;
   readonly href?: string;
+  readonly comingSoon?: boolean;
 }) {
+  const displayLabel = getComingSoonLabel(label, comingSoon);
+  const baseClassName = `flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-semibold transition-all ${
+    active
+      ? "bg-[#eef2ff] text-[#3b6ef8]"
+      : comingSoon
+        ? "cursor-default text-[#9ca3b8]"
+        : "text-[#4a4f6a] hover:bg-gray-50 hover:text-[#1a1d2e]"
+  }`;
+
+  const content = (
+    <>
+      <Icon size={16} className={active ? "text-[#3b6ef8]" : comingSoon ? "text-[#c0c4d4]" : "text-[#7c8099]"} />
+      <span className="min-w-0 flex-1 truncate text-left" title={displayLabel}>
+        {displayLabel}
+      </span>
+      {!comingSoon && badge !== undefined ? <Badge count={badge} /> : null}
+    </>
+  );
+
+  if (comingSoon) {
+    return (
+      <div
+        aria-disabled="true"
+        title={displayLabel}
+        className={baseClassName}
+      >
+        {content}
+      </div>
+    );
+  }
+
   return (
     <a
       href={href}
-      className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-semibold transition-all ${
-        active
-          ? "bg-[#eef2ff] text-[#3b6ef8]"
-          : "text-[#4a4f6a] hover:bg-gray-50 hover:text-[#1a1d2e]"
-      }`}
+      className={baseClassName}
     >
-      <Icon size={16} className={active ? "text-[#3b6ef8]" : "text-[#7c8099]"} />
-      <span className="flex-1 text-left">{label}</span>
-      {badge !== undefined ? <Badge count={badge} /> : null}
+      {content}
     </a>
   );
 }
@@ -237,6 +270,7 @@ function TreeItem({
   actionOnClick,
   actionDisabled,
   onClick,
+  comingSoon,
 }: {
   readonly label: string;
   readonly depth?: number;
@@ -248,26 +282,40 @@ function TreeItem({
   readonly actionOnClick?: (event: MouseEvent<HTMLButtonElement>) => void;
   readonly actionDisabled?: boolean;
   readonly onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+  readonly comingSoon?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
   const pl = depth === 1 ? "pl-9" : depth === 2 ? "pl-12" : "pl-[60px]";
   const textSize = depth === 1 ? "text-[12px] font-medium" : "text-[11.5px] font-normal";
-  const textColor = depth === 1 ? "text-[#5a5f7a]" : "text-[#7c8099]";
+  const textColor = comingSoon ? "text-[#9ca3b8]" : depth === 1 ? "text-[#5a5f7a]" : "text-[#7c8099]";
+  const displayLabel = getComingSoonLabel(label, comingSoon);
 
   if (children) {
     return (
       <div>
         <button
           type="button"
-          onClick={() => setOpen(!open)}
-          className={`flex w-full items-center gap-1.5 rounded-md py-1.5 pr-3 ${pl} ${textSize} ${textColor} transition-all hover:bg-gray-50 hover:text-[#1a1d2e]`}
+          disabled={comingSoon}
+          onClick={() => {
+            if (!comingSoon) {
+              setOpen(!open);
+            }
+          }}
+          title={displayLabel}
+          className={`flex w-full items-center gap-1.5 rounded-md py-1.5 pr-3 ${pl} ${textSize} ${textColor} transition-all ${
+            comingSoon ? "cursor-default opacity-70" : "hover:bg-gray-50 hover:text-[#1a1d2e]"
+          }`}
         >
-          <span className="flex-1 text-left">{label}</span>
-          {open ? (
-            <ChevronDown size={11} className="text-[#c0c4d4]" />
-          ) : (
-            <ChevronRight size={11} className="text-[#c0c4d4]" />
-          )}
+          <span className="min-w-0 flex-1 truncate text-left leading-tight">
+            {displayLabel}
+          </span>
+          {!comingSoon ? (
+            open ? (
+              <ChevronDown size={11} className="text-[#c0c4d4]" />
+            ) : (
+              <ChevronRight size={11} className="text-[#c0c4d4]" />
+            )
+          ) : null}
         </button>
 
         {open ? <div>{children}</div> : null}
@@ -275,40 +323,53 @@ function TreeItem({
     );
   }
 
-  return (
-    <div className="group flex w-full items-center rounded-md pr-2 transition-all hover:bg-gray-50">
-      <a
-        href={href}
-        onClick={onClick}
-        className={`flex min-w-0 flex-1 items-center py-1.5 pr-2 ${pl} ${textSize} ${textColor} transition-all group-hover:text-[#1a1d2e]`}
-      >
-        <span className="flex-1 truncate text-left leading-tight">{label}</span>
-      </a>
+  const linkClassName = `flex min-w-0 flex-1 items-center py-1.5 pr-2 ${pl} ${textSize} ${textColor} transition-all ${
+    comingSoon ? "cursor-default opacity-70" : "group-hover:text-[#1a1d2e]"
+  }`;
 
-      {actionHref || actionOnClick ? (
+  return (
+    <div className={`group flex w-full items-center rounded-md pr-2 transition-all ${comingSoon ? "" : "hover:bg-gray-50"}`}>
+      {comingSoon ? (
+        <span
+          aria-disabled="true"
+          title={displayLabel}
+          className={linkClassName}
+        >
+          <span className="min-w-0 flex-1 truncate text-left leading-tight">
+            {displayLabel}
+          </span>
+        </span>
+      ) : (
+        <a
+          href={href}
+          onClick={onClick}
+          title={displayLabel}
+          className={linkClassName}
+        >
+          <span className="min-w-0 flex-1 truncate text-left leading-tight">
+            {displayLabel}
+          </span>
+        </a>
+      )}
+
+      {!comingSoon && (actionHref || actionOnClick) ? (
         actionOnClick ? (
           <button
             type="button"
             onClick={actionOnClick}
             disabled={actionDisabled}
-            title={actionTitle ?? `Add: ${label}`}
-            aria-label={actionTitle ?? `Add: ${label}`}
-            className={`mr-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border border-transparent text-[#b0b4c8] transition-all ${
-              actionDisabled
-                ? "cursor-not-allowed opacity-50"
-                : "hover:border-[#dfe4ff] hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
-            }`}
+            title={actionTitle}
+            className="ml-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-[#9ca3b8] opacity-0 transition-all hover:bg-[#eef2ff] hover:text-[#3b6ef8] disabled:cursor-not-allowed disabled:opacity-30 group-hover:opacity-100"
           >
-            <Plus size={12} strokeWidth={2.4} />
+            <Plus size={13} />
           </button>
         ) : (
           <a
-            href={actionHref ?? "#"}
-            title={actionTitle ?? `Add: ${label}`}
-            aria-label={actionTitle ?? `Add: ${label}`}
-            className="mr-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border border-transparent text-[#b0b4c8] transition-all hover:border-[#dfe4ff] hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
+            href={actionHref}
+            title={actionTitle}
+            className="ml-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-[#9ca3b8] opacity-0 transition-all hover:bg-[#eef2ff] hover:text-[#3b6ef8] group-hover:opacity-100"
           >
-            <Plus size={12} strokeWidth={2.4} />
+            <Plus size={13} />
           </a>
         )
       ) : null}
@@ -316,10 +377,29 @@ function TreeItem({
   );
 }
 
-function getOrganizationInitial(organization: SidebarOrganization) {
-  return organization.organization_name.trim().charAt(0).toUpperCase() || "\u2022";
-}
+function getOrganizationInitial(organization: unknown) {
+  const record =
+    organization && typeof organization === "object"
+      ? organization as Record<string, unknown>
+      : {};
 
+  const candidate =
+    typeof record.name === "string"
+      ? record.name
+      : typeof record.title === "string"
+        ? record.title
+        : typeof record.displayName === "string"
+          ? record.displayName
+          : typeof record.organizationName === "string"
+            ? record.organizationName
+            : typeof record.slug === "string"
+              ? record.slug
+              : "";
+
+  const trimmed = candidate.trim();
+
+  return trimmed ? trimmed.charAt(0).toUpperCase() : "•";
+}
 function BusinessOrganizationTreeItem({
   organization,
   locale,
@@ -545,6 +625,7 @@ export function GlobalSidebar({
             href={localeHref("/offers")}
             actionHref={localeHref("/offers/new")}
             actionTitle={t("navigation.createEnterpriseOffer")}
+            comingSoon
           />
           <TreeItem
             label={t("navigation.giftCertificates")}
@@ -552,8 +633,9 @@ export function GlobalSidebar({
             href={localeHref("/certificates")}
             actionHref={localeHref("/certificates/new")}
             actionTitle={t("navigation.createGiftCertificate")}
+            comingSoon
           />
-          <TreeItem label={t("navigation.events")} depth={2} href={localeHref("/calendar")} />
+          <TreeItem label={t("navigation.events")} depth={2} href={localeHref("/calendar")} comingSoon />
 
         </ExpandableSidebarItem>
 
@@ -577,6 +659,7 @@ export function GlobalSidebar({
             href={localeHref("/value-objects")}
             actionHref={localeHref("/value-objects/new")}
             actionTitle={t("navigation.addPrivateValueObject")}
+            comingSoon
           />
           <TreeItem
             label={t("navigation.myActivityLog")}
@@ -607,6 +690,7 @@ export function GlobalSidebar({
             label={t("navigation.myCertificates")}
             depth={2}
             href={localeHref("/my-certificates")}
+            comingSoon
           />
           <TreeItem
             label={t("navigation.purchaseConfirmationsInbox")}
@@ -617,6 +701,7 @@ export function GlobalSidebar({
             label={t("navigation.sellerCertificates")}
             depth={2}
             href={localeHref("/seller-certificates")}
+            comingSoon
           />
           <TreeItem label={t("navigation.business")} depth={1} defaultOpen>
             {isLoadingOrganizations ? (
@@ -658,17 +743,17 @@ export function GlobalSidebar({
           />
 
           </TreeItem>
-          <TreeItem label={t("navigation.career")} depth={1} href={localeHref("/next")} />
-          <TreeItem label={t("navigation.salesManager")} depth={2} href={localeHref("/next")} />
-          <TreeItem label={t("navigation.careerOpportunities")} depth={2} defaultOpen>
-            <TreeItem label={t("navigation.hardSkills")} depth={3} href={localeHref("/value-objects")} />
-            <TreeItem label={t("navigation.germanLanguage")} depth={3} href={localeHref("/value-objects")} />
-            <TreeItem label={t("navigation.softSkills")} depth={3} href={localeHref("/value-objects")} />
+          <TreeItem label={t("navigation.career")} depth={1} href={localeHref("/next")} comingSoon />
+          <TreeItem label={t("navigation.salesManager")} depth={2} href={localeHref("/next")} comingSoon />
+          <TreeItem label={t("navigation.careerOpportunities")} depth={2} defaultOpen comingSoon>
+            <TreeItem label={t("navigation.hardSkills")} depth={3} href={localeHref("/value-objects")} comingSoon />
+            <TreeItem label={t("navigation.germanLanguage")} depth={3} href={localeHref("/value-objects")} comingSoon />
+            <TreeItem label={t("navigation.softSkills")} depth={3} href={localeHref("/value-objects")} comingSoon />
           </TreeItem>
         </ExpandableSidebarItem>
 
-        <SidebarMainItem icon={Heart} label={t("navigation.health")} href={localeHref("/analytics")} />
-        <SidebarMainItem icon={Home} label={t("navigation.personalSpace")} href={localeHref("/value-objects")} />
+        <SidebarMainItem icon={Heart} label={t("navigation.health")} href={localeHref("/analytics")} comingSoon />
+        <SidebarMainItem icon={Home} label={t("navigation.personalSpace")} href={localeHref("/value-objects")} comingSoon />
 
       </nav>
     </aside>
