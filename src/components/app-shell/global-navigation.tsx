@@ -163,10 +163,22 @@ function Badge({
   );
 }
 
-const COMING_SOON_SUFFIX = " (скоро)";
+const COMING_SOON_SUFFIX_BY_LOCALE: Record<string, string> = {
+  en: " (soon)",
+  pl: " (wkrótce)",
+  ru: " (скоро)",
+  uk: " (незабаром)",
+  de: " (bald)",
+  es: " (pronto)",
+  cs: " (brzy)",
+};
 
-function getComingSoonLabel(label: string, comingSoon?: boolean) {
-  return comingSoon ? `${label}${COMING_SOON_SUFFIX}` : label;
+function getComingSoonSuffix(locale: string) {
+  return COMING_SOON_SUFFIX_BY_LOCALE[locale] ?? COMING_SOON_SUFFIX_BY_LOCALE.en;
+}
+
+function getComingSoonLabel(label: string, comingSoon?: boolean, comingSoonSuffix = getComingSoonSuffix("en")) {
+  return comingSoon ? `${label}${comingSoonSuffix}` : label;
 }
 
 function SidebarMainItem({
@@ -176,6 +188,7 @@ function SidebarMainItem({
   badge,
   href = "#",
   comingSoon,
+  comingSoonSuffix = getComingSoonSuffix("en"),
 }: {
   readonly icon: IconComponent;
   readonly label: string;
@@ -183,8 +196,9 @@ function SidebarMainItem({
   readonly badge?: number;
   readonly href?: string;
   readonly comingSoon?: boolean;
+  readonly comingSoonSuffix?: string;
 }) {
-  const displayLabel = getComingSoonLabel(label, comingSoon);
+  const displayLabel = getComingSoonLabel(label, comingSoon, comingSoonSuffix);
   const baseClassName = `flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-semibold transition-all ${
     active
       ? "bg-[#eef2ff] text-[#3b6ef8]"
@@ -271,6 +285,7 @@ function TreeItem({
   actionDisabled,
   onClick,
   comingSoon,
+  comingSoonSuffix = getComingSoonSuffix("en"),
 }: {
   readonly label: string;
   readonly depth?: number;
@@ -283,12 +298,13 @@ function TreeItem({
   readonly actionDisabled?: boolean;
   readonly onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
   readonly comingSoon?: boolean;
+  readonly comingSoonSuffix?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
   const pl = depth === 1 ? "pl-9" : depth === 2 ? "pl-12" : "pl-[60px]";
   const textSize = depth === 1 ? "text-[12px] font-medium" : "text-[11.5px] font-normal";
   const textColor = comingSoon ? "text-[#9ca3b8]" : depth === 1 ? "text-[#5a5f7a]" : "text-[#7c8099]";
-  const displayLabel = getComingSoonLabel(label, comingSoon);
+  const displayLabel = getComingSoonLabel(label, comingSoon, comingSoonSuffix);
 
   if (children) {
     return (
@@ -625,7 +641,7 @@ export function GlobalSidebar({
             href={localeHref("/offers")}
             actionHref={localeHref("/offers/new")}
             actionTitle={t("navigation.createEnterpriseOffer")}
-            comingSoon
+            comingSoon comingSoonSuffix={getComingSoonSuffix(locale)}
           />
           <TreeItem
             label={t("navigation.giftCertificates")}
@@ -633,9 +649,9 @@ export function GlobalSidebar({
             href={localeHref("/certificates")}
             actionHref={localeHref("/certificates/new")}
             actionTitle={t("navigation.createGiftCertificate")}
-            comingSoon
+            comingSoon comingSoonSuffix={getComingSoonSuffix(locale)}
           />
-          <TreeItem label={t("navigation.events")} depth={2} href={localeHref("/calendar")} comingSoon />
+          <TreeItem label={t("navigation.events")} depth={2} href={localeHref("/calendar")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
 
         </ExpandableSidebarItem>
 
@@ -659,7 +675,7 @@ export function GlobalSidebar({
             href={localeHref("/value-objects")}
             actionHref={localeHref("/value-objects/new")}
             actionTitle={t("navigation.addPrivateValueObject")}
-            comingSoon
+            comingSoon comingSoonSuffix={getComingSoonSuffix(locale)}
           />
           <TreeItem
             label={t("navigation.myActivityLog")}
@@ -690,7 +706,7 @@ export function GlobalSidebar({
             label={t("navigation.myCertificates")}
             depth={2}
             href={localeHref("/my-certificates")}
-            comingSoon
+            comingSoon comingSoonSuffix={getComingSoonSuffix(locale)}
           />
           <TreeItem
             label={t("navigation.purchaseConfirmationsInbox")}
@@ -701,7 +717,7 @@ export function GlobalSidebar({
             label={t("navigation.sellerCertificates")}
             depth={2}
             href={localeHref("/seller-certificates")}
-            comingSoon
+            comingSoon comingSoonSuffix={getComingSoonSuffix(locale)}
           />
           <TreeItem label={t("navigation.business")} depth={1} defaultOpen>
             {isLoadingOrganizations ? (
@@ -743,17 +759,17 @@ export function GlobalSidebar({
           />
 
           </TreeItem>
-          <TreeItem label={t("navigation.career")} depth={1} href={localeHref("/next")} comingSoon />
-          <TreeItem label={t("navigation.salesManager")} depth={2} href={localeHref("/next")} comingSoon />
-          <TreeItem label={t("navigation.careerOpportunities")} depth={2} defaultOpen comingSoon>
-            <TreeItem label={t("navigation.hardSkills")} depth={3} href={localeHref("/value-objects")} comingSoon />
-            <TreeItem label={t("navigation.germanLanguage")} depth={3} href={localeHref("/value-objects")} comingSoon />
-            <TreeItem label={t("navigation.softSkills")} depth={3} href={localeHref("/value-objects")} comingSoon />
+          <TreeItem label={t("navigation.career")} depth={1} href={localeHref("/next")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
+          <TreeItem label={t("navigation.salesManager")} depth={2} href={localeHref("/next")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
+          <TreeItem label={t("navigation.careerOpportunities")} depth={2} defaultOpen comingSoon comingSoonSuffix={getComingSoonSuffix(locale)}>
+            <TreeItem label={t("navigation.hardSkills")} depth={3} href={localeHref("/value-objects")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
+            <TreeItem label={t("navigation.germanLanguage")} depth={3} href={localeHref("/value-objects")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
+            <TreeItem label={t("navigation.softSkills")} depth={3} href={localeHref("/value-objects")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
           </TreeItem>
         </ExpandableSidebarItem>
 
-        <SidebarMainItem icon={Heart} label={t("navigation.health")} href={localeHref("/analytics")} comingSoon />
-        <SidebarMainItem icon={Home} label={t("navigation.personalSpace")} href={localeHref("/value-objects")} comingSoon />
+        <SidebarMainItem icon={Heart} label={t("navigation.health")} href={localeHref("/analytics")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
+        <SidebarMainItem icon={Home} label={t("navigation.personalSpace")} href={localeHref("/value-objects")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
 
       </nav>
     </aside>
