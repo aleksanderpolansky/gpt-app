@@ -30,6 +30,14 @@ type SyncedActor = {
   display_name: string;
 };
 
+type SyncedPublicProfile = {
+  id: string;
+  public_slug: string;
+  display_name: string;
+  profile_kind: "personal" | "avatar";
+  is_public: boolean;
+};
+
 type MeApiResponse = {
   user?: UserProfile | null;
   error?: string;
@@ -38,6 +46,7 @@ type MeApiResponse = {
 type SyncUserApiResponse = {
   person?: SyncedPerson | null;
   actor?: SyncedActor | null;
+  publicProfile?: SyncedPublicProfile | null;
   error?: string;
 };
 
@@ -45,6 +54,7 @@ export type UserSessionSnapshot = {
   user: UserProfile | null;
   person: SyncedPerson | null;
   actor: SyncedActor | null;
+  publicProfile?: SyncedPublicProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -146,6 +156,7 @@ async function loadUserSessionSnapshot(): Promise<
 
     let person: SyncedPerson | null = null;
     let actor: SyncedActor | null = null;
+    let publicProfile: SyncedPublicProfile | null = null;
     let syncStatus = "User signed in. person/actor sync was not executed.";
 
     try {
@@ -158,6 +169,7 @@ async function loadUserSessionSnapshot(): Promise<
       if (syncResponse.ok) {
         person = syncData.person || null;
         actor = syncData.actor || null;
+        publicProfile = syncData.publicProfile || null;
         syncStatus = "User, person and actor are synchronized.";
       } else {
         syncStatus = syncData.error || "User synchronization error.";
@@ -173,6 +185,7 @@ async function loadUserSessionSnapshot(): Promise<
       user,
       person,
       actor,
+      publicProfile,
       isAuthenticated: true,
       error: null,
       syncStatus,
@@ -226,6 +239,12 @@ function useInterfaceLocale(): LocaleCode {
   return locale;
 }
 
+function buildLocaleAwareHref(pathname: string, locale: LocaleCode) {
+  return locale === "en"
+    ? pathname
+    : `${pathname}?locale=${encodeURIComponent(locale)}`;
+}
+
 function useNavigationLabel(key: NavigationMessageKey) {
   const locale = useInterfaceLocale();
 
@@ -270,6 +289,7 @@ export function useUserSessionClient(): UserSessionSnapshot {
 
 export function UserSessionTopBarControls() {
   const session = useUserSessionClient();
+  const locale = useInterfaceLocale();
   const checkingSignInLabel = useNavigationLabel("navigation.checkingSignIn");
   const guestLabel = useNavigationLabel("navigation.guest");
   const loggedInLabel = useNavigationLabel("navigation.loggedIn");
@@ -294,6 +314,13 @@ export function UserSessionTopBarControls() {
     session.isAuthenticated,
     session.isLoading,
   ]);
+
+  const profileHref = session.publicProfile?.public_slug
+    ? buildLocaleAwareHref(
+        `/people/${encodeURIComponent(session.publicProfile.public_slug)}`,
+        locale,
+      )
+    : null;
 
   if (session.isLoading) {
     return (
@@ -329,9 +356,11 @@ export function UserSessionTopBarControls() {
         {loggedInLabel}
       </div>
 
-      <div
-        className="flex items-center gap-2 rounded-lg py-1.5 pl-2 pr-1"
-        title={loggedInLabel}
+      <a
+        href={profileHref ?? undefined}
+        aria-disabled={!profileHref}
+        className="flex items-center gap-2 rounded-lg py-1.5 pl-2 pr-1 transition-colors hover:bg-[#f5f6fb]"
+        title={session.publicProfile?.display_name ?? loggedInLabel}
       >
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#3b6ef8] to-[#6f42f5] text-[11px] font-bold text-white">
           {session.initials}
@@ -345,7 +374,7 @@ export function UserSessionTopBarControls() {
             {subtitle}
           </div>
         </div>
-      </div>
+      </a>
 
       <a
         href="/auth/logout"

@@ -8,3 +8,4 @@ export * from "./organizations";
 export * from "./time";
 export * from "./value-objects";
 export * from "./organization-detail";
+export * from "./personal-profile";

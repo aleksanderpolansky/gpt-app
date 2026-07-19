@@ -2,6 +2,66 @@ import { NextResponse } from "next/server";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 
+type PersonalProfileSeed = {
+  ownerUserId: string;
+  actorId: string;
+  displayName: string;
+  authPicture: string | null;
+};
+
+async function ensurePersonalPublicProfile(seed: PersonalProfileSeed) {
+  const { data: existingProfile, error: existingProfileError } = await supabase
+    .from("actor_public_profiles")
+    .select("*")
+    .eq("actor_id", seed.actorId)
+    .maybeSingle();
+
+  if (existingProfileError) {
+    throw new Error(existingProfileError.message);
+  }
+
+  if (existingProfile) {
+    return existingProfile;
+  }
+
+  const { data: createdProfile, error: createdProfileError } = await supabase
+    .from("actor_public_profiles")
+    .insert({
+      owner_user_id: seed.ownerUserId,
+      actor_id: seed.actorId,
+      profile_kind: "personal",
+      public_slug: `person-${seed.actorId.replaceAll("-", "")}`,
+      display_name: seed.displayName,
+      image_url: seed.authPicture,
+      image_source: "auth",
+      is_public: false,
+    })
+    .select("*")
+    .single();
+
+  if (!createdProfileError && createdProfile) {
+    return createdProfile;
+  }
+
+  // Two simultaneous first-login requests can race. Unique indexes guarantee
+  // one row; after a conflict, return the row created by the other request.
+  if (createdProfileError?.code === "23505") {
+    const { data: racedProfile, error: racedProfileError } = await supabase
+      .from("actor_public_profiles")
+      .select("*")
+      .eq("actor_id", seed.actorId)
+      .single();
+
+    if (!racedProfileError && racedProfile) {
+      return racedProfile;
+    }
+  }
+
+  throw new Error(
+    createdProfileError?.message ?? "Could not create the personal public profile.",
+  );
+}
+
 export async function POST() {
   const session = await auth0.getSession();
 
@@ -133,6 +193,36 @@ export async function POST() {
     }
 
     actor = createdActor;
+  }
+
+  let publicProfile;
+
+  try {
+    publicProfile = await ensurePersonalPublicProfile({
+      ownerUserId: appUser.id,
+      actorId: actor.id,
+      displayName:
+        user.name ??
+        person.full_name ??
+        person.short_name ??
+        actor.display_name ??
+        appUser.email ??
+        "User",
+      authPicture:
+        typeof user.picture === "string" && user.picture.trim()
+          ? user.picture.trim()
+          : null,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Could not create the personal public profile.",
+      },
+      { status: 500 },
+    );
   }
 
   const { data: existingPersonalSpace, error: existingPersonalSpaceError } = await supabase
@@ -304,6 +394,7 @@ export async function POST() {
     user: appUser,
     person,
     actor,
+    publicProfile,
     spaces: {
       personal: personalSpace,
       marketplace: marketplaceSpace,
