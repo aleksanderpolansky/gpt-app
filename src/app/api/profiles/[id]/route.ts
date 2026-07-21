@@ -2,23 +2,16 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { auth0 } from "../../../../../lib/auth0";
+import {
+  ProfileOwnerContextError,
+  resolveProfileOwnerContext,
+} from "../../../../../lib/profile-owner-context";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
 type RouteProps = {
   params: Promise<{ id: string }>;
-};
-
-type AppUserRow = {
-  id: string;
-};
-
-type OwnedProfileRow = {
-  id: string;
-  owner_user_id: string;
-  actor_id: string;
-  public_slug: string;
 };
 
 function parseText(value: unknown, maximumLength: number) {
@@ -47,52 +40,44 @@ function parseImage(value: unknown) {
   throw new Error("Unsupported profile image format.");
 }
 
-async function getCurrentAppUser() {
-  const session = await auth0.getSession();
-
-  if (!session?.user?.sub) {
-    return { appUser: null, status: 401, error: "Not authenticated" };
+function ownerContextErrorResponse(error: unknown) {
+  if (error instanceof ProfileOwnerContextError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error.code,
+        errorMessage: error.message,
+      },
+      { status: error.status },
+    );
   }
 
-  const { data, error } = await supabase
-    .from("app_users")
-    .select("id")
-    .eq("auth0_sub", session.user.sub)
-    .maybeSingle();
-
-  if (error || !data) {
-    return { appUser: null, status: 500, error: error?.message ?? "App user not found" };
-  }
-
-  return { appUser: data as AppUserRow, status: 200, error: null };
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "PROFILE_OWNER_CONTEXT_FAILED",
+      errorMessage: "Could not verify profile ownership.",
+    },
+    { status: 500 },
+  );
 }
 
 export async function PATCH(request: Request, { params }: RouteProps) {
-  const { id } = await params;
-  const auth = await getCurrentAppUser();
+  const [{ id }, session] = await Promise.all([params, auth0.getSession()]);
 
-  if (!auth.appUser) {
-    return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+  if (!session?.user?.sub) {
+    return NextResponse.json(
+      { ok: false, error: "NOT_AUTHENTICATED" },
+      { status: 401 },
+    );
   }
 
-  const { data: profileData, error: profileError } = await supabase
-    .from("actor_public_profiles")
-    .select("id, owner_user_id, actor_id, public_slug")
-    .eq("id", id)
-    .limit(1);
+  let ownerContext: Awaited<ReturnType<typeof resolveProfileOwnerContext>>;
 
-  if (profileError) {
-    return NextResponse.json({ ok: false, error: profileError.message }, { status: 500 });
-  }
-
-  const profile = ((profileData ?? [])[0] as OwnedProfileRow | undefined) ?? null;
-
-  if (!profile) {
-    return NextResponse.json({ ok: false, error: "Profile not found." }, { status: 404 });
-  }
-
-  if (profile.owner_user_id !== auth.appUser.id) {
-    return NextResponse.json({ ok: false, error: "You cannot edit this profile." }, { status: 403 });
+  try {
+    ownerContext = await resolveProfileOwnerContext(session.user.sub, id);
+  } catch (error) {
+    return ownerContextErrorResponse(error);
   }
 
   let body: Record<string, unknown>;
@@ -100,13 +85,19 @@ export async function PATCH(request: Request, { params }: RouteProps) {
   try {
     body = (await request.json()) as Record<string, unknown>;
   } catch {
-    return NextResponse.json({ ok: false, error: "Invalid JSON body." }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: "INVALID_JSON" },
+      { status: 400 },
+    );
   }
 
   const displayName = parseText(body.displayName, 160);
 
   if (!displayName) {
-    return NextResponse.json({ ok: false, error: "Profile name is required." }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: "PROFILE_NAME_REQUIRED" },
+      { status: 400 },
+    );
   }
 
   let imageUrl: string | null;
@@ -115,53 +106,63 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     imageUrl = parseImage(body.imageUrl);
   } catch (error) {
     return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "Invalid profile image." },
+      {
+        ok: false,
+        error: "INVALID_PROFILE_IMAGE",
+        errorMessage:
+          error instanceof Error ? error.message : "Invalid profile image.",
+      },
       { status: 400 },
     );
   }
 
-  const update = {
-    display_name: displayName,
-    bio: parseText(body.bio, 5_000),
-    image_url: imageUrl,
-    image_source: "custom",
-    public_phone: parseText(body.publicPhone, 80),
-    website_url: parseText(body.websiteUrl, 500),
-    messenger_url: parseText(body.messengerUrl, 500),
-    updated_at: new Date().toISOString(),
-  };
-
+  const profile = ownerContext.profile;
+  const now = new Date().toISOString();
   const { data: updatedData, error: updateError } = await supabase
     .from("actor_public_profiles")
-    .update(update)
-    .eq("id", profile.id)
-    .eq("owner_user_id", auth.appUser.id)
-    .select("id, owner_user_id, actor_id, profile_kind, public_slug, display_name, bio, image_url, image_source, category_label, public_phone, website_url, messenger_url, is_public, published_at, updated_at")
+    .update({
+      display_name: displayName,
+      bio: parseText(body.bio, 5_000),
+      image_url: imageUrl,
+      image_source: "custom",
+      public_phone: parseText(body.publicPhone, 80),
+      website_url: parseText(body.websiteUrl, 500),
+      messenger_url: parseText(body.messengerUrl, 500),
+      updated_at: now,
+    })
+    .eq("id", profile.profileId)
+    .eq("owner_user_id", ownerContext.appUserId)
+    .select(
+      "id, profile_kind, public_slug, display_name, bio, image_url, image_source, category_label, public_phone, website_url, messenger_url, is_public, published_at, updated_at",
+    )
     .single();
 
   if (updateError || !updatedData) {
     return NextResponse.json(
-      { ok: false, error: updateError?.message ?? "Profile was not updated." },
+      {
+        ok: false,
+        error: "PROFILE_UPDATE_FAILED",
+        errorMessage: "Profile was not updated.",
+      },
       { status: 500 },
     );
   }
 
-  // Keep the actor display label aligned for future acting-as/profile flows.
-  // The public profile save itself remains successful if this secondary sync fails.
   const { error: actorSyncError } = await supabase
     .from("actors")
     .update({
       display_name: displayName,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
     })
-    .eq("id", profile.actor_id);
+    .eq("id", profile.actorId);
 
-  revalidatePath(`/people/${profile.public_slug}`);
-  revalidatePath(`/profiles/${profile.id}/edit`);
+  revalidatePath("/people");
+  revalidatePath(`/people/${profile.publicSlug}`);
+  revalidatePath(`/profiles/${profile.profileId}/edit`);
 
   return NextResponse.json({
     ok: true,
     profile: updatedData,
-    actorSyncWarning: actorSyncError?.message ?? null,
+    warning: actorSyncError ? "ACTOR_LABEL_SYNC_FAILED" : null,
   });
 }
