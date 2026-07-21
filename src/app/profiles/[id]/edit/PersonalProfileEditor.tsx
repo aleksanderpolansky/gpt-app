@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useMemo,
   useRef,
@@ -21,6 +22,7 @@ import {
   Phone,
   Save,
   Star,
+  UserRound,
 } from "lucide-react";
 
 import ProfileSwitcher, {
@@ -144,10 +146,14 @@ function FutureCard({ title, label }: { title: string; label: string }) {
 
 export default function PersonalProfileEditor({
   initialData,
+  mode = "edit",
 }: {
   initialData: PersonalProfileEditorInitialData;
+  mode?: "edit" | "create-avatar";
 }) {
+  const router = useRouter();
   const messages = getPersonalProfileMessages(initialData.locale);
+  const isCreatingAvatar = mode === "create-avatar";
   const startingValues = useMemo(() => initialValues(initialData), [initialData]);
   const [savedValues, setSavedValues] = useState(startingValues);
   const [values, setValues] = useState(startingValues);
@@ -192,14 +198,34 @@ export default function PersonalProfileEditor({
     setErrorMessage(null);
 
     try {
-      const response = await fetch(`/api/profiles/${initialData.profile.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      const payload = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      const response = await fetch(
+        isCreatingAvatar ? "/api/profiles" : `/api/profiles/${initialData.profile.id}`,
+        {
+          method: isCreatingAvatar ? "POST" : "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(values),
+        },
+      );
+      const payload = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+        profile?: { profile_id?: string };
+      } | null;
 
       if (!response.ok || !payload?.ok) throw new Error(payload?.error ?? messages.saveError);
+
+      if (isCreatingAvatar) {
+        const profileId = payload.profile?.profile_id;
+
+        if (!profileId) throw new Error(messages.saveError);
+
+        router.replace(
+          appendLocale(`/profiles/${encodeURIComponent(profileId)}/edit`, initialData.locale),
+        );
+        router.refresh();
+        return;
+      }
+
       setSavedValues(values);
       setSaveState("saved");
     } catch (error) {
@@ -209,6 +235,8 @@ export default function PersonalProfileEditor({
   }
 
   async function toggleVisibility() {
+    if (isCreatingAvatar) return;
+
     setVisibilityBusy(true);
     setErrorMessage(null);
     const nextVisibility = !isPublic;
@@ -236,7 +264,10 @@ export default function PersonalProfileEditor({
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href={appendLocale(`/people/${initialData.profile.publicSlug}`, initialData.locale)}
+              href={appendLocale(
+                isCreatingAvatar ? "/people" : `/people/${initialData.profile.publicSlug}`,
+                initialData.locale,
+              )}
               className="inline-flex min-h-9 items-center rounded-full border border-[#dfe3f1] bg-white px-4 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
             >
               {messages.viewMode}
@@ -244,7 +275,7 @@ export default function PersonalProfileEditor({
             <button
               type="button"
               onClick={toggleVisibility}
-              disabled={visibilityBusy}
+              disabled={visibilityBusy || isCreatingAvatar}
               className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-4 text-[12px] font-semibold shadow-sm transition disabled:opacity-50 ${isPublic ? "border-[#fecaca] bg-[#fff1f2] text-[#dc2626]" : "border-[#bbf7d0] bg-[#f0fdf4] text-[#16a34a]"}`}
             >
               {isPublic ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -271,7 +302,13 @@ export default function PersonalProfileEditor({
               className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 text-[13px] font-bold text-[#16a34a] shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Save size={14} />
-              {saveState === "saving" ? messages.saving : messages.saveChanges}
+              {isCreatingAvatar
+                ? saveState === "saving"
+                  ? messages.creatingAvatar
+                  : messages.createAvatar
+                : saveState === "saving"
+                  ? messages.saving
+                  : messages.saveChanges}
             </button>
           </div>
         </div>
@@ -283,10 +320,13 @@ export default function PersonalProfileEditor({
           <input
             value={values.displayName}
             onChange={(event) => setField("displayName", event.target.value)}
+            maxLength={isCreatingAvatar ? 160 : undefined}
             className="mt-2 w-full max-w-[720px] rounded-xl border border-dashed border-[#d9deed] bg-white/60 px-3 py-2 text-[24px] font-bold leading-tight text-[#111827] outline-none focus:border-[#3b6ef8]"
           />
           <div className="mt-1 text-[14px] text-[#7c8099]">{profileTypeLabel}</div>
-          <p className="mt-2 max-w-[720px] text-[13px] text-[#7c8099]">{messages.editHint}</p>
+          <p className="mt-2 max-w-[720px] text-[13px] text-[#7c8099]">
+            {isCreatingAvatar ? messages.avatarPrivacyNote : messages.editHint}
+          </p>
         </section>
 
         <section className="grid auto-rows-auto items-stretch gap-4 lg:grid-cols-4">
@@ -297,7 +337,13 @@ export default function PersonalProfileEditor({
               aria-label={messages.chooseImage}
               className="group relative mx-auto flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden rounded-2xl border border-[#dfe4ff] bg-[#eef2ff] text-[46px] font-bold text-[#3b6ef8]"
             >
-              {values.imageUrl ? <img src={values.imageUrl} alt="" className="h-full w-full object-cover" /> : initials(values.displayName)}
+              {values.imageUrl ? (
+                <img src={values.imageUrl} alt="" className="h-full w-full object-cover" />
+              ) : values.displayName.trim() ? (
+                initials(values.displayName)
+              ) : (
+                <UserRound size={48} strokeWidth={1.5} />
+              )}
               <span className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-[#3b6ef8] shadow-lg"><Camera size={18} /></span>
             </button>
             <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImage} />

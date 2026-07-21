@@ -1,6 +1,12 @@
-import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
-import { getDefaultCurrencyByCountryCode, normalizeCountryCode } from "@/lib/commercial/currency";
+import {
+  getDefaultCurrencyByCountryCode,
+  normalizeCountryCode,
+} from "@/lib/commercial/currency";
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { runOrganizationSemanticIntake } from "../../../../lib/organizations/organizationSemanticIntake";
 import { supabase } from "../../../../lib/supabase";
@@ -53,11 +59,16 @@ type OrganizationLocationWithGeoStatus = OrganizationLocationRow & {
   geoStatusLabel: string | null;
 };
 
-type AppUserRow = {
-  id: string;
-  auth0_sub: string;
+type ActorOwnedOrganizationRpcRow = {
+  organization_id: string;
+  organization_actor_id: string;
+  business_space_id: string;
+  location_id: string | null;
+  reward_rule_id: string | null;
+  public_slug: string;
+  owner_actor_id: string;
+  owner_actor_type: "person" | "avatar";
 };
-
 
 const HIDDEN_ORGANIZATION_STATUSES = new Set([
   "archived",
@@ -89,12 +100,12 @@ function isHiddenOrganization(organization: Record<string, unknown>) {
   );
 }
 
-async function getCurrentAppUser() {
+async function getCurrentActorContext() {
   const session = await auth0.getSession();
 
-  if (!session?.user) {
+  if (!session?.user?.sub) {
     return {
-      appUser: null,
+      actorContext: null,
       errorResponse: NextResponse.json(
         { error: "Not authenticated" },
         { status: 401 }
@@ -102,26 +113,35 @@ async function getCurrentAppUser() {
     };
   }
 
-  const { data: appUser, error: appUserError } = await supabase
-    .from("app_users")
-    .select("*")
-    .eq("auth0_sub", session.user.sub)
-    .single();
-
-  if (appUserError || !appUser) {
+  try {
     return {
-      appUser: null,
+      actorContext: await resolveActiveActorContext(session.user.sub),
+      errorResponse: null,
+    };
+  } catch (error) {
+    if (error instanceof ActorContextError) {
+      return {
+        actorContext: null,
+        errorResponse: NextResponse.json(
+          { error: error.code, errorMessage: error.message },
+          { status: error.status }
+        ),
+      };
+    }
+
+    return {
+      actorContext: null,
       errorResponse: NextResponse.json(
-        { error: appUserError?.message ?? "App user not found" },
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Could not resolve active actor context",
+        },
         { status: 500 }
       ),
     };
   }
-
-  return {
-    appUser: appUser as AppUserRow,
-    errorResponse: null,
-  };
 }
 
 function parseOptionalText(value: unknown) {
@@ -139,10 +159,6 @@ function parseOptionalText(value: unknown) {
 }
 
 
-
-function createPublicSlugFromOrganizationId(organizationId: string) {
-  return `organization-${organizationId.slice(0, 8)}`;
-}
 
 function normalizeUuid(value: string | null) {
   if (!value) {
@@ -634,15 +650,15 @@ async function enrichLocationWithGeoStatus(input: {
 }
 
 export async function GET(request: Request) {
-  const { appUser, errorResponse } = await getCurrentAppUser();
+  const { actorContext, errorResponse } = await getCurrentActorContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!actorContext) {
     return NextResponse.json(
-      { error: "App user not found" },
+      { error: "Active actor context not found" },
       { status: 500 }
     );
   }
@@ -650,7 +666,7 @@ export async function GET(request: Request) {
   const { data: organizations, error: organizationsError } = await supabase
     .from("organizations")
     .select("*")
-    .eq("created_by_user_id", appUser.id)
+    .eq("owner_actor_id", actorContext.actorId)
     .order("created_at", { ascending: false });
 
   if (organizationsError) {
@@ -704,7 +720,7 @@ export async function GET(request: Request) {
     locationRows.map((location) =>
       enrichLocationWithGeoStatus({
         location,
-        appUserId: appUser.id,
+        appUserId: actorContext.appUserId,
       })
     )
   );
@@ -725,20 +741,27 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { appUser, errorResponse } = await getCurrentAppUser();
+  const { actorContext, errorResponse } = await getCurrentActorContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!actorContext) {
     return NextResponse.json(
-      { error: "App user not found" },
+      { error: "Active actor context not found" },
       { status: 500 }
     );
   }
 
-  const body = await request.json();
+  const body = (await request.json().catch(() => null)) as Record<
+    string,
+    unknown
+  > | null;
+
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
   const organizationName = parseOptionalText(body.organizationName);
   const organizationType = parseOptionalText(body.organizationType);
@@ -755,7 +778,7 @@ export async function POST(request: Request) {
 
   const locationValidation = await validateOrganizationLocationInput(
     locationInput,
-    appUser.id
+    actorContext.appUserId
   );
 
   if (!locationValidation.ok) {
@@ -769,209 +792,129 @@ export async function POST(request: Request) {
     );
   }
 
-  const defaultCurrency = getDefaultCurrencyByCountryCode(locationInput.countryCode, { fallbackCurrency: "PLN" });
-
-  const organizationId = randomUUID();
-  const organizationPublicSlug = createPublicSlugFromOrganizationId(
-    organizationId
+  const defaultCurrency = getDefaultCurrencyByCountryCode(
+    locationInput.countryCode,
+    { fallbackCurrency: "PLN" }
   );
   const directoryPublishedAt = new Date().toISOString();
+  const createLocation = hasAnyLocationInput(locationInput);
+  const cityName =
+    locationValidation.cityGeoArea?.name ?? locationInput.city ?? null;
+  const districtName =
+    locationValidation.districtGeoArea?.name ?? locationInput.district ?? null;
+  const latitude = locationValidation.cityGeoArea?.latitude ?? null;
+  const longitude = locationValidation.cityGeoArea?.longitude ?? null;
 
-  const { data: person, error: personError } = await supabase
-    .from("persons")
-    .select("*")
-    .eq("user_id", appUser.id)
-    .single();
+  const { data: creationRows, error: creationError } = await supabase.rpc(
+    "create_actor_owned_organization_v1",
+    {
+      p_owner_user_id: actorContext.appUserId,
+      p_owner_actor_id: actorContext.actorId,
+      p_organization_name: organizationName,
+      p_organization_type: organizationType,
+      p_description: description,
+      p_country_code: locationInput.countryCode,
+      p_default_currency: defaultCurrency,
+      p_directory_status: "published",
+      p_is_public_profile_enabled: true,
+      p_is_listed_in_directory: true,
+      p_directory_published_at: directoryPublishedAt,
+      p_create_location: createLocation,
+      p_location_country_code: locationInput.countryCode,
+      p_location_city: cityName,
+      p_location_district: districtName,
+      p_location_address_visibility: "approximate",
+      p_location_latitude: latitude,
+      p_location_longitude: longitude,
+      p_create_default_reward_rule: false,
+    }
+  );
 
-  if (personError) {
-    return NextResponse.json({ error: personError.message }, { status: 500 });
-  }
+  const creation = (
+    (creationRows ?? []) as ActorOwnedOrganizationRpcRow[]
+  )[0];
 
-  const { data: personActor, error: personActorError } = await supabase
-    .from("actors")
-    .select("*")
-    .eq("person_id", person.id)
-    .eq("actor_type", "person")
-    .single();
-
-  if (personActorError) {
+  if (creationError || !creation) {
     return NextResponse.json(
-      { error: personActorError.message },
-      { status: 500 }
+      {
+        error:
+          creationError?.message ?? "Actor-owned organization was not created",
+      },
+      { status: creationError?.code === "42501" ? 403 : 500 }
     );
   }
 
   const { data: organization, error: organizationError } = await supabase
     .from("organizations")
-    .insert({
-      id: organizationId,
-      created_by_user_id: appUser.id,
-      organization_name: organizationName,
-      organization_type: organizationType,
-      owner_person_id: person.id,
-      description,
-      country_code: locationInput.countryCode,
-      default_currency: defaultCurrency,
-      status: "active",
-      directory_status: "published",
-      is_public_profile_enabled: true,
-      is_listed_in_directory: true,
-      public_slug: organizationPublicSlug,
-      directory_published_at: directoryPublishedAt,
-      updated_at: directoryPublishedAt,
-    })
-    .select()
+    .select("*")
+    .eq("id", creation.organization_id)
     .single();
-
-  if (organizationError) {
-    return NextResponse.json(
-      { error: organizationError.message },
-      { status: 500 }
-    );
-  }
-
-  let organizationLocation = null;
-
-  if (hasAnyLocationInput(locationInput)) {
-    const cityName =
-      locationValidation.cityGeoArea?.name ?? locationInput.city ?? null;
-    const districtName =
-      locationValidation.districtGeoArea?.name ?? locationInput.district ?? null;
-
-    const latitude = locationValidation.cityGeoArea?.latitude ?? null;
-    const longitude = locationValidation.cityGeoArea?.longitude ?? null;
-
-    const { data: insertedLocation, error: locationError } = await supabase
-      .from("organization_locations")
-      .insert({
-        organization_id: organization.id,
-        country_code: locationInput.countryCode,
-        city: cityName,
-        district: districtName,
-        address_visibility: "approximate",
-        latitude,
-        longitude,
-        is_primary: true,
-        is_active: true,
-      })
-      .select()
-      .single();
-
-    if (locationError) {
-      return NextResponse.json(
-        {
-          error: locationError.message,
-          organization,
-          warning:
-            "Organization was created, but organization location was not saved.",
-        },
-        { status: 500 }
-      );
-    }
-
-    organizationLocation = insertedLocation;
-  }
 
   const { data: organizationActor, error: organizationActorError } =
     await supabase
       .from("actors")
-      .insert({
-        actor_type: "organization",
-        organization_id: organization.id,
-        display_name: organization.organization_name,
-        status: "active",
-      })
-      .select()
+      .select("*")
+      .eq("id", creation.organization_actor_id)
       .single();
-
-  if (organizationActorError) {
-    return NextResponse.json(
-      { error: organizationActorError.message },
-      { status: 500 }
-    );
-  }
 
   const { data: businessSpace, error: businessSpaceError } = await supabase
     .from("spaces")
-    .insert({
-      owner_user_id: appUser.id,
-      space_type: "own_business",
-      title: organization.organization_name,
-      description: `Business space for ${organization.organization_name}`,
-      status: "active",
-    })
-    .select()
+    .select("*")
+    .eq("id", creation.business_space_id)
     .single();
 
-  if (businessSpaceError) {
-    return NextResponse.json(
-      { error: businessSpaceError.message },
-      { status: 500 }
-    );
+  let organizationLocation = null;
+  let organizationLocationError: { message: string } | null = null;
+
+  if (creation.location_id) {
+    const locationResult = await supabase
+      .from("organization_locations")
+      .select("*")
+      .eq("id", creation.location_id)
+      .single();
+
+    organizationLocation = locationResult.data;
+    organizationLocationError = locationResult.error;
   }
 
-  const { data: ownerRole, error: ownerRoleError } = await supabase
+  const { data: roleRows, error: rolesError } = await supabase
     .from("actor_space_roles")
-    .insert({
-      actor_id: personActor.id,
-      space_id: businessSpace.id,
-      function_type: "owner",
-      title: "Owner",
-      is_active: true,
-      authority_level: 100,
-      responsibility_level: 100,
-    })
-    .select()
-    .single();
+    .select("*")
+    .eq("space_id", creation.business_space_id)
+    .eq("is_active", true);
 
-  if (ownerRoleError) {
+  const postReadError =
+    organizationError ??
+    organizationActorError ??
+    businessSpaceError ??
+    organizationLocationError ??
+    rolesError;
+
+  if (postReadError || !organization || !organizationActor || !businessSpace) {
     return NextResponse.json(
-      { error: ownerRoleError.message },
+      {
+        error:
+          postReadError?.message ??
+          "Organization was created, but its complete result could not be read",
+        created: creation,
+      },
       { status: 500 }
     );
   }
 
-  const { data: managerRole, error: managerRoleError } = await supabase
-    .from("actor_space_roles")
-    .insert({
-      actor_id: personActor.id,
-      space_id: businessSpace.id,
-      function_type: "manager",
-      title: "Manager",
-      is_active: true,
-      authority_level: 90,
-      responsibility_level: 90,
-    })
-    .select()
-    .single();
-
-  if (managerRoleError) {
-    return NextResponse.json(
-      { error: managerRoleError.message },
-      { status: 500 }
-    );
-  }
-
-  const { data: sellerRole, error: sellerRoleError } = await supabase
-    .from("actor_space_roles")
-    .insert({
-      actor_id: organizationActor.id,
-      space_id: businessSpace.id,
-      function_type: "seller",
-      title: "Seller / Provider",
-      is_active: true,
-      authority_level: 100,
-      responsibility_level: 100,
-    })
-    .select()
-    .single();
-
-  if (sellerRoleError) {
-    return NextResponse.json(
-      { error: sellerRoleError.message },
-      { status: 500 }
-    );
-  }
+  const ownerRole = (roleRows ?? []).find(
+    (role) =>
+      role.actor_id === actorContext.actorId && role.function_type === "owner"
+  );
+  const managerRole = (roleRows ?? []).find(
+    (role) =>
+      role.actor_id === actorContext.actorId && role.function_type === "manager"
+  );
+  const sellerRole = (roleRows ?? []).find(
+    (role) =>
+      role.actor_id === organizationActor.id &&
+      role.function_type === "seller"
+  );
 
   let semanticIntake = null;
 
@@ -989,7 +932,7 @@ export async function POST(request: Request) {
         locationInput.countryCode,
       city: organizationLocation?.city ?? locationInput.city,
       district: organizationLocation?.district ?? locationInput.district,
-      classifiedByUserId: appUser.id,
+      classifiedByUserId: actorContext.appUserId,
       persist: true,
       replaceExistingAiPrimary: true,
     });
@@ -1004,24 +947,33 @@ export async function POST(request: Request) {
     };
   }
 
-  return NextResponse.json({
-    ok: true,
-    organization,
-    organizationLocation,
-    organizationActor,
-    businessSpace,
-    roles: {
-      owner: ownerRole,
-      manager: managerRole,
-      seller: sellerRole,
+  return NextResponse.json(
+    {
+      ok: true,
+      organization,
+      organizationLocation,
+      organizationActor,
+      businessSpace,
+      roles: {
+        owner: ownerRole ?? null,
+        manager: managerRole ?? null,
+        seller: sellerRole ?? null,
+      },
+      actingAs: {
+        actorId: actorContext.actorId,
+        actorType: actorContext.actorType,
+        profileId: actorContext.profile.profileId,
+        displayName: actorContext.profile.displayName,
+      },
+      directory: {
+        status: organization.directory_status,
+        isPublicProfileEnabled: organization.is_public_profile_enabled,
+        isListedInDirectory: organization.is_listed_in_directory,
+        publicSlug: organization.public_slug,
+        publishedAt: organization.directory_published_at,
+      },
+      semanticIntake,
     },
-    directory: {
-      status: organization.directory_status,
-      isPublicProfileEnabled: organization.is_public_profile_enabled,
-      isListedInDirectory: organization.is_listed_in_directory,
-      publicSlug: organization.public_slug,
-      publishedAt: organization.directory_published_at,
-    },
-    semanticIntake,
-  });
+    { status: 201 }
+  );
 }

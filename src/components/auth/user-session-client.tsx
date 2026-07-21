@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { LogOut } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, LogOut, Plus } from "lucide-react";
 
 import {
   getLocaleSearchParam,
@@ -50,6 +50,30 @@ type SyncUserApiResponse = {
   error?: string;
 };
 
+type ActorContextOption = {
+  profileId: string;
+  profileKind: "personal" | "avatar";
+  displayName: string;
+  imageUrl: string | null;
+};
+
+type ActorContextApiResponse = {
+  ok?: boolean;
+  activeProfile?: ActorContextOption | null;
+  profiles?: ActorContextOption[];
+  error?: string;
+  errorMessage?: string;
+};
+
+type ActorContextLabels = {
+  actingAs: string;
+  createAvatar: string;
+  loading: string;
+  personal: string;
+  avatar: string;
+  unavailable: string;
+};
+
 export type UserSessionSnapshot = {
   user: UserProfile | null;
   person: SyncedPerson | null;
@@ -95,6 +119,334 @@ function buildInitials(displayName: string, email: string | null) {
   }
 
   return source.slice(0, 2).toUpperCase();
+}
+
+function getActorContextLabels(locale: LocaleCode): ActorContextLabels {
+  switch (locale) {
+    case "ru":
+      return {
+        actingAs: "Действовать как",
+        createAvatar: "Создать аватар",
+        loading: "Загрузка профилей…",
+        personal: "Личный профиль",
+        avatar: "Аватар",
+        unavailable: "Профили недоступны",
+      };
+    case "uk":
+      return {
+        actingAs: "Діяти як",
+        createAvatar: "Створити аватар",
+        loading: "Завантаження профілів…",
+        personal: "Особистий профіль",
+        avatar: "Аватар",
+        unavailable: "Профілі недоступні",
+      };
+    case "pl":
+      return {
+        actingAs: "Działaj jako",
+        createAvatar: "Utwórz awatar",
+        loading: "Ładowanie profili…",
+        personal: "Profil osobisty",
+        avatar: "Awatar",
+        unavailable: "Profile niedostępne",
+      };
+    case "de":
+      return {
+        actingAs: "Handeln als",
+        createAvatar: "Avatar erstellen",
+        loading: "Profile werden geladen…",
+        personal: "Persönliches Profil",
+        avatar: "Avatar",
+        unavailable: "Profile nicht verfügbar",
+      };
+    case "es":
+      return {
+        actingAs: "Actuar como",
+        createAvatar: "Crear avatar",
+        loading: "Cargando perfiles…",
+        personal: "Perfil personal",
+        avatar: "Avatar",
+        unavailable: "Perfiles no disponibles",
+      };
+    case "cs":
+      return {
+        actingAs: "Jednat jako",
+        createAvatar: "Vytvořit avatara",
+        loading: "Načítání profilů…",
+        personal: "Osobní profil",
+        avatar: "Avatar",
+        unavailable: "Profily nejsou dostupné",
+      };
+    case "en":
+    default:
+      return {
+        actingAs: "Acting as",
+        createAvatar: "Create avatar",
+        loading: "Loading profiles…",
+        personal: "Personal profile",
+        avatar: "Avatar",
+        unavailable: "Profiles unavailable",
+      };
+  }
+}
+
+function ActorContextSwitcher({
+  enabled,
+  locale,
+}: {
+  readonly enabled: boolean;
+  readonly locale: LocaleCode;
+}) {
+  const labels = getActorContextLabels(locale);
+  const [profiles, setProfiles] = useState<ActorContextOption[]>([]);
+  const [activeProfile, setActiveProfile] =
+    useState<ActorContextOption | null>(null);
+  const [isLoading, setIsLoading] = useState(enabled);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const switcherRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      setProfiles([]);
+      setActiveProfile(null);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
+    let mounted = true;
+    setIsLoading(true);
+
+    fetch("/api/actor-context", {
+      method: "GET",
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const data = (await response.json()) as ActorContextApiResponse;
+
+        if (!response.ok || !data.ok) {
+          throw new Error(
+            data.errorMessage || data.error || "Could not load actor context.",
+          );
+        }
+
+        return data;
+      })
+      .then((data) => {
+        if (!mounted) {
+          return;
+        }
+
+        setProfiles(data.profiles ?? []);
+        setActiveProfile(data.activeProfile ?? null);
+        setError(null);
+      })
+      .catch((loadError: unknown) => {
+        if (!mounted) {
+          return;
+        }
+
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Could not load actor context.",
+        );
+      })
+      .finally(() => {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return;
+    }
+
+    function closeOnOutsidePointer(event: PointerEvent) {
+      if (
+        switcherRef.current &&
+        !switcherRef.current.contains(event.target as Node)
+      ) {
+        setIsMenuOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isMenuOpen]);
+
+  async function changeActiveProfile(profileId: string) {
+    if (
+      isUpdating ||
+      !profileId ||
+      profileId === activeProfile?.profileId
+    ) {
+      return;
+    }
+
+    setIsUpdating(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/actor-context", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ profileId }),
+      });
+      const data = (await response.json()) as ActorContextApiResponse;
+
+      if (!response.ok || !data.ok || !data.activeProfile) {
+        throw new Error(
+          data.errorMessage || data.error || "Could not change actor context.",
+        );
+      }
+
+      setActiveProfile(data.activeProfile);
+      setProfiles(data.profiles ?? profiles);
+      window.location.reload();
+    } catch (updateError) {
+      setError(
+        updateError instanceof Error
+          ? updateError.message
+          : "Could not change actor context.",
+      );
+      setIsUpdating(false);
+    }
+  }
+
+  if (!enabled) {
+    return null;
+  }
+
+  const title = error || labels.actingAs;
+  const activeInitials = activeProfile
+    ? buildInitials(activeProfile.displayName, null)
+    : isLoading
+      ? "…"
+      : "!";
+  const createAvatarHref = buildLocaleAwareHref("/profiles/new", locale);
+
+  return (
+    <div ref={switcherRef} className="relative hidden items-center sm:flex">
+      <button
+        type="button"
+        title={title}
+        aria-label={labels.actingAs}
+        aria-haspopup="listbox"
+        aria-expanded={isMenuOpen}
+        disabled={isLoading || isUpdating || !activeProfile}
+        onClick={() => setIsMenuOpen((current) => !current)}
+        className={`flex h-9 min-w-[61px] items-center justify-center gap-1.5 rounded-lg border bg-white px-2 shadow-sm transition-colors hover:bg-[#f5f6fb] disabled:cursor-wait disabled:opacity-60 ${
+          error ? "border-red-200" : "border-[#dfe3f1]"
+        }`}
+      >
+        <span
+          className={`flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white ${
+            error
+              ? "bg-red-500"
+              : "bg-gradient-to-br from-[#3b6ef8] to-[#6f42f5]"
+          }`}
+        >
+          {activeInitials}
+        </span>
+        <ChevronDown
+          size={14}
+          className={`text-[#7c8099] transition-transform ${
+            isMenuOpen ? "rotate-180" : ""
+          }`}
+          aria-hidden="true"
+        />
+      </button>
+
+      {isMenuOpen && profiles.length > 0 && activeProfile ? (
+        <div
+          role="listbox"
+          aria-label={labels.actingAs}
+          className="absolute right-0 top-[calc(100%+6px)] z-[80] w-[270px] overflow-hidden rounded-xl border border-[#dfe3f1] bg-white p-1.5 shadow-[0_14px_36px_rgba(35,42,75,0.18)]"
+        >
+          <div className="px-2.5 pb-1.5 pt-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#9ca3b8]">
+            {labels.actingAs}
+          </div>
+
+          {profiles.map((profile) => {
+            const isActive = profile.profileId === activeProfile.profileId;
+
+            return (
+              <button
+                key={profile.profileId}
+                type="button"
+                role="option"
+                aria-selected={isActive}
+                disabled={isUpdating}
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  void changeActiveProfile(profile.profileId);
+                }}
+                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors disabled:cursor-wait disabled:opacity-60 ${
+                  isActive ? "bg-[#eef2ff]" : "hover:bg-[#f5f6fb]"
+                }`}
+              >
+                <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#3b6ef8] to-[#6f42f5] px-1 text-[10px] font-bold text-white">
+                  {buildInitials(profile.displayName, null)}
+                </span>
+
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[11px] font-semibold text-[#30354d]">
+                    {profile.displayName}
+                  </span>
+                  <span className="block text-[9px] text-[#9ca3b8]">
+                    {profile.profileKind === "avatar"
+                      ? labels.avatar
+                      : labels.personal}
+                  </span>
+                </span>
+
+                {isActive ? (
+                  <Check size={15} className="text-[#6f42f5]" aria-hidden="true" />
+                ) : null}
+              </button>
+            );
+          })}
+
+          <div className="my-1 border-t border-[#eceef5]" />
+          <a
+            href={createAvatarHref}
+            className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[#6f42f5] transition-colors hover:bg-[#f5f6fb]"
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#d9d0ff] bg-[#f5f1ff]">
+              <Plus size={15} aria-hidden="true" />
+            </span>
+            <span className="text-[11px] font-semibold">
+              {labels.createAvatar}
+            </span>
+          </a>
+        </div>
+      ) : null}
+
+      {error ? <span className="sr-only">{labels.unavailable}</span> : null}
+    </div>
+  );
 }
 
 async function loadUserSessionSnapshot(): Promise<
@@ -375,6 +727,8 @@ export function UserSessionTopBarControls() {
           </div>
         </div>
       </a>
+
+      <ActorContextSwitcher enabled locale={locale} />
 
       <a
         href="/auth/logout"

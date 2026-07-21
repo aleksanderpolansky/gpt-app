@@ -1,39 +1,24 @@
-import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../../lib/actor-context";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 
-export const API_FIX_FAST_ORGANIZATION_DRAFT_CREATE =
-  "API_FIX_FAST_ORGANIZATION_DRAFT_CREATE" as const;
-
-export const API_FIX_DRAFT_ORGANIZATION_DEFAULT_REWARD_RULE =
-  "API_FIX_DRAFT_ORGANIZATION_DEFAULT_REWARD_RULE" as const;
-
-type AppUserRow = {
-  id: string;
-  auth0_sub: string;
-};
-
-type PersonRow = {
-  id: string;
-};
-
-type RewardRuleRow = {
-  id: string;
+type ActorOwnedOrganizationRpcRow = {
   organization_id: string;
-  purchase_currency: string;
-  min_purchase_amount: number;
-  points_per_confirmed_purchase: number;
+  organization_actor_id: string;
+  business_space_id: string;
+  location_id: string | null;
+  reward_rule_id: string | null;
+  public_slug: string;
+  owner_actor_id: string;
+  owner_actor_type: "person" | "avatar";
 };
 
-const DEFAULT_PURCHASE_REWARD_RULE = {
-  minPurchaseAmount: 45,
-  purchaseCurrency: "PLN",
-  pointsPerConfirmedPurchase: 10,
-  maxPointsPerUserPerMonth: 2000,
-  maxConfirmationsPerOrganizationPerMonth: 5,
-} as const;
+const DEFAULT_PURCHASE_REWARD_CURRENCY = "PLN";
 
 function parseOptionalText(value: unknown) {
   if (typeof value !== "string") {
@@ -45,172 +30,61 @@ function parseOptionalText(value: unknown) {
   return trimmedValue.length > 0 ? trimmedValue : null;
 }
 
-function createPublicSlugFromOrganizationId(organizationId: string) {
-  return `organization-${organizationId.slice(0, 8)}`;
-}
-
 function normalizeOrganizationType(value: unknown) {
-  const organizationType = parseOptionalText(value);
-
-  return organizationType ?? "private_business";
+  return parseOptionalText(value) ?? "private_business";
 }
 
 function getDraftOrganizationName(locale: string | null) {
   switch (locale) {
     case "ru":
-      return "\u041d\u043e\u0432\u043e\u0435 \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u0435";
+      return "Новое предприятие";
     case "pl":
-      return "Nowe przedsi\u0119biorstwo";
+      return "Nowe przedsiębiorstwo";
     case "es":
       return "Nueva empresa";
     case "uk":
-      return "\u041d\u043e\u0432\u0435 \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u043e";
+      return "Нове підприємство";
     case "de":
       return "Neues Unternehmen";
     case "cs":
-      return "Nov\u00fd podnik";
+      return "Nový podnik";
     case "en":
     default:
       return "New business";
   }
 }
 
-async function getCurrentAppUser() {
+export async function POST(request: Request) {
   const session = await auth0.getSession();
 
   if (!session?.user?.sub) {
-    return {
-      appUser: null,
-      errorResponse: NextResponse.json(
-        { ok: false, error: "Not authenticated" },
-        { status: 401 },
-      ),
-    };
-  }
-
-  const { data, error } = await supabase
-    .from("app_users")
-    .select("id, auth0_sub")
-    .eq("auth0_sub", session.user.sub)
-    .single();
-
-  if (error || !data) {
-    return {
-      appUser: null,
-      errorResponse: NextResponse.json(
-        { ok: false, error: error?.message ?? "App user not found" },
-        { status: 500 },
-      ),
-    };
-  }
-
-  return {
-    appUser: data as AppUserRow,
-    errorResponse: null,
-  };
-}
-
-async function getOwnerPersonId(appUserId: string) {
-  const { data, error } = await supabase
-    .from("persons")
-    .select("id")
-    .eq("user_id", appUserId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const person = data as PersonRow | null;
-
-  return person?.id ?? null;
-}
-
-async function ensureDefaultRewardRuleForOrganization({
-  organizationId,
-  organizationName,
-  now,
-}: {
-  organizationId: string;
-  organizationName: string;
-  now: string;
-}) {
-  const { data: existingRewardRule, error: existingRewardRuleError } =
-    await supabase
-      .from("points_reward_rules")
-      .select(
-        `
-        id,
-        organization_id,
-        purchase_currency,
-        min_purchase_amount,
-        points_per_confirmed_purchase
-      `,
-      )
-      .eq("organization_id", organizationId)
-      .eq("purchase_currency", DEFAULT_PURCHASE_REWARD_RULE.purchaseCurrency)
-      .eq("is_active", true)
-      .eq("status", "active")
-      .maybeSingle();
-
-  if (existingRewardRuleError) {
-    throw new Error(existingRewardRuleError.message);
-  }
-
-  if (existingRewardRule) {
-    return existingRewardRule as RewardRuleRow;
-  }
-
-  const { data: rewardRule, error: rewardRuleError } = await supabase
-    .from("points_reward_rules")
-    .insert({
-      id: randomUUID(),
-      organization_id: organizationId,
-      rule_name: `${organizationName} default purchase reward`,
-      min_purchase_amount: DEFAULT_PURCHASE_REWARD_RULE.minPurchaseAmount,
-      purchase_currency: DEFAULT_PURCHASE_REWARD_RULE.purchaseCurrency,
-      points_per_confirmed_purchase:
-        DEFAULT_PURCHASE_REWARD_RULE.pointsPerConfirmedPurchase,
-      max_points_per_user_per_month:
-        DEFAULT_PURCHASE_REWARD_RULE.maxPointsPerUserPerMonth,
-      max_confirmations_per_organization_per_month:
-        DEFAULT_PURCHASE_REWARD_RULE.maxConfirmationsPerOrganizationPerMonth,
-      is_active: true,
-      status: "active",
-      created_at: now,
-      updated_at: now,
-    })
-    .select(
-      `
-      id,
-      organization_id,
-      purchase_currency,
-      min_purchase_amount,
-      points_per_confirmed_purchase
-    `,
-    )
-    .single();
-
-  if (rewardRuleError || !rewardRule) {
-    throw new Error(
-      rewardRuleError?.message ?? "Default reward rule was not created",
+    return NextResponse.json(
+      { ok: false, error: "Not authenticated" },
+      { status: 401 }
     );
   }
 
-  return rewardRule as RewardRuleRow;
-}
+  let actorContext;
 
-export async function POST(request: Request) {
-  const { appUser, errorResponse } = await getCurrentAppUser();
+  try {
+    actorContext = await resolveActiveActorContext(session.user.sub);
+  } catch (error) {
+    if (error instanceof ActorContextError) {
+      return NextResponse.json(
+        { ok: false, error: error.code, errorMessage: error.message },
+        { status: error.status }
+      );
+    }
 
-  if (errorResponse) {
-    return errorResponse;
-  }
-
-  if (!appUser) {
     return NextResponse.json(
-      { ok: false, error: "App user not found" },
-      { status: 500 },
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Could not resolve active actor context",
+      },
+      { status: 500 }
     );
   }
 
@@ -218,56 +92,61 @@ export async function POST(request: Request) {
     string,
     unknown
   >;
-
   const locale = parseOptionalText(body.locale);
   const organizationName =
     parseOptionalText(body.organizationName) ?? getDraftOrganizationName(locale);
   const organizationType = normalizeOrganizationType(body.organizationType);
-
-  const organizationId = randomUUID();
-  const publicSlug = createPublicSlugFromOrganizationId(organizationId);
   const now = new Date().toISOString();
 
-  let ownerPersonId: string | null = null;
+  const { data: creationRows, error: creationError } = await supabase.rpc(
+    "create_actor_owned_organization_v1",
+    {
+      p_owner_user_id: actorContext.appUserId,
+      p_owner_actor_id: actorContext.actorId,
+      p_organization_name: organizationName,
+      p_organization_type: organizationType,
+      p_description: null,
+      p_country_code: null,
+      p_default_currency: DEFAULT_PURCHASE_REWARD_CURRENCY,
+      p_directory_status: "published",
+      p_is_public_profile_enabled: true,
+      p_is_listed_in_directory: true,
+      p_directory_published_at: now,
+      p_create_location: false,
+      p_location_country_code: null,
+      p_location_city: null,
+      p_location_district: null,
+      p_location_address_visibility: "approximate",
+      p_location_latitude: null,
+      p_location_longitude: null,
+      p_create_default_reward_rule: true,
+    }
+  );
 
-  try {
-    ownerPersonId = await getOwnerPersonId(appUser.id);
-  } catch (error) {
+  const creation = (
+    (creationRows ?? []) as ActorOwnedOrganizationRpcRow[]
+  )[0];
+
+  if (creationError || !creation) {
     return NextResponse.json(
       {
         ok: false,
         error:
-          error instanceof Error
-            ? error.message
-            : "Owner person lookup failed",
+          creationError?.message ?? "Actor-owned organization was not created",
       },
-      { status: 500 },
+      { status: creationError?.code === "42501" ? 403 : 500 }
     );
   }
 
   const { data: organization, error: organizationError } = await supabase
     .from("organizations")
-    .insert({
-      id: organizationId,
-      created_by_user_id: appUser.id,
-      owner_person_id: ownerPersonId,
-      organization_name: organizationName,
-      organization_type: organizationType,
-      description: null,
-      country_code: null,
-      default_currency: DEFAULT_PURCHASE_REWARD_RULE.purchaseCurrency,
-      status: "active",
-      directory_status: "published",
-      is_public_profile_enabled: true,
-      is_listed_in_directory: true,
-      public_slug: publicSlug,
-      directory_published_at: now,
-      updated_at: now,
-    })
     .select(
       `
       id,
       created_by_user_id,
+      created_by_actor_id,
+      owner_actor_id,
+      owner_person_id,
       organization_name,
       organization_type,
       public_slug,
@@ -275,52 +154,89 @@ export async function POST(request: Request) {
       directory_status,
       is_public_profile_enabled,
       is_listed_in_directory
-    `,
+    `
     )
+    .eq("id", creation.organization_id)
     .single();
 
-  if (organizationError || !organization) {
-    return NextResponse.json(
-      { ok: false, error: organizationError?.message ?? "Draft was not created" },
-      { status: 500 },
-    );
-  }
+  const { data: rewardRule, error: rewardRuleError } = creation.reward_rule_id
+    ? await supabase
+        .from("points_reward_rules")
+        .select(
+          `
+          id,
+          organization_id,
+          purchase_currency,
+          min_purchase_amount,
+          points_per_confirmed_purchase
+        `
+        )
+        .eq("id", creation.reward_rule_id)
+        .single()
+    : { data: null, error: null };
 
-  let rewardRule: RewardRuleRow | null = null;
+  const { data: organizationActor, error: organizationActorError } =
+    await supabase
+      .from("actors")
+      .select("id, actor_type, organization_id, display_name, status")
+      .eq("id", creation.organization_actor_id)
+      .single();
 
-  try {
-    rewardRule = await ensureDefaultRewardRuleForOrganization({
-      organizationId,
-      organizationName,
-      now,
-    });
-  } catch (error) {
+  const { data: businessSpace, error: businessSpaceError } = await supabase
+    .from("spaces")
+    .select("id, organization_id, space_type, title, status")
+    .eq("id", creation.business_space_id)
+    .single();
+
+  const postReadError =
+    organizationError ??
+    rewardRuleError ??
+    organizationActorError ??
+    businessSpaceError;
+
+  if (
+    postReadError ||
+    !organization ||
+    !rewardRule ||
+    !organizationActor ||
+    !businessSpace
+  ) {
     return NextResponse.json(
       {
         ok: false,
         error:
-          error instanceof Error
-            ? error.message
-            : "Default reward rule was not created",
-        organization,
+          postReadError?.message ??
+          "Organization was created, but its complete result could not be read",
+        created: creation,
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 
-  return NextResponse.json({
-    ok: true,
-    mode: "fast_draft_create",
-    organization,
-    rewardRule,
-    safety: {
-      semanticIntakeSkipped: true,
-      openaiCalls: false,
-      spacesAndRolesSkipped: true,
-      locationSkipped: true,
-      defaultRewardRuleCreated: true,
-      pointsWalletTouched: false,
-      pointsTransactionsTouched: false,
+  return NextResponse.json(
+    {
+      ok: true,
+      mode: "fast_actor_owned_organization_create",
+      organization,
+      organizationActor,
+      businessSpace,
+      rewardRule,
+      actingAs: {
+        actorId: actorContext.actorId,
+        actorType: actorContext.actorType,
+        profileId: actorContext.profile.profileId,
+        displayName: actorContext.profile.displayName,
+      },
+      safety: {
+        semanticIntakeSkipped: true,
+        openaiCalls: false,
+        spacesAndRolesSkipped: false,
+        locationSkipped: true,
+        defaultRewardRuleCreated: true,
+        pointsWalletTouched: false,
+        pointsTransactionsTouched: false,
+      },
     },
-  });
+    { status: 201 }
+  );
 }

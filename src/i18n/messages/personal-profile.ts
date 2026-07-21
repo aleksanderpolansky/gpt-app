@@ -36,6 +36,9 @@ export type PersonalProfileMessages = {
   imageTooLarge: string;
   chooseImage: string;
   nameRequired: string;
+  createAvatar: string;
+  creatingAvatar: string;
+  avatarPrivacyNote: string;
 };
 
 const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
@@ -75,6 +78,10 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     imageTooLarge: "Choose an image smaller than 2 MB.",
     chooseImage: "Choose another profile image",
     nameRequired: "Profile name is required.",
+    createAvatar: "Create avatar",
+    creatingAvatar: "Creating…",
+    avatarPrivacyNote:
+      "The avatar is hidden by default. Its public page does not reveal which personal profile owns it.",
   },
   pl: {
     backToPeople: "← Wróć do ludzi i awatarów",
@@ -112,6 +119,10 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     imageTooLarge: "Wybierz obraz mniejszy niż 2 MB.",
     chooseImage: "Wybierz inne zdjęcie profilowe",
     nameRequired: "Nazwa profilu jest wymagana.",
+    createAvatar: "Utwórz awatar",
+    creatingAvatar: "Tworzenie…",
+    avatarPrivacyNote:
+      "Awatar jest domyślnie ukryty. Jego strona publiczna nie ujawnia, do którego profilu osobistego należy.",
   },
   ru: {
     backToPeople: "← Назад к людям и аватарам",
@@ -149,6 +160,10 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     imageTooLarge: "Выберите изображение размером менее 2 МБ.",
     chooseImage: "Выбрать другое фото профиля",
     nameRequired: "Укажите имя профиля.",
+    createAvatar: "Создать аватар",
+    creatingAvatar: "Создание…",
+    avatarPrivacyNote:
+      "По умолчанию аватар скрыт. На его публичной странице не раскрывается, какому личному профилю он принадлежит.",
   },
   uk: {
     backToPeople: "← Назад до людей і аватарів",
@@ -186,6 +201,10 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     imageTooLarge: "Виберіть зображення розміром менше ніж 2 МБ.",
     chooseImage: "Вибрати інше фото профілю",
     nameRequired: "Укажіть ім’я профілю.",
+    createAvatar: "Створити аватар",
+    creatingAvatar: "Створення…",
+    avatarPrivacyNote:
+      "За замовчуванням аватар прихований. На його публічній сторінці не розкривається, якому особистому профілю він належить.",
   },
   de: {
     backToPeople: "← Zurück zu Menschen und Avataren",
@@ -223,6 +242,10 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     imageTooLarge: "Wähle ein Bild unter 2 MB.",
     chooseImage: "Anderes Profilbild auswählen",
     nameRequired: "Ein Profilname ist erforderlich.",
+    createAvatar: "Avatar erstellen",
+    creatingAvatar: "Wird erstellt…",
+    avatarPrivacyNote:
+      "Der Avatar ist standardmäßig ausgeblendet. Seine öffentliche Seite verrät nicht, zu welchem persönlichen Profil er gehört.",
   },
   es: {
     backToPeople: "← Volver a personas y avatares",
@@ -260,6 +283,10 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     imageTooLarge: "Elige una imagen de menos de 2 MB.",
     chooseImage: "Elegir otra imagen de perfil",
     nameRequired: "El nombre del perfil es obligatorio.",
+    createAvatar: "Crear avatar",
+    creatingAvatar: "Creando…",
+    avatarPrivacyNote:
+      "El avatar está oculto de forma predeterminada. Su página pública no revela a qué perfil personal pertenece.",
   },
   cs: {
     backToPeople: "← Zpět k lidem a avatarům",
@@ -297,6 +324,10 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     imageTooLarge: "Vyberte obrázek menší než 2 MB.",
     chooseImage: "Vybrat jiný profilový obrázek",
     nameRequired: "Název profilu je povinný.",
+    createAvatar: "Vytvořit avatar",
+    creatingAvatar: "Vytváření…",
+    avatarPrivacyNote:
+      "Avatar je ve výchozím nastavení skrytý. Jeho veřejná stránka neodhaluje, ke kterému osobnímu profilu patří.",
   },
 };
 
