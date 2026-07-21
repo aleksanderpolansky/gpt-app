@@ -348,7 +348,7 @@ function ActorContextSwitcher({
   const createAvatarHref = buildLocaleAwareHref("/profiles/new", locale);
 
   return (
-    <div ref={switcherRef} className="relative hidden items-center sm:flex">
+    <div ref={switcherRef} className="relative flex items-center">
       <button
         type="button"
         title={title}
@@ -357,7 +357,7 @@ function ActorContextSwitcher({
         aria-expanded={isMenuOpen}
         disabled={isLoading || isUpdating || !activeProfile}
         onClick={() => setIsMenuOpen((current) => !current)}
-        className={`flex h-9 min-w-[61px] items-center justify-center gap-1.5 rounded-lg border bg-white px-2 shadow-sm transition-colors hover:bg-[#f5f6fb] disabled:cursor-wait disabled:opacity-60 ${
+        className={`flex h-9 w-11 items-center justify-center gap-1 rounded-lg border bg-white px-1 shadow-sm transition-colors hover:bg-[#f5f6fb] disabled:cursor-wait disabled:opacity-60 sm:w-auto sm:min-w-[61px] sm:gap-1.5 sm:px-2 ${
           error ? "border-red-200" : "border-[#dfe3f1]"
         }`}
       >
@@ -383,7 +383,7 @@ function ActorContextSwitcher({
         <div
           role="listbox"
           aria-label={labels.actingAs}
-          className="absolute right-0 top-[calc(100%+6px)] z-[80] w-[270px] overflow-hidden rounded-xl border border-[#dfe3f1] bg-white p-1.5 shadow-[0_14px_36px_rgba(35,42,75,0.18)]"
+          className="absolute right-0 top-[calc(100%+6px)] z-[80] w-[270px] max-w-[calc(100vw-24px)] overflow-hidden rounded-xl border border-[#dfe3f1] bg-white p-1.5 shadow-[0_14px_36px_rgba(35,42,75,0.18)]"
         >
           <div className="px-2.5 pb-1.5 pt-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#9ca3b8]">
             {labels.actingAs}
@@ -711,7 +711,7 @@ export function UserSessionTopBarControls() {
       <a
         href={profileHref ?? undefined}
         aria-disabled={!profileHref}
-        className="flex items-center gap-2 rounded-lg py-1.5 pl-2 pr-1 transition-colors hover:bg-[#f5f6fb]"
+        className="hidden items-center gap-2 rounded-lg py-1.5 pl-2 pr-1 transition-colors hover:bg-[#f5f6fb] sm:flex"
         title={session.publicProfile?.display_name ?? loggedInLabel}
       >
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#3b6ef8] to-[#6f42f5] text-[11px] font-bold text-white">
