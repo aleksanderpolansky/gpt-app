@@ -143,17 +143,15 @@ export async function POST(request: Request) {
     .select(
       `
       id,
-      created_by_user_id,
-      created_by_actor_id,
-      owner_actor_id,
-      owner_person_id,
       organization_name,
       organization_type,
       public_slug,
       status,
       directory_status,
       is_public_profile_enabled,
-      is_listed_in_directory
+      is_listed_in_directory,
+      created_at,
+      updated_at
     `
     )
     .eq("id", creation.organization_id)

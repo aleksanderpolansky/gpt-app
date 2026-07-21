@@ -1,6 +1,10 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
 
@@ -12,14 +16,9 @@ type RouteProps = {
   }>;
 };
 
-type AppUserRow = {
-  id: string;
-  auth0_sub: string;
-};
-
 type OrganizationRow = {
   id: string;
-  created_by_user_id: string | null;
+  owner_actor_id: string | null;
   public_slug: string | null;
   social_links_json: Record<string, unknown> | null;
 };
@@ -114,12 +113,12 @@ function parseNullableCoordinate(value: unknown, min: number, max: number) {
   return Math.round(parsedValue * 1000000) / 1000000;
 }
 
-async function getCurrentAppUser() {
+async function getCurrentActorContext() {
   const session = await auth0.getSession();
 
   if (!session?.user?.sub) {
     return {
-      appUser: null,
+      actorContext: null,
       errorResponse: NextResponse.json(
         { ok: false, error: "Not authenticated" },
         { status: 401 },
@@ -127,35 +126,49 @@ async function getCurrentAppUser() {
     };
   }
 
-  const { data, error } = await supabase
-    .from("app_users")
-    .select("id, auth0_sub")
-    .eq("auth0_sub", session.user.sub)
-    .single();
-
-  if (error || !data) {
+  try {
     return {
-      appUser: null,
+      actorContext: await resolveActiveActorContext(session.user.sub),
+      errorResponse: null,
+    };
+  } catch (error) {
+    if (error instanceof ActorContextError) {
+      return {
+        actorContext: null,
+        errorResponse: NextResponse.json(
+          {
+            ok: false,
+            error: error.code,
+            errorMessage: error.message,
+          },
+          { status: error.status },
+        ),
+      };
+    }
+
+    return {
+      actorContext: null,
       errorResponse: NextResponse.json(
-        { ok: false, error: error?.message ?? "App user not found" },
+        {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Could not resolve active actor context",
+        },
         { status: 500 },
       ),
     };
   }
-
-  return {
-    appUser: data as AppUserRow,
-    errorResponse: null,
-  };
 }
 
 async function getOwnedOrganization(input: {
   organizationId: string;
-  appUserId: string;
+  actorId: string;
 }) {
   const { data, error } = await supabase
     .from("organizations")
-    .select("id, created_by_user_id, public_slug, social_links_json")
+    .select("id, owner_actor_id, public_slug, social_links_json")
     .eq("id", input.organizationId)
     .limit(1);
 
@@ -181,7 +194,7 @@ async function getOwnedOrganization(input: {
     };
   }
 
-  if (organization.created_by_user_id !== input.appUserId) {
+  if (organization.owner_actor_id !== input.actorId) {
     return {
       organization: null,
       errorResponse: NextResponse.json(
@@ -201,15 +214,15 @@ export async function PATCH(request: Request, { params }: RouteProps) {
   const resolvedParams = await params;
   const organizationId = resolvedParams.id;
 
-  const { appUser, errorResponse } = await getCurrentAppUser();
+  const { actorContext, errorResponse } = await getCurrentActorContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!actorContext) {
     return NextResponse.json(
-      { ok: false, error: "App user not found" },
+      { ok: false, error: "Actor context not found" },
       { status: 500 },
     );
   }
@@ -217,7 +230,7 @@ export async function PATCH(request: Request, { params }: RouteProps) {
   const { organization, errorResponse: organizationErrorResponse } =
     await getOwnedOrganization({
       organizationId,
-      appUserId: appUser.id,
+      actorId: actorContext.actorId,
     });
 
   if (organizationErrorResponse) {
@@ -283,8 +296,24 @@ export async function PATCH(request: Request, { params }: RouteProps) {
         updated_at: now,
       })
       .eq("id", organizationId)
-      .eq("created_by_user_id", appUser.id)
-      .select()
+      .eq("owner_actor_id", actorContext.actorId)
+      .select(
+        `
+        id,
+        organization_name,
+        organization_type,
+        public_slug,
+        description,
+        short_description,
+        public_phone,
+        website_url,
+        booking_url,
+        public_email,
+        logo_url,
+        social_links_json,
+        updated_at
+      `,
+      )
       .single();
 
   if (updateOrganizationError) {
@@ -347,7 +376,26 @@ export async function PATCH(request: Request, { params }: RouteProps) {
         .update(locationUpdate)
         .eq("id", existingLocationId)
         .eq("organization_id", organizationId)
-        .select()
+        .select(
+          `
+          id,
+          organization_id,
+          location_type,
+          address_visibility,
+          label,
+          country_code,
+          region,
+          city,
+          district,
+          street_address,
+          postal_code,
+          latitude,
+          longitude,
+          is_primary,
+          is_active,
+          created_at
+        `,
+        )
         .single();
 
       if (error) {
@@ -363,10 +411,30 @@ export async function PATCH(request: Request, { params }: RouteProps) {
         .from("organization_locations")
         .insert({
           organization_id: organizationId,
+          created_by_actor_id: actorContext.actorId,
           location_type: "service_area",
           ...locationUpdate,
         })
-        .select()
+        .select(
+          `
+          id,
+          organization_id,
+          location_type,
+          address_visibility,
+          label,
+          country_code,
+          region,
+          city,
+          district,
+          street_address,
+          postal_code,
+          latitude,
+          longitude,
+          is_primary,
+          is_active,
+          created_at
+        `,
+        )
         .single();
 
       if (error) {
@@ -390,5 +458,10 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     ok: true,
     organization: updatedOrganization,
     primaryLocation: updatedLocation,
+    actingAs: {
+      actorId: actorContext.actorId,
+      actorType: actorContext.actorType,
+      profileId: actorContext.profile.profileId,
+    },
   });
 }

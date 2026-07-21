@@ -1,5 +1,9 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
 
@@ -24,14 +28,11 @@ type CategoryReviewRouteContext = {
 
 type AppUserRow = {
   id: string;
-  auth0_sub: string;
-  email?: string | null;
-  name?: string | null;
 };
 
 type OrganizationRow = {
   id: string;
-  created_by_user_id: string | null;
+  owner_actor_id: string | null;
   organization_name: string;
 };
 
@@ -189,8 +190,8 @@ function appendCategoryReviewEvent(input: {
   };
 }
 
-async function getCurrentAppUser(): Promise<{
-  appUser: AppUserRow | null;
+async function getCurrentActorContext(): Promise<{
+  actorContext: Awaited<ReturnType<typeof resolveActiveActorContext>> | null;
   errorMessage: string | null;
   status: number;
 }> {
@@ -198,36 +199,41 @@ async function getCurrentAppUser(): Promise<{
 
   if (!session?.user?.sub) {
     return {
-      appUser: null,
+      actorContext: null,
       errorMessage: "Not authenticated.",
       status: 401,
     };
   }
 
-  const { data, error } = await supabase
-    .from("app_users")
-    .select("id, auth0_sub, email, name")
-    .eq("auth0_sub", session.user.sub)
-    .single();
-
-  if (error || !data) {
+  try {
     return {
-      appUser: null,
-      errorMessage: error?.message ?? "App user not found.",
-      status: 401,
+      actorContext: await resolveActiveActorContext(session.user.sub),
+      errorMessage: null,
+      status: 200,
+    };
+  } catch (error) {
+    if (error instanceof ActorContextError) {
+      return {
+        actorContext: null,
+        errorMessage: error.message,
+        status: error.status,
+      };
+    }
+
+    return {
+      actorContext: null,
+      errorMessage:
+        error instanceof Error
+          ? error.message
+          : "Could not resolve active actor context.",
+      status: 500,
     };
   }
-
-  return {
-    appUser: data as AppUserRow,
-    errorMessage: null,
-    status: 200,
-  };
 }
 
 async function getOwnedOrganization(input: {
   organizationId: string;
-  appUserId: string;
+  actorId: string;
 }): Promise<{
   organization: OrganizationRow | null;
   errorMessage: string | null;
@@ -235,9 +241,9 @@ async function getOwnedOrganization(input: {
 }> {
   const { data, error } = await supabase
     .from("organizations")
-    .select("id, created_by_user_id, organization_name")
+    .select("id, owner_actor_id, organization_name")
     .eq("id", input.organizationId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     return {
@@ -257,10 +263,10 @@ async function getOwnedOrganization(input: {
 
   const organization = data as OrganizationRow;
 
-  if (organization.created_by_user_id !== input.appUserId) {
+  if (organization.owner_actor_id !== input.actorId) {
     return {
       organization: null,
-      errorMessage: "Only the organization owner can review its category.",
+      errorMessage: "Only the active organization owner can review its category.",
       status: 403,
     };
   }
@@ -653,15 +659,22 @@ export async function PATCH(
     return createErrorResponse("note must be a non-empty string.");
   }
 
-  const { appUser, errorMessage: authErrorMessage, status: authStatus } =
-    await getCurrentAppUser();
+  const {
+    actorContext,
+    errorMessage: authErrorMessage,
+    status: authStatus,
+  } = await getCurrentActorContext();
 
-  if (authErrorMessage || !appUser) {
+  if (authErrorMessage || !actorContext) {
     return createErrorResponse(
       authErrorMessage ?? "Not authenticated.",
       authStatus,
     );
   }
+
+  const appUser: AppUserRow = {
+    id: actorContext.appUserId,
+  };
 
   const {
     organization,
@@ -669,7 +682,7 @@ export async function PATCH(
     status: organizationStatus,
   } = await getOwnedOrganization({
     organizationId,
-    appUserId: appUser.id,
+    actorId: actorContext.actorId,
   });
 
   if (organizationErrorMessage || !organization) {
@@ -721,6 +734,11 @@ export async function PATCH(
         action,
         organizationId,
         organizationName: organization.organization_name,
+        actingAs: {
+          actorId: actorContext.actorId,
+          actorType: actorContext.actorType,
+          profileId: actorContext.profile.profileId,
+        },
         categoryReview: {
           reviewState: "owner_confirmed",
           publicDataMutation: true,
@@ -747,6 +765,11 @@ export async function PATCH(
         action,
         organizationId,
         organizationName: organization.organization_name,
+        actingAs: {
+          actorId: actorContext.actorId,
+          actorType: actorContext.actorType,
+          profileId: actorContext.profile.profileId,
+        },
         categoryReview: {
           reviewState: "owner_removed",
           publicDataMutation: true,
@@ -796,6 +819,11 @@ export async function PATCH(
       action,
       organizationId,
       organizationName: organization.organization_name,
+      actingAs: {
+        actorId: actorContext.actorId,
+        actorType: actorContext.actorType,
+        profileId: actorContext.profile.profileId,
+      },
       categoryReview: {
         reviewState: "owner_confirmed",
         publicDataMutation: true,

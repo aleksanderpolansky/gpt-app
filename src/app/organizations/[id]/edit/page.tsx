@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { resolveActiveActorContext } from "../../../../../lib/actor-context";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 import OrganizationPublicProfileEditClient, {
@@ -15,14 +16,9 @@ type OrganizationEditPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-type AppUserRow = {
-  id: string;
-  auth0_sub: string;
-};
-
 type OrganizationRow = {
   id: string;
-  created_by_user_id: string | null;
+  owner_actor_id: string | null;
   organization_name: string;
   organization_type: string;
   public_slug: string | null;
@@ -93,24 +89,18 @@ function getLocaleValue(
   return rawValue || "en";
 }
 
-async function getCurrentAppUser() {
+async function getCurrentActorContext() {
   const session = await auth0.getSession();
 
   if (!session?.user?.sub) {
     return null;
   }
 
-  const { data, error } = await supabase
-    .from("app_users")
-    .select("id, auth0_sub")
-    .eq("auth0_sub", session.user.sub)
-    .single();
-
-  if (error || !data) {
+  try {
+    return await resolveActiveActorContext(session.user.sub);
+  } catch {
     return null;
   }
-
-  return data as AppUserRow;
 }
 
 async function getCurrentCategoryName(organizationId: string) {
@@ -179,9 +169,9 @@ export default async function OrganizationEditPage({
   const locale = getLocaleValue(resolvedSearchParams);
   const organizationId = resolvedParams.id;
 
-  const appUser = await getCurrentAppUser();
+  const actorContext = await getCurrentActorContext();
 
-  if (!appUser) {
+  if (!actorContext) {
     notFound();
   }
 
@@ -190,7 +180,7 @@ export default async function OrganizationEditPage({
     .select(
       `
       id,
-      created_by_user_id,
+      owner_actor_id,
       organization_name,
       organization_type,
       public_slug,
@@ -225,7 +215,7 @@ export default async function OrganizationEditPage({
   const organization =
     ((organizationData ?? [])[0] as OrganizationRow | undefined) ?? null;
 
-  if (!organization || organization.created_by_user_id !== appUser.id) {
+  if (!organization || organization.owner_actor_id !== actorContext.actorId) {
     notFound();
   }
 

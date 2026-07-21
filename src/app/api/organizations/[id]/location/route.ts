@@ -1,19 +1,18 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getDefaultCurrencyByCountryCode, normalizeCountryCode } from "@/lib/commercial/currency";
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-type AppUserRow = {
-  id: string;
-  auth0_sub: string;
-};
-
 type OrganizationRow = {
   id: string;
   organization_name: string;
-  created_by_user_id: string | null;
+  owner_actor_id: string | null;
   country_code: string | null;
   default_currency: string | null;
 };
@@ -54,48 +53,56 @@ type CoordinateParseResult = {
 
 const ADDRESS_VISIBILITY_VALUES = new Set(["public", "approximate", "hidden"]);
 
-async function getCurrentAppUser(): Promise<{
-  appUser: AppUserRow | null;
-  errorResponse: NextResponse | null;
-}> {
+async function getCurrentActorContext() {
   const session = await auth0.getSession();
 
-  if (!session?.user) {
+  if (!session?.user?.sub) {
     return {
-      appUser: null,
+      actorContext: null,
       errorResponse: NextResponse.json(
         {
           ok: false,
           error: "Not authenticated",
         },
-        { status: 401 }
+        { status: 401 },
       ),
     };
   }
 
-  const { data: appUser, error: appUserError } = await supabase
-    .from("app_users")
-    .select("id, auth0_sub")
-    .eq("auth0_sub", session.user.sub)
-    .single();
-
-  if (appUserError || !appUser) {
+  try {
     return {
-      appUser: null,
+      actorContext: await resolveActiveActorContext(session.user.sub),
+      errorResponse: null,
+    };
+  } catch (error) {
+    if (error instanceof ActorContextError) {
+      return {
+        actorContext: null,
+        errorResponse: NextResponse.json(
+          {
+            ok: false,
+            error: error.code,
+            errorMessage: error.message,
+          },
+          { status: error.status },
+        ),
+      };
+    }
+
+    return {
+      actorContext: null,
       errorResponse: NextResponse.json(
         {
           ok: false,
-          error: appUserError?.message ?? "App user not found",
+          error:
+            error instanceof Error
+              ? error.message
+              : "Could not resolve active actor context",
         },
-        { status: 500 }
+        { status: 500 },
       ),
     };
   }
-
-  return {
-    appUser: appUser as AppUserRow,
-    errorResponse: null,
-  };
 }
 
 function parseOptionalText(value: unknown) {
@@ -274,7 +281,7 @@ async function readJsonBody(request: Request): Promise<{
 
 async function getOwnedOrganization(input: {
   organizationId: string;
-  appUserId: string;
+  actorId: string;
 }): Promise<{
   organization: OrganizationRow | null;
   errorResponse: NextResponse | null;
@@ -285,7 +292,7 @@ async function getOwnedOrganization(input: {
       `
       id,
       organization_name,
-      created_by_user_id,
+      owner_actor_id,
       country_code,
       default_currency
     `
@@ -322,7 +329,7 @@ async function getOwnedOrganization(input: {
     };
   }
 
-  if (organization.created_by_user_id !== input.appUserId) {
+  if (organization.owner_actor_id !== input.actorId) {
     return {
       organization: null,
       errorResponse: NextResponse.json(
@@ -401,6 +408,7 @@ function buildLocationLabel(input: ParsedLocationUpdateInput) {
 
 async function updatePrimaryLocation(input: {
   organizationId: string;
+  actorId: string;
   currentLocation: OrganizationLocationRow | null;
   locationInput: ParsedLocationUpdateInput;
 }): Promise<{
@@ -409,6 +417,7 @@ async function updatePrimaryLocation(input: {
 }> {
   const locationPatch = {
     organization_id: input.organizationId,
+    created_by_actor_id: input.actorId,
     location_type: "physical",
     label: buildLocationLabel(input.locationInput),
     country_code: input.locationInput.countryCode,
@@ -528,20 +537,20 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     );
   }
 
-  const { appUser, errorResponse: authErrorResponse } =
-    await getCurrentAppUser();
+  const { actorContext, errorResponse: authErrorResponse } =
+    await getCurrentActorContext();
 
   if (authErrorResponse) {
     return authErrorResponse;
   }
 
-  if (!appUser) {
+  if (!actorContext) {
     return NextResponse.json(
       {
         ok: false,
-        error: "App user not found.",
+        error: "Actor context not found.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -573,7 +582,7 @@ export async function PATCH(request: Request, { params }: RouteProps) {
   const { organization, errorResponse: organizationErrorResponse } =
     await getOwnedOrganization({
       organizationId,
-      appUserId: appUser.id,
+      actorId: actorContext.actorId,
     });
 
   if (organizationErrorResponse) {
@@ -602,6 +611,7 @@ export async function PATCH(request: Request, { params }: RouteProps) {
   const { location: updatedLocation, errorResponse: locationErrorResponse } =
     await updatePrimaryLocation({
       organizationId,
+      actorId: actorContext.actorId,
       currentLocation,
       locationInput,
     });
@@ -638,12 +648,12 @@ export async function PATCH(request: Request, { params }: RouteProps) {
         updated_at: nowIso,
       })
       .eq("id", organizationId)
-      .eq("created_by_user_id", appUser.id)
+      .eq("owner_actor_id", actorContext.actorId)
       .select(
         `
         id,
         organization_name,
-        created_by_user_id,
+        owner_actor_id,
         country_code,
         default_currency
       `
@@ -665,5 +675,10 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     ok: true,
     organization: updatedOrganizationData as unknown as OrganizationRow,
     location: updatedLocation,
+    actingAs: {
+      actorId: actorContext.actorId,
+      actorType: actorContext.actorType,
+      profileId: actorContext.profile.profileId,
+    },
   });
 }

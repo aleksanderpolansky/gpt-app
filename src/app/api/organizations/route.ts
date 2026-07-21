@@ -665,7 +665,33 @@ export async function GET(request: Request) {
 
   const { data: organizations, error: organizationsError } = await supabase
     .from("organizations")
-    .select("*")
+    .select(
+      `
+      id,
+      organization_name,
+      organization_type,
+      public_slug,
+      description,
+      short_description,
+      status,
+      country_code,
+      default_currency,
+      directory_status,
+      verification_status,
+      is_public_profile_enabled,
+      is_listed_in_directory,
+      public_email,
+      public_phone,
+      website_url,
+      booking_url,
+      logo_url,
+      cover_image_url,
+      social_links_json,
+      directory_published_at,
+      created_at,
+      updated_at
+    `,
+    )
     .eq("owner_actor_id", actorContext.actorId)
     .order("created_at", { ascending: false });
 
@@ -846,7 +872,33 @@ export async function POST(request: Request) {
 
   const { data: organization, error: organizationError } = await supabase
     .from("organizations")
-    .select("*")
+    .select(
+      `
+      id,
+      organization_name,
+      organization_type,
+      public_slug,
+      description,
+      short_description,
+      status,
+      country_code,
+      default_currency,
+      directory_status,
+      verification_status,
+      is_public_profile_enabled,
+      is_listed_in_directory,
+      public_email,
+      public_phone,
+      website_url,
+      booking_url,
+      logo_url,
+      cover_image_url,
+      social_links_json,
+      directory_published_at,
+      created_at,
+      updated_at
+    `,
+    )
     .eq("id", creation.organization_id)
     .single();
 

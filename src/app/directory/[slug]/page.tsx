@@ -11,6 +11,7 @@ import {
   Star,
   TrendingUp,
 } from "lucide-react";
+import { resolveActiveActorContext } from "../../../../lib/actor-context";
 import { supabase } from "../../../../lib/supabase";
 import { auth0 } from "../../../../lib/auth0";
 import {
@@ -69,7 +70,7 @@ type DirectoryLocation = {
 
 type DirectoryOrganization = {
   id: string;
-  createdByUserId: string | null;
+  ownerActorId: string | null;
   name: string;
   type: string;
   description: string | null;
@@ -206,7 +207,7 @@ type RelatedStats = {
 
 type DirectoryOrganizationRow = {
   id: string;
-  created_by_user_id: string | null;
+  owner_actor_id: string | null;
   organization_name: string;
   organization_type: string;
   description: string | null;
@@ -307,11 +308,6 @@ type DirectoryObjectActionClassification = {
   category: DirectoryContextualCategoryRow;
 };
 
-type DirectoryAppUserRow = {
-  id: string;
-  auth0_sub: string;
-};
-
 type DirectoryOrganizationPageProps = {
   params: Promise<{
     slug: string;
@@ -350,25 +346,20 @@ function appendLocaleToHref(href: string, locale: string) {
   return `${pathname}?${nextQueryString}${nextHash}`;
 }
 
-async function getCurrentDirectoryAppUser() {
+async function getCurrentDirectoryActorContext() {
   const session = await auth0.getSession();
 
   if (!session?.user?.sub) {
     return null;
   }
 
-  const { data, error } = await supabase
-    .from("app_users")
-    .select("id, auth0_sub")
-    .eq("auth0_sub", session.user.sub)
-    .limit(1);
-
-  if (error) {
+  try {
+    return await resolveActiveActorContext(session.user.sub);
+  } catch {
     return null;
   }
-
-  return ((data ?? [])[0] as DirectoryAppUserRow | undefined) ?? null;
 }
+
 const BUSINESS_DIRECTORY_CONTEXT_CODE = "business_directory";
 const ORGANIZATION_ENTITY_TYPE = "organization";
 
@@ -664,7 +655,7 @@ function mapDirectoryOrganization(
 
   return {
     id: row.id,
-    createdByUserId: row.created_by_user_id,
+    ownerActorId: row.owner_actor_id,
     name: row.organization_name,
     type: row.organization_type,
     description: row.description,
@@ -754,7 +745,7 @@ async function getDirectoryOrganization(slug: string): Promise<{
     .select(
       `
       id,
-      created_by_user_id,
+      owner_actor_id,
       organization_name,
       organization_type,
       description,
@@ -1109,7 +1100,8 @@ type PublicOrganizationDashboardLabelKey =
   | "publicActions"
   | "notProvided"
   | "details"
-  | "thisWeek";
+  | "thisWeek"
+  | "placed";
 
 type PublicOrganizationDashboardLocaleKey =
   | "en"
@@ -1141,6 +1133,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     notProvided: "Not provided",
     details: "Details",
     thisWeek: "this week",
+    placed: "Placed",
   },
   pl: {
     logo: "Logo",
@@ -1159,6 +1152,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     notProvided: "Nie podano",
     details: "Szczeg\u00f3\u0142y",
     thisWeek: "w tym tygodniu",
+    placed: "Zamieszczono",
   },
   uk: {
     logo: "\u041b\u043e\u0433\u043e\u0442\u0438\u043f",
@@ -1177,6 +1171,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     notProvided: "\u041d\u0435 \u0432\u043a\u0430\u0437\u0430\u043d\u043e",
     details: "\u0414\u043e\u043a\u043b\u0430\u0434\u043d\u0456\u0448\u0435",
     thisWeek: "\u0446\u044c\u043e\u0433\u043e \u0442\u0438\u0436\u043d\u044f",
+    placed: "\u0420\u043e\u0437\u043c\u0456\u0449\u0435\u043d\u043e",
   },
   ru: {
     logo: "\u041b\u043e\u0433\u043e\u0442\u0438\u043f",
@@ -1195,6 +1190,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     notProvided: "\u041d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d\u043e",
     details: "\u041f\u043e\u0434\u0440\u043e\u0431\u043d\u0435\u0435",
     thisWeek: "\u043d\u0430 \u044d\u0442\u043e\u0439 \u043d\u0435\u0434\u0435\u043b\u0435",
+    placed: "\u0420\u0430\u0437\u043c\u0435\u0449\u0435\u043d\u043e",
   },
   de: {
     logo: "Logo",
@@ -1213,6 +1209,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     notProvided: "Nicht angegeben",
     details: "Details",
     thisWeek: "diese Woche",
+    placed: "Eingestellt",
   },
   es: {
     logo: "Logotipo",
@@ -1231,6 +1228,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     notProvided: "No indicado",
     details: "Detalles",
     thisWeek: "esta semana",
+    placed: "Publicado",
   },
   cs: {
     logo: "Logo",
@@ -1249,6 +1247,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     notProvided: "Neuvedeno",
     details: "Podrobnosti",
     thisWeek: "tento t\u00fdden",
+    placed: "Zve\u0159ejn\u011bno",
   },
 };
 
@@ -1283,6 +1282,26 @@ function getPublicOrganizationDashboardLabel(
     PUBLIC_ORGANIZATION_DASHBOARD_LABELS[labelLocale][key] ??
     PUBLIC_ORGANIZATION_DASHBOARD_LABELS.en[key]
   );
+}
+
+function formatPublicOrganizationPlacedDate(
+  value: string | null | undefined,
+  locale?: string,
+) {
+  if (!value) {
+    return getPublicOrganizationDashboardLabel("notProvided", locale);
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return getPublicOrganizationDashboardLabel("notProvided", locale);
+  }
+
+  return new Intl.DateTimeFormat(
+    getPublicOrganizationDashboardLocale(locale),
+    { dateStyle: "medium" },
+  ).format(date);
 }
 
 function getPublicOrganizationPublicProfileLabel(locale?: string) {
@@ -1970,10 +1989,10 @@ export default async function DirectoryOrganizationPage({
   const publicPhoneUrl = organization?.publicPhone
     ? `tel:${organization.publicPhone}`
     : null;
-  const currentAppUser = await getCurrentDirectoryAppUser();
+  const currentActorContext = await getCurrentDirectoryActorContext();
   const isOrganizationOwner = Boolean(
-    organization?.createdByUserId &&
-      currentAppUser?.id === organization.createdByUserId,
+    organization?.ownerActorId &&
+      currentActorContext?.actorId === organization.ownerActorId,
   );
   const editProfileHref = organization
     ? appendLocaleToHref(`/organizations/${organization.id}/edit`, selectedLocale)
@@ -2023,6 +2042,13 @@ export default async function DirectoryOrganizationPage({
                 </h1>
                 <p className="mt-0.5 text-[13px] text-[#7c8099]">
                   {getPublicOrganizationTypeLabel(organization.type)}
+                </p>
+                <p className="mt-1 text-[12px] font-medium text-[#9ca3b8]">
+                  {getPublicOrganizationDashboardLabel("placed", selectedLocale)}:{" "}
+                  {formatPublicOrganizationPlacedDate(
+                    organization.createdAt,
+                    selectedLocale,
+                  )}
                 </p>
               </div>
             </div>

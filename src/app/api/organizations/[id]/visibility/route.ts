@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
 
@@ -11,15 +15,10 @@ type RouteProps = {
   }>;
 };
 
-type AppUserRow = {
-  id: string;
-  auth0_sub: string;
-};
-
 type OrganizationRow = {
   id: string;
   organization_name: string;
-  created_by_user_id: string | null;
+  owner_actor_id: string | null;
 };
 
 type VisibilityUpdate = {
@@ -30,60 +29,68 @@ type VisibilityUpdate = {
   updated_at: string;
 };
 
-async function getCurrentAppUser(): Promise<{
-  appUser: AppUserRow | null;
-  errorResponse: NextResponse | null;
-}> {
+async function getCurrentActorContext() {
   const session = await auth0.getSession();
 
-  if (!session?.user) {
+  if (!session?.user?.sub) {
     return {
-      appUser: null,
+      actorContext: null,
       errorResponse: NextResponse.json(
         {
           ok: false,
           error: "Not authenticated",
         },
-        { status: 401 }
+        { status: 401 },
       ),
     };
   }
 
-  const { data: appUser, error: appUserError } = await supabase
-    .from("app_users")
-    .select("id, auth0_sub")
-    .eq("auth0_sub", session.user.sub)
-    .single();
-
-  if (appUserError || !appUser) {
+  try {
     return {
-      appUser: null,
+      actorContext: await resolveActiveActorContext(session.user.sub),
+      errorResponse: null,
+    };
+  } catch (error) {
+    if (error instanceof ActorContextError) {
+      return {
+        actorContext: null,
+        errorResponse: NextResponse.json(
+          {
+            ok: false,
+            error: error.code,
+            errorMessage: error.message,
+          },
+          { status: error.status },
+        ),
+      };
+    }
+
+    return {
+      actorContext: null,
       errorResponse: NextResponse.json(
         {
           ok: false,
-          error: appUserError?.message ?? "App user not found",
+          error:
+            error instanceof Error
+              ? error.message
+              : "Could not resolve active actor context",
         },
-        { status: 500 }
+        { status: 500 },
       ),
     };
   }
-
-  return {
-    appUser: appUser as AppUserRow,
-    errorResponse: null,
-  };
 }
 
 async function getOwnedOrganization(input: {
   organizationId: string;
-  appUserId: string;
+  actorId: string;
 }): Promise<{
   organization: OrganizationRow | null;
   errorResponse: NextResponse | null;
 }> {
   const { data, error } = await supabase
     .from("organizations")
-    .select("id, organization_name, created_by_user_id")
+    .select("id, organization_name, owner_actor_id")
     .eq("id", input.organizationId)
     .limit(1);
 
@@ -95,7 +102,7 @@ async function getOwnedOrganization(input: {
           ok: false,
           error: error.message,
         },
-        { status: 500 }
+        { status: 500 },
       ),
     };
   }
@@ -111,20 +118,20 @@ async function getOwnedOrganization(input: {
           ok: false,
           error: "Organization not found.",
         },
-        { status: 404 }
+        { status: 404 },
       ),
     };
   }
 
-  if (organization.created_by_user_id !== input.appUserId) {
+  if (organization.owner_actor_id !== input.actorId) {
     return {
       organization: null,
       errorResponse: NextResponse.json(
         {
           ok: false,
-          error: "Only the organization owner can update visibility.",
+          error: "Only the active organization owner can update visibility.",
         },
-        { status: 403 }
+        { status: 403 },
       ),
     };
   }
@@ -137,16 +144,16 @@ async function getOwnedOrganization(input: {
 
 async function tryUpdateVisibility(input: {
   organizationId: string;
-  appUserId: string;
+  actorId: string;
   update: VisibilityUpdate;
 }) {
   const { data, error } = await supabase
     .from("organizations")
     .update(input.update)
     .eq("id", input.organizationId)
-    .eq("created_by_user_id", input.appUserId)
+    .eq("owner_actor_id", input.actorId)
     .select(
-      "id, organization_name, status, directory_status, is_public_profile_enabled, is_listed_in_directory, updated_at"
+      "id, organization_name, status, directory_status, is_public_profile_enabled, is_listed_in_directory, updated_at",
     )
     .limit(1);
 
@@ -171,25 +178,25 @@ export async function PATCH(_request: Request, { params }: RouteProps) {
   const resolvedParams = await params;
   const organizationId = resolvedParams.id;
 
-  const { appUser, errorResponse } = await getCurrentAppUser();
+  const { actorContext, errorResponse } = await getCurrentActorContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!actorContext) {
     return NextResponse.json(
       {
         ok: false,
-        error: "App user not found",
+        error: "Actor context not found",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
   const { errorResponse: ownershipError } = await getOwnedOrganization({
     organizationId,
-    appUserId: appUser.id,
+    actorId: actorContext.actorId,
   });
 
   if (ownershipError) {
@@ -224,7 +231,7 @@ export async function PATCH(_request: Request, { params }: RouteProps) {
   for (const update of updateAttempts) {
     const result = await tryUpdateVisibility({
       organizationId,
-      appUserId: appUser.id,
+      actorId: actorContext.actorId,
       update,
     });
 
@@ -232,6 +239,11 @@ export async function PATCH(_request: Request, { params }: RouteProps) {
       return NextResponse.json({
         ok: true,
         organization: result.organization,
+        actingAs: {
+          actorId: actorContext.actorId,
+          actorType: actorContext.actorType,
+          profileId: actorContext.profile.profileId,
+        },
         appliedUpdate: Object.keys(update),
       });
     }
@@ -249,6 +261,6 @@ export async function PATCH(_request: Request, { params }: RouteProps) {
         "Organization visibility could not be changed. No matching row was updated.",
       attemptedFallbacks: errors,
     },
-    { status: 500 }
+    { status: 500 },
   );
 }

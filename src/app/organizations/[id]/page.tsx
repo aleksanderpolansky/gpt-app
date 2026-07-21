@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
 import {
@@ -17,6 +18,7 @@ import {
   getOrganizationTypeLabel,
 } from "@/i18n/messages/system-labels";
 
+import { resolveActiveActorContext } from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import PurchaseConfirmationForm from "./PurchaseConfirmationForm";
@@ -65,7 +67,7 @@ type OrganizationLocation = {
 
 type Organization = {
   id: string;
-  created_by_user_id?: string | null;
+  owner_actor_id?: string | null;
   organization_name: string;
   organization_type: string;
   public_slug?: string | null;
@@ -166,13 +168,6 @@ type Offer = {
   status: string;
   created_at: string;
   offer_items?: OfferItem[] | null;
-};
-
-type AppUser = {
-  id: string;
-  auth0_sub: string;
-  email?: string | null;
-  name?: string | null;
 };
 
 type OrganizationCurrentCategory = {
@@ -321,6 +316,26 @@ function formatDate(
   }
 
   return new Date(value).toLocaleString();
+}
+
+function formatPlacedDate(
+  value: string | null | undefined,
+  locale: LocaleCode,
+  fallbackLabel: string,
+) {
+  if (!value) {
+    return fallbackLabel;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return fallbackLabel;
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+  }).format(date);
 }
 
 function getBooleanLabel(
@@ -625,42 +640,39 @@ function getClassificationReviewState(input: {
 
   return input.sourceType;
 }
-async function getCurrentAppUser(): Promise<{
-  appUser: AppUser | null;
+async function getCurrentActorContext(): Promise<{
+  actorContext: Awaited<ReturnType<typeof resolveActiveActorContext>> | null;
   errorMessage: string | null;
 }> {
   const session = await auth0.getSession();
 
-  if (!session?.user) {
+  if (!session?.user?.sub) {
     return {
-      appUser: null,
+      actorContext: null,
       errorMessage: "Not authenticated",
     };
   }
 
-  const { data: appUser, error: appUserError } = await supabase
-    .from("app_users")
-    .select("*")
-    .eq("auth0_sub", session.user.sub)
-    .single();
-
-  if (appUserError || !appUser) {
+  try {
     return {
-      appUser: null,
-      errorMessage: appUserError?.message ?? "App user not found",
+      actorContext: await resolveActiveActorContext(session.user.sub),
+      errorMessage: null,
+    };
+  } catch (error) {
+    return {
+      actorContext: null,
+      errorMessage:
+        error instanceof Error
+          ? error.message
+          : "Could not resolve active actor context",
     };
   }
-
-  return {
-    appUser: appUser as AppUser,
-    errorMessage: null,
-  };
 }
 
 async function getOrganizationPageData(
   organizationId: string
 ): Promise<PageData> {
-  const { appUser, errorMessage } = await getCurrentAppUser();
+  const { actorContext, errorMessage } = await getCurrentActorContext();
 
   if (errorMessage) {
     return {
@@ -672,13 +684,13 @@ async function getOrganizationPageData(
     };
   }
 
-  if (!appUser) {
+  if (!actorContext) {
     return {
       organization: null,
       primaryLocation: null,
       valueObjects: [],
       offers: [],
-      errorMessage: "User context not found",
+      errorMessage: "Actor context not found",
     };
   }
 
@@ -693,7 +705,7 @@ async function getOrganizationPageData(
       .select(
         `
         id,
-        created_by_user_id,
+        owner_actor_id,
         organization_name,
         organization_type,
         public_slug,
@@ -705,7 +717,8 @@ async function getOrganizationPageData(
       `
       )
       .eq("id", organizationId)
-      .single(),
+      .eq("owner_actor_id", actorContext.actorId)
+      .maybeSingle(),
 
     supabase
       .from("organization_locations")
@@ -861,7 +874,7 @@ async function getOrganizationPageData(
 
   const enrichedPrimaryLocation = await enrichLocationWithGeoStatus({
     location: rawPrimaryLocation,
-    appUserId: appUser.id,
+    appUserId: actorContext.appUserId,
   });
 
   if (valueObjectsResult.error) {
@@ -1054,7 +1067,8 @@ async function getOrganizationPageData(
     currentCategory: currentCategory,
     categoryOptions: categoryOptions,
     errorMessage: null,
-    canEditOrganizationLocation: organization.created_by_user_id === appUser.id,
+    canEditOrganizationLocation:
+      organization.owner_actor_id === actorContext.actorId,
   };
 }
 
@@ -1120,7 +1134,7 @@ type OwnerPublicPreviewMessageKey =
   | "ownerOnly"
   | "noOffers"
   | "createOffer"
-;
+  | "placed";
 
 const OWNER_PUBLIC_PREVIEW_MESSAGES: Record<
   LocaleCode,
@@ -1145,6 +1159,7 @@ const OWNER_PUBLIC_PREVIEW_MESSAGES: Record<
     ownerOnly: "Owner-only controls",
     noOffers: "No offers yet",
     createOffer: "Create offer",
+    placed: "Placed",
   },
   ru: {
     eyebrow: "\u041f\u0440\u0435\u0434\u043f\u0440\u043e\u0441\u043c\u043e\u0442\u0440 \u043f\u0443\u0431\u043b\u0438\u0447\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f",
@@ -1165,6 +1180,7 @@ const OWNER_PUBLIC_PREVIEW_MESSAGES: Record<
     ownerOnly: "\u0422\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430",
     noOffers: "\u041e\u0444\u0444\u0435\u0440\u043e\u0432 \u043f\u043e\u043a\u0430 \u043d\u0435\u0442",
     createOffer: "\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u043e\u0444\u0444\u0435\u0440",
+    placed: "\u0420\u0430\u0437\u043c\u0435\u0449\u0435\u043d\u043e",
   },
   uk: {
     eyebrow: "\u041f\u043e\u043f\u0435\u0440\u0435\u0434\u043d\u0456\u0439 \u043f\u0435\u0440\u0435\u0433\u043b\u044f\u0434 \u043f\u0443\u0431\u043b\u0456\u0447\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u0444\u0456\u043b\u044e",
@@ -1185,6 +1201,7 @@ const OWNER_PUBLIC_PREVIEW_MESSAGES: Record<
     ownerOnly: "\u0422\u0456\u043b\u044c\u043a\u0438 \u0434\u043b\u044f \u0432\u043b\u0430\u0441\u043d\u0438\u043a\u0430",
     noOffers: "\u041f\u0440\u043e\u043f\u043e\u0437\u0438\u0446\u0456\u0439 \u043f\u043e\u043a\u0438 \u043d\u0435\u043c\u0430\u0454",
     createOffer: "\u0421\u0442\u0432\u043e\u0440\u0438\u0442\u0438 \u043f\u0440\u043e\u043f\u043e\u0437\u0438\u0446\u0456\u044e",
+    placed: "\u0420\u043e\u0437\u043c\u0456\u0449\u0435\u043d\u043e",
   },
   pl: {
     eyebrow: "Podgl\u0105d profilu publicznego",
@@ -1205,6 +1222,7 @@ const OWNER_PUBLIC_PREVIEW_MESSAGES: Record<
     ownerOnly: "Tylko dla w\u0142a\u015bciciela",
     noOffers: "Nie ma jeszcze ofert",
     createOffer: "Utw\u00f3rz ofert\u0119",
+    placed: "Zamieszczono",
   },
   es: {
     eyebrow: "Vista previa del perfil p\u00fablico",
@@ -1225,6 +1243,7 @@ const OWNER_PUBLIC_PREVIEW_MESSAGES: Record<
     ownerOnly: "Solo propietario",
     noOffers: "A\u00fan no hay ofertas",
     createOffer: "Crear oferta",
+    placed: "Publicado",
   },
   de: {
     eyebrow: "Vorschau des \u00f6ffentlichen Profils",
@@ -1245,6 +1264,7 @@ const OWNER_PUBLIC_PREVIEW_MESSAGES: Record<
     ownerOnly: "Nur f\u00fcr Inhaber",
     noOffers: "Noch keine Angebote",
     createOffer: "Angebot erstellen",
+    placed: "Eingestellt",
   },
   cs: {
     eyebrow: "N\u00e1hled ve\u0159ejn\u00e9ho profilu",
@@ -1265,6 +1285,7 @@ const OWNER_PUBLIC_PREVIEW_MESSAGES: Record<
     ownerOnly: "Pouze vlastn\u00edk",
     noOffers: "Zat\u00edm \u017e\u00e1dn\u00e9 nab\u00eddky",
     createOffer: "Vytvo\u0159it nab\u00eddku",
+    placed: "Zve\u0159ejn\u011bno",
   },
 };
 
@@ -1446,6 +1467,10 @@ export default async function OrganizationDetailsPage({
     canEditOrganizationLocation = false,
   } = await getOrganizationPageData(organizationId);
 
+  if (!organization && !errorMessage) {
+    notFound();
+  }
+
   const locationGeoStatusLabel = getLocationGeoStatusLabel(primaryLocation);
 
   const activeCategorySuggestionRequests = categorySuggestionRequests.filter(
@@ -1508,6 +1533,11 @@ export default async function OrganizationDetailsPage({
     td("common.addressHidden"),
   );
   const ownerPreviewOffers = offers.slice(0, 3);
+  const placedDate = formatPlacedDate(
+    organization?.created_at,
+    locale,
+    notSpecifiedLabel,
+  );
 
   const tabs: TabItem[] = [
     {
@@ -1839,6 +1869,10 @@ export default async function OrganizationDetailsPage({
                 <h1 className="text-[32px] font-bold tracking-[-0.04em] text-[#111827]">
                   {organization?.organization_name ?? td("header.fallbackTitle")}
                 </h1>
+
+                <p className="mt-1 text-[12px] font-medium text-[#8b91aa]">
+                  {ownerPreviewText("placed")}: {placedDate}
+                </p>
 
                 <p className="mt-2 max-w-[780px] text-[14px] leading-6 text-[#5a5f7a]">
                   {organization?.description ??
