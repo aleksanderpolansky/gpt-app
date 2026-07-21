@@ -4,6 +4,18 @@ export type PersonalProfileMessages = {
   backToPeople: string;
   peopleTitle: string;
   peopleIntro: string;
+  peopleFound: string;
+  peopleFoundHint: string;
+  peoplePersonalCount: string;
+  peopleAvatarCount: string;
+  peopleNewest: string;
+  peopleNoNewest: string;
+  peopleEmptyTitle: string;
+  peopleEmptyHint: string;
+  peopleOpenProfile: string;
+  peoplePublished: string;
+  peopleUncategorized: string;
+  peopleNoDescription: string;
   editMode: string;
   viewMode: string;
   personalProfile: string;
@@ -45,7 +57,19 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
   en: {
     backToPeople: "← Back to people and avatars",
     peopleTitle: "People and avatars",
-    peopleIntro: "Public personal profiles and avatars will be shown here.",
+    peopleIntro: "Public personal profiles and avatars are shown here.",
+    peopleFound: "Public profiles",
+    peopleFoundHint: "Published people and avatars",
+    peoplePersonalCount: "People",
+    peopleAvatarCount: "Avatars",
+    peopleNewest: "Newest profile",
+    peopleNoNewest: "No published profiles yet",
+    peopleEmptyTitle: "No public profiles yet",
+    peopleEmptyHint: "A profile will appear here after its owner makes it visible.",
+    peopleOpenProfile: "Open",
+    peoplePublished: "Published",
+    peopleUncategorized: "Category not provided",
+    peopleNoDescription: "The profile description has not been added yet.",
     editMode: "Edit mode",
     viewMode: "View mode",
     personalProfile: "Personal profile",
@@ -86,7 +110,19 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
   pl: {
     backToPeople: "← Wróć do ludzi i awatarów",
     peopleTitle: "Ludzie i awatary",
-    peopleIntro: "Tutaj pojawią się publiczne profile osobiste i awatary.",
+    peopleIntro: "Tutaj są wyświetlane publiczne profile osobiste i awatary.",
+    peopleFound: "Profile publiczne",
+    peopleFoundHint: "Opublikowane osoby i awatary",
+    peoplePersonalCount: "Ludzie",
+    peopleAvatarCount: "Awatary",
+    peopleNewest: "Najnowszy profil",
+    peopleNoNewest: "Brak opublikowanych profili",
+    peopleEmptyTitle: "Nie ma jeszcze profili publicznych",
+    peopleEmptyHint: "Profil pojawi się tutaj, gdy jego właściciel ustawi go jako widoczny.",
+    peopleOpenProfile: "Otwórz",
+    peoplePublished: "Opublikowano",
+    peopleUncategorized: "Nie podano kategorii",
+    peopleNoDescription: "Opis profilu nie został jeszcze dodany.",
     editMode: "Tryb edycji",
     viewMode: "Tryb podglądu",
     personalProfile: "Profil osobisty",
@@ -127,7 +163,19 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
   ru: {
     backToPeople: "← Назад к людям и аватарам",
     peopleTitle: "Люди и аватары",
-    peopleIntro: "Здесь будут показаны публичные личные профили и аватары.",
+    peopleIntro: "Здесь показаны публичные личные профили и аватары.",
+    peopleFound: "Публичные профили",
+    peopleFoundHint: "Опубликованные люди и аватары",
+    peoplePersonalCount: "Люди",
+    peopleAvatarCount: "Аватары",
+    peopleNewest: "Новейший профиль",
+    peopleNoNewest: "Публичных профилей пока нет",
+    peopleEmptyTitle: "Публичных профилей пока нет",
+    peopleEmptyHint: "Профиль появится здесь, когда владелец сделает его видимым.",
+    peopleOpenProfile: "Открыть",
+    peoplePublished: "Опубликовано",
+    peopleUncategorized: "Категория не указана",
+    peopleNoDescription: "Описание профиля ещё не добавлено.",
     editMode: "Режим редактирования",
     viewMode: "Режим просмотра",
     personalProfile: "Личный профиль",
@@ -168,7 +216,19 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
   uk: {
     backToPeople: "← Назад до людей і аватарів",
     peopleTitle: "Люди й аватари",
-    peopleIntro: "Тут будуть показані публічні особисті профілі й аватари.",
+    peopleIntro: "Тут показані публічні особисті профілі й аватари.",
+    peopleFound: "Публічні профілі",
+    peopleFoundHint: "Опубліковані люди й аватари",
+    peoplePersonalCount: "Люди",
+    peopleAvatarCount: "Аватари",
+    peopleNewest: "Найновіший профіль",
+    peopleNoNewest: "Публічних профілів ще немає",
+    peopleEmptyTitle: "Публічних профілів ще немає",
+    peopleEmptyHint: "Профіль з’явиться тут, коли власник зробить його видимим.",
+    peopleOpenProfile: "Відкрити",
+    peoplePublished: "Опубіковано",
+    peopleUncategorized: "Категорію не вказано",
+    peopleNoDescription: "Опис профілю ще не додано.",
     editMode: "Режим редагування",
     viewMode: "Режим перегляду",
     personalProfile: "Особистий профіль",
@@ -210,6 +270,18 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     backToPeople: "← Zurück zu Menschen und Avataren",
     peopleTitle: "Menschen und Avatare",
     peopleIntro: "Hier werden öffentliche persönliche Profile und Avatare angezeigt.",
+    peopleFound: "Öffentliche Profile",
+    peopleFoundHint: "Veröffentlichte Menschen und Avatare",
+    peoplePersonalCount: "Menschen",
+    peopleAvatarCount: "Avatare",
+    peopleNewest: "Neuestes Profil",
+    peopleNoNewest: "Noch keine öffentlichen Profile",
+    peopleEmptyTitle: "Noch keine öffentlichen Profile",
+    peopleEmptyHint: "Ein Profil erscheint hier, nachdem sein Besitzer es sichtbar gemacht hat.",
+    peopleOpenProfile: "Öffnen",
+    peoplePublished: "Veröffentlicht",
+    peopleUncategorized: "Keine Kategorie angegeben",
+    peopleNoDescription: "Die Profilbeschreibung wurde noch nicht hinzugefügt.",
     editMode: "Bearbeitungsmodus",
     viewMode: "Ansichtsmodus",
     personalProfile: "Persönliches Profil",
@@ -250,7 +322,19 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
   es: {
     backToPeople: "← Volver a personas y avatares",
     peopleTitle: "Personas y avatares",
-    peopleIntro: "Aquí aparecerán los perfiles personales públicos y los avatares.",
+    peopleIntro: "Aquí se muestran los perfiles personales públicos y los avatares.",
+    peopleFound: "Perfiles públicos",
+    peopleFoundHint: "Personas y avatares publicados",
+    peoplePersonalCount: "Personas",
+    peopleAvatarCount: "Avatares",
+    peopleNewest: "Perfil más reciente",
+    peopleNoNewest: "Aún no hay perfiles públicos",
+    peopleEmptyTitle: "Aún no hay perfiles públicos",
+    peopleEmptyHint: "Un perfil aparecerá aquí cuando su propietario lo haga visible.",
+    peopleOpenProfile: "Abrir",
+    peoplePublished: "Publicado",
+    peopleUncategorized: "Categoría no indicada",
+    peopleNoDescription: "La descripción del perfil aún no se ha añadido.",
     editMode: "Modo de edición",
     viewMode: "Modo de vista",
     personalProfile: "Perfil personal",
@@ -291,7 +375,19 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
   cs: {
     backToPeople: "← Zpět k lidem a avatarům",
     peopleTitle: "Lidé a avatary",
-    peopleIntro: "Zde se zobrazí veřejné osobní profily a avatary.",
+    peopleIntro: "Zde se zobrazují veřejné osobní profily a avatary.",
+    peopleFound: "Veřejné profily",
+    peopleFoundHint: "Publikovaní lidé a avataři",
+    peoplePersonalCount: "Lidé",
+    peopleAvatarCount: "Avataři",
+    peopleNewest: "Nejnovější profil",
+    peopleNoNewest: "Zatím nejsou veřejné profily",
+    peopleEmptyTitle: "Zatím nejsou veřejné profily",
+    peopleEmptyHint: "Profil se zde objeví, jakmile jej vlastník zveřejní.",
+    peopleOpenProfile: "Otevřít",
+    peoplePublished: "Publikováno",
+    peopleUncategorized: "Kategorie nebyla uvedena",
+    peopleNoDescription: "Popis profilu zatím nebyl přidán.",
     editMode: "Režim úprav",
     viewMode: "Režim zobrazení",
     personalProfile: "Osobní profil",

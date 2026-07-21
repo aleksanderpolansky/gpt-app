@@ -1,35 +1,62 @@
-import { UsersRound } from "lucide-react";
+import { supabase } from "../../../lib/supabase";
 
-import { normalizeLocale } from "@/i18n";
-import { getPersonalProfileMessages } from "@/i18n/messages/personal-profile";
+import { getLocaleSearchParam } from "@/i18n";
+import {
+  PeopleDirectoryDashboardContent,
+  type PeopleDirectoryProfile,
+} from "../../components/figma-dashboard/people-dashboard";
 
-type PageProps = {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
+type PeoplePageSearchParams = Record<
+  string,
+  string | string[] | undefined
+>;
+
+type PeoplePageProps = {
+  readonly searchParams?: Promise<PeoplePageSearchParams>;
 };
 
-function readLocale(searchParams: Record<string, string | string[] | undefined>) {
-  const value = searchParams.locale ?? searchParams.lang;
-  return normalizeLocale(Array.isArray(value) ? value[0] : value);
+function getFirstSearchParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
 }
-export default async function PeopleAndAvatarsPage({ searchParams }: PageProps) {
-  const resolvedSearchParams = searchParams ? await searchParams : {};
-  const locale = readLocale(resolvedSearchParams);
-  const messages = getPersonalProfileMessages(locale);
+
+export default async function PeopleAndAvatarsPage({
+  searchParams,
+}: PeoplePageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const localeSearchParams = new URLSearchParams();
+
+  const locale = getFirstSearchParam(resolvedSearchParams?.locale);
+  const lang = getFirstSearchParam(resolvedSearchParams?.lang);
+
+  if (locale) {
+    localeSearchParams.set("locale", locale);
+  }
+
+  if (lang) {
+    localeSearchParams.set("lang", lang);
+  }
+
+  const { data, error } = await supabase
+    .from("actor_public_profiles")
+    .select(
+      "id, public_slug, display_name, bio, image_url, category_label, profile_kind, published_at, created_at",
+    )
+    .eq("is_public", true)
+    .order("published_at", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   return (
-    <main className="min-h-full bg-[#f5f6fb] p-5 text-[#1a1d2e]">
-      <section className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-6 shadow-sm">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#eef2ff] text-[#3b6ef8]">
-          <UsersRound size={21} />
-        </div>
-        <h1 className="mt-4 text-[20px] font-bold">{messages.peopleTitle}</h1>
-        <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#7c8099]">
-          {messages.peopleIntro}
-        </p>
-        <div className="mt-5 flex h-[140px] items-center justify-center rounded-xl bg-[#f8f9fd] text-[12px] text-[#9ca3b8]">
-          {messages.comingSoon}
-        </div>
-      </section>
-    </main>
+    <PeopleDirectoryDashboardContent
+      initialLocale={getLocaleSearchParam(localeSearchParams)}
+      profiles={(data ?? []) as PeopleDirectoryProfile[]}
+    />
   );
 }
