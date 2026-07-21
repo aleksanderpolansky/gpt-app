@@ -12,8 +12,8 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  Globe2,
   Heart,
-  Home,
   LayoutDashboard,
   Menu,
   Plus,
@@ -59,6 +59,20 @@ type OrganizationCreateResponse = {
   organization?: {
     id?: string | null;
   } | null;
+};
+
+type SidebarProfile = {
+  profileId: string;
+  profileKind: "personal" | "avatar";
+  displayName: string;
+  imageUrl: string | null;
+};
+
+type SidebarProfilesResponse = {
+  ok?: boolean;
+  error?: string;
+  errorMessage?: string;
+  profiles?: SidebarProfile[];
 };
 
 type NavigationTranslate = (
@@ -456,6 +470,60 @@ function BusinessOrganizationTreeItem({
 export const UI_MINI_FIX_BUSINESS_NAV_DETAIL_LINKS =
   "UI_MINI_FIX_BUSINESS_NAV_DETAIL_LINKS" as const;
 
+function getProfileInitials(displayName: string) {
+  const words = displayName
+    .trim()
+    .split(/[\s._-]+/)
+    .filter(Boolean);
+
+  if (words.length >= 2) {
+    return `${words[0][0] ?? "P"}${words[1][0] ?? ""}`.toUpperCase();
+  }
+
+  return (displayName.trim().slice(0, 2) || "P").toUpperCase();
+}
+
+function ProfileNavigationTreeItem({
+  profile,
+  locale,
+}: {
+  readonly profile: SidebarProfile;
+  readonly locale: LocaleCode;
+}) {
+  const href = buildLocaleAwareHref(
+    `/profiles/${encodeURIComponent(profile.profileId)}/edit`,
+    locale,
+  );
+
+  return (
+    <a
+      href={href}
+      title={profile.displayName}
+      className="group ml-12 flex min-w-0 items-center gap-2 rounded-md py-1.5 pl-2 pr-2 text-[11.5px] font-normal text-[#7c8099] transition-all hover:bg-gray-50 hover:text-[#1a1d2e]"
+    >
+      {profile.imageUrl ? (
+        <img
+          src={profile.imageUrl}
+          alt=""
+          className="h-5 w-5 flex-shrink-0 rounded-full object-cover ring-1 ring-[#dbe4ff]"
+        />
+      ) : (
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#eef2ff] px-1 text-[9px] font-bold text-[#3b6ef8] ring-1 ring-[#dbe4ff]">
+          {getProfileInitials(profile.displayName)}
+        </span>
+      )}
+
+      <span className="min-w-0 flex-1 truncate leading-tight">
+        {profile.displayName}
+      </span>
+
+      <span className="min-w-[20px] text-right text-[9.5px] font-semibold tracking-[0.02em] text-[#9ca3b8]">
+        {getProfileInitials(profile.displayName)}
+      </span>
+    </a>
+  );
+}
+
 function getOrganizationLocationLabel(organization: SidebarOrganization) {
   const location =
     organization.primaryLocation ??
@@ -481,6 +549,9 @@ export function GlobalSidebar({
   const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(false);
   const [organizationsError, setOrganizationsError] = useState<string | null>(null);
   const [isCreatingBusiness, setIsCreatingBusiness] = useState(false);
+  const [profiles, setProfiles] = useState<SidebarProfile[]>([]);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
+  const [profilesError, setProfilesError] = useState<string | null>(null);
   const t = useNavigationTranslator();
   const locale = useInterfaceLocale();
   const localeHref = (pathname: string) => buildLocaleAwareHref(pathname, locale);
@@ -578,6 +649,57 @@ export function GlobalSidebar({
     }
 
     void loadOrganizations();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [t]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProfiles() {
+      setIsLoadingProfiles(true);
+      setProfilesError(null);
+
+      try {
+        const response = await fetch("/api/actor-context", {
+          method: "GET",
+          cache: "no-store",
+        });
+        const data = (await response.json()) as SidebarProfilesResponse;
+
+        if (!response.ok || !data.ok) {
+          if (isMounted) {
+            setProfilesError(
+              data.errorMessage ??
+                data.error ??
+                t("navigation.profilesLoadError"),
+            );
+          }
+
+          return;
+        }
+
+        if (isMounted) {
+          setProfiles(Array.isArray(data.profiles) ? data.profiles : []);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setProfilesError(
+            error instanceof Error
+              ? error.message
+              : t("navigation.profilesLoadError"),
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingProfiles(false);
+        }
+      }
+    }
+
+    void loadProfiles();
 
     return () => {
       isMounted = false;
@@ -769,7 +891,41 @@ export function GlobalSidebar({
         </ExpandableSidebarItem>
 
         <SidebarMainItem icon={Heart} label={t("navigation.health")} href={localeHref("/analytics")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
-        <SidebarMainItem icon={Home} label={t("navigation.personalSpace")} href={localeHref("/value-objects")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
+
+        <ExpandableSidebarItem icon={Globe2} label={t("navigation.world")} defaultOpen>
+          <TreeItem
+            label={t("navigation.peopleAndAvatars")}
+            depth={1}
+            href={localeHref("/people")}
+          />
+          <TreeItem label={t("navigation.myProfiles")} depth={1} defaultOpen>
+            {isLoadingProfiles ? (
+              <div className="py-1.5 pl-12 pr-3 text-[11px] text-[#9ca3b8]">
+                {t("navigation.loadingProfiles")}
+              </div>
+            ) : profilesError ? (
+              <div
+                className="py-1.5 pl-12 pr-3 text-[11px] text-[#ef4444]"
+                title={profilesError}
+              >
+                {t("navigation.profilesLoadError")}
+              </div>
+            ) : (
+              profiles.map((profile) => (
+                <ProfileNavigationTreeItem
+                  key={profile.profileId}
+                  profile={profile}
+                  locale={locale}
+                />
+              ))
+            )}
+            <TreeItem
+              label={t("navigation.createAvatar")}
+              depth={2}
+              href={localeHref("/profiles/new")}
+            />
+          </TreeItem>
+        </ExpandableSidebarItem>
 
       </nav>
     </aside>
