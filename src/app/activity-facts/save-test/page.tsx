@@ -1,35 +1,84 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-type SaveState =
-  | {
-      status: "idle";
-      message: string;
-      response: unknown;
-      factsResponse: unknown;
-    }
-  | {
-      status: "saving" | "success" | "error";
-      message: string;
-      response: unknown;
-      factsResponse: unknown;
-    };
+type UnknownRecord = Record<string, unknown>;
 
-function buildSaveBody() {
+type CheckResult = {
+  readonly label: string;
+  readonly passed: boolean;
+  readonly actual: string;
+};
+
+type TestState = {
+  readonly status: "idle" | "running" | "passed" | "failed";
+  readonly message: string;
+  readonly checks: readonly CheckResult[];
+  readonly response: unknown;
+  readonly factsResponse: unknown;
+};
+
+type Scenario = "valid_conversion" | "invalid_unit";
+
+const INITIAL_STATE: TestState = {
+  status: "idle",
+  message: "Тест ещё не запускался.",
+  checks: [],
+  response: null,
+  factsResponse: null,
+};
+
+function asRecord(value: unknown): UnknownRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as UnknownRecord)
+    : {};
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function readString(record: UnknownRecord, key: string): string | null {
+  return typeof record[key] === "string" ? (record[key] as string) : null;
+}
+
+function readBoolean(record: UnknownRecord, key: string): boolean | null {
+  return typeof record[key] === "boolean" ? (record[key] as boolean) : null;
+}
+
+function readNumber(record: UnknownRecord, key: string): number | null {
+  return typeof record[key] === "number" && Number.isFinite(record[key])
+    ? (record[key] as number)
+    : null;
+}
+
+function json(value: unknown): string {
+  return JSON.stringify(value, null, 2);
+}
+
+function buildSaveBody(scenario: Scenario) {
   const nowIso = new Date().toISOString();
   const id = crypto.randomUUID();
+  const isValid = scenario === "valid_conversion";
+
+  const rawText = isValid
+    ? "Reality Core R1-3C: тестовая активность длилась полтора часа"
+    : "Reality Core R1-3C: намеренно несовместимая длительность 70 килограммов";
+  const localSuffix = isValid ? "valid" : "invalid";
+  const unit = isValid ? "hour" : "kilogram";
+  const numericValue = isValid ? 1.5 : 70;
 
   return {
     routeMode: "future_server_mediated_write",
-    idempotencyKey: `reels-15-min-${id}`,
-    sourcePackageId: `reels-15-min-package-${id}`,
+    temporalDirection: "past",
+    idempotencyKey: `reality-core-r1-3c-${localSuffix}-${id}`,
+    sourcePackageId: `reality-core-r1-3c-package-${localSuffix}-${id}`,
     activityProcessingPackage: {
-      packageId: `reels-15-min-package-${id}`,
+      packageId: `reality-core-r1-3c-package-${localSuffix}-${id}`,
       status: "ready_for_save_gate",
       rawInput: {
-        text: "смотрел рилс 15 минут",
+        text: rawText,
         locale: "ru",
         source: "manual_test_fixture",
         capturedAtIso: nowIso,
@@ -37,63 +86,62 @@ function buildSaveBody() {
       recognition: {
         status: "obvious_activity",
         confidence: 1,
-        reason: "Manual authenticated browser save test for activity facts runtime.",
-        detectedActivityTitle: "смотрел рилс 15 минут",
+        reason: "Authenticated Reality Core R1-3C runtime verification.",
+        detectedActivityTitle: rawText,
         shouldAskUserBeforeSaving: false,
       },
       measures: [
         {
-          localId: "measure-duration-15-min",
+          localId: `measure-duration-${localSuffix}`,
           measureType: "duration",
-          unit: "minute",
-          numericValue: 15,
+          unit,
+          numericValue,
           textValue: null,
           confidence: 1,
-          evidenceText: "15 минут",
-          normalizedLabel: "15 минут",
+          evidenceText: isValid ? "1,5 часа" : "70 килограммов",
+          normalizedLabel: rawText,
         },
       ],
       semanticCategories: [
         {
-          localId: "category-watching-reels",
-          semanticObjectKey: "watching_reels",
-          labelRu: "Просмотр рилсов",
-          layer: "activity_type",
+          localId: `category-reality-core-${localSuffix}`,
+          semanticObjectKey: `reality_core_runtime_${localSuffix}`,
+          labelRu: "Проверка Reality Core",
+          layer: "system",
           confidence: 1,
-          evidenceText: "смотрел рилс",
-          reason: "The user reported watching reels.",
+          evidenceText: rawText,
+          reason: "Technical runtime verification of parameter normalization.",
         },
       ],
       valueObjectMatches: [
         {
-          semanticCategoryLocalId: "category-watching-reels",
+          semanticCategoryLocalId: `category-reality-core-${localSuffix}`,
           matchStatus: "not_applicable",
           valueObjectId: null,
           valueObjectTitle: null,
           parentValueObjectId: null,
           parentValueObjectTitle: null,
           confidence: 1,
-          reason:
-            "This first runtime test saves a semantic fact without requiring an existing Value Object.",
+          reason: "This normalization test does not require a Value Object.",
         },
       ],
       missingValueObjectCandidates: [],
       factPreviews: [
         {
-          localId: "fact-watching-reels-duration",
+          localId: `fact-duration-${localSuffix}`,
           activityEventId: null,
-          measureLocalId: "measure-duration-15-min",
-          semanticCategoryLocalId: "category-watching-reels",
-          semanticObjectKey: "watching_reels",
+          measureLocalId: `measure-duration-${localSuffix}`,
+          semanticCategoryLocalId: `category-reality-core-${localSuffix}`,
+          semanticObjectKey: `reality_core_runtime_${localSuffix}`,
           valueObjectId: null,
           valueObjectTitle: null,
           measureType: "duration",
-          unit: "minute",
-          numericValue: 15,
+          unit,
+          numericValue,
           textValue: null,
           status: "ready_for_fact_write",
           confidence: 1,
-          explanation: "Факт: пользователь смотрел рилс 15 минут.",
+          explanation: rawText,
         },
       ],
       safety: {
@@ -103,9 +151,9 @@ function buildSaveBody() {
         openAiCallAllowed: false,
         medicalDiagnosisAllowed: false,
         notes: [
-          "Authenticated browser test.",
+          "Authenticated browser runtime test.",
           "No OpenAI call.",
-          "No manual SQL execution.",
+          "No SQL execution.",
         ],
       },
       counters: {
@@ -118,10 +166,11 @@ function buildSaveBody() {
     },
     factDecisions: [
       {
-        factLocalId: "fact-watching-reels-duration",
+        factLocalId: `fact-duration-${localSuffix}`,
         decision: "accept",
-        reasonRu:
-          "Пользователь подтвердил тестовую запись факта: смотрел рилс 15 минут.",
+        reasonRu: isValid
+          ? "Подтверждён валидный тест конвертации часов в минуты."
+          : "Подтверждён намеренно невалидный тест несовместимой единицы.",
       },
     ],
     editedFactDecisions: [],
@@ -135,304 +184,299 @@ function buildSaveBody() {
   };
 }
 
-function stringify(value: unknown) {
-  return JSON.stringify(value, null, 2);
+function getNormalizationItem(body: UnknownRecord): UnknownRecord {
+  const normalization = asRecord(body.realityCoreNormalization);
+  return asRecord(asArray(normalization.items)[0]);
 }
 
-const buttonStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
+function getCreatedIdsAreEmpty(body: UnknownRecord): boolean {
+  const createdIds = asRecord(body.createdIds);
+  const activityEventId = createdIds.activityEventId;
+  const arrayKeys = [
+    "measureIds",
+    "valueObjectIds",
+    "factIds",
+    "reviewItemIds",
+    "recalculationQueueIds",
+  ];
+
+  return (
+    (activityEventId === null || activityEventId === undefined) &&
+    arrayKeys.every((key) => asArray(createdIds[key]).length === 0)
+  );
+}
+
+function createCheck(label: string, passed: boolean, actual: unknown): CheckResult {
+  return {
+    label,
+    passed,
+    actual:
+      typeof actual === "string" ? actual : JSON.stringify(actual, null, 0),
+  };
+}
+
+async function postScenario(scenario: Scenario) {
+  const response = await fetch("/api/activity/facts/save-gate", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(buildSaveBody(scenario)),
+  });
+
+  const body = await response.json().catch(() => ({
+    ok: false,
+    errorCode: "RESPONSE_NOT_JSON",
+    errorMessage: "Response was not valid JSON.",
+  }));
+
+  return {
+    httpStatus: response.status,
+    body,
+  };
+}
+
+const buttonBase: React.CSSProperties = {
   minHeight: "44px",
-  minWidth: "280px",
   padding: "12px 18px",
-  borderRadius: "16px",
-  border: "2px solid #1d4ed8",
-  background: "#2563eb",
-  color: "#ffffff",
+  borderRadius: "14px",
   fontSize: "14px",
   fontWeight: 800,
   cursor: "pointer",
-  boxShadow: "0 8px 18px rgba(37, 99, 235, 0.25)",
 };
 
-const disabledButtonStyle: React.CSSProperties = {
-  ...buttonStyle,
-  cursor: "not-allowed",
-  opacity: 0.65,
-};
-
-const linkButtonStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minHeight: "44px",
-  padding: "12px 18px",
-  borderRadius: "16px",
-  border: "1px solid #cbd5e1",
+const panelStyle: React.CSSProperties = {
+  border: "1px solid #dbeafe",
+  borderRadius: "20px",
   background: "#ffffff",
-  color: "#0f172a",
-  fontSize: "14px",
-  fontWeight: 700,
-  textDecoration: "none",
+  padding: "22px",
+  boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
 };
 
-export default function ActivityFactsSaveTestPage() {
-  const [state, setState] = useState<SaveState>({
-    status: "idle",
-    message:
-      "Нажми большую синюю кнопку, чтобы записать тестовую активность: смотрел рилс 15 минут.",
-    response: null,
-    factsResponse: null,
-  });
+function CheckList({ checks }: { readonly checks: readonly CheckResult[] }) {
+  if (checks.length === 0) {
+    return null;
+  }
 
-  const previewBody = useMemo(() => buildSaveBody(), []);
+  return (
+    <div style={{ display: "grid", gap: "8px", marginTop: "16px" }}>
+      {checks.map((check) => (
+        <div
+          key={check.label}
+          style={{
+            borderRadius: "12px",
+            padding: "10px 12px",
+            background: check.passed ? "#ecfdf5" : "#fef2f2",
+            color: check.passed ? "#065f46" : "#991b1b",
+            fontSize: "13px",
+          }}
+        >
+          <strong>{check.passed ? "✓" : "✕"} {check.label}</strong>
+          <div style={{ marginTop: "4px", opacity: 0.85 }}>Получено: {check.actual}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  async function saveActivity() {
-    setState({
-      status: "saving",
-      message: "Отправляю запись в /api/activity/facts/save-gate...",
-      response: null,
-      factsResponse: null,
-    });
+export default function RealityCoreRuntimeTestPage() {
+  const [validState, setValidState] = useState<TestState>(INITIAL_STATE);
+  const [invalidState, setInvalidState] = useState<TestState>(INITIAL_STATE);
+
+  const allPassed = useMemo(() => {
+    return validState.status === "passed" && invalidState.status === "passed";
+  }, [invalidState.status, validState.status]);
+
+  async function runValidTest() {
+    setValidState({ ...INITIAL_STATE, status: "running", message: "Выполняется реальная запись..." });
 
     try {
-      const body = buildSaveBody();
+      const result = await postScenario("valid_conversion");
+      const body = asRecord(result.body);
+      const normalization = asRecord(body.realityCoreNormalization);
+      const item = getNormalizationItem(body);
+      const createdIds = asRecord(body.createdIds);
 
-      const saveResponse = await fetch("/api/activity/facts/save-gate", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+      const checks = [
+        createCheck("HTTP 200", result.httpStatus === 200, result.httpStatus),
+        createCheck("ok=true", readBoolean(body, "ok") === true, body.ok),
+        createCheck("writeStatus=written", readString(body, "writeStatus") === "written", body.writeStatus),
+        createCheck("normalization.ok=true", readBoolean(normalization, "ok") === true, normalization.ok),
+        createCheck("parameterCode=duration", readString(item, "parameterCode") === "duration", item.parameterCode),
+        createCheck("canonicalUnitCode=minute", readString(item, "canonicalUnitCode") === "minute", item.canonicalUnitCode),
+        createCheck("1.5 hour -> 90 minute", readNumber(item, "canonicalValueNumeric") === 90, item.canonicalValueNumeric),
+        createCheck("activityEventId создан", typeof createdIds.activityEventId === "string", createdIds.activityEventId),
+        createCheck("dbWriteExecuted=true", readBoolean(body, "dbWriteExecuted") === true, body.dbWriteExecuted),
+      ];
 
-      const saveJson = await saveResponse.json().catch(() => {
-        return {
-          ok: false,
-          errorCode: "SAVE_RESPONSE_NOT_JSON",
-          errorMessage: "Save response was not valid JSON.",
-        };
-      });
-
+      const passed = checks.every((check) => check.passed);
       const factsResponse = await fetch("/api/activity/facts?limit=10", {
         method: "GET",
         credentials: "same-origin",
       });
+      const factsBody = await factsResponse.json().catch(() => null);
 
-      const factsJson = await factsResponse.json().catch(() => {
-        return {
-          ok: false,
-          errorCode: "FACTS_RESPONSE_NOT_JSON",
-          errorMessage: "Facts response was not valid JSON.",
-        };
-      });
-
-      const ok =
-        saveResponse.ok &&
-        Boolean((saveJson as { ok?: unknown }).ok) &&
-        (saveJson as { writeStatus?: unknown }).writeStatus === "written";
-
-      setState({
-        status: ok ? "success" : "error",
-        message: ok
-          ? "Готово: backend вернул writeStatus=written. Теперь открой /activity-facts."
-          : "Запись не завершилась. Смотри JSON ответа ниже.",
-        response: {
-          httpStatus: saveResponse.status,
-          body: saveJson,
-        },
+      setValidState({
+        status: passed ? "passed" : "failed",
+        message: passed
+          ? "Валидный факт сохранён, а 1,5 часа нормализованы в 90 минут."
+          : "Ответ получен, но не все ожидаемые условия выполнены.",
+        checks,
+        response: result,
         factsResponse: {
           httpStatus: factsResponse.status,
-          body: factsJson,
+          body: factsBody,
         },
       });
     } catch (error) {
-      setState({
-        status: "error",
-        message: "Ошибка browser fetch. Смотри details ниже.",
-        response: {
-          error: error instanceof Error ? error.message : String(error),
-        },
+      setValidState({
+        status: "failed",
+        message: "Browser fetch завершился ошибкой.",
+        checks: [],
+        response: error instanceof Error ? error.message : String(error),
+        factsResponse: null,
+      });
+    }
+  }
+
+  async function runInvalidTest() {
+    setInvalidState({ ...INITIAL_STATE, status: "running", message: "Проверяется блокировка до записи..." });
+
+    try {
+      const result = await postScenario("invalid_unit");
+      const body = asRecord(result.body);
+      const normalization = asRecord(body.realityCoreNormalization);
+      const item = getNormalizationItem(body);
+      const sideEffects = asRecord(body.sideEffects);
+
+      const checks = [
+        createCheck("HTTP 400", result.httpStatus === 400, result.httpStatus),
+        createCheck("ok=false", readBoolean(body, "ok") === false, body.ok),
+        createCheck(
+          "routeStatus=normalization_failed_before_write",
+          readString(body, "routeStatus") === "reality_core_normalization_failed_before_write",
+          body.routeStatus,
+        ),
+        createCheck(
+          "ошибка save-gate нормализации",
+          readString(body, "errorCode") === "ACTIVITY_FACTS_SAVE_REALITY_CORE_NORMALIZATION_FAILED",
+          body.errorCode,
+        ),
+        createCheck("normalization.ok=false", readBoolean(normalization, "ok") === false, normalization.ok),
+        createCheck(
+          "причина REALITY_CORE_UNIT_NOT_ALLOWED",
+          readString(item, "errorCode") === "REALITY_CORE_UNIT_NOT_ALLOWED",
+          item.errorCode,
+        ),
+        createCheck("dbWriteExecuted=false", readBoolean(body, "dbWriteExecuted") === false, body.dbWriteExecuted),
+        createCheck("rowsActuallyWritten=0", readNumber(sideEffects, "rowsActuallyWritten") === 0, sideEffects.rowsActuallyWritten),
+        createCheck("createdIds пусты", getCreatedIdsAreEmpty(body), body.createdIds),
+      ];
+
+      const passed = checks.every((check) => check.passed);
+
+      setInvalidState({
+        status: passed ? "passed" : "failed",
+        message: passed
+          ? "Несовместимая единица заблокирована до первой записи в Supabase."
+          : "Ответ получен, но не все защитные условия подтверждены.",
+        checks,
+        response: result,
+        factsResponse: null,
+      });
+    } catch (error) {
+      setInvalidState({
+        status: "failed",
+        message: "Browser fetch завершился ошибкой.",
+        checks: [],
+        response: error instanceof Error ? error.message : String(error),
         factsResponse: null,
       });
     }
   }
 
   return (
-    <main style={{ minHeight: "100vh", padding: "32px", background: "#f1f5f9" }}>
-      <section
-        style={{
-          maxWidth: "880px",
-          margin: "0 auto 24px auto",
-          border: "1px solid #e2e8f0",
-          borderRadius: "24px",
-          background: "#ffffff",
-          padding: "28px",
-          boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
-        }}
-      >
-        <p
-          style={{
-            margin: 0,
-            fontSize: "12px",
-            fontWeight: 800,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color: "#1d4ed8",
-          }}
-        >
-          Activity Facts · real save test
-        </p>
-
-        <h1 style={{ margin: "14px 0 0 0", fontSize: "28px", color: "#020617" }}>
-          Записать активность: смотрел рилс 15 минут
-        </h1>
-
-        <p style={{ marginTop: "14px", maxWidth: "760px", color: "#334155", lineHeight: 1.6 }}>
-          Эта страница вызывает реальный backend route{" "}
-          <code>/api/activity/facts/save-gate</code> из браузера с текущей
-          authenticated-сессией. После успешной записи факт должен появиться в{" "}
-          <Link href="/activity-facts" style={{ color: "#1d4ed8", fontWeight: 700 }}>
-            /activity-facts
-          </Link>
-          .
-        </p>
-
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginTop: "24px" }}>
-          <button
-            type="button"
-            onClick={saveActivity}
-            disabled={state.status === "saving"}
-            style={state.status === "saving" ? disabledButtonStyle : buttonStyle}
-          >
-            {state.status === "saving"
-              ? "Записываю..."
-              : "▶ Записать: смотрел рилс 15 минут"}
-          </button>
-
-          <Link href="/activity-facts" style={linkButtonStyle}>
-            Открыть /activity-facts
-          </Link>
-
-          <Link href="/workspace" style={linkButtonStyle}>
-            Вернуться в /workspace
-          </Link>
+    <main style={{ minHeight: "100vh", padding: "28px", background: "#f1f5f9", color: "#0f172a" }}>
+      <section style={{ maxWidth: "1080px", margin: "0 auto" }}>
+        <div style={{ ...panelStyle, marginBottom: "20px" }}>
+          <p style={{ margin: 0, color: "#2563eb", fontSize: "12px", fontWeight: 900, letterSpacing: "0.12em" }}>
+            REALITY CORE R1-3C · AUTHENTICATED RUNTIME VERIFICATION
+          </p>
+          <h1 style={{ margin: "12px 0 0", fontSize: "28px" }}>Проверка нормализации фактов до записи</h1>
+          <p style={{ margin: "12px 0 0", lineHeight: 1.6, color: "#475569" }}>
+            Первый тест создаёт реальную прошлую активность и проверяет преобразование 1,5 часа в 90 минут.
+            Второй отправляет намеренно несовместимую пару «duration + kilogram» и подтверждает нулевое число записей.
+          </p>
+          <div style={{ marginTop: "14px", padding: "12px", borderRadius: "12px", background: allPassed ? "#dcfce7" : "#e0e7ff" }}>
+            <strong>{allPassed ? "R1-3C runtime acceptance: PASSED" : "Выполните оба теста по порядку."}</strong>
+          </div>
         </div>
 
-        <div
-          style={{
-            marginTop: "24px",
-            borderRadius: "18px",
-            border:
-              state.status === "success"
-                ? "1px solid #86efac"
-                : state.status === "error"
-                  ? "1px solid #fecdd3"
-                  : "1px solid #cbd5e1",
-            background:
-              state.status === "success"
-                ? "#dcfce7"
-                : state.status === "error"
-                  ? "#fff1f2"
-                  : "#f8fafc",
-            color:
-              state.status === "success"
-                ? "#14532d"
-                : state.status === "error"
-                  ? "#881337"
-                  : "#0f172a",
-            padding: "16px",
-            fontSize: "14px",
-            fontWeight: 700,
-          }}
-        >
-          {state.message}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "20px" }}>
+          <section style={panelStyle}>
+            <h2 style={{ margin: 0, fontSize: "20px" }}>1. Валидная запись и конвертация</h2>
+            <p style={{ color: "#64748b", lineHeight: 1.5 }}>Ожидается реальная запись и canonical preview: duration / minute / 90.</p>
+            <button
+              type="button"
+              onClick={runValidTest}
+              disabled={validState.status === "running"}
+              style={{
+                ...buttonBase,
+                border: "1px solid #2563eb",
+                background: "#2563eb",
+                color: "#ffffff",
+                opacity: validState.status === "running" ? 0.65 : 1,
+              }}
+            >
+              {validState.status === "running" ? "Выполняется..." : "Записать 1,5 часа"}
+            </button>
+            <p style={{ marginBottom: 0, fontWeight: 700 }}>{validState.message}</p>
+            <CheckList checks={validState.checks} />
+            {validState.response !== null ? (
+              <details style={{ marginTop: "16px" }}>
+                <summary style={{ cursor: "pointer", fontWeight: 700 }}>JSON ответа</summary>
+                <pre style={{ overflowX: "auto", whiteSpace: "pre-wrap", fontSize: "11px", background: "#0f172a", color: "#e2e8f0", padding: "14px", borderRadius: "12px" }}>{json(validState.response)}</pre>
+              </details>
+            ) : null}
+          </section>
+
+          <section style={panelStyle}>
+            <h2 style={{ margin: 0, fontSize: "20px" }}>2. Невалидная единица без записи</h2>
+            <p style={{ color: "#64748b", lineHeight: 1.5 }}>Ожидается HTTP 400, REALITY_CORE_UNIT_NOT_ALLOWED и rowsActuallyWritten=0.</p>
+            <button
+              type="button"
+              onClick={runInvalidTest}
+              disabled={invalidState.status === "running"}
+              style={{
+                ...buttonBase,
+                border: "1px solid #dc2626",
+                background: "#ffffff",
+                color: "#b91c1c",
+                opacity: invalidState.status === "running" ? 0.65 : 1,
+              }}
+            >
+              {invalidState.status === "running" ? "Проверяется..." : "Отправить duration + kilogram"}
+            </button>
+            <p style={{ marginBottom: 0, fontWeight: 700 }}>{invalidState.message}</p>
+            <CheckList checks={invalidState.checks} />
+            {invalidState.response !== null ? (
+              <details style={{ marginTop: "16px" }}>
+                <summary style={{ cursor: "pointer", fontWeight: 700 }}>JSON ответа</summary>
+                <pre style={{ overflowX: "auto", whiteSpace: "pre-wrap", fontSize: "11px", background: "#0f172a", color: "#e2e8f0", padding: "14px", borderRadius: "12px" }}>{json(invalidState.response)}</pre>
+              </details>
+            ) : null}
+          </section>
         </div>
-      </section>
 
-      <section
-        style={{
-          maxWidth: "880px",
-          margin: "0 auto 24px auto",
-          border: "1px solid #e2e8f0",
-          borderRadius: "24px",
-          background: "#ffffff",
-          padding: "24px",
-        }}
-      >
-        <h2 style={{ marginTop: 0, color: "#020617" }}>Save response</h2>
-        <pre
-          style={{
-            maxHeight: "360px",
-            overflow: "auto",
-            borderRadius: "16px",
-            background: "#020617",
-            color: "#f8fafc",
-            padding: "16px",
-            fontSize: "12px",
-            lineHeight: 1.5,
-          }}
-        >
-          {stringify(state.response)}
-        </pre>
-      </section>
-
-      <section
-        style={{
-          maxWidth: "880px",
-          margin: "0 auto 24px auto",
-          border: "1px solid #e2e8f0",
-          borderRadius: "24px",
-          background: "#ffffff",
-          padding: "24px",
-        }}
-      >
-        <h2 style={{ marginTop: 0, color: "#020617" }}>
-          GET /api/activity/facts response
-        </h2>
-        <pre
-          style={{
-            maxHeight: "360px",
-            overflow: "auto",
-            borderRadius: "16px",
-            background: "#020617",
-            color: "#f8fafc",
-            padding: "16px",
-            fontSize: "12px",
-            lineHeight: 1.5,
-          }}
-        >
-          {stringify(state.factsResponse)}
-        </pre>
-      </section>
-
-      <section
-        style={{
-          maxWidth: "880px",
-          margin: "0 auto",
-          border: "1px solid #e2e8f0",
-          borderRadius: "24px",
-          background: "#ffffff",
-          padding: "24px",
-        }}
-      >
-        <h2 style={{ marginTop: 0, color: "#020617" }}>Request body preview</h2>
-        <pre
-          style={{
-            maxHeight: "360px",
-            overflow: "auto",
-            borderRadius: "16px",
-            background: "#020617",
-            color: "#f8fafc",
-            padding: "16px",
-            fontSize: "12px",
-            lineHeight: 1.5,
-          }}
-        >
-          {stringify(previewBody)}
-        </pre>
+        <div style={{ ...panelStyle, marginTop: "20px", display: "flex", flexWrap: "wrap", gap: "12px" }}>
+          <Link href="/activity-facts" style={{ ...buttonBase, display: "inline-flex", alignItems: "center", textDecoration: "none", border: "1px solid #cbd5e1", background: "#ffffff", color: "#0f172a" }}>
+            Открыть таблицу фактов
+          </Link>
+          <Link href="/workspace" style={{ ...buttonBase, display: "inline-flex", alignItems: "center", textDecoration: "none", border: "1px solid #cbd5e1", background: "#ffffff", color: "#0f172a" }}>
+            Вернуться в workspace
+          </Link>
+        </div>
       </section>
     </main>
   );
