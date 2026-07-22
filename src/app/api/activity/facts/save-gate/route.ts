@@ -32,7 +32,16 @@ import type {
 } from "@/types/activity-to-value-objects";
 
 import { auth0 } from "../../../../../../lib/auth0";
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../../../lib/actor-context";
 import { supabase } from "../../../../../../lib/supabase";
+import {
+  buildRealityCoreRequestHash,
+  saveRealityActivityViaRpc,
+  type RealityCoreRpcFactInput,
+} from "@/lib/activity/facts/saveRealityActivityRpc";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -40,7 +49,7 @@ export const runtime = "nodejs";
 const ENDPOINT = "/api/activity/facts/save-gate" as const;
 
 const ROUTE_LAYER =
-  "activity-facts-save-gate-route-server-mediated-real-write-v1" as const;
+  "activity-facts-save-gate-route-transactional-rpc-v2" as const;
 
 const NO_WRITE_SIDE_EFFECTS = {
   dbReadExecuted: false,
@@ -63,6 +72,8 @@ type AuthenticatedSaveContext =
       ok: true;
       auth0Sub: string;
       appUserId: string;
+      actorId: string;
+      activeProfileId: string;
     }
   | {
       ok: false;
@@ -423,7 +434,7 @@ function buildNoWriteResponse(params: {
     routeLayer: ROUTE_LAYER,
     routePurpose: "activity_facts_save_gate_preview_or_server_mediated_write",
     routeMarker:
-      "activity-facts-save-gate-route-server-mediated-real-write-v1",
+      "activity-facts-save-gate-route-transactional-rpc-v2",
     routeStatus: "preview_ready_real_write_available_when_confirmed",
     productionWriteEnabled: true,
     requestSummary: params.validation.summary,
@@ -514,49 +525,33 @@ async function resolveAuthenticatedSaveContext(): Promise<AuthenticatedSaveConte
     };
   }
 
-  const { data, error } = await supabase
-    .from("app_users")
-    .select("id")
-    .eq("auth0_sub", auth0Sub)
-    .limit(2);
+  try {
+    const actorContext = await resolveActiveActorContext(auth0Sub);
 
-  if (error) {
+    return {
+      ok: true,
+      auth0Sub,
+      appUserId: actorContext.appUserId,
+      actorId: actorContext.actorId,
+      activeProfileId: actorContext.profile.profileId,
+    };
+  } catch (error) {
+    if (error instanceof ActorContextError) {
+      return {
+        ok: false,
+        status: error.status,
+        errorCode: error.code,
+        errorMessage: error.message,
+      };
+    }
+
     return {
       ok: false,
       status: 500,
-      errorCode: "ACTIVITY_FACTS_SAVE_APP_USER_LOOKUP_FAILED",
-      errorMessage: "Could not resolve app user for authenticated session.",
+      errorCode: "ACTIVITY_FACTS_SAVE_ACTOR_CONTEXT_FAILED",
+      errorMessage: "Could not resolve the authenticated active actor context.",
     };
   }
-
-  const rows = Array.isArray(data) ? data.map(asRecord) : [];
-
-  if (rows.length !== 1) {
-    return {
-      ok: false,
-      status: 403,
-      errorCode: "ACTIVITY_FACTS_SAVE_APP_USER_NOT_LINKED",
-      errorMessage:
-        "Authenticated Auth0 user is not linked to exactly one app_users row.",
-    };
-  }
-
-  const appUserId = asString(rows[0].id);
-
-  if (!appUserId) {
-    return {
-      ok: false,
-      status: 403,
-      errorCode: "ACTIVITY_FACTS_SAVE_APP_USER_ID_MISSING",
-      errorMessage: "Mapped app_users row has no id.",
-    };
-  }
-
-  return {
-    ok: true,
-    auth0Sub,
-    appUserId,
-  };
 }
 
 function getActivityProcessingPackage(
@@ -847,39 +842,117 @@ function buildActivityTiming(pkg: ActivityProcessingPackage | null, facts: Norma
   };
 }
 
+function toCurrentSchemaUnitCode(canonicalUnitCode: string): DbUnit {
+  if (canonicalUnitCode === "kilometer_per_hour") {
+    return "km_per_hour";
+  }
+
+  if (canonicalUnitCode === "step") {
+    return "count";
+  }
+
+  return canonicalUnitCode as DbUnit;
+}
+
+function mapRpcErrorStatus(message: string): number {
+  if (message.includes("SAVE_REALITY_ACTIVITY_IDEMPOTENCY_CONFLICT")) {
+    return 409;
+  }
+
+  if (
+    /_(REQUIRED|INVALID|NOT_ALLOWED|OUT_OF_RANGE|MUST_BE_|AT_LEAST_|EXACTLY_ONE_|NOT_FOUND)/.test(
+      message
+    )
+  ) {
+    return 400;
+  }
+
+  return 500;
+}
+
+async function verifyNoDurableActivityEvent(params: {
+  appUserId: string;
+  eventCode: string;
+}): Promise<TransactionRollbackVerification> {
+  const { count, error } = await supabase
+    .from("activity_events")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", params.appUserId)
+    .eq("event_code", params.eventCode);
+
+  if (error) {
+    return {
+      checked: true,
+      passed: null,
+      activityEventRows: null,
+      verificationError: error.message,
+    };
+  }
+
+  const activityEventRows = count ?? 0;
+
+  return {
+    checked: true,
+    passed: activityEventRows === 0,
+    activityEventRows,
+    verificationError: null,
+  };
+}
+
+type TransactionRollbackVerification = {
+  readonly checked: boolean;
+  readonly passed: boolean | null;
+  readonly activityEventRows: number | null;
+  readonly verificationError: string | null;
+};
+
 function buildWriteErrorResponse(params: {
   validation: ActivityFactsSaveGateValidationResult;
   errorCode: string;
   errorMessage: string;
   status: number;
-  createdIds?: DbWriteIds;
-  rowsActuallyWritten?: number;
+  transactionAttempted?: boolean;
+  rollbackVerification?: TransactionRollbackVerification | null;
 }) {
   const executionPlan = buildNoWriteExecutionPlan(params.validation);
+  const transactionAttempted = params.transactionAttempted === true;
+  const rollbackVerification = params.rollbackVerification ?? null;
 
   return NextResponse.json(
     {
       ok: false,
       endpoint: ENDPOINT,
       routeLayer: ROUTE_LAYER,
-      routeStatus: "server_mediated_write_failed",
+      routeStatus: transactionAttempted
+        ? "transactional_rpc_failed_without_commit"
+        : "server_mediated_write_not_started",
       productionWriteEnabled: true,
       writeStatus: "failed",
+      transactional: true,
+      transactionAttempted,
+      transactionCommitted: false,
       errorCode: params.errorCode,
       errorMessage: params.errorMessage,
       requestSummary: params.validation.summary,
-      createdIds: params.createdIds ?? EMPTY_CREATED_IDS,
+      createdIds: EMPTY_CREATED_IDS,
       plannedWrites: executionPlan.plannedWrites,
       skipped: executionPlan.skipped,
-      dbWriteExecuted: true,
+      dbWriteExecuted: false,
       sqlExecuted: false,
       openAiCallExecuted: false,
+      transactionRollbackVerification: rollbackVerification,
       sideEffects: {
         dbReadExecuted: true,
-        dbWriteExecuted: true,
+        dbWriteExecuted: false,
         sqlExecuted: false,
         openAiCallExecuted: false,
-        rowsActuallyWritten: params.rowsActuallyWritten ?? 0,
+        valueObjectCreated: false,
+        activityEventCreated: false,
+        activityEventMeasureCreated: false,
+        activityObjectFactCreated: false,
+        activityFactReviewItemCreated: false,
+        recalculationQueueItemCreated: false,
+        rowsActuallyWritten: 0,
       },
       safety: {
         serverMediatedOnly: true,
@@ -887,46 +960,17 @@ function buildWriteErrorResponse(params: {
         duplicateChronologicalTimeAllowed: false,
         medicalDiagnosisAllowed: false,
         notes: [
-          "The route is server-mediated.",
-          "The route derives user_id from the authenticated session.",
-          "The route does not trust client-provided ownership fields.",
-          "The route does not execute SQL.",
+          "The route derives the account and active actor from the authenticated server session.",
+          "Client-provided user_id and actor_id are ignored.",
+          "All durable writes are delegated to save_reality_activity_v1.",
+          "Any RPC failure aborts the PostgreSQL transaction.",
+          "The route does not execute SQL text.",
           "The route does not call OpenAI.",
-          "This first runtime patch is not a database transaction; partial writes are reported through createdIds if a later insert fails.",
         ],
       },
     },
     { status: params.status }
   );
-}
-
-async function findExistingActivityEvent(params: {
-  appUserId: string;
-  eventCode: string;
-}) {
-  const { data, error } = await supabase
-    .from("activity_events")
-    .select("id")
-    .eq("user_id", params.appUserId)
-    .eq("event_code", params.eventCode)
-    .limit(1);
-
-  if (error) {
-    return {
-      ok: false as const,
-      errorMessage: error.message,
-      activityEventId: null,
-    };
-  }
-
-  const row = Array.isArray(data) ? asRecord(data[0]) : {};
-  const activityEventId = asString(row.id);
-
-  return {
-    ok: true as const,
-    errorMessage: null,
-    activityEventId,
-  };
 }
 
 function normalizeRequestTemporalDirection(body: UnknownRecord): "past" | "future" {
@@ -962,7 +1006,6 @@ function normalizeRequestExistingActivityEventId(body: UnknownRecord) {
   return isUuid(value) ? value : null;
 }
 async function executeRealSave(params: {
-
   body: UnknownRecord;
   validation: ActivityFactsSaveGateValidationResult;
   context: Extract<AuthenticatedSaveContext, { ok: true }>;
@@ -974,9 +1017,11 @@ async function executeRealSave(params: {
   const idempotencyKey = params.validation.summary.idempotencyKey;
   const temporalDirection = normalizeRequestTemporalDirection(bodyRecord);
   const calendarEventId = normalizeRequestCalendarEventId(bodyRecord);
-  const existingActivityEventId = normalizeRequestExistingActivityEventId(bodyRecord);
+  const existingActivityEventId =
+    normalizeRequestExistingActivityEventId(bodyRecord);
 
-  const acceptedOrEditedFactInputs = collectAcceptedOrEditedFactIds(bodyRecord);
+  const acceptedOrEditedFactInputs =
+    collectAcceptedOrEditedFactIds(bodyRecord);
 
   if (acceptedOrEditedFactInputs.length === 0) {
     return buildWriteErrorResponse({
@@ -1032,416 +1077,192 @@ async function executeRealSave(params: {
 
   const eventCode = `save_gate:${idempotencyKey}`;
 
-  const existingEvent = await findExistingActivityEvent({
-    appUserId: params.context.appUserId,
-    eventCode,
+  const rpcFacts: RealityCoreRpcFactInput[] = facts.map((fact) => {
+    if (!fact.realityCore.ok) {
+      throw new Error(
+        `Unexpected failed Reality Core normalization for ${fact.localFactId}.`
+      );
+    }
+
+    return {
+      localFactId: fact.localFactId,
+      decision: fact.decision,
+      semanticObjectKey: fact.semanticObjectKey,
+      semanticObjectLabel: fact.semanticObjectLabel,
+      valueObjectId: fact.valueObjectId,
+      measureType: fact.measureType,
+      parameterCode: fact.realityCore.parameterCode,
+      unitCode: toCurrentSchemaUnitCode(
+        fact.realityCore.canonicalUnitCode
+      ),
+      canonicalUnitCode: fact.realityCore.canonicalUnitCode,
+      valueNumeric: fact.realityCore.canonicalValueNumeric,
+      valueText: fact.realityCore.canonicalValueText,
+      valueBoolean: fact.realityCore.canonicalValueBoolean,
+      confidence: fact.confidence,
+      rawFragment: fact.rawFragment,
+      normalizedFragment: fact.normalizedFragment,
+      reasonRu: fact.reasonRu,
+      metadata: {
+        sourcePackageId,
+        routeLayer: ROUTE_LAYER,
+        temporalDirection,
+        calendarEventId,
+        existingActivityEventId,
+        legacyMeasureType: fact.realityCore.source.legacyMeasureType,
+        legacyUnit: fact.realityCore.source.legacyUnit,
+      },
+    };
   });
 
-  if (!existingEvent.ok) {
-    return buildWriteErrorResponse({
-      validation: params.validation,
-      errorCode: "ACTIVITY_FACTS_SAVE_IDEMPOTENCY_CHECK_FAILED",
-      errorMessage: existingEvent.errorMessage,
-      status: 500,
-    });
-  }
-
-  if (existingEvent.activityEventId) {
-    const executionPlan = buildNoWriteExecutionPlan(params.validation);
-
-    return NextResponse.json(
-      {
-        ok: true,
-        endpoint: ENDPOINT,
-        routeLayer: ROUTE_LAYER,
-        routeStatus: "server_mediated_write_idempotent_replay",
-        productionWriteEnabled: true,
-        writeStatus: "written",
-        requestSummary: params.validation.summary,
-        realityCoreNormalization,
-        createdIds: {
-          ...EMPTY_CREATED_IDS,
-          activityEventId: existingEvent.activityEventId,
-        },
-        plannedWrites: executionPlan.plannedWrites,
-        skipped: executionPlan.skipped,
-        dbWriteExecuted: false,
-        sqlExecuted: false,
-        openAiCallExecuted: false,
-        sideEffects: {
-          dbReadExecuted: true,
-          dbWriteExecuted: false,
-          sqlExecuted: false,
-          openAiCallExecuted: false,
-          rowsActuallyWritten: 0,
-        },
-        safety: {
-          serverMediatedOnly: true,
-          directBrowserSupabaseWriteAllowed: false,
-          duplicateChronologicalTimeAllowed: false,
-          medicalDiagnosisAllowed: false,
-          notes: [
-            "Existing activity_event found for the same user_id + idempotencyKey-derived event_code.",
-            "Duplicate click did not create duplicate facts in this route invocation.",
-          ],
-        },
-      },
-      { status: 200 }
-    );
-  }
-
-  const createdIds: DbWriteIds = {
-    activityEventId: null,
-    measureIds: [],
-    valueObjectIds: [],
-    factIds: [],
-    reviewItemIds: [],
-    recalculationQueueIds: [],
+  const rpcActorContext = {
+    performedByActorId: params.context.actorId,
+    actingAsActorId: params.context.actorId,
+    actingForActorId: params.context.actorId,
+    activeProfileId: params.context.activeProfileId,
   };
 
-  let rowsActuallyWritten = 0;
-
-  const activityEventInsert = {
-    user_id: params.context.appUserId,
-    performed_by_actor_id: null,
-    acting_as_actor_id: null,
-    acting_for_actor_id: null,
-    activity_type_id: null,
-    template_id: null,
-    event_code: eventCode,
-    input_text: rawText,
+  const rpcActivity = {
+    idempotencyKey,
+    temporalDirection,
+    inputText: rawText,
     title,
     description:
-      "Created by /api/activity/facts/save-gate server-mediated real write v1.",
-    started_at: timing.startedAtIso,
-    ended_at: timing.endedAtIso,
-    duration_minutes: timing.durationMinutes,
+      "Created by /api/activity/facts/save-gate transactional Reality Core RPC.",
+    startedAtIso: timing.startedAtIso,
+    endedAtIso: timing.endedAtIso,
+    durationMinutes: timing.durationMinutes,
     source: temporalDirection === "future" ? "calendar_import" : "chat_ai",
-    temporal_direction: temporalDirection,
     status: temporalDirection === "future" ? "planned" : "completed",
-    privacy_scope: "private",
-    processing_status: "processed",
-    metadata_json: {
+    privacyScope: "private",
+    metadata: {
       sourcePackageId,
-      idempotencyKey,
       routeLayer: ROUTE_LAYER,
       rawInput: pkg?.rawInput ?? null,
       recognition: pkg?.recognition ?? null,
       temporalDirection,
       calendarEventId,
       existingActivityEventId,
+      activeProfileId: params.context.activeProfileId,
     },
   };
 
-  const { data: activityEventData, error: activityEventError } = await supabase
-    .from("activity_events")
-    .insert(activityEventInsert)
-    .select("id")
-    .single();
+  const requestHash = buildRealityCoreRequestHash({
+    ownerUserId: params.context.appUserId,
+    actorContext: rpcActorContext,
+    activity: rpcActivity,
+    facts: rpcFacts,
+  });
 
-  if (activityEventError) {
+  const rpcResult = await saveRealityActivityViaRpc({
+    ownerUserId: params.context.appUserId,
+    requestHash,
+    actorContext: rpcActorContext,
+    activity: rpcActivity,
+    facts: rpcFacts,
+  });
+
+  if (!rpcResult.ok) {
+    const isIdempotencyConflict = rpcResult.errorMessage.includes(
+      "SAVE_REALITY_ACTIVITY_IDEMPOTENCY_CONFLICT"
+    );
+
+    const rollbackVerification = isIdempotencyConflict
+      ? null
+      : await verifyNoDurableActivityEvent({
+          appUserId: params.context.appUserId,
+          eventCode,
+        });
+
     return buildWriteErrorResponse({
       validation: params.validation,
-      errorCode: "ACTIVITY_FACTS_SAVE_ACTIVITY_EVENT_INSERT_FAILED",
-      errorMessage: activityEventError.message,
-      status: 500,
-      createdIds,
-      rowsActuallyWritten,
+      errorCode: isIdempotencyConflict
+        ? "ACTIVITY_FACTS_SAVE_IDEMPOTENCY_CONFLICT"
+        : "ACTIVITY_FACTS_SAVE_TRANSACTIONAL_RPC_FAILED",
+      errorMessage: rpcResult.errorMessage,
+      status: mapRpcErrorStatus(rpcResult.errorMessage),
+      transactionAttempted: true,
+      rollbackVerification,
     });
-  }
-
-  const activityEventId = asString(asRecord(activityEventData).id);
-
-  if (!activityEventId) {
-    return buildWriteErrorResponse({
-      validation: params.validation,
-      errorCode: "ACTIVITY_FACTS_SAVE_ACTIVITY_EVENT_ID_MISSING",
-      errorMessage: "activity_events insert returned no id.",
-      status: 500,
-      createdIds,
-      rowsActuallyWritten,
-    });
-  }
-
-  createdIds.activityEventId = activityEventId;
-  rowsActuallyWritten += 1;
-
-  for (const [index, fact] of facts.entries()) {
-    const measureInsert = {
-      activity_event_id: activityEventId,
-      user_id: params.context.appUserId,
-      performed_by_actor_id: null,
-      acting_as_actor_id: null,
-      acting_for_actor_id: null,
-      measure_type: fact.measureType,
-      value_numeric: fact.valueNumeric,
-      value_text: fact.valueText,
-      value_boolean: fact.valueBoolean,
-      unit: fact.unit,
-      source_type: fact.decision === "edit" ? "user_edit" : "user_text",
-      confidence: fact.confidence,
-      is_derived: false,
-      raw_fragment: fact.rawFragment,
-      normalized_fragment: fact.normalizedFragment,
-      metadata: {
-        localFactId: fact.localFactId,
-        sourcePackageId,
-        idempotencyKey,
-        routeLayer: ROUTE_LAYER,
-        temporalDirection,
-        calendarEventId,
-        existingActivityEventId,
-      },
-    };
-
-    const { data: measureData, error: measureError } = await supabase
-      .from("activity_event_measures")
-      .insert(measureInsert)
-      .select("id")
-      .single();
-
-    if (measureError) {
-      return buildWriteErrorResponse({
-        validation: params.validation,
-        errorCode: "ACTIVITY_FACTS_SAVE_MEASURE_INSERT_FAILED",
-        errorMessage: measureError.message,
-        status: 500,
-        createdIds,
-        rowsActuallyWritten,
-      });
-    }
-
-    const measureId = asString(asRecord(measureData).id);
-
-    if (!measureId) {
-      return buildWriteErrorResponse({
-        validation: params.validation,
-        errorCode: "ACTIVITY_FACTS_SAVE_MEASURE_ID_MISSING",
-        errorMessage: "activity_event_measures insert returned no id.",
-        status: 500,
-        createdIds,
-        rowsActuallyWritten,
-      });
-    }
-
-    createdIds.measureIds.push(measureId);
-    rowsActuallyWritten += 1;
-
-    const factInsert = {
-      activity_event_id: activityEventId,
-      measure_id: measureId,
-      user_id: params.context.appUserId,
-      performed_by_actor_id: null,
-      acting_as_actor_id: null,
-      acting_for_actor_id: null,
-      value_object_id: fact.valueObjectId,
-      semantic_object_key: fact.semanticObjectKey,
-      semantic_object_label: fact.semanticObjectLabel,
-      measure_type: fact.measureType,
-      value_numeric: fact.valueNumeric,
-      value_text: fact.valueText,
-      value_boolean: fact.valueBoolean,
-      unit: fact.unit,
-      period_start: timing.startedAtIso,
-      period_end: timing.endedAtIso,
-      fact_status: temporalDirection === "future" ? "proposed" : "confirmed",
-      confidence: fact.confidence,
-      source_type: fact.decision === "edit" ? "user_edit" : "user_text",
-      is_chronological_primary:
-        index === 0 && fact.measureType === "duration" && fact.unit === "minute",
-      is_exposure_fact: true,
-      is_user_confirmed: temporalDirection === "past",
-      metadata: {
-        localFactId: fact.localFactId,
-        sourcePackageId,
-        idempotencyKey,
-        routeLayer: ROUTE_LAYER,
-        temporalDirection,
-        calendarEventId,
-        existingActivityEventId,
-      },
-    };
-
-    const { data: factData, error: factError } = await supabase
-      .from("activity_object_facts")
-      .insert(factInsert)
-      .select("id")
-      .single();
-
-    if (factError) {
-      return buildWriteErrorResponse({
-        validation: params.validation,
-        errorCode: "ACTIVITY_FACTS_SAVE_OBJECT_FACT_INSERT_FAILED",
-        errorMessage: factError.message,
-        status: 500,
-        createdIds,
-        rowsActuallyWritten,
-      });
-    }
-
-    const factId = asString(asRecord(factData).id);
-
-    if (!factId) {
-      return buildWriteErrorResponse({
-        validation: params.validation,
-        errorCode: "ACTIVITY_FACTS_SAVE_OBJECT_FACT_ID_MISSING",
-        errorMessage: "activity_object_facts insert returned no id.",
-        status: 500,
-        createdIds,
-        rowsActuallyWritten,
-      });
-    }
-
-    createdIds.factIds.push(factId);
-    rowsActuallyWritten += 1;
-
-    const reviewItemInsert = {
-      activity_event_id: activityEventId,
-      fact_id: factId,
-      measure_id: measureId,
-      user_id: params.context.appUserId,
-      performed_by_actor_id: null,
-      acting_as_actor_id: null,
-      acting_for_actor_id: null,
-      proposed_label: fact.semanticObjectLabel,
-      proposed_value_numeric: fact.valueNumeric,
-      proposed_value_text: fact.valueText,
-      proposed_value_boolean: fact.valueBoolean,
-      proposed_unit: fact.unit,
-      user_decision: fact.decision === "edit" ? "edited" : "accepted",
-      edited_value_numeric: fact.decision === "edit" ? fact.valueNumeric : null,
-      edited_value_text: fact.decision === "edit" ? fact.valueText : null,
-      edited_value_boolean: fact.decision === "edit" ? fact.valueBoolean : null,
-      edited_unit: fact.decision === "edit" ? fact.unit : null,
-      rejected_reason: null,
-      metadata: {
-        localFactId: fact.localFactId,
-        reasonRu: fact.reasonRu,
-        sourcePackageId,
-        idempotencyKey,
-        routeLayer: ROUTE_LAYER,
-        temporalDirection,
-        calendarEventId,
-        existingActivityEventId,
-      },
-    };
-
-    const { data: reviewItemData, error: reviewItemError } = await supabase
-      .from("activity_fact_review_items")
-      .insert(reviewItemInsert)
-      .select("id")
-      .single();
-
-    if (reviewItemError) {
-      return buildWriteErrorResponse({
-        validation: params.validation,
-        errorCode: "ACTIVITY_FACTS_SAVE_REVIEW_ITEM_INSERT_FAILED",
-        errorMessage: reviewItemError.message,
-        status: 500,
-        createdIds,
-        rowsActuallyWritten,
-      });
-    }
-
-    const reviewItemId = asString(asRecord(reviewItemData).id);
-
-    if (reviewItemId) {
-      createdIds.reviewItemIds.push(reviewItemId);
-      rowsActuallyWritten += 1;
-    }
-
-    const queueInsert = {
-      user_id: params.context.appUserId,
-      performed_by_actor_id: null,
-      acting_as_actor_id: null,
-      acting_for_actor_id: null,
-      activity_event_id: activityEventId,
-      value_object_id: fact.valueObjectId,
-      semantic_object_key: fact.semanticObjectKey,
-      reason: "fact_created",
-      queue_status: "queued",
-      metadata: {
-        localFactId: fact.localFactId,
-        factId,
-        measureId,
-        sourcePackageId,
-        idempotencyKey,
-        routeLayer: ROUTE_LAYER,
-        temporalDirection,
-        calendarEventId,
-        existingActivityEventId,
-      },
-    };
-
-    const { data: queueData, error: queueError } = await supabase
-      .from("activity_fact_recalculation_queue")
-      .insert(queueInsert)
-      .select("id")
-      .single();
-
-    if (queueError) {
-      return buildWriteErrorResponse({
-        validation: params.validation,
-        errorCode: "ACTIVITY_FACTS_SAVE_RECALC_QUEUE_INSERT_FAILED",
-        errorMessage: queueError.message,
-        status: 500,
-        createdIds,
-        rowsActuallyWritten,
-      });
-    }
-
-    const queueId = asString(asRecord(queueData).id);
-
-    if (queueId) {
-      createdIds.recalculationQueueIds.push(queueId);
-      rowsActuallyWritten += 1;
-    }
   }
 
   const executionPlan = buildNoWriteExecutionPlan(params.validation);
+  const rpcData = rpcResult.data;
+  const createdIds: DbWriteIds = {
+    activityEventId: rpcData.activityEventId,
+    measureIds: rpcData.measureIds,
+    valueObjectIds: [],
+    factIds: rpcData.factIds,
+    reviewItemIds: rpcData.reviewItemIds,
+    recalculationQueueIds: rpcData.recalculationQueueIds,
+  };
+
+  const durableWriteExecuted = rpcData.writeStatus === "written";
 
   return NextResponse.json(
     {
       ok: true,
       endpoint: ENDPOINT,
       routeLayer: ROUTE_LAYER,
-      routeStatus: "server_mediated_write_completed",
+      routeStatus:
+        rpcData.writeStatus === "idempotent_replay"
+          ? "transactional_rpc_idempotent_replay"
+          : "transactional_rpc_write_completed",
       productionWriteEnabled: true,
-      writeStatus: "written",
+      writeStatus: rpcData.writeStatus,
+      transactional: true,
+      transactionAttempted: true,
+      transactionCommitted: durableWriteExecuted,
       requestSummary: params.validation.summary,
       realityCoreNormalization,
       createdIds,
       plannedWrites: executionPlan.plannedWrites.map((write) => {
         return {
           ...write,
-          writeStatus: "written",
+          writeStatus:
+            rpcData.writeStatus === "idempotent_replay"
+              ? "idempotent_replay"
+              : "written",
         };
       }),
       skipped: executionPlan.skipped,
-      dbWriteExecuted: true,
+      dbWriteExecuted: durableWriteExecuted,
       sqlExecuted: false,
       openAiCallExecuted: false,
       sideEffects: {
         dbReadExecuted: true,
-        dbWriteExecuted: true,
+        dbWriteExecuted: durableWriteExecuted,
         sqlExecuted: false,
         openAiCallExecuted: false,
-        valueObjectCreated: createdIds.valueObjectIds.length > 0,
-        activityEventCreated: Boolean(createdIds.activityEventId),
+        valueObjectCreated: false,
+        activityEventCreated:
+          durableWriteExecuted && Boolean(createdIds.activityEventId),
         temporalDirection,
         calendarEventId,
-        activityEventMeasureCreated: createdIds.measureIds.length > 0,
-        activityObjectFactCreated: createdIds.factIds.length > 0,
-        activityFactReviewItemCreated: createdIds.reviewItemIds.length > 0,
+        activityEventMeasureCreated:
+          durableWriteExecuted && createdIds.measureIds.length > 0,
+        activityObjectFactCreated:
+          durableWriteExecuted && createdIds.factIds.length > 0,
+        activityFactReviewItemCreated:
+          durableWriteExecuted && createdIds.reviewItemIds.length > 0,
         recalculationQueueItemCreated:
+          durableWriteExecuted &&
           createdIds.recalculationQueueIds.length > 0,
-        rowsActuallyWritten,
+        rowsActuallyWritten: rpcData.rowsActuallyWritten,
+      },
+      transaction: {
+        rpc: "save_reality_activity_v1",
+        requestHash,
+        writeStatus: rpcData.writeStatus,
+        committed: durableWriteExecuted,
+        idempotentReplay:
+          rpcData.writeStatus === "idempotent_replay",
       },
       visibility: {
         readApi: "/api/activity/facts",
         page: "/activity-facts",
         expectedFilter: {
-          activityEventId,
+          activityEventId: rpcData.activityEventId,
         },
       },
       safety: {
@@ -1450,22 +1271,27 @@ async function executeRealSave(params: {
         duplicateChronologicalTimeAllowed: false,
         medicalDiagnosisAllowed: false,
         notes: [
-          "The route derives user_id from Auth0 session -> app_users mapping.",
-          "Client-provided user_id and actor_id are ignored.",
-          "activity_events stores chronological time once.",
-          "activity_object_facts stores user-owned semantic facts/exposures.",
-          "This route does not execute SQL.",
-          "This route does not call OpenAI.",
-          "This first runtime patch reports partial createdIds if a later insert fails; a future step should move this into a DB transaction/RPC.",
+          "The route derives user_id and active actor_id from the authenticated server session.",
+          "Client-provided ownership fields are ignored.",
+          "All five write stages run inside one PostgreSQL RPC transaction.",
+          "Any RPC error rolls back the complete write.",
+          "Canonical values from parameter-registry-v1 are persisted.",
+          "The route does not execute SQL text.",
+          "The route does not call OpenAI.",
         ],
       },
       debug: {
         sourcePackageId: body.sourcePackageId,
         idempotencyKey: body.idempotencyKey,
         factCount: facts.length,
-        realityCoreContractVersion: realityCoreNormalization.contractVersion,
-        parameterRegistryVersion: realityCoreNormalization.registryVersion,
-        normalizedFactCount: realityCoreNormalization.normalizedCount,
+        realityCoreContractVersion:
+          realityCoreNormalization.contractVersion,
+        parameterRegistryVersion:
+          realityCoreNormalization.registryVersion,
+        normalizedFactCount:
+          realityCoreNormalization.normalizedCount,
+        activeActorId: params.context.actorId,
+        activeProfileId: params.context.activeProfileId,
       },
     },
     { status: 200 }
