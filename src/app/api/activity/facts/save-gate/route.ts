@@ -36,7 +36,6 @@ import {
   ActorContextError,
   resolveActiveActorContext,
 } from "../../../../../../lib/actor-context";
-import { supabase } from "../../../../../../lib/supabase";
 import {
   buildRealityCoreRequestHash,
   saveRealityActivityViaRpc,
@@ -870,122 +869,14 @@ function mapRpcErrorStatus(message: string): number {
   return 500;
 }
 
-type TransactionRollbackCounts = {
-  readonly activityEvents: number | null;
-  readonly measures: number | null;
-  readonly objectFacts: number | null;
-  readonly reviewItems: number | null;
-  readonly recalculationQueue: number | null;
-};
-
-type TransactionRollbackVerification = {
-  readonly checked: boolean;
-  readonly passed: boolean | null;
-  readonly eventCode: string;
-  readonly idempotencyKey: string;
-  readonly counts: TransactionRollbackCounts;
-  readonly verificationErrors: readonly string[];
-};
-
-async function verifyNoDurableTransactionRows(params: {
-  appUserId: string;
-  eventCode: string;
-  idempotencyKey: string;
-}): Promise<TransactionRollbackVerification> {
-  const [
-    activityEventsResult,
-    measuresResult,
-    objectFactsResult,
-    reviewItemsResult,
-    recalculationQueueResult,
-  ] = await Promise.all([
-    supabase
-      .from("activity_events")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", params.appUserId)
-      .eq("event_code", params.eventCode),
-    supabase
-      .from("activity_event_measures")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", params.appUserId)
-      .contains("metadata", { idempotencyKey: params.idempotencyKey }),
-    supabase
-      .from("activity_object_facts")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", params.appUserId)
-      .contains("metadata", { idempotencyKey: params.idempotencyKey }),
-    supabase
-      .from("activity_fact_review_items")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", params.appUserId)
-      .contains("metadata", { idempotencyKey: params.idempotencyKey }),
-    supabase
-      .from("activity_fact_recalculation_queue")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", params.appUserId)
-      .contains("metadata", { idempotencyKey: params.idempotencyKey }),
-  ]);
-
-  const verificationErrors = [
-    activityEventsResult.error
-      ? `activity_events: ${activityEventsResult.error.message}`
-      : null,
-    measuresResult.error
-      ? `activity_event_measures: ${measuresResult.error.message}`
-      : null,
-    objectFactsResult.error
-      ? `activity_object_facts: ${objectFactsResult.error.message}`
-      : null,
-    reviewItemsResult.error
-      ? `activity_fact_review_items: ${reviewItemsResult.error.message}`
-      : null,
-    recalculationQueueResult.error
-      ? `activity_fact_recalculation_queue: ${recalculationQueueResult.error.message}`
-      : null,
-  ].filter((value): value is string => value !== null);
-
-  const counts: TransactionRollbackCounts = {
-    activityEvents: activityEventsResult.error
-      ? null
-      : (activityEventsResult.count ?? 0),
-    measures: measuresResult.error ? null : (measuresResult.count ?? 0),
-    objectFacts: objectFactsResult.error
-      ? null
-      : (objectFactsResult.count ?? 0),
-    reviewItems: reviewItemsResult.error
-      ? null
-      : (reviewItemsResult.count ?? 0),
-    recalculationQueue: recalculationQueueResult.error
-      ? null
-      : (recalculationQueueResult.count ?? 0),
-  };
-
-  const countValues = Object.values(counts);
-
-  return {
-    checked: true,
-    passed:
-      verificationErrors.length === 0
-        ? countValues.every((count) => count === 0)
-        : null,
-    eventCode: params.eventCode,
-    idempotencyKey: params.idempotencyKey,
-    counts,
-    verificationErrors,
-  };
-}
-
 function buildWriteErrorResponse(params: {
   validation: ActivityFactsSaveGateValidationResult;
   errorCode: string;
   errorMessage: string;
   status: number;
   transactionAttempted?: boolean;
-  rollbackVerification?: TransactionRollbackVerification | null;
 }) {
-  const executionPlan = buildNoWriteExecutionPlan(params.validation);
   const transactionAttempted = params.transactionAttempted === true;
-  const rollbackVerification = params.rollbackVerification ?? null;
 
   return NextResponse.json(
     {
@@ -1004,39 +895,10 @@ function buildWriteErrorResponse(params: {
       errorMessage: params.errorMessage,
       requestSummary: params.validation.summary,
       createdIds: EMPTY_CREATED_IDS,
-      plannedWrites: executionPlan.plannedWrites,
-      skipped: executionPlan.skipped,
       dbWriteExecuted: false,
       sqlExecuted: false,
       openAiCallExecuted: false,
-      transactionRollbackVerification: rollbackVerification,
-      sideEffects: {
-        dbReadExecuted: true,
-        dbWriteExecuted: false,
-        sqlExecuted: false,
-        openAiCallExecuted: false,
-        valueObjectCreated: false,
-        activityEventCreated: false,
-        activityEventMeasureCreated: false,
-        activityObjectFactCreated: false,
-        activityFactReviewItemCreated: false,
-        recalculationQueueItemCreated: false,
-        rowsActuallyWritten: 0,
-      },
-      safety: {
-        serverMediatedOnly: true,
-        directBrowserSupabaseWriteAllowed: false,
-        duplicateChronologicalTimeAllowed: false,
-        medicalDiagnosisAllowed: false,
-        notes: [
-          "The route derives the account and active actor from the authenticated server session.",
-          "Client-provided user_id and actor_id are ignored.",
-          "All durable writes are delegated to save_reality_activity_v1.",
-          "Any RPC failure aborts the PostgreSQL transaction.",
-          "The route does not execute SQL text.",
-          "The route does not call OpenAI.",
-        ],
-      },
+      rowsActuallyWritten: 0,
     },
     { status: params.status }
   );
@@ -1144,7 +1006,6 @@ async function executeRealSave(params: {
     rawText.slice(0, 120) ??
     "Saved activity";
 
-  const eventCode = `save_gate:${idempotencyKey}`;
 
   const rpcFacts: RealityCoreRpcFactInput[] = facts.map((fact) => {
     if (!fact.realityCore.ok) {
@@ -1236,27 +1097,28 @@ async function executeRealSave(params: {
       "SAVE_REALITY_ACTIVITY_IDEMPOTENCY_CONFLICT"
     );
 
-    const rollbackVerification = isIdempotencyConflict
-      ? null
-      : await verifyNoDurableTransactionRows({
-          appUserId: params.context.appUserId,
-          eventCode,
-          idempotencyKey,
-        });
+    console.error("Reality Core transactional save failed.", {
+      errorCode: rpcResult.errorCode,
+      errorMessage: rpcResult.errorMessage,
+      errorDetails: rpcResult.errorDetails,
+      errorHint: rpcResult.errorHint,
+      idempotencyKey,
+      sourcePackageId,
+    });
 
     return buildWriteErrorResponse({
       validation: params.validation,
       errorCode: isIdempotencyConflict
         ? "ACTIVITY_FACTS_SAVE_IDEMPOTENCY_CONFLICT"
         : "ACTIVITY_FACTS_SAVE_TRANSACTIONAL_RPC_FAILED",
-      errorMessage: rpcResult.errorMessage,
+      errorMessage: isIdempotencyConflict
+        ? "This request key was already used with different content."
+        : "The activity could not be saved.",
       status: mapRpcErrorStatus(rpcResult.errorMessage),
       transactionAttempted: true,
-      rollbackVerification,
     });
   }
 
-  const executionPlan = buildNoWriteExecutionPlan(params.validation);
   const rpcData = rpcResult.data;
   const createdIds: DbWriteIds = {
     activityEventId: rpcData.activityEventId,
@@ -1283,86 +1145,15 @@ async function executeRealSave(params: {
       transactional: true,
       transactionAttempted: true,
       transactionCommitted: durableWriteExecuted,
+      idempotentReplay:
+        rpcData.writeStatus === "idempotent_replay",
       requestSummary: params.validation.summary,
       realityCoreNormalization,
       createdIds,
-      plannedWrites: executionPlan.plannedWrites.map((write) => {
-        return {
-          ...write,
-          writeStatus:
-            rpcData.writeStatus === "idempotent_replay"
-              ? "idempotent_replay"
-              : "written",
-        };
-      }),
-      skipped: executionPlan.skipped,
       dbWriteExecuted: durableWriteExecuted,
       sqlExecuted: false,
       openAiCallExecuted: false,
-      sideEffects: {
-        dbReadExecuted: true,
-        dbWriteExecuted: durableWriteExecuted,
-        sqlExecuted: false,
-        openAiCallExecuted: false,
-        valueObjectCreated: false,
-        activityEventCreated:
-          durableWriteExecuted && Boolean(createdIds.activityEventId),
-        temporalDirection,
-        calendarEventId,
-        activityEventMeasureCreated:
-          durableWriteExecuted && createdIds.measureIds.length > 0,
-        activityObjectFactCreated:
-          durableWriteExecuted && createdIds.factIds.length > 0,
-        activityFactReviewItemCreated:
-          durableWriteExecuted && createdIds.reviewItemIds.length > 0,
-        recalculationQueueItemCreated:
-          durableWriteExecuted &&
-          createdIds.recalculationQueueIds.length > 0,
-        rowsActuallyWritten: rpcData.rowsActuallyWritten,
-      },
-      transaction: {
-        rpc: "save_reality_activity_v1",
-        requestHash,
-        writeStatus: rpcData.writeStatus,
-        committed: durableWriteExecuted,
-        idempotentReplay:
-          rpcData.writeStatus === "idempotent_replay",
-      },
-      visibility: {
-        readApi: "/api/activity/facts",
-        page: "/activity-facts",
-        expectedFilter: {
-          activityEventId: rpcData.activityEventId,
-        },
-      },
-      safety: {
-        serverMediatedOnly: true,
-        directBrowserSupabaseWriteAllowed: false,
-        duplicateChronologicalTimeAllowed: false,
-        medicalDiagnosisAllowed: false,
-        notes: [
-          "The route derives user_id and active actor_id from the authenticated server session.",
-          "Client-provided ownership fields are ignored.",
-          "All five write stages run inside one PostgreSQL RPC transaction.",
-          "Any RPC error rolls back the complete write.",
-          "Canonical values from parameter-registry-v1 are persisted.",
-          "The route does not execute SQL text.",
-          "The route does not call OpenAI.",
-        ],
-      },
-      debug: {
-        sourcePackageId: body.sourcePackageId,
-        idempotencyKey: body.idempotencyKey,
-        factCount: facts.length,
-        realityCoreContractVersion:
-          realityCoreNormalization.contractVersion,
-        parameterRegistryVersion:
-          realityCoreNormalization.registryVersion,
-        normalizedFactCount:
-          realityCoreNormalization.normalizedCount,
-        activeActorId: params.context.actorId,
-        activeProfileId: params.context.activeProfileId,
-      },
+      rowsActuallyWritten: rpcData.rowsActuallyWritten,
     },
     { status: 200 }
   );
