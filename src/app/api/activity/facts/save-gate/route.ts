@@ -870,41 +870,110 @@ function mapRpcErrorStatus(message: string): number {
   return 500;
 }
 
-async function verifyNoDurableActivityEvent(params: {
-  appUserId: string;
-  eventCode: string;
-}): Promise<TransactionRollbackVerification> {
-  const { count, error } = await supabase
-    .from("activity_events")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", params.appUserId)
-    .eq("event_code", params.eventCode);
-
-  if (error) {
-    return {
-      checked: true,
-      passed: null,
-      activityEventRows: null,
-      verificationError: error.message,
-    };
-  }
-
-  const activityEventRows = count ?? 0;
-
-  return {
-    checked: true,
-    passed: activityEventRows === 0,
-    activityEventRows,
-    verificationError: null,
-  };
-}
+type TransactionRollbackCounts = {
+  readonly activityEvents: number | null;
+  readonly measures: number | null;
+  readonly objectFacts: number | null;
+  readonly reviewItems: number | null;
+  readonly recalculationQueue: number | null;
+};
 
 type TransactionRollbackVerification = {
   readonly checked: boolean;
   readonly passed: boolean | null;
-  readonly activityEventRows: number | null;
-  readonly verificationError: string | null;
+  readonly eventCode: string;
+  readonly idempotencyKey: string;
+  readonly counts: TransactionRollbackCounts;
+  readonly verificationErrors: readonly string[];
 };
+
+async function verifyNoDurableTransactionRows(params: {
+  appUserId: string;
+  eventCode: string;
+  idempotencyKey: string;
+}): Promise<TransactionRollbackVerification> {
+  const [
+    activityEventsResult,
+    measuresResult,
+    objectFactsResult,
+    reviewItemsResult,
+    recalculationQueueResult,
+  ] = await Promise.all([
+    supabase
+      .from("activity_events")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", params.appUserId)
+      .eq("event_code", params.eventCode),
+    supabase
+      .from("activity_event_measures")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", params.appUserId)
+      .contains("metadata", { idempotencyKey: params.idempotencyKey }),
+    supabase
+      .from("activity_object_facts")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", params.appUserId)
+      .contains("metadata", { idempotencyKey: params.idempotencyKey }),
+    supabase
+      .from("activity_fact_review_items")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", params.appUserId)
+      .contains("metadata", { idempotencyKey: params.idempotencyKey }),
+    supabase
+      .from("activity_fact_recalculation_queue")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", params.appUserId)
+      .contains("metadata", { idempotencyKey: params.idempotencyKey }),
+  ]);
+
+  const verificationErrors = [
+    activityEventsResult.error
+      ? `activity_events: ${activityEventsResult.error.message}`
+      : null,
+    measuresResult.error
+      ? `activity_event_measures: ${measuresResult.error.message}`
+      : null,
+    objectFactsResult.error
+      ? `activity_object_facts: ${objectFactsResult.error.message}`
+      : null,
+    reviewItemsResult.error
+      ? `activity_fact_review_items: ${reviewItemsResult.error.message}`
+      : null,
+    recalculationQueueResult.error
+      ? `activity_fact_recalculation_queue: ${recalculationQueueResult.error.message}`
+      : null,
+  ].filter((value): value is string => value !== null);
+
+  const counts: TransactionRollbackCounts = {
+    activityEvents: activityEventsResult.error
+      ? null
+      : (activityEventsResult.count ?? 0),
+    measures: measuresResult.error ? null : (measuresResult.count ?? 0),
+    objectFacts: objectFactsResult.error
+      ? null
+      : (objectFactsResult.count ?? 0),
+    reviewItems: reviewItemsResult.error
+      ? null
+      : (reviewItemsResult.count ?? 0),
+    recalculationQueue: recalculationQueueResult.error
+      ? null
+      : (recalculationQueueResult.count ?? 0),
+  };
+
+  const countValues = Object.values(counts);
+
+  return {
+    checked: true,
+    passed:
+      verificationErrors.length === 0
+        ? countValues.every((count) => count === 0)
+        : null,
+    eventCode: params.eventCode,
+    idempotencyKey: params.idempotencyKey,
+    counts,
+    verificationErrors,
+  };
+}
 
 function buildWriteErrorResponse(params: {
   validation: ActivityFactsSaveGateValidationResult;
@@ -1169,9 +1238,10 @@ async function executeRealSave(params: {
 
     const rollbackVerification = isIdempotencyConflict
       ? null
-      : await verifyNoDurableActivityEvent({
+      : await verifyNoDurableTransactionRows({
           appUserId: params.context.appUserId,
           eventCode,
+          idempotencyKey,
         });
 
     return buildWriteErrorResponse({
