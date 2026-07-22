@@ -1054,6 +1054,8 @@ async function executeRealSave(params: {
 
   const rpcActivity = {
     idempotencyKey,
+    existingActivityEventId,
+    calendarEventId,
     temporalDirection,
     inputText: rawText,
     title,
