@@ -5,6 +5,12 @@ import {
   saveGateContractPreviewResponse,
 } from "@/data/activity-to-value-objects/save-gate-contract-preview";
 import { buildNoWriteExecutionPlan } from "@/lib/activity/facts/saveGate/executionPlan";
+import {
+  buildRealityCoreNormalizationPreview,
+  normalizeLegacyActivityFactToRealityCore,
+  type RealityCoreFactNormalizationResult,
+  type RealityCoreNormalizationPreview,
+} from "@/lib/activity/facts/realityCoreNormalization";
 import { buildActivityFactsGuardedPersistenceContract } from "@/lib/activity/facts/saveGate/persistenceContract";
 import { buildNoWriteOwnershipContext } from "@/lib/activity/facts/saveGate/ownershipContext";
 import { buildNoWriteIdempotencyContext } from "@/lib/activity/facts/saveGate/idempotencyContext";
@@ -89,6 +95,7 @@ type NormalizedFactWrite = {
   rawFragment: string | null;
   normalizedFragment: string | null;
   reasonRu: string | null;
+  realityCore: RealityCoreFactNormalizationResult;
 };
 
 type DbMeasureType =
@@ -688,16 +695,17 @@ function normalizeFactForWrite(params: {
     preview?.semanticObjectKey ??
     semanticObjectKey;
 
-  const measureType = normalizeMeasureType(
+  const legacyMeasureType =
     asString(editedPatch.measureType) ??
-      preview?.measureType ??
-      measure?.measureType ??
-      "duration"
-  );
+    preview?.measureType ??
+    measure?.measureType ??
+    "duration";
 
-  const unit = normalizeUnit(
-    asString(editedPatch.unit) ?? preview?.unit ?? measure?.unit ?? "minute"
-  );
+  const legacyUnit =
+    asString(editedPatch.unit) ?? preview?.unit ?? measure?.unit ?? "minute";
+
+  const measureType = normalizeMeasureType(legacyMeasureType);
+  const unit = normalizeUnit(legacyUnit);
 
   const editedNumeric = asNumber(editedPatch.numericValue);
   const editedText = asString(editedPatch.textValue);
@@ -720,6 +728,17 @@ function normalizeFactForWrite(params: {
     valueNumeric: rawNumeric,
     valueText: rawText,
     valueBoolean: rawBoolean,
+  });
+
+  const realityCore = normalizeLegacyActivityFactToRealityCore({
+    localFactId: params.localFactId,
+    semanticObjectKey,
+    semanticObjectLabel,
+    legacyMeasureType,
+    legacyUnit,
+    valueNumeric: value.valueNumeric,
+    valueText: value.valueText,
+    valueBoolean: value.valueBoolean,
   });
 
   const candidateValueObjectId =
@@ -748,7 +767,57 @@ function normalizeFactForWrite(params: {
     rawFragment: measure?.evidenceText ?? preview?.explanation ?? null,
     normalizedFragment: measure?.normalizedLabel ?? semanticObjectLabel,
     reasonRu: params.reasonRu,
+    realityCore,
   };
+}
+
+function buildRealityCorePreviewFromRequest(
+  bodyRecord: UnknownRecord
+): RealityCoreNormalizationPreview {
+  const pkg = getActivityProcessingPackage(bodyRecord);
+  const acceptedOrEditedFactInputs = collectAcceptedOrEditedFactIds(bodyRecord);
+
+  const normalizedFacts = acceptedOrEditedFactInputs.map((item) => {
+    return normalizeFactForWrite({
+      body: bodyRecord,
+      pkg,
+      localFactId: item.localFactId,
+      decision: item.decision,
+      reasonRu: item.reasonRu,
+    }).realityCore;
+  });
+
+  return buildRealityCoreNormalizationPreview(normalizedFacts);
+}
+
+function buildRealityCoreNormalizationErrorResponse(params: {
+  validation: ActivityFactsSaveGateValidationResult;
+  normalization: RealityCoreNormalizationPreview;
+}) {
+  return NextResponse.json(
+    {
+      ...buildNoWriteResponse({
+        response: {
+          ...saveGateContractPreviewResponse,
+          ok: false,
+          writeStatus: "not_executed_contract_preview",
+          dbWriteExecuted: false,
+          sqlExecuted: false,
+          openAiCallExecuted: false,
+        },
+        validation: params.validation,
+        ok: false,
+      }),
+      routeStatus: "reality_core_normalization_failed_before_write",
+      errorCode: "ACTIVITY_FACTS_SAVE_REALITY_CORE_NORMALIZATION_FAILED",
+      errorMessage:
+        "One or more accepted facts cannot be normalized against parameter-registry-v1.",
+      realityCoreNormalization: params.normalization,
+      dbWriteExecuted: false,
+      sideEffects: NO_WRITE_SIDE_EFFECTS,
+    },
+    { status: 400 }
+  );
 }
 
 function buildActivityTiming(pkg: ActivityProcessingPackage | null, facts: NormalizedFactWrite[]) {
@@ -939,6 +1008,17 @@ async function executeRealSave(params: {
     });
   });
 
+  const realityCoreNormalization = buildRealityCoreNormalizationPreview(
+    facts.map((fact) => fact.realityCore)
+  );
+
+  if (!realityCoreNormalization.ok) {
+    return buildRealityCoreNormalizationErrorResponse({
+      validation: params.validation,
+      normalization: realityCoreNormalization,
+    });
+  }
+
   const timing = buildActivityTiming(pkg, facts);
   const rawText =
     pkg?.rawInput?.text ??
@@ -978,6 +1058,7 @@ async function executeRealSave(params: {
         productionWriteEnabled: true,
         writeStatus: "written",
         requestSummary: params.validation.summary,
+        realityCoreNormalization,
         createdIds: {
           ...EMPTY_CREATED_IDS,
           activityEventId: existingEvent.activityEventId,
@@ -1328,6 +1409,7 @@ async function executeRealSave(params: {
       productionWriteEnabled: true,
       writeStatus: "written",
       requestSummary: params.validation.summary,
+      realityCoreNormalization,
       createdIds,
       plannedWrites: executionPlan.plannedWrites.map((write) => {
         return {
@@ -1381,6 +1463,9 @@ async function executeRealSave(params: {
         sourcePackageId: body.sourcePackageId,
         idempotencyKey: body.idempotencyKey,
         factCount: facts.length,
+        realityCoreContractVersion: realityCoreNormalization.contractVersion,
+        parameterRegistryVersion: realityCoreNormalization.registryVersion,
+        normalizedFactCount: realityCoreNormalization.normalizedCount,
       },
     },
     { status: 200 }
@@ -1435,12 +1520,18 @@ export async function POST(request: Request) {
   }
 
   if (validation.summary.futurePersistenceMode !== "confirm_save") {
+    const realityCoreNormalization =
+      buildRealityCorePreviewFromRequest(bodyRecord);
+
     return NextResponse.json(
-      buildNoWriteResponse({
-        response: saveGateContractPreviewResponse,
-        validation,
-        ok: true,
-      }),
+      {
+        ...buildNoWriteResponse({
+          response: saveGateContractPreviewResponse,
+          validation,
+          ok: true,
+        }),
+        realityCoreNormalization,
+      },
       { status: 200 }
     );
   }
