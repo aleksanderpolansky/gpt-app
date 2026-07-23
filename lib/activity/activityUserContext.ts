@@ -1,5 +1,9 @@
 ﻿import { NextResponse } from "next/server";
 import { auth0 } from "../auth0";
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../actor-context";
 import { supabase } from "../supabase";
 
 export type ActivityAppUser = {
@@ -24,6 +28,11 @@ export type ActivityActor = {
 export type ActivityUserContext = {
   appUser: ActivityAppUser | null;
   person: ActivityPerson | null;
+  /**
+   * Compatibility name retained for existing activity routes.
+   * Since Reality Model v2 P4 this is the server-resolved active profile
+   * actor (person or avatar), not necessarily the account's person actor.
+   */
   personActor: ActivityActor | null;
   errorResponse: NextResponse | null;
 };
@@ -31,7 +40,7 @@ export type ActivityUserContext = {
 export async function getActivityUserContext(): Promise<ActivityUserContext> {
   const session = await auth0.getSession();
 
-  if (!session?.user) {
+  if (!session?.user?.sub) {
     return {
       appUser: null,
       person: null,
@@ -43,10 +52,43 @@ export async function getActivityUserContext(): Promise<ActivityUserContext> {
     };
   }
 
+  let resolvedActorContext: Awaited<
+    ReturnType<typeof resolveActiveActorContext>
+  >;
+
+  try {
+    resolvedActorContext = await resolveActiveActorContext(session.user.sub);
+  } catch (error) {
+    if (error instanceof ActorContextError) {
+      return {
+        appUser: null,
+        person: null,
+        personActor: null,
+        errorResponse: NextResponse.json(
+          {
+            error: error.message,
+            errorCode: error.code,
+          },
+          { status: error.status }
+        ),
+      };
+    }
+
+    return {
+      appUser: null,
+      person: null,
+      personActor: null,
+      errorResponse: NextResponse.json(
+        { error: "Could not resolve active actor context" },
+        { status: 500 }
+      ),
+    };
+  }
+
   const { data: appUser, error: appUserError } = await supabase
     .from("app_users")
     .select("*")
-    .eq("auth0_sub", session.user.sub)
+    .eq("id", resolvedActorContext.appUserId)
     .single();
 
   if (appUserError || !appUser) {
@@ -83,20 +125,21 @@ export async function getActivityUserContext(): Promise<ActivityUserContext> {
 
   const typedPerson = person as ActivityPerson;
 
-  const { data: personActor, error: personActorError } = await supabase
+  const { data: activeActor, error: activeActorError } = await supabase
     .from("actors")
     .select("*")
-    .eq("person_id", typedPerson.id)
-    .eq("actor_type", "person")
+    .eq("id", resolvedActorContext.actorId)
+    .in("actor_type", ["person", "avatar"])
+    .eq("status", "active")
     .single();
 
-  if (personActorError || !personActor) {
+  if (activeActorError || !activeActor) {
     return {
       appUser: null,
       person: null,
       personActor: null,
       errorResponse: NextResponse.json(
-        { error: personActorError?.message ?? "Person actor not found" },
+        { error: activeActorError?.message ?? "Active actor not found" },
         { status: 500 }
       ),
     };
@@ -105,7 +148,7 @@ export async function getActivityUserContext(): Promise<ActivityUserContext> {
   return {
     appUser: typedAppUser,
     person: typedPerson,
-    personActor: personActor as ActivityActor,
+    personActor: activeActor as ActivityActor,
     errorResponse: null,
   };
 }

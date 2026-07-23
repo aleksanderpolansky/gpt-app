@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
 
@@ -20,14 +24,8 @@ type AppUserRow = {
   auth0_sub?: string | null;
 };
 
-type PersonRow = {
-  id: string;
-  user_id?: string | null;
-};
-
 type ActorRow = {
   id: string;
-  person_id?: string | null;
   actor_type?: string | null;
 };
 
@@ -48,7 +46,6 @@ type CurrentUserContext =
   | {
       ok: true;
       appUser: AppUserRow;
-      person: PersonRow;
       personActor: ActorRow;
     }
   | {
@@ -88,62 +85,37 @@ async function resolveCurrentUserContext(): Promise<CurrentUserContext> {
     };
   }
 
-  const { data: appUser, error: appUserError } = await supabase
-    .from("app_users")
-    .select("id, auth0_sub")
-    .eq("auth0_sub", auth0Sub)
-    .single();
+  try {
+    const actorContext = await resolveActiveActorContext(auth0Sub);
 
-  if (appUserError || !appUser) {
+    return {
+      ok: true,
+      appUser: {
+        id: actorContext.appUserId,
+        auth0_sub: auth0Sub,
+      },
+      personActor: {
+        id: actorContext.actorId,
+        actor_type: actorContext.actorType,
+      },
+    };
+  } catch (error) {
+    if (error instanceof ActorContextError) {
+      return {
+        ok: false,
+        status: error.status,
+        errorCode: error.code,
+        errorMessage: error.message,
+      };
+    }
+
     return {
       ok: false,
       status: 500,
-      errorCode: "VALUE_OBJECT_TARGET_STANDARDS_READ_APP_USER_NOT_FOUND",
-      errorMessage:
-        appUserError?.message ?? "Authenticated user is not linked to app_users.",
+      errorCode: "VALUE_OBJECT_TARGET_STANDARDS_READ_ACTOR_CONTEXT_FAILED",
+      errorMessage: "Could not resolve active actor context.",
     };
   }
-
-  const { data: person, error: personError } = await supabase
-    .from("persons")
-    .select("id, user_id")
-    .eq("user_id", appUser.id)
-    .single();
-
-  if (personError || !person) {
-    return {
-      ok: false,
-      status: 500,
-      errorCode: "VALUE_OBJECT_TARGET_STANDARDS_READ_PERSON_NOT_FOUND",
-      errorMessage:
-        personError?.message ?? "Authenticated app user is not linked to persons.",
-    };
-  }
-
-  const { data: personActor, error: personActorError } = await supabase
-    .from("actors")
-    .select("id, person_id, actor_type")
-    .eq("person_id", person.id)
-    .eq("actor_type", "person")
-    .single();
-
-  if (personActorError || !personActor) {
-    return {
-      ok: false,
-      status: 500,
-      errorCode: "VALUE_OBJECT_TARGET_STANDARDS_READ_PERSON_ACTOR_NOT_FOUND",
-      errorMessage:
-        personActorError?.message ??
-        "Authenticated person is not linked to a person actor.",
-    };
-  }
-
-  return {
-    ok: true,
-    appUser: appUser as AppUserRow,
-    person: person as PersonRow,
-    personActor: personActor as ActorRow,
-  };
 }
 
 function isValueObjectOwnedByCurrentActor(params: {
@@ -151,34 +123,10 @@ function isValueObjectOwnedByCurrentActor(params: {
   appUser: AppUserRow;
   personActor: ActorRow;
 }) {
-  const currentActorIds = new Set(
-    [params.personActor.id].filter((value): value is string => Boolean(value)),
+  return (
+    params.valueObject.owner_user_id === params.appUser.id &&
+    params.valueObject.owner_actor_id === params.personActor.id
   );
-
-  const currentUserIds = new Set(
-    [params.appUser.id].filter((value): value is string => Boolean(value)),
-  );
-
-  const valueObjectActorIds = [
-    params.valueObject.owner_actor_id,
-    params.valueObject.created_by_actor_id,
-    params.valueObject.actor_id,
-  ].filter((value): value is string => Boolean(value));
-
-  const valueObjectUserIds = [
-    params.valueObject.app_user_id,
-    params.valueObject.owner_user_id,
-  ].filter((value): value is string => Boolean(value));
-
-  const actorMatches = valueObjectActorIds.some((actorId) =>
-    currentActorIds.has(actorId),
-  );
-
-  const userMatches = valueObjectUserIds.some((userId) =>
-    currentUserIds.has(userId),
-  );
-
-  return actorMatches || userMatches;
 }
 
 async function readOwnedValueObject(params: {
@@ -323,6 +271,7 @@ export async function GET(_request: Request, context: RouteContext) {
     `,
     )
     .eq("user_id", userContext.appUser.id)
+    .eq("owner_actor_id", userContext.personActor.id)
     .eq("value_object_id", routeValueObjectId)
     .order("created_at", { ascending: false });
 

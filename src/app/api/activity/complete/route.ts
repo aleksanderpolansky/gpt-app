@@ -890,13 +890,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const { appUser, errorResponse } = await getActivityUserContext();
+  const { appUser, personActor, errorResponse } =
+    await getActivityUserContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!appUser || !personActor) {
     return NextResponse.json(
       {
         ok: false,
@@ -937,6 +938,7 @@ export async function POST(request: Request) {
     .select("*")
     .eq("id", eventId)
     .eq("user_id", appUser.id)
+    .eq("acting_as_actor_id", personActor.id)
     .maybeSingle();
 
   if (eventError) {
@@ -1168,6 +1170,7 @@ export async function POST(request: Request) {
     })
     .eq("id", event.id)
     .eq("user_id", appUser.id)
+    .eq("acting_as_actor_id", personActor.id)
     .select()
     .single();
 
@@ -1702,7 +1705,8 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", updatedEvent.id)
-      .eq("user_id", appUser.id);
+      .eq("user_id", appUser.id)
+      .eq("acting_as_actor_id", personActor.id);
 
     return NextResponse.json(
       {

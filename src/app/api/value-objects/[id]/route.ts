@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../../lib/actor-context";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 
@@ -9,14 +13,8 @@ type AppUserRow = {
   auth0_sub?: string | null;
 };
 
-type PersonRow = {
-  id: string;
-  user_id?: string | null;
-};
-
 type ActorRow = {
   id: string;
-  person_id?: string | null;
   actor_type?: string | null;
 };
 
@@ -54,13 +52,11 @@ type ValueObjectRow = {
 type CurrentUserContext =
   | {
       appUser: AppUserRow;
-      person: PersonRow;
       personActor: ActorRow;
       errorResponse: null;
     }
   | {
       appUser: null;
-      person: null;
       personActor: null;
       errorResponse: NextResponse;
     };
@@ -229,34 +225,10 @@ function isValueObjectOwnedByCurrentActor(
   appUser: AppUserRow,
   personActor: ActorRow,
 ) {
-  const currentActorIds = new Set(
-    [personActor.id].filter((value): value is string => Boolean(value)),
+  return (
+    valueObject.owner_user_id === appUser.id &&
+    valueObject.owner_actor_id === personActor.id
   );
-
-  const currentUserIds = new Set(
-    [appUser.id].filter((value): value is string => Boolean(value)),
-  );
-
-  const valueObjectActorIds = [
-    valueObject.owner_actor_id,
-    valueObject.created_by_actor_id,
-    valueObject.actor_id,
-  ].filter((value): value is string => Boolean(value));
-
-  const valueObjectUserIds = [
-    valueObject.app_user_id,
-    valueObject.owner_user_id,
-  ].filter((value): value is string => Boolean(value));
-
-  const actorMatches = valueObjectActorIds.some((actorId) =>
-    currentActorIds.has(actorId),
-  );
-
-  const userMatches = valueObjectUserIds.some((userId) =>
-    currentUserIds.has(userId),
-  );
-
-  return actorMatches || userMatches;
 }
 
 async function getCurrentUserContext(): Promise<CurrentUserContext> {
@@ -265,7 +237,6 @@ async function getCurrentUserContext(): Promise<CurrentUserContext> {
   if (!session?.user?.sub) {
     return {
       appUser: null,
-      person: null,
       personActor: null,
       errorResponse: NextResponse.json(
         { error: "Not authenticated" },
@@ -274,67 +245,44 @@ async function getCurrentUserContext(): Promise<CurrentUserContext> {
     };
   }
 
-  const { data: appUser, error: appUserError } = await supabase
-    .from("app_users")
-    .select("id, auth0_sub")
-    .eq("auth0_sub", session.user.sub)
-    .single();
+  try {
+    const actorContext = await resolveActiveActorContext(session.user.sub);
 
-  if (appUserError || !appUser) {
+    return {
+      appUser: {
+        id: actorContext.appUserId,
+        auth0_sub: session.user.sub,
+      },
+      personActor: {
+        id: actorContext.actorId,
+        actor_type: actorContext.actorType,
+      },
+      errorResponse: null,
+    };
+  } catch (error) {
+    if (error instanceof ActorContextError) {
+      return {
+        appUser: null,
+        personActor: null,
+        errorResponse: NextResponse.json(
+          {
+            error: error.message,
+            errorCode: error.code,
+          },
+          { status: error.status },
+        ),
+      };
+    }
+
     return {
       appUser: null,
-      person: null,
       personActor: null,
       errorResponse: NextResponse.json(
-        { error: appUserError?.message ?? "App user not found" },
+        { error: "Could not resolve active actor context" },
         { status: 500 },
       ),
     };
   }
-
-  const { data: person, error: personError } = await supabase
-    .from("persons")
-    .select("id, user_id")
-    .eq("user_id", appUser.id)
-    .single();
-
-  if (personError || !person) {
-    return {
-      appUser: null,
-      person: null,
-      personActor: null,
-      errorResponse: NextResponse.json(
-        { error: personError?.message ?? "Person not found" },
-        { status: 500 },
-      ),
-    };
-  }
-
-  const { data: personActor, error: personActorError } = await supabase
-    .from("actors")
-    .select("id, person_id, actor_type")
-    .eq("person_id", person.id)
-    .eq("actor_type", "person")
-    .single();
-
-  if (personActorError || !personActor) {
-    return {
-      appUser: null,
-      person: null,
-      personActor: null,
-      errorResponse: NextResponse.json(
-        { error: personActorError?.message ?? "Person actor not found" },
-        { status: 500 },
-      ),
-    };
-  }
-
-  return {
-    appUser,
-    person,
-    personActor,
-    errorResponse: null,
-  };
 }
 
 async function readOwnedValueObject(
@@ -346,6 +294,8 @@ async function readOwnedValueObject(
     .from("value_objects")
     .select(VALUE_OBJECT_SELECT)
     .eq("id", valueObjectId)
+    .eq("owner_user_id", appUser.id)
+    .eq("owner_actor_id", personActor.id)
     .maybeSingle();
 
   if (valueObjectError) {
@@ -907,6 +857,8 @@ export async function PATCH(request: Request, context: ValueObjectRouteContext) 
     .from("value_objects")
     .update(patch)
     .eq("id", valueObject.id)
+    .eq("owner_user_id", appUser.id)
+    .eq("owner_actor_id", personActor.id)
     .select(VALUE_OBJECT_SELECT)
     .maybeSingle();
 

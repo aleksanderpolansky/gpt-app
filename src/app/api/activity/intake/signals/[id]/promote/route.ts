@@ -403,14 +403,19 @@ async function getRawSignal(params: { rawSignalId: string; userId: string }) {
   return (data as RawActivitySignalRow | null) ?? null;
 }
 
-async function getActivityEvent(params: { eventId: string; userId: string }) {
-  const { eventId, userId } = params;
+async function getActivityEvent(params: {
+  eventId: string;
+  userId: string;
+  actorId: string;
+}) {
+  const { eventId, userId, actorId } = params;
 
   const { data, error } = await supabase
     .from("activity_events")
     .select("*")
     .eq("id", eventId)
     .eq("user_id", userId)
+    .eq("acting_as_actor_id", actorId)
     .maybeSingle();
 
   if (error) {
@@ -470,7 +475,7 @@ export async function POST(request: Request, context: RouteContext) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!appUser || !personActor) {
     return NextResponse.json(
       {
         ok: false,
@@ -547,6 +552,7 @@ export async function POST(request: Request, context: RouteContext) {
     const existingEvent = await getActivityEvent({
       eventId: rawSignal.output_event_id,
       userId: appUser.id,
+      actorId: personActor.id,
     });
 
     if (!existingEvent) {
@@ -647,9 +653,9 @@ export async function POST(request: Request, context: RouteContext) {
     .from("activity_events")
     .insert({
       user_id: appUser.id,
-      performed_by_actor_id: personActor?.id ?? null,
-      acting_as_actor_id: personActor?.id ?? null,
-      acting_for_actor_id: personActor?.id ?? null,
+      performed_by_actor_id: personActor.id,
+      acting_as_actor_id: personActor.id,
+      acting_for_actor_id: personActor.id,
       activity_type_id: templateMapping.activityTypeId,
       activity_template_id: templateMapping.activityTemplateId,
       template_id: templateMapping.legacyTemplateId,

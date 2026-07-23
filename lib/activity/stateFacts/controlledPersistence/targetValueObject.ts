@@ -32,6 +32,7 @@ import type {
 type ValueObjectRow = {
   id?: unknown;
   title?: unknown;
+  owner_user_id?: unknown;
   owner_actor_id?: unknown;
   organization_id?: unknown;
   [key: string]: unknown;
@@ -112,7 +113,7 @@ function buildSuccess(
  *
  * This helper is intentionally read-only:
  * - reads value_objects by id;
- * - checks owner_actor_id against authenticated actor context;
+ * - checks owner_user_id + owner_actor_id against authenticated context;
  * - treats public/catalog visibility as insufficient for write permission;
  * - does not create or update any row;
  * - does not touch the future state fact storage table.
@@ -143,7 +144,7 @@ export async function resolveStateFactTargetValueObject(
 
   const { data: valueObjectData, error: valueObjectError } = await supabase
     .from("value_objects")
-    .select("id, title, owner_actor_id, organization_id")
+    .select("id, title, owner_user_id, owner_actor_id, organization_id")
     .eq("id", valueObjectId)
     .maybeSingle();
 
@@ -164,6 +165,7 @@ export async function resolveStateFactTargetValueObject(
   }
 
   const resolvedValueObjectId = toNullableString(valueObject.id);
+  const ownerUserId = toNullableString(valueObject.owner_user_id);
   const ownerActorId = toNullableString(valueObject.owner_actor_id);
   const organizationId = toNullableString(valueObject.organization_id);
   const title = toNullableString(valueObject.title);
@@ -212,7 +214,12 @@ export async function resolveStateFactTargetValueObject(
     );
   }
 
-  if (!ownerActorId || ownerActorId !== authenticatedActorId) {
+  if (
+    !ownerUserId ||
+    ownerUserId !== input.authenticatedActor.appUserId ||
+    !ownerActorId ||
+    ownerActorId !== authenticatedActorId
+  ) {
     return buildFailure(
       PUBLIC_VISIBILITY_NOT_WRITE_PERMISSION,
       "Target Value Object is not owned by the authenticated actor. Public visibility is not write permission."

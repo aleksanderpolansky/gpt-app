@@ -4,6 +4,10 @@
 } from "@/lib/admin/require-platform-admin";
 import { NextResponse, type NextRequest } from "next/server";
 
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../../lib/actor-context";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 import { processValueObjectBridgeForActivityEvent } from "../../../../../lib/activity/valueObjectBridge";
@@ -20,6 +24,7 @@ type RequestBody = {
 type AppUserRow = {
   id: string;
   auth0_sub: string | null;
+  activeActorId: string;
 };
 
 type CurrentAppUserResult =
@@ -74,55 +79,49 @@ async function getCurrentAppUser(): Promise<CurrentAppUserResult> {
     };
   }
 
-  const { data, error } = await supabase
-    .from("app_users")
-    .select("id, auth0_sub")
-    .eq("auth0_sub", auth0Sub)
-    .maybeSingle();
+  try {
+    const actorContext = await resolveActiveActorContext(auth0Sub);
 
-  if (error) {
+    return {
+      ok: true,
+      appUser: {
+        id: actorContext.appUserId,
+        auth0_sub: auth0Sub,
+        activeActorId: actorContext.actorId,
+      },
+    };
+  } catch (error) {
+    const status = error instanceof ActorContextError ? error.status : 500;
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Could not resolve active actor context.";
+
     return {
       ok: false,
       errorResponse: NextResponse.json(
         {
           ok: false,
           endpoint: "/api/activity/debug-rubricator-value-object-bridge",
-          error: error.message,
+          error: message,
         },
-        { status: 500 }
+        { status }
       ),
     };
   }
-
-  if (!data) {
-    return {
-      ok: false,
-      errorResponse: NextResponse.json(
-        {
-          ok: false,
-          endpoint: "/api/activity/debug-rubricator-value-object-bridge",
-          error: "Authenticated Auth0 user is not linked to app_users.",
-        },
-        { status: 403 }
-      ),
-    };
-  }
-
-  return {
-    ok: true,
-    appUser: data as AppUserRow,
-  };
 }
 
 async function assertEventOwnership(
   eventId: string,
-  userId: string
+  userId: string,
+  actorId: string
 ): Promise<EventOwnershipResult> {
   const { data, error } = await supabase
     .from("activity_events")
     .select("id, user_id")
     .eq("id", eventId)
     .eq("user_id", userId)
+    .eq("acting_as_actor_id", actorId)
     .maybeSingle();
 
   if (error) {
@@ -204,7 +203,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const ownership = await assertEventOwnership(eventId, appUser.id);
+  const ownership = await assertEventOwnership(
+    eventId,
+    appUser.id,
+    appUser.activeActorId
+  );
 
   if (!ownership.ok) {
     return ownership.errorResponse;

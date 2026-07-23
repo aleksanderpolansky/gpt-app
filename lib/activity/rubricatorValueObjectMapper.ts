@@ -581,20 +581,23 @@ async function findControlledValueObject(
   const ownerActorId =
     event.acting_as_actor_id ?? event.performed_by_actor_id ?? null;
 
+  if (!event.user_id || !ownerActorId) {
+    return {
+      valueObjectId: null,
+      errorMessage: "controlled_value_object_owner_context_missing",
+    };
+  }
+
   let query = supabase
     .from("value_objects")
     .select("id")
+    .eq("owner_user_id", event.user_id)
+    .eq("owner_actor_id", ownerActorId)
     .eq("title", rule.valueObjectTitle)
     .eq("value_type", rule.valueObjectType)
     .eq("status", "active")
     .is("organization_id", null)
     .limit(1);
-
-  if (ownerActorId) {
-    query = query.eq("owner_actor_id", ownerActorId);
-  } else {
-    query = query.is("owner_actor_id", null);
-  }
 
   const { data, error } = await query.maybeSingle();
 
@@ -622,10 +625,21 @@ async function createControlledValueObject(
   const ownerActorId =
     event.acting_as_actor_id ?? event.performed_by_actor_id ?? null;
 
+  if (!event.user_id || !ownerActorId) {
+    return {
+      valueObjectId: null,
+      errorMessage: "controlled_value_object_owner_context_missing",
+    };
+  }
+
   const { data, error } = await supabase
     .from("value_objects")
     .insert({
+      owner_user_id: event.user_id,
       owner_actor_id: ownerActorId,
+      created_by_actor_id: ownerActorId,
+      actor_id: ownerActorId,
+      app_user_id: event.user_id,
       organization_id: null,
       value_type: rule.valueObjectType,
       title: rule.valueObjectTitle,

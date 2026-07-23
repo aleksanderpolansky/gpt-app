@@ -384,13 +384,14 @@ export async function GET(request: Request) {
     );
   }
 
-  const { appUser, errorResponse } = await getActivityUserContext();
+  const { appUser, personActor, errorResponse } =
+    await getActivityUserContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!appUser || !personActor) {
     return NextResponse.json(
       {
         ok: false,
@@ -413,7 +414,8 @@ export async function GET(request: Request) {
   let eventsQuery = supabase
     .from("activity_events")
     .select("*")
-    .eq("user_id", appUser.id);
+    .eq("user_id", appUser.id)
+    .eq("acting_as_actor_id", personActor.id);
 
   if (status) {
     eventsQuery = eventsQuery.eq("status", status);
@@ -716,7 +718,7 @@ export async function POST(request: Request) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!appUser || !personActor) {
     return NextResponse.json(
       {
         ok: false,
@@ -773,9 +775,9 @@ export async function POST(request: Request) {
     .from("activity_events")
     .insert({
       user_id: appUser.id,
-      performed_by_actor_id: personActor?.id ?? null,
-      acting_as_actor_id: personActor?.id ?? null,
-      acting_for_actor_id: personActor?.id ?? null,
+      performed_by_actor_id: personActor.id,
+      acting_as_actor_id: personActor.id,
+      acting_for_actor_id: personActor.id,
       input_text: rawText ?? title,
       title,
       description,

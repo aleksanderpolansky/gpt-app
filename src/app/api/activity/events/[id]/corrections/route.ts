@@ -159,14 +159,16 @@ function normalizeCorrectionSummary(row: ActivityCorrectionRow) {
 async function getActivityEventForAccessCheck(params: {
   eventId: string;
   userId: string;
+  actorId: string;
 }) {
-  const { eventId, userId } = params;
+  const { eventId, userId, actorId } = params;
 
   const { data, error } = await supabase
     .from("activity_events")
     .select("id,user_id")
     .eq("id", eventId)
     .eq("user_id", userId)
+    .eq("acting_as_actor_id", actorId)
     .maybeSingle();
 
   if (error) {
@@ -227,13 +229,14 @@ export async function GET(request: Request, context: RouteContext) {
     );
   }
 
-  const { appUser, errorResponse } = await getActivityUserContext();
+  const { appUser, personActor, errorResponse } =
+    await getActivityUserContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!appUser || !personActor) {
     return NextResponse.json(
       {
         ok: false,
@@ -264,6 +267,7 @@ export async function GET(request: Request, context: RouteContext) {
     const event = await getActivityEventForAccessCheck({
       eventId,
       userId: appUser.id,
+      actorId: personActor.id,
     });
 
     if (!event) {

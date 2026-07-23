@@ -279,14 +279,19 @@ function resolveConfirmTiming(params: {
   };
 }
 
-async function getActivityEvent(params: { eventId: string; userId: string }) {
-  const { eventId, userId } = params;
+async function getActivityEvent(params: {
+  eventId: string;
+  userId: string;
+  actorId: string;
+}) {
+  const { eventId, userId, actorId } = params;
 
   const { data, error } = await supabase
     .from("activity_events")
     .select("*")
     .eq("id", eventId)
     .eq("user_id", userId)
+    .eq("acting_as_actor_id", actorId)
     .maybeSingle();
 
   if (error) {
@@ -336,13 +341,14 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const { appUser, errorResponse } = await getActivityUserContext();
+  const { appUser, personActor, errorResponse } =
+    await getActivityUserContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!appUser || !personActor) {
     return NextResponse.json(
       {
         ok: false,
@@ -389,6 +395,7 @@ export async function POST(request: Request, context: RouteContext) {
     event = await getActivityEvent({
       eventId,
       userId: appUser.id,
+      actorId: personActor.id,
     });
   } catch (error) {
     return NextResponse.json(
@@ -522,6 +529,7 @@ export async function POST(request: Request, context: RouteContext) {
     })
     .eq("id", event.id)
     .eq("user_id", appUser.id)
+    .eq("acting_as_actor_id", personActor.id)
     .select()
     .single();
 
@@ -573,7 +581,8 @@ export async function POST(request: Request, context: RouteContext) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", updatedEvent.id)
-      .eq("user_id", appUser.id);
+      .eq("user_id", appUser.id)
+      .eq("acting_as_actor_id", personActor.id);
 
       const processingStartedAt = new Date();
       const processingRunId = crypto.randomUUID();
@@ -777,7 +786,8 @@ export async function POST(request: Request, context: RouteContext) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", updatedEvent.id)
-      .eq("user_id", appUser.id);
+      .eq("user_id", appUser.id)
+      .eq("acting_as_actor_id", personActor.id);
 
     return NextResponse.json(
       {
@@ -793,7 +803,6 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 }
-
 
 
 

@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 
@@ -23,7 +27,7 @@ type CertificatePricingCalculation = {
 async function getCurrentUserContext() {
   const session = await auth0.getSession();
 
-  if (!session?.user) {
+  if (!session?.user?.sub) {
     return {
       appUser: null,
       person: null,
@@ -35,67 +39,38 @@ async function getCurrentUserContext() {
     };
   }
 
-  const { data: appUser, error: appUserError } = await supabase
-    .from("app_users")
-    .select("*")
-    .eq("auth0_sub", session.user.sub)
-    .single();
+  try {
+    const actorContext = await resolveActiveActorContext(session.user.sub);
 
-  if (appUserError || !appUser) {
+    return {
+      appUser: {
+        id: actorContext.appUserId,
+        auth0_sub: session.user.sub,
+      },
+      person: null,
+      personActor: {
+        id: actorContext.actorId,
+        actor_type: actorContext.actorType,
+      },
+      errorResponse: null,
+    };
+  } catch (error) {
+    const status = error instanceof ActorContextError ? error.status : 500;
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Could not resolve active actor context.";
+
     return {
       appUser: null,
       person: null,
       personActor: null,
       errorResponse: NextResponse.json(
-        { error: appUserError?.message ?? "App user not found" },
-        { status: 500 }
+        { error: message },
+        { status }
       ),
     };
   }
-
-  const { data: person, error: personError } = await supabase
-    .from("persons")
-    .select("*")
-    .eq("user_id", appUser.id)
-    .single();
-
-  if (personError || !person) {
-    return {
-      appUser: null,
-      person: null,
-      personActor: null,
-      errorResponse: NextResponse.json(
-        { error: personError?.message ?? "Person not found" },
-        { status: 500 }
-      ),
-    };
-  }
-
-  const { data: personActor, error: personActorError } = await supabase
-    .from("actors")
-    .select("*")
-    .eq("person_id", person.id)
-    .eq("actor_type", "person")
-    .single();
-
-  if (personActorError || !personActor) {
-    return {
-      appUser: null,
-      person: null,
-      personActor: null,
-      errorResponse: NextResponse.json(
-        { error: personActorError?.message ?? "Person actor not found" },
-        { status: 500 }
-      ),
-    };
-  }
-
-  return {
-    appUser,
-    person,
-    personActor,
-    errorResponse: null,
-  };
 }
 
 function parseOptionalText(value: unknown) {
@@ -346,13 +321,17 @@ function calculateCertificatePricing(params: {
 
 async function verifyOrganizationAccess(
   appUserId: string,
+  actorId: string,
   organizationId: string
 ) {
   const { data: organization, error: organizationError } = await supabase
     .from("organizations")
-    .select("id, organization_name, organization_type, status, created_by_user_id")
+    .select(
+      "id, organization_name, organization_type, status, created_by_user_id, owner_actor_id"
+    )
     .eq("id", organizationId)
     .eq("created_by_user_id", appUserId)
+    .eq("owner_actor_id", actorId)
     .single();
 
   if (organizationError || !organization) {
@@ -372,6 +351,7 @@ async function verifyOrganizationAccess(
 }
 
 async function verifyValueObjectAccess(
+  appUserId: string,
   personActorId: string,
   organizationId: string,
   valueObjectId: string
@@ -380,6 +360,7 @@ async function verifyValueObjectAccess(
     .from("value_objects")
     .select("id, title, value_type, organization_id, owner_actor_id")
     .eq("id", valueObjectId)
+    .eq("owner_user_id", appUserId)
     .eq("owner_actor_id", personActorId)
     .eq("organization_id", organizationId)
     .single();
@@ -404,6 +385,7 @@ async function verifyValueObjectAccess(
 }
 
 async function verifyOfferItemsAccess(
+  appUserId: string,
   personActorId: string,
   organizationId: string,
   items: OfferItemInput[]
@@ -419,6 +401,7 @@ async function verifyOfferItemsAccess(
     }
 
     const { errorResponse } = await verifyValueObjectAccess(
+      appUserId,
       personActorId,
       organizationId,
       item.valueObjectId
@@ -630,7 +613,11 @@ export async function POST(request: Request) {
   }
 
   const { organization, errorResponse: organizationAccessErrorResponse } =
-    await verifyOrganizationAccess(appUser.id, organizationId);
+    await verifyOrganizationAccess(
+      appUser.id,
+      personActor.id,
+      organizationId
+    );
 
   if (organizationAccessErrorResponse) {
     return organizationAccessErrorResponse;
@@ -646,6 +633,7 @@ export async function POST(request: Request) {
   if (valueObjectId) {
     const { errorResponse: valueObjectAccessErrorResponse } =
       await verifyValueObjectAccess(
+        appUser.id,
         personActor.id,
         organization.id,
         valueObjectId
@@ -658,7 +646,12 @@ export async function POST(request: Request) {
 
   if (items.length > 0) {
     const { errorResponse: offerItemsAccessErrorResponse } =
-      await verifyOfferItemsAccess(personActor.id, organization.id, items);
+      await verifyOfferItemsAccess(
+        appUser.id,
+        personActor.id,
+        organization.id,
+        items
+      );
 
     if (offerItemsAccessErrorResponse) {
       return offerItemsAccessErrorResponse;

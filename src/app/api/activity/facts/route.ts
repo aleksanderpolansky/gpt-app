@@ -1,5 +1,9 @@
 ﻿import { NextResponse } from "next/server";
 
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../../lib/actor-context";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 
@@ -17,6 +21,7 @@ type AuthenticatedFactsContext =
       ok: true;
       auth0Sub: string;
       appUserId: string;
+      actorId: string;
     }
   | {
       ok: false;
@@ -154,49 +159,32 @@ async function resolveAuthenticatedFactsContext(): Promise<AuthenticatedFactsCon
     };
   }
 
-  const { data, error } = await supabase
-    .from("app_users")
-    .select("id")
-    .eq("auth0_sub", auth0Sub)
-    .limit(2);
+  try {
+    const actorContext = await resolveActiveActorContext(auth0Sub);
 
-  if (error) {
+    return {
+      ok: true,
+      auth0Sub,
+      appUserId: actorContext.appUserId,
+      actorId: actorContext.actorId,
+    };
+  } catch (error) {
+    if (error instanceof ActorContextError) {
+      return {
+        ok: false,
+        status: error.status,
+        errorCode: error.code,
+        errorMessage: error.message,
+      };
+    }
+
     return {
       ok: false,
       status: 500,
-      errorCode: "ACTIVITY_FACTS_READ_APP_USER_LOOKUP_FAILED",
-      errorMessage: "Could not resolve app user for authenticated session.",
+      errorCode: "ACTIVITY_FACTS_READ_ACTOR_CONTEXT_FAILED",
+      errorMessage: "Could not resolve active actor for activity facts.",
     };
   }
-
-  const rows = Array.isArray(data) ? data.map(asRecord) : [];
-
-  if (rows.length !== 1) {
-    return {
-      ok: false,
-      status: 403,
-      errorCode: "ACTIVITY_FACTS_READ_APP_USER_NOT_LINKED",
-      errorMessage:
-        "Authenticated Auth0 user is not linked to exactly one app_users row.",
-    };
-  }
-
-  const appUserId = asString(rows[0].id);
-
-  if (!appUserId) {
-    return {
-      ok: false,
-      status: 403,
-      errorCode: "ACTIVITY_FACTS_READ_APP_USER_ID_MISSING",
-      errorMessage: "Mapped app_users row has no id.",
-    };
-  }
-
-  return {
-    ok: true,
-    auth0Sub,
-    appUserId,
-  };
 }
 
 export async function GET(request: Request) {
@@ -259,6 +247,7 @@ export async function GET(request: Request) {
       ].join(", ")
     )
     .eq("user_id", context.appUserId)
+    .eq("acting_as_actor_id", context.actorId)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -325,7 +314,9 @@ export async function GET(request: Request) {
       },
       ownership: {
         appUserId: context.appUserId,
-        rule: "activity_object_facts.user_id equals authenticated app_users.id",
+        actorId: context.actorId,
+        rule:
+          "activity_object_facts owner pair equals the authenticated app user and server-resolved active actor",
       },
       schemaMode: {
         source: "activity_object_facts",
@@ -348,4 +339,3 @@ export async function GET(request: Request) {
     { status: 200 }
   );
 }
-

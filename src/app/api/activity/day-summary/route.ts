@@ -477,13 +477,14 @@ export async function GET(request: Request) {
     );
   }
 
-  const { appUser, errorResponse } = await getActivityUserContext();
+  const { appUser, personActor, errorResponse } =
+    await getActivityUserContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!appUser || !personActor) {
     return NextResponse.json(
       {
         ok: false,
@@ -503,6 +504,7 @@ export async function GET(request: Request) {
     .from("activity_events")
     .select("*")
     .eq("user_id", appUser.id)
+    .eq("acting_as_actor_id", personActor.id)
     .or(`started_at.gte.${dayRange.from},created_at.gte.${dayRange.from}`)
     .order("created_at", { ascending: false })
     .limit(500);

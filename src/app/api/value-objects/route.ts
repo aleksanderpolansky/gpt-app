@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 
@@ -11,14 +15,8 @@ type AppUserRow = {
   auth0_sub?: string | null;
 };
 
-type PersonRow = {
-  id: string;
-  user_id?: string | null;
-};
-
 type ActorRow = {
   id: string;
-  person_id?: string | null;
   actor_type?: string | null;
 };
 
@@ -27,19 +25,17 @@ type OrganizationRow = {
   organization_name: string | null;
   organization_type: string | null;
   status: string | null;
-  created_by_user_id: string | null;
+  owner_actor_id: string | null;
 };
 
 type CurrentUserContext =
   | {
       appUser: AppUserRow;
-      person: PersonRow;
       personActor: ActorRow;
       errorResponse: null;
     }
   | {
       appUser: null;
-      person: null;
       personActor: null;
       errorResponse: NextResponse;
     };
@@ -186,7 +182,6 @@ async function getCurrentUserContext(): Promise<CurrentUserContext> {
   if (!session?.user?.sub) {
     return {
       appUser: null,
-      person: null,
       personActor: null,
       errorResponse: NextResponse.json(
         { error: "Not authenticated" },
@@ -195,78 +190,55 @@ async function getCurrentUserContext(): Promise<CurrentUserContext> {
     };
   }
 
-  const { data: appUser, error: appUserError } = await supabase
-    .from("app_users")
-    .select("id, auth0_sub")
-    .eq("auth0_sub", session.user.sub)
-    .single();
+  try {
+    const actorContext = await resolveActiveActorContext(session.user.sub);
 
-  if (appUserError || !appUser) {
+    return {
+      appUser: {
+        id: actorContext.appUserId,
+        auth0_sub: session.user.sub,
+      },
+      personActor: {
+        id: actorContext.actorId,
+        actor_type: actorContext.actorType,
+      },
+      errorResponse: null,
+    };
+  } catch (error) {
+    if (error instanceof ActorContextError) {
+      return {
+        appUser: null,
+        personActor: null,
+        errorResponse: NextResponse.json(
+          {
+            error: error.message,
+            errorCode: error.code,
+          },
+          { status: error.status },
+        ),
+      };
+    }
+
     return {
       appUser: null,
-      person: null,
       personActor: null,
       errorResponse: NextResponse.json(
-        { error: appUserError?.message ?? "App user not found" },
+        { error: "Could not resolve active actor context" },
         { status: 500 },
       ),
     };
   }
-
-  const { data: person, error: personError } = await supabase
-    .from("persons")
-    .select("id, user_id")
-    .eq("user_id", appUser.id)
-    .single();
-
-  if (personError || !person) {
-    return {
-      appUser: null,
-      person: null,
-      personActor: null,
-      errorResponse: NextResponse.json(
-        { error: personError?.message ?? "Person not found" },
-        { status: 500 },
-      ),
-    };
-  }
-
-  const { data: personActor, error: personActorError } = await supabase
-    .from("actors")
-    .select("id, person_id, actor_type")
-    .eq("person_id", person.id)
-    .eq("actor_type", "person")
-    .single();
-
-  if (personActorError || !personActor) {
-    return {
-      appUser: null,
-      person: null,
-      personActor: null,
-      errorResponse: NextResponse.json(
-        { error: personActorError?.message ?? "Person actor not found" },
-        { status: 500 },
-      ),
-    };
-  }
-
-  return {
-    appUser,
-    person,
-    personActor,
-    errorResponse: null,
-  };
 }
 
 async function verifyOrganizationAccess(
-  appUserId: string,
+  activeActorId: string,
   organizationId: string,
 ): Promise<OrganizationAccessResult> {
   const { data: organization, error: organizationError } = await supabase
     .from("organizations")
-    .select("id, organization_name, organization_type, status, created_by_user_id")
+    .select("id, organization_name, organization_type, status, owner_actor_id")
     .eq("id", organizationId)
-    .eq("created_by_user_id", appUserId)
+    .eq("owner_actor_id", activeActorId)
     .single();
 
   if (organizationError || !organization) {
@@ -286,7 +258,8 @@ async function verifyOrganizationAccess(
 }
 
 export async function GET() {
-  const { personActor, errorResponse } = await getCurrentUserContext();
+  const { appUser, personActor, errorResponse } =
+    await getCurrentUserContext();
 
   if (errorResponse) {
     return errorResponse;
@@ -305,6 +278,7 @@ export async function GET() {
       )
     `,
     )
+    .eq("owner_user_id", appUser.id)
     .eq("owner_actor_id", personActor.id)
     .order("created_at", { ascending: false });
 
@@ -357,7 +331,7 @@ async function createDraftValueObject(
     const {
       organization: verifiedOrganization,
       errorResponse: organizationAccessErrorResponse,
-    } = await verifyOrganizationAccess(appUser.id, organizationId);
+    } = await verifyOrganizationAccess(personActor.id, organizationId);
 
     if (organizationAccessErrorResponse) {
       return organizationAccessErrorResponse;
@@ -444,7 +418,7 @@ async function createLegacyCommercialValueObject(
   }
 
   const { organization, errorResponse: organizationAccessErrorResponse } =
-    await verifyOrganizationAccess(appUser.id, organizationId);
+    await verifyOrganizationAccess(personActor.id, organizationId);
 
   if (organizationAccessErrorResponse) {
     return organizationAccessErrorResponse;

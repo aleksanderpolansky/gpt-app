@@ -497,18 +497,20 @@ function buildTimelineCandidate(params: {
 
 async function getNearbyTimelineEvents(params: {
   userId: string;
+  actorId: string;
   eventId: string;
   searchRange: {
     from: string;
     to: string;
   };
 }) {
-  const { userId, eventId, searchRange } = params;
+  const { userId, actorId, eventId, searchRange } = params;
 
   const { data, error } = await supabase
     .from("activity_events")
     .select("*")
     .eq("user_id", userId)
+    .eq("acting_as_actor_id", actorId)
     .neq("id", eventId)
     .not("started_at", "is", null)
     .gte("started_at", searchRange.from)
@@ -527,8 +529,9 @@ async function detectTimelineConflicts(params: {
   previousEvent: ActivityEventRow;
   updatedEvent: ActivityEventRow;
   userId: string;
+  actorId: string;
 }): Promise<TimelineConflictDetectionResult> {
-  const { previousEvent, updatedEvent, userId } = params;
+  const { previousEvent, updatedEvent, userId, actorId } = params;
 
   const previousDuration = getDurationFromEvent(previousEvent);
   const updatedDuration = getDurationFromEvent(updatedEvent);
@@ -586,6 +589,7 @@ async function detectTimelineConflicts(params: {
 
   const nearbyEvents = await getNearbyTimelineEvents({
     userId,
+    actorId,
     eventId: updatedEvent.id,
     searchRange,
   });
@@ -624,14 +628,16 @@ async function safeDetectTimelineConflicts(params: {
   previousEvent: ActivityEventRow;
   updatedEvent: ActivityEventRow;
   userId: string;
+  actorId: string;
 }): Promise<TimelineConflictDetectionResult> {
-  const { previousEvent, updatedEvent, userId } = params;
+  const { previousEvent, updatedEvent, userId, actorId } = params;
 
   try {
     return await detectTimelineConflicts({
       previousEvent,
       updatedEvent,
       userId,
+      actorId,
     });
   } catch (error) {
     return {
@@ -798,14 +804,19 @@ function resolveCorrectionTiming(params: {
   };
 }
 
-async function getActivityEvent(params: { eventId: string; userId: string }) {
-  const { eventId, userId } = params;
+async function getActivityEvent(params: {
+  eventId: string;
+  userId: string;
+  actorId: string;
+}) {
+  const { eventId, userId, actorId } = params;
 
   const { data, error } = await supabase
     .from("activity_events")
     .select("*")
     .eq("id", eventId)
     .eq("user_id", userId)
+    .eq("acting_as_actor_id", actorId)
     .maybeSingle();
 
   if (error) {
@@ -922,6 +933,7 @@ async function collectPreviousAuditState(params: {
 async function markCorrectionAuditFailure(params: {
   event: ActivityEventRow;
   userId: string;
+  actorId: string;
   correctionFlow: string;
   correctionStage: string;
   correctionError: string;
@@ -929,6 +941,7 @@ async function markCorrectionAuditFailure(params: {
   const {
     event,
     userId,
+    actorId,
     correctionFlow,
     correctionStage,
     correctionError,
@@ -954,6 +967,7 @@ async function markCorrectionAuditFailure(params: {
     })
     .eq("id", event.id)
     .eq("user_id", userId)
+    .eq("acting_as_actor_id", actorId)
     .select()
     .single();
 
@@ -1008,13 +1022,14 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  const { appUser, errorResponse } = await getActivityUserContext();
+  const { appUser, personActor, errorResponse } =
+    await getActivityUserContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!appUser || !personActor) {
     return NextResponse.json(
       {
         ok: false,
@@ -1078,6 +1093,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     previousEvent = await getActivityEvent({
       eventId,
       userId: appUser.id,
+      actorId: personActor.id,
     });
   } catch (error) {
     return NextResponse.json(
@@ -1286,6 +1302,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       })
       .eq("id", previousEvent.id)
       .eq("user_id", appUser.id)
+      .eq("acting_as_actor_id", personActor.id)
       .select()
       .single();
 
@@ -1431,7 +1448,8 @@ export async function PATCH(request: Request, context: RouteContext) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", updatedEvent.id)
-        .eq("user_id", appUser.id);
+        .eq("user_id", appUser.id)
+        .eq("acting_as_actor_id", personActor.id);
 
       return NextResponse.json(
         {
@@ -1535,6 +1553,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       const recovery = await markCorrectionAuditFailure({
         event: updatedEvent,
         userId: appUser.id,
+        actorId: personActor.id,
         correctionFlow: "B11.3b",
         correctionStage: "status_rollback_audit_insert",
         correctionError: correctionError.message,
@@ -1882,6 +1901,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     })
     .eq("id", previousEvent.id)
     .eq("user_id", appUser.id)
+    .eq("acting_as_actor_id", personActor.id)
     .select()
     .single();
 
@@ -2045,7 +2065,8 @@ export async function PATCH(request: Request, context: RouteContext) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", updatedEvent.id)
-        .eq("user_id", appUser.id);
+        .eq("user_id", appUser.id)
+        .eq("acting_as_actor_id", personActor.id);
 
       return NextResponse.json(
         {
@@ -2101,6 +2122,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         previousEvent,
         updatedEvent,
         userId: appUser.id,
+        actorId: personActor.id,
       })
     : {
         ok: true,
@@ -2187,6 +2209,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const recovery = await markCorrectionAuditFailure({
       event: updatedEvent,
       userId: appUser.id,
+      actorId: personActor.id,
       correctionFlow: "B11.3a",
       correctionStage: "correction_audit_insert",
       correctionError: correctionError.message,
@@ -2312,6 +2335,3 @@ export async function PATCH(request: Request, context: RouteContext) {
     },
   });
 }
-
-
-

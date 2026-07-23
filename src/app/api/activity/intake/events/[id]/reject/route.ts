@@ -208,13 +208,14 @@ export async function POST(
     );
   }
 
-  const { appUser, errorResponse } = await getActivityUserContext();
+  const { appUser, personActor, errorResponse } =
+    await getActivityUserContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!appUser || !personActor) {
     return NextResponse.json(
       {
         ok: false,
@@ -248,6 +249,7 @@ export async function POST(
       .select("*")
       .eq("id", eventId)
       .eq("user_id", appUser.id)
+      .eq("acting_as_actor_id", personActor.id)
       .maybeSingle();
 
     if (eventError) {
@@ -334,6 +336,7 @@ export async function POST(
       })
       .eq("id", eventId)
       .eq("user_id", appUser.id)
+      .eq("acting_as_actor_id", personActor.id)
       .eq("status", "imported_pending")
       .select("*")
       .single();
@@ -371,4 +374,3 @@ export async function POST(
     );
   }
 }
-

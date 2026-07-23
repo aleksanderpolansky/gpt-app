@@ -1,6 +1,10 @@
 ﻿import crypto from "crypto";
 import { NextResponse } from "next/server";
 
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
 import { getSupabaseAdminClient } from "../../../../../../lib/supabase/admin";
 
@@ -599,6 +603,7 @@ async function resolveSelectedSpace(params: {
 async function resolveActorForSpace(params: {
   supabase: any;
   selectedSpaceId: string | null;
+  trustedAuthSubject: string | null;
 }): Promise<ActorResolution> {
   if (!params.selectedSpaceId) {
     return {
@@ -612,34 +617,7 @@ async function resolveActorForSpace(params: {
     };
   }
 
-  const { data, error } = await params.supabase
-    .from("actor_space_roles")
-    .select("id, actor_id, space_id")
-    .eq("space_id", params.selectedSpaceId)
-    .limit(20);
-
-  if (error) {
-    return {
-      outcome: "query_error",
-      candidateActorCount: 0,
-      actorId: null,
-      actorIdSha256Prefix: null,
-      actorIdAvailableForFutureWriteGate: false,
-      errorCode: error.code ?? "unknown",
-      errorMessage: sanitizeErrorMessage(error.message),
-    };
-  }
-
-  const rows = Array.isArray(data) ? (data as JsonRecord[]) : [];
-  const actorIds = Array.from(
-    new Set(
-      rows
-        .map((row) => readStringProperty(row, "actor_id"))
-        .filter((value): value is string => Boolean(value))
-    )
-  );
-
-  if (actorIds.length === 0) {
+  if (!params.trustedAuthSubject) {
     return {
       outcome: "no_actor_candidate",
       candidateActorCount: 0,
@@ -651,27 +629,55 @@ async function resolveActorForSpace(params: {
     };
   }
 
-  if (actorIds.length > 1) {
+  try {
+    const actorContext = await resolveActiveActorContext(
+      params.trustedAuthSubject
+    );
+    const { data: actorRole, error: actorRoleError } = await params.supabase
+      .from("actor_space_roles")
+      .select("actor_id")
+      .eq("space_id", params.selectedSpaceId)
+      .eq("actor_id", actorContext.actorId)
+      .limit(1)
+      .maybeSingle();
+
+    if (actorRoleError || !actorRole) {
+      return {
+        outcome: actorRoleError ? "query_error" : "no_actor_candidate",
+        candidateActorCount: 0,
+        actorId: null,
+        actorIdSha256Prefix: null,
+        actorIdAvailableForFutureWriteGate: false,
+        errorCode: actorRoleError?.code ?? null,
+        errorMessage: actorRoleError
+          ? sanitizeErrorMessage(actorRoleError.message)
+          : null,
+      };
+    }
+
     return {
-      outcome: "multiple_actor_candidates",
-      candidateActorCount: actorIds.length,
-      actorId: null,
-      actorIdSha256Prefix: null,
-      actorIdAvailableForFutureWriteGate: false,
+      outcome: "resolved_single_actor",
+      candidateActorCount: 1,
+      actorId: actorContext.actorId,
+      actorIdSha256Prefix: hashDiagnosticValue(actorContext.actorId),
+      actorIdAvailableForFutureWriteGate: true,
       errorCode: null,
       errorMessage: null,
     };
+  } catch (error) {
+    return {
+      outcome: "query_error",
+      candidateActorCount: 0,
+      actorId: null,
+      actorIdSha256Prefix: null,
+      actorIdAvailableForFutureWriteGate: false,
+      errorCode:
+        error instanceof ActorContextError ? error.code : "unknown",
+      errorMessage: sanitizeErrorMessage(
+        error instanceof Error ? error.message : "Actor context failed"
+      ),
+    };
   }
-
-  return {
-    outcome: "resolved_single_actor",
-    candidateActorCount: 1,
-    actorId: actorIds[0],
-    actorIdSha256Prefix: hashDiagnosticValue(actorIds[0]),
-    actorIdAvailableForFutureWriteGate: true,
-    errorCode: null,
-    errorMessage: null,
-  };
 }
 
 async function buildReadiness(
@@ -731,6 +737,7 @@ async function buildReadiness(
   const actorResolution = await resolveActorForSpace({
     supabase,
     selectedSpaceId: selectedSpaceResolution.selectedSpaceId,
+    trustedAuthSubject,
   });
 
   const blockers: string[] = [];
@@ -919,6 +926,19 @@ function buildActivityEventPayload(params: {
     column: "actor_id",
     value: params.readiness.raw.actorId,
   });
+
+  for (const column of [
+    "performed_by_actor_id",
+    "acting_as_actor_id",
+    "acting_for_actor_id",
+  ]) {
+    addIfColumnExists({
+      payload,
+      inventory,
+      column,
+      value: params.readiness.raw.actorId,
+    });
+  }
 
   addIfColumnExists({
     payload,

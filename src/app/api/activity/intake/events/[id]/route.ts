@@ -1061,13 +1061,14 @@ export async function GET(
     );
   }
 
-  const { appUser, errorResponse } = await getActivityUserContext();
+  const { appUser, personActor, errorResponse } =
+    await getActivityUserContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!appUser || !personActor) {
     return NextResponse.json(
       {
         ok: false,
@@ -1100,6 +1101,7 @@ export async function GET(
       .select("*")
       .eq("id", eventId)
       .eq("user_id", appUser.id)
+      .eq("acting_as_actor_id", personActor.id)
       .maybeSingle();
 
     if (eventError) {
@@ -1180,13 +1182,14 @@ export async function PATCH(
     );
   }
 
-  const { appUser, errorResponse } = await getActivityUserContext();
+  const { appUser, personActor, errorResponse } =
+    await getActivityUserContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
-  if (!appUser) {
+  if (!appUser || !personActor) {
     return NextResponse.json(
       {
         ok: false,
@@ -1218,6 +1221,7 @@ export async function PATCH(
       .select("*")
       .eq("id", eventId)
       .eq("user_id", appUser.id)
+      .eq("acting_as_actor_id", personActor.id)
       .maybeSingle();
 
     if (eventError) {
@@ -1332,6 +1336,7 @@ export async function PATCH(
       .update(finalUpdate)
       .eq("id", eventId)
       .eq("user_id", appUser.id)
+      .eq("acting_as_actor_id", personActor.id)
       .eq("status", "imported_pending")
       .select("*")
       .single();
@@ -1438,7 +1443,6 @@ export async function PATCH(
     );
   }
 }
-
 
 
 

@@ -1,6 +1,10 @@
 ﻿import crypto from "crypto";
 import { NextResponse } from "next/server";
 
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
 import { getSupabaseAdminClient } from "../../../../../../lib/supabase/admin";
 import { buildC32StableLinkBundle } from "../../../../../../lib/activity/categoryDerivation/c32SemanticPersistenceProofHelpers";
@@ -286,6 +290,7 @@ async function resolveSelectedSpace(params: {
 async function resolveActorForSpace(params: {
   supabase: any;
   selectedSpaceId: string | null;
+  trustedAuthSubject: string | null;
 }) {
   if (!params.selectedSpaceId) {
     return {
@@ -298,36 +303,9 @@ async function resolveActorForSpace(params: {
     };
   }
 
-  const { data, error } = await params.supabase
-    .from("actor_space_roles")
-    .select("actor_id, space_id")
-    .eq("space_id", params.selectedSpaceId)
-    .limit(20);
-
-  if (error) {
+  if (!params.trustedAuthSubject) {
     return {
-      outcome: "query_error",
-      actorId: null,
-      actorIdSha256Prefix: null,
-      actorCandidateCount: 0,
-      errorCode: error.code ?? "unknown",
-      errorMessage: sanitizeErrorMessage(error.message),
-    };
-  }
-
-  const rows = Array.isArray(data) ? (data as JsonRecord[]) : [];
-
-  const actorIds = Array.from(
-    new Set(
-      rows
-        .map((row) => readStringProperty(row, "actor_id"))
-        .filter((value): value is string => Boolean(value))
-    )
-  );
-
-  if (actorIds.length === 0) {
-    return {
-      outcome: "no_actor_candidate",
+      outcome: "not_attempted_no_session",
       actorId: null,
       actorIdSha256Prefix: null,
       actorCandidateCount: 0,
@@ -336,33 +314,61 @@ async function resolveActorForSpace(params: {
     };
   }
 
-  if (actorIds.length > 1) {
+  try {
+    const actorContext = await resolveActiveActorContext(
+      params.trustedAuthSubject
+    );
+    const { data: actorRole, error: actorRoleError } = await params.supabase
+      .from("actor_space_roles")
+      .select("actor_id")
+      .eq("space_id", params.selectedSpaceId)
+      .eq("actor_id", actorContext.actorId)
+      .limit(1)
+      .maybeSingle();
+
+    if (actorRoleError || !actorRole) {
+      return {
+        outcome: actorRoleError ? "query_error" : "no_actor_candidate",
+        actorId: null,
+        actorIdSha256Prefix: null,
+        actorCandidateCount: 0,
+        errorCode: actorRoleError?.code ?? null,
+        errorMessage: actorRoleError
+          ? sanitizeErrorMessage(actorRoleError.message)
+          : null,
+      };
+    }
+
     return {
-      outcome: "multiple_actor_candidates",
-      actorId: null,
-      actorIdSha256Prefix: null,
-      actorCandidateCount: actorIds.length,
+      outcome: "resolved_single_actor",
+      actorId: actorContext.actorId,
+      actorIdSha256Prefix: hashDiagnosticValue(actorContext.actorId),
+      actorCandidateCount: 1,
       errorCode: null,
       errorMessage: null,
     };
+  } catch (error) {
+    return {
+      outcome: "actor_context_error",
+      actorId: null,
+      actorIdSha256Prefix: null,
+      actorCandidateCount: 0,
+      errorCode:
+        error instanceof ActorContextError ? error.code : "unknown",
+      errorMessage: sanitizeErrorMessage(
+        error instanceof Error ? error.message : "Actor context failed"
+      ),
+    };
   }
-
-  return {
-    outcome: "resolved_single_actor",
-    actorId: actorIds[0],
-    actorIdSha256Prefix: hashDiagnosticValue(actorIds[0]),
-    actorCandidateCount: 1,
-    errorCode: null,
-    errorMessage: null,
-  };
 }
 
 async function findActivityEvent(params: {
   supabase: any;
   appUserId: string | null;
+  actorId: string | null;
   insertedActivityEventIdSha256Prefix: string | null;
 }) {
-  if (!params.appUserId) {
+  if (!params.appUserId || !params.actorId) {
     return {
       outcome: "missing_app_user",
       activityEventId: null,
@@ -394,6 +400,7 @@ async function findActivityEvent(params: {
     .from("activity_events")
     .select("id, user_id, title, source, status, duration_minutes, created_at")
     .eq("user_id", params.appUserId)
+    .eq("acting_as_actor_id", params.actorId)
     .eq("source", "chat_ai")
     .order("created_at", { ascending: false })
     .limit(50);
@@ -466,9 +473,10 @@ async function findActivityEvent(params: {
 async function findExistingValueObject(params: {
   supabase: any;
   appUserId: string | null;
+  actorId: string | null;
   selectedSpaceId: string | null;
 }) {
-  if (!params.appUserId || !params.selectedSpaceId) {
+  if (!params.appUserId || !params.actorId || !params.selectedSpaceId) {
     return {
       outcome: "not_attempted_missing_scope",
       existingCount: 0,
@@ -486,6 +494,8 @@ async function findExistingValueObject(params: {
   const { data, error } = await params.supabase
     .from("value_objects")
     .select("id, title, source, value_type, status, created_at")
+    .eq("owner_user_id", params.appUserId)
+    .eq("owner_actor_id", params.actorId)
     .eq("app_user_id", params.appUserId)
     .eq("space_id", params.selectedSpaceId)
     .eq("source", "semantic_candidate")
@@ -692,11 +702,13 @@ async function buildRuntimeContext(params: {
   const actorResolution = await resolveActorForSpace({
     supabase: params.supabase,
     selectedSpaceId: selectedSpaceResolution.selectedSpaceId,
+    trustedAuthSubject: params.trustedAuthSubject,
   });
 
   const activityEventResolution = await findActivityEvent({
     supabase: params.supabase,
     appUserId: appUserMapping.appUserId,
+    actorId: actorResolution.actorId,
     insertedActivityEventIdSha256Prefix:
       params.insertedActivityEventIdSha256Prefix,
   });
@@ -704,6 +716,7 @@ async function buildRuntimeContext(params: {
   const valueObjectResolution = await findExistingValueObject({
     supabase: params.supabase,
     appUserId: appUserMapping.appUserId,
+    actorId: actorResolution.actorId,
     selectedSpaceId: selectedSpaceResolution.selectedSpaceId,
   });
 
@@ -1117,5 +1130,4 @@ export async function POST(request: Request) {
     next: "C32 final verification and transfer report can be prepared.",
   });
 }
-
 

@@ -18,38 +18,20 @@
  * - this helper does not create users, persons, actors, state facts, or dimensions.
  */
 
+import {
+  ActorContextError,
+  resolveActiveActorContext,
+} from "../../../actor-context";
 import { auth0 } from "../../../auth0";
-import { supabase } from "../../../supabase";
 
 import type {
   AuthenticatedStateFactActor,
   StateFactPersistenceErrorCode,
-  UuidString,
 } from "./types";
 
 type AuthSessionUserLike = {
   sub?: unknown;
   email?: unknown;
-  [key: string]: unknown;
-};
-
-type AppUserRow = {
-  id?: unknown;
-  auth0_sub?: unknown;
-  email?: unknown;
-  [key: string]: unknown;
-};
-
-type PersonRow = {
-  id?: unknown;
-  user_id?: unknown;
-  [key: string]: unknown;
-};
-
-type ActorRow = {
-  id?: unknown;
-  person_id?: unknown;
-  actor_type?: unknown;
   [key: string]: unknown;
 };
 
@@ -120,8 +102,7 @@ function buildSuccess(
  *
  * This helper is intentionally read-only:
  * - reads Auth0 session;
- * - reads app_users by auth0_sub;
- * - optionally reads persons and actors;
+ * - resolves the server-selected active actor;
  * - does not create or update any row;
  * - does not touch the future state fact storage table.
  */
@@ -145,105 +126,42 @@ export async function resolveAuthenticatedStateFactActor(): Promise<ResolveAuthe
     );
   }
 
-  const { data: appUserData, error: appUserError } = await supabase
-    .from("app_users")
-    .select("id, auth0_sub, email")
-    .eq("auth0_sub", authSubject)
-    .maybeSingle();
+  try {
+    const actorContext = await resolveActiveActorContext(authSubject);
 
-  if (appUserError) {
-    return buildFailure(
-      "APP_USER_NOT_FOUND",
-      "Application user could not be resolved from authenticated identity."
-    );
-  }
-
-  const appUser = appUserData as AppUserRow | null;
-
-  if (!appUser) {
-    return buildFailure(
-      "APP_USER_NOT_FOUND",
-      "Application user was not found for authenticated identity."
-    );
-  }
-
-  const appUserId = toNullableString(appUser.id);
-  const appUserAuthSubject = toNullableString(appUser.auth0_sub);
-
-  if (!appUserId || !appUserAuthSubject || appUserAuthSubject !== authSubject) {
-    return buildFailure(
-      "AMBIGUOUS_IDENTITY",
-      "Application user identity is incomplete or inconsistent."
-    );
-  }
-
-  if (isPlaceholderUuid(appUserId)) {
-    return buildFailure(
-      "PLACEHOLDER_USER_BLOCKED",
-      "Placeholder application user identifiers cannot be used for controlled persistence."
-    );
-  }
-
-  const { data: personData, error: personError } = await supabase
-    .from("persons")
-    .select("id, user_id")
-    .eq("user_id", appUserId)
-    .maybeSingle();
-
-  if (personError) {
-    return buildFailure(
-      "UNKNOWN_ERROR",
-      "Person context could not be read for authenticated application user."
-    );
-  }
-
-  const person = personData as PersonRow | null;
-  const personId = person ? toNullableString(person.id) : null;
-
-  if (personId && isPlaceholderUuid(personId)) {
-    return buildFailure(
-      "PLACEHOLDER_USER_BLOCKED",
-      "Placeholder person identifiers cannot be used for controlled persistence."
-    );
-  }
-
-  let actorId: UuidString | null = null;
-
-  if (personId) {
-    const { data: actorData, error: actorError } = await supabase
-      .from("actors")
-      .select("id, person_id, actor_type")
-      .eq("person_id", personId)
-      .eq("actor_type", "person")
-      .maybeSingle();
-
-    if (actorError) {
-      return buildFailure(
-        "UNKNOWN_ERROR",
-        "Actor context could not be read for authenticated person."
-      );
-    }
-
-    const actor = actorData as ActorRow | null;
-    const resolvedActorId = actor ? toNullableString(actor.id) : null;
-
-    if (resolvedActorId && isPlaceholderUuid(resolvedActorId)) {
+    if (
+      isPlaceholderUuid(actorContext.appUserId) ||
+      isPlaceholderUuid(actorContext.actorId)
+    ) {
       return buildFailure(
         "PLACEHOLDER_USER_BLOCKED",
-        "Placeholder actor identifiers cannot be used for controlled persistence."
+        "Placeholder user or actor identifiers cannot be used for controlled persistence."
       );
     }
 
-    actorId = resolvedActorId;
+    const actor: AuthenticatedStateFactActor = {
+      appUserId: actorContext.appUserId,
+      actorId: actorContext.actorId,
+      personId: null,
+      authSubject,
+      email: toNullableString(sessionUser.email),
+    };
+
+    return buildSuccess(actor);
+  } catch (error) {
+    if (
+      error instanceof ActorContextError &&
+      error.code === "APP_USER_NOT_FOUND"
+    ) {
+      return buildFailure(
+        "APP_USER_NOT_FOUND",
+        "Application user was not found for authenticated identity."
+      );
+    }
+
+    return buildFailure(
+      "UNKNOWN_ERROR",
+      "Active actor context could not be resolved for controlled persistence."
+    );
   }
-
-  const actor: AuthenticatedStateFactActor = {
-    appUserId,
-    actorId,
-    personId,
-    authSubject,
-    email: toNullableString(sessionUser.email) ?? toNullableString(appUser.email),
-  };
-
-  return buildSuccess(actor);
 }
