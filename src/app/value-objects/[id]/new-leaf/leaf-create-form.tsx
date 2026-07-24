@@ -9,11 +9,12 @@ type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 type LeafCreateFormProps = {
   locale: LocaleCode;
   activeProfileName: string;
-  root: {
+  parent: {
     id: string;
     title: string;
     branchTypeCode: string;
     objectKind: string;
+    rootValueObjectId: string;
     status: string;
   };
 };
@@ -23,7 +24,7 @@ type Copy = {
   title: string;
   description: string;
   activeProfile: string;
-  root: string;
+  parent: string;
   inheritedBranch: string;
   objectTitle: string;
   objectDescription: string;
@@ -44,9 +45,9 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Activity observation leaf",
     title: "Create an activity leaf",
     description:
-      "A leaf is a repeatable activity pattern observed inside the selected root. Its branch, owner and root path are inherited on the server.",
+      "A leaf is a repeatable activity pattern under the selected structural parent. Its branch, owner and root path are inherited on the server.",
     activeProfile: "Current active profile",
-    root: "Parent root",
+    parent: "Structural parent",
     inheritedBranch: "Inherited branch",
     objectTitle: "Activity pattern name",
     objectDescription: "Description",
@@ -55,7 +56,7 @@ const COPY: Record<LocaleCode, Copy> = {
       "What repeatable activity does this leaf represent?",
     create: "Create leaf",
     creating: "Creating…",
-    back: "Back to root",
+    back: "Back to parent",
     errorPrefix: "Could not create the leaf:",
     draftNotice: "The new leaf will be a private draft by default.",
     fixedKind: "Object kind",
@@ -67,9 +68,9 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Liść obserwacji aktywności",
     title: "Utwórz liść aktywności",
     description:
-      "Liść to powtarzalny wzorzec aktywności obserwowany w wybranym korzeniu. Gałąź, właściciel i ścieżka korzenia są dziedziczone po stronie serwera.",
+      "Liść to powtarzalny wzorzec aktywności pod wybranym obiektem strukturalnym. Gałąź, właściciel i ścieżka korzenia są dziedziczone po stronie serwera.",
     activeProfile: "Aktualnie aktywny profil",
-    root: "Korzeń nadrzędny",
+    parent: "Nadrzędny obiekt strukturalny",
     inheritedBranch: "Dziedziczona gałąź",
     objectTitle: "Nazwa wzorca aktywności",
     objectDescription: "Opis",
@@ -78,7 +79,7 @@ const COPY: Record<LocaleCode, Copy> = {
       "Jaką powtarzalną aktywność reprezentuje ten liść?",
     create: "Utwórz liść",
     creating: "Tworzenie…",
-    back: "Wróć do korzenia",
+    back: "Wróć do obiektu nadrzędnego",
     errorPrefix: "Nie udało się utworzyć liścia:",
     draftNotice: "Nowy liść będzie domyślnie prywatnym szkicem.",
     fixedKind: "Rodzaj obiektu",
@@ -90,9 +91,9 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Лист наблюдения активности",
     title: "Создать лист активности",
     description:
-      "Лист — повторяемый шаблон активности внутри выбранного корня. Ветвь, владелец и путь к корню наследуются на сервере.",
+      "Лист — повторяемый шаблон активности под выбранным структурным объектом. Ветвь, владелец и полный путь к корню наследуются на сервере.",
     activeProfile: "Текущий активный профиль",
-    root: "Родительский корень",
+    parent: "Родительский структурный объект",
     inheritedBranch: "Унаследованная ветвь",
     objectTitle: "Название шаблона активности",
     objectDescription: "Описание",
@@ -101,7 +102,7 @@ const COPY: Record<LocaleCode, Copy> = {
       "Какую повторяемую активность представляет этот лист?",
     create: "Создать лист",
     creating: "Создание…",
-    back: "Назад к корню",
+    back: "Назад к родительскому объекту",
     errorPrefix: "Не удалось создать лист:",
     draftNotice: "Новый лист по умолчанию будет приватным черновиком.",
     fixedKind: "Вид объекта",
@@ -113,9 +114,9 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Листок спостереження активності",
     title: "Створити листок активності",
     description:
-      "Листок — повторюваний шаблон активності всередині вибраного кореня. Гілка, власник і шлях до кореня успадковуються на сервері.",
+      "Листок — повторюваний шаблон активності під вибраним структурним об’єктом. Гілка, власник і повний шлях до кореня успадковуються на сервері.",
     activeProfile: "Поточний активний профіль",
-    root: "Батьківський корінь",
+    parent: "Батьківський структурний об’єкт",
     inheritedBranch: "Успадкована гілка",
     objectTitle: "Назва шаблону активності",
     objectDescription: "Опис",
@@ -124,7 +125,7 @@ const COPY: Record<LocaleCode, Copy> = {
       "Яку повторювану активність представляє цей листок?",
     create: "Створити листок",
     creating: "Створення…",
-    back: "Назад до кореня",
+    back: "Назад до батьківського об’єкта",
     errorPrefix: "Не вдалося створити листок:",
     draftNotice: "Новий листок за замовчуванням буде приватною чернеткою.",
     fixedKind: "Вид об’єкта",
@@ -136,9 +137,9 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Aktivitäts-Beobachtungsblatt",
     title: "Aktivitätsblatt erstellen",
     description:
-      "Ein Blatt ist ein wiederholbares Aktivitätsmuster innerhalb der ausgewählten Wurzel. Zweig, Eigentümer und Wurzelpfad werden serverseitig geerbt.",
+      "Ein Blatt ist ein wiederholbares Aktivitätsmuster unter dem ausgewählten Strukturobjekt. Zweig, Eigentümer und Wurzelpfad werden serverseitig geerbt.",
     activeProfile: "Aktuell aktives Profil",
-    root: "Übergeordnete Wurzel",
+    parent: "Übergeordnetes Strukturobjekt",
     inheritedBranch: "Geerbter Zweig",
     objectTitle: "Name des Aktivitätsmusters",
     objectDescription: "Beschreibung",
@@ -147,7 +148,7 @@ const COPY: Record<LocaleCode, Copy> = {
       "Welche wiederholbare Aktivität stellt dieses Blatt dar?",
     create: "Blatt erstellen",
     creating: "Wird erstellt…",
-    back: "Zurück zur Wurzel",
+    back: "Zurück zum übergeordneten Objekt",
     errorPrefix: "Blatt konnte nicht erstellt werden:",
     draftNotice: "Das neue Blatt ist standardmäßig ein privater Entwurf.",
     fixedKind: "Objektart",
@@ -159,9 +160,9 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Hoja de observación de actividad",
     title: "Crear hoja de actividad",
     description:
-      "Una hoja es un patrón de actividad repetible dentro de la raíz seleccionada. La rama, el propietario y la ruta raíz se heredan en el servidor.",
+      "Una hoja es un patrón de actividad repetible bajo el objeto estructural seleccionado. La rama, el propietario y la ruta raíz se heredan en el servidor.",
     activeProfile: "Perfil activo actual",
-    root: "Raíz principal",
+    parent: "Objeto estructural padre",
     inheritedBranch: "Rama heredada",
     objectTitle: "Nombre del patrón de actividad",
     objectDescription: "Descripción",
@@ -170,7 +171,7 @@ const COPY: Record<LocaleCode, Copy> = {
       "¿Qué actividad repetible representa esta hoja?",
     create: "Crear hoja",
     creating: "Creando…",
-    back: "Volver a la raíz",
+    back: "Volver al objeto padre",
     errorPrefix: "No se pudo crear la hoja:",
     draftNotice: "La nueva hoja será privada y borrador por defecto.",
     fixedKind: "Tipo de objeto",
@@ -182,9 +183,9 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "List pozorování aktivity",
     title: "Vytvořit list aktivity",
     description:
-      "List je opakovatelný vzor aktivity uvnitř vybraného kořene. Větev, vlastník a cesta ke kořeni se dědí na serveru.",
+      "List je opakovatelný vzor aktivity pod vybraným strukturálním objektem. Větev, vlastník a cesta ke kořeni se dědí na serveru.",
     activeProfile: "Aktuálně aktivní profil",
-    root: "Nadřazený kořen",
+    parent: "Nadřazený strukturální objekt",
     inheritedBranch: "Zděděná větev",
     objectTitle: "Název vzoru aktivity",
     objectDescription: "Popis",
@@ -193,7 +194,7 @@ const COPY: Record<LocaleCode, Copy> = {
       "Jakou opakovatelnou aktivitu tento list představuje?",
     create: "Vytvořit list",
     creating: "Vytváření…",
-    back: "Zpět ke kořeni",
+    back: "Zpět k nadřazenému objektu",
     errorPrefix: "List se nepodařilo vytvořit:",
     draftNotice: "Nový list bude ve výchozím stavu soukromý koncept.",
     fixedKind: "Druh objektu",
@@ -220,7 +221,7 @@ function buildLocaleHref(pathname: string, locale: LocaleCode) {
 export function LeafCreateForm({
   locale,
   activeProfileName,
-  root,
+  parent,
 }: LeafCreateFormProps) {
   const router = useRouter();
   const copy = COPY[locale];
@@ -250,7 +251,7 @@ export function LeafCreateForm({
         },
         body: JSON.stringify({
           creationMode: "leaf_draft_v3",
-          parentValueObjectId: root.id,
+          parentValueObjectId: parent.id,
           title: normalizedTitle,
           description: description.trim() || null,
           locale,
@@ -294,7 +295,7 @@ export function LeafCreateForm({
             </div>
 
             <Link
-              href={buildLocaleHref(`/value-objects/${root.id}`, locale)}
+              href={buildLocaleHref(`/value-objects/${parent.id}`, locale)}
               className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
             >
               {copy.back}
@@ -305,8 +306,8 @@ export function LeafCreateForm({
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           {[
             [copy.activeProfile, activeProfileName],
-            [copy.root, root.title],
-            [copy.inheritedBranch, root.branchTypeCode],
+            [copy.parent, parent.title],
+            [copy.inheritedBranch, parent.branchTypeCode],
             [copy.fixedRole, "activity_leaf"],
             [copy.fixedKind, "activity_pattern"],
           ].map(([label, value]) => (
@@ -371,7 +372,7 @@ export function LeafCreateForm({
 
           <div className="mt-6 flex flex-wrap justify-end gap-3">
             <Link
-              href={buildLocaleHref(`/value-objects/${root.id}`, locale)}
+              href={buildLocaleHref(`/value-objects/${parent.id}`, locale)}
               className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#dfe3f1] bg-white px-5 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
             >
               {copy.back}

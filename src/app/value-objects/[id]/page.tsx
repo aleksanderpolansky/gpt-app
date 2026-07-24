@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 
 import {
@@ -38,15 +39,7 @@ type ValueObjectRow = {
   updated_at: string | null;
 };
 
-type ChildRow = {
-  id: string;
-  title: string;
-  node_role_code: string | null;
-  object_kind: string | null;
-  status: string;
-};
-
-type ParentRow = {
+type TreeNodeRow = {
   id: string;
   title: string;
   node_role_code: string | null;
@@ -54,6 +47,8 @@ type ParentRow = {
   branch_type_code: string | null;
   root_value_object_id: string | null;
   parent_value_object_id: string | null;
+  status: string;
+  created_at: string | null;
 };
 
 type CriterionRow = {
@@ -66,6 +61,7 @@ type CriterionRow = {
 type Copy = {
   rootEyebrow: string;
   leafEyebrow: string;
+  intermediateEyebrow: string;
   genericEyebrow: string;
   path: string;
   back: string;
@@ -73,6 +69,8 @@ type Copy = {
   editLater: string;
   addLeaf: string;
   addLeafLater: string;
+  addIntermediate: string;
+  addIntermediateLater: string;
   description: string;
   branch: string;
   kind: string;
@@ -88,6 +86,7 @@ type Copy = {
   relations: string;
   relationsLater: string;
   directChildren: string;
+  descendantLeaves: string;
   successCriteria: string;
   failureCriteria: string;
   source: string;
@@ -99,13 +98,16 @@ const COPY: Record<LocaleCode, Copy> = {
   en: {
     rootEyebrow: "Root observation object",
     leafEyebrow: "Activity observation leaf",
+    intermediateEyebrow: "Intermediate observation object",
     path: "Path",
     genericEyebrow: "Observation object",
     back: "Back to observation objects",
     edit: "Edit",
     editLater: "Editing is not available in this authoring step yet.",
     addLeaf: "Add leaf",
-    addLeafLater: "Leaf creation is not available yet",
+    addLeafLater: "Leaves can be created only under structural objects.",
+    addIntermediate: "Add intermediate",
+    addIntermediateLater: "Intermediate objects can be created only under structural objects.",
     description: "Description",
     branch: "Branch",
     kind: "Object kind",
@@ -115,12 +117,13 @@ const COPY: Record<LocaleCode, Copy> = {
     privacy: "Privacy",
     sensitivity: "Sensitivity",
     children: "Children tree",
-    noChildren: "This root has no child objects yet.",
+    noChildren: "This object has no child objects yet.",
     criteria: "Outcome criteria",
     noCriteria: "No success or failure criteria have been added yet.",
     relations: "Semantic relations",
     relationsLater: "Semantic relations are not available yet.",
     directChildren: "Direct children",
+    descendantLeaves: "Leaf descendants",
     successCriteria: "Success criteria",
     failureCriteria: "Failure criteria",
     source: "Source",
@@ -130,13 +133,16 @@ const COPY: Record<LocaleCode, Copy> = {
   pl: {
     rootEyebrow: "Korzeniowy obiekt obserwacji",
     leafEyebrow: "Liść obserwacji aktywności",
+    intermediateEyebrow: "Pośredni obiekt obserwacji",
     path: "Ścieżka",
     genericEyebrow: "Obiekt obserwacji",
     back: "Wróć do obiektów obserwacji",
     edit: "Edytuj",
     editLater: "Edycja nie jest jeszcze dostępna na tym etapie.",
     addLeaf: "Dodaj liść",
-    addLeafLater: "Tworzenie liści nie jest jeszcze dostępne",
+    addLeafLater: "Liście można tworzyć tylko pod obiektami strukturalnymi.",
+    addIntermediate: "Dodaj obiekt pośredni",
+    addIntermediateLater: "Obiekty pośrednie można tworzyć tylko pod obiektami strukturalnymi.",
     description: "Opis",
     branch: "Gałąź",
     kind: "Rodzaj obiektu",
@@ -146,12 +152,13 @@ const COPY: Record<LocaleCode, Copy> = {
     privacy: "Prywatność",
     sensitivity: "Wrażliwość",
     children: "Drzewo obiektów podrzędnych",
-    noChildren: "Ten korzeń nie ma jeszcze obiektów podrzędnych.",
+    noChildren: "Ten obiekt nie ma jeszcze obiektów podrzędnych.",
     criteria: "Kryteria wyniku",
     noCriteria: "Nie dodano jeszcze kryteriów sukcesu ani porażki.",
     relations: "Relacje semantyczne",
     relationsLater: "Relacje semantyczne nie są jeszcze dostępne.",
     directChildren: "Bezpośrednie dzieci",
+    descendantLeaves: "Liście potomne",
     successCriteria: "Kryteria sukcesu",
     failureCriteria: "Kryteria porażki",
     source: "Źródło",
@@ -161,13 +168,16 @@ const COPY: Record<LocaleCode, Copy> = {
   ru: {
     rootEyebrow: "Корневой объект наблюдения",
     leafEyebrow: "Лист наблюдения активности",
+    intermediateEyebrow: "Промежуточный объект наблюдения",
     path: "Путь",
     genericEyebrow: "Объект наблюдения",
     back: "Назад к объектам наблюдения",
     edit: "Редактировать",
     editLater: "Редактирование пока недоступно на этом этапе.",
     addLeaf: "Добавить лист",
-    addLeafLater: "Создание листьев пока недоступно",
+    addLeafLater: "Листы можно создавать только под структурными объектами.",
+    addIntermediate: "Добавить промежуточный",
+    addIntermediateLater: "Промежуточные объекты можно создавать только под структурными объектами.",
     description: "Описание",
     branch: "Ветвь",
     kind: "Вид объекта",
@@ -177,12 +187,13 @@ const COPY: Record<LocaleCode, Copy> = {
     privacy: "Приватность",
     sensitivity: "Чувствительность",
     children: "Дерево дочерних объектов",
-    noChildren: "У этого корня пока нет дочерних объектов.",
+    noChildren: "У этого объекта пока нет дочерних объектов.",
     criteria: "Критерии результата",
     noCriteria: "Критерии успеха и провала пока не добавлены.",
     relations: "Семантические связи",
     relationsLater: "Семантические связи пока недоступны.",
     directChildren: "Прямые потомки",
+    descendantLeaves: "Листья в поддереве",
     successCriteria: "Критерии успеха",
     failureCriteria: "Критерии провала",
     source: "Источник",
@@ -192,13 +203,16 @@ const COPY: Record<LocaleCode, Copy> = {
   uk: {
     rootEyebrow: "Кореневий об’єкт спостереження",
     leafEyebrow: "Листок спостереження активності",
+    intermediateEyebrow: "Проміжний об’єкт спостереження",
     path: "Шлях",
     genericEyebrow: "Об’єкт спостереження",
     back: "Назад до об’єктів спостереження",
     edit: "Редагувати",
     editLater: "Редагування поки недоступне на цьому етапі.",
     addLeaf: "Додати листок",
-    addLeafLater: "Створення листків поки недоступне",
+    addLeafLater: "Листки можна створювати лише під структурними об’єктами.",
+    addIntermediate: "Додати проміжний",
+    addIntermediateLater: "Проміжні об’єкти можна створювати лише під структурними об’єктами.",
     description: "Опис",
     branch: "Гілка",
     kind: "Вид об’єкта",
@@ -208,12 +222,13 @@ const COPY: Record<LocaleCode, Copy> = {
     privacy: "Приватність",
     sensitivity: "Чутливість",
     children: "Дерево дочірніх об’єктів",
-    noChildren: "Цей корінь поки не має дочірніх об’єктів.",
+    noChildren: "Цей об’єкт поки не має дочірніх об’єктів.",
     criteria: "Критерії результату",
     noCriteria: "Критерії успіху та провалу ще не додані.",
     relations: "Семантичні зв’язки",
     relationsLater: "Семантичні зв’язки поки недоступні.",
     directChildren: "Прямі нащадки",
+    descendantLeaves: "Листки в піддереві",
     successCriteria: "Критерії успіху",
     failureCriteria: "Критерії провалу",
     source: "Джерело",
@@ -223,13 +238,16 @@ const COPY: Record<LocaleCode, Copy> = {
   de: {
     rootEyebrow: "Wurzel-Beobachtungsobjekt",
     leafEyebrow: "Aktivitäts-Beobachtungsblatt",
+    intermediateEyebrow: "Zwischen-Beobachtungsobjekt",
     path: "Pfad",
     genericEyebrow: "Beobachtungsobjekt",
     back: "Zurück zu Beobachtungsobjekten",
     edit: "Bearbeiten",
     editLater: "Die Bearbeitung ist in diesem Schritt noch nicht verfügbar.",
     addLeaf: "Blatt hinzufügen",
-    addLeafLater: "Das Erstellen von Blättern ist noch nicht verfügbar",
+    addLeafLater: "Blätter können nur unter Strukturobjekten erstellt werden.",
+    addIntermediate: "Zwischenobjekt hinzufügen",
+    addIntermediateLater: "Zwischenobjekte können nur unter Strukturobjekten erstellt werden.",
     description: "Beschreibung",
     branch: "Zweig",
     kind: "Objektart",
@@ -239,12 +257,13 @@ const COPY: Record<LocaleCode, Copy> = {
     privacy: "Privatsphäre",
     sensitivity: "Sensibilität",
     children: "Baum der untergeordneten Objekte",
-    noChildren: "Diese Wurzel hat noch keine untergeordneten Objekte.",
+    noChildren: "Dieses Objekt hat noch keine untergeordneten Objekte.",
     criteria: "Ergebniskriterien",
     noCriteria: "Es wurden noch keine Erfolgs- oder Misserfolgskriterien hinzugefügt.",
     relations: "Semantische Beziehungen",
     relationsLater: "Semantische Beziehungen sind noch nicht verfügbar.",
     directChildren: "Direkte Kinder",
+    descendantLeaves: "Blätter im Teilbaum",
     successCriteria: "Erfolgskriterien",
     failureCriteria: "Misserfolgskriterien",
     source: "Quelle",
@@ -254,13 +273,16 @@ const COPY: Record<LocaleCode, Copy> = {
   es: {
     rootEyebrow: "Objeto raíz de observación",
     leafEyebrow: "Hoja de observación de actividad",
+    intermediateEyebrow: "Objeto intermedio de observación",
     path: "Ruta",
     genericEyebrow: "Objeto de observación",
     back: "Volver a objetos de observación",
     edit: "Editar",
     editLater: "La edición todavía no está disponible en este paso.",
     addLeaf: "Añadir hoja",
-    addLeafLater: "La creación de hojas todavía no está disponible",
+    addLeafLater: "Las hojas solo pueden crearse bajo objetos estructurales.",
+    addIntermediate: "Añadir intermedio",
+    addIntermediateLater: "Los objetos intermedios solo pueden crearse bajo objetos estructurales.",
     description: "Descripción",
     branch: "Rama",
     kind: "Tipo de objeto",
@@ -270,12 +292,13 @@ const COPY: Record<LocaleCode, Copy> = {
     privacy: "Privacidad",
     sensitivity: "Sensibilidad",
     children: "Árbol de objetos hijos",
-    noChildren: "Esta raíz todavía no tiene objetos hijos.",
+    noChildren: "Este objeto todavía no tiene objetos hijos.",
     criteria: "Criterios de resultado",
     noCriteria: "Todavía no se han añadido criterios de éxito o fracaso.",
     relations: "Relaciones semánticas",
     relationsLater: "Las relaciones semánticas todavía no están disponibles.",
     directChildren: "Hijos directos",
+    descendantLeaves: "Hojas del subárbol",
     successCriteria: "Criterios de éxito",
     failureCriteria: "Criterios de fracaso",
     source: "Fuente",
@@ -285,13 +308,16 @@ const COPY: Record<LocaleCode, Copy> = {
   cs: {
     rootEyebrow: "Kořenový objekt pozorování",
     leafEyebrow: "List pozorování aktivity",
+    intermediateEyebrow: "Mezilehlý objekt pozorování",
     path: "Cesta",
     genericEyebrow: "Objekt pozorování",
     back: "Zpět k objektům pozorování",
     edit: "Upravit",
     editLater: "Úpravy zatím nejsou v tomto kroku dostupné.",
     addLeaf: "Přidat list",
-    addLeafLater: "Vytváření listů zatím není dostupné",
+    addLeafLater: "Listy lze vytvářet pouze pod strukturálními objekty.",
+    addIntermediate: "Přidat mezilehlý",
+    addIntermediateLater: "Mezilehlé objekty lze vytvářet pouze pod strukturálními objekty.",
     description: "Popis",
     branch: "Větev",
     kind: "Druh objektu",
@@ -301,12 +327,13 @@ const COPY: Record<LocaleCode, Copy> = {
     privacy: "Soukromí",
     sensitivity: "Citlivost",
     children: "Strom podřízených objektů",
-    noChildren: "Tento kořen zatím nemá podřízené objekty.",
+    noChildren: "Tento objekt zatím nemá podřízené objekty.",
     criteria: "Kritéria výsledku",
     noCriteria: "Kritéria úspěchu ani neúspěchu zatím nebyla přidána.",
     relations: "Sémantické vztahy",
     relationsLater: "Sémantické vztahy zatím nejsou dostupné.",
     directChildren: "Přímé děti",
+    descendantLeaves: "Listy v podstromu",
     successCriteria: "Kritéria úspěchu",
     failureCriteria: "Kritéria neúspěchu",
     source: "Zdroj",
@@ -431,10 +458,14 @@ export default async function ValueObjectDetailPage({
     notFound();
   }
 
-  let parent: ParentRow | null = null;
+  const rootValueObjectId =
+    valueObject.root_value_object_id ?? valueObject.id;
 
-  if (valueObject.parent_value_object_id) {
-    const { data: parentData, error: parentError } = await supabase
+  const [
+    { data: treeData, error: treeError },
+    { data: criteriaData, error: criteriaError },
+  ] = await Promise.all([
+    supabase
       .from("value_objects")
       .select(
         `
@@ -444,48 +475,65 @@ export default async function ValueObjectDetailPage({
         object_kind,
         branch_type_code,
         root_value_object_id,
-        parent_value_object_id
+        parent_value_object_id,
+        status,
+        created_at
       `,
       )
-      .eq("id", valueObject.parent_value_object_id)
       .eq("owner_user_id", actorContext.appUserId)
       .eq("owner_actor_id", actorContext.actorId)
-      .maybeSingle();
+      .eq("root_value_object_id", rootValueObjectId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("value_object_outcome_criteria")
+      .select("id, criterion_type_code, title, status")
+      .eq("owner_user_id", actorContext.appUserId)
+      .eq("owner_actor_id", actorContext.actorId)
+      .eq("value_object_id", valueObject.id)
+      .order("created_at", { ascending: true }),
+  ]);
 
-    if (parentError) {
-      throw new Error(parentError.message);
-    }
-
-    parent = parentData as ParentRow | null;
-  }
-
-  const [{ data: childrenData, error: childrenError }, { data: criteriaData, error: criteriaError }] =
-    await Promise.all([
-      supabase
-        .from("value_objects")
-        .select("id, title, node_role_code, object_kind, status")
-        .eq("owner_user_id", actorContext.appUserId)
-        .eq("owner_actor_id", actorContext.actorId)
-        .eq("parent_value_object_id", valueObject.id)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("value_object_outcome_criteria")
-        .select("id, criterion_type_code, title, status")
-        .eq("owner_user_id", actorContext.appUserId)
-        .eq("owner_actor_id", actorContext.actorId)
-        .eq("value_object_id", valueObject.id)
-        .order("created_at", { ascending: true }),
-    ]);
-
-  if (childrenError) {
-    throw new Error(childrenError.message);
+  if (treeError) {
+    throw new Error(treeError.message);
   }
 
   if (criteriaError) {
     throw new Error(criteriaError.message);
   }
 
-  const children = (childrenData ?? []) as ChildRow[];
+  const treeNodes = (treeData ?? []) as TreeNodeRow[];
+  const nodesById = new Map(
+    treeNodes.map((node) => [node.id, node] as const),
+  );
+  const childrenByParent = new Map<string, TreeNodeRow[]>();
+
+  for (const node of treeNodes) {
+    if (!node.parent_value_object_id) {
+      continue;
+    }
+
+    const siblings = childrenByParent.get(node.parent_value_object_id) ?? [];
+    siblings.push(node);
+    childrenByParent.set(node.parent_value_object_id, siblings);
+  }
+
+  const pathNodes: TreeNodeRow[] = [];
+  const pathVisited = new Set<string>();
+  let pathCursor = nodesById.get(valueObject.id) ?? null;
+
+  while (pathCursor && !pathVisited.has(pathCursor.id)) {
+    pathVisited.add(pathCursor.id);
+    pathNodes.unshift(pathCursor);
+
+    if (!pathCursor.parent_value_object_id) {
+      break;
+    }
+
+    pathCursor =
+      nodesById.get(pathCursor.parent_value_object_id) ?? null;
+  }
+
+  const directChildren = childrenByParent.get(valueObject.id) ?? [];
   const criteria = (criteriaData ?? []) as CriterionRow[];
   const successCriteria = criteria.filter(
     (criterion) => criterion.criterion_type_code === "success",
@@ -500,6 +548,60 @@ export default async function ValueObjectDetailPage({
     valueObject.node_role_code === "activity_leaf" &&
     valueObject.object_kind === "activity_pattern" &&
     valueObject.parent_value_object_id !== null;
+  const isIntermediate =
+    valueObject.node_role_code === "structural" &&
+    !isRoot &&
+    valueObject.parent_value_object_id !== null;
+  const isStructural =
+    valueObject.node_role_code === "structural" &&
+    valueObject.object_kind !== "activity_pattern" &&
+    (valueObject.status === "draft" || valueObject.status === "active");
+
+  function countLeafDescendants(parentId: string): number {
+    const children = childrenByParent.get(parentId) ?? [];
+
+    return children.reduce((count, child) => {
+      if (child.node_role_code === "activity_leaf") {
+        return count + 1;
+      }
+
+      return count + countLeafDescendants(child.id);
+    }, 0);
+  }
+
+  const descendantLeafCount = countLeafDescendants(valueObject.id);
+
+  function renderSubtree(parentId: string, depth = 0): ReactNode {
+    const children = childrenByParent.get(parentId) ?? [];
+
+    return children.map((child) => (
+      <div
+        key={child.id}
+        className="grid gap-3"
+        style={{ marginLeft: `${Math.min(depth, 12) * 18}px` }}
+      >
+        <Link
+          href={buildLocaleHref(
+            `/value-objects/${child.id}`,
+            locale,
+          )}
+          className="rounded-2xl border border-[#e5e7eb] bg-[#fafbff] p-4 transition hover:border-[#c9d5ff] hover:bg-[#f5f7ff]"
+        >
+          <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#7c8099]">
+            {child.node_role_code || "—"} · {child.object_kind || "—"} ·{" "}
+            {child.status}
+          </div>
+          <div className="mt-1 text-[16px] font-bold text-[#111827]">
+            {child.title}
+          </div>
+        </Link>
+
+        {child.node_role_code === "structural"
+          ? renderSubtree(child.id, depth + 1)
+          : null}
+      </div>
+    ));
+  }
 
   return (
     <main className="min-h-full bg-[#f0f2f7] px-4 py-8 text-[#1a1d2e]">
@@ -508,9 +610,11 @@ export default async function ValueObjectDetailPage({
           <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
             {isRoot
               ? copy.rootEyebrow
-              : isLeaf
-                ? copy.leafEyebrow
-                : copy.genericEyebrow}
+              : isIntermediate
+                ? copy.intermediateEyebrow
+                : isLeaf
+                  ? copy.leafEyebrow
+                  : copy.genericEyebrow}
           </div>
 
           <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -522,22 +626,32 @@ export default async function ValueObjectDetailPage({
                 {valueObject.description || "—"}
               </p>
 
-              {parent && (
+              {pathNodes.length > 1 && (
                 <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] font-semibold text-[#5a5f7a]">
                   <span className="uppercase tracking-[0.14em] text-[#7c8099]">
                     {copy.path}
                   </span>
-                  <Link
-                    href={buildLocaleHref(
-                      `/value-objects/${parent.id}`,
-                      locale,
-                    )}
-                    className="text-[#3b6ef8] hover:underline"
-                  >
-                    {parent.title}
-                  </Link>
-                  <span aria-hidden="true">→</span>
-                  <span>{valueObject.title}</span>
+                  {pathNodes.map((node, index) => (
+                    <span
+                      key={node.id}
+                      className="inline-flex items-center gap-2"
+                    >
+                      {index > 0 && <span aria-hidden="true">→</span>}
+                      {node.id === valueObject.id ? (
+                        <span>{node.title}</span>
+                      ) : (
+                        <Link
+                          href={buildLocaleHref(
+                            `/value-objects/${node.id}`,
+                            locale,
+                          )}
+                          className="text-[#3b6ef8] hover:underline"
+                        >
+                          {node.title}
+                        </Link>
+                      )}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
@@ -561,13 +675,21 @@ export default async function ValueObjectDetailPage({
           </div>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
             <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
               {copy.directChildren}
             </div>
             <div className="mt-2 text-[28px] font-bold text-[#111827]">
-              {children.length}
+              {directChildren.length}
+            </div>
+          </div>
+          <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+              {copy.descendantLeaves}
+            </div>
+            <div className="mt-2 text-[28px] font-bold text-[#111827]">
+              {descendantLeafCount}
             </div>
           </div>
           <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
@@ -608,52 +730,58 @@ export default async function ValueObjectDetailPage({
                 </h2>
               </div>
 
-              {isRoot ? (
-                <Link
-                  href={buildLocaleHref(
-                    `/value-objects/${valueObject.id}/new-leaf`,
-                    locale,
-                  )}
-                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] transition hover:border-[#aebfff] hover:bg-[#e8edff]"
-                >
-                  {copy.addLeaf}
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  disabled
-                  title={copy.addLeafLater}
-                  className="inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] opacity-45"
-                >
-                  {copy.addLeaf}
-                </button>
-              )}
+              <div className="flex flex-wrap justify-end gap-2">
+                {isStructural ? (
+                  <>
+                    <Link
+                      href={buildLocaleHref(
+                        `/value-objects/${valueObject.id}/new-intermediate`,
+                        locale,
+                      )}
+                      className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#eadcff] bg-[#f7f1ff] px-4 py-2 text-[13px] font-bold text-[#8b5cf6] transition hover:border-[#cdb7ff] hover:bg-[#f1e9ff]"
+                    >
+                      {copy.addIntermediate}
+                    </Link>
+                    <Link
+                      href={buildLocaleHref(
+                        `/value-objects/${valueObject.id}/new-leaf`,
+                        locale,
+                      )}
+                      className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] transition hover:border-[#aebfff] hover:bg-[#e8edff]"
+                    >
+                      {copy.addLeaf}
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled
+                      title={copy.addIntermediateLater}
+                      className="inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-xl border border-[#eadcff] bg-[#f7f1ff] px-4 py-2 text-[13px] font-bold text-[#8b5cf6] opacity-45"
+                    >
+                      {copy.addIntermediate}
+                    </button>
+                    <button
+                      type="button"
+                      disabled
+                      title={copy.addLeafLater}
+                      className="inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] opacity-45"
+                    >
+                      {copy.addLeaf}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
-            {children.length === 0 ? (
+            {directChildren.length === 0 ? (
               <div className="mt-5 rounded-2xl border border-dashed border-[#c9d5ff] bg-[#f7f9ff] p-5 text-[14px] leading-6 text-[#5a5f7a]">
                 {copy.noChildren}
               </div>
             ) : (
               <div className="mt-5 grid gap-3">
-                {children.map((child) => (
-                  <Link
-                    key={child.id}
-                    href={buildLocaleHref(
-                      `/value-objects/${child.id}`,
-                      locale,
-                    )}
-                    className="rounded-2xl border border-[#e5e7eb] bg-[#fafbff] p-4 transition hover:border-[#c9d5ff] hover:bg-[#f5f7ff]"
-                  >
-                    <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#7c8099]">
-                      {child.node_role_code || "—"} · {child.object_kind || "—"} ·{" "}
-                      {child.status}
-                    </div>
-                    <div className="mt-1 text-[16px] font-bold text-[#111827]">
-                      {child.title}
-                    </div>
-                  </Link>
-                ))}
+                {renderSubtree(valueObject.id)}
               </div>
             )}
           </div>

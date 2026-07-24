@@ -176,6 +176,10 @@ function normalizeLeafDraftCreationMode(value: unknown): boolean {
   return normalizeOptionalString(value) === "leaf_draft_v3";
 }
 
+function normalizeIntermediateDraftCreationMode(value: unknown): boolean {
+  return normalizeOptionalString(value) === "intermediate_draft_v3";
+}
+
 function normalizeUuid(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
@@ -517,6 +521,236 @@ async function createRootDraftValueObject(
 }
 
 
+async function getOwnedStructuralParent(
+  parentValueObjectId: string,
+  appUser: AppUserRow,
+  personActor: ActorRow,
+) {
+  const { data: parentData, error: parentError } = await supabase
+    .from("value_objects")
+    .select(
+      `
+      id,
+      title,
+      object_kind,
+      node_role_code,
+      branch_type_code,
+      root_value_object_id,
+      parent_value_object_id,
+      status
+    `,
+    )
+    .eq("id", parentValueObjectId)
+    .eq("owner_user_id", appUser.id)
+    .eq("owner_actor_id", personActor.id)
+    .maybeSingle();
+
+  if (parentError) {
+    return {
+      parent: null,
+      branchTypeCode: null,
+      rootValueObjectId: null,
+      errorResponse: NextResponse.json(
+        { error: parentError.message },
+        { status: 500 },
+      ),
+    };
+  }
+
+  if (!parentData) {
+    return {
+      parent: null,
+      branchTypeCode: null,
+      rootValueObjectId: null,
+      errorResponse: NextResponse.json(
+        { error: "Parent observation object not found or access denied" },
+        { status: 404 },
+      ),
+    };
+  }
+
+  const branchTypeCode = normalizeBranchTypeCode(
+    parentData.branch_type_code,
+  );
+  const rootValueObjectId = normalizeUuid(
+    parentData.root_value_object_id,
+  );
+  const parentIsEligible =
+    parentData.node_role_code === "structural" &&
+    parentData.object_kind !== null &&
+    parentData.object_kind !== "activity_pattern" &&
+    branchTypeCode !== null &&
+    rootValueObjectId !== null &&
+    (parentData.status === "draft" || parentData.status === "active");
+
+  if (!parentIsEligible) {
+    return {
+      parent: null,
+      branchTypeCode: null,
+      rootValueObjectId: null,
+      errorResponse: NextResponse.json(
+        {
+          error:
+            "Children can be created only under an owned active or draft structural observation object",
+        },
+        { status: 400 },
+      ),
+    };
+  }
+
+  return {
+    parent: parentData,
+    branchTypeCode,
+    rootValueObjectId,
+    errorResponse: null,
+  };
+}
+
+async function createIntermediateDraftValueObject(
+  body: ValueObjectRequestBody,
+  appUser: AppUserRow,
+  personActor: ActorRow,
+) {
+  const parentValueObjectId = normalizeUuid(body.parentValueObjectId);
+  const title = normalizeRequiredString(body.title);
+  const description = normalizeOptionalString(body.description);
+  const objectKind = normalizeObjectKind(body.objectKind);
+  const locale = normalizeLocale(body.locale);
+
+  if (!parentValueObjectId) {
+    return NextResponse.json(
+      { error: "A valid parentValueObjectId is required" },
+      { status: 400 },
+    );
+  }
+
+  if (!title || title.length > 180) {
+    return NextResponse.json(
+      { error: "title is required and must be 180 characters or fewer" },
+      { status: 400 },
+    );
+  }
+
+  if (description && description.length > 4000) {
+    return NextResponse.json(
+      { error: "description must be 4000 characters or fewer" },
+      { status: 400 },
+    );
+  }
+
+  if (!objectKind || objectKind === "activity_pattern") {
+    return NextResponse.json(
+      {
+        error:
+          "A valid structural objectKind other than activity_pattern is required",
+      },
+      { status: 400 },
+    );
+  }
+
+  const {
+    parent,
+    branchTypeCode,
+    rootValueObjectId,
+    errorResponse,
+  } = await getOwnedStructuralParent(
+    parentValueObjectId,
+    appUser,
+    personActor,
+  );
+
+  if (errorResponse || !parent || !branchTypeCode || !rootValueObjectId) {
+    return (
+      errorResponse ??
+      NextResponse.json(
+        { error: "Structural parent resolution failed" },
+        { status: 500 },
+      )
+    );
+  }
+
+  const { data: valueObject, error: valueObjectError } = await supabase
+    .from("value_objects")
+    .insert({
+      owner_actor_id: personActor.id,
+      created_by_actor_id: personActor.id,
+      actor_id: personActor.id,
+      app_user_id: appUser.id,
+      owner_user_id: appUser.id,
+      organization_id: null,
+      usage_scope: "private",
+      value_type: objectKind,
+      object_kind: objectKind,
+      node_role_code: "structural",
+      branch_type_code: branchTypeCode,
+      root_value_object_id: rootValueObjectId,
+      parent_value_object_id: parent.id,
+      instance_of_value_object_id: null,
+      title,
+      description,
+      unit_type: null,
+      default_price: null,
+      default_currency: null,
+      default_duration_minutes: null,
+      is_marketplace_sellable: false,
+      is_free_possible: false,
+      commercial_usage: "none",
+      visibility: "private",
+      privacy_level: "private",
+      sensitivity_level: "standard",
+      source: "manual",
+      status: "draft",
+      identity_attributes_json: {},
+      metadata_json: {
+        authoring_contract: "reality-model-v3-p6-intermediate",
+        parent_object_id: parent.id,
+        root_object_id: rootValueObjectId,
+      },
+    })
+    .select(
+      `
+      id,
+      title,
+      description,
+      object_kind,
+      node_role_code,
+      branch_type_code,
+      root_value_object_id,
+      parent_value_object_id,
+      status,
+      visibility,
+      privacy_level,
+      sensitivity_level,
+      created_at,
+      updated_at
+    `,
+    )
+    .single();
+
+  if (valueObjectError) {
+    return NextResponse.json(
+      {
+        error: valueObjectError.message,
+        errorCode: valueObjectError.code ?? null,
+      },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    mode: "intermediate_draft_v3",
+    valueObject,
+    parent: {
+      id: parent.id,
+      title: parent.title,
+      branchTypeCode,
+      rootValueObjectId,
+    },
+    redirectUrl: buildValueObjectDetailUrl(valueObject.id, locale),
+  });
+}
+
 async function createLeafDraftValueObject(
   body: ValueObjectRequestBody,
   appUser: AppUserRow,
@@ -548,57 +782,24 @@ async function createLeafDraftValueObject(
     );
   }
 
-  const { data: parentData, error: parentError } = await supabase
-    .from("value_objects")
-    .select(
-      `
-      id,
-      title,
-      object_kind,
-      node_role_code,
-      branch_type_code,
-      root_value_object_id,
-      parent_value_object_id,
-      status
-    `,
-    )
-    .eq("id", parentValueObjectId)
-    .eq("owner_user_id", appUser.id)
-    .eq("owner_actor_id", personActor.id)
-    .maybeSingle();
-
-  if (parentError) {
-    return NextResponse.json(
-      { error: parentError.message },
-      { status: 500 },
-    );
-  }
-
-  if (!parentData) {
-    return NextResponse.json(
-      { error: "Root observation object not found or access denied" },
-      { status: 404 },
-    );
-  }
-
-  const branchTypeCode = normalizeBranchTypeCode(
-    parentData.branch_type_code,
+  const {
+    parent,
+    branchTypeCode,
+    rootValueObjectId,
+    errorResponse,
+  } = await getOwnedStructuralParent(
+    parentValueObjectId,
+    appUser,
+    personActor,
   );
-  const parentIsRoot =
-    parentData.node_role_code === "structural" &&
-    parentData.parent_value_object_id === null &&
-    parentData.root_value_object_id === parentData.id &&
-    parentData.object_kind !== null &&
-    parentData.object_kind !== "activity_pattern" &&
-    (parentData.status === "draft" || parentData.status === "active");
 
-  if (!parentIsRoot || !branchTypeCode) {
-    return NextResponse.json(
-      {
-        error:
-          "Leaves can be created only under an owned active or draft structural root",
-      },
-      { status: 400 },
+  if (errorResponse || !parent || !branchTypeCode || !rootValueObjectId) {
+    return (
+      errorResponse ??
+      NextResponse.json(
+        { error: "Structural parent resolution failed" },
+        { status: 500 },
+      )
     );
   }
 
@@ -616,8 +817,8 @@ async function createLeafDraftValueObject(
       object_kind: "activity_pattern",
       node_role_code: "activity_leaf",
       branch_type_code: branchTypeCode,
-      root_value_object_id: parentData.id,
-      parent_value_object_id: parentData.id,
+      root_value_object_id: rootValueObjectId,
+      parent_value_object_id: parent.id,
       instance_of_value_object_id: null,
       title,
       description,
@@ -636,7 +837,8 @@ async function createLeafDraftValueObject(
       identity_attributes_json: {},
       metadata_json: {
         authoring_contract: "reality-model-v3-p6-leaf",
-        parent_root_id: parentData.id,
+        parent_object_id: parent.id,
+        root_object_id: rootValueObjectId,
       },
     })
     .select(
@@ -674,9 +876,10 @@ async function createLeafDraftValueObject(
     mode: "leaf_draft_v3",
     valueObject,
     parent: {
-      id: parentData.id,
-      title: parentData.title,
+      id: parent.id,
+      title: parent.title,
       branchTypeCode,
+      rootValueObjectId,
     },
     redirectUrl: buildValueObjectDetailUrl(valueObject.id, locale),
   });
@@ -877,6 +1080,17 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Invalid JSON body" },
       { status: 400 },
+    );
+  }
+
+  const intermediateDraftRequested =
+    normalizeIntermediateDraftCreationMode(body.creationMode);
+
+  if (intermediateDraftRequested) {
+    return createIntermediateDraftValueObject(
+      body,
+      appUser,
+      personActor,
     );
   }
 

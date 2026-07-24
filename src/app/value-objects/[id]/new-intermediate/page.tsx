@@ -6,11 +6,11 @@ import {
 } from "../../../../../lib/actor-context";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
-import { LeafCreateForm } from "./leaf-create-form";
+import { IntermediateCreateForm } from "./intermediate-create-form";
 
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
-type LeafCreatePageProps = {
+type IntermediateCreatePageProps = {
   params: Promise<{
     id: string;
   }>;
@@ -47,10 +47,10 @@ function normalizeLocale(value: string | string[] | undefined): LocaleCode {
   return "en";
 }
 
-export default async function LeafCreatePage({
+export default async function IntermediateCreatePage({
   params,
   searchParams,
-}: LeafCreatePageProps) {
+}: IntermediateCreatePageProps) {
   const { id } = await params;
   const resolvedSearchParams = await searchParams;
   const locale = normalizeLocale(resolvedSearchParams?.locale);
@@ -122,7 +122,7 @@ export default async function LeafCreatePage({
   }
 
   return (
-    <LeafCreateForm
+    <IntermediateCreateForm
       locale={locale}
       activeProfileName={actorContext.profile.displayName}
       parent={{
