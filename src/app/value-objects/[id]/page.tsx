@@ -46,6 +46,16 @@ type ChildRow = {
   status: string;
 };
 
+type ParentRow = {
+  id: string;
+  title: string;
+  node_role_code: string | null;
+  object_kind: string | null;
+  branch_type_code: string | null;
+  root_value_object_id: string | null;
+  parent_value_object_id: string | null;
+};
+
 type CriterionRow = {
   id: string;
   criterion_type_code: string;
@@ -55,7 +65,9 @@ type CriterionRow = {
 
 type Copy = {
   rootEyebrow: string;
+  leafEyebrow: string;
   genericEyebrow: string;
+  path: string;
   back: string;
   edit: string;
   editLater: string;
@@ -86,6 +98,8 @@ type Copy = {
 const COPY: Record<LocaleCode, Copy> = {
   en: {
     rootEyebrow: "Root observation object",
+    leafEyebrow: "Activity observation leaf",
+    path: "Path",
     genericEyebrow: "Observation object",
     back: "Back to observation objects",
     edit: "Edit",
@@ -115,6 +129,8 @@ const COPY: Record<LocaleCode, Copy> = {
   },
   pl: {
     rootEyebrow: "Korzeniowy obiekt obserwacji",
+    leafEyebrow: "Liść obserwacji aktywności",
+    path: "Ścieżka",
     genericEyebrow: "Obiekt obserwacji",
     back: "Wróć do obiektów obserwacji",
     edit: "Edytuj",
@@ -144,6 +160,8 @@ const COPY: Record<LocaleCode, Copy> = {
   },
   ru: {
     rootEyebrow: "Корневой объект наблюдения",
+    leafEyebrow: "Лист наблюдения активности",
+    path: "Путь",
     genericEyebrow: "Объект наблюдения",
     back: "Назад к объектам наблюдения",
     edit: "Редактировать",
@@ -173,6 +191,8 @@ const COPY: Record<LocaleCode, Copy> = {
   },
   uk: {
     rootEyebrow: "Кореневий об’єкт спостереження",
+    leafEyebrow: "Листок спостереження активності",
+    path: "Шлях",
     genericEyebrow: "Об’єкт спостереження",
     back: "Назад до об’єктів спостереження",
     edit: "Редагувати",
@@ -202,6 +222,8 @@ const COPY: Record<LocaleCode, Copy> = {
   },
   de: {
     rootEyebrow: "Wurzel-Beobachtungsobjekt",
+    leafEyebrow: "Aktivitäts-Beobachtungsblatt",
+    path: "Pfad",
     genericEyebrow: "Beobachtungsobjekt",
     back: "Zurück zu Beobachtungsobjekten",
     edit: "Bearbeiten",
@@ -231,6 +253,8 @@ const COPY: Record<LocaleCode, Copy> = {
   },
   es: {
     rootEyebrow: "Objeto raíz de observación",
+    leafEyebrow: "Hoja de observación de actividad",
+    path: "Ruta",
     genericEyebrow: "Objeto de observación",
     back: "Volver a objetos de observación",
     edit: "Editar",
@@ -260,6 +284,8 @@ const COPY: Record<LocaleCode, Copy> = {
   },
   cs: {
     rootEyebrow: "Kořenový objekt pozorování",
+    leafEyebrow: "List pozorování aktivity",
+    path: "Cesta",
     genericEyebrow: "Objekt pozorování",
     back: "Zpět k objektům pozorování",
     edit: "Upravit",
@@ -405,6 +431,34 @@ export default async function ValueObjectDetailPage({
     notFound();
   }
 
+  let parent: ParentRow | null = null;
+
+  if (valueObject.parent_value_object_id) {
+    const { data: parentData, error: parentError } = await supabase
+      .from("value_objects")
+      .select(
+        `
+        id,
+        title,
+        node_role_code,
+        object_kind,
+        branch_type_code,
+        root_value_object_id,
+        parent_value_object_id
+      `,
+      )
+      .eq("id", valueObject.parent_value_object_id)
+      .eq("owner_user_id", actorContext.appUserId)
+      .eq("owner_actor_id", actorContext.actorId)
+      .maybeSingle();
+
+    if (parentError) {
+      throw new Error(parentError.message);
+    }
+
+    parent = parentData as ParentRow | null;
+  }
+
   const [{ data: childrenData, error: childrenError }, { data: criteriaData, error: criteriaError }] =
     await Promise.all([
       supabase
@@ -442,13 +496,21 @@ export default async function ValueObjectDetailPage({
   const isRoot =
     valueObject.parent_value_object_id === null &&
     valueObject.root_value_object_id === valueObject.id;
+  const isLeaf =
+    valueObject.node_role_code === "activity_leaf" &&
+    valueObject.object_kind === "activity_pattern" &&
+    valueObject.parent_value_object_id !== null;
 
   return (
     <main className="min-h-full bg-[#f0f2f7] px-4 py-8 text-[#1a1d2e]">
       <div className="mx-auto grid w-full max-w-[1180px] gap-5">
         <header className="rounded-[26px] border border-black/[0.07] bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
           <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
-            {isRoot ? copy.rootEyebrow : copy.genericEyebrow}
+            {isRoot
+              ? copy.rootEyebrow
+              : isLeaf
+                ? copy.leafEyebrow
+                : copy.genericEyebrow}
           </div>
 
           <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -459,6 +521,25 @@ export default async function ValueObjectDetailPage({
               <p className="mt-3 text-[14px] leading-6 text-[#5a5f7a]">
                 {valueObject.description || "—"}
               </p>
+
+              {parent && (
+                <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] font-semibold text-[#5a5f7a]">
+                  <span className="uppercase tracking-[0.14em] text-[#7c8099]">
+                    {copy.path}
+                  </span>
+                  <Link
+                    href={buildLocaleHref(
+                      `/value-objects/${parent.id}`,
+                      locale,
+                    )}
+                    className="text-[#3b6ef8] hover:underline"
+                  >
+                    {parent.title}
+                  </Link>
+                  <span aria-hidden="true">→</span>
+                  <span>{valueObject.title}</span>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-wrap justify-end gap-2">
@@ -527,14 +608,26 @@ export default async function ValueObjectDetailPage({
                 </h2>
               </div>
 
-              <button
-                type="button"
-                disabled
-                title={copy.addLeafLater}
-                className="inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] opacity-60"
-              >
-                {copy.addLeaf}
-              </button>
+              {isRoot ? (
+                <Link
+                  href={buildLocaleHref(
+                    `/value-objects/${valueObject.id}/new-leaf`,
+                    locale,
+                  )}
+                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] transition hover:border-[#aebfff] hover:bg-[#e8edff]"
+                >
+                  {copy.addLeaf}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title={copy.addLeafLater}
+                  className="inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] opacity-45"
+                >
+                  {copy.addLeaf}
+                </button>
+              )}
             </div>
 
             {children.length === 0 ? (

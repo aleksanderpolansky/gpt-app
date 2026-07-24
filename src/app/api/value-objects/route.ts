@@ -59,6 +59,7 @@ type OrganizationAccessResult =
 type ValueObjectRequestBody = {
   usageScope?: unknown;
   creationMode?: unknown;
+  parentValueObjectId?: unknown;
   organizationId?: unknown;
   valueType?: unknown;
   title?: unknown;
@@ -169,6 +170,24 @@ function normalizeDraftCreationMode(value: unknown): boolean {
 
 function normalizeRootDraftCreationMode(value: unknown): boolean {
   return normalizeOptionalString(value) === "root_draft_v3";
+}
+
+function normalizeLeafDraftCreationMode(value: unknown): boolean {
+  return normalizeOptionalString(value) === "leaf_draft_v3";
+}
+
+function normalizeUuid(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    normalized,
+  )
+    ? normalized
+    : null;
 }
 
 function normalizeBranchTypeCode(
@@ -497,6 +516,172 @@ async function createRootDraftValueObject(
   });
 }
 
+
+async function createLeafDraftValueObject(
+  body: ValueObjectRequestBody,
+  appUser: AppUserRow,
+  personActor: ActorRow,
+) {
+  const parentValueObjectId = normalizeUuid(body.parentValueObjectId);
+  const title = normalizeRequiredString(body.title);
+  const description = normalizeOptionalString(body.description);
+  const locale = normalizeLocale(body.locale);
+
+  if (!parentValueObjectId) {
+    return NextResponse.json(
+      { error: "A valid parentValueObjectId is required" },
+      { status: 400 },
+    );
+  }
+
+  if (!title || title.length > 180) {
+    return NextResponse.json(
+      { error: "title is required and must be 180 characters or fewer" },
+      { status: 400 },
+    );
+  }
+
+  if (description && description.length > 4000) {
+    return NextResponse.json(
+      { error: "description must be 4000 characters or fewer" },
+      { status: 400 },
+    );
+  }
+
+  const { data: parentData, error: parentError } = await supabase
+    .from("value_objects")
+    .select(
+      `
+      id,
+      title,
+      object_kind,
+      node_role_code,
+      branch_type_code,
+      root_value_object_id,
+      parent_value_object_id,
+      status
+    `,
+    )
+    .eq("id", parentValueObjectId)
+    .eq("owner_user_id", appUser.id)
+    .eq("owner_actor_id", personActor.id)
+    .maybeSingle();
+
+  if (parentError) {
+    return NextResponse.json(
+      { error: parentError.message },
+      { status: 500 },
+    );
+  }
+
+  if (!parentData) {
+    return NextResponse.json(
+      { error: "Root observation object not found or access denied" },
+      { status: 404 },
+    );
+  }
+
+  const branchTypeCode = normalizeBranchTypeCode(
+    parentData.branch_type_code,
+  );
+  const parentIsRoot =
+    parentData.node_role_code === "structural" &&
+    parentData.parent_value_object_id === null &&
+    parentData.root_value_object_id === parentData.id &&
+    parentData.object_kind !== null &&
+    parentData.object_kind !== "activity_pattern" &&
+    (parentData.status === "draft" || parentData.status === "active");
+
+  if (!parentIsRoot || !branchTypeCode) {
+    return NextResponse.json(
+      {
+        error:
+          "Leaves can be created only under an owned active or draft structural root",
+      },
+      { status: 400 },
+    );
+  }
+
+  const { data: valueObject, error: valueObjectError } = await supabase
+    .from("value_objects")
+    .insert({
+      owner_actor_id: personActor.id,
+      created_by_actor_id: personActor.id,
+      actor_id: personActor.id,
+      app_user_id: appUser.id,
+      owner_user_id: appUser.id,
+      organization_id: null,
+      usage_scope: "private",
+      value_type: "activity_pattern",
+      object_kind: "activity_pattern",
+      node_role_code: "activity_leaf",
+      branch_type_code: branchTypeCode,
+      root_value_object_id: parentData.id,
+      parent_value_object_id: parentData.id,
+      instance_of_value_object_id: null,
+      title,
+      description,
+      unit_type: null,
+      default_price: null,
+      default_currency: null,
+      default_duration_minutes: null,
+      is_marketplace_sellable: false,
+      is_free_possible: false,
+      commercial_usage: "none",
+      visibility: "private",
+      privacy_level: "private",
+      sensitivity_level: "standard",
+      source: "manual",
+      status: "draft",
+      identity_attributes_json: {},
+      metadata_json: {
+        authoring_contract: "reality-model-v3-p6-leaf",
+        parent_root_id: parentData.id,
+      },
+    })
+    .select(
+      `
+      id,
+      title,
+      description,
+      object_kind,
+      node_role_code,
+      branch_type_code,
+      root_value_object_id,
+      parent_value_object_id,
+      status,
+      visibility,
+      privacy_level,
+      sensitivity_level,
+      created_at,
+      updated_at
+    `,
+    )
+    .single();
+
+  if (valueObjectError) {
+    return NextResponse.json(
+      {
+        error: valueObjectError.message,
+        errorCode: valueObjectError.code ?? null,
+      },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    mode: "leaf_draft_v3",
+    valueObject,
+    parent: {
+      id: parentData.id,
+      title: parentData.title,
+      branchTypeCode,
+    },
+    redirectUrl: buildValueObjectDetailUrl(valueObject.id, locale),
+  });
+}
+
 async function createDraftValueObject(
   body: ValueObjectRequestBody,
   appUser: AppUserRow,
@@ -693,6 +878,14 @@ export async function POST(request: Request) {
       { error: "Invalid JSON body" },
       { status: 400 },
     );
+  }
+
+  const leafDraftRequested = normalizeLeafDraftCreationMode(
+    body.creationMode,
+  );
+
+  if (leafDraftRequested) {
+    return createLeafDraftValueObject(body, appUser, personActor);
   }
 
   const rootDraftRequested = normalizeRootDraftCreationMode(
