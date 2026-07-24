@@ -176,8 +176,8 @@ function formatDate(value: string | null | undefined, locale: LocaleCode) {
   return parsed.toLocaleString(getDateLocale(locale));
 }
 
-function getObjectEditHref(valueObject: ActualValueObjectPayload) {
-  return valueObject.id ? `/value-objects/${valueObject.id}/edit` : "#";
+function getObjectDetailHref(valueObject: ActualValueObjectPayload) {
+  return valueObject.id ? `/value-objects/${valueObject.id}` : "#";
 }
 
 function buildLocaleAwareHref(pathname: string, locale: LocaleCode) {
@@ -345,7 +345,7 @@ export function ActualValueObjectsList() {
           <div className="rounded-2xl border border-dashed border-[#c9d5ff] bg-[#f7f9ff] p-5 text-[14px] leading-6 text-[#4a4f6a]">
             {t("valueObjects.actual.empty")}{" "}
             <Link
-              href={buildLocaleAwareHref("/value-objects/new", locale)}
+              href={buildLocaleAwareHref("/value-objects/new/root", locale)}
               className="font-bold text-[#3b6ef8] hover:underline"
             >
               /value-objects/new
@@ -381,7 +381,7 @@ export function ActualValueObjectsList() {
                     </div>
 
                     <Link
-                      href={buildLocaleAwareHref(getObjectEditHref(valueObject), locale)}
+                      href={buildLocaleAwareHref(getObjectDetailHref(valueObject), locale)}
                       className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
                     >
                       {t("valueObjects.actual.openEdit")}

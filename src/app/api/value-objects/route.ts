@@ -5,6 +5,12 @@ import {
 } from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
+import {
+  VALUE_OBJECT_BRANCH_TYPE_CODES_V2,
+  VALUE_OBJECT_KINDS_V2,
+  type ValueObjectBranchTypeCodeV2,
+  type ValueObjectKindV2,
+} from "@/types/reality-core/reality-core-contracts-v2";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +70,9 @@ type ValueObjectRequestBody = {
   isMarketplaceSellable?: unknown;
   isFreePossible?: unknown;
   commercialUsage?: unknown;
+  branchTypeCode?: unknown;
+  objectKind?: unknown;
+  locale?: unknown;
 };
 
 function normalizeRequiredString(value: unknown): string | null {
@@ -156,6 +165,62 @@ function normalizeDraftCreationMode(value: unknown): boolean {
     normalized === "manual_draft" ||
     normalized === "draft_first"
   );
+}
+
+function normalizeRootDraftCreationMode(value: unknown): boolean {
+  return normalizeOptionalString(value) === "root_draft_v3";
+}
+
+function normalizeBranchTypeCode(
+  value: unknown,
+): ValueObjectBranchTypeCodeV2 | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  return VALUE_OBJECT_BRANCH_TYPE_CODES_V2.includes(
+    value as ValueObjectBranchTypeCodeV2,
+  )
+    ? (value as ValueObjectBranchTypeCodeV2)
+    : null;
+}
+
+function normalizeObjectKind(value: unknown): ValueObjectKindV2 | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+
+  if (normalized === "activity_pattern") {
+    return null;
+  }
+
+  return VALUE_OBJECT_KINDS_V2.includes(normalized as ValueObjectKindV2)
+    ? (normalized as ValueObjectKindV2)
+    : null;
+}
+
+function normalizeLocale(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  return ["en", "pl", "ru", "uk", "de", "es", "cs"].includes(normalized)
+    ? normalized
+    : null;
+}
+
+function buildValueObjectDetailUrl(id: string, locale: string | null) {
+  const pathname = `/value-objects/${id}`;
+
+  if (!locale || locale === "en") {
+    return pathname;
+  }
+
+  return `${pathname}?locale=${encodeURIComponent(locale)}`;
 }
 
 function getDraftDefaults(usageScope: UsageScope) {
@@ -292,6 +357,143 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     valueObjects,
+  });
+}
+
+async function createRootDraftValueObject(
+  body: ValueObjectRequestBody,
+  appUser: AppUserRow,
+  personActor: ActorRow,
+) {
+  const title = normalizeRequiredString(body.title);
+  const description = normalizeOptionalString(body.description);
+  const branchTypeCode = normalizeBranchTypeCode(body.branchTypeCode);
+  const objectKind = normalizeObjectKind(body.objectKind);
+  const locale = normalizeLocale(body.locale);
+
+  if (!title || title.length > 180) {
+    return NextResponse.json(
+      { error: "title is required and must be 180 characters or fewer" },
+      { status: 400 },
+    );
+  }
+
+  if (description && description.length > 4000) {
+    return NextResponse.json(
+      { error: "description must be 4000 characters or fewer" },
+      { status: 400 },
+    );
+  }
+
+  if (!branchTypeCode) {
+    return NextResponse.json(
+      { error: "A valid branchTypeCode is required" },
+      { status: 400 },
+    );
+  }
+
+  if (!objectKind || objectKind === "activity_pattern") {
+    return NextResponse.json(
+      {
+        error:
+          "A valid structural objectKind other than activity_pattern is required",
+      },
+      { status: 400 },
+    );
+  }
+
+  const { data: branchType, error: branchTypeError } = await supabase
+    .from("value_object_branch_types")
+    .select("branch_type_code, status")
+    .eq("branch_type_code", branchTypeCode)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (branchTypeError) {
+    return NextResponse.json(
+      { error: branchTypeError.message },
+      { status: 500 },
+    );
+  }
+
+  if (!branchType) {
+    return NextResponse.json(
+      { error: "Selected branch type is not active" },
+      { status: 400 },
+    );
+  }
+
+  const { data: valueObject, error: valueObjectError } = await supabase
+    .from("value_objects")
+    .insert({
+      owner_actor_id: personActor.id,
+      created_by_actor_id: personActor.id,
+      actor_id: personActor.id,
+      app_user_id: appUser.id,
+      owner_user_id: appUser.id,
+      organization_id: null,
+      usage_scope: "private",
+      value_type: objectKind,
+      object_kind: objectKind,
+      node_role_code: "structural",
+      branch_type_code: branchTypeCode,
+      root_value_object_id: null,
+      parent_value_object_id: null,
+      instance_of_value_object_id: null,
+      title,
+      description,
+      unit_type: null,
+      default_price: null,
+      default_currency: null,
+      default_duration_minutes: null,
+      is_marketplace_sellable: false,
+      is_free_possible: false,
+      commercial_usage: "none",
+      visibility: "private",
+      privacy_level: "private",
+      sensitivity_level: "standard",
+      source: "manual",
+      status: "draft",
+      identity_attributes_json: {},
+      metadata_json: {
+        authoring_contract: "reality-model-v3-p6-root",
+      },
+    })
+    .select(
+      `
+      id,
+      title,
+      description,
+      object_kind,
+      node_role_code,
+      branch_type_code,
+      root_value_object_id,
+      parent_value_object_id,
+      status,
+      visibility,
+      privacy_level,
+      sensitivity_level,
+      created_at,
+      updated_at
+    `,
+    )
+    .single();
+
+  if (valueObjectError) {
+    return NextResponse.json(
+      {
+        error: valueObjectError.message,
+        errorCode: valueObjectError.code ?? null,
+      },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    mode: "root_draft_v3",
+    valueObject,
+    redirectUrl: buildValueObjectDetailUrl(valueObject.id, locale),
   });
 }
 
@@ -491,6 +693,14 @@ export async function POST(request: Request) {
       { error: "Invalid JSON body" },
       { status: 400 },
     );
+  }
+
+  const rootDraftRequested = normalizeRootDraftCreationMode(
+    body.creationMode,
+  );
+
+  if (rootDraftRequested) {
+    return createRootDraftValueObject(body, appUser, personActor);
   }
 
   const usageScope = normalizeUsageScope(body.usageScope);
