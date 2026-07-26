@@ -67,6 +67,8 @@ type Copy = {
   back: string;
   edit: string;
   editLater: string;
+  parametersAndTargets: string;
+  parametersAndTargetsReadOnly: string;
   addLeaf: string;
   addLeafLater: string;
   addIntermediate: string;
@@ -104,6 +106,8 @@ const COPY: Record<LocaleCode, Copy> = {
     back: "Back to observation objects",
     edit: "Edit",
     editLater: "Editing is not available in this authoring step yet.",
+    parametersAndTargets: "Parameters and targets",
+    parametersAndTargetsReadOnly: "Read-only parameter and target view.",
     addLeaf: "Add leaf",
     addLeafLater: "Leaves can be created only under structural objects.",
     addIntermediate: "Add intermediate",
@@ -139,6 +143,8 @@ const COPY: Record<LocaleCode, Copy> = {
     back: "Wróć do obiektów obserwacji",
     edit: "Edytuj",
     editLater: "Edycja nie jest jeszcze dostępna na tym etapie.",
+    parametersAndTargets: "Parametry i cele",
+    parametersAndTargetsReadOnly: "Widok parametrów i celów tylko do odczytu.",
     addLeaf: "Dodaj liść",
     addLeafLater: "Liście można tworzyć tylko pod obiektami strukturalnymi.",
     addIntermediate: "Dodaj obiekt pośredni",
@@ -174,6 +180,8 @@ const COPY: Record<LocaleCode, Copy> = {
     back: "Назад к объектам наблюдения",
     edit: "Редактировать",
     editLater: "Редактирование пока недоступно на этом этапе.",
+    parametersAndTargets: "Параметры и цели",
+    parametersAndTargetsReadOnly: "Просмотр параметров и целей без записи.",
     addLeaf: "Добавить лист",
     addLeafLater: "Листы можно создавать только под структурными объектами.",
     addIntermediate: "Добавить промежуточный",
@@ -209,6 +217,8 @@ const COPY: Record<LocaleCode, Copy> = {
     back: "Назад до об’єктів спостереження",
     edit: "Редагувати",
     editLater: "Редагування поки недоступне на цьому етапі.",
+    parametersAndTargets: "Параметри та цілі",
+    parametersAndTargetsReadOnly: "Перегляд параметрів і цілей без запису.",
     addLeaf: "Додати листок",
     addLeafLater: "Листки можна створювати лише під структурними об’єктами.",
     addIntermediate: "Додати проміжний",
@@ -244,6 +254,8 @@ const COPY: Record<LocaleCode, Copy> = {
     back: "Zurück zu Beobachtungsobjekten",
     edit: "Bearbeiten",
     editLater: "Die Bearbeitung ist in diesem Schritt noch nicht verfügbar.",
+    parametersAndTargets: "Parameter und Ziele",
+    parametersAndTargetsReadOnly: "Schreibgeschützte Ansicht der Parameter und Ziele.",
     addLeaf: "Blatt hinzufügen",
     addLeafLater: "Blätter können nur unter Strukturobjekten erstellt werden.",
     addIntermediate: "Zwischenobjekt hinzufügen",
@@ -279,6 +291,8 @@ const COPY: Record<LocaleCode, Copy> = {
     back: "Volver a objetos de observación",
     edit: "Editar",
     editLater: "La edición todavía no está disponible en este paso.",
+    parametersAndTargets: "Parámetros y objetivos",
+    parametersAndTargetsReadOnly: "Vista de parámetros y objetivos de solo lectura.",
     addLeaf: "Añadir hoja",
     addLeafLater: "Las hojas solo pueden crearse bajo objetos estructurales.",
     addIntermediate: "Añadir intermedio",
@@ -314,6 +328,8 @@ const COPY: Record<LocaleCode, Copy> = {
     back: "Zpět k objektům pozorování",
     edit: "Upravit",
     editLater: "Úpravy zatím nejsou v tomto kroku dostupné.",
+    parametersAndTargets: "Parametry a cíle",
+    parametersAndTargetsReadOnly: "Zobrazení parametrů a cílů pouze pro čtení.",
     addLeaf: "Přidat list",
     addLeafLater: "Listy lze vytvářet pouze pod strukturálními objekty.",
     addIntermediate: "Přidat mezilehlý",
@@ -663,6 +679,18 @@ export default async function ValueObjectDetailPage({
               >
                 {copy.back}
               </Link>
+              {isLeaf ? (
+                <Link
+                  href={buildLocaleHref(
+                    `/value-objects/${valueObject.id}/standards`,
+                    locale,
+                  )}
+                  title={copy.parametersAndTargetsReadOnly}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] transition hover:border-[#aebfff] hover:bg-[#e8edff]"
+                >
+                  {copy.parametersAndTargets}
+                </Link>
+              ) : null}
               <button
                 type="button"
                 disabled
