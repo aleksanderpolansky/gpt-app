@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { ValueObjectParameterAssignmentManager } from "@/components/workspace/value-objects/value-object-parameter-assignment-manager";
+import { ValueObjectTargetWriteManager } from "@/components/workspace/value-objects/value-object-target-write-manager";
 
 import type {
   P72B1ParameterAssignmentRead,
@@ -15,7 +16,7 @@ type ValueObjectTargetReadPanelProps = {
   readonly valueObjectId: string;
 };
 
-const PANEL_MARKER = "P7_2B1_REAL_TARGET_READ_PANEL_V1";
+const PANEL_MARKER = "P7_2B3_TARGET_WRITE_PANEL_V1";
 
 const numberFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 6,
@@ -268,9 +269,13 @@ function TargetSummary({
 }
 
 function AssignmentCard({
+  valueObjectId,
   assignment,
+  onChanged,
 }: {
+  readonly valueObjectId: string;
   readonly assignment: P72B1ParameterAssignmentRead;
+  readonly onChanged: () => void;
 }) {
   const { parameter } = assignment;
 
@@ -345,6 +350,13 @@ function AssignmentCard({
             This parameter is assigned to the leaf, but it has no active target.
           </div>
         )}
+
+        <ValueObjectTargetWriteManager
+          key={`${assignment.id}:${assignment.currentTarget?.id ?? "none"}`}
+          valueObjectId={valueObjectId}
+          assignment={assignment}
+          onChanged={onChanged}
+        />
 
         {assignment.targetHistory.length > 0 ? (
           <details className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -485,15 +497,15 @@ export function ValueObjectTargetReadPanel({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">
-              P7.2B2 · real parameters and targets
+              P7.2B3 · target authoring
             </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-950">
               Parameters and planned targets
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
               Leaf: <strong>{response.valueObject.title}</strong>. The read
-              model shows actor-owned assignments and versioned targets. P7.2B2
-              adds guarded parameter assignment controls.
+              model shows actor-owned assignments and immutable target history.
+              P7.2B3 adds guarded target creation, versioning and archiving.
             </p>
           </div>
 
@@ -520,9 +532,8 @@ export function ValueObjectTargetReadPanel({
         </div>
 
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-950">
-          Parameter assignment is enabled through a guarded server write gate.
-          Creating, editing and archiving planned target values remain disabled
-          until P7.2B3.
+          Parameter assignment and target authoring are server-mediated. Target
+          changes create immutable versions; archiving preserves the full history.
         </div>
 
         <ValueObjectParameterAssignmentManager
@@ -535,7 +546,9 @@ export function ValueObjectTargetReadPanel({
             {response.assignments.map((assignment) => (
               <AssignmentCard
                 key={assignment.id}
+                valueObjectId={valueObjectId}
                 assignment={assignment}
+                onChanged={() => setReloadKey((current) => current + 1)}
               />
             ))}
           </div>

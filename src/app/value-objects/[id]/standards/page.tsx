@@ -56,7 +56,7 @@ export default async function ValueObjectStandardsDetailPage({
 
         <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-600">
-            P7.2B2 · parameter assignment
+            P7.2B3 · target authoring
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">
             Parameters and planned targets
@@ -64,8 +64,9 @@ export default async function ValueObjectStandardsDetailPage({
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
             This page reads the active actor&apos;s real parameter assignments,
             current targets and version history for one activity observation
-            leaf. Parameters can now be assigned, created, deactivated and
-            reactivated. Planned target values remain read-only until P7.2B3.
+            leaf. Parameters can be assigned and managed, while planned target
+            values can now be created, versioned and archived without deleting
+            history.
           </p>
         </header>
 

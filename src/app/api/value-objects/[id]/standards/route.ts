@@ -604,7 +604,7 @@ export async function GET(_request: Request, context: RouteContext) {
       serverMediatedOnly: true,
       directBrowserSupabaseReadAllowed: false,
       clientProvidedOwnershipTrusted: false,
-      writeActionsEnabled: false,
+      writeActionsEnabled: true,
     },
   };
 

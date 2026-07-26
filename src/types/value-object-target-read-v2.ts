@@ -103,7 +103,7 @@ export type P72B1ValueObjectTargetReadSuccess = {
     serverMediatedOnly: true;
     directBrowserSupabaseReadAllowed: false;
     clientProvidedOwnershipTrusted: false;
-    writeActionsEnabled: false;
+    writeActionsEnabled: true;
   };
 };
 
