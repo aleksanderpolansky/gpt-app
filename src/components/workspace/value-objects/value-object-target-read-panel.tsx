@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { ValueObjectParameterAssignmentManager } from "@/components/workspace/value-objects/value-object-parameter-assignment-manager";
+
 import type {
   P72B1ParameterAssignmentRead,
   P72B1TargetVersionRead,
@@ -379,6 +381,7 @@ export function ValueObjectTargetReadPanel({
     useState<P72B1ValueObjectTargetReadResponse | null>(null);
   const [transportError, setTransportError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -422,7 +425,7 @@ export function ValueObjectTargetReadPanel({
     void load();
 
     return () => controller.abort();
-  }, [valueObjectId]);
+  }, [valueObjectId, reloadKey]);
 
   if (isLoading) {
     return (
@@ -482,15 +485,15 @@ export function ValueObjectTargetReadPanel({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">
-              P7.2B1 · real database read
+              P7.2B2 · real parameters and targets
             </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-950">
               Parameters and planned targets
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-              Leaf: <strong>{response.valueObject.title}</strong>. This panel
-              reads actor-owned assignments and versioned targets. It performs
-              no database writes.
+              Leaf: <strong>{response.valueObject.title}</strong>. The read
+              model shows actor-owned assignments and versioned targets. P7.2B2
+              adds guarded parameter assignment controls.
             </p>
           </div>
 
@@ -517,9 +520,15 @@ export function ValueObjectTargetReadPanel({
         </div>
 
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-950">
-          Read-only stage. Adding parameters, creating target versions and
-          archiving targets remain disabled until separate write gates.
+          Parameter assignment is enabled through a guarded server write gate.
+          Creating, editing and archiving planned target values remain disabled
+          until P7.2B3.
         </div>
+
+        <ValueObjectParameterAssignmentManager
+          valueObjectId={valueObjectId}
+          onChanged={() => setReloadKey((current) => current + 1)}
+        />
 
         {response.assignments.length > 0 ? (
           <div className="grid gap-4">
