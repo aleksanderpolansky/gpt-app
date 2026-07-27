@@ -67,6 +67,7 @@ type Copy = {
   back: string;
   edit: string;
   editLater: string;
+  restructure: string;
   parametersAndTargets: string;
   parametersAndTargetsReadOnly: string;
   addLeaf: string;
@@ -106,6 +107,7 @@ const COPY: Record<LocaleCode, Copy> = {
     back: "Back to observation objects",
     edit: "Edit",
     editLater: "Editing is not available in this authoring step yet.",
+    restructure: "Restructure tree",
     parametersAndTargets: "Parameters and targets",
     parametersAndTargetsReadOnly: "Read-only parameter and target view.",
     addLeaf: "Add leaf",
@@ -143,6 +145,7 @@ const COPY: Record<LocaleCode, Copy> = {
     back: "Wróć do obiektów obserwacji",
     edit: "Edytuj",
     editLater: "Edycja nie jest jeszcze dostępna na tym etapie.",
+    restructure: "Przebuduj drzewo",
     parametersAndTargets: "Parametry i cele",
     parametersAndTargetsReadOnly: "Widok parametrów i celów tylko do odczytu.",
     addLeaf: "Dodaj liść",
@@ -180,6 +183,7 @@ const COPY: Record<LocaleCode, Copy> = {
     back: "Назад к объектам наблюдения",
     edit: "Редактировать",
     editLater: "Редактирование пока недоступно на этом этапе.",
+    restructure: "Перестроить дерево",
     parametersAndTargets: "Параметры и цели",
     parametersAndTargetsReadOnly: "Просмотр параметров и целей без записи.",
     addLeaf: "Добавить лист",
@@ -217,6 +221,7 @@ const COPY: Record<LocaleCode, Copy> = {
     back: "Назад до об’єктів спостереження",
     edit: "Редагувати",
     editLater: "Редагування поки недоступне на цьому етапі.",
+    restructure: "Перебудувати дерево",
     parametersAndTargets: "Параметри та цілі",
     parametersAndTargetsReadOnly: "Перегляд параметрів і цілей без запису.",
     addLeaf: "Додати листок",
@@ -254,6 +259,7 @@ const COPY: Record<LocaleCode, Copy> = {
     back: "Zurück zu Beobachtungsobjekten",
     edit: "Bearbeiten",
     editLater: "Die Bearbeitung ist in diesem Schritt noch nicht verfügbar.",
+    restructure: "Baum umstrukturieren",
     parametersAndTargets: "Parameter und Ziele",
     parametersAndTargetsReadOnly: "Schreibgeschützte Ansicht der Parameter und Ziele.",
     addLeaf: "Blatt hinzufügen",
@@ -291,6 +297,7 @@ const COPY: Record<LocaleCode, Copy> = {
     back: "Volver a objetos de observación",
     edit: "Editar",
     editLater: "La edición todavía no está disponible en este paso.",
+    restructure: "Reestructurar árbol",
     parametersAndTargets: "Parámetros y objetivos",
     parametersAndTargetsReadOnly: "Vista de parámetros y objetivos de solo lectura.",
     addLeaf: "Añadir hoja",
@@ -328,6 +335,7 @@ const COPY: Record<LocaleCode, Copy> = {
     back: "Zpět k objektům pozorování",
     edit: "Upravit",
     editLater: "Úpravy zatím nejsou v tomto kroku dostupné.",
+    restructure: "Přestavět strom",
     parametersAndTargets: "Parametry a cíle",
     parametersAndTargetsReadOnly: "Zobrazení parametrů a cílů pouze pro čtení.",
     addLeaf: "Přidat list",
@@ -691,6 +699,15 @@ export default async function ValueObjectDetailPage({
                   {copy.parametersAndTargets}
                 </Link>
               ) : null}
+              <Link
+                href={buildLocaleHref(
+                  `/value-objects/${valueObject.id}/restructure`,
+                  locale,
+                )}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#e6dcff] bg-[#f7f1ff] px-4 py-3 text-[13px] font-bold text-[#8b5cf6] transition hover:border-[#cdb7ff] hover:bg-[#f1e9ff]"
+              >
+                {copy.restructure}
+              </Link>
               <button
                 type="button"
                 disabled
