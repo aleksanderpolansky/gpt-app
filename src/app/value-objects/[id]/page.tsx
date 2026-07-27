@@ -8,6 +8,7 @@ import {
 } from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
+import { ValueObjectSemanticRelationsManager } from "@/components/workspace/value-objects/value-object-semantic-relations-manager";
 
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
@@ -864,9 +865,10 @@ export default async function ValueObjectDetailPage({
               <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#7c8099]">
                 {copy.relations}
               </div>
-              <p className="mt-3 text-[14px] leading-6 text-[#5a5f7a]">
-                {copy.relationsLater}
-              </p>
+              <ValueObjectSemanticRelationsManager
+                valueObjectId={valueObject.id}
+                locale={locale}
+              />
             </section>
           </div>
         </section>

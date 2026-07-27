@@ -470,15 +470,18 @@ export interface ValueObjectOutcomeCriterionV3 {
 }
 
 export const VALUE_OBJECT_SEMANTIC_RELATION_TYPE_CODES_V3 = [
+  "related_to",
+  "same_subject_as",
   "supports",
   "depends_on",
-  "prerequisite_for",
   "conflicts_with",
+  "influences",
+  "prerequisite_for",
   "associated_with",
+  "influenced_by",
   "threatens",
   "opportunity_for",
   "indicated_by",
-  "influenced_by",
 ] as const;
 export type ValueObjectSemanticRelationTypeCodeV3 =
   (typeof VALUE_OBJECT_SEMANTIC_RELATION_TYPE_CODES_V3)[number];
@@ -505,7 +508,45 @@ export interface ValueObjectRelationTypeDefinitionV3 {
   readonly toScopeCode: ValueObjectRelationScopeCodeV3;
   readonly titleKey: string;
   readonly descriptionKey: string;
+  readonly reverseTitleKey: string;
+  readonly reverseDescriptionKey: string;
+  readonly allowSelfLink: boolean;
+  readonly contractVersion: number;
   readonly status: "active" | "inactive" | "future";
+}
+
+export const VALUE_OBJECT_RELATION_STATUS_CODES_V3 = [
+  "active",
+  "inactive",
+] as const;
+export type ValueObjectRelationStatusCodeV3 =
+  (typeof VALUE_OBJECT_RELATION_STATUS_CODES_V3)[number];
+
+export const VALUE_OBJECT_RELATION_PROVENANCE_CODES_V3 = [
+  "manual",
+  "ai_suggested",
+  "imported",
+  "system",
+] as const;
+export type ValueObjectRelationProvenanceCodeV3 =
+  (typeof VALUE_OBJECT_RELATION_PROVENANCE_CODES_V3)[number];
+
+export interface ValueObjectSemanticRelationV3 {
+  readonly id: RealityModelUuidV3;
+  readonly ownerUserId: RealityModelUuidV3;
+  readonly ownerActorId: RealityModelUuidV3;
+  readonly sourceValueObjectId: RealityModelUuidV3;
+  readonly targetValueObjectId: RealityModelUuidV3;
+  readonly relationTypeCode: ValueObjectSemanticRelationTypeCodeV3;
+  readonly status: ValueObjectRelationStatusCodeV3;
+  readonly provenanceCode: ValueObjectRelationProvenanceCodeV3;
+  readonly createdByActorId: RealityModelUuidV3;
+  readonly updatedByActorId: RealityModelUuidV3;
+  readonly createdAt: RealityModelIsoDateTimeV3;
+  readonly updatedAt: RealityModelIsoDateTimeV3;
+  readonly deactivatedAt: RealityModelIsoDateTimeV3 | null;
+  readonly reactivatedAt: RealityModelIsoDateTimeV3 | null;
+  readonly metadataJson: RealityModelJsonObjectV3;
 }
 
 export const VALUE_OBJECT_TARGET_KIND_CODES_V3 = [
