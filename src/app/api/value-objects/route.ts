@@ -6,9 +6,7 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import {
-  VALUE_OBJECT_BRANCH_TYPE_CODES_V2,
   VALUE_OBJECT_KINDS_V2,
-  type ValueObjectBranchTypeCodeV2,
   type ValueObjectKindV2,
 } from "@/types/reality-core/reality-core-contracts-v2";
 
@@ -194,17 +192,15 @@ function normalizeUuid(value: unknown): string | null {
     : null;
 }
 
-function normalizeBranchTypeCode(
-  value: unknown,
-): ValueObjectBranchTypeCodeV2 | null {
+function normalizeBranchTypeCode(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
   }
 
-  return VALUE_OBJECT_BRANCH_TYPE_CODES_V2.includes(
-    value as ValueObjectBranchTypeCodeV2,
-  )
-    ? (value as ValueObjectBranchTypeCodeV2)
+  const normalized = value.trim();
+
+  return /^[a-z][a-z0-9_]{1,79}$/.test(normalized)
+    ? normalized
     : null;
 }
 
@@ -222,6 +218,16 @@ function normalizeObjectKind(value: unknown): ValueObjectKindV2 | null {
   return VALUE_OBJECT_KINDS_V2.includes(normalized as ValueObjectKindV2)
     ? (normalized as ValueObjectKindV2)
     : null;
+}
+
+function normalizeStructuralObjectKind(
+  value: unknown,
+): ValueObjectKindV2 | null {
+  if (value === undefined || value === null || value === "") {
+    return "other";
+  }
+
+  return normalizeObjectKind(value);
 }
 
 function normalizeLocale(value: unknown): string | null {
@@ -391,7 +397,7 @@ async function createRootDraftValueObject(
   const title = normalizeRequiredString(body.title);
   const description = normalizeOptionalString(body.description);
   const branchTypeCode = normalizeBranchTypeCode(body.branchTypeCode);
-  const objectKind = normalizeObjectKind(body.objectKind);
+  const objectKind = normalizeStructuralObjectKind(body.objectKind);
   const locale = normalizeLocale(body.locale);
 
   if (!title || title.length > 180) {
@@ -614,7 +620,7 @@ async function createIntermediateDraftValueObject(
   const parentValueObjectId = normalizeUuid(body.parentValueObjectId);
   const title = normalizeRequiredString(body.title);
   const description = normalizeOptionalString(body.description);
-  const objectKind = normalizeObjectKind(body.objectKind);
+  const objectKind = normalizeStructuralObjectKind(body.objectKind);
   const locale = normalizeLocale(body.locale);
 
   if (!parentValueObjectId) {

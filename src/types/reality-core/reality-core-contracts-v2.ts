@@ -19,6 +19,11 @@ export type RealityUuidV2 = string;
 export type RealityIsoDateTimeV2 = string;
 export type RealityJsonObjectV2 = Readonly<Record<string, unknown>>;
 
+/**
+ * Known seed codes retained for documentation and fixture compatibility.
+ * Runtime-active branch policies must be loaded from
+ * public.value_object_branch_types rather than validated against this tuple.
+ */
 export const VALUE_OBJECT_BRANCH_TYPE_CODES_V2 = [
   "external_capital",
   "internal_capability",
@@ -26,8 +31,7 @@ export const VALUE_OBJECT_BRANCH_TYPE_CODES_V2 = [
   "biological_system",
   "mediator_hormone",
 ] as const;
-export type ValueObjectBranchTypeCodeV2 =
-  (typeof VALUE_OBJECT_BRANCH_TYPE_CODES_V2)[number];
+export type ValueObjectBranchTypeCodeV2 = string;
 
 export const VALUE_OBJECT_NODE_ROLE_CODES_V2 = [
   "structural",

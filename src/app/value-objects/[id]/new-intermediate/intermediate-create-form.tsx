@@ -35,6 +35,8 @@ type Copy = {
   objectDescription: string;
   objectKind: string;
   kindHint: string;
+  advancedSettings: string;
+  advancedHint: string;
   titlePlaceholder: string;
   descriptionPlaceholder: string;
   create: string;
@@ -60,6 +62,9 @@ const COPY: Record<LocaleCode, Copy> = {
     objectKind: "Object kind",
     kindHint:
       "Choose the closest semantic nature. Activity pattern is reserved for leaves.",
+    advancedSettings: "Advanced settings",
+    advancedHint:
+      "Object kind is optional for structural objects. Leave “other” unless a specific kind already has real system behavior.",
     titlePlaceholder: "For example: Pulling exercises",
     descriptionPlaceholder:
       "What child objects should this structural group organize?",
@@ -86,6 +91,9 @@ const COPY: Record<LocaleCode, Copy> = {
     objectKind: "Rodzaj obiektu",
     kindHint:
       "Wybierz najbliższą naturę semantyczną. Wzorzec aktywności jest zarezerwowany dla liści.",
+    advancedSettings: "Ustawienia zaawansowane",
+    advancedHint:
+      "Rodzaj obiektu jest opcjonalny dla obiektów strukturalnych. Pozostaw „other”, jeśli dany rodzaj nie ma jeszcze rzeczywistego zachowania systemowego.",
     titlePlaceholder: "Na przykład: Ćwiczenia przyciągające",
     descriptionPlaceholder:
       "Jakie obiekty podrzędne ma porządkować ta grupa strukturalna?",
@@ -112,6 +120,9 @@ const COPY: Record<LocaleCode, Copy> = {
     objectKind: "Вид объекта",
     kindHint:
       "Выберите ближайшую смысловую природу. Шаблон активности предназначен только для листьев.",
+    advancedSettings: "Дополнительные настройки",
+    advancedHint:
+      "Вид объекта для структурных объектов необязателен. Оставьте «other», если для конкретного вида ещё нет реального системного поведения.",
     titlePlaceholder: "Например: Тяговые упражнения",
     descriptionPlaceholder:
       "Какие дочерние объекты должна объединять эта структурная группа?",
@@ -138,6 +149,9 @@ const COPY: Record<LocaleCode, Copy> = {
     objectKind: "Вид об’єкта",
     kindHint:
       "Оберіть найближчу смислову природу. Шаблон активності призначений лише для листків.",
+    advancedSettings: "Додаткові налаштування",
+    advancedHint:
+      "Вид об’єкта для структурних об’єктів необов’язковий. Залиште «other», якщо конкретний вид ще не має реальної системної поведінки.",
     titlePlaceholder: "Наприклад: Тягові вправи",
     descriptionPlaceholder:
       "Які дочірні об’єкти має об’єднувати ця структурна група?",
@@ -164,6 +178,9 @@ const COPY: Record<LocaleCode, Copy> = {
     objectKind: "Objektart",
     kindHint:
       "Wählen Sie die passende semantische Art. Aktivitätsmuster sind Blättern vorbehalten.",
+    advancedSettings: "Erweiterte Einstellungen",
+    advancedHint:
+      "Die Objektart ist für Strukturobjekte optional. Lassen Sie „other“ stehen, solange eine konkrete Art kein echtes Systemverhalten hat.",
     titlePlaceholder: "Zum Beispiel: Zugübungen",
     descriptionPlaceholder:
       "Welche untergeordneten Objekte soll diese Strukturgruppe ordnen?",
@@ -190,6 +207,9 @@ const COPY: Record<LocaleCode, Copy> = {
     objectKind: "Tipo de objeto",
     kindHint:
       "Elige la naturaleza semántica más cercana. El patrón de actividad está reservado para hojas.",
+    advancedSettings: "Configuración avanzada",
+    advancedHint:
+      "El tipo de objeto es opcional para objetos estructurales. Mantén «other» mientras un tipo concreto no tenga comportamiento real del sistema.",
     titlePlaceholder: "Por ejemplo: Ejercicios de tracción",
     descriptionPlaceholder:
       "¿Qué objetos hijos debe organizar este grupo estructural?",
@@ -216,6 +236,9 @@ const COPY: Record<LocaleCode, Copy> = {
     objectKind: "Druh objektu",
     kindHint:
       "Zvolte nejbližší sémantickou povahu. Vzor aktivity je vyhrazen listům.",
+    advancedSettings: "Pokročilá nastavení",
+    advancedHint:
+      "Druh objektu je u strukturálních objektů volitelný. Ponechte „other“, dokud konkrétní druh nemá skutečné systémové chování.",
     titlePlaceholder: "Například: Tahové cviky",
     descriptionPlaceholder:
       "Jaké podřízené objekty má tato strukturální skupina uspořádat?",
@@ -263,15 +286,10 @@ export function IntermediateCreateForm({
 }: IntermediateCreateFormProps) {
   const router = useRouter();
   const copy = COPY[locale];
-  const initialKind = STRUCTURAL_OBJECT_KINDS.includes(
-    parent.objectKind as ValueObjectKindV2,
-  )
-    ? (parent.objectKind as ValueObjectKindV2)
-    : "other";
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [objectKind, setObjectKind] =
-    useState<ValueObjectKindV2>(initialKind);
+    useState<ValueObjectKindV2>("other");
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -373,7 +391,7 @@ export function IntermediateCreateForm({
 
         <section className="rounded-[26px] border border-black/[0.07] bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
           <div className="grid gap-5 lg:grid-cols-2">
-            <label className="grid gap-2">
+            <label className="grid gap-2 lg:col-span-2">
               <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
                 {copy.objectTitle}
               </span>
@@ -386,7 +404,30 @@ export function IntermediateCreateForm({
               />
             </label>
 
-            <label className="grid gap-2">
+
+            <label className="grid gap-2 lg:col-span-2">
+              <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
+                {copy.objectDescription}
+              </span>
+              <textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                maxLength={4000}
+                rows={5}
+                placeholder={copy.descriptionPlaceholder}
+                className="rounded-2xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] leading-6 outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+              />
+            </label>
+          </div>
+
+          <details className="mt-5 rounded-2xl border border-[#e5e7f0] bg-[#fafbfe] p-4">
+            <summary className="cursor-pointer text-[13px] font-bold text-[#4a4f6a]">
+              {copy.advancedSettings}
+            </summary>
+            <p className="mt-3 text-[12px] leading-5 text-[#7c8099]">
+              {copy.advancedHint}
+            </p>
+            <label className="mt-4 grid gap-2">
               <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
                 {copy.objectKind}
               </span>
@@ -407,21 +448,7 @@ export function IntermediateCreateForm({
                 {copy.kindHint}
               </span>
             </label>
-
-            <label className="grid gap-2 lg:col-span-2">
-              <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
-                {copy.objectDescription}
-              </span>
-              <textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                maxLength={4000}
-                rows={5}
-                placeholder={copy.descriptionPlaceholder}
-                className="rounded-2xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] leading-6 outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
-              />
-            </label>
-          </div>
+          </details>
 
           <div className="mt-6 grid gap-3 md:grid-cols-2">
             <div className="rounded-2xl border border-[#dfe6ff] bg-[#f7f9ff] p-4 text-[13px] font-semibold text-[#4a4f6a]">

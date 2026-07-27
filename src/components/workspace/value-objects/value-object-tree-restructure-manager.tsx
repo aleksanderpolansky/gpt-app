@@ -47,6 +47,8 @@ type Copy = {
   title: string;
   description: string;
   objectKind: string;
+  advancedSettings: string;
+  advancedHint: string;
   preview: string;
   previewing: string;
   apply: string;
@@ -84,6 +86,9 @@ const EN_COPY: Copy = {
   title: "Intermediate object name",
   description: "Description",
   objectKind: "Object kind",
+  advancedSettings: "Advanced settings",
+  advancedHint:
+    "Object kind is optional for the new structural object. Leave other unless a specific kind has real system behavior.",
   preview: "Build preview",
   previewing: "Building preview…",
   apply: "Confirm and apply atomically",
@@ -122,6 +127,9 @@ const RU_COPY: Copy = {
   title: "Название промежуточного объекта",
   description: "Описание",
   objectKind: "Вид объекта",
+  advancedSettings: "Дополнительные настройки",
+  advancedHint:
+    "Вид объекта для нового структурного объекта необязателен. Оставьте other, если конкретный вид ещё не имеет реального системного поведения.",
   preview: "Показать предварительный результат",
   previewing: "Строю предпросмотр…",
   apply: "Подтвердить и применить атомарно",
@@ -551,23 +559,31 @@ export function ValueObjectTreeRestructureManager({
               />
             </label>
 
-            <label className="block text-[13px] font-bold text-[#343854]">
-              {copy.objectKind}
-              <select
-                value={objectKind}
-                onChange={(event: ChangeEvent<HTMLSelectElement>) => {
-                  setObjectKind(event.target.value as ValueObjectKindV2);
-                  invalidatePreview();
-                }}
-                className="mt-2 w-full rounded-xl border border-[#dfe3f1] bg-white px-3 py-3 text-[14px] outline-none focus:border-[#cdb7ff]"
-              >
-                {STRUCTURAL_OBJECT_KINDS.map((kind) => (
-                  <option key={kind} value={kind}>
-                    {kind}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <details className="rounded-xl border border-[#e5e7f0] bg-[#fafbfe] p-4">
+              <summary className="cursor-pointer text-[13px] font-bold text-[#343854]">
+                {copy.advancedSettings}
+              </summary>
+              <p className="mt-3 text-[12px] leading-5 text-[#7c8099]">
+                {copy.advancedHint}
+              </p>
+              <label className="mt-4 block text-[13px] font-bold text-[#343854]">
+                {copy.objectKind}
+                <select
+                  value={objectKind}
+                  onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                    setObjectKind(event.target.value as ValueObjectKindV2);
+                    invalidatePreview();
+                  }}
+                  className="mt-2 w-full rounded-xl border border-[#dfe3f1] bg-white px-3 py-3 text-[14px] outline-none focus:border-[#cdb7ff]"
+                >
+                  {STRUCTURAL_OBJECT_KINDS.map((kind) => (
+                    <option key={kind} value={kind}>
+                      {kind}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </details>
           </div>
         )}
 

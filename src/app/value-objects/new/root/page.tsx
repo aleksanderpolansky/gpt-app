@@ -5,11 +5,18 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import {
-  VALUE_OBJECT_BRANCH_TYPE_CODES_V2,
+  humanizeValueObjectCode,
+  resolveValueObjectBranchPolicyDescription,
+  resolveValueObjectBranchPolicyTitle,
+} from "@/data/value-object-branch-policy-localization";
+import {
   VALUE_OBJECT_KINDS_V2,
-  type ValueObjectBranchTypeCodeV2,
   type ValueObjectKindV2,
 } from "@/types/reality-core/reality-core-contracts-v2";
+import type {
+  ValueObjectBranchPolicyDto,
+  ValueObjectBranchPolicyListResponse,
+} from "@/types/value-object-branch-policy";
 
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
@@ -26,6 +33,10 @@ type Copy = {
   descriptionPlaceholder: string;
   branchHint: string;
   kindHint: string;
+  advancedSettings: string;
+  advancedHint: string;
+  branchLoading: string;
+  branchUnavailable: string;
   create: string;
   creating: string;
   back: string;
@@ -51,6 +62,11 @@ const COPY: Record<LocaleCode, Copy> = {
       "The branch defines stable system rules. Child objects will inherit it.",
     kindHint:
       "Choose the closest semantic nature of the root. Activity pattern is reserved for leaves.",
+    advancedSettings: "Advanced settings",
+    advancedHint:
+      "Object kind is optional for structural objects. Leave “other” unless a specific kind already has real system behavior.",
+    branchLoading: "Loading branch policies…",
+    branchUnavailable: "No active branch policies are available.",
     create: "Create root",
     creating: "Creating…",
     back: "Back to observation objects",
@@ -74,6 +90,11 @@ const COPY: Record<LocaleCode, Copy> = {
       "Gałąź definiuje stałe reguły systemowe. Obiekty podrzędne ją odziedziczą.",
     kindHint:
       "Wybierz najbliższą naturę semantyczną korzenia. Wzorzec aktywności jest zarezerwowany dla liści.",
+    advancedSettings: "Ustawienia zaawansowane",
+    advancedHint:
+      "Rodzaj obiektu jest opcjonalny dla obiektów strukturalnych. Pozostaw „other”, jeśli dany rodzaj nie ma jeszcze rzeczywistego zachowania systemowego.",
+    branchLoading: "Ładowanie polityk gałęzi…",
+    branchUnavailable: "Brak aktywnych polityk gałęzi.",
     create: "Utwórz korzeń",
     creating: "Tworzenie…",
     back: "Wróć do obiektów obserwacji",
@@ -97,6 +118,11 @@ const COPY: Record<LocaleCode, Copy> = {
       "Ветвь задаёт стабильные системные правила. Дочерние объекты унаследуют её.",
     kindHint:
       "Выберите ближайшую смысловую природу корня. Шаблон активности предназначен только для листьев.",
+    advancedSettings: "Дополнительные настройки",
+    advancedHint:
+      "Вид объекта для структурных объектов необязателен. Оставьте «other», если для конкретного вида ещё нет реального системного поведения.",
+    branchLoading: "Загружаю политики ветвей…",
+    branchUnavailable: "Нет доступных активных политик ветвей.",
     create: "Создать корень",
     creating: "Создание…",
     back: "Назад к объектам наблюдения",
@@ -120,6 +146,11 @@ const COPY: Record<LocaleCode, Copy> = {
       "Гілка задає сталі системні правила. Дочірні об’єкти успадкують її.",
     kindHint:
       "Оберіть найближчу смислову природу кореня. Шаблон активності призначений лише для листків.",
+    advancedSettings: "Додаткові налаштування",
+    advancedHint:
+      "Вид об’єкта для структурних об’єктів необов’язковий. Залиште «other», якщо конкретний вид ще не має реальної системної поведінки.",
+    branchLoading: "Завантажую політики гілок…",
+    branchUnavailable: "Немає доступних активних політик гілок.",
     create: "Створити корінь",
     creating: "Створення…",
     back: "Назад до об’єктів спостереження",
@@ -143,6 +174,11 @@ const COPY: Record<LocaleCode, Copy> = {
       "Der Zweig definiert stabile Systemregeln. Untergeordnete Objekte erben ihn.",
     kindHint:
       "Wählen Sie die passende semantische Art der Wurzel. Aktivitätsmuster sind Blättern vorbehalten.",
+    advancedSettings: "Erweiterte Einstellungen",
+    advancedHint:
+      "Die Objektart ist für Strukturobjekte optional. Lassen Sie „other“ stehen, solange eine konkrete Art kein echtes Systemverhalten hat.",
+    branchLoading: "Zweigregeln werden geladen…",
+    branchUnavailable: "Keine aktiven Zweigregeln verfügbar.",
     create: "Wurzel erstellen",
     creating: "Wird erstellt…",
     back: "Zurück zu Beobachtungsobjekten",
@@ -166,6 +202,11 @@ const COPY: Record<LocaleCode, Copy> = {
       "La rama define reglas estables del sistema. Los objetos hijos la heredarán.",
     kindHint:
       "Elige la naturaleza semántica más cercana de la raíz. El patrón de actividad está reservado para hojas.",
+    advancedSettings: "Configuración avanzada",
+    advancedHint:
+      "El tipo de objeto es opcional para objetos estructurales. Mantén «other» mientras un tipo concreto no tenga comportamiento real del sistema.",
+    branchLoading: "Cargando políticas de rama…",
+    branchUnavailable: "No hay políticas de rama activas disponibles.",
     create: "Crear raíz",
     creating: "Creando…",
     back: "Volver a objetos de observación",
@@ -189,62 +230,16 @@ const COPY: Record<LocaleCode, Copy> = {
       "Větev určuje stabilní systémová pravidla. Podřízené objekty ji zdědí.",
     kindHint:
       "Vyberte nejbližší sémantickou povahu kořene. Vzor aktivity je vyhrazen listům.",
+    advancedSettings: "Pokročilá nastavení",
+    advancedHint:
+      "Druh objektu je u strukturálních objektů volitelný. Ponechte „other“, dokud konkrétní druh nemá skutečné systémové chování.",
+    branchLoading: "Načítání politik větví…",
+    branchUnavailable: "Nejsou dostupné žádné aktivní politiky větví.",
     create: "Vytvořit kořen",
     creating: "Vytváření…",
     back: "Zpět k objektům pozorování",
     errorPrefix: "Kořen se nepodařilo vytvořit:",
     draftNotice: "Nový kořen bude ve výchozím stavu soukromý koncept.",
-  },
-};
-
-const BRANCH_LABELS: Record<
-  ValueObjectBranchTypeCodeV2,
-  Record<LocaleCode, string>
-> = {
-  external_capital: {
-    en: "External capital",
-    pl: "Kapitał zewnętrzny",
-    ru: "Внешний капитал",
-    uk: "Зовнішній капітал",
-    de: "Externes Kapital",
-    es: "Capital externo",
-    cs: "Vnější kapitál",
-  },
-  internal_capability: {
-    en: "Internal capability",
-    pl: "Zdolność wewnętrzna",
-    ru: "Внутренняя способность",
-    uk: "Внутрішня спроможність",
-    de: "Interne Fähigkeit",
-    es: "Capacidad interna",
-    cs: "Vnitřní schopnost",
-  },
-  resource: {
-    en: "Resource",
-    pl: "Zasób",
-    ru: "Ресурс",
-    uk: "Ресурс",
-    de: "Ressource",
-    es: "Recurso",
-    cs: "Zdroj",
-  },
-  biological_system: {
-    en: "Biological system",
-    pl: "Układ biologiczny",
-    ru: "Биологическая система",
-    uk: "Біологічна система",
-    de: "Biologisches System",
-    es: "Sistema biológico",
-    cs: "Biologický systém",
-  },
-  mediator_hormone: {
-    en: "Mediator or hormone",
-    pl: "Mediator lub hormon",
-    ru: "Медиатор или гормон",
-    uk: "Медіатор або гормон",
-    de: "Mediator oder Hormon",
-    es: "Mediador u hormona",
-    cs: "Mediátor nebo hormon",
   },
 };
 
@@ -284,12 +279,6 @@ function normalizeLocale(value: string | null): LocaleCode {
   return "en";
 }
 
-function humanizeCode(value: string) {
-  return value
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
 
 function buildLocaleHref(pathname: string, locale: LocaleCode) {
   if (locale === "en") {
@@ -304,8 +293,12 @@ export default function NewRootObservationObjectPage() {
   const [locale, setLocale] = useState<LocaleCode>("en");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [branchTypeCode, setBranchTypeCode] =
-    useState<ValueObjectBranchTypeCodeV2>("resource");
+  const [branchTypeCode, setBranchTypeCode] = useState("");
+  const [branchPolicies, setBranchPolicies] = useState<
+    ValueObjectBranchPolicyDto[]
+  >([]);
+  const [branchPoliciesLoading, setBranchPoliciesLoading] = useState(true);
+  const [branchPoliciesError, setBranchPoliciesError] = useState("");
   const [objectKind, setObjectKind] = useState<ValueObjectKindV2>("other");
   const [activeProfileName, setActiveProfileName] = useState("—");
   const [pending, setPending] = useState(false);
@@ -348,15 +341,83 @@ export default function NewRootObservationObjectPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadBranchPolicies() {
+      setBranchPoliciesLoading(true);
+      setBranchPoliciesError("");
+
+      try {
+        const response = await fetch("/api/value-object-branch-policies", {
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        const data =
+          (await response.json()) as ValueObjectBranchPolicyListResponse;
+
+        if (!response.ok || !data.ok || !Array.isArray(data.policies)) {
+          throw new Error(data.error || `HTTP ${response.status}`);
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setBranchPolicies(data.policies);
+        setBranchTypeCode((current) => {
+          if (data.policies?.some((policy) => policy.branchTypeCode === current)) {
+            return current;
+          }
+
+          return (
+            data.policies?.find(
+              (policy) => policy.branchTypeCode === "resource",
+            )?.branchTypeCode ??
+            data.policies?.[0]?.branchTypeCode ??
+            ""
+          );
+        });
+      } catch (error) {
+        if (!cancelled) {
+          setBranchPolicies([]);
+          setBranchTypeCode("");
+          setBranchPoliciesError(
+            error instanceof Error ? error.message : "Unknown error",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setBranchPoliciesLoading(false);
+        }
+      }
+    }
+
+    void loadBranchPolicies();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const copy = COPY[locale];
 
   const branchOptions = useMemo(
     () =>
-      VALUE_OBJECT_BRANCH_TYPE_CODES_V2.map((code) => ({
-        code,
-        label: BRANCH_LABELS[code][locale],
+      branchPolicies.map((policy) => ({
+        ...policy,
+        label: resolveValueObjectBranchPolicyTitle(policy, locale),
+        description: resolveValueObjectBranchPolicyDescription(policy, locale),
       })),
-    [locale],
+    [branchPolicies, locale],
+  );
+
+  const selectedBranchPolicy = useMemo(
+    () =>
+      branchOptions.find(
+        (policy) => policy.branchTypeCode === branchTypeCode,
+      ) ?? null,
+    [branchOptions, branchTypeCode],
   );
 
   async function submit() {
@@ -366,6 +427,11 @@ export default function NewRootObservationObjectPage() {
 
     if (!normalizedTitle) {
       setErrorMessage(`${copy.errorPrefix} ${copy.objectTitle}.`);
+      return;
+    }
+
+    if (!branchTypeCode) {
+      setErrorMessage(`${copy.errorPrefix} ${copy.branchUnavailable}`);
       return;
     }
 
@@ -492,21 +558,31 @@ export default function NewRootObservationObjectPage() {
               </span>
               <select
                 value={branchTypeCode}
-                onChange={(event) =>
-                  setBranchTypeCode(
-                    event.target.value as ValueObjectBranchTypeCodeV2,
-                  )
+                disabled={
+                  branchPoliciesLoading || branchOptions.length === 0
                 }
+                onChange={(event) => setBranchTypeCode(event.target.value)}
                 className="min-h-12 rounded-2xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] font-semibold outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
               >
                 {branchOptions.map((option) => (
-                  <option key={option.code} value={option.code}>
-                    {option.label} · {option.code}
+                  <option
+                    key={option.branchTypeCode}
+                    value={option.branchTypeCode}
+                  >
+                    {option.label} · {option.branchTypeCode}
                   </option>
                 ))}
               </select>
               <span className="text-[12px] leading-5 text-[#7c8099]">
-                {copy.branchHint}
+                {branchPoliciesLoading
+                  ? copy.branchLoading
+                  : selectedBranchPolicy
+                    ? `${selectedBranchPolicy.description} ${copy.branchHint}`
+                    : `${copy.branchUnavailable}${
+                        branchPoliciesError
+                          ? ` (${branchPoliciesError})`
+                          : ""
+                      }`}
               </span>
             </label>
 
@@ -524,27 +600,35 @@ export default function NewRootObservationObjectPage() {
               />
             </label>
 
-            <label className="grid gap-2 lg:col-span-2">
-              <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
-                {copy.kind}
-              </span>
-              <select
-                value={objectKind}
-                onChange={(event) =>
-                  setObjectKind(event.target.value as ValueObjectKindV2)
-                }
-                className="min-h-12 rounded-2xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] font-semibold outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
-              >
-                {ROOT_OBJECT_KINDS.map((kind) => (
-                  <option key={kind} value={kind}>
-                    {humanizeCode(kind)} · {kind}
-                  </option>
-                ))}
-              </select>
-              <span className="text-[12px] leading-5 text-[#7c8099]">
-                {copy.kindHint}
-              </span>
-            </label>
+            <details className="lg:col-span-2 rounded-2xl border border-[#e5e7f0] bg-[#fafbfe] p-4">
+              <summary className="cursor-pointer text-[13px] font-bold text-[#4a4f6a]">
+                {copy.advancedSettings}
+              </summary>
+              <p className="mt-3 text-[12px] leading-5 text-[#7c8099]">
+                {copy.advancedHint}
+              </p>
+              <label className="mt-4 grid gap-2">
+                <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
+                  {copy.kind}
+                </span>
+                <select
+                  value={objectKind}
+                  onChange={(event) =>
+                    setObjectKind(event.target.value as ValueObjectKindV2)
+                  }
+                  className="min-h-12 rounded-2xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] font-semibold outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                >
+                  {ROOT_OBJECT_KINDS.map((kind) => (
+                    <option key={kind} value={kind}>
+                      {humanizeValueObjectCode(kind)} · {kind}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[12px] leading-5 text-[#7c8099]">
+                  {copy.kindHint}
+                </span>
+              </label>
+            </details>
           </div>
 
           <div className="mt-6 rounded-2xl border border-[#dfe6ff] bg-[#f7f9ff] p-4 text-[13px] font-semibold text-[#4a4f6a]">
@@ -567,7 +651,9 @@ export default function NewRootObservationObjectPage() {
 
             <button
               type="button"
-              disabled={pending}
+              disabled={
+                pending || branchPoliciesLoading || !branchTypeCode
+              }
               onClick={() => void submit()}
               className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#3b6ef8] px-6 py-3 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.24)] transition hover:bg-[#315fdc] disabled:cursor-not-allowed disabled:opacity-60"
             >
