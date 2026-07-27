@@ -208,3 +208,46 @@ export async function saveRealityActivityViaRpc(
     data: parsed,
   };
 }
+
+export async function attachRealityFactsToExistingActivityPp1ViaRpc(
+  input: RealityCoreRpcSaveInput
+): Promise<RealityCoreRpcSaveResult> {
+  const { data, error } = await supabase.rpc(
+    "attach_reality_facts_to_activity_pp1_v1",
+    {
+      p_owner_user_id: input.ownerUserId,
+      p_request_hash: input.requestHash,
+      p_actor_context: input.actorContext,
+      p_activity: input.activity,
+      p_facts: input.facts,
+    }
+  );
+
+  if (error) {
+    return {
+      ok: false,
+      errorCode: error.code ?? null,
+      errorMessage: error.message,
+      errorDetails: error.details ?? null,
+      errorHint: error.hint ?? null,
+    };
+  }
+
+  const parsed = parseRpcData(data);
+
+  if (!parsed) {
+    return {
+      ok: false,
+      errorCode: "PP1_FACT_RPC_RESPONSE_INVALID",
+      errorMessage:
+        "attach_reality_facts_to_activity_pp1_v1 returned an invalid response contract.",
+      errorDetails: JSON.stringify(data),
+      errorHint: null,
+    };
+  }
+
+  return {
+    ok: true,
+    data: parsed,
+  };
+}

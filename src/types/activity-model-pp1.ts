@@ -96,6 +96,7 @@ interface ActivityCreateBasePp1 {
   readonly source?: string;
   readonly privacyScope?: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly durationMinutes?: number | null;
 }
 
 export type PlannedActivityCreatePp1 = ActivityCreateBasePp1 &
@@ -124,4 +125,18 @@ export interface ActivityCreateResultPp1 {
   readonly activityEvent: Readonly<Record<string, unknown>>;
   readonly calendarEvent: Readonly<Record<string, unknown>> | null;
   readonly plannedTargetValueObjectIds: readonly string[];
+}
+
+
+export type ActivityCreateRequestPp1 = ActivityCreatePp1 & {
+  readonly idempotencyKey: string;
+};
+
+export interface ActivityCreateApiResponsePp1 {
+  readonly ok: true;
+  readonly event: Readonly<Record<string, unknown>>;
+  readonly activityEvent: Readonly<Record<string, unknown>>;
+  readonly calendarEvent: Readonly<Record<string, unknown>> | null;
+  readonly plannedTargetValueObjectIds: readonly string[];
+  readonly disposition: "created" | "idempotent_replay";
 }

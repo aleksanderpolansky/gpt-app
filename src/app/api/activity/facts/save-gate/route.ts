@@ -37,6 +37,7 @@ import {
   resolveActiveActorContext,
 } from "../../../../../../lib/actor-context";
 import {
+  attachRealityFactsToExistingActivityPp1ViaRpc,
   buildRealityCoreRequestHash,
   saveRealityActivityViaRpc,
   type RealityCoreRpcFactInput,
@@ -854,7 +855,10 @@ function toCurrentSchemaUnitCode(canonicalUnitCode: string): DbUnit {
 }
 
 function mapRpcErrorStatus(message: string): number {
-  if (message.includes("SAVE_REALITY_ACTIVITY_IDEMPOTENCY_CONFLICT")) {
+  if (
+    message.includes("SAVE_REALITY_ACTIVITY_IDEMPOTENCY_CONFLICT") ||
+    message.includes("PP1_FACT_IDEMPOTENCY_CONFLICT")
+  ) {
     return 409;
   }
 
@@ -1086,18 +1090,22 @@ async function executeRealSave(params: {
     facts: rpcFacts,
   });
 
-  const rpcResult = await saveRealityActivityViaRpc({
+  const rpcInput = {
     ownerUserId: params.context.appUserId,
     requestHash,
     actorContext: rpcActorContext,
     activity: rpcActivity,
     facts: rpcFacts,
-  });
+  };
+
+  const rpcResult = existingActivityEventId
+    ? await attachRealityFactsToExistingActivityPp1ViaRpc(rpcInput)
+    : await saveRealityActivityViaRpc(rpcInput);
 
   if (!rpcResult.ok) {
-    const isIdempotencyConflict = rpcResult.errorMessage.includes(
-      "SAVE_REALITY_ACTIVITY_IDEMPOTENCY_CONFLICT"
-    );
+    const isIdempotencyConflict =
+      rpcResult.errorMessage.includes("SAVE_REALITY_ACTIVITY_IDEMPOTENCY_CONFLICT") ||
+      rpcResult.errorMessage.includes("PP1_FACT_IDEMPOTENCY_CONFLICT");
 
     console.error("Reality Core transactional save failed.", {
       errorCode: rpcResult.errorCode,

@@ -11,6 +11,14 @@ type ActivityEventSummary = {
   status: string | null;
   source: string | null;
   temporalDirection?: string | null;
+  activityRoleCode?: string | null;
+  fulfillsPlannedActivityEventId?: string | null;
+  scheduleModeCode?: string | null;
+  scheduledDate?: string | null;
+  scheduleStartDate?: string | null;
+  scheduleEndDate?: string | null;
+  deadlineAt?: string | null;
+  observedDate?: string | null;
   processingStatus?: string | null;
   startedAt?: string | null;
   endedAt?: string | null;
@@ -397,12 +405,12 @@ function parseDatetimeLocal(value: string) {
 }
 
 function isNewActivityContainer(event: ActivityEventSummary) {
-  if (event.temporalDirection === "past") {
+  if (event.activityRoleCode === "planned" || event.activityRoleCode === "actual") {
     return true;
   }
 
-  if (event.temporalDirection === "future") {
-    return false;
+  if (event.temporalDirection === "past") {
+    return true;
   }
 
   const source = event.source ?? "";
@@ -416,6 +424,60 @@ function isNewActivityContainer(event: ActivityEventSummary) {
       comment.includes("activity_container_review_v1")
     )
   );
+}
+
+function formatDateOnly(value: string | null | undefined, locale: Locale) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(`${value}T12:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(parsed);
+}
+
+function formatActivityEventTime(event: ActivityEventSummary, locale: Locale) {
+  const timingCopy: Record<Locale, { deadline: string; unscheduled: string }> = {
+    en: { deadline: "Deadline", unscheduled: "Unscheduled" },
+    pl: { deadline: "Termin", unscheduled: "Bez terminu" },
+    ru: { deadline: "Срок", unscheduled: "Без даты" },
+    uk: { deadline: "Строк", unscheduled: "Без дати" },
+    de: { deadline: "Frist", unscheduled: "Ohne Termin" },
+    es: { deadline: "Fecha límite", unscheduled: "Sin fecha" },
+    cs: { deadline: "Termín", unscheduled: "Bez termínu" },
+  };
+
+  if (event.startedAt) {
+    return `${formatDateTime(event.startedAt, locale)}${event.endedAt ? ` - ${formatDateTime(event.endedAt, locale)}` : ""}`;
+  }
+
+  if (event.scheduleModeCode === "date_only") {
+    return formatDateOnly(event.scheduledDate, locale);
+  }
+
+  if (event.scheduleModeCode === "date_range") {
+    const start = formatDateOnly(event.scheduleStartDate, locale);
+    const end = formatDateOnly(event.scheduleEndDate, locale);
+    return start || end ? `${start ?? "—"} - ${end ?? "—"}` : null;
+  }
+
+  if (event.scheduleModeCode === "deadline" && event.deadlineAt) {
+    return `${timingCopy[locale].deadline}: ${formatDateTime(event.deadlineAt, locale)}`;
+  }
+
+  if (event.scheduleModeCode === "unscheduled") {
+    return timingCopy[locale].unscheduled;
+  }
+
+  if (event.observedDate) {
+    return formatDateOnly(event.observedDate, locale);
+  }
+
+  return null;
 }
 
 function calendarAction(action: CalendarLogSummary["action"], ui: typeof UI[Locale]) {
@@ -446,32 +508,31 @@ function mapActivityEvent(event: ActivityEventSummary, index: number, locale: Lo
   const ui = UI[locale];
   const title = event.title ?? "Activity";
   const sourceId = event.id;
-  const start = event.startedAt ?? event.createdAt ?? event.updatedAt ?? null;
-  const end = event.endedAt ?? null;
-  const eventTime = start
-    ? `${formatDateTime(start, locale)}${end ? ` - ${formatDateTime(end, locale)}` : ""}`
-    : null;
+  const role = event.activityRoleCode ?? (event.temporalDirection === "future" ? "planned" : "actual");
+  const eventTime = formatActivityEventTime(event, locale);
+  const inactive = event.status === "cancelled" || event.status === "archived";
+  const editableActual = role === "actual";
 
   return {
     id: `activity:${sourceId ?? index}`,
     kind: "activity",
     sourceId,
-    occurredAt: event.updatedAt ?? event.createdAt ?? start,
+    occurredAt: event.updatedAt ?? event.createdAt ?? event.startedAt ?? event.deadlineAt ?? null,
     title,
     action: activityAction(event.status, ui),
     actorName: ui.actor,
     eventTime,
     source: event.source ?? "activity_events",
-    status: event.temporalDirection ? `${event.status ?? "unknown"} / ${event.temporalDirection}` : event.status ?? "unknown",
+    status: `${event.status ?? "unknown"} / ${role}`,
     description: event.comment ?? "",
-    canEdit: Boolean(sourceId) && event.status !== "cancelled" && event.status !== "archived",
-    canCancel: Boolean(sourceId) && event.status !== "cancelled" && event.status !== "archived",
-    canRestore: Boolean(sourceId) && (event.status === "cancelled" || event.status === "archived"),
+    canEdit: Boolean(sourceId) && editableActual && !inactive,
+    canCancel: Boolean(sourceId) && editableActual && !inactive,
+    canRestore: Boolean(sourceId) && editableActual && inactive,
     containerHref: `/calendar/activity-review?${new URLSearchParams({
       locale,
       text: title,
-      returnTo: "activity-journal",
-      temporalDirection: "past",
+      returnTo: role === "planned" ? "calendar" : "activity-journal",
+      temporalDirection: role === "planned" ? "future" : "past",
     }).toString()}`,
     raw: event,
   };
@@ -525,7 +586,7 @@ export default function ActivityTodayPage() {
     description: "",
     startedAtLocal: "",
     endedAtLocal: "",
-    durationMinutes: "30",
+    durationMinutes: "",
   });
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -631,7 +692,7 @@ export default function ActivityTodayPage() {
       description: item.description,
       startedAtLocal: formatDatetimeLocal(activity?.startedAt ?? null),
       endedAtLocal: formatDatetimeLocal(activity?.endedAt ?? null),
-      durationMinutes: String(activity?.durationMinutes ?? 30),
+      durationMinutes: activity?.durationMinutes ? String(activity.durationMinutes) : "",
     });
   }
 

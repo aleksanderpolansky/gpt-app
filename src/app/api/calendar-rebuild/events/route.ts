@@ -204,6 +204,15 @@ async function readCalendarEventLogs(
   appUser: Record<string, any>,
   calendarRows: Record<string, any>[],
 ) {
+  const canonicalProjectionIds = new Set(
+    calendarRows
+      .filter((row) => Boolean(asText(row.related_activity_event_id)))
+      .map((row) => String(row.id)),
+  );
+  const standaloneCalendarRows = calendarRows.filter(
+    (row) => !canonicalProjectionIds.has(String(row.id)),
+  );
+
   const { data, error } = await supabase
     .from("calendar_event_logs")
     .select("*")
@@ -212,16 +221,25 @@ async function readCalendarEventLogs(
     .limit(120);
 
   if (error) {
-    return buildDerivedCalendarEventLogs(calendarRows, appUser);
+    return buildDerivedCalendarEventLogs(standaloneCalendarRows, appUser);
   }
 
-  const storedLogs = (data ?? []).map(mapCalendarEventLogRow).filter(Boolean) as CalendarEventLogEntry[];
+  const storedLogs = ((data ?? []) as Record<string, any>[])
+    .map(mapCalendarEventLogRow)
+    .filter((entry): entry is CalendarEventLogEntry => Boolean(entry))
+    .filter((entry) => {
+      const storageId = entry.eventId?.startsWith("calendar:")
+        ? entry.eventId.slice("calendar:".length)
+        : null;
+
+      return !storageId || !canonicalProjectionIds.has(storageId);
+    });
 
   if (storedLogs.length > 0) {
     return storedLogs;
   }
 
-  return buildDerivedCalendarEventLogs(calendarRows, appUser);
+  return buildDerivedCalendarEventLogs(standaloneCalendarRows, appUser);
 }
 function asText(value: unknown) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;

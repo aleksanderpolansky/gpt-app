@@ -7,6 +7,11 @@ import {
 } from "../../../../../lib/activity/activityRecordingConfig";
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
+import { createActivityEventViaPp1Rpc } from "@/lib/activity/pp1/createActivityEventRpc";
+import type {
+  ActivityCreatePp1,
+  ActivityScheduleModeCodePp1,
+} from "@/types/activity-model-pp1";
 
 export const dynamic = "force-dynamic";
 
@@ -271,20 +276,30 @@ function normalizeActivityType(row: Row | null) {
 }
 
 
-/* Step 10A Activity Journal container write helpers */
-type ActivityJournalContainerBody = {
+/* PP1B canonical activity create helpers */
+type ActivityCanonicalCreateBody = {
+  idempotencyKey?: unknown;
+  activityRoleCode?: unknown;
   title?: unknown;
   rawText?: unknown;
   inputText?: unknown;
   description?: unknown;
-  startTime?: unknown;
   startedAt?: unknown;
-  endTime?: unknown;
   endedAt?: unknown;
   durationMinutes?: unknown;
   status?: unknown;
   source?: unknown;
+  privacyScope?: unknown;
+  fulfillsPlannedActivityEventId?: unknown;
+  scheduleModeCode?: unknown;
+  scheduledDate?: unknown;
+  scheduleStartDate?: unknown;
+  scheduleEndDate?: unknown;
+  deadlineAt?: unknown;
+  createCalendarProjection?: unknown;
+  plannedTargetValueObjectIds?: unknown;
   temporalDirection?: unknown;
+  metadata?: unknown;
 };
 
 function parseIsoDate(value: unknown): string | null {
@@ -296,64 +311,75 @@ function parseIsoDate(value: unknown): string | null {
 
   const date = new Date(text);
 
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date.toISOString();
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function calculateDurationFromIso(startedAt: string | null, endedAt: string | null) {
-  if (!startedAt || !endedAt) {
-    return null;
-  }
-
-  const start = new Date(startedAt).getTime();
-  const end = new Date(endedAt).getTime();
-
-  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
-    return null;
-  }
-
-  return Math.round((end - start) / 60000);
-}
-
-function normalizeActivityJournalStatus(value: unknown) {
-  const text = asString(value)?.toLowerCase();
-
-  if (text === "cancelled" || text === "canceled") {
-    return "cancelled";
-  }
-
-  if (text === "started" || text === "running") {
-    return "started";
-  }
-
-  return "completed";
-}
-
-function normalizeActivityJournalSource(value: unknown) {
+function parseDateKey(value: unknown): string | null {
   const text = asString(value);
 
-  if (
-    text === "manual_chat" ||
-    text === "manual_form" ||
-    text === "voice_input" ||
-    text === "app_action" ||
-    text === "system_event" ||
-    text === "api_webhook" ||
-    text === "nfc_sensor" ||
-    text === "wearable_import" ||
-    text === "calendar_import" ||
-    text === "ai_suggested" ||
-    text === "file_import" ||
-    text === "external_import" ||
-    text === "unknown"
-  ) {
-    return text;
+  return text && /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
+}
+
+function parseUuid(value: unknown): string | null {
+  const text = asString(value);
+
+  return text && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text)
+    ? text
+    : null;
+}
+
+function parseUuidArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
   }
 
-  return "manual_form";
+  return Array.from(new Set(value.map(parseUuid).filter((item): item is string => Boolean(item))));
+}
+
+function normalizeActivityRole(value: unknown): "planned" | "actual" | null {
+  return value === "planned" || value === "actual" ? value : null;
+}
+
+function normalizeScheduleMode(value: unknown): ActivityScheduleModeCodePp1 | null {
+  return value === "unscheduled" ||
+    value === "date_only" ||
+    value === "date_range" ||
+    value === "deadline" ||
+    value === "exact"
+    ? value
+    : null;
+}
+
+function normalizeSource(value: unknown) {
+  const source = asString(value);
+
+  return source ?? "manual_form";
+}
+
+function normalizePrivacyScope(value: unknown) {
+  const scope = asString(value);
+
+  return scope ?? "private";
+}
+
+function normalizeMetadata(value: unknown) {
+  return asRecord(value);
+}
+
+function mapPp1ErrorStatus(message: string) {
+  if (message.includes("IDEMPOTENCY_CONFLICT")) {
+    return 409;
+  }
+
+  if (message.includes("OWNER") || message.includes("ACTOR")) {
+    return 403;
+  }
+
+  if (/PP1_/.test(message)) {
+    return 400;
+  }
+
+  return 500;
 }
 
 function summarizeActivityJournalEvent(row: Row) {
@@ -362,6 +388,14 @@ function summarizeActivityJournalEvent(row: Row) {
     title: asString(row.title),
     status: asString(row.status),
     source: asString(row.source),
+    activityRoleCode: asString(row.activity_role_code),
+    fulfillsPlannedActivityEventId: asString(row.fulfills_planned_activity_event_id),
+    scheduleModeCode: asString(row.schedule_mode_code),
+    scheduledDate: asString(row.scheduled_date),
+    scheduleStartDate: asString(row.schedule_start_date),
+    scheduleEndDate: asString(row.schedule_end_date),
+    deadlineAt: asString(row.deadline_at),
+    observedDate: asString(asRecord(row.metadata_json).observedDate),
     temporalDirection: getActivityTemporalDirection(row),
     privacyScope: asString(row.privacy_scope),
     processingStatus: asString(row.processing_status),
@@ -373,6 +407,7 @@ function summarizeActivityJournalEvent(row: Row) {
     updatedAt: asString(row.updated_at),
   };
 }
+
 export async function GET(request: Request) {
   if (!ACTIVITY_RECORDING_ENABLED) {
     return NextResponse.json(
@@ -534,6 +569,14 @@ export async function GET(request: Request) {
         activityTypeId: asString(event.activity_type_id),
         activityTemplateId: asString(event.activity_template_id),
         legacyTemplateId: asString(event.template_id),
+        activityRoleCode: asString(event.activity_role_code),
+        fulfillsPlannedActivityEventId: asString(event.fulfills_planned_activity_event_id),
+        scheduleModeCode: asString(event.schedule_mode_code),
+        scheduledDate: asString(event.scheduled_date),
+        scheduleStartDate: asString(event.schedule_start_date),
+        scheduleEndDate: asString(event.schedule_end_date),
+        deadlineAt: asString(event.deadline_at),
+        observedDate: asString(asRecord(event.metadata_json).observedDate),
         temporalDirection: getActivityTemporalDirection(event),
         createdAt: asString(event.created_at),
         updatedAt: asString(event.updated_at),
@@ -668,6 +711,15 @@ export async function GET(request: Request) {
       activityTypeId,
       activityTemplateId,
       legacyTemplateId,
+      activityRoleCode: asString(event.activity_role_code),
+      fulfillsPlannedActivityEventId: asString(event.fulfills_planned_activity_event_id),
+      scheduleModeCode: asString(event.schedule_mode_code),
+      scheduledDate: asString(event.scheduled_date),
+      scheduleStartDate: asString(event.schedule_start_date),
+      scheduleEndDate: asString(event.schedule_end_date),
+      deadlineAt: asString(event.deadline_at),
+      observedDate: asString(asRecord(event.metadata_json).observedDate),
+      temporalDirection: getActivityTemporalDirection(event),
       createdAt: asString(event.created_at),
       updatedAt: asString(event.updated_at),
       activityTemplate: normalizeActivityTemplate(
@@ -703,16 +755,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   if (!ACTIVITY_RECORDING_ENABLED) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: ACTIVITY_RECORDING_DISABLED_MESSAGE,
-      },
+      { ok: false, error: ACTIVITY_RECORDING_DISABLED_MESSAGE },
       { status: 503 }
     );
   }
 
-  const { appUser, personActor, errorResponse } =
-    await getActivityUserContext();
+  const { appUser, personActor, errorResponse } = await getActivityUserContext();
 
   if (errorResponse) {
     return errorResponse;
@@ -720,108 +768,142 @@ export async function POST(request: Request) {
 
   if (!appUser || !personActor) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: "User context not found",
-      },
+      { ok: false, error: "User context not found" },
       { status: 500 }
     );
   }
 
-  let body: ActivityJournalContainerBody;
+  let body: ActivityCanonicalCreateBody;
 
   try {
-    body = (await request.json()) as ActivityJournalContainerBody;
+    body = await request.json() as ActivityCanonicalCreateBody;
   } catch {
+    return NextResponse.json({ ok: false, error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const idempotencyKey = asString(body.idempotencyKey);
+  const activityRoleCode = normalizeActivityRole(body.activityRoleCode);
+  const inputText = asString(body.inputText) ?? asString(body.rawText);
+  const title = asString(body.title) ?? inputText;
+
+  if (!idempotencyKey || !activityRoleCode || !title) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: "Invalid JSON body",
-      },
+      { ok: false, error: "idempotencyKey, activityRoleCode and title are required" },
       { status: 400 }
     );
   }
 
-  const rawText = asString(body.rawText) ?? asString(body.inputText);
-  const title = asString(body.title) ?? rawText ?? "Activity";
-  const description = asString(body.description) ?? rawText;
-  const startedAt = parseIsoDate(body.startedAt) ?? parseIsoDate(body.startTime);
+  const durationMinutesRaw = asNumber(body.durationMinutes);
+  const durationMinutes = durationMinutesRaw !== null && durationMinutesRaw > 0
+    ? Math.round(durationMinutesRaw)
+    : null;
+  const common = {
+    activityRoleCode,
+    title,
+    inputText,
+    description: asString(body.description),
+    durationMinutes,
+    source: normalizeSource(body.source),
+    privacyScope: normalizePrivacyScope(body.privacyScope),
+    metadata: {
+      ...normalizeMetadata(body.metadata),
+      pp1bWritePath: "/api/activity/events",
+    },
+  } as const;
 
-  if (!startedAt) {
+  let activity: ActivityCreatePp1;
+  let plannedTargetValueObjectIds: string[] = [];
+
+  if (activityRoleCode === "planned") {
+    const scheduleModeCode = normalizeScheduleMode(body.scheduleModeCode);
+
+    if (!scheduleModeCode) {
+      return NextResponse.json(
+        { ok: false, error: "scheduleModeCode is required for planned activities" },
+        { status: 400 }
+      );
+    }
+
+    plannedTargetValueObjectIds = parseUuidArray(body.plannedTargetValueObjectIds);
+    const scheduleFields = {
+      scheduleModeCode,
+      ...(scheduleModeCode === "date_only"
+        ? { scheduledDate: parseDateKey(body.scheduledDate) ?? "" }
+        : {}),
+      ...(scheduleModeCode === "date_range"
+        ? {
+            scheduleStartDate: parseDateKey(body.scheduleStartDate) ?? "",
+            scheduleEndDate: parseDateKey(body.scheduleEndDate) ?? "",
+          }
+        : {}),
+      ...(scheduleModeCode === "deadline"
+        ? { deadlineAt: parseIsoDate(body.deadlineAt) ?? "" }
+        : {}),
+      ...(scheduleModeCode === "exact"
+        ? {
+            startedAt: parseIsoDate(body.startedAt) ?? "",
+            endedAt: parseIsoDate(body.endedAt),
+            createCalendarProjection: body.createCalendarProjection !== false,
+          }
+        : {}),
+    };
+
+    activity = {
+      ...common,
+      activityRoleCode: "planned",
+      status: body.status === "draft" || body.status === "confirmed" || body.status === "cancelled" || body.status === "missed" || body.status === "archived"
+        ? body.status
+        : "planned",
+      ...scheduleFields,
+      plannedTargetValueObjectIds,
+    } as ActivityCreatePp1;
+  } else {
+    activity = {
+      ...common,
+      activityRoleCode: "actual",
+      status: body.status === "draft" || body.status === "started" || body.status === "paused" || body.status === "corrected" || body.status === "cancelled" || body.status === "imported_pending" || body.status === "archived"
+        ? body.status
+        : "completed",
+      startedAt: parseIsoDate(body.startedAt),
+      endedAt: parseIsoDate(body.endedAt),
+      fulfillsPlannedActivityEventId: parseUuid(body.fulfillsPlannedActivityEventId),
+    };
+  }
+
+  const result = await createActivityEventViaPp1Rpc({
+    ownerUserId: appUser.id,
+    ownerActorId: personActor.id,
+    idempotencyKey,
+    activity,
+    plannedTargetValueObjectIds,
+  });
+
+  if (!result.ok) {
     return NextResponse.json(
       {
         ok: false,
-        error: "Valid startTime or startedAt is required.",
+        error: result.errorMessage,
+        errorCode: result.errorCode,
+        errorDetails: result.errorDetails,
+        errorHint: result.errorHint,
       },
-      { status: 400 }
+      { status: mapPp1ErrorStatus(result.errorMessage) }
     );
   }
 
-  const durationMinutes = asNumber(body.durationMinutes) ?? 30;
-  const endedAt =
-    parseIsoDate(body.endedAt) ??
-    parseIsoDate(body.endTime) ??
-    new Date(new Date(startedAt).getTime() + durationMinutes * 60000).toISOString();
-
-  const finalDurationMinutes =
-    asNumber(body.durationMinutes) ??
-    calculateDurationFromIso(startedAt, endedAt) ??
-    durationMinutes;
-
-  const status = normalizeActivityJournalStatus(body.status);
-  const source = normalizeActivityJournalSource(body.source);
-
-  const { data: createdEvent, error: insertError } = await supabase
-    .from("activity_events")
-    .insert({
-      user_id: appUser.id,
-      performed_by_actor_id: personActor.id,
-      acting_as_actor_id: personActor.id,
-      acting_for_actor_id: personActor.id,
-      input_text: rawText ?? title,
-      title,
-      description,
-      started_at: startedAt,
-      ended_at: endedAt,
-      duration_minutes: finalDurationMinutes,
-      source,
-      temporal_direction: "past",
-      status,
-      privacy_scope: "private",
-      processing_status: "pending",
-      metadata_json: {
-        parser: "activity_container_review_v1",
-        temporal_direction: "past",
-        source_entry_point: "activity_journal",
-        save_gate: "activity_journal_review_add_gate_v1",
-        requested_source: asString(body.source),
-        facts_created: false,
-        value_objects_linked: false,
-        plan_metrics_created: false,
-        analytics_zones_created: false,
-      },
-    })
-    .select("*")
-    .single();
-
-  if (insertError || !createdEvent) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: insertError?.message ?? "Failed to create activity event.",
-      },
-      { status: 500 }
-    );
-  }
+  const activityEvent = result.data.activityEvent as Row;
 
   return NextResponse.json({
     ok: true,
-    event: summarizeActivityJournalEvent(createdEvent as Row),
+    disposition: result.data.disposition,
+    event: summarizeActivityJournalEvent(activityEvent),
+    activityEvent: result.data.activityEvent,
+    calendarEvent: result.data.calendarEvent,
+    plannedTargetValueObjectIds: result.data.plannedTargetValueObjectIds,
     container: {
-      temporalDirection: "past",
+      activityRoleCode,
       persistenceTarget: "activity_events",
-      factsCreated: false,
-      valueObjectsLinked: false,
+      calendarProjectionCreated: result.data.calendarEvent !== null,
     },
   });
 }
