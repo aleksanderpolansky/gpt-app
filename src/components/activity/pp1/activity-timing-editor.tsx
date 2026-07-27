@@ -175,6 +175,51 @@ const COPY: Record<ActivityTimingLocalePp1, {
 const inputClass = "mt-1 w-full rounded-xl border border-[#dfe5f1] bg-white px-3 py-2 text-sm text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8]";
 const labelClass = "text-[11px] font-extrabold uppercase tracking-[0.15em] text-[#7c8099]";
 
+function addMinutesToLocal(value: string, minutes: number) {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  parsed.setMinutes(parsed.getMinutes() + minutes);
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const hour = String(parsed.getHours()).padStart(2, "0");
+  const minute = String(parsed.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hour}:${minute}`;
+}
+
+function durationBetweenLocal(start: string, end: string) {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return null;
+  }
+
+  const duration = Math.round((endDate.getTime() - startDate.getTime()) / 60_000);
+  return duration > 0 ? duration : null;
+}
+
+function clearFieldsForMode(
+  draft: ActivityTimingDraftPp1,
+  scheduleModeCode: ActivityTimingDraftPp1["scheduleModeCode"],
+): ActivityTimingDraftPp1 {
+  return {
+    ...draft,
+    scheduleModeCode,
+    scheduledDate: scheduleModeCode === "date_only" ? draft.scheduledDate : "",
+    scheduleStartDate: scheduleModeCode === "date_range" ? draft.scheduleStartDate : "",
+    scheduleEndDate: scheduleModeCode === "date_range" ? draft.scheduleEndDate : "",
+    deadlineLocal: scheduleModeCode === "deadline" ? draft.deadlineLocal : "",
+    startedAtLocal: scheduleModeCode === "exact" ? draft.startedAtLocal : "",
+    endedAtLocal: scheduleModeCode === "exact" ? draft.endedAtLocal : "",
+  };
+}
+
 export function ActivityTimingEditorPp1({
   locale,
   temporalDirection,
@@ -191,6 +236,50 @@ export function ActivityTimingEditorPp1({
   const copy = COPY[locale];
   const patch = (values: Partial<ActivityTimingDraftPp1>) => onChange({ ...draft, ...values });
 
+  const modeOptions = [
+    { value: "unscheduled" as const, label: copy.unscheduled },
+    { value: "date_only" as const, label: copy.dateOnly },
+    { value: "date_range" as const, label: copy.dateRange },
+    { value: "deadline" as const, label: copy.deadline },
+    { value: "exact" as const, label: copy.exact },
+  ];
+
+  function updateStart(value: string) {
+    const next: Partial<ActivityTimingDraftPp1> = { startedAtLocal: value };
+    const duration = Number(draft.durationMinutes);
+
+    if (value && Number.isFinite(duration) && duration > 0) {
+      next.endedAtLocal = addMinutesToLocal(value, duration);
+    } else if (value && draft.endedAtLocal) {
+      const calculated = durationBetweenLocal(value, draft.endedAtLocal);
+      next.durationMinutes = calculated ? String(calculated) : "";
+    }
+
+    patch(next);
+  }
+
+  function updateEnd(value: string) {
+    const calculated = draft.startedAtLocal
+      ? durationBetweenLocal(draft.startedAtLocal, value)
+      : null;
+
+    patch({
+      endedAtLocal: value,
+      ...(calculated ? { durationMinutes: String(calculated) } : {}),
+    });
+  }
+
+  function updateDuration(value: string) {
+    const parsed = Number(value);
+    const next: Partial<ActivityTimingDraftPp1> = { durationMinutes: value };
+
+    if (draft.startedAtLocal && Number.isFinite(parsed) && parsed > 0) {
+      next.endedAtLocal = addMinutesToLocal(draft.startedAtLocal, Math.round(parsed));
+    }
+
+    patch(next);
+  }
+
   return (
     <div className="rounded-[18px] border border-[#dfe5f1] bg-[#f8fafc] p-4">
       <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#7c8099]">
@@ -198,22 +287,35 @@ export function ActivityTimingEditorPp1({
       </p>
 
       {temporalDirection === "future" ? (
-        <div className="mt-3">
-          <label className={labelClass}>
-            {copy.mode}
-            <select
-              value={draft.scheduleModeCode}
-              onChange={(event) => patch({ scheduleModeCode: event.target.value as ActivityTimingDraftPp1["scheduleModeCode"] })}
-              className={inputClass}
-            >
-              <option value="unscheduled">{copy.unscheduled}</option>
-              <option value="date_only">{copy.dateOnly}</option>
-              <option value="date_range">{copy.dateRange}</option>
-              <option value="deadline">{copy.deadline}</option>
-              <option value="exact">{copy.exact}</option>
-            </select>
-          </label>
-        </div>
+        <fieldset className="mt-3">
+          <legend className={labelClass}>{copy.mode}</legend>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {modeOptions.map((option) => {
+              const selected = draft.scheduleModeCode === option.value;
+
+              return (
+                <label
+                  key={option.value}
+                  className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                    selected
+                      ? "border-[#3b6ef8] bg-[#eef2ff] text-[#2853c7] shadow-sm"
+                      : "border-[#dfe5f1] bg-white text-[#52607a] hover:border-[#b9c8ff]"
+                  } ${option.value === "exact" ? "sm:col-span-2" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="activity-schedule-mode"
+                    value={option.value}
+                    checked={selected}
+                    onChange={() => onChange(clearFieldsForMode(draft, option.value))}
+                    className="h-4 w-4 accent-[#3b6ef8]"
+                  />
+                  <span>{option.label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
       ) : null}
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -283,7 +385,7 @@ export function ActivityTimingEditorPp1({
               <input
                 type="datetime-local"
                 value={draft.startedAtLocal}
-                onChange={(event) => patch({ startedAtLocal: event.target.value })}
+                onChange={(event) => updateStart(event.target.value)}
                 className={inputClass}
               />
             </label>
@@ -292,7 +394,7 @@ export function ActivityTimingEditorPp1({
               <input
                 type="datetime-local"
                 value={draft.endedAtLocal}
-                onChange={(event) => patch({ endedAtLocal: event.target.value })}
+                onChange={(event) => updateEnd(event.target.value)}
                 className={inputClass}
               />
             </label>
@@ -307,7 +409,7 @@ export function ActivityTimingEditorPp1({
             step="1"
             inputMode="numeric"
             value={draft.durationMinutes}
-            onChange={(event) => patch({ durationMinutes: event.target.value })}
+            onChange={(event) => updateDuration(event.target.value)}
             className={inputClass}
           />
         </label>

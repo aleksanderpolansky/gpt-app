@@ -22,6 +22,34 @@ export type ActivityTimingValidationPp1 = {
 
 const DATE_ISO_PATTERN = /\b(20\d{2})-(\d{2})-(\d{2})\b/g;
 const DATE_DMY_PATTERN = /\b(\d{1,2})[./-](\d{1,2})(?:[./-](20\d{2}))?\b/g;
+const CLOCK_PATTERN = /(?:^|[^\d])([01]?\d|2[0-3])[:.]([0-5]\d)(?!\d)/g;
+
+const MONTH_ALIASES: Array<{ month: number; values: string[] }> = [
+  { month: 1, values: ["января", "январь", "січня", "stycznia", "january", "januar", "enero", "ledna"] },
+  { month: 2, values: ["февраля", "февраль", "лютого", "lutego", "february", "februar", "febrero", "února", "unora"] },
+  { month: 3, values: ["марта", "март", "березня", "marca", "march", "märz", "maerz", "marzo", "března", "brezna"] },
+  { month: 4, values: ["апреля", "апрель", "квітня", "kwietnia", "april", "abril", "dubna"] },
+  { month: 5, values: ["мая", "май", "травня", "maja", "may", "mai", "mayo", "května", "kvetna"] },
+  { month: 6, values: ["июня", "июнь", "червня", "czerwca", "june", "juni", "junio", "června", "cervna"] },
+  { month: 7, values: ["июля", "июль", "липня", "lipca", "july", "juli", "julio", "července", "cervence"] },
+  { month: 8, values: ["августа", "август", "серпня", "sierpnia", "august", "agosto", "srpna"] },
+  { month: 9, values: ["сентября", "сентябрь", "вересня", "września", "wrzesnia", "september", "septiembre", "září", "zari"] },
+  { month: 10, values: ["октября", "октябрь", "жовтня", "października", "pazdziernika", "october", "oktober", "octubre", "října", "rijna"] },
+  { month: 11, values: ["ноября", "ноябрь", "листопада", "listopada", "november", "noviembre"] },
+  { month: 12, values: ["декабря", "декабрь", "грудня", "grudnia", "december", "dezember", "diciembre", "prosince"] },
+];
+
+const MONTH_LOOKUP = new Map<string, number>(
+  MONTH_ALIASES.flatMap((entry) => entry.values.map((value) => [value, entry.month] as const)),
+);
+const MONTH_TOKEN_PATTERN = Array.from(MONTH_LOOKUP.keys())
+  .sort((left, right) => right.length - left.length)
+  .map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+  .join("|");
+const DATE_MONTH_NAME_PATTERN = new RegExp(
+  `(?:^|\\s)(\\d{1,2})\\.?\\s+(${MONTH_TOKEN_PATTERN})(?:\\s+(20\\d{2}))?(?=$|\\s|[,.;])`,
+  "giu",
+);
 
 function pad2(value: number) {
   return String(value).padStart(2, "0");
@@ -81,13 +109,38 @@ function validDateKey(year: number, month: number, day: number) {
   return toDateKeyPp1(value);
 }
 
-function extractDateKeys(rawText: string, now: Date) {
+function resolveImplicitYear(
+  month: number,
+  day: number,
+  now: Date,
+  temporalDirection: ActivityTemporalDirectionPp1,
+) {
+  const currentYear = now.getFullYear();
+  const currentCandidate = new Date(currentYear, month - 1, day, 12, 0, 0, 0);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0);
+
+  if (temporalDirection === "future" && currentCandidate.getTime() < today.getTime()) {
+    return currentYear + 1;
+  }
+
+  if (temporalDirection === "past" && currentCandidate.getTime() > today.getTime()) {
+    return currentYear - 1;
+  }
+
+  return currentYear;
+}
+
+function extractDateKeys(
+  rawText: string,
+  now: Date,
+  temporalDirection: ActivityTemporalDirectionPp1,
+) {
   const keys: string[] = [];
-  const lower = rawText.toLowerCase();
+  const lower = rawText.toLowerCase().replace(/\u00a0/g, " ");
 
   if (includesAny(lower, ["послезавтра", "післязавтра", "pojutrze", "day after tomorrow", "übermorgen", "pasado mañana", "pozítří"])) {
     keys.push(toDateKeyPp1(addDays(now, 2)));
-  } else if (includesAny(lower, ["завтра", "завтра", "jutro", "tomorrow", "morgen", "mañana", "zítra"])) {
+  } else if (includesAny(lower, ["завтра", "jutro", "tomorrow", "morgen", "mañana", "zítra"])) {
     keys.push(toDateKeyPp1(addDays(now, 1)));
   } else if (includesAny(lower, ["сегодня", "сьогодні", "dzisiaj", "dziś", "today", "heute", "hoy", "dnes"])) {
     keys.push(toDateKeyPp1(now));
@@ -104,8 +157,31 @@ function extractDateKeys(rawText: string, now: Date) {
   }
 
   for (const match of rawText.matchAll(DATE_DMY_PATTERN)) {
-    const year = match[3] ? Number(match[3]) : now.getFullYear();
-    const key = validDateKey(year, Number(match[2]), Number(match[1]));
+    const month = Number(match[2]);
+    const day = Number(match[1]);
+    const year = match[3]
+      ? Number(match[3])
+      : resolveImplicitYear(month, day, now, temporalDirection);
+    const key = validDateKey(year, month, day);
+
+    if (key) {
+      keys.push(key);
+    }
+  }
+
+  DATE_MONTH_NAME_PATTERN.lastIndex = 0;
+  for (const match of lower.matchAll(DATE_MONTH_NAME_PATTERN)) {
+    const month = MONTH_LOOKUP.get(match[2]);
+    const day = Number(match[1]);
+
+    if (!month) {
+      continue;
+    }
+
+    const year = match[3]
+      ? Number(match[3])
+      : resolveImplicitYear(month, day, now, temporalDirection);
+    const key = validDateKey(year, month, day);
 
     if (key) {
       keys.push(key);
@@ -115,30 +191,26 @@ function extractDateKeys(rawText: string, now: Date) {
   return Array.from(new Set(keys));
 }
 
-function extractClock(rawText: string) {
-  const lower = rawText.toLowerCase();
-  const match = lower.match(/(?:^|\s)(?:в|о|o|at|um|a las|às)?\s*(\d{1,2})[:.](\d{2})(?:\s|$)/i);
+type ClockMatch = {
+  hour: number;
+  minute: number;
+  index: number;
+};
 
-  if (match) {
+function extractClocks(rawText: string) {
+  const values: ClockMatch[] = [];
+  CLOCK_PATTERN.lastIndex = 0;
+
+  for (const match of rawText.matchAll(CLOCK_PATTERN)) {
     const hour = Number(match[1]);
     const minute = Number(match[2]);
 
     if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
-      return { hour, minute };
+      values.push({ hour, minute, index: match.index ?? 0 });
     }
   }
 
-  const hourOnly = lower.match(/(?:^|\s)(?:в|о|o|at|um)\s+(\d{1,2})(?:\s|$)/i);
-
-  if (hourOnly) {
-    const hour = Number(hourOnly[1]);
-
-    if (hour >= 0 && hour <= 23) {
-      return { hour, minute: 0 };
-    }
-  }
-
-  return null;
+  return values;
 }
 
 function extractRelativeStart(rawText: string, now: Date) {
@@ -195,33 +267,79 @@ function extractDurationMinutes(rawText: string) {
   return null;
 }
 
-function isDeadlineText(rawText: string) {
-  const lower = rawText.toLowerCase();
+function hasExplicitTimeRange(rawText: string, clocks: ClockMatch[]) {
+  if (clocks.length < 2) {
+    return false;
+  }
 
-  return includesAny(lower, [
-    "дедлайн",
-    "крайний срок",
-    "до ",
-    "не позднее",
-    "термін",
-    "до ",
-    "deadline",
-    "by ",
-    "frist",
-    "spätestens",
-    "hasta ",
-    "nejpozději",
-  ]);
+  const lower = rawText.toLowerCase();
+  const between = lower.slice(clocks[0].index, clocks[1].index + 6);
+
+  return includesAny(between, [" до ", " — ", " – ", "-", " to ", " bis ", " a ", " do ", " по ", " till ", " until "]);
 }
 
-function hasRangeText(rawText: string) {
+function hasDateRangeText(rawText: string) {
   const lower = rawText.toLowerCase();
 
-  return includesAny(lower, [" с ", " по ", "від ", " до ", "from ", " to ", "od ", " do ", "von ", " bis ", "de ", " a "]);
+  return includesAny(lower, [" с ", " по ", "від ", "from ", " to ", "od ", " do ", "von ", " bis ", "de ", " a "]);
+}
+
+function isDeadlineText(rawText: string, clocks: ClockMatch[]) {
+  const lower = rawText.toLowerCase();
+
+  if (hasExplicitTimeRange(rawText, clocks)) {
+    return false;
+  }
+
+  if (includesAny(lower, [
+    "дедлайн",
+    "крайний срок",
+    "не позднее",
+    "срок до",
+    "завершить до",
+    "сделать до",
+    "крайній термін",
+    "не пізніше",
+    "deadline",
+    "due by",
+    "no later than",
+    "frist",
+    "spätestens",
+    "fecha límite",
+    "fecha limite",
+    "nejpozději",
+  ])) {
+    return true;
+  }
+
+  return /(?:^|\s)(?:до|by|bis|hasta)\s+(?:\d{1,2}[./-]|\d{1,2}\s+[\p{L}])/iu.test(lower);
 }
 
 function composeLocalDateTime(dateKey: string, clock: { hour: number; minute: number }) {
   return `${dateKey}T${pad2(clock.hour)}:${pad2(clock.minute)}`;
+}
+
+function addMinutesToLocal(value: string, minutes: number) {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  parsed.setMinutes(parsed.getMinutes() + minutes);
+  return toDatetimeLocalPp1(parsed);
+}
+
+function durationBetweenLocal(start: string, end: string) {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return null;
+  }
+
+  const minutes = Math.round((endDate.getTime() - startDate.getTime()) / 60_000);
+  return minutes > 0 ? minutes : null;
 }
 
 export function emptyActivityTimingDraftPp1(): ActivityTimingDraftPp1 {
@@ -238,25 +356,80 @@ export function emptyActivityTimingDraftPp1(): ActivityTimingDraftPp1 {
   };
 }
 
+export function mergeActivityTimingDraftPp1(
+  base: ActivityTimingDraftPp1,
+  candidate: Partial<ActivityTimingDraftPp1> | null | undefined,
+) {
+  if (!candidate) {
+    return base;
+  }
+
+  const next: ActivityTimingDraftPp1 = { ...base };
+  const mode = candidate.scheduleModeCode;
+
+  if (
+    mode === "unscheduled" ||
+    mode === "date_only" ||
+    mode === "date_range" ||
+    mode === "deadline" ||
+    mode === "exact"
+  ) {
+    next.scheduleModeCode = mode;
+  }
+
+  for (const key of [
+    "scheduledDate",
+    "scheduleStartDate",
+    "scheduleEndDate",
+    "deadlineLocal",
+    "startedAtLocal",
+    "endedAtLocal",
+    "durationMinutes",
+    "observedDate",
+  ] as const) {
+    const value = candidate[key];
+
+    if (typeof value === "string" && value.trim()) {
+      next[key] = value.trim();
+    }
+  }
+
+  return next;
+}
+
 export function inferActivityTimingDraftPp1(
   rawText: string,
   temporalDirection: ActivityTemporalDirectionPp1,
   now = new Date(),
 ): ActivityTimingDraftPp1 {
   const draft = emptyActivityTimingDraftPp1();
-  const dateKeys = extractDateKeys(rawText, now);
-  const clock = extractClock(rawText);
+  const dateKeys = extractDateKeys(rawText, now, temporalDirection);
+  const clocks = extractClocks(rawText);
   const relativeStart = extractRelativeStart(rawText, now);
-  const durationMinutes = extractDurationMinutes(rawText);
+  const explicitDurationMinutes = extractDurationMinutes(rawText);
 
-  draft.durationMinutes = durationMinutes ? String(durationMinutes) : "";
+  draft.durationMinutes = explicitDurationMinutes ? String(explicitDurationMinutes) : "";
   draft.observedDate = dateKeys[0] ?? "";
 
   if (temporalDirection === "past") {
     if (relativeStart) {
       draft.startedAtLocal = toDatetimeLocalPp1(relativeStart);
-    } else if (dateKeys[0] && clock) {
-      draft.startedAtLocal = composeLocalDateTime(dateKeys[0], clock);
+    } else if (dateKeys[0] && clocks[0]) {
+      draft.startedAtLocal = composeLocalDateTime(dateKeys[0], clocks[0]);
+    }
+
+    if (dateKeys[0] && clocks.length >= 2 && hasExplicitTimeRange(rawText, clocks)) {
+      draft.startedAtLocal = composeLocalDateTime(dateKeys[0], clocks[0]);
+      draft.endedAtLocal = composeLocalDateTime(dateKeys[0], clocks[1]);
+
+      if (new Date(draft.endedAtLocal).getTime() <= new Date(draft.startedAtLocal).getTime()) {
+        draft.endedAtLocal = addMinutesToLocal(draft.endedAtLocal, 24 * 60);
+      }
+
+      if (!draft.durationMinutes) {
+        const duration = durationBetweenLocal(draft.startedAtLocal, draft.endedAtLocal);
+        draft.durationMinutes = duration ? String(duration) : "";
+      }
     }
 
     return draft;
@@ -265,29 +438,56 @@ export function inferActivityTimingDraftPp1(
   if (relativeStart) {
     draft.scheduleModeCode = "exact";
     draft.startedAtLocal = toDatetimeLocalPp1(relativeStart);
+
+    if (explicitDurationMinutes) {
+      draft.endedAtLocal = addMinutesToLocal(draft.startedAtLocal, explicitDurationMinutes);
+    }
+
     return draft;
   }
 
-  if (dateKeys.length >= 2 && hasRangeText(rawText)) {
+  if (dateKeys[0] && clocks.length >= 2 && hasExplicitTimeRange(rawText, clocks)) {
+    draft.scheduleModeCode = "exact";
+    draft.startedAtLocal = composeLocalDateTime(dateKeys[0], clocks[0]);
+    draft.endedAtLocal = composeLocalDateTime(dateKeys[0], clocks[1]);
+
+    if (new Date(draft.endedAtLocal).getTime() <= new Date(draft.startedAtLocal).getTime()) {
+      draft.endedAtLocal = addMinutesToLocal(draft.endedAtLocal, 24 * 60);
+    }
+
+    if (!draft.durationMinutes) {
+      const duration = durationBetweenLocal(draft.startedAtLocal, draft.endedAtLocal);
+      draft.durationMinutes = duration ? String(duration) : "";
+    }
+
+    return draft;
+  }
+
+  if (dateKeys.length >= 2 && hasDateRangeText(rawText)) {
     draft.scheduleModeCode = "date_range";
     draft.scheduleStartDate = dateKeys[0];
     draft.scheduleEndDate = dateKeys[1];
     return draft;
   }
 
-  if (isDeadlineText(rawText)) {
+  if (isDeadlineText(rawText, clocks)) {
     draft.scheduleModeCode = "deadline";
 
-    if (dateKeys[0] && clock) {
-      draft.deadlineLocal = composeLocalDateTime(dateKeys[0], clock);
+    if (dateKeys[0]) {
+      draft.deadlineLocal = composeLocalDateTime(dateKeys[0], clocks[0] ?? { hour: 23, minute: 59 });
     }
 
     return draft;
   }
 
-  if (dateKeys[0] && clock) {
+  if (dateKeys[0] && clocks[0]) {
     draft.scheduleModeCode = "exact";
-    draft.startedAtLocal = composeLocalDateTime(dateKeys[0], clock);
+    draft.startedAtLocal = composeLocalDateTime(dateKeys[0], clocks[0]);
+
+    if (explicitDurationMinutes) {
+      draft.endedAtLocal = addMinutesToLocal(draft.startedAtLocal, explicitDurationMinutes);
+    }
+
     return draft;
   }
 
@@ -321,8 +521,16 @@ export function validateActivityTimingDraftPp1(
     errors.push("end_invalid");
   }
 
-  if (startedAt && endedAt && new Date(endedAt).getTime() < new Date(startedAt).getTime()) {
+  if (startedAt && endedAt && new Date(endedAt).getTime() <= new Date(startedAt).getTime()) {
     errors.push("time_order_invalid");
+  }
+
+  if (startedAt && endedAt && durationMinutes !== null) {
+    const actualDuration = Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 60_000);
+
+    if (actualDuration !== durationMinutes) {
+      errors.push("end_duration_conflict");
+    }
   }
 
   if (temporalDirection === "past") {

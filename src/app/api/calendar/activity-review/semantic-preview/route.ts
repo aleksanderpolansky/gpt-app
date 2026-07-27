@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
 
+import {
+  inferActivityTimingDraftPp1,
+  mergeActivityTimingDraftPp1,
+  validateActivityTimingDraftPp1,
+  type ActivityTemporalDirectionPp1,
+  type ActivityTimingDraftPp1,
+} from "@/lib/activity/pp1/activityTiming";
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -30,6 +38,7 @@ type ReviewPayload = {
   intent: IntentValue;
   activityTitle: string;
   summary: string;
+  timingDraft: ActivityTimingDraftPp1;
   fields: ReviewField[];
   counters: Record<FieldStatus, number>;
   safety: {
@@ -72,6 +81,19 @@ type ModelShape = {
   duration?: Partial<{
     value: string;
     status: FieldStatus;
+    confidence: number;
+    note: string;
+  }>;
+  schedule?: Partial<{
+    scheduleModeCode: ActivityTimingDraftPp1["scheduleModeCode"];
+    scheduledDate: string;
+    scheduleStartDate: string;
+    scheduleEndDate: string;
+    deadlineLocal: string;
+    startedAtLocal: string;
+    endedAtLocal: string;
+    durationMinutes: string | number;
+    observedDate: string;
     confidence: number;
     note: string;
   }>;
@@ -264,61 +286,6 @@ function includesAny(text: string, markers: string[]) {
   return markers.some((marker) => text.includes(marker));
 }
 
-function extractDuration(raw: string): string | null {
-  const lower = raw.toLowerCase();
-
-  if (
-    includesAny(lower, ["полчас", "pół godz", "pol godz", "half an hour", "half hour", "media hora", "halbe stunde", "půl hod"])
-  ) {
-    return "30 min";
-  }
-
-  const minuteMatch = lower.match(/(\d{1,3})\s*(минут|мин|хвилин|хв|minute|minutes|minut|minuty|minuta|min|minutes|minutos|minuten|Minuten)/i);
-  if (minuteMatch) {
-    return `${minuteMatch[1]} min`;
-  }
-
-  const hourMatch = lower.match(/(\d{1,2})\s*(час|часа|часов|годин|hour|hours|godz|hora|horas|stunde|stunden)/i);
-  if (hourMatch) {
-    return `${hourMatch[1]} h`;
-  }
-
-  return null;
-}
-
-
-function defaultDurationText(locale: Locale) {
-  return locale === "pl"
-    ? "30 min"
-    : locale === "en"
-      ? "30 min"
-      : locale === "es"
-        ? "30 min"
-        : locale === "de"
-          ? "30 Min."
-          : locale === "cs"
-            ? "30 min"
-            : locale === "uk"
-              ? "30 хв"
-              : "30 мин";
-}
-
-function defaultTimeText(locale: Locale) {
-  return locale === "pl"
-    ? "08:00"
-    : locale === "en"
-      ? "08:00"
-      : locale === "es"
-        ? "08:00"
-        : locale === "de"
-          ? "08:00"
-          : locale === "cs"
-            ? "08:00"
-            : locale === "uk"
-              ? "08:00"
-              : "08:00";
-}
-
 function inferIntent(lower: string): IntentValue {
   if (
     includesAny(lower, [
@@ -389,78 +356,6 @@ function inferActivityTitle(raw: string, locale: Locale): string {
   return raw.trim().length > 0 ? raw.trim().slice(0, 70) : LABELS[locale].noText;
 }
 
-function inferTemporal(raw: string, locale: Locale) {
-  const lower = raw.toLowerCase();
-
-  const todayText =
-    locale === "pl"
-      ? "Dzi\u015b"
-      : locale === "en"
-        ? "Today"
-        : locale === "es"
-          ? "Hoy"
-          : locale === "de"
-            ? "Heute"
-            : locale === "cs"
-              ? "Dnes"
-              : locale === "uk"
-                ? "\u0421\u044c\u043e\u0433\u043e\u0434\u043d\u0456"
-                : "\u0421\u0435\u0433\u043e\u0434\u043d\u044f";
-
-  const tomorrowText =
-    locale === "pl"
-      ? "Jutro"
-      : locale === "en"
-        ? "Tomorrow"
-        : locale === "es"
-          ? "Ma\u00f1ana"
-          : locale === "de"
-            ? "Morgen"
-            : locale === "cs"
-              ? "Z\u00edtra"
-              : locale === "uk"
-                ? "\u0417\u0430\u0432\u0442\u0440\u0430"
-                : "\u0417\u0430\u0432\u0442\u0440\u0430";
-
-  const isRelativeSoon = includesAny(lower, ["\u0447\u0435\u0440\u0435\u0437 \u043f\u043e\u043b\u0447\u0430\u0441", "\u0447\u0435\u0440\u0435\u0437 30", "za p\u00f3\u0142 godz", "za pol godz", "in half an hour", "in 30"]);
-  const isToday = includesAny(lower, ["\u0441\u0435\u0433\u043e\u0434\u043d\u044f", "\u0441\u044c\u043e\u0433\u043e\u0434\u043d\u0456", "dzis", "dzi\u015b", "today", "hoy", "heute", "dnes"]);
-  const isEvening = includesAny(lower, ["\u0432\u0435\u0447\u0435\u0440", "\u0432\u0435\u0447\u0435\u0440\u043e\u043c", "wiecz", "evening", "abend", "tarde", "ve\u010der"]);
-  const isAfternoon = includesAny(lower, ["\u0434\u043d\u0435\u043c", "po po\u0142udniu", "afternoon", "nachmittag", "por la tarde"]);
-  const explicitClock = lower.match(/(?:^|\s)(?:\u0432|o|at|um|a las)?\s*(\d{1,2})[:.](\d{2})(?:\s|$)/i);
-  const explicitHour = lower.match(/(?:^|\s)(?:\u0432|o|at|um)\s+(\d{1,2})(?:\s|$)/i);
-
-  const date = isRelativeSoon || isToday ? todayText : tomorrowText;
-  let time: string;
-
-  if (isRelativeSoon) {
-    time =
-      locale === "pl"
-        ? "Za oko\u0142o 30 minut"
-        : locale === "en"
-          ? "In about 30 minutes"
-          : locale === "es"
-            ? "En unos 30 minutos"
-            : locale === "de"
-              ? "In etwa 30 Minuten"
-              : locale === "cs"
-                ? "Asi za 30 minut"
-                : locale === "uk"
-                  ? "\u041f\u0440\u0438\u0431\u043b\u0438\u0437\u043d\u043e \u0447\u0435\u0440\u0435\u0437 30 \u0445\u0432\u0438\u043b\u0438\u043d"
-                  : "\u041f\u0440\u0438\u043c\u0435\u0440\u043d\u043e \u0447\u0435\u0440\u0435\u0437 30 \u043c\u0438\u043d\u0443\u0442";
-  } else if (explicitClock) {
-    time = `${explicitClock[1].padStart(2, "0")}:${explicitClock[2]}`;
-  } else if (explicitHour) {
-    time = `${explicitHour[1].padStart(2, "0")}:00`;
-  } else if (isEvening) {
-    time = "19:00";
-  } else if (isAfternoon) {
-    time = "13:00";
-  } else {
-    time = defaultTimeText(locale);
-  }
-
-  return { date, time };
-}
 function inferCategories(raw: string, locale: Locale): string[] {
   const lower = raw.toLowerCase();
 
@@ -530,27 +425,161 @@ function countFields(fields: ReviewField[]): Record<FieldStatus, number> {
   };
 }
 
-function buildFallbackPackage(rawText: string, locale: Locale, modelError: string | null): ReviewPayload {
+function normalizeTemporalDirection(value: unknown): ActivityTemporalDirectionPp1 {
+  return value === "past" ? "past" : "future";
+}
+
+function timingDisplayParts(
+  draft: ActivityTimingDraftPp1,
+  labels: Record<string, string>,
+) {
+  let date = "";
+  let time = "";
+
+  if (draft.scheduleModeCode === "date_only") {
+    date = draft.scheduledDate;
+  } else if (draft.scheduleModeCode === "date_range") {
+    date = [draft.scheduleStartDate, draft.scheduleEndDate].filter(Boolean).join(" – ");
+  } else if (draft.scheduleModeCode === "deadline") {
+    date = draft.deadlineLocal.slice(0, 10);
+    time = draft.deadlineLocal.slice(11, 16);
+  } else if (draft.scheduleModeCode === "exact") {
+    date = draft.startedAtLocal.slice(0, 10);
+    const start = draft.startedAtLocal.slice(11, 16);
+    const end = draft.endedAtLocal.slice(11, 16);
+    time = [start, end].filter(Boolean).join(" – ");
+  } else if (draft.observedDate) {
+    date = draft.observedDate;
+    const start = draft.startedAtLocal.slice(11, 16);
+    const end = draft.endedAtLocal.slice(11, 16);
+    time = [start, end].filter(Boolean).join(" – ");
+  }
+
+  return {
+    date: date || labels.noDate,
+    time: time || labels.noExactTime,
+    duration: draft.durationMinutes
+      ? `${draft.durationMinutes} min`
+      : labels.noDuration,
+    hasDate: Boolean(date),
+    hasTime: Boolean(time),
+    hasDuration: Boolean(draft.durationMinutes),
+  };
+}
+
+function normalizeModelTimingDraft(
+  value: ModelShape["schedule"],
+  temporalDirection: ActivityTemporalDirectionPp1,
+) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const candidate: Partial<ActivityTimingDraftPp1> = {};
+  const mode = value.scheduleModeCode;
+
+  if (
+    mode === "unscheduled" ||
+    mode === "date_only" ||
+    mode === "date_range" ||
+    mode === "deadline" ||
+    mode === "exact"
+  ) {
+    candidate.scheduleModeCode = mode;
+  }
+
+  for (const key of [
+    "scheduledDate",
+    "scheduleStartDate",
+    "scheduleEndDate",
+    "deadlineLocal",
+    "startedAtLocal",
+    "endedAtLocal",
+    "observedDate",
+  ] as const) {
+    const normalized = asText(value[key]);
+
+    if (normalized) {
+      candidate[key] = normalized;
+    }
+  }
+
+  if (typeof value.durationMinutes === "number" && Number.isFinite(value.durationMinutes)) {
+    candidate.durationMinutes = String(Math.round(value.durationMinutes));
+  } else {
+    const normalizedDuration = asText(value.durationMinutes);
+
+    if (normalizedDuration) {
+      candidate.durationMinutes = normalizedDuration;
+    }
+  }
+
+  const draft = mergeActivityTimingDraftPp1(
+    inferActivityTimingDraftPp1("", temporalDirection),
+    candidate,
+  );
+
+  return validateActivityTimingDraftPp1(draft, temporalDirection).ok
+    ? draft
+    : null;
+}
+
+function mergeDeterministicAndModelTiming(
+  deterministic: ActivityTimingDraftPp1,
+  modelTiming: ActivityTimingDraftPp1 | null,
+  temporalDirection: ActivityTemporalDirectionPp1,
+) {
+  if (!modelTiming) {
+    return deterministic;
+  }
+
+  const deterministicHasSchedule =
+    temporalDirection === "past"
+      ? Boolean(
+          deterministic.observedDate ||
+          deterministic.startedAtLocal ||
+          deterministic.endedAtLocal ||
+          deterministic.durationMinutes
+        )
+      : deterministic.scheduleModeCode !== "unscheduled" ||
+        Boolean(deterministic.durationMinutes);
+
+  if (!deterministicHasSchedule) {
+    return modelTiming;
+  }
+
+  return mergeActivityTimingDraftPp1(modelTiming, deterministic);
+}
+
+function buildFallbackPackage(
+  rawText: string,
+  locale: Locale,
+  modelError: string | null,
+  temporalDirection: ActivityTemporalDirectionPp1,
+  now = new Date(),
+): ReviewPayload {
   const labels = LABELS[locale];
   const raw = rawText.trim();
   const lower = raw.toLowerCase();
   const intent = inferIntent(lower);
   const title = inferActivityTitle(raw, locale);
-  const temporal = inferTemporal(raw, locale);
-  const duration = extractDuration(raw) ?? defaultDurationText(locale);
+  const timingDraft = inferActivityTimingDraftPp1(raw, temporalDirection, now);
+  const timing = timingDisplayParts(timingDraft, labels);
   const categories = inferCategories(raw, locale);
   const voCandidates = categories.slice(0, 3);
-  const factPreview = intent === "ordinary_chat" ? "ordinary_chat / preview only" : `${intent} / event / candidate`;
+  const factPreview = intent === "ordinary_chat"
+    ? "ordinary_chat / preview only"
+    : `${intent} / event / candidate`;
 
   const fields = [
     field("sourceText", labels.sourceText, raw || labels.noText, raw ? "ready" : "missing", "calendar input", raw ? 1 : 0.1),
     field("activityTitle", labels.activityTitle, title, title === labels.noText ? "missing" : "ready", "fallback semantic title", raw ? 0.72 : 0.1),
     field("intent", labels.intent, intent, "ready", "planned/fact/ambiguous decision", 0.7),
-    field("date", labels.date, temporal.date ?? labels.noDate, temporal.date ? "candidate" : "missing", "temporal marker", temporal.date ? 0.65 : 0.1),
-    field("time", labels.time, temporal.time ?? labels.noExactTime, temporal.time ? "candidate" : "missing", "time marker", temporal.time ? 0.65 : 0.1),
-    field("duration", labels.duration, duration, "candidate", "duration parser with default 30 minutes", 0.75),
-    field("categories", labels.categories, categories.join(" / "), "candidate", "semantic category candidates", 0.65),
-    field("vo", labels.vo, voCandidates.join(" / "), "candidate", labels.noVoLookup, 0.55),
+    field("date", labels.date, timing.date, timing.hasDate ? "ready" : "missing", "deterministic temporal extraction; no artificial defaults", timing.hasDate ? 0.92 : 0.1),
+    field("time", labels.time, timing.time, timing.hasTime ? "ready" : "missing", "deterministic time extraction; no artificial defaults", timing.hasTime ? 0.92 : 0.1),
+    field("duration", labels.duration, timing.duration, timing.hasDuration ? "ready" : "missing", "deterministic duration extraction; no artificial defaults", timing.hasDuration ? 0.92 : 0.1),
+    field("categories", labels.categories, categories.join(" / "), categories.length ? "candidate" : "missing", "semantic category candidates", categories.length ? 0.65 : 0.1),
+    field("vo", labels.vo, voCandidates.join(" / ") || labels.noVoLookup, voCandidates.length ? "candidate" : "missing", labels.noVoLookup, voCandidates.length ? 0.55 : 0.1),
     field("facts", labels.facts, factPreview, "candidate", labels.previewOnly, 0.6),
   ];
 
@@ -568,6 +597,7 @@ function buildFallbackPackage(rawText: string, locale: Locale, modelError: strin
     intent,
     activityTitle: title,
     summary: labels.fallbackSummary,
+    timingDraft,
     fields,
     counters: countFields(fields),
     safety: {
@@ -581,6 +611,7 @@ function buildFallbackPackage(rawText: string, locale: Locale, modelError: strin
     },
     warnings: [
       "Fallback parser was used.",
+      "Unknown date, time and duration remain unknown.",
       "No DB write was executed.",
       "No Activity Event, Time Block, Fact or Value Object was created.",
     ],
@@ -615,7 +646,14 @@ function toModelField(
   );
 }
 
-function normalizeModelPackage(rawText: string, locale: Locale, modelName: string, model: ModelShape): ReviewPayload {
+function normalizeModelPackage(
+  rawText: string,
+  locale: Locale,
+  modelName: string,
+  model: ModelShape,
+  temporalDirection: ActivityTemporalDirectionPp1,
+  now: Date,
+): ReviewPayload {
   const labels = LABELS[locale];
 
   const categories = Array.isArray(model.categories)
@@ -644,27 +682,77 @@ function normalizeModelPackage(rawText: string, locale: Locale, modelName: strin
         .slice(0, 5)
     : [];
 
-  const fallback = buildFallbackPackage(rawText, locale, null);
-  const intentValue = model.intent?.value === "actual_fact" || model.intent?.value === "planned_activity" || model.intent?.value === "ordinary_chat" || model.intent?.value === "ambiguous_activity"
-    ? model.intent.value
-    : fallback.intent;
+  const fallback = buildFallbackPackage(
+    rawText,
+    locale,
+    null,
+    temporalDirection,
+    now,
+  );
+  const intentValue =
+    model.intent?.value === "actual_fact" ||
+    model.intent?.value === "planned_activity" ||
+    model.intent?.value === "ordinary_chat" ||
+    model.intent?.value === "ambiguous_activity"
+      ? model.intent.value
+      : fallback.intent;
 
   const activityTitle = asText(model.activityTitle?.value) || fallback.activityTitle;
-
-  const fallbackDate = fallback.fields.find((item) => item.key === "date");
-  const fallbackTime = fallback.fields.find((item) => item.key === "time");
-  const fallbackDuration = fallback.fields.find((item) => item.key === "duration");
+  const modelTiming = normalizeModelTimingDraft(model.schedule, temporalDirection);
+  const timingDraft = mergeDeterministicAndModelTiming(
+    fallback.timingDraft,
+    modelTiming,
+    temporalDirection,
+  );
+  const timing = timingDisplayParts(timingDraft, labels);
 
   const fields = [
     field("sourceText", labels.sourceText, rawText, "ready", "calendar input", 1),
     toModelField("activityTitle", labels.activityTitle, model.activityTitle, activityTitle, "ready", "model semantic title"),
-    toModelField("intent", labels.intent, model.intent ? { value: intentValue, status: model.intent.status, confidence: model.intent.confidence, note: model.intent.note } : undefined, intentValue, "ready", "model intent decision"),
-    toModelField("date", labels.date, model.date, fallbackDate?.value ?? labels.noDate, "candidate", "model temporal extraction; default policy applies when missing"),
-    toModelField("time", labels.time, model.time, fallbackTime?.value ?? defaultTimeText(locale), "candidate", "model time extraction; default policy applies when missing"),
-    toModelField("duration", labels.duration, model.duration, fallbackDuration?.value ?? defaultDurationText(locale), "candidate", "model duration extraction; default policy applies when missing"),
-    field("categories", labels.categories, categories.length ? categories.join(" / ") : fallback.fields.find((item) => item.key === "categories")?.value ?? "", categories.length ? "candidate" : "missing", "model semantic category candidates", categories.length ? 0.82 : 0.2),
-    field("vo", labels.vo, voCandidates.length ? voCandidates.join(" / ") : labels.noVoLookup, voCandidates.length ? "candidate" : "missing", "model VO candidates only; real lookup is not connected", voCandidates.length ? 0.72 : 0.2),
-    field("facts", labels.facts, factPreviews.length ? factPreviews.join("; ") : `${intentValue} / candidate`, "candidate", labels.previewOnly, 0.72),
+    toModelField(
+      "intent",
+      labels.intent,
+      model.intent
+        ? {
+            value: intentValue,
+            status: model.intent.status,
+            confidence: model.intent.confidence,
+            note: model.intent.note,
+          }
+        : undefined,
+      intentValue,
+      "ready",
+      "model intent decision",
+    ),
+    field("date", labels.date, timing.date, timing.hasDate ? "ready" : "missing", "normalized timing contract; explicit text wins; no artificial defaults", timing.hasDate ? 0.96 : 0.1),
+    field("time", labels.time, timing.time, timing.hasTime ? "ready" : "missing", "normalized timing contract; an explicit interval is exact time", timing.hasTime ? 0.96 : 0.1),
+    field("duration", labels.duration, timing.duration, timing.hasDuration ? "ready" : "missing", "normalized duration; no artificial defaults", timing.hasDuration ? 0.96 : 0.1),
+    field(
+      "categories",
+      labels.categories,
+      categories.length
+        ? categories.join(" / ")
+        : fallback.fields.find((item) => item.key === "categories")?.value ?? "",
+      categories.length ? "candidate" : "missing",
+      "model semantic category candidates",
+      categories.length ? 0.82 : 0.2,
+    ),
+    field(
+      "vo",
+      labels.vo,
+      voCandidates.length ? voCandidates.join(" / ") : labels.noVoLookup,
+      voCandidates.length ? "candidate" : "missing",
+      "model VO candidates only; real lookup is handled by the selector",
+      voCandidates.length ? 0.72 : 0.2,
+    ),
+    field(
+      "facts",
+      labels.facts,
+      factPreviews.length ? factPreviews.join("; ") : `${intentValue} / candidate`,
+      "candidate",
+      labels.previewOnly,
+      0.72,
+    ),
   ];
 
   return {
@@ -681,6 +769,7 @@ function normalizeModelPackage(rawText: string, locale: Locale, modelName: strin
     intent: intentValue,
     activityTitle,
     summary: asText(model.summary) || labels.modelSummary,
+    timingDraft,
     fields,
     counters: countFields(fields),
     safety: {
@@ -695,13 +784,31 @@ function normalizeModelPackage(rawText: string, locale: Locale, modelName: strin
     warnings: [
       ...(Array.isArray(model.warnings) ? model.warnings.map(asText).filter(Boolean) : []),
       "Model output is preview-only.",
+      "Unknown date, time and duration remain unknown.",
       "No DB write was executed.",
       "No Activity Event, Time Block, Fact or Value Object was created.",
     ],
   };
 }
 
-async function runModelPreview(rawText: string, locale: Locale): Promise<ReviewPayload | null> {
+function dateKeyInTimeZone(value: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+async function runModelPreview(
+  rawText: string,
+  locale: Locale,
+  temporalDirection: ActivityTemporalDirectionPp1,
+  now: Date,
+): Promise<ReviewPayload | null> {
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
@@ -714,6 +821,8 @@ async function runModelPreview(rawText: string, locale: Locale): Promise<ReviewP
     "gpt-4o-mini";
 
   const labels = LABELS[locale];
+  const timeZone = "Europe/Warsaw";
+  const currentDate = dateKeyInTimeZone(now, timeZone);
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -728,14 +837,27 @@ async function runModelPreview(rawText: string, locale: Locale): Promise<ReviewP
       messages: [
         {
           role: "system",
-          content:
-            "You are an activity semantic parser for a calendar activity review screen. Return only valid JSON. Do not provide advice. Do not create events, facts, value objects, time blocks, database rows, or write actions. Your task is to propose structured fields for a preview-only Activity Review Package. Default policy: if a planned activity has no explicit date/time, use tomorrow 08:00. If the user says tomorrow without time or tomorrow morning, use tomorrow 08:00. If duration is missing, use 30 minutes.",
+          content: [
+            "You are an activity semantic parser for ARCTor calendar capture.",
+            "Return only valid JSON and never perform writes.",
+            "Never invent a date, time, duration, end time or year.",
+            "Missing values must be empty strings.",
+            "An explicit interval such as 'from 18:00 to 18:45', 'с 18:00 до 18:45', 'od 18:00 do 18:45' is scheduleModeCode=exact, not deadline.",
+            "Use deadline only when the user explicitly means due-by, no-later-than or a deadline.",
+            "When a date omits a year, resolve it relative to currentDate and temporalDirection.",
+            "For future activities, choose the next occurrence of that calendar date; for past activities, choose the previous occurrence.",
+            "Return dates as YYYY-MM-DD and local datetimes as YYYY-MM-DDTHH:mm in Europe/Warsaw.",
+            "Explicit data in the current message is authoritative.",
+          ].join(" "),
         },
         {
           role: "user",
           content: JSON.stringify({
             locale,
             rawText,
+            temporalDirection,
+            currentDate,
+            timeZone,
             requiredJsonShape: {
               intent: {
                 value: "planned_activity | actual_fact | ambiguous_activity | ordinary_chat",
@@ -749,20 +871,33 @@ async function runModelPreview(rawText: string, locale: Locale): Promise<ReviewP
                 confidence: "0..1",
                 note: "short reason",
               },
+              schedule: {
+                scheduleModeCode: "unscheduled | date_only | date_range | deadline | exact",
+                scheduledDate: "YYYY-MM-DD or empty",
+                scheduleStartDate: "YYYY-MM-DD or empty",
+                scheduleEndDate: "YYYY-MM-DD or empty",
+                deadlineLocal: "YYYY-MM-DDTHH:mm or empty",
+                startedAtLocal: "YYYY-MM-DDTHH:mm or empty",
+                endedAtLocal: "YYYY-MM-DDTHH:mm or empty",
+                durationMinutes: "positive integer as string, or empty",
+                observedDate: "YYYY-MM-DD or empty",
+                confidence: "0..1",
+                note: "short explanation",
+              },
               date: {
-                value: "date meaning, for relative phrases keep natural form, e.g. today / tomorrow / in 30 minutes",
+                value: "human-readable extracted date or empty",
                 status: "ready | candidate | missing",
                 confidence: "0..1",
                 note: "short reason",
               },
               time: {
-                value: "time meaning, for relative phrases keep natural form",
+                value: "human-readable start/end time or empty",
                 status: "ready | candidate | missing",
                 confidence: "0..1",
                 note: "short reason",
               },
               duration: {
-                value: "duration if found, otherwise empty",
+                value: "duration if explicitly present or derivable from explicit start/end; otherwise empty",
                 status: "ready | candidate | missing",
                 confidence: "0..1",
                 note: "short reason",
@@ -804,8 +939,8 @@ async function runModelPreview(rawText: string, locale: Locale): Promise<ReviewP
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`OpenAI response ${response.status}: ${text.slice(0, 300)}`);
+    const responseText = await response.text();
+    throw new Error(`OpenAI response ${response.status}: ${responseText.slice(0, 300)}`);
   }
 
   const data = (await response.json()) as {
@@ -819,7 +954,14 @@ async function runModelPreview(rawText: string, locale: Locale): Promise<ReviewP
   }
 
   const parsed = JSON.parse(stripJsonFences(content)) as ModelShape;
-  return normalizeModelPackage(rawText, locale, modelName, parsed);
+  return normalizeModelPackage(
+    rawText,
+    locale,
+    modelName,
+    parsed,
+    temporalDirection,
+    now,
+  );
 }
 
 export async function POST(request: Request) {
@@ -834,25 +976,44 @@ export async function POST(request: Request) {
 
   const rawText = asText(body.text ?? body.rawText).slice(0, 2000);
   const locale = normalizeLocale(body.locale);
+  const temporalDirection = normalizeTemporalDirection(body.temporalDirection);
+  const now = new Date();
 
   if (!rawText) {
-    return NextResponse.json(buildFallbackPackage("", locale, "empty input"), { status: 200 });
+    return NextResponse.json(
+      buildFallbackPackage("", locale, "empty input", temporalDirection, now),
+      { status: 200 },
+    );
   }
 
   try {
-    const modelPackage = await runModelPreview(rawText, locale);
+    const modelPackage = await runModelPreview(
+      rawText,
+      locale,
+      temporalDirection,
+      now,
+    );
 
     if (modelPackage) {
       return NextResponse.json(modelPackage, { status: 200 });
     }
 
     return NextResponse.json(
-      buildFallbackPackage(rawText, locale, "OPENAI_API_KEY is not configured; model-backed preview was skipped."),
-      { status: 200 }
+      buildFallbackPackage(
+        rawText,
+        locale,
+        "OPENAI_API_KEY is not configured; model-backed preview was skipped.",
+        temporalDirection,
+        now,
+      ),
+      { status: 200 },
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown model error";
-    return NextResponse.json(buildFallbackPackage(rawText, locale, message), { status: 200 });
+    return NextResponse.json(
+      buildFallbackPackage(rawText, locale, message, temporalDirection, now),
+      { status: 200 },
+    );
   }
 }
 

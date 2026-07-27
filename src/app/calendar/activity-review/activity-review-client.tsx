@@ -15,6 +15,7 @@ import {
   formatActivityTimingDraftPp1,
   getTimingFocusDatePp1,
   inferActivityTimingDraftPp1,
+  mergeActivityTimingDraftPp1,
   parsePositiveDurationMinutesPp1,
   validateActivityTimingDraftPp1,
   type ActivityTimingDraftPp1,
@@ -48,6 +49,7 @@ type ReviewPayload = {
   intent: string;
   activityTitle: string;
   summary: string;
+  timingDraft: ActivityTimingDraftPp1;
   fields: ReviewField[];
   counters: Record<FieldStatus, number>;
   safety: {
@@ -864,7 +866,12 @@ function statusLabel(status: FieldStatus, labels: typeof UI[Locale]): string {
   return labels.missing;
 }
 
-function buildEmergencyPayload(rawText: string, locale: Locale, message: string): ReviewPayload {
+function buildEmergencyPayload(
+  rawText: string,
+  locale: Locale,
+  message: string,
+  temporalDirection: TemporalDirection,
+): ReviewPayload {
   const labels = UI[locale];
 
   const fields: ReviewField[] = [
@@ -900,6 +907,7 @@ function buildEmergencyPayload(rawText: string, locale: Locale, message: string)
     intent: "ambiguous_activity",
     activityTitle: rawText || labels.noText,
     summary: message,
+    timingDraft: inferActivityTimingDraftPp1(rawText, temporalDirection),
     fields,
     counters: {
       ready: fields.filter((field) => field.status === "ready").length,
@@ -1071,6 +1079,7 @@ export default function ActivityReviewClient() {
             locale,
             source: "calendar_add",
             mode: "preview_only",
+            temporalDirection,
             write: false,
           }),
         });
@@ -1079,12 +1088,15 @@ export default function ActivityReviewClient() {
 
         if (!cancelled) {
           setReview(payload);
+          setTimingDraft((current) =>
+            mergeActivityTimingDraftPp1(current, payload.timingDraft),
+          );
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Semantic preview request failed.";
 
         if (!cancelled) {
-          setReview(buildEmergencyPayload(rawText, locale, message));
+          setReview(buildEmergencyPayload(rawText, locale, message, temporalDirection));
         }
       } finally {
         if (!cancelled) {
@@ -1098,7 +1110,7 @@ export default function ActivityReviewClient() {
     return () => {
       cancelled = true;
     };
-  }, [rawText, locale]);
+  }, [rawText, locale, temporalDirection]);
 
   useEffect(() => {
     setTimingDraft(inferActivityTimingDraftPp1(rawText, temporalDirection));
