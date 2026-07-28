@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ActivityTimingEditorPp1 } from "@/components/activity/pp1/activity-timing-editor";
@@ -32,6 +31,19 @@ type ActivityCreateResponse = {
   ok?: boolean;
   error?: string;
   activityEvent?: { id?: string | null };
+  semanticEnrichment?: {
+    runId?: string | null;
+    status?: string | null;
+    disposition?: string | null;
+    error?: string | null;
+  } | null;
+};
+
+export type Cux4QuickCaptureResult = {
+  activityEventId: string;
+  enrichmentRunId: string | null;
+  analysisStatus: string;
+  focusDateKey: string | null;
 };
 
 type Copy = {
@@ -67,7 +79,7 @@ type Copy = {
 const EN: Copy = {
   eyebrow: "Quick activity entry",
   title: "Add an activity",
-  helper: "Type or dictate in ordinary language. AI fills the title, schedule and duration; every field can be corrected before saving.",
+  helper: "Type or dictate in ordinary language and add immediately. Analysis continues in the required Activity Container.",
   placeholder: "For example: Guitar rehearsal on 30 July from 18:00 to 18:45",
   voice: "Voice",
   voiceSoon: "Voice transcription will be connected in a later stage.",
@@ -81,7 +93,7 @@ const EN: Copy = {
   clear: "Clear",
   add: "Add activity",
   saving: "Saving…",
-  success: "Activity added. Calendar and activity journal are being refreshed.",
+  success: "Activity added. Analysis continues in the Activity Container.",
   analysisReady: "AI filled the available fields.",
   analysisError: "AI analysis failed. You can still fill the fields manually.",
   needsClarification: "Check the highlighted schedule fields before saving.",
@@ -103,7 +115,7 @@ const COPY: Partial<Record<ActivityTimingLocalePp1, Partial<Copy>>> = {
   ru: {
     eyebrow: "Быстрое добавление активности",
     title: "Добавить активность",
-    helper: "Напишите или надиктуйте обычными словами. AI заполнит название, расписание и длительность; перед сохранением любое поле можно исправить.",
+    helper: "Напишите или надиктуйте обычными словами и сразу добавьте активность. Анализ продолжится в обязательном контейнере активности.",
     placeholder: "Например: Репетиция на гитаре 30 июля с 18:00 до 18:45",
     voice: "Диктовка",
     voiceSoon: "Распознавание голоса будет подключено на следующем этапе.",
@@ -117,7 +129,7 @@ const COPY: Partial<Record<ActivityTimingLocalePp1, Partial<Copy>>> = {
     clear: "Очистить",
     add: "Добавить активность",
     saving: "Сохраняю…",
-    success: "Активность добавлена. Календарь и журнал активностей обновляются.",
+    success: "Активность добавлена. Анализ продолжается в контейнере активности.",
     analysisReady: "AI заполнил доступные поля.",
     analysisError: "AI-разбор не выполнен. Поля можно заполнить вручную.",
     needsClarification: "Перед сохранением проверьте выделенные поля расписания.",
@@ -137,7 +149,7 @@ const COPY: Partial<Record<ActivityTimingLocalePp1, Partial<Copy>>> = {
   pl: {
     eyebrow: "Szybkie dodawanie aktywności",
     title: "Dodaj aktywność",
-    helper: "Wpisz lub podyktuj zwykłym językiem. AI uzupełni tytuł, termin i czas trwania; każde pole można poprawić przed zapisem.",
+    helper: "Wpisz lub podyktuj zwykłym językiem i dodaj od razu. Analiza będzie kontynuowana w obowiązkowym kontenerze aktywności.",
     placeholder: "Na przykład: Próba gitary 30 lipca od 18:00 do 18:45",
     voice: "Głos",
     voiceSoon: "Rozpoznawanie głosu zostanie podłączone na późniejszym etapie.",
@@ -151,7 +163,7 @@ const COPY: Partial<Record<ActivityTimingLocalePp1, Partial<Copy>>> = {
     clear: "Wyczyść",
     add: "Dodaj aktywność",
     saving: "Zapisywanie…",
-    success: "Aktywność została dodana. Kalendarz i dziennik są odświeżane.",
+    success: "Aktywność została dodana. Analiza trwa w kontenerze aktywności.",
     analysisReady: "AI uzupełniła dostępne pola.",
     analysisError: "Analiza AI nie powiodła się. Pola można uzupełnić ręcznie.",
     needsClarification: "Przed zapisem sprawdź wyróżnione pola harmonogramu.",
@@ -252,7 +264,7 @@ export function Cux2InlineActivityComposer({
   locale: ActivityTimingLocalePp1;
   focusDateKey: string;
   onClose: () => void;
-  onSaved: (focusDateKey: string | null) => void;
+  onSaved: (result: Cux4QuickCaptureResult) => void;
 }) {
   const copy = copyFor(locale);
   const [text, setText] = useState("");
@@ -262,7 +274,6 @@ export function Cux2InlineActivityComposer({
   );
   const [plannedTargetIds, setPlannedTargetIds] = useState<string[]>([]);
   const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>("idle");
-  const [analysisMessage, setAnalysisMessage] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -283,31 +294,18 @@ export function Cux2InlineActivityComposer({
     () => getTimingFocusDatePp1(timingDraft, "future"),
     [timingDraft],
   );
-  const detailedAnalysisHref = useMemo(() => {
-    const params = new URLSearchParams({
-      locale,
-      text: text.trim(),
-      returnTo: "calendar",
-      focusDate: timingFocusDate ?? focusDateKey,
-      temporalDirection: "future",
-    });
-
-    return `/calendar/activity-review?${params.toString()}`;
-  }, [focusDateKey, locale, text, timingFocusDate]);
 
   async function analyzeText(rawText: string) {
     const normalizedText = rawText.trim();
 
     if (!normalizedText) {
       setAnalysisStatus("idle");
-      setAnalysisMessage(null);
       return;
     }
 
     const sequence = analysisSequenceRef.current + 1;
     analysisSequenceRef.current = sequence;
     setAnalysisStatus("analyzing");
-    setAnalysisMessage(null);
 
     try {
       const response = await fetch("/api/calendar/activity-review/semantic-preview", {
@@ -342,11 +340,9 @@ export function Cux2InlineActivityComposer({
       }
 
       setAnalysisStatus("ready");
-      setAnalysisMessage(payload.summary?.trim() || copy.analysisReady);
     } catch {
       if (sequence === analysisSequenceRef.current) {
         setAnalysisStatus("error");
-        setAnalysisMessage(copy.analysisError);
       }
     }
   }
@@ -358,17 +354,14 @@ export function Cux2InlineActivityComposer({
     setTimingDraft(inferActivityTimingDraftPp1(normalizedText, "future"));
     setSaveStatus("idle");
     setSaveMessage(null);
+    setAnalysisStatus("idle");
 
     if (!normalizedText) {
       setTitle("");
-      setAnalysisStatus("idle");
-      setAnalysisMessage(null);
       return;
     }
 
     setTitle(normalizedText);
-    const timer = window.setTimeout(() => void analyzeText(normalizedText), 700);
-    return () => window.clearTimeout(timer);
   }, [locale, text]);
 
   function clearDraft() {
@@ -378,7 +371,6 @@ export function Cux2InlineActivityComposer({
     setTimingDraft(inferActivityTimingDraftPp1("", "future"));
     setPlannedTargetIds([]);
     setAnalysisStatus("idle");
-    setAnalysisMessage(null);
     setSaveStatus("idle");
     setSaveMessage(null);
     timingTouchedRef.current = false;
@@ -390,13 +382,7 @@ export function Cux2InlineActivityComposer({
     const rawText = text.trim();
     const activityTitle = title.trim() || rawText;
 
-    if (!rawText || !activityTitle || saveStatus === "saving") {
-      return;
-    }
-
-    if (!timingValidation.ok) {
-      setSaveStatus("error");
-      setSaveMessage(`${copy.validation} ${timingValidation.errors.join(", ")}`);
+    if (!rawText || saveStatus === "saving") {
       return;
     }
 
@@ -404,55 +390,140 @@ export function Cux2InlineActivityComposer({
     setSaveMessage(null);
 
     try {
-      const durationMinutes = parsePositiveDurationMinutesPp1(timingDraft.durationMinutes);
-      const startedAt = datetimeLocalToIsoPp1(timingDraft.startedAtLocal);
-      const endedAt = datetimeLocalToIsoPp1(timingDraft.endedAtLocal);
-      const deadlineAt = datetimeLocalToIsoPp1(timingDraft.deadlineLocal);
+      const writeTimingDraft = timingValidation.ok
+        ? timingDraft
+        : inferActivityTimingDraftPp1("", "future");
+      const writeTimingLabel = formatActivityTimingDraftPp1(
+        writeTimingDraft,
+        "future",
+        locale,
+      );
+      const writeFocusDate = getTimingFocusDatePp1(
+        writeTimingDraft,
+        "future",
+      );
+      const durationMinutes = parsePositiveDurationMinutesPp1(
+        writeTimingDraft.durationMinutes,
+      );
+      const startedAt = datetimeLocalToIsoPp1(
+        writeTimingDraft.startedAtLocal,
+      );
+      const endedAt = datetimeLocalToIsoPp1(
+        writeTimingDraft.endedAtLocal,
+      );
+      const deadlineAt = datetimeLocalToIsoPp1(
+        writeTimingDraft.deadlineLocal,
+      );
+      const protectedFieldCodes = [
+        ...(titleTouchedRef.current ? ["title"] : []),
+        ...(timingTouchedRef.current && timingValidation.ok
+          ? [
+              "schedule_mode_code",
+              "scheduled_date",
+              "schedule_start_date",
+              "schedule_end_date",
+              "deadline_at",
+              "started_at",
+              "ended_at",
+              "duration_minutes",
+            ]
+          : []),
+        ...(plannedTargetIds.length > 0 ? ["planned_target_links"] : []),
+      ];
+
       const response = await fetch("/api/activity/events", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         body: JSON.stringify({
           idempotencyKey: requestIdRef.current,
           activityRoleCode: "planned",
           title: activityTitle,
           rawText,
           inputText: rawText,
-          description: `Source: calendar_inline_composer\nRaw text: ${rawText}\nTiming: ${timingLabel}`,
+          description: [
+            "Source: calendar_inline_composer",
+            `Raw text: ${rawText}`,
+            `Timing: ${writeTimingLabel}`,
+          ].join("\n"),
           durationMinutes,
           status: "planned",
           source: "manual_form",
           privacyScope: "private",
-          scheduleModeCode: timingDraft.scheduleModeCode,
-          scheduledDate: timingDraft.scheduleModeCode === "date_only" ? timingDraft.scheduledDate : null,
-          scheduleStartDate: timingDraft.scheduleModeCode === "date_range" ? timingDraft.scheduleStartDate : null,
-          scheduleEndDate: timingDraft.scheduleModeCode === "date_range" ? timingDraft.scheduleEndDate : null,
-          deadlineAt: timingDraft.scheduleModeCode === "deadline" ? deadlineAt : null,
-          startedAt: timingDraft.scheduleModeCode === "exact" ? startedAt : null,
-          endedAt: timingDraft.scheduleModeCode === "exact" ? endedAt : null,
-          createCalendarProjection: timingDraft.scheduleModeCode === "exact",
+          scheduleModeCode: writeTimingDraft.scheduleModeCode,
+          scheduledDate:
+            writeTimingDraft.scheduleModeCode === "date_only"
+              ? writeTimingDraft.scheduledDate
+              : null,
+          scheduleStartDate:
+            writeTimingDraft.scheduleModeCode === "date_range"
+              ? writeTimingDraft.scheduleStartDate
+              : null,
+          scheduleEndDate:
+            writeTimingDraft.scheduleModeCode === "date_range"
+              ? writeTimingDraft.scheduleEndDate
+              : null,
+          deadlineAt:
+            writeTimingDraft.scheduleModeCode === "deadline"
+              ? deadlineAt
+              : null,
+          startedAt:
+            writeTimingDraft.scheduleModeCode === "exact"
+              ? startedAt
+              : null,
+          endedAt:
+            writeTimingDraft.scheduleModeCode === "exact"
+              ? endedAt
+              : null,
+          createCalendarProjection:
+            writeTimingDraft.scheduleModeCode === "exact",
           plannedTargetValueObjectIds: plannedTargetIds,
           metadata: {
             cux2Composer: "inline_calendar",
             locale,
             sourceFocusDate: focusDateKey,
             semanticAnalysisStatus: analysisStatus,
+            cux4: {
+              backgroundAnalysis: true,
+              protectedFieldCodes,
+              initialTimingValidationOk: timingValidation.ok,
+              requiredActivityContainer: true,
+            },
           },
         }),
       });
-      const payload = (await response.json().catch(() => null)) as ActivityCreateResponse | null;
+      const payload = (
+        await response.json().catch(() => null)
+      ) as ActivityCreateResponse | null;
 
       if (!response.ok || payload?.ok !== true || !payload.activityEvent?.id) {
-        throw new Error(payload?.error || `Activity write failed: ${response.status}`);
+        throw new Error(
+          payload?.error || `Activity write failed: ${response.status}`,
+        );
       }
+
+      const result: Cux4QuickCaptureResult = {
+        activityEventId: payload.activityEvent.id,
+        enrichmentRunId:
+          payload.semanticEnrichment?.runId ?? null,
+        analysisStatus:
+          payload.semanticEnrichment?.status ?? "pending",
+        focusDateKey: writeFocusDate ?? focusDateKey,
+      };
 
       setSaveStatus("saved");
       setSaveMessage(copy.success);
-      requestIdRef.current = createRequestId();
-      onSaved(timingFocusDate ?? focusDateKey);
+      onSaved(result);
+      clearDraft();
+      onClose();
     } catch (error) {
       setSaveStatus("error");
-      setSaveMessage(error instanceof Error ? error.message : copy.saveError);
+      setSaveMessage(
+        error instanceof Error ? error.message : copy.saveError,
+      );
     }
   }
 
@@ -489,7 +560,6 @@ export function Cux2InlineActivityComposer({
                 {analysisStatus === "analyzing" ? copy.analyzing : copy.analyze}
               </button>
               <button type="button" onClick={() => setRulesOpen((value) => !value)} className="rounded-xl border border-[#d8deef] bg-white px-3 py-2 text-sm font-bold text-[#667091] hover:bg-[#f4f6fb]">{copy.rules}</button>
-              {text.trim() ? <Link href={detailedAnalysisHref} className="rounded-xl border border-[#d8deef] bg-white px-3 py-2 text-sm font-bold text-[#667091] hover:bg-[#f4f6fb]">{copy.details}</Link> : null}
               <button type="button" onClick={clearDraft} disabled={!text && !title} className="rounded-xl border border-[#d8deef] bg-white px-3 py-2 text-sm font-bold text-[#667091] hover:bg-[#f4f6fb] disabled:cursor-not-allowed disabled:text-[#b7bdcc]">{copy.clear}</button>
             </div>
 
@@ -505,11 +575,6 @@ export function Cux2InlineActivityComposer({
               />
             ) : null}
 
-            {analysisStatus !== "idle" ? (
-              <div className={`mt-3 rounded-xl border px-3 py-2 text-sm font-semibold ${analysisStatus === "error" ? "border-rose-200 bg-rose-50 text-rose-700" : analysisStatus === "analyzing" ? "border-amber-200 bg-amber-50 text-amber-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
-                {analysisStatus === "analyzing" ? copy.analyzing : analysisStatus === "error" ? copy.analysisError : analysisMessage || copy.analysisReady}
-              </div>
-            ) : null}
           </div>
 
           <label className="block rounded-[18px] border border-[#dfe5f1] bg-[#f8fafc] p-4">
@@ -538,7 +603,7 @@ export function Cux2InlineActivityComposer({
             <p className="mt-2 text-base font-extrabold text-[#1a1d2e]">{timingLabel}</p>
             {!timingValidation.ok ? <p className="mt-2 text-sm font-semibold text-rose-700">{copy.needsClarification}</p> : null}
           </div>
-          <button type="button" onClick={() => void saveActivity()} disabled={!text.trim() || !title.trim() || !timingValidation.ok || saveStatus === "saving" || saveStatus === "saved"} className="w-full rounded-[16px] bg-[#3b6ef8] px-4 py-3 text-sm font-bold text-white shadow-sm shadow-[#3b6ef8]/20 disabled:cursor-not-allowed disabled:bg-[#c8d2f4]">
+          <button type="button" onClick={() => void saveActivity()} disabled={!text.trim() || saveStatus === "saving" || saveStatus === "saved"} className="w-full rounded-[16px] bg-[#3b6ef8] px-4 py-3 text-sm font-bold text-white shadow-sm shadow-[#3b6ef8]/20 disabled:cursor-not-allowed disabled:bg-[#c8d2f4]">
             {saveStatus === "saving" ? copy.saving : copy.add}
           </button>
           {saveMessage ? (

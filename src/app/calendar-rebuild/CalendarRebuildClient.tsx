@@ -20,7 +20,10 @@ import {
   parseDateKey,
 } from "../../features/calendar-core/date-utils";
 import type { CalendarEvent, CalendarViewMode } from "../../features/calendar-core/types";
-import { Cux2InlineActivityComposer } from "../../components/calendar/cux2-inline-activity-composer";
+import {
+  Cux2InlineActivityComposer,
+  type Cux4QuickCaptureResult,
+} from "../../components/calendar/cux2-inline-activity-composer";
 
 type CalendarRebuildClientProps = {
   initialFocusDateKey: string | null;
@@ -30,6 +33,59 @@ type CalendarRebuildClientProps = {
 };
 
 type UiLocale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
+
+const CUX4_CAPTURE_NOTICE_UI: Record<
+  UiLocale,
+  {
+    saved: string;
+    analyzing: string;
+    details: string;
+    dismiss: string;
+  }
+> = {
+  en: {
+    saved: "Activity added.",
+    analyzing: "Analysis continues in the Activity Container.",
+    details: "Details",
+    dismiss: "Dismiss",
+  },
+  pl: {
+    saved: "Aktywność została dodana.",
+    analyzing: "Analiza trwa w kontenerze aktywności.",
+    details: "Szczegóły",
+    dismiss: "Ukryj",
+  },
+  ru: {
+    saved: "Активность добавлена.",
+    analyzing: "Анализ продолжается в контейнере активности.",
+    details: "Подробнее",
+    dismiss: "Скрыть",
+  },
+  uk: {
+    saved: "Активність додано.",
+    analyzing: "Аналіз триває в контейнері активності.",
+    details: "Докладніше",
+    dismiss: "Сховати",
+  },
+  de: {
+    saved: "Aktivität hinzugefügt.",
+    analyzing: "Die Analyse läuft im Aktivitätscontainer weiter.",
+    details: "Details",
+    dismiss: "Ausblenden",
+  },
+  es: {
+    saved: "Actividad añadida.",
+    analyzing: "El análisis continúa en el contenedor de actividad.",
+    details: "Detalles",
+    dismiss: "Ocultar",
+  },
+  cs: {
+    saved: "Aktivita byla přidána.",
+    analyzing: "Analýza pokračuje v kontejneru aktivity.",
+    details: "Podrobnosti",
+    dismiss: "Skrýt",
+  },
+};
 
 type CalendarEventLogAction = "created" | "updated" | "cancelled" | "restored";
 
@@ -775,6 +831,7 @@ export default function CalendarRebuildClient({
 }: CalendarRebuildClientProps) {
   const locale = normalizeLocale(initialLocale);
   const ui = UI[locale];
+  const cux4NoticeUi = CUX4_CAPTURE_NOTICE_UI[locale];
   const detailUi = DETAIL_UI[locale];
   const analyticsUi = ANALYTICS_PLACEHOLDER_UI[locale];
   const statsUi = CALENDAR_STATS_UI[locale];
@@ -782,6 +839,7 @@ export default function CalendarRebuildClient({
 
   const [view, setView] = useState<CalendarViewMode>("week");
   const [composerOpen, setComposerOpen] = useState(false);
+  const [lastQuickCapture, setLastQuickCapture] = useState<Cux4QuickCaptureResult | null>(null);
   const [calendarPresentation, setCalendarPresentation] = useState<"grid" | "list">("grid");
   const [activeCalendarTab, setActiveCalendarTab] = useState<"calendar" | "log">("calendar");
   const [eventLogs, setEventLogs] = useState<CalendarEventLogEntry[]>([]);
@@ -1384,15 +1442,58 @@ export default function CalendarRebuildClient({
           locale={locale}
           focusDateKey={dateKey(focusDate)}
           onClose={() => setComposerOpen(false)}
-          onSaved={(savedFocusDateKey) => {
+          onSaved={(result) => {
             setEventsRefreshKey((value) => value + 1);
             setActiveCalendarTab("calendar");
+            setLastQuickCapture(result);
+            setComposerOpen(false);
 
-            if (savedFocusDateKey) {
-              updateFocusDate(parseDateKey(savedFocusDateKey));
+            if (result.focusDateKey) {
+              updateFocusDate(parseDateKey(result.focusDateKey));
             }
           }}
         />
+
+        {lastQuickCapture ? (
+          <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-extrabold text-emerald-800">
+                  {cux4NoticeUi.saved}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-emerald-700">
+                  {cux4NoticeUi.analyzing}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={{
+                    pathname: "/calendar/activity-review",
+                    query: {
+                      locale,
+                      returnTo: returnToTarget,
+                      temporalDirection: "future",
+                      activityEventId: lastQuickCapture.activityEventId,
+                      ...(lastQuickCapture.focusDateKey
+                        ? { focusDate: lastQuickCapture.focusDateKey }
+                        : {}),
+                    },
+                  }}
+                  className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white shadow-sm"
+                >
+                  {cux4NoticeUi.details}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setLastQuickCapture(null)}
+                  className="rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-bold text-emerald-800"
+                >
+                  {cux4NoticeUi.dismiss}
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {/* Step 9A calendar/log top tabs */}
         <section className="flex flex-wrap gap-2">

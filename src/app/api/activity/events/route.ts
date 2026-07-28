@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import {
   ACTIVITY_RECORDING_DEFAULT_LIMIT,
   ACTIVITY_RECORDING_DISABLED_MESSAGE,
@@ -8,6 +8,10 @@ import {
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
 import { createActivityEventViaPp1Rpc } from "@/lib/activity/pp1/createActivityEventRpc";
+import {
+  createActivitySemanticEnrichmentRunCux4,
+  processActivitySemanticEnrichmentRunCux4,
+} from "@/lib/calendar/activitySemanticEnrichment.server";
 import type {
   ActivityCreatePp1,
   ActivityScheduleModeCodePp1,
@@ -334,6 +338,32 @@ function parseUuidArray(value: unknown): string[] {
   }
 
   return Array.from(new Set(value.map(parseUuid).filter((item): item is string => Boolean(item))));
+}
+
+function parseStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .map((item) => asString(item))
+        .filter((item): item is string => Boolean(item)),
+    ),
+  );
+}
+
+function normalizeCux4Locale(value: unknown) {
+  return value === "en" ||
+    value === "pl" ||
+    value === "ru" ||
+    value === "uk" ||
+    value === "de" ||
+    value === "es" ||
+    value === "cs"
+    ? value
+    : "pl";
 }
 
 function normalizeActivityRole(value: unknown): "planned" | "actual" | null {
@@ -797,6 +827,7 @@ export async function POST(request: Request) {
   const durationMinutes = durationMinutesRaw !== null && durationMinutesRaw > 0
     ? Math.round(durationMinutesRaw)
     : null;
+  const normalizedMetadata = normalizeMetadata(body.metadata);
   const common = {
     activityRoleCode,
     title,
@@ -806,7 +837,7 @@ export async function POST(request: Request) {
     source: normalizeSource(body.source),
     privacyScope: normalizePrivacyScope(body.privacyScope),
     metadata: {
-      ...normalizeMetadata(body.metadata),
+      ...normalizedMetadata,
       pp1bWritePath: "/api/activity/events",
     },
   } as const;
@@ -892,6 +923,85 @@ export async function POST(request: Request) {
   }
 
   const activityEvent = result.data.activityEvent as Row;
+  const activityEventId = asString(activityEvent.id);
+  const cux4Metadata = asRecord(normalizedMetadata.cux4);
+  const backgroundAnalysisRequested =
+    activityRoleCode === "planned" &&
+    cux4Metadata.backgroundAnalysis === true &&
+    Boolean(activityEventId) &&
+    Boolean(inputText?.trim());
+  let semanticEnrichment: {
+    runId: string | null;
+    status: string;
+    disposition: string | null;
+    error: string | null;
+  } | null = null;
+
+  if (
+    backgroundAnalysisRequested &&
+    activityEventId &&
+    inputText?.trim()
+  ) {
+    try {
+      const locale = normalizeCux4Locale(normalizedMetadata.locale);
+      const protectedFieldCodes = parseStringArray(
+        cux4Metadata.protectedFieldCodes,
+      );
+      const run = await createActivitySemanticEnrichmentRunCux4({
+        ownerUserId: appUser.id,
+        ownerActorId: personActor.id,
+        activityEventId,
+        requestKey: `capture:${idempotencyKey}`,
+        sourceLocale: locale,
+        sourceText: inputText,
+        protectedFieldCodes,
+        inputSnapshot: {
+          title,
+          scheduleModeCode:
+            activityRoleCode === "planned"
+              ? (activity as ActivityCreatePp1 & {
+                  scheduleModeCode?: string;
+                }).scheduleModeCode ?? null
+              : null,
+          plannedTargetValueObjectIds,
+          metadata: normalizedMetadata,
+        },
+      });
+
+      semanticEnrichment = {
+        runId: run.runId,
+        status: run.status,
+        disposition: run.disposition,
+        error: null,
+      };
+
+      const previewUrl = new URL(
+        "/api/calendar/activity-review/semantic-preview",
+        request.url,
+      ).toString();
+
+      after(async () => {
+        await processActivitySemanticEnrichmentRunCux4({
+          ownerUserId: appUser.id,
+          ownerActorId: personActor.id,
+          runId: run.runId,
+          previewUrl,
+          sourceLocale: locale,
+          sourceText: inputText,
+        });
+      });
+    } catch (error) {
+      semanticEnrichment = {
+        runId: null,
+        status: "failed_to_start",
+        disposition: null,
+        error:
+          error instanceof Error
+            ? error.message
+            : "CUX4 semantic enrichment could not be started.",
+      };
+    }
+  }
 
   return NextResponse.json({
     ok: true,
@@ -900,10 +1010,13 @@ export async function POST(request: Request) {
     activityEvent: result.data.activityEvent,
     calendarEvent: result.data.calendarEvent,
     plannedTargetValueObjectIds: result.data.plannedTargetValueObjectIds,
+    semanticEnrichment,
     container: {
       activityRoleCode,
       persistenceTarget: "activity_events",
       calendarProjectionCreated: result.data.calendarEvent !== null,
+      requiredActivityContainer:
+        cux4Metadata.requiredActivityContainer === true,
     },
   });
 }
