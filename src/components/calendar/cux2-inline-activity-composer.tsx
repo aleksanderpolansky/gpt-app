@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ActivityTimingEditorPp1 } from "@/components/activity/pp1/activity-timing-editor";
 import { PlannedTargetSelectorPp1 } from "@/components/activity/pp1/planned-target-selector";
+import { Cux3AiRulesEditor } from "@/components/calendar/cux3-ai-rules-editor";
 import {
   datetimeLocalToIsoPp1,
   formatActivityTimingDraftPp1,
@@ -139,9 +140,11 @@ const COPY: Partial<Record<ActivityTimingLocalePp1, Partial<Copy>>> = {
     helper: "Wpisz lub podyktuj zwykłym językiem. AI uzupełni tytuł, termin i czas trwania; każde pole można poprawić przed zapisem.",
     placeholder: "Na przykład: Próba gitary 30 lipca od 18:00 do 18:45",
     voice: "Głos",
+    voiceSoon: "Rozpoznawanie głosu zostanie podłączone na późniejszym etapie.",
     analyze: "Analizuj",
     analyzing: "Analizowanie…",
     activityTitle: "Tytuł aktywności",
+    titlePlaceholder: "AI zaproponuje tytuł",
     rules: "Reguły AI",
     details: "Szczegółowa analiza",
     close: "Zwiń",
@@ -149,6 +152,12 @@ const COPY: Partial<Record<ActivityTimingLocalePp1, Partial<Copy>>> = {
     add: "Dodaj aktywność",
     saving: "Zapisywanie…",
     success: "Aktywność została dodana. Kalendarz i dziennik są odświeżane.",
+    analysisReady: "AI uzupełniła dostępne pola.",
+    analysisError: "Analiza AI nie powiodła się. Pola można uzupełnić ręcznie.",
+    needsClarification: "Przed zapisem sprawdź wyróżnione pola harmonogramu.",
+    timingPreview: "Planowana aktywność",
+    validation: "Uzupełnij wymagane pola harmonogramu.",
+    saveError: "Nie udało się zapisać aktywności.",
   },
   uk: {
     eyebrow: "Швидке додавання активності",
@@ -485,12 +494,15 @@ export function Cux2InlineActivityComposer({
             </div>
 
             {rulesOpen ? (
-              <div className="mt-3 rounded-xl border border-[#cbd7ff] bg-[#eef2ff] p-4 text-sm text-[#52607a]">
-                <p className="font-bold text-[#1a1d2e]">{copy.rulesTitle}</p>
-                <p className="mt-1 leading-6">{copy.rulesBody}</p>
-                <ol className="mt-2 list-decimal space-y-1 pl-5">{copy.rulesPriority.map((item) => <li key={item}>{item}</li>)}</ol>
-                <p className="mt-2 text-xs font-bold uppercase tracking-[0.12em] text-[#315ee7]">{copy.rulesNext}</p>
-              </div>
+              <Cux3AiRulesEditor
+                locale={locale}
+                sourceText={text}
+                onRulesChanged={() => {
+                  if (text.trim()) {
+                    void analyzeText(text);
+                  }
+                }}
+              />
             ) : null}
 
             {analysisStatus !== "idle" ? (
