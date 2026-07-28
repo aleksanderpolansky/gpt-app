@@ -1160,7 +1160,7 @@ export function PlannedTargetSelectorPp1({
         </div>
       ) : null}
 
-      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_190px]">
+      <div className="mt-4">
         <label className="block">
           <span className="text-[11px] font-extrabold uppercase tracking-[0.15em] text-[#7c8099]">
             {copy.search}
@@ -1171,55 +1171,58 @@ export function PlannedTargetSelectorPp1({
               setQuery(event.target.value)
             }
             placeholder={copy.searchPlaceholder}
+            aria-label={copy.searchPlaceholder}
             className="mt-1.5 w-full rounded-xl border border-[#dfe5f1] bg-white px-3 py-2 text-sm font-semibold text-[#1a1d2e] outline-none focus:border-[#3b6ef8]"
           />
         </label>
 
-        <label className="block">
-          <span className="text-[11px] font-extrabold uppercase tracking-[0.15em] text-[#7c8099]">
-            {copy.branch}
-          </span>
-          <select
-            value={branchFilter}
-            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-              setBranchFilter(event.target.value)
-            }
-            className="mt-1.5 w-full rounded-xl border border-[#dfe5f1] bg-white px-3 py-2 text-sm font-semibold text-[#1a1d2e]"
-          >
-            <option value="all">{copy.allBranches}</option>
-            {policies.map((policy) => (
-              <option
-                key={policy.branchTypeCode}
-                value={policy.branchTypeCode}
-              >
-                {resolveValueObjectBranchPolicyTitle(
-                  policy,
-                  policyLocale,
-                )}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="block min-w-0">
+            <span className="text-[11px] font-extrabold uppercase tracking-[0.15em] text-[#7c8099]">
+              {copy.branch}
+            </span>
+            <select
+              value={branchFilter}
+              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                setBranchFilter(event.target.value)
+              }
+              className="mt-1.5 w-full rounded-xl border border-[#dfe5f1] bg-white px-3 py-2 text-sm font-semibold text-[#1a1d2e]"
+            >
+              <option value="all">{copy.allBranches}</option>
+              {policies.map((policy) => (
+                <option
+                  key={policy.branchTypeCode}
+                  value={policy.branchTypeCode}
+                >
+                  {resolveValueObjectBranchPolicyTitle(
+                    policy,
+                    policyLocale,
+                  )}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <label className="block">
-          <span className="text-[11px] font-extrabold uppercase tracking-[0.15em] text-[#7c8099]">
-            {copy.level}
-          </span>
-          <select
-            value={levelFilter}
-            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-              setLevelFilter(event.target.value as SelectorLevel)
-            }
-            className="mt-1.5 w-full rounded-xl border border-[#dfe5f1] bg-white px-3 py-2 text-sm font-semibold text-[#1a1d2e]"
-          >
-            <option value="all">{copy.allLevels}</option>
-            <option value="root">{copy.root}</option>
-            <option value="intermediate">
-              {copy.intermediate}
-            </option>
-            <option value="leaf">{copy.leaf}</option>
-          </select>
-        </label>
+          <label className="block min-w-0">
+            <span className="text-[11px] font-extrabold uppercase tracking-[0.15em] text-[#7c8099]">
+              {copy.level}
+            </span>
+            <select
+              value={levelFilter}
+              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                setLevelFilter(event.target.value as SelectorLevel)
+              }
+              className="mt-1.5 w-full rounded-xl border border-[#dfe5f1] bg-white px-3 py-2 text-sm font-semibold text-[#1a1d2e]"
+            >
+              <option value="all">{copy.allLevels}</option>
+              <option value="root">{copy.root}</option>
+              <option value="intermediate">
+                {copy.intermediate}
+              </option>
+              <option value="leaf">{copy.leaf}</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">

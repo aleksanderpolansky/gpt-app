@@ -1,6 +1,11 @@
 "use client";
 
-import type { ActivityTimingDraftPp1, ActivityTimingLocalePp1, ActivityTemporalDirectionPp1 } from "@/lib/activity/pp1/activityTiming";
+import {
+  DEFAULT_EXACT_DURATION_MINUTES_PP1,
+  type ActivityTemporalDirectionPp1,
+  type ActivityTimingDraftPp1,
+  type ActivityTimingLocalePp1,
+} from "@/lib/activity/pp1/activityTiming";
 
 const COPY: Record<ActivityTimingLocalePp1, {
   titleFuture: string;
@@ -253,6 +258,14 @@ export function ActivityTimingEditorPp1({
     } else if (value && draft.endedAtLocal) {
       const calculated = durationBetweenLocal(value, draft.endedAtLocal);
       next.durationMinutes = calculated ? String(calculated) : "";
+    } else if (value && draft.scheduleModeCode === "exact") {
+      next.durationMinutes = String(
+        DEFAULT_EXACT_DURATION_MINUTES_PP1,
+      );
+      next.endedAtLocal = addMinutesToLocal(
+        value,
+        DEFAULT_EXACT_DURATION_MINUTES_PP1,
+      );
     }
 
     patch(next);

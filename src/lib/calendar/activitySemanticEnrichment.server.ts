@@ -154,7 +154,7 @@ export async function createActivitySemanticEnrichmentRunCux4(params: {
   };
 }
 
-async function claimActivitySemanticEnrichmentRunCux4(params: {
+async function claimActivitySemanticEnrichmentRunRpcCux4(params: {
   ownerUserId: string;
   ownerActorId: string;
   runId: string;
@@ -175,6 +175,20 @@ async function claimActivitySemanticEnrichmentRunCux4(params: {
   }
 
   return normalizeRpcPayload(data);
+}
+
+export async function claimActivitySemanticEnrichmentRunCux4(params: {
+  ownerUserId: string;
+  ownerActorId: string;
+  runId: string;
+}) {
+  const claim = await claimActivitySemanticEnrichmentRunRpcCux4(params);
+
+  return {
+    claimed: claim.claimed === true,
+    status: normalizeRunStatus(claim.run?.status),
+    disposition: claim.disposition ?? null,
+  };
 }
 
 async function finishActivitySemanticEnrichmentRunCux4(params: {
@@ -227,17 +241,20 @@ export async function processActivitySemanticEnrichmentRunCux4(
     previewUrl: string;
     sourceLocale: string;
     sourceText: string;
+    alreadyClaimed?: boolean;
   },
 ) {
   try {
-    const claim = await claimActivitySemanticEnrichmentRunCux4({
-      ownerUserId: params.ownerUserId,
-      ownerActorId: params.ownerActorId,
-      runId: params.runId,
-    });
+    if (params.alreadyClaimed !== true) {
+      const claim = await claimActivitySemanticEnrichmentRunCux4({
+        ownerUserId: params.ownerUserId,
+        ownerActorId: params.ownerActorId,
+        runId: params.runId,
+      });
 
-    if (claim.claimed !== true) {
-      return;
+      if (claim.claimed !== true) {
+        return;
+      }
     }
 
     const locale = normalizeCalendarAiRuleLocale(

@@ -9,6 +9,7 @@ import { getActivityUserContext } from "../../../../../lib/activity/activityUser
 import { supabase } from "../../../../../lib/supabase";
 import { createActivityEventViaPp1Rpc } from "@/lib/activity/pp1/createActivityEventRpc";
 import {
+  claimActivitySemanticEnrichmentRunCux4,
   createActivitySemanticEnrichmentRunCux4,
   processActivitySemanticEnrichmentRunCux4,
 } from "@/lib/calendar/activitySemanticEnrichment.server";
@@ -316,6 +317,14 @@ function parseIsoDate(value: unknown): string | null {
   const date = new Date(text);
 
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+const DEFAULT_EXACT_DURATION_MINUTES = 15;
+
+function addMinutesToIso(value: string, minutes: number) {
+  const parsed = new Date(value);
+  parsed.setMinutes(parsed.getMinutes() + minutes);
+  return parsed.toISOString();
 }
 
 function parseDateKey(value: unknown): string | null {
@@ -824,9 +833,32 @@ export async function POST(request: Request) {
   }
 
   const durationMinutesRaw = asNumber(body.durationMinutes);
-  const durationMinutes = durationMinutesRaw !== null && durationMinutesRaw > 0
-    ? Math.round(durationMinutesRaw)
-    : null;
+  const requestedDurationMinutes =
+    durationMinutesRaw !== null && durationMinutesRaw > 0
+      ? Math.round(durationMinutesRaw)
+      : null;
+  const plannedScheduleModeCode =
+    activityRoleCode === "planned"
+      ? normalizeScheduleMode(body.scheduleModeCode)
+      : null;
+  const requestedStartedAt = parseIsoDate(body.startedAt);
+  const requestedEndedAt = parseIsoDate(body.endedAt);
+  const exactStartOnlyDefaultApplied =
+    activityRoleCode === "planned" &&
+    plannedScheduleModeCode === "exact" &&
+    requestedStartedAt !== null &&
+    requestedEndedAt === null &&
+    requestedDurationMinutes === null;
+  const durationMinutes = exactStartOnlyDefaultApplied
+    ? DEFAULT_EXACT_DURATION_MINUTES
+    : requestedDurationMinutes;
+  const resolvedEndedAt =
+    exactStartOnlyDefaultApplied && requestedStartedAt
+      ? addMinutesToIso(
+          requestedStartedAt,
+          DEFAULT_EXACT_DURATION_MINUTES,
+        )
+      : requestedEndedAt;
   const normalizedMetadata = normalizeMetadata(body.metadata);
   const common = {
     activityRoleCode,
@@ -846,7 +878,7 @@ export async function POST(request: Request) {
   let plannedTargetValueObjectIds: string[] = [];
 
   if (activityRoleCode === "planned") {
-    const scheduleModeCode = normalizeScheduleMode(body.scheduleModeCode);
+    const scheduleModeCode = plannedScheduleModeCode;
 
     if (!scheduleModeCode) {
       return NextResponse.json(
@@ -872,8 +904,8 @@ export async function POST(request: Request) {
         : {}),
       ...(scheduleModeCode === "exact"
         ? {
-            startedAt: parseIsoDate(body.startedAt) ?? "",
-            endedAt: parseIsoDate(body.endedAt),
+            startedAt: requestedStartedAt ?? "",
+            endedAt: resolvedEndedAt,
             createCalendarProjection: body.createCalendarProjection !== false,
           }
         : {}),
@@ -895,8 +927,8 @@ export async function POST(request: Request) {
       status: body.status === "draft" || body.status === "started" || body.status === "paused" || body.status === "corrected" || body.status === "cancelled" || body.status === "imported_pending" || body.status === "archived"
         ? body.status
         : "completed",
-      startedAt: parseIsoDate(body.startedAt),
-      endedAt: parseIsoDate(body.endedAt),
+      startedAt: requestedStartedAt,
+      endedAt: requestedEndedAt,
       fulfillsPlannedActivityEventId: parseUuid(body.fulfillsPlannedActivityEventId),
     };
   }
@@ -968,28 +1000,37 @@ export async function POST(request: Request) {
         },
       });
 
+      const claim = await claimActivitySemanticEnrichmentRunCux4({
+        ownerUserId: appUser.id,
+        ownerActorId: personActor.id,
+        runId: run.runId,
+      });
+
       semanticEnrichment = {
         runId: run.runId,
-        status: run.status,
-        disposition: run.disposition,
+        status: claim.status,
+        disposition: claim.disposition ?? run.disposition,
         error: null,
       };
 
-      const previewUrl = new URL(
-        "/api/calendar/activity-review/semantic-preview",
-        request.url,
-      ).toString();
+      if (claim.claimed) {
+        const previewUrl = new URL(
+          "/api/calendar/activity-review/semantic-preview",
+          request.url,
+        ).toString();
 
-      after(async () => {
-        await processActivitySemanticEnrichmentRunCux4({
-          ownerUserId: appUser.id,
-          ownerActorId: personActor.id,
-          runId: run.runId,
-          previewUrl,
-          sourceLocale: locale,
-          sourceText: inputText,
+        after(async () => {
+          await processActivitySemanticEnrichmentRunCux4({
+            ownerUserId: appUser.id,
+            ownerActorId: personActor.id,
+            runId: run.runId,
+            previewUrl,
+            sourceLocale: locale,
+            sourceText: inputText,
+            alreadyClaimed: true,
+          });
         });
-      });
+      }
     } catch (error) {
       semanticEnrichment = {
         runId: null,

@@ -6,6 +6,7 @@ import { ActivityTimingEditorPp1 } from "@/components/activity/pp1/activity-timi
 import { PlannedTargetSelectorPp1 } from "@/components/activity/pp1/planned-target-selector";
 import { Cux3AiRulesEditor } from "@/components/calendar/cux3-ai-rules-editor";
 import {
+  applyExactStartOnlyDefaultPp1,
   datetimeLocalToIsoPp1,
   formatActivityTimingDraftPp1,
   getTimingFocusDatePp1,
@@ -282,17 +283,26 @@ export function Cux2InlineActivityComposer({
   const analysisSequenceRef = useRef(0);
   const requestIdRef = useRef(createRequestId());
 
-  const timingValidation = useMemo(
-    () => validateActivityTimingDraftPp1(timingDraft, "future"),
+  const effectiveTimingDraft = useMemo(
+    () => applyExactStartOnlyDefaultPp1(timingDraft),
     [timingDraft],
+  );
+  const timingValidation = useMemo(
+    () => validateActivityTimingDraftPp1(effectiveTimingDraft, "future"),
+    [effectiveTimingDraft],
   );
   const timingLabel = useMemo(
-    () => formatActivityTimingDraftPp1(timingDraft, "future", locale),
-    [locale, timingDraft],
+    () =>
+      formatActivityTimingDraftPp1(
+        effectiveTimingDraft,
+        "future",
+        locale,
+      ),
+    [effectiveTimingDraft, locale],
   );
   const timingFocusDate = useMemo(
-    () => getTimingFocusDatePp1(timingDraft, "future"),
-    [timingDraft],
+    () => getTimingFocusDatePp1(effectiveTimingDraft, "future"),
+    [effectiveTimingDraft],
   );
 
   async function analyzeText(rawText: string) {
@@ -391,7 +401,7 @@ export function Cux2InlineActivityComposer({
 
     try {
       const writeTimingDraft = timingValidation.ok
-        ? timingDraft
+        ? effectiveTimingDraft
         : inferActivityTimingDraftPp1("", "future");
       const writeTimingLabel = formatActivityTimingDraftPp1(
         writeTimingDraft,

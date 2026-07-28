@@ -20,6 +20,8 @@ export type ActivityTimingValidationPp1 = {
   errors: string[];
 };
 
+export const DEFAULT_EXACT_DURATION_MINUTES_PP1 = 15;
+
 const DATE_ISO_PATTERN = /\b(20\d{2})-(\d{2})-(\d{2})\b/g;
 const DATE_DMY_PATTERN = /\b(\d{1,2})[./-](\d{1,2})(?:[./-](20\d{2}))?\b/g;
 const CLOCK_PATTERN = /(?:^|[^\d])([01]?\d|2[0-3])[:.]([0-5]\d)(?!\d)/g;
@@ -330,6 +332,34 @@ function addMinutesToLocal(value: string, minutes: number) {
   return toDatetimeLocalPp1(parsed);
 }
 
+export function applyExactStartOnlyDefaultPp1(
+  draft: ActivityTimingDraftPp1,
+): ActivityTimingDraftPp1 {
+  if (
+    draft.scheduleModeCode !== "exact" ||
+    !draft.startedAtLocal.trim() ||
+    draft.endedAtLocal.trim() ||
+    draft.durationMinutes.trim()
+  ) {
+    return draft;
+  }
+
+  const endedAtLocal = addMinutesToLocal(
+    draft.startedAtLocal,
+    DEFAULT_EXACT_DURATION_MINUTES_PP1,
+  );
+
+  if (!endedAtLocal) {
+    return draft;
+  }
+
+  return {
+    ...draft,
+    endedAtLocal,
+    durationMinutes: String(DEFAULT_EXACT_DURATION_MINUTES_PP1),
+  };
+}
+
 function durationBetweenLocal(start: string, end: string) {
   const startDate = new Date(start);
   const endDate = new Date(end);
@@ -394,7 +424,7 @@ export function mergeActivityTimingDraftPp1(
     }
   }
 
-  return next;
+  return applyExactStartOnlyDefaultPp1(next);
 }
 
 export function inferActivityTimingDraftPp1(
@@ -443,7 +473,7 @@ export function inferActivityTimingDraftPp1(
       draft.endedAtLocal = addMinutesToLocal(draft.startedAtLocal, explicitDurationMinutes);
     }
 
-    return draft;
+    return applyExactStartOnlyDefaultPp1(draft);
   }
 
   if (dateKeys[0] && clocks.length >= 2 && hasExplicitTimeRange(rawText, clocks)) {
@@ -488,7 +518,7 @@ export function inferActivityTimingDraftPp1(
       draft.endedAtLocal = addMinutesToLocal(draft.startedAtLocal, explicitDurationMinutes);
     }
 
-    return draft;
+    return applyExactStartOnlyDefaultPp1(draft);
   }
 
   if (dateKeys[0]) {
@@ -504,20 +534,26 @@ export function validateActivityTimingDraftPp1(
   temporalDirection: ActivityTemporalDirectionPp1,
 ): ActivityTimingValidationPp1 {
   const errors: string[] = [];
-  const durationMinutes = parsePositiveDurationMinutesPp1(draft.durationMinutes);
+  const effectiveDraft =
+    temporalDirection === "future"
+      ? applyExactStartOnlyDefaultPp1(draft)
+      : draft;
+  const durationMinutes = parsePositiveDurationMinutesPp1(
+    effectiveDraft.durationMinutes,
+  );
 
-  if (draft.durationMinutes.trim() && durationMinutes === null) {
+  if (effectiveDraft.durationMinutes.trim() && durationMinutes === null) {
     errors.push("duration_invalid");
   }
 
-  const startedAt = datetimeLocalToIsoPp1(draft.startedAtLocal);
-  const endedAt = datetimeLocalToIsoPp1(draft.endedAtLocal);
+  const startedAt = datetimeLocalToIsoPp1(effectiveDraft.startedAtLocal);
+  const endedAt = datetimeLocalToIsoPp1(effectiveDraft.endedAtLocal);
 
-  if (draft.startedAtLocal.trim() && !startedAt) {
+  if (effectiveDraft.startedAtLocal.trim() && !startedAt) {
     errors.push("start_invalid");
   }
 
-  if (draft.endedAtLocal.trim() && !endedAt) {
+  if (effectiveDraft.endedAtLocal.trim() && !endedAt) {
     errors.push("end_invalid");
   }
 
@@ -541,23 +577,23 @@ export function validateActivityTimingDraftPp1(
     return { ok: errors.length === 0, errors };
   }
 
-  switch (draft.scheduleModeCode) {
+  switch (effectiveDraft.scheduleModeCode) {
     case "unscheduled":
       break;
     case "date_only":
-      if (!draft.scheduledDate) {
+      if (!effectiveDraft.scheduledDate) {
         errors.push("scheduled_date_required");
       }
       break;
     case "date_range":
-      if (!draft.scheduleStartDate || !draft.scheduleEndDate) {
+      if (!effectiveDraft.scheduleStartDate || !effectiveDraft.scheduleEndDate) {
         errors.push("date_range_required");
-      } else if (draft.scheduleEndDate < draft.scheduleStartDate) {
+      } else if (effectiveDraft.scheduleEndDate < effectiveDraft.scheduleStartDate) {
         errors.push("date_range_order_invalid");
       }
       break;
     case "deadline":
-      if (!datetimeLocalToIsoPp1(draft.deadlineLocal)) {
+      if (!datetimeLocalToIsoPp1(effectiveDraft.deadlineLocal)) {
         errors.push("deadline_required");
       }
       break;
