@@ -20,6 +20,7 @@ import {
   parseDateKey,
 } from "../../features/calendar-core/date-utils";
 import type { CalendarEvent, CalendarViewMode } from "../../features/calendar-core/types";
+import { Cux2InlineActivityComposer } from "../../components/calendar/cux2-inline-activity-composer";
 
 type CalendarRebuildClientProps = {
   initialFocusDateKey: string | null;
@@ -780,6 +781,7 @@ export default function CalendarRebuildClient({
   const filterLabels = CALENDAR_FILTERS_UI[locale];
 
   const [view, setView] = useState<CalendarViewMode>("week");
+  const [composerOpen, setComposerOpen] = useState(false);
   const [calendarPresentation, setCalendarPresentation] = useState<"grid" | "list">("grid");
   const [activeCalendarTab, setActiveCalendarTab] = useState<"calendar" | "log">("calendar");
   const [eventLogs, setEventLogs] = useState<CalendarEventLogEntry[]>([]);
@@ -802,15 +804,6 @@ export default function CalendarRebuildClient({
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [sourceCounts, setSourceCounts] = useState({ calendarEvents: 0, timeBlocks: 0 });
-
-  const addFlowHref = {
-    pathname: "/calendar/add",
-    query: {
-      locale,
-      returnTo: returnToTarget,
-      focusDate: dateKey(focusDate),
-    },
-  };
 
   const range = useMemo(() => getRangeForView(view, focusDate), [view, focusDate]);
   const rangeStart = range.start.toISOString();
@@ -1374,14 +1367,32 @@ export default function CalendarRebuildClient({
               </p>
             </div>
 
-            <Link
-              href={addFlowHref}
+            <button
+              type="button"
+              aria-expanded={composerOpen}
+              aria-controls="calendar-inline-composer"
+              onClick={() => setComposerOpen((value) => !value)}
               className="rounded-xl bg-[#3b6ef8] px-4 py-2 text-sm font-bold text-white shadow"
             >
               {ui.add}
-            </Link>
+            </button>
           </div>
         </section>
+
+        <Cux2InlineActivityComposer
+          open={composerOpen}
+          locale={locale}
+          focusDateKey={dateKey(focusDate)}
+          onClose={() => setComposerOpen(false)}
+          onSaved={(savedFocusDateKey) => {
+            setEventsRefreshKey((value) => value + 1);
+            setActiveCalendarTab("calendar");
+
+            if (savedFocusDateKey) {
+              updateFocusDate(parseDateKey(savedFocusDateKey));
+            }
+          }}
+        />
 
         {/* Step 9A calendar/log top tabs */}
         <section className="flex flex-wrap gap-2">
