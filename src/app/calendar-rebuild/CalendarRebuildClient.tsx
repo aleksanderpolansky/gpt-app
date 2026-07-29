@@ -163,6 +163,37 @@ type CalendarListGroup = {
   entries: CalendarListEntry[];
 };
 
+type CalendarPresentationMode = "grid" | "list" | "timeline";
+
+type CalendarTimelineEntry =
+  | {
+      key: string;
+      kind: "all_day";
+      title: string;
+      startAt: Date;
+      endAt: Date;
+      isPoint: boolean;
+      item: CalendarAllDayItem;
+    }
+  | {
+      key: string;
+      kind: "timed";
+      title: string;
+      startAt: Date;
+      endAt: Date;
+      isPoint: false;
+      event: CalendarEvent;
+    };
+
+type CalendarTimelineAxisCell = {
+  key: string;
+  label: string;
+  secondaryLabel: string;
+  startAt: Date;
+  endAt: Date;
+  isFocusDate: boolean;
+};
+
 type AllDayUiLabels = {
   title: string;
   empty: string;
@@ -908,6 +939,206 @@ function buildWeekAllDaySegments(
   });
 }
 
+function startOfDateKey(value: string) {
+  const parsed = parseDateKey(value);
+
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
+}
+
+function addLocalCalendarDays(value: Date, amount: number) {
+  return new Date(
+    value.getFullYear(),
+    value.getMonth(),
+    value.getDate() + amount,
+    value.getHours(),
+    value.getMinutes(),
+    value.getSeconds(),
+    value.getMilliseconds(),
+  );
+}
+
+function clampTimelineDate(value: Date, minimum: Date, maximum: Date) {
+  return new Date(Math.min(maximum.getTime(), Math.max(minimum.getTime(), value.getTime())));
+}
+
+function buildTimelineEntries(
+  events: CalendarEvent[],
+  allDayItems: CalendarAllDayItem[],
+  range: { start: Date; end: Date },
+): CalendarTimelineEntry[] {
+  const entries: CalendarTimelineEntry[] = [];
+
+  for (const item of allDayItems) {
+    const rawStart = startOfDateKey(item.startDate);
+    const rawEndExclusive = addLocalCalendarDays(startOfDateKey(item.endDate), 1);
+
+    if (item.scheduleModeCode === "deadline") {
+      const parsedDeadline = item.deadlineAt ? new Date(item.deadlineAt) : rawStart;
+      const markerAt = Number.isNaN(parsedDeadline.getTime()) ? rawStart : parsedDeadline;
+
+      if (markerAt < range.start || markerAt >= range.end) {
+        continue;
+      }
+
+      entries.push({
+        key: `timeline:all-day:${item.id}`,
+        kind: "all_day",
+        title: item.title,
+        startAt: markerAt,
+        endAt: markerAt,
+        isPoint: true,
+        item,
+      });
+      continue;
+    }
+
+    const startAt = clampTimelineDate(rawStart, range.start, range.end);
+    const endAt = clampTimelineDate(rawEndExclusive, range.start, range.end);
+
+    if (endAt <= startAt) {
+      continue;
+    }
+
+    entries.push({
+      key: `timeline:all-day:${item.id}`,
+      kind: "all_day",
+      title: item.title,
+      startAt,
+      endAt,
+      isPoint: false,
+      item,
+    });
+  }
+
+  for (const event of events) {
+    const rawStart = eventStartDate(event);
+    const parsedEnd = new Date(event.endAt);
+    const rawEnd = Number.isNaN(parsedEnd.getTime())
+      ? new Date(rawStart.getTime() + eventDurationMinutes(event) * 60000)
+      : parsedEnd;
+    const startAt = clampTimelineDate(rawStart, range.start, range.end);
+    const endAt = clampTimelineDate(rawEnd, range.start, range.end);
+
+    if (endAt <= startAt) {
+      continue;
+    }
+
+    entries.push({
+      key: `timeline:timed:${event.id}`,
+      kind: "timed",
+      title: getEventDisplayTitle(event) || buildCompactEventLabel(event),
+      startAt,
+      endAt,
+      isPoint: false,
+      event,
+    });
+  }
+
+  return entries.sort((left, right) => {
+    if (left.startAt.getTime() !== right.startAt.getTime()) {
+      return left.startAt.getTime() - right.startAt.getTime();
+    }
+
+    if (left.isPoint !== right.isPoint) {
+      return left.isPoint ? 1 : -1;
+    }
+
+    return left.key.localeCompare(right.key);
+  });
+}
+
+function buildTimelineAxisCells(
+  view: CalendarViewMode,
+  focusDate: Date,
+  weekDates: Date[],
+  monthDates: Date[],
+  locale: UiLocale,
+): CalendarTimelineAxisCell[] {
+  if (view === "day") {
+    const dayStart = new Date(
+      focusDate.getFullYear(),
+      focusDate.getMonth(),
+      focusDate.getDate(),
+      0,
+      0,
+      0,
+      0,
+    );
+
+    return Array.from({ length: 24 }, (_, hour) => {
+      const startAt = new Date(dayStart.getTime() + hour * 60 * 60 * 1000);
+      const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+
+      return {
+        key: `${dateKey(dayStart)}:${hour}`,
+        label: `${String(hour).padStart(2, "0")}:00`,
+        secondaryLabel: hour === 0 ? formatAllDayDateKey(dateKey(dayStart), locale) : "",
+        startAt,
+        endAt,
+        isFocusDate: true,
+      };
+    });
+  }
+
+  const dates = view === "week" ? weekDates : monthDates;
+
+  return dates.map((day, index) => {
+    const startAt = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0);
+    const endAt = addLocalCalendarDays(startAt, 1);
+    const showMonth = index === 0 || day.getDate() === 1;
+
+    return {
+      key: dateKey(day),
+      label:
+        view === "week"
+          ? formatShortDay(day, locale)
+          : String(day.getDate()).padStart(2, "0"),
+      secondaryLabel:
+        view === "week"
+          ? formatAllDayDateKey(dateKey(day), locale)
+          : showMonth
+            ? new Intl.DateTimeFormat(intlLocale(locale), { month: "short" }).format(day)
+            : "",
+      startAt,
+      endAt,
+      isFocusDate: isSameDate(day, focusDate),
+    };
+  });
+}
+
+function getHorizontalTimelinePosition(
+  entry: CalendarTimelineEntry,
+  range: { start: Date; end: Date },
+  axisWidth: number,
+) {
+  const rangeDuration = Math.max(1, range.end.getTime() - range.start.getTime());
+  const rawLeft = ((entry.startAt.getTime() - range.start.getTime()) / rangeDuration) * axisWidth;
+  const left = Math.max(0, Math.min(axisWidth, rawLeft));
+
+  if (entry.isPoint) {
+    return {
+      left: Math.max(0, Math.min(axisWidth - 20, left - 10)),
+      width: 20,
+    };
+  }
+
+  const rawWidth = ((entry.endAt.getTime() - entry.startAt.getTime()) / rangeDuration) * axisWidth;
+  const availableWidth = Math.max(10, axisWidth - left);
+
+  return {
+    left,
+    width: Math.min(availableWidth, Math.max(18, rawWidth)),
+  };
+}
+
+function formatTimelineEntryRange(entry: CalendarTimelineEntry, locale: UiLocale) {
+  if (entry.kind === "all_day") {
+    return formatAllDayItemRange(entry.item, locale);
+  }
+
+  return formatEventDateTimeRange(entry.event, locale);
+}
+
 function getEventDisplayTitle(event: CalendarEvent) {
   const record = event as CalendarEvent & Record<string, unknown>;
   const candidates = [
@@ -1102,7 +1333,7 @@ export default function CalendarRebuildClient({
   const [view, setView] = useState<CalendarViewMode>("week");
   const [composerOpen, setComposerOpen] = useState(false);
   const [lastQuickCapture, setLastQuickCapture] = useState<Cux4QuickCaptureResult | null>(null);
-  const [calendarPresentation, setCalendarPresentation] = useState<"grid" | "list">("grid");
+  const [calendarPresentation, setCalendarPresentation] = useState<CalendarPresentationMode>("grid");
   const [activeCalendarTab, setActiveCalendarTab] = useState<"calendar" | "log">("calendar");
   const [eventLogs, setEventLogs] = useState<CalendarEventLogEntry[]>([]);
   const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
@@ -1545,6 +1776,18 @@ export default function CalendarRebuildClient({
         }),
       }));
   }, [range.start, visibleAllDayItems, visibleEvents]);
+  const calendarTimelineEntries = useMemo(
+    () => buildTimelineEntries(visibleEvents, visibleAllDayItems, range),
+    [range, visibleAllDayItems, visibleEvents],
+  );
+  const calendarTimelineAxisCells = useMemo(
+    () => buildTimelineAxisCells(view, focusDate, weekDates, monthDates, locale),
+    [focusDate, locale, monthDates, view, weekDates],
+  );
+  const calendarTimelineUnitWidth = view === "day" ? 72 : view === "week" ? 132 : 56;
+  const calendarTimelineAxisWidth =
+    calendarTimelineAxisCells.length * calendarTimelineUnitWidth;
+  const calendarTimelineLabelWidth = 248;
 
   const periodLabel =
     view === "day" ? ui.selectedDay : view === "week" ? ui.selectedWeek : ui.selectedMonth;
@@ -1555,32 +1798,101 @@ export default function CalendarRebuildClient({
         ? `${dateKey(weekDates[0])} - ${dateKey(weekDates[6])}`
         : formatMonthTitle(focusDate, locale);
   const gridTitle = view === "day" ? ui.day : view === "week" ? ui.week : ui.month;
-  const calendarPresentationCopy = useMemo(() => {
+  const calendarPresentationCopy = useMemo<Record<CalendarPresentationMode, string>>(() => {
     if (locale === "ru") {
-      return { grid: "Сетка", list: "Список" };
+      return { grid: "Сетка", list: "Список", timeline: "Шкала времени" };
     }
 
     if (locale === "uk") {
-      return { grid: "Сітка", list: "Список" };
+      return { grid: "Сітка", list: "Список", timeline: "Часова шкала" };
     }
 
     if (locale === "pl") {
-      return { grid: "Siatka", list: "Lista" };
+      return { grid: "Siatka", list: "Lista", timeline: "Oś czasu" };
     }
 
     if (locale === "de") {
-      return { grid: "Raster", list: "Liste" };
+      return { grid: "Raster", list: "Liste", timeline: "Zeitleiste" };
     }
 
     if (locale === "es") {
-      return { grid: "Cuadrícula", list: "Lista" };
+      return { grid: "Cuadrícula", list: "Lista", timeline: "Línea de tiempo" };
     }
 
     if (locale === "cs") {
-      return { grid: "Mřížka", list: "Seznam" };
+      return { grid: "Mřížka", list: "Seznam", timeline: "Časová osa" };
     }
 
-    return { grid: "Grid", list: "List" };
+    return { grid: "Grid", list: "List", timeline: "Timeline" };
+  }, [locale]);
+  const calendarTimelineUi = useMemo(() => {
+    if (locale === "ru") {
+      return {
+        title: "Шкала времени периода",
+        empty: "В выбранном периоде нет записей",
+        records: "записей",
+        exact: "Точное время",
+        hint: "Прокручивайте шкалу по горизонтали",
+      };
+    }
+
+    if (locale === "uk") {
+      return {
+        title: "Часова шкала періоду",
+        empty: "У вибраному періоді немає записів",
+        records: "записів",
+        exact: "Точний час",
+        hint: "Прокручуйте шкалу горизонтально",
+      };
+    }
+
+    if (locale === "pl") {
+      return {
+        title: "Oś czasu okresu",
+        empty: "Brak wpisów w wybranym okresie",
+        records: "wpisów",
+        exact: "Dokładny czas",
+        hint: "Przewijaj oś poziomo",
+      };
+    }
+
+    if (locale === "de") {
+      return {
+        title: "Zeitleiste des Zeitraums",
+        empty: "Keine Einträge im gewählten Zeitraum",
+        records: "Einträge",
+        exact: "Genaue Zeit",
+        hint: "Zeitleiste horizontal scrollen",
+      };
+    }
+
+    if (locale === "es") {
+      return {
+        title: "Línea de tiempo del período",
+        empty: "No hay registros en el período seleccionado",
+        records: "registros",
+        exact: "Hora exacta",
+        hint: "Desplaza la línea horizontalmente",
+      };
+    }
+
+    if (locale === "cs") {
+      return {
+        title: "Časová osa období",
+        empty: "Ve vybraném období nejsou žádné záznamy",
+        records: "záznamů",
+        exact: "Přesný čas",
+        hint: "Posouvejte osu vodorovně",
+      };
+    }
+
+    return {
+      title: "Period timeline",
+      empty: "No records in the selected period",
+      records: "records",
+      exact: "Exact time",
+      hint: "Scroll the timeline horizontally",
+    };
   }, [locale]);
   const calendarListUi = useMemo(() => {
     if (locale === "ru") {
@@ -2208,11 +2520,12 @@ export default function CalendarRebuildClient({
           </div>
 
           <div className="inline-flex rounded-full border border-[#d8deef] bg-white p-1 shadow-sm">
-            {(["grid", "list"] as const).map((mode) => (
+            {(["grid", "list", "timeline"] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
                 onClick={() => setCalendarPresentation(mode)}
+                aria-pressed={calendarPresentation === mode}
                 className={cn(
                   "rounded-full px-3 py-1.5 text-xs font-bold transition",
                   calendarPresentation === mode
@@ -2340,6 +2653,217 @@ export default function CalendarRebuildClient({
                 </section>
               ))
             : null}
+        </div>
+
+        {/* CUX7C2 horizontal Timeline: one canonical record per row, no new writes */}
+        <div className={cn("mb-4 space-y-3", calendarPresentation === "timeline" ? "block" : "hidden")}>
+          <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#fbfcff] p-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#3b6ef8]">
+                  {calendarTimelineUi.title}
+                </div>
+                <div className="mt-1 text-sm font-semibold text-[#1a1d2e]">
+                  {periodTitle}
+                </div>
+                <div className="mt-2 text-xs font-medium text-[#7c8099]">
+                  {calendarTimelineEntries.length} {calendarTimelineUi.records}
+                </div>
+              </div>
+              <div className="rounded-full border border-[#d8deef] bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#667091] shadow-sm">
+                {calendarTimelineUi.hint}
+              </div>
+            </div>
+          </div>
+
+          {eventsError ? (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-medium text-rose-700">
+              {eventsError}
+            </div>
+          ) : null}
+
+          {isLoadingEvents ? (
+            <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-3 text-sm font-medium text-[#7c8099]">
+              {ui.loadingEvents}
+            </div>
+          ) : null}
+
+          {!isLoadingEvents && !eventsError && calendarTimelineEntries.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-[#d8deef] bg-white p-4 text-sm font-medium text-[#7c8099]">
+              {calendarTimelineUi.empty}
+            </div>
+          ) : null}
+
+          {!isLoadingEvents && !eventsError && calendarTimelineEntries.length > 0 ? (
+            <div className="overflow-x-auto rounded-xl border border-[rgba(0,0,0,0.06)] bg-white shadow-sm">
+              <div
+                className="min-w-max"
+                style={{ width: `${calendarTimelineLabelWidth + calendarTimelineAxisWidth}px` }}
+              >
+                <div
+                  className="grid border-b border-[#e8ebf3] bg-[#fbfcff]"
+                  style={{
+                    gridTemplateColumns: `${calendarTimelineLabelWidth}px ${calendarTimelineAxisWidth}px`,
+                  }}
+                >
+                  <div className="sticky left-0 z-30 border-r border-[#e8ebf3] bg-[#fbfcff] px-4 py-3">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
+                      {calendarTimelineUi.title}
+                    </div>
+                    <div className="mt-1 truncate text-xs font-semibold text-[#1a1d2e]">
+                      {periodTitle}
+                    </div>
+                  </div>
+
+                  <div
+                    className="grid"
+                    style={{
+                      gridTemplateColumns: `repeat(${calendarTimelineAxisCells.length}, ${calendarTimelineUnitWidth}px)`,
+                    }}
+                  >
+                    {calendarTimelineAxisCells.map((cell) => (
+                      <div
+                        key={cell.key}
+                        className={cn(
+                          "border-r border-[#e8ebf3] px-2 py-2 text-center last:border-r-0",
+                          cell.isFocusDate && "bg-[#eef2ff]",
+                        )}
+                      >
+                        <div className="truncate text-[10px] font-bold uppercase tracking-[0.08em] text-[#667091]">
+                          {cell.label}
+                        </div>
+                        <div className="mt-0.5 truncate text-[10px] font-medium text-[#9ca3b8]">
+                          {cell.secondaryLabel || "\u00a0"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  {calendarTimelineEntries.map((entry) => {
+                    const position = getHorizontalTimelinePosition(
+                      entry,
+                      range,
+                      calendarTimelineAxisWidth,
+                    );
+                    const modeLabel =
+                      entry.kind === "all_day"
+                        ? allDayUi.modes[entry.item.scheduleModeCode]
+                        : calendarTimelineUi.exact;
+
+                    return (
+                      <div
+                        key={entry.key}
+                        className="grid min-h-[68px] border-b border-[#eef1f7] last:border-b-0"
+                        style={{
+                          gridTemplateColumns: `${calendarTimelineLabelWidth}px ${calendarTimelineAxisWidth}px`,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (entry.kind === "all_day") {
+                              setSelectedEventId(null);
+                              setSelectedShelfItem(allDayItemToShelfItem(entry.item));
+                              return;
+                            }
+
+                            setSelectedShelfItem(null);
+                            setSelectedEventId(entry.event.id);
+                            setFocusDate(eventStartDate(entry.event));
+                          }}
+                          className="sticky left-0 z-20 border-r border-[#e8ebf3] bg-white px-4 py-3 text-left transition hover:bg-[#f8f9fd] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#3b6ef8]"
+                        >
+                          <div className="truncate text-xs font-bold text-[#1a1d2e]">
+                            {entry.title}
+                          </div>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="rounded-full bg-[#eef2ff] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-[#3b6ef8]">
+                              {modeLabel}
+                            </span>
+                            <span className="truncate text-[10px] font-medium text-[#7c8099]">
+                              {formatTimelineEntryRange(entry, locale)}
+                            </span>
+                          </div>
+                        </button>
+
+                        <div className="relative bg-white">
+                          <div
+                            className="pointer-events-none absolute inset-0 grid"
+                            style={{
+                              gridTemplateColumns: `repeat(${calendarTimelineAxisCells.length}, ${calendarTimelineUnitWidth}px)`,
+                            }}
+                          >
+                            {calendarTimelineAxisCells.map((cell) => (
+                              <div
+                                key={cell.key}
+                                className={cn(
+                                  "border-r border-[#eef1f7] last:border-r-0",
+                                  cell.isFocusDate && "bg-[#f7f8ff]",
+                                )}
+                              />
+                            ))}
+                          </div>
+
+                          {entry.isPoint ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (entry.kind !== "all_day") {
+                                  return;
+                                }
+
+                                setSelectedEventId(null);
+                                setSelectedShelfItem(allDayItemToShelfItem(entry.item));
+                              }}
+                              className="absolute top-1/2 z-10 h-5 w-5 -translate-y-1/2 rotate-45 rounded-[4px] border-2 border-amber-400 bg-amber-100 shadow-sm transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#3b6ef8] focus:ring-offset-2"
+                              style={{ left: `${position.left}px` }}
+                              aria-label={`${modeLabel}: ${entry.title}`}
+                              title={`${modeLabel} · ${formatTimelineEntryRange(entry, locale)} · ${entry.title}`}
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (entry.kind === "all_day") {
+                                  setSelectedEventId(null);
+                                  setSelectedShelfItem(allDayItemToShelfItem(entry.item));
+                                  return;
+                                }
+
+                                setSelectedShelfItem(null);
+                                setSelectedEventId(entry.event.id);
+                                setFocusDate(eventStartDate(entry.event));
+                              }}
+                              className={cn(
+                                "absolute top-1/2 z-10 flex h-8 -translate-y-1/2 items-center overflow-hidden rounded-lg border px-2 text-left text-[10px] font-bold shadow-sm transition hover:brightness-[0.98] focus:outline-none focus:ring-2 focus:ring-[#3b6ef8] focus:ring-offset-1",
+                                entry.kind === "all_day"
+                                  ? getAllDayAccentClass(entry.item)
+                                  : getLayerAccentClass(entry.event),
+                                entry.kind === "timed" && selectedEventId === entry.event.id
+                                  ? "ring-2 ring-[#3b6ef8] ring-offset-1"
+                                  : "",
+                              )}
+                              style={{
+                                left: `${position.left}px`,
+                                width: `${position.width}px`,
+                              }}
+                              title={`${modeLabel} · ${formatTimelineEntryRange(entry, locale)} · ${entry.title}`}
+                            >
+                              <span className="truncate">
+                                {position.width >= 90 ? entry.title : modeLabel}
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {view === "day" ? (
