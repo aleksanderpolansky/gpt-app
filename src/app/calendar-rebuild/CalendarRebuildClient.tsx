@@ -1069,31 +1069,22 @@ function buildValueObjectGroups(
   entries: CalendarTimelineEntry[],
   labels: {
     unlinked: string;
-    multiple: string;
   },
 ): CalendarValueObjectGroup[] {
   const groups = new Map<string, CalendarValueObjectGroup>();
 
-  for (const entry of entries) {
-    const valueObjects = getTimelineEntryValueObjects(entry);
-    const groupKey =
-      valueObjects.length === 0
-        ? "unlinked"
-        : valueObjects.length === 1
-          ? `value-object:${valueObjects[0].id}`
-          : "multiple";
-    const label =
-      valueObjects.length === 0
-        ? labels.unlinked
-        : valueObjects.length === 1
-          ? valueObjects[0].title
-          : labels.multiple;
-    const sortOrder = valueObjects.length === 1 ? 0 : valueObjects.length > 1 ? 1 : 2;
+  function addEntryToGroup(
+    groupKey: string,
+    label: string,
+    valueObjects: CalendarValueObjectRef[],
+    entry: CalendarTimelineEntry,
+    sortOrder: number,
+  ) {
     const existing = groups.get(groupKey);
 
     if (existing) {
       existing.entries.push(entry);
-      continue;
+      return;
     }
 
     groups.set(groupKey, {
@@ -1103,6 +1094,29 @@ function buildValueObjectGroups(
       entries: [entry],
       sortOrder,
     });
+  }
+
+  for (const entry of entries) {
+    const valueObjects = getTimelineEntryValueObjects(entry);
+
+    if (valueObjects.length === 0) {
+      addEntryToGroup("unlinked", labels.unlinked, [], entry, 1);
+      continue;
+    }
+
+    const uniqueValueObjects = Array.from(
+      new Map(valueObjects.map((valueObject) => [valueObject.id, valueObject])).values(),
+    );
+
+    for (const valueObject of uniqueValueObjects) {
+      addEntryToGroup(
+        `value-object:${valueObject.id}`,
+        valueObject.title,
+        [valueObject],
+        entry,
+        0,
+      );
+    }
   }
 
   return Array.from(groups.values())
@@ -2077,7 +2091,6 @@ export default function CalendarRebuildClient({
         none: "Обычный вид",
         valueObject: "По ценным объектам",
         unlinked: "Без ценного объекта",
-        multiple: "Несколько ценных объектов",
         collapse: "Свернуть группу",
         expand: "Развернуть группу",
       };
@@ -2089,7 +2102,6 @@ export default function CalendarRebuildClient({
         none: "Звичайний вигляд",
         valueObject: "За цінними об’єктами",
         unlinked: "Без цінного об’єкта",
-        multiple: "Кілька цінних об’єктів",
         collapse: "Згорнути групу",
         expand: "Розгорнути групу",
       };
@@ -2101,7 +2113,6 @@ export default function CalendarRebuildClient({
         none: "Widok zwykły",
         valueObject: "Według obiektów wartości",
         unlinked: "Bez obiektu wartości",
-        multiple: "Wiele obiektów wartości",
         collapse: "Zwiń grupę",
         expand: "Rozwiń grupę",
       };
@@ -2113,7 +2124,6 @@ export default function CalendarRebuildClient({
         none: "Standardansicht",
         valueObject: "Nach Wertobjekten",
         unlinked: "Ohne Wertobjekt",
-        multiple: "Mehrere Wertobjekte",
         collapse: "Gruppe einklappen",
         expand: "Gruppe ausklappen",
       };
@@ -2125,7 +2135,6 @@ export default function CalendarRebuildClient({
         none: "Vista normal",
         valueObject: "Por objetos de valor",
         unlinked: "Sin objeto de valor",
-        multiple: "Varios objetos de valor",
         collapse: "Contraer grupo",
         expand: "Expandir grupo",
       };
@@ -2137,7 +2146,6 @@ export default function CalendarRebuildClient({
         none: "Běžné zobrazení",
         valueObject: "Podle hodnotových objektů",
         unlinked: "Bez hodnotového objektu",
-        multiple: "Více hodnotových objektů",
         collapse: "Sbalit skupinu",
         expand: "Rozbalit skupinu",
       };
@@ -2148,7 +2156,6 @@ export default function CalendarRebuildClient({
       none: "Standard view",
       valueObject: "By Value Object",
       unlinked: "Without Value Object",
-      multiple: "Multiple Value Objects",
       collapse: "Collapse group",
       expand: "Expand group",
     };
@@ -2158,9 +2165,8 @@ export default function CalendarRebuildClient({
     () =>
       buildValueObjectGroups(calendarTimelineEntries, {
         unlinked: calendarGroupingUi.unlinked,
-        multiple: calendarGroupingUi.multiple,
       }),
-    [calendarGroupingUi.multiple, calendarGroupingUi.unlinked, calendarTimelineEntries],
+    [calendarGroupingUi.unlinked, calendarTimelineEntries],
   );
 
   const calendarListIsEmpty =
