@@ -29,6 +29,14 @@ export type CalendarEventLayer =
   | "certificates"
   | "points";
 
+export type CalendarValueObjectRef = {
+  id: string;
+  title: string;
+  branchTypeCode: string | null;
+  objectKind: string | null;
+  parentValueObjectId: string | null;
+};
+
 export type CalendarEvent = {
   id: string;
   title: string;
@@ -42,7 +50,9 @@ export type CalendarEvent = {
   layer: CalendarEventLayer;
   isPrivate: boolean;
   semanticPreviewId?: string | null;
+  activityEventId?: string | null;
   valueObjectIds?: string[];
+  valueObjects?: CalendarValueObjectRef[];
 };
 
 export type CalendarAllDayScheduleMode =
@@ -71,6 +81,8 @@ export type CalendarAllDayItem = {
   durationMinutes: number | null;
   dueAt: string | null;
   updatedAt: string | null;
+  valueObjectIds: string[];
+  valueObjects: CalendarValueObjectRef[];
 };
 
 export type CalendarRange = {

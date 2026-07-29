@@ -22,6 +22,7 @@ import {
 import type {
   CalendarAllDayItem,
   CalendarEvent,
+  CalendarValueObjectRef,
   CalendarViewMode,
 } from "../../features/calendar-core/types";
 import {
@@ -126,6 +127,7 @@ type CalendarEventsResponse = {
     calendarEvents?: number;
     timeBlocks?: number;
     plannedActivities?: number;
+    plannedTargetLinks?: number;
   };
 };
 
@@ -184,6 +186,16 @@ type CalendarTimelineEntry =
       isPoint: false;
       event: CalendarEvent;
     };
+
+type CalendarGroupingMode = "none" | "value_object";
+
+type CalendarValueObjectGroup = {
+  key: string;
+  label: string;
+  valueObjects: CalendarValueObjectRef[];
+  entries: CalendarTimelineEntry[];
+  sortOrder: number;
+};
 
 type CalendarTimelineAxisCell = {
   key: string;
@@ -1047,6 +1059,72 @@ function buildTimelineEntries(
   });
 }
 
+function getTimelineEntryValueObjects(entry: CalendarTimelineEntry) {
+  return entry.kind === "all_day"
+    ? entry.item.valueObjects ?? []
+    : entry.event.valueObjects ?? [];
+}
+
+function buildValueObjectGroups(
+  entries: CalendarTimelineEntry[],
+  labels: {
+    unlinked: string;
+    multiple: string;
+  },
+): CalendarValueObjectGroup[] {
+  const groups = new Map<string, CalendarValueObjectGroup>();
+
+  for (const entry of entries) {
+    const valueObjects = getTimelineEntryValueObjects(entry);
+    const groupKey =
+      valueObjects.length === 0
+        ? "unlinked"
+        : valueObjects.length === 1
+          ? `value-object:${valueObjects[0].id}`
+          : "multiple";
+    const label =
+      valueObjects.length === 0
+        ? labels.unlinked
+        : valueObjects.length === 1
+          ? valueObjects[0].title
+          : labels.multiple;
+    const sortOrder = valueObjects.length === 1 ? 0 : valueObjects.length > 1 ? 1 : 2;
+    const existing = groups.get(groupKey);
+
+    if (existing) {
+      existing.entries.push(entry);
+      continue;
+    }
+
+    groups.set(groupKey, {
+      key: groupKey,
+      label,
+      valueObjects,
+      entries: [entry],
+      sortOrder,
+    });
+  }
+
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      entries: [...group.entries].sort((left, right) => {
+        if (left.startAt.getTime() !== right.startAt.getTime()) {
+          return left.startAt.getTime() - right.startAt.getTime();
+        }
+
+        return left.key.localeCompare(right.key);
+      }),
+    }))
+    .sort((left, right) => {
+      if (left.sortOrder !== right.sortOrder) {
+        return left.sortOrder - right.sortOrder;
+      }
+
+      return left.label.localeCompare(right.label);
+    });
+}
+
 function buildTimelineAxisCells(
   view: CalendarViewMode,
   focusDate: Date,
@@ -1183,6 +1261,34 @@ function buildCompactEventLabel(event: CalendarEvent) {
 
 function EventLabel({ event }: { event: CalendarEvent }) {
   return <span className="block max-w-full truncate">{buildCompactEventLabel(event)}</span>;
+}
+
+function ValueObjectChips({ valueObjects }: { valueObjects: CalendarValueObjectRef[] }) {
+  if (valueObjects.length === 0) {
+    return null;
+  }
+
+  const visible = valueObjects.slice(0, 3);
+  const hiddenCount = valueObjects.length - visible.length;
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {visible.map((valueObject) => (
+        <span
+          key={valueObject.id}
+          title={valueObject.title}
+          className="max-w-[220px] truncate rounded-full border border-[#d8deef] bg-white/80 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#667091]"
+        >
+          {valueObject.title}
+        </span>
+      ))}
+      {hiddenCount > 0 ? (
+        <span className="rounded-full border border-[#d8deef] bg-white/80 px-2 py-0.5 text-[9px] font-bold text-[#667091]">
+          +{hiddenCount}
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 function formatEventDateTimeRange(event: CalendarEvent, locale: UiLocale) {
@@ -1334,6 +1440,10 @@ export default function CalendarRebuildClient({
   const [composerOpen, setComposerOpen] = useState(false);
   const [lastQuickCapture, setLastQuickCapture] = useState<Cux4QuickCaptureResult | null>(null);
   const [calendarPresentation, setCalendarPresentation] = useState<CalendarPresentationMode>("grid");
+  const [calendarGrouping, setCalendarGrouping] = useState<CalendarGroupingMode>("none");
+  const [collapsedValueObjectGroups, setCollapsedValueObjectGroups] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [activeCalendarTab, setActiveCalendarTab] = useState<"calendar" | "log">("calendar");
   const [eventLogs, setEventLogs] = useState<CalendarEventLogEntry[]>([]);
   const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
@@ -1358,6 +1468,7 @@ export default function CalendarRebuildClient({
     calendarEvents: 0,
     timeBlocks: 0,
     plannedActivities: 0,
+    plannedTargetLinks: 0,
   });
 
   const range = useMemo(() => getRangeForView(view, focusDate), [view, focusDate]);
@@ -1397,6 +1508,7 @@ export default function CalendarRebuildClient({
           calendarEvents: payload.sources?.calendarEvents ?? 0,
           timeBlocks: payload.sources?.timeBlocks ?? 0,
           plannedActivities: payload.sources?.plannedActivities ?? 0,
+          plannedTargetLinks: payload.sources?.plannedTargetLinks ?? 0,
         });
       } catch (error) {
         if (abortController.signal.aborted) {
@@ -1410,6 +1522,7 @@ export default function CalendarRebuildClient({
           calendarEvents: 0,
           timeBlocks: 0,
           plannedActivities: 0,
+          plannedTargetLinks: 0,
         });
         setEventsError(error instanceof Error ? error.message : "Unknown calendar events error");
       } finally {
@@ -1956,6 +2069,308 @@ export default function CalendarRebuildClient({
       records: "records",
     };
   }, [locale]);
+
+  const calendarGroupingUi = useMemo(() => {
+    if (locale === "ru") {
+      return {
+        label: "Группировка",
+        none: "Обычный вид",
+        valueObject: "По ценным объектам",
+        unlinked: "Без ценного объекта",
+        multiple: "Несколько ценных объектов",
+        collapse: "Свернуть группу",
+        expand: "Развернуть группу",
+      };
+    }
+
+    if (locale === "uk") {
+      return {
+        label: "Групування",
+        none: "Звичайний вигляд",
+        valueObject: "За цінними об’єктами",
+        unlinked: "Без цінного об’єкта",
+        multiple: "Кілька цінних об’єктів",
+        collapse: "Згорнути групу",
+        expand: "Розгорнути групу",
+      };
+    }
+
+    if (locale === "pl") {
+      return {
+        label: "Grupowanie",
+        none: "Widok zwykły",
+        valueObject: "Według obiektów wartości",
+        unlinked: "Bez obiektu wartości",
+        multiple: "Wiele obiektów wartości",
+        collapse: "Zwiń grupę",
+        expand: "Rozwiń grupę",
+      };
+    }
+
+    if (locale === "de") {
+      return {
+        label: "Gruppierung",
+        none: "Standardansicht",
+        valueObject: "Nach Wertobjekten",
+        unlinked: "Ohne Wertobjekt",
+        multiple: "Mehrere Wertobjekte",
+        collapse: "Gruppe einklappen",
+        expand: "Gruppe ausklappen",
+      };
+    }
+
+    if (locale === "es") {
+      return {
+        label: "Agrupación",
+        none: "Vista normal",
+        valueObject: "Por objetos de valor",
+        unlinked: "Sin objeto de valor",
+        multiple: "Varios objetos de valor",
+        collapse: "Contraer grupo",
+        expand: "Expandir grupo",
+      };
+    }
+
+    if (locale === "cs") {
+      return {
+        label: "Seskupení",
+        none: "Běžné zobrazení",
+        valueObject: "Podle hodnotových objektů",
+        unlinked: "Bez hodnotového objektu",
+        multiple: "Více hodnotových objektů",
+        collapse: "Sbalit skupinu",
+        expand: "Rozbalit skupinu",
+      };
+    }
+
+    return {
+      label: "Grouping",
+      none: "Standard view",
+      valueObject: "By Value Object",
+      unlinked: "Without Value Object",
+      multiple: "Multiple Value Objects",
+      collapse: "Collapse group",
+      expand: "Expand group",
+    };
+  }, [locale]);
+
+  const calendarValueObjectGroups = useMemo(
+    () =>
+      buildValueObjectGroups(calendarTimelineEntries, {
+        unlinked: calendarGroupingUi.unlinked,
+        multiple: calendarGroupingUi.multiple,
+      }),
+    [calendarGroupingUi.multiple, calendarGroupingUi.unlinked, calendarTimelineEntries],
+  );
+
+  const calendarListIsEmpty =
+    calendarGrouping === "value_object"
+      ? calendarValueObjectGroups.length === 0
+      : calendarListGroups.length === 0;
+
+  function toggleValueObjectGroup(groupKey: string) {
+    setCollapsedValueObjectGroups((current) => {
+      const next = new Set(current);
+
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
+      } else {
+        next.add(groupKey);
+      }
+
+      return next;
+    });
+  }
+
+  function renderCalendarListCard(entry: CalendarListEntry | CalendarTimelineEntry) {
+    if (entry.kind === "all_day") {
+      const item = entry.item;
+
+      return (
+        <button
+          key={entry.key}
+          type="button"
+          onClick={() => {
+            setSelectedEventId(null);
+            setSelectedShelfItem(allDayItemToShelfItem(item));
+          }}
+          className={cn(
+            "w-full rounded-xl border p-3 text-left transition hover:brightness-[0.99]",
+            getAllDayAccentClass(item),
+          )}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-bold">{item.title}</div>
+              <div className="mt-1 text-xs font-medium opacity-75">
+                {formatAllDayItemRange(item, locale)}
+              </div>
+              <ValueObjectChips valueObjects={item.valueObjects ?? []} />
+            </div>
+            <span className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em]">
+              {allDayUi.modes[item.scheduleModeCode]}
+            </span>
+          </div>
+        </button>
+      );
+    }
+
+    const event = entry.event;
+
+    return (
+      <button
+        key={entry.key}
+        type="button"
+        onClick={() => {
+          setSelectedShelfItem(null);
+          setSelectedEventId(event.id);
+          setFocusDate(eventStartDate(event));
+        }}
+        className={cn(
+          "w-full rounded-xl border p-3 text-left shadow-sm transition hover:brightness-[0.99]",
+          getLayerAccentClass(event),
+          selectedEventId === event.id && "ring-2 ring-[#3b6ef8] ring-offset-1",
+        )}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-bold text-[#1a1d2e]">
+              {getEventDisplayTitle(event) || buildCompactEventLabel(event)}
+            </div>
+            <div className="mt-1 text-xs font-medium text-[#667091]">
+              {formatEventDateTimeRange(event, locale)}
+            </div>
+            <ValueObjectChips valueObjects={event.valueObjects ?? []} />
+          </div>
+          <span className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#667091]">
+            {calendarListUi.exact}
+          </span>
+        </div>
+      </button>
+    );
+  }
+
+  function renderTimelineEntryRow(entry: CalendarTimelineEntry) {
+    const position = getHorizontalTimelinePosition(
+      entry,
+      range,
+      calendarTimelineAxisWidth,
+    );
+    const modeLabel =
+      entry.kind === "all_day"
+        ? allDayUi.modes[entry.item.scheduleModeCode]
+        : calendarTimelineUi.exact;
+    const valueObjects = getTimelineEntryValueObjects(entry);
+
+    return (
+      <div
+        key={entry.key}
+        className="grid min-h-[68px] border-b border-[#eef1f7] last:border-b-0"
+        style={{
+          gridTemplateColumns: `${calendarTimelineLabelWidth}px ${calendarTimelineAxisWidth}px`,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            if (entry.kind === "all_day") {
+              setSelectedEventId(null);
+              setSelectedShelfItem(allDayItemToShelfItem(entry.item));
+              return;
+            }
+
+            setSelectedShelfItem(null);
+            setSelectedEventId(entry.event.id);
+            setFocusDate(eventStartDate(entry.event));
+          }}
+          className="sticky left-0 z-20 border-r border-[#e8ebf3] bg-white px-4 py-3 text-left transition hover:bg-[#f8f9fd] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#3b6ef8]"
+        >
+          <div className="truncate text-xs font-bold text-[#1a1d2e]">
+            {entry.title}
+          </div>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="rounded-full bg-[#eef2ff] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-[#3b6ef8]">
+              {modeLabel}
+            </span>
+            <span className="truncate text-[10px] font-medium text-[#7c8099]">
+              {formatTimelineEntryRange(entry, locale)}
+            </span>
+          </div>
+          <ValueObjectChips valueObjects={valueObjects} />
+        </button>
+
+        <div className="relative bg-white">
+          <div
+            className="pointer-events-none absolute inset-0 grid"
+            style={{
+              gridTemplateColumns: `repeat(${calendarTimelineAxisCells.length}, ${calendarTimelineUnitWidth}px)`,
+            }}
+          >
+            {calendarTimelineAxisCells.map((cell) => (
+              <div
+                key={cell.key}
+                className={cn(
+                  "border-r border-[#eef1f7] last:border-r-0",
+                  cell.isFocusDate && "bg-[#f7f8ff]",
+                )}
+              />
+            ))}
+          </div>
+
+          {entry.isPoint ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (entry.kind !== "all_day") {
+                  return;
+                }
+
+                setSelectedEventId(null);
+                setSelectedShelfItem(allDayItemToShelfItem(entry.item));
+              }}
+              className="absolute top-1/2 z-10 h-5 w-5 -translate-y-1/2 rotate-45 rounded-[4px] border-2 border-amber-400 bg-amber-100 shadow-sm transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#3b6ef8] focus:ring-offset-2"
+              style={{ left: `${position.left}px` }}
+              aria-label={`${modeLabel}: ${entry.title}`}
+              title={`${modeLabel} · ${formatTimelineEntryRange(entry, locale)} · ${entry.title}`}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (entry.kind === "all_day") {
+                  setSelectedEventId(null);
+                  setSelectedShelfItem(allDayItemToShelfItem(entry.item));
+                  return;
+                }
+
+                setSelectedShelfItem(null);
+                setSelectedEventId(entry.event.id);
+                setFocusDate(eventStartDate(entry.event));
+              }}
+              className={cn(
+                "absolute top-1/2 z-10 flex h-8 -translate-y-1/2 items-center overflow-hidden rounded-lg border px-2 text-left text-[10px] font-bold shadow-sm transition hover:brightness-[0.98] focus:outline-none focus:ring-2 focus:ring-[#3b6ef8] focus:ring-offset-1",
+                entry.kind === "all_day"
+                  ? getAllDayAccentClass(entry.item)
+                  : getLayerAccentClass(entry.event),
+                entry.kind === "timed" && selectedEventId === entry.event.id
+                  ? "ring-2 ring-[#3b6ef8] ring-offset-1"
+                  : "",
+              )}
+              style={{
+                left: `${position.left}px`,
+                width: `${position.width}px`,
+              }}
+              title={`${modeLabel} · ${formatTimelineEntryRange(entry, locale)} · ${entry.title}`}
+            >
+              <span className="truncate">
+                {position.width >= 90 ? entry.title : modeLabel}
+              </span>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   /* Step 8B event action labels */
   const eventActionUi = useMemo(() => {
@@ -2539,6 +2954,30 @@ export default function CalendarRebuildClient({
           </div>
         </div>
 
+        {calendarPresentation !== "grid" ? (
+          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#fbfcff] p-2">
+            <span className="px-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7c8099]">
+              {calendarGroupingUi.label}
+            </span>
+            {(["none", "value_object"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setCalendarGrouping(mode)}
+                aria-pressed={calendarGrouping === mode}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-xs font-bold transition",
+                  calendarGrouping === mode
+                    ? "bg-[#3b6ef8] text-white shadow-sm"
+                    : "border border-[#d8deef] bg-white text-[#667091] hover:bg-[#f4f6fb]",
+                )}
+              >
+                {mode === "none" ? calendarGroupingUi.none : calendarGroupingUi.valueObject}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         {/* CUX7C1 complete list surface for all schedule modes in the selected period */}
         <div className={cn("mb-4 space-y-3", calendarPresentation === "list" ? "block" : "hidden")}>
           <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#fbfcff] p-3">
@@ -2565,13 +3004,13 @@ export default function CalendarRebuildClient({
             </div>
           ) : null}
 
-          {!isLoadingEvents && !eventsError && calendarListGroups.length === 0 ? (
+          {!isLoadingEvents && !eventsError && calendarListIsEmpty ? (
             <div className="rounded-xl border border-dashed border-[#d8deef] bg-white p-4 text-sm font-medium text-[#7c8099]">
               {calendarListUi.empty}
             </div>
           ) : null}
 
-          {!isLoadingEvents && !eventsError
+          {!isLoadingEvents && !eventsError && calendarGrouping === "none"
             ? calendarListGroups.map((group) => (
                 <section
                   key={group.dateKey}
@@ -2582,76 +3021,49 @@ export default function CalendarRebuildClient({
                   </div>
 
                   <div className="space-y-2">
-                    {group.entries.map((entry) => {
-                      if (entry.kind === "all_day") {
-                        const item = entry.item;
-
-                        return (
-                          <button
-                            key={entry.key}
-                            type="button"
-                            onClick={() => {
-                              setSelectedEventId(null);
-                              setSelectedShelfItem(allDayItemToShelfItem(item));
-                            }}
-                            className={cn(
-                              "w-full rounded-xl border p-3 text-left transition hover:brightness-[0.99]",
-                              getAllDayAccentClass(item),
-                            )}
-                          >
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                              <div className="min-w-0 flex-1">
-                                <div className="truncate text-sm font-bold">
-                                  {item.title}
-                                </div>
-                                <div className="mt-1 text-xs font-medium opacity-75">
-                                  {formatAllDayItemRange(item, locale)}
-                                </div>
-                              </div>
-                              <span className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em]">
-                                {allDayUi.modes[item.scheduleModeCode]}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      }
-
-                      const event = entry.event;
-
-                      return (
-                        <button
-                          key={entry.key}
-                          type="button"
-                          onClick={() => {
-                            setSelectedShelfItem(null);
-                            setSelectedEventId(event.id);
-                            setFocusDate(eventStartDate(event));
-                          }}
-                          className={cn(
-                            "w-full rounded-xl border p-3 text-left shadow-sm transition hover:brightness-[0.99]",
-                            getLayerAccentClass(event),
-                            selectedEventId === event.id && "ring-2 ring-[#3b6ef8] ring-offset-1",
-                          )}
-                        >
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-sm font-bold text-[#1a1d2e]">
-                                {getEventDisplayTitle(event) || buildCompactEventLabel(event)}
-                              </div>
-                              <div className="mt-1 text-xs font-medium text-[#667091]">
-                                {formatEventDateTimeRange(event, locale)}
-                              </div>
-                            </div>
-                            <span className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#667091]">
-                              {calendarListUi.exact}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
+                    {group.entries.map((entry) => renderCalendarListCard(entry))}
                   </div>
                 </section>
               ))
+            : null}
+
+          {!isLoadingEvents && !eventsError && calendarGrouping === "value_object"
+            ? calendarValueObjectGroups.map((group) => {
+                const isCollapsed = collapsedValueObjectGroups.has(group.key);
+
+                return (
+                  <section
+                    key={group.key}
+                    className="overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-white shadow-sm"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleValueObjectGroup(group.key)}
+                      aria-expanded={!isCollapsed}
+                      aria-label={`${isCollapsed ? calendarGroupingUi.expand : calendarGroupingUi.collapse}: ${group.label}`}
+                      className="flex w-full items-center justify-between gap-3 border-b border-[#eef1f7] bg-[#fbfcff] px-4 py-3 text-left transition hover:bg-[#f5f7fc]"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-xs font-bold text-[#1a1d2e]">
+                          {group.label}
+                        </div>
+                        <div className="mt-1 text-[10px] font-medium text-[#7c8099]">
+                          {group.entries.length} {calendarListUi.records}
+                        </div>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-[#d8deef] bg-white px-2 py-1 text-xs font-bold text-[#3b6ef8]">
+                        {isCollapsed ? "›" : "⌄"}
+                      </span>
+                    </button>
+
+                    {!isCollapsed ? (
+                      <div className="space-y-2 p-3">
+                        {group.entries.map((entry) => renderCalendarListCard(entry))}
+                      </div>
+                    ) : null}
+                  </section>
+                );
+              })
             : null}
         </div>
 
@@ -2741,125 +3153,53 @@ export default function CalendarRebuildClient({
                 </div>
 
                 <div>
-                  {calendarTimelineEntries.map((entry) => {
-                    const position = getHorizontalTimelinePosition(
-                      entry,
-                      range,
-                      calendarTimelineAxisWidth,
-                    );
-                    const modeLabel =
-                      entry.kind === "all_day"
-                        ? allDayUi.modes[entry.item.scheduleModeCode]
-                        : calendarTimelineUi.exact;
+                  {calendarGrouping === "none"
+                    ? calendarTimelineEntries.map((entry) => renderTimelineEntryRow(entry))
+                    : calendarValueObjectGroups.map((group) => {
+                        const isCollapsed = collapsedValueObjectGroups.has(group.key);
 
-                    return (
-                      <div
-                        key={entry.key}
-                        className="grid min-h-[68px] border-b border-[#eef1f7] last:border-b-0"
-                        style={{
-                          gridTemplateColumns: `${calendarTimelineLabelWidth}px ${calendarTimelineAxisWidth}px`,
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (entry.kind === "all_day") {
-                              setSelectedEventId(null);
-                              setSelectedShelfItem(allDayItemToShelfItem(entry.item));
-                              return;
-                            }
-
-                            setSelectedShelfItem(null);
-                            setSelectedEventId(entry.event.id);
-                            setFocusDate(eventStartDate(entry.event));
-                          }}
-                          className="sticky left-0 z-20 border-r border-[#e8ebf3] bg-white px-4 py-3 text-left transition hover:bg-[#f8f9fd] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#3b6ef8]"
-                        >
-                          <div className="truncate text-xs font-bold text-[#1a1d2e]">
-                            {entry.title}
-                          </div>
-                          <div className="mt-1 flex items-center gap-2">
-                            <span className="rounded-full bg-[#eef2ff] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-[#3b6ef8]">
-                              {modeLabel}
-                            </span>
-                            <span className="truncate text-[10px] font-medium text-[#7c8099]">
-                              {formatTimelineEntryRange(entry, locale)}
-                            </span>
-                          </div>
-                        </button>
-
-                        <div className="relative bg-white">
-                          <div
-                            className="pointer-events-none absolute inset-0 grid"
-                            style={{
-                              gridTemplateColumns: `repeat(${calendarTimelineAxisCells.length}, ${calendarTimelineUnitWidth}px)`,
-                            }}
-                          >
-                            {calendarTimelineAxisCells.map((cell) => (
-                              <div
-                                key={cell.key}
-                                className={cn(
-                                  "border-r border-[#eef1f7] last:border-r-0",
-                                  cell.isFocusDate && "bg-[#f7f8ff]",
-                                )}
-                              />
-                            ))}
-                          </div>
-
-                          {entry.isPoint ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (entry.kind !== "all_day") {
-                                  return;
-                                }
-
-                                setSelectedEventId(null);
-                                setSelectedShelfItem(allDayItemToShelfItem(entry.item));
-                              }}
-                              className="absolute top-1/2 z-10 h-5 w-5 -translate-y-1/2 rotate-45 rounded-[4px] border-2 border-amber-400 bg-amber-100 shadow-sm transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#3b6ef8] focus:ring-offset-2"
-                              style={{ left: `${position.left}px` }}
-                              aria-label={`${modeLabel}: ${entry.title}`}
-                              title={`${modeLabel} · ${formatTimelineEntryRange(entry, locale)} · ${entry.title}`}
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (entry.kind === "all_day") {
-                                  setSelectedEventId(null);
-                                  setSelectedShelfItem(allDayItemToShelfItem(entry.item));
-                                  return;
-                                }
-
-                                setSelectedShelfItem(null);
-                                setSelectedEventId(entry.event.id);
-                                setFocusDate(eventStartDate(entry.event));
-                              }}
-                              className={cn(
-                                "absolute top-1/2 z-10 flex h-8 -translate-y-1/2 items-center overflow-hidden rounded-lg border px-2 text-left text-[10px] font-bold shadow-sm transition hover:brightness-[0.98] focus:outline-none focus:ring-2 focus:ring-[#3b6ef8] focus:ring-offset-1",
-                                entry.kind === "all_day"
-                                  ? getAllDayAccentClass(entry.item)
-                                  : getLayerAccentClass(entry.event),
-                                entry.kind === "timed" && selectedEventId === entry.event.id
-                                  ? "ring-2 ring-[#3b6ef8] ring-offset-1"
-                                  : "",
-                              )}
+                        return (
+                          <div key={group.key}>
+                            <div
+                              className="grid border-b border-[#e8ebf3] bg-[#fbfcff]"
                               style={{
-                                left: `${position.left}px`,
-                                width: `${position.width}px`,
+                                gridTemplateColumns: `${calendarTimelineLabelWidth}px ${calendarTimelineAxisWidth}px`,
                               }}
-                              title={`${modeLabel} · ${formatTimelineEntryRange(entry, locale)} · ${entry.title}`}
                             >
-                              <span className="truncate">
-                                {position.width >= 90 ? entry.title : modeLabel}
-                              </span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                              <button
+                                type="button"
+                                onClick={() => toggleValueObjectGroup(group.key)}
+                                aria-expanded={!isCollapsed}
+                                aria-label={`${isCollapsed ? calendarGroupingUi.expand : calendarGroupingUi.collapse}: ${group.label}`}
+                                className="sticky left-0 z-20 flex items-center justify-between gap-3 border-r border-[#e8ebf3] bg-[#fbfcff] px-4 py-2 text-left transition hover:bg-[#f5f7fc]"
+                              >
+                                <span className="min-w-0 truncate text-[11px] font-bold text-[#1a1d2e]">
+                                  {group.label}
+                                </span>
+                                <span className="shrink-0 rounded-full border border-[#d8deef] bg-white px-2 py-0.5 text-[10px] font-bold text-[#3b6ef8]">
+                                  {group.entries.length}
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => toggleValueObjectGroup(group.key)}
+                                className="flex items-center gap-2 px-4 py-2 text-left text-[10px] font-bold uppercase tracking-[0.1em] text-[#667091] transition hover:bg-[#f5f7fc]"
+                              >
+                                <span>{isCollapsed ? "›" : "⌄"}</span>
+                                <span>
+                                  {isCollapsed
+                                    ? calendarGroupingUi.expand
+                                    : calendarGroupingUi.collapse}
+                                </span>
+                              </button>
+                            </div>
+
+                            {!isCollapsed
+                              ? group.entries.map((entry) => renderTimelineEntryRow(entry))
+                              : null}
+                          </div>
+                        );
+                      })}
                 </div>
               </div>
             </div>

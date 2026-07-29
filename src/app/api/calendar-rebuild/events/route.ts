@@ -8,6 +8,7 @@ import type {
   CalendarEventLayer,
   CalendarEventSource,
   CalendarEventStatus,
+  CalendarValueObjectRef,
 } from "../../../../features/calendar-core/types";
 import { auth0 } from "../../../../../lib/auth0";
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
@@ -46,6 +47,7 @@ type CalendarEventLogEntry = {
 const ACTIVE_PLANNED_STATUSES = ["draft", "planned", "confirmed"] as const;
 const ALL_DAY_SCHEDULE_MODES = ["date_only", "date_range", "deadline"] as const;
 const MAX_ALL_DAY_SCAN_LIMIT = 500;
+const MAX_PLANNED_TARGET_QUERY_CHUNK = 100;
 
 function normalizeLogAction(value: unknown): CalendarEventLogAction {
   const text = String(value ?? "").toLowerCase();
@@ -284,6 +286,155 @@ function dateOnlyDueAt(value: string | null) {
   return isDateKey(value) ? `${value}T23:59:59.999Z` : null;
 }
 
+function uniqueTextValues(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value)))).sort();
+}
+
+function chunkValues<T>(values: T[], size: number) {
+  const chunks: T[][] = [];
+
+  for (let index = 0; index < values.length; index += size) {
+    chunks.push(values.slice(index, index + size));
+  }
+
+  return chunks;
+}
+
+async function readPlannedTargetValueObjects(
+  activityEventIds: string[],
+  appUserId: string,
+  actorId: string,
+) {
+  const normalizedActivityEventIds = uniqueTextValues(activityEventIds);
+
+  if (normalizedActivityEventIds.length === 0) {
+    return new Map<string, CalendarValueObjectRef[]>();
+  }
+
+  const linkRows: Record<string, any>[] = [];
+
+  for (const activityEventIdChunk of chunkValues(
+    normalizedActivityEventIds,
+    MAX_PLANNED_TARGET_QUERY_CHUNK,
+  )) {
+    const { data, error } = await supabase
+      .from("activity_value_object_links")
+      .select("activity_event_id,value_object_id,created_at")
+      .eq("app_user_id", appUserId)
+      .eq("actor_id", actorId)
+      .eq("link_type", "planned_target")
+      .eq("status", "active")
+      .in("activity_event_id", activityEventIdChunk)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      throw new Error(`Unable to read planned target links: ${error.message}`);
+    }
+
+    linkRows.push(...((data ?? []) as Record<string, any>[]));
+  }
+
+  const valueObjectIds = uniqueTextValues(
+    linkRows.map((row) => asText(row.value_object_id)),
+  );
+
+  if (valueObjectIds.length === 0) {
+    return new Map<string, CalendarValueObjectRef[]>();
+  }
+
+  const valueObjectRows: Record<string, any>[] = [];
+
+  for (const valueObjectIdChunk of chunkValues(
+    valueObjectIds,
+    MAX_PLANNED_TARGET_QUERY_CHUNK,
+  )) {
+    const { data, error } = await supabase
+      .from("value_objects")
+      .select("id,title,branch_type_code,object_kind,parent_value_object_id")
+      .eq("owner_user_id", appUserId)
+      .eq("owner_actor_id", actorId)
+      .in("id", valueObjectIdChunk);
+
+    if (error) {
+      throw new Error(`Unable to read planned target Value Objects: ${error.message}`);
+    }
+
+    valueObjectRows.push(...((data ?? []) as Record<string, any>[]));
+  }
+
+  const valueObjectById = new Map<string, CalendarValueObjectRef>();
+
+  for (const row of valueObjectRows) {
+    const id = asText(row.id);
+
+    if (!id) {
+      continue;
+    }
+
+    valueObjectById.set(id, {
+      id,
+      title: asText(row.title) ?? "Untitled Value Object",
+      branchTypeCode: asText(row.branch_type_code),
+      objectKind: asText(row.object_kind),
+      parentValueObjectId: asText(row.parent_value_object_id),
+    });
+  }
+
+  const rowsByActivityEventId = new Map<string, Record<string, any>[]>();
+
+  for (const row of linkRows) {
+    const activityEventId = asText(row.activity_event_id);
+
+    if (!activityEventId) {
+      continue;
+    }
+
+    const rows = rowsByActivityEventId.get(activityEventId) ?? [];
+    rows.push(row);
+    rowsByActivityEventId.set(activityEventId, rows);
+  }
+
+  const result = new Map<string, CalendarValueObjectRef[]>();
+
+  for (const [activityEventId, rows] of rowsByActivityEventId.entries()) {
+    const references: CalendarValueObjectRef[] = [];
+    const seen = new Set<string>();
+
+    for (const row of rows.sort((left, right) => {
+      const leftCreatedAt = asText(left.created_at) ?? "";
+      const rightCreatedAt = asText(right.created_at) ?? "";
+      const createdAtComparison = leftCreatedAt.localeCompare(rightCreatedAt);
+
+      if (createdAtComparison !== 0) {
+        return createdAtComparison;
+      }
+
+      return String(left.value_object_id ?? "").localeCompare(
+        String(right.value_object_id ?? ""),
+      );
+    })) {
+      const valueObjectId = asText(row.value_object_id);
+
+      if (!valueObjectId || seen.has(valueObjectId)) {
+        continue;
+      }
+
+      const reference = valueObjectById.get(valueObjectId);
+
+      if (!reference) {
+        continue;
+      }
+
+      references.push(reference);
+      seen.add(valueObjectId);
+    }
+
+    result.set(activityEventId, references);
+  }
+
+  return result;
+}
+
 function normalizeAllDayScheduleMode(value: unknown): CalendarAllDayScheduleMode | null {
   const text = asText(value);
 
@@ -292,7 +443,10 @@ function normalizeAllDayScheduleMode(value: unknown): CalendarAllDayScheduleMode
     : null;
 }
 
-function mapPlannedActivityAllDayItem(row: Record<string, any>): CalendarAllDayItem | null {
+function mapPlannedActivityAllDayItem(
+  row: Record<string, any>,
+  valueObjects: CalendarValueObjectRef[] = [],
+): CalendarAllDayItem | null {
   const activityEventId = asText(row.id);
   const scheduleModeCode = normalizeAllDayScheduleMode(row.schedule_mode_code);
 
@@ -357,6 +511,8 @@ function mapPlannedActivityAllDayItem(row: Record<string, any>): CalendarAllDayI
     durationMinutes: asFiniteNumber(row.duration_minutes),
     dueAt,
     updatedAt: asText(row.updated_at) ?? asText(row.created_at),
+    valueObjectIds: valueObjects.map((valueObject) => valueObject.id),
+    valueObjects,
   };
 }
 
@@ -460,7 +616,10 @@ function inferLayer(value: unknown): CalendarEventLayer {
   return "personal";
 }
 
-function mapCalendarEvent(row: Record<string, any>): CalendarEvent | null {
+function mapCalendarEvent(
+  row: Record<string, any>,
+  valueObjects: CalendarValueObjectRef[] = [],
+): CalendarEvent | null {
   const startAt = asText(row.start_time);
   const endAt = asText(row.end_time);
 
@@ -481,7 +640,9 @@ function mapCalendarEvent(row: Record<string, any>): CalendarEvent | null {
     layer: inferLayer(row.event_type),
     isPrivate: true,
     semanticPreviewId: asText(row.semantic_preview_id),
-    valueObjectIds: [],
+    activityEventId: asText(row.related_activity_event_id),
+    valueObjectIds: valueObjects.map((valueObject) => valueObject.id),
+    valueObjects,
   };
 }
 
@@ -509,7 +670,9 @@ function mapTimeBlock(row: Record<string, any>): CalendarEvent | null {
     layer: inferLayer(row.block_type),
     isPrivate: true,
     semanticPreviewId: null,
+    activityEventId: null,
     valueObjectIds: [],
+    valueObjects: [],
   };
 }
 
@@ -679,14 +842,56 @@ export async function GET(request: Request) {
   /* Step 8A active rows filter */
   const activeCalendarRows = (calendarRows ?? []).filter(isActiveCalendarRow);
   const activeTimeBlockRows = (timeBlockRows ?? []).filter(isActiveCalendarRow);
+  const plannedActivityRecords = (plannedActivityRows ?? []) as Record<string, any>[];
+  const activityEventIds = uniqueTextValues([
+    ...plannedActivityRecords.map((row) => asText(row.id)),
+    ...activeCalendarRows.map((row) => asText(row.related_activity_event_id)),
+  ]);
+
+  let plannedTargetValueObjectsByActivityEventId: Map<
+    string,
+    CalendarValueObjectRef[]
+  >;
+
+  try {
+    plannedTargetValueObjectsByActivityEventId = await readPlannedTargetValueObjects(
+      activityEventIds,
+      String(appUser.id),
+      String(personActor.id),
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to read planned target Value Objects",
+      },
+      { status: 500 },
+    );
+  }
 
   const events = [
-    ...(activeCalendarRows.map(mapCalendarEvent).filter(Boolean) as CalendarEvent[]),
+    ...(activeCalendarRows
+      .map((row) => {
+        const activityEventId = asText(row.related_activity_event_id);
+        const valueObjects = activityEventId
+          ? plannedTargetValueObjectsByActivityEventId.get(activityEventId) ?? []
+          : [];
+
+        return mapCalendarEvent(row, valueObjects);
+      })
+      .filter(Boolean) as CalendarEvent[]),
     ...(activeTimeBlockRows.map(mapTimeBlock).filter(Boolean) as CalendarEvent[]),
   ].sort((left, right) => new Date(left.startAt).getTime() - new Date(right.startAt).getTime());
 
-  const allDayItems = ((plannedActivityRows ?? []) as Record<string, any>[])
-    .map(mapPlannedActivityAllDayItem)
+  const allDayItems = plannedActivityRecords
+    .map((row) =>
+      mapPlannedActivityAllDayItem(
+        row,
+        plannedTargetValueObjectsByActivityEventId.get(String(row.id)) ?? [],
+      ),
+    )
     .filter((item): item is CalendarAllDayItem => Boolean(item))
     .filter((item) =>
       allDayItemIntersectsDateRange(item, rangeStartDate, rangeEndDateExclusive),
@@ -712,6 +917,9 @@ export async function GET(request: Request) {
       calendarEvents: activeCalendarRows.length,
       timeBlocks: activeTimeBlockRows.length,
       plannedActivities: allDayItems.length,
+      plannedTargetLinks: Array.from(
+        plannedTargetValueObjectsByActivityEventId.values(),
+      ).reduce((count, valueObjects) => count + valueObjects.length, 0),
     },
   });
 }
