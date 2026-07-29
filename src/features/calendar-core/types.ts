@@ -45,6 +45,34 @@ export type CalendarEvent = {
   valueObjectIds?: string[];
 };
 
+export type CalendarAllDayScheduleMode =
+  | "date_only"
+  | "date_range"
+  | "deadline";
+
+export type CalendarAllDayItem = {
+  id: string;
+  activityEventId: string;
+  title: string;
+  inputText: string | null;
+  description: string | null;
+  source: string | null;
+  privacyScope: string | null;
+  status: string | null;
+  scheduleModeCode: CalendarAllDayScheduleMode;
+  scheduledDate: string | null;
+  scheduleStartDate: string | null;
+  scheduleEndDate: string | null;
+  deadlineAt: string | null;
+  startDate: string;
+  endDate: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  durationMinutes: number | null;
+  dueAt: string | null;
+  updatedAt: string | null;
+};
+
 export type CalendarRange = {
   start: Date;
   end: Date;

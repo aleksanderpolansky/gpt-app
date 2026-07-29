@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import type {
+  CalendarAllDayItem,
+  CalendarAllDayScheduleMode,
   CalendarEvent,
   CalendarEventKind,
   CalendarEventLayer,
@@ -8,6 +10,7 @@ import type {
   CalendarEventStatus,
 } from "../../../../features/calendar-core/types";
 import { auth0 } from "../../../../../lib/auth0";
+import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
 
 type UserContext =
@@ -39,6 +42,10 @@ type CalendarEventLogEntry = {
   canCancel: boolean;
   canRestore: boolean;
 };
+
+const ACTIVE_PLANNED_STATUSES = ["draft", "planned", "confirmed"] as const;
+const ALL_DAY_SCHEDULE_MODES = ["date_only", "date_range", "deadline"] as const;
+const MAX_ALL_DAY_SCAN_LIMIT = 500;
 
 function normalizeLogAction(value: unknown): CalendarEventLogAction {
   const text = String(value ?? "").toLowerCase();
@@ -255,6 +262,116 @@ function isValidDate(value: string | null) {
   return !Number.isNaN(parsed);
 }
 
+function isDateKey(value: string | null) {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+function asFiniteNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function dateKeyFromTimestamp(value: string | null) {
+  if (!value || !isValidDate(value)) {
+    return null;
+  }
+
+  const isoDateKey = value.slice(0, 10);
+
+  return isDateKey(isoDateKey) ? isoDateKey : null;
+}
+
+function dateOnlyDueAt(value: string | null) {
+  return isDateKey(value) ? `${value}T23:59:59.999Z` : null;
+}
+
+function normalizeAllDayScheduleMode(value: unknown): CalendarAllDayScheduleMode | null {
+  const text = asText(value);
+
+  return ALL_DAY_SCHEDULE_MODES.includes(text as CalendarAllDayScheduleMode)
+    ? (text as CalendarAllDayScheduleMode)
+    : null;
+}
+
+function mapPlannedActivityAllDayItem(row: Record<string, any>): CalendarAllDayItem | null {
+  const activityEventId = asText(row.id);
+  const scheduleModeCode = normalizeAllDayScheduleMode(row.schedule_mode_code);
+
+  if (!activityEventId || !scheduleModeCode) {
+    return null;
+  }
+
+  const scheduledDate = asText(row.scheduled_date);
+  const scheduleStartDate = asText(row.schedule_start_date);
+  const scheduleEndDate = asText(row.schedule_end_date);
+  const deadlineAt = asText(row.deadline_at);
+
+  let startDate: string | null = null;
+  let endDate: string | null = null;
+  let dueAt: string | null = null;
+
+  if (scheduleModeCode === "date_only") {
+    startDate = isDateKey(scheduledDate) ? scheduledDate : null;
+    endDate = startDate;
+    dueAt = dateOnlyDueAt(startDate);
+  } else if (scheduleModeCode === "date_range") {
+    startDate = isDateKey(scheduleStartDate) ? scheduleStartDate : null;
+    endDate = isDateKey(scheduleEndDate) ? scheduleEndDate : startDate;
+
+    if (startDate && endDate && endDate < startDate) {
+      return null;
+    }
+
+    dueAt = dateOnlyDueAt(endDate);
+  } else {
+    startDate = dateKeyFromTimestamp(deadlineAt);
+    endDate = startDate;
+    dueAt = deadlineAt;
+  }
+
+  if (!startDate || !endDate) {
+    return null;
+  }
+
+  return {
+    id: `activity:${activityEventId}`,
+    activityEventId,
+    title:
+      asText(row.title) ??
+      asText(row.description) ??
+      asText(row.input_text) ??
+      "Untitled planned activity",
+    inputText: asText(row.input_text),
+    description: asText(row.description),
+    source: asText(row.source),
+    privacyScope: asText(row.privacy_scope),
+    status: asText(row.status),
+    scheduleModeCode,
+    scheduledDate,
+    scheduleStartDate,
+    scheduleEndDate,
+    deadlineAt,
+    startDate,
+    endDate,
+    startedAt: asText(row.started_at),
+    endedAt: asText(row.ended_at),
+    durationMinutes: asFiniteNumber(row.duration_minutes),
+    dueAt,
+    updatedAt: asText(row.updated_at) ?? asText(row.created_at),
+  };
+}
+
+function allDayItemIntersectsDateRange(
+  item: CalendarAllDayItem,
+  rangeStartDate: string | null,
+  rangeEndDateExclusive: string | null,
+) {
+  if (!rangeStartDate || !rangeEndDateExclusive) {
+    return true;
+  }
+
+  return item.startDate < rangeEndDateExclusive && item.endDate >= rangeStartDate;
+}
+
 function normalizeKind(value: unknown): CalendarEventKind {
   const text = String(value ?? "").toLowerCase();
 
@@ -464,15 +581,27 @@ async function getCurrentUserContext(): Promise<UserContext> {
 }
 
 export async function GET(request: Request) {
-  const { appUser, errorResponse } = await getCurrentUserContext();
+  const { appUser, personActor, errorResponse } = await getActivityUserContext();
 
   if (errorResponse) {
     return errorResponse;
   }
 
+  if (!appUser || !personActor) {
+    return NextResponse.json({ error: "Active actor context not found" }, { status: 500 });
+  }
+
   const url = new URL(request.url);
   const start = url.searchParams.get("start");
   const end = url.searchParams.get("end");
+  const requestedRangeStartDate = url.searchParams.get("startDate");
+  const requestedRangeEndDate = url.searchParams.get("endDate");
+  const rangeStartDate = isDateKey(requestedRangeStartDate)
+    ? requestedRangeStartDate
+    : null;
+  const rangeEndDateExclusive = isDateKey(requestedRangeEndDate)
+    ? requestedRangeEndDate
+    : null;
   const hasRange = isValidDate(start) && isValidDate(end);
   const includeLog = url.searchParams.get("includeLog") === "1";
 
@@ -488,6 +617,38 @@ export async function GET(request: Request) {
     .eq("user_id", appUser.id)
     .order("start_time", { ascending: true });
 
+  const plannedActivitySelect = [
+    "id",
+    "title",
+    "description",
+    "input_text",
+    "source",
+    "privacy_scope",
+    "status",
+    "activity_role_code",
+    "schedule_mode_code",
+    "scheduled_date",
+    "schedule_start_date",
+    "schedule_end_date",
+    "deadline_at",
+    "started_at",
+    "ended_at",
+    "duration_minutes",
+    "created_at",
+    "updated_at",
+  ].join(",");
+
+  const plannedActivitiesQuery = supabase
+    .from("activity_events")
+    .select(plannedActivitySelect)
+    .eq("user_id", appUser.id)
+    .eq("acting_as_actor_id", personActor.id)
+    .eq("activity_role_code", "planned")
+    .in("status", [...ACTIVE_PLANNED_STATUSES])
+    .in("schedule_mode_code", [...ALL_DAY_SCHEDULE_MODES])
+    .order("updated_at", { ascending: false })
+    .limit(MAX_ALL_DAY_SCAN_LIMIT);
+
   if (hasRange && start && end) {
     calendarEventsQuery = calendarEventsQuery.lt("start_time", end).gt("end_time", start);
     timeBlocksQuery = timeBlocksQuery.lt("start_time", end).gt("end_time", start);
@@ -496,7 +657,12 @@ export async function GET(request: Request) {
   const [
     { data: calendarRows, error: calendarError },
     { data: timeBlockRows, error: timeBlockError },
-  ] = await Promise.all([calendarEventsQuery, timeBlocksQuery]);
+    { data: plannedActivityRows, error: plannedActivityError },
+  ] = await Promise.all([
+    calendarEventsQuery,
+    timeBlocksQuery,
+    plannedActivitiesQuery,
+  ]);
 
   if (calendarError) {
     return NextResponse.json({ error: calendarError.message }, { status: 500 });
@@ -504,6 +670,10 @@ export async function GET(request: Request) {
 
   if (timeBlockError) {
     return NextResponse.json({ error: timeBlockError.message }, { status: 500 });
+  }
+
+  if (plannedActivityError) {
+    return NextResponse.json({ error: plannedActivityError.message }, { status: 500 });
   }
 
   /* Step 8A active rows filter */
@@ -515,15 +685,33 @@ export async function GET(request: Request) {
     ...(activeTimeBlockRows.map(mapTimeBlock).filter(Boolean) as CalendarEvent[]),
   ].sort((left, right) => new Date(left.startAt).getTime() - new Date(right.startAt).getTime());
 
+  const allDayItems = ((plannedActivityRows ?? []) as Record<string, any>[])
+    .map(mapPlannedActivityAllDayItem)
+    .filter((item): item is CalendarAllDayItem => Boolean(item))
+    .filter((item) =>
+      allDayItemIntersectsDateRange(item, rangeStartDate, rangeEndDateExclusive),
+    )
+    .sort((left, right) => {
+      const dateComparison = left.startDate.localeCompare(right.startDate);
+
+      if (dateComparison !== 0) {
+        return dateComparison;
+      }
+
+      return left.title.localeCompare(right.title);
+    });
+
   const logs = includeLog ? await readCalendarEventLogs(appUser, calendarRows ?? []) : undefined;
 
   return NextResponse.json({
     ok: true,
     events,
+    allDayItems,
     logs,
     sources: {
       calendarEvents: activeCalendarRows.length,
       timeBlocks: activeTimeBlockRows.length,
+      plannedActivities: allDayItems.length,
     },
   });
 }

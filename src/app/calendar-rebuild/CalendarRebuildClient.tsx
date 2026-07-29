@@ -19,7 +19,11 @@ import {
   isSameMonth,
   parseDateKey,
 } from "../../features/calendar-core/date-utils";
-import type { CalendarEvent, CalendarViewMode } from "../../features/calendar-core/types";
+import type {
+  CalendarAllDayItem,
+  CalendarEvent,
+  CalendarViewMode,
+} from "../../features/calendar-core/types";
 import {
   Cux2InlineActivityComposer,
   type Cux4QuickCaptureResult,
@@ -113,6 +117,7 @@ type CalendarEventLogEntry = {
 type CalendarEventsResponse = {
   ok?: boolean;
   events?: CalendarEvent[];
+  allDayItems?: CalendarAllDayItem[];
   event?: CalendarEvent;
   log?: CalendarEventLogEntry | null;
   logs?: CalendarEventLogEntry[];
@@ -120,6 +125,7 @@ type CalendarEventsResponse = {
   sources?: {
     calendarEvents?: number;
     timeBlocks?: number;
+    plannedActivities?: number;
   };
 };
 
@@ -127,6 +133,93 @@ type PositionedEvent = {
   event: CalendarEvent;
   top: number;
   height: number;
+};
+
+type PositionedAllDayItem = {
+  item: CalendarAllDayItem;
+  startColumn: number;
+  endColumn: number;
+  lane: number;
+};
+
+type AllDayUiLabels = {
+  title: string;
+  empty: string;
+  more: string;
+  modes: Record<CalendarAllDayItem["scheduleModeCode"], string>;
+};
+
+const CUX7B_ALL_DAY_UI: Record<UiLocale, AllDayUiLabels> = {
+  en: {
+    title: "Scheduled dates",
+    empty: "No date-only items",
+    more: "more",
+    modes: {
+      date_only: "Date",
+      date_range: "Date range",
+      deadline: "Deadline",
+    },
+  },
+  pl: {
+    title: "Zaplanowane daty",
+    empty: "Brak wpisów całodniowych",
+    more: "więcej",
+    modes: {
+      date_only: "Data",
+      date_range: "Zakres dat",
+      deadline: "Termin",
+    },
+  },
+  ru: {
+    title: "Запланированные даты",
+    empty: "Нет записей без точного времени",
+    more: "ещё",
+    modes: {
+      date_only: "Дата",
+      date_range: "Диапазон дат",
+      deadline: "Крайний срок",
+    },
+  },
+  uk: {
+    title: "Заплановані дати",
+    empty: "Немає записів без точного часу",
+    more: "ще",
+    modes: {
+      date_only: "Дата",
+      date_range: "Діапазон дат",
+      deadline: "Крайній термін",
+    },
+  },
+  de: {
+    title: "Geplante Daten",
+    empty: "Keine Einträge ohne genaue Uhrzeit",
+    more: "weitere",
+    modes: {
+      date_only: "Datum",
+      date_range: "Datumsbereich",
+      deadline: "Frist",
+    },
+  },
+  es: {
+    title: "Fechas planificadas",
+    empty: "No hay registros sin hora exacta",
+    more: "más",
+    modes: {
+      date_only: "Fecha",
+      date_range: "Rango de fechas",
+      deadline: "Fecha límite",
+    },
+  },
+  cs: {
+    title: "Plánovaná data",
+    empty: "Žádné záznamy bez přesného času",
+    more: "další",
+    modes: {
+      date_only: "Datum",
+      date_range: "Rozsah dat",
+      deadline: "Termín",
+    },
+  },
 };
 
 type UiLabels = {
@@ -652,6 +745,136 @@ function getEventsForDate(events: CalendarEvent[], value: Date) {
   return events.filter((event) => eventDateKey(event) === key);
 }
 
+function allDayItemIntersectsDate(item: CalendarAllDayItem, value: Date) {
+  const key = dateKey(value);
+
+  return item.startDate <= key && item.endDate >= key;
+}
+
+function getAllDayItemsForDate(items: CalendarAllDayItem[], value: Date) {
+  return items.filter((item) => allDayItemIntersectsDate(item, value));
+}
+
+function getAllDayAccentClass(item: CalendarAllDayItem) {
+  if (item.scheduleModeCode === "deadline") {
+    return "border-amber-300 bg-amber-50 text-amber-950";
+  }
+
+  if (item.scheduleModeCode === "date_range") {
+    return "border-violet-300 bg-violet-50 text-violet-950";
+  }
+
+  return "border-blue-300 bg-blue-50 text-blue-950";
+}
+
+function formatAllDayDateKey(value: string, locale: UiLocale) {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
+    day: "2-digit",
+    month: "short",
+  }).format(parseDateKey(value));
+}
+
+function formatAllDayItemRange(item: CalendarAllDayItem, locale: UiLocale) {
+  if (item.scheduleModeCode === "deadline" && item.deadlineAt) {
+    const deadline = new Date(item.deadlineAt);
+
+    if (!Number.isNaN(deadline.getTime())) {
+      return new Intl.DateTimeFormat(intlLocale(locale), {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(deadline);
+    }
+  }
+
+  if (item.startDate === item.endDate) {
+    return formatAllDayDateKey(item.startDate, locale);
+  }
+
+  return `${formatAllDayDateKey(item.startDate, locale)} - ${formatAllDayDateKey(
+    item.endDate,
+    locale,
+  )}`;
+}
+
+function allDayItemToShelfItem(item: CalendarAllDayItem): Cux6ShelfItem {
+  return {
+    id: item.activityEventId,
+    title: item.title,
+    inputText: item.inputText,
+    description: item.description,
+    source: item.source,
+    privacyScope: item.privacyScope,
+    status: item.status,
+    scheduleModeCode: item.scheduleModeCode,
+    scheduledDate: item.scheduledDate,
+    scheduleStartDate: item.scheduleStartDate,
+    scheduleEndDate: item.scheduleEndDate,
+    deadlineAt: item.deadlineAt,
+    startedAt: item.startedAt,
+    endedAt: item.endedAt,
+    durationMinutes: item.durationMinutes,
+    dueAt: item.dueAt,
+    enrichmentStatus: null,
+    enrichmentUpdatedAt: null,
+    updatedAt: item.updatedAt,
+  };
+}
+
+function buildWeekAllDaySegments(
+  items: CalendarAllDayItem[],
+  weekDates: Date[],
+): PositionedAllDayItem[] {
+  const firstDate = dateKey(weekDates[0]);
+  const lastDate = dateKey(weekDates[weekDates.length - 1]);
+  const indexByDate = new Map(weekDates.map((day, index) => [dateKey(day), index]));
+
+  const candidates = items
+    .filter((item) => item.startDate <= lastDate && item.endDate >= firstDate)
+    .map((item) => {
+      const clippedStart = item.startDate < firstDate ? firstDate : item.startDate;
+      const clippedEnd = item.endDate > lastDate ? lastDate : item.endDate;
+
+      return {
+        item,
+        startColumn: indexByDate.get(clippedStart) ?? 0,
+        endColumn: indexByDate.get(clippedEnd) ?? weekDates.length - 1,
+      };
+    })
+    .sort((left, right) => {
+      if (left.startColumn !== right.startColumn) {
+        return left.startColumn - right.startColumn;
+      }
+
+      if (left.endColumn !== right.endColumn) {
+        return right.endColumn - left.endColumn;
+      }
+
+      return left.item.title.localeCompare(right.item.title);
+    });
+
+  const laneEndColumns: number[] = [];
+
+  return candidates.map((candidate) => {
+    let lane = laneEndColumns.findIndex(
+      (lastOccupiedColumn) => candidate.startColumn > lastOccupiedColumn,
+    );
+
+    if (lane === -1) {
+      lane = laneEndColumns.length;
+      laneEndColumns.push(candidate.endColumn);
+    } else {
+      laneEndColumns[lane] = candidate.endColumn;
+    }
+
+    return {
+      ...candidate,
+      lane,
+    };
+  });
+}
+
 function getEventDisplayTitle(event: CalendarEvent) {
   const record = event as CalendarEvent & Record<string, unknown>;
   const candidates = [
@@ -841,6 +1064,7 @@ export default function CalendarRebuildClient({
   const analyticsUi = ANALYTICS_PLACEHOLDER_UI[locale];
   const statsUi = CALENDAR_STATS_UI[locale];
   const filterLabels = CALENDAR_FILTERS_UI[locale];
+  const allDayUi = CUX7B_ALL_DAY_UI[locale];
 
   const [view, setView] = useState<CalendarViewMode>("week");
   const [composerOpen, setComposerOpen] = useState(false);
@@ -866,9 +1090,14 @@ export default function CalendarRebuildClient({
   const [editStartAt, setEditStartAt] = useState("");
   const [editEndAt, setEditEndAt] = useState("");
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [allDayItems, setAllDayItems] = useState<CalendarAllDayItem[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
-  const [sourceCounts, setSourceCounts] = useState({ calendarEvents: 0, timeBlocks: 0 });
+  const [sourceCounts, setSourceCounts] = useState({
+    calendarEvents: 0,
+    timeBlocks: 0,
+    plannedActivities: 0,
+  });
 
   const range = useMemo(() => getRangeForView(view, focusDate), [view, focusDate]);
   const rangeStart = range.start.toISOString();
@@ -884,6 +1113,8 @@ export default function CalendarRebuildClient({
       const params = new URLSearchParams({
         start: rangeStart,
         end: rangeEnd,
+        startDate: dateKey(range.start),
+        endDate: dateKey(range.end),
         includeLog: "1",
       });
 
@@ -899,10 +1130,12 @@ export default function CalendarRebuildClient({
         }
 
         setEvents(payload.events ?? []);
+        setAllDayItems(payload.allDayItems ?? []);
         setEventLogs(payload.logs ?? []);
         setSourceCounts({
           calendarEvents: payload.sources?.calendarEvents ?? 0,
           timeBlocks: payload.sources?.timeBlocks ?? 0,
+          plannedActivities: payload.sources?.plannedActivities ?? 0,
         });
       } catch (error) {
         if (abortController.signal.aborted) {
@@ -910,8 +1143,13 @@ export default function CalendarRebuildClient({
         }
 
         setEvents([]);
+        setAllDayItems([]);
         setEventLogs([]);
-        setSourceCounts({ calendarEvents: 0, timeBlocks: 0 });
+        setSourceCounts({
+          calendarEvents: 0,
+          timeBlocks: 0,
+          plannedActivities: 0,
+        });
         setEventsError(error instanceof Error ? error.message : "Unknown calendar events error");
       } finally {
         if (!abortController.signal.aborted) {
@@ -929,6 +1167,15 @@ export default function CalendarRebuildClient({
     () => events.filter((event) => eventIntersectsRange(event, range)),
     [events, range],
   );
+
+  const visibleAllDayItems = useMemo(() => {
+    const startDate = dateKey(range.start);
+    const endDateExclusive = dateKey(range.end);
+
+    return allDayItems.filter(
+      (item) => item.startDate < endDateExclusive && item.endDate >= startDate,
+    );
+  }, [allDayItems, range]);
 
   const selectedEvent = useMemo(
     () => visibleEvents.find((event) => event.id === selectedEventId) ?? null,
@@ -1190,6 +1437,32 @@ export default function CalendarRebuildClient({
 
     return grouped;
   }, [visibleEvents, weekDates]);
+
+  const dayAllDayItems = useMemo(
+    () => getAllDayItemsForDate(visibleAllDayItems, focusDate),
+    [focusDate, visibleAllDayItems],
+  );
+  const weekAllDaySegments = useMemo(
+    () => buildWeekAllDaySegments(visibleAllDayItems, weekDates),
+    [visibleAllDayItems, weekDates],
+  );
+  const maxVisibleAllDayLanes = 4;
+  const visibleWeekAllDaySegments = weekAllDaySegments.filter(
+    (segment) => segment.lane < maxVisibleAllDayLanes,
+  );
+  const hiddenWeekAllDayCount =
+    weekAllDaySegments.length - visibleWeekAllDaySegments.length;
+  const weekAllDayLaneCount = Math.max(
+    1,
+    Math.min(
+      maxVisibleAllDayLanes,
+      weekAllDaySegments.reduce(
+        (maximum, segment) => Math.max(maximum, segment.lane + 1),
+        0,
+      ),
+    ),
+  );
+  const visibleRecordCount = visibleEvents.length + visibleAllDayItems.length;
 
   const periodLabel =
     view === "day" ? ui.selectedDay : view === "week" ? ui.selectedWeek : ui.selectedMonth;
@@ -1700,7 +1973,7 @@ export default function CalendarRebuildClient({
             </div>
             <div className="mt-7 flex items-end justify-between gap-4">
               <div>
-                <div className="text-[28px] font-bold leading-none text-[#1a1d2e]">{visibleEvents.length}</div>
+                <div className="text-[28px] font-bold leading-none text-[#1a1d2e]">{visibleRecordCount}</div>
                 <div className="mt-2 text-[11px] text-[#9ca3b8]">{statsUi.visibleSub}</div>
               </div>
               <svg viewBox="0 0 120 48" className="h-12 w-32 overflow-visible" aria-hidden="true">
@@ -1873,7 +2146,55 @@ export default function CalendarRebuildClient({
         </div>
 
         {view === "day" ? (
-            <div className={cn("relative overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)]", calendarPresentation === "grid" ? "block" : "hidden")}>
+          <div
+            className={cn(
+              "space-y-2",
+              calendarPresentation === "grid" ? "block" : "hidden",
+            )}
+          >
+            <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-3">
+              <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
+                {allDayUi.title}
+              </div>
+              {dayAllDayItems.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-[#d8deef] px-3 py-2 text-xs font-medium text-[#9ca3b8]">
+                  {allDayUi.empty}
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {dayAllDayItems.slice(0, 4).map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedEventId(null);
+                        setSelectedShelfItem(allDayItemToShelfItem(item));
+                      }}
+                      className={cn(
+                        "flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-xs font-bold shadow-sm",
+                        getAllDayAccentClass(item),
+                      )}
+                      title={`${allDayUi.modes[item.scheduleModeCode]}: ${formatAllDayItemRange(
+                        item,
+                        locale,
+                      )}`}
+                    >
+                      <span className="min-w-0 truncate">{item.title}</span>
+                      <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] opacity-70">
+                        {allDayUi.modes[item.scheduleModeCode]}
+                      </span>
+                    </button>
+                  ))}
+                  {dayAllDayItems.length > 4 ? (
+                    <div className="px-1 text-[10px] font-bold text-[#3b6ef8]">
+                      +{dayAllDayItems.length - 4} {allDayUi.more}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+
+            <div className="relative overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)]">
               {hours.map((hour) => (
                 <div
                   key={hour}
@@ -1910,62 +2231,154 @@ export default function CalendarRebuildClient({
                 </button>
               ))}
             </div>
-          ) : null}
+          </div>
+        ) : null}
 
-          {view === "week" ? (
-            <div className={cn("overflow-x-auto rounded-xl border border-[rgba(0,0,0,0.06)]", calendarPresentation === "grid" ? "block" : "hidden")}>
-              <div className="min-w-[1080px]">
-                <div className="grid border-b border-[#eef1f7]" style={{ gridTemplateColumns: `${timeGutterWidth}px repeat(7, minmax(132px, 1fr))` }}>
-                  <div className="border-r border-[#eef1f7] bg-[#fbfcff] p-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-                    {ui.time}
-                  </div>
-                  {weekDates.map((day) => (
-                    <button
-                      key={dateKey(day)}
-                      type="button"
-                      onClick={() => updateFocusDate(day)}
-                      className={cn(
-                        "border-r border-[#eef1f7] p-3 text-left last:border-r-0 hover:bg-[#f5f6fb]",
-                        isSameDate(day, focusDate) && "bg-[#eef2ff]",
-                      )}
-                    >
-                      <div className="text-xs font-bold uppercase text-[#7c8099]">{formatShortDay(day, locale)}</div>
-                      <div className="mt-1 text-xl font-bold">{day.getDate()}</div>
-                    </button>
-                  ))}
+        {view === "week" ? (
+          <div
+            className={cn(
+              "overflow-x-auto rounded-xl border border-[rgba(0,0,0,0.06)]",
+              calendarPresentation === "grid" ? "block" : "hidden",
+            )}
+          >
+            <div className="min-w-[1080px]">
+              <div
+                className="grid border-b border-[#eef1f7]"
+                style={{
+                  gridTemplateColumns: `${timeGutterWidth}px repeat(7, minmax(132px, 1fr))`,
+                }}
+              >
+                <div className="border-r border-[#eef1f7] bg-[#fbfcff] p-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+                  {ui.time}
                 </div>
-
-                <div className="relative" style={{ height: `${getTimelineHeight()}px` }}>
-                  <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `${timeGutterWidth}px repeat(7, minmax(132px, 1fr))` }}>
-                    <div className="border-r border-[#eef1f7] bg-[#fbfcff]">
-                      {hours.map((hour) => (
-                        <div
-                          key={hour}
-                          className="border-b border-[#eef1f7] px-3 py-2 text-xs font-bold text-[#7c8099]"
-                          style={{ height: `${hourHeight}px` }}
-                        >
-                          {String(hour).padStart(2, "0")}:00
-                        </div>
-                      ))}
+                {weekDates.map((day) => (
+                  <button
+                    key={dateKey(day)}
+                    type="button"
+                    onClick={() => updateFocusDate(day)}
+                    className={cn(
+                      "border-r border-[#eef1f7] p-3 text-left last:border-r-0 hover:bg-[#f5f6fb]",
+                      isSameDate(day, focusDate) && "bg-[#eef2ff]",
+                    )}
+                  >
+                    <div className="text-xs font-bold uppercase text-[#7c8099]">
+                      {formatShortDay(day, locale)}
                     </div>
+                    <div className="mt-1 text-xl font-bold">{day.getDate()}</div>
+                  </button>
+                ))}
+              </div>
 
+              <div
+                className="grid border-b border-[#eef1f7] bg-white"
+                style={{
+                  gridTemplateColumns: `${timeGutterWidth}px repeat(7, minmax(132px, 1fr))`,
+                }}
+              >
+                <div className="border-r border-[#eef1f7] bg-[#fbfcff] p-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7c8099]">
+                  {allDayUi.title}
+                </div>
+                <div className="relative col-span-7">
+                  <div className="pointer-events-none absolute inset-0 grid grid-cols-7">
                     {weekDates.map((day) => (
                       <div
                         key={dateKey(day)}
                         className={cn(
-                          "relative border-r border-[#eef1f7] last:border-r-0",
-                          isSameDate(day, focusDate) && "bg-[#f1f4ff]",
+                          "border-r border-[#eef1f7] last:border-r-0",
+                          isSameDate(day, focusDate) && "bg-[#f7f8ff]",
                         )}
-                      >
-                        {hours.map((hour) => (
-                          <div
-                            key={hour}
-                            className="border-b border-[#eef1f7]"
-                            style={{ height: `${hourHeight}px` }}
-                          />
-                        ))}
+                      />
+                    ))}
+                  </div>
 
-                        {(weekTimelineEventsByDay.get(dateKey(day)) ?? []).map(({ event, top, height }) => (
+                  <div
+                    className="relative grid gap-y-1 px-1 py-2"
+                    style={{
+                      gridTemplateColumns: "repeat(7, minmax(132px, 1fr))",
+                      gridTemplateRows: `repeat(${weekAllDayLaneCount}, 28px)`,
+                      minHeight: `${weekAllDayLaneCount * 32 + 12}px`,
+                    }}
+                  >
+                    {visibleWeekAllDaySegments.map(
+                      ({ item, startColumn, endColumn, lane }) => (
+                        <button
+                          key={`${item.id}:${startColumn}:${endColumn}`}
+                          type="button"
+                          onClick={() => {
+                            setSelectedEventId(null);
+                            setFocusDate(parseDateKey(item.startDate));
+                            setSelectedShelfItem(allDayItemToShelfItem(item));
+                          }}
+                          className={cn(
+                            "z-10 mx-1 truncate rounded-md border px-2 py-1 text-left text-[11px] font-bold shadow-sm",
+                            getAllDayAccentClass(item),
+                          )}
+                          style={{
+                            gridColumn: `${startColumn + 1} / ${endColumn + 2}`,
+                            gridRow: `${lane + 1}`,
+                          }}
+                          title={`${allDayUi.modes[item.scheduleModeCode]} · ${formatAllDayItemRange(
+                            item,
+                            locale,
+                          )} · ${item.title}`}
+                        >
+                          {item.title}
+                        </button>
+                      ),
+                    )}
+
+                    {visibleWeekAllDaySegments.length === 0 ? (
+                      <div className="col-span-7 flex items-center px-3 text-xs font-medium text-[#9ca3b8]">
+                        {allDayUi.empty}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {hiddenWeekAllDayCount > 0 ? (
+                    <div className="absolute bottom-1 right-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold text-[#3b6ef8] shadow-sm">
+                      +{hiddenWeekAllDayCount} {allDayUi.more}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="relative" style={{ height: `${getTimelineHeight()}px` }}>
+                <div
+                  className="absolute inset-0 grid"
+                  style={{
+                    gridTemplateColumns: `${timeGutterWidth}px repeat(7, minmax(132px, 1fr))`,
+                  }}
+                >
+                  <div className="border-r border-[#eef1f7] bg-[#fbfcff]">
+                    {hours.map((hour) => (
+                      <div
+                        key={hour}
+                        className="border-b border-[#eef1f7] px-3 py-2 text-xs font-bold text-[#7c8099]"
+                        style={{ height: `${hourHeight}px` }}
+                      >
+                        {String(hour).padStart(2, "0")}:00
+                      </div>
+                    ))}
+                  </div>
+
+                  {weekDates.map((day) => (
+                    <div
+                      key={dateKey(day)}
+                      className={cn(
+                        "relative border-r border-[#eef1f7] last:border-r-0",
+                        isSameDate(day, focusDate) && "bg-[#f1f4ff]",
+                      )}
+                    >
+                      {hours.map((hour) => (
+                        <div
+                          key={hour}
+                          className="border-b border-[#eef1f7]"
+                          style={{ height: `${hourHeight}px` }}
+                        />
+                      ))}
+
+                      {(weekTimelineEventsByDay.get(dateKey(day)) ?? []).map(
+                        ({ event, top, height }) => (
                           <button
                             key={event.id}
                             type="button"
@@ -1977,7 +2390,8 @@ export default function CalendarRebuildClient({
                             className={cn(
                               "absolute left-1 right-1 z-10 overflow-hidden rounded-lg px-2 py-1 text-left text-[11px] font-bold leading-tight text-[#1a1d2e] shadow-sm",
                               getLayerAccentClass(event),
-                    selectedEventId === event.id && "ring-2 ring-[#3b6ef8] ring-offset-1",
+                              selectedEventId === event.id &&
+                                "ring-2 ring-[#3b6ef8] ring-offset-1",
                             )}
                             style={{
                               top: `${top}px`,
@@ -1987,57 +2401,108 @@ export default function CalendarRebuildClient({
                           >
                             <EventLabel event={event} />
                           </button>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
+                        ),
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          ) : null}
+          </div>
+        ) : null}
 
-          {view === "month" ? (
-            <div className={cn("overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)]", calendarPresentation === "grid" ? "grid grid-cols-7" : "hidden")}>
-              {monthDates.map((day) => {
-                const dayEvents = getEventsForDate(visibleEvents, day);
+        {view === "month" ? (
+          <div
+            className={cn(
+              "overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)]",
+              calendarPresentation === "grid" ? "grid grid-cols-7" : "hidden",
+            )}
+          >
+            {monthDates.map((day) => {
+              const dayEvents = getEventsForDate(visibleEvents, day);
+              const dayDateItems = getAllDayItemsForDate(visibleAllDayItems, day);
+              const visibleDateItems = dayDateItems.slice(0, 3);
+              const availableTimedSlots = Math.max(0, 3 - visibleDateItems.length);
+              const visibleTimedEvents = dayEvents.slice(0, availableTimedSlots);
+              const hiddenCount =
+                dayDateItems.length +
+                dayEvents.length -
+                visibleDateItems.length -
+                visibleTimedEvents.length;
 
-                return (
+              return (
+                <div
+                  key={dateKey(day)}
+                  className={cn(
+                    "min-h-[120px] border-b border-r border-[#eef1f7] p-2 text-left",
+                    !isSameMonth(day, focusDate) &&
+                      "bg-[#fbfcff] text-[#b0b4c8]",
+                    isSameDate(day, focusDate) && "bg-[#eef2ff]",
+                  )}
+                >
                   <button
-                    key={dateKey(day)}
                     type="button"
                     onClick={() => updateFocusDate(day)}
-                    className={cn(
-                      "min-h-[120px] border-b border-r border-[#eef1f7] p-2 text-left hover:bg-[#f5f6fb]",
-                      !isSameMonth(day, focusDate) && "bg-[#fbfcff] text-[#b0b4c8]",
-                      isSameDate(day, focusDate) && "bg-[#eef2ff]",
-                    )}
+                    className="rounded px-1 text-xs font-bold hover:bg-white/70"
                   >
-                    <div className="text-xs font-bold">{day.getDate()}</div>
-                    <div className="mt-2 space-y-1">
-                      {dayEvents.slice(0, 3).map((event) => (
-                        <div
-                          key={event.id}
-                          title={buildEventLabel(event)}
-                          className={cn(
-                            "truncate rounded-md border px-2 py-1 text-[11px] font-bold text-[#1a1d2e]",
-                            getLayerAccentClass(event),
-                    selectedEventId === event.id && "ring-2 ring-[#3b6ef8] ring-offset-1",
-                          )}
-                        >
-                          <EventLabel event={event} />
-                        </div>
-                      ))}
-                      {dayEvents.length > 3 ? (
-                        <div className="text-[10px] font-bold text-[#3b6ef8]">
-                          +{dayEvents.length - 3}
-                        </div>
-                      ) : null}
-                    </div>
+                    {day.getDate()}
                   </button>
-                );
-              })}
-            </div>
-          ) : null}
+
+                  <div className="mt-2 space-y-1">
+                    {visibleDateItems.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedEventId(null);
+                          setFocusDate(day);
+                          setSelectedShelfItem(allDayItemToShelfItem(item));
+                        }}
+                        title={`${allDayUi.modes[item.scheduleModeCode]} · ${formatAllDayItemRange(
+                          item,
+                          locale,
+                        )} · ${item.title}`}
+                        className={cn(
+                          "block w-full truncate rounded-md border px-2 py-1 text-left text-[11px] font-bold shadow-sm",
+                          getAllDayAccentClass(item),
+                        )}
+                      >
+                        {item.title}
+                      </button>
+                    ))}
+
+                    {visibleTimedEvents.map((event) => (
+                      <button
+                        key={event.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedShelfItem(null);
+                          setSelectedEventId(event.id);
+                          setFocusDate(day);
+                        }}
+                        title={buildEventLabel(event)}
+                        className={cn(
+                          "block w-full truncate rounded-md border px-2 py-1 text-left text-[11px] font-bold text-[#1a1d2e]",
+                          getLayerAccentClass(event),
+                          selectedEventId === event.id &&
+                            "ring-2 ring-[#3b6ef8] ring-offset-1",
+                        )}
+                      >
+                        <EventLabel event={event} />
+                      </button>
+                    ))}
+
+                    {hiddenCount > 0 ? (
+                      <div className="text-[10px] font-bold text-[#3b6ef8]">
+                        +{hiddenCount}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
         </section>
         {selectedShelfItem ? (
           <Cux6TaskDetailModal
