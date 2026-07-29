@@ -24,6 +24,7 @@ import {
   Cux2InlineActivityComposer,
   type Cux4QuickCaptureResult,
 } from "../../components/calendar/cux2-inline-activity-composer";
+import { Cux6TaskShelf } from "../../components/calendar/cux6-task-shelf";
 
 type CalendarRebuildClientProps = {
   initialFocusDateKey: string | null;
@@ -1494,6 +1495,13 @@ export default function CalendarRebuildClient({
             </div>
           </section>
         ) : null}
+
+
+        <Cux6TaskShelf
+          locale={locale}
+          returnToTarget={returnToTarget}
+          refreshKey={eventsRefreshKey}
+        />
 
         {/* Step 9A calendar/log top tabs */}
         <section className="flex flex-wrap gap-2">
