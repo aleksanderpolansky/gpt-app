@@ -549,9 +549,27 @@ export function Cux2InlineActivityComposer({
           <h2 className="mt-1 text-xl font-bold text-[#1a1d2e]">{copy.title}</h2>
           <p className="mt-1 text-sm leading-6 text-[#68708a]">{copy.helper}</p>
         </div>
-        <button type="button" onClick={onClose} className="rounded-xl border border-[#d8deef] bg-white px-3 py-2 text-sm font-bold text-[#667091] hover:bg-[#f4f6fb]">
-          {copy.close}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void saveActivity()}
+            disabled={
+              !text.trim() ||
+              saveStatus === "saving" ||
+              saveStatus === "saved"
+            }
+            className="rounded-xl bg-[#3b6ef8] px-4 py-2 text-sm font-bold text-white shadow-sm shadow-[#3b6ef8]/20 disabled:cursor-not-allowed disabled:bg-[#c8d2f4]"
+          >
+            {saveStatus === "saving" ? copy.saving : copy.add}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-[#d8deef] bg-white px-3 py-2 text-sm font-bold text-[#667091] hover:bg-[#f4f6fb]"
+          >
+            {copy.close}
+          </button>
+        </div>
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
@@ -613,9 +631,6 @@ export function Cux2InlineActivityComposer({
             <p className="mt-2 text-base font-extrabold text-[#1a1d2e]">{timingLabel}</p>
             {!timingValidation.ok ? <p className="mt-2 text-sm font-semibold text-rose-700">{copy.needsClarification}</p> : null}
           </div>
-          <button type="button" onClick={() => void saveActivity()} disabled={!text.trim() || saveStatus === "saving" || saveStatus === "saved"} className="w-full rounded-[16px] bg-[#3b6ef8] px-4 py-3 text-sm font-bold text-white shadow-sm shadow-[#3b6ef8]/20 disabled:cursor-not-allowed disabled:bg-[#c8d2f4]">
-            {saveStatus === "saving" ? copy.saving : copy.add}
-          </button>
           {saveMessage ? (
             <div className={`rounded-xl border px-4 py-3 text-sm font-semibold ${saveStatus === "saved" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}>
               {saveStatus === "error" ? `${copy.saveError} ${saveMessage}` : saveMessage}

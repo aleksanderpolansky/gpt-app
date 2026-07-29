@@ -12,6 +12,10 @@ type ShelfGroupKey = "unscheduled" | "dueSoon" | "needsClarification";
 type ShelfItem = {
   id: string;
   title: string;
+  inputText: string | null;
+  description: string | null;
+  source: string | null;
+  privacyScope: string | null;
   status: string | null;
   scheduleModeCode: string | null;
   scheduledDate: string | null;
@@ -151,6 +155,10 @@ function toShelfItem(
   return {
     id,
     title: titleForActivity(row),
+    inputText: asString(row.input_text),
+    description: asString(row.description),
+    source: asString(row.source),
+    privacyScope: asString(row.privacy_scope),
     status: asString(row.status),
     scheduleModeCode: asString(row.schedule_mode_code),
     scheduledDate: asString(row.scheduled_date),
@@ -251,6 +259,8 @@ export async function GET(request: Request) {
     "title",
     "description",
     "input_text",
+    "source",
+    "privacy_scope",
     "status",
     "activity_role_code",
     "schedule_mode_code",

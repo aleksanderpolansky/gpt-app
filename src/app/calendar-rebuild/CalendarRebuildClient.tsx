@@ -24,7 +24,11 @@ import {
   Cux2InlineActivityComposer,
   type Cux4QuickCaptureResult,
 } from "../../components/calendar/cux2-inline-activity-composer";
-import { Cux6TaskShelf } from "../../components/calendar/cux6-task-shelf";
+import {
+  Cux6TaskShelf,
+  type Cux6ShelfItem,
+} from "../../components/calendar/cux6-task-shelf";
+import { Cux6TaskDetailModal } from "../../components/calendar/cux6-task-detail-modal";
 
 type CalendarRebuildClientProps = {
   initialFocusDateKey: string | null;
@@ -852,6 +856,8 @@ export default function CalendarRebuildClient({
     setCalendarPresentation("grid");
   }, [view]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedShelfItem, setSelectedShelfItem] =
+    useState<Cux6ShelfItem | null>(null);
   const [isEditingEvent, setIsEditingEvent] = useState(false);
   const [isSavingEvent, setIsSavingEvent] = useState(false);
   const [eventActionError, setEventActionError] = useState<string | null>(null);
@@ -1499,8 +1505,11 @@ export default function CalendarRebuildClient({
 
         <Cux6TaskShelf
           locale={locale}
-          returnToTarget={returnToTarget}
           refreshKey={eventsRefreshKey}
+          onOpenDetails={(item) => {
+            setSelectedEventId(null);
+            setSelectedShelfItem(item);
+          }}
         />
 
         {/* Step 9A calendar/log top tabs */}
@@ -2030,6 +2039,19 @@ export default function CalendarRebuildClient({
             </div>
           ) : null}
         </section>
+        {selectedShelfItem ? (
+          <Cux6TaskDetailModal
+            item={selectedShelfItem}
+            locale={locale}
+            returnToTarget={returnToTarget}
+            onClose={() => setSelectedShelfItem(null)}
+            onChanged={(item) => {
+              setSelectedShelfItem(item);
+              setEventsRefreshKey((value) => value + 1);
+            }}
+          />
+        ) : null}
+
         {/* Step 6B event details modal */}
         {selectedEvent ? (
           <div

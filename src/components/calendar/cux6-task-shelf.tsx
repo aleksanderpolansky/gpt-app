@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type UiLocale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
@@ -10,9 +9,13 @@ type ShelfGroupKey =
   | "dueSoon"
   | "needsClarification";
 
-type ShelfItem = {
+export type Cux6ShelfItem = {
   id: string;
   title: string;
+  inputText: string | null;
+  description: string | null;
+  source: string | null;
+  privacyScope: string | null;
   status: string | null;
   scheduleModeCode: string | null;
   scheduledDate: string | null;
@@ -31,7 +34,7 @@ type ShelfItem = {
 type ShelfGroup = {
   key: ShelfGroupKey;
   totalCount: number;
-  items: ShelfItem[];
+  items: Cux6ShelfItem[];
 };
 
 type TaskShelfResponse = {
@@ -47,8 +50,8 @@ type TaskShelfResponse = {
 
 type Cux6TaskShelfProps = {
   locale: UiLocale;
-  returnToTarget: "calendar" | "calendar-rebuild";
   refreshKey: number;
+  onOpenDetails: (item: Cux6ShelfItem) => void;
 };
 
 const GROUP_ORDER: ShelfGroupKey[] = [
@@ -409,7 +412,7 @@ function formatDateOnly(
 }
 
 function itemScheduleLabel(
-  item: ShelfItem,
+  item: Cux6ShelfItem,
   locale: UiLocale,
   copy: (typeof COPY)[UiLocale],
 ) {
@@ -438,21 +441,6 @@ function itemScheduleLabel(
   return copy.modes[item.scheduleModeCode ?? ""] ?? null;
 }
 
-function buildDetailsHref(
-  item: ShelfItem,
-  locale: UiLocale,
-  returnToTarget: "calendar" | "calendar-rebuild",
-) {
-  const params = new URLSearchParams({
-    locale,
-    returnTo: returnToTarget,
-    temporalDirection: "future",
-    activityEventId: item.id,
-  });
-
-  return `/calendar/activity-review?${params.toString()}`;
-}
-
 function groupAccent(groupKey: ShelfGroupKey) {
   if (groupKey === "dueSoon") {
     return "border-amber-200 bg-amber-50/70";
@@ -479,8 +467,8 @@ function groupDot(groupKey: ShelfGroupKey) {
 
 export function Cux6TaskShelf({
   locale,
-  returnToTarget,
   refreshKey,
+  onOpenDetails,
 }: Cux6TaskShelfProps) {
   const copy = COPY[locale];
   const [payload, setPayload] =
@@ -600,10 +588,6 @@ export function Cux6TaskShelf({
           {groups.map((group) => {
             const groupCopy = copy.groups[group.key];
             const isExpanded = expanded[group.key];
-            const visibleItems = isExpanded
-              ? group.items
-              : group.items.slice(0, 3);
-            const canExpand = group.items.length > 3;
 
             return (
               <article
@@ -629,90 +613,95 @@ export function Cux6TaskShelf({
                       {groupCopy.subtitle}
                     </p>
                   </div>
-                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-extrabold text-[#3b6ef8] shadow-sm">
-                    {group.totalCount}
-                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-extrabold text-[#3b6ef8] shadow-sm">
+                      {group.totalCount}
+                    </span>
+                    <button
+                      type="button"
+                      aria-expanded={isExpanded}
+                      aria-label={
+                        isExpanded ? copy.collapse : copy.showAll
+                      }
+                      onClick={() =>
+                        setExpanded((current) => ({
+                          ...current,
+                          [group.key]: !current[group.key],
+                        }))
+                      }
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-lg font-extrabold text-[#315ed8] shadow-sm"
+                    >
+                      <span aria-hidden="true">
+                        {isExpanded ? "⌃" : "⌄"}
+                      </span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="mt-3 space-y-2">
-                  {visibleItems.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-white/80 bg-white/60 p-3 text-xs font-semibold text-[#7c8099]">
-                      {copy.empty}
-                    </div>
-                  ) : null}
-
-                  {visibleItems.map((item) => {
-                    const scheduleLabel = itemScheduleLabel(
-                      item,
-                      locale,
-                      copy,
-                    );
-                    const modeLabel =
-                      copy.modes[item.scheduleModeCode ?? ""] ??
-                      item.scheduleModeCode;
-                    const statusLabel =
-                      copy.statuses[item.enrichmentStatus ?? ""] ??
-                      copy.statuses[item.status ?? ""] ??
-                      item.status;
-
-                    return (
-                      <div
-                        key={item.id}
-                        className="rounded-lg border border-white/90 bg-white p-3 shadow-sm"
-                      >
-                        <div className="line-clamp-2 text-sm font-bold text-[#1a1d2e]">
-                          {item.title}
-                        </div>
-
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {modeLabel ? (
-                            <span className="rounded-full bg-[#eef2ff] px-2 py-1 text-[10px] font-bold text-[#4865b4]">
-                              {modeLabel}
-                            </span>
-                          ) : null}
-                          {statusLabel ? (
-                            <span className="rounded-full bg-[#f3f4f8] px-2 py-1 text-[10px] font-bold text-[#667091]">
-                              {statusLabel}
-                            </span>
-                          ) : null}
-                        </div>
-
-                        {scheduleLabel ? (
-                          <div className="mt-2 text-[11px] font-semibold text-[#7c8099]">
-                            {scheduleLabel}
-                          </div>
-                        ) : null}
-
-                        <div className="mt-3">
-                          <Link
-                            href={buildDetailsHref(
-                              item,
-                              locale,
-                              returnToTarget,
-                            )}
-                            className="text-xs font-extrabold text-[#315ed8] underline decoration-[#9eb3ff] underline-offset-4"
-                          >
-                            {copy.details}
-                          </Link>
-                        </div>
+                {isExpanded ? (
+                  <div className="mt-3 space-y-2">
+                    {group.items.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-white/80 bg-white/60 p-3 text-xs font-semibold text-[#7c8099]">
+                        {copy.empty}
                       </div>
-                    );
-                  })}
-                </div>
+                    ) : null}
 
-                {canExpand ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpanded((current) => ({
-                        ...current,
-                        [group.key]: !current[group.key],
-                      }))
-                    }
-                    className="mt-3 w-full rounded-lg border border-white bg-white/80 px-3 py-2 text-xs font-extrabold text-[#315ed8] shadow-sm"
-                  >
-                    {isExpanded ? copy.collapse : copy.showAll}
-                  </button>
+                    {group.items.map((item) => {
+                      const scheduleLabel = itemScheduleLabel(
+                        item,
+                        locale,
+                        copy,
+                      );
+                      const modeLabel =
+                        copy.modes[item.scheduleModeCode ?? ""] ??
+                        item.scheduleModeCode;
+                      const statusLabel =
+                        copy.statuses[item.enrichmentStatus ?? ""] ??
+                        copy.statuses[item.status ?? ""] ??
+                        item.status;
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="rounded-lg border border-white/90 bg-white p-3 shadow-sm"
+                        >
+                          <div className="line-clamp-2 text-sm font-bold text-[#1a1d2e]">
+                            {item.title}
+                          </div>
+
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {modeLabel ? (
+                              <span className="rounded-full bg-[#eef2ff] px-2 py-1 text-[10px] font-bold text-[#4865b4]">
+                                {modeLabel}
+                              </span>
+                            ) : null}
+                            {statusLabel ? (
+                              <span className="rounded-full bg-[#f3f4f8] px-2 py-1 text-[10px] font-bold text-[#667091]">
+                                {statusLabel}
+                              </span>
+                            ) : null}
+                          </div>
+
+                          {scheduleLabel ? (
+                            <div className="mt-2 text-[11px] font-semibold text-[#7c8099]">
+                              {scheduleLabel}
+                            </div>
+                          ) : null}
+
+                          <div className="mt-3">
+                            <button
+                              type="button"
+                              onClick={() => onOpenDetails(item)}
+                              className="text-xs font-extrabold text-[#315ed8] underline decoration-[#9eb3ff] underline-offset-4"
+                            >
+                              {copy.details}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : null}
               </article>
             );
