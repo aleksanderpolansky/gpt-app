@@ -142,6 +142,27 @@ type PositionedAllDayItem = {
   lane: number;
 };
 
+type CalendarListEntry =
+  | {
+      key: string;
+      kind: "all_day";
+      dateKey: string;
+      sortAt: number;
+      item: CalendarAllDayItem;
+    }
+  | {
+      key: string;
+      kind: "timed";
+      dateKey: string;
+      sortAt: number;
+      event: CalendarEvent;
+    };
+
+type CalendarListGroup = {
+  dateKey: string;
+  entries: CalendarListEntry[];
+};
+
 type AllDayUiLabels = {
   title: string;
   empty: string;
@@ -798,6 +819,18 @@ function formatAllDayItemRange(item: CalendarAllDayItem, locale: UiLocale) {
   )}`;
 }
 
+function getAllDayListSortTime(item: CalendarAllDayItem, visibleStartDateKey: string) {
+  if (item.scheduleModeCode === "deadline" && item.deadlineAt) {
+    const deadline = new Date(item.deadlineAt);
+
+    if (!Number.isNaN(deadline.getTime())) {
+      return deadline.getTime();
+    }
+  }
+
+  return parseDateKey(visibleStartDateKey).getTime();
+}
+
 function allDayItemToShelfItem(item: CalendarAllDayItem): Cux6ShelfItem {
   return {
     id: item.activityEventId,
@@ -1076,9 +1109,6 @@ export default function CalendarRebuildClient({
   const [autoEditEventId, setAutoEditEventId] = useState<string | null>(null);
   const [focusDate, setFocusDate] = useState(() => parseDateKey(initialFocusDateKey));
 
-  useEffect(() => {
-    setCalendarPresentation("grid");
-  }, [view]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedShelfItem, setSelectedShelfItem] =
     useState<Cux6ShelfItem | null>(null);
@@ -1463,6 +1493,58 @@ export default function CalendarRebuildClient({
     ),
   );
   const visibleRecordCount = visibleEvents.length + visibleAllDayItems.length;
+  const calendarListGroups = useMemo<CalendarListGroup[]>(() => {
+    const rangeStartDateKey = dateKey(range.start);
+    const groups = new Map<string, CalendarListEntry[]>();
+
+    const addEntry = (entry: CalendarListEntry) => {
+      const entries = groups.get(entry.dateKey) ?? [];
+      entries.push(entry);
+      groups.set(entry.dateKey, entries);
+    };
+
+    for (const item of visibleAllDayItems) {
+      const visibleStartDateKey =
+        item.startDate < rangeStartDateKey ? rangeStartDateKey : item.startDate;
+
+      addEntry({
+        key: `all-day:${item.id}`,
+        kind: "all_day",
+        dateKey: visibleStartDateKey,
+        sortAt: getAllDayListSortTime(item, visibleStartDateKey),
+        item,
+      });
+    }
+
+    for (const event of visibleEvents) {
+      const start = eventStartDate(event);
+
+      addEntry({
+        key: `timed:${event.id}`,
+        kind: "timed",
+        dateKey: dateKey(start),
+        sortAt: start.getTime(),
+        event,
+      });
+    }
+
+    return Array.from(groups.entries())
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([groupDateKey, entries]) => ({
+        dateKey: groupDateKey,
+        entries: entries.sort((left, right) => {
+          if (left.sortAt !== right.sortAt) {
+            return left.sortAt - right.sortAt;
+          }
+
+          if (left.kind !== right.kind) {
+            return left.kind === "all_day" ? -1 : 1;
+          }
+
+          return left.key.localeCompare(right.key);
+        }),
+      }));
+  }, [range.start, visibleAllDayItems, visibleEvents]);
 
   const periodLabel =
     view === "day" ? ui.selectedDay : view === "week" ? ui.selectedWeek : ui.selectedMonth;
@@ -1499,6 +1581,68 @@ export default function CalendarRebuildClient({
     }
 
     return { grid: "Grid", list: "List" };
+  }, [locale]);
+  const calendarListUi = useMemo(() => {
+    if (locale === "ru") {
+      return {
+        title: "Все записи периода",
+        empty: "В выбранном периоде нет записей",
+        exact: "Точное время",
+        records: "записей",
+      };
+    }
+
+    if (locale === "uk") {
+      return {
+        title: "Усі записи періоду",
+        empty: "У вибраному періоді немає записів",
+        exact: "Точний час",
+        records: "записів",
+      };
+    }
+
+    if (locale === "pl") {
+      return {
+        title: "Wszystkie wpisy okresu",
+        empty: "Brak wpisów w wybranym okresie",
+        exact: "Dokładny czas",
+        records: "wpisów",
+      };
+    }
+
+    if (locale === "de") {
+      return {
+        title: "Alle Einträge im Zeitraum",
+        empty: "Keine Einträge im gewählten Zeitraum",
+        exact: "Genaue Zeit",
+        records: "Einträge",
+      };
+    }
+
+    if (locale === "es") {
+      return {
+        title: "Todos los registros del período",
+        empty: "No hay registros en el período seleccionado",
+        exact: "Hora exacta",
+        records: "registros",
+      };
+    }
+
+    if (locale === "cs") {
+      return {
+        title: "Všechny záznamy období",
+        empty: "Ve vybraném období nejsou žádné záznamy",
+        exact: "Přesný čas",
+        records: "záznamů",
+      };
+    }
+
+    return {
+      title: "All records in period",
+      empty: "No records in the selected period",
+      exact: "Exact time",
+      records: "records",
+    };
   }, [locale]);
 
   /* Step 8B event action labels */
@@ -2082,17 +2226,17 @@ export default function CalendarRebuildClient({
           </div>
         </div>
 
-        {/* Step 7A mobile agenda surface */}
-        <div className={cn("mb-4 space-y-2", calendarPresentation === "list" ? "block" : "hidden")}>
+        {/* CUX7C1 complete list surface for all schedule modes in the selected period */}
+        <div className={cn("mb-4 space-y-3", calendarPresentation === "list" ? "block" : "hidden")}>
           <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#fbfcff] p-3">
             <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#3b6ef8]">
-              {gridTitle}
+              {calendarListUi.title}
             </div>
             <div className="mt-1 text-sm font-semibold text-[#1a1d2e]">
               {periodTitle}
             </div>
             <div className="mt-2 text-xs font-medium text-[#7c8099]">
-              {visibleEvents.length} {ui.visibleEvents}
+              {visibleRecordCount} {calendarListUi.records}
             </div>
           </div>
 
@@ -2108,39 +2252,92 @@ export default function CalendarRebuildClient({
             </div>
           ) : null}
 
-          {!isLoadingEvents && !eventsError && visibleEvents.length === 0 ? (
+          {!isLoadingEvents && !eventsError && calendarListGroups.length === 0 ? (
             <div className="rounded-xl border border-dashed border-[#d8deef] bg-white p-4 text-sm font-medium text-[#7c8099]">
-              0 {ui.visibleEvents}
+              {calendarListUi.empty}
             </div>
           ) : null}
 
           {!isLoadingEvents && !eventsError
-            ? visibleEvents.slice(0, 8).map((event) => (
-                <button
-                  key={event.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedEventId(event.id);
-                    setFocusDate(eventStartDate(event));
-                  }}
-                  className={cn(
-                    "w-full rounded-xl border p-3 text-left shadow-sm",
-                    getLayerAccentClass(event),
-                    selectedEventId === event.id && "ring-2 ring-[#3b6ef8] ring-offset-1",
-                  )}
+            ? calendarListGroups.map((group) => (
+                <section
+                  key={group.dateKey}
+                  className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-3 shadow-sm"
                 >
-                  <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
-                    {formatEventDateTimeRange(event, locale)}
+                  <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#667091]">
+                    {formatDateTitle(parseDateKey(group.dateKey), locale)}
                   </div>
-                  <div className="mt-1 truncate text-sm font-bold text-[#1a1d2e]">
-                    {getEventDisplayTitle(event) || buildCompactEventLabel(event)}
+
+                  <div className="space-y-2">
+                    {group.entries.map((entry) => {
+                      if (entry.kind === "all_day") {
+                        const item = entry.item;
+
+                        return (
+                          <button
+                            key={entry.key}
+                            type="button"
+                            onClick={() => {
+                              setSelectedEventId(null);
+                              setSelectedShelfItem(allDayItemToShelfItem(item));
+                            }}
+                            className={cn(
+                              "w-full rounded-xl border p-3 text-left transition hover:brightness-[0.99]",
+                              getAllDayAccentClass(item),
+                            )}
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-sm font-bold">
+                                  {item.title}
+                                </div>
+                                <div className="mt-1 text-xs font-medium opacity-75">
+                                  {formatAllDayItemRange(item, locale)}
+                                </div>
+                              </div>
+                              <span className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em]">
+                                {allDayUi.modes[item.scheduleModeCode]}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      }
+
+                      const event = entry.event;
+
+                      return (
+                        <button
+                          key={entry.key}
+                          type="button"
+                          onClick={() => {
+                            setSelectedShelfItem(null);
+                            setSelectedEventId(event.id);
+                            setFocusDate(eventStartDate(event));
+                          }}
+                          className={cn(
+                            "w-full rounded-xl border p-3 text-left shadow-sm transition hover:brightness-[0.99]",
+                            getLayerAccentClass(event),
+                            selectedEventId === event.id && "ring-2 ring-[#3b6ef8] ring-offset-1",
+                          )}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-sm font-bold text-[#1a1d2e]">
+                                {getEventDisplayTitle(event) || buildCompactEventLabel(event)}
+                              </div>
+                              <div className="mt-1 text-xs font-medium text-[#667091]">
+                                {formatEventDateTimeRange(event, locale)}
+                              </div>
+                            </div>
+                            <span className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#667091]">
+                              {calendarListUi.exact}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7c8099]">
-                    <span className="rounded-full bg-white/70 px-2 py-1">{event.kind}</span>
-                    <span className="rounded-full bg-white/70 px-2 py-1">{event.layer}</span>
-                    <span className="rounded-full bg-white/70 px-2 py-1">{event.source}</span>
-                  </div>
-                </button>
+                </section>
               ))
             : null}
         </div>
