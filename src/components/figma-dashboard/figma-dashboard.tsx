@@ -9,7 +9,8 @@ import {
   type ReactNode,
 } from "react";
 import {
-  Activity,
+  Award,
+  CircleHelp,
   Plus,
   Star,
   Target,
@@ -121,6 +122,16 @@ type PointsWalletResponse = {
   readonly wallet?: {
     readonly balance?: number | string | null;
     readonly status?: string | null;
+  } | null;
+  readonly error?: string;
+};
+
+type ReputationSummaryResponse = {
+  readonly ok?: boolean;
+  readonly summary?: {
+    readonly totalReputation?: number | string | null;
+    readonly accountCount?: number | string | null;
+    readonly ledgerEntryCount?: number | string | null;
   } | null;
   readonly error?: string;
 };
@@ -264,6 +275,7 @@ function KpiCard({
   valueHref,
   trendHref,
   historyTitle,
+  helpText,
 }: {
   readonly label: string;
   readonly value: string;
@@ -274,6 +286,7 @@ function KpiCard({
   readonly valueHref?: string;
   readonly trendHref?: string;
   readonly historyTitle?: string;
+  readonly helpText?: string;
 }) {
   const valueNode = (
     <div className="text-[24px] font-bold leading-none text-[#1a1d2e]">
@@ -291,9 +304,27 @@ function KpiCard({
   return (
     <div className="flex flex-col gap-2.5 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
-          {label}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
+            {label}
+          </span>
+          {helpText ? (
+            <details className="group relative">
+              <summary
+                aria-label={helpText}
+                className="cursor-pointer list-none rounded-full text-[#9ca3b8] transition hover:text-[#3b6ef8] focus:outline-none focus:ring-2 focus:ring-[#3b6ef8]/30"
+              >
+                <CircleHelp size={13} />
+              </summary>
+              <div
+                role="note"
+                className="absolute left-0 top-5 z-30 w-72 rounded-xl border border-[#dfe3f1] bg-white p-3 text-[11px] font-normal normal-case leading-5 tracking-normal text-[#5a5f7a] shadow-lg sm:left-auto sm:right-0"
+              >
+                {helpText}
+              </div>
+            </details>
+          ) : null}
+        </div>
         <div
           className="flex h-7 w-7 items-center justify-center rounded-lg"
           style={{ backgroundColor: `${accent}18` }}
@@ -369,13 +400,13 @@ function AiTokenProjectionsKpi({
         ? t("dashboard.limitsUnavailable")
         : status === "not_configured"
           ? t("dashboard.modelPricesNotConfigured")
-          : t("dashboard.currentPackage");
+          : t("dashboard.tokenBalanceBasis");
 
   return (
     <div className="flex flex-col gap-2.5 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
-          {t("dashboard.aiPackage")}
+          {t("dashboard.tokensLabel")}
         </span>
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#f9731618]">
           <Zap size={14} className="text-[#f97316]" />
@@ -554,6 +585,9 @@ export function FigmaDashboardContent() {
   const [pointsBalance, setPointsBalance] = useState<number | null>(null);
   const [pointsWalletStatus, setPointsWalletStatus] = useState("loading");
   const [pointsWalletError, setPointsWalletError] = useState("");
+  const [reputationBalance, setReputationBalance] = useState<number | null>(null);
+  const [reputationStatus, setReputationStatus] = useState("loading");
+  const [reputationError, setReputationError] = useState("");
   const [aiTokenProjections, setAiTokenProjections] = useState<
     AiTokenProjection[]
   >([]);
@@ -640,6 +674,47 @@ export function FigmaDashboardContent() {
       }
     }
 
+    async function loadReputationSummary() {
+      try {
+        setReputationError("");
+        setReputationStatus("loading");
+
+        const response = await fetch("/api/reputation/summary", {
+          headers: {
+            Accept: "application/json",
+          },
+          cache: "no-store",
+        });
+
+        const data = (await response.json()) as ReputationSummaryResponse;
+
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error ?? t("dashboard.reputationLoadError"));
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        setReputationBalance(
+          normalizePointsBalance(data.summary?.totalReputation),
+        );
+        setReputationStatus("ready");
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setReputationBalance(0);
+        setReputationStatus("error");
+        setReputationError(
+          error instanceof Error
+            ? error.message
+            : t("dashboard.reputationUnavailable"),
+        );
+      }
+    }
+
     async function loadAiTokenProjections() {
       try {
         setAiTokenError("");
@@ -689,6 +764,7 @@ export function FigmaDashboardContent() {
     }
 
     void loadPointsWallet();
+    void loadReputationSummary();
     void loadAiTokenProjections();
 
     return () => {
@@ -707,6 +783,15 @@ export function FigmaDashboardContent() {
   const pointsTrend = pointsWalletError
     ? t("dashboard.openHistory")
     : t("dashboard.pointsHistory");
+  const reputationValue = formatPointsBalance(reputationBalance, locale);
+  const reputationSub = reputationError
+    ? t("dashboard.reputationUnavailable")
+    : reputationStatus === "loading"
+      ? t("dashboard.reputationLoading")
+      : t("dashboard.reputationCurrent");
+  const reputationTrend = reputationError
+    ? t("dashboard.openHistory")
+    : t("dashboard.reputationHistory");
 
   return (
     <div className="p-5">
@@ -731,19 +816,24 @@ export function FigmaDashboardContent() {
           trendHref="/points/transactions"
           historyTitle={t("dashboard.pointsHistoryTitle")}
         />
+        <KpiCard
+          label={t("dashboard.reputation")}
+          value={reputationValue}
+          sub={reputationSub}
+          accent="#22c55e"
+          icon={Award}
+          trend={reputationTrend}
+          valueHref="/reputation"
+          trendHref="/reputation"
+          historyTitle={t("dashboard.reputationHistoryTitle")}
+          helpText={t("dashboard.reputationHelp")}
+        />
         <AiTokenProjectionsKpi
           projections={aiTokenProjections}
           status={aiTokenStatus}
           errorMessage={aiTokenError}
           locale={locale}
           t={t}
-        />
-        <KpiCard
-          label={t("dashboard.subscription")}
-          value="Free"
-          sub={t("dashboard.currentPackage")}
-          accent="#22c55e"
-          icon={Activity}
         />
         <ProgressKpi t={t} />
       </div>

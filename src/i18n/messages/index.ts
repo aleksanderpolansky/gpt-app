@@ -3,6 +3,7 @@ export * from "./navigation";
 export * from "./directory-list";
 export * from "./purchase-confirmations";
 export * from "./points";
+export * from "./reputation";
 export * from "./dashboard";
 export * from "./organizations";
 export * from "./time";
