@@ -984,14 +984,26 @@ export default async function ValueObjectDetailPage({
                     </h2>
                   </div>
 
-                  <button
-                    type="button"
-                    disabled
-                    title={copy.activityCreateLater}
-                    className="inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] opacity-45"
-                  >
-                    {activityCreateLabel}
-                  </button>
+                  {isProductOrService ? (
+                    <Link
+                      href={buildLocaleHref(
+                        `/value-objects/${valueObject.id}/gift-certificates/new`,
+                        locale,
+                      )}
+                      className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] transition hover:border-[#aebfff] hover:bg-[#e8edff]"
+                    >
+                      {activityCreateLabel}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      title={copy.activityCreateLater}
+                      className="inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] opacity-45"
+                    >
+                      {activityCreateLabel}
+                    </button>
+                  )}
                 </div>
 
                 {plannedActivities.length === 0 ? (
