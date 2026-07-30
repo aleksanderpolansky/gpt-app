@@ -9,6 +9,7 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import { ValueObjectSemanticRelationsManager } from "@/components/workspace/value-objects/value-object-semantic-relations-manager";
+import { ActivityScheduleDisplay } from "./activity-schedule-display";
 import {
   isValueObjectLeafKindV2,
   isValueObjectStructuralKindV2,
@@ -110,6 +111,8 @@ type Copy = {
   noGiftCertificates: string;
   scheduledActivities: string;
   openActivity: string;
+  details: string;
+  giftCertificateTitle: string;
   addPlannedActivity: string;
   addGiftCertificate: string;
   activityCreateLater: string;
@@ -159,6 +162,8 @@ const COPY: Record<LocaleCode, Copy> = {
     noGiftCertificates: "No gift certificates have been created for this product or service yet.",
     scheduledActivities: "With dates",
     openActivity: "Open activity",
+    details: "Details",
+    giftCertificateTitle: "Gift certificate",
     addPlannedActivity: "Add planned activity",
     addGiftCertificate: "Create gift certificate",
     activityCreateLater: "Creation from this card will be enabled with the dedicated activity template.",
@@ -206,6 +211,8 @@ const COPY: Record<LocaleCode, Copy> = {
     noGiftCertificates: "Dla tego produktu lub usługi nie utworzono jeszcze bonów podarunkowych.",
     scheduledActivities: "Z terminem",
     openActivity: "Otwórz aktywność",
+    details: "Szczegóły",
+    giftCertificateTitle: "Bon podarunkowy",
     addPlannedActivity: "Dodaj planowaną aktywność",
     addGiftCertificate: "Utwórz bon podarunkowy",
     activityCreateLater: "Tworzenie z tej karty zostanie włączone wraz z dedykowanym szablonem aktywności.",
@@ -253,6 +260,8 @@ const COPY: Record<LocaleCode, Copy> = {
     noGiftCertificates: "Для этого товара или услуги пока не создано ни одного подарочного сертификата.",
     scheduledActivities: "С указанными сроками",
     openActivity: "Открыть активность",
+    details: "Подробнее",
+    giftCertificateTitle: "Подарочный сертификат",
     addPlannedActivity: "Добавить плановую активность",
     addGiftCertificate: "Создать подарочный сертификат",
     activityCreateLater: "Создание с этой страницы будет включено вместе со специальным шаблоном активности.",
@@ -300,6 +309,8 @@ const COPY: Record<LocaleCode, Copy> = {
     noGiftCertificates: "Для цього товару або послуги ще не створено подарункових сертифікатів.",
     scheduledActivities: "Із зазначеними строками",
     openActivity: "Відкрити активність",
+    details: "Докладніше",
+    giftCertificateTitle: "Подарунковий сертифікат",
     addPlannedActivity: "Додати заплановану активність",
     addGiftCertificate: "Створити подарунковий сертифікат",
     activityCreateLater: "Створення з цієї сторінки буде ввімкнено разом зі спеціальним шаблоном активності.",
@@ -347,6 +358,8 @@ const COPY: Record<LocaleCode, Copy> = {
     noGiftCertificates: "Für dieses Produkt oder diese Dienstleistung wurden noch keine Geschenkgutscheine erstellt.",
     scheduledActivities: "Mit Termin",
     openActivity: "Aktivität öffnen",
+    details: "Details",
+    giftCertificateTitle: "Geschenkgutschein",
     addPlannedActivity: "Geplante Aktivität hinzufügen",
     addGiftCertificate: "Geschenkgutschein erstellen",
     activityCreateLater: "Die Erstellung von dieser Seite wird mit der speziellen Aktivitätsvorlage aktiviert.",
@@ -394,6 +407,8 @@ const COPY: Record<LocaleCode, Copy> = {
     noGiftCertificates: "Todavía no se han creado certificados de regalo para este producto o servicio.",
     scheduledActivities: "Con fechas",
     openActivity: "Abrir actividad",
+    details: "Detalles",
+    giftCertificateTitle: "Certificado de regalo",
     addPlannedActivity: "Añadir actividad planificada",
     addGiftCertificate: "Crear certificado de regalo",
     activityCreateLater: "La creación desde esta página se habilitará junto con la plantilla de actividad específica.",
@@ -441,6 +456,8 @@ const COPY: Record<LocaleCode, Copy> = {
     noGiftCertificates: "Pro tento produkt nebo službu zatím nebyly vytvořeny žádné dárkové poukazy.",
     scheduledActivities: "S termínem",
     openActivity: "Otevřít aktivitu",
+    details: "Podrobnosti",
+    giftCertificateTitle: "Dárkový poukaz",
     addPlannedActivity: "Přidat plánovanou aktivitu",
     addGiftCertificate: "Vytvořit dárkový poukaz",
     activityCreateLater: "Vytváření z této stránky bude zapnuto spolu se zvláštní šablonou aktivity.",
@@ -520,31 +537,22 @@ function formatDate(value: string | null, locale: LocaleCode) {
   }).format(parsed);
 }
 
-function formatActivitySchedule(
-  activity: PlannedActivityRow,
-  locale: LocaleCode,
+function formatActivityTitle(
+  title: string,
+  isGiftCertificate: boolean,
+  copy: Copy,
 ) {
-  if (activity.schedule_mode_code === "exact") {
-    const start = formatDate(activity.started_at, locale);
-    const end = formatDate(activity.ended_at, locale);
-    return end === "—" ? start : `${start} — ${end}`;
+  if (!isGiftCertificate) {
+    return title;
   }
 
-  if (activity.schedule_mode_code === "date_only") {
-    return activity.scheduled_date || "—";
+  const technicalPrefix = /^Gift certificate:\s*/i;
+
+  if (!technicalPrefix.test(title)) {
+    return title;
   }
 
-  if (activity.schedule_mode_code === "date_range") {
-    return [activity.schedule_start_date, activity.schedule_end_date]
-      .filter(Boolean)
-      .join(" — ") || "—";
-  }
-
-  if (activity.schedule_mode_code === "deadline") {
-    return formatDate(activity.deadline_at, locale);
-  }
-
-  return "—";
+  return `${copy.giftCertificateTitle}: ${title.replace(technicalPrefix, "")}`;
 }
 
 export default async function ValueObjectDetailPage({
@@ -976,10 +984,7 @@ export default async function ValueObjectDetailPage({
               <>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
-                      planned_target
-                    </div>
-                    <h2 className="mt-2 text-[22px] font-bold text-[#111827]">
+                    <h2 className="text-[22px] font-bold text-[#111827]">
                       {activitySectionTitle}
                     </h2>
                   </div>
@@ -1024,7 +1029,11 @@ export default async function ValueObjectDetailPage({
                               {activity.status} · {activity.schedule_mode_code || "unscheduled"}
                             </div>
                             <div className="mt-1 text-[16px] font-bold text-[#111827]">
-                              {activity.title}
+                              {formatActivityTitle(
+                                activity.title,
+                                isProductOrService,
+                                copy,
+                              )}
                             </div>
                             {activity.description ? (
                               <div className="mt-2 text-[13px] leading-5 text-[#5a5f7a]">
@@ -1032,11 +1041,20 @@ export default async function ValueObjectDetailPage({
                               </div>
                             ) : null}
                             <div className="mt-2 text-[12px] font-semibold text-[#5a5f7a]">
-                              {formatActivitySchedule(activity, locale)}
+                              <ActivityScheduleDisplay
+                                locale={locale}
+                                scheduleModeCode={activity.schedule_mode_code}
+                                scheduledDate={activity.scheduled_date}
+                                scheduleStartDate={activity.schedule_start_date}
+                                scheduleEndDate={activity.schedule_end_date}
+                                deadlineAt={activity.deadline_at}
+                                startedAt={activity.started_at}
+                                endedAt={activity.ended_at}
+                              />
                             </div>
                           </div>
                           <span className="text-[12px] font-bold text-[#3b6ef8]">
-                            {copy.openActivity}
+                            {isProductOrService ? copy.details : copy.openActivity}
                           </span>
                         </div>
                       </Link>
