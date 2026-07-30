@@ -8,6 +8,7 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import { ActivityScheduleDisplay } from "../../value-objects/[id]/activity-schedule-display";
+import { PublishGiftCertificateButton } from "./publish-gift-certificate-button";
 
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
@@ -30,6 +31,7 @@ type GiftCertificateTermsRow = {
   provider_type: "personal" | "avatar" | "organization";
   delivery_mode: string;
   lifecycle_status: string;
+  published_at: string | null;
   available_from: string;
   available_until: string;
   regular_price_snapshot: number | string;
@@ -137,7 +139,7 @@ const COPY: Record<LocaleCode, Copy> = {
     backToObject: "Back to product or service",
     draftNoticeTitle: "This is still a draft",
     draftNoticeBody:
-      "The certificate is not public, has no recipient and does not debit POINTS. Publication and ordering will be added in the next controlled steps.",
+      "Review the details below before publication. Publishing marks the certificate as available, but does not assign a recipient, debit POINTS, award reputation, or create a public code or QR.",
     status: "Status",
     provider: "Provider",
     providerType: "Provider type",
@@ -181,7 +183,7 @@ const COPY: Record<LocaleCode, Copy> = {
     backToObject: "Wróć do produktu lub usługi",
     draftNoticeTitle: "To nadal jest szkic",
     draftNoticeBody:
-      "Bon nie jest publiczny, nie ma odbiorcy i nie obciąża POINTS. Publikowanie i zamawianie zostaną dodane w kolejnych kontrolowanych krokach.",
+      "Przed publikacją sprawdź poniższe dane. Publikacja oznacza bon jako dostępny, ale nie przypisuje odbiorcy, nie pobiera POINTS, nie przyznaje reputacji i nie tworzy kodu publicznego ani QR.",
     status: "Status",
     provider: "Dostawca",
     providerType: "Typ dostawcy",
@@ -225,7 +227,7 @@ const COPY: Record<LocaleCode, Copy> = {
     backToObject: "Назад к товару или услуге",
     draftNoticeTitle: "Это пока черновик",
     draftNoticeBody:
-      "Сертификат не опубликован, у него нет получателя и POINTS не списываются. Публикация и заказ будут добавлены следующими контролируемыми шагами.",
+      "Перед публикацией проверьте данные ниже. Публикация отметит сертификат как доступный, но не назначит получателя, не спишет POINTS, не начислит репутацию и не создаст публичный код или QR.",
     status: "Состояние",
     provider: "Предоставляющий",
     providerType: "Вид предоставляющего",
@@ -269,7 +271,7 @@ const COPY: Record<LocaleCode, Copy> = {
     backToObject: "Назад до товару або послуги",
     draftNoticeTitle: "Це поки що чернетка",
     draftNoticeBody:
-      "Сертифікат не опублікований, у нього немає отримувача і POINTS не списуються. Публікацію та замовлення буде додано наступними контрольованими кроками.",
+      "Перед публікацією перевірте дані нижче. Публікація позначить сертифікат як доступний, але не призначить отримувача, не спише POINTS, не нарахує репутацію і не створить публічний код або QR.",
     status: "Стан",
     provider: "Надавач",
     providerType: "Вид надавача",
@@ -313,7 +315,7 @@ const COPY: Record<LocaleCode, Copy> = {
     backToObject: "Zurück zum Produkt oder zur Dienstleistung",
     draftNoticeTitle: "Dies ist noch ein Entwurf",
     draftNoticeBody:
-      "Der Gutschein ist nicht veröffentlicht, hat keinen Empfänger und belastet keine POINTS. Veröffentlichung und Bestellung folgen in den nächsten kontrollierten Schritten.",
+      "Prüfen Sie vor der Veröffentlichung die folgenden Angaben. Die Veröffentlichung markiert den Gutschein als verfügbar, weist aber keinen Empfänger zu, bucht keine POINTS ab, schreibt keine Reputation gut und erzeugt keinen öffentlichen Code oder QR.",
     status: "Status",
     provider: "Anbieter",
     providerType: "Anbietertyp",
@@ -357,7 +359,7 @@ const COPY: Record<LocaleCode, Copy> = {
     backToObject: "Volver al producto o servicio",
     draftNoticeTitle: "Esto todavía es un borrador",
     draftNoticeBody:
-      "El certificado no es público, no tiene destinatario y no descuenta POINTS. La publicación y el pedido se añadirán en los siguientes pasos controlados.",
+      "Revise los datos antes de publicar. La publicación marca el certificado como disponible, pero no asigna destinatario, no descuenta POINTS, no otorga reputación y no genera código público ni QR.",
     status: "Estado",
     provider: "Proveedor",
     providerType: "Tipo de proveedor",
@@ -401,7 +403,7 @@ const COPY: Record<LocaleCode, Copy> = {
     backToObject: "Zpět k produktu nebo službě",
     draftNoticeTitle: "Toto je zatím koncept",
     draftNoticeBody:
-      "Certifikát není veřejný, nemá příjemce a neodečítá POINTS. Publikování a objednání budou přidány v dalších řízených krocích.",
+      "Před publikováním zkontrolujte údaje níže. Publikování označí certifikát jako dostupný, ale nepřiřadí příjemce, neodečte POINTS, nepřipíše reputaci a nevytvoří veřejný kód ani QR.",
     status: "Stav",
     provider: "Poskytovatel",
     providerType: "Typ poskytovatele",
@@ -438,6 +440,72 @@ const COPY: Record<LocaleCode, Copy> = {
       "Peněžní doplatek se hradí mimo ARCTor. ARCTor peněžní platbu nepřijímá ani nepotvrzuje.",
     createdAt: "Vytvořeno",
     updatedAt: "Aktualizováno",
+  },
+};
+
+type PublicationCopy = {
+  availableTitle: string;
+  availableBody: string;
+  publishedAt: string;
+  pointsNotice: string;
+};
+
+const PUBLICATION_COPY: Record<LocaleCode, PublicationCopy> = {
+  en: {
+    availableTitle: "The certificate is published",
+    availableBody:
+      "It is marked as available. The public catalogue and ordering action will be connected in the next controlled step. There is no recipient, POINTS debit, reputation award, public code or QR yet.",
+    publishedAt: "Published",
+    pointsNotice:
+      "Publication does not debit POINTS. POINTS will be burned only when a user orders the certificate; only then will the provider receive reputation and the recipient, public code and QR be created.",
+  },
+  pl: {
+    availableTitle: "Bon został opublikowany",
+    availableBody:
+      "Jest oznaczony jako dostępny. Publiczny katalog i zamawianie zostaną podłączone w następnym kontrolowanym kroku. Nie ma jeszcze odbiorcy, pobrania POINTS, reputacji, kodu publicznego ani QR.",
+    publishedAt: "Opublikowano",
+    pointsNotice:
+      "Publikacja nie pobiera POINTS. POINTS zostaną zniszczone dopiero przy zamówieniu bonu; wtedy dostawca otrzyma reputację oraz zostaną utworzone odbiorca, kod publiczny i QR.",
+  },
+  ru: {
+    availableTitle: "Сертификат опубликован",
+    availableBody:
+      "Он отмечен как доступный. Публичный каталог и заказ будут подключены следующим контролируемым шагом. Получателя, списания POINTS, начисления репутации, публичного кода и QR пока нет.",
+    publishedAt: "Опубликован",
+    pointsNotice:
+      "Публикация не списывает POINTS. POINTS будут уничтожены только при заказе сертификата; тогда предоставляющему начислится репутация и будут созданы получатель, публичный код и QR.",
+  },
+  uk: {
+    availableTitle: "Сертифікат опубліковано",
+    availableBody:
+      "Його позначено як доступний. Публічний каталог і замовлення буде підключено наступним контрольованим кроком. Отримувача, списання POINTS, нарахування репутації, публічного коду та QR поки немає.",
+    publishedAt: "Опубліковано",
+    pointsNotice:
+      "Публікація не списує POINTS. POINTS буде знищено лише під час замовлення сертифіката; тоді надавачу нарахують репутацію та створять отримувача, публічний код і QR.",
+  },
+  de: {
+    availableTitle: "Der Gutschein ist veröffentlicht",
+    availableBody:
+      "Er ist als verfügbar markiert. Der öffentliche Katalog und die Bestellung werden im nächsten kontrollierten Schritt angeschlossen. Es gibt noch keinen Empfänger, keine POINTS-Abbuchung, keine Reputationsgutschrift, keinen öffentlichen Code und keinen QR.",
+    publishedAt: "Veröffentlicht",
+    pointsNotice:
+      "Die Veröffentlichung bucht keine POINTS ab. POINTS werden erst bei einer Bestellung verbrannt; dann erhält der Anbieter Reputation und Empfänger, öffentlicher Code und QR werden erzeugt.",
+  },
+  es: {
+    availableTitle: "El certificado está publicado",
+    availableBody:
+      "Está marcado como disponible. El catálogo público y el pedido se conectarán en el siguiente paso controlado. Todavía no hay destinatario, descuento de POINTS, reputación, código público ni QR.",
+    publishedAt: "Publicado",
+    pointsNotice:
+      "La publicación no descuenta POINTS. Los POINTS solo se destruirán cuando un usuario pida el certificado; entonces el proveedor recibirá reputación y se crearán el destinatario, el código público y el QR.",
+  },
+  cs: {
+    availableTitle: "Certifikát je publikován",
+    availableBody:
+      "Je označen jako dostupný. Veřejný katalog a objednání budou připojeny v dalším řízeném kroku. Zatím není příjemce, odečet POINTS, připsání reputace, veřejný kód ani QR.",
+    publishedAt: "Publikováno",
+    pointsNotice:
+      "Publikování neodečte POINTS. POINTS budou zničeny až při objednání certifikátu; tehdy poskytovatel získá reputaci a vytvoří se příjemce, veřejný kód a QR.",
   },
 };
 
@@ -698,6 +766,7 @@ export default async function GiftCertificateDetailsPage({
       provider_type,
       delivery_mode,
       lifecycle_status,
+      published_at,
       available_from,
       available_until,
       regular_price_snapshot,
@@ -888,6 +957,29 @@ export default async function GiftCertificateDetailsPage({
             <p className="mt-2 text-[13px] leading-6 text-[#72551d]">
               {copy.draftNoticeBody}
             </p>
+            <div className="mt-4">
+              <PublishGiftCertificateButton
+                activityEventId={terms.activity_event_id}
+                locale={locale}
+              />
+            </div>
+          </section>
+        ) : null}
+
+        {terms.lifecycle_status === "available" ? (
+          <section className="rounded-[24px] border border-[#b7e4c7] bg-[#f4fbf6] p-5">
+            <div className="text-[14px] font-bold text-[#166534]">
+              {PUBLICATION_COPY[locale].availableTitle}
+            </div>
+            <p className="mt-2 text-[13px] leading-6 text-[#42604a]">
+              {PUBLICATION_COPY[locale].availableBody}
+            </p>
+            {terms.published_at ? (
+              <div className="mt-3 text-[12px] font-semibold text-[#42604a]">
+                {PUBLICATION_COPY[locale].publishedAt}:{" "}
+                {formatDateTime(terms.published_at, locale)}
+              </div>
+            ) : null}
           </section>
         ) : null}
 
@@ -1008,7 +1100,11 @@ export default async function GiftCertificateDetailsPage({
         </section>
 
         <section className="grid gap-3 rounded-[24px] border border-[#d9e2ff] bg-[#f4f7ff] p-5 text-[13px] leading-6 text-[#42507a]">
-          <p>{copy.pointsNotice}</p>
+          <p>
+            {terms.lifecycle_status === "draft"
+              ? copy.pointsNotice
+              : PUBLICATION_COPY[locale].pointsNotice}
+          </p>
           <p>{copy.outsidePaymentNotice}</p>
         </section>
       </div>
