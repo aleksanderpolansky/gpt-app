@@ -63,6 +63,21 @@ type CriterionRow = {
   status: string;
 };
 
+type PlannedActivityRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  schedule_mode_code: string | null;
+  scheduled_date: string | null;
+  schedule_start_date: string | null;
+  schedule_end_date: string | null;
+  deadline_at: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  updated_at: string | null;
+};
+
 type Copy = {
   rootEyebrow: string;
   leafEyebrow: string;
@@ -89,6 +104,15 @@ type Copy = {
   sensitivity: string;
   children: string;
   noChildren: string;
+  plannedActivities: string;
+  giftCertificates: string;
+  noPlannedActivities: string;
+  noGiftCertificates: string;
+  scheduledActivities: string;
+  openActivity: string;
+  addPlannedActivity: string;
+  addGiftCertificate: string;
+  activityCreateLater: string;
   criteria: string;
   noCriteria: string;
   relations: string;
@@ -105,7 +129,7 @@ type Copy = {
 const COPY: Record<LocaleCode, Copy> = {
   en: {
     rootEyebrow: "Root observation object",
-    leafEyebrow: "Activity observation leaf",
+    leafEyebrow: "Leaf observation object",
     intermediateEyebrow: "Intermediate observation object",
     path: "Path",
     genericEyebrow: "Observation object",
@@ -129,6 +153,15 @@ const COPY: Record<LocaleCode, Copy> = {
     sensitivity: "Sensitivity",
     children: "Children tree",
     noChildren: "This object has no child objects yet.",
+    plannedActivities: "Planned activities",
+    giftCertificates: "Gift certificates",
+    noPlannedActivities: "No planned activities are linked to this object yet.",
+    noGiftCertificates: "No gift certificates have been created for this product or service yet.",
+    scheduledActivities: "With dates",
+    openActivity: "Open activity",
+    addPlannedActivity: "Add planned activity",
+    addGiftCertificate: "Create gift certificate",
+    activityCreateLater: "Creation from this card will be enabled with the dedicated activity template.",
     criteria: "Outcome criteria",
     noCriteria: "No success or failure criteria have been added yet.",
     relations: "Semantic relations",
@@ -143,7 +176,7 @@ const COPY: Record<LocaleCode, Copy> = {
   },
   pl: {
     rootEyebrow: "Korzeniowy obiekt obserwacji",
-    leafEyebrow: "Liść obserwacji aktywności",
+    leafEyebrow: "Liściowy obiekt obserwacji",
     intermediateEyebrow: "Pośredni obiekt obserwacji",
     path: "Ścieżka",
     genericEyebrow: "Obiekt obserwacji",
@@ -167,6 +200,15 @@ const COPY: Record<LocaleCode, Copy> = {
     sensitivity: "Wrażliwość",
     children: "Drzewo obiektów podrzędnych",
     noChildren: "Ten obiekt nie ma jeszcze obiektów podrzędnych.",
+    plannedActivities: "Planowane aktywności",
+    giftCertificates: "Bony podarunkowe",
+    noPlannedActivities: "Z tym obiektem nie powiązano jeszcze żadnych planowanych aktywności.",
+    noGiftCertificates: "Dla tego produktu lub usługi nie utworzono jeszcze bonów podarunkowych.",
+    scheduledActivities: "Z terminem",
+    openActivity: "Otwórz aktywność",
+    addPlannedActivity: "Dodaj planowaną aktywność",
+    addGiftCertificate: "Utwórz bon podarunkowy",
+    activityCreateLater: "Tworzenie z tej karty zostanie włączone wraz z dedykowanym szablonem aktywności.",
     criteria: "Kryteria wyniku",
     noCriteria: "Nie dodano jeszcze kryteriów sukcesu ani porażki.",
     relations: "Relacje semantyczne",
@@ -181,7 +223,7 @@ const COPY: Record<LocaleCode, Copy> = {
   },
   ru: {
     rootEyebrow: "Корневой объект наблюдения",
-    leafEyebrow: "Лист наблюдения активности",
+    leafEyebrow: "Листовой объект наблюдения",
     intermediateEyebrow: "Промежуточный объект наблюдения",
     path: "Путь",
     genericEyebrow: "Объект наблюдения",
@@ -205,6 +247,15 @@ const COPY: Record<LocaleCode, Copy> = {
     sensitivity: "Чувствительность",
     children: "Дерево дочерних объектов",
     noChildren: "У этого объекта пока нет дочерних объектов.",
+    plannedActivities: "Запланированные активности",
+    giftCertificates: "Подарочные сертификаты",
+    noPlannedActivities: "С этим объектом пока не связано ни одной запланированной активности.",
+    noGiftCertificates: "Для этого товара или услуги пока не создано ни одного подарочного сертификата.",
+    scheduledActivities: "С указанными сроками",
+    openActivity: "Открыть активность",
+    addPlannedActivity: "Добавить плановую активность",
+    addGiftCertificate: "Создать подарочный сертификат",
+    activityCreateLater: "Создание с этой страницы будет включено вместе со специальным шаблоном активности.",
     criteria: "Критерии результата",
     noCriteria: "Критерии успеха и провала пока не добавлены.",
     relations: "Семантические связи",
@@ -219,7 +270,7 @@ const COPY: Record<LocaleCode, Copy> = {
   },
   uk: {
     rootEyebrow: "Кореневий об’єкт спостереження",
-    leafEyebrow: "Листок спостереження активності",
+    leafEyebrow: "Листовий об’єкт спостереження",
     intermediateEyebrow: "Проміжний об’єкт спостереження",
     path: "Шлях",
     genericEyebrow: "Об’єкт спостереження",
@@ -243,6 +294,15 @@ const COPY: Record<LocaleCode, Copy> = {
     sensitivity: "Чутливість",
     children: "Дерево дочірніх об’єктів",
     noChildren: "Цей об’єкт поки не має дочірніх об’єктів.",
+    plannedActivities: "Заплановані активності",
+    giftCertificates: "Подарункові сертифікати",
+    noPlannedActivities: "Із цим об’єктом поки не пов’язано жодної запланованої активності.",
+    noGiftCertificates: "Для цього товару або послуги ще не створено подарункових сертифікатів.",
+    scheduledActivities: "Із зазначеними строками",
+    openActivity: "Відкрити активність",
+    addPlannedActivity: "Додати заплановану активність",
+    addGiftCertificate: "Створити подарунковий сертифікат",
+    activityCreateLater: "Створення з цієї сторінки буде ввімкнено разом зі спеціальним шаблоном активності.",
     criteria: "Критерії результату",
     noCriteria: "Критерії успіху та провалу ще не додані.",
     relations: "Семантичні зв’язки",
@@ -257,7 +317,7 @@ const COPY: Record<LocaleCode, Copy> = {
   },
   de: {
     rootEyebrow: "Wurzel-Beobachtungsobjekt",
-    leafEyebrow: "Aktivitäts-Beobachtungsblatt",
+    leafEyebrow: "Blatt-Beobachtungsobjekt",
     intermediateEyebrow: "Zwischen-Beobachtungsobjekt",
     path: "Pfad",
     genericEyebrow: "Beobachtungsobjekt",
@@ -281,6 +341,15 @@ const COPY: Record<LocaleCode, Copy> = {
     sensitivity: "Sensibilität",
     children: "Baum der untergeordneten Objekte",
     noChildren: "Dieses Objekt hat noch keine untergeordneten Objekte.",
+    plannedActivities: "Geplante Aktivitäten",
+    giftCertificates: "Geschenkgutscheine",
+    noPlannedActivities: "Mit diesem Objekt sind noch keine geplanten Aktivitäten verknüpft.",
+    noGiftCertificates: "Für dieses Produkt oder diese Dienstleistung wurden noch keine Geschenkgutscheine erstellt.",
+    scheduledActivities: "Mit Termin",
+    openActivity: "Aktivität öffnen",
+    addPlannedActivity: "Geplante Aktivität hinzufügen",
+    addGiftCertificate: "Geschenkgutschein erstellen",
+    activityCreateLater: "Die Erstellung von dieser Seite wird mit der speziellen Aktivitätsvorlage aktiviert.",
     criteria: "Ergebniskriterien",
     noCriteria: "Es wurden noch keine Erfolgs- oder Misserfolgskriterien hinzugefügt.",
     relations: "Semantische Beziehungen",
@@ -295,7 +364,7 @@ const COPY: Record<LocaleCode, Copy> = {
   },
   es: {
     rootEyebrow: "Objeto raíz de observación",
-    leafEyebrow: "Hoja de observación de actividad",
+    leafEyebrow: "Objeto hoja de observación",
     intermediateEyebrow: "Objeto intermedio de observación",
     path: "Ruta",
     genericEyebrow: "Objeto de observación",
@@ -319,6 +388,15 @@ const COPY: Record<LocaleCode, Copy> = {
     sensitivity: "Sensibilidad",
     children: "Árbol de objetos hijos",
     noChildren: "Este objeto todavía no tiene objetos hijos.",
+    plannedActivities: "Actividades planificadas",
+    giftCertificates: "Certificados de regalo",
+    noPlannedActivities: "Todavía no hay actividades planificadas vinculadas a este objeto.",
+    noGiftCertificates: "Todavía no se han creado certificados de regalo para este producto o servicio.",
+    scheduledActivities: "Con fechas",
+    openActivity: "Abrir actividad",
+    addPlannedActivity: "Añadir actividad planificada",
+    addGiftCertificate: "Crear certificado de regalo",
+    activityCreateLater: "La creación desde esta página se habilitará junto con la plantilla de actividad específica.",
     criteria: "Criterios de resultado",
     noCriteria: "Todavía no se han añadido criterios de éxito o fracaso.",
     relations: "Relaciones semánticas",
@@ -333,7 +411,7 @@ const COPY: Record<LocaleCode, Copy> = {
   },
   cs: {
     rootEyebrow: "Kořenový objekt pozorování",
-    leafEyebrow: "List pozorování aktivity",
+    leafEyebrow: "Listový objekt pozorování",
     intermediateEyebrow: "Mezilehlý objekt pozorování",
     path: "Cesta",
     genericEyebrow: "Objekt pozorování",
@@ -357,6 +435,15 @@ const COPY: Record<LocaleCode, Copy> = {
     sensitivity: "Citlivost",
     children: "Strom podřízených objektů",
     noChildren: "Tento objekt zatím nemá podřízené objekty.",
+    plannedActivities: "Plánované aktivity",
+    giftCertificates: "Dárkové poukazy",
+    noPlannedActivities: "K tomuto objektu zatím nejsou připojeny žádné plánované aktivity.",
+    noGiftCertificates: "Pro tento produkt nebo službu zatím nebyly vytvořeny žádné dárkové poukazy.",
+    scheduledActivities: "S termínem",
+    openActivity: "Otevřít aktivitu",
+    addPlannedActivity: "Přidat plánovanou aktivitu",
+    addGiftCertificate: "Vytvořit dárkový poukaz",
+    activityCreateLater: "Vytváření z této stránky bude zapnuto spolu se zvláštní šablonou aktivity.",
     criteria: "Kritéria výsledku",
     noCriteria: "Kritéria úspěchu ani neúspěchu zatím nebyla přidána.",
     relations: "Sémantické vztahy",
@@ -396,6 +483,16 @@ function buildLocaleHref(pathname: string, locale: LocaleCode) {
   return `${pathname}?locale=${encodeURIComponent(locale)}`;
 }
 
+function buildActivityHref(activityEventId: string, locale: LocaleCode) {
+  const searchParams = new URLSearchParams({ activityEventId });
+
+  if (locale !== "en") {
+    searchParams.set("locale", locale);
+  }
+
+  return `/activity-today?${searchParams.toString()}`;
+}
+
 function formatDate(value: string | null, locale: LocaleCode) {
   if (!value) {
     return "—";
@@ -421,6 +518,33 @@ function formatDate(value: string | null, locale: LocaleCode) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(parsed);
+}
+
+function formatActivitySchedule(
+  activity: PlannedActivityRow,
+  locale: LocaleCode,
+) {
+  if (activity.schedule_mode_code === "exact") {
+    const start = formatDate(activity.started_at, locale);
+    const end = formatDate(activity.ended_at, locale);
+    return end === "—" ? start : `${start} — ${end}`;
+  }
+
+  if (activity.schedule_mode_code === "date_only") {
+    return activity.scheduled_date || "—";
+  }
+
+  if (activity.schedule_mode_code === "date_range") {
+    return [activity.schedule_start_date, activity.schedule_end_date]
+      .filter(Boolean)
+      .join(" — ") || "—";
+  }
+
+  if (activity.schedule_mode_code === "deadline") {
+    return formatDate(activity.deadline_at, locale);
+  }
+
+  return "—";
 }
 
 export default async function ValueObjectDetailPage({
@@ -585,6 +709,84 @@ export default async function ValueObjectDetailPage({
     valueObject.node_role_code === "structural" &&
     isValueObjectStructuralKindV2(valueObject.object_kind) &&
     (valueObject.status === "draft" || valueObject.status === "active");
+  const isProductOrService =
+    valueObject.object_kind === "product_type" ||
+    valueObject.object_kind === "service_type";
+
+  let plannedActivities: PlannedActivityRow[] = [];
+
+  if (isLeaf) {
+    const { data: linkData, error: linkError } = await supabase
+      .from("activity_value_object_links")
+      .select("activity_event_id,created_at")
+      .eq("app_user_id", actorContext.appUserId)
+      .eq("actor_id", actorContext.actorId)
+      .eq("value_object_id", valueObject.id)
+      .eq("link_type", "planned_target")
+      .eq("status", "active")
+      .order("created_at", { ascending: false });
+
+    if (linkError) {
+      throw new Error(linkError.message);
+    }
+
+    const linkedActivityIds = Array.from(
+      new Set(
+        (linkData ?? [])
+          .map((link) => link.activity_event_id)
+          .filter((activityEventId): activityEventId is string =>
+            typeof activityEventId === "string" && activityEventId.length > 0,
+          ),
+      ),
+    );
+
+    if (linkedActivityIds.length > 0) {
+      const { data: activityData, error: activityError } = await supabase
+        .from("activity_events")
+        .select(
+          `
+          id,
+          title,
+          description,
+          status,
+          schedule_mode_code,
+          scheduled_date,
+          schedule_start_date,
+          schedule_end_date,
+          deadline_at,
+          started_at,
+          ended_at,
+          updated_at
+        `,
+        )
+        .eq("user_id", actorContext.appUserId)
+        .eq("acting_as_actor_id", actorContext.actorId)
+        .eq("activity_role_code", "planned")
+        .in("id", linkedActivityIds)
+        .order("updated_at", { ascending: false });
+
+      if (activityError) {
+        throw new Error(activityError.message);
+      }
+
+      plannedActivities = (activityData ?? []) as PlannedActivityRow[];
+    }
+  }
+
+  const activitySectionTitle = isProductOrService
+    ? copy.giftCertificates
+    : copy.plannedActivities;
+  const activityEmptyText = isProductOrService
+    ? copy.noGiftCertificates
+    : copy.noPlannedActivities;
+  const activityCreateLabel = isProductOrService
+    ? copy.addGiftCertificate
+    : copy.addPlannedActivity;
+  const activitiesWithSchedule = plannedActivities.filter(
+    (activity) =>
+      activity.schedule_mode_code &&
+      activity.schedule_mode_code !== "unscheduled",
+  ).length;
 
   function countLeafDescendants(parentId: string): number {
     const children = childrenByParent.get(parentId) ?? [];
@@ -728,18 +930,18 @@ export default async function ValueObjectDetailPage({
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
             <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-              {copy.directChildren}
+              {isLeaf ? activitySectionTitle : copy.directChildren}
             </div>
             <div className="mt-2 text-[28px] font-bold text-[#111827]">
-              {directChildren.length}
+              {isLeaf ? plannedActivities.length : directChildren.length}
             </div>
           </div>
           <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
             <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-              {copy.descendantLeaves}
+              {isLeaf ? copy.scheduledActivities : copy.descendantLeaves}
             </div>
             <div className="mt-2 text-[28px] font-bold text-[#111827]">
-              {descendantLeafCount}
+              {isLeaf ? activitiesWithSchedule : descendantLeafCount}
             </div>
           </div>
           <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
@@ -770,69 +972,114 @@ export default async function ValueObjectDetailPage({
 
         <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
           <div className="rounded-[26px] border border-black/[0.07] bg-white p-6 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
-                  part_of
+            {isLeaf ? (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
+                      planned_target
+                    </div>
+                    <h2 className="mt-2 text-[22px] font-bold text-[#111827]">
+                      {activitySectionTitle}
+                    </h2>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled
+                    title={copy.activityCreateLater}
+                    className="inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] opacity-45"
+                  >
+                    {activityCreateLabel}
+                  </button>
                 </div>
-                <h2 className="mt-2 text-[22px] font-bold text-[#111827]">
-                  {copy.children}
-                </h2>
-              </div>
 
-              <div className="flex flex-wrap justify-end gap-2">
-                {isStructural ? (
-                  <>
-                    <Link
-                      href={buildLocaleHref(
-                        `/value-objects/${valueObject.id}/new-intermediate`,
-                        locale,
-                      )}
-                      className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#eadcff] bg-[#f7f1ff] px-4 py-2 text-[13px] font-bold text-[#8b5cf6] transition hover:border-[#cdb7ff] hover:bg-[#f1e9ff]"
-                    >
-                      {copy.addIntermediate}
-                    </Link>
-                    <Link
-                      href={buildLocaleHref(
-                        `/value-objects/${valueObject.id}/new-leaf`,
-                        locale,
-                      )}
-                      className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] transition hover:border-[#aebfff] hover:bg-[#e8edff]"
-                    >
-                      {copy.addLeaf}
-                    </Link>
-                  </>
+                {plannedActivities.length === 0 ? (
+                  <div className="mt-5 rounded-2xl border border-dashed border-[#c9d5ff] bg-[#f7f9ff] p-5 text-[14px] leading-6 text-[#5a5f7a]">
+                    {activityEmptyText}
+                  </div>
                 ) : (
-                  <>
-                    <button
-                      type="button"
-                      disabled
-                      title={copy.addIntermediateLater}
-                      className="inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-xl border border-[#eadcff] bg-[#f7f1ff] px-4 py-2 text-[13px] font-bold text-[#8b5cf6] opacity-45"
-                    >
-                      {copy.addIntermediate}
-                    </button>
-                    <button
-                      type="button"
-                      disabled
-                      title={copy.addLeafLater}
-                      className="inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] opacity-45"
-                    >
-                      {copy.addLeaf}
-                    </button>
-                  </>
+                  <div className="mt-5 grid gap-3">
+                    {plannedActivities.map((activity) => (
+                      <Link
+                        key={activity.id}
+                        href={buildActivityHref(activity.id, locale)}
+                        className="rounded-2xl border border-[#e5e7eb] bg-[#fafbff] p-4 transition hover:border-[#c9d5ff] hover:bg-[#f5f7ff]"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#7c8099]">
+                              {activity.status} · {activity.schedule_mode_code || "unscheduled"}
+                            </div>
+                            <div className="mt-1 text-[16px] font-bold text-[#111827]">
+                              {activity.title}
+                            </div>
+                            {activity.description ? (
+                              <div className="mt-2 text-[13px] leading-5 text-[#5a5f7a]">
+                                {activity.description}
+                              </div>
+                            ) : null}
+                            <div className="mt-2 text-[12px] font-semibold text-[#5a5f7a]">
+                              {formatActivitySchedule(activity, locale)}
+                            </div>
+                          </div>
+                          <span className="text-[12px] font-bold text-[#3b6ef8]">
+                            {copy.openActivity}
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
                 )}
-              </div>
-            </div>
-
-            {directChildren.length === 0 ? (
-              <div className="mt-5 rounded-2xl border border-dashed border-[#c9d5ff] bg-[#f7f9ff] p-5 text-[14px] leading-6 text-[#5a5f7a]">
-                {copy.noChildren}
-              </div>
+              </>
             ) : (
-              <div className="mt-5 grid gap-3">
-                {renderSubtree(valueObject.id)}
-              </div>
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
+                      part_of
+                    </div>
+                    <h2 className="mt-2 text-[22px] font-bold text-[#111827]">
+                      {copy.children}
+                    </h2>
+                  </div>
+
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {isStructural ? (
+                      <>
+                        <Link
+                          href={buildLocaleHref(
+                            `/value-objects/${valueObject.id}/new-intermediate`,
+                            locale,
+                          )}
+                          className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#eadcff] bg-[#f7f1ff] px-4 py-2 text-[13px] font-bold text-[#8b5cf6] transition hover:border-[#cdb7ff] hover:bg-[#f1e9ff]"
+                        >
+                          {copy.addIntermediate}
+                        </Link>
+                        <Link
+                          href={buildLocaleHref(
+                            `/value-objects/${valueObject.id}/new-leaf`,
+                            locale,
+                          )}
+                          className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] transition hover:border-[#aebfff] hover:bg-[#e8edff]"
+                        >
+                          {copy.addLeaf}
+                        </Link>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+
+                {directChildren.length === 0 ? (
+                  <div className="mt-5 rounded-2xl border border-dashed border-[#c9d5ff] bg-[#f7f9ff] p-5 text-[14px] leading-6 text-[#5a5f7a]">
+                    {copy.noChildren}
+                  </div>
+                ) : (
+                  <div className="mt-5 grid gap-3">
+                    {renderSubtree(valueObject.id)}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
