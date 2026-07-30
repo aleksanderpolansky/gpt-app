@@ -812,8 +812,8 @@ export function FigmaDashboardContent() {
           accent="#3b6ef8"
           icon={Star}
           trend={pointsTrend}
-          valueHref="/points/transactions"
-          trendHref="/points/transactions"
+          valueHref={`/points/transactions?locale=${locale}`}
+          trendHref={`/points/transactions?locale=${locale}`}
           historyTitle={t("dashboard.pointsHistoryTitle")}
         />
         <KpiCard
@@ -823,8 +823,8 @@ export function FigmaDashboardContent() {
           accent="#22c55e"
           icon={Award}
           trend={reputationTrend}
-          valueHref="/reputation"
-          trendHref="/reputation"
+          valueHref={`/reputation?locale=${locale}`}
+          trendHref={`/reputation?locale=${locale}`}
           historyTitle={t("dashboard.reputationHistoryTitle")}
           helpText={t("dashboard.reputationHelp")}
         />
