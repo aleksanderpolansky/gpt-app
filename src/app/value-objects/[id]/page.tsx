@@ -500,7 +500,18 @@ function buildLocaleHref(pathname: string, locale: LocaleCode) {
   return `${pathname}?locale=${encodeURIComponent(locale)}`;
 }
 
-function buildActivityHref(activityEventId: string, locale: LocaleCode) {
+function buildActivityHref(
+  activityEventId: string,
+  locale: LocaleCode,
+  isGiftCertificate: boolean,
+) {
+  if (isGiftCertificate) {
+    return buildLocaleHref(
+      `/gift-certificates/${activityEventId}`,
+      locale,
+    );
+  }
+
   const searchParams = new URLSearchParams({ activityEventId });
 
   if (locale !== "en") {
@@ -1020,7 +1031,11 @@ export default async function ValueObjectDetailPage({
                     {plannedActivities.map((activity) => (
                       <Link
                         key={activity.id}
-                        href={buildActivityHref(activity.id, locale)}
+                        href={buildActivityHref(
+                          activity.id,
+                          locale,
+                          isProductOrService,
+                        )}
                         className="rounded-2xl border border-[#e5e7eb] bg-[#fafbff] p-4 transition hover:border-[#c9d5ff] hover:bg-[#f5f7ff]"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
