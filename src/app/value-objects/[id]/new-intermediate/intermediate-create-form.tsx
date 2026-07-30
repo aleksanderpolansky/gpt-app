@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import {
-  VALUE_OBJECT_KINDS_V2,
+  VALUE_OBJECT_STRUCTURAL_KINDS_V2,
   type ValueObjectKindV2,
 } from "@/types/reality-core/reality-core-contracts-v2";
 
@@ -260,9 +260,7 @@ type IntermediateCreateResponse = {
   redirectUrl?: string;
 };
 
-const STRUCTURAL_OBJECT_KINDS = VALUE_OBJECT_KINDS_V2.filter(
-  (value): value is ValueObjectKindV2 => value !== "activity_pattern",
-);
+const STRUCTURAL_OBJECT_KINDS = VALUE_OBJECT_STRUCTURAL_KINDS_V2;
 
 function humanizeCode(value: string) {
   return value

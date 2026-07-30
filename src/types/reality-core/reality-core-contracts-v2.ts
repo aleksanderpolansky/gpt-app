@@ -65,6 +65,43 @@ export const VALUE_OBJECT_KINDS_V2 = [
 ] as const;
 export type ValueObjectKindV2 = (typeof VALUE_OBJECT_KINDS_V2)[number];
 
+export const VALUE_OBJECT_LEAF_KINDS_V2 = [
+  "activity_pattern",
+  "product_type",
+  "service_type",
+] as const;
+export type ValueObjectLeafKindV2 =
+  (typeof VALUE_OBJECT_LEAF_KINDS_V2)[number];
+export type ValueObjectStructuralKindV2 = Exclude<
+  ValueObjectKindV2,
+  ValueObjectLeafKindV2
+>;
+
+export function isValueObjectLeafKindV2(
+  value: unknown,
+): value is ValueObjectLeafKindV2 {
+  return (
+    typeof value === "string" &&
+    (VALUE_OBJECT_LEAF_KINDS_V2 as readonly string[]).includes(value)
+  );
+}
+
+export function isValueObjectStructuralKindV2(
+  value: unknown,
+): value is ValueObjectStructuralKindV2 {
+  return (
+    typeof value === "string" &&
+    (VALUE_OBJECT_KINDS_V2 as readonly string[]).includes(value) &&
+    !isValueObjectLeafKindV2(value)
+  );
+}
+
+export const VALUE_OBJECT_STRUCTURAL_KINDS_V2 =
+  VALUE_OBJECT_KINDS_V2.filter(
+    (value): value is ValueObjectStructuralKindV2 =>
+      isValueObjectStructuralKindV2(value),
+  );
+
 export const REALITY_OBJECT_RELATION_TYPE_CODES_V2 = [
   "performs",
   "counts_toward",
@@ -162,7 +199,7 @@ export interface RealityActorContextV2 {
 export type ValueObjectTreeIdentityV2 =
   | {
       readonly nodeRoleCode: "structural";
-      readonly objectKind: ValueObjectKindV2;
+      readonly objectKind: ValueObjectStructuralKindV2;
       readonly branchTypeCode: ValueObjectBranchTypeCodeV2;
       readonly rootValueObjectId: RealityUuidV2;
       readonly parentValueObjectId: RealityUuidV2 | null;
@@ -170,7 +207,7 @@ export type ValueObjectTreeIdentityV2 =
     }
   | {
       readonly nodeRoleCode: "activity_leaf";
-      readonly objectKind: "activity_pattern";
+      readonly objectKind: ValueObjectLeafKindV2;
       readonly branchTypeCode: ValueObjectBranchTypeCodeV2;
       readonly rootValueObjectId: RealityUuidV2;
       readonly parentValueObjectId: RealityUuidV2;

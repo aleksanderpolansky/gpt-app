@@ -10,7 +10,7 @@ import {
   resolveValueObjectBranchPolicyTitle,
 } from "@/data/value-object-branch-policy-localization";
 import {
-  VALUE_OBJECT_KINDS_V2,
+  VALUE_OBJECT_STRUCTURAL_KINDS_V2,
   type ValueObjectKindV2,
 } from "@/types/reality-core/reality-core-contracts-v2";
 import type {
@@ -260,9 +260,7 @@ type RootCreateResponse = {
   redirectUrl?: string;
 };
 
-const ROOT_OBJECT_KINDS = VALUE_OBJECT_KINDS_V2.filter(
-  (value): value is ValueObjectKindV2 => value !== "activity_pattern",
-);
+const ROOT_OBJECT_KINDS = VALUE_OBJECT_STRUCTURAL_KINDS_V2;
 
 function normalizeLocale(value: string | null): LocaleCode {
   if (

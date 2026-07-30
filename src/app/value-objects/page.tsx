@@ -56,6 +56,17 @@ const LEGACY_CREATE_LABELS: Record<string, string> = {
   cs: "Starší selektor Value Object",
 };
 
+
+const CREATE_PRODUCT_SERVICE_LABELS: Record<string, string> = {
+  en: "Add product or service",
+  pl: "Dodaj produkt lub usługę",
+  ru: "Добавить товар или услугу",
+  uk: "Додати товар або послугу",
+  de: "Produkt oder Dienstleistung hinzufügen",
+  es: "Añadir producto o servicio",
+  cs: "Přidat produkt nebo službu",
+};
+
 export default async function ValueObjectsPage({
   searchParams,
 }: ValueObjectsPageProps) {
@@ -66,6 +77,10 @@ export default async function ValueObjectsPage({
 
   const createRootHref = buildLocaleAwareHref(
     "/value-objects/new/root",
+    locale,
+  );
+  const productServiceHref = buildLocaleAwareHref(
+    "/value-objects/new/product-service",
     locale,
   );
   const legacyCreateHref = buildLocaleAwareHref("/value-objects/new", locale);
@@ -83,9 +98,16 @@ export default async function ValueObjectsPage({
             </Link>
             <Link
               href={createRootHref}
-              className="rounded-full bg-[#3b6ef8] px-5 py-2 text-sm font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.22)] hover:bg-[#315fdc]"
+              className="rounded-full border border-[#c9d5ff] bg-[#f7f9ff] px-4 py-2 text-sm font-semibold text-[#3b6ef8] hover:bg-[#eef2ff]"
             >
               {CREATE_ROOT_LABELS[locale] ?? CREATE_ROOT_LABELS.en}
+            </Link>
+            <Link
+              href={productServiceHref}
+              className="rounded-full bg-[#3b6ef8] px-5 py-2 text-sm font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.22)] hover:bg-[#315fdc]"
+            >
+              {CREATE_PRODUCT_SERVICE_LABELS[locale] ??
+                CREATE_PRODUCT_SERVICE_LABELS.en}
             </Link>
           </div>
 

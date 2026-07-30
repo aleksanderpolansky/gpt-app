@@ -10,7 +10,8 @@ import {
 } from "react";
 
 import {
-  VALUE_OBJECT_KINDS_V2,
+  isValueObjectStructuralKindV2,
+  VALUE_OBJECT_STRUCTURAL_KINDS_V2,
   type ValueObjectKindV2,
 } from "@/types/reality-core/reality-core-contracts-v2";
 import type {
@@ -162,9 +163,7 @@ const COPY: Record<LocaleCode, Copy> = {
   cs: EN_COPY,
 };
 
-const STRUCTURAL_OBJECT_KINDS = VALUE_OBJECT_KINDS_V2.filter(
-  (value): value is ValueObjectKindV2 => value !== "activity_pattern",
-);
+const STRUCTURAL_OBJECT_KINDS = VALUE_OBJECT_STRUCTURAL_KINDS_V2;
 
 function buildLocaleHref(path: string, locale: LocaleCode) {
   return locale === "en" ? path : `${path}?locale=${encodeURIComponent(locale)}`;
@@ -234,10 +233,8 @@ export function ValueObjectTreeRestructureManager({
       setContext(data);
       setNewParentId(data.current.parentValueObjectId ?? "");
       setObjectKind(
-        STRUCTURAL_OBJECT_KINDS.includes(
-          data.current.objectKind as ValueObjectKindV2,
-        )
-          ? (data.current.objectKind as ValueObjectKindV2)
+        isValueObjectStructuralKindV2(data.current.objectKind)
+          ? data.current.objectKind
           : "other",
       );
     } catch (error) {

@@ -139,7 +139,8 @@ export const VALUE_OBJECT_FIELD_DECISIONS_V3 = [
     leafPolicy: "derived",
     writableByClient: false,
     writableByServer: true,
-    notes: "Leaf is always activity_pattern; structural nodes use a reviewed kind.",
+    notes:
+      "Leaf kinds are activity_pattern, product_type or service_type; structural nodes use a reviewed non-leaf kind.",
   },
   {
     fieldCode: "node_role_code",

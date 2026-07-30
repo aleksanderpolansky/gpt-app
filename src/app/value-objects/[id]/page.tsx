@@ -9,6 +9,10 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import { ValueObjectSemanticRelationsManager } from "@/components/workspace/value-objects/value-object-semantic-relations-manager";
+import {
+  isValueObjectLeafKindV2,
+  isValueObjectStructuralKindV2,
+} from "@/types/reality-core/reality-core-contracts-v2";
 
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
@@ -571,7 +575,7 @@ export default async function ValueObjectDetailPage({
     valueObject.root_value_object_id === valueObject.id;
   const isLeaf =
     valueObject.node_role_code === "activity_leaf" &&
-    valueObject.object_kind === "activity_pattern" &&
+    isValueObjectLeafKindV2(valueObject.object_kind) &&
     valueObject.parent_value_object_id !== null;
   const isIntermediate =
     valueObject.node_role_code === "structural" &&
@@ -579,7 +583,7 @@ export default async function ValueObjectDetailPage({
     valueObject.parent_value_object_id !== null;
   const isStructural =
     valueObject.node_role_code === "structural" &&
-    valueObject.object_kind !== "activity_pattern" &&
+    isValueObjectStructuralKindV2(valueObject.object_kind) &&
     (valueObject.status === "draft" || valueObject.status === "active");
 
   function countLeafDescendants(parentId: string): number {

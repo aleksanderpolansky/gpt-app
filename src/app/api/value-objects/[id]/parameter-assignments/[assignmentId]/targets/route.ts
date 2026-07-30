@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
+import { isValueObjectLeafKindV2 } from "@/types/reality-core/reality-core-contracts-v2";
 import type {
   P72B3NormalizationPolicyCode,
   P72B3PeriodUnitCode,
@@ -611,7 +612,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (
     valueObject.node_role_code !== "activity_leaf" ||
-    valueObject.object_kind !== "activity_pattern" ||
+    !isValueObjectLeafKindV2(valueObject.object_kind) ||
     valueObject.parent_value_object_id === null
   ) {
     return errorResponse({

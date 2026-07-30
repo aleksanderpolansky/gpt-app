@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { isValueObjectStructuralKindV2 } from "@/types/reality-core/reality-core-contracts-v2";
 import {
   ActorContextError,
   resolveActiveActorContext,
@@ -107,8 +108,7 @@ export default async function IntermediateCreatePage({
   const parentIsEligible =
     parent.node_role_code === "structural" &&
     typeof rootValueObjectId === "string" &&
-    typeof objectKind === "string" &&
-    objectKind !== "activity_pattern" &&
+    isValueObjectStructuralKindV2(objectKind) &&
     typeof branchTypeCode === "string" &&
     (parent.status === "draft" || parent.status === "active");
 

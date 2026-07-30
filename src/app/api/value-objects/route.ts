@@ -6,8 +6,10 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import {
-  VALUE_OBJECT_KINDS_V2,
-  type ValueObjectKindV2,
+  isValueObjectLeafKindV2,
+  isValueObjectStructuralKindV2,
+  type ValueObjectLeafKindV2,
+  type ValueObjectStructuralKindV2,
 } from "@/types/reality-core/reality-core-contracts-v2";
 
 export const dynamic = "force-dynamic";
@@ -204,30 +206,36 @@ function normalizeBranchTypeCode(value: unknown): string | null {
     : null;
 }
 
-function normalizeObjectKind(value: unknown): ValueObjectKindV2 | null {
+function normalizeStructuralObjectKind(
+  value: unknown,
+): ValueObjectStructuralKindV2 | null {
+  if (value === undefined || value === null || value === "") {
+    return "other";
+  }
+
   if (typeof value !== "string") {
     return null;
   }
 
   const normalized = value.trim();
 
-  if (normalized === "activity_pattern") {
+  return isValueObjectStructuralKindV2(normalized) ? normalized : null;
+}
+
+function normalizeLeafObjectKind(
+  value: unknown,
+): ValueObjectLeafKindV2 | null {
+  if (value === undefined || value === null || value === "") {
+    return "activity_pattern";
+  }
+
+  if (typeof value !== "string") {
     return null;
   }
 
-  return VALUE_OBJECT_KINDS_V2.includes(normalized as ValueObjectKindV2)
-    ? (normalized as ValueObjectKindV2)
-    : null;
-}
+  const normalized = value.trim();
 
-function normalizeStructuralObjectKind(
-  value: unknown,
-): ValueObjectKindV2 | null {
-  if (value === undefined || value === null || value === "") {
-    return "other";
-  }
-
-  return normalizeObjectKind(value);
+  return isValueObjectLeafKindV2(normalized) ? normalized : null;
 }
 
 function normalizeLocale(value: unknown): string | null {
@@ -383,9 +391,25 @@ export async function GET() {
     );
   }
 
+  const observationValueObjects = (valueObjects ?? []).filter((valueObject) => {
+    const metadata =
+      valueObject &&
+      typeof valueObject === "object" &&
+      valueObject.metadata_json &&
+      typeof valueObject.metadata_json === "object" &&
+      !Array.isArray(valueObject.metadata_json)
+        ? (valueObject.metadata_json as Record<string, unknown>)
+        : null;
+
+    return (
+      metadata?.system_hidden_from_observation_ui !== true &&
+      metadata?.system_root_code !== "products_services"
+    );
+  });
+
   return NextResponse.json({
     ok: true,
-    valueObjects,
+    valueObjects: observationValueObjects,
   });
 }
 
@@ -421,11 +445,11 @@ async function createRootDraftValueObject(
     );
   }
 
-  if (!objectKind || objectKind === "activity_pattern") {
+  if (!objectKind) {
     return NextResponse.json(
       {
         error:
-          "A valid structural objectKind other than activity_pattern is required",
+          "A valid structural objectKind is required; leaf-only kinds are not allowed",
       },
       { status: 400 },
     );
@@ -583,8 +607,7 @@ async function getOwnedStructuralParent(
   );
   const parentIsEligible =
     parentData.node_role_code === "structural" &&
-    parentData.object_kind !== null &&
-    parentData.object_kind !== "activity_pattern" &&
+    isValueObjectStructuralKindV2(parentData.object_kind) &&
     branchTypeCode !== null &&
     rootValueObjectId !== null &&
     (parentData.status === "draft" || parentData.status === "active");
@@ -644,11 +667,11 @@ async function createIntermediateDraftValueObject(
     );
   }
 
-  if (!objectKind || objectKind === "activity_pattern") {
+  if (!objectKind) {
     return NextResponse.json(
       {
         error:
-          "A valid structural objectKind other than activity_pattern is required",
+          "A valid structural objectKind is required; leaf-only kinds are not allowed",
       },
       { status: 400 },
     );
@@ -765,11 +788,22 @@ async function createLeafDraftValueObject(
   const parentValueObjectId = normalizeUuid(body.parentValueObjectId);
   const title = normalizeRequiredString(body.title);
   const description = normalizeOptionalString(body.description);
+  const objectKind = normalizeLeafObjectKind(body.objectKind);
   const locale = normalizeLocale(body.locale);
 
   if (!parentValueObjectId) {
     return NextResponse.json(
       { error: "A valid parentValueObjectId is required" },
+      { status: 400 },
+    );
+  }
+
+  if (!objectKind) {
+    return NextResponse.json(
+      {
+        error:
+          "A valid leaf objectKind is required: activity_pattern, product_type or service_type",
+      },
       { status: 400 },
     );
   }
@@ -819,8 +853,8 @@ async function createLeafDraftValueObject(
       owner_user_id: appUser.id,
       organization_id: null,
       usage_scope: "private",
-      value_type: "activity_pattern",
-      object_kind: "activity_pattern",
+      value_type: objectKind,
+      object_kind: objectKind,
       node_role_code: "activity_leaf",
       branch_type_code: branchTypeCode,
       root_value_object_id: rootValueObjectId,
@@ -842,7 +876,8 @@ async function createLeafDraftValueObject(
       status: "draft",
       identity_attributes_json: {},
       metadata_json: {
-        authoring_contract: "reality-model-v3-p6-leaf",
+        authoring_contract: "pgc2-product-service-leaf-v1",
+        leaf_object_kind: objectKind,
         parent_object_id: parent.id,
         root_object_id: rootValueObjectId,
       },
