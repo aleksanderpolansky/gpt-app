@@ -303,11 +303,12 @@ export function CertificateShareButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-[#3b6ef8] transition hover:bg-[#eef2ff]"
+        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#3b6ef8] transition hover:bg-[#eef2ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b6ef8]/35"
         aria-haspopup="dialog"
+        aria-label={copy.share}
+        title={copy.share}
       >
-        <Share2 size={12} />
-        {copy.share}
+        <Share2 size={14} aria-hidden="true" />
       </button>
 
       {open ? (

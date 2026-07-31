@@ -144,7 +144,7 @@ const EN: Labels = {
     buyer:
       "Certificates ordered by your account, their check-in and confirmation states.",
     provider:
-      "Offers published and fulfilled by your profiles and organizations.",
+      "Give gifts — meet new customers and friends.",
   },
   total: "Certificates",
   allOffers: "All offers",
@@ -160,7 +160,7 @@ const EN: Labels = {
   newest: "Newest first",
   searchFilters: "Search and filters",
   findCertificate: "Find offer",
-  createCertificate: "Create certificate",
+  createCertificate: "Create offer",
   myCertificates: "My certificates",
   catalog: "Offer catalog",
   publicCatalog: "Public catalog",
@@ -217,7 +217,7 @@ const RU: Labels = {
     buyer:
       "Сертификаты, заказанные вашей учётной записью, и состояния их исполнения.",
     provider:
-      "Предложения, опубликованные и реализуемые вашими профилями и предприятиями.",
+      "Делайте подарки — находите новых покупателей и друзей.",
   },
   total: "Сертификаты",
   allOffers: "Все предложения",
@@ -233,7 +233,7 @@ const RU: Labels = {
   newest: "Сначала новые",
   searchFilters: "Поиск и фильтры",
   findCertificate: "Найти предложение",
-  createCertificate: "Создать сертификат",
+  createCertificate: "Создать предложение",
   myCertificates: "Мои сертификаты",
   catalog: "Каталог предложений",
   publicCatalog: "Все предложения",
@@ -290,7 +290,7 @@ const PL: Labels = {
     buyer:
       "Bony zamówione przez Twoje konto oraz stan ich realizacji.",
     provider:
-      "Oferty opublikowane i realizowane przez Twoje profile i firmy.",
+      "Dawaj prezenty — zdobywaj nowych klientów i przyjaciół.",
   },
   total: "Bony",
   allOffers: "Wszystkie oferty",
@@ -306,7 +306,7 @@ const PL: Labels = {
   newest: "Najnowsze",
   searchFilters: "Wyszukiwanie i filtry",
   findCertificate: "Znajdź ofertę",
-  createCertificate: "Utwórz bon",
+  createCertificate: "Utwórz ofertę",
   myCertificates: "Moje bony",
   catalog: "Katalog ofert",
   publicCatalog: "Wszystkie oferty",
@@ -368,7 +368,7 @@ function getLabels(locale: LocaleCode): Labels {
         buyer:
           "Сертифікати, замовлені вашим обліковим записом, і стани їх виконання.",
         provider:
-          "Пропозиції, опубліковані та реалізовані вашими профілями й підприємствами.",
+          "Робіть подарунки — знаходьте нових покупців і друзів.",
       },
       total: "Сертифікати",
       allOffers: "Усі пропозиції",
@@ -384,7 +384,7 @@ function getLabels(locale: LocaleCode): Labels {
       newest: "Спочатку нові",
       searchFilters: "Пошук і фільтри",
       findCertificate: "Знайти пропозицію",
-      createCertificate: "Створити сертифікат",
+      createCertificate: "Створити пропозицію",
       myCertificates: "Мої сертифікати",
       catalog: "Каталог пропозицій",
       publicCatalog: "Усі пропозиції",
@@ -443,7 +443,7 @@ function getLabels(locale: LocaleCode): Labels {
         buyer:
           "Von Ihrem Konto bestellte Gutscheine und der Stand ihrer Erfüllung.",
         provider:
-          "Angebote, die von Ihren Profilen und Unternehmen veröffentlicht und erfüllt wurden.",
+          "Machen Sie Geschenke – gewinnen Sie neue Kunden und Freunde.",
       },
       total: "Gutscheine",
       allOffers: "Alle Angebote",
@@ -459,7 +459,7 @@ function getLabels(locale: LocaleCode): Labels {
       newest: "Neueste zuerst",
       searchFilters: "Suche und Filter",
       findCertificate: "Angebot finden",
-      createCertificate: "Gutschein erstellen",
+      createCertificate: "Angebot erstellen",
       myCertificates: "Meine Gutscheine",
       catalog: "Angebotskatalog",
       publicCatalog: "Alle Angebote",
@@ -518,7 +518,7 @@ function getLabels(locale: LocaleCode): Labels {
         buyer:
           "Certificados solicitados por tu cuenta y el estado de su cumplimiento.",
         provider:
-          "Ofertas publicadas y cumplidas por tus perfiles y empresas.",
+          "Haz regalos y encuentra nuevos clientes y amigos.",
       },
       total: "Certificados",
       allOffers: "Todas las ofertas",
@@ -534,7 +534,7 @@ function getLabels(locale: LocaleCode): Labels {
       newest: "Más recientes",
       searchFilters: "Búsqueda y filtros",
       findCertificate: "Buscar oferta",
-      createCertificate: "Crear certificado",
+      createCertificate: "Crear oferta",
       myCertificates: "Mis certificados",
       catalog: "Catálogo de ofertas",
       publicCatalog: "Todas las ofertas",
@@ -593,7 +593,7 @@ function getLabels(locale: LocaleCode): Labels {
         buyer:
           "Certifikáty objednané vaším účtem a stav jejich splnění.",
         provider:
-          "Nabídky publikované a splněné vašimi profily a podniky.",
+          "Dávejte dárky — získávejte nové zákazníky a přátele.",
       },
       total: "Certifikáty",
       allOffers: "Všechny nabídky",
@@ -609,7 +609,7 @@ function getLabels(locale: LocaleCode): Labels {
       newest: "Nejnovější",
       searchFilters: "Vyhledávání a filtry",
       findCertificate: "Najít nabídku",
-      createCertificate: "Vytvořit certifikát",
+      createCertificate: "Vytvořit nabídku",
       myCertificates: "Moje certifikáty",
       catalog: "Katalog nabídek",
       publicCatalog: "Všechny nabídky",
@@ -984,15 +984,30 @@ function CertificatePreview({
 
   return (
     <div className="flex min-h-[190px] items-start gap-3 sm:gap-4">
-      <div className="flex h-[104px] w-[92px] shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#eef2ff] text-[#3b6ef8] sm:h-[120px] sm:w-[110px]">
-        {item.objectKind === "service_type" ? (
-          <Gift size={30} />
-        ) : (
-          <Package size={30} />
-        )}
-        <span className="mt-2 text-center text-[10px] font-semibold text-[#5a5f7a]">
-          {item.objectKind === "service_type" ? labels.service : labels.product}
-        </span>
+      <div className="flex w-[92px] shrink-0 flex-col items-start sm:w-[110px]">
+        <div className="flex h-[104px] w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#eef2ff] text-[#3b6ef8] sm:h-[120px]">
+          {item.objectKind === "service_type" ? (
+            <Gift size={30} />
+          ) : (
+            <Package size={30} />
+          )}
+          <span className="mt-2 text-center text-[10px] font-semibold text-[#5a5f7a]">
+            {item.objectKind === "service_type" ? labels.service : labels.product}
+          </span>
+        </div>
+
+        <div className="mt-1.5 flex w-full justify-start pl-1">
+          <CertificateShareButton
+            locale={locale}
+            title={item.title}
+            description={item.description}
+            href={item.shareHref}
+            providerName={item.providerName}
+            pointsPrice={item.pointsPrice}
+            moneyRemainder={item.moneyRemainder}
+            currency={item.currency}
+          />
+        </div>
       </div>
 
       <div className="min-w-0 flex-1">
@@ -1304,7 +1319,7 @@ export function CertificatesDashboardContent({
             <KpiCard
               label={labels.allOffers}
               value={String(items.length)}
-              sub={labels.subtitles.provider}
+              sub={`${labels.activeOffers}: ${availableCount} · ${labels.realizedOffers}: ${completedCount}`}
               accent="#3b6ef8"
               icon={Star}
             />
@@ -1406,18 +1421,6 @@ export function CertificatesDashboardContent({
             title={item.title}
             detailsLabel={labels.details}
             href={item.href}
-            action={
-              <CertificateShareButton
-                locale={locale}
-                title={item.title}
-                description={item.description}
-                href={item.shareHref}
-                providerName={item.providerName}
-                pointsPrice={item.pointsPrice}
-                moneyRemainder={item.moneyRemainder}
-                currency={item.currency}
-              />
-            }
           >
             <CertificatePreview
               item={item}

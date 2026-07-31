@@ -87,8 +87,14 @@ export function LocalizedMoney({
   const accessibleValue = formatter.format(value);
 
   return (
-    <span className={className} aria-label={accessibleValue}>
-      <span aria-hidden="true">
+    <span
+      className={`inline-flex items-start whitespace-nowrap leading-none ${className ?? ""}`}
+      aria-label={accessibleValue}
+    >
+      <span
+        aria-hidden="true"
+        className="inline-flex items-start whitespace-nowrap leading-none"
+      >
         {parts.map((part, index) => {
           if (part.type === "decimal") {
             return null;
@@ -96,16 +102,31 @@ export function LocalizedMoney({
 
           if (part.type === "fraction") {
             return (
-              <sup
+              <span
                 key={`${part.type}-${index}`}
-                className="relative -top-[0.15em] ml-[0.04em] text-[0.62em] font-bold leading-none"
+                className="ml-[0.06em] text-[0.58em] font-bold leading-none"
               >
                 {part.value}
-              </sup>
+              </span>
             );
           }
 
-          return <span key={`${part.type}-${index}`}>{part.value}</span>;
+          if (part.type === "currency" || part.type === "literal") {
+            return (
+              <span
+                key={`${part.type}-${index}`}
+                className="self-end pb-[0.02em] leading-none"
+              >
+                {part.value}
+              </span>
+            );
+          }
+
+          return (
+            <span key={`${part.type}-${index}`} className="leading-none">
+              {part.value}
+            </span>
+          );
         })}
       </span>
     </span>
