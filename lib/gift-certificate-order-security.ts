@@ -1,4 +1,4 @@
-import { createHash, createHmac } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 
 export const GIFT_CERTIFICATE_QR_TOKEN_VERSION = "hmac-sha256-v1";
 
@@ -98,6 +98,62 @@ export function buildGiftCertificateQrPayload(params: {
   url.searchParams.set("certificate", params.activityEventId);
   url.searchParams.set("code", params.publicCode);
   url.searchParams.set("token", params.rawQrToken);
+
+  const locale = params.locale?.trim().toLowerCase();
+
+  if (
+    locale === "pl" ||
+    locale === "ru" ||
+    locale === "uk" ||
+    locale === "de" ||
+    locale === "es" ||
+    locale === "cs"
+  ) {
+    url.searchParams.set("locale", locale);
+  }
+
+  return url.toString();
+}
+
+export const GIFT_CERTIFICATE_FULFILLMENT_QR_TOKEN_VERSION =
+  "sha256-v1";
+
+type GiftCertificateFulfillmentQrSecurity = {
+  readonly rawToken: string;
+  readonly tokenHash: string;
+  readonly tokenVersion:
+    typeof GIFT_CERTIFICATE_FULFILLMENT_QR_TOKEN_VERSION;
+};
+
+export function createGiftCertificateFulfillmentQrSecurity():
+  GiftCertificateFulfillmentQrSecurity {
+  const rawToken = randomBytes(32).toString("base64url");
+
+  return {
+    rawToken,
+    tokenHash: createHash("sha256")
+      .update(rawToken, "utf8")
+      .digest("hex"),
+    tokenVersion:
+      GIFT_CERTIFICATE_FULFILLMENT_QR_TOKEN_VERSION,
+  };
+}
+
+export function buildGiftCertificateFulfillmentQrPayload(params: {
+  readonly qrSessionId: string;
+  readonly rawToken: string;
+  readonly locale?: string;
+}): string {
+  const configuredBaseUrl =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    "https://arctor.app";
+  const baseUrl = configuredBaseUrl.replace(/\/+$/, "");
+  const url = new URL(
+    `${baseUrl}/gift-certificates/scan`,
+  );
+
+  url.searchParams.set("session", params.qrSessionId);
+  url.searchParams.set("token", params.rawToken);
 
   const locale = params.locale?.trim().toLowerCase();
 

@@ -7,11 +7,6 @@ import {
   type ResolvedActorContext,
 } from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
-import {
-  buildGiftCertificateQrPayload,
-  createGiftCertificateOrderSecurity,
-  GiftCertificateOrderSecurityConfigurationError,
-} from "../../../../lib/gift-certificate-order-security";
 import { ActivityScheduleDisplay } from "../../value-objects/[id]/activity-schedule-display";
 import {
   buildGiftCertificateLocaleHref,
@@ -109,48 +104,6 @@ export default async function CertificateCatalogDetailPage({
 
   if (!isPubliclyAvailable && !isProviderManager && !isRecipient) {
     notFound();
-  }
-
-  let qrPayload: string | null = null;
-  let qrUnavailable = false;
-
-  if (
-    isRecipient &&
-    certificate.lifecycleStatus === "active" &&
-    certificate.publicCode &&
-    certificate.qrTokenHash &&
-    certificate.qrTokenVersion
-  ) {
-    try {
-      const security = createGiftCertificateOrderSecurity({
-        activityEventId: certificate.activityEventId,
-        buyerUserId: viewer.appUserId,
-        recipientActorId: viewer.actorId,
-      });
-
-      if (
-        security.publicCode === certificate.publicCode &&
-        security.qrTokenHash === certificate.qrTokenHash &&
-        security.qrTokenVersion === certificate.qrTokenVersion
-      ) {
-        qrPayload = buildGiftCertificateQrPayload({
-          activityEventId: certificate.activityEventId,
-          publicCode: certificate.publicCode,
-          rawQrToken: security.rawQrToken,
-          locale,
-        });
-      } else {
-        qrUnavailable = true;
-      }
-    } catch (error) {
-      if (
-        error instanceof GiftCertificateOrderSecurityConfigurationError
-      ) {
-        qrUnavailable = true;
-      } else {
-        throw error;
-      }
-    }
   }
 
   return (
@@ -352,21 +305,16 @@ export default async function CertificateCatalogDetailPage({
           </section>
         ) : null}
 
-        {isRecipient && qrPayload && certificate.publicCode ? (
+        {isRecipient &&
+        certificate.lifecycleStatus === "active" &&
+        certificate.publicCode ? (
           <div className="mt-5">
             <GiftCertificateQr
-              value={qrPayload}
+              activityEventId={certificate.activityEventId}
               publicCode={certificate.publicCode}
-              title={copy.qrTitle}
-              instruction={copy.qrInstruction}
+              locale={locale}
             />
           </div>
-        ) : null}
-
-        {isRecipient && qrUnavailable ? (
-          <section className="mt-5 rounded-[20px] border border-[#f1d393] bg-[#fff9e9] p-4 text-[13px] font-semibold text-[#8a5a00]">
-            {copy.qrUnavailable}
-          </section>
         ) : null}
 
         <section className="mt-5 grid gap-2 rounded-[22px] border border-[#d9e2ff] bg-[#f4f7ff] p-5 text-[13px] leading-6 text-[#42507a]">
