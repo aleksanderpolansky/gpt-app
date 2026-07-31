@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import Link from "next/link";
+import { type ReactNode } from "react";
 
 import {
   ActorContextError,
@@ -14,6 +15,7 @@ import {
   formatGiftCertificateDate,
   normalizeGiftCertificateLocale,
 } from "../../certificates/gift-certificate-copy";
+import { GiftCertificateScanLocalDateTime } from "./gift-certificate-scan-local-date-time";
 import { RegisterGiftCertificateCheckinButton } from "./register-gift-certificate-checkin-button";
 
 export const dynamic = "force-dynamic";
@@ -355,16 +357,6 @@ async function resolveOptionalViewer(): Promise<ResolvedActorContext | null> {
   }
 }
 
-function formatDateTime(value: string, locale: string): string {
-  const date = new Date(value);
-
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat(
-        locale === "en" ? "en-US" : locale,
-        { dateStyle: "medium", timeStyle: "medium" },
-      ).format(date);
-}
 
 function InvalidQr({ copy }: { readonly copy: Copy }) {
   return (
@@ -517,7 +509,7 @@ export default async function GiftCertificateScanPage({
     !expired &&
     !checkedIn;
 
-  const detailRows: ReadonlyArray<readonly [string, string]> = [
+  const detailRows: ReadonlyArray<readonly [string, ReactNode]> = [
     [copy.certificate, objectTitle],
     [copy.publicCode, qrSession.public_code_snapshot],
     [copy.provider, providerName],
@@ -532,7 +524,14 @@ export default async function GiftCertificateScanPage({
             ? copy.expired
             : copy.inactive,
     ],
-    [copy.qrExpiry, formatDateTime(qrSession.expires_at, locale)],
+    [
+      copy.qrExpiry,
+      <GiftCertificateScanLocalDateTime
+        key="qr-expiry"
+        value={qrSession.expires_at}
+        locale={locale}
+      />,
+    ],
   ];
 
   return (
@@ -584,7 +583,10 @@ export default async function GiftCertificateScanPage({
               <p className="font-bold text-[#166534]">{copy.checkedIn}</p>
               <p className="mt-1 text-[13px] text-[#166534]">
                 {copy.checkedInAt}:{" "}
-                {formatDateTime(checkin.checked_in_at, locale)}
+                <GiftCertificateScanLocalDateTime
+                  value={checkin.checked_in_at}
+                  locale={locale}
+                />
               </p>
             </div>
           ) : null}

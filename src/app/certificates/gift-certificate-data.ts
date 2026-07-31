@@ -79,6 +79,39 @@ type ReputationRow = {
   balance: number | string;
 };
 
+type CheckinRow = {
+  id: string;
+  planned_activity_event_id: string;
+  status: string;
+  checked_in_at: string;
+  actual_activity_event_id: string | null;
+};
+
+type ConfirmationRow = {
+  id: string;
+  planned_activity_event_id: string;
+  status: string;
+  requested_at: string | null;
+  response_deadline_at: string | null;
+  buyer_responded_at: string | null;
+  auto_confirmed_at: string | null;
+  finalized_at: string | null;
+  buyer_message: string | null;
+};
+
+export type GiftCertificateFlowState =
+  | "draft"
+  | "available"
+  | "active"
+  | "checked_in"
+  | "awaiting_confirmation"
+  | "confirmed_by_buyer"
+  | "auto_confirmed"
+  | "problem"
+  | "redeemed"
+  | "expired"
+  | "annulled";
+
 export type GiftCertificateCatalogItem = {
   readonly activityEventId: string;
   readonly valueObjectId: string;
@@ -92,8 +125,12 @@ export type GiftCertificateCatalogItem = {
   readonly providerType: "personal" | "avatar" | "organization";
   readonly providerDisplayName: string;
   readonly providerReputation: number;
+  readonly recipientUserId: string | null;
+  readonly recipientActorId: string | null;
+  readonly recipientDisplayName: string | null;
   readonly deliveryMode: string;
   readonly lifecycleStatus: string;
+  readonly flowState: GiftCertificateFlowState;
   readonly publishedAt: string | null;
   readonly availableFrom: string;
   readonly availableUntil: string;
@@ -105,8 +142,6 @@ export type GiftCertificateCatalogItem = {
   readonly moneyRemainder: number;
   readonly pointsPrice: number;
   readonly termsText: string | null;
-  readonly recipientUserId: string | null;
-  readonly recipientActorId: string | null;
   readonly publicCode: string | null;
   readonly qrTokenHash: string | null;
   readonly qrTokenVersion: string | null;
@@ -119,6 +154,8 @@ export type GiftCertificateCatalogItem = {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly activity: ActivityRow;
+  readonly checkin: CheckinRow | null;
+  readonly confirmation: ConfirmationRow | null;
 };
 
 const TERMS_SELECT = `
@@ -174,6 +211,63 @@ function readSnapshotText(snapshot: unknown, key: string): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function resolveFlowState(
+  terms: TermsRow,
+  checkin: CheckinRow | null,
+  confirmation: ConfirmationRow | null,
+): GiftCertificateFlowState {
+  if (
+    confirmation?.status === "disputed" ||
+    confirmation?.status === "partial_problem"
+  ) {
+    return "problem";
+  }
+
+  if (confirmation?.status === "confirmed_by_buyer") {
+    return "confirmed_by_buyer";
+  }
+
+  if (confirmation?.status === "auto_confirmed") {
+    return "auto_confirmed";
+  }
+
+  if (checkin?.status === "registered" && confirmation?.status === "pending") {
+    return "awaiting_confirmation";
+  }
+
+  if (checkin?.status === "registered") {
+    return "checked_in";
+  }
+
+  if (terms.lifecycle_status === "redeemed") {
+    return "redeemed";
+  }
+
+  if (terms.lifecycle_status === "annulled") {
+    return "annulled";
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (
+    terms.lifecycle_status === "expired" ||
+    terms.expired_at ||
+    terms.available_until < today
+  ) {
+    return "expired";
+  }
+
+  if (terms.lifecycle_status === "active") {
+    return "active";
+  }
+
+  if (terms.lifecycle_status === "available") {
+    return "available";
+  }
+
+  return "draft";
+}
+
 async function hydrateTerms(
   termsRows: TermsRow[],
 ): Promise<GiftCertificateCatalogItem[]> {
@@ -183,7 +277,16 @@ async function hydrateTerms(
 
   const activityIds = [...new Set(termsRows.map((row) => row.activity_event_id))];
   const valueObjectIds = [...new Set(termsRows.map((row) => row.value_object_id))];
-  const providerActorIds = [...new Set(termsRows.map((row) => row.provider_actor_id))];
+  const actorIds = [
+    ...new Set(
+      termsRows
+        .flatMap((row) => [row.provider_actor_id, row.recipient_actor_id])
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
+  const providerActorIds = [
+    ...new Set(termsRows.map((row) => row.provider_actor_id)),
+  ];
   const organizationIds = [
     ...new Set(
       termsRows
@@ -198,6 +301,8 @@ async function hydrateTerms(
     { data: actorData, error: actorError },
     { data: reputationData, error: reputationError },
     organizationResult,
+    { data: checkinData, error: checkinError },
+    { data: confirmationData, error: confirmationError },
   ] = await Promise.all([
     supabase
       .from("activity_events")
@@ -227,7 +332,7 @@ async function hydrateTerms(
     supabase
       .from("actors")
       .select("id,actor_type,display_name,status")
-      .in("id", providerActorIds)
+      .in("id", actorIds)
       .eq("status", "active"),
     supabase
       .from("actor_reputation_accounts")
@@ -239,6 +344,19 @@ async function hydrateTerms(
           .select("id,organization_name,status")
           .in("id", organizationIds)
       : Promise.resolve({ data: [], error: null }),
+    supabase
+      .from("activity_fulfillment_checkins")
+      .select(
+        "id,planned_activity_event_id,status,checked_in_at,actual_activity_event_id",
+      )
+      .in("planned_activity_event_id", activityIds)
+      .eq("status", "registered"),
+    supabase
+      .from("activity_fulfillment_confirmations")
+      .select(
+        "id,planned_activity_event_id,status,requested_at,response_deadline_at,buyer_responded_at,auto_confirmed_at,finalized_at,buyer_message",
+      )
+      .in("planned_activity_event_id", activityIds),
   ]);
 
   if (activityError) {
@@ -259,6 +377,14 @@ async function hydrateTerms(
 
   if (organizationResult.error) {
     throw new Error(organizationResult.error.message);
+  }
+
+  if (checkinError) {
+    throw new Error(checkinError.message);
+  }
+
+  if (confirmationError) {
+    throw new Error(confirmationError.message);
   }
 
   const activitiesById = new Map(
@@ -282,6 +408,18 @@ async function hydrateTerms(
       toNumber(row.balance),
     ]),
   );
+  const checkinsByActivityId = new Map(
+    ((checkinData ?? []) as CheckinRow[]).map((row) => [
+      row.planned_activity_event_id,
+      row,
+    ]),
+  );
+  const confirmationsByActivityId = new Map(
+    ((confirmationData ?? []) as ConfirmationRow[]).map((row) => [
+      row.planned_activity_event_id,
+      row,
+    ]),
+  );
 
   return termsRows.flatMap((terms) => {
     const activity = activitiesById.get(terms.activity_event_id);
@@ -295,6 +433,12 @@ async function hydrateTerms(
     const organization = terms.provider_organization_id
       ? organizationsById.get(terms.provider_organization_id)
       : null;
+    const recipientActor = terms.recipient_actor_id
+      ? actorsById.get(terms.recipient_actor_id)
+      : null;
+    const checkin = checkinsByActivityId.get(terms.activity_event_id) ?? null;
+    const confirmation =
+      confirmationsByActivityId.get(terms.activity_event_id) ?? null;
     const title =
       readSnapshotText(terms.public_snapshot_json, "publicTitle") ??
       valueObject.title ??
@@ -319,8 +463,12 @@ async function hydrateTerms(
         providerDisplayName:
           organization?.organization_name ?? providerActor.display_name,
         providerReputation: reputationByActorId.get(terms.provider_actor_id) ?? 0,
+        recipientUserId: terms.recipient_user_id,
+        recipientActorId: terms.recipient_actor_id,
+        recipientDisplayName: recipientActor?.display_name ?? null,
         deliveryMode: terms.delivery_mode,
         lifecycleStatus: terms.lifecycle_status,
+        flowState: resolveFlowState(terms, checkin, confirmation),
         publishedAt: terms.published_at,
         availableFrom: terms.available_from,
         availableUntil: terms.available_until,
@@ -339,8 +487,6 @@ async function hydrateTerms(
         ),
         pointsPrice: toNumber(terms.points_price),
         termsText: terms.terms_text,
-        recipientUserId: terms.recipient_user_id,
-        recipientActorId: terms.recipient_actor_id,
         publicCode: terms.public_code,
         qrTokenHash: terms.qr_token_hash,
         qrTokenVersion: terms.qr_token_version,
@@ -353,9 +499,31 @@ async function hydrateTerms(
         createdAt: terms.created_at,
         updatedAt: terms.updated_at,
         activity,
+        checkin,
+        confirmation,
       },
     ];
   });
+}
+
+function sortByNewest(
+  items: GiftCertificateCatalogItem[],
+): GiftCertificateCatalogItem[] {
+  return [...items].sort((left, right) =>
+    String(
+      right.redeemedAt ??
+        right.orderedAt ??
+        right.publishedAt ??
+        right.updatedAt,
+    ).localeCompare(
+      String(
+        left.redeemedAt ??
+          left.orderedAt ??
+          left.publishedAt ??
+          left.updatedAt,
+      ),
+    ),
+  );
 }
 
 export async function listAvailableGiftCertificates(): Promise<
@@ -381,7 +549,7 @@ export async function listAvailableGiftCertificates(): Promise<
     .filter(
       (item) =>
         item.activity.status === "planned" &&
-        item.lifecycleStatus === "available",
+        item.flowState === "available",
     )
     .sort((left, right) => {
       if (right.providerReputation !== left.providerReputation) {
@@ -392,6 +560,42 @@ export async function listAvailableGiftCertificates(): Promise<
         String(left.publishedAt ?? ""),
       );
     });
+}
+
+export async function listBuyerGiftCertificates(
+  recipientUserId: string,
+): Promise<GiftCertificateCatalogItem[]> {
+  const { data, error } = await supabase
+    .from("activity_gift_certificate_terms")
+    .select(TERMS_SELECT)
+    .eq("recipient_user_id", recipientUserId)
+    .not("ordered_at", "is", null)
+    .order("ordered_at", { ascending: false })
+    .limit(500);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return sortByNewest(await hydrateTerms((data ?? []) as TermsRow[]));
+}
+
+export async function listProviderGiftCertificates(
+  providerOwnerUserId: string,
+): Promise<GiftCertificateCatalogItem[]> {
+  const { data, error } = await supabase
+    .from("activity_gift_certificate_terms")
+    .select(TERMS_SELECT)
+    .eq("provider_owner_user_id", providerOwnerUserId)
+    .neq("lifecycle_status", "draft")
+    .order("updated_at", { ascending: false })
+    .limit(500);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return sortByNewest(await hydrateTerms((data ?? []) as TermsRow[]));
 }
 
 export async function getGiftCertificateCatalogItem(
