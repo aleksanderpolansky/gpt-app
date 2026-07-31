@@ -16,7 +16,6 @@ import { ActivityScheduleDisplay } from "../../value-objects/[id]/activity-sched
 import {
   buildGiftCertificateLocaleHref,
   formatGiftCertificateDate,
-  formatGiftCertificateDateTime,
   formatGiftCertificateMoney,
   formatGiftCertificatePoints,
   getGiftCertificateDeliveryLabel,
@@ -25,6 +24,7 @@ import {
   normalizeGiftCertificateLocale,
 } from "../gift-certificate-copy";
 import { getGiftCertificateCatalogItem } from "../gift-certificate-data";
+import { GiftCertificateLocalDateTime } from "./gift-certificate-local-date-time";
 import { GiftCertificateQr } from "./gift-certificate-qr";
 import { OrderGiftCertificateButton } from "./order-gift-certificate-button";
 
@@ -137,6 +137,7 @@ export default async function CertificateCatalogDetailPage({
           activityEventId: certificate.activityEventId,
           publicCode: certificate.publicCode,
           rawQrToken: security.rawQrToken,
+          locale,
         });
       } else {
         qrUnavailable = true;
@@ -339,12 +340,14 @@ export default async function CertificateCatalogDetailPage({
               {certificate.publicCode}
             </DetailCard>
             <DetailCard label={copy.orderedAt}>
-              {certificate.orderedAt
-                ? formatGiftCertificateDateTime(
-                    certificate.orderedAt,
-                    locale,
-                  )
-                : "—"}
+              {certificate.orderedAt ? (
+                <GiftCertificateLocalDateTime
+                  value={certificate.orderedAt}
+                  locale={locale}
+                />
+              ) : (
+                "—"
+              )}
             </DetailCard>
           </section>
         ) : null}

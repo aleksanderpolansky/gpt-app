@@ -26,6 +26,20 @@ function getPointsLocaleFromLocation(): PointsLocale {
 const pointsText = (key: Parameters<typeof getPointsText>[0]) =>
   getPointsText(key, getPointsLocaleFromLocation());
 
+const POINTS_LOCALE_TAGS: Record<PointsLocale, string> = {
+  ru: "ru-RU",
+  pl: "pl-PL",
+  en: "en-US",
+  es: "es-ES",
+  uk: "uk-UA",
+  de: "de-DE",
+  cs: "cs-CZ",
+};
+
+function getPointsLocaleTag(): string {
+  return POINTS_LOCALE_TAGS[getPointsLocaleFromLocation()];
+}
+
 type PointsTransaction = {
   readonly id?: string | null;
   readonly transaction_type?: string | null;
@@ -55,8 +69,9 @@ function formatPoints(value: unknown): string {
     return "0";
   }
 
-  return new Intl.NumberFormat("ru-RU", {
-    maximumFractionDigits: 0,
+  return new Intl.NumberFormat(getPointsLocaleTag(), {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(parsed);
 }
 
@@ -71,10 +86,63 @@ function formatDate(value: string | null | undefined): string {
     return value;
   }
 
-  return parsed.toLocaleString("ru-RU", {
+  return parsed.toLocaleString(getPointsLocaleTag(), {
     dateStyle: "short",
     timeStyle: "short",
   });
+}
+
+function getTransactionDescription(
+  transaction: PointsTransaction,
+): string {
+  if (transaction.transaction_type === "gift_certificate_points_burned") {
+    return pointsText(
+      "points.transactions.giftCertificateBurnedDescription",
+    );
+  }
+
+  return (
+    transaction.description ||
+    transaction.source_type ||
+    pointsText("points.transactions.noDescription")
+  );
+}
+
+function getTransactionStatus(
+  transaction: PointsTransaction,
+): string {
+  const status = (transaction.status ?? "").toLowerCase();
+
+  if (status === "confirmed") {
+    return pointsText("points.transactions.statusConfirmed");
+  }
+
+  if (status === "pending") {
+    return pointsText("points.transactions.statusPending");
+  }
+
+  if (status === "failed" || status === "rejected") {
+    return pointsText("points.transactions.statusFailed");
+  }
+
+  return transaction.status || pointsText(
+    "points.transactions.statusUnknown",
+  );
+}
+
+function getTransactionType(
+  transaction: PointsTransaction,
+): string {
+  if (transaction.transaction_type === "gift_certificate_points_burned") {
+    return pointsText(
+      "points.transactions.giftCertificateBurnedType",
+    );
+  }
+
+  return (
+    transaction.transaction_type ||
+    pointsText("points.transactions.typeUnknown")
+  );
 }
 
 function getTransactionKind(transaction: PointsTransaction): string {
@@ -171,7 +239,11 @@ export default function PointsTransactionsPage() {
 
           <div className="flex flex-col gap-2 sm:flex-row">
             <Link
-              href="/"
+              href={
+                getPointsLocaleFromLocation() === "en"
+                  ? "/"
+                  : `/?locale=${getPointsLocaleFromLocation()}`
+              }
               className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe3f1] bg-white px-4 py-2 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
             >
               {pointsText("points.transactions.backToWorkspace")}
@@ -211,7 +283,7 @@ export default function PointsTransactionsPage() {
               {pointsText("points.transactions.dataSourceLabel")}
             </div>
             <div className="mt-2 text-[14px] font-bold">
-              /api/points/transactions
+              ARCTor POINTS
             </div>
           </div>
         </section>
@@ -249,9 +321,7 @@ export default function PointsTransactionsPage() {
                     </h2>
 
                     <p className="mt-1 text-[13px] leading-5 text-[#5a5f7a]">
-                      {transaction.description ||
-                        transaction.source_type ||
-                        pointsText("points.transactions.noDescription")}
+                      {getTransactionDescription(transaction)}
                     </p>
 
                     {transaction.organizations?.organization_name ? (
@@ -262,28 +332,28 @@ export default function PointsTransactionsPage() {
                   </div>
 
                   <div className="rounded-xl bg-[#f8fafc] px-3 py-2 text-[12px] font-semibold text-[#4a4f6a]">
-                    {transaction.status ?? "status?"} {" | "}
+                    {getTransactionStatus(transaction)} {" | "}
                     {formatDate(transaction.created_at)}
                   </div>
                 </div>
 
                 <div className="mt-3 grid gap-2 text-[12px] text-[#64748b] md:grid-cols-3">
                   <div>
-                    before:{" "}
+                    {pointsText("points.transactions.beforeLabel")}:{" "}
                     <span className="font-mono">
                       {formatPoints(transaction.balance_before)}
                     </span>
                   </div>
                   <div>
-                    after:{" "}
+                    {pointsText("points.transactions.afterLabel")}:{" "}
                     <span className="font-mono">
                       {formatPoints(transaction.balance_after)}
                     </span>
                   </div>
                   <div>
-                    type:{" "}
+                    {pointsText("points.transactions.typeLabel")}:{" "}
                     <span className="font-mono">
-                      {transaction.transaction_type ?? "unknown"}
+                      {getTransactionType(transaction)}
                     </span>
                   </div>
                 </div>

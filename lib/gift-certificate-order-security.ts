@@ -88,6 +88,7 @@ export function buildGiftCertificateQrPayload(params: {
   readonly activityEventId: string;
   readonly publicCode: string;
   readonly rawQrToken: string;
+  readonly locale?: string;
 }): string {
   const configuredBaseUrl =
     process.env.NEXT_PUBLIC_APP_URL?.trim() || "https://arctor.app";
@@ -97,6 +98,19 @@ export function buildGiftCertificateQrPayload(params: {
   url.searchParams.set("certificate", params.activityEventId);
   url.searchParams.set("code", params.publicCode);
   url.searchParams.set("token", params.rawQrToken);
+
+  const locale = params.locale?.trim().toLowerCase();
+
+  if (
+    locale === "pl" ||
+    locale === "ru" ||
+    locale === "uk" ||
+    locale === "de" ||
+    locale === "es" ||
+    locale === "cs"
+  ) {
+    url.searchParams.set("locale", locale);
+  }
 
   return url.toString();
 }
