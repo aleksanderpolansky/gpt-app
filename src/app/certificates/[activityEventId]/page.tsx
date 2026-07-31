@@ -19,6 +19,7 @@ import {
   normalizeGiftCertificateLocale,
 } from "../gift-certificate-copy";
 import { getGiftCertificateCatalogItem } from "../gift-certificate-data";
+import { GiftCertificateFulfillmentConfirmation } from "./gift-certificate-fulfillment-confirmation";
 import { GiftCertificateLocalDateTime } from "./gift-certificate-local-date-time";
 import { GiftCertificateQr } from "./gift-certificate-qr";
 import { OrderGiftCertificateButton } from "./order-gift-certificate-button";
@@ -312,6 +313,17 @@ export default async function CertificateCatalogDetailPage({
             <GiftCertificateQr
               activityEventId={certificate.activityEventId}
               publicCode={certificate.publicCode}
+              locale={locale}
+            />
+          </div>
+        ) : null}
+
+        {isRecipient &&
+        (certificate.lifecycleStatus === "active" ||
+          certificate.lifecycleStatus === "redeemed") ? (
+          <div className="mt-5">
+            <GiftCertificateFulfillmentConfirmation
+              activityEventId={certificate.activityEventId}
               locale={locale}
             />
           </div>
