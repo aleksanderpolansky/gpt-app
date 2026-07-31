@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { type Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import {
@@ -34,6 +35,79 @@ type CertificatePageProps = {
     readonly locale?: string | string[];
   }>;
 };
+
+
+function isPubliclyShareableLifecycle(status: string): boolean {
+  return [
+    "available",
+    "active",
+    "redeemed",
+    "expired",
+    "annulled",
+  ].includes(status);
+}
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: CertificatePageProps): Promise<Metadata> {
+  const { activityEventId } = await params;
+  const resolvedSearchParams = await searchParams;
+  const locale = normalizeGiftCertificateLocale(
+    resolvedSearchParams?.locale,
+  );
+  const certificate = await getGiftCertificateCatalogItem(activityEventId);
+
+  if (
+    !certificate ||
+    certificate.activity.status !== "planned" ||
+    !isPubliclyShareableLifecycle(certificate.lifecycleStatus)
+  ) {
+    return {
+      title: "ARCTor",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const points = formatGiftCertificatePoints(
+    certificate.pointsPrice,
+    locale,
+  );
+  const remainder =
+    certificate.moneyRemainder > 0
+      ? formatGiftCertificateMoney(
+          certificate.moneyRemainder,
+          certificate.providerCurrency,
+          locale,
+        )
+      : null;
+  const description = [
+    certificate.providerDisplayName,
+    points,
+    remainder,
+    certificate.description,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const title = `${certificate.title} — ARCTor`;
+
+  return {
+    title,
+    description,
+    robots: { index: true, follow: true },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      siteName: "ARCTor",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
 
 async function resolveOptionalViewer(): Promise<ResolvedActorContext | null> {
   const session = await auth0.getSession();
@@ -99,11 +173,11 @@ export default async function CertificateCatalogDetailPage({
   const isRecipient =
     viewer?.appUserId === certificate.recipientUserId &&
     viewer?.actorId === certificate.recipientActorId;
-  const isPubliclyAvailable =
-    certificate.lifecycleStatus === "available" &&
+  const isPubliclyShareable =
+    isPubliclyShareableLifecycle(certificate.lifecycleStatus) &&
     certificate.activity.status === "planned";
 
-  if (!isPubliclyAvailable && !isProviderManager && !isRecipient) {
+  if (!isPubliclyShareable && !isProviderManager && !isRecipient) {
     notFound();
   }
 
@@ -148,7 +222,19 @@ export default async function CertificateCatalogDetailPage({
             )}
           </DetailCard>
           <DetailCard label={copy.provider}>
-            {certificate.providerDisplayName}
+            {certificate.providerPublicHref ? (
+              <Link
+                href={buildGiftCertificateLocaleHref(
+                  certificate.providerPublicHref,
+                  locale,
+                )}
+                className="text-[#315bd0] hover:underline"
+              >
+                {certificate.providerDisplayName}
+              </Link>
+            ) : (
+              certificate.providerDisplayName
+            )}
           </DetailCard>
           <DetailCard label={copy.reputation}>
             {new Intl.NumberFormat(locale === "en" ? "en-US" : locale, {
@@ -287,7 +373,8 @@ export default async function CertificateCatalogDetailPage({
           </div>
         ) : null}
 
-        {certificate.lifecycleStatus === "active" &&
+        {(isProviderManager || isRecipient) &&
+        certificate.lifecycleStatus === "active" &&
         certificate.publicCode ? (
           <section className="mt-5 grid gap-3 sm:grid-cols-2">
             <DetailCard label={copy.publicCode}>

@@ -33,9 +33,12 @@ export default async function CertificatesPage({
       description: certificate.description,
       objectKind: certificate.objectKind,
       providerName: certificate.providerDisplayName,
+      providerHref: certificate.providerPublicHref,
       recipientName: certificate.recipientDisplayName,
+      recipientHref: certificate.recipientPublicHref,
       providerReputation: certificate.providerReputation,
       state: certificate.flowState,
+      regularPrice: certificate.regularPrice,
       pointsPrice: certificate.pointsPrice,
       moneyRemainder: certificate.moneyRemainder,
       currency: certificate.providerCurrency,
@@ -46,6 +49,10 @@ export default async function CertificatesPage({
       orderedAt: certificate.orderedAt,
       finalizedAt: certificate.confirmation?.finalized_at ?? null,
       href: buildGiftCertificateLocaleHref(
+        `/certificates/${certificate.activityEventId}`,
+        locale,
+      ),
+      shareHref: buildGiftCertificateLocaleHref(
         `/certificates/${certificate.activityEventId}`,
         locale,
       ),

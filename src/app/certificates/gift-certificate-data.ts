@@ -71,7 +71,18 @@ type ActorRow = {
 type OrganizationRow = {
   id: string;
   organization_name: string;
+  public_slug: string | null;
   status: string;
+  directory_status: string;
+  is_public_profile_enabled: boolean;
+  is_listed_in_directory: boolean;
+};
+
+type ActorPublicProfileRow = {
+  actor_id: string;
+  public_slug: string;
+  display_name: string;
+  is_public: boolean;
 };
 
 type ReputationRow = {
@@ -124,10 +135,12 @@ export type GiftCertificateCatalogItem = {
   readonly providerOrganizationId: string | null;
   readonly providerType: "personal" | "avatar" | "organization";
   readonly providerDisplayName: string;
+  readonly providerPublicHref: string | null;
   readonly providerReputation: number;
   readonly recipientUserId: string | null;
   readonly recipientActorId: string | null;
   readonly recipientDisplayName: string | null;
+  readonly recipientPublicHref: string | null;
   readonly deliveryMode: string;
   readonly lifecycleStatus: string;
   readonly flowState: GiftCertificateFlowState;
@@ -299,6 +312,7 @@ async function hydrateTerms(
     { data: activityData, error: activityError },
     { data: valueObjectData, error: valueObjectError },
     { data: actorData, error: actorError },
+    { data: publicProfileData, error: publicProfileError },
     { data: reputationData, error: reputationError },
     organizationResult,
     { data: checkinData, error: checkinError },
@@ -335,13 +349,17 @@ async function hydrateTerms(
       .in("id", actorIds)
       .eq("status", "active"),
     supabase
+      .from("actor_public_profiles")
+      .select("actor_id,public_slug,display_name,is_public")
+      .in("actor_id", actorIds),
+    supabase
       .from("actor_reputation_accounts")
       .select("actor_id,balance")
       .in("actor_id", providerActorIds),
     organizationIds.length > 0
       ? supabase
           .from("organizations")
-          .select("id,organization_name,status")
+          .select("id,organization_name,public_slug,status,directory_status,is_public_profile_enabled,is_listed_in_directory")
           .in("id", organizationIds)
       : Promise.resolve({ data: [], error: null }),
     supabase
@@ -369,6 +387,10 @@ async function hydrateTerms(
 
   if (actorError) {
     throw new Error(actorError.message);
+  }
+
+  if (publicProfileError) {
+    throw new Error(publicProfileError.message);
   }
 
   if (reputationError) {
@@ -399,6 +421,12 @@ async function hydrateTerms(
   const organizationsById = new Map(
     ((organizationResult.data ?? []) as OrganizationRow[]).map((row) => [
       row.id,
+      row,
+    ]),
+  );
+  const publicProfilesByActorId = new Map(
+    ((publicProfileData ?? []) as ActorPublicProfileRow[]).map((row) => [
+      row.actor_id,
       row,
     ]),
   );
@@ -436,6 +464,12 @@ async function hydrateTerms(
     const recipientActor = terms.recipient_actor_id
       ? actorsById.get(terms.recipient_actor_id)
       : null;
+    const providerPublicProfile = publicProfilesByActorId.get(
+      terms.provider_actor_id,
+    );
+    const recipientPublicProfile = terms.recipient_actor_id
+      ? publicProfilesByActorId.get(terms.recipient_actor_id)
+      : null;
     const checkin = checkinsByActivityId.get(terms.activity_event_id) ?? null;
     const confirmation =
       confirmationsByActivityId.get(terms.activity_event_id) ?? null;
@@ -461,11 +495,29 @@ async function hydrateTerms(
         providerOrganizationId: terms.provider_organization_id,
         providerType: terms.provider_type,
         providerDisplayName:
-          organization?.organization_name ?? providerActor.display_name,
+          organization?.organization_name ??
+          (providerPublicProfile?.is_public
+            ? providerPublicProfile.display_name
+            : providerActor.display_name),
+        providerPublicHref:
+          organization?.public_slug &&
+          organization.status === "active" &&
+          organization.directory_status === "published" &&
+          organization.is_public_profile_enabled &&
+          organization.is_listed_in_directory
+            ? `/directory/${encodeURIComponent(organization.public_slug)}`
+            : providerPublicProfile?.is_public
+              ? `/people/${encodeURIComponent(providerPublicProfile.public_slug)}`
+              : null,
         providerReputation: reputationByActorId.get(terms.provider_actor_id) ?? 0,
         recipientUserId: terms.recipient_user_id,
         recipientActorId: terms.recipient_actor_id,
-        recipientDisplayName: recipientActor?.display_name ?? null,
+        recipientDisplayName: recipientPublicProfile?.is_public
+          ? recipientPublicProfile.display_name
+          : recipientActor?.display_name ?? null,
+        recipientPublicHref: recipientPublicProfile?.is_public
+          ? `/people/${encodeURIComponent(recipientPublicProfile.public_slug)}`
+          : null,
         deliveryMode: terms.delivery_mode,
         lifecycleStatus: terms.lifecycle_status,
         flowState: resolveFlowState(terms, checkin, confirmation),

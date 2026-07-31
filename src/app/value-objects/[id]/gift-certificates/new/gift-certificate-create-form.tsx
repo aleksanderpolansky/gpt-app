@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { formatLocalizedPoints } from "@/components/figma-dashboard/certificate-value-format";
+
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 type ProductServiceKind = "product_type" | "service_type";
 type DeliveryMode =
@@ -83,7 +85,7 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Gift certificate",
     title: "Create a gift-certificate draft",
     intro:
-      "The certificate is a planned activity linked to this product or service. This step creates only a draft; it does not publish the certificate, debit POINTS or create a QR code.",
+      "The certificate is a planned activity linked to this product or service. This step creates only a draft; it does not publish the certificate, debit points or create a QR code.",
     back: "Back to product or service",
     provider: "Provider",
     item: "Product or service",
@@ -99,13 +101,13 @@ const COPY: Record<LocaleCode, Copy> = {
     availableFrom: "Valid from",
     availableUntil: "Valid until",
     validityHint: "The author sets both dates. The period may not exceed 31 days.",
-    coverageMode: "POINTS coverage",
+    coverageMode: "Points coverage",
     percentage: "Percentage of the ordinary price",
     amount: "Amount in provider currency",
     coverageValue: "Coverage value",
-    exchangeRate: "Provider-currency units per 1 EUR",
+    exchangeRate: "Provider-currency units per 1 €",
     exchangeRateHint:
-      "Required because POINTS use EUR as the reference currency. 1 POINT = 1 EUR.",
+      "Required because ARCTor points use the euro as the reference currency. 1 point = 1 €.",
     serviceStart: "Service starts",
     serviceEnd: "Service ends",
     exactSlotHint:
@@ -113,7 +115,7 @@ const COPY: Record<LocaleCode, Copy> = {
     terms: "Conditions and comments",
     termsHint: "Optional public conditions for this certificate.",
     preview: "Calculation preview",
-    points: "POINTS price",
+    points: "Points price",
     covered: "Covered in provider currency",
     remainder: "Money remainder",
     externalPayment:
@@ -126,7 +128,7 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Bon podarunkowy",
     title: "Utwórz szkic bonu podarunkowego",
     intro:
-      "Bon jest planowaną aktywnością powiązaną z tym produktem lub usługą. Ten krok tworzy tylko szkic; nie publikuje bonu, nie pobiera POINTS i nie tworzy kodu QR.",
+      "Bon jest planowaną aktywnością powiązaną z tym produktem lub usługą. Ten krok tworzy tylko szkic; nie publikuje bonu, nie pobiera punktów i nie tworzy kodu QR.",
     back: "Wróć do produktu lub usługi",
     provider: "Dostawca",
     item: "Produkt lub usługa",
@@ -143,13 +145,13 @@ const COPY: Record<LocaleCode, Copy> = {
     availableUntil: "Ważny do",
     validityHint:
       "Autor ustala obie daty. Okres nie może przekraczać 31 dni.",
-    coverageMode: "Pokrycie POINTS",
+    coverageMode: "Pokrycie punktami",
     percentage: "Procent zwykłej ceny",
     amount: "Kwota w walucie dostawcy",
     coverageValue: "Wartość pokrycia",
-    exchangeRate: "Jednostki waluty dostawcy za 1 EUR",
+    exchangeRate: "Jednostki waluty dostawcy za 1 €",
     exchangeRateHint:
-      "Wymagane, ponieważ walutą odniesienia POINTS jest EUR. 1 POINT = 1 EUR.",
+      "Wymagane, ponieważ walutą odniesienia punktów ARCTor jest euro. 1 punkt = 1 €.",
     serviceStart: "Początek usługi",
     serviceEnd: "Koniec usługi",
     exactSlotHint:
@@ -157,7 +159,7 @@ const COPY: Record<LocaleCode, Copy> = {
     terms: "Warunki i komentarze",
     termsHint: "Opcjonalne publiczne warunki tego bonu.",
     preview: "Podgląd obliczenia",
-    points: "Cena w POINTS",
+    points: "Cena w punktach",
     covered: "Pokryte w walucie dostawcy",
     remainder: "Pozostała kwota pieniężna",
     externalPayment:
@@ -170,7 +172,7 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Подарочный сертификат",
     title: "Создать черновик подарочного сертификата",
     intro:
-      "Сертификат является плановой активностью, связанной с этим товаром или услугой. На этом шаге создаётся только черновик: он не публикуется, POINTS не списываются и QR-код не создаётся.",
+      "Сертификат является плановой активностью, связанной с этим товаром или услугой. На этом шаге создаётся только черновик: он не публикуется, пункты не списываются и QR-код не создаётся.",
     back: "Назад к товару или услуге",
     provider: "Предоставляющий",
     item: "Товар или услуга",
@@ -187,13 +189,13 @@ const COPY: Record<LocaleCode, Copy> = {
     availableUntil: "Действует до",
     validityHint:
       "Автор устанавливает обе даты. Продолжительность периода не может превышать 31 день.",
-    coverageMode: "Покрытие POINTS",
+    coverageMode: "Покрытие пунктами",
     percentage: "Процент обычной стоимости",
     amount: "Сумма в валюте предоставляющего",
     coverageValue: "Размер покрытия",
-    exchangeRate: "Единиц валюты предоставляющего за 1 EUR",
+    exchangeRate: "Единиц валюты предоставляющего за 1 €",
     exchangeRateHint:
-      "Обязательно, поскольку расчётная валюта POINTS — EUR. 1 POINT = 1 EUR.",
+      "Обязательно, поскольку расчётная валюта пунктов ARCTor — евро. 1 пункт = 1 €.",
     serviceStart: "Начало услуги",
     serviceEnd: "Окончание услуги",
     exactSlotHint:
@@ -201,7 +203,7 @@ const COPY: Record<LocaleCode, Copy> = {
     terms: "Условия и комментарии",
     termsHint: "Необязательные публичные условия этого сертификата.",
     preview: "Предварительный расчёт",
-    points: "Стоимость в POINTS",
+    points: "Стоимость в пунктах",
     covered: "Покрыто в валюте предоставляющего",
     remainder: "Денежный остаток",
     externalPayment:
@@ -214,7 +216,7 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Подарунковий сертифікат",
     title: "Створити чернетку подарункового сертифіката",
     intro:
-      "Сертифікат є запланованою активністю, пов’язаною з цим товаром або послугою. На цьому кроці створюється лише чернетка: вона не публікується, POINTS не списуються і QR-код не створюється.",
+      "Сертифікат є запланованою активністю, пов’язаною з цим товаром або послугою. На цьому кроці створюється лише чернетка: вона не публікується, пункти не списуються і QR-код не створюється.",
     back: "Назад до товару або послуги",
     provider: "Надавач",
     item: "Товар або послуга",
@@ -231,13 +233,13 @@ const COPY: Record<LocaleCode, Copy> = {
     availableUntil: "Діє до",
     validityHint:
       "Автор встановлює обидві дати. Тривалість періоду не може перевищувати 31 день.",
-    coverageMode: "Покриття POINTS",
+    coverageMode: "Покриття пунктами",
     percentage: "Відсоток звичайної вартості",
     amount: "Сума у валюті надавача",
     coverageValue: "Розмір покриття",
-    exchangeRate: "Одиниць валюти надавача за 1 EUR",
+    exchangeRate: "Одиниць валюти надавача за 1 €",
     exchangeRateHint:
-      "Обов’язково, оскільки розрахункова валюта POINTS — EUR. 1 POINT = 1 EUR.",
+      "Обов’язково, оскільки розрахункова валюта пунктів ARCTor — євро. 1 пункт = 1 €.",
     serviceStart: "Початок послуги",
     serviceEnd: "Закінчення послуги",
     exactSlotHint:
@@ -245,7 +247,7 @@ const COPY: Record<LocaleCode, Copy> = {
     terms: "Умови та коментарі",
     termsHint: "Необов’язкові публічні умови цього сертифіката.",
     preview: "Попередній розрахунок",
-    points: "Вартість у POINTS",
+    points: "Вартість у пунктах",
     covered: "Покрито у валюті надавача",
     remainder: "Грошовий залишок",
     externalPayment:
@@ -258,7 +260,7 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Geschenkgutschein",
     title: "Geschenkgutschein-Entwurf erstellen",
     intro:
-      "Der Gutschein ist eine geplante Aktivität, die mit diesem Produkt oder dieser Dienstleistung verknüpft ist. Dieser Schritt erstellt nur einen Entwurf; er veröffentlicht nichts, zieht keine POINTS ab und erstellt keinen QR-Code.",
+      "Der Gutschein ist eine geplante Aktivität, die mit diesem Produkt oder dieser Dienstleistung verknüpft ist. Dieser Schritt erstellt nur einen Entwurf; er veröffentlicht nichts, zieht keine Punkte ab und erstellt keinen QR-Code.",
     back: "Zurück zum Produkt oder zur Dienstleistung",
     provider: "Anbieter",
     item: "Produkt oder Dienstleistung",
@@ -275,13 +277,13 @@ const COPY: Record<LocaleCode, Copy> = {
     availableUntil: "Gültig bis",
     validityHint:
       "Der Autor legt beide Daten fest. Der Zeitraum darf 31 Tage nicht überschreiten.",
-    coverageMode: "POINTS-Abdeckung",
+    coverageMode: "Punkte-Abdeckung",
     percentage: "Prozent des regulären Preises",
     amount: "Betrag in Anbieterwährung",
     coverageValue: "Abdeckungswert",
-    exchangeRate: "Einheiten der Anbieterwährung je 1 EUR",
+    exchangeRate: "Einheiten der Anbieterwährung je 1 €",
     exchangeRateHint:
-      "Erforderlich, weil EUR die Referenzwährung für POINTS ist. 1 POINT = 1 EUR.",
+      "Erforderlich, weil der Euro die Referenzwährung für ARCTor-Punkte ist. 1 Punkt = 1 €.",
     serviceStart: "Beginn der Dienstleistung",
     serviceEnd: "Ende der Dienstleistung",
     exactSlotHint:
@@ -289,7 +291,7 @@ const COPY: Record<LocaleCode, Copy> = {
     terms: "Bedingungen und Kommentare",
     termsHint: "Optionale öffentliche Bedingungen dieses Gutscheins.",
     preview: "Berechnungsvorschau",
-    points: "Preis in POINTS",
+    points: "Preis in Punkten",
     covered: "In Anbieterwährung abgedeckt",
     remainder: "Geldrestbetrag",
     externalPayment:
@@ -302,7 +304,7 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Certificado de regalo",
     title: "Crear borrador de certificado de regalo",
     intro:
-      "El certificado es una actividad planificada vinculada a este producto o servicio. Este paso solo crea un borrador; no lo publica, no descuenta POINTS ni crea un código QR.",
+      "El certificado es una actividad planificada vinculada a este producto o servicio. Este paso solo crea un borrador; no lo publica, no descuenta puntos ni crea un código QR.",
     back: "Volver al producto o servicio",
     provider: "Proveedor",
     item: "Producto o servicio",
@@ -319,13 +321,13 @@ const COPY: Record<LocaleCode, Copy> = {
     availableUntil: "Válido hasta",
     validityHint:
       "El autor fija ambas fechas. El período no puede superar 31 días.",
-    coverageMode: "Cobertura con POINTS",
+    coverageMode: "Cobertura con puntos",
     percentage: "Porcentaje del precio habitual",
     amount: "Importe en la moneda del proveedor",
     coverageValue: "Valor cubierto",
-    exchangeRate: "Unidades de moneda del proveedor por 1 EUR",
+    exchangeRate: "Unidades de moneda del proveedor por 1 €",
     exchangeRateHint:
-      "Obligatorio porque la moneda de referencia de POINTS es EUR. 1 POINT = 1 EUR.",
+      "Obligatorio porque la moneda de referencia de los puntos ARCTor es el euro. 1 punto = 1 €.",
     serviceStart: "Inicio del servicio",
     serviceEnd: "Fin del servicio",
     exactSlotHint:
@@ -333,7 +335,7 @@ const COPY: Record<LocaleCode, Copy> = {
     terms: "Condiciones y comentarios",
     termsHint: "Condiciones públicas opcionales de este certificado.",
     preview: "Vista previa del cálculo",
-    points: "Precio en POINTS",
+    points: "Precio en puntos",
     covered: "Cubierto en moneda del proveedor",
     remainder: "Resto monetario",
     externalPayment:
@@ -346,7 +348,7 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Dárkový certifikát",
     title: "Vytvořit koncept dárkového certifikátu",
     intro:
-      "Certifikát je plánovaná aktivita propojená s tímto produktem nebo službou. Tento krok vytvoří pouze koncept; nic nezveřejní, neodečte POINTS ani nevytvoří QR kód.",
+      "Certifikát je plánovaná aktivita propojená s tímto produktem nebo službou. Tento krok vytvoří pouze koncept; nic nezveřejní, neodečte body ani nevytvoří QR kód.",
     back: "Zpět k produktu nebo službě",
     provider: "Poskytovatel",
     item: "Produkt nebo služba",
@@ -363,13 +365,13 @@ const COPY: Record<LocaleCode, Copy> = {
     availableUntil: "Platí do",
     validityHint:
       "Autor stanoví obě data. Období nesmí překročit 31 dní.",
-    coverageMode: "Pokrytí POINTS",
+    coverageMode: "Pokrytí body",
     percentage: "Procento obvyklé ceny",
     amount: "Částka v měně poskytovatele",
     coverageValue: "Hodnota pokrytí",
-    exchangeRate: "Jednotek měny poskytovatele za 1 EUR",
+    exchangeRate: "Jednotek měny poskytovatele za 1 €",
     exchangeRateHint:
-      "Povinné, protože referenční měnou POINTS je EUR. 1 POINT = 1 EUR.",
+      "Povinné, protože referenční měnou bodů ARCTor je euro. 1 bod = 1 €.",
     serviceStart: "Začátek služby",
     serviceEnd: "Konec služby",
     exactSlotHint:
@@ -377,7 +379,7 @@ const COPY: Record<LocaleCode, Copy> = {
     terms: "Podmínky a komentáře",
     termsHint: "Volitelné veřejné podmínky tohoto certifikátu.",
     preview: "Náhled výpočtu",
-    points: "Cena v POINTS",
+    points: "Cena v bodech",
     covered: "Pokryto v měně poskytovatele",
     remainder: "Peněžní zbytek",
     externalPayment:
@@ -915,7 +917,7 @@ export function GiftCertificateCreateForm({
                   [
                     copy.points,
                     calculation.valid
-                      ? `${calculation.pointsPrice.toFixed(2)} POINTS`
+                      ? formatLocalizedPoints(calculation.pointsPrice, locale)
                       : "—",
                   ],
                   [

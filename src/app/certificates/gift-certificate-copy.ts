@@ -1,3 +1,4 @@
+import { formatLocalizedPoints } from "@/components/figma-dashboard/certificate-value-format";
 import { type LocaleCode } from "@/i18n";
 
 export type GiftCertificateCatalogCopy = {
@@ -96,24 +97,24 @@ export const GIFT_CERTIFICATE_CATALOG_COPY: Record<
     serviceOffline: "Service offline",
     serviceOnline: "Service online",
     ordinaryPrice: "Ordinary price",
-    coveredByPoints: "Covered by POINTS",
+    coveredByPoints: "Covered by points",
     conditions: "Conditions and comments",
     noConditions: "No additional conditions.",
     activeProfile: "Order for active profile",
     orderButton: "Order certificate",
     ordering: "Ordering…",
     orderConfirm:
-      "POINTS will be destroyed immediately. The provider will receive reputation but no POINTS. Continue?",
+      "Points will be destroyed immediately. The provider will receive reputation but no points. Continue?",
     orderSuccess: "The certificate has been ordered.",
     ownCertificate: "This certificate is provided by your account and cannot be ordered by you.",
     signInToOrder: "Sign in and select a personal profile or avatar to order.",
     unavailableToOrder: "This certificate can no longer be ordered.",
     pointsBurnNotice:
-      "POINTS are destroyed immediately when the certificate is ordered.",
+      "Points are destroyed immediately when the certificate is ordered.",
     moneyOutsideNotice:
       "Any money remainder is paid outside ARCTor. ARCTor does not accept or confirm the payment.",
     noRefundNotice:
-      "Unused certificates expire without a POINTS refund.",
+      "Unused certificates expire without a points refund.",
     publicCode: "Public code",
     qrTitle: "Permanent one-time QR",
     qrInstruction:
@@ -123,11 +124,11 @@ export const GIFT_CERTIFICATE_CATALOG_COPY: Record<
     orderedAt: "Ordered",
     ownerDetails: "Open provider view",
     errorGeneric: "The certificate could not be ordered.",
-    errorInsufficientPoints: "There are not enough available POINTS.",
+    errorInsufficientPoints: "There are not enough available points.",
     errorOwnCertificate: "You cannot order your own certificate.",
     errorAlreadyActive:
       "You already have an active certificate from this provider.",
-    errorNoWallet: "An active POINTS wallet was not found.",
+    errorNoWallet: "An active points wallet was not found.",
     errorExpired: "The certificate validity period has ended.",
     errorNotAvailable: "The certificate is no longer available.",
     errorProfile: "Select a personal profile or avatar.",
@@ -165,22 +166,22 @@ export const GIFT_CERTIFICATE_CATALOG_COPY: Record<
     serviceOffline: "Usługa stacjonarna",
     serviceOnline: "Usługa online",
     ordinaryPrice: "Zwykła cena",
-    coveredByPoints: "Pokrycie POINTS",
+    coveredByPoints: "Pokrycie punktami",
     conditions: "Warunki i komentarze",
     noConditions: "Brak dodatkowych warunków.",
     activeProfile: "Zamówienie dla aktywnego profilu",
     orderButton: "Zamów bon",
     ordering: "Zamawianie…",
     orderConfirm:
-      "POINTS zostaną natychmiast zniszczone. Dostawca otrzyma reputację, ale nie otrzyma POINTS. Kontynuować?",
+      "Punkty zostaną natychmiast wykorzystane. Dostawca otrzyma reputację, ale nie otrzyma punktów. Kontynuować?",
     orderSuccess: "Bon został zamówiony.",
     ownCertificate: "Ten bon jest udostępniany przez Twoje konto i nie możesz go zamówić.",
     signInToOrder: "Zaloguj się i wybierz profil osobisty lub awatar.",
     unavailableToOrder: "Tego bonu nie można już zamówić.",
-    pointsBurnNotice: "POINTS są niszczone natychmiast po zamówieniu bonu.",
+    pointsBurnNotice: "Punkty są wykorzystywane natychmiast po zamówieniu bonu.",
     moneyOutsideNotice:
       "Pozostała kwota jest płacona poza ARCTor. ARCTor nie przyjmuje ani nie potwierdza płatności.",
-    noRefundNotice: "Niewykorzystany bon wygasa bez zwrotu POINTS.",
+    noRefundNotice: "Niewykorzystany bon wygasa bez zwrotu punktów.",
     publicCode: "Kod publiczny",
     qrTitle: "Stały jednorazowy QR",
     qrInstruction:
@@ -190,10 +191,10 @@ export const GIFT_CERTIFICATE_CATALOG_COPY: Record<
     orderedAt: "Zamówiono",
     ownerDetails: "Otwórz widok dostawcy",
     errorGeneric: "Nie udało się zamówić bonu.",
-    errorInsufficientPoints: "Brak wystarczającej liczby dostępnych POINTS.",
+    errorInsufficientPoints: "Brak wystarczającej liczby dostępnych punktów.",
     errorOwnCertificate: "Nie możesz zamówić własnego bonu.",
     errorAlreadyActive: "Masz już aktywny bon tego dostawcy.",
-    errorNoWallet: "Nie znaleziono aktywnego portfela POINTS.",
+    errorNoWallet: "Nie znaleziono aktywnego portfela punktów.",
     errorExpired: "Okres ważności bonu już minął.",
     errorNotAvailable: "Bon nie jest już dostępny.",
     errorProfile: "Wybierz profil osobisty lub awatar.",
@@ -231,23 +232,23 @@ export const GIFT_CERTIFICATE_CATALOG_COPY: Record<
     serviceOffline: "Услуга офлайн",
     serviceOnline: "Услуга онлайн",
     ordinaryPrice: "Обычная стоимость",
-    coveredByPoints: "Покрывается POINTS",
+    coveredByPoints: "Покрывается пунктами",
     conditions: "Условия и комментарии",
     noConditions: "Дополнительные условия не указаны.",
     activeProfile: "Заказ для активного профиля",
     orderButton: "Заказать сертификат",
     ordering: "Оформление заказа…",
     orderConfirm:
-      "POINTS будут уничтожены сразу. Предоставляющий получит репутацию, но не получит POINTS. Продолжить?",
+      "Пункты будут использованы сразу. Предоставляющий получит репутацию, но не получит пункты. Продолжить?",
     orderSuccess: "Сертификат заказан.",
     ownCertificate: "Этот сертификат предоставляется вашей учётной записью, поэтому вы не можете его заказать.",
     signInToOrder: "Войдите и выберите личный профиль или аватар для заказа.",
     unavailableToOrder: "Этот сертификат больше нельзя заказать.",
-    pointsBurnNotice: "POINTS уничтожаются сразу при заказе сертификата.",
+    pointsBurnNotice: "Пункты используются сразу при заказе сертификата.",
     moneyOutsideNotice:
       "Денежный остаток оплачивается вне ARCTor. ARCTor не принимает и не подтверждает денежную оплату.",
     noRefundNotice:
-      "Неиспользованный сертификат истекает без возврата POINTS.",
+      "Неиспользованный сертификат истекает без возврата пунктов.",
     publicCode: "Публичный код",
     qrTitle: "Постоянный одноразовый QR",
     qrInstruction:
@@ -257,11 +258,11 @@ export const GIFT_CERTIFICATE_CATALOG_COPY: Record<
     orderedAt: "Заказан",
     ownerDetails: "Открыть представление предоставляющего",
     errorGeneric: "Не удалось заказать сертификат.",
-    errorInsufficientPoints: "Недостаточно доступных POINTS.",
+    errorInsufficientPoints: "Недостаточно доступных пунктов.",
     errorOwnCertificate: "Нельзя заказать собственный сертификат.",
     errorAlreadyActive:
       "У вас уже есть активный сертификат этого предоставляющего.",
-    errorNoWallet: "Активный кошелёк POINTS не найден.",
+    errorNoWallet: "Активный кошелёк пунктов не найден.",
     errorExpired: "Срок действия сертификата уже закончился.",
     errorNotAvailable: "Сертификат больше не доступен.",
     errorProfile: "Выберите личный профиль или аватар.",
@@ -299,23 +300,23 @@ export const GIFT_CERTIFICATE_CATALOG_COPY: Record<
     serviceOffline: "Послуга офлайн",
     serviceOnline: "Послуга онлайн",
     ordinaryPrice: "Звичайна вартість",
-    coveredByPoints: "Покривається POINTS",
+    coveredByPoints: "Покривається пунктами",
     conditions: "Умови й коментарі",
     noConditions: "Додаткові умови не вказані.",
     activeProfile: "Замовлення для активного профілю",
     orderButton: "Замовити сертифікат",
     ordering: "Оформлення замовлення…",
     orderConfirm:
-      "POINTS буде знищено одразу. Надавач отримає репутацію, але не отримає POINTS. Продовжити?",
+      "Пункти буде використано одразу. Надавач отримає репутацію, але не отримає пункти. Продовжити?",
     orderSuccess: "Сертифікат замовлено.",
     ownCertificate: "Цей сертифікат надає ваш обліковий запис, тому ви не можете його замовити.",
     signInToOrder: "Увійдіть і виберіть особистий профіль або аватар.",
     unavailableToOrder: "Цей сертифікат більше не можна замовити.",
-    pointsBurnNotice: "POINTS знищуються одразу під час замовлення.",
+    pointsBurnNotice: "Пункти використовуються одразу під час замовлення.",
     moneyOutsideNotice:
       "Грошовий залишок сплачується поза ARCTor. ARCTor не приймає і не підтверджує оплату.",
     noRefundNotice:
-      "Невикористаний сертифікат спливає без повернення POINTS.",
+      "Невикористаний сертифікат спливає без повернення пунктів.",
     publicCode: "Публічний код",
     qrTitle: "Постійний одноразовий QR",
     qrInstruction:
@@ -325,10 +326,10 @@ export const GIFT_CERTIFICATE_CATALOG_COPY: Record<
     orderedAt: "Замовлено",
     ownerDetails: "Відкрити представлення надавача",
     errorGeneric: "Не вдалося замовити сертифікат.",
-    errorInsufficientPoints: "Недостатньо доступних POINTS.",
+    errorInsufficientPoints: "Недостатньо доступних пунктів.",
     errorOwnCertificate: "Не можна замовити власний сертифікат.",
     errorAlreadyActive: "У вас уже є активний сертифікат цього надавача.",
-    errorNoWallet: "Активний гаманець POINTS не знайдено.",
+    errorNoWallet: "Активний гаманець пунктів не знайдено.",
     errorExpired: "Строк дії сертифіката вже завершився.",
     errorNotAvailable: "Сертифікат більше не доступний.",
     errorProfile: "Виберіть особистий профіль або аватар.",
@@ -366,23 +367,23 @@ export const GIFT_CERTIFICATE_CATALOG_COPY: Record<
     serviceOffline: "Dienstleistung vor Ort",
     serviceOnline: "Online-Dienstleistung",
     ordinaryPrice: "Normalpreis",
-    coveredByPoints: "Durch POINTS gedeckt",
+    coveredByPoints: "Durch Punkte gedeckt",
     conditions: "Bedingungen und Kommentare",
     noConditions: "Keine zusätzlichen Bedingungen.",
     activeProfile: "Bestellung für aktives Profil",
     orderButton: "Gutschein bestellen",
     ordering: "Bestellung…",
     orderConfirm:
-      "POINTS werden sofort vernichtet. Der Anbieter erhält Reputation, aber keine POINTS. Fortfahren?",
+      "Punkte werden sofort verwendet. Der Anbieter erhält Reputation, aber keine Punkte. Fortfahren?",
     orderSuccess: "Der Gutschein wurde bestellt.",
     ownCertificate: "Dieser Gutschein wird von Ihrem Konto angeboten und kann von Ihnen nicht bestellt werden.",
     signInToOrder: "Melden Sie sich an und wählen Sie ein persönliches Profil oder einen Avatar.",
     unavailableToOrder: "Dieser Gutschein kann nicht mehr bestellt werden.",
-    pointsBurnNotice: "POINTS werden bei der Bestellung sofort vernichtet.",
+    pointsBurnNotice: "Punkte werden bei der Bestellung sofort verwendet.",
     moneyOutsideNotice:
       "Ein Geldrest wird außerhalb von ARCTor bezahlt. ARCTor nimmt die Zahlung nicht an und bestätigt sie nicht.",
     noRefundNotice:
-      "Nicht verwendete Gutscheine verfallen ohne POINTS-Rückerstattung.",
+      "Nicht verwendete Gutscheine verfallen ohne Rückerstattung der Punkte.",
     publicCode: "Öffentlicher Code",
     qrTitle: "Permanenter einmaliger QR",
     qrInstruction:
@@ -392,11 +393,11 @@ export const GIFT_CERTIFICATE_CATALOG_COPY: Record<
     orderedAt: "Bestellt",
     ownerDetails: "Anbieteransicht öffnen",
     errorGeneric: "Der Gutschein konnte nicht bestellt werden.",
-    errorInsufficientPoints: "Nicht genügend verfügbare POINTS.",
+    errorInsufficientPoints: "Nicht genügend verfügbare Punkte.",
     errorOwnCertificate: "Der eigene Gutschein kann nicht bestellt werden.",
     errorAlreadyActive:
       "Sie haben bereits einen aktiven Gutschein dieses Anbieters.",
-    errorNoWallet: "Kein aktives POINTS-Wallet gefunden.",
+    errorNoWallet: "Kein aktives Punkte-Wallet gefunden.",
     errorExpired: "Die Gültigkeit des Gutscheins ist beendet.",
     errorNotAvailable: "Der Gutschein ist nicht mehr verfügbar.",
     errorProfile: "Wählen Sie ein persönliches Profil oder einen Avatar.",
@@ -434,24 +435,24 @@ export const GIFT_CERTIFICATE_CATALOG_COPY: Record<
     serviceOffline: "Servicio presencial",
     serviceOnline: "Servicio en línea",
     ordinaryPrice: "Precio normal",
-    coveredByPoints: "Cubierto por POINTS",
+    coveredByPoints: "Cubierto con puntos",
     conditions: "Condiciones y comentarios",
     noConditions: "No hay condiciones adicionales.",
     activeProfile: "Pedido para el perfil activo",
     orderButton: "Pedir certificado",
     ordering: "Procesando…",
     orderConfirm:
-      "Los POINTS se destruirán de inmediato. El proveedor recibirá reputación, pero no POINTS. ¿Continuar?",
+      "Los puntos se utilizarán de inmediato. El proveedor recibirá reputación, pero no puntos. ¿Continuar?",
     orderSuccess: "El certificado ha sido pedido.",
     ownCertificate: "Este certificado lo ofrece tu cuenta y no puedes pedirlo.",
     signInToOrder: "Inicia sesión y elige un perfil personal o avatar.",
     unavailableToOrder: "Este certificado ya no se puede pedir.",
     pointsBurnNotice:
-      "Los POINTS se destruyen inmediatamente al pedir el certificado.",
+      "Los puntos se utilizan inmediatamente al pedir el certificado.",
     moneyOutsideNotice:
       "El resto en dinero se paga fuera de ARCTor. ARCTor no acepta ni confirma el pago.",
     noRefundNotice:
-      "Los certificados no utilizados caducan sin devolución de POINTS.",
+      "Los certificados no utilizados caducan sin devolución de puntos.",
     publicCode: "Código público",
     qrTitle: "QR permanente de un solo uso",
     qrInstruction:
@@ -461,11 +462,11 @@ export const GIFT_CERTIFICATE_CATALOG_COPY: Record<
     orderedAt: "Pedido",
     ownerDetails: "Abrir vista del proveedor",
     errorGeneric: "No se pudo pedir el certificado.",
-    errorInsufficientPoints: "No hay suficientes POINTS disponibles.",
+    errorInsufficientPoints: "No hay suficientes puntos disponibles.",
     errorOwnCertificate: "No puedes pedir tu propio certificado.",
     errorAlreadyActive:
       "Ya tienes un certificado activo de este proveedor.",
-    errorNoWallet: "No se encontró una cartera POINTS activa.",
+    errorNoWallet: "No se encontró una cartera de puntos activa.",
     errorExpired: "El período de validez ha terminado.",
     errorNotAvailable: "El certificado ya no está disponible.",
     errorProfile: "Elige un perfil personal o avatar.",
@@ -503,24 +504,24 @@ export const GIFT_CERTIFICATE_CATALOG_COPY: Record<
     serviceOffline: "Služba osobně",
     serviceOnline: "Online služba",
     ordinaryPrice: "Běžná cena",
-    coveredByPoints: "Pokryto POINTS",
+    coveredByPoints: "Pokryto body",
     conditions: "Podmínky a komentáře",
     noConditions: "Žádné další podmínky.",
     activeProfile: "Objednávka pro aktivní profil",
     orderButton: "Objednat certifikát",
     ordering: "Objednávání…",
     orderConfirm:
-      "POINTS budou okamžitě zničeny. Poskytovatel získá reputaci, ale žádné POINTS. Pokračovat?",
+      "Body budou okamžitě použity. Poskytovatel získá reputaci, ale žádné body. Pokračovat?",
     orderSuccess: "Certifikát byl objednán.",
     ownCertificate: "Tento certifikát nabízí váš účet a nemůžete si jej objednat.",
     signInToOrder: "Přihlaste se a vyberte osobní profil nebo avatar.",
     unavailableToOrder: "Tento certifikát již nelze objednat.",
     pointsBurnNotice:
-      "POINTS jsou při objednání certifikátu okamžitě zničeny.",
+      "Body jsou při objednání certifikátu okamžitě použity.",
     moneyOutsideNotice:
       "Peněžní zbytek se platí mimo ARCTor. ARCTor platbu nepřijímá ani nepotvrzuje.",
     noRefundNotice:
-      "Nevyužité certifikáty vyprší bez vrácení POINTS.",
+      "Nevyužité certifikáty vyprší bez vrácení bodů.",
     publicCode: "Veřejný kód",
     qrTitle: "Trvalý jednorázový QR",
     qrInstruction:
@@ -530,11 +531,11 @@ export const GIFT_CERTIFICATE_CATALOG_COPY: Record<
     orderedAt: "Objednáno",
     ownerDetails: "Otevřít pohled poskytovatele",
     errorGeneric: "Certifikát se nepodařilo objednat.",
-    errorInsufficientPoints: "Není dostatek dostupných POINTS.",
+    errorInsufficientPoints: "Není dostatek dostupných bodů.",
     errorOwnCertificate: "Vlastní certifikát nelze objednat.",
     errorAlreadyActive:
       "Již máte aktivní certifikát tohoto poskytovatele.",
-    errorNoWallet: "Aktivní POINTS peněženka nebyla nalezena.",
+    errorNoWallet: "Aktivní peněženka bodů nebyla nalezena.",
     errorExpired: "Platnost certifikátu skončila.",
     errorNotAvailable: "Certifikát již není dostupný.",
     errorProfile: "Vyberte osobní profil nebo avatar.",
@@ -589,8 +590,7 @@ export function formatGiftCertificateMoney(
   return new Intl.NumberFormat(LOCALE_TAGS[locale], {
     style: "currency",
     currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    currencyDisplay: "narrowSymbol",
   }).format(value);
 }
 
@@ -598,10 +598,7 @@ export function formatGiftCertificatePoints(
   value: number,
   locale: LocaleCode,
 ): string {
-  return `${new Intl.NumberFormat(LOCALE_TAGS[locale], {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)} POINTS`;
+  return formatLocalizedPoints(value, locale);
 }
 
 export function formatGiftCertificateDate(

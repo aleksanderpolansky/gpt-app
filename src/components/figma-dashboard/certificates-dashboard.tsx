@@ -23,6 +23,12 @@ import {
 
 import { type LocaleCode } from "@/i18n";
 
+import { CertificateShareButton } from "./certificate-share-button";
+import {
+  formatLocalizedPoints,
+  LocalizedMoney,
+} from "./certificate-value-format";
+
 export type CertificateDashboardMode =
   | "catalog"
   | "buyer"
@@ -47,9 +53,12 @@ export type CertificateDashboardItem = {
   readonly description: string | null;
   readonly objectKind: "product_type" | "service_type";
   readonly providerName: string;
+  readonly providerHref: string | null;
   readonly recipientName: string | null;
+  readonly recipientHref: string | null;
   readonly providerReputation: number;
   readonly state: CertificateDashboardState;
+  readonly regularPrice: number;
   readonly pointsPrice: number;
   readonly moneyRemainder: number;
   readonly currency: string;
@@ -60,6 +69,7 @@ export type CertificateDashboardItem = {
   readonly orderedAt: string | null;
   readonly finalizedAt: string | null;
   readonly href: string;
+  readonly shareHref: string;
 };
 
 type FilterKey =
@@ -77,6 +87,9 @@ type Labels = {
   readonly titles: Record<CertificateDashboardMode, string>;
   readonly subtitles: Record<CertificateDashboardMode, string>;
   readonly total: string;
+  readonly allOffers: string;
+  readonly activeOffers: string;
+  readonly realizedOffers: string;
   readonly available: string;
   readonly active: string;
   readonly awaiting: string;
@@ -101,6 +114,11 @@ type Labels = {
   readonly showMore: string;
   readonly empty: string;
   readonly details: string;
+  readonly share: string;
+  readonly price: string;
+  readonly surcharge: string;
+  readonly recipientHidden: string;
+  readonly recipientPending: string;
   readonly provider: string;
   readonly buyer: string;
   readonly points: string;
@@ -116,19 +134,22 @@ type Labels = {
 
 const EN: Labels = {
   titles: {
-    catalog: "Gift certificate catalog",
+    catalog: "Offer catalog",
     buyer: "My certificates",
-    provider: "Provided certificates",
+    provider: "My offers",
   },
   subtitles: {
     catalog:
-      "Available products and services that can be ordered with ARCTor POINTS.",
+      "Products, services and private offers available for ARCTor points.",
     buyer:
       "Certificates ordered by your account, their check-in and confirmation states.",
     provider:
-      "Certificates published and fulfilled by your profiles and organizations.",
+      "Offers published and fulfilled by your profiles and organizations.",
   },
   total: "Certificates",
+  allOffers: "All offers",
+  activeOffers: "Active offers",
+  realizedOffers: "Realized offers",
   available: "Available",
   active: "Ordered",
   awaiting: "Awaiting confirmation",
@@ -138,10 +159,10 @@ const EN: Labels = {
   services: "Services",
   newest: "Newest first",
   searchFilters: "Search and filters",
-  findCertificate: "Find certificate",
+  findCertificate: "Find offer",
   createCertificate: "Create certificate",
   myCertificates: "My certificates",
-  catalog: "Certificate catalog",
+  catalog: "Offer catalog",
   publicCatalog: "Public catalog",
   availableActions: "Available states",
   nextAction: "Next action",
@@ -151,11 +172,16 @@ const EN: Labels = {
   shown: "Shown",
   of: "of",
   showMore: "Show more",
-  empty: "No certificates match the selected filter.",
+  empty: "No offers match the selected filter.",
   details: "Open details",
+  share: "Share",
+  price: "Price",
+  surcharge: "surcharge",
+  recipientHidden: "Hidden recipient",
+  recipientPending: "Recipient not selected",
   provider: "Provider",
-  buyer: "Buyer",
-  points: "POINTS",
+  buyer: "Recipient",
+  points: "points",
   validity: "Validity",
   code: "Public code",
   reputation: "Reputation",
@@ -181,19 +207,22 @@ const EN: Labels = {
 const RU: Labels = {
   ...EN,
   titles: {
-    catalog: "Каталог подарочных сертификатов",
+    catalog: "Каталог предложений",
     buyer: "Мои сертификаты",
-    provider: "Предоставленные сертификаты",
+    provider: "Мои предложения",
   },
   subtitles: {
     catalog:
-      "Доступные товары и услуги, которые можно заказать за ARCTor POINTS.",
+      "Товары, услуги и частные предложения, доступные за пункты ARCTor.",
     buyer:
       "Сертификаты, заказанные вашей учётной записью, и состояния их исполнения.",
     provider:
-      "Сертификаты, опубликованные и исполняемые вашими профилями и предприятиями.",
+      "Предложения, опубликованные и реализуемые вашими профилями и предприятиями.",
   },
   total: "Сертификаты",
+  allOffers: "Все предложения",
+  activeOffers: "Активные предложения",
+  realizedOffers: "Реализованные предложения",
   available: "Опубликованы",
   active: "Заказаны",
   awaiting: "Ожидают подтверждения",
@@ -203,11 +232,11 @@ const RU: Labels = {
   services: "Услуги",
   newest: "Сначала новые",
   searchFilters: "Поиск и фильтры",
-  findCertificate: "Найти сертификат",
+  findCertificate: "Найти предложение",
   createCertificate: "Создать сертификат",
   myCertificates: "Мои сертификаты",
-  catalog: "Каталог сертификатов",
-  publicCatalog: "Публичный каталог",
+  catalog: "Каталог предложений",
+  publicCatalog: "Все предложения",
   availableActions: "Доступные состояния",
   nextAction: "Следующее действие",
   noActions: "Действий не требуется",
@@ -216,11 +245,16 @@ const RU: Labels = {
   shown: "Показано",
   of: "из",
   showMore: "Показать ещё",
-  empty: "По выбранному фильтру сертификатов нет.",
-  details: "Открыть сертификат",
+  empty: "По выбранному фильтру предложений нет.",
+  details: "Открыть предложение",
+  share: "Поделиться",
+  price: "Цена",
+  surcharge: "доплата",
+  recipientHidden: "Скрытый получатель",
+  recipientPending: "Получатель не выбран",
   provider: "Предоставляющий",
-  buyer: "Покупатель",
-  points: "POINTS",
+  buyer: "Получатель",
+  points: "пункты",
   validity: "Срок действия",
   code: "Публичный код",
   reputation: "Репутация",
@@ -246,19 +280,22 @@ const RU: Labels = {
 const PL: Labels = {
   ...EN,
   titles: {
-    catalog: "Katalog bonów prezentowych",
+    catalog: "Katalog ofert",
     buyer: "Moje bony",
-    provider: "Udostępnione bony",
+    provider: "Moje oferty",
   },
   subtitles: {
     catalog:
-      "Produkty i usługi dostępne do zamówienia za ARCTor POINTS.",
+      "Produkty, usługi i oferty prywatne dostępne za punkty ARCTor.",
     buyer:
       "Bony zamówione przez Twoje konto oraz stan ich realizacji.",
     provider:
-      "Bony opublikowane i realizowane przez Twoje profile i firmy.",
+      "Oferty opublikowane i realizowane przez Twoje profile i firmy.",
   },
   total: "Bony",
+  allOffers: "Wszystkie oferty",
+  activeOffers: "Aktywne oferty",
+  realizedOffers: "Zrealizowane oferty",
   available: "Opublikowane",
   active: "Zamówione",
   awaiting: "Oczekują na potwierdzenie",
@@ -268,11 +305,11 @@ const PL: Labels = {
   services: "Usługi",
   newest: "Najnowsze",
   searchFilters: "Wyszukiwanie i filtry",
-  findCertificate: "Znajdź bon",
+  findCertificate: "Znajdź ofertę",
   createCertificate: "Utwórz bon",
   myCertificates: "Moje bony",
-  catalog: "Katalog bonów",
-  publicCatalog: "Katalog publiczny",
+  catalog: "Katalog ofert",
+  publicCatalog: "Wszystkie oferty",
   availableActions: "Dostępne stany",
   nextAction: "Następne działanie",
   noActions: "Brak wymaganych działań",
@@ -281,10 +318,16 @@ const PL: Labels = {
   shown: "Pokazano",
   of: "z",
   showMore: "Pokaż więcej",
-  empty: "Brak bonów dla wybranego filtra.",
-  details: "Otwórz bon",
+  empty: "Brak ofert dla wybranego filtra.",
+  details: "Otwórz ofertę",
+  share: "Udostępnij",
+  price: "Cena",
+  surcharge: "dopłata",
+  recipientHidden: "Ukryty odbiorca",
+  recipientPending: "Odbiorca nie został wybrany",
   provider: "Dostawca",
-  buyer: "Kupujący",
+  buyer: "Odbiorca",
+  points: "punkty",
   validity: "Ważność",
   code: "Kod publiczny",
   reputation: "Reputacja",
@@ -315,11 +358,22 @@ function getLabels(locale: LocaleCode): Labels {
     return {
       ...RU,
       titles: {
-        catalog: "Каталог подарункових сертифікатів",
+        catalog: "Каталог пропозицій",
         buyer: "Мої сертифікати",
-        provider: "Надані сертифікати",
+        provider: "Мої пропозиції",
+      },
+      subtitles: {
+        catalog:
+          "Товари, послуги та приватні пропозиції, доступні за пункти ARCTor.",
+        buyer:
+          "Сертифікати, замовлені вашим обліковим записом, і стани їх виконання.",
+        provider:
+          "Пропозиції, опубліковані та реалізовані вашими профілями й підприємствами.",
       },
       total: "Сертифікати",
+      allOffers: "Усі пропозиції",
+      activeOffers: "Активні пропозиції",
+      realizedOffers: "Реалізовані пропозиції",
       available: "Опубліковані",
       active: "Замовлені",
       awaiting: "Очікують підтвердження",
@@ -327,27 +381,50 @@ function getLabels(locale: LocaleCode): Labels {
       problems: "Потребують розгляду",
       products: "Товари",
       services: "Послуги",
-      findCertificate: "Знайти сертифікат",
+      newest: "Спочатку нові",
+      searchFilters: "Пошук і фільтри",
+      findCertificate: "Знайти пропозицію",
       createCertificate: "Створити сертифікат",
       myCertificates: "Мої сертифікати",
-      catalog: "Каталог сертифікатів",
-      details: "Відкрити сертифікат",
+      catalog: "Каталог пропозицій",
+      publicCatalog: "Усі пропозиції",
+      availableActions: "Доступні стани",
+      nextAction: "Наступна дія",
+      noActions: "Дій не потрібно",
+      noProblems: "Проблем немає",
+      completion: "Завершеність",
+      shown: "Показано",
+      of: "із",
+      showMore: "Показати ще",
+      empty: "За вибраним фільтром пропозицій немає.",
+      details: "Відкрити пропозицію",
+      share: "Поділитися",
+      price: "Ціна",
+      surcharge: "доплата",
+      recipientHidden: "Прихований отримувач",
+      recipientPending: "Отримувача не вибрано",
       provider: "Надавач",
-      buyer: "Покупець",
+      buyer: "Отримувач",
+      points: "пункти",
       validity: "Строк дії",
       code: "Публічний код",
+      reputation: "Репутація",
+      moneyRemainder: "Грошовий залишок",
+      product: "Товар",
+      service: "Послуга",
+      searchSection: "Пошук і фільтри",
       states: {
-        ...RU.states,
-        available: "Опублікований",
-        active: "Замовлений і активний",
+        draft: "Чернетка",
+        available: "Опубліковано",
+        active: "Замовлено й активно",
         checked_in: "Прибуття зареєстровано",
-        awaiting_confirmation: "Очікується підтвердження покупця",
-        confirmed_by_buyer: "Підтверджений покупцем",
-        auto_confirmed: "Підтверджений автоматично",
+        awaiting_confirmation: "Очікується підтвердження отримувача",
+        confirmed_by_buyer: "Підтверджено отримувачем",
+        auto_confirmed: "Підтверджено автоматично",
         problem: "Потребує розгляду",
-        redeemed: "Використаний",
+        redeemed: "Реалізовано",
         expired: "Строк минув",
-        annulled: "Анульований",
+        annulled: "Анульовано",
       },
     };
   }
@@ -356,27 +433,74 @@ function getLabels(locale: LocaleCode): Labels {
     return {
       ...EN,
       titles: {
-        catalog: "Geschenkgutschein-Katalog",
+        catalog: "Angebotskatalog",
         buyer: "Meine Gutscheine",
-        provider: "Bereitgestellte Gutscheine",
+        provider: "Meine Angebote",
+      },
+      subtitles: {
+        catalog:
+          "Produkte, Dienstleistungen und private Angebote, die für ARCTor-Punkte verfügbar sind.",
+        buyer:
+          "Von Ihrem Konto bestellte Gutscheine und der Stand ihrer Erfüllung.",
+        provider:
+          "Angebote, die von Ihren Profilen und Unternehmen veröffentlicht und erfüllt wurden.",
       },
       total: "Gutscheine",
+      allOffers: "Alle Angebote",
+      activeOffers: "Aktive Angebote",
+      realizedOffers: "Erfüllte Angebote",
       available: "Veröffentlicht",
       active: "Bestellt",
-      awaiting: "Warten auf Bestätigung",
+      awaiting: "Bestätigung ausstehend",
       completed: "Bestätigt",
       problems: "Prüfung erforderlich",
       products: "Produkte",
       services: "Dienstleistungen",
-      findCertificate: "Gutschein finden",
+      newest: "Neueste zuerst",
+      searchFilters: "Suche und Filter",
+      findCertificate: "Angebot finden",
       createCertificate: "Gutschein erstellen",
       myCertificates: "Meine Gutscheine",
-      catalog: "Gutscheinkatalog",
-      details: "Gutschein öffnen",
+      catalog: "Angebotskatalog",
+      publicCatalog: "Alle Angebote",
+      availableActions: "Verfügbare Zustände",
+      nextAction: "Nächste Aktion",
+      noActions: "Keine Aktion erforderlich",
+      noProblems: "Keine Probleme",
+      completion: "Erfüllung",
+      shown: "Angezeigt",
+      of: "von",
+      showMore: "Mehr anzeigen",
+      empty: "Für den gewählten Filter gibt es keine Angebote.",
+      details: "Angebot öffnen",
+      share: "Teilen",
+      price: "Preis",
+      surcharge: "Zuzahlung",
+      recipientHidden: "Verborgener Empfänger",
+      recipientPending: "Empfänger nicht ausgewählt",
       provider: "Anbieter",
-      buyer: "Käufer",
+      buyer: "Empfänger",
+      points: "Punkte",
       validity: "Gültigkeit",
       code: "Öffentlicher Code",
+      reputation: "Reputation",
+      moneyRemainder: "Restbetrag",
+      product: "Produkt",
+      service: "Dienstleistung",
+      searchSection: "Suche und Filter",
+      states: {
+        draft: "Entwurf",
+        available: "Veröffentlicht",
+        active: "Bestellt und aktiv",
+        checked_in: "Ankunft registriert",
+        awaiting_confirmation: "Bestätigung des Empfängers ausstehend",
+        confirmed_by_buyer: "Vom Empfänger bestätigt",
+        auto_confirmed: "Automatisch bestätigt",
+        problem: "Prüfung erforderlich",
+        redeemed: "Erfüllt",
+        expired: "Abgelaufen",
+        annulled: "Annulliert",
+      },
     };
   }
 
@@ -384,27 +508,74 @@ function getLabels(locale: LocaleCode): Labels {
     return {
       ...EN,
       titles: {
-        catalog: "Catálogo de certificados regalo",
+        catalog: "Catálogo de ofertas",
         buyer: "Mis certificados",
-        provider: "Certificados ofrecidos",
+        provider: "Mis ofertas",
+      },
+      subtitles: {
+        catalog:
+          "Productos, servicios y ofertas privadas disponibles por puntos ARCTor.",
+        buyer:
+          "Certificados solicitados por tu cuenta y el estado de su cumplimiento.",
+        provider:
+          "Ofertas publicadas y cumplidas por tus perfiles y empresas.",
       },
       total: "Certificados",
-      available: "Publicados",
-      active: "Pedidos",
+      allOffers: "Todas las ofertas",
+      activeOffers: "Ofertas activas",
+      realizedOffers: "Ofertas realizadas",
+      available: "Publicadas",
+      active: "Solicitadas",
       awaiting: "Esperan confirmación",
-      completed: "Confirmados",
+      completed: "Confirmadas",
       problems: "Requieren revisión",
       products: "Productos",
       services: "Servicios",
-      findCertificate: "Buscar certificado",
+      newest: "Más recientes",
+      searchFilters: "Búsqueda y filtros",
+      findCertificate: "Buscar oferta",
       createCertificate: "Crear certificado",
       myCertificates: "Mis certificados",
-      catalog: "Catálogo de certificados",
-      details: "Abrir certificado",
+      catalog: "Catálogo de ofertas",
+      publicCatalog: "Todas las ofertas",
+      availableActions: "Estados disponibles",
+      nextAction: "Siguiente acción",
+      noActions: "No se requiere ninguna acción",
+      noProblems: "Sin problemas",
+      completion: "Realización",
+      shown: "Mostradas",
+      of: "de",
+      showMore: "Mostrar más",
+      empty: "No hay ofertas para el filtro seleccionado.",
+      details: "Abrir oferta",
+      share: "Compartir",
+      price: "Precio",
+      surcharge: "pago adicional",
+      recipientHidden: "Destinatario oculto",
+      recipientPending: "Destinatario no seleccionado",
       provider: "Proveedor",
-      buyer: "Comprador",
+      buyer: "Destinatario",
+      points: "puntos",
       validity: "Validez",
       code: "Código público",
+      reputation: "Reputación",
+      moneyRemainder: "Importe restante",
+      product: "Producto",
+      service: "Servicio",
+      searchSection: "Búsqueda y filtros",
+      states: {
+        draft: "Borrador",
+        available: "Publicada",
+        active: "Solicitada y activa",
+        checked_in: "Llegada registrada",
+        awaiting_confirmation: "Esperando confirmación del destinatario",
+        confirmed_by_buyer: "Confirmada por el destinatario",
+        auto_confirmed: "Confirmada automáticamente",
+        problem: "Requiere revisión",
+        redeemed: "Realizada",
+        expired: "Caducada",
+        annulled: "Anulada",
+      },
     };
   }
 
@@ -412,11 +583,22 @@ function getLabels(locale: LocaleCode): Labels {
     return {
       ...EN,
       titles: {
-        catalog: "Katalog dárkových certifikátů",
+        catalog: "Katalog nabídek",
         buyer: "Moje certifikáty",
-        provider: "Poskytnuté certifikáty",
+        provider: "Moje nabídky",
+      },
+      subtitles: {
+        catalog:
+          "Produkty, služby a soukromé nabídky dostupné za body ARCTor.",
+        buyer:
+          "Certifikáty objednané vaším účtem a stav jejich splnění.",
+        provider:
+          "Nabídky publikované a splněné vašimi profily a podniky.",
       },
       total: "Certifikáty",
+      allOffers: "Všechny nabídky",
+      activeOffers: "Aktivní nabídky",
+      realizedOffers: "Realizované nabídky",
       available: "Publikované",
       active: "Objednané",
       awaiting: "Čekají na potvrzení",
@@ -424,15 +606,51 @@ function getLabels(locale: LocaleCode): Labels {
       problems: "Vyžadují posouzení",
       products: "Produkty",
       services: "Služby",
-      findCertificate: "Najít certifikát",
+      newest: "Nejnovější",
+      searchFilters: "Vyhledávání a filtry",
+      findCertificate: "Najít nabídku",
       createCertificate: "Vytvořit certifikát",
       myCertificates: "Moje certifikáty",
-      catalog: "Katalog certifikátů",
-      details: "Otevřít certifikát",
+      catalog: "Katalog nabídek",
+      publicCatalog: "Všechny nabídky",
+      availableActions: "Dostupné stavy",
+      nextAction: "Další krok",
+      noActions: "Není vyžadována žádná akce",
+      noProblems: "Bez problémů",
+      completion: "Realizace",
+      shown: "Zobrazeno",
+      of: "z",
+      showMore: "Zobrazit více",
+      empty: "Pro zvolený filtr nejsou žádné nabídky.",
+      details: "Otevřít nabídku",
+      share: "Sdílet",
+      price: "Cena",
+      surcharge: "doplatek",
+      recipientHidden: "Skrytý příjemce",
+      recipientPending: "Příjemce nebyl vybrán",
       provider: "Poskytovatel",
-      buyer: "Kupující",
+      buyer: "Příjemce",
+      points: "body",
       validity: "Platnost",
       code: "Veřejný kód",
+      reputation: "Reputace",
+      moneyRemainder: "Zbývající částka",
+      product: "Produkt",
+      service: "Služba",
+      searchSection: "Vyhledávání a filtry",
+      states: {
+        draft: "Koncept",
+        available: "Publikována",
+        active: "Objednána a aktivní",
+        checked_in: "Příchod zaregistrován",
+        awaiting_confirmation: "Čeká na potvrzení příjemce",
+        confirmed_by_buyer: "Potvrzena příjemcem",
+        auto_confirmed: "Potvrzena automaticky",
+        problem: "Vyžaduje posouzení",
+        redeemed: "Realizována",
+        expired: "Platnost skončila",
+        annulled: "Anulována",
+      },
     };
   }
 
@@ -692,11 +910,13 @@ function AnalyticsCard({
   title,
   detailsLabel,
   href,
+  action,
   children,
 }: {
   readonly title: string;
   readonly detailsLabel: string;
   readonly href: string;
+  readonly action?: ReactNode;
   readonly children: ReactNode;
 }) {
   return (
@@ -705,12 +925,42 @@ function AnalyticsCard({
         <h2 className="min-w-0 line-clamp-1 pr-2 text-[13px] font-semibold text-[#1a1d2e]">
           {title}
         </h2>
-        <Link href={href} className="text-[11px] text-[#3b6ef8] hover:underline">
-          {detailsLabel}
-        </Link>
+        <div className="flex shrink-0 items-center gap-1">
+          {action}
+          <Link href={href} className="text-[11px] text-[#3b6ef8] hover:underline">
+            {detailsLabel}
+          </Link>
+        </div>
       </div>
       {children}
     </article>
+  );
+}
+
+function ParticipantValue({
+  name,
+  href,
+  locale,
+}: {
+  readonly name: string;
+  readonly href: string | null;
+  readonly locale: LocaleCode;
+}) {
+  if (!href) {
+    return (
+      <span className="line-clamp-1 text-[12px] font-bold text-[#1a1d2e]">
+        {name}
+      </span>
+    );
+  }
+
+  return (
+    <Link
+      href={appendLocale(href, locale)}
+      className="line-clamp-1 text-[12px] font-bold text-[#315bd0] hover:underline"
+    >
+      {name}
+    </Link>
   );
 }
 
@@ -726,67 +976,108 @@ function CertificatePreview({
   readonly locale: LocaleCode;
 }) {
   const stateTone = getStateTone(item.state);
-  const counterpartyLabel = mode === "provider" ? labels.buyer : labels.provider;
-  const counterparty =
-    mode === "provider"
-      ? item.recipientName ?? labels.states.available
-      : item.providerName;
+  const recipientName = item.recipientName
+    ? item.recipientHref
+      ? item.recipientName
+      : labels.recipientHidden
+    : labels.recipientPending;
 
   return (
-    <div className="flex min-h-[140px] items-center gap-3 sm:h-[140px] sm:gap-4">
-      <div className="flex h-[92px] w-[92px] shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#eef2ff] text-[#3b6ef8] sm:h-[110px] sm:w-[110px]">
+    <div className="flex min-h-[190px] items-start gap-3 sm:gap-4">
+      <div className="flex h-[104px] w-[92px] shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#eef2ff] text-[#3b6ef8] sm:h-[120px] sm:w-[110px]">
         {item.objectKind === "service_type" ? (
-          <Gift size={28} />
+          <Gift size={30} />
         ) : (
-          <Package size={28} />
+          <Package size={30} />
         )}
-        <span className="mt-2 text-[12px] font-bold">
-          {formatNumber(item.pointsPrice, locale)}
-        </span>
-        <span className="text-[9px] font-semibold uppercase tracking-wide">
-          POINTS
+        <span className="mt-2 text-center text-[10px] font-semibold text-[#5a5f7a]">
+          {item.objectKind === "service_type" ? labels.service : labels.product}
         </span>
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="line-clamp-1 text-[13px] leading-5 text-[#5a5f7a]">
-          {item.description?.trim() || `${counterpartyLabel}: ${counterparty}`}
+        <p className="line-clamp-2 text-[13px] leading-5 text-[#5a5f7a]">
+          {item.description?.trim() || item.title}
         </p>
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="rounded-lg bg-[#eef2ff] px-2.5 py-1 text-[11px] font-semibold text-[#3b6ef8]">
             {item.objectKind === "service_type" ? labels.service : labels.product}
           </span>
-          <span
-            className="rounded-lg px-2.5 py-1 text-[11px] font-semibold"
-            style={stateTone}
-          >
-            {labels.states[item.state]}
-          </span>
+          {mode !== "provider" ? (
+            <span
+              className="rounded-lg px-2.5 py-1 text-[11px] font-semibold"
+              style={stateTone}
+            >
+              {labels.states[item.state]}
+            </span>
+          ) : null}
         </div>
 
-        <div className="mt-3 grid min-w-0 grid-cols-3 gap-2 text-center">
-          <div className="min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5">
-            <div className="line-clamp-1 text-[12px] font-bold text-[#1a1d2e]">
-              {counterparty}
-            </div>
-            <div className="text-[10px] text-[#9ca3b8]">{counterpartyLabel}</div>
+        <div className="mt-3 rounded-xl border border-[#e7eaf2] bg-[#f8fafc] px-3 py-2.5">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[#9ca3b8]">
+              {labels.price}
+            </span>
+            <LocalizedMoney
+              value={item.regularPrice}
+              currency={item.currency}
+              locale={locale}
+              className="text-[17px] font-bold text-[#1a1d2e]"
+            />
           </div>
+          <div className="mt-1.5 text-[12px] font-bold text-[#315bd0]">
+            {formatLocalizedPoints(item.pointsPrice, locale)}
+            {item.moneyRemainder > 0 ? (
+              <>
+                {" + "}
+                <span className="font-semibold text-[#5a5f7a]">
+                  {labels.surcharge}{" "}
+                </span>
+                <LocalizedMoney
+                  value={item.moneyRemainder}
+                  currency={item.currency}
+                  locale={locale}
+                  className="text-[14px] font-bold text-[#1a1d2e]"
+                />
+              </>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-3 grid min-w-0 grid-cols-2 gap-2 text-center sm:grid-cols-3">
           <div className="min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5">
+            <ParticipantValue
+              name={item.providerName}
+              href={item.providerHref}
+              locale={locale}
+            />
+            <div className="text-[10px] text-[#9ca3b8]">{labels.provider}</div>
+          </div>
+
+          {mode !== "catalog" ? (
+            <div className="min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5">
+              <ParticipantValue
+                name={recipientName}
+                href={item.recipientHref}
+                locale={locale}
+              />
+              <div className="text-[10px] text-[#9ca3b8]">{labels.buyer}</div>
+            </div>
+          ) : (
+            <div className="min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5">
+              <div className="line-clamp-1 text-[12px] font-bold text-[#1a1d2e]">
+                {formatNumber(item.providerReputation, locale)}
+              </div>
+              <div className="text-[10px] text-[#9ca3b8]">{labels.reputation}</div>
+            </div>
+          )}
+
+          <div className="col-span-2 min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5 sm:col-span-1">
             <div className="line-clamp-1 text-[12px] font-bold text-[#1a1d2e]">
               {formatDate(item.availableUntil, locale)}
             </div>
             <div className="text-[10px] text-[#9ca3b8]">{labels.validity}</div>
-          </div>
-          <div className="min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5">
-            <div className="line-clamp-1 text-[12px] font-bold text-[#1a1d2e]">
-              {mode === "catalog"
-                ? formatNumber(item.providerReputation, locale)
-                : item.publicCode ?? "—"}
-            </div>
-            <div className="text-[10px] text-[#9ca3b8]">
-              {mode === "catalog" ? labels.reputation : labels.code}
-            </div>
           </div>
         </div>
       </div>
@@ -859,11 +1150,11 @@ function getFilterDefinitions(
   }
 
   return [
-    ["all", labels.total],
-    ["available", labels.available],
+    ["all", labels.allOffers],
+    ["available", labels.activeOffers],
     ["active", labels.active],
     ["awaiting", labels.awaiting],
-    ["completed", labels.completed],
+    ["completed", labels.realizedOffers],
     ["problem", labels.problems],
   ];
 }
@@ -1008,31 +1299,66 @@ export function CertificatesDashboardContent({
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
-          label={labels.total}
-          value={String(items.length)}
-          sub={labels.subtitles[mode]}
-          accent="#3b6ef8"
-          icon={Star}
-          trend={labels.details}
-        />
-        <BreakdownKpi labels={labels} rows={breakdownRows} />
-        <KpiCard
-          label={labels.nextAction}
-          value={attentionValue}
-          sub={attentionSub}
-          accent={problemCount > 0 ? "#ef4444" : "#22c55e"}
-          icon={problemCount > 0 ? CircleAlert : Activity}
-        />
-        <ProgressKpi
-          label={labels.completion}
-          percent={completionPercent}
-          sub={
-            mode === "catalog"
-              ? labels.publicCatalog
-              : `${completedCount} / ${items.length}`
-          }
-        />
+        {mode === "provider" ? (
+          <>
+            <KpiCard
+              label={labels.allOffers}
+              value={String(items.length)}
+              sub={labels.subtitles.provider}
+              accent="#3b6ef8"
+              icon={Star}
+            />
+            <KpiCard
+              label={labels.activeOffers}
+              value={String(availableCount)}
+              sub={labels.states.available}
+              accent="#22c55e"
+              icon={Zap}
+            />
+            <KpiCard
+              label={labels.active}
+              value={String(activeCount + awaitingCount)}
+              sub={labels.awaiting}
+              accent="#f97316"
+              icon={Activity}
+            />
+            <KpiCard
+              label={labels.realizedOffers}
+              value={String(completedCount)}
+              sub={`${completedCount} / ${items.length}`}
+              accent="#8b5cf6"
+              icon={Target}
+            />
+          </>
+        ) : (
+          <>
+            <KpiCard
+              label={labels.total}
+              value={String(items.length)}
+              sub={labels.subtitles[mode]}
+              accent="#3b6ef8"
+              icon={Star}
+              trend={labels.details}
+            />
+            <BreakdownKpi labels={labels} rows={breakdownRows} />
+            <KpiCard
+              label={labels.nextAction}
+              value={attentionValue}
+              sub={attentionSub}
+              accent={problemCount > 0 ? "#ef4444" : "#22c55e"}
+              icon={problemCount > 0 ? CircleAlert : Activity}
+            />
+            <ProgressKpi
+              label={labels.completion}
+              percent={completionPercent}
+              sub={
+                mode === "catalog"
+                  ? labels.publicCatalog
+                  : `${completedCount} / ${items.length}`
+              }
+            />
+          </>
+        )}
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -1080,6 +1406,18 @@ export function CertificatesDashboardContent({
             title={item.title}
             detailsLabel={labels.details}
             href={item.href}
+            action={
+              <CertificateShareButton
+                locale={locale}
+                title={item.title}
+                description={item.description}
+                href={item.shareHref}
+                providerName={item.providerName}
+                pointsPrice={item.pointsPrice}
+                moneyRemainder={item.moneyRemainder}
+                currency={item.currency}
+              />
+            }
           >
             <CertificatePreview
               item={item}
@@ -1117,30 +1455,61 @@ export function CertificatesDashboardContent({
           {labels.searchSection}
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <DirectionCard
-            label={mode === "catalog" ? labels.products : labels.active}
-            count={mode === "catalog" ? productsCount : activeCount}
-            total={items.length}
-            color="#3b6ef8"
-          />
-          <DirectionCard
-            label={mode === "catalog" ? labels.services : labels.awaiting}
-            count={mode === "catalog" ? servicesCount : awaitingCount}
-            total={items.length}
-            color="#f97316"
-          />
-          <DirectionCard
-            label={mode === "catalog" ? labels.available : labels.completed}
-            count={mode === "catalog" ? availableCount : completedCount}
-            total={items.length}
-            color="#22c55e"
-          />
-          <DirectionCard
-            label={mode === "catalog" ? labels.newest : labels.problems}
-            count={mode === "catalog" ? items.length : problemCount}
-            total={items.length}
-            color="#8b5cf6"
-          />
+          {mode === "provider" ? (
+            <>
+              <DirectionCard
+                label={labels.activeOffers}
+                count={availableCount}
+                total={items.length}
+                color="#3b6ef8"
+              />
+              <DirectionCard
+                label={labels.active}
+                count={activeCount}
+                total={items.length}
+                color="#f97316"
+              />
+              <DirectionCard
+                label={labels.awaiting}
+                count={awaitingCount}
+                total={items.length}
+                color="#22c55e"
+              />
+              <DirectionCard
+                label={labels.realizedOffers}
+                count={completedCount}
+                total={items.length}
+                color="#8b5cf6"
+              />
+            </>
+          ) : (
+            <>
+              <DirectionCard
+                label={mode === "catalog" ? labels.products : labels.active}
+                count={mode === "catalog" ? productsCount : activeCount}
+                total={items.length}
+                color="#3b6ef8"
+              />
+              <DirectionCard
+                label={mode === "catalog" ? labels.services : labels.awaiting}
+                count={mode === "catalog" ? servicesCount : awaitingCount}
+                total={items.length}
+                color="#f97316"
+              />
+              <DirectionCard
+                label={mode === "catalog" ? labels.available : labels.completed}
+                count={mode === "catalog" ? availableCount : completedCount}
+                total={items.length}
+                color="#22c55e"
+              />
+              <DirectionCard
+                label={mode === "catalog" ? labels.newest : labels.problems}
+                count={mode === "catalog" ? items.length : problemCount}
+                total={items.length}
+                color="#8b5cf6"
+              />
+            </>
+          )}
         </div>
       </div>
     </div>
