@@ -1363,6 +1363,42 @@ export default async function ValueObjectDetailPage({
   return (
     <main className="min-h-full bg-[#eef1f7] px-4 py-5 text-[#1a1d2e] md:px-6">
       <div className="mx-auto grid w-full max-w-[1640px] gap-5">
+        <div className="flex flex-wrap items-center gap-2">
+          {!editMode ? (
+            <Link
+              href={buildLocaleHref("/value-objects", locale)}
+              className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] transition hover:bg-gray-50"
+            >
+              {copy.back}
+            </Link>
+          ) : null}
+
+          {editMode ? (
+            <Link
+              href={viewHref}
+              className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
+            >
+              {VIEW_MODE_LABELS[locale]}
+            </Link>
+          ) : canEdit ? (
+            <Link
+              href={editHref}
+              className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
+            >
+              {copy.edit}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled
+              title={copy.editLater}
+              className="w-fit cursor-not-allowed rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#9ca3b8] opacity-70 shadow-sm"
+            >
+              {copy.edit}
+            </button>
+          )}
+        </div>
+
         <header className="rounded-[26px] border border-black/[0.07] bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
           <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
             {isRoot
@@ -1431,12 +1467,6 @@ export default async function ValueObjectDetailPage({
             </div>
 
             <div className="flex flex-wrap justify-end gap-2">
-              <Link
-                href={buildLocaleHref("/value-objects", locale)}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
-              >
-                {copy.back}
-              </Link>
               {isLeaf ? (
                 <Link
                   href={buildLocaleHref(
@@ -1458,23 +1488,6 @@ export default async function ValueObjectDetailPage({
               >
                 {copy.restructure}
               </Link>
-              {canEdit ? (
-                <Link
-                  href={editMode ? viewHref : editHref}
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#3b6ef8] px-5 py-3 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.22)] transition hover:bg-[#315bd0]"
-                >
-                  {editMode ? VIEW_MODE_LABELS[locale] : copy.edit}
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  disabled
-                  title={copy.editLater}
-                  className="inline-flex min-h-11 cursor-not-allowed items-center justify-center rounded-xl bg-[#3b6ef8] px-5 py-3 text-[13px] font-bold text-white opacity-45 shadow-[0_8px_20px_rgba(59,110,248,0.22)]"
-                >
-                  {copy.edit}
-                </button>
-              )}
             </div>
           </div>
         </header>
