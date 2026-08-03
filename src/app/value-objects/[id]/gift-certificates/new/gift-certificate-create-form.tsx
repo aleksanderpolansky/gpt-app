@@ -25,6 +25,7 @@ type GiftCertificateCreateFormProps = {
     ordinaryPrice: number;
     currency: string;
     ordinaryDurationMinutes: number | null;
+    imageUrl: string | null;
   };
   provider: {
     label: string;
@@ -675,11 +676,28 @@ export function GiftCertificateCreateForm({
                   <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#7c8099]">
                     {copy.item}
                   </div>
-                  <div className="mt-2 text-[14px] font-bold text-[#111827]">
-                    {valueObject.title}
-                  </div>
-                  <div className="mt-1 text-[12px] text-[#7c8099]">
-                    {isService ? copy.service : copy.product}
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-[#dfe4ff] bg-[#eef2ff]">
+                      {valueObject.imageUrl ? (
+                        <img
+                          src={valueObject.imageUrl}
+                          alt={valueObject.title}
+                          className="h-full w-full object-cover object-center"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-[#7c8099]">
+                          {isService ? copy.service : copy.product}
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="line-clamp-2 text-[14px] font-bold text-[#111827]">
+                        {valueObject.title}
+                      </div>
+                      <div className="mt-1 text-[12px] text-[#7c8099]">
+                        {isService ? copy.service : copy.product}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

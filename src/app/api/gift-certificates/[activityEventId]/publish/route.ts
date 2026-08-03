@@ -6,6 +6,10 @@ import {
 } from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
+import {
+  buildGiftCertificateProductImageSnapshotMetadata,
+  readValueObjectPublicImageUrl,
+} from "@/lib/value-object-public-image";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +23,24 @@ type RouteContext = {
 
 type RequestBody = {
   locale?: unknown;
+};
+
+
+type PublicationTermsRow = {
+  readonly value_object_id: string;
+  readonly provider_owner_user_id: string;
+  readonly provider_manager_actor_id: string;
+  readonly lifecycle_status: string;
+};
+
+type PublicationValueObjectRow = {
+  readonly id: string;
+  readonly metadata_json: unknown;
+};
+
+type PublicationActivityRow = {
+  readonly id: string;
+  readonly metadata_json: unknown;
 };
 
 type PublicationPayload = {
@@ -161,6 +183,131 @@ export async function POST(
     locale = normalizeLocale(body.locale);
   } catch {
     locale = "en";
+  }
+
+  const { data: termsData, error: termsError } = await supabase
+    .from("activity_gift_certificate_terms")
+    .select(
+      "value_object_id,provider_owner_user_id,provider_manager_actor_id,lifecycle_status",
+    )
+    .eq("activity_event_id", activityEventId)
+    .maybeSingle();
+
+  if (termsError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: termsError.message,
+        errorCode: "GCR3_PUBLICATION_TERMS_READ_FAILED",
+      },
+      { status: 500 },
+    );
+  }
+
+  const terms = termsData as PublicationTermsRow | null;
+
+  if (!terms) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Certificate not found",
+        errorCode: "PGC6A_CERTIFICATE_NOT_FOUND",
+      },
+      { status: 404 },
+    );
+  }
+
+  if (
+    terms.provider_owner_user_id !== actorContext.appUserId ||
+    terms.provider_manager_actor_id !== actorContext.actorId
+  ) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Certificate owner mismatch",
+        errorCode: "PGC6A_CERTIFICATE_OWNER_MISMATCH",
+      },
+      { status: 403 },
+    );
+  }
+
+  if (terms.lifecycle_status === "draft") {
+    const [valueObjectResult, activityResult] = await Promise.all([
+      supabase
+        .from("value_objects")
+        .select("id,metadata_json")
+        .eq("id", terms.value_object_id)
+        .eq("owner_user_id", actorContext.appUserId)
+        .eq("owner_actor_id", actorContext.actorId)
+        .maybeSingle(),
+      supabase
+        .from("activity_events")
+        .select("id,metadata_json")
+        .eq("id", activityEventId)
+        .eq("user_id", actorContext.appUserId)
+        .eq("acting_as_actor_id", actorContext.actorId)
+        .maybeSingle(),
+    ]);
+
+    if (valueObjectResult.error || activityResult.error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            valueObjectResult.error?.message ??
+            activityResult.error?.message ??
+            "Could not prepare the offer image snapshot",
+          errorCode: "GCR3_MEDIA_SNAPSHOT_READ_FAILED",
+        },
+        { status: 500 },
+      );
+    }
+
+    const valueObject =
+      valueObjectResult.data as PublicationValueObjectRow | null;
+    const activity = activityResult.data as PublicationActivityRow | null;
+
+    if (!valueObject || !activity) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Could not prepare the offer image snapshot",
+          errorCode: "GCR3_MEDIA_SNAPSHOT_SOURCE_NOT_FOUND",
+        },
+        { status: 404 },
+      );
+    }
+
+    const capturedAt = new Date().toISOString();
+    const productImageUrl = readValueObjectPublicImageUrl(
+      valueObject.metadata_json,
+    );
+    const nextMetadata = buildGiftCertificateProductImageSnapshotMetadata(
+      activity.metadata_json,
+      productImageUrl,
+      capturedAt,
+    );
+
+    const { error: snapshotError } = await supabase
+      .from("activity_events")
+      .update({
+        metadata_json: nextMetadata,
+        updated_at: capturedAt,
+      })
+      .eq("id", activityEventId)
+      .eq("user_id", actorContext.appUserId)
+      .eq("acting_as_actor_id", actorContext.actorId);
+
+    if (snapshotError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: snapshotError.message,
+          errorCode: "GCR3_MEDIA_SNAPSHOT_WRITE_FAILED",
+        },
+        { status: 500 },
+      );
+    }
   }
 
   const { data, error } = await supabase.rpc(

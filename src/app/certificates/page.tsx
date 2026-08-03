@@ -34,6 +34,8 @@ export default async function CertificatesPage({
       objectKind: certificate.objectKind,
       providerName: certificate.providerDisplayName,
       providerHref: certificate.providerPublicHref,
+      providerImageUrl: certificate.providerImageUrl,
+      productImageUrl: certificate.productImageUrl,
       recipientName: certificate.recipientDisplayName,
       recipientHref: certificate.recipientPublicHref,
       providerReputation: certificate.providerReputation,

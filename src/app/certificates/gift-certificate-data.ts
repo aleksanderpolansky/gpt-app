@@ -1,4 +1,8 @@
 import { supabase } from "../../../lib/supabase";
+import {
+  readGiftCertificateProductImageSnapshot,
+  readValueObjectPublicImageUrl,
+} from "@/lib/value-object-public-image";
 
 type TermsRow = {
   activity_event_id: string;
@@ -52,6 +56,7 @@ type ActivityRow = {
   deadline_at: string | null;
   started_at: string | null;
   ended_at: string | null;
+  metadata_json: unknown;
 };
 
 type ValueObjectRow = {
@@ -60,6 +65,7 @@ type ValueObjectRow = {
   description: string | null;
   object_kind: "product_type" | "service_type";
   status: string;
+  metadata_json: unknown;
 };
 
 type ActorRow = {
@@ -399,14 +405,15 @@ async function hydrateTerms(
           schedule_end_date,
           deadline_at,
           started_at,
-          ended_at
+          ended_at,
+          metadata_json
         `,
       )
       .in("id", activityIds)
       .eq("activity_role_code", "planned"),
     supabase
       .from("value_objects")
-      .select("id,title,description,object_kind,status")
+      .select("id,title,description,object_kind,status,metadata_json")
       .in("id", valueObjectIds)
       .in("object_kind", ["product_type", "service_type"]),
     supabase
@@ -570,6 +577,20 @@ async function hydrateTerms(
       readSnapshotText(terms.public_snapshot_json, "publicDescription") ??
       valueObject.description ??
       activity.description;
+    const sourceProductImageUrl = readValueObjectPublicImageUrl(
+      valueObject.metadata_json,
+    );
+    const activityImageSnapshot =
+      readGiftCertificateProductImageSnapshot(activity.metadata_json);
+    const legacyProductImageUrl =
+      readSnapshotText(terms.public_snapshot_json, "publicImageUrl") ??
+      readSnapshotText(terms.public_snapshot_json, "imageUrl");
+    const productImageUrl =
+      terms.lifecycle_status === "draft"
+        ? sourceProductImageUrl
+        : activityImageSnapshot.captured
+          ? activityImageSnapshot.imageUrl
+          : legacyProductImageUrl ?? sourceProductImageUrl;
 
     return [
       {
@@ -600,9 +621,7 @@ async function hydrateTerms(
               : null,
         providerImageUrl:
           organization?.logo_url ?? providerPublicProfile?.image_url ?? null,
-        productImageUrl:
-          readSnapshotText(terms.public_snapshot_json, "publicImageUrl") ??
-          readSnapshotText(terms.public_snapshot_json, "imageUrl"),
+        productImageUrl,
         providerLocation: sanitizeProviderLocation(organizationLocation),
         providerReputation: reputationByActorId.get(terms.provider_actor_id) ?? 0,
         recipientUserId: terms.recipient_user_id,

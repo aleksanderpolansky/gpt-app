@@ -51,6 +51,8 @@ export type CertificateDashboardItem = {
   readonly objectKind: "product_type" | "service_type";
   readonly providerName: string;
   readonly providerHref: string | null;
+  readonly providerImageUrl: string | null;
+  readonly productImageUrl: string | null;
   readonly recipientName: string | null;
   readonly recipientHref: string | null;
   readonly providerReputation: number;
@@ -982,12 +984,42 @@ function CertificatePreview({
   return (
     <div className="flex min-h-[190px] items-start gap-3 sm:gap-4">
       <div className="flex w-[92px] shrink-0 flex-col items-start sm:w-[110px]">
-        <div className="flex h-[104px] w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#eef2ff] text-[#3b6ef8] sm:h-[120px]">
-          {item.objectKind === "service_type" ? (
+        <div className="relative flex h-[104px] w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#eef2ff] text-[#3b6ef8] sm:h-[120px]">
+          {item.productImageUrl ? (
+            <img
+              src={item.productImageUrl}
+              alt={item.title}
+              className="h-full w-full object-cover object-center"
+            />
+          ) : item.objectKind === "service_type" ? (
             <Gift size={30} />
           ) : (
             <Package size={30} />
           )}
+
+          {item.providerImageUrl ? (
+            item.providerHref ? (
+              <Link
+                href={appendLocale(item.providerHref, locale)}
+                aria-label={item.providerName}
+                className="absolute bottom-2 right-2 h-9 w-9 overflow-hidden rounded-full border-2 border-white bg-white shadow-md"
+              >
+                <img
+                  src={item.providerImageUrl}
+                  alt={item.providerName}
+                  className="h-full w-full object-cover object-center"
+                />
+              </Link>
+            ) : (
+              <div className="absolute bottom-2 right-2 h-9 w-9 overflow-hidden rounded-full border-2 border-white bg-white shadow-md">
+                <img
+                  src={item.providerImageUrl}
+                  alt={item.providerName}
+                  className="h-full w-full object-cover object-center"
+                />
+              </div>
+            )
+          ) : null}
         </div>
 
         <div className="mt-1.5 flex w-full justify-start pl-1">

@@ -7,6 +7,7 @@ import {
 import { auth0 } from "../../../../../../lib/auth0";
 import { getEcbReferenceRate } from "../../../../../../lib/exchange-rates/ecb-reference-rate";
 import { supabase } from "../../../../../../lib/supabase";
+import { readValueObjectPublicImageUrl } from "@/lib/value-object-public-image";
 import { GiftCertificateCreateForm } from "./gift-certificate-create-form";
 
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
@@ -31,6 +32,7 @@ type ValueObjectRow = {
   default_duration_minutes: number | null;
   organization_id: string | null;
   status: string;
+  metadata_json: unknown;
 };
 
 type OrganizationRow = {
@@ -96,7 +98,8 @@ export default async function GiftCertificateCreatePage({
       default_currency,
       default_duration_minutes,
       organization_id,
-      status
+      status,
+      metadata_json
     `,
     )
     .eq("id", id)
@@ -168,6 +171,7 @@ export default async function GiftCertificateCreatePage({
         ordinaryPrice: Number(valueObject.default_price ?? 0),
         currency: providerCurrency,
         ordinaryDurationMinutes: valueObject.default_duration_minutes,
+        imageUrl: readValueObjectPublicImageUrl(valueObject.metadata_json),
       }}
       provider={{
         label: providerLabel,
