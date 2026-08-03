@@ -41,6 +41,7 @@ type ValueObjectRow = {
   visibility?: string | null;
   source?: string | null;
   status?: string | null;
+  metadata_json?: Record<string, unknown> | null;
   organizations?: {
     id: string;
     organization_name?: string | null;
@@ -71,7 +72,7 @@ type DraftPatchBody = Record<string, unknown>;
 
 type DraftPatchResult =
   | {
-      patch: Record<string, string | number | boolean | null>;
+      patch: Record<string, unknown>;
       errorResponse: null;
     }
   | {
@@ -102,6 +103,7 @@ const VALUE_OBJECT_SELECT = `
   visibility,
   source,
   status,
+  metadata_json,
   organizations (
     id,
     organization_name,
@@ -121,6 +123,7 @@ const ALLOWED_PATCH_KEYS = new Set([
   "isMarketplaceSellable",
   "isFreePossible",
   "commercialUsage",
+  "publicProfile",
 ]);
 
 const BLOCKED_PATCH_KEYS = new Set([
@@ -149,6 +152,10 @@ const BLOCKED_PATCH_KEYS = new Set([
   "eventMeasures",
   "relations",
   "rollups",
+  "metadataJson",
+  "metadata_json",
+  "imageUrl",
+  "location",
 ]);
 
 function normalizeValueObjectId(value: unknown): string | null {
@@ -350,7 +357,7 @@ function buildEditContract() {
 }
 
 function addStringPatchField(
-  patch: Record<string, string | number | boolean | null>,
+  patch: Record<string, unknown>,
   body: DraftPatchBody,
   inputKey: string,
   columnName: string,
@@ -393,7 +400,7 @@ function addStringPatchField(
 }
 
 function addNumberPatchField(
-  patch: Record<string, string | number | boolean | null>,
+  patch: Record<string, unknown>,
   body: DraftPatchBody,
   inputKey: string,
   columnName: string,
@@ -413,7 +420,7 @@ function addNumberPatchField(
 }
 
 function addBooleanPatchField(
-  patch: Record<string, string | number | boolean | null>,
+  patch: Record<string, unknown>,
   body: DraftPatchBody,
   inputKey: string,
   columnName: string,
@@ -429,6 +436,229 @@ function addBooleanPatchField(
   }
 
   patch[columnName] = raw;
+  return null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeNullableText(
+  value: unknown,
+  maxLength: number,
+): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || value === "") {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  if (trimmed.length > maxLength) {
+    return undefined;
+  }
+
+  return trimmed || null;
+}
+
+function normalizeCoordinate(
+  value: unknown,
+  min: number,
+  max: number,
+): number | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || value === "") {
+    return null;
+  }
+
+  const parsed = typeof value === "number" ? value : Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
+    return undefined;
+  }
+
+  return parsed;
+}
+
+function normalizeImageUrl(value: unknown): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || value === "") {
+    return null;
+  }
+
+  if (typeof value !== "string" || value.length > 1_500_000) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  if (
+    /^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=\s]+$/i.test(trimmed) ||
+    /^https:\/\/[^\s]+$/i.test(trimmed)
+  ) {
+    return trimmed;
+  }
+
+  return undefined;
+}
+
+function addPublicProfilePatch(
+  patch: Record<string, unknown>,
+  body: DraftPatchBody,
+  valueObject: ValueObjectRow,
+): string | null {
+  if (!Object.prototype.hasOwnProperty.call(body, "publicProfile")) {
+    return null;
+  }
+
+  const rawProfile = body.publicProfile;
+
+  if (!isRecord(rawProfile)) {
+    return "publicProfile must be an object";
+  }
+
+  const allowedProfileKeys = new Set(["imageUrl", "location"]);
+
+  for (const key of Object.keys(rawProfile)) {
+    if (!allowedProfileKeys.has(key)) {
+      return `Unsupported publicProfile field: ${key}`;
+    }
+  }
+
+  const imageUrl = normalizeImageUrl(rawProfile.imageUrl);
+
+  if (rawProfile.imageUrl !== undefined && imageUrl === undefined) {
+    return "publicProfile.imageUrl must be a supported image data URL, HTTPS URL or null";
+  }
+
+  let nextLocation: Record<string, unknown> | null | undefined;
+
+  if (rawProfile.location !== undefined) {
+    if (rawProfile.location === null) {
+      nextLocation = null;
+    } else if (!isRecord(rawProfile.location)) {
+      return "publicProfile.location must be an object or null";
+    } else {
+      const allowedLocationKeys = new Set([
+        "label",
+        "countryCode",
+        "region",
+        "city",
+        "district",
+        "streetAddress",
+        "postalCode",
+        "latitude",
+        "longitude",
+        "addressVisibility",
+      ]);
+
+      for (const key of Object.keys(rawProfile.location)) {
+        if (!allowedLocationKeys.has(key)) {
+          return `Unsupported publicProfile.location field: ${key}`;
+        }
+      }
+
+      const label = normalizeNullableText(rawProfile.location.label, 160);
+      const countryCode = normalizeNullableText(
+        rawProfile.location.countryCode,
+        2,
+      );
+      const region = normalizeNullableText(rawProfile.location.region, 160);
+      const city = normalizeNullableText(rawProfile.location.city, 160);
+      const district = normalizeNullableText(rawProfile.location.district, 160);
+      const streetAddress = normalizeNullableText(
+        rawProfile.location.streetAddress,
+        240,
+      );
+      const postalCode = normalizeNullableText(
+        rawProfile.location.postalCode,
+        32,
+      );
+      const addressVisibility = normalizeNullableText(
+        rawProfile.location.addressVisibility,
+        32,
+      );
+      const latitude = normalizeCoordinate(
+        rawProfile.location.latitude,
+        -90,
+        90,
+      );
+      const longitude = normalizeCoordinate(
+        rawProfile.location.longitude,
+        -180,
+        180,
+      );
+
+      const invalidText = [
+        [rawProfile.location.label, label],
+        [rawProfile.location.countryCode, countryCode],
+        [rawProfile.location.region, region],
+        [rawProfile.location.city, city],
+        [rawProfile.location.district, district],
+        [rawProfile.location.streetAddress, streetAddress],
+        [rawProfile.location.postalCode, postalCode],
+        [rawProfile.location.addressVisibility, addressVisibility],
+      ].some(([raw, normalized]) => raw !== undefined && normalized === undefined);
+
+      if (invalidText || latitude === undefined || longitude === undefined) {
+        return "publicProfile.location contains an invalid value";
+      }
+
+      const normalizedAddressVisibility = addressVisibility ?? "public";
+
+      if (!new Set(["public", "approximate", "private"]).has(normalizedAddressVisibility)) {
+        return "publicProfile.location.addressVisibility is invalid";
+      }
+
+      nextLocation = {
+        label: label ?? null,
+        country_code: countryCode?.toUpperCase() ?? null,
+        region: region ?? null,
+        city: city ?? null,
+        district: district ?? null,
+        street_address: streetAddress ?? null,
+        postal_code: postalCode ?? null,
+        latitude: latitude ?? null,
+        longitude: longitude ?? null,
+        address_visibility: normalizedAddressVisibility,
+      };
+    }
+  }
+
+  const currentMetadata = isRecord(valueObject.metadata_json)
+    ? valueObject.metadata_json
+    : {};
+  const currentProfile = isRecord(currentMetadata.public_profile)
+    ? currentMetadata.public_profile
+    : {};
+  const nextProfile: Record<string, unknown> = { ...currentProfile };
+
+  if (imageUrl !== undefined) {
+    nextProfile.image_url = imageUrl;
+  }
+
+  if (nextLocation !== undefined) {
+    nextProfile.location = nextLocation;
+  }
+
+  patch.metadata_json = {
+    ...currentMetadata,
+    public_profile: nextProfile,
+  };
+
   return null;
 }
 
@@ -498,7 +728,7 @@ function buildDraftPatch(
     };
   }
 
-  const patch: Record<string, string | number | boolean | null> = {};
+  const patch: Record<string, unknown> = {};
 
   const stringFieldErrors = [
     addStringPatchField(patch, draftBody, "valueType", "value_type", {
@@ -618,6 +848,22 @@ function buildDraftPatch(
 
     patch.commercial_usage =
       valueObject.usage_scope === "commercial" ? commercialUsage : "none";
+  }
+
+  const publicProfileError = addPublicProfilePatch(
+    patch,
+    draftBody,
+    valueObject,
+  );
+
+  if (publicProfileError) {
+    return {
+      patch: null,
+      errorResponse: NextResponse.json(
+        { error: publicProfileError },
+        { status: 400 },
+      ),
+    };
   }
 
   if (Object.keys(patch).length === 0) {

@@ -19,6 +19,8 @@ type OrganizationLocationMapPreviewProps = {
   readonly actionLabel?: string;
   readonly distanceLabel?: string;
   readonly className?: string;
+  readonly titleLabel?: string;
+  readonly fallbackLabel?: string;
 };
 
 const MAP_MESSAGES: Record<
@@ -137,6 +139,13 @@ export function buildOrganizationLocationMapQuery(input: {
     return locationParts.join(", ");
   }
 
+  const latitude = normalizeCoordinate(input.location?.latitude);
+  const longitude = normalizeCoordinate(input.location?.longitude);
+
+  if (latitude !== null && longitude !== null) {
+    return `${latitude},${longitude}`;
+  }
+
   return normalizeText(input.organizationName);
 }
 
@@ -165,16 +174,6 @@ function buildGoogleMapsEmbedSrc(input: {
     )}&z=${zoom}&output=embed`;
   }
 
-  const latitude = normalizeCoordinate(input.location?.latitude);
-  const longitude = normalizeCoordinate(input.location?.longitude);
-  const hasCoordinates = latitude !== null && longitude !== null;
-
-  if (hasCoordinates) {
-    return `https://www.google.com/maps?q=${encodeURIComponent(
-      `${latitude},${longitude}`,
-    )}&z=${zoom}&output=embed`;
-  }
-
   return null;
 }
 
@@ -185,6 +184,8 @@ export default function OrganizationLocationMapPreview({
   actionLabel,
   distanceLabel,
   className,
+  titleLabel,
+  fallbackLabel,
 }: OrganizationLocationMapPreviewProps) {
   const mapLocale = normalizeLocale(locale);
   const messages = MAP_MESSAGES[mapLocale];
@@ -203,7 +204,7 @@ return (
       {iframeSrc ? (
         <iframe
           key={iframeSrc}
-          title={messages.title}
+          title={titleLabel ?? messages.title}
           src={iframeSrc}
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
@@ -211,7 +212,7 @@ return (
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#dbeafe] via-[#e0f2fe] to-[#dcfce7] px-5 text-center text-[12px] font-semibold text-[#64748b]">
-          {messages.fallback}
+          {fallbackLabel ?? messages.fallback}
         </div>
       )}
 {distanceLabel ? (
@@ -224,8 +225,8 @@ return (
         href={mapsHref}
         target="_blank"
         rel="noreferrer"
-        aria-label={actionLabel ?? messages.title}
-        title={actionLabel ?? messages.title}
+        aria-label={actionLabel ?? titleLabel ?? messages.title}
+        title={actionLabel ?? titleLabel ?? messages.title}
         className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/90 bg-white/95 text-[#2563eb] shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#2563eb]/40"
       >
         <Navigation size={16} />

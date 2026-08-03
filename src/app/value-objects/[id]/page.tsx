@@ -9,6 +9,12 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import { ValueObjectInlineEditor } from "@/components/workspace/value-objects/value-object-inline-editor";
+import {
+  ValueObjectProfileTopGrid,
+  type ValueObjectOwnerPresentation,
+  type ValueObjectPublicLocation,
+  type ValueObjectSummaryItem,
+} from "@/components/workspace/value-objects/value-object-profile-top-grid";
 import { ValueObjectSemanticRelationsManager } from "@/components/workspace/value-objects/value-object-semantic-relations-manager";
 import { ActivityScheduleDisplay } from "./activity-schedule-display";
 import {
@@ -48,6 +54,9 @@ type ValueObjectRow = {
   privacy_level: string | null;
   sensitivity_level: string | null;
   source: string | null;
+  owner_actor_id: string;
+  organization_id: string | null;
+  metadata_json: Record<string, unknown> | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -84,6 +93,47 @@ type PlannedActivityRow = {
   started_at: string | null;
   ended_at: string | null;
   updated_at: string | null;
+};
+
+type ActorPublicProfileRow = {
+  actor_id: string;
+  profile_kind: string;
+  public_slug: string | null;
+  display_name: string;
+  image_url: string | null;
+  is_public: boolean | null;
+};
+
+type ActorRow = {
+  id: string;
+  actor_type: string | null;
+  display_name: string | null;
+};
+
+type OwnerOrganizationRow = {
+  id: string;
+  organization_name: string;
+  organization_type: string | null;
+  public_slug: string | null;
+  logo_url: string | null;
+};
+
+type OwnerOrganizationLocationRow = {
+  label: string | null;
+  country_code: string | null;
+  region: string | null;
+  city: string | null;
+  district: string | null;
+  street_address: string | null;
+  postal_code: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  address_visibility: string | null;
+};
+
+type ValueObjectPublicProfileMetadata = {
+  imageUrl: string | null;
+  location: ValueObjectPublicLocation | null;
 };
 
 type Copy = {
@@ -482,6 +532,357 @@ const COPY: Record<LocaleCode, Copy> = {
   },
 };
 
+const OWNER_KIND_LABELS: Record<
+  LocaleCode,
+  { personal: string; avatar: string; organization: string; actor: string }
+> = {
+  en: {
+    personal: "Personal profile",
+    avatar: "Avatar",
+    organization: "Enterprise",
+    actor: "Actor",
+  },
+  pl: {
+    personal: "Profil osobisty",
+    avatar: "Awatar",
+    organization: "Przedsiębiorstwo",
+    actor: "Aktor",
+  },
+  ru: {
+    personal: "Личный профиль",
+    avatar: "Аватар",
+    organization: "Предприятие",
+    actor: "Актор",
+  },
+  uk: {
+    personal: "Особистий профіль",
+    avatar: "Аватар",
+    organization: "Підприємство",
+    actor: "Актор",
+  },
+  de: {
+    personal: "Persönliches Profil",
+    avatar: "Avatar",
+    organization: "Unternehmen",
+    actor: "Akteur",
+  },
+  es: {
+    personal: "Perfil personal",
+    avatar: "Avatar",
+    organization: "Empresa",
+    actor: "Actor",
+  },
+  cs: {
+    personal: "Osobní profil",
+    avatar: "Avatar",
+    organization: "Podnik",
+    actor: "Aktér",
+  },
+};
+
+const SUMMARY_LABELS: Record<
+  LocaleCode,
+  { ordinaryPrice: string; duration: string; linkedActivities: string; totalCriteria: string }
+> = {
+  en: {
+    ordinaryPrice: "Ordinary price",
+    duration: "Ordinary duration",
+    linkedActivities: "Linked activities",
+    totalCriteria: "Outcome criteria",
+  },
+  pl: {
+    ordinaryPrice: "Cena zwykła",
+    duration: "Zwykły czas trwania",
+    linkedActivities: "Powiązane aktywności",
+    totalCriteria: "Kryteria wyniku",
+  },
+  ru: {
+    ordinaryPrice: "Обычная цена",
+    duration: "Обычная продолжительность",
+    linkedActivities: "Связанные активности",
+    totalCriteria: "Критерии результата",
+  },
+  uk: {
+    ordinaryPrice: "Звичайна ціна",
+    duration: "Звичайна тривалість",
+    linkedActivities: "Пов’язані активності",
+    totalCriteria: "Критерії результату",
+  },
+  de: {
+    ordinaryPrice: "Normalpreis",
+    duration: "Übliche Dauer",
+    linkedActivities: "Verknüpfte Aktivitäten",
+    totalCriteria: "Ergebniskriterien",
+  },
+  es: {
+    ordinaryPrice: "Precio habitual",
+    duration: "Duración habitual",
+    linkedActivities: "Actividades vinculadas",
+    totalCriteria: "Criterios de resultado",
+  },
+  cs: {
+    ordinaryPrice: "Běžná cena",
+    duration: "Běžná délka",
+    linkedActivities: "Propojené aktivity",
+    totalCriteria: "Kritéria výsledku",
+  },
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function readNullableString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function readNullableNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function parsePublicProfileMetadata(
+  metadata: Record<string, unknown> | null,
+): ValueObjectPublicProfileMetadata {
+  const publicProfile = isRecord(metadata?.public_profile)
+    ? metadata.public_profile
+    : {};
+  const rawLocation = isRecord(publicProfile.location)
+    ? publicProfile.location
+    : null;
+
+  return {
+    imageUrl: readNullableString(publicProfile.image_url),
+    location: rawLocation
+      ? {
+          label: readNullableString(rawLocation.label),
+          countryCode: readNullableString(rawLocation.country_code),
+          region: readNullableString(rawLocation.region),
+          city: readNullableString(rawLocation.city),
+          district: readNullableString(rawLocation.district),
+          streetAddress: readNullableString(rawLocation.street_address),
+          postalCode: readNullableString(rawLocation.postal_code),
+          latitude: readNullableNumber(rawLocation.latitude),
+          longitude: readNullableNumber(rawLocation.longitude),
+          addressVisibility:
+            readNullableString(rawLocation.address_visibility) ?? "public",
+        }
+      : null,
+  };
+}
+
+function hasLocationData(location: ValueObjectPublicLocation | null) {
+  return Boolean(
+    location &&
+      (location.label ||
+        location.countryCode ||
+        location.region ||
+        location.city ||
+        location.district ||
+        location.streetAddress ||
+        location.postalCode ||
+        location.latitude !== null ||
+        location.longitude !== null),
+  );
+}
+
+function toPublicLocation(
+  row: OwnerOrganizationLocationRow | null,
+): ValueObjectPublicLocation | null {
+  if (!row) {
+    return null;
+  }
+
+  const location: ValueObjectPublicLocation = {
+    label: row.label,
+    countryCode: row.country_code,
+    region: row.region,
+    city: row.city,
+    district: row.district,
+    streetAddress: row.street_address,
+    postalCode: row.postal_code,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    addressVisibility: row.address_visibility ?? "public",
+  };
+
+  return hasLocationData(location) ? location : null;
+}
+
+function emptyPublicLocation(): ValueObjectPublicLocation {
+  return {
+    label: null,
+    countryCode: null,
+    region: null,
+    city: null,
+    district: null,
+    streetAddress: null,
+    postalCode: null,
+    latitude: null,
+    longitude: null,
+    addressVisibility: "public",
+  };
+}
+
+async function resolveOwnerPresentation(
+  valueObject: ValueObjectRow,
+  locale: LocaleCode,
+): Promise<ValueObjectOwnerPresentation> {
+  const labels = OWNER_KIND_LABELS[locale];
+
+  if (valueObject.organization_id) {
+    const { data, error } = await supabase
+      .from("organizations")
+      .select(
+        "id,organization_name,organization_type,public_slug,logo_url",
+      )
+      .eq("id", valueObject.organization_id)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const organization = data as OwnerOrganizationRow | null;
+
+    if (organization) {
+      return {
+        displayName: organization.organization_name,
+        kindLabel: labels.organization,
+        imageUrl: organization.logo_url,
+        href: organization.public_slug
+          ? buildLocaleHref(
+              `/directory/${organization.public_slug}`,
+              locale,
+            )
+          : null,
+      };
+    }
+  }
+
+  const [{ data: profileData, error: profileError }, { data: actorData, error: actorError }] =
+    await Promise.all([
+      supabase
+        .from("actor_public_profiles")
+        .select(
+          "actor_id,profile_kind,public_slug,display_name,image_url,is_public",
+        )
+        .eq("actor_id", valueObject.owner_actor_id)
+        .maybeSingle(),
+      supabase
+        .from("actors")
+        .select("id,actor_type,display_name")
+        .eq("id", valueObject.owner_actor_id)
+        .maybeSingle(),
+    ]);
+
+  if (profileError) {
+    throw new Error(profileError.message);
+  }
+
+  if (actorError) {
+    throw new Error(actorError.message);
+  }
+
+  const profile = profileData as ActorPublicProfileRow | null;
+  const actor = actorData as ActorRow | null;
+
+  if (profile) {
+    const kindLabel =
+      profile.profile_kind === "avatar" ? labels.avatar : labels.personal;
+
+    return {
+      displayName: profile.display_name,
+      kindLabel,
+      imageUrl: profile.image_url,
+      href: profile.public_slug
+        ? buildLocaleHref(`/people/${profile.public_slug}`, locale)
+        : null,
+    };
+  }
+
+  return {
+    displayName: actor?.display_name || labels.actor,
+    kindLabel: actor?.actor_type || labels.actor,
+    imageUrl: null,
+    href: null,
+  };
+}
+
+async function resolveOrganizationLocation(
+  organizationId: string | null,
+): Promise<ValueObjectPublicLocation | null> {
+  if (!organizationId) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("organization_locations")
+    .select(
+      "label,country_code,region,city,district,street_address,postal_code,latitude,longitude,address_visibility",
+    )
+    .eq("organization_id", organizationId)
+    .eq("is_active", true)
+    .order("is_primary", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const row = ((data ?? [])[0] as OwnerOrganizationLocationRow | undefined) ??
+    null;
+
+  return toPublicLocation(row);
+}
+
+function formatMoney(
+  value: number | null,
+  currency: string | null,
+  locale: LocaleCode,
+) {
+  if (value === null) {
+    return "—";
+  }
+
+  const localeByCode: Record<LocaleCode, string> = {
+    en: "en-US",
+    pl: "pl-PL",
+    ru: "ru-RU",
+    uk: "uk-UA",
+    de: "de-DE",
+    es: "es-ES",
+    cs: "cs-CZ",
+  };
+
+  if (!currency) {
+    return new Intl.NumberFormat(localeByCode[locale], {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  }
+
+  try {
+    return new Intl.NumberFormat(localeByCode[locale], {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return `${value.toFixed(2)} ${currency}`;
+  }
+}
+
 function normalizeLocale(value: string | string[] | undefined): LocaleCode {
   const normalized = Array.isArray(value) ? value[0] : value;
 
@@ -658,6 +1059,9 @@ export default async function ValueObjectDetailPage({
       privacy_level,
       sensitivity_level,
       source,
+      owner_actor_id,
+      organization_id,
+      metadata_json,
       created_at,
       updated_at
     `,
@@ -676,6 +1080,17 @@ export default async function ValueObjectDetailPage({
   if (!valueObject) {
     notFound();
   }
+
+  const publicProfileMetadata = parsePublicProfileMetadata(
+    valueObject.metadata_json,
+  );
+  const [ownerPresentation, organizationLocation] = await Promise.all([
+    resolveOwnerPresentation(valueObject, locale),
+    resolveOrganizationLocation(valueObject.organization_id),
+  ]);
+  const hasOwnLocation = hasLocationData(publicProfileMetadata.location);
+  const effectiveLocation =
+    publicProfileMetadata.location ?? organizationLocation ?? emptyPublicLocation();
 
   const rootValueObjectId =
     valueObject.root_value_object_id ?? valueObject.id;
@@ -871,6 +1286,47 @@ export default async function ValueObjectDetailPage({
   }
 
   const descendantLeafCount = countLeafDescendants(valueObject.id);
+  const summaryLabels = SUMMARY_LABELS[locale];
+  const summaryItems: ValueObjectSummaryItem[] = isProductOrService
+    ? [
+        { label: copy.status, value: valueObject.status || "—" },
+        {
+          label: summaryLabels.ordinaryPrice,
+          value: formatMoney(
+            valueObject.default_price,
+            valueObject.default_currency,
+            locale,
+          ),
+        },
+        {
+          label: isService ? summaryLabels.duration : copy.kind,
+          value: isService
+            ? valueObject.default_duration_minutes === null
+              ? "—"
+              : `${valueObject.default_duration_minutes} min`
+            : valueObject.object_kind || "—",
+        },
+        {
+          label: activitySectionTitle,
+          value: String(plannedActivities.length),
+        },
+      ]
+    : isLeaf
+      ? [
+          { label: copy.status, value: valueObject.status || "—" },
+          { label: copy.role, value: valueObject.node_role_code || "—" },
+          {
+            label: summaryLabels.linkedActivities,
+            value: String(plannedActivities.length),
+          },
+          { label: summaryLabels.totalCriteria, value: String(criteria.length) },
+        ]
+      : [
+          { label: copy.status, value: valueObject.status || "—" },
+          { label: copy.role, value: valueObject.node_role_code || "—" },
+          { label: copy.directChildren, value: String(directChildren.length) },
+          { label: copy.descendantLeaves, value: String(descendantLeafCount) },
+        ];
 
   function renderSubtree(parentId: string, depth = 0): ReactNode {
     const children = childrenByParent.get(parentId) ?? [];
@@ -905,8 +1361,8 @@ export default async function ValueObjectDetailPage({
   }
 
   return (
-    <main className="min-h-full bg-[#f0f2f7] px-4 py-8 text-[#1a1d2e]">
-      <div className="mx-auto grid w-full max-w-[1180px] gap-5">
+    <main className="min-h-full bg-[#eef1f7] px-4 py-5 text-[#1a1d2e] md:px-6">
+      <div className="mx-auto grid w-full max-w-[1640px] gap-5">
         <header className="rounded-[26px] border border-black/[0.07] bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
           <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
             {isRoot
@@ -1023,48 +1479,21 @@ export default async function ValueObjectDetailPage({
           </div>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-              {isLeaf ? activitySectionTitle : copy.directChildren}
-            </div>
-            <div className="mt-2 text-[28px] font-bold text-[#111827]">
-              {isLeaf ? plannedActivities.length : directChildren.length}
-            </div>
-          </div>
-          <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-              {isLeaf ? copy.scheduledActivities : copy.descendantLeaves}
-            </div>
-            <div className="mt-2 text-[28px] font-bold text-[#111827]">
-              {isLeaf ? activitiesWithSchedule : descendantLeafCount}
-            </div>
-          </div>
-          <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-              {copy.successCriteria}
-            </div>
-            <div className="mt-2 text-[28px] font-bold text-[#3b6ef8]">
-              {successCriteria.length}
-            </div>
-          </div>
-          <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-              {copy.failureCriteria}
-            </div>
-            <div className="mt-2 text-[28px] font-bold text-[#8b5cf6]">
-              {failureCriteria.length}
-            </div>
-          </div>
-          <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-              {copy.status}
-            </div>
-            <div className="mt-2 font-mono text-[15px] font-bold text-[#111827]">
-              {valueObject.status}
-            </div>
-          </div>
-        </section>
+        <ValueObjectProfileTopGrid
+          valueObjectId={valueObject.id}
+          locale={locale}
+          editMode={editMode}
+          canEdit={canEdit}
+          title={valueObject.title}
+          objectKindLabel={`${valueObject.object_kind || "—"} · ${
+            valueObject.node_role_code || "—"
+          }`}
+          imageUrl={publicProfileMetadata.imageUrl}
+          location={effectiveLocation}
+          locationIsInherited={!hasOwnLocation && Boolean(organizationLocation)}
+          owner={ownerPresentation}
+          summaryItems={summaryItems}
+        />
 
         <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
           <div className="rounded-[26px] border border-black/[0.07] bg-white p-6 shadow-sm">
