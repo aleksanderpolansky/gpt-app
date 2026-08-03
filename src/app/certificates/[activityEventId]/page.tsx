@@ -592,7 +592,7 @@ export default async function CertificateCatalogDetailPage({
             <p className="mt-0.5 text-[13px] text-[#7c8099]">
               {editMode ? pageCopy.editorType : pageCopy.offerType}
             </p>
-            <p className="mt-1 text-[12px] font-medium text-[#9ca3b8]">
+            <p className="mt-1 text-[12px] text-[#9ca3b8]">
               {pageCopy.placed}: {formatPlacedDate(certificate.publishedAt, locale)}
             </p>
             {editMode ? (
@@ -602,7 +602,7 @@ export default async function CertificateCatalogDetailPage({
         </div>
 
         {showImmutableNotice ? (
-          <section className="mb-4 rounded-xl border border-[#fed7aa] bg-[#fff7ed] px-4 py-3 text-[13px] font-semibold leading-5 text-[#9a3412]">
+          <section className="mb-4 rounded-xl border border-[#fed7aa] bg-[#fff7ed] px-4 py-3 text-[13px] font-medium leading-5 text-[#9a3412]">
             {pageCopy.immutableNotice}
           </section>
         ) : null}
@@ -633,7 +633,7 @@ export default async function CertificateCatalogDetailPage({
               </div>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="line-clamp-2 text-[14px] font-bold text-[#111827]">
+                  <div className="line-clamp-2 text-[13px] font-semibold text-[#111827]">
                     {certificate.title}
                   </div>
                   <div className="mt-1 text-[11px] text-[#9ca3b8]">
@@ -659,7 +659,13 @@ export default async function CertificateCatalogDetailPage({
             icon={MapPin}
             accent="#f97316"
           >
-            <div className="text-[18px] font-bold leading-6 text-[#111827]">
+            <div
+              className={
+                providerLocationText
+                  ? "text-[15px] font-semibold leading-5 text-[#1a1d2e]"
+                  : "max-w-[28ch] text-[13px] font-medium leading-5 text-[#5a5f7a]"
+              }
+            >
               {providerLocationText ?? pageCopy.locationMissing}
             </div>
             <div className="mt-3 flex min-h-0 flex-1">
@@ -695,12 +701,12 @@ export default async function CertificateCatalogDetailPage({
                 {providerHref ? (
                   <Link
                     href={providerHref}
-                    className="line-clamp-2 text-[14px] font-bold text-[#315bd0] hover:underline"
+                    className="line-clamp-2 text-[13px] font-semibold text-[#315bd0] hover:underline"
                   >
                     {certificate.providerDisplayName}
                   </Link>
                 ) : (
-                  <div className="line-clamp-2 text-[14px] font-bold text-[#111827]">
+                  <div className="line-clamp-2 text-[13px] font-semibold text-[#111827]">
                     {certificate.providerDisplayName}
                   </div>
                 )}
@@ -725,7 +731,7 @@ export default async function CertificateCatalogDetailPage({
                 locale={locale}
               />
             </div>
-            <div className="mt-4 rounded-xl bg-[#f5f7ff] px-3 py-2 text-[12px] font-semibold text-[#42507a]">
+            <div className="mt-4 rounded-xl bg-[#f5f7ff] px-3 py-2 text-[12px] font-medium text-[#42507a]">
               {pageCopy.status}: {getGiftCertificateStatusLabel(certificate.lifecycleStatus, copy)}
             </div>
             <div className="mt-3 text-[12px] leading-5 text-[#7c8099]">
@@ -750,7 +756,7 @@ export default async function CertificateCatalogDetailPage({
                   </p>
                 )
               ) : (
-                <div className="text-[13px] font-bold text-[#42507a]">
+                <div className="text-[13px] font-semibold text-[#42507a]">
                   {getGiftCertificateStatusLabel(certificate.lifecycleStatus, copy)}
                 </div>
               )}
@@ -874,7 +880,7 @@ export default async function CertificateCatalogDetailPage({
         </section>
 
         <section className="mt-5">
-          <h2 className="mb-3 text-[14px] font-bold text-[#111827]">
+          <h2 className="mb-3 text-[13px] font-semibold text-[#111827]">
             {pageCopy.flow}
           </h2>
           <div className="grid items-stretch gap-4 lg:auto-rows-fr lg:grid-cols-4">

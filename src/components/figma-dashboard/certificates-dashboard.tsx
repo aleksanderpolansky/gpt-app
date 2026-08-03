@@ -945,7 +945,7 @@ function ParticipantValue({
 }) {
   if (!href) {
     return (
-      <span className="line-clamp-1 text-[12px] font-bold text-[#1a1d2e]">
+      <span className="line-clamp-1 text-[12px] font-semibold text-[#1a1d2e]">
         {name}
       </span>
     );
@@ -954,7 +954,7 @@ function ParticipantValue({
   return (
     <Link
       href={appendLocale(href, locale)}
-      className="line-clamp-1 text-[12px] font-bold text-[#315bd0] hover:underline"
+      className="line-clamp-1 text-[12px] font-semibold text-[#315bd0] hover:underline"
     >
       {name}
     </Link>
@@ -1052,7 +1052,7 @@ function CertificatePreview({
             </div>
           ) : (
             <div className="min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5">
-              <div className="line-clamp-1 text-[12px] font-bold text-[#1a1d2e]">
+              <div className="line-clamp-1 text-[12px] font-semibold text-[#1a1d2e]">
                 {formatNumber(item.providerReputation, locale)}
               </div>
               <div className="text-[10px] text-[#9ca3b8]">{labels.reputation}</div>
@@ -1060,7 +1060,7 @@ function CertificatePreview({
           )}
 
           <div className="col-span-2 min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5 sm:col-span-1">
-            <div className="line-clamp-1 text-[12px] font-bold text-[#1a1d2e]">
+            <div className="line-clamp-1 text-[12px] font-semibold text-[#1a1d2e]">
               {formatDate(item.availableUntil, locale)}
             </div>
             <div className="text-[10px] text-[#9ca3b8]">{labels.validity}</div>
@@ -1380,7 +1380,7 @@ export function CertificatesDashboardContent({
       </div>
 
       {errorMessage ? (
-        <div className="mb-3 rounded-xl border border-[#fecaca] bg-[#fef2f2] p-4 text-[13px] font-semibold text-[#b91c1c]">
+        <div className="mb-3 rounded-xl border border-[#fecaca] bg-[#fef2f2] p-4 text-[13px] font-medium text-[#b91c1c]">
           {errorMessage}
         </div>
       ) : null}
@@ -1404,7 +1404,7 @@ export function CertificatesDashboardContent({
       </div>
 
       {!errorMessage && displayedItems.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#cbd5e1] bg-white p-5 text-[13px] font-semibold text-[#64748b]">
+        <div className="rounded-xl border border-dashed border-[#cbd5e1] bg-white p-5 text-[13px] font-medium text-[#64748b]">
           {labels.empty}
         </div>
       ) : null}
