@@ -25,6 +25,7 @@ import {
   CertificateProfileNavLink,
   CertificateProfileTopCard,
 } from "@/components/figma-dashboard/certificate-profile-shell";
+import { CertificateLockedEditButton } from "@/components/figma-dashboard/certificate-locked-edit-button";
 import { CertificateShareButton } from "@/components/figma-dashboard/certificate-share-button";
 import { type LocaleCode } from "@/i18n";
 import { ActivityScheduleDisplay } from "../../value-objects/[id]/activity-schedule-display";
@@ -69,6 +70,7 @@ type OfferPageCopy = {
   readonly editHint: string;
   readonly editSource: string;
   readonly lockedTerms: string;
+  readonly immutableNotice: string;
   readonly offerType: string;
   readonly placed: string;
   readonly offer: string;
@@ -103,8 +105,9 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
     viewMode: "View mode",
     editorType: "Public offer editor",
     editHint: "The public offer uses the same layout in viewing and editing modes.",
-    editSource: "Edit product or service",
+    editSource: "Open product or service",
     lockedTerms: "The terms of an ordered or completed offer are fixed.",
+    immutableNotice: "This offer has already been ordered or completed. Its terms and public snapshot are fixed. Changes to the source object affect only future offers; create a new offer for new terms.",
     offerType: "ARCTor offer",
     placed: "Published",
     offer: "Offer",
@@ -137,8 +140,9 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
     viewMode: "Tryb podglądu",
     editorType: "Edytor publicznej oferty",
     editHint: "Publiczna oferta ma ten sam układ w trybie podglądu i edycji.",
-    editSource: "Edytuj produkt lub usługę",
+    editSource: "Otwórz produkt lub usługę",
     lockedTerms: "Warunki zamówionej lub zrealizowanej oferty są zablokowane.",
+    immutableNotice: "Ta oferta została już zamówiona lub zrealizowana. Jej warunki i publiczny zapis są stałe. Zmiany obiektu źródłowego dotyczą tylko przyszłych ofert; dla nowych warunków utwórz nową ofertę.",
     offerType: "Oferta ARCTor",
     placed: "Opublikowano",
     offer: "Oferta",
@@ -171,8 +175,9 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
     viewMode: "Режим просмотра",
     editorType: "Редактор публичного предложения",
     editHint: "Публичное предложение редактируется в том же виде, в котором его видят посетители.",
-    editSource: "Редактировать товар или услугу",
+    editSource: "Открыть товар или услугу",
     lockedTerms: "Условия заказанного или реализованного предложения зафиксированы.",
+    immutableNotice: "Это предложение уже заказано или реализовано. Его условия и публичный снимок зафиксированы. Изменения исходного объекта повлияют только на будущие предложения; для новых условий создайте новое предложение.",
     offerType: "Предложение ARCTor",
     placed: "Опубликовано",
     offer: "Предложение",
@@ -205,8 +210,9 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
     viewMode: "Режим перегляду",
     editorType: "Редактор публічної пропозиції",
     editHint: "Публічна пропозиція редагується в тому самому вигляді, який бачать відвідувачі.",
-    editSource: "Редагувати товар або послугу",
+    editSource: "Відкрити товар або послугу",
     lockedTerms: "Умови замовленої або реалізованої пропозиції зафіксовано.",
+    immutableNotice: "Цю пропозицію вже замовлено або реалізовано. Її умови та публічний знімок зафіксовано. Зміни вихідного об’єкта впливають лише на майбутні пропозиції; для нових умов створіть нову пропозицію.",
     offerType: "Пропозиція ARCTor",
     placed: "Опубліковано",
     offer: "Пропозиція",
@@ -239,8 +245,9 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
     viewMode: "Ansichtsmodus",
     editorType: "Editor für öffentliche Angebote",
     editHint: "Das öffentliche Angebot verwendet im Ansichts- und Bearbeitungsmodus dasselbe Layout.",
-    editSource: "Produkt oder Dienstleistung bearbeiten",
+    editSource: "Produkt oder Dienstleistung öffnen",
     lockedTerms: "Die Bedingungen eines bestellten oder abgeschlossenen Angebots sind festgeschrieben.",
+    immutableNotice: "Dieses Angebot wurde bereits bestellt oder abgeschlossen. Bedingungen und öffentlicher Stand sind festgeschrieben. Änderungen am Quellobjekt gelten nur für künftige Angebote; für neue Bedingungen erstellen Sie ein neues Angebot.",
     offerType: "ARCTor-Angebot",
     placed: "Veröffentlicht",
     offer: "Angebot",
@@ -273,8 +280,9 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
     viewMode: "Modo de vista",
     editorType: "Editor de oferta pública",
     editHint: "La oferta pública usa el mismo diseño en los modos de vista y edición.",
-    editSource: "Editar producto o servicio",
+    editSource: "Abrir producto o servicio",
     lockedTerms: "Las condiciones de una oferta pedida o realizada están fijadas.",
+    immutableNotice: "Esta oferta ya fue pedida o realizada. Sus condiciones y su versión pública están fijadas. Los cambios del objeto de origen solo afectan a ofertas futuras; cree una oferta nueva para condiciones nuevas.",
     offerType: "Oferta ARCTor",
     placed: "Publicado",
     offer: "Oferta",
@@ -307,8 +315,9 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
     viewMode: "Režim zobrazení",
     editorType: "Editor veřejné nabídky",
     editHint: "Veřejná nabídka má v režimu zobrazení i úprav stejné rozvržení.",
-    editSource: "Upravit produkt nebo službu",
+    editSource: "Otevřít produkt nebo službu",
     lockedTerms: "Podmínky objednané nebo dokončené nabídky jsou uzamčeny.",
+    immutableNotice: "Tato nabídka již byla objednána nebo dokončena. Její podmínky a veřejný snímek jsou pevně dané. Změny zdrojového objektu ovlivní jen budoucí nabídky; pro nové podmínky vytvořte novou nabídku.",
     offerType: "Nabídka ARCTor",
     placed: "Publikováno",
     offer: "Nabídka",
@@ -493,7 +502,7 @@ export default async function CertificateCatalogDetailPage({
   const requestedMode = Array.isArray(resolvedSearchParams?.mode)
     ? resolvedSearchParams?.mode[0]
     : resolvedSearchParams?.mode;
-  const editMode = requestedMode === "edit";
+  const requestedEditMode = requestedMode === "edit";
   const [certificate, viewer] = await Promise.all([
     getGiftCertificateCatalogItem(activityEventId),
     resolveOptionalViewer(),
@@ -503,6 +512,12 @@ export default async function CertificateCatalogDetailPage({
     notFound();
   }
 
+  const canEditOfferTerms = ["draft", "available"].includes(
+    certificate.lifecycleStatus,
+  );
+  const editMode = requestedEditMode && canEditOfferTerms;
+  const showImmutableNotice = requestedEditMode && !canEditOfferTerms;
+
   const isAccountProvider = viewer?.appUserId === certificate.providerOwnerUserId;
   const isProviderManager =
     isAccountProvider && viewer?.actorId === certificate.providerManagerActorId;
@@ -510,7 +525,7 @@ export default async function CertificateCatalogDetailPage({
     viewer?.appUserId === certificate.recipientUserId &&
     viewer?.actorId === certificate.recipientActorId;
 
-  if (editMode && !isProviderManager) {
+  if (requestedEditMode && !isProviderManager) {
     notFound();
   }
   const isPubliclyShareable =
@@ -556,9 +571,16 @@ export default async function CertificateCatalogDetailPage({
           </CertificateProfileNavLink>
 
           {isProviderManager ? (
-            <CertificateProfileNavLink href={editMode ? viewHref : editHref}>
-              {editMode ? pageCopy.viewMode : pageCopy.editMode}
-            </CertificateProfileNavLink>
+            canEditOfferTerms ? (
+              <CertificateProfileNavLink href={editMode ? viewHref : editHref}>
+                {editMode ? pageCopy.viewMode : pageCopy.editMode}
+              </CertificateProfileNavLink>
+            ) : (
+              <CertificateLockedEditButton
+                label={pageCopy.editMode}
+                message={pageCopy.immutableNotice}
+              />
+            )
           ) : null}
         </div>
 
@@ -578,6 +600,12 @@ export default async function CertificateCatalogDetailPage({
             ) : null}
           </div>
         </div>
+
+        {showImmutableNotice ? (
+          <section className="mb-4 rounded-xl border border-[#fed7aa] bg-[#fff7ed] px-4 py-3 text-[13px] font-semibold leading-5 text-[#9a3412]">
+            {pageCopy.immutableNotice}
+          </section>
+        ) : null}
 
         <section className="mb-5 grid auto-rows-auto grid-cols-1 items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <CertificateProfileTopCard
@@ -740,10 +768,10 @@ export default async function CertificateCatalogDetailPage({
           <CertificateProfileActionLink href="#offer-schedule">
             {pageCopy.schedule}
           </CertificateProfileActionLink>
-          {editMode ? (
+          {isProviderManager ? (
             <Link
               href={buildGiftCertificateLocaleHref(
-                `/value-objects/${certificate.valueObjectId}/edit`,
+                `/value-objects/${certificate.valueObjectId}`,
                 locale,
               )}
               className="rounded-lg border border-black/[0.08] bg-white px-3 py-1.5 text-[12px] font-medium text-[#5a5f7a] transition hover:bg-[#f5f6fb]"

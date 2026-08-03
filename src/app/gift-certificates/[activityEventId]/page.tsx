@@ -18,7 +18,7 @@ export default async function GiftCertificateDetailsPage({
   const { activityEventId } = await params;
   const resolvedSearchParams = await searchParams;
   const locale = normalizeGiftCertificateLocale(resolvedSearchParams?.locale);
-  const query = new URLSearchParams({ mode: "edit" });
+  const query = new URLSearchParams();
 
   if (locale !== "en") {
     query.set("locale", locale);
