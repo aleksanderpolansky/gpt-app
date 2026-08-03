@@ -8,6 +8,7 @@ import {
 } from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
+import { ValueObjectInlineEditor } from "@/components/workspace/value-objects/value-object-inline-editor";
 import { ValueObjectSemanticRelationsManager } from "@/components/workspace/value-objects/value-object-semantic-relations-manager";
 import { ActivityScheduleDisplay } from "./activity-schedule-display";
 import {
@@ -23,6 +24,7 @@ type ValueObjectDetailPageProps = {
   }>;
   searchParams?: Promise<{
     locale?: string | string[];
+    mode?: string | string[];
   }>;
 };
 
@@ -31,6 +33,11 @@ type ValueObjectRow = {
   title: string;
   description: string | null;
   object_kind: string | null;
+  usage_scope: string | null;
+  value_type: string | null;
+  default_price: number | null;
+  default_currency: string | null;
+  default_duration_minutes: number | null;
   node_role_code: string | null;
   branch_type_code: string | null;
   root_value_object_id: string | null;
@@ -500,6 +507,37 @@ function buildLocaleHref(pathname: string, locale: LocaleCode) {
   return `${pathname}?locale=${encodeURIComponent(locale)}`;
 }
 
+const VIEW_MODE_LABELS: Record<LocaleCode, string> = {
+  en: "View mode",
+  pl: "Tryb podglądu",
+  ru: "Режим просмотра",
+  uk: "Режим перегляду",
+  de: "Ansichtsmodus",
+  es: "Modo de vista",
+  cs: "Režim zobrazení",
+};
+
+function buildValueObjectModeHref(
+  valueObjectId: string,
+  locale: LocaleCode,
+  mode: "view" | "edit",
+) {
+  const query = new URLSearchParams();
+
+  if (locale !== "en") {
+    query.set("locale", locale);
+  }
+
+  if (mode === "edit") {
+    query.set("mode", "edit");
+  }
+
+  const queryString = query.toString();
+  const pathname = `/value-objects/${encodeURIComponent(valueObjectId)}`;
+
+  return queryString ? `${pathname}?${queryString}` : pathname;
+}
+
 function buildActivityHref(
   activityEventId: string,
   locale: LocaleCode,
@@ -573,6 +611,10 @@ export default async function ValueObjectDetailPage({
   const { id } = await params;
   const resolvedSearchParams = await searchParams;
   const locale = normalizeLocale(resolvedSearchParams?.locale);
+  const rawMode = Array.isArray(resolvedSearchParams?.mode)
+    ? resolvedSearchParams?.mode[0]
+    : resolvedSearchParams?.mode;
+  const editMode = rawMode === "edit";
   const copy = COPY[locale];
 
   const session = await auth0.getSession();
@@ -601,6 +643,11 @@ export default async function ValueObjectDetailPage({
       title,
       description,
       object_kind,
+      usage_scope,
+      value_type,
+      default_price,
+      default_currency,
+      default_duration_minutes,
       node_role_code,
       branch_type_code,
       root_value_object_id,
@@ -731,6 +778,10 @@ export default async function ValueObjectDetailPage({
   const isProductOrService =
     valueObject.object_kind === "product_type" ||
     valueObject.object_kind === "service_type";
+  const isService = valueObject.object_kind === "service_type";
+  const canEdit = valueObject.status === "draft";
+  const viewHref = buildValueObjectModeHref(valueObject.id, locale, "view");
+  const editHref = buildValueObjectModeHref(valueObject.id, locale, "edit");
 
   let plannedActivities: PlannedActivityRow[] = [];
 
@@ -869,12 +920,29 @@ export default async function ValueObjectDetailPage({
 
           <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-[760px]">
-              <h1 className="text-[32px] font-bold tracking-[-0.035em] text-[#111827]">
-                {valueObject.title}
-              </h1>
-              <p className="mt-3 text-[14px] leading-6 text-[#5a5f7a]">
-                {valueObject.description || "—"}
-              </p>
+              {editMode && canEdit ? (
+                <ValueObjectInlineEditor
+                  valueObjectId={valueObject.id}
+                  locale={locale}
+                  initialTitle={valueObject.title}
+                  initialDescription={valueObject.description}
+                  isProductOrService={isProductOrService}
+                  isService={isService}
+                  initialPrice={valueObject.default_price}
+                  currency={valueObject.default_currency}
+                  initialDurationMinutes={valueObject.default_duration_minutes}
+                  viewHref={viewHref}
+                />
+              ) : (
+                <>
+                  <h1 className="text-[32px] font-bold tracking-[-0.035em] text-[#111827]">
+                    {valueObject.title}
+                  </h1>
+                  <p className="mt-3 text-[14px] leading-6 text-[#5a5f7a]">
+                    {valueObject.description || "—"}
+                  </p>
+                </>
+              )}
 
               {pathNodes.length > 1 && (
                 <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] font-semibold text-[#5a5f7a]">
@@ -934,14 +1002,23 @@ export default async function ValueObjectDetailPage({
               >
                 {copy.restructure}
               </Link>
-              <button
-                type="button"
-                disabled
-                title={copy.editLater}
-                className="inline-flex min-h-11 cursor-not-allowed items-center justify-center rounded-xl bg-[#3b6ef8] px-5 py-3 text-[13px] font-bold text-white opacity-60 shadow-[0_8px_20px_rgba(59,110,248,0.22)]"
-              >
-                {copy.edit}
-              </button>
+              {canEdit ? (
+                <Link
+                  href={editMode ? viewHref : editHref}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#3b6ef8] px-5 py-3 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.22)] transition hover:bg-[#315bd0]"
+                >
+                  {editMode ? VIEW_MODE_LABELS[locale] : copy.edit}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title={copy.editLater}
+                  className="inline-flex min-h-11 cursor-not-allowed items-center justify-center rounded-xl bg-[#3b6ef8] px-5 py-3 text-[13px] font-bold text-white opacity-45 shadow-[0_8px_20px_rgba(59,110,248,0.22)]"
+                >
+                  {copy.edit}
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -1185,6 +1262,15 @@ export default async function ValueObjectDetailPage({
               [copy.source, valueObject.source],
               [copy.createdAt, formatDate(valueObject.created_at, locale)],
               [copy.updatedAt, formatDate(valueObject.updated_at, locale)],
+              ...(isProductOrService
+                ? [
+                    ["default_price", valueObject.default_price],
+                    ["default_currency", valueObject.default_currency],
+                    ...(isService
+                      ? [["default_duration_minutes", valueObject.default_duration_minutes]]
+                      : []),
+                  ]
+                : []),
               ["root_value_object_id", valueObject.root_value_object_id],
               ["parent_value_object_id", valueObject.parent_value_object_id],
               ["instance_of_value_object_id", valueObject.instance_of_value_object_id],
