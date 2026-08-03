@@ -7,7 +7,6 @@ import {
   Mail,
   MessageCircle,
   Share2,
-  Smartphone,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -197,7 +196,6 @@ export function CertificateShareButton({
   const copy = COPY[locale];
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [systemShareAvailable, setSystemShareAvailable] = useState(false);
 
   const absoluteUrl = useMemo(() => {
     if (typeof window === "undefined") return href;
@@ -205,21 +203,16 @@ export function CertificateShareButton({
   }, [href]);
 
   const shareText = useMemo(() => {
-    const price = formatLocalizedPoints(pointsPrice, locale);
+    const points = formatLocalizedPoints(pointsPrice, locale);
     const payment =
       moneyRemainder > 0
-        ? `${price} + ${copy.surcharge} ${formatCurrencyText(
-            moneyRemainder,
-            currency,
-            locale,
-          )}`
-        : price;
+        ? `${formatCurrencyText(moneyRemainder, currency, locale)} + ${points}`
+        : points;
 
     return [title, providerName, payment, description?.trim()]
       .filter(Boolean)
       .join(" · ");
   }, [
-    copy.surcharge,
     currency,
     description,
     locale,
@@ -228,23 +221,6 @@ export function CertificateShareButton({
     providerName,
     title,
   ]);
-
-
-  useEffect(() => {
-    if (typeof navigator === "undefined" || !navigator.share) {
-      setSystemShareAvailable(false);
-      return;
-    }
-
-    try {
-      const shareData = { title, text: shareText, url: absoluteUrl };
-      setSystemShareAvailable(
-        typeof navigator.canShare !== "function" || navigator.canShare(shareData),
-      );
-    } catch {
-      setSystemShareAvailable(false);
-    }
-  }, [absoluteUrl, shareText, title]);
 
   useEffect(() => {
     if (!open) return;
@@ -257,20 +233,31 @@ export function CertificateShareButton({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
-  async function shareViaSystem(): Promise<void> {
-    if (!systemShareAvailable || !navigator.share) return;
+  async function shareOrOpenFallback(): Promise<void> {
+    const shareData = {
+      title,
+      text: shareText,
+      url: absoluteUrl,
+    };
+
+    const canUseSystemShare =
+      typeof navigator !== "undefined" &&
+      typeof navigator.share === "function" &&
+      (typeof navigator.canShare !== "function" || navigator.canShare(shareData));
+
+    if (!canUseSystemShare) {
+      setOpen(true);
+      return;
+    }
 
     try {
-      await navigator.share({
-        title,
-        text: shareText,
-        url: absoluteUrl,
-      });
-      setOpen(false);
+      await navigator.share(shareData);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
       }
+
+      setOpen(true);
     }
   }
 
@@ -302,7 +289,7 @@ export function CertificateShareButton({
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => void shareOrOpenFallback()}
         className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#3b6ef8] transition hover:bg-[#eef2ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b6ef8]/35"
         aria-haspopup="dialog"
         aria-label={copy.share}
@@ -345,17 +332,6 @@ export function CertificateShareButton({
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {systemShareAvailable ? (
-                <button
-                  type="button"
-                  onClick={() => void shareViaSystem()}
-                  className="col-span-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#3b6ef8] px-3 text-[12px] font-bold text-white sm:col-span-3"
-                >
-                  <Smartphone size={16} />
-                  {copy.shareViaApps}
-                </button>
-              ) : null}
-
               <button
                 type="button"
                 onClick={() => void copyLink()}

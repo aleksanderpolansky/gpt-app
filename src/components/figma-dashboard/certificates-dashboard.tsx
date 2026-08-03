@@ -23,11 +23,8 @@ import {
 
 import { type LocaleCode } from "@/i18n";
 
+import { CertificateCommercialPrice } from "./certificate-commercial-price";
 import { CertificateShareButton } from "./certificate-share-button";
-import {
-  formatLocalizedPoints,
-  LocalizedMoney,
-} from "./certificate-value-format";
 
 export type CertificateDashboardMode =
   | "catalog"
@@ -1029,35 +1026,15 @@ function CertificatePreview({
           ) : null}
         </div>
 
-        <div className="mt-3 rounded-xl border border-[#e7eaf2] bg-[#f8fafc] px-3 py-2.5">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[#9ca3b8]">
-              {labels.price}
-            </span>
-            <LocalizedMoney
-              value={item.regularPrice}
-              currency={item.currency}
-              locale={locale}
-              className="text-[17px] font-bold text-[#1a1d2e]"
-            />
-          </div>
-          <div className="mt-1.5 text-[12px] font-bold text-[#315bd0]">
-            {formatLocalizedPoints(item.pointsPrice, locale)}
-            {item.moneyRemainder > 0 ? (
-              <>
-                {" + "}
-                <span className="font-semibold text-[#5a5f7a]">
-                  {labels.surcharge}{" "}
-                </span>
-                <LocalizedMoney
-                  value={item.moneyRemainder}
-                  currency={item.currency}
-                  locale={locale}
-                  className="text-[14px] font-bold text-[#1a1d2e]"
-                />
-              </>
-            ) : null}
-          </div>
+        <div className="mt-3 rounded-xl border border-[#e7eaf2] bg-[#f8fafc] px-3 py-3">
+          <CertificateCommercialPrice
+            regularPrice={item.regularPrice}
+            moneyRemainder={item.moneyRemainder}
+            pointsPrice={item.pointsPrice}
+            currency={item.currency}
+            locale={locale}
+            compact
+          />
         </div>
 
         <div className="mt-3 grid min-w-0 grid-cols-2 gap-2 text-center sm:grid-cols-3">

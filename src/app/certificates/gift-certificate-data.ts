@@ -21,6 +21,7 @@ type TermsRow = {
   provider_currency_covered_amount: number | string;
   money_remainder_provider_currency: number | string;
   points_price: number | string;
+  reference_exchange_rate: number | string;
   terms_text: string | null;
   public_snapshot_json: unknown;
   recipient_user_id: string | null;
@@ -72,16 +73,36 @@ type OrganizationRow = {
   id: string;
   organization_name: string;
   public_slug: string | null;
+  logo_url: string | null;
+  country_code: string | null;
   status: string;
   directory_status: string;
   is_public_profile_enabled: boolean;
   is_listed_in_directory: boolean;
 };
 
+type OrganizationLocationRow = {
+  id: string;
+  organization_id: string;
+  address_visibility: string;
+  label: string | null;
+  country_code: string | null;
+  region: string | null;
+  city: string | null;
+  district: string | null;
+  street_address: string | null;
+  postal_code: string | null;
+  latitude: number | string | null;
+  longitude: number | string | null;
+  is_primary: boolean | null;
+  created_at: string;
+};
+
 type ActorPublicProfileRow = {
   actor_id: string;
   public_slug: string;
   display_name: string;
+  image_url: string | null;
   is_public: boolean;
 };
 
@@ -136,6 +157,19 @@ export type GiftCertificateCatalogItem = {
   readonly providerType: "personal" | "avatar" | "organization";
   readonly providerDisplayName: string;
   readonly providerPublicHref: string | null;
+  readonly providerImageUrl: string | null;
+  readonly productImageUrl: string | null;
+  readonly providerLocation: {
+    readonly label: string | null;
+    readonly countryCode: string | null;
+    readonly region: string | null;
+    readonly city: string | null;
+    readonly district: string | null;
+    readonly streetAddress: string | null;
+    readonly postalCode: string | null;
+    readonly latitude: number | null;
+    readonly longitude: number | null;
+  } | null;
   readonly providerReputation: number;
   readonly recipientUserId: string | null;
   readonly recipientActorId: string | null;
@@ -154,6 +188,7 @@ export type GiftCertificateCatalogItem = {
   readonly providerCurrencyCoveredAmount: number;
   readonly moneyRemainder: number;
   readonly pointsPrice: number;
+  readonly referenceExchangeRate: number;
   readonly termsText: string | null;
   readonly publicCode: string | null;
   readonly qrTokenHash: string | null;
@@ -192,6 +227,7 @@ const TERMS_SELECT = `
   provider_currency_covered_amount,
   money_remainder_provider_currency,
   points_price,
+  reference_exchange_rate,
   terms_text,
   public_snapshot_json,
   recipient_user_id,
@@ -222,6 +258,35 @@ function readSnapshotText(snapshot: unknown, key: string): string | null {
   const value = (snapshot as Record<string, unknown>)[key];
 
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function toNullableNumber(value: number | string | null | undefined): number | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function sanitizeProviderLocation(row: OrganizationLocationRow | null) {
+  if (!row) {
+    return null;
+  }
+
+  const exactAddress = row.address_visibility === "public";
+
+  return {
+    label: row.label,
+    countryCode: row.country_code,
+    region: row.region,
+    city: row.city,
+    district: row.district,
+    streetAddress: exactAddress ? row.street_address : null,
+    postalCode: exactAddress ? row.postal_code : null,
+    latitude: exactAddress ? toNullableNumber(row.latitude) : null,
+    longitude: exactAddress ? toNullableNumber(row.longitude) : null,
+  };
 }
 
 function resolveFlowState(
@@ -315,6 +380,7 @@ async function hydrateTerms(
     { data: publicProfileData, error: publicProfileError },
     { data: reputationData, error: reputationError },
     organizationResult,
+    organizationLocationResult,
     { data: checkinData, error: checkinError },
     { data: confirmationData, error: confirmationError },
   ] = await Promise.all([
@@ -350,7 +416,7 @@ async function hydrateTerms(
       .eq("status", "active"),
     supabase
       .from("actor_public_profiles")
-      .select("actor_id,public_slug,display_name,is_public")
+      .select("actor_id,public_slug,display_name,image_url,is_public")
       .in("actor_id", actorIds),
     supabase
       .from("actor_reputation_accounts")
@@ -359,8 +425,17 @@ async function hydrateTerms(
     organizationIds.length > 0
       ? supabase
           .from("organizations")
-          .select("id,organization_name,public_slug,status,directory_status,is_public_profile_enabled,is_listed_in_directory")
+          .select("id,organization_name,public_slug,logo_url,country_code,status,directory_status,is_public_profile_enabled,is_listed_in_directory")
           .in("id", organizationIds)
+      : Promise.resolve({ data: [], error: null }),
+    organizationIds.length > 0
+      ? supabase
+          .from("organization_locations")
+          .select("id,organization_id,address_visibility,label,country_code,region,city,district,street_address,postal_code,latitude,longitude,is_primary,created_at")
+          .in("organization_id", organizationIds)
+          .eq("is_active", true)
+          .order("is_primary", { ascending: false })
+          .order("created_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
     supabase
       .from("activity_fulfillment_checkins")
@@ -401,6 +476,10 @@ async function hydrateTerms(
     throw new Error(organizationResult.error.message);
   }
 
+  if (organizationLocationResult.error) {
+    throw new Error(organizationLocationResult.error.message);
+  }
+
   if (checkinError) {
     throw new Error(checkinError.message);
   }
@@ -424,6 +503,13 @@ async function hydrateTerms(
       row,
     ]),
   );
+  const organizationLocationsById = new Map<string, OrganizationLocationRow>();
+
+  for (const row of (organizationLocationResult.data ?? []) as OrganizationLocationRow[]) {
+    if (!organizationLocationsById.has(row.organization_id)) {
+      organizationLocationsById.set(row.organization_id, row);
+    }
+  }
   const publicProfilesByActorId = new Map(
     ((publicProfileData ?? []) as ActorPublicProfileRow[]).map((row) => [
       row.actor_id,
@@ -460,6 +546,9 @@ async function hydrateTerms(
 
     const organization = terms.provider_organization_id
       ? organizationsById.get(terms.provider_organization_id)
+      : null;
+    const organizationLocation = terms.provider_organization_id
+      ? organizationLocationsById.get(terms.provider_organization_id) ?? null
       : null;
     const recipientActor = terms.recipient_actor_id
       ? actorsById.get(terms.recipient_actor_id)
@@ -509,6 +598,12 @@ async function hydrateTerms(
             : providerPublicProfile?.is_public
               ? `/people/${encodeURIComponent(providerPublicProfile.public_slug)}`
               : null,
+        providerImageUrl:
+          organization?.logo_url ?? providerPublicProfile?.image_url ?? null,
+        productImageUrl:
+          readSnapshotText(terms.public_snapshot_json, "publicImageUrl") ??
+          readSnapshotText(terms.public_snapshot_json, "imageUrl"),
+        providerLocation: sanitizeProviderLocation(organizationLocation),
         providerReputation: reputationByActorId.get(terms.provider_actor_id) ?? 0,
         recipientUserId: terms.recipient_user_id,
         recipientActorId: terms.recipient_actor_id,
@@ -538,6 +633,7 @@ async function hydrateTerms(
           terms.money_remainder_provider_currency,
         ),
         pointsPrice: toNumber(terms.points_price),
+        referenceExchangeRate: toNumber(terms.reference_exchange_rate),
         termsText: terms.terms_text,
         publicCode: terms.public_code,
         qrTokenHash: terms.qr_token_hash,

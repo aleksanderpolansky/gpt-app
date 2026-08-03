@@ -5,6 +5,7 @@ import {
   resolveActiveActorContext,
 } from "../../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../../lib/auth0";
+import { getEcbReferenceRate } from "../../../../../../../lib/exchange-rates/ecb-reference-rate";
 import { supabase } from "../../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -265,7 +266,6 @@ export async function POST(
     body.pointsCoveragePercent,
   );
   const coveredAmount = normalizeNumber(body.pointsCoveredAmount);
-  const exchangeRate = normalizeNumber(body.referenceExchangeRate);
   const termsText = normalizeOptionalText(body.termsText, 4000);
 
   if (
@@ -422,16 +422,20 @@ export async function POST(
     );
   }
 
-  if (
-    providerCurrency !== "EUR" &&
-    (exchangeRate === null || exchangeRate <= 0)
-  ) {
+
+  let referenceRate: Awaited<ReturnType<typeof getEcbReferenceRate>>;
+
+  try {
+    referenceRate = await getEcbReferenceRate(providerCurrency);
+  } catch (error) {
     return NextResponse.json(
       {
         error:
-          "A positive provider-currency-per-EUR exchange rate is required",
+          error instanceof Error
+            ? error.message
+            : "Official euro reference rate is unavailable",
       },
-      { status: 400 },
+      { status: 503 },
     );
   }
 
@@ -471,7 +475,9 @@ export async function POST(
           ? coveredAmount
           : null,
       p_reference_exchange_rate:
-        providerCurrency === "EUR" ? null : exchangeRate,
+        providerCurrency === "EUR"
+          ? null
+          : referenceRate.providerCurrencyPerEuro,
       p_terms_text: termsText,
       p_started_at:
         valueObject.object_kind === "service_type"

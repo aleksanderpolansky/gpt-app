@@ -30,6 +30,11 @@ type GiftCertificateCreateFormProps = {
     label: string;
     type: "personal" | "avatar" | "organization";
   };
+  referenceRate: {
+    providerCurrencyPerEuro: number;
+    referenceDate: string;
+    sourceLabel: string;
+  };
 };
 
 type CreateResponse = {
@@ -442,6 +447,7 @@ export function GiftCertificateCreateForm({
   locale,
   valueObject,
   provider,
+  referenceRate,
 }: GiftCertificateCreateFormProps) {
   const router = useRouter();
   const copy = COPY[locale];
@@ -464,9 +470,6 @@ export function GiftCertificateCreateForm({
   const [coverageMode, setCoverageMode] =
     useState<CoverageMode>("percentage");
   const [coverageValue, setCoverageValue] = useState("100");
-  const [exchangeRate, setExchangeRate] = useState(
-    valueObject.currency === "EUR" ? "1" : "",
-  );
   const [serviceStart, setServiceStart] = useState("");
   const [serviceEnd, setServiceEnd] = useState("");
   const [termsText, setTermsText] = useState("");
@@ -479,8 +482,7 @@ export function GiftCertificateCreateForm({
   const calculation = useMemo(() => {
     const ordinaryPrice = roundMoney(valueObject.ordinaryPrice);
     const rawCoverage = parseNumber(coverageValue);
-    const rawRate =
-      valueObject.currency === "EUR" ? 1 : parseNumber(exchangeRate);
+    const rawRate = referenceRate.providerCurrencyPerEuro;
 
     let coveredProviderAmount = Number.NaN;
 
@@ -521,8 +523,7 @@ export function GiftCertificateCreateForm({
   }, [
     coverageMode,
     coverageValue,
-    exchangeRate,
-    valueObject.currency,
+    referenceRate.providerCurrencyPerEuro,
     valueObject.ordinaryPrice,
   ]);
 
@@ -595,10 +596,7 @@ export function GiftCertificateCreateForm({
               coverageMode === "provider_currency_amount"
                 ? parseNumber(coverageValue)
                 : null,
-            referenceExchangeRate:
-              valueObject.currency === "EUR"
-                ? null
-                : parseNumber(exchangeRate),
+            referenceExchangeRate: referenceRate.providerCurrencyPerEuro,
             termsText: termsText.trim() || null,
             startedAt,
             endedAt,
@@ -853,24 +851,20 @@ export function GiftCertificateCreateForm({
                 </div>
               </label>
 
-              {valueObject.currency !== "EUR" ? (
-                <label className="grid gap-2">
-                  <span className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-                    {copy.exchangeRate}
-                  </span>
-                  <input
-                    inputMode="decimal"
-                    value={exchangeRate}
-                    onChange={(event) =>
-                      setExchangeRate(event.target.value)
-                    }
-                    className="min-h-12 rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] text-[#1a1d2e]"
-                  />
-                  <span className="text-[12px] leading-5 text-[#7c8099]">
-                    {copy.exchangeRateHint}
-                  </span>
-                </label>
-              ) : null}
+              <div className="grid gap-2 rounded-2xl border border-[#dfe3f1] bg-[#f8fafc] p-4">
+                <span className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+                  {copy.exchangeRate}
+                </span>
+                <div className="font-mono text-[18px] font-bold text-[#111827]">
+                  1 € = {referenceRate.providerCurrencyPerEuro.toLocaleString(
+                    locale === "en" ? "en-US" : locale,
+                    { maximumFractionDigits: 8 },
+                  )} {valueObject.currency}
+                </div>
+                <span className="text-[12px] leading-5 text-[#7c8099]">
+                  {referenceRate.sourceLabel} · {referenceRate.referenceDate}. {copy.exchangeRateHint}
+                </span>
+              </div>
 
               <label className="grid gap-2">
                 <span className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">

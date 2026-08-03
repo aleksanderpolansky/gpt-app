@@ -5,6 +5,7 @@ import {
   resolveActiveActorContext,
 } from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
+import { getEcbReferenceRate } from "../../../../../../lib/exchange-rates/ecb-reference-rate";
 import { supabase } from "../../../../../../lib/supabase";
 import { GiftCertificateCreateForm } from "./gift-certificate-create-form";
 
@@ -154,6 +155,8 @@ export default async function GiftCertificateCreatePage({
     throw new Error("Provider currency is unavailable");
   }
 
+  const referenceRate = await getEcbReferenceRate(providerCurrency);
+
   return (
     <GiftCertificateCreateForm
       locale={locale}
@@ -169,6 +172,14 @@ export default async function GiftCertificateCreatePage({
       provider={{
         label: providerLabel,
         type: providerType,
+      }}
+      referenceRate={{
+        providerCurrencyPerEuro: referenceRate.providerCurrencyPerEuro,
+        referenceDate: referenceRate.referenceDate,
+        sourceLabel:
+          referenceRate.sourceCode === "EUR_IDENTITY"
+            ? "EUR"
+            : "European Central Bank",
       }}
     />
   );
