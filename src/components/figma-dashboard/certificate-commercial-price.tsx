@@ -52,7 +52,7 @@ export function CertificateCommercialPrice({
             currency={currency}
             locale={locale}
             className={`${
-              compact ? "text-[12px]" : "text-[14px]"
+              compact ? "text-[15px]" : "text-[22px]"
             } font-semibold text-[#dc2626] line-through decoration-[1.5px]`}
           />
         ) : null}

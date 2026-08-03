@@ -988,9 +988,6 @@ function CertificatePreview({
           ) : (
             <Package size={30} />
           )}
-          <span className="mt-2 text-center text-[10px] font-semibold text-[#5a5f7a]">
-            {item.objectKind === "service_type" ? labels.service : labels.product}
-          </span>
         </div>
 
         <div className="mt-1.5 flex w-full justify-start pl-1">
@@ -1012,19 +1009,16 @@ function CertificatePreview({
           {item.description?.trim() || item.title}
         </p>
 
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="rounded-lg bg-[#eef2ff] px-2.5 py-1 text-[11px] font-semibold text-[#3b6ef8]">
-            {item.objectKind === "service_type" ? labels.service : labels.product}
-          </span>
-          {mode !== "provider" ? (
+        {mode !== "provider" ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <span
               className="rounded-lg px-2.5 py-1 text-[11px] font-semibold"
               style={stateTone}
             >
               {labels.states[item.state]}
             </span>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         <div className="mt-3 rounded-xl border border-[#e7eaf2] bg-[#f8fafc] px-3 py-3">
           <CertificateCommercialPrice

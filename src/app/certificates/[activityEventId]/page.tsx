@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { type Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Gift, MapPin, Package, Star } from "lucide-react";
+import {
+  CheckCircle2,
+  Gift,
+  MapPin,
+  Package,
+  Star,
+  UserRound,
+} from "lucide-react";
 
 import {
   ActorContextError,
@@ -11,6 +18,13 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import OrganizationLocationMapPreview from "@/components/commercial/OrganizationLocationMapPreview";
 import { CertificateCommercialPrice } from "@/components/figma-dashboard/certificate-commercial-price";
+import {
+  CertificateProfileActionLink,
+  CertificateProfileBigCard,
+  CertificateProfileDirectionCard,
+  CertificateProfileNavLink,
+  CertificateProfileTopCard,
+} from "@/components/figma-dashboard/certificate-profile-shell";
 import { CertificateShareButton } from "@/components/figma-dashboard/certificate-share-button";
 import { type LocaleCode } from "@/i18n";
 import { ActivityScheduleDisplay } from "../../value-objects/[id]/activity-schedule-display";
@@ -28,10 +42,12 @@ import {
   getGiftCertificateCatalogItem,
   type GiftCertificateCatalogItem,
 } from "../gift-certificate-data";
+import { CertificateTermsEditor } from "./certificate-terms-editor";
 import { GiftCertificateFulfillmentConfirmation } from "./gift-certificate-fulfillment-confirmation";
 import { GiftCertificateLocalDateTime } from "./gift-certificate-local-date-time";
 import { GiftCertificateQr } from "./gift-certificate-qr";
 import { OrderGiftCertificateButton } from "./order-gift-certificate-button";
+import { PublishGiftCertificateButton } from "../../gift-certificates/[activityEventId]/publish-gift-certificate-button";
 
 export const dynamic = "force-dynamic";
 
@@ -41,138 +57,283 @@ type CertificatePageProps = {
   }>;
   readonly searchParams?: Promise<{
     readonly locale?: string | string[];
+    readonly mode?: string | string[];
   }>;
 };
 
-type OfferDetailCopy = {
-  readonly eyebrow: string;
-  readonly title: string;
+type OfferPageCopy = {
   readonly back: string;
+  readonly editMode: string;
+  readonly viewMode: string;
+  readonly editorType: string;
+  readonly editHint: string;
+  readonly editSource: string;
+  readonly lockedTerms: string;
+  readonly offerType: string;
+  readonly placed: string;
+  readonly offer: string;
   readonly address: string;
-  readonly locationMissing: string;
   readonly provider: string;
-  readonly providerKind: string;
+  readonly commercialTerms: string;
+  readonly description: string;
+  readonly conditions: string;
+  readonly schedule: string;
+  readonly providerDetails: string;
+  readonly details: string;
+  readonly publicInformation: string;
+  readonly locationMissing: string;
   readonly personal: string;
   readonly avatar: string;
   readonly organization: string;
-  readonly offer: string;
-  readonly commercialTerms: string;
   readonly reputation: string;
+  readonly status: string;
+  readonly validity: string;
+  readonly points: string;
+  readonly money: string;
+  readonly flow: string;
   readonly share: string;
+  readonly sourceObject: string;
+  readonly recipient: string;
 };
 
-const OFFER_DETAIL_COPY: Record<LocaleCode, OfferDetailCopy> = {
+const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
   en: {
-    eyebrow: "ARCTor offer",
-    title: "Offer details",
-    back: "Back to offers",
+    back: "← Back to offers",
+    editMode: "Edit mode",
+    viewMode: "View mode",
+    editorType: "Public offer editor",
+    editHint: "The public offer uses the same layout in viewing and editing modes.",
+    editSource: "Edit product or service",
+    lockedTerms: "The terms of an ordered or completed offer are fixed.",
+    offerType: "ARCTor offer",
+    placed: "Published",
+    offer: "Offer",
     address: "Address",
-    locationMissing: "Public provider location has not been added yet.",
     provider: "Provider",
-    providerKind: "Provider type",
+    commercialTerms: "Offer terms",
+    description: "Description",
+    conditions: "Conditions",
+    schedule: "Schedule",
+    providerDetails: "Provider details",
+    details: "Details",
+    publicInformation: "Public information",
+    locationMissing: "The provider has not added a public location yet.",
     personal: "Personal profile",
     avatar: "Avatar",
     organization: "Business",
-    offer: "Offer",
-    commercialTerms: "Offer terms",
     reputation: "Reputation",
-    share: "Share offer",
+    status: "Status",
+    validity: "Validity",
+    points: "Points",
+    money: "Money part",
+    flow: "Offer status",
+    share: "Share",
+    sourceObject: "Product or service",
+    recipient: "Recipient",
   },
   pl: {
-    eyebrow: "Oferta ARCTor",
-    title: "Szczegóły oferty",
-    back: "Wróć do ofert",
+    back: "← Wróć do ofert",
+    editMode: "Tryb edycji",
+    viewMode: "Tryb podglądu",
+    editorType: "Edytor publicznej oferty",
+    editHint: "Publiczna oferta ma ten sam układ w trybie podglądu i edycji.",
+    editSource: "Edytuj produkt lub usługę",
+    lockedTerms: "Warunki zamówionej lub zrealizowanej oferty są zablokowane.",
+    offerType: "Oferta ARCTor",
+    placed: "Opublikowano",
+    offer: "Oferta",
     address: "Adres",
-    locationMissing: "Publiczna lokalizacja dostawcy nie została jeszcze dodana.",
     provider: "Dostawca",
-    providerKind: "Typ dostawcy",
+    commercialTerms: "Warunki oferty",
+    description: "Opis",
+    conditions: "Warunki",
+    schedule: "Termin",
+    providerDetails: "Dane dostawcy",
+    details: "Szczegóły",
+    publicInformation: "Informacja publiczna",
+    locationMissing: "Dostawca nie dodał jeszcze publicznej lokalizacji.",
     personal: "Profil osobisty",
     avatar: "Awatar",
     organization: "Firma",
-    offer: "Oferta",
-    commercialTerms: "Warunki oferty",
     reputation: "Reputacja",
-    share: "Udostępnij ofertę",
+    status: "Status",
+    validity: "Ważność",
+    points: "Punkty",
+    money: "Część pieniężna",
+    flow: "Stan oferty",
+    share: "Udostępnij",
+    sourceObject: "Produkt lub usługa",
+    recipient: "Odbiorca",
   },
   ru: {
-    eyebrow: "Предложение ARCTor",
-    title: "Подробнее о предложении",
-    back: "Назад к предложениям",
+    back: "← Назад к предложениям",
+    editMode: "Режим редактирования",
+    viewMode: "Режим просмотра",
+    editorType: "Редактор публичного предложения",
+    editHint: "Публичное предложение редактируется в том же виде, в котором его видят посетители.",
+    editSource: "Редактировать товар или услугу",
+    lockedTerms: "Условия заказанного или реализованного предложения зафиксированы.",
+    offerType: "Предложение ARCTor",
+    placed: "Опубликовано",
+    offer: "Предложение",
     address: "Адрес",
-    locationMissing: "Публичная геолокация предоставляющего пока не добавлена.",
     provider: "Предоставляющий",
-    providerKind: "Вид предоставляющего",
+    commercialTerms: "Условия предложения",
+    description: "Описание",
+    conditions: "Условия",
+    schedule: "Сроки и время",
+    providerDetails: "Предоставляющий",
+    details: "Подробнее",
+    publicInformation: "Публичная информация",
+    locationMissing: "Публичная геолокация предоставляющего пока не добавлена.",
     personal: "Личный профиль",
     avatar: "Аватар",
     organization: "Предприятие",
-    offer: "Предложение",
-    commercialTerms: "Условия предложения",
     reputation: "Репутация",
-    share: "Поделиться предложением",
+    status: "Состояние",
+    validity: "Срок действия",
+    points: "Пункты",
+    money: "Денежная часть",
+    flow: "Состояние предложения",
+    share: "Поделиться",
+    sourceObject: "Товар или услуга",
+    recipient: "Получатель",
   },
   uk: {
-    eyebrow: "Пропозиція ARCTor",
-    title: "Докладніше про пропозицію",
-    back: "Назад до пропозицій",
+    back: "← Назад до пропозицій",
+    editMode: "Режим редагування",
+    viewMode: "Режим перегляду",
+    editorType: "Редактор публічної пропозиції",
+    editHint: "Публічна пропозиція редагується в тому самому вигляді, який бачать відвідувачі.",
+    editSource: "Редагувати товар або послугу",
+    lockedTerms: "Умови замовленої або реалізованої пропозиції зафіксовано.",
+    offerType: "Пропозиція ARCTor",
+    placed: "Опубліковано",
+    offer: "Пропозиція",
     address: "Адреса",
-    locationMissing: "Публічну геолокацію надавача ще не додано.",
     provider: "Надавач",
-    providerKind: "Вид надавача",
+    commercialTerms: "Умови пропозиції",
+    description: "Опис",
+    conditions: "Умови",
+    schedule: "Строки й час",
+    providerDetails: "Надавач",
+    details: "Докладніше",
+    publicInformation: "Публічна інформація",
+    locationMissing: "Публічну геолокацію надавача ще не додано.",
     personal: "Особистий профіль",
     avatar: "Аватар",
     organization: "Підприємство",
-    offer: "Пропозиція",
-    commercialTerms: "Умови пропозиції",
     reputation: "Репутація",
-    share: "Поділитися пропозицією",
+    status: "Стан",
+    validity: "Строк дії",
+    points: "Пункти",
+    money: "Грошова частина",
+    flow: "Стан пропозиції",
+    share: "Поділитися",
+    sourceObject: "Товар або послуга",
+    recipient: "Отримувач",
   },
   de: {
-    eyebrow: "ARCTor-Angebot",
-    title: "Angebotsdetails",
-    back: "Zurück zu den Angeboten",
+    back: "← Zurück zu den Angeboten",
+    editMode: "Bearbeitungsmodus",
+    viewMode: "Ansichtsmodus",
+    editorType: "Editor für öffentliche Angebote",
+    editHint: "Das öffentliche Angebot verwendet im Ansichts- und Bearbeitungsmodus dasselbe Layout.",
+    editSource: "Produkt oder Dienstleistung bearbeiten",
+    lockedTerms: "Die Bedingungen eines bestellten oder abgeschlossenen Angebots sind festgeschrieben.",
+    offerType: "ARCTor-Angebot",
+    placed: "Veröffentlicht",
+    offer: "Angebot",
     address: "Adresse",
-    locationMissing: "Der öffentliche Standort des Anbieters wurde noch nicht hinzugefügt.",
     provider: "Anbieter",
-    providerKind: "Anbietertyp",
+    commercialTerms: "Angebotsbedingungen",
+    description: "Beschreibung",
+    conditions: "Bedingungen",
+    schedule: "Zeitraum und Termin",
+    providerDetails: "Anbieter",
+    details: "Details",
+    publicInformation: "Öffentliche Information",
+    locationMissing: "Der Anbieter hat noch keinen öffentlichen Standort hinzugefügt.",
     personal: "Persönliches Profil",
     avatar: "Avatar",
     organization: "Unternehmen",
-    offer: "Angebot",
-    commercialTerms: "Angebotsbedingungen",
     reputation: "Reputation",
-    share: "Angebot teilen",
+    status: "Status",
+    validity: "Gültigkeit",
+    points: "Punkte",
+    money: "Geldanteil",
+    flow: "Angebotsstatus",
+    share: "Teilen",
+    sourceObject: "Produkt oder Dienstleistung",
+    recipient: "Empfänger",
   },
   es: {
-    eyebrow: "Oferta ARCTor",
-    title: "Detalles de la oferta",
-    back: "Volver a las ofertas",
+    back: "← Volver a las ofertas",
+    editMode: "Modo de edición",
+    viewMode: "Modo de vista",
+    editorType: "Editor de oferta pública",
+    editHint: "La oferta pública usa el mismo diseño en los modos de vista y edición.",
+    editSource: "Editar producto o servicio",
+    lockedTerms: "Las condiciones de una oferta pedida o realizada están fijadas.",
+    offerType: "Oferta ARCTor",
+    placed: "Publicado",
+    offer: "Oferta",
     address: "Dirección",
-    locationMissing: "La ubicación pública del proveedor aún no se ha añadido.",
     provider: "Proveedor",
-    providerKind: "Tipo de proveedor",
+    commercialTerms: "Condiciones de la oferta",
+    description: "Descripción",
+    conditions: "Condiciones",
+    schedule: "Fechas y horario",
+    providerDetails: "Proveedor",
+    details: "Detalles",
+    publicInformation: "Información pública",
+    locationMissing: "El proveedor todavía no ha añadido una ubicación pública.",
     personal: "Perfil personal",
     avatar: "Avatar",
     organization: "Empresa",
-    offer: "Oferta",
-    commercialTerms: "Condiciones de la oferta",
     reputation: "Reputación",
-    share: "Compartir oferta",
+    status: "Estado",
+    validity: "Validez",
+    points: "Puntos",
+    money: "Parte monetaria",
+    flow: "Estado de la oferta",
+    share: "Compartir",
+    sourceObject: "Producto o servicio",
+    recipient: "Destinatario",
   },
   cs: {
-    eyebrow: "Nabídka ARCTor",
-    title: "Podrobnosti nabídky",
-    back: "Zpět k nabídkám",
+    back: "← Zpět k nabídkám",
+    editMode: "Režim úprav",
+    viewMode: "Režim zobrazení",
+    editorType: "Editor veřejné nabídky",
+    editHint: "Veřejná nabídka má v režimu zobrazení i úprav stejné rozvržení.",
+    editSource: "Upravit produkt nebo službu",
+    lockedTerms: "Podmínky objednané nebo dokončené nabídky jsou uzamčeny.",
+    offerType: "Nabídka ARCTor",
+    placed: "Publikováno",
+    offer: "Nabídka",
     address: "Adresa",
-    locationMissing: "Veřejná poloha poskytovatele zatím nebyla přidána.",
     provider: "Poskytovatel",
-    providerKind: "Typ poskytovatele",
+    commercialTerms: "Podmínky nabídky",
+    description: "Popis",
+    conditions: "Podmínky",
+    schedule: "Termín a čas",
+    providerDetails: "Poskytovatel",
+    details: "Podrobnosti",
+    publicInformation: "Veřejná informace",
+    locationMissing: "Poskytovatel zatím nepřidal veřejnou polohu.",
     personal: "Osobní profil",
     avatar: "Avatar",
     organization: "Podnik",
-    offer: "Nabídka",
-    commercialTerms: "Podmínky nabídky",
     reputation: "Reputace",
-    share: "Sdílet nabídku",
+    status: "Stav",
+    validity: "Platnost",
+    points: "Body",
+    money: "Peněžní část",
+    flow: "Stav nabídky",
+    share: "Sdílet",
+    sourceObject: "Produkt nebo služba",
+    recipient: "Příjemce",
   },
 };
 
@@ -263,25 +424,6 @@ async function resolveOptionalViewer(): Promise<ResolvedActorContext | null> {
   }
 }
 
-function DetailCard({
-  label,
-  children,
-}: {
-  readonly label: string;
-  readonly children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-[20px] border border-black/[0.07] bg-white p-4 shadow-sm">
-      <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#7c8099]">
-        {label}
-      </div>
-      <div className="mt-2 text-[14px] font-bold leading-6 text-[#111827]">
-        {children}
-      </div>
-    </div>
-  );
-}
-
 function formatProviderLocation(
   location: GiftCertificateCatalogItem["providerLocation"],
 ): string | null {
@@ -299,6 +441,46 @@ function formatProviderLocation(
   return parts.length > 0 ? parts.join(", ") : location.label;
 }
 
+
+function buildOfferPageHref(
+  pathname: string,
+  locale: LocaleCode,
+  mode?: "edit",
+): string {
+  const params = new URLSearchParams();
+
+  if (locale !== "en") {
+    params.set("locale", locale);
+  }
+
+  if (mode) {
+    params.set("mode", mode);
+  }
+
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}
+
+function formatPlacedDate(value: string | null, locale: LocaleCode): string {
+  if (!value) return "—";
+
+  const localeTag: Record<LocaleCode, string> = {
+    en: "en-US",
+    pl: "pl-PL",
+    ru: "ru-RU",
+    uk: "uk-UA",
+    de: "de-DE",
+    es: "es-ES",
+    cs: "cs-CZ",
+  };
+
+  return new Intl.DateTimeFormat(localeTag[locale], {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
 export default async function CertificateCatalogDetailPage({
   params,
   searchParams,
@@ -307,7 +489,11 @@ export default async function CertificateCatalogDetailPage({
   const resolvedSearchParams = await searchParams;
   const locale = normalizeGiftCertificateLocale(resolvedSearchParams?.locale);
   const copy = GIFT_CERTIFICATE_CATALOG_COPY[locale];
-  const offerCopy = OFFER_DETAIL_COPY[locale];
+  const pageCopy = OFFER_PAGE_COPY[locale];
+  const requestedMode = Array.isArray(resolvedSearchParams?.mode)
+    ? resolvedSearchParams?.mode[0]
+    : resolvedSearchParams?.mode;
+  const editMode = requestedMode === "edit";
   const [certificate, viewer] = await Promise.all([
     getGiftCertificateCatalogItem(activityEventId),
     resolveOptionalViewer(),
@@ -323,6 +509,10 @@ export default async function CertificateCatalogDetailPage({
   const isRecipient =
     viewer?.appUserId === certificate.recipientUserId &&
     viewer?.actorId === certificate.recipientActorId;
+
+  if (editMode && !isProviderManager) {
+    notFound();
+  }
   const isPubliclyShareable =
     isPubliclyShareableLifecycle(certificate.lifecycleStatus) &&
     certificate.activity.status === "planned";
@@ -333,163 +523,172 @@ export default async function CertificateCatalogDetailPage({
 
   const providerKindLabel =
     certificate.providerType === "organization"
-      ? offerCopy.organization
+      ? pageCopy.organization
       : certificate.providerType === "avatar"
-        ? offerCopy.avatar
-        : offerCopy.personal;
+        ? pageCopy.avatar
+        : pageCopy.personal;
   const providerLocationText = formatProviderLocation(certificate.providerLocation);
   const shareHref = buildGiftCertificateLocaleHref(
     `/certificates/${certificate.activityEventId}`,
     locale,
   );
+  const editHref = buildOfferPageHref(
+    `/certificates/${certificate.activityEventId}`,
+    locale,
+    "edit",
+  );
+  const viewHref = buildOfferPageHref(
+    `/certificates/${certificate.activityEventId}`,
+    locale,
+  );
+  const providerHref = certificate.providerPublicHref
+    ? buildGiftCertificateLocaleHref(certificate.providerPublicHref, locale)
+    : null;
 
   return (
-    <main className="min-h-screen bg-[#f0f2f7] p-4 text-[#1a1d2e] sm:p-5">
-      <div className="mx-auto max-w-[1320px]">
-        <Link
-          href={buildGiftCertificateLocaleHref("/certificates", locale)}
-          className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe3f1] bg-white px-4 py-2 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
-        >
-          ← {offerCopy.back}
-        </Link>
+    <main className="min-h-full bg-[#f5f6fb] text-[#1a1d2e]">
+      <div className="p-5">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <CertificateProfileNavLink
+            href={buildGiftCertificateLocaleHref("/certificates", locale)}
+          >
+            {pageCopy.back}
+          </CertificateProfileNavLink>
 
-        <header className="mt-4">
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7c8099]">
-            {offerCopy.eyebrow}
-          </p>
-          <h1 className="mt-1 text-[27px] font-bold tracking-[-0.03em]">
-            {certificate.title}
-          </h1>
-          {certificate.description ? (
-            <p className="mt-1 max-w-4xl text-[14px] leading-6 text-[#7c8099]">
-              {certificate.description}
-            </p>
+          {isProviderManager ? (
+            <CertificateProfileNavLink href={editMode ? viewHref : editHref}>
+              {editMode ? pageCopy.viewMode : pageCopy.editMode}
+            </CertificateProfileNavLink>
           ) : null}
-        </header>
+        </div>
 
-        <section className="mt-5 grid gap-3 lg:grid-cols-4">
-          <article className="relative min-h-[360px] overflow-hidden rounded-[20px] border border-black/[0.07] bg-white p-4 shadow-sm">
-            <div className="h-[270px] overflow-hidden rounded-2xl bg-[#eef2ff]">
-              {certificate.productImageUrl ? (
-                <img
-                  src={certificate.productImageUrl}
-                  alt={certificate.title}
-                  className="h-full w-full object-cover"
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-[20px] font-bold leading-tight text-[#1a1d2e]">
+              {certificate.title}
+            </h1>
+            <p className="mt-0.5 text-[13px] text-[#7c8099]">
+              {editMode ? pageCopy.editorType : pageCopy.offerType}
+            </p>
+            <p className="mt-1 text-[12px] font-medium text-[#9ca3b8]">
+              {pageCopy.placed}: {formatPlacedDate(certificate.publishedAt, locale)}
+            </p>
+            {editMode ? (
+              <p className="mt-2 text-[12px] text-[#7c8099]">{pageCopy.editHint}</p>
+            ) : null}
+          </div>
+        </div>
+
+        <section className="mb-5 grid auto-rows-auto grid-cols-1 items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <CertificateProfileTopCard
+            label={pageCopy.offer}
+            icon={Star}
+            accent="#3b6ef8"
+          >
+            <div className="flex h-full min-h-0 flex-col gap-3">
+              <div className="relative mx-auto aspect-square w-full max-w-[220px] overflow-hidden rounded-2xl border border-[#dfe4ff] bg-[#eef2ff] text-[#3b6ef8]">
+                {certificate.productImageUrl ? (
+                  <img
+                    src={certificate.productImageUrl}
+                    alt={certificate.title}
+                    className="h-full w-full object-cover object-center"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    {certificate.objectKind === "service_type" ? (
+                      <Gift size={46} />
+                    ) : (
+                      <Package size={46} />
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="line-clamp-2 text-[14px] font-bold text-[#111827]">
+                    {certificate.title}
+                  </div>
+                  <div className="mt-1 text-[11px] text-[#9ca3b8]">
+                    {pageCopy.offerType}
+                  </div>
+                </div>
+                <CertificateShareButton
+                  locale={locale}
+                  title={certificate.title}
+                  description={certificate.description}
+                  href={shareHref}
+                  providerName={certificate.providerDisplayName}
+                  pointsPrice={certificate.pointsPrice}
+                  moneyRemainder={certificate.moneyRemainder}
+                  currency={certificate.providerCurrency}
                 />
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center text-[#3b6ef8]">
-                  {certificate.objectKind === "service_type" ? (
-                    <Gift size={44} />
-                  ) : (
-                    <Package size={44} />
-                  )}
-                  <span className="mt-3 text-[12px] font-semibold text-[#5a5f7a]">
-                    {certificate.objectKind === "service_type"
-                      ? copy.service
-                      : copy.product}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="truncate text-[14px] font-bold">
-                  {certificate.title}
-                </div>
-                <div className="mt-1 text-[11px] text-[#9aa0ba]">
-                  {offerCopy.offer}
-                </div>
               </div>
-              <CertificateShareButton
-                locale={locale}
-                title={certificate.title}
-                description={certificate.description}
-                href={shareHref}
-                providerName={certificate.providerDisplayName}
-                pointsPrice={certificate.pointsPrice}
-                moneyRemainder={certificate.moneyRemainder}
-                currency={certificate.providerCurrency}
-              />
             </div>
-          </article>
+          </CertificateProfileTopCard>
 
-          <article className="flex min-h-[360px] flex-col rounded-[20px] border border-black/[0.07] bg-white p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#7c8099]">
-                  {offerCopy.address}
-                </div>
-                <div className="mt-2 text-[16px] font-bold leading-6 text-[#111827]">
-                  {providerLocationText ?? offerCopy.locationMissing}
-                </div>
-              </div>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#fff3e7] text-[#ff8a35]">
-                <MapPin size={15} />
-              </span>
+          <CertificateProfileTopCard
+            label={pageCopy.address}
+            icon={MapPin}
+            accent="#f97316"
+          >
+            <div className="text-[18px] font-bold leading-6 text-[#111827]">
+              {providerLocationText ?? pageCopy.locationMissing}
             </div>
-            <div className="mt-4 min-h-[250px] flex-1">
+            <div className="mt-3 flex min-h-0 flex-1">
               <OrganizationLocationMapPreview
                 location={certificate.providerLocation}
-                organizationName={
-                  certificate.providerLocation
-                    ? certificate.providerDisplayName
-                    : undefined
-                }
+                organizationName={certificate.providerDisplayName}
                 locale={locale}
-                className="min-h-[250px]"
+                className="rounded-xl shadow-sm"
               />
             </div>
-          </article>
+          </CertificateProfileTopCard>
 
-          <article className="relative min-h-[360px] overflow-hidden rounded-[20px] border border-black/[0.07] bg-white p-4 shadow-sm">
-            <div className="h-[270px] overflow-hidden rounded-2xl bg-[#f5f6fb]">
-              {certificate.providerImageUrl ? (
-                <img
-                  src={certificate.providerImageUrl}
-                  alt={certificate.providerDisplayName}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-[56px] font-bold text-[#8da2ff]">
-                  {certificate.providerDisplayName.slice(0, 1).toUpperCase()}
-                </div>
-              )}
-            </div>
-            <div className="mt-3 flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                {certificate.providerPublicHref ? (
+          <CertificateProfileTopCard
+            label={pageCopy.provider}
+            icon={UserRound}
+            accent="#8b5cf6"
+          >
+            <div className="flex h-full min-h-0 flex-col gap-3">
+              <div className="mx-auto aspect-square w-full max-w-[220px] overflow-hidden rounded-2xl bg-[#f5f6fb]">
+                {certificate.providerImageUrl ? (
+                  <img
+                    src={certificate.providerImageUrl}
+                    alt={certificate.providerDisplayName}
+                    className="h-full w-full object-cover object-center"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-[48px] font-bold text-[#8da2ff]">
+                    {certificate.providerDisplayName.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div>
+                {providerHref ? (
                   <Link
-                    href={buildGiftCertificateLocaleHref(
-                      certificate.providerPublicHref,
-                      locale,
-                    )}
+                    href={providerHref}
                     className="line-clamp-2 text-[14px] font-bold text-[#315bd0] hover:underline"
                   >
                     {certificate.providerDisplayName}
                   </Link>
                 ) : (
-                  <div className="line-clamp-2 text-[14px] font-bold">
+                  <div className="line-clamp-2 text-[14px] font-bold text-[#111827]">
                     {certificate.providerDisplayName}
                   </div>
                 )}
-                <div className="mt-1 text-[11px] text-[#9aa0ba]">
+                <div className="mt-1 text-[11px] text-[#9ca3b8]">
                   {providerKindLabel}
                 </div>
               </div>
-              <span
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#eef2ff] text-[#3b6ef8]"
-                title={`${offerCopy.reputation}: ${certificate.providerReputation}`}
-              >
-                <Star size={15} />
-              </span>
             </div>
-          </article>
+          </CertificateProfileTopCard>
 
-          <article className="flex min-h-[360px] flex-col rounded-[20px] border border-[#c8f0d3] bg-white p-5 shadow-sm">
-            <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#7c8099]">
-              {offerCopy.commercialTerms}
-            </div>
-            <div className="mt-4">
+          <CertificateProfileTopCard
+            label={pageCopy.commercialTerms}
+            icon={CheckCircle2}
+            accent="#22c55e"
+          >
+            <div className="rounded-xl border border-[#e7eaf2] bg-[#f8fafc] px-3 py-3">
               <CertificateCommercialPrice
                 regularPrice={certificate.regularPrice}
                 moneyRemainder={certificate.moneyRemainder}
@@ -498,15 +697,20 @@ export default async function CertificateCatalogDetailPage({
                 locale={locale}
               />
             </div>
-            <div className="mt-5 rounded-xl bg-[#f5f7ff] px-3 py-2 text-[12px] font-semibold text-[#42507a]">
-              {copy.status}: {getGiftCertificateStatusLabel(certificate.lifecycleStatus, copy)}
+            <div className="mt-4 rounded-xl bg-[#f5f7ff] px-3 py-2 text-[12px] font-semibold text-[#42507a]">
+              {pageCopy.status}: {getGiftCertificateStatusLabel(certificate.lifecycleStatus, copy)}
             </div>
             <div className="mt-3 text-[12px] leading-5 text-[#7c8099]">
               {getGiftCertificateDeliveryLabel(certificate.deliveryMode, copy)}
             </div>
 
             <div className="mt-auto pt-5">
-              {certificate.lifecycleStatus === "available" ? (
+              {certificate.lifecycleStatus === "draft" && isProviderManager ? (
+                <PublishGiftCertificateButton
+                  activityEventId={certificate.activityEventId}
+                  locale={locale}
+                />
+              ) : certificate.lifecycleStatus === "available" ? (
                 viewer && !isAccountProvider ? (
                   <OrderGiftCertificateButton
                     activityEventId={certificate.activityEventId}
@@ -523,20 +727,87 @@ export default async function CertificateCatalogDetailPage({
                 </div>
               )}
             </div>
-          </article>
+          </CertificateProfileTopCard>
         </section>
 
-        <section className="mt-5 grid gap-4 lg:grid-cols-2">
-          <div className="grid gap-3">
-            <DetailCard label={copy.delivery}>
-              {getGiftCertificateDeliveryLabel(certificate.deliveryMode, copy)}
-            </DetailCard>
-            <DetailCard label={copy.validity}>
-              {formatGiftCertificateDate(certificate.availableFrom, locale)} —{" "}
-              {formatGiftCertificateDate(certificate.availableUntil, locale)}
-            </DetailCard>
-            {certificate.objectKind === "service_type" ? (
-              <DetailCard label={copy.service}>
+        <section className="mb-4 flex flex-wrap items-center gap-2">
+          <CertificateProfileActionLink href="#offer-description" active>
+            {pageCopy.description}
+          </CertificateProfileActionLink>
+          <CertificateProfileActionLink href="#offer-conditions">
+            {pageCopy.conditions}
+          </CertificateProfileActionLink>
+          <CertificateProfileActionLink href="#offer-schedule">
+            {pageCopy.schedule}
+          </CertificateProfileActionLink>
+          {editMode ? (
+            <Link
+              href={buildGiftCertificateLocaleHref(
+                `/value-objects/${certificate.valueObjectId}/edit`,
+                locale,
+              )}
+              className="rounded-lg border border-black/[0.08] bg-white px-3 py-1.5 text-[12px] font-medium text-[#5a5f7a] transition hover:bg-[#f5f6fb]"
+            >
+              {pageCopy.editSource}
+            </Link>
+          ) : null}
+          {providerHref ? (
+            <Link
+              href={providerHref}
+              className="rounded-lg border border-black/[0.08] bg-white px-3 py-1.5 text-[12px] font-medium text-[#5a5f7a] transition hover:bg-[#f5f6fb]"
+            >
+              {pageCopy.providerDetails}
+            </Link>
+          ) : null}
+        </section>
+
+        <section className="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
+          <CertificateProfileBigCard
+            id="offer-description"
+            title={pageCopy.description}
+            detailLabel={pageCopy.details}
+          >
+            <div className="min-h-[140px] text-[13px] leading-6 text-[#5a5f7a]">
+              {certificate.description?.trim() || pageCopy.publicInformation}
+            </div>
+          </CertificateProfileBigCard>
+
+          <CertificateProfileBigCard
+            id="offer-conditions"
+            title={pageCopy.conditions}
+            detailLabel={pageCopy.details}
+          >
+            {editMode &&
+            ["draft", "available"].includes(certificate.lifecycleStatus) ? (
+              <CertificateTermsEditor
+                activityEventId={certificate.activityEventId}
+                initialTerms={certificate.termsText}
+                locale={locale}
+              />
+            ) : (
+              <div className="min-h-[140px] whitespace-pre-wrap text-[13px] leading-6 text-[#5a5f7a]">
+                {certificate.termsText?.trim() || copy.noConditions}
+                {editMode ? (
+                  <p className="mt-4 rounded-lg bg-[#fff7ed] px-3 py-2 text-[12px] font-semibold text-[#9a3412]">
+                    {pageCopy.lockedTerms}
+                  </p>
+                ) : null}
+              </div>
+            )}
+          </CertificateProfileBigCard>
+
+          <CertificateProfileBigCard
+            id="offer-schedule"
+            title={pageCopy.schedule}
+            detailLabel={pageCopy.details}
+          >
+            <div className="grid min-h-[140px] gap-3 text-[13px] leading-6 text-[#5a5f7a]">
+              <div>
+                <span className="font-semibold text-[#1a1d2e]">{pageCopy.validity}: </span>
+                {formatGiftCertificateDate(certificate.availableFrom, locale)} — {" "}
+                {formatGiftCertificateDate(certificate.availableUntil, locale)}
+              </div>
+              {certificate.objectKind === "service_type" ? (
                 <ActivityScheduleDisplay
                   locale={locale}
                   scheduleModeCode={certificate.activity.schedule_mode_code}
@@ -547,49 +818,90 @@ export default async function CertificateCatalogDetailPage({
                   startedAt={certificate.activity.started_at}
                   endedAt={certificate.activity.ended_at}
                 />
-              </DetailCard>
-            ) : null}
-          </div>
-
-          <section className="rounded-[20px] border border-black/[0.07] bg-white p-5 shadow-sm">
-            <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#7c8099]">
-              {copy.conditions}
+              ) : null}
             </div>
-            <p className="mt-3 whitespace-pre-wrap text-[14px] leading-6 text-[#4a4f6a]">
-              {certificate.termsText?.trim() || copy.noConditions}
-            </p>
-          </section>
+          </CertificateProfileBigCard>
+
+          <CertificateProfileBigCard
+            title={pageCopy.providerDetails}
+            detailLabel={pageCopy.details}
+          >
+            <div className="grid min-h-[140px] gap-3 text-[13px] leading-6 text-[#5a5f7a]">
+              <div>
+                <span className="font-semibold text-[#1a1d2e]">{pageCopy.provider}: </span>
+                {certificate.providerDisplayName}
+              </div>
+              <div>
+                <span className="font-semibold text-[#1a1d2e]">{pageCopy.reputation}: </span>
+                {certificate.providerReputation}
+              </div>
+              {certificate.recipientDisplayName ? (
+                <div>
+                  <span className="font-semibold text-[#1a1d2e]">{pageCopy.recipient}: </span>
+                  {certificate.recipientDisplayName}
+                </div>
+              ) : null}
+            </div>
+          </CertificateProfileBigCard>
         </section>
 
-        {isProviderManager ? (
-          <div className="mt-4">
-            <Link
-              href={buildGiftCertificateLocaleHref(
-                `/gift-certificates/${certificate.activityEventId}`,
+        <section className="mt-5">
+          <h2 className="mb-3 text-[14px] font-bold text-[#111827]">
+            {pageCopy.flow}
+          </h2>
+          <div className="grid items-stretch gap-4 lg:auto-rows-fr lg:grid-cols-4">
+            <CertificateProfileDirectionCard
+              label={pageCopy.status}
+              value={getGiftCertificateStatusLabel(certificate.lifecycleStatus, copy)}
+              color="#3b6ef8"
+              sub={getGiftCertificateDeliveryLabel(certificate.deliveryMode, copy)}
+            />
+            <CertificateProfileDirectionCard
+              label={pageCopy.points}
+              value={formatGiftCertificatePoints(certificate.pointsPrice, locale)}
+              color="#f97316"
+              sub={pageCopy.commercialTerms}
+            />
+            <CertificateProfileDirectionCard
+              label={pageCopy.money}
+              value={formatGiftCertificateMoney(
+                certificate.moneyRemainder,
+                certificate.providerCurrency,
                 locale,
               )}
-              className="text-[13px] font-bold text-[#3b6ef8] hover:underline"
-            >
-              {copy.ownerDetails}
-            </Link>
+              color="#22c55e"
+              sub={certificate.providerCurrency}
+            />
+            <CertificateProfileDirectionCard
+              label={pageCopy.validity}
+              value={formatGiftCertificateDate(certificate.availableUntil, locale)}
+              color="#8b5cf6"
+              sub={formatGiftCertificateDate(certificate.availableFrom, locale)}
+            />
           </div>
-        ) : null}
+        </section>
 
         {(isProviderManager || isRecipient) &&
         certificate.lifecycleStatus === "active" &&
         certificate.publicCode ? (
           <section className="mt-5 grid gap-3 sm:grid-cols-2">
-            <DetailCard label={copy.publicCode}>{certificate.publicCode}</DetailCard>
-            <DetailCard label={copy.orderedAt}>
-              {certificate.orderedAt ? (
-                <GiftCertificateLocalDateTime
-                  value={certificate.orderedAt}
-                  locale={locale}
-                />
-              ) : (
-                "—"
-              )}
-            </DetailCard>
+            <CertificateProfileBigCard title={copy.publicCode}>
+              <div className="text-[14px] font-bold text-[#111827]">
+                {certificate.publicCode}
+              </div>
+            </CertificateProfileBigCard>
+            <CertificateProfileBigCard title={copy.orderedAt}>
+              <div className="text-[14px] font-bold text-[#111827]">
+                {certificate.orderedAt ? (
+                  <GiftCertificateLocalDateTime
+                    value={certificate.orderedAt}
+                    locale={locale}
+                  />
+                ) : (
+                  "—"
+                )}
+              </div>
+            </CertificateProfileBigCard>
           </section>
         ) : null}
 
@@ -616,7 +928,7 @@ export default async function CertificateCatalogDetailPage({
           </div>
         ) : null}
 
-        <section className="mt-5 grid gap-2 rounded-[22px] border border-[#d9e2ff] bg-[#f4f7ff] p-5 text-[13px] leading-6 text-[#42507a]">
+        <section className="mt-5 grid gap-2 rounded-xl border border-[#d9e2ff] bg-[#f4f7ff] p-5 text-[13px] leading-6 text-[#42507a]">
           <p>{copy.pointsBurnNotice}</p>
           <p>{copy.moneyOutsideNotice}</p>
           <p>{copy.noRefundNotice}</p>
